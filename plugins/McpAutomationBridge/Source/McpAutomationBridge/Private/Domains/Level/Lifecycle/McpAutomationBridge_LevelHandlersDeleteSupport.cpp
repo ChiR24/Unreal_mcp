@@ -1,5 +1,7 @@
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDeletion.h"
-#include "Safety/McpSafeOperationsPackageTools.h"
+#include "Domains/Level/Copy/McpAutomationBridge_LevelHandlersCopyOperations.h"
+#include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersPathSafety.h"
+#include "PackageTools.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
@@ -13,7 +15,6 @@
 #include "RenderingThread.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 namespace {
 void FlushDeleteGarbage() {
   FlushRenderingCommands();
@@ -91,7 +92,6 @@ void TryUnloadLoadedLevelPackageForDelete(const FString& LongPackageName,
     return;
   }
 
-#if MCP_HAS_PACKAGE_TOOLS
   TArray<UPackage*> PackagesToUnload;
   PackagesToUnload.Add(LoadedPackage);
   TWeakObjectPtr<UPackage> WeakLoadedPackage = LoadedPackage;
@@ -107,29 +107,39 @@ void TryUnloadLoadedLevelPackageForDelete(const FString& LongPackageName,
   LoadedPackage = FindPackage(nullptr, *LongPackageName);
   bPackageUnloadSucceeded = bPackageUnloadSucceeded &&
       !WeakLoadedPackage.IsValid() && LoadedPackage == nullptr;
-#else
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-         TEXT("delete_level: PackageTools unavailable; cannot unload loaded map package %s"),
-         *LongPackageName);
-#endif
 }
 
-void RescanLevelPackageForDelete(const FString& LongPackageName,
-                                 bool bHasMapFilename,
-                                 const FString& AbsoluteMapFilename) {
-  IAssetRegistry& AssetRegistry =
-      FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-  if (bHasMapFilename && IFileManager::Get().FileExists(*AbsoluteMapFilename)) {
-    TArray<FString> FilesToScan;
-    FilesToScan.Add(AbsoluteMapFilename);
-    AssetRegistry.ScanFilesSynchronous(FilesToScan, true);
+void DeleteLevelFiles(const FString& PackagePath, bool bDelete, FLevelFileDeletion& Out) {
+  IFileManager& FileManager = IFileManager::Get();
+  TryGetAbsoluteMapFilename(PackagePath, Out.MapFilename);
+  Out.bMapExisted = !Out.MapFilename.IsEmpty() && FileManager.FileExists(*Out.MapFilename);
+  FString BuiltDataFilename;
+  if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath + TEXT("_BuiltData"), BuiltDataFilename,
+                                                        FPackageName::GetAssetPackageExtension())) {
+    BuiltDataFilename = FPaths::ConvertRelativePathToFull(BuiltDataFilename);
+    FPaths::NormalizeFilename(BuiltDataFilename);
+    Out.bBuiltDataExists = FileManager.FileExists(*BuiltDataFilename);
   }
-  const FString PackageDir = FPaths::GetPath(LongPackageName);
-  if (!PackageDir.IsEmpty()) {
-    TArray<FString> PathsToScan;
-    PathsToScan.Add(PackageDir);
-    AssetRegistry.ScanPathsSynchronous(PathsToScan, true);
+  if (!bDelete) {
+    return;
+  }
+  Out.bDeletedMap = Out.bMapExisted && FileManager.Delete(*Out.MapFilename, false, true, true);
+  Out.bDeletedBuiltData = Out.bBuiltDataExists && FileManager.Delete(*BuiltDataFilename, false, true, true);
+  if (Out.bMapExisted && !Out.bDeletedMap) {
+    return;
+  }
+  Out.bSidecarDeleteAttempted = true;
+  const TCHAR* Roots[] = {TEXT("__ExternalActors__"), TEXT("__ExternalObjects__")};
+  bool* Exists[] = {&Out.bExternalActorsExists, &Out.bExternalObjectsExists};
+  bool* Deleted[] = {&Out.bDeletedExternalActors, &Out.bDeletedExternalObjects};
+  for (int32 Index = 0; Index < 2; ++Index) {
+    FString Message, Code;
+    if (!DeleteExternalPackageDirectory(PackagePath, Roots[Index], *Exists[Index], *Deleted[Index],
+                                        Message, Code) &&
+        Out.SidecarErrorMessage.IsEmpty()) {
+      Out.SidecarErrorMessage = Message;
+      Out.SidecarErrorCode = Code;
+    }
   }
 }
-#endif
 } // namespace McpLevelHandlers

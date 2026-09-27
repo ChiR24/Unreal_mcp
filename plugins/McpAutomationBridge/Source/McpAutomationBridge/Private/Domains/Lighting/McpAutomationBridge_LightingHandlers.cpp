@@ -5,10 +5,8 @@
 
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Subsystems/EditorActorSubsystem.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     const FString& RequestId,
@@ -71,7 +69,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
         return false;
     }
 
-#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId, TEXT("Lighting payload missing"), TEXT("INVALID_PAYLOAD"));
@@ -129,11 +126,11 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     }
     if (Lower == TEXT("set_exposure"))
     {
-        return HandleSetExposure(*this, RequestId, Payload, RequestingSocket, ActorSS);
+        return HandleSetExposure(*this, RequestId, Payload, RequestingSocket);
     }
     if (Lower == TEXT("set_ambient_occlusion"))
     {
-        return HandleSetAmbientOcclusion(*this, RequestId, Payload, RequestingSocket, ActorSS);
+        return HandleSetAmbientOcclusion(*this, RequestId, Payload, RequestingSocket);
     }
     if (Lower == TEXT("create_lighting_enabled_level"))
     {
@@ -151,14 +148,4 @@ bool UMcpAutomationBridgeSubsystem::HandleLightingAction(
     }
 
     return false;
-#else
-    SendAutomationResponse(
-        RequestingSocket,
-        RequestId,
-        false,
-        TEXT("Lighting actions require editor build"),
-        nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }

@@ -1,6 +1,5 @@
 #include "Domains/Navigation/McpAutomationBridge_NavigationHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpNavigationHandlers
 {
 bool HandleRebuildNavigation(
@@ -9,24 +8,6 @@ bool HandleRebuildNavigation(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    if (!BlueprintPath.IsEmpty())
-    {
-        if (!IsValidNavigationPath(BlueprintPath))
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
-            return true;
-        }
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
-            return true;
-        }
-    }
-
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -48,10 +29,7 @@ bool HandleRebuildNavigation(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("rebuilding"), NavSys->IsNavigationBuildInProgress());
     Result->SetBoolField(TEXT("hasNavMesh"), bHasNavMesh);
-    Result->SetBoolField(TEXT("navMeshPresent"), bHasNavMesh);
-    Result->SetBoolField(TEXT("bHasNavMesh"), bHasNavMesh);
     Result->SetStringField(TEXT("navigationSystemPath"), NavSys->GetPathName());
-    Result->SetBoolField(TEXT("existsAfter"), true);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
         bHasNavMesh ? TEXT("Navigation rebuild initiated") : TEXT("Navigation rebuild initiated (no existing NavMesh - ensure NavMeshBoundsVolume is present)"), Result);
@@ -64,24 +42,6 @@ bool HandleGetNavigationInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    if (!BlueprintPath.IsEmpty())
-    {
-        if (!IsValidNavigationPath(BlueprintPath))
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
-            return true;
-        }
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
-            return true;
-        }
-    }
-
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World)
     {
@@ -143,4 +103,3 @@ bool HandleGetNavigationInfo(
     return true;
 }
 }
-#endif

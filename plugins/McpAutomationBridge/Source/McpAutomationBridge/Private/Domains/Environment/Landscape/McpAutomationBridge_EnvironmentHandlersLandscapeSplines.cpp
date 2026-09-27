@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
@@ -27,14 +26,13 @@ bool McpConfigureLandscapeSplines(const TSharedPtr<FJsonObject> &Payload, TShare
     const float Width = FMath::Max(0.0f, static_cast<float>(WidthValue));
 
     double SideFalloffValue = WidthValue * 0.5;
-    Payload->TryGetNumberField(TEXT("sideFalloff"), SideFalloffValue);
     const float SideFalloff = FMath::Max(0.0f, static_cast<float>(SideFalloffValue));
 
     bool bClosedLoop = false;
     McpTryGetBoolFromPayloadOrSettings(Payload, TEXT("closedLoop"), bClosedLoop);
     McpTryGetBoolFromPayloadOrSettings(Payload, TEXT("ClosedLoop"), bClosedLoop);
 
-    const FString LayerName = McpGetFirstStringField(Payload, {TEXT("layerName"), TEXT("splineLayerName")});
+    const FString LayerName = McpGetFirstStringField(Payload, {TEXT("layerName")});
     bool bRaiseTerrain = true;
     bool bLowerTerrain = true;
     McpTryGetBoolFromPayloadOrSettings(Payload, TEXT("raiseTerrain"), bRaiseTerrain);
@@ -192,8 +190,8 @@ bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TS
     }
 
     const FString ActorName = McpGetFirstStringField(Payload, {TEXT("targetActor"), TEXT("actorName"), TEXT("name")});
-    const FVector Location = McpGetVectorField(Payload, TEXT("location"), Landscape->GetActorLocation());
-    const FRotator Rotation = McpGetRotatorField(Payload, TEXT("rotation"), Landscape->GetActorRotation());
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), Landscape->GetActorLocation());
+    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), Landscape->GetActorRotation());
 
     ALandscapeStreamingProxy *Proxy = Cast<ALandscapeStreamingProxy>(
         McpFindOrSpawnActor(ALandscapeStreamingProxy::StaticClass(), ActorName.IsEmpty() ? TEXT("LandscapeStreamingProxy") : ActorName, Location, Rotation));
@@ -234,4 +232,3 @@ bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TS
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

@@ -1,16 +1,15 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 AActor *McpFindOrSpawnEnvironmentActor(const TSharedPtr<FJsonObject> &Payload, UClass *ActorClass, const FString &DefaultActorName)
 {
     const FString ActorName = McpGetFirstStringField(Payload, {TEXT("targetActor"), TEXT("actorName"), TEXT("waterBodyName"), TEXT("name")});
-    const FVector Location = McpGetVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    const FRotator Rotation = McpGetRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     return McpFindOrSpawnActor(ActorClass, ActorName.IsEmpty() ? DefaultActorName : ActorName, Location, Rotation);
 }
-void McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp)
+int32 McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp)
 {
     TArray<FString> Applied;
     TArray<FString> Failed;
@@ -18,19 +17,13 @@ void McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject> 
     Resp->SetNumberField(TEXT("configuredPropertyCount"), AppliedCount);
     McpAddStringArrayField(Resp, TEXT("configuredProperties"), Applied);
     McpAddStringArrayField(Resp, TEXT("configurationErrors"), Failed);
+    return AppliedCount;
 }
 AActor *McpFindActorFromEnvironmentPayload(const TSharedPtr<FJsonObject> &Payload)
 {
     const FString ActorName = McpGetFirstStringField(Payload, {TEXT("targetActor"), TEXT("actorName"), TEXT("waterBodyName"), TEXT("name"), TEXT("actorPath")});
-    if (ActorName.IsEmpty())
-    {
-        return nullptr;
-    }
-    if (AActor *ActorByPath = FindObject<AActor>(nullptr, *ActorName))
-    {
-        return ActorByPath;
-    }
-    return McpFindActorByNameOrClass(nullptr, ActorName);
+    // Label, name or object path in the editor world.
+    return FindActorByNameInWorldForMcp(McpHandlerUtils::GetEditorWorld(), ActorName, true);
 }
 AActor *McpFindWaterBodyActor(const TSharedPtr<FJsonObject> &Payload)
 {
@@ -114,4 +107,3 @@ int32 McpSetCollisionOnActor(AActor *Actor, const TSharedPtr<FJsonObject> &Paylo
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

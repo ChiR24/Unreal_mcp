@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 #include "Engine/Level.h"
 #include "Engine/LevelStreaming.h"
 #include "Engine/World.h"
@@ -122,4 +121,3 @@ bool HandleInspectLevelDetailsAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

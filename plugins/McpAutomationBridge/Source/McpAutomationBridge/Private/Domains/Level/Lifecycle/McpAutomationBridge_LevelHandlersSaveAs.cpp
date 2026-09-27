@@ -11,9 +11,6 @@
 using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     // Force cleanup to prevent potential deadlocks with HLODs/WorldPartition
     // during save
@@ -27,7 +24,7 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     if (Payload.IsValid())
       Payload->TryGetStringField(TEXT("savePath"), SavePath);
     if (SavePath.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("savePath required for save_level_as"),
                              nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
@@ -35,7 +32,7 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
 
     SavePath = SanitizeProjectRelativePath(SavePath);
     if (SavePath.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Invalid savePath: contains path traversal (..) or invalid characters"),
                              nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
@@ -56,7 +53,7 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
           ErrorDetail->SetStringField(TEXT("absolutePath"), AbsoluteFilePath);
           ErrorDetail->SetNumberField(TEXT("pathLength"), AbsoluteFilePath.Len());
           ErrorDetail->SetNumberField(TEXT("maxLength"), SafePathLength);
-          SendAutomationResponse(
+          Subsystem.SendAutomationResponse(
               RequestingSocket, RequestId, false,
               FString::Printf(TEXT("Path too long (%d chars, max %d): %s"),
                   AbsoluteFilePath.Len(), SafePathLength, *SavePath),
@@ -67,7 +64,7 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     }
 
     if (!GEditor) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
                              TEXT("EDITOR_NOT_AVAILABLE"));
       return true;
@@ -78,7 +75,7 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
         // Saving the unsaved Open World template as a new package fails on its
         // private template references and then asserts in the world partition
         // subsystem, so refuse before touching it.
-        SendAutomationResponse(RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("save_level_as cannot save an unsaved World Partition template level; create_level or load a level first"),
                                nullptr, TEXT("UNSAVED_TEMPLATE_LEVEL"));
         return true;
@@ -99,7 +96,7 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("levelPath"), SavePath);
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, true,
           FString::Printf(TEXT("Level saved as %s"), *SavePath), Resp,
           FString());
@@ -108,14 +105,11 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
       ErrorDetail->SetStringField(TEXT("attemptedPath"), SavePath);
       ErrorDetail->SetStringField(TEXT("reason"), TEXT("Save operation failed - check Output Log for details"));
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           FString::Printf(TEXT("Failed to save level as: %s"), *SavePath),
           ErrorDetail, TEXT("SAVE_FAILED"));
     }
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

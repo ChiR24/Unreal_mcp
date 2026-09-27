@@ -7,17 +7,6 @@
 
 namespace VolumeHelpers
 {
-#if WITH_EDITOR
-FVector GetVectorFromPayload(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, FVector Default)
-{
-    return ExtractVectorField(Payload, *FieldName, Default);
-}
-
-FRotator GetRotatorFromPayload(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName, FRotator Default)
-{
-    return ExtractRotatorField(Payload, *FieldName, Default);
-}
-
 bool ValidateVolumeName(const FString& VolumeName, FString& OutError)
 {
     if (VolumeName.IsEmpty())
@@ -107,20 +96,20 @@ bool ReadNamedTransform(UMcpAutomationBridgeSubsystem* Subsystem, const FString&
         Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("MISSING_PARAMETER"));
         return false;
     }
-    OutArgs.Location = GetVectorFromPayload(Payload, TEXT("location"), FVector::ZeroVector);
+    OutArgs.Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     if (!ValidateLocation(OutArgs.Location, ValidationError))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
         return false;
     }
-    OutArgs.Rotation = GetRotatorFromPayload(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    OutArgs.Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     return true;
 }
 
 bool ReadExtent(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& FieldName, const FVector& DefaultExtent, FVector& OutExtent)
 {
     FString ValidationError;
-    OutExtent = GetVectorFromPayload(Payload, FieldName, DefaultExtent);
+    OutExtent = ExtractVectorField(Payload, *FieldName, DefaultExtent);
     if (!ValidateExtent(OutExtent, ValidationError))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false, *ValidationError, nullptr, TEXT("INVALID_ARGUMENT"));
@@ -128,5 +117,4 @@ bool ReadExtent(UMcpAutomationBridgeSubsystem* Subsystem, const FString& Request
     }
     return true;
 }
-#endif
 }

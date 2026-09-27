@@ -13,27 +13,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBakeLightmap(
         return false;
     }
 
-#if WITH_EDITOR
-    FString QualityStr = TEXT("Preview");
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("quality"), QualityStr);
-    }
+    TSharedPtr<FJsonObject> P = MakeShared<FJsonObject>();
+    if (Payload.IsValid()) { P->Values = Payload->Values; }
+    if (!P->HasField(TEXT("quality"))) { P->SetStringField(TEXT("quality"), TEXT("Preview")); }
+    return HandleLightingAction(RequestId, TEXT("bake_lightmap"), P, RequestingSocket);
 
-    // Reuse HandleExecuteEditorFunction logic
-    TSharedPtr<FJsonObject> P = McpHandlerUtils::CreateResultObject();
-    P->SetStringField(TEXT("functionName"), TEXT("BUILD_LIGHTING"));
-    P->SetStringField(TEXT("quality"), QualityStr);
-
-    return HandleExecuteEditorFunction(RequestId, TEXT("execute_editor_function"),
-                                       P, RequestingSocket);
-
-#else
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Requires editor"), nullptr,
-                           TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
@@ -47,7 +31,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
         return false;
     }
 
-#if WITH_EDITOR
     if (!GEditor)
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -270,10 +253,4 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
                            TEXT("Procedural terrain created successfully"), Resp, FString());
     return true;
 
-#else
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("create_procedural_terrain requires editor build"), nullptr,
-                           TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }

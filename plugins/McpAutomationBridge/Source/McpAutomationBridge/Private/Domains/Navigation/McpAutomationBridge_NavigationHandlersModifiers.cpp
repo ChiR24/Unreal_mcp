@@ -1,6 +1,5 @@
 #include "Domains/Navigation/McpAutomationBridge_NavigationHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpNavigationHandlers
 {
 bool HandleCreateNavModifierComponent(
@@ -37,10 +36,6 @@ bool HandleCreateNavModifierComponent(
     if (!AreaClassPath.IsEmpty())
     {
         ResolvedAreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
-        if (!ResolvedAreaClass)
-        {
-            ResolvedAreaClass = StaticLoadClass(UNavArea::StaticClass(), nullptr, *AreaClassPath);
-        }
         if (!ResolvedAreaClass)
         {
             Self->SendAutomationResponse(Socket, RequestId, false,
@@ -85,12 +80,9 @@ bool HandleCreateNavModifierComponent(
     if (ModComp)
     {
         ModComp->FailsafeExtent = FailsafeExtent;
-        if (!AreaClassPath.IsEmpty())
+        if (ResolvedAreaClass)
         {
-            if (ResolvedAreaClass)
-            {
-                ModComp->AreaClass = ResolvedAreaClass;
-            }
+            ModComp->AreaClass = ResolvedAreaClass;
         }
     }
 
@@ -104,7 +96,6 @@ bool HandleCreateNavModifierComponent(
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("componentName"), ComponentName);
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-    Result->SetBoolField(TEXT("existsAfter"), true);
     McpHandlerUtils::AddVerification(Result, Blueprint);
 
     Self->SendAutomationResponse(Socket, RequestId, true,
@@ -254,7 +245,6 @@ bool HandleConfigureNavAreaCost(
     Result->SetStringField(TEXT("areaClass"), AreaClassPath);
     Result->SetNumberField(TEXT("areaCost"), AreaCost);
     Result->SetNumberField(TEXT("fixedAreaEnteringCost"), AreaCDO->GetFixedAreaEnteringCost());
-    Result->SetBoolField(TEXT("existsAfter"), true);
 
     FString Message = TEXT("Nav area cost configured");
     if (Payload->HasField(TEXT("fixedAreaEnteringCost")))
@@ -267,4 +257,3 @@ bool HandleConfigureNavAreaCost(
     return true;
 }
 }
-#endif

@@ -5,7 +5,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -30,34 +29,15 @@ bool HandleCreateSplineActor(
         return true;
     }
 
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Name = *ActorName;
-    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-    AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
-    if (!NewActor)
+    USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, Rotation);
+    if (!SplineComp)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("Failed to spawn spline actor"), nullptr, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    NewActor->SetActorLabel(*ActorName);
-
-    USplineComponent* SplineComp = NewObject<USplineComponent>(NewActor, TEXT("SplineComponent"));
-    if (!SplineComp)
-    {
-        NewActor->Destroy();
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to create spline component"), nullptr, TEXT("COMPONENT_FAILED"));
-        return true;
-    }
-
-    SplineComp->RegisterComponent();
-    NewActor->AddInstanceComponent(SplineComp);
+    AActor* NewActor = SplineComp->GetOwner();
     SplineComp->SetClosedLoop(bClosedLoop);
-    NewActor->SetRootComponent(SplineComp);
 
     ESplinePointType::Type PointType = ParseSplinePointType(SplineType);
     for (int32 i = 0; i < SplineComp->GetNumberOfSplinePoints(); i++)
@@ -101,4 +81,3 @@ bool HandleCreateSplineActor(
         FString::Printf(TEXT("Spline actor '%s' created with %d points"), *ActorName, SplineComp->GetNumberOfSplinePoints()), Result);
     return true;
 }
-#endif

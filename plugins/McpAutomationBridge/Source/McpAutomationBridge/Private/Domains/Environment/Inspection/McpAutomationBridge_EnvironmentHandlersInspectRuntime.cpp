@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool HandleInspectRuntimeReportAction(
@@ -138,7 +137,7 @@ bool HandleInspectRuntimeReportAction(
             APlayerController *PlayerController = World->GetFirstPlayerController();
             if (PlayerController)
             {
-                // BB-036 pins these as canonical string identities; the record now matches (dogfood #139).
+                // Pins these as canonical string identities; the record now matches (dogfood #139).
                 Report->SetStringField(TEXT("playerController"), PlayerController->GetPathName());
 
                 if (APawn *Pawn = PlayerController->GetPawn())
@@ -159,12 +158,12 @@ bool HandleInspectRuntimeReportAction(
                     CameraJson->SetStringField(TEXT("name"), CameraManager->GetName());
                     CameraJson->SetStringField(TEXT("path"), CameraManager->GetPathName());
                     CameraJson->SetStringField(TEXT("class"), CameraManager->GetClass()->GetName());
-                    CameraJson->SetObjectField(TEXT("cameraLocation"), McpMakeVectorObject(CameraManager->GetCameraLocation()));
-                    CameraJson->SetObjectField(TEXT("cameraRotation"), McpMakeRotatorObject(CameraManager->GetCameraRotation()));
+                    CameraJson->SetObjectField(TEXT("cameraLocation"), McpHandlerUtils::VectorToJson(CameraManager->GetCameraLocation()));
+                    CameraJson->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(CameraManager->GetCameraRotation()));
                     CameraJson->SetNumberField(TEXT("fov"), CameraManager->GetFOVAngle());
                     Report->SetObjectField(TEXT("playerCameraManager"), CameraJson);
-                    Report->SetObjectField(TEXT("cameraLocation"), McpMakeVectorObject(CameraManager->GetCameraLocation()));
-                    Report->SetObjectField(TEXT("cameraRotation"), McpMakeRotatorObject(CameraManager->GetCameraRotation()));
+                    Report->SetObjectField(TEXT("cameraLocation"), McpHandlerUtils::VectorToJson(CameraManager->GetCameraLocation()));
+                    Report->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(CameraManager->GetCameraRotation()));
                 }
             }
 
@@ -176,4 +175,3 @@ bool HandleInspectRuntimeReportAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

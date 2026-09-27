@@ -1,23 +1,17 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 #include "PhysicsEngine/BodySetup.h"
 
 namespace McpGeometryHandlers
 {
-// outputPath / assetPath / savePath name the converted asset (dogfood #135). A folder
+// outputPath names the converted asset (dogfood #135). A folder
 // (trailing '/' or an existing content folder) gets DefaultName appended; anything else
 // is the full asset path. Everything passes the project path sanitizer first.
 static bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, const FString& DefaultName,
-                                       FString& OutAssetPath, FString& OutRequested, FString& OutError)
+                                       FString& OutAssetPath, FString& OutError)
 {
-    for (const TCHAR* Field : {TEXT("outputPath"), TEXT("assetPath"), TEXT("savePath")})
-    {
-        if (Payload->TryGetStringField(Field, OutRequested) && !OutRequested.IsEmpty())
-        {
-            break;
-        }
-    }
+    const FString OutRequested = GetJsonStringField(Payload, TEXT("outputPath"));
     if (OutRequested.IsEmpty())
     {
         OutAssetPath = TEXT("/Game/GeneratedMeshes/") + DefaultName;
@@ -41,44 +35,28 @@ static bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, c
 }
 
 bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+                                      const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bNanite)
 {
+    // convert_to_nanite is the same bake with Nanite enabled.
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
     FString AssetPath;
-    FString RequestedPath;
     FString PathError;
-    if (!ResolveConversionAssetPath(Payload, ActorName, AssetPath, RequestedPath, PathError))
+    if (!ResolveConversionAssetPath(Payload, bNanite ? ActorName + TEXT("_Nanite") : ActorName, AssetPath, PathError))
     {
         Self->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_ASSET_PATH"));
-        return true;
-    }
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
         return true;
     }
 
     FGeometryScriptCreateNewStaticMeshAssetOptions CreateOptions;
     CreateOptions.bEnableRecomputeNormals = true;
     CreateOptions.bEnableRecomputeTangents = true;
-    // UE 5.7: bAllowDistanceField and bGenerateNaniteEnabledMesh were removed
-    // Use bEnableNanite + NaniteSettings instead
-    CreateOptions.bEnableNanite = false;
+    CreateOptions.bEnableNanite = bNanite;
 
     EGeometryScriptOutcomePins Outcome;
-    UStaticMesh* NewStaticMesh = nullptr;
-
     UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
-        Mesh,
+        Target->Mesh,
         AssetPath,
         CreateOptions,
         Outcome,
@@ -143,68 +121,11 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
-
+    Result->SetBoolField(TEXT("naniteEnabled"), bNanite);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("StaticMesh created from DynamicMesh"), Result);
-    return true;
-}
-
-bool HandleConvertToNanite(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-    FString AssetPath;
-    FString RequestedPath;
-    FString PathError;
-    if (!ResolveConversionAssetPath(Payload, ActorName + TEXT("_Nanite"), AssetPath, RequestedPath, PathError))
-    {
-        Self->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_ASSET_PATH"));
-        return true;
-    }
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
-
-    FGeometryScriptCreateNewStaticMeshAssetOptions CreateOptions;
-    CreateOptions.bEnableRecomputeNormals = true;
-    CreateOptions.bEnableRecomputeTangents = true;
-    CreateOptions.bEnableNanite = true;
-
-    EGeometryScriptOutcomePins Outcome;
-
-    UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
-        Mesh,
-        AssetPath,
-        CreateOptions,
-        Outcome,
-        nullptr
-    );
-
-    if (Outcome != EGeometryScriptOutcomePins::Success)
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("Failed to create Nanite StaticMesh asset"), TEXT("ASSET_CREATION_FAILED"));
-        return true;
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetStringField(TEXT("assetPath"), AssetPath);
-    Result->SetBoolField(TEXT("naniteEnabled"), true);
-
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Nanite StaticMesh created from DynamicMesh"), Result);
     return true;
 }
 
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

@@ -1,8 +1,11 @@
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/Level.h"
+#include "Engine/LevelStreamingDynamic.h"
+#include "McpAutomationBridgeLog.h"
+#include "Misc/PackageName.h"
+#include "Misc/Paths.h"
 #include "Engine/World.h"
 
 namespace LevelStructureHelpers
@@ -28,11 +31,6 @@ FString NormalizeLevelPath(const FString& In)
     return Path;
 }
 } // namespace
-
-UWorld* GetEditorWorld()
-{
-    return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-}
 
 ULevel* ResolveTargetLevelForBlueprintRequest(
     UWorld* World, const TSharedPtr<FJsonObject>& Payload, FString& OutError, bool bAllowTransient)
@@ -113,5 +111,46 @@ ULevel* ResolveTargetLevelForBlueprintRequest(
     return Target;
 }
 
+ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName)
+{
+    // Package name, object path or short name, case-insensitively (dogfood #159: create_sublevel reported the
+    // level under /Game/.../Sub but the configurators could not find it).
+    FString WantedPackage = LevelName;
+    int32 DotIndex = INDEX_NONE;
+    if (WantedPackage.FindChar(TEXT('.'), DotIndex)) { WantedPackage.LeftInline(DotIndex); }
+    const FString WantedShort = FPackageName::GetShortName(WantedPackage);
+    for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
+    {
+        const FString PackageName = StreamingLevel ? StreamingLevel->GetWorldAssetPackageName() : FString();
+        if (StreamingLevel && (PackageName.Equals(WantedPackage, ESearchCase::IgnoreCase) ||
+                               FPackageName::GetShortName(PackageName).Equals(WantedShort, ESearchCase::IgnoreCase)))
+        {
+            return StreamingLevel;
+        }
+    }
+    // A sublevel that exists on disk but is not streamed by this world yet.
+    TArray<FString> Candidates;
+    if (LevelName.StartsWith(TEXT("/Game/")))
+    {
+        Candidates.Add(LevelName);
+    }
+    Candidates.Add(FPaths::GetPath(World->GetOutermost()->GetName()) / LevelName);
+    Candidates.Add(FString(TEXT("/Game/")) / LevelName);
+    for (const FString& Candidate : Candidates)
+    {
+        if (!Candidate.EndsWith(TEXT(".umap")) && FPackageName::DoesPackageExist(Candidate))
+        {
+            ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
+            NewStreamingLevel->SetWorldAssetByPackageName(FName(*Candidate));
+            NewStreamingLevel->LevelTransform = FTransform::Identity;
+            NewStreamingLevel->SetShouldBeVisible(true);
+            NewStreamingLevel->SetShouldBeLoaded(true);
+            World->AddStreamingLevel(NewStreamingLevel);
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Created streaming reference for existing level: %s"), *Candidate);
+            return NewStreamingLevel;
+        }
+    }
+    return nullptr;
 }
-#endif
+
+} // namespace LevelStructureHelpers

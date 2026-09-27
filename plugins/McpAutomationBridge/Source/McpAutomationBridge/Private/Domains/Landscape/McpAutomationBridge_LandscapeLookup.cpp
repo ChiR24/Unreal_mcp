@@ -1,71 +1,66 @@
 #include "Domains/Landscape/McpAutomationBridge_LandscapeLookup.h"
 
-#include "Core/Compatibility/McpVersionCompatibility.h"
-
-#if WITH_EDITOR
-#include "Editor.h"
+#include "EngineUtils.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Landscape.h"
-
-#if __has_include("Subsystems/EditorActorSubsystem.h")
-#include "Subsystems/EditorActorSubsystem.h"
-#elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
-#endif
+#include "LandscapeInfo.h"
+#include "McpAutomationBridgeSubsystem.h"
 
 namespace McpLandscapeHandlers {
-static bool LandscapePathMatches(const ALandscape &Landscape,
-                                 const FString &LandscapePath) {
-  FString ActorPath = Landscape.GetPackage()->GetPathName();
-  FString NormalizedRequest = LandscapePath;
-  NormalizedRequest.ReplaceInline(TEXT("\\"), TEXT("/"));
-  ActorPath.ReplaceInline(TEXT("\\"), TEXT("/"));
-  if (ActorPath.EndsWith(TEXT(".uasset"))) {
-    ActorPath = ActorPath.LeftChop(7);
-  }
-  return ActorPath.Equals(NormalizedRequest, ESearchCase::IgnoreCase);
-}
-
-ALandscape *FindLandscapeForEdit(const FString &LandscapePath,
-                                 const FString &LandscapeName) {
-  ALandscape *Landscape = nullptr;
-  if (GEditor) {
-    if (UEditorActorSubsystem *ActorSS =
-            GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
-      TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-      for (AActor *Actor : AllActors) {
-        ALandscape *Candidate = Cast<ALandscape>(Actor);
-        if (!Candidate) {
-          continue;
-        }
-        if (!LandscapeName.IsEmpty() &&
-            Candidate->GetActorLabel().Equals(LandscapeName,
-                                              ESearchCase::IgnoreCase)) {
-          Landscape = Candidate;
-          break;
-        }
-        if (!LandscapePath.IsEmpty() &&
-            LandscapePathMatches(*Candidate, LandscapePath)) {
-          Landscape = Candidate;
-          break;
-        }
+static ALandscape *FindLandscapeForEdit(const FString &LandscapePath,
+                                        const FString &LandscapeName) {
+  if (UWorld *World = McpHandlerUtils::GetEditorWorld()) {
+    for (TActorIterator<ALandscape> It(World); It; ++It) {
+      if ((!LandscapeName.IsEmpty() &&
+           It->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase)) ||
+          (!LandscapePath.IsEmpty() &&
+           It->GetPackage()->GetPathName().Equals(LandscapePath,
+                                                  ESearchCase::IgnoreCase))) {
+        return *It;
       }
     }
   }
+  return LandscapePath.IsEmpty()
+             ? nullptr
+             : Cast<ALandscape>(StaticLoadObject(ALandscape::StaticClass(),
+                                                 nullptr, *LandscapePath));
+}
 
-  if (!Landscape && !LandscapePath.IsEmpty()) {
-    Landscape = Cast<ALandscape>(
-        StaticLoadObject(ALandscape::StaticClass(), nullptr, *LandscapePath));
+ALandscape *ResolveLandscapeOrReply(UMcpAutomationBridgeSubsystem &Bridge,
+                                    const FString &RequestId,
+                                    const TSharedPtr<FJsonObject> &Payload,
+                                    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
+                                    ULandscapeInfo **OutInfo) {
+  FString LandscapePath = GetJsonStringField(Payload, TEXT("landscapePath"));
+  const FString LandscapeName = GetJsonStringField(Payload, TEXT("landscapeName"));
+  if (!LandscapePath.IsEmpty()) {
+    const FString SafePath = SanitizeProjectRelativePath(LandscapePath);
+    if (SafePath.IsEmpty()) {
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
+          TEXT("SECURITY_VIOLATION"));
+      return nullptr;
+    }
+    LandscapePath = SafePath;
+  }
+  ALandscape *Landscape = FindLandscapeForEdit(LandscapePath, LandscapeName);
+  if (!Landscape) {
+    Bridge.SendAutomationError(
+        RequestingSocket, RequestId,
+        LandscapeName.IsEmpty()
+            ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
+            : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath),
+        TEXT("LANDSCAPE_NOT_FOUND"));
+    return nullptr;
+  }
+  if (OutInfo && !(*OutInfo = Landscape->GetLandscapeInfo())) {
+    Bridge.SendAutomationError(RequestingSocket, RequestId,
+                               TEXT("Landscape has no info"),
+                               TEXT("INVALID_LANDSCAPE"));
+    return nullptr;
   }
   return Landscape;
 }
-
-FString MakeLandscapeNotFoundMessage(const FString &LandscapePath,
-                                     const FString &LandscapeName) {
-  return LandscapeName.IsEmpty()
-             ? FString::Printf(TEXT("Landscape not found at path: %s"),
-                               *LandscapePath)
-             : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"),
-                               *LandscapeName, *LandscapePath);
 }
-}
-#endif

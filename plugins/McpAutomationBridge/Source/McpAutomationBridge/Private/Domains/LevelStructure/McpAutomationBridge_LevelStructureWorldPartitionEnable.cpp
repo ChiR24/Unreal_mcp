@@ -9,7 +9,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "WorldPartition/WorldPartition.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -75,4 +74,3 @@ bool HandleEnableWorldPartition(
 }
 
 }
-#endif

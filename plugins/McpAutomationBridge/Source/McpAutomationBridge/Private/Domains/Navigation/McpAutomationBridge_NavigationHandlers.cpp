@@ -10,7 +10,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
 {
     (void)Action;
 
-#if WITH_EDITOR
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
 
     UE_LOG(LogMcpNavigationHandlers, Verbose, TEXT("HandleManageNavigationAction: SubAction=%s"), *SubAction);
@@ -43,9 +42,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNavigationAction(
     SendAutomationResponse(Socket, RequestId, false,
         FString::Printf(TEXT("Unknown navigation subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
     return true;
-#else
-    SendAutomationResponse(Socket, RequestId, false,
-        TEXT("Navigation operations require editor build"), nullptr, TEXT("EDITOR_ONLY"));
-    return true;
-#endif
 }

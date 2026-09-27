@@ -4,6 +4,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 #include "Dom/JsonObject.h"
+#include "HAL/IConsoleManager.h"
 #include "Templates/SharedPointer.h"
 
 class AActor;
@@ -12,6 +13,16 @@ class UWorld;
 
 namespace McpPerformanceHandlers
 {
+// Sets the console variable Name when this engine has it (int32, float, bool or text Value).
+template <typename T>
+void SetCVarIfExists(const TCHAR* Name, T Value)
+{
+    if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(Name))
+    {
+        CVar->Set(Value);
+    }
+}
+
 struct FPerformanceActionContext
 {
     UMcpAutomationBridgeSubsystem& Bridge;

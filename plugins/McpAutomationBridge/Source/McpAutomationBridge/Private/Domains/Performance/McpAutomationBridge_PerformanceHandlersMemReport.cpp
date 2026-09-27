@@ -13,7 +13,6 @@
 
 namespace McpPerformanceHandlers
 {
-#if WITH_EDITOR
 namespace
 {
 FString FindNewestMemReport(const FString& ReportDirectory, FDateTime& OutStamp)
@@ -35,7 +34,6 @@ FString FindNewestMemReport(const FString& ReportDirectory, FDateTime& OutStamp)
     return Newest;
 }
 }
-#endif
 
 // generate_memory_report: runs memreport and answers with the file it produced.
 // The engine writes the report at the end of the frame, so the response is
@@ -43,9 +41,6 @@ FString FindNewestMemReport(const FString& ReportDirectory, FDateTime& OutStamp)
 // never observe the new file, dogfood #172).
 bool HandleMemoryReportAction(const FPerformanceActionContext& Context)
 {
-#if !WITH_EDITOR
-    return false;
-#else
     if (Context.Lower != TEXT("generate_memory_report"))
     {
         return false;
@@ -95,6 +90,5 @@ bool HandleMemoryReportAction(const FPerformanceActionContext& Context)
             return false;
         }), 0.1f);
     return true;
-#endif
 }
 }

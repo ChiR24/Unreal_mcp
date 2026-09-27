@@ -1,7 +1,6 @@
 #include "Domains/Environment/Runtime/McpAutomationBridge_EnvironmentAssetValidation.h"
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 UFoliageType *McpLoadFoliageTypeFromPayload(const TSharedPtr<FJsonObject> &Payload, FString &OutPath)
@@ -135,7 +134,7 @@ bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TShared
             TEXT("Failed to create landscape layer info"), TEXT("CREATION_FAILED"));
     }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
+#if ENGINE_MINOR_VERSION >= 7
     LayerInfo->SetLayerName(FName(*LayerName), true);
 #else
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -165,12 +164,10 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
     bool bNoWeightBlend = false;
     if (Payload->TryGetBoolField(TEXT("noWeightBlend"), bNoWeightBlend))
     {
-#if WITH_EDITORONLY_DATA
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
+#if ENGINE_MINOR_VERSION >= 7
         LayerInfo->SetBlendMethod(bNoWeightBlend ? ELandscapeTargetLayerBlendMethod::None : ELandscapeTargetLayerBlendMethod::FinalWeightBlending, false);
 #else
         LayerInfo->bNoWeightBlend = bNoWeightBlend;
-#endif
 #endif
     }
 
@@ -240,4 +237,3 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

@@ -1,4 +1,5 @@
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 
 #include "Editor.h"
 #include "Engine/Level.h"
@@ -7,46 +8,16 @@
 #include "GameFramework/WorldSettings.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-namespace {
-// GameModes authored as Blueprints live in the generated `_C` class, a suffix
-// callers rarely spell. Accept the plain asset path as well and derive it.
-UClass* ResolveGameModeClass(const FString& InPath) {
-  const FString Path = InPath.TrimStartAndEnd();
-  if (Path.IsEmpty()) {
-    return nullptr;
-  }
-  if (UClass* Direct = LoadObject<UClass>(nullptr, *Path)) {
-    return Direct;
-  }
-  if (Path.EndsWith(TEXT("_C"))) {
-    return nullptr;
-  }
-  FString ObjectPath = Path;
-  if (!Path.Contains(TEXT("."))) {
-    int32 SlashIndex = INDEX_NONE;
-    if (!Path.FindLastChar(TEXT('/'), SlashIndex)) {
-      return nullptr;
-    }
-    ObjectPath = Path + TEXT(".") + Path.RightChop(SlashIndex + 1);
-  }
-  return LoadObject<UClass>(nullptr, *(ObjectPath + TEXT("_C")));
-}
-} // namespace
-
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString RequestedLevelPath;
     if (Payload.IsValid()) {
       Payload->TryGetStringField(TEXT("levelPath"), RequestedLevelPath);
-      if (RequestedLevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), RequestedLevelPath);
     }
 
     if (!RequestedLevelPath.IsEmpty()) {
       RequestedLevelPath = SanitizeProjectRelativePath(RequestedLevelPath);
       if (RequestedLevelPath.IsEmpty()) {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Invalid levelPath"), nullptr,
                                TEXT("SECURITY_VIOLATION"));
         return true;
@@ -55,14 +26,14 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
 
     ULevel* TargetLevel = World->GetCurrentLevel();
     if (!TargetLevel) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No current level"), nullptr, TEXT("NO_LEVEL"));
       return true;
     }
@@ -70,8 +41,8 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
     FString CurrentLevelPath = TargetLevel->GetOutermost() ? TargetLevel->GetOutermost()->GetName() : TEXT("");
 
     if (!RequestedLevelPath.IsEmpty()) {
-      if (CurrentLevelPath.ToLower() != RequestedLevelPath.ToLower()) {
-        SendAutomationResponse(
+      if (!CurrentLevelPath.Equals(RequestedLevelPath, ESearchCase::IgnoreCase)) {
+        Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(TEXT("Requested level '%s' is not loaded (current: %s)"),
                            *RequestedLevelPath, *CurrentLevelPath),
@@ -86,7 +57,7 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
     // needs to run its own game rules — got a success receipt for a no-op.
     AWorldSettings* Settings = World->GetWorldSettings();
     if (!Settings) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Level has no WorldSettings actor"), nullptr,
                              TEXT("NO_WORLD_SETTINGS"));
       return true;
@@ -99,9 +70,9 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
     Payload->TryGetStringField(TEXT("gameMode"), GameModePath);
     if (GameModePath.IsEmpty()) Payload->TryGetStringField(TEXT("gameModeOverride"), GameModePath);
     if (!GameModePath.TrimStartAndEnd().IsEmpty()) {
-      UClass* GameModeClass = ResolveGameModeClass(GameModePath);
+      UClass* GameModeClass = ResolveClassByName(GameModePath.TrimStartAndEnd());
       if (!GameModeClass || !GameModeClass->IsChildOf(AGameModeBase::StaticClass())) {
-        SendAutomationResponse(
+        Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(TEXT("Could not resolve '%s' to a GameModeBase class"), *GameModePath),
             nullptr, TEXT("GAME_MODE_NOT_FOUND"));
@@ -139,7 +110,7 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
     }
 
     if (Applied.Num() == 0) {
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           TEXT("No world settings supplied; expected one of gameMode, killZ, "
                "gravityZ, timeDilation, enableWorldBoundsChecks"),
@@ -159,11 +130,8 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
     Result->SetNumberField(TEXT("gravityZ"), Settings->GetGravityZ());
     Result->SetNumberField(TEXT("timeDilation"), Settings->TimeDilation);
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("World settings updated (%d applied)"), Applied.Num()), Result);
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

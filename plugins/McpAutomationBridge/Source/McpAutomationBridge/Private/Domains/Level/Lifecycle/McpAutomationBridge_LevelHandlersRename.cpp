@@ -3,14 +3,12 @@
 #include "Engine/LevelStreaming.h"
 #include "Engine/World.h"
 #include "Domains/Level/Copy/McpAutomationBridge_LevelHandlersCopyOperations.h"
+#include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDeletion.h"
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersPathSafety.h"
 
 #include "HAL/FileManager.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleRenameLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString SourcePath;
     if (Payload.IsValid())
@@ -30,13 +28,13 @@ bool HandleRenameLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     }
 
     if (SourcePath.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("levelPath or sourcePath required for rename_level"),
                              nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
     if (DestinationPath.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("destinationPath required for rename_level"),
                              nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
@@ -54,7 +52,7 @@ bool HandleRenameLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
           }
         }
         if (bInUse) {
-          SendAutomationResponse(RequestingSocket, RequestId, false,
+          Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                                  FString::Printf(TEXT("Level %s is loaded in the editor (current level or streaming sub-level); unload it before renaming"), *SourcePackage),
                                  nullptr, TEXT("LEVEL_IN_USE"));
           return true;
@@ -65,14 +63,14 @@ bool HandleRenameLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     // Issue #8: Sanitize paths to prevent traversal attacks
     FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
     if (SanitizedSource.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Invalid source path (traversal/security violation): %s"), *SourcePath),
                              nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
     }
     FString SanitizedDest = SanitizeProjectRelativePath(DestinationPath);
     if (SanitizedDest.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Invalid destination path (traversal/security violation): %s"), *DestinationPath),
                              nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
@@ -81,7 +79,7 @@ bool HandleRenameLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     DestinationPath = NormalizeLevelPackagePath(SanitizedDest);
 
     if (IsCurrentEditorWorldPackage(SourcePath)) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Cannot rename the current loaded level: %s"), *SourcePath),
                              nullptr, TEXT("LEVEL_LOADED"));
       return true;
@@ -97,80 +95,41 @@ bool HandleRenameLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     FString ErrorCode;
     const bool bCopied = CopyLevelMapPackageFile(SourcePath, DestinationPath, bOverwrite, Result, ErrorMessage, ErrorCode);
     if (!bCopied) {
-      SendAutomationResponse(RequestingSocket, RequestId, false, ErrorMessage, Result, ErrorCode);
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, ErrorMessage, Result, ErrorCode);
       return true;
     }
 
-    FString SourceFilename;
-    TryGetAbsoluteMapFilename(SourcePath, SourceFilename);
-    bool bDeletedSource = false;
-    if (!SourceFilename.IsEmpty()) {
-      bDeletedSource = IFileManager::Get().Delete(*SourceFilename, false, true, true);
+    FLevelFileDeletion Deletion;
+    DeleteLevelFiles(SourcePath, true, Deletion);
+    if (!Deletion.SidecarErrorMessage.IsEmpty()) {
+      Result->SetStringField(TEXT("externalDeleteError"), Deletion.SidecarErrorMessage);
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, Deletion.SidecarErrorMessage,
+                             Result, Deletion.SidecarErrorCode);
+      return true;
     }
 
-    const FString SourceBuiltDataPackagePath = SourcePath + TEXT("_BuiltData");
-    FString SourceBuiltDataFilename;
-    bool bSourceBuiltDataExists = false;
-    bool bDeletedBuiltData = false;
-    if (FPackageName::TryConvertLongPackageNameToFilename(
-            SourceBuiltDataPackagePath, SourceBuiltDataFilename, FPackageName::GetAssetPackageExtension())) {
-      SourceBuiltDataFilename = FPaths::ConvertRelativePathToFull(SourceBuiltDataFilename);
-      FPaths::NormalizeFilename(SourceBuiltDataFilename);
-      bSourceBuiltDataExists = IFileManager::Get().FileExists(*SourceBuiltDataFilename);
-      if (bSourceBuiltDataExists) {
-        bDeletedBuiltData = IFileManager::Get().Delete(*SourceBuiltDataFilename, false, true, true);
-      }
-    }
-
-    bool bSourceExternalActorsExists = false;
-    bool bDeletedSourceExternalActors = false;
-    bool bSourceExternalObjectsExists = false;
-    bool bDeletedSourceExternalObjects = false;
-    if (bDeletedSource) {
-      if (!DeleteExternalPackageDirectory(SourcePath, TEXT("__ExternalActors__"),
-                                          bSourceExternalActorsExists,
-                                          bDeletedSourceExternalActors,
-                                          ErrorMessage, ErrorCode) ||
-          !DeleteExternalPackageDirectory(SourcePath, TEXT("__ExternalObjects__"),
-                                          bSourceExternalObjectsExists,
-                                          bDeletedSourceExternalObjects,
-                                          ErrorMessage, ErrorCode)) {
-        Result->SetStringField(TEXT("externalDeleteError"), ErrorMessage);
-        SendAutomationResponse(RequestingSocket, RequestId, false, ErrorMessage,
-                               Result, ErrorCode);
-        return true;
-      }
-    }
-
-    ScanLevelPackagePath(SourcePath, SourceFilename);
-    const bool bSourceFileExistsAfter = !SourceFilename.IsEmpty() && IFileManager::Get().FileExists(*SourceFilename);
-    const bool bRemovedSourceBuiltData = !bSourceBuiltDataExists || bDeletedBuiltData;
-    const bool bRemovedSourceExternalActors = !bSourceExternalActorsExists || bDeletedSourceExternalActors;
-    const bool bRemovedSourceExternalObjects = !bSourceExternalObjectsExists || bDeletedSourceExternalObjects;
-    const bool bRenamed = bDeletedSource && !bSourceFileExistsAfter &&
-        bRemovedSourceBuiltData && bRemovedSourceExternalActors &&
-        bRemovedSourceExternalObjects;
+    ScanLevelPackagePath(SourcePath, Deletion.MapFilename);
+    const bool bSourceFileExistsAfter = !Deletion.MapFilename.IsEmpty() &&
+                                        IFileManager::Get().FileExists(*Deletion.MapFilename);
+    const bool bRenamed = Deletion.bDeletedMap && !bSourceFileExistsAfter && Deletion.SidecarsRemoved();
     Result->SetBoolField(TEXT("renamed"), bRenamed);
-    Result->SetBoolField(TEXT("deletedSourceFile"), bDeletedSource);
-    Result->SetBoolField(TEXT("sourceBuiltDataExists"), bSourceBuiltDataExists);
-    Result->SetBoolField(TEXT("deletedSourceBuiltData"), bDeletedBuiltData);
-    Result->SetBoolField(TEXT("sourceExternalActorsExists"), bSourceExternalActorsExists);
-    Result->SetBoolField(TEXT("deletedSourceExternalActors"), bDeletedSourceExternalActors);
-    Result->SetBoolField(TEXT("sourceExternalObjectsExists"), bSourceExternalObjectsExists);
-    Result->SetBoolField(TEXT("deletedSourceExternalObjects"), bDeletedSourceExternalObjects);
+    Result->SetBoolField(TEXT("deletedSourceFile"), Deletion.bDeletedMap);
+    Result->SetBoolField(TEXT("sourceBuiltDataExists"), Deletion.bBuiltDataExists);
+    Result->SetBoolField(TEXT("deletedSourceBuiltData"), Deletion.bDeletedBuiltData);
+    Result->SetBoolField(TEXT("sourceExternalActorsExists"), Deletion.bExternalActorsExists);
+    Result->SetBoolField(TEXT("deletedSourceExternalActors"), Deletion.bDeletedExternalActors);
+    Result->SetBoolField(TEXT("sourceExternalObjectsExists"), Deletion.bExternalObjectsExists);
+    Result->SetBoolField(TEXT("deletedSourceExternalObjects"), Deletion.bDeletedExternalObjects);
     Result->SetBoolField(TEXT("sourceFileExistsAfter"), bSourceFileExistsAfter);
 
     if (bRenamed) {
-      SendAutomationResponse(RequestingSocket, RequestId, true,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                              FString::Printf(TEXT("Level renamed to: %s"), *DestinationPath), Result);
     } else {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Failed to delete source level after copy: %s"), *SourcePath),
                              Result, TEXT("SOURCE_DELETE_FAILED"));
     }
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

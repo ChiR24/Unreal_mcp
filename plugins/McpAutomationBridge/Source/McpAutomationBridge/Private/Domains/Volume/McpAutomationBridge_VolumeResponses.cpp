@@ -6,7 +6,6 @@
 
 namespace VolumeHelpers
 {
-#if WITH_EDITOR
 TSharedPtr<FJsonObject> CreateVectorObject(const FVector& Value)
 {
     TSharedPtr<FJsonObject> Json = McpHandlerUtils::CreateResultObject();
@@ -27,5 +26,4 @@ TSharedPtr<FJsonObject> CreateVolumeResponse(AActor* Volume, const FString& Volu
     }
     return ResponseJson;
 }
-#endif
 }

@@ -14,7 +14,6 @@
 
 namespace VolumeHelpers
 {
-#if WITH_EDITOR
 bool ResolveAttachmentTarget(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FVector& DefaultExtent, FVolumeAttachmentArgs& OutArgs)
 {
     const FString ActorPath = GetJsonStringField(Payload, TEXT("actorPath"), TEXT(""));
@@ -82,5 +81,4 @@ void SendAttachedVolumeResponse(UMcpAutomationBridgeSubsystem* Subsystem, const 
     Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
         bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
 }
-#endif
 }

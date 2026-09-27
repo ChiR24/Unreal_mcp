@@ -1,35 +1,39 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
 bool HandleWeldVertices(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bMerge)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double Tolerance = GetJsonNumberField(Payload, TEXT("tolerance"), 0.0001);
+    // merge_vertices is a looser weld that also compacts the mesh.
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const double Tolerance = GetJsonNumberField(Payload, TEXT("weldDistance"), bMerge ? 0.001 : 0.0001);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
+    const int32 VertsBefore = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh);
 
     FGeometryScriptWeldEdgesOptions WeldOptions;
     WeldOptions.Tolerance = Tolerance;
     WeldOptions.bOnlyUniquePairs = true;
-
-    UGeometryScriptLibrary_MeshRepairFunctions::WeldMeshEdges(
-        Mesh, WeldOptions, nullptr);
-
+    UGeometryScriptLibrary_MeshRepairFunctions::WeldMeshEdges(Mesh, WeldOptions, nullptr);
+    if (bMerge)
+    {
+        UGeometryScriptLibrary_MeshRepairFunctions::CompactMesh(Mesh, nullptr);
+    }
+    const int32 VertsAfter = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertices welded"), Result);
+    Result->SetNumberField(TEXT("tolerance"), Tolerance);
+    Result->SetNumberField(TEXT("verticesBefore"), VertsBefore);
+    Result->SetNumberField(TEXT("verticesAfter"), VertsAfter);
+    Result->SetNumberField(TEXT("merged"), VertsBefore - VertsAfter);
+    Self->SendAutomationResponse(Socket, RequestId, true, bMerge ? TEXT("Vertices merged") : TEXT("Vertices welded"), Result);
     return true;
 }
 
@@ -38,13 +42,9 @@ bool HandleFillHoles(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     FGeometryScriptFillHolesOptions FillOptions;
     FillOptions.FillMethod = EGeometryScriptFillHolesMethod::Automatic;
@@ -91,13 +91,9 @@ bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const FString&
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     FGeometryScriptDegenerateTriangleOptions Options;
     Options.Mode = EGeometryScriptRepairMeshMode::RepairOrDelete;
@@ -113,50 +109,6 @@ bool HandleRemoveDegenerates(UMcpAutomationBridgeSubsystem* Self, const FString&
     return true;
 }
 
-bool HandleMergeVertices(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double Tolerance = GetJsonNumberField(Payload, TEXT("tolerance"), 0.001);
-    bool bCompactMesh = GetJsonBoolField(Payload, TEXT("compact"), true);
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
-
-    // UE 5.7: GetVertexCount() is not a member of UDynamicMesh - use MeshQueryFunctions
-    int32 VertsBefore = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh);
-
-    // UE 5.7: FGeometryScriptMergeVerticesOptions and MergeIdenticalMeshVertices were removed
-    // Use WeldMeshEdges with FGeometryScriptWeldEdgesOptions instead
-    FGeometryScriptWeldEdgesOptions WeldOptions;
-    WeldOptions.Tolerance = Tolerance;
-    WeldOptions.bOnlyUniquePairs = true;
-    UGeometryScriptLibrary_MeshRepairFunctions::WeldMeshEdges(Mesh, WeldOptions, nullptr);
-
-    if (bCompactMesh)
-    {
-        // UE 5.7: CompactMesh moved to MeshRepairFunctions
-        UGeometryScriptLibrary_MeshRepairFunctions::CompactMesh(Mesh, nullptr);
-    }
-
-    int32 VertsAfter = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh);
-    DMC->NotifyMeshUpdated();
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("tolerance"), Tolerance);
-    Result->SetNumberField(TEXT("verticesBefore"), VertsBefore);
-    Result->SetNumberField(TEXT("verticesAfter"), VertsAfter);
-    Result->SetNumberField(TEXT("merged"), VertsBefore - VertsAfter);
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Vertices merged"), Result);
-    return true;
-}
-
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

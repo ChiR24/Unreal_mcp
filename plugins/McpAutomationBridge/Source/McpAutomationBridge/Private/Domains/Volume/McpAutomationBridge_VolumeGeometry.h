@@ -2,14 +2,15 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "Engine/Brush.h"
 #include "Engine/World.h"
-#endif
+#include "McpAutomationBridgeSubsystem.h"
+#include "Domains/Volume/McpAutomationBridge_VolumeRequestParsing.h"
+#include "Domains/Volume/McpAutomationBridge_VolumeResponses.h"
+#include "Domains/Volume/McpAutomationBridge_VolumeWorldResolution.h"
 
 namespace VolumeHelpers
 {
-#if WITH_EDITOR
 bool CreateBoxBrushForVolume(ABrush* Volume, const FVector& Extent);
 void SetVolumeExtentGeometry(AActor* VolumeActor, const FVector& Extent);
 
@@ -45,5 +46,35 @@ TVolumeClass* SpawnVolumeActor(
     }
     return Volume;
 }
-#endif
+
+// The whole create_<box volume> request: name/location/rotation/extent from
+// the payload, spawn in the editor world, reply with the volume's identity.
+template<typename TVolumeClass>
+bool CreateBoxVolume(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const FVector& DefaultExtent)
+{
+    const FString ClassName = TVolumeClass::StaticClass()->GetName();
+    FVolumeCreateArgs Args;
+    FVector Extent;
+    UWorld* World = nullptr;
+    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
+        !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), DefaultExtent, Extent) ||
+        !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
+    {
+        return true;
+    }
+    TVolumeClass* Volume = SpawnVolumeActor<TVolumeClass>(World, Args.VolumeName, Args.Location, Args.Rotation, Extent);
+    if (!Volume)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to spawn ") + ClassName, nullptr);
+        return true;
+    }
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Created %s: %s"), *ClassName, *Args.VolumeName), CreateVolumeResponse(Volume, TEXT("A") + ClassName));
+    return true;
+}
 }

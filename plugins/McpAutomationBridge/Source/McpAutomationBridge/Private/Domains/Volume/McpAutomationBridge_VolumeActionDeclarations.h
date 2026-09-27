@@ -7,7 +7,7 @@ class FJsonObject;
 class FMcpBridgeWebSocket;
 class UMcpAutomationBridgeSubsystem;
 
-#if WITH_EDITOR && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #define MCP_HAS_POSTPROCESS_VOLUME 1
 #else
 #define MCP_HAS_POSTPROCESS_VOLUME 0

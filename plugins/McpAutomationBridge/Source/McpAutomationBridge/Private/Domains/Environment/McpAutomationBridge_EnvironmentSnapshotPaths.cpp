@@ -5,7 +5,6 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 namespace {
 
@@ -163,4 +162,3 @@ bool McpResolveEnvironmentSnapshotPath(
 }
 
 }
-#endif

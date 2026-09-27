@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -58,23 +58,9 @@ bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     const int64 EstimatedTriangles = 2LL * (static_cast<int64>(WidthSegments) * HeightSegments +
                                             static_cast<int64>(WidthSegments) * DepthSegments +
                                             static_cast<int64>(HeightSegments) * DepthSegments);
-    if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
-    {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Box segment counts would create too many triangles: %lld"), EstimatedTriangles),
-            TEXT("TOO_MANY_TRIANGLES"));
-        return true;
-    }
+    if (!GuardMeshBudget(Self, RequestId, Socket, EstimatedTriangles, TEXT("Box creation"))) return true;
 
-    if (!IsMemoryPressureSafe())
-    {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Memory pressure too high for geometry creation: %.1f%%"), GetMemoryUsagePercent()),
-            TEXT("MEMORY_PRESSURE"));
-        return true;
-    }
-
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
 
     FGeometryScriptPrimitiveOptions Options;
     Options.PolygroupMode = EGeometryScriptPrimitivePolygroupMode::PerFace;
@@ -96,19 +82,12 @@ bool HandleCreateBox(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 
     // Spawn actor with dynamic mesh component. Use direct world spawning so
     // headless/NullRHI automation does not enter viewport hit-proxy placement.
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage(); // Clean up DynamicMesh on error
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
-    Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetNumberField(TEXT("width"), Width);
     Result->SetNumberField(TEXT("height"), Height);
     Result->SetNumberField(TEXT("depth"), Depth);
@@ -129,9 +108,9 @@ bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
-    int32 Subdivisions = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments"), TEXT("subdivisions")}, 16);
+    int32 Subdivisions = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments")}, 16);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSphereBox(
@@ -144,19 +123,12 @@ bool HandleCreateSphere(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
         nullptr
     );
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage(); // Clean up DynamicMesh on error
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
-    Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetNumberField(TEXT("radius"), Radius);
 
     McpHandlerUtils::AddVerification(Result, NewActor);
@@ -174,9 +146,9 @@ bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
-    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 16);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, 16);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCylinder(
@@ -190,19 +162,12 @@ bool HandleCreateCylinder(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         nullptr
     );
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage(); // Clean up DynamicMesh on error
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor for cylinder") : SpawnError, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
-    Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
 
     McpHandlerUtils::AddVerification(Result, NewActor);
 
@@ -226,9 +191,9 @@ bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
         GetJsonNumberField(Payload, TEXT("baseRadius"), DefaultBaseRadius);
     double TopRadius = GetJsonNumberField(Payload, TEXT("topRadius"), 0.0);
     double Height = GetJsonNumberField(Payload, TEXT("height"), 100.0);
-    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 16);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, 16);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCone(
@@ -242,19 +207,12 @@ bool HandleCreateCone(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
         nullptr
     );
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
-
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage(); // Clean up DynamicMesh on error
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor for cone") : SpawnError, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), Name);
 
     McpHandlerUtils::AddVerification(Result, NewActor);
 
@@ -270,11 +228,11 @@ bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
-    double Length = GetJsonNumberField(Payload, TEXT("length"), 100.0);
-    int32 HemisphereSteps = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("hemisphereSteps")}, 4);
-    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 16);
+    double Length = GetJsonNumberField(Payload, TEXT("length"), GetJsonNumberField(Payload, TEXT("height"), 100.0));
+    int32 HemisphereSteps = DeclaredSegments(Payload, {TEXT("numRings")}, 4);
+    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, 16);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCapsule(
@@ -284,25 +242,18 @@ bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FString& Req
         Radius, Length,
         HemisphereSteps, Segments,
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-        0,  // SegmentSteps parameter added in UE 5.5
+        DeclaredSegments(Payload, {TEXT("heightSegments")}, 1) - 1,  // SegmentSteps parameter added in UE 5.5
 #endif
         EGeometryScriptPrimitiveOriginMode::Center,
         nullptr
     );
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
-
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage(); // Clean up DynamicMesh on error
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor for capsule") : SpawnError, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), Name);
 
     McpHandlerUtils::AddVerification(Result, NewActor);
 
@@ -311,4 +262,4 @@ bool HandleCreateCapsule(UMcpAutomationBridgeSubsystem* Self, const FString& Req
 }
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

@@ -5,37 +5,9 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("remove_foliage"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("remove_foliage payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString FoliageTypePath;
-  Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath);
-
-  if (!FoliageTypePath.IsEmpty()) {
-    FString SafePath = SanitizeProjectRelativePath(FoliageTypePath);
-    if (SafePath.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *FoliageTypePath),
-                          TEXT("SECURITY_VIOLATION"));
-      return true;
-    }
-    FoliageTypePath = SafePath;
-  }
-
-  if (!FoliageTypePath.IsEmpty() &&
-      FPaths::GetPath(FoliageTypePath).IsEmpty()) {
-    FoliageTypePath =
-        FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
+  if (!McpFoliageHandlers::ReadFoliageTypePath(*this, RequestId, RequestingSocket, Payload, FoliageTypePath)) {
+    return true;
   }
 
   bool bRemoveAll = false;
@@ -67,9 +39,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   TArray<FBox> Boxes;
   auto AddBox = [&Boxes](const TSharedPtr<FJsonObject> &Area) {
     if (Area.IsValid() && Area->HasField(TEXT("min")) && Area->HasField(TEXT("max"))) {
-      FVector AreaMin = FVector::ZeroVector, AreaMax = FVector::ZeroVector;
-      ReadVectorField(Area, TEXT("min"), AreaMin, FVector::ZeroVector);
-      ReadVectorField(Area, TEXT("max"), AreaMax, FVector::ZeroVector);
+      const FVector AreaMin = ExtractVectorField(Area, TEXT("min"), FVector::ZeroVector);
+      const FVector AreaMax = ExtractVectorField(Area, TEXT("max"), FVector::ZeroVector);
       Boxes.Add(FBox(AreaMin.ComponentMin(AreaMax), AreaMin.ComponentMax(AreaMax)));
     }
   };
@@ -109,22 +80,11 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
       }
       return true;
     });
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
-    Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
-    Resp->SetBoolField(TEXT("existsAfter"), true);
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           FString::Printf(TEXT("Removed %d foliage instances inside %d area(s)"),
-                                           RemovedCount, Boxes.Num()),
-                           Resp, FString());
-    return true;
-  }
-
-  // Emptying FFoliageInfo::Instances left every rendered instance in its component,
-  // out of step with the list the next add appends to; RemoveFoliageType takes the
-  // instances, their components and the type out together.
-  IFA->Modify();
-  if (bRemoveAll) {
+  } else if (bRemoveAll) {
+    // Emptying FFoliageInfo::Instances left every rendered instance in its component,
+    // out of step with the list the next add appends to; RemoveFoliageType takes the
+    // instances, their components and the type out together.
+    IFA->Modify();
     TArray<UFoliageType *> Types;
     IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
       RemovedCount += Info.Instances.Num();
@@ -132,32 +92,22 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
       return true;
     });
     IFA->RemoveFoliageType(Types.GetData(), Types.Num());
-  } else if (!FoliageTypePath.IsEmpty()) {
-    if (UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
-      UFoliageType *FoliageType =
-          LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
-      if (FoliageType) {
-        if (FFoliageInfo *Info = IFA->FindInfo(FoliageType)) {
-          RemovedCount = Info->Instances.Num();
-          IFA->RemoveFoliageType(&FoliageType, 1);
-        }
-      }
+  } else if (!FoliageTypePath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
+    UFoliageType *FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+    if (FFoliageInfo *Info = FoliageType ? IFA->FindInfo(FoliageType) : nullptr) {
+      IFA->Modify();
+      RemovedCount = Info->Instances.Num();
+      IFA->RemoveFoliageType(&FoliageType, 1);
     }
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetBoolField(TEXT("existsAfter"), true);
-
   SendAutomationResponse(RequestingSocket, RequestId, true,
-                         TEXT("Foliage removed successfully"), Resp, FString());
+                         Boxes.Num() > 0 ? FString::Printf(TEXT("Removed %d foliage instances inside %d area(s)"), RemovedCount, Boxes.Num())
+                                         : FString(TEXT("Foliage removed successfully")),
+                         Resp, FString());
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("remove_foliage requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

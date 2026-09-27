@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -18,24 +18,8 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
-        return true;
-    }
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    ADynamicMeshActor* ToolActor = nullptr;
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == TargetActorName)
-            TargetActor = *It;
-        if (It->GetActorLabel() == ToolActorName)
-            ToolActor = *It;
-    }
-
+    ADynamicMeshActor* TargetActor = FindGeometryActor<ADynamicMeshActor>(TargetActorName);
+    ADynamicMeshActor* ToolActor = FindGeometryActor<ADynamicMeshActor>(ToolActorName);
     if (!TargetActor)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Target actor not found: %s"), *TargetActorName), TEXT("ACTOR_NOT_FOUND"));
@@ -49,55 +33,23 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
 
     UDynamicMeshComponent* TargetDMC = TargetActor->GetDynamicMeshComponent();
     UDynamicMeshComponent* ToolDMC = ToolActor->GetDynamicMeshComponent();
-
-    if (!TargetDMC || !ToolDMC)
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMeshComponent not found on actors"), TEXT("COMPONENT_NOT_FOUND"));
-        return true;
-    }
-
-    UDynamicMesh* TargetMesh = TargetDMC->GetDynamicMesh();
-    UDynamicMesh* ToolMesh = ToolDMC->GetDynamicMesh();
-
+    UDynamicMesh* TargetMesh = TargetDMC ? TargetDMC->GetDynamicMesh() : nullptr;
+    UDynamicMesh* ToolMesh = ToolDMC ? ToolDMC->GetDynamicMesh() : nullptr;
     if (!TargetMesh || !ToolMesh)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
         return true;
     }
 
-    int32 TargetTriCount = TargetMesh->GetTriangleCount();
-    int32 ToolTriCount = ToolMesh->GetTriangleCount();
-    int64 EstimatedMaxTriangles = static_cast<int64>(TargetTriCount) + static_cast<int64>(ToolTriCount);
-
-    // Safety: Check memory pressure before heavy operation
-    if (!IsMemoryPressureSafe())
-    {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Boolean %s blocked to prevent OOM."),
-                           GetMemoryUsagePercent(), *OpName),
-            TEXT("MEMORY_PRESSURE"));
-        return true;
-    }
-
-    // Safety: Estimate maximum possible triangles and check against limit
-    // Boolean operations can at most combine both meshes, but may create additional geometry
-    int64 EstimatedWithSafetyMargin = EstimatedMaxTriangles * 3;
-    if (EstimatedWithSafetyMargin > MAX_TRIANGLES_PER_DYNAMIC_MESH)
-    {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Boolean %s would exceed polygon limit. Target: %d, Tool: %d, Estimated max: %lld, Limit: %d"),
-                           *OpName, TargetTriCount, ToolTriCount, EstimatedWithSafetyMargin, MAX_TRIANGLES_PER_DYNAMIC_MESH),
-            TEXT("POLYGON_LIMIT_EXCEEDED"));
-        return true;
-    }
+    const int32 TargetTriCount = TargetMesh->GetTriangleCount();
+    const int32 ToolTriCount = ToolMesh->GetTriangleCount();
+    // A boolean can at most combine both meshes, plus the new cut geometry.
+    if (!GuardMeshBudget(Self, RequestId, Socket, (static_cast<int64>(TargetTriCount) + ToolTriCount) * 3,
+                         *FString::Printf(TEXT("Boolean %s"), *OpName))) return true;
 
     FGeometryScriptMeshBooleanOptions BoolOptions;
     BoolOptions.bFillHoles = true;
     BoolOptions.bSimplifyOutput = false;
-    const bool bAllowEmptyResult = GetJsonBoolField(Payload, TEXT("allowEmptyResult"), GetJsonBoolField(Payload, TEXT("bAllowEmptyResult"), false));
-#if MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT
-    BoolOptions.bAllowEmptyResult = bAllowEmptyResult;
-#endif
 
     UGeometryScriptDebug* BoolDebug = NewObject<UGeometryScriptDebug>(GetTransientPackage());
     UDynamicMesh* ResultMesh = UGeometryScriptLibrary_MeshBooleanFunctions::ApplyMeshBoolean(
@@ -109,8 +61,6 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
         BoolOptions,
         BoolDebug
     );
-
-    bool bBooleanSucceeded = (ResultMesh != nullptr);
 
     bool bEmptyResult = false;
     if (BoolDebug)
@@ -125,23 +75,14 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
             }
         }
     }
-    if (bEmptyResult && !bAllowEmptyResult && ResultMesh && ResultMesh->GetTriangleCount() == TargetTriCount)
-    {
-        bBooleanSucceeded = false;
-    }
-    else if (bEmptyResult && !bAllowEmptyResult && (!ResultMesh || ResultMesh->GetTriangleCount() == 0))
-    {
-        bBooleanSucceeded = false;
-    }
-    if (bEmptyResult && bAllowEmptyResult)
-    {
-        bBooleanSucceeded = (ResultMesh != nullptr);
-    }
+    const int32 ResultTriCount = ResultMesh ? ResultMesh->GetTriangleCount() : 0;
+    // An empty result leaves the target unchanged (same count) or empty: both are failures.
+    bool bBooleanSucceeded = ResultMesh && !(bEmptyResult && (ResultTriCount == 0 || ResultTriCount == TargetTriCount));
     bool bSubtractNoOp = false;
     bool bSubtractBoundsOverlap = false;
     if (bBooleanSucceeded && !bEmptyResult &&
         BoolOp == EGeometryScriptBooleanOperation::Subtract &&
-        ResultMesh && ResultMesh->GetTriangleCount() == TargetTriCount &&
+        ResultTriCount == TargetTriCount &&
         TargetTriCount > 0 && ToolTriCount > 0)
     {
         auto MeshWorldBox = [](UDynamicMesh* Mesh, const FTransform& T, FBox& OutBox)
@@ -171,35 +112,6 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
         }
     }
 
-    // Safety: Check result polygon count
-    int32 ResultTriCount = 0;
-    if (ResultMesh)
-    {
-        ResultTriCount = ResultMesh->GetTriangleCount();
-
-        if (ResultTriCount > MAX_TRIANGLES_PER_DYNAMIC_MESH)
-        {
-            // Log warning but don't fail - the operation already completed
-            UE_LOG(LogMcpGeometryHandlers, Warning,
-                   TEXT("Boolean %s result has %d triangles (exceeds limit of %d)"),
-                   *OpName, ResultTriCount, MAX_TRIANGLES_PER_DYNAMIC_MESH);
-        }
-
-        if (ResultTriCount > WARNING_TRIANGLE_THRESHOLD)
-        {
-            UE_LOG(LogMcpGeometryHandlers, Warning,
-                   TEXT("Boolean %s result has %d triangles (warning threshold: %d)"),
-                   *OpName, ResultTriCount, WARNING_TRIANGLE_THRESHOLD);
-        }
-    }
-    else
-    {
-        // Boolean operation returned null - this typically means the operation failed
-        // (e.g., empty result from intersection, non-overlapping meshes)
-        UE_LOG(LogMcpGeometryHandlers, Warning,
-               TEXT("Boolean %s returned null result - operation may have produced empty geometry"), *OpName);
-    }
-
     // Keep the tool on failure as well as when keepTool was requested: a failed
     // boolean (empty result / no effect) is almost always a placement problem,
     // and the caller needs the actor to still exist in order to move it. Destroy
@@ -219,18 +131,13 @@ bool HandleBooleanOperation(UMcpAutomationBridgeSubsystem* Self, const FString& 
     if (bBooleanSucceeded)
     {
         Result->SetNumberField(TEXT("resultTriangles"), ResultTriCount);
-        if (bEmptyResult && bAllowEmptyResult)
-        {
-            Result->SetStringField(TEXT("note"),
-                TEXT("The operation produced an empty result, which was accepted because allowEmptyResult was set."));
-        }
     }
 
-    if (!bBooleanSucceeded && bEmptyResult && !bAllowEmptyResult)
+    if (!bBooleanSucceeded && bEmptyResult)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(
-                TEXT("Boolean %s produced an empty result — the meshes do not overlap in a way this operation keeps, so the target mesh was left unchanged (%d triangles). Reposition the tool actor (it was kept) so the volumes intersect, or pass allowEmptyResult=true to accept the empty outcome."),
+                TEXT("Boolean %s produced an empty result — the meshes do not overlap in a way this operation keeps, so the target mesh was left unchanged (%d triangles). Reposition the tool actor (it was kept) so the volumes intersect."),
                 *OpName, TargetTriCount),
             Result, TEXT("EMPTY_RESULT"));
         return true;
@@ -279,4 +186,4 @@ bool HandleBooleanIntersection(UMcpAutomationBridgeSubsystem* Self, const FStrin
 
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

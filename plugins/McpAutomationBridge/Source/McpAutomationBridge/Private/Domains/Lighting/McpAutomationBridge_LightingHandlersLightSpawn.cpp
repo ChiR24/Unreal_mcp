@@ -18,101 +18,20 @@
 #include "Kismet/GameplayStatics.h"
 #include "RenderingThread.h"
 
-#if WITH_EDITOR
 namespace McpLightingHandlers
 {
 
-static bool TryGetRequestedLightClass(
-    UMcpAutomationBridgeSubsystem& Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    FString& OutLightClass)
+// The engine light for a short type or its class name ("point"/"PointLight", ...); null for anything else.
+static UClass* FindKnownLightClass(const FString& Name)
 {
-    if (Payload->TryGetStringField(TEXT("lightClass"), OutLightClass) && !OutLightClass.IsEmpty())
-    {
-        return true;
-    }
-
-    FString LightType;
-    const bool bHasLightType =
-        Payload->TryGetStringField(TEXT("lightType"), LightType) && !LightType.IsEmpty();
-    const bool bHasType =
-        !bHasLightType && Payload->TryGetStringField(TEXT("type"), LightType) && !LightType.IsEmpty();
-    if (!bHasLightType && !bHasType)
-    {
-        Subsystem.SendAutomationError(
-            RequestingSocket, RequestId, TEXT("lightClass or lightType required"), TEXT("INVALID_ARGUMENT"));
-        return false;
-    }
-
-    const FString LowerType = LightType.ToLower();
-    if (LowerType == TEXT("point") || LowerType == TEXT("pointlight"))
-    {
-        OutLightClass = TEXT("PointLight");
-    }
-    else if (LowerType == TEXT("directional") || LowerType == TEXT("directionallight"))
-    {
-        OutLightClass = TEXT("DirectionalLight");
-    }
-    else if (LowerType == TEXT("spot") || LowerType == TEXT("spotlight"))
-    {
-        OutLightClass = TEXT("SpotLight");
-    }
-    else if (LowerType == TEXT("rect") || LowerType == TEXT("rectlight"))
-    {
-        OutLightClass = TEXT("RectLight");
-    }
-    else if (LowerType == TEXT("sky") || LowerType == TEXT("skylight"))
-    {
-        OutLightClass = TEXT("SkyLight");
-    }
-    else
-    {
-        const FString ErrorMessage = bHasLightType
-            ? FString::Printf(
-                  TEXT("Invalid lightType: %s. Must be one of: point, directional, spot, rect, sky"),
-                  *LightType)
-            : FString::Printf(
-                  TEXT("Invalid type: %s. Must be one of: point, directional, spot, rect, sky"),
-                  *LightType);
-        Subsystem.SendAutomationError(
-            RequestingSocket,
-            RequestId,
-            ErrorMessage,
-            TEXT("INVALID_LIGHT_TYPE"));
-        return false;
-    }
-
-    return true;
-}
-
-static UClass* ResolveLightClass(const FString& LightClassStr)
-{
-    const FString LowerClassStr = LightClassStr.ToLower();
-    if (LowerClassStr == TEXT("pointlight") || LowerClassStr == TEXT("point"))
-    {
-        return APointLight::StaticClass();
-    }
-    if (LowerClassStr == TEXT("directionallight") || LowerClassStr == TEXT("directional"))
-    {
-        return ADirectionalLight::StaticClass();
-    }
-    if (LowerClassStr == TEXT("spotlight") || LowerClassStr == TEXT("spot"))
-    {
-        return ASpotLight::StaticClass();
-    }
-    if (LowerClassStr == TEXT("rectlight") || LowerClassStr == TEXT("rect"))
-    {
-        return ARectLight::StaticClass();
-    }
-    if (LowerClassStr == TEXT("skylight") || LowerClassStr == TEXT("sky"))
-    {
-        return ASkyLight::StaticClass();
-    }
-
-    UClass* LightClass = ResolveUClass(LightClassStr);
-    return LightClass ? LightClass : ResolveUClass(TEXT("A") + LightClassStr);
+    static const TMap<FString, UClass*> Known = {
+        {TEXT("point"), APointLight::StaticClass()},             {TEXT("pointlight"), APointLight::StaticClass()},
+        {TEXT("directional"), ADirectionalLight::StaticClass()}, {TEXT("directionallight"), ADirectionalLight::StaticClass()},
+        {TEXT("spot"), ASpotLight::StaticClass()},               {TEXT("spotlight"), ASpotLight::StaticClass()},
+        {TEXT("rect"), ARectLight::StaticClass()},               {TEXT("rectlight"), ARectLight::StaticClass()},
+        {TEXT("sky"), ASkyLight::StaticClass()},                 {TEXT("skylight"), ASkyLight::StaticClass()}};
+    UClass* const* Found = Known.Find(Name);
+    return Found ? *Found : nullptr;
 }
 
 bool HandleSpawnLight(
@@ -121,13 +40,31 @@ bool HandleSpawnLight(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString LightClassStr;
-    if (!TryGetRequestedLightClass(Subsystem, RequestId, Payload, RequestingSocket, LightClassStr))
+    // lightClass may name any light class; lightType/type must be one of the engine lights.
+    FString LightClassStr = GetJsonStringField(Payload, TEXT("lightClass"));
+    if (LightClassStr.IsEmpty())
     {
-        return true;
+        LightClassStr = McpGetFirstStringField(Payload, {TEXT("lightType"), TEXT("type")});
+        if (LightClassStr.IsEmpty())
+        {
+            Subsystem.SendAutomationError(
+                RequestingSocket, RequestId, TEXT("lightClass or lightType required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        if (!FindKnownLightClass(LightClassStr))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Invalid lightType: %s. Must be one of: point, directional, spot, rect, sky"), *LightClassStr),
+                TEXT("INVALID_LIGHT_TYPE"));
+            return true;
+        }
     }
-
-    UClass* LightClass = ResolveLightClass(LightClassStr);
+    // UClass names carry no "A" prefix, so ResolveUClass takes the name as given.
+    UClass* LightClass = FindKnownLightClass(LightClassStr);
+    if (!LightClass)
+    {
+        LightClass = ResolveUClass(LightClassStr);
+    }
     // ASkyLight derives from AInfo, NOT from ALight (which covers the local light
     // actors PointLight/SpotLight/RectLight/DirectionalLight). Validating only
     // against ALight made SkyLight permanently unreachable even though the
@@ -155,27 +92,8 @@ bool HandleSpawnLight(
         *LightClass->GetName(),
         *LightClass->GetPathName());
 
-    FVector Location(0.0f, 0.0f, 300.0f);
-    const TSharedPtr<FJsonObject>* LocPtr;
-    if (Payload->TryGetObjectField(TEXT("location"), LocPtr))
-    {
-        Location.X = GetJsonNumberField((*LocPtr), TEXT("x"));
-        Location.Y = GetJsonNumberField((*LocPtr), TEXT("y"));
-        Location.Z = GetJsonNumberField((*LocPtr), TEXT("z"));
-    }
-    else
-    {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("spawn_light: No location provided, using default (0, 0, 300)"));
-    }
-
-    FRotator Rotation = FRotator::ZeroRotator;
-    const TSharedPtr<FJsonObject>* RotPtr;
-    if (Payload->TryGetObjectField(TEXT("rotation"), RotPtr))
-    {
-        Rotation.Pitch = GetJsonNumberField((*RotPtr), TEXT("pitch"));
-        Rotation.Yaw = GetJsonNumberField((*RotPtr), TEXT("yaw"));
-        Rotation.Roll = GetJsonNumberField((*RotPtr), TEXT("roll"));
-    }
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector(0.0, 0.0, 300.0));
+    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World || !World->IsValidLowLevel())
@@ -195,20 +113,15 @@ bool HandleSpawnLight(
         return true;
     }
     UGameplayStatics::FinishSpawningActor(NewLight, SpawnTransform);
-    NewLight->SetActorLabel(LightClassStr);
     NewLight->SetActorLocationAndRotation(Location, Rotation, false, nullptr, ETeleportType::TeleportPhysics);
-
-    FString Name;
-    if (Payload->TryGetStringField(TEXT("name"), Name) && !Name.IsEmpty())
-    {
-        NewLight->SetActorLabel(Name);
-    }
+    const FString Name = GetJsonStringField(Payload, TEXT("name"));
+    NewLight->SetActorLabel(Name.IsEmpty() ? LightClass->GetName() : Name);
 
     if (ULightComponent* BaseLightComp = NewLight->FindComponentByClass<ULightComponent>())
     {
         BaseLightComp->SetMobility(EComponentMobility::Movable);
 
-        // BB-058: ApplyLightProperties below only reads the `properties`
+        // ApplyLightProperties below only reads the `properties`
         // sub-object, so a documented top-level intensity would otherwise be
         // silently dropped and the component keeps the engine default. Mirror
         // spawn_sky_light / the Effect create_dynamic_light path.
@@ -216,6 +129,11 @@ bool HandleSpawnLight(
         if (Payload->TryGetNumberField(TEXT("intensity"), TopLevelIntensity))
         {
             BaseLightComp->SetIntensity(static_cast<float>(TopLevelIntensity));
+        }
+        // A properties.color below still wins.
+        if (Payload->HasField(TEXT("color")))
+        {
+            BaseLightComp->SetLightColor(ExtractLinearColorField(Payload, TEXT("color"), FLinearColor(0.f, 0.f, 0.f, 1.f)));
         }
     }
 
@@ -240,4 +158,3 @@ bool HandleSpawnLight(
 }
 
 }
-#endif

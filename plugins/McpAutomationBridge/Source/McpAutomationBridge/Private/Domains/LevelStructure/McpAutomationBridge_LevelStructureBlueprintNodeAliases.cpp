@@ -20,7 +20,6 @@
 #include "K2Node_MacroInstance.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 namespace
@@ -215,4 +214,3 @@ bool ApplyLevelBlueprintNodeAlias(UK2Node* Node, const FString& EventName, const
     return true;
 }
 }
-#endif

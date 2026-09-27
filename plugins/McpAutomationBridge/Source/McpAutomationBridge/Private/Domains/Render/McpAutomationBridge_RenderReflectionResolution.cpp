@@ -4,7 +4,6 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 #include "Components/ReflectionCaptureComponent.h"
 
 namespace McpRenderHandlers
@@ -130,4 +129,3 @@ bool HandleRenderReflectionResolutionAction(
     return true;
 }
 }
-#endif

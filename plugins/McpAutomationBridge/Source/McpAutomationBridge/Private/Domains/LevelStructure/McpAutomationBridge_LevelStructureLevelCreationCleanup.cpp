@@ -7,7 +7,6 @@
 #include "UObject/Package.h"
 #include "UObject/UObjectHash.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -98,4 +97,3 @@ void CleanupCreatedLevelWorldAfterSave(UWorld* NewWorld, UPackage* Package, cons
 }
 
 }
-#endif

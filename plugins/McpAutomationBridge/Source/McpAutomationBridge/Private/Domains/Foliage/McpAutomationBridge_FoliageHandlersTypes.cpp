@@ -5,19 +5,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("add_foliage_type"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("add_foliage_type payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString Name;
   if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
     SendAutomationError(RequestingSocket, RequestId, TEXT("name required"),
@@ -26,9 +13,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   }
 
   FString MeshPath;
-  if (!Payload->TryGetStringField(TEXT("meshPath"), MeshPath) ||
-      MeshPath.IsEmpty() ||
-      MeshPath.Equals(TEXT("undefined"), ESearchCase::IgnoreCase)) {
+  if (!Payload->TryGetStringField(TEXT("meshPath"), MeshPath) || MeshPath.IsEmpty()) {
     SendAutomationError(RequestingSocket, RequestId,
                         TEXT("valid meshPath required"),
                         TEXT("INVALID_ARGUMENT"));
@@ -74,22 +59,12 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   int32 CullDistance = 0;
   Payload->TryGetNumberField(TEXT("cullDistance"), CullDistance);
 
+  // An object or package path, else one relative to /Game ("Meshes/Rock" or "Meshes/Rock.Rock").
   UStaticMesh *StaticMesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
-  if (!StaticMesh) {
-    if (FPackageName::IsValidLongPackageName(MeshPath)) {
-      StaticMesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
-    }
-
+  if (!StaticMesh && !MeshPath.StartsWith(TEXT("/"))) {
+    StaticMesh = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/%s"), *MeshPath));
     if (!StaticMesh) {
-      if (!MeshPath.StartsWith(TEXT("/"))) {
-        FString GamePath = FString::Printf(TEXT("/Game/%s"), *MeshPath);
-        StaticMesh = LoadObject<UStaticMesh>(nullptr, *GamePath);
-        if (!StaticMesh) {
-          FString BaseName = FPaths::GetBaseFilename(MeshPath);
-          GamePath = FString::Printf(TEXT("/Game/%s.%s"), *MeshPath, *BaseName);
-          StaticMesh = LoadObject<UStaticMesh>(nullptr, *GamePath);
-        }
-      }
+      StaticMesh = LoadObject<UStaticMesh>(nullptr, *FString::Printf(TEXT("/Game/%s.%s"), *MeshPath, *FPaths::GetBaseFilename(MeshPath)));
     }
   }
 
@@ -145,6 +120,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
     FoliageType =
         LoadObject<UFoliageType_InstancedStaticMesh>(Package, *AssetName);
   }
+  const bool bCreated = FoliageType == nullptr;
   if (!FoliageType) {
     FoliageType = NewObject<UFoliageType_InstancedStaticMesh>(
         Package, FName(*AssetName), RF_Public | RF_Standalone);
@@ -159,12 +135,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   FoliageType->SetStaticMesh(StaticMesh);
   FoliageType->Density = static_cast<float>(Density);
   FoliageType->Scaling = EFoliageScaling::Uniform;
+  // Uniform scaling reads ScaleX only.
   FoliageType->ScaleX.Min = static_cast<float>(MinScale);
   FoliageType->ScaleX.Max = static_cast<float>(MaxScale);
-  FoliageType->ScaleY.Min = static_cast<float>(MinScale);
-  FoliageType->ScaleY.Max = static_cast<float>(MaxScale);
-  FoliageType->ScaleZ.Min = static_cast<float>(MinScale);
-  FoliageType->ScaleZ.Max = static_cast<float>(MaxScale);
   FoliageType->AlignToNormal = AlignToNormal;
   FoliageType->RandomYaw = RandomYaw;
   if (CullDistance > 0) {
@@ -176,12 +149,10 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   McpSafeAssetSave(FoliageType);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetBoolField(TEXT("created"), true);
+  Resp->SetBoolField(TEXT("created"), bCreated);
   Resp->SetBoolField(TEXT("exists_after"), true);
   Resp->SetStringField(TEXT("asset_path"), FoliageType->GetPathName());
   Resp->SetStringField(TEXT("used_mesh"), MeshPath);
-  Resp->SetStringField(TEXT("method"), TEXT("native_asset_creation"));
 
   McpHandlerUtils::AddVerification(Resp, FoliageType);
 
@@ -190,10 +161,4 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
                          FString());
 
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("add_foliage_type requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

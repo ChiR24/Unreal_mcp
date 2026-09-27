@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -9,13 +9,9 @@ bool HandleRecomputeTangents(UMcpAutomationBridgeSubsystem* Self, const FString&
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     // Recompute tangents using MikkT space
     FGeometryScriptTangentsOptions TangentOptions;
@@ -35,13 +31,9 @@ bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     double SplitAngle = GetJsonNumberField(Payload, TEXT("splitAngle"), 60.0);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     // UE 5.7: SplitAngle was removed from FGeometryScriptCalculateNormalsOptions
     // Use ComputeSplitNormals with FGeometryScriptSplitNormalsOptions instead
@@ -67,4 +59,4 @@ bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

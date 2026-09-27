@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool HandleInspectGlobalAction(
@@ -28,4 +27,3 @@ bool HandleInspectGlobalAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

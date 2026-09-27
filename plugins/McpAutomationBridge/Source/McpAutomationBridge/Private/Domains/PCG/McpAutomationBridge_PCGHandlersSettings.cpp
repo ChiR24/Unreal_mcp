@@ -1,6 +1,6 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
 
-#if WITH_EDITOR && MCP_HAS_PCG
+#if MCP_HAS_PCG
 namespace McpPCGHandlers
 {
 UClass* ResolvePCGSettingsClass(const FString& RawClassName)
@@ -19,9 +19,9 @@ UClass* ResolvePCGSettingsClass(const FString& RawClassName)
     const FString Trimmed = RawClassName.TrimStartAndEnd();
     Candidates.Add(Trimmed);
 
-    if (const FPCGSettingsAlias* Alias = FindPCGSettingsAlias(Trimmed))
+    if (const TCHAR* SettingsClass = FindPCGSettingsAlias(Trimmed))
     {
-        Candidates.Add(Alias->SettingsClass);
+        Candidates.Add(SettingsClass);
     }
 
     FString ShortName = Trimmed;
@@ -46,52 +46,16 @@ UClass* ResolvePCGSettingsClass(const FString& RawClassName)
         Candidates.Add(TEXT("PCG") + ShortName + TEXT("Settings"));
     }
 
+    // ResolveClassByName already finds a loaded class by short or full name (native PCG modules
+    // register their classes on load), so one pass per spelling is enough.
     for (const FString& Candidate : Candidates)
     {
-        if (UClass* Class = ResolveClassByName(Candidate))
-        {
-            if (Class->IsChildOf(UPCGSettings::StaticClass()) && !Class->HasAnyClassFlags(CLASS_Abstract))
-            {
-                return Class;
-            }
-        }
-
-        static const TCHAR* ScriptModules[] = {TEXT("PCG"), TEXT("PCGGeometryScriptInterop")};
-        for (const TCHAR* ScriptModule : ScriptModules)
-        {
-            const FString ScriptPath = FString::Printf(TEXT("/Script/%s.%s"), ScriptModule, *Candidate);
-            if (UClass* Class = FindObject<UClass>(nullptr, *ScriptPath))
-            {
-                if (Class->IsChildOf(UPCGSettings::StaticClass()) && !Class->HasAnyClassFlags(CLASS_Abstract))
-                {
-                    return Class;
-                }
-            }
-            if (UClass* Class = LoadObject<UClass>(nullptr, *ScriptPath))
-            {
-                if (Class->IsChildOf(UPCGSettings::StaticClass()) && !Class->HasAnyClassFlags(CLASS_Abstract))
-                {
-                    return Class;
-                }
-            }
-        }
-    }
-
-    for (TObjectIterator<UClass> It; It; ++It)
-    {
-        UClass* Class = *It;
+        UClass* Class = ResolveClassByName(Candidate);
         if (Class && Class->IsChildOf(UPCGSettings::StaticClass()) && !Class->HasAnyClassFlags(CLASS_Abstract))
         {
-            for (const FString& Candidate : Candidates)
-            {
-                if (Class->GetName().Equals(Candidate, ESearchCase::IgnoreCase))
-                {
-                    return Class;
-                }
-            }
+            return Class;
         }
     }
-
     return nullptr;
 }
 
@@ -159,14 +123,6 @@ bool ResolveClassForProperty(UObject* Target, const TCHAR* PropertyName, const F
     }
 
     UClass* Class = ResolveClassByName(ClassName);
-    if (!Class)
-    {
-        Class = LoadObject<UClass>(nullptr, *ClassName);
-    }
-    if (!Class && ClassName.StartsWith(TEXT("/Script/")))
-    {
-        Class = FindObject<UClass>(nullptr, *ClassName);
-    }
     if (!Class)
     {
         OutError = FString::Printf(TEXT("Could not resolve class '%s'."), *ClassName);

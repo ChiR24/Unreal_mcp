@@ -6,10 +6,8 @@
 
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "Engine/StaticMesh.h"
 #include "Runtime/Launch/Resources/Version.h"
-#endif
 
 namespace McpRenderHandlers
 {
@@ -19,7 +17,6 @@ bool HandleNaniteRebuildMesh(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     const FString AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));
     if (AssetPath.IsEmpty())
     {
@@ -60,8 +57,5 @@ bool HandleNaniteRebuildMesh(
         RequestingSocket, RequestId, true,
         TEXT("Nanite enabled and mesh rebuilt."), Result);
     return true;
-#else
-    return false;
-#endif
 }
 }

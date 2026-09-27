@@ -19,7 +19,6 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
         return false;
     }
 
-#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -191,10 +190,4 @@ bool UMcpAutomationBridgeSubsystem::HandleInspectAction(
 
     return McpEnvironmentHandlers::HandleInspectObjectAction(
         *this, RequestId, ObjectPath, Payload, RequestingSocket);
-#else
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("inspect requires editor build"), nullptr,
-                           TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }

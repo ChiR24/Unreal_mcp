@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 class AActor;
 class FMcpBridgeWebSocket;
@@ -9,10 +10,8 @@ class UWorld;
 
 namespace VolumeHelpers
 {
-#if WITH_EDITOR
-UWorld* GetEditorWorld();
+using McpHandlerUtils::GetEditorWorld;
 AActor* FindVolumeByName(UWorld* World, const FString& VolumeName);
 AActor* FindActorByPathOrName(UWorld* World, const FString& ActorPath);
 bool ResolveEditorWorld(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld*& OutWorld);
-#endif
 }

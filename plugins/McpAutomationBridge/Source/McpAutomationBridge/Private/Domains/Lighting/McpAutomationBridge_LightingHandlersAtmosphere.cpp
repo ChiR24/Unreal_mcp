@@ -12,7 +12,6 @@
 #include "HAL/IConsoleManager.h"
 #include "Subsystems/EditorActorSubsystem.h"
 
-#if WITH_EDITOR
 namespace McpLightingHandlers
 {
 
@@ -91,46 +90,11 @@ bool HandleSetupGlobalIllumination(
         return true;
     }
 
-    if (Method == TEXT("LumenGI"))
-    {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
-        {
-            CVar->Set(1);
-        }
-        if (IConsoleVariable* CVarRefl = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ReflectionMethod")))
-        {
-            CVarRefl->Set(1);
-        }
-    }
-    else if (Method == TEXT("ScreenSpace"))
-    {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
-        {
-            CVar->Set(2);
-        }
-    }
-    else if (Method == TEXT("None"))
-    {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
-        {
-            CVar->Set(0);
-        }
-    }
-    else if (Method == TEXT("RayTraced"))
-    {
-        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
-        {
-            CVar->Set(3);
-        }
-    }
-    else if (Method == TEXT("Lightmass"))
-    {
-        if (IConsoleVariable* CVarGI = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
-        {
-            CVarGI->Set(0);
-        }
-    }
-    else
+    // r.DynamicGlobalIlluminationMethod per method (Lightmass is baked: no dynamic GI).
+    static const TMap<FString, int32> GIMethods = {
+        {TEXT("None"), 0}, {TEXT("LumenGI"), 1}, {TEXT("ScreenSpace"), 2}, {TEXT("RayTraced"), 3}, {TEXT("Lightmass"), 0}};
+    const int32* GIMethod = GIMethods.Find(Method);
+    if (!GIMethod)
     {
         Subsystem.SendAutomationError(
             RequestingSocket,
@@ -140,6 +104,16 @@ bool HandleSetupGlobalIllumination(
                 *Method),
             TEXT("INVALID_GI_METHOD"));
         return true;
+    }
+    if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
+    {
+        CVar->Set(*GIMethod);
+    }
+    // Lumen GI pairs with Lumen reflections.
+    IConsoleVariable* CVarRefl = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ReflectionMethod"));
+    if (*GIMethod == 1 && CVarRefl)
+    {
+        CVarRefl->Set(1);
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -254,4 +228,3 @@ bool HandleConfigureShadows(
 }
 
 }
-#endif

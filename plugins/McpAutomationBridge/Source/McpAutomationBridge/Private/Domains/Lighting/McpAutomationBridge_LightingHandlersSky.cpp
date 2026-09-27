@@ -11,7 +11,6 @@
 #include "Engine/TextureCube.h"
 #include "Subsystems/EditorActorSubsystem.h"
 
-#if WITH_EDITOR
 namespace McpLightingHandlers
 {
 
@@ -192,4 +191,3 @@ bool HandleEnsureSingleSkyLight(
 }
 
 }
-#endif

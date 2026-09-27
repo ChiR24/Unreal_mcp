@@ -4,7 +4,6 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 #include "Components/PlanarReflectionComponent.h"
 #include "Components/ReflectionCaptureComponent.h"
 #include "Engine/BoxReflectionCapture.h"
@@ -230,4 +229,3 @@ bool HandleRenderReflectionAction(
     return false;
 }
 }
-#endif

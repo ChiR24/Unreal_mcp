@@ -14,7 +14,6 @@
 #endif
 #include "WorldPartition/WorldPartition.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -24,7 +23,7 @@ bool HandleAssignActorToDataLayer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT(""));
@@ -44,59 +43,14 @@ bool HandleAssignActorToDataLayer(
         return true;
     }
 
-    UWorld* World = GetEditorWorld();
-    if (!World)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr);
-        return true;
-    }
-
-    // Check if World Partition is enabled
-    UWorldPartition* WorldPartition = World->GetWorldPartition();
-    if (!WorldPartition)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("World Partition is not enabled for this level. Data layers require World Partition."), nullptr, TEXT("WORLD_PARTITION_NOT_ENABLED"));
-        return true;
-    }
-
-    // CRITICAL: Check if the level uses External Objects (One File Per Actor / OFPA)
-    // Actor-to-DataLayer assignment requires OFPA for actors to be compatible with data layers.
-    // Non-OFPA actors cannot be assigned to data layers.
-    ULevel* PersistentLevel = World->PersistentLevel;
-    if (!PersistentLevel || !PersistentLevel->IsUsingExternalObjects())
-    {
-        TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-        ErrorDetails->SetStringField(TEXT("reason"), TEXT("One File Per Actor (OFPA) / External Actors is not enabled for this level."));
-        ErrorDetails->SetStringField(TEXT("solution"), TEXT("Enable 'Use External Actors' in World Partition settings. Actors must be external to be compatible with data layers."));
-        ErrorDetails->SetBoolField(TEXT("worldPartitionEnabled"), true);
-        ErrorDetails->SetBoolField(TEXT("externalActorsEnabled"), PersistentLevel ? PersistentLevel->IsUsingExternalObjects() : false);
-
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Actor-to-DataLayer assignment requires 'One File Per Actor' (External Actors). Actors must be stored as external packages to be compatible with data layers."),
-            ErrorDetails, TEXT("EXTERNAL_ACTORS_NOT_ENABLED"));
-        return true;
-    }
-
-    UDataLayerEditorSubsystem* DataLayerEditorSubsystem = UDataLayerEditorSubsystem::Get();
+    UWorld* World = nullptr;
+    UDataLayerEditorSubsystem* DataLayerEditorSubsystem =
+        RequireDataLayerWorld(Subsystem, RequestId, Socket, TEXT("Actor-to-DataLayer assignment"), World);
     if (!DataLayerEditorSubsystem)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Data Layer Editor Subsystem not available"), nullptr, TEXT("SUBSYSTEM_NOT_AVAILABLE"));
         return true;
     }
-
-    // Find the actor
-    AActor* FoundActor = nullptr;
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
-        {
-            FoundActor = *It;
-            break;
-        }
-    }
+    AActor* FoundActor = FindActorByNameInWorldForMcp(World, ActorName, true);
 
     if (!FoundActor)
     {
@@ -212,4 +166,3 @@ bool HandleAssignActorToDataLayer(
 }
 
 }
-#endif

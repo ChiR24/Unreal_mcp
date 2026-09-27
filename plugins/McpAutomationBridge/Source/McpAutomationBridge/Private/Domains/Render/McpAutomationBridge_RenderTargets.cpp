@@ -1,12 +1,12 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Render/McpAutomationBridge_RenderHandlersPrivate.h"
+#include "Foundation/Render/McpRenderTargetFormat.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/PostProcessVolume.h"
@@ -15,7 +15,6 @@
 #include "Materials/MaterialInterface.h"
 #include "TextureResource.h"
 #include "UObject/Package.h"
-#endif
 
 namespace McpRenderHandlers
 {
@@ -25,7 +24,6 @@ bool HandleCreateRenderTarget(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     const FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty())
     {
@@ -80,36 +78,8 @@ bool HandleCreateRenderTarget(
     EPixelFormat Format = PF_B8G8R8A8;
     if (!FormatStr.IsEmpty())
     {
-        if (FormatStr.Equals(TEXT("RGBA16F"), ESearchCase::IgnoreCase) ||
-            FormatStr.Equals(TEXT("FloatRGBA"), ESearchCase::IgnoreCase))
-        {
-            Format = PF_FloatRGBA;
-        }
-        else if (FormatStr.Equals(TEXT("RGBA32F"), ESearchCase::IgnoreCase))
-        {
-            Format = PF_A32B32G32R32F;
-        }
-        else if (FormatStr.Equals(TEXT("R8"), ESearchCase::IgnoreCase))
-        {
-            Format = PF_R8;
-        }
-        else if (FormatStr.Equals(TEXT("RG8"), ESearchCase::IgnoreCase))
-        {
-            Format = PF_G8;
-        }
-        else if (FormatStr.Equals(TEXT("R16F"), ESearchCase::IgnoreCase))
-        {
-            Format = PF_R16F;
-        }
-        else if (FormatStr.Equals(TEXT("R32F"), ESearchCase::IgnoreCase))
-        {
-            Format = PF_R32_FLOAT;
-        }
-        else if (FormatStr.Equals(TEXT("A2B10G10R10"), ESearchCase::IgnoreCase))
-        {
-            Format = PF_A2B10G10R10;
-        }
-        else
+        Format = McpParseRenderTargetPixelFormat(FormatStr);
+        if (Format == PF_Unknown)
         {
             Subsystem->SendAutomationError(
                 RequestingSocket, RequestId,
@@ -162,74 +132,5 @@ bool HandleCreateRenderTarget(
     Subsystem->SendAutomationResponse(
         RequestingSocket, RequestId, true, TEXT("Render target created."), Result);
     return true;
-#else
-    return false;
-#endif
-}
-
-bool HandleAttachRenderTargetToVolume(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-#if WITH_EDITOR
-    const FString VolumePath = GetJsonStringField(Payload, TEXT("volumePath"));
-    const FString TargetPath = GetJsonStringField(Payload, TEXT("targetPath"));
-    APostProcessVolume* Volume = Cast<APostProcessVolume>(FindObject<AActor>(nullptr, *VolumePath));
-    if (!Volume)
-    {
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Volume not found."), TEXT("ACTOR_NOT_FOUND"));
-        return true;
-    }
-
-    UTextureRenderTarget2D* RT = LoadObject<UTextureRenderTarget2D>(nullptr, *TargetPath);
-    if (!RT)
-    {
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Render target not found."), TEXT("ASSET_NOT_FOUND"));
-        return true;
-    }
-
-    const FString MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
-    const FString ParamName = GetJsonStringField(Payload, TEXT("parameterName"));
-    if (MaterialPath.IsEmpty() || ParamName.IsEmpty())
-    {
-        Subsystem->SendAutomationError(
-            RequestingSocket, RequestId, TEXT("materialPath and parameterName required."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
-    if (!BaseMat)
-    {
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Base material not found."), TEXT("ASSET_NOT_FOUND"));
-        return true;
-    }
-
-    UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(BaseMat, Volume);
-    if (!MID)
-    {
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create MID."), TEXT("CREATE_FAILED"));
-        return true;
-    }
-
-    MID->SetTextureParameterValue(FName(*ParamName), RT);
-    Volume->Settings.AddBlendable(MID, 1.0f);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("action"), TEXT("manage_render"));
-    Result->SetStringField(TEXT("subAction"), TEXT("attach_render_target_to_volume"));
-    Result->SetStringField(TEXT("renderTarget"), TargetPath);
-    Result->SetStringField(TEXT("materialPath"), MaterialPath);
-    Result->SetStringField(TEXT("parameterName"), ParamName);
-    Result->SetBoolField(TEXT("attached"), true);
-    McpHandlerUtils::AddVerification(Result, Volume);
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, true,
-        TEXT("Render target attached to volume via material."), Result);
-    return true;
-#else
-    return false;
-#endif
 }
 }

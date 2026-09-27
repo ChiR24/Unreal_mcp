@@ -1,17 +1,13 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "EngineUtils.h"
 #include "Editor.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
-UWorld *McpGetEditorWorld()
-{
-    return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-}
 AActor *McpFindActorByNameOrClass(UClass *ActorClass, const FString &ActorName)
 {
-    UWorld *World = McpGetEditorWorld();
+    UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         return nullptr;
@@ -42,8 +38,12 @@ AActor *McpFindActorByNameOrClass(UClass *ActorClass, const FString &ActorName)
     return ActorName.IsEmpty() ? FirstClassMatch : nullptr;
 }
 AActor *McpFindOrSpawnActor(UClass *ActorClass, const FString &ActorName, const FVector &Location,
-                                   const FRotator &Rotation)
+                                   const FRotator &Rotation, bool *bOutSpawned)
 {
+    if (bOutSpawned)
+    {
+        *bOutSpawned = false;
+    }
     if (!ActorClass)
     {
         return nullptr;
@@ -55,7 +55,12 @@ AActor *McpFindOrSpawnActor(UClass *ActorClass, const FString &ActorName, const 
     }
 
     const FString Label = ActorName.IsEmpty() ? ActorClass->GetName() : ActorName;
-    return SpawnActorInActiveWorld<AActor>(ActorClass, Location, Rotation, Label);
+    AActor *Spawned = SpawnActorInActiveWorld<AActor>(ActorClass, Location, Rotation, Label);
+    if (bOutSpawned)
+    {
+        *bOutSpawned = Spawned != nullptr;
+    }
+    return Spawned;
 }
 UActorComponent *McpFindComponentByClass(AActor *Actor, UClass *ComponentClass)
 {
@@ -125,21 +130,12 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     }
 
     const FString ActorName = McpGetFirstStringField(Payload, {TEXT("targetActor"), TEXT("actorName"), TEXT("waterBodyName"), TEXT("name")});
-    const FVector Location = McpGetVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-    const FRotator Rotation = McpGetRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     const FString EffectiveActorName = ActorName.IsEmpty() ? DefaultActorName : ActorName;
-    bool bExistedBefore = false;
-    if (UWorld *ProbeWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr)
-    {
-        for (TActorIterator<AActor> It(ProbeWorld); It; ++It)
-        {
-            // By label or object name, as the lookup below finds it; a label-only probe
-            // reported ExponentialHeightFog_0 (labelled HeightFog) as created.
-            if (It->GetActorLabel().Equals(EffectiveActorName, ESearchCase::IgnoreCase) ||
-                It->GetName().Equals(EffectiveActorName, ESearchCase::IgnoreCase)) { bExistedBefore = true; break; }
-        }
-    }
-    AActor *Actor = McpFindOrSpawnActor(ActorClass, EffectiveActorName, Location, Rotation);
+    bool bSpawned = false;
+    AActor *Actor = McpFindOrSpawnActor(ActorClass, EffectiveActorName, Location, Rotation, &bSpawned);
+    const bool bExistedBefore = !bSpawned;
     if (!Actor)
     {
         OutMessage = FString::Printf(TEXT("Failed to create or find actor for class: %s"), *ActorClassPath);
@@ -269,4 +265,3 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

@@ -10,10 +10,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
         return false;
     }
 
-#if !WITH_EDITOR
-    SendAutomationError(Socket, RequestId, TEXT("manage_pcg requires an editor build."), TEXT("EDITOR_ONLY"));
-    return true;
-#elif !MCP_HAS_PCG
+#if !MCP_HAS_PCG
     SendAutomationError(Socket, RequestId, TEXT("PCG plugin support is not available in this build. Enable the 'Procedural Content Generation Framework (PCG)' plugin (Edit > Plugins), restart the editor, then rebuild this automation plugin so PCG support is compiled in."), TEXT("PCG_PLUGIN_NOT_AVAILABLE"));
     return true;
 #else
@@ -30,8 +27,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
         return true;
     }
 
-    const FString SubAction = McpPCGHandlers::NormalizePCGSubAction(Payload);
-    if (SubAction.IsEmpty() || !McpConsolidatedActions::IsPCGAction(SubAction))
+    const FString SubAction = McpConsolidatedActions::GetPayloadSubAction(Payload);
+    if (SubAction.IsEmpty() || !McpConsolidatedActions::PCG().Contains(SubAction))
     {
         SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Unknown PCG subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
         return true;
@@ -59,7 +56,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
         return McpPCGHandlers::HandleSetPCGPartitionGridSize(this, RequestId, Payload, Socket, bSave);
     }
 
-    FString GraphRawPath = McpPCGHandlers::GetFirstStringField(Payload, {TEXT("graphPath"), TEXT("assetPath")});
+    FString GraphRawPath = McpGetFirstStringField(Payload, {TEXT("graphPath"), TEXT("assetPath")});
     if (GraphRawPath.IsEmpty())
     {
         SendAutomationError(Socket, RequestId, TEXT("Missing 'graphPath'."), TEXT("INVALID_ARGUMENT"));
@@ -68,7 +65,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManagePCGAction(
 
     FString GraphPath;
     FString Error;
-    UPCGGraph* Graph = McpPCGHandlers::LoadPCGGraph(GraphRawPath, GraphPath, Error);
+    UPCGGraph* Graph = McpPCGHandlers::LoadPCGAsset<UPCGGraph>(GraphRawPath, TEXT("PCG graph"), GraphPath, Error);
     if (!Graph)
     {
         SendAutomationError(Socket, RequestId, Error, TEXT("ASSET_NOT_FOUND"));

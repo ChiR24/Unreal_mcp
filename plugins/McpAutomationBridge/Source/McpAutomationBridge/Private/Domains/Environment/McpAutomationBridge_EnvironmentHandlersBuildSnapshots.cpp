@@ -8,7 +8,6 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 namespace {
 
@@ -166,4 +165,3 @@ bool HandleBuildSnapshotAction(const FString &LowerSub, FEnvironmentBuildContext
 }
 
 }
-#endif

@@ -1,12 +1,24 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
-UDynamicMesh* GetOrCreateDynamicMesh(UObject* Outer)
+AActor* SpawnPrimitiveOrReply(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                              const FTransform& Transform, const FString& Name, UDynamicMesh* DynMesh, TSharedPtr<FJsonObject>& OutResult)
 {
-    return NewObject<UDynamicMesh>(Outer);
+    FString SpawnError;
+    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh, SpawnError);
+    if (!NewActor)
+    {
+        DynMesh->MarkAsGarbage();
+        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
+        return nullptr;
+    }
+    OutResult = McpHandlerUtils::CreateResultObject();
+    OutResult->SetStringField(TEXT("name"), NewActor->GetActorLabel());
+    OutResult->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
+    return NewActor;
 }
 
 AActor* SpawnDynamicMeshActorWithMesh(
@@ -94,57 +106,48 @@ AActor* SpawnDynamicMeshActorWithMesh(
     return NewActor;
 }
 
-ADynamicMeshActor* FindDynamicMeshActorForGeometry(const FString& ActorName)
+TOptional<FMcpGeometryTarget> ResolveGeometryTarget(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                                                     const FString& ActorName, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        return nullptr;
-    }
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
-        {
-            return *It;
-        }
-    }
-
-    return nullptr;
-}
-
-bool ResolveDynamicMeshForGeometry(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                                          const FString& ActorName, TSharedPtr<FMcpBridgeWebSocket> Socket,
-                                          ADynamicMeshActor*& OutActor, UDynamicMeshComponent*& OutComponent,
-                                          UDynamicMesh*& OutMesh)
-{
-    OutActor = nullptr;
-    OutComponent = nullptr;
-    OutMesh = nullptr;
-
     if (ActorName.IsEmpty())
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return false;
+        return {};
     }
-
-    OutActor = FindDynamicMeshActorForGeometry(ActorName);
-    if (!OutActor)
+    FMcpGeometryTarget Target;
+    Target.Actor = FindGeometryActor<ADynamicMeshActor>(ActorName);
+    if (!Target.Actor)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
-        return false;
+        return {};
     }
-
-    OutComponent = OutActor->GetDynamicMeshComponent();
-    if (!OutComponent || !OutComponent->GetDynamicMesh())
+    Target.Component = Target.Actor->GetDynamicMeshComponent();
+    Target.Mesh = Target.Component ? Target.Component->GetDynamicMesh() : nullptr;
+    if (!Target.Mesh)
     {
         Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
-        return false;
+        return {};
     }
-
-    OutMesh = OutComponent->GetDynamicMesh();
-    return true;
+    return Target;
 }
+
+USplineComponent* ResolveGeometrySpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                                        TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& SplineActorName)
+{
+    AActor* SplineActor = FindGeometryActor<AActor>(SplineActorName);
+    if (!SplineActor)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Spline actor not found: %s"), *SplineActorName), TEXT("SPLINE_NOT_FOUND"));
+        return nullptr;
+    }
+    USplineComponent* Spline = SplineActor->FindComponentByClass<USplineComponent>();
+    if (!Spline)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s has no spline component"), *SplineActorName), TEXT("SPLINE_COMPONENT_NOT_FOUND"));
+    }
+    return Spline;
+}
+
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

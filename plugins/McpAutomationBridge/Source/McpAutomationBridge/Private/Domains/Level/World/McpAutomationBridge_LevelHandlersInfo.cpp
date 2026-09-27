@@ -8,19 +8,40 @@
 #include "Modules/ModuleManager.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
+namespace {
+// The registry entry for a package or object path; a bare package path also tries "<path>.<ShortName>".
+FAssetData FindLevelAssetData(const FString& Path) {
+  IAssetRegistry& AssetRegistry = FAssetRegistryModule::GetRegistry();
+  FAssetData Data = AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Path));
+  const FString ShortName = FPackageName::GetShortName(Path);
+  if (!Data.IsValid() && !ShortName.IsEmpty() && !Path.Contains(TEXT("."))) {
+    Data = AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Path + TEXT(".") + ShortName));
+  }
+  return Data;
+}
+
+// The entry's tags, minus FiBData: Blueprint bytecode that is kilobytes of non-UTF8 text, not metadata.
+TSharedPtr<FJsonObject> TagsWithoutFiBData(const FAssetData& Data) {
+  TSharedPtr<FJsonObject> Tags = McpHandlerUtils::CreateResultObject();
+  for (const auto& Kvp : Data.TagsAndValues) {
+    const FString TagKey = Kvp.Key.ToString();
+    if (!TagKey.Equals(TEXT("FiBData"), ESearchCase::IgnoreCase)) {
+      Tags->SetStringField(TagKey, Kvp.Value.AsString());
+    }
+  }
+  return Tags;
+}
+} // namespace
+
 bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString LevelPath;
     if (Payload.IsValid()) {
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
-      if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("level_path"), LevelPath);
     }
 
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
@@ -29,7 +50,7 @@ bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FS
     if (!LevelPath.IsEmpty()) {
       LevelPath = SanitizeProjectRelativePath(LevelPath);
       if (LevelPath.IsEmpty()) {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Invalid levelPath"), nullptr,
                                TEXT("SECURITY_VIOLATION"));
         return true;
@@ -57,70 +78,30 @@ bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FS
       Result->SetNumberField(TEXT("actorCount"), TargetLevel->Actors.Num());
       Result->SetBoolField(TEXT("loaded"), true);
 
-      // BB-018: a loaded level must be identifiable as a map asset without a
+      // A loaded level must be identifiable as a map asset without a
       // follow-up list_levels call. The record already declares these fields;
       // the unloaded branch emits them, so mirror that identity here.
       if (!PackageName.IsEmpty()) {
         Result->SetStringField(TEXT("packageName"), PackageName);
         Result->SetStringField(TEXT("assetName"), AssetName);
         Result->SetStringField(TEXT("objectPath"), PackageName + TEXT(".") + AssetName);
-        IAssetRegistry& AssetRegistry =
-            FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-        FAssetData LevelAssetData = AssetRegistry.GetAssetByObjectPath(
-            FSoftObjectPath(PackageName + TEXT(".") + AssetName));
+        const FAssetData LevelAssetData = FindLevelAssetData(PackageName);
         if (LevelAssetData.IsValid()) {
           Result->SetStringField(TEXT("assetClass"),
                                  MCP_ASSET_DATA_GET_CLASS_PATH(LevelAssetData));
-          TSharedPtr<FJsonObject> LoadedTags = McpHandlerUtils::CreateResultObject();
-          for (const auto& Kvp : LevelAssetData.TagsAndValues) {
-            // Skip binary/encoded engine metadata tags. FiBData is blueprint
-            // bytecode; serializing it as a JSON string leaks kilobytes of
-            // non-UTF8 garbage that is useless to callers and can break strict
-            // JSON consumers.
-            const FString TagKey = Kvp.Key.ToString();
-            if (TagKey.Equals(TEXT("FiBData"), ESearchCase::IgnoreCase)) {
-              continue;
-            }
-            LoadedTags->SetStringField(TagKey, Kvp.Value.AsString());
-          }
-          Result->SetObjectField(TEXT("tagsAndValues"), LoadedTags);
+          Result->SetObjectField(TEXT("tagsAndValues"), TagsWithoutFiBData(LevelAssetData));
         }
       }
 
-      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level info retrieved"), Result);
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Level info retrieved"), Result);
       return true;
     }
 
     // Not loaded as a UWorld — fall back to AssetRegistry lookup so callers can
     // query metadata for any map asset without forcing a load. We do NOT auto-load.
     if (!LevelPath.IsEmpty()) {
-      IAssetRegistry& AssetRegistry =
-          FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-
-      // Accept either a package path ("/Game/Maps/Foo") or a full object path
-      // ("/Game/Maps/Foo.Foo"). FSoftObjectPath handles both forms.
-      FAssetData AssetData;
-      #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(LevelPath));
-      if (!AssetData.IsValid()) {
-        // Try appending `.<ShortName>` to a bare package path.
-        const FString ShortName = FPackageName::GetShortName(LevelPath);
-        if (!ShortName.IsEmpty() && !LevelPath.Contains(TEXT("."))) {
-          const FString ObjectPath = LevelPath + TEXT(".") + ShortName;
-          AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(ObjectPath));
-        }
-      }
-      #else
-      AssetData = AssetRegistry.GetAssetByObjectPath(FName(*LevelPath));
-      if (!AssetData.IsValid()) {
-        const FString ShortName = FPackageName::GetShortName(LevelPath);
-        if (!ShortName.IsEmpty() && !LevelPath.Contains(TEXT("."))) {
-          const FString ObjectPath = LevelPath + TEXT(".") + ShortName;
-          AssetData = AssetRegistry.GetAssetByObjectPath(FName(*ObjectPath));
-        }
-      }
-      #endif
-
+      // Accept either a package path ("/Game/Maps/Foo") or a full object path ("/Game/Maps/Foo.Foo").
+      const FAssetData AssetData = FindLevelAssetData(LevelPath);
       if (AssetData.IsValid()) {
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("loaded"), false);
@@ -131,29 +112,17 @@ bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FS
         Result->SetStringField(TEXT("objectPath"), MCP_ASSET_DATA_GET_OBJECT_PATH(AssetData));
         Result->SetStringField(TEXT("assetClass"), MCP_ASSET_DATA_GET_CLASS_PATH(AssetData));
 
-        TSharedPtr<FJsonObject> TagsObj = McpHandlerUtils::CreateResultObject();
-        for (const auto& Kvp : AssetData.TagsAndValues) {
-          // See the note above: FiBData is binary blueprint bytecode, not metadata.
-          const FString TagKey = Kvp.Key.ToString();
-          if (TagKey.Equals(TEXT("FiBData"), ESearchCase::IgnoreCase)) {
-            continue;
-          }
-          TagsObj->SetStringField(TagKey, Kvp.Value.AsString());
-        }
-        Result->SetObjectField(TEXT("tagsAndValues"), TagsObj);
+        Result->SetObjectField(TEXT("tagsAndValues"), TagsWithoutFiBData(AssetData));
 
-        SendAutomationResponse(RequestingSocket, RequestId, true,
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level info retrieved (asset registry, not loaded)"), Result);
         return true;
       }
     }
 
-    SendAutomationResponse(RequestingSocket, RequestId, false,
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                            FString::Printf(TEXT("Level not found: %s"), *LevelPath),
                            nullptr, TEXT("LEVEL_NOT_FOUND"));
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

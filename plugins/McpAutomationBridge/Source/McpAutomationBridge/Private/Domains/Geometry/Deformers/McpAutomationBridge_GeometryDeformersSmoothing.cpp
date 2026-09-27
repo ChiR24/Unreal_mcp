@@ -1,123 +1,71 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
-bool HandleSmooth(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+namespace
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), 10);
-    double Alpha = GetJsonNumberField(Payload, TEXT("alpha"), 0.2);
+// Iterative Laplacian smoothing; smooth and relax differ only in their defaults. `strength` is the step.
+bool ApplySmoothing(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                    TSharedPtr<FMcpBridgeWebSocket> Socket, int32 DefaultIterations, double DefaultStep,
+                    const TCHAR* Message)
+{
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), DefaultIterations);
+    const double Step = GetJsonNumberField(Payload, TEXT("strength"), DefaultStep);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
 
     FGeometryScriptIterativeMeshSmoothingOptions SmoothOptions;
     SmoothOptions.NumIterations = Iterations;
-    SmoothOptions.Alpha = Alpha;
-
-    FGeometryScriptMeshSelection Selection;
-
-    UGeometryScriptLibrary_MeshDeformFunctions::ApplyIterativeSmoothingToMesh(
-        Mesh, Selection, SmoothOptions, nullptr);
-
-    DMC->NotifyMeshUpdated();
+    SmoothOptions.Alpha = Step;
+    UGeometryScriptLibrary_MeshDeformFunctions::ApplyIterativeSmoothingToMesh(Target->Mesh, FGeometryScriptMeshSelection(), SmoothOptions, nullptr);
+    Target->Component->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("iterations"), Iterations);
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Smooth applied"), Result);
+    Result->SetNumberField(TEXT("strength"), Step);
+    Self->SendAutomationResponse(Socket, RequestId, true, Message, Result);
     return true;
+}
+}
+
+bool HandleSmooth(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    return ApplySmoothing(Self, RequestId, Payload, Socket, 10, 0.2, TEXT("Smooth applied"));
 }
 
 bool HandleRelax(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), 3);
-    double Strength = GetJsonNumberField(Payload, TEXT("strength"), 0.5);
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
-
-    // Relax is essentially Laplacian smoothing with lower strength
-    FGeometryScriptIterativeMeshSmoothingOptions SmoothOptions;
-    SmoothOptions.NumIterations = Iterations;
-    SmoothOptions.Alpha = Strength;
-    UGeometryScriptLibrary_MeshDeformFunctions::ApplyIterativeSmoothingToMesh(Mesh, FGeometryScriptMeshSelection(), SmoothOptions, nullptr);
-
-    DMC->NotifyMeshUpdated();
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("iterations"), Iterations);
-    Result->SetNumberField(TEXT("strength"), Strength);
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Relax applied"), Result);
-    return true;
+    return ApplySmoothing(Self, RequestId, Payload, Socket, 3, 0.5, TEXT("Relax applied"));
 }
 
 bool HandleStretch(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    // deform_mesh declares strength; factor is undeclared and never reached the handler.
-    double Factor = GetJsonNumberField(Payload, TEXT("strength"), GetJsonNumberField(Payload, TEXT("factor"), 1.5));
+    const double Factor = GetJsonNumberField(Payload, TEXT("strength"), 1.5);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
 
-    // Stretch by non-uniform scaling
     FVector ScaleVec = FVector::OneVector;
-    if (Axis == TEXT("X")) ScaleVec.X = Factor;
-    else if (Axis == TEXT("Y")) ScaleVec.Y = Factor;
-    else ScaleVec.Z = Factor;
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
-    UGeometryScriptLibrary_MeshTransformFunctions::ScaleMesh(Mesh, ScaleVec, FVector::ZeroVector, true, nullptr);
-#else
-    // UE 5.3 fallback: Scale mesh using low-level API
-    {
-        UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-        for (int32 VID : EditMesh.VertexIndicesItr())
-        {
-            FVector3d Pos = EditMesh.GetVertex(VID);
-            Pos.X *= ScaleVec.X;
-            Pos.Y *= ScaleVec.Y;
-            Pos.Z *= ScaleVec.Z;
-            EditMesh.SetVertex(VID, Pos);
-        }
-            // EditMesh.UpdateVertexNormals(); // Not available in UE 5.3
-            // Mesh->NotifyMeshUpdated(); // Not available in UE 5.3
-    }
-#endif
-
-    DMC->NotifyMeshUpdated();
+    ScaleVec[AxisIndexFromPayload(Payload)] = Factor;
+    ScaleMesh(Target->Mesh, ScaleVec);
+    Target->Component->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetStringField(TEXT("axis"), Axis);
+    Result->SetStringField(TEXT("axis"), GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper());
     Result->SetNumberField(TEXT("factor"), Factor);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Stretch applied"), Result);
     return true;
 }
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

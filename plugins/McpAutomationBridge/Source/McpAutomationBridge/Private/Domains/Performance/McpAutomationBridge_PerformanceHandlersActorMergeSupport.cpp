@@ -1,8 +1,8 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 
 #include "Domains/Performance/McpAutomationBridge_PerformanceHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Components/StaticMeshComponent.h"
 #include "EngineUtils.h"
 
@@ -20,19 +20,9 @@ AActor* ResolveMergeActorByName(UWorld* World, const FString& Name)
         return ByPath;
     }
 
-    for (TActorIterator<AActor> It(World); It; ++It)
+    if (AActor* Actor = FindActorByNameInWorldForMcp(World, Name, true))
     {
-        AActor* Actor = *It;
-        if (!Actor)
-        {
-            continue;
-        }
-
-        if (Actor->GetActorLabel().Equals(Name, ESearchCase::IgnoreCase) ||
-            Actor->GetName().Equals(Name, ESearchCase::IgnoreCase))
-        {
-            return Actor;
-        }
+        return Actor;
     }
 
     return nullptr;
@@ -61,4 +51,3 @@ void CollectMergeComponents(
     }
 }
 }
-#endif

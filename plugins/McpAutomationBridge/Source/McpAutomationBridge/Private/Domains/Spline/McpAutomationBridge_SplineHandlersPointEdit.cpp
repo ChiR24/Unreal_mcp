@@ -5,7 +5,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -21,34 +20,10 @@ bool HandleAddSplinePoint(
     int32 Index = GetJsonIntField(Payload, TEXT("index"), -1);
     FString PointType = GetJsonStringField(Payload, TEXT("pointType"), TEXT("Curve"));
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByName(World, ActorName);
-    if (!Actor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    USplineComponent* SplineComp = FindSplineComponent(Actor);
+    AActor* Actor = nullptr;
+    USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
     if (!SplineComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
         return true;
     }
 
@@ -64,7 +39,7 @@ bool HandleAddSplinePoint(
 
     SplineComp->SetSplinePointType(Index, ParseSplinePointType(PointType), true);
     SplineComp->UpdateSpline();
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), Index);
@@ -85,34 +60,10 @@ bool HandleRemoveSplinePoint(
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByName(World, ActorName);
-    if (!Actor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    USplineComponent* SplineComp = FindSplineComponent(Actor);
+    AActor* Actor = nullptr;
+    USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
     if (!SplineComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
         return true;
     }
 
@@ -125,7 +76,7 @@ bool HandleRemoveSplinePoint(
 
     SplineComp->RemoveSplinePoint(PointIndex, true);
     SplineComp->UpdateSpline();
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("removedIndex"), PointIndex);
@@ -147,34 +98,10 @@ bool HandleSetSplinePointPosition(
     int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
     FVector Position = ExtractVectorField(Payload, TEXT("position"), FVector::ZeroVector);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByName(World, ActorName);
-    if (!Actor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    USplineComponent* SplineComp = FindSplineComponent(Actor);
+    AActor* Actor = nullptr;
+    USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
     if (!SplineComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
         return true;
     }
 
@@ -187,7 +114,7 @@ bool HandleSetSplinePointPosition(
 
     SplineComp->SetLocationAtSplinePoint(PointIndex, Position, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("pointIndex"), PointIndex);
@@ -197,4 +124,3 @@ bool HandleSetSplinePointPosition(
         FString::Printf(TEXT("Set position for spline point %d"), PointIndex), Result);
     return true;
 }
-#endif

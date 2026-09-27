@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 #include "EditorViewportClient.h"
 #include "Engine/EngineBaseTypes.h"
 #include "LevelEditorViewport.h"
@@ -54,8 +53,8 @@ void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp)
     {
         Resp->SetStringField(TEXT("viewportType"), Client->IsPerspective() ? TEXT("Perspective") : TEXT("Orthographic"));
         Resp->SetNumberField(TEXT("viewportTypeIndex"), static_cast<int32>(Client->GetViewportType()));
-        Resp->SetObjectField(TEXT("cameraLocation"), McpMakeVectorObject(Client->GetViewLocation()));
-        Resp->SetObjectField(TEXT("cameraRotation"), McpMakeRotatorObject(Client->GetViewRotation()));
+        Resp->SetObjectField(TEXT("cameraLocation"), McpHandlerUtils::VectorToJson(Client->GetViewLocation()));
+        Resp->SetObjectField(TEXT("cameraRotation"), McpHandlerUtils::RotatorToJson(Client->GetViewRotation()));
         Resp->SetNumberField(TEXT("cameraFov"), Client->ViewFOV);
         Resp->SetNumberField(TEXT("orthoZoom"), Client->GetOrthoZoom());
         FString ViewMode = StaticEnum<EViewModeIndex>()->GetNameStringByValue(static_cast<int64>(Client->GetViewMode()));
@@ -88,11 +87,10 @@ void McpAppendViewportInfo(TSharedPtr<FJsonObject> Resp)
     {
         Resp->SetStringField(TEXT("cameraManager"), CameraManager->GetPathName());
         Resp->SetStringField(TEXT("cameraManagerClass"), CameraManager->GetClass()->GetName());
-        Resp->SetObjectField(TEXT("pieCameraLocation"), McpMakeVectorObject(CameraManager->GetCameraLocation()));
-        Resp->SetObjectField(TEXT("pieCameraRotation"), McpMakeRotatorObject(CameraManager->GetCameraRotation()));
+        Resp->SetObjectField(TEXT("pieCameraLocation"), McpHandlerUtils::VectorToJson(CameraManager->GetCameraLocation()));
+        Resp->SetObjectField(TEXT("pieCameraRotation"), McpHandlerUtils::RotatorToJson(CameraManager->GetCameraRotation()));
         Resp->SetNumberField(TEXT("pieCameraFov"), CameraManager->GetFOVAngle());
     }
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

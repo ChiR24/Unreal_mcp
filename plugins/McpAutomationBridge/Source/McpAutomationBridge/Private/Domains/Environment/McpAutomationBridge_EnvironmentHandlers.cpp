@@ -192,14 +192,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
                                   RequestingSocket);
     }
 
-#if WITH_EDITOR
     return McpEnvironmentHandlers::HandleBuildEnvironmentEditorAction(
         *this, RequestId, LowerSub, Payload, RequestingSocket);
-#else
-    SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("Environment building actions require editor build."), nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }

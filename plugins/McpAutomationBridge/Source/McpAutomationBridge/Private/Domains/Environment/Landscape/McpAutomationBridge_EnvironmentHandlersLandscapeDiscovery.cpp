@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload)
@@ -13,7 +12,7 @@ ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload)
         LandscapePath = TEXT("/") + LandscapePath;
     }
 
-    UWorld *World = McpGetEditorWorld();
+    UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (World)
     {
         for (TActorIterator<ALandscape> It(World); It; ++It)
@@ -68,15 +67,7 @@ bool McpResolveProjectFilePath(const FString &InputPath, FString &OutAbsolutePat
 bool McpGetLandscapeExtentForEnvironmentAction(ALandscape *Landscape, int32 &OutMinX, int32 &OutMinY, int32 &OutMaxX, int32 &OutMaxY)
 {
     ULandscapeInfo *LandscapeInfo = Landscape ? Landscape->GetLandscapeInfo() : nullptr;
-    if (!LandscapeInfo)
-    {
-        return false;
-    }
-    if (LandscapeInfo->GetLandscapeExtent(OutMinX, OutMinY, OutMaxX, OutMaxY))
-    {
-        return true;
-    }
-    return McpLandscapeMetadataTags::GetLandscapeMetadataExtent(Landscape, OutMinX, OutMinY, OutMaxX, OutMaxY);
+    return LandscapeInfo && LandscapeInfo->GetLandscapeExtent(OutMinX, OutMinY, OutMaxX, OutMaxY);
 }
 void McpApplyHeightmapRegionFromPayload(const TSharedPtr<FJsonObject> &Payload,
                                                const int32 FullMinX, const int32 FullMinY,
@@ -116,4 +107,3 @@ ALandscape *McpFindLandscapeForEnvironmentAction(const TSharedPtr<FJsonObject> &
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

@@ -2,7 +2,6 @@
 
 #include "Domains/Landscape/McpAutomationBridge_LandscapeCreation.h"
 
-#if WITH_EDITOR
 #include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "Engine/World.h"
@@ -14,7 +13,6 @@
 #include "LandscapeProxy.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Domains/Landscape/McpLandscapeMetadataTags.h"
 #include "Materials/Material.h"
 #include "ScopedTransaction.h"
 
@@ -51,9 +49,6 @@ void CreateLandscapeOnGameThread(
   Landscape->SubsectionSizeQuads =
       Request.QuadsPerComponent / Request.SectionsPerComponent;
   Landscape->NumSubsections = Request.SectionsPerComponent;
-  McpLandscapeMetadataTags::EncodeLandscapeMetadata(
-      Landscape, Request.ComponentsX, Request.ComponentsY,
-      Request.QuadsPerComponent);
 
   if (!Request.MaterialPath.IsEmpty()) {
     UMaterialInterface *Mat =
@@ -90,7 +85,6 @@ void CreateLandscapeOnGameThread(
   ImportHeightData.Add(FGuid(), HeightArray);
   TMap<FGuid, TArray<FLandscapeImportLayerInfo>> ImportLayerInfos;
   ImportLayerInfos.Add(FGuid(), TArray<FLandscapeImportLayerInfo>());
-  TArray<FLandscapeLayer> EditLayers;
 
   {
     const FScopedTransaction Transaction(
@@ -120,32 +114,17 @@ void CreateLandscapeOnGameThread(
                       Request.ComponentsY - 1, Request.SectionsPerComponent,
                       Request.QuadsPerComponent, ImportHeightData, nullptr,
                       ImportLayerInfos, ELandscapeImportAlphamapType::Layered,
-                      EditLayers.Num() > 0 ? &EditLayers : nullptr);
+                      nullptr);
     PRAGMA_ENABLE_DEPRECATION_WARNINGS
     Landscape->CreateDefaultLayer();
 #endif
   }
 
-  Landscape->SetActorLabel(Request.Name.IsEmpty()
-                               ? FString::Printf(TEXT("Landscape_%dx%d"),
-                                                 Request.ComponentsX,
-                                                 Request.ComponentsY)
-                               : Request.Name);
-  if (!Request.MaterialPath.IsEmpty()) {
-    UMaterialInterface *Mat =
-        LoadObject<UMaterialInterface>(nullptr, *Request.MaterialPath);
-    if (Mat) {
-      Landscape->LandscapeMaterial = Mat;
-      Landscape->PostEditChange();
-    }
-  }
   if (Landscape->GetRootComponent() &&
       !Landscape->GetRootComponent()->IsRegistered()) {
     Landscape->RegisterAllComponents();
   }
-  if (IsValid(Landscape)) {
-    Landscape->PostEditChange();
-  }
+  Landscape->PostEditChange();
 
   // Refuse to report success for an empty shell. Everything below used to be
   // echoed straight back from Request, so a landscape that built nothing was
@@ -179,4 +158,3 @@ void CreateLandscapeOnGameThread(
                                    FString());
 }
 }
-#endif

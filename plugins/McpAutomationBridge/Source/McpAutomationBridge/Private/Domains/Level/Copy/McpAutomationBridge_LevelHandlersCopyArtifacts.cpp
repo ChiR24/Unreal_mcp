@@ -5,7 +5,6 @@
 #include "Misc/Paths.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 namespace {
 bool CopyBuiltDataIfPresent(FLevelCopyContext& Context,
                             TSharedPtr<FJsonObject>& Result,
@@ -100,5 +99,4 @@ bool CopyLevelMapAndArtifacts(FLevelCopyContext& Context,
   DeleteLevelCopyDestinationBackups(Context);
   return true;
 }
-#endif
 } // namespace McpLevelHandlers

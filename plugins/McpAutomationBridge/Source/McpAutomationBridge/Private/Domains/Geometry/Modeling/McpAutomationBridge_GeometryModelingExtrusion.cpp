@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -8,17 +8,13 @@ bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    // amount/offset are the documented spellings; distance stays as the legacy alias (dogfood #137).
-    double Distance = GetJsonNumberField(Payload, TEXT("distance"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("offset"), 10.0)));
-    FVector Direction = ReadVectorFromPayload(Payload, TEXT("direction"), FVector(0, 0, 1));
+    const FVector Offset = ExtractVectorField(Payload, TEXT("offset"), FVector::ZeroVector);
+    const double Distance = Offset.IsNearlyZero() ? FaceOpDistance(Payload, 10.0) : Offset.Size();
+    const FVector Direction = Offset.IsNearlyZero() ? FVector::UpVector : Offset.GetSafeNormal();
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     FGeometryScriptMeshLinearExtrudeOptions ExtrudeOptions;
     ExtrudeOptions.Distance = Distance;
@@ -27,12 +23,7 @@ bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
 
     FGeometryScriptMeshSelection Selection;
     bool bHasSelection = false;
-    FString SelectionError;
-    if (!McpBuildTriangleSelection(Mesh, Payload, Selection, bHasSelection, SelectionError))
-    {
-        Self->SendAutomationError(Socket, RequestId, SelectionError, TEXT("INVALID_SELECTION"));
-        return true;
-    }
+    if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection)) return true;
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshLinearExtrudeFaces(
         Mesh, ExtrudeOptions, Selection, nullptr);
@@ -51,15 +42,11 @@ bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
                               bool bIsInset)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double Distance = GetJsonNumberField(Payload, TEXT("distance"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("offset"), 5.0)));
+    double Distance = FaceOpDistance(Payload, 5.0);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     FGeometryScriptMeshInsetOutsetFacesOptions Options;
     Options.Distance = bIsInset ? -Distance : Distance;  // Negative for inset
@@ -67,12 +54,7 @@ bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
     FGeometryScriptMeshSelection Selection;
     bool bHasSelection = false;
-    FString SelectionError;
-    if (!McpBuildTriangleSelection(Mesh, Payload, Selection, bHasSelection, SelectionError))
-    {
-        Self->SendAutomationError(Socket, RequestId, SelectionError, TEXT("INVALID_SELECTION"));
-        return true;
-    }
+    if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection)) return true;
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshInsetOutsetFaces(
         Mesh, Options, Selection, nullptr);
@@ -91,20 +73,13 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double BevelDistance = GetJsonNumberField(Payload, TEXT("distance"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("offset"), 5.0)));
-    // model_mesh declares segments; subdivisions is undeclared, so the gateway
-    // rejected it and every bevel came out a single flat chamfer.
-    int32 Subdivisions = Payload->HasField(TEXT("segments"))
-        ? GetJsonIntField(Payload, TEXT("segments"), 0)
-        : GetJsonIntField(Payload, TEXT("subdivisions"), 0);
+    double BevelDistance = FaceOpDistance(Payload, 5.0);
+    // No segments = a single flat chamfer (the chamfer action routes here).
+    int32 Subdivisions = GetJsonIntField(Payload, TEXT("segments"), 0);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     FGeometryScriptMeshBevelOptions BevelOptions;
     BevelOptions.BevelDistance = BevelDistance;
@@ -114,12 +89,7 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 
     FGeometryScriptMeshSelection BevelSelection;
     bool bHasBevelSelection = false;
-    FString BevelSelectionError;
-    if (!McpBuildTriangleSelection(Mesh, Payload, BevelSelection, bHasBevelSelection, BevelSelectionError))
-    {
-        Self->SendAutomationError(Socket, RequestId, BevelSelectionError, TEXT("INVALID_SELECTION"));
-        return true;
-    }
+    if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, BevelSelection, bHasBevelSelection)) return true;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
     if (bHasBevelSelection)
     {
@@ -146,4 +116,4 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 }
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

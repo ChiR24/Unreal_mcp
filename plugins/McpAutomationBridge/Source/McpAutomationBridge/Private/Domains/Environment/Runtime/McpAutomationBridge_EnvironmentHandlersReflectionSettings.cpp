@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 FProperty *McpFindPropertyCaseInsensitive(UObject *Object, const FString &PropertyName)
@@ -10,27 +9,10 @@ FProperty *McpFindPropertyCaseInsensitive(UObject *Object, const FString &Proper
         return nullptr;
     }
 
-    if (FProperty *Exact = Object->GetClass()->FindPropertyByName(FName(*PropertyName)))
-    {
-        return Exact;
-    }
-
-    for (TFieldIterator<FProperty> It(Object->GetClass()); It; ++It)
-    {
-        FProperty *Property = *It;
-        if (!Property)
-        {
-            continue;
-        }
-
-        const FString Candidate = Property->GetName();
-        if (Candidate.Equals(PropertyName, ESearchCase::IgnoreCase) ||
-            (Candidate.StartsWith(TEXT("b")) && Candidate.Mid(1).Equals(PropertyName, ESearchCase::IgnoreCase)))
-        {
-            return Property;
-        }
-    }
-    return nullptr;
+    // FName lookup ignores case; a bool member may also be named without its "b" prefix.
+    UClass *Class = Object->GetClass();
+    FProperty *Property = Class->FindPropertyByName(FName(*PropertyName));
+    return Property ? Property : Class->FindPropertyByName(FName(*(TEXT("b") + PropertyName)));
 }
 UObject *McpGetObjectPropertyValue(UObject *Object, const FString &PropertyName)
 {
@@ -98,28 +80,18 @@ bool McpInvokeObjectSetter(UObject *Object, const FName &FunctionName, UObject *
     Object->ProcessEvent(Function, &Params);
     return true;
 }
-bool McpApplyNumberProperty(UObject *Target, std::initializer_list<const TCHAR *> PropertyNames, double Value,
+bool McpApplyNumberProperty(UObject *Target, const TCHAR *PropertyName, double Value,
                                    const FString &ResponseName, TSharedPtr<FJsonObject> Resp, TArray<FString> &Applied)
 {
-    if (!Target)
+    FProperty *Property = McpFindPropertyCaseInsensitive(Target, PropertyName);
+    FString ApplyError;
+    if (!Property || !McpPropertyReflection::ApplyJsonValueToProperty(Target, Property, MakeShared<FJsonValueNumber>(Value), ApplyError))
     {
         return false;
     }
-
-    for (const TCHAR *PropertyName : PropertyNames)
-    {
-        if (FProperty *Property = McpFindPropertyCaseInsensitive(Target, PropertyName))
-        {
-            FString ApplyError;
-            if (McpPropertyReflection::ApplyJsonValueToProperty(Target, Property, MakeShared<FJsonValueNumber>(Value), ApplyError))
-            {
-                Applied.Add(Property->GetName());
-                Resp->SetNumberField(ResponseName, Value);
-                return true;
-            }
-        }
-    }
-    return false;
+    Applied.Add(Property->GetName());
+    Resp->SetNumberField(ResponseName, Value);
+    return true;
 }
 int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload,
                                      TArray<FString> &AppliedProperties, TArray<FString> &FailedProperties)
@@ -129,12 +101,12 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
         return 0;
     }
 
-    // BB-055: the canonical payload key skyLightIntensity does not match the
+    // The canonical payload key skyLightIntensity does not match the
     // USkyLightComponent property name "Intensity" (McpApplyPayloadSettings
     // below does a case-insensitive exact-name match only), so translate it
     // explicitly before the generic pass. Mirrors spawn_sky_light's top-level
     // intensity handling (LightingHandlersSky.cpp).
-    // Live-discovered (Todo 39): configure_sky_light passes the ASkyLight actor
+    // Live-discovered: configure_sky_light passes the ASkyLight actor
     // (not the component) to McpApplyEnvironmentSettings, so resolve the
     // component from the actor when the direct Cast fails.
     USkyLightComponent *SkyComp = Cast<USkyLightComponent>(Target);
@@ -180,7 +152,7 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
         if (RotationObject && RotationObject->IsValid())
         {
             const FRotator NewRotation =
-                McpGetRotatorField(Payload, RotationKey, RotatableActor->GetActorRotation());
+                ExtractRotatorField(Payload, RotationKey, RotatableActor->GetActorRotation());
             RotatableActor->Modify();
             RotatableActor->SetActorRotation(NewRotation);
             RotatableActor->MarkPackageDirty();
@@ -251,4 +223,3 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

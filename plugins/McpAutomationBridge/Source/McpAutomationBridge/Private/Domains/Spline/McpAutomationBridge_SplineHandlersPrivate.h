@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 
 class AActor;
 class FMcpBridgeWebSocket;
@@ -13,13 +14,18 @@ class UWorld;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpSplineHandlers, Log, All);
 
-#if WITH_EDITOR
 #include "Components/SplineComponent.h"
 #include "Components/SplineMeshComponent.h"
 
 
-AActor* FindActorByName(UWorld* World, const FString& ActorName);
 USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentName = TEXT(""));
+// Each of these replies with the refusal itself and returns null / empty on failure.
+AActor* ResolveSplineActor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName);
+USplineComponent* ResolveSplineTarget(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName, AActor*& OutActor);
+USplineMeshComponent* ResolveSplineMeshTarget(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName, const FString& ComponentName, AActor*& OutActor);
+// Spawns an empty, labelled actor whose root is a registered instance spline; null if the spawn failed.
+USplineComponent* SpawnSplineActor(UWorld* World, const FString& Name, const FVector& Location, const FRotator& Rotation);
+FString RequireSplineProjectPath(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const TCHAR* Field, const FString& Path);
 USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName = TEXT(""));
 ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis);
 ESplinePointType::Type ParseSplinePointType(const FString& TypeStr);
@@ -46,7 +52,6 @@ bool HandleCreateSplineMeshComponentOnActor(UMcpAutomationBridgeSubsystem* Self,
 bool HandleSetSplineMeshAsset(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleConfigureSplineMeshAxis(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetSplineMeshMaterial(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
-bool HandleCreateSplineMeshActor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 bool HandleScatterMeshesAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleConfigureMeshSpacing(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
@@ -60,4 +65,3 @@ bool HandleCreateCableSpline(UMcpAutomationBridgeSubsystem* Self, const FString&
 bool HandleCreatePipeSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 bool HandleGetSplinesInfo(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
-#endif

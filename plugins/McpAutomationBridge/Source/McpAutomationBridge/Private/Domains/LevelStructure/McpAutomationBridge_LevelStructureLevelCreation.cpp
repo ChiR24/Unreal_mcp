@@ -11,12 +11,12 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
+#include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/Package.h"
 #include "WorldPartition/WorldPartition.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -43,39 +43,13 @@ bool HandleCreateLevel(
         return true;
     }
 
-    // These characters are not allowed in Windows filenames and UE asset names
-    const FString InvalidChars = TEXT("\\/:*?\"<>|");
-    for (const TCHAR& Char : LevelName)
-    {
-        if (InvalidChars.Contains(FString(1, &Char)))
-        {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("levelName contains invalid character: '%c'. Cannot use: \\ / : * ? \" < > |"), Char),
-                nullptr, TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-    }
-
-    if (LevelName.Len() > 255)
+    // Object- and package-name characters (a level name is both), reserved device names (CON, LPT1, ...) and length.
+    FText InvalidNameReason;
+    if (!FName::IsValidXName(LevelName, FString(INVALID_OBJECTNAME_CHARACTERS) + INVALID_LONGPACKAGE_CHARACTERS, &InvalidNameReason) ||
+        !FFileHelper::IsFilenameValidForSaving(LevelName, InvalidNameReason))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("levelName exceeds maximum length of 255 characters"),
-            nullptr, TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    const TArray<FString> ReservedNames = {
-        TEXT("CON"), TEXT("PRN"), TEXT("AUX"), TEXT("NUL"),
-        TEXT("COM1"), TEXT("COM2"), TEXT("COM3"), TEXT("COM4"), TEXT("COM5"),
-        TEXT("COM6"), TEXT("COM7"), TEXT("COM8"), TEXT("COM9"),
-        TEXT("LPT1"), TEXT("LPT2"), TEXT("LPT3"), TEXT("LPT4"), TEXT("LPT5"),
-        TEXT("LPT6"), TEXT("LPT7"), TEXT("LPT8"), TEXT("LPT9")
-    };
-    FString UpperLevelName = LevelName.ToUpper();
-    if (ReservedNames.Contains(UpperLevelName))
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("levelName cannot be a reserved Windows device name: %s"), *LevelName),
+            FString::Printf(TEXT("Invalid levelName '%s': %s"), *LevelName, *InvalidNameReason.ToString()),
             nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
@@ -113,6 +87,28 @@ bool HandleCreateLevel(
         FullPath = TEXT("/Game/") + FullPath;
     }
 
+    // With loadAfterCreate, opens FullPath and reports where the editor ended up; false (refusal sent) when it would not load.
+    auto LoadIfRequested = [&](const TSharedPtr<FJsonObject>& Result, const TCHAR* FailurePrefix)
+    {
+        Result->SetBoolField(TEXT("loaded"), false);
+        if (!bLoadAfterCreate)
+        {
+            return true;
+        }
+        const bool bLoaded = McpSafeLoadMap(FullPath, true);
+        Result->SetBoolField(TEXT("loaded"), bLoaded);
+        if (UWorld* EditorWorld = GetEditorWorld())
+        {
+            Result->SetStringField(TEXT("currentLevelPath"), EditorWorld->GetOutermost()->GetName());
+        }
+        if (!bLoaded)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("%s could not be loaded: %s"), FailurePrefix, *FullPath), Result, TEXT("LOAD_FAILED"));
+        }
+        return bLoaded;
+    };
+
     // IDEMPOTENT: Check if level already exists and return success if so
     // This makes create_level idempotent - calling it multiple times with the same path succeeds
     // The level is not recreated if it already exists (prevents WorldSettings collision crash)
@@ -131,18 +127,9 @@ bool HandleCreateLevel(
         Result->SetStringField(TEXT("levelPath"), FullPath);
         Result->SetBoolField(TEXT("exists"), true);
         Result->SetBoolField(TEXT("alreadyExisted"), true);
-        if (bLoadAfterCreate) {
-            const bool bLoaded = McpSafeLoadMap(FullPath, true);
-            Result->SetBoolField(TEXT("loaded"), bLoaded);
-            if (GEditor && GEditor->GetEditorWorldContext().World()) {
-                Result->SetStringField(TEXT("currentLevelPath"), GEditor->GetEditorWorldContext().World()->GetOutermost()->GetName());
-            }
-            if (!bLoaded) {
-                Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                    FString::Printf(TEXT("Level exists but could not be loaded: %s"), *FullPath),
-                    Result, TEXT("LOAD_FAILED"));
-                return true;
-            }
+        if (!LoadIfRequested(Result, TEXT("Level exists but")))
+        {
+            return true;
         }
         Subsystem->SendAutomationResponse(Socket, RequestId, true,
             FString::Printf(TEXT("Level already exists: %s"), *FullPath),
@@ -173,7 +160,6 @@ bool HandleCreateLevel(
     }
 
     bool bWorldPartitionActuallyEnabled = false;
-#if ENGINE_MAJOR_VERSION >= 5
     if (bCreateWorldPartition)
     {
         // World Partition is enabled via WorldSettings using CreateOrRepairWorldPartition
@@ -198,19 +184,16 @@ bool HandleCreateLevel(
             UE_LOG(LogMcpLevelStructureHandlers, Warning, TEXT("Failed to get WorldSettings for World Partition creation: %s"), *FullPath);
         }
     }
-#endif
 
     // This is required for Data Layer support in World Partition levels
     bool bExternalActorsActuallyEnabled = false;
     if (bUseExternalActors && NewWorld->PersistentLevel)
     {
-#if WITH_EDITORONLY_DATA
         // This enables actors to be stored as external packages, which is required
         // for Data Layer compatibility in World Partition levels
         NewWorld->PersistentLevel->bUseExternalActors = true;
         bExternalActorsActuallyEnabled = true;
         UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Enabled External Actors (OFPA) for level: %s"), *FullPath);
-#endif
     }
 
     Package->MarkPackageDirty();
@@ -292,22 +275,9 @@ bool HandleCreateLevel(
 
     // Creating does not switch the editor to the new level unless
     // loadAfterCreate is set; say so explicitly (dogfood #162).
-    ResponseJson->SetBoolField(TEXT("loaded"), false);
-    if (bLoadAfterCreate)
+    if (!LoadIfRequested(ResponseJson, TEXT("Level created but")))
     {
-        const bool bLoaded = McpSafeLoadMap(FullPath, true);
-        ResponseJson->SetBoolField(TEXT("loaded"), bLoaded);
-        if (GEditor && GEditor->GetEditorWorldContext().World())
-        {
-            ResponseJson->SetStringField(TEXT("currentLevelPath"), GEditor->GetEditorWorldContext().World()->GetOutermost()->GetName());
-        }
-        if (!bLoaded)
-        {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Level created but could not be loaded: %s"), *FullPath),
-                ResponseJson, TEXT("LOAD_FAILED"));
-            return true;
-        }
+        return true;
     }
 
     FString Message = FString::Printf(TEXT("Created level: %s"), *FullPath);
@@ -316,4 +286,3 @@ bool HandleCreateLevel(
 }
 
 }
-#endif

@@ -4,7 +4,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -118,4 +117,3 @@ bool HandleConfigureMeshRandomization(
         TEXT("Mesh randomization configuration stored on Unreal spline target"), Result);
     return true;
 }
-#endif

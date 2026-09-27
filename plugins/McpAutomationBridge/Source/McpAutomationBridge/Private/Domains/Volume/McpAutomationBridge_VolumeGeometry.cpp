@@ -1,16 +1,13 @@
 #include "Domains/Volume/McpAutomationBridge_VolumeGeometry.h"
 
-#if WITH_EDITOR
 #include "Builders/CubeBuilder.h"
 #include "Components/BrushComponent.h"
 #include "Engine/Polys.h"
 #include "Model.h"
 #include "UObject/Package.h"
-#endif
 
 namespace VolumeHelpers
 {
-#if WITH_EDITOR
 bool CreateBoxBrushForVolume(ABrush* Volume, const FVector& Extent)
 {
     if (!Volume)
@@ -66,5 +63,4 @@ void SetVolumeExtentGeometry(AActor* VolumeActor, const FVector& Extent)
         VolumeActor->SetActorScale3D(FVector(Extent.X / 100.0f, Extent.Y / 100.0f, Extent.Z / 100.0f));
     }
 }
-#endif
 }

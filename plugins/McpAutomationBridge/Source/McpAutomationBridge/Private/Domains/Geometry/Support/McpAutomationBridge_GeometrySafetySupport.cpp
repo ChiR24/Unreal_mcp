@@ -1,29 +1,57 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
-bool IsMemoryPressureSafe()
+bool GuardMeshBudget(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                     int64 EstimatedTriangles, const TCHAR* OpName)
 {
-#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
-    FPlatformMemoryStats MemStats = FPlatformMemory::GetStats();
-    double UsagePercent = static_cast<double>(MemStats.UsedPhysical) /
-                          static_cast<double>(MemStats.TotalPhysical);
-    return UsagePercent < MEMORY_PRESSURE_CRITICAL;
-#else
-    return true;  // Assume safe on other platforms
-#endif
+    // Starting a heavy mesh op on a starved system can take the editor (and unsaved work) down.
+    const FPlatformMemoryStats MemStats = FPlatformMemory::GetStats();
+    const double UsedFraction = static_cast<double>(MemStats.UsedPhysical) / static_cast<double>(MemStats.TotalPhysical);
+    if (UsedFraction >= MEMORY_PRESSURE_CRITICAL)
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Memory pressure too high (%.1f%% used); %s blocked to prevent OOM."), UsedFraction * 100.0, OpName),
+            TEXT("MEMORY_PRESSURE"));
+        return false;
+    }
+    if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("%s would produce ~%lld triangles (max %d)."), OpName, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH),
+            TEXT("POLYGON_LIMIT_EXCEEDED"));
+        return false;
+    }
+    return true;
 }
 
-double GetMemoryUsagePercent()
+int32 DeformVertices(UDynamicMesh* Mesh, TFunctionRef<FVector(const FVector&)> Move)
 {
-#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
-    FPlatformMemoryStats MemStats = FPlatformMemory::GetStats();
-    return static_cast<double>(MemStats.UsedPhysical) /
-           static_cast<double>(MemStats.TotalPhysical) * 100.0;
+    int32 Moved = 0;
+    Mesh->EditMesh([&](UE::Geometry::FDynamicMesh3& EditMesh)
+    {
+        for (int32 VID : EditMesh.VertexIndicesItr())
+        {
+            const FVector Before(EditMesh.GetVertex(VID));
+            const FVector After = Move(Before);
+            if (!After.Equals(Before, 0.0))
+            {
+                EditMesh.SetVertex(VID, FVector3d(After));
+                ++Moved;
+            }
+        }
+    });
+    return Moved;
+}
+
+void RecomputeMeshNormals(UDynamicMesh* Mesh, const FGeometryScriptCalculateNormalsOptions& Options)
+{
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, Options, false, nullptr);
 #else
-    return 0.0;
+    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, Options, nullptr);
 #endif
 }
 
@@ -51,4 +79,4 @@ double ClampDimension(double Value, double Default)
 }
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

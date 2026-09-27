@@ -13,7 +13,6 @@
 #include "WorldPartition/WorldPartition.h"
 #include "WorldPartition/WorldPartitionRuntimeSpatialHash.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -224,4 +223,3 @@ bool HandleConfigureGridSize(
 }
 
 }
-#endif

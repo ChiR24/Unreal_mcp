@@ -4,46 +4,12 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 #include "Engine/PostProcessVolume.h"
 #include "Engine/Scene.h"
 #include "Engine/Texture.h"
 
 namespace McpRenderHandlers
 {
-namespace
-{
-bool ApplyColorPostSettings(
-    APostProcessVolume* Volume,
-    const TSharedPtr<FJsonObject>& Settings,
-    TArray<FString>& Applied,
-    TArray<FString>& Unsupported,
-    FString& Error)
-{
-    return ApplyJsonSettings(
-        &Volume->Settings,
-        FPostProcessSettings::StaticStruct(),
-        Settings,
-        true,
-        Applied,
-        Unsupported,
-        Error);
-}
-
-bool ApplyColorPostValue(
-    APostProcessVolume* Volume,
-    const FString& Field,
-    const TSharedPtr<FJsonValue>& Value,
-    TArray<FString>& Applied,
-    TArray<FString>& Unsupported,
-    FString& Error)
-{
-    TSharedPtr<FJsonObject> Settings = MakeShared<FJsonObject>();
-    Settings->SetField(Field, Value);
-    return ApplyColorPostSettings(Volume, Settings, Applied, Unsupported, Error);
-}
-}
-
 bool HandleRenderPostProcessColorAction(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -107,9 +73,10 @@ bool HandleRenderPostProcessColorAction(
     }
     else if (SubAction == TEXT("set_bloom_intensity"))
     {
-        if (!ApplyColorPostValue(
+        // amount is the declared name; this read the undeclared intensity, so bloom stayed at 1.0.
+        if (!ApplyPostProcessField(
                 Volume, TEXT("BloomIntensity"),
-                MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("intensity"), 1.0)),
+                MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 1.0)),
                 Applied, Unsupported, Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
@@ -125,17 +92,17 @@ bool HandleRenderPostProcessColorAction(
         // sibling lens variants (vignette, grain, chromatic aberration) already
         // read their top-level number, so read ours the same way and still fold
         // in an explicit `settings` object for anything else on the struct.
-        ApplyColorPostSettings(Volume, GetSettingsObject(Payload), Applied, Unsupported, Error);
+        ApplyPostProcessSettings(Volume, GetSettingsObject(Payload), Applied, Unsupported, Error);
         if (Payload->HasField(TEXT("amount")))
         {
-            ApplyColorPostValue(
+            ApplyPostProcessField(
                 Volume, TEXT("BloomIntensity"),
                 MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 1.0)),
                 Applied, Unsupported, Error);
         }
         if (Payload->HasField(TEXT("threshold")))
         {
-            ApplyColorPostValue(
+            ApplyPostProcessField(
                 Volume, TEXT("BloomThreshold"),
                 MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("threshold"), -1.0)),
                 Applied, Unsupported, Error);
@@ -152,7 +119,7 @@ bool HandleRenderPostProcessColorAction(
         const double Threshold = Settings.IsValid()
             ? GetJsonNumberField(Settings, TEXT("BloomThreshold"), GetJsonNumberField(Payload, TEXT("threshold"), -1.0))
             : GetJsonNumberField(Payload, TEXT("threshold"), -1.0);
-        if (!ApplyColorPostValue(
+        if (!ApplyPostProcessField(
                 Volume, TEXT("BloomThreshold"), MakeShared<FJsonValueNumber>(Threshold),
                 Applied, Unsupported, Error))
         {
@@ -160,7 +127,7 @@ bool HandleRenderPostProcessColorAction(
             return true;
         }
     }
-    else if (!ApplyColorPostSettings(
+    else if (!ApplyPostProcessSettings(
                  Volume, GetSettingsObject(Payload), Applied, Unsupported, Error))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
@@ -195,4 +162,3 @@ bool HandleRenderPostProcessColorAction(
     return true;
 }
 }
-#endif

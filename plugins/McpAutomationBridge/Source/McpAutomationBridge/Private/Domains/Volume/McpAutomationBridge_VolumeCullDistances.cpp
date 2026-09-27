@@ -7,7 +7,6 @@
 
 namespace VolumeHelpers
 {
-#if WITH_EDITOR
 void SetCullDistancesFromPayload(AActor* VolumeActor, const TSharedPtr<FJsonObject>& Payload)
 {
     ACullDistanceVolume* Volume = Cast<ACullDistanceVolume>(VolumeActor);
@@ -34,5 +33,4 @@ void SetCullDistancesFromPayload(AActor* VolumeActor, const TSharedPtr<FJsonObje
         Volume->CullDistances = CullDistances;
     }
 }
-#endif
 }

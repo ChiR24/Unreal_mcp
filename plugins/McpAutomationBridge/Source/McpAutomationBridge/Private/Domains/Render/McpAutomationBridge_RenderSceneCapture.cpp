@@ -4,7 +4,6 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/SceneCaptureComponentCube.h"
 #include "Engine/SceneCapture2D.h"
@@ -253,4 +252,3 @@ bool HandleRenderSceneCaptureAction(
     return true;
 }
 }
-#endif

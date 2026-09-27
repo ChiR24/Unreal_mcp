@@ -1,4 +1,5 @@
 #include "Domains/Texture/McpAutomationBridge_TextureHandlersShared.h"
+#include "Foundation/Render/McpRenderTargetFormat.h"
 
 namespace McpTextureHandlers
 {
@@ -7,7 +8,7 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
     // Canonical contract field is packagePath (asset.create_render_target); legacy
-    // callers may still send path. packagePath wins when both appear (BB-013).
+    // callers may still send path. packagePath wins when both appear.
     FString Path = NormalizeTexturePath(GetJsonStringField(Params, TEXT("packagePath"),
         GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures"))));
 
@@ -53,48 +54,8 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
         TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("width and height must be between 1 and %d x %d"), MaxWidth, MaxHeight));
     }
 
-    EPixelFormat Format = PF_B8G8R8A8;
-    if (FormatStr.Equals(TEXT("RGBA8"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_B8G8R8A8;
-    }
-    else if (FormatStr.Equals(TEXT("RGBA16F"), ESearchCase::IgnoreCase) || FormatStr.Equals(TEXT("FloatRGBA"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_FloatRGBA;
-    }
-    else if (FormatStr.Equals(TEXT("RGBA32F"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_A32B32G32R32F;
-    }
-    else if (FormatStr.Equals(TEXT("R8"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_G8;
-    }
-    else if (FormatStr.Equals(TEXT("RG8"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_R8G8;
-    }
-    else if (FormatStr.Equals(TEXT("R16F"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_R16F;
-    }
-    else if (FormatStr.Equals(TEXT("RG16F"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_G16R16F;
-    }
-    else if (FormatStr.Equals(TEXT("R32F"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_R32_FLOAT;
-    }
-    else if (FormatStr.Equals(TEXT("RG32F"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_G32R32F;
-    }
-    else if (FormatStr.Equals(TEXT("A2B10G10R10"), ESearchCase::IgnoreCase) || FormatStr.Equals(TEXT("RGB10A2"), ESearchCase::IgnoreCase))
-    {
-        Format = PF_A2B10G10R10;
-    }
-    else
+    const EPixelFormat Format = McpParseRenderTargetPixelFormat(FormatStr);
+    if (Format == PF_Unknown)
     {
         TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Unsupported render target format: %s"), *FormatStr));
     }

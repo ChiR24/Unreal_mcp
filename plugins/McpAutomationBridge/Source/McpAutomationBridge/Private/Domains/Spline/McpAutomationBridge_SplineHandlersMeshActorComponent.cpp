@@ -25,12 +25,9 @@ bool HandleCreateSplineMeshComponentOnActor(
     const FString& MeshPath,
     const FString& ForwardAxis)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    AActor* Actor = World ? FindActorByName(World, ActorName) : nullptr;
+    AActor* Actor = ResolveSplineActor(Self, RequestId, Socket, ActorName);
     if (!Actor)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
     UStaticMesh* Mesh = nullptr;

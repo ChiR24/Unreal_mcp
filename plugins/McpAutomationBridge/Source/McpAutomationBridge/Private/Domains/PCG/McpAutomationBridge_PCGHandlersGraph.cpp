@@ -1,6 +1,6 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
 
-#if WITH_EDITOR && MCP_HAS_PCG
+#if MCP_HAS_PCG
 namespace McpPCGHandlers
 {
 FString GetNodeTitleString(UPCGNode* Node)
@@ -190,7 +190,7 @@ void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload)
         return;
     }
 
-    const FString Title = GetFirstStringField(Payload, {TEXT("nodeName"), TEXT("title"), TEXT("name")});
+    const FString Title = McpGetFirstStringField(Payload, {TEXT("nodeName"), TEXT("title"), TEXT("name")});
     if (!Title.IsEmpty())
     {
         Node->NodeTitle = FName(*Title);

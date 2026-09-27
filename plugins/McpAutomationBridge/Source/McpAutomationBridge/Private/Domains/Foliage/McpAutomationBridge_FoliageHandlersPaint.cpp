@@ -5,43 +5,13 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("paint_foliage"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("paint_foliage payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString FoliageTypePath;
-  if (!Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath)) {
-    Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
+  if (!McpFoliageHandlers::ReadFoliageTypePath(*this, RequestId, RequestingSocket, Payload, FoliageTypePath)) {
+    return true;
   }
   if (FoliageTypePath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("foliageTypePath (or foliageType) required"),
-                        TEXT("INVALID_ARGUMENT"));
+    SendAutomationError(RequestingSocket, RequestId, TEXT("foliageTypePath (or foliageType) required"), TEXT("INVALID_ARGUMENT"));
     return true;
-  }
-
-  FString SafePath = SanitizeProjectRelativePath(FoliageTypePath);
-  if (SafePath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *FoliageTypePath),
-                        TEXT("SECURITY_VIOLATION"));
-    return true;
-  }
-  FoliageTypePath = SafePath;
-
-  if (!FoliageTypePath.IsEmpty() &&
-      FPaths::GetPath(FoliageTypePath).IsEmpty()) {
-    FoliageTypePath =
-        FString::Printf(TEXT("/Game/Foliage/%s"), *FoliageTypePath);
   }
 
   TArray<FVector> Locations;
@@ -50,16 +20,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
        Payload->TryGetArrayField(TEXT("location"), LocationsArray)) &&
       LocationsArray && LocationsArray->Num() > 0) {
     for (const TSharedPtr<FJsonValue> &Val : *LocationsArray) {
-      if (Val.IsValid() && Val->Type == EJson::Object) {
-        const TSharedPtr<FJsonObject> *Obj = nullptr;
-        if (Val->TryGetObject(Obj) && Obj) {
-          double X = 0, Y = 0, Z = 0;
-          (*Obj)->TryGetNumberField(TEXT("x"), X);
-          (*Obj)->TryGetNumberField(TEXT("y"), Y);
-          (*Obj)->TryGetNumberField(TEXT("z"), Z);
-          Locations.Add(FVector(X, Y, Z));
-        }
-      }
+      Locations.Add(ReadJsonVector(Val, FVector::ZeroVector));
     }
   } else {
     const TSharedPtr<FJsonObject> *PosObj = nullptr;
@@ -81,8 +42,8 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   const bool bHasArea = Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj &&
       (*AreaObj)->HasField(TEXT("min")) && (*AreaObj)->HasField(TEXT("max"));
   if (bHasArea) {
-    ReadVectorField(*AreaObj, TEXT("min"), AreaMin, FVector::ZeroVector);
-    ReadVectorField(*AreaObj, TEXT("max"), AreaMax, FVector::ZeroVector);
+    AreaMin = ExtractVectorField(*AreaObj, TEXT("min"), FVector::ZeroVector);
+    AreaMax = ExtractVectorField(*AreaObj, TEXT("max"), FVector::ZeroVector);
   }
   if (Locations.Num() == 0 && !bHasArea) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -131,72 +92,19 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     Locations = MoveTemp(BrushLocations);
   }
 
-  if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Editor world not available"),
-                        TEXT("EDITOR_NOT_AVAILABLE"));
-    return true;
-  }
-
-  UWorld *World = GEditor->GetEditorWorldContext().World();
-  UFoliageType *FoliageType = nullptr;
-  if (UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
-    FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
-  }
-
-  if (!FoliageType) {
-    UStaticMesh *StaticMesh = LoadObject<UStaticMesh>(nullptr, *FoliageTypePath);
-    if (StaticMesh) {
-      FString BaseName = FPaths::GetBaseFilename(FoliageTypePath);
-      FString AutoFTPath = FString::Printf(TEXT("/Game/Foliage/Auto_%s"), *BaseName);
-
-      if (UEditorAssetLibrary::DoesAssetExist(AutoFTPath)) {
-        FoliageType = LoadObject<UFoliageType>(nullptr, *AutoFTPath);
-        if (FoliageType) {
-          FoliageTypePath = AutoFTPath;
-        }
-      } else {
-        UPackage *FTPackage = CreatePackage(*AutoFTPath);
-        if (FTPackage) {
-          UFoliageType_InstancedStaticMesh *AutoFT = NewObject<UFoliageType_InstancedStaticMesh>(
-              FTPackage, FName(*BaseName), RF_Public | RF_Standalone);
-          if (AutoFT) {
-            AutoFT->SetStaticMesh(StaticMesh);
-            AutoFT->Density = 100.0f;
-            AutoFT->ReapplyDensity = true;
-            McpSafeAssetSave(AutoFT);
-            FoliageType = AutoFT;
-            FoliageTypePath = AutoFT->GetPathName();
-          }
-        }
-      }
-    }
-  }
-
-  if (!FoliageType) {
-    SendAutomationError(
-        RequestingSocket, RequestId,
-        FString::Printf(TEXT("Foliage type asset not found: %s (also tried as StaticMesh)"),
-                        *FoliageTypePath),
-        TEXT("ASSET_NOT_FOUND"));
-    return true;
-  }
-
-  AInstancedFoliageActor *IFA =
-      McpFoliageHandlers::GetOrCreateFoliageActorForWorldSafe(World, true);
+  UFoliageType *FoliageType = McpFoliageHandlers::ResolveFoliageTypeOrMesh(*this, RequestId, RequestingSocket, FoliageTypePath);
+  AInstancedFoliageActor *IFA = FoliageType ? McpFoliageHandlers::RequireFoliageActor(*this, RequestId, RequestingSocket) : nullptr;
   if (!IFA) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Failed to get foliage actor"),
-                        TEXT("FOLIAGE_ACTOR_FAILED"));
     return true;
   }
+  UWorld *World = IFA->GetWorld();
 
   // Each point drops onto the first static surface below it, as the editor's
   // own brush does; placing at the caller's z left instances floating or buried
   // wherever the guess was off. No surface below (a pit, off the level) skips it.
-  const bool bSnap = McpHandlerUtils::GetOptionalBool(Payload, TEXT("snapToSurface"), true);
-  const bool bRandomYaw = McpHandlerUtils::GetOptionalBool(Payload, TEXT("randomYaw"), false);
-  const bool bAlign = McpHandlerUtils::GetOptionalBool(Payload, TEXT("alignToNormal"), false);
+  const bool bSnap = GetJsonBoolField(Payload, TEXT("snapToSurface"), true);
+  const bool bRandomYaw = GetJsonBoolField(Payload, TEXT("randomYaw"), false);
+  const bool bAlign = GetJsonBoolField(Payload, TEXT("alignToNormal"), false);
   double MinScale = 1.0, MaxScale = 1.0;
   Payload->TryGetNumberField(TEXT("minScale"), MinScale);
   Payload->TryGetNumberField(TEXT("maxScale"), MaxScale);
@@ -226,14 +134,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
     Instance.DrawScale3D = FVector3f(Stream.FRandRange(FMath::Min(MinScale, MaxScale), FMath::Max(MinScale, MaxScale)));
     Instance.ZOffset = 0.0f;
 
-    if (FFoliageInfo *Info = IFA->FindInfo(FoliageType)) {
-      Info->AddInstance(FoliageType, Instance, nullptr);
-    } else {
-      IFA->AddFoliageType(FoliageType);
-      if (FFoliageInfo *NewInfo = IFA->FindInfo(FoliageType)) {
-        NewInfo->AddInstance(FoliageType, Instance, nullptr);
-      }
-    }
+    McpFoliageHandlers::AddFoliageInstance(IFA, FoliageType, Instance);
     PlacedLocations.Add(Instance.Location);
   }
   if (PlacedLocations.Num() == 0) {
@@ -261,10 +162,4 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Foliage painted successfully"), Resp, FString());
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("paint_foliage requires editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

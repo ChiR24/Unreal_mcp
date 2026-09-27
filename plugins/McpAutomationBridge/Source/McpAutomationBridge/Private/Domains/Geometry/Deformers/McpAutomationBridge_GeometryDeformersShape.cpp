@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -8,66 +8,22 @@ bool HandleSpherify(UMcpAutomationBridgeSubsystem* Self, const FString& RequestI
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    // deform_mesh declares strength; factor is undeclared and never reached the handler.
-    double Factor = GetJsonNumberField(Payload, TEXT("strength"), GetJsonNumberField(Payload, TEXT("factor"), 1.0));
+    const double Factor = GetJsonNumberField(Payload, TEXT("strength"), 1.0);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
+
+    const FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
+    const FVector Center = BBox.GetCenter();
+    const double TargetRadius = BBox.GetExtent().GetMax();
+    const double Alpha = FMath::Clamp(Factor, 0.0, 1.0);
+    DeformVertices(Mesh, [&](const FVector& Pos)
     {
-        return true;
-    }
-
-    FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
-    FVector Center = BBox.GetCenter();
-    double TargetRadius = BBox.GetExtent().GetMax();
-
-    FGeometryScriptIndexList VertexIDList;
-    bool bHasGaps = false;
-    UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
-
-    int32 NumVertices = VertexIDList.List.IsValid() ? VertexIDList.List->Num() : 0;
-    int32 VerticesModified = 0;
-
-    for (int32 i = 0; i < NumVertices; ++i)
-    {
-        int32 VertexID = (*VertexIDList.List)[i];
-        bool bIsValid = false;
-        FVector OriginalPos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
-
-        if (bIsValid)
-        {
-            FVector Direction = OriginalPos - Center;
-            double CurrentDistance = Direction.Size();
-
-            if (CurrentDistance > KINDA_SMALL_NUMBER)
-            {
-                Direction.Normalize();
-
-                FVector SpherePos = Center + Direction * TargetRadius;
-
-                FVector NewPos = FMath::Lerp(OriginalPos, SpherePos, FMath::Clamp(Factor, 0.0, 1.0));
-
-                bool bVertexValid = false;
-                UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
-                if (bVertexValid)
-                {
-                    VerticesModified++;
-                }
-            }
-        }
-    }
-
-    // Recompute normals after vertex modifications
-    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-    // UE 5.3+: RecomputeNormals takes 4 parameters
-    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
-#else
-    // UE 5.0-5.2: RecomputeNormals takes 3 parameters
-    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
-#endif
-
+        const FVector Direction = Pos - Center;
+        return Direction.Size() > KINDA_SMALL_NUMBER ? FMath::Lerp(Pos, Center + Direction.GetUnsafeNormal() * TargetRadius, Alpha) : Pos;
+    });
+    RecomputeMeshNormals(Mesh);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -81,118 +37,44 @@ bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString Axis = GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper();
-    // deform_mesh declares strength; factor is undeclared and never reached the handler.
-    double Factor = GetJsonNumberField(Payload, TEXT("strength"), GetJsonNumberField(Payload, TEXT("factor"), 1.0));
+    const double Factor = GetJsonNumberField(Payload, TEXT("strength"), 1.0);
+    const int32 AxisIndex = AxisIndexFromPayload(Payload);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
-    // Determine axis index (0=X, 1=Y, 2=Z)
-    int32 AxisIndex = 2; // Default to Z
-    if (Axis == TEXT("X")) AxisIndex = 0;
-    else if (Axis == TEXT("Y")) AxisIndex = 1;
-
-    // Calculate bounding box center and average perpendicular radius from axis
-    FBox BBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
-    FVector Center = BBox.GetCenter();
-
-    FGeometryScriptIndexList VertexIDList;
-    bool bHasGaps = false;
-    UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
-
-    int32 NumVertices = VertexIDList.List.IsValid() ? VertexIDList.List->Num() : 0;
-
-    // First pass: compute average radius perpendicular to the cylinder axis
+    const FVector Center = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh).GetCenter();
+    // Average distance from the cylinder axis becomes the cylinder radius.
     double TotalRadius = 0.0;
-    int32 ValidVertexCount = 0;
-
-    for (int32 i = 0; i < NumVertices; ++i)
+    int32 VertexCount = 0;
+    const UE::Geometry::FDynamicMesh3& ReadMesh = Mesh->GetMeshRef();
+    for (int32 VID : ReadMesh.VertexIndicesItr())
     {
-        int32 VertexID = (*VertexIDList.List)[i];
-        bool bIsValid = false;
-        FVector Pos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
-
-        if (bIsValid)
-        {
-            FVector FromCenter = Pos - Center;
-            FVector Perpendicular = FromCenter;
-            // Zero out the axis component to get perpendicular vector
-            if (AxisIndex == 0) Perpendicular.X = 0;
-            else if (AxisIndex == 1) Perpendicular.Y = 0;
-            else Perpendicular.Z = 0;
-
-            double PerpDist = Perpendicular.Size();
-            TotalRadius += PerpDist;
-            ValidVertexCount++;
-        }
+        FVector Perpendicular = FVector(ReadMesh.GetVertex(VID)) - Center;
+        Perpendicular[AxisIndex] = 0.0;
+        TotalRadius += Perpendicular.Size();
+        ++VertexCount;
     }
-
-    double AvgRadius = ValidVertexCount > 0 ? TotalRadius / ValidVertexCount : 1.0;
+    double AvgRadius = VertexCount > 0 ? TotalRadius / VertexCount : 1.0;
     if (AvgRadius < KINDA_SMALL_NUMBER) AvgRadius = 1.0;
 
-    // Second pass: project each vertex to cylinder surface
-    int32 VerticesModified = 0;
-
-    for (int32 i = 0; i < NumVertices; ++i)
+    const double Alpha = FMath::Clamp(Factor, 0.0, 1.0);
+    const int32 VerticesModified = DeformVertices(Mesh, [&](const FVector& Pos)
     {
-        int32 VertexID = (*VertexIDList.List)[i];
-        bool bIsValid = false;
-        FVector OriginalPos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
-
-        if (bIsValid)
-        {
-            FVector FromCenter = OriginalPos - Center;
-            FVector Perpendicular = FromCenter;
-            double AxisCoord = 0.0;
-
-            if (AxisIndex == 0) { AxisCoord = FromCenter.X; Perpendicular.X = 0; }
-            else if (AxisIndex == 1) { AxisCoord = FromCenter.Y; Perpendicular.Y = 0; }
-            else { AxisCoord = FromCenter.Z; Perpendicular.Z = 0; }
-
-            double PerpDist = Perpendicular.Size();
-
-            if (PerpDist > KINDA_SMALL_NUMBER)
-            {
-                Perpendicular.Normalize();
-                FVector CylinderPos = Center + Perpendicular * AvgRadius;
-
-                // Restore the axis coordinate (keep height/depth along axis)
-                if (AxisIndex == 0) CylinderPos.X = Center.X + AxisCoord;
-                else if (AxisIndex == 1) CylinderPos.Y = Center.Y + AxisCoord;
-                else CylinderPos.Z = Center.Z + AxisCoord;
-
-                FVector NewPos = FMath::Lerp(OriginalPos, CylinderPos, FMath::Clamp(Factor, 0.0, 1.0));
-
-                bool bVertexValid = false;
-                UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
-                if (bVertexValid)
-                {
-                    VerticesModified++;
-                }
-            }
-        }
-    }
-
-    // Recompute normals after vertex modifications
-    #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-    // UE 5.3+: RecomputeNormals takes 4 parameters
-    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
-#else
-    // UE 5.0-5.2: RecomputeNormals takes 3 parameters
-    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
-#endif
-
+        FVector Perpendicular = Pos - Center;
+        Perpendicular[AxisIndex] = 0.0;
+        if (Perpendicular.Size() <= KINDA_SMALL_NUMBER) return Pos;
+        FVector CylinderPos = Center + Perpendicular.GetUnsafeNormal() * AvgRadius;
+        CylinderPos[AxisIndex] = Pos[AxisIndex];
+        return FMath::Lerp(Pos, CylinderPos, Alpha);
+    });
+    RecomputeMeshNormals(Mesh);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetStringField(TEXT("axis"), Axis);
+    Result->SetStringField(TEXT("axis"), GetJsonStringField(Payload, TEXT("axis"), TEXT("Z")).ToUpper());
     Result->SetNumberField(TEXT("factor"), Factor);
     Result->SetNumberField(TEXT("avgRadius"), AvgRadius);
     Result->SetNumberField(TEXT("verticesModified"), VerticesModified);
@@ -201,4 +83,4 @@ bool HandleCylindrify(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 }
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

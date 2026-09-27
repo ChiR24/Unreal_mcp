@@ -4,7 +4,6 @@
 // that has no bound function (the "Could not find a function named None" compile error).
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureActions.h"
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
-#include "Domains/LevelStructure/McpAutomationBridge_LevelStructurePayload.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
 #include "Engine/Level.h"
@@ -17,7 +16,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 bool HandleRemoveLevelBlueprintNode(
@@ -101,4 +99,3 @@ bool HandleRemoveLevelBlueprintNode(
     return true;
 }
 }
-#endif

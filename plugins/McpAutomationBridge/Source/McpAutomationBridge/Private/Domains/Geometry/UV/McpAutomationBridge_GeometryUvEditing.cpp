@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -13,13 +13,9 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     double V = GetJsonNumberField(Payload, TEXT("v"), 0.0);
     int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
 
     UE::Geometry::FDynamicMeshAttributeSet* Attributes = EditMesh.Attributes();
@@ -125,77 +121,25 @@ bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     return true;
 }
 
-bool HandleUnwrapUV(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
-
-    FGeometryScriptXAtlasOptions XAtlasOptions;
-    // XAtlas defaults are reasonable for most cases
-
-    UGeometryScriptLibrary_MeshUVFunctions::AutoGenerateXAtlasMeshUVs(
-        Mesh,
-        UVChannel,
-        XAtlasOptions,
-        nullptr
-    );
-
-    DMC->NotifyMeshUpdated();
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("uvChannel"), UVChannel);
-
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("UV unwrapping completed"), Result);
-    return true;
-}
-
 bool HandlePackUVIslands(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
-    int32 TextureResolution = GetJsonIntField(Payload, TEXT("textureResolution"), 1024);
+    // Repack the existing islands into 0-1; re-unwrapping here discarded the caller's UVs.
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const int32 UVChannel = GetJsonIntField(Payload, TEXT("uvChannel"), 0);
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
-
-    // Use XAtlas with packing - it handles both unwrapping and packing
-    FGeometryScriptXAtlasOptions XAtlasOptions;
-    // XAtlas will pack islands efficiently by default
-
-    UGeometryScriptLibrary_MeshUVFunctions::AutoGenerateXAtlasMeshUVs(
-        Mesh,
-        UVChannel,
-        XAtlasOptions,
-        nullptr
-    );
-
-    DMC->NotifyMeshUpdated();
+    UGeometryScriptLibrary_MeshUVFunctions::RepackMeshUVs(Target->Mesh, UVChannel, FGeometryScriptRepackUVsOptions(), nullptr);
+    Target->Component->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("uvChannel"), UVChannel);
-    Result->SetNumberField(TEXT("textureResolution"), TextureResolution);
-
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("UV islands packed"), Result);
     return true;
 }
 
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

@@ -9,7 +9,7 @@
 #include "WorldPartition/RuntimeHashSet/WorldPartitionRuntimeHashSet.h"
 #endif
 
-#if WITH_EDITOR && WITH_EDITORONLY_DATA && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 namespace McpLevelStructure
 {
 
@@ -45,9 +45,7 @@ bool HandleConfigureRuntimeHashSetGrid(
     void* PartitionsArrayPtr = PartitionsProperty->ContainerPtrToValuePtr<void>(HashSet);
     FScriptArrayHelper ArrayHelper(ArrayProp, PartitionsArrayPtr);
 
-    bool bFound = false;
-    bool bCreated = false;
-    FName TargetPartitionName = GridName.IsEmpty() ? FName(TEXT("MainPartition")) : FName(*GridName);
+    const FName TargetPartitionName = GridName.IsEmpty() ? FName(TEXT("MainPartition")) : FName(*GridName);
 
     FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp->Inner);
     if (!StructProp)
@@ -56,78 +54,69 @@ bool HandleConfigureRuntimeHashSetGrid(
             TEXT("RuntimePartitions array element is not a struct"), nullptr);
         return true;
     }
-
     UStruct* PartitionStruct = StructProp->Struct;
 
-    for (int32 i = 0; i < ArrayHelper.Num(); ++i)
+    FNameProperty* NameProp = CastField<FNameProperty>(PartitionStruct->FindPropertyByName(TEXT("Name")));
+    int32 Index = INDEX_NONE;
+    for (int32 i = 0; NameProp && i < ArrayHelper.Num(); ++i)
     {
-        void* PartitionPtr = ArrayHelper.GetRawPtr(i);
-        if (!PartitionPtr) continue;
-
-        FProperty* NameProp = PartitionStruct->FindPropertyByName(TEXT("Name"));
-        if (NameProp && NameProp->IsA<FNameProperty>())
+        if (NameProp->GetPropertyValue_InContainer(ArrayHelper.GetRawPtr(i)) == TargetPartitionName)
         {
-            FNameProperty* NameProperty = CastField<FNameProperty>(NameProp);
-            FName PartitionName = NameProperty->GetPropertyValue(PartitionPtr);
-
-            if (PartitionName == TargetPartitionName)
-            {
-                // Found the partition - update its settings via reflection
-                // LoadingRange equivalent
-                FProperty* LoadingRangeProp = PartitionStruct->FindPropertyByName(TEXT("LoadingRange"));
-                if (LoadingRangeProp && LoadingRangeProp->IsA<FFloatProperty>())
-                {
-                    CastField<FFloatProperty>(LoadingRangeProp)->SetPropertyValue(PartitionPtr, LoadingRange);
-                }
-
-                // GridCellSize equivalent (may be called GridSize or CellSize)
-                FProperty* GridSizeProp = PartitionStruct->FindPropertyByName(TEXT("GridSize"));
-                if (!GridSizeProp)
-                {
-                    GridSizeProp = PartitionStruct->FindPropertyByName(TEXT("CellSize"));
-                }
-                if (GridSizeProp && GridSizeProp->IsA<FIntProperty>())
-                {
-                    CastField<FIntProperty>(GridSizeProp)->SetPropertyValue(PartitionPtr, GridCellSize);
-                }
-
-                bFound = true;
-                break;
-            }
+            Index = i;
+            break;
         }
     }
-
-    if (!bFound && bCreateIfMissing)
+    const bool bCreated = Index == INDEX_NONE && bCreateIfMissing;
+    if (bCreated)
     {
-        int32 NewIndex = ArrayHelper.AddValue();
-        void* NewPartition = ArrayHelper.GetRawPtr(NewIndex);
-        if (NewPartition)
+        Index = ArrayHelper.AddValue();
+        if (NameProp)
         {
-            FProperty* NameProp = PartitionStruct->FindPropertyByName(TEXT("Name"));
-            if (NameProp && NameProp->IsA<FNameProperty>())
-            {
-                CastField<FNameProperty>(NameProp)->SetPropertyValue(NewPartition, TargetPartitionName);
-            }
-
-            FProperty* LoadingRangeProp = PartitionStruct->FindPropertyByName(TEXT("LoadingRange"));
-            if (LoadingRangeProp && LoadingRangeProp->IsA<FFloatProperty>())
-            {
-                CastField<FFloatProperty>(LoadingRangeProp)->SetPropertyValue(NewPartition, LoadingRange);
-            }
-
-            FProperty* GridSizeProp = PartitionStruct->FindPropertyByName(TEXT("GridSize"));
-            if (!GridSizeProp)
-            {
-                GridSizeProp = PartitionStruct->FindPropertyByName(TEXT("CellSize"));
-            }
-            if (GridSizeProp && GridSizeProp->IsA<FIntProperty>())
-            {
-                CastField<FIntProperty>(GridSizeProp)->SetPropertyValue(NewPartition, GridCellSize);
-            }
-
-            bCreated = true;
-            bFound = true;
+            NameProp->SetPropertyValue_InContainer(ArrayHelper.GetRawPtr(Index), TargetPartitionName);
         }
+    }
+    const bool bFound = Index != INDEX_NONE;
+
+    // The first of Names that Owner has as a numeric property, set on Container to Value.
+    auto SetNumber = [](const UStruct* Owner, void* Container, std::initializer_list<const TCHAR*> Names, double Value)
+    {
+        for (const TCHAR* Name : Names)
+        {
+            if (FNumericProperty* Prop = CastField<FNumericProperty>(Owner->FindPropertyByName(Name)))
+            {
+                void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(Container);
+                if (Prop->IsFloatingPoint())
+                {
+                    Prop->SetFloatingPointPropertyValue(ValuePtr, Value);
+                }
+                else
+                {
+                    Prop->SetIntPropertyValue(ValuePtr, static_cast<int64>(Value));
+                }
+                return true;
+            }
+        }
+        return false;
+    };
+    bool bLoadingRangeApplied = false;
+    bool bCellSizeApplied = false;
+    if (bFound)
+    {
+        // The grid settings live on the row's MainLayer partition object (a new row has none yet).
+        void* Row = ArrayHelper.GetRawPtr(Index);
+        FObjectPropertyBase* LayerProp = CastField<FObjectPropertyBase>(PartitionStruct->FindPropertyByName(TEXT("MainLayer")));
+        UObject* MainLayer = LayerProp ? LayerProp->GetObjectPropertyValue_InContainer(Row) : nullptr;
+        if (MainLayer)
+        {
+            MainLayer->Modify();
+        }
+        auto SetField = [&](std::initializer_list<const TCHAR*> Names, double Value)
+        {
+            return SetNumber(PartitionStruct, Row, Names, Value) ||
+                   (MainLayer && SetNumber(MainLayer->GetClass(), MainLayer, Names, Value));
+        };
+        bLoadingRangeApplied = SetField({TEXT("LoadingRange")}, LoadingRange);
+        bCellSizeApplied = SetField({TEXT("CellSize"), TEXT("GridSize")}, GridCellSize);
     }
 
     HashSet->MarkPackageDirty();
@@ -141,6 +130,8 @@ bool HandleConfigureRuntimeHashSetGrid(
     ResponseJson->SetNumberField(TEXT("cellSize"), GridCellSize);
     ResponseJson->SetBoolField(TEXT("created"), bCreated);
     ResponseJson->SetBoolField(TEXT("modified"), bFound);
+    ResponseJson->SetBoolField(TEXT("loadingRangeApplied"), bLoadingRangeApplied);
+    ResponseJson->SetBoolField(TEXT("cellSizeApplied"), bCellSizeApplied);
 
     FString Message = bCreated
         ? FString::Printf(TEXT("Created new partition '%s' in RuntimeHashSet"), *TargetPartitionName.ToString())

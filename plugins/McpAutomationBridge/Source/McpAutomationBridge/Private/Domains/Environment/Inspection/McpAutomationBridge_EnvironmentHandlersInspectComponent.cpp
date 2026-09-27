@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 #include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -53,8 +52,8 @@ void McpDescribeComponent(UActorComponent *Component, TSharedPtr<FJsonObject> Re
     {
         return;
     }
-    Resp->SetObjectField(TEXT("relativeTransform"), McpMakeTransformObject(Scene->GetRelativeTransform()));
-    Resp->SetObjectField(TEXT("worldTransform"), McpMakeTransformObject(Scene->GetComponentTransform()));
+    Resp->SetObjectField(TEXT("relativeTransform"), McpHandlerUtils::TransformToJson(Scene->GetRelativeTransform()));
+    Resp->SetObjectField(TEXT("worldTransform"), McpHandlerUtils::TransformToJson(Scene->GetComponentTransform()));
     Resp->SetStringField(TEXT("mobility"), McpMobilityName(Scene->Mobility));
     Resp->SetBoolField(TEXT("isVisible"), Scene->IsVisible());
     Resp->SetBoolField(TEXT("hiddenInGame"), Scene->bHiddenInGame != 0);
@@ -91,7 +90,7 @@ bool HandleInspectComponentDetailsAction(
         Bridge.SendAutomationError(RequestingSocket, RequestId, Message, Code);
         return true;
     };
-    const FString ComponentName = McpGetFirstStringField(Payload, {TEXT("componentName"), TEXT("component"), TEXT("component_name")});
+    const FString ComponentName = McpGetFirstStringField(Payload, {TEXT("componentName")});
     const FString ActorRef = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("objectPath"), TEXT("name"), TEXT("actorPath")});
     FString BlueprintPath = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("assetPath")});
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -107,7 +106,7 @@ bool HandleInspectComponentDetailsAction(
         {
             return Fail(TEXT("componentName is required for get_component_details"), TEXT("INVALID_ARGUMENT"));
         }
-        Component = McpHandlerUtils::FindActorComponentByName(Actor, ComponentName);
+        Component = FindComponentByName(Actor, ComponentName);
         if (!Component)
         {
             return Fail(FString::Printf(TEXT("Component not found: %s on actor %s"), *ComponentName, *Actor->GetActorLabel()),
@@ -161,4 +160,3 @@ bool HandleInspectComponentDetailsAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

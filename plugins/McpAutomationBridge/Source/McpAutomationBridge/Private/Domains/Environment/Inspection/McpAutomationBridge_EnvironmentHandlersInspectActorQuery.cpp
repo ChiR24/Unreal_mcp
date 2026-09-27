@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetData.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
@@ -127,8 +126,8 @@ bool HandleInspectActorQueryAction(
                         TEXT("UNSUPPORTED_OBJECT"));
         }
         Resp->SetObjectField(TEXT("bounds"), McpMakeBoundsObject(Box));
-        Resp->SetObjectField(TEXT("origin"), McpMakeVectorObject(Box.GetCenter()));
-        Resp->SetObjectField(TEXT("extent"), McpMakeVectorObject(Box.GetExtent()));
+        Resp->SetObjectField(TEXT("origin"), McpHandlerUtils::VectorToJson(Box.GetCenter()));
+        Resp->SetObjectField(TEXT("extent"), McpHandlerUtils::VectorToJson(Box.GetExtent()));
         Resp->SetStringField(TEXT("boundsSource"), Source);
         Message = TEXT("Bounding box retrieved");
     }
@@ -141,13 +140,13 @@ bool HandleInspectActorQueryAction(
             // A root actor's folder is NAME_None, which ToString() spells "None".
             Resp->SetStringField(TEXT("folderPath"),
                                  Actor->GetFolderPath().IsNone() ? FString() : Actor->GetFolderPath().ToString());
-            Resp->SetObjectField(TEXT("location"), McpMakeVectorObject(Actor->GetActorLocation()));
+            Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Actor->GetActorLocation()));
         }
         Message = TEXT("Metadata retrieved");
     }
     else
     {
-        FString FileType = McpGetFirstStringField(Payload, {TEXT("format"), TEXT("fileType"), TEXT("exportFormat")});
+        FString FileType = McpGetFirstStringField(Payload, {TEXT("format")});
         if (FileType.IsEmpty())
         {
             FileType = TEXT("T3D");
@@ -189,4 +188,3 @@ bool HandleInspectActorQueryAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

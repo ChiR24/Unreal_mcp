@@ -1,11 +1,11 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/Spline/McpAutomationBridge_SplineHandlersPrivate.h"
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersResponseVerification.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -31,19 +31,10 @@ bool HandleGetSplinesInfo(
 
     if (!ActorName.IsEmpty())
     {
-        AActor* Actor = FindActorByName(World, ActorName);
-        if (!Actor)
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        USplineComponent* SplineComp = FindSplineComponent(Actor);
+        AActor* Actor = nullptr;
+        USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
         if (!SplineComp)
         {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
             return true;
         }
 
@@ -60,11 +51,7 @@ bool HandleGetSplinesInfo(
 
             PointObj->SetNumberField(TEXT("index"), i);
 
-            TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
-            LocObj->SetNumberField(TEXT("x"), Loc.X);
-            LocObj->SetNumberField(TEXT("y"), Loc.Y);
-            LocObj->SetNumberField(TEXT("z"), Loc.Z);
-            PointObj->SetObjectField(TEXT("location"), LocObj);
+            PointObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Loc));
             PointObj->SetStringField(TEXT("type"), SplinePointTypeToString(SplineComp->GetSplinePointType(i)));
 
             PointsArray.Add(MakeShared<FJsonValueObject>(PointObj));
@@ -129,4 +116,3 @@ bool HandleGetSplinesInfo(
         TEXT("Spline info retrieved"), Result);
     return true;
 }
-#endif

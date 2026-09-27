@@ -30,103 +30,48 @@ double LanczosWeight(double X)
 TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    TSet<FString> ValidParams = {
-        // `action` is injected by WithPayloadSubAction as the legacy dispatch
-        // verb (MCPBB-060); it is not a client parameter but must be accepted.
-        TEXT("action"), TEXT("subAction"), TEXT("kind"), TEXT("sourcePath"), TEXT("name"), TEXT("path"),
-        TEXT("newWidth"), TEXT("newHeight"), TEXT("filterMethod"), TEXT("save")
-    };
-    for (const auto& Field : Params->Values)
-    {
-        if (!ValidParams.Contains(FString(*Field.Key)))
-        {
-            TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Invalid parameter: %s"), *Field.Key));
-        }
-    }
-
-    FString SourcePath = GetJsonStringField(Params, TEXT("sourcePath"), TEXT(""));
-    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
-    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT(""));
-    const FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
-    if (SanitizedSource.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid sourcePath: contains traversal or invalid characters"));
-    }
-    SourcePath = SanitizedSource;
-
     int32 NewWidth = 0;
     int32 NewHeight = 0;
-    FString ValidationError;
+    FString Error;
     if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("newWidth"), 512),
                                             GetJsonNumberField(Params, TEXT("newHeight"), 512),
                                             TEXT("newWidth"), TEXT("newHeight"),
-                                            NewWidth, NewHeight, ValidationError))
+                                            NewWidth, NewHeight, Error))
     {
-        TEXTURE_ERROR_RESPONSE(ValidationError);
+        TEXTURE_ERROR_RESPONSE(Error);
     }
     const FString FilterMethod = GetJsonStringField(Params, TEXT("filterMethod"), TEXT("Bilinear"));
     const FString FilterMethodLower = FilterMethod.ToLower();
-    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
     if (FilterMethodLower != TEXT("nearest") && FilterMethodLower != TEXT("bilinear") &&
         FilterMethodLower != TEXT("bicubic") && FilterMethodLower != TEXT("lanczos"))
     {
         TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Unsupported filterMethod: %s"), *FilterMethod));
     }
-    if (SourcePath.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("sourcePath is required"));
-    }
 
-    UTexture2D* SourceTexture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *SourcePath));
-    if (!SourceTexture)
+    FString SourcePath;
+    UTexture2D* SourceTexture = LoadSourceTexture(GetJsonStringField(Params, TEXT("sourcePath")), TEXT("sourcePath"), SourcePath, Error);
+    FString Path;
+    FString Name;
+    if (!SourceTexture ||
+        !ResolveOutputTarget(Params, FPaths::GetPath(SourcePath), FPaths::GetBaseFilename(SourcePath) + TEXT("_Resized"), Path, Name, Error))
     {
-        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load source texture: %s"), *SourcePath));
+        TEXTURE_ERROR_RESPONSE(Error);
     }
-    if (!SourceTexture->Source.IsValid())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Source texture has no source data - may be compressed or not fully loaded"));
-    }
-    if (SourceTexture->IsStreamable())
-    {
-        SourceTexture->SetForceMipLevelsToBeResident(30.0f);
-    }
-
-    const int32 SrcWidth = SourceTexture->GetSizeX();
-    const int32 SrcHeight = SourceTexture->GetSizeY();
-    const uint8* SrcData = SourceTexture->Source.LockMip(0);
-    if (!SrcData)
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock source texture data - texture may be compressed or streaming"));
-    }
-
-    if (Name.IsEmpty()) Name = FPaths::GetBaseFilename(SourcePath) + TEXT("_Resized");
-    if (Path.IsEmpty()) Path = FPaths::GetPath(SourcePath);
-    const FString SanitizedPath = SanitizeProjectRelativePath(Path);
-    if (SanitizedPath.IsEmpty())
-    {
-        SourceTexture->Source.UnlockMip(0);
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid path: contains traversal or invalid characters"));
-    }
-    Path = SanitizedPath;
-    const FString SanitizedName = SanitizeAssetName(Name);
-    if (SanitizedName.IsEmpty())
-    {
-        SourceTexture->Source.UnlockMip(0);
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid name: contains invalid characters"));
-    }
-    Name = SanitizedName;
-
     UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, NewWidth, NewHeight, false);
     if (!NewTexture)
     {
-        SourceTexture->Source.UnlockMip(0);
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create resized texture"));
     }
+
+    const int32 SrcWidth = SourceTexture->Source.GetSizeX();
+    const int32 SrcHeight = SourceTexture->Source.GetSizeY();
+    const uint8* SrcData = SourceTexture->Source.LockMipReadOnly(0);
     uint8* DstMipData = NewTexture->Source.LockMip(0);
-    if (!DstMipData)
+    if (!SrcData || !DstMipData)
     {
-        SourceTexture->Source.UnlockMip(0);
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock destination texture data"));
+        if (SrcData) SourceTexture->Source.UnlockMip(0);
+        if (DstMipData) NewTexture->Source.UnlockMip(0);
+        TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture data"));
     }
 
     auto GetPixelBGRA = [&](int32 PX, int32 PY) -> FColor
@@ -199,11 +144,8 @@ TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Param
     SourceTexture->Source.UnlockMip(0);
     NewTexture->Source.UnlockMip(0);
     NewTexture->UpdateResource();
-    if (bSave)
-    {
-        FAssetRegistryModule::AssetCreated(NewTexture);
-        McpSafeAssetSave(NewTexture);
-    }
+    FAssetRegistryModule::AssetCreated(NewTexture);
+    McpSafeAssetSave(NewTexture);
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Texture resized to %dx%d"), NewWidth, NewHeight));
     Response->SetStringField(TEXT("assetPath"), Path / Name);

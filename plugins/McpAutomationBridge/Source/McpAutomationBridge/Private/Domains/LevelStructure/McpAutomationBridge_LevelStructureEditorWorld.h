@@ -2,14 +2,19 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 class ULevel;
+class ULevelStreaming;
 class UWorld;
 
 namespace LevelStructureHelpers
 {
-#if WITH_EDITOR
-UWorld* GetEditorWorld();
+using McpHandlerUtils::GetEditorWorld;
+
+// The editor world's streaming level whose package (or its short name) is LevelName; when none is and the package
+// exists at LevelName, under the persistent level's folder, or under /Game, a ULevelStreamingDynamic is added for it.
+ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName);
 
 /**
  * Resolve the level a level-blueprint request targets.
@@ -35,5 +40,4 @@ UWorld* GetEditorWorld();
 ULevel* ResolveTargetLevelForBlueprintRequest(
     UWorld* World, const TSharedPtr<FJsonObject>& Payload, FString& OutError,
     bool bAllowTransient = false);
-#endif
 }

@@ -33,18 +33,9 @@ UTexture2D* LoadTextureChecked(const TSharedPtr<FJsonObject>& Params, TSharedPtr
 
 TextureCompressionSettings ParseCompressionSetting(const FString& Value)
 {
-    if (Value == TEXT("TC_Normalmap")) return TC_Normalmap;
-    if (Value == TEXT("TC_Masks")) return TC_Masks;
-    if (Value == TEXT("TC_Grayscale")) return TC_Grayscale;
-    if (Value == TEXT("TC_Displacementmap")) return TC_Displacementmap;
-    if (Value == TEXT("TC_VectorDisplacementmap")) return TC_VectorDisplacementmap;
-    if (Value == TEXT("TC_HDR")) return TC_HDR;
-    if (Value == TEXT("TC_EditorIcon")) return TC_EditorIcon;
-    if (Value == TEXT("TC_Alpha")) return TC_Alpha;
-    if (Value == TEXT("TC_DistanceFieldFont")) return TC_DistanceFieldFont;
-    if (Value == TEXT("TC_HDR_Compressed")) return TC_HDR_Compressed;
-    if (Value == TEXT("TC_BC7")) return TC_BC7;
-    return TC_Default;
+    // Any engine TextureCompressionSettings name; TC_Default otherwise.
+    const int64 Compression = StaticEnum<TextureCompressionSettings>()->GetValueByNameString(Value);
+    return Compression == INDEX_NONE ? TC_Default : static_cast<TextureCompressionSettings>(Compression);
 }
 
 ::TextureGroup ParseTextureGroup(const FString& Value)

@@ -1,6 +1,6 @@
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureActions.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
-#include "Domains/LevelStructure/McpAutomationBridge_LevelStructurePayload.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/World.h"
@@ -16,7 +16,6 @@
 #include "WorldPartition/WorldPartitionMiniMapVolume.h"
 #endif
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -81,36 +80,21 @@ bool HandleConfigureHlodLayer(
         return true;
     }
 
-    // SetLayerType is NOT deprecated in 5.7 -- only the spatially-loaded /
-    // cell-size / loading-range trio moved to the partition's settings
-    // (HLODLayer.h:55 vs :66-77). The old guard excluded the WHOLE block below
-    // 5.7, so on a 5.7 editor every layer was created at the default type while
-    // the reply echoed back the requested layerType as though it had been set.
-    bool bLayerTypeApplied = false;
-    bool bSpatiallyLoadedApplied = false;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    if (LayerType == TEXT("Instancing"))
+    // LayerType, bIsSpatiallyLoaded, CellSize and LoadingRange are reflected properties on every 5.x UHLODLayer
+    // (5.7 moved only their public setters), so each is written through reflection and reported as applied or not.
+    static const TMap<FString, FString> LayerTypeAliases = {
+        {TEXT("SimplifiedMesh"), TEXT("MeshSimplify")}, {TEXT("ApproximatedMesh"), TEXT("MeshApproximate")}};
+    const FString* LayerTypeAlias = LayerTypeAliases.Find(LayerType);
+    auto ApplyLayerProperty = [NewHLODLayer](const TCHAR* Name, const TSharedPtr<FJsonValue>& Value)
     {
-        NewHLODLayer->SetLayerType(EHLODLayerType::Instancing);
-    }
-    else if (LayerType == TEXT("MeshSimplify") || LayerType == TEXT("SimplifiedMesh"))
-    {
-        NewHLODLayer->SetLayerType(EHLODLayerType::MeshSimplify);
-    }
-    else if (LayerType == TEXT("MeshApproximate") || LayerType == TEXT("ApproximatedMesh"))
-    {
-        NewHLODLayer->SetLayerType(EHLODLayerType::MeshApproximate);
-    }
-    else // Default to MeshMerge
-    {
-        NewHLODLayer->SetLayerType(EHLODLayerType::MeshMerge);
-    }
-    bLayerTypeApplied = true;
-#endif
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && ENGINE_MINOR_VERSION < 7
-    NewHLODLayer->SetIsSpatiallyLoaded(bIsSpatiallyLoaded);
-    bSpatiallyLoadedApplied = true;
-#endif
+        FProperty* Property = NewHLODLayer->GetClass()->FindPropertyByName(Name);
+        FString ApplyError;
+        return Property && ApplyJsonValueToProperty(NewHLODLayer, Property, Value, ApplyError);
+    };
+    const bool bLayerTypeApplied = ApplyLayerProperty(TEXT("LayerType"), MakeShared<FJsonValueString>(LayerTypeAlias ? *LayerTypeAlias : LayerType));
+    const bool bSpatiallyLoadedApplied = ApplyLayerProperty(TEXT("bIsSpatiallyLoaded"), MakeShared<FJsonValueBoolean>(bIsSpatiallyLoaded));
+    const bool bCellSizeApplied = ApplyLayerProperty(TEXT("CellSize"), MakeShared<FJsonValueNumber>(CellSize));
+    const bool bLoadingDistanceApplied = ApplyLayerProperty(TEXT("LoadingRange"), MakeShared<FJsonValueNumber>(LoadingDistance));
 
     AssetPackage->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewHLODLayer);
@@ -124,15 +108,10 @@ bool HandleConfigureHlodLayer(
     ResponseJson->SetNumberField(TEXT("cellSize"), CellSize);
     ResponseJson->SetNumberField(TEXT("loadingDistance"), LoadingDistance);
     ResponseJson->SetStringField(TEXT("layerType"), LayerType);
-    // Say which of the echoed values were actually written. cellSize and
-    // loadingDistance have never had public setters on UHLODLayer, and in 5.7+
-    // they live on the world partition's runtime grid instead.
     ResponseJson->SetBoolField(TEXT("layerTypeApplied"), bLayerTypeApplied);
     ResponseJson->SetBoolField(TEXT("isSpatiallyLoadedApplied"), bSpatiallyLoadedApplied);
-    ResponseJson->SetBoolField(TEXT("cellSizeApplied"), false);
-    ResponseJson->SetBoolField(TEXT("loadingDistanceApplied"), false);
-    ResponseJson->SetStringField(TEXT("streamingGridNote"),
-        TEXT("cellSize/loadingDistance (and isSpatiallyLoaded on UE 5.7+) belong to the world partition's runtime grid, not to the HLOD layer asset; use manage_level_structure configure_grid_size for those."));
+    ResponseJson->SetBoolField(TEXT("cellSizeApplied"), bCellSizeApplied);
+    ResponseJson->SetBoolField(TEXT("loadingDistanceApplied"), bLoadingDistanceApplied);
 
     FString Message = FString::Printf(TEXT("Created HLOD layer '%s' at '%s'"),
         *HlodLayerName, *FullPath);
@@ -146,12 +125,12 @@ bool HandleCreateMinimapVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("MinimapVolume"));
-    FVector VolumeLocation = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("volumeLocation")));
-    FVector VolumeExtent = LevelStructureHelpers::GetVectorFromJson(GetObjectField(Payload, TEXT("volumeExtent")), FVector(10000.0));
+    FVector VolumeLocation = ExtractVectorField(Payload, TEXT("volumeLocation"), FVector::ZeroVector);
+    FVector VolumeExtent = ExtractVectorField(Payload, TEXT("volumeExtent"), FVector(10000.0));
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -205,17 +184,9 @@ bool HandleCreateMinimapVolume(
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     ResponseJson->SetStringField(TEXT("volumeClass"), TEXT("AWorldPartitionMiniMapVolume"));
 
-    TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();
-    LocationJson->SetNumberField(TEXT("x"), VolumeLocation.X);
-    LocationJson->SetNumberField(TEXT("y"), VolumeLocation.Y);
-    LocationJson->SetNumberField(TEXT("z"), VolumeLocation.Z);
-    ResponseJson->SetObjectField(TEXT("volumeLocation"), LocationJson);
+    ResponseJson->SetObjectField(TEXT("volumeLocation"), McpHandlerUtils::VectorToJson(VolumeLocation));
 
-    TSharedPtr<FJsonObject> ExtentJson = McpHandlerUtils::CreateResultObject();
-    ExtentJson->SetNumberField(TEXT("x"), VolumeExtent.X);
-    ExtentJson->SetNumberField(TEXT("y"), VolumeExtent.Y);
-    ExtentJson->SetNumberField(TEXT("z"), VolumeExtent.Z);
-    ResponseJson->SetObjectField(TEXT("volumeExtent"), ExtentJson);
+    ResponseJson->SetObjectField(TEXT("volumeExtent"), McpHandlerUtils::VectorToJson(VolumeExtent));
 
     FString Message = FString::Printf(TEXT("Created minimap volume '%s' at (%f, %f, %f)"),
         *VolumeName, VolumeLocation.X, VolumeLocation.Y, VolumeLocation.Z);
@@ -228,4 +199,3 @@ bool HandleCreateMinimapVolume(
 }
 
 }
-#endif

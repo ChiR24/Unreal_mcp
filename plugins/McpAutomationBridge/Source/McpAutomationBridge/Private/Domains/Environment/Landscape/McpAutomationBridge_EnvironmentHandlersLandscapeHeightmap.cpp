@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool McpExportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
@@ -189,4 +188,3 @@ bool McpImportLandscapeHeightmap(const TSharedPtr<FJsonObject> &Payload, TShared
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

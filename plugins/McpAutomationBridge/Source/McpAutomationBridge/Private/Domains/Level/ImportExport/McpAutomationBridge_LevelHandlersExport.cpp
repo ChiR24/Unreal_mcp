@@ -11,9 +11,6 @@
 using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString LevelPath;
     if (Payload.IsValid())
@@ -26,7 +23,7 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
         Payload->TryGetStringField(TEXT("destinationPath"), ExportPath);
 
     if (ExportPath.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("exportPath required"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
@@ -39,14 +36,14 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       const FString FullT3D = FPaths::ConvertRelativePathToFull(ExportPath);
       const FString ProjectRoot = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
       if (!FullT3D.StartsWith(ProjectRoot, ESearchCase::IgnoreCase) || FullT3D.Contains(TEXT(".."))) {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("A .t3d exportPath must be a file inside the project directory (e.g. Saved/Exports/Level.t3d)"),
                                nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
       }
       UWorld* T3DWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
       if (!T3DWorld) {
-        SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("No world loaded"), nullptr, TEXT("NO_WORLD"));
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, TEXT("No world loaded"), nullptr, TEXT("NO_WORLD"));
         return true;
       }
       IFileManager::Get().MakeDirectory(*FPaths::GetPath(FullT3D), true);
@@ -54,7 +51,7 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       TSharedPtr<FJsonObject> T3DResult = McpHandlerUtils::CreateResultObject();
       T3DResult->SetStringField(TEXT("exportPath"), FullT3D);
       T3DResult->SetStringField(TEXT("format"), TEXT("t3d"));
-      SendAutomationResponse(RequestingSocket, RequestId, bWrote,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, bWrote,
                              bWrote ? TEXT("Level exported as T3D") : TEXT("T3D export failed"),
                              T3DResult, bWrote ? FString() : TEXT("EXPORT_FAILED"));
       return true;
@@ -62,14 +59,14 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     // SECURITY: Sanitize export path as an asset path
     FString SafeExportPath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(ExportPath));
     if (SafeExportPath.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Invalid or unsafe exportPath: use a /Game package path for a map copy, or a project-relative .t3d file for a text export"), nullptr,
                              TEXT("SECURITY_VIOLATION"));
       return true;
     }
 
     if (!GEditor) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
                              TEXT("EDITOR_NOT_AVAILABLE"));
       return true;
@@ -88,7 +85,7 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
               *FPaths::ConvertRelativePathToFull(Filename));
         }
         if (!bFileFound) {
-          SendAutomationResponse(RequestingSocket, RequestId, false,
+          Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                                  FString::Printf(TEXT("Source level not found: %s"), *LevelPath),
                                  nullptr, TEXT("LEVEL_NOT_FOUND"));
           return true;
@@ -99,7 +96,7 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
                       Current->GetPathName() == LevelPath)) {
         WorldToExport = Current;
       } else {
-        SendAutomationResponse(
+        Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(
                 TEXT("Requested level is not loaded: %s. Load the level before exporting it."),
@@ -112,7 +109,7 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       WorldToExport = GEditor->GetEditorWorldContext().World();
 
     if (!WorldToExport) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,
                              TEXT("NO_WORLD"));
       return true;
@@ -125,7 +122,7 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
                                            ExportErrorMessage,
                                            ExportErrorCode,
                                            TEXT("Export destination"))) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              ExportErrorMessage, nullptr,
                              ExportErrorCode.IsEmpty() ? TEXT("INVALID_ARGUMENT") : ExportErrorCode);
       return true;
@@ -139,16 +136,13 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     // to prevent Intel GPU driver crashes (MONZA DdiThreadingContext)
     bool bExported = McpSafeLevelSave(WorldToExport->PersistentLevel, SafeExportPath);
     if (bExported) {
-      SendAutomationResponse(RequestingSocket, RequestId, true,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level exported"), nullptr);
     } else {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Failed to export level after 5 retries (check GPU driver stability)"), nullptr,
                              TEXT("EXPORT_FAILED"));
     }
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

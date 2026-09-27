@@ -1,52 +1,21 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
 UTexture2D* ResolveGeometryTexture(const FString& TexturePath, FString& OutResolvedPath)
 {
     FString SafePath = SanitizeProjectRelativePath(TexturePath);
-    if (SafePath.IsEmpty())
-    {
-        return nullptr;
-    }
-
-    auto TryLoadTexture = [&OutResolvedPath](const FString& Candidate) -> UTexture2D*
-    {
-        if (Candidate.IsEmpty())
-        {
-            return nullptr;
-        }
-
-        if (UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *Candidate)))
-        {
-            OutResolvedPath = Texture->GetPathName();
-            return Texture;
-        }
-
-        if (UTexture2D* Texture = FindObject<UTexture2D>(nullptr, *Candidate))
-        {
-            OutResolvedPath = Texture->GetPathName();
-            return Texture;
-        }
-
-        return nullptr;
-    };
-
-    if (UTexture2D* Texture = TryLoadTexture(SafePath))
-    {
-        return Texture;
-    }
-
+    if (SafePath.IsEmpty()) return nullptr;
+    // A bare package path names the asset after its package.
     if (!SafePath.Contains(TEXT(".")))
     {
-        const FString AssetName = FPackageName::GetLongPackageAssetName(SafePath);
-        const FString ObjectPath = FString::Printf(TEXT("%s.%s"), *SafePath, *AssetName);
-        return TryLoadTexture(ObjectPath);
+        SafePath += TEXT(".") + FPackageName::GetLongPackageAssetName(SafePath);
     }
-
-    return nullptr;
+    UTexture2D* Texture = LoadObject<UTexture2D>(nullptr, *SafePath);
+    if (Texture) OutResolvedPath = Texture->GetPathName();
+    return Texture;
 }
 
 bool SampleTextureLuminance(UTexture2D* Texture, double U, double V, double& OutLuminance)
@@ -97,4 +66,4 @@ bool SampleTextureLuminance(UTexture2D* Texture, double U, double V, double& Out
 }
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

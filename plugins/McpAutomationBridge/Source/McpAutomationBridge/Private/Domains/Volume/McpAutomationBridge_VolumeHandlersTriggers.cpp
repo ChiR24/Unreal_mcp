@@ -17,7 +17,6 @@
 
 namespace McpVolumeHandlers
 {
-#if WITH_EDITOR
 bool HandleCreateTriggerVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace VolumeHelpers;
@@ -53,10 +52,10 @@ bool HandleCreateTriggerBox(UMcpAutomationBridgeSubsystem* Subsystem, const FStr
     {
         return true;
     }
-    FVector Extent = GetVectorFromPayload(Payload, TEXT("boxExtent"), FVector(100.0f, 100.0f, 100.0f));
+    FVector Extent = ExtractVectorField(Payload, TEXT("boxExtent"), FVector(100.0f, 100.0f, 100.0f));
     if (Extent == FVector::ZeroVector)
     {
-        Extent = GetVectorFromPayload(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
+        Extent = ExtractVectorField(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
     }
     FString ValidationError;
     if (!ValidateExtent(Extent, ValidationError))
@@ -146,5 +145,4 @@ bool HandleCreateTriggerCapsule(UMcpAutomationBridgeSubsystem* Subsystem, const 
         FString::Printf(TEXT("Created TriggerCapsule: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
-#endif
 }

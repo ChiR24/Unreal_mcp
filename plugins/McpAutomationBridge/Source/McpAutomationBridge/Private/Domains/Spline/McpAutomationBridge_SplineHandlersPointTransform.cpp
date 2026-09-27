@@ -5,7 +5,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -17,40 +16,12 @@ static bool GetSplinePointTarget(
     TSharedPtr<FMcpBridgeWebSocket> Socket,
     AActor*& OutActor,
     USplineComponent*& OutSplineComp,
-    UWorld*& OutWorld,
     int32& OutPointIndex)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     OutPointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), 0);
-
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
-        return false;
-    }
-
-    OutWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!OutWorld)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return false;
-    }
-
-    OutActor = FindActorByName(OutWorld, ActorName);
-    if (!OutActor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return false;
-    }
-
-    OutSplineComp = FindSplineComponent(OutActor);
+    OutSplineComp = ResolveSplineTarget(Self, RequestId, Socket, GetJsonStringField(Payload, TEXT("actorName")), OutActor);
     if (!OutSplineComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
         return false;
     }
 
@@ -86,9 +57,8 @@ bool HandleSetSplinePointTangents(
 {
     AActor* Actor = nullptr;
     USplineComponent* SplineComp = nullptr;
-    UWorld* World = nullptr;
     int32 PointIndex = 0;
-    if (!GetSplinePointTarget(Self, RequestId, Payload, Socket, Actor, SplineComp, World, PointIndex))
+    if (!GetSplinePointTarget(Self, RequestId, Payload, Socket, Actor, SplineComp, PointIndex))
     {
         return true;
     }
@@ -104,7 +74,7 @@ bool HandleSetSplinePointTangents(
 
     SplineComp->SetTangentAtSplinePoint(PointIndex, ArriveTangent, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     SendPointMutationResponse(Self, RequestId, Socket, Actor, PointIndex,
         FString::Printf(TEXT("Set tangents for spline point %d"), PointIndex));
@@ -119,9 +89,8 @@ bool HandleSetSplinePointRotation(
 {
     AActor* Actor = nullptr;
     USplineComponent* SplineComp = nullptr;
-    UWorld* World = nullptr;
     int32 PointIndex = 0;
-    if (!GetSplinePointTarget(Self, RequestId, Payload, Socket, Actor, SplineComp, World, PointIndex))
+    if (!GetSplinePointTarget(Self, RequestId, Payload, Socket, Actor, SplineComp, PointIndex))
     {
         return true;
     }
@@ -129,7 +98,7 @@ bool HandleSetSplinePointRotation(
     FRotator Rotation = ExtractRotatorField(Payload, TEXT("pointRotation"), FRotator::ZeroRotator);
     SplineComp->SetRotationAtSplinePoint(PointIndex, Rotation, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     SendPointMutationResponse(Self, RequestId, Socket, Actor, PointIndex,
         FString::Printf(TEXT("Set rotation for spline point %d"), PointIndex));
@@ -144,9 +113,8 @@ bool HandleSetSplinePointScale(
 {
     AActor* Actor = nullptr;
     USplineComponent* SplineComp = nullptr;
-    UWorld* World = nullptr;
     int32 PointIndex = 0;
-    if (!GetSplinePointTarget(Self, RequestId, Payload, Socket, Actor, SplineComp, World, PointIndex))
+    if (!GetSplinePointTarget(Self, RequestId, Payload, Socket, Actor, SplineComp, PointIndex))
     {
         return true;
     }
@@ -154,7 +122,7 @@ bool HandleSetSplinePointScale(
     FVector Scale = ExtractVectorField(Payload, TEXT("pointScale"), FVector::OneVector);
     SplineComp->SetScaleAtSplinePoint(PointIndex, Scale, true);
     SplineComp->UpdateSpline();
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     SendPointMutationResponse(Self, RequestId, Socket, Actor, PointIndex,
         FString::Printf(TEXT("Set scale for spline point %d"), PointIndex));
@@ -171,34 +139,10 @@ bool HandleSetSplineType(
     FString SplineType = GetJsonStringField(Payload, TEXT("splineType"), TEXT("Curve"));
     int32 PointIndex = GetJsonIntField(Payload, TEXT("pointIndex"), -1);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByName(World, ActorName);
-    if (!Actor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    USplineComponent* SplineComp = FindSplineComponent(Actor);
+    AActor* Actor = nullptr;
+    USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
     if (!SplineComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
         return true;
     }
 
@@ -222,7 +166,7 @@ bool HandleSetSplineType(
     }
 
     SplineComp->UpdateSpline();
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("splineType"), SplineType);
@@ -233,4 +177,3 @@ bool HandleSetSplineType(
         FString::Printf(TEXT("Set spline type to %s"), *SplineType), Result);
     return true;
 }
-#endif

@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 namespace {
@@ -111,4 +110,3 @@ void McpDescribeClass(UClass *Class, TSharedPtr<FJsonObject> Resp)
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

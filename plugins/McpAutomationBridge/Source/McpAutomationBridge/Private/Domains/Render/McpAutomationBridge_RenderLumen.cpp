@@ -3,11 +3,9 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
-#endif
 
 namespace McpRenderHandlers
 {
@@ -16,7 +14,6 @@ bool HandleLumenUpdateScene(
     const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-#if WITH_EDITOR
     if (GEditor)
     {
         UWorld* World = GEditor->GetEditorWorldContext().World();
@@ -39,10 +36,5 @@ bool HandleLumenUpdateScene(
     Subsystem->SendAutomationError(RequestingSocket, RequestId,
         TEXT("Could not execute command (no world context)."), TEXT("EXECUTION_FAILED"));
     return true;
-#else
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-        TEXT("Render management requires editor build"), nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 }

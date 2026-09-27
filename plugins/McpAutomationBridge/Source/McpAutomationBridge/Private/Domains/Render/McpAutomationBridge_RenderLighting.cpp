@@ -6,7 +6,6 @@
 #include "Domains/Lighting/McpAutomationBridge_LightingHandlersPrivate.h"
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 #include "Components/LightComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/WorldSettings.h"
@@ -195,4 +194,3 @@ bool HandleRenderLightingAction(
     return false;
 }
 }
-#endif

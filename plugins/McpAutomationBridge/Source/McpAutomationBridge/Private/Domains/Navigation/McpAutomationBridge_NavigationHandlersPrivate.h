@@ -9,7 +9,6 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Misc/EngineVersionComparison.h"
 
-#if WITH_EDITOR
 #include "AI/NavigationSystemBase.h"
 #include "Editor.h"
 #include "Engine/Blueprint.h"
@@ -73,6 +72,23 @@ inline ANavLinkProxy* FindNavLinkProxyByName(UWorld* World, const FString& Actor
     }
     return nullptr;
 }
+
+// The NavLinkProxy the payload's actorName names in the editor world; replies and returns null when actorName is
+// missing or unsafe, there is no editor world, or nothing matches.
+ANavLinkProxy* ResolveNavLinkOrReply(
+    UMcpAutomationBridgeSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+// create_nav_link_proxy / create_smart_link: a NavLinkProxy at location linking startPoint to endPoint -- as a point
+// link, or (bSmart) through its smart link component.
+bool SpawnNavLink(
+    UMcpAutomationBridgeSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket,
+    bool bSmart);
 
 bool HandleConfigureNavMeshSettings(
     UMcpAutomationBridgeSubsystem* Self,
@@ -146,4 +162,3 @@ bool HandleGetNavigationInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
 }
-#endif

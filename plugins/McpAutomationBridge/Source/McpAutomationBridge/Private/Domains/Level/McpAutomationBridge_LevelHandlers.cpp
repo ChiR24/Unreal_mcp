@@ -5,19 +5,10 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   const FString Lower = Action.ToLower();
-  const bool bIsLevelAction =
-      (Lower == TEXT("manage_level") || Lower == TEXT("save_current_level") ||
-       Lower == TEXT("create_new_level") || Lower == TEXT("stream_level") ||
-       Lower == TEXT("spawn_light") || Lower == TEXT("build_lighting") ||
-       Lower == TEXT("bake_lightmap") || Lower == TEXT("list_levels") ||
-       Lower == TEXT("get_current_level") ||
-       Lower == TEXT("export_level") || Lower == TEXT("import_level") ||
-       Lower == TEXT("add_sublevel"));
-  if (!bIsLevelAction) {
+  if (Lower != TEXT("manage_level")) {
     return false;
   }
 
-#if WITH_EDITOR
   FString EffectiveAction = Lower;
   bool bForceStreamUnload = false;
   if (Lower == TEXT("manage_level")) {
@@ -78,35 +69,9 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       EffectiveAction = TEXT("duplicate_level");
     } else if (LowerSub == TEXT("get_summary")) {
       EffectiveAction = TEXT("get_level_info");
-    } else if (LowerSub == TEXT("delete_levels")) {
-      EffectiveAction = TEXT("delete_level");
     } else if (LowerSub == TEXT("unload") || LowerSub == TEXT("unload_level")) {
       EffectiveAction = TEXT("stream_level");
       bForceStreamUnload = true;
-    } else if (LowerSub == TEXT("get_level_info")) {
-      EffectiveAction = TEXT("get_level_info");
-    } else if (LowerSub == TEXT("set_level_lighting")) {
-      EffectiveAction = TEXT("set_level_lighting");
-    } else if (LowerSub == TEXT("add_level_to_world")) {
-      EffectiveAction = TEXT("add_level_to_world");
-    } else if (LowerSub == TEXT("remove_level_from_world")) {
-      EffectiveAction = TEXT("remove_level_from_world");
-    } else if (LowerSub == TEXT("set_level_visibility")) {
-      EffectiveAction = TEXT("set_level_visibility");
-    } else if (LowerSub == TEXT("set_level_locked")) {
-      EffectiveAction = TEXT("set_level_locked");
-    } else if (LowerSub == TEXT("get_level_actors")) {
-      EffectiveAction = TEXT("get_level_actors");
-    } else if (LowerSub == TEXT("get_level_bounds")) {
-      EffectiveAction = TEXT("get_level_bounds");
-    } else if (LowerSub == TEXT("get_level_lighting_scenarios")) {
-      EffectiveAction = TEXT("get_level_lighting_scenarios");
-    } else if (LowerSub == TEXT("build_level_lighting")) {
-      EffectiveAction = TEXT("build_level_lighting");
-    } else if (LowerSub == TEXT("build_level_navigation")) {
-      EffectiveAction = TEXT("build_level_navigation");
-    } else if (LowerSub == TEXT("build_all_level")) {
-      EffectiveAction = TEXT("build_all_level");
     } else {
       SendAutomationError(
           RequestingSocket, RequestId,
@@ -137,17 +102,6 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
       {TEXT("duplicate_level"), McpLevelHandlers::HandleDuplicateLevelAction},
       {TEXT("get_level_info"), McpLevelHandlers::HandleGetLevelInfoAction},
       {TEXT("set_level_world_settings"), McpLevelHandlers::HandleSetLevelWorldSettingsAction},
-      {TEXT("set_level_lighting"), McpLevelHandlers::HandleSetLevelLightingAction},
-      {TEXT("add_level_to_world"), McpLevelHandlers::HandleAddLevelToWorldAction},
-      {TEXT("remove_level_from_world"), McpLevelHandlers::HandleRemoveLevelFromWorldAction},
-      {TEXT("set_level_visibility"), McpLevelHandlers::HandleSetLevelVisibilityAction},
-      {TEXT("set_level_locked"), McpLevelHandlers::HandleSetLevelLockedAction},
-      {TEXT("get_level_actors"), McpLevelHandlers::HandleGetLevelActorsAction},
-      {TEXT("get_level_bounds"), McpLevelHandlers::HandleGetLevelBoundsAction},
-      {TEXT("get_level_lighting_scenarios"), McpLevelHandlers::HandleGetLevelLightingScenariosAction},
-      {TEXT("build_level_lighting"), McpLevelHandlers::HandleBuildLightingAction},
-      {TEXT("build_level_navigation"), McpLevelHandlers::HandleBuildLevelNavigationAction},
-      {TEXT("build_all_level"), McpLevelHandlers::HandleBuildAllLevelAction},
   };
 
   if (EffectiveAction == TEXT("stream_level")) {
@@ -155,8 +109,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
                                                      RequestingSocket,
                                                      bForceStreamUnload);
   }
-  if (EffectiveAction == TEXT("build_lighting") ||
-      EffectiveAction == TEXT("bake_lightmap")) {
+  if (EffectiveAction == TEXT("build_lighting")) {
     return McpLevelHandlers::HandleBuildLightingAction(*this, RequestId, Payload,
                                                        RequestingSocket);
   }
@@ -166,10 +119,4 @@ bool UMcpAutomationBridgeSubsystem::HandleLevelAction(
     }
   }
   return false;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("Level actions require editor build."), nullptr,
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

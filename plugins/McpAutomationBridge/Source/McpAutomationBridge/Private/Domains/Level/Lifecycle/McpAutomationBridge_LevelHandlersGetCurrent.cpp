@@ -6,48 +6,23 @@
 #include "Misc/PackageName.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleGetCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     UWorld* EditorWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!EditorWorld) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
       return true;
     }
 
     ULevel* CurrentLevel = EditorWorld->GetCurrentLevel();
     if (!CurrentLevel) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No current level available"), nullptr, TEXT("NO_LEVEL"));
       return true;
     }
 
     UPackage* WorldPackage = EditorWorld->GetOutermost();
     UPackage* LevelPackage = CurrentLevel->GetOutermost();
-
-    auto WorldTypeToString = [](EWorldType::Type WorldType) -> FString {
-      switch (WorldType) {
-      case EWorldType::Game:
-        return TEXT("Game");
-      case EWorldType::Editor:
-        return TEXT("Editor");
-      case EWorldType::PIE:
-        return TEXT("PIE");
-      case EWorldType::EditorPreview:
-        return TEXT("EditorPreview");
-      case EWorldType::GamePreview:
-        return TEXT("GamePreview");
-      case EWorldType::GameRPC:
-        return TEXT("GameRPC");
-      case EWorldType::Inactive:
-        return TEXT("Inactive");
-      case EWorldType::None:
-      default:
-        return TEXT("None");
-      }
-    };
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("mapName"), EditorWorld->GetMapName());
@@ -64,18 +39,15 @@ bool HandleGetCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const
     // can distinguish persistent map state from transient PIE/editor worlds.
     Result->SetStringField(TEXT("editorWorldName"), EditorWorld->GetName());
     Result->SetStringField(TEXT("editorWorldPath"), WorldPackage ? WorldPackage->GetPathName() : TEXT(""));
-    Result->SetStringField(TEXT("worldType"), WorldTypeToString(EditorWorld->WorldType));
+    Result->SetStringField(TEXT("worldType"), LexToString(EditorWorld->WorldType));
     Result->SetNumberField(TEXT("actorCount"), CurrentLevel->Actors.Num());
     Result->SetBoolField(TEXT("isPersistentLevel"), CurrentLevel == EditorWorld->PersistentLevel);
     // The capability's declared contract promises `loaded`; the current level is
     // loaded by definition, so it is stated rather than left absent.
     Result->SetBoolField(TEXT("loaded"), true);
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Current level retrieved"), Result);
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

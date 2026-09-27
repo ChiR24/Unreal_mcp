@@ -1,7 +1,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 namespace {
 
@@ -257,4 +256,3 @@ bool HandleBuildSnapshotAndDeletionAction(const FString &LowerSub, FEnvironmentB
 }
 
 }
-#endif

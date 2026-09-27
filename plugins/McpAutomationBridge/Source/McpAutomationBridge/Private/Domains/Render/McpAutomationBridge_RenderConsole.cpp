@@ -4,7 +4,6 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 namespace McpRenderHandlers
 {
 namespace
@@ -112,79 +111,61 @@ bool HandleRenderConsoleAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    TArray<FString> Applied;
-    TArray<FString> Unsupported;
-    const TSharedPtr<FJsonObject> Settings = GetSettingsObject(Payload);
-
-    if (SubAction == TEXT("configure_ray_traced_shadows"))
+    // Field, bounds and cvar per sub-action; fields live under settings except ray-traced AO's top-level intensity.
+    struct FNumberCVar
     {
-        FBoundedConsoleSetting Samples;
-        if (!ReadBoundedNumberSetting(Subsystem, RequestId, Settings, TEXT("SamplesPerPixel"), 1.0, 64.0, true, Samples, RequestingSocket))
-        {
-            return true;
-        }
-        AddEnabledCVar(Payload, TEXT("r.RayTracing.Shadows"), Applied, Unsupported);
-        ApplyNumberSetting(Samples, TEXT("r.RayTracing.Shadows.SamplesPerPixel"), Applied, Unsupported);
-    }
-    else if (SubAction == TEXT("configure_ray_traced_gi"))
+        bool bTopLevel;
+        const TCHAR* Field;
+        double Min;
+        double Max;
+        bool bWhole;
+        const TCHAR* CVar;
+    };
+    struct FConsoleAction
     {
-        FBoundedConsoleSetting Samples;
-        FBoundedConsoleSetting Bounces;
-        if (!ReadBoundedNumberSetting(Subsystem, RequestId, Settings, TEXT("SamplesPerPixel"), 1.0, 64.0, true, Samples, RequestingSocket) ||
-            !ReadBoundedNumberSetting(Subsystem, RequestId, Settings, TEXT("MaxBounces"), 0.0, 16.0, true, Bounces, RequestingSocket))
-        {
-            return true;
-        }
-        AddEnabledCVar(Payload, TEXT("r.RayTracing.GlobalIllumination"), Applied, Unsupported);
-        ApplyNumberSetting(Samples, TEXT("r.RayTracing.GlobalIllumination.SamplesPerPixel"), Applied, Unsupported);
-        ApplyNumberSetting(Bounces, TEXT("r.RayTracing.GlobalIllumination.MaxBounces"), Applied, Unsupported);
-    }
-    else if (SubAction == TEXT("configure_ray_traced_reflections"))
-    {
-        FBoundedConsoleSetting Samples;
-        FBoundedConsoleSetting MaxRoughness;
-        if (!ReadBoundedNumberSetting(Subsystem, RequestId, Settings, TEXT("SamplesPerPixel"), 1.0, 64.0, true, Samples, RequestingSocket) ||
-            !ReadBoundedNumberSetting(Subsystem, RequestId, Settings, TEXT("MaxRoughness"), 0.0, 1.0, false, MaxRoughness, RequestingSocket))
-        {
-            return true;
-        }
-        AddEnabledCVar(Payload, TEXT("r.RayTracing.Reflections"), Applied, Unsupported);
-        ApplyNumberSetting(Samples, TEXT("r.RayTracing.Reflections.SamplesPerPixel"), Applied, Unsupported);
-        ApplyNumberSetting(MaxRoughness, TEXT("r.RayTracing.Reflections.MaxRoughness"), Applied, Unsupported);
-    }
-    else if (SubAction == TEXT("configure_ray_traced_ao"))
-    {
-        FBoundedConsoleSetting Intensity;
-        FBoundedConsoleSetting Radius;
-        if (!ReadBoundedNumberSetting(Subsystem, RequestId, Payload, TEXT("intensity"), 0.0, 10.0, false, Intensity, RequestingSocket) ||
-            !ReadBoundedNumberSetting(Subsystem, RequestId, Settings, TEXT("Radius"), 0.0, 10000.0, false, Radius, RequestingSocket))
-        {
-            return true;
-        }
-        AddEnabledCVar(Payload, TEXT("r.RayTracing.AmbientOcclusion"), Applied, Unsupported);
-        ApplyNumberSetting(Intensity, TEXT("r.RayTracing.AmbientOcclusion.Intensity"), Applied, Unsupported);
-        ApplyNumberSetting(Radius, TEXT("r.RayTracing.AmbientOcclusion.Radius"), Applied, Unsupported);
-    }
-    else if (SubAction == TEXT("configure_path_tracing"))
-    {
-        FBoundedConsoleSetting Samples;
-        FBoundedConsoleSetting Bounces;
-        if (!ReadBoundedNumberSetting(Subsystem, RequestId, Settings, TEXT("SamplesPerPixel"), 1.0, 256.0, true, Samples, RequestingSocket) ||
-            !ReadBoundedNumberSetting(Subsystem, RequestId, Settings, TEXT("MaxBounces"), 0.0, 16.0, true, Bounces, RequestingSocket))
-        {
-            return true;
-        }
-        AddEnabledCVar(Payload, TEXT("r.PathTracing"), Applied, Unsupported);
-        ApplyNumberSetting(Samples, TEXT("r.PathTracing.SamplesPerPixel"), Applied, Unsupported);
-        ApplyNumberSetting(Bounces, TEXT("r.PathTracing.MaxBounces"), Applied, Unsupported);
-    }
-    else
+        const TCHAR* EnableCVar;
+        TArray<FNumberCVar> Numbers;
+    };
+    static const TMap<FString, FConsoleAction> Actions = {
+        {TEXT("configure_ray_traced_shadows"), {TEXT("r.RayTracing.Shadows"), {
+            {false, TEXT("SamplesPerPixel"), 1.0, 64.0, true, TEXT("r.RayTracing.Shadows.SamplesPerPixel")}}}},
+        {TEXT("configure_ray_traced_gi"), {TEXT("r.RayTracing.GlobalIllumination"), {
+            {false, TEXT("SamplesPerPixel"), 1.0, 64.0, true, TEXT("r.RayTracing.GlobalIllumination.SamplesPerPixel")},
+            {false, TEXT("MaxBounces"), 0.0, 16.0, true, TEXT("r.RayTracing.GlobalIllumination.MaxBounces")}}}},
+        {TEXT("configure_ray_traced_reflections"), {TEXT("r.RayTracing.Reflections"), {
+            {false, TEXT("SamplesPerPixel"), 1.0, 64.0, true, TEXT("r.RayTracing.Reflections.SamplesPerPixel")},
+            {false, TEXT("MaxRoughness"), 0.0, 1.0, false, TEXT("r.RayTracing.Reflections.MaxRoughness")}}}},
+        {TEXT("configure_ray_traced_ao"), {TEXT("r.RayTracing.AmbientOcclusion"), {
+            {true, TEXT("intensity"), 0.0, 10.0, false, TEXT("r.RayTracing.AmbientOcclusion.Intensity")},
+            {false, TEXT("Radius"), 0.0, 10000.0, false, TEXT("r.RayTracing.AmbientOcclusion.Radius")}}}},
+        {TEXT("configure_path_tracing"), {TEXT("r.PathTracing"), {
+            {false, TEXT("SamplesPerPixel"), 1.0, 256.0, true, TEXT("r.PathTracing.SamplesPerPixel")},
+            {false, TEXT("MaxBounces"), 0.0, 16.0, true, TEXT("r.PathTracing.MaxBounces")}}}},
+    };
+    const FConsoleAction* ConsoleAction = Actions.Find(SubAction);
+    if (!ConsoleAction)
     {
         return false;
     }
 
+    const TSharedPtr<FJsonObject> Settings = GetSettingsObject(Payload);
+    TArray<FBoundedConsoleSetting> Values;
+    for (const FNumberCVar& Number : ConsoleAction->Numbers)
+    {
+        if (!ReadBoundedNumberSetting(Subsystem, RequestId, Number.bTopLevel ? Payload : Settings, Number.Field,
+                Number.Min, Number.Max, Number.bWhole, Values.AddDefaulted_GetRef(), RequestingSocket))
+        {
+            return true;
+        }
+    }
+    TArray<FString> Applied;
+    TArray<FString> Unsupported;
+    AddEnabledCVar(Payload, ConsoleAction->EnableCVar, Applied, Unsupported);
+    for (int32 Index = 0; Index < Values.Num(); ++Index)
+    {
+        ApplyNumberSetting(Values[Index], ConsoleAction->Numbers[Index].CVar, Applied, Unsupported);
+    }
     SendConsoleResult(Subsystem, RequestId, SubAction, Applied, Unsupported, RequestingSocket);
     return true;
 }
 }
-#endif

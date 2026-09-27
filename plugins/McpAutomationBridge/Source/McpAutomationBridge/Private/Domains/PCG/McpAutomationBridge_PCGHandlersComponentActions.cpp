@@ -1,11 +1,11 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
 
-#if WITH_EDITOR && MCP_HAS_PCG
+#if MCP_HAS_PCG
 namespace McpPCGHandlers
 {
 bool HandleExecutePCGGraph(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave)
 {
-    UWorld* World = GetPCGEditorWorld();
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("Could not resolve the editor world for PCG execution."), TEXT("WORLD_NOT_FOUND"));
@@ -15,10 +15,10 @@ bool HandleExecutePCGGraph(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     FString Error;
     FString GraphPath;
     UPCGGraph* Graph = nullptr;
-    const FString GraphRawPath = GetFirstStringField(Payload, {TEXT("graphPath"), TEXT("assetPath")});
+    const FString GraphRawPath = McpGetFirstStringField(Payload, {TEXT("graphPath"), TEXT("assetPath")});
     if (!GraphRawPath.IsEmpty())
     {
-        Graph = LoadPCGGraph(GraphRawPath, GraphPath, Error);
+        Graph = LoadPCGAsset<UPCGGraph>(GraphRawPath, TEXT("PCG graph"), GraphPath, Error);
         if (!Graph)
         {
             Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("ASSET_NOT_FOUND"));
@@ -33,14 +33,14 @@ bool HandleExecutePCGGraph(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     const bool bCreateComponent = GetJsonBoolField(Payload, TEXT("createComponent"), false);
     AActor* Actor = nullptr;
     UPCGComponent* Component = FindPCGComponent(World, ActorName, ComponentSelector, Actor);
-    if (!Component && !bCreateComponent && !HasPCGComponentSelector(ActorName, ComponentSelector))
+    if (!Component && !bCreateComponent && ActorName.IsEmpty() && ComponentSelector.IsEmpty())
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("execute_pcg_graph requires actorName, componentName, or componentPath when createComponent is false."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     if (!Component && bCreateComponent)
     {
-        Actor = FindPCGActor(World, ActorName);
+        Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
         if (!Actor)
         {
             Bridge->SendAutomationError(Socket, RequestId, TEXT("createComponent requires an existing actorName."), TEXT("ACTOR_NOT_FOUND"));
@@ -94,7 +94,7 @@ bool HandleSetComponentGridSize(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     const FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
     const FString ComponentPath = GetJsonStringField(Payload, TEXT("componentPath"));
     const FString ComponentSelector = !ComponentPath.IsEmpty() ? ComponentPath : ComponentName;
-    if (!HasPCGComponentSelector(ActorName, ComponentSelector))
+    if (ActorName.IsEmpty() && ComponentSelector.IsEmpty())
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("component-scoped partition grid size requires actorName, componentName, or componentPath."), TEXT("INVALID_ARGUMENT"));
         return true;
@@ -181,7 +181,7 @@ bool HandleSetWorldGridSize(UMcpAutomationBridgeSubsystem* Bridge, const FString
 
 bool HandleSetPCGPartitionGridSize(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave)
 {
-    UWorld* World = GetPCGEditorWorld();
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         Bridge->SendAutomationError(Socket, RequestId, TEXT("Could not resolve the editor world for PCG partition grid size."), TEXT("WORLD_NOT_FOUND"));

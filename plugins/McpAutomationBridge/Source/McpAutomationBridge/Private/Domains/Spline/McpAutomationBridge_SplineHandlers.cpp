@@ -11,7 +11,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if WITH_EDITOR
     FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
 
     UE_LOG(LogMcpSplineHandlers, Verbose, TEXT("HandleManageSplinesAction: SubAction=%s"), *SubAction);
@@ -35,8 +34,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
 
     if (SubAction == TEXT("create_spline_mesh_component"))
         return HandleCreateSplineMeshComponent(this, RequestId, Payload, Socket);
-    if (SubAction == TEXT("create_spline_mesh_actor"))
-        return HandleCreateSplineMeshActor(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("set_spline_mesh_asset"))
         return HandleSetSplineMeshAsset(this, RequestId, Payload, Socket);
     if (SubAction == TEXT("configure_spline_mesh_axis"))
@@ -70,9 +67,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSplinesAction(
     SendAutomationResponse(Socket, RequestId, false,
         FString::Printf(TEXT("Unknown spline subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
     return true;
-#else
-    SendAutomationResponse(Socket, RequestId, false,
-        TEXT("Spline operations require editor build"), nullptr, TEXT("EDITOR_ONLY"));
-    return true;
-#endif
 }

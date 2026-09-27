@@ -16,7 +16,6 @@
 
 namespace McpVolumeHandlers
 {
-#if WITH_EDITOR
 template<typename TActorClass>
 static void AppendVolumeInfo(UWorld* World, const FString& Filter, const FString& VolumeType, bool bTriggerAlias, TArray<TSharedPtr<FJsonValue>>& VolumesArray, int32& TotalCount)
 {
@@ -115,5 +114,4 @@ bool HandleRemoveVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString&
         FString::Printf(TEXT("Removed volume: %s"), *VolumeName), ResponseJson);
     return true;
 }
-#endif
 }

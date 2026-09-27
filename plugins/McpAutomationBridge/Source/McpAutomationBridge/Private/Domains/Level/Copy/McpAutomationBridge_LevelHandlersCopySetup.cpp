@@ -7,7 +7,6 @@
 #include "UObject/UObjectGlobals.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 bool InitializeLevelCopyContext(const FString& SourcePackagePath,
                                 const FString& DestinationPackagePath,
                                 bool bOverwrite,
@@ -108,5 +107,4 @@ bool InitializeLevelCopyContext(const FString& SourcePackagePath,
   }
   return true;
 }
-#endif
 } // namespace McpLevelHandlers

@@ -5,54 +5,34 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleTextureFilterAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString AssetPath = GetJsonStringField(Params, TEXT("assetPath"), TEXT(""));
-    AssetPath = SanitizeProjectRelativePath(AssetPath);
-    if (AssetPath.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid assetPath: contains traversal or invalid characters"));
-    }
-
     int32 Radius = 2;
-    float Amount = static_cast<float>(GetJsonNumberField(Params, TEXT("amount"), 1.0));
-    FString ValidationError;
+    float Amount = static_cast<float>(GetJsonNumberField(Params, TEXT("strength"), 1.0));
+    FString Error;
     if (SubAction == TEXT("blur") &&
         !ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("radius"), 2),
-                                       TEXT("radius"), 1, 10, Radius, ValidationError))
+                                       TEXT("radius"), 1, 10, Radius, Error))
     {
-        TEXTURE_ERROR_RESPONSE(ValidationError);
+        TEXTURE_ERROR_RESPONSE(Error);
     }
-    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-    UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *AssetPath));
+    FString AssetPath;
+    UTexture2D* Texture = LoadSourceTexture(GetJsonStringField(Params, TEXT("assetPath")), TEXT("assetPath"), AssetPath, Error);
     if (!Texture)
     {
-        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Failed to load texture: %s"), *AssetPath));
+        TEXTURE_ERROR_RESPONSE(Error);
     }
-    if (!Texture->Source.IsValid())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Texture has no source data - may be compressed or not fully loaded"));
-    }
-    if (Texture->IsStreamable())
-    {
-        Texture->SetForceMipLevelsToBeResident(30.0f);
-    }
-
-    const int32 Width = Texture->GetSizeX();
-    const int32 Height = Texture->GetSizeY();
+    const int32 Width = Texture->Source.GetSizeX();
+    const int32 Height = Texture->Source.GetSizeY();
     uint8* MipData = Texture->Source.LockMip(0);
     if (!MipData)
     {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture mip data - texture may be compressed or streaming"));
+        TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture mip data"));
     }
 
-    TArray<uint8> OriginalData;
-    const int32 DataSize = Width * Height * 4;
-    OriginalData.SetNumUninitialized(DataSize);
-    FMemory::Memcpy(OriginalData.GetData(), MipData, DataSize);
+    const TArray<uint8> OriginalData(MipData, Width * Height * 4);
 
     if (SubAction == TEXT("blur"))
     {
-        Radius = FMath::Clamp(Radius, 1, 10);
         const int32 KernelSize = Radius * 2 + 1;
         const float KernelWeight = 1.0f / (KernelSize * KernelSize);
         for (int32 Y = 0; Y < Height; ++Y)
@@ -105,14 +85,11 @@ TSharedPtr<FJsonObject> HandleTextureFilterAction(const FString& SubAction, cons
     Texture->Source.UnlockMip(0);
     Texture->UpdateResource();
     Texture->MarkPackageDirty();
-    if (bSave)
-    {
-        McpSafeAssetSave(Texture);
-    }
+    if (GetJsonBoolField(Params, TEXT("save"), true)) McpSafeAssetSave(Texture);
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), SubAction == TEXT("blur")
         ? FString::Printf(TEXT("Blur applied (radius: %d)"), Radius)
-        : FString::Printf(TEXT("Sharpen applied (amount: %.2f)"), Amount));
+        : FString::Printf(TEXT("Sharpen applied (strength: %.2f)"), Amount));
     Response->SetStringField(TEXT("assetPath"), AssetPath);
     return Response;
 }

@@ -3,7 +3,6 @@
 #include "Domains/Render/McpAutomationBridge_RenderSupport.h"
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 #include "Engine/EngineTypes.h"
 
 namespace McpRenderHandlers
@@ -88,4 +87,3 @@ inline void SetLightChannels(FLightingChannels& Channels, const TArray<int32>& C
     }
 }
 }
-#endif

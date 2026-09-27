@@ -6,7 +6,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Render/McpPostProcessVolumeResolution.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/Scene.h"
@@ -17,11 +16,9 @@
 #include "GameFramework/Actor.h"
 #include "HAL/IConsoleManager.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpRenderHandlers
 {
-#if WITH_EDITOR
 inline UWorld* GetRenderWorld()
 {
     if (!GEditor)
@@ -44,22 +41,22 @@ inline AActor* FindRenderActor(const FString& Reference)
         return ByPath;
     }
     UWorld* World = GetRenderWorld();
-    if (!World)
-    {
-        return nullptr;
-    }
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        AActor* Actor = *It;
-        if (Actor &&
-            (Actor->GetName().Equals(Reference, ESearchCase::IgnoreCase) ||
-             Actor->GetActorLabel().Equals(Reference, ESearchCase::IgnoreCase) ||
-             Actor->GetPathName().Equals(Reference, ESearchCase::IgnoreCase)))
-        {
-            return Actor;
-        }
-    }
-    return nullptr;
+    return FindActorByNameInWorldForMcp(World, Reference, true);
+}
+
+// Writes FPostProcessSettings fields of the volume from JSON (reflection; override flags set).
+inline bool ApplyPostProcessSettings(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Settings,
+    TArray<FString>& Applied, TArray<FString>& Unsupported, FString& Error)
+{
+    return ApplyJsonSettings(&Volume->Settings, FPostProcessSettings::StaticStruct(), Settings, true, Applied, Unsupported, Error);
+}
+
+inline bool ApplyPostProcessField(APostProcessVolume* Volume, const FString& Field, const TSharedPtr<FJsonValue>& Value,
+    TArray<FString>& Applied, TArray<FString>& Unsupported, FString& Error)
+{
+    TSharedPtr<FJsonObject> Settings = MakeShared<FJsonObject>();
+    Settings->SetField(Field, Value);
+    return ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
 }
 
 inline TSharedPtr<FJsonObject> MakeRenderResult(const FString& SubAction)
@@ -124,7 +121,7 @@ inline bool ApplyDeclaredExposureFields(APostProcessVolume* Volume, const TShare
         }
     }
     return Fields->Values.Num() == 0 ||
-        ApplyJsonSettings(&Volume->Settings, FPostProcessSettings::StaticStruct(), Fields, true, Applied, Unsupported, Error);
+        ApplyPostProcessSettings(Volume, Fields, Applied, Unsupported, Error);
 }
 
 inline APostProcessVolume* RequirePostProcessVolume(
@@ -214,5 +211,4 @@ inline AActor* FindSoleSceneCaptureActor(FString& OutError, FString& OutErrorCod
     OutErrorCode = TEXT("ACTOR_NOT_FOUND");
     return nullptr;
 }
-#endif
 }

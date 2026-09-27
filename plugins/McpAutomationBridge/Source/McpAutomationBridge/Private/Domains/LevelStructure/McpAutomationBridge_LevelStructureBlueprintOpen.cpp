@@ -10,13 +10,8 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/App.h"
-#if __has_include("Subsystems/AssetEditorSubsystem.h")
 #include "Subsystems/AssetEditorSubsystem.h"
-#elif __has_include("AssetEditorSubsystem.h")
-#include "AssetEditorSubsystem.h"
-#endif
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -95,4 +90,3 @@ bool HandleOpenLevelBlueprint(
 }
 
 }
-#endif

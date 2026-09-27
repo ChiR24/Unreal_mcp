@@ -12,9 +12,6 @@
 #include "RenderingThread.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString SubLevelPath;
     if (Payload.IsValid())
@@ -23,7 +20,7 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       Payload->TryGetStringField(TEXT("levelPath"), SubLevelPath);
 
     if (SubLevelPath.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                           TEXT("subLevelPath required"),
                           TEXT("INVALID_ARGUMENT"));
       return true;
@@ -31,7 +28,7 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
 
     SubLevelPath = SanitizeProjectRelativePath(SubLevelPath);
     if (SubLevelPath.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId,
+      Subsystem.SendAutomationError(RequestingSocket, RequestId,
                           TEXT("Invalid subLevelPath"),
                           TEXT("SECURITY_VIOLATION"));
       return true;
@@ -61,7 +58,7 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     if (!bFileFound) {
       // Try checking DoesPackageExist as last resort
       if (!FPackageName::DoesPackageExist(SubLevelPath)) {
-        SendAutomationResponse(
+        Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(TEXT("Level file not found: %s"), *SubLevelPath),
             nullptr, TEXT("PACKAGE_NOT_FOUND"));
@@ -74,7 +71,7 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       Payload->TryGetStringField(TEXT("streamingMethod"), StreamingMethod);
 
     if (!GEditor) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor unavailable"), nullptr,
                              TEXT("NO_EDITOR"));
       return true;
@@ -82,7 +79,7 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
 
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,
                              TEXT("NO_WORLD"));
       return true;
@@ -117,7 +114,7 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
             Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
             Result->SetStringField(TEXT("world"), World->GetName());
             Result->SetBoolField(TEXT("alreadyExists"), true);
-            SendAutomationResponse(RequestingSocket, RequestId, true,
+            Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    FString::Printf(TEXT("Sublevel already in world: %s"), *SubLevelPath), Result);
             return true;
           } else {
@@ -158,19 +155,19 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
         Result->SetStringField(TEXT("sublevelPath"), SubLevelPath);
         Result->SetStringField(TEXT("world"), World->GetName());
         Result->SetStringField(TEXT("streamingMethod"), StreamingMethod);
-        SendAutomationResponse(RequestingSocket, RequestId, true,
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Sublevel added successfully"), Result);
       } else {
         // CRITICAL FIX: Level file doesn't exist - return ERROR not success with warning
         // The streaming level was added to the world but the level file doesn't exist
         // This is an error condition, not a warning
-        SendAutomationResponse(
+        Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(TEXT("Sublevel file not found: %s"), *SubLevelPath),
             nullptr, TEXT("FILE_NOT_FOUND"));
       }
     } else {
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           FString::Printf(TEXT("Failed to add sublevel %s (Check logs)"),
                           *SubLevelPath),
@@ -178,7 +175,4 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     }
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

@@ -5,68 +5,38 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    TSet<FString> ValidParams = {
-        // `action` is injected by WithPayloadSubAction as the legacy dispatch
-        // verb (MCPBB-060); it is not a client parameter but must be accepted.
-        TEXT("action"), TEXT("subAction"), TEXT("kind"), TEXT("name"), TEXT("path"), TEXT("noiseType"),
-        TEXT("width"), TEXT("height"), TEXT("scale"), TEXT("octaves"),
-        TEXT("persistence"), TEXT("lacunarity"), TEXT("seed"),
-        TEXT("seamless"), TEXT("hdr"), TEXT("save")
-    };
-    for (const auto& Field : Params->Values)
+    FString Path;
+    FString Name;
+    FString Error;
+    if (!ResolveOutputTarget(Params, TEXT("/Game/Textures"), FString(), Path, Name, Error))
     {
-        if (!ValidParams.Contains(FString(*Field.Key)))
-        {
-            TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Invalid parameter: %s"), *Field.Key));
-        }
+        TEXTURE_ERROR_RESPONSE(Error);
     }
-
-    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
-    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures"));
-    FString SanitizedPath = SanitizeProjectRelativePath(Path);
-    if (SanitizedPath.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid path: contains traversal or invalid characters"));
-    }
-    Path = SanitizedPath;
-
-    FString SanitizedName = SanitizeAssetName(Name);
-    if (SanitizedName.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid name: contains invalid characters"));
-    }
-    Name = SanitizedName;
 
     int32 Width = 0;
     int32 Height = 0;
-    FString ValidationError;
     if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
                                             GetJsonNumberField(Params, TEXT("height"), 1024),
                                             TEXT("width"), TEXT("height"),
-                                            Width, Height, ValidationError))
+                                            Width, Height, Error))
     {
-        TEXTURE_ERROR_RESPONSE(ValidationError);
+        TEXTURE_ERROR_RESPONSE(Error);
     }
 
     const float Scale = static_cast<float>(GetJsonNumberField(Params, TEXT("scale"), 1.0));
     int32 Octaves = 0;
     if (!ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("octaves"), 4),
                                        TEXT("octaves"), 1, 16,
-                                       Octaves, ValidationError))
+                                       Octaves, Error))
     {
-        TEXTURE_ERROR_RESPONSE(ValidationError);
+        TEXTURE_ERROR_RESPONSE(Error);
     }
     const float Persistence = static_cast<float>(GetJsonNumberField(Params, TEXT("persistence"), 0.5));
     const float Lacunarity = static_cast<float>(GetJsonNumberField(Params, TEXT("lacunarity"), 2.0));
     const int32 Seed = static_cast<int32>(GetJsonNumberField(Params, TEXT("seed"), 0));
     const bool bSeamless = GetJsonBoolField(Params, TEXT("seamless"), false);
     const bool bHDR = GetJsonBoolField(Params, TEXT("hdr"), false);
-    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-    if (Name.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Name is required"));
-    }
 
     UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, bHDR);
     if (!NewTexture)
@@ -110,7 +80,7 @@ TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& 
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to update texture pixel data"));
     }
-    if (bSave && !SaveTextureAsset(NewTexture))
+    if (!SaveTextureAsset(NewTexture))
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to save noise texture"));
     }

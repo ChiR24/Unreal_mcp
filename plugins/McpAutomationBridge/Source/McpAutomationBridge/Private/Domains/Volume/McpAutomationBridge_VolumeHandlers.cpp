@@ -12,7 +12,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if WITH_EDITOR
     const FString SubAction = GetJsonStringField(Payload, TEXT("subAction"), TEXT(""));
     UE_LOG(LogMcpVolumeHandlers, Verbose, TEXT("HandleManageVolumesAction: SubAction=%s"), *SubAction);
     using namespace McpVolumeHandlers;
@@ -67,8 +66,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageVolumesAction(
     SendAutomationResponse(Socket, RequestId, false,
         FString::Printf(TEXT("Unknown volume subAction: %s"), *SubAction), nullptr, TEXT("UNKNOWN_ACTION"));
     return true;
-#else
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Volume operations require editor build"), nullptr, TEXT("EDITOR_ONLY"));
-    return true;
-#endif
 }

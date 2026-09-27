@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -8,13 +8,9 @@ bool HandleLatticeDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     const int32 LatticeResolution = FMath::Clamp(GetJsonIntField(Payload, TEXT("latticeResolution"), 3), 2, 16);
     const double Weight = FMath::Clamp(GetJsonNumberField(Payload, TEXT("weight"), GetJsonNumberField(Payload, TEXT("strength"), 0.25)), -2.0, 2.0);
@@ -28,31 +24,16 @@ bool HandleLatticeDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     const FVector BoundsSize = BBox.GetSize();
     const double MaxExtent = FMath::Max3(BoundsSize.X, BoundsSize.Y, BoundsSize.Z);
     const FVector Center = Payload->HasField(TEXT("position"))
-        ? ReadVectorFromPayload(Payload, TEXT("position"), BBox.GetCenter())
+        ? ExtractVectorField(Payload, TEXT("position"), BBox.GetCenter())
         : BBox.GetCenter();
-    const double Radius = FMath::Max(GetJsonNumberField(Payload, TEXT("radius"), MaxExtent * 0.75), KINDA_SMALL_NUMBER);
+    const double Radius = FMath::Max(MaxExtent * 0.75, KINDA_SMALL_NUMBER);
     const FVector DisplacementAxis = AxisVectorFromPayload(Payload);
     const double Amplitude = MaxExtent * 0.25 * Weight;
 
-    FGeometryScriptIndexList VertexIDList;
-    bool bHasGaps = false;
-    UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
-    const int32 NumVertices = VertexIDList.List.IsValid() ? VertexIDList.List->Num() : 0;
-    int32 VerticesModified = 0;
-
     TargetActor->Modify();
     DMC->Modify();
-
-    for (int32 Index = 0; Index < NumVertices; ++Index)
+    const int32 VerticesModified = DeformVertices(Mesh, [&](const FVector& OriginalPos)
     {
-        const int32 VertexID = (*VertexIDList.List)[Index];
-        bool bIsValid = false;
-        const FVector OriginalPos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
-        if (!bIsValid)
-        {
-            continue;
-        }
-
         const FVector Normalized(
             BoundsSize.X > KINDA_SMALL_NUMBER ? (OriginalPos.X - BBox.Min.X) / BoundsSize.X : 0.5,
             BoundsSize.Y > KINDA_SMALL_NUMBER ? (OriginalPos.Y - BBox.Min.Y) / BoundsSize.Y : 0.5,
@@ -62,21 +43,9 @@ bool HandleLatticeDeform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
             FMath::Sin(Normalized.X * PI * static_cast<double>(LatticeResolution)) *
             FMath::Sin(Normalized.Y * PI * static_cast<double>(LatticeResolution)) *
             FMath::Sin((Normalized.Z + 0.5) * PI * static_cast<double>(LatticeResolution));
-        const FVector NewPos = OriginalPos + DisplacementAxis * (LatticeWave * Falloff * Amplitude);
-
-        bool bVertexValid = false;
-        UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
-        if (bVertexValid)
-        {
-            VerticesModified++;
-        }
-    }
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
-#else
-    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
-#endif
+        return OriginalPos + DisplacementAxis * (LatticeWave * Falloff * Amplitude);
+    });
+    RecomputeMeshNormals(Mesh);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -99,13 +68,9 @@ bool HandleDisplaceByTexture(UMcpAutomationBridgeSubsystem* Self, const FString&
         return true;
     }
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     FString ResolvedTexturePath;
     UTexture2D* Texture = ResolveGeometryTexture(TexturePath, ResolvedTexturePath);
@@ -133,47 +98,18 @@ bool HandleDisplaceByTexture(UMcpAutomationBridgeSubsystem* Self, const FString&
     }
 
     const FVector BoundsSize = BBox.GetSize();
-    FGeometryScriptIndexList VertexIDList;
-    bool bHasGaps = false;
-    UGeometryScriptLibrary_MeshQueryFunctions::GetAllVertexIDs(Mesh, VertexIDList, bHasGaps);
-    const int32 NumVertices = VertexIDList.List.IsValid() ? VertexIDList.List->Num() : 0;
-    int32 VerticesModified = 0;
-
     TargetActor->Modify();
     DMC->Modify();
-
-    for (int32 Index = 0; Index < NumVertices; ++Index)
+    const int32 VerticesModified = DeformVertices(Mesh, [&](const FVector& OriginalPos)
     {
-        const int32 VertexID = (*VertexIDList.List)[Index];
-        bool bIsValid = false;
-        const FVector OriginalPos = UGeometryScriptLibrary_MeshQueryFunctions::GetVertexPosition(Mesh, VertexID, bIsValid);
-        if (!bIsValid)
-        {
-            continue;
-        }
-
         const double U = BoundsSize.X > KINDA_SMALL_NUMBER ? (OriginalPos.X - BBox.Min.X) / BoundsSize.X : 0.5;
         const double V = BoundsSize.Y > KINDA_SMALL_NUMBER ? (OriginalPos.Y - BBox.Min.Y) / BoundsSize.Y : 0.5;
         double Luminance = 0.0;
-        if (!SampleTextureLuminance(Texture, U, V, Luminance))
-        {
-            continue;
-        }
-
-        const FVector NewPos = OriginalPos + DisplacementAxis * ((Luminance - Midpoint) * HeightScale);
-        bool bVertexValid = false;
-        UGeometryScriptLibrary_MeshBasicEditFunctions::SetVertexPosition(Mesh, VertexID, NewPos, bVertexValid, true);
-        if (bVertexValid)
-        {
-            VerticesModified++;
-        }
-    }
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), false, nullptr);
-#else
-    UGeometryScriptLibrary_MeshNormalsFunctions::RecomputeNormals(Mesh, FGeometryScriptCalculateNormalsOptions(), nullptr);
-#endif
+        return SampleTextureLuminance(Texture, U, V, Luminance)
+            ? OriginalPos + DisplacementAxis * ((Luminance - Midpoint) * HeightScale)
+            : OriginalPos;
+    });
+    RecomputeMeshNormals(Mesh);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -188,4 +124,4 @@ bool HandleDisplaceByTexture(UMcpAutomationBridgeSubsystem* Self, const FString&
 
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

@@ -23,17 +23,12 @@
 #include "RenderingThread.h"
 #include "StaticMeshCompiler.h"
 
-#if WITH_EDITOR
 #include "Editor/UnrealEd/Public/Editor.h"
-#endif
 
 namespace McpPerformanceHandlers
 {
 bool HandleActorMergeAction(const FPerformanceActionContext& Context)
 {
-#if !WITH_EDITOR
-    return false;
-#else
     if (Context.Lower != TEXT("merge_actors"))
     {
         return false;
@@ -99,7 +94,7 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     if (RequestedPackageName.IsEmpty())
     {
         RequestedPackageName = FString::Printf(
-            TEXT("/Game/MCPTest/MergedActors/SM_Merged_%s"),
+            TEXT("/Game/MergedActors/SM_Merged_%s"),
             *FGuid::NewGuid().ToString(EGuidFormats::Digits));
     }
     if (!FPackageName::IsValidLongPackageName(RequestedPackageName))
@@ -111,6 +106,7 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         return true;
     }
 
+    // MergeComponentsToStaticMesh prefixes the asset with SM_ itself, so a requested SM_X is merged as X.
     FString MergeBasePackageName = RequestedPackageName;
     const FString RequestedAssetName = FPackageName::GetShortName(RequestedPackageName);
     if (RequestedAssetName.StartsWith(TEXT("SM_")))
@@ -194,7 +190,6 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
     MergedMesh->SetFlags(RF_Public | RF_Standalone);
     MergedMesh->ClearFlags(RF_Transient);
     MergedMesh->MarkPackageDirty();
-    FAssetRegistryModule::AssetCreated(MergedMesh);
 
     bool bSaved = false;
     if (UPackage* MergedPackage = MergedMesh->GetOutermost())
@@ -202,15 +197,6 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         MergedPackage->ClearFlags(RF_Transient);
         MergedPackage->SetDirtyFlag(true);
         bSaved = McpSafeAssetSave(MergedMesh);
-
-        if (bSaved)
-        {
-            TArray<FString> PathsToScan;
-            PathsToScan.Add(FPaths::GetPath(MergedPackage->GetName()));
-            FAssetRegistryModule& AssetRegistryModule =
-                FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-            AssetRegistryModule.Get().ScanPathsSynchronous(PathsToScan, false);
-        }
     }
 
     if (!bSaved)
@@ -269,6 +255,5 @@ bool HandleActorMergeAction(const FPerformanceActionContext& Context)
         Context.RequestingSocket, Context.RequestId, true,
         TEXT("Actors merged to static mesh"), Response, FString());
     return true;
-#endif
 }
 }

@@ -12,7 +12,6 @@
 
 namespace McpVolumeHandlers
 {
-#if WITH_EDITOR
 static AAudioVolume* SpawnAudioVolume(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -82,5 +81,4 @@ bool HandleCreateReverbVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FS
         FString::Printf(TEXT("Created ReverbVolume: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
-#endif
 }

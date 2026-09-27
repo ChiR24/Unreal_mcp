@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -8,27 +8,20 @@ bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    double TargetPercentage = GetJsonNumberField(Payload, TEXT("targetPercentage"), 50.0);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
-    // UE 5.7: Use FGeometryScriptSimplifyMeshOptions (renamed from FGeometryScriptMeshSimplifyOptions)
     FGeometryScriptSimplifyMeshOptions SimplifyOptions;
     SimplifyOptions.Method = EGeometryScriptRemoveMeshSimplificationType::StandardQEM;
-    // Note: bPreserveSharpEdges was removed in UE 5.7
     SimplifyOptions.bAllowSeamCollapse = true;
 
-    // UE 5.7: FGeometryScriptMeshInfo and GetMeshInfo() were removed
-    // Use individual query functions instead
     int32 TriCountBefore = Mesh->GetTriangleCount();
 
-    int32 TargetTriCount = FMath::Max(1, FMath::RoundToInt(TriCountBefore * (TargetPercentage / 100.0)));
+    const double ReductionPercent = FMath::Clamp(GetJsonNumberField(Payload, TEXT("reductionPercent"), 50.0), 0.0, 100.0);
+    const int32 TargetTriCount = FMath::Max(1, GetJsonIntField(Payload, TEXT("targetTriangleCount"),
+        FMath::RoundToInt(TriCountBefore * (1.0 - ReductionPercent / 100.0))));
 
     UGeometryScriptLibrary_MeshSimplifyFunctions::ApplySimplifyToTriangleCount(
         Mesh,
@@ -54,77 +47,22 @@ bool HandleSimplifyMesh(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 Iterations = GetJsonIntField(Payload, TEXT("iterations"), 1);
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const int32 Iterations = FMath::Clamp(GetJsonIntField(Payload, TEXT("iterations"), 1), 1, MAX_SUBDIVIDE_ITERATIONS);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
-    // Safety: Clamp iterations to prevent polygon explosion
-    int32 OriginalIterations = Iterations;
-    Iterations = FMath::Clamp(Iterations, 1, MAX_SUBDIVIDE_ITERATIONS);
-    if (Iterations != OriginalIterations)
-    {
-        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide iterations clamped from %d to %d (MAX_SUBDIVIDE_ITERATIONS)"),
-               OriginalIterations, Iterations);
-    }
-
-    // Check memory pressure before heavy operation
-    if (!IsMemoryPressureSafe())
-    {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Memory pressure too high (%.1f%% used). Subdivide blocked to prevent OOM."),
-                           GetMemoryUsagePercent()),
-            TEXT("MEMORY_PRESSURE"));
-        return true;
-    }
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
-
-    // UE 5.7: FGeometryScriptMeshInfo and GetMeshInfo() were removed
-    // Use individual query functions instead
-    int32 TriCountBefore = Mesh->GetTriangleCount();
-
-    // Safety: Estimate triangles after subdivision and check against limit
-    // Each subdivision iteration roughly quadruples triangle count
-    int64 EstimatedTriangles = static_cast<int64>(TriCountBefore);
-    for (int32 i = 0; i < Iterations; ++i)
-    {
-        EstimatedTriangles *= 4;  // Each subdivision ~4x triangles
-    }
-
-    if (EstimatedTriangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
-    {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Subdivide would exceed triangle limit. Current: %d, Estimated after: %lld, Max allowed: %d"),
-                           TriCountBefore, EstimatedTriangles, MAX_TRIANGLES_PER_DYNAMIC_MESH),
-            TEXT("POLYGON_LIMIT_EXCEEDED"));
-        return true;
-    }
+    const int32 TriCountBefore = Mesh->GetTriangleCount();
+    // Each PN tessellation pass quadruples the triangle count.
+    if (!GuardMeshBudget(Self, RequestId, Socket, static_cast<int64>(TriCountBefore) << (2 * Iterations), TEXT("Subdivide"))) return true;
 
     for (int32 i = 0; i < Iterations; ++i)
     {
-        // UE 5.7: ApplyPNTessellation now takes TessellationLevel as separate parameter
-        FGeometryScriptPNTessellateOptions TessOptions;
-        UGeometryScriptLibrary_MeshSubdivideFunctions::ApplyPNTessellation(Mesh, TessOptions, 1, nullptr);
+        UGeometryScriptLibrary_MeshSubdivideFunctions::ApplyPNTessellation(Mesh, FGeometryScriptPNTessellateOptions(), 1, nullptr);
     }
-
-    int32 TriCountAfter = Mesh->GetTriangleCount();
-
-    if (TriCountAfter > WARNING_TRIANGLE_THRESHOLD)
-    {
-        UE_LOG(LogMcpGeometryHandlers, Warning, TEXT("Subdivide result has %d triangles (warning threshold: %d)"),
-               TriCountAfter, WARNING_TRIANGLE_THRESHOLD);
-    }
+    const int32 TriCountAfter = Mesh->GetTriangleCount();
 
     DMC->NotifyMeshUpdated();
 
@@ -139,39 +77,49 @@ bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 }
 
 bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bVoxel)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 TargetTriangleCount = GetJsonIntField(Payload, TEXT("targetTriangleCount"), 5000);
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    // remesh_voxel (GeometryScript has no voxel remesh) halves the triangle count and closes holes.
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
+    const int32 TrisBefore = Mesh->GetTriangleCount();
 
     FGeometryScriptRemeshOptions RemeshOptions;
     RemeshOptions.bDiscardAttributes = false;
     RemeshOptions.bReprojectToInputMesh = true;
-
     FGeometryScriptUniformRemeshOptions UniformOptions;
-    UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TriangleCount;
-    UniformOptions.TargetTriangleCount = TargetTriangleCount;
-
-    UGeometryScriptLibrary_RemeshingFunctions::ApplyUniformRemesh(
-        Mesh, RemeshOptions, UniformOptions, nullptr);
-
+    if (Payload->HasField(TEXT("targetEdgeLength")))
+    {
+        UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TargetEdgeLength;
+        UniformOptions.TargetEdgeLength = GetJsonNumberField(Payload, TEXT("targetEdgeLength"), 10.0);
+    }
+    else
+    {
+        UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TriangleCount;
+        UniformOptions.TargetTriangleCount = GetJsonIntField(Payload, TEXT("targetTriangleCount"), bVoxel ? FMath::Max(100, TrisBefore / 2) : 5000);
+    }
+    UGeometryScriptLibrary_RemeshingFunctions::ApplyUniformRemesh(Mesh, RemeshOptions, UniformOptions, nullptr);
+    if (bVoxel)
+    {
+        FGeometryScriptFillHolesOptions FillOptions;
+        FillOptions.FillMethod = EGeometryScriptFillHolesMethod::Automatic;
+        int32 NumFilled = 0;
+        int32 NumFailed = 0;
+        UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, NumFilled, NumFailed, nullptr);
+    }
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("targetTriangleCount"), TargetTriangleCount);
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Uniform remesh applied"), Result);
+    Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
+    Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());
+    McpHandlerUtils::AddVerification(Result, TargetActor);
+    Self->SendAutomationResponse(Socket, RequestId, true, bVoxel ? TEXT("Voxel remesh applied") : TEXT("Uniform remesh applied"), Result);
     return true;
 }
 
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

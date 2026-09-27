@@ -13,7 +13,6 @@
 
 namespace McpVolumeHandlers
 {
-#if WITH_EDITOR
 bool HandleSetVolumeBounds(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     using namespace VolumeHelpers;
@@ -90,5 +89,4 @@ bool HandleSetVolumeBounds(UMcpAutomationBridgeSubsystem* Subsystem, const FStri
         FString::Printf(TEXT("Set bounds for volume: %s"), *VolumeName), ResponseJson);
     return true;
 }
-#endif
 }

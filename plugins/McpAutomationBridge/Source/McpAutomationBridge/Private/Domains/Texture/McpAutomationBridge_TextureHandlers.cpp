@@ -57,23 +57,9 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     {
         return McpTextureHandlers::HandleChannelExtract(Params);
     }
-    if (SubAction == TEXT("import_texture") || SubAction == TEXT("set_texture_filter") ||
-        SubAction == TEXT("set_texture_wrap"))
-    {
-        return McpTextureHandlers::HandleTextureImportAndSamplerAction(SubAction, Params);
-    }
     if (SubAction == TEXT("create_render_target"))
     {
         return McpTextureHandlers::HandleCreateRenderTarget(Params);
-    }
-    if (SubAction == TEXT("create_cube_texture") || SubAction == TEXT("create_volume_texture") ||
-        SubAction == TEXT("create_texture_array"))
-    {
-        return McpTextureHandlers::HandleTexturePlaceholderAction(SubAction, Params);
-    }
-    if (SubAction == TEXT("create_ao_from_mesh"))
-    {
-        return McpTextureHandlers::HandleCreateAoFromMesh(Params);
     }
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();

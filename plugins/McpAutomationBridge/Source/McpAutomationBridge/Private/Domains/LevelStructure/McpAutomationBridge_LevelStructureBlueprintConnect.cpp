@@ -1,6 +1,5 @@
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureActions.h"
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
-#include "Domains/LevelStructure/McpAutomationBridge_LevelStructurePayload.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
@@ -18,7 +17,6 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -171,4 +169,3 @@ bool HandleConnectLevelBlueprintNodes(
 }
 
 }
-#endif

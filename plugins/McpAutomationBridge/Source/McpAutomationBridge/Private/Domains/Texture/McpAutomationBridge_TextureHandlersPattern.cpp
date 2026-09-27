@@ -2,87 +2,40 @@
 
 namespace McpTextureHandlers
 {
-namespace
-{
-FLinearColor ReadPatternColor(const TSharedPtr<FJsonObject>& Params, const TCHAR* FieldName, const FLinearColor& Default)
-{
-    FLinearColor Color = Default;
-    const TSharedPtr<FJsonObject>* ColorObject = nullptr;
-    if (Params->TryGetObjectField(FieldName, ColorObject))
-    {
-        Color.R = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("r"), Color.R));
-        Color.G = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("g"), Color.G));
-        Color.B = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("b"), Color.B));
-        Color.A = static_cast<float>(GetJsonNumberField(*ColorObject, TEXT("a"), Color.A));
-    }
-    return Color;
-}
-}
-
 TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    TSet<FString> ValidParams = {
-        // `action` is injected by WithPayloadSubAction as the legacy dispatch
-        // verb (MCPBB-060); it is not a client parameter but must be accepted.
-        TEXT("action"), TEXT("subAction"), TEXT("kind"), TEXT("name"), TEXT("path"), TEXT("patternType"),
-        TEXT("width"), TEXT("height"), TEXT("tilesX"), TEXT("tilesY"),
-        TEXT("lineWidth"), TEXT("brickRatio"), TEXT("offset"), TEXT("save"),
-        TEXT("primaryColor"), TEXT("secondaryColor")
-    };
-    for (const auto& Field : Params->Values)
+    FString Path;
+    FString Name;
+    FString Error;
+    if (!ResolveOutputTarget(Params, TEXT("/Game/Textures"), FString(), Path, Name, Error))
     {
-        if (!ValidParams.Contains(FString(*Field.Key)))
-        {
-            TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Invalid parameter: %s"), *Field.Key));
-        }
+        TEXTURE_ERROR_RESPONSE(Error);
     }
-
-    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
-    FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures"));
-    FString SanitizedPath = SanitizeProjectRelativePath(Path);
-    if (SanitizedPath.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid path: contains traversal or invalid characters"));
-    }
-    Path = SanitizedPath;
-
-    FString SanitizedName = SanitizeAssetName(Name);
-    if (SanitizedName.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid name: contains invalid characters"));
-    }
-    Name = SanitizedName;
 
     int32 Width = 0;
     int32 Height = 0;
     int32 TilesX = 0;
     int32 TilesY = 0;
-    FString ValidationError;
     if (!ValidateGeneratedTextureDimensions(GetJsonNumberField(Params, TEXT("width"), 1024),
                                             GetJsonNumberField(Params, TEXT("height"), 1024),
                                             TEXT("width"), TEXT("height"),
-                                            Width, Height, ValidationError) ||
+                                            Width, Height, Error) ||
         !ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("tilesX"), 8),
-                                       TEXT("tilesX"), 1, 1024, TilesX, ValidationError) ||
+                                       TEXT("tilesX"), 1, 1024, TilesX, Error) ||
         !ValidateTextureIterationCount(GetJsonNumberField(Params, TEXT("tilesY"), 8),
-                                       TEXT("tilesY"), 1, 1024, TilesY, ValidationError))
+                                       TEXT("tilesY"), 1, 1024, TilesY, Error))
     {
-        TEXTURE_ERROR_RESPONSE(ValidationError);
+        TEXTURE_ERROR_RESPONSE(Error);
     }
 
     const FString PatternType = GetJsonStringField(Params, TEXT("patternType"), TEXT("Checker"));
     const float LineWidth = static_cast<float>(GetJsonNumberField(Params, TEXT("lineWidth"), 0.02));
     const float BrickRatio = static_cast<float>(GetJsonNumberField(Params, TEXT("brickRatio"), 2.0));
     const float Offset = static_cast<float>(GetJsonNumberField(Params, TEXT("offset"), 0.5));
-    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-    const FLinearColor PrimaryColor = ReadPatternColor(Params, TEXT("primaryColor"), FLinearColor(1, 1, 1, 1));
-    const FLinearColor SecondaryColor = ReadPatternColor(Params, TEXT("secondaryColor"), FLinearColor(0, 0, 0, 1));
+    const FLinearColor PrimaryColor = ExtractLinearColorField(Params, TEXT("primaryColor"), FLinearColor(1, 1, 1, 1));
+    const FLinearColor SecondaryColor = ExtractLinearColorField(Params, TEXT("secondaryColor"), FLinearColor(0, 0, 0, 1));
 
-    if (Name.IsEmpty())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Name is required"));
-    }
 
     UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, false);
     if (!NewTexture)
@@ -143,7 +96,7 @@ TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to update texture pixel data"));
     }
-    if (bSave && !SaveTextureAsset(NewTexture))
+    if (!SaveTextureAsset(NewTexture))
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to save pattern texture"));
     }

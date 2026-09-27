@@ -25,7 +25,6 @@
 #include "WorldPartition/HLOD/HLODLayer.h"
 #include "WorldPartition/WorldPartition.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -52,21 +51,14 @@ bool HandleGetLevelStructureInfo(
     const TArray<ULevelStreaming*>& StreamingLevels = World->GetStreamingLevels();
     InfoJson->SetNumberField(TEXT("sublevelCount"), StreamingLevels.Num());
 
-    for (const ULevelStreaming* StreamingLevel : StreamingLevels)
-    {
-        if (StreamingLevel)
-        {
-            SublevelsArray.Add(MakeShared<FJsonValueString>(StreamingLevel->GetWorldAssetPackageFName().ToString()));
-        }
-    }
-    InfoJson->SetArrayField(TEXT("sublevels"), SublevelsArray);
-    // Structured streaming-level report (dogfood #161): the bare name list said nothing about state.
+    // Structured streaming-level report (dogfood #161) beside the bare name list.
     TArray<TSharedPtr<FJsonValue>> StreamingArray;
     for (const ULevelStreaming* StreamingLevel : StreamingLevels)
     {
         if (!StreamingLevel) { continue; }
-        TSharedPtr<FJsonObject> LevelJson = McpHandlerUtils::CreateResultObject();
         const FString PackageName = StreamingLevel->GetWorldAssetPackageName();
+        SublevelsArray.Add(MakeShared<FJsonValueString>(PackageName));
+        TSharedPtr<FJsonObject> LevelJson = McpHandlerUtils::CreateResultObject();
         LevelJson->SetStringField(TEXT("name"), FPackageName::GetShortName(PackageName));
         LevelJson->SetStringField(TEXT("packageName"), PackageName);
         LevelJson->SetBoolField(TEXT("isLoaded"), StreamingLevel->IsLevelLoaded());
@@ -78,6 +70,7 @@ bool HandleGetLevelStructureInfo(
         LevelJson->SetNumberField(TEXT("actorCount"), StreamingLevel->GetLoadedLevel() ? StreamingLevel->GetLoadedLevel()->Actors.Num() : 0);
         StreamingArray.Add(MakeShared<FJsonValueObject>(LevelJson));
     }
+    InfoJson->SetArrayField(TEXT("sublevels"), SublevelsArray);
     InfoJson->SetArrayField(TEXT("streamingLevels"), StreamingArray);
     InfoJson->SetStringField(TEXT("persistentLevel"), World->GetOutermost()->GetName());
     InfoJson->SetNumberField(TEXT("actorCount"), World->PersistentLevel ? World->PersistentLevel->Actors.Num() : 0);
@@ -129,29 +122,15 @@ bool HandleGetLevelStructureInfo(
                 TSharedPtr<FJsonObject> LayerJson = McpHandlerUtils::CreateResultObject();
                 LayerJson->SetStringField(TEXT("name"), Layer->GetName());
                 LayerJson->SetStringField(TEXT("type"), TEXT("world_partition"));
-                // UE 5.7+: GetCellSize, GetLoadingRange, IsSpatiallyLoaded are deprecated
-                // These streaming grid properties are now in the partition's settings
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+                // GetCellSize, GetLoadingRange and IsSpatiallyLoaded are deprecated on 5.7+.
                 PRAGMA_DISABLE_DEPRECATION_WARNINGS
-#endif
                 LayerJson->SetNumberField(TEXT("cellSize"), Layer->GetCellSize());
                 LayerJson->SetNumberField(TEXT("loadingRange"), Layer->GetLoadingRange());
                 LayerJson->SetBoolField(TEXT("isSpatiallyLoaded"), Layer->IsSpatiallyLoaded());
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
                 PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
 
-                FString LayerTypeStr;
-                switch (Layer->GetLayerType())
-                {
-                    case EHLODLayerType::Instancing: LayerTypeStr = TEXT("Instancing"); break;
-                    case EHLODLayerType::MeshMerge: LayerTypeStr = TEXT("MeshMerge"); break;
-                    case EHLODLayerType::MeshSimplify: LayerTypeStr = TEXT("MeshSimplify"); break;
-                    case EHLODLayerType::MeshApproximate: LayerTypeStr = TEXT("MeshApproximate"); break;
-                    case EHLODLayerType::Custom: LayerTypeStr = TEXT("Custom"); break;
-                    default: LayerTypeStr = TEXT("Unknown"); break;
-                }
-                LayerJson->SetStringField(TEXT("layerType"), LayerTypeStr);
+                LayerJson->SetStringField(TEXT("layerType"),
+                    StaticEnum<EHLODLayerType>()->GetNameStringByValue(static_cast<int64>(Layer->GetLayerType())));
 
                 TSoftObjectPtr<UHLODLayer> ParentLayerSoft = Layer->GetParentLayer();
                 if (ParentLayerSoft.IsValid())
@@ -223,4 +202,3 @@ bool HandleGetLevelStructureInfo(
 }
 
 }
-#endif

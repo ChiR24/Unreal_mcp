@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool McpConfigureParticleEmitter(const TSharedPtr<FJsonObject> &Payload, const FString &DefaultName,
@@ -36,24 +35,13 @@ bool McpConfigureParticleEmitter(const TSharedPtr<FJsonObject> &Payload, const F
         }
     }
 
-    // McpApplyEnvironmentSettings overwrites configuredPropertyCount on each
-    // call, so read it back between the actor and component passes and keep the
-    // sum. Weather params such as density/speed match no UPROPERTY on AEmitter
-    // or UParticleSystemComponent, so this is routinely zero.
-    int32 TotalApplied = 0;
-    double AppliedProbe = 0.0;
-    McpApplyEnvironmentSettings(Emitter, Payload, Resp);
-    if (Resp->TryGetNumberField(TEXT("configuredPropertyCount"), AppliedProbe))
-    {
-        TotalApplied += static_cast<int32>(AppliedProbe);
-    }
+    // Actor and component passes each report their own count; keep the sum.
+    // Weather params such as density/speed match no UPROPERTY on AEmitter or
+    // UParticleSystemComponent, so this is routinely zero.
+    int32 TotalApplied = McpApplyEnvironmentSettings(Emitter, Payload, Resp);
     if (ParticleComponent)
     {
-        McpApplyEnvironmentSettings(ParticleComponent, Payload, Resp);
-        if (Resp->TryGetNumberField(TEXT("configuredPropertyCount"), AppliedProbe))
-        {
-            TotalApplied += static_cast<int32>(AppliedProbe);
-        }
+        TotalApplied += McpApplyEnvironmentSettings(ParticleComponent, Payload, Resp);
         Resp->SetStringField(TEXT("componentName"), ParticleComponent->GetName());
     }
     Resp->SetNumberField(TEXT("configuredPropertyCount"), TotalApplied);
@@ -154,4 +142,3 @@ bool McpConfigureWaterBodyActor(const TSharedPtr<FJsonObject> &Payload, TSharedP
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

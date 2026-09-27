@@ -6,7 +6,6 @@
 #include "Misc/Paths.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 bool GetExternalPackageDirectory(const FString& PackagePath,
                                  const FString& RootDirectoryName,
                                  FString& OutDirectory) {
@@ -90,5 +89,4 @@ bool DeleteExternalPackageDirectory(const FString& PackagePath,
   }
   return true;
 }
-#endif
 } // namespace McpLevelHandlers

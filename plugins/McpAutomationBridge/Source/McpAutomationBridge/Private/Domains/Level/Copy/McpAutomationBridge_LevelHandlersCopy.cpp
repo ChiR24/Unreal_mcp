@@ -7,7 +7,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 void PopulateLevelCopyResult(FLevelCopyContext& Context,
                              TSharedPtr<FJsonObject>& Result) {
   Result = McpHandlerUtils::CreateResultObject();
@@ -64,5 +63,4 @@ bool CopyLevelMapPackageFile(const FString& SourcePackagePath,
   }
   return true;
 }
-#endif
 } // namespace McpLevelHandlers

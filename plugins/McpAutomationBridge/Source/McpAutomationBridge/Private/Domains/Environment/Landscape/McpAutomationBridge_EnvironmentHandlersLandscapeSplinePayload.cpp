@@ -1,31 +1,6 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
-
-bool McpPayloadHasWaterWaveSettings(const TSharedPtr<FJsonObject> &Payload)
-{
-    double NumberValue = 0.0;
-    const TSharedPtr<FJsonObject> *DirectionObj = nullptr;
-    return McpGetFirstNumberField(Payload, {TEXT("waveHeight"), TEXT("waveLength"), TEXT("amplitude")}, NumberValue) ||
-           (Payload.IsValid() && Payload->TryGetObjectField(TEXT("direction"), DirectionObj) && DirectionObj && DirectionObj->IsValid());
-}
-bool McpTryGetNumberFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, double &OutValue)
-{
-    if (!Payload.IsValid())
-    {
-        return false;
-    }
-
-    if (Payload->TryGetNumberField(FieldName, OutValue))
-    {
-        return true;
-    }
-
-    const TSharedPtr<FJsonObject> *SettingsObj = nullptr;
-    return Payload->TryGetObjectField(TEXT("settings"), SettingsObj) && SettingsObj && SettingsObj->IsValid() &&
-           (*SettingsObj)->TryGetNumberField(FieldName, OutValue);
-}
 bool McpTryGetBoolFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, bool &OutValue)
 {
     if (!Payload.IsValid())
@@ -217,4 +192,3 @@ ULandscapeSplineSegment *McpAddLandscapeSplineSegment(ULandscapeSplinesComponent
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

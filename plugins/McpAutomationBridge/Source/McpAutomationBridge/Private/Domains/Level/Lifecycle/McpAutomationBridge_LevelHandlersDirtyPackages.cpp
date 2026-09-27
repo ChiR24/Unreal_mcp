@@ -11,7 +11,6 @@ using McpSafeOperations::McpSafeAssetSave;
 using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 bool IsBlockingDirtyPackageForLevelLoad(UPackage* Package) {
   if (!Package || Package->HasAnyFlags(RF_Transient)) {
     return false;
@@ -23,29 +22,32 @@ bool IsBlockingDirtyPackageForLevelLoad(UPackage* Package) {
          !PackagePath.StartsWith(TEXT("/Engine/Transient"));
 }
 
+namespace {
+// The dirty packages that block a level load, each once: world packages first, OutWorldCount of them.
+TArray<UPackage*> CollectBlockingDirtyPackages(int32& OutWorldCount) {
+  TArray<UPackage*> WorldPackages;
+  TArray<UPackage*> ContentPackages;
+  FEditorFileUtils::GetDirtyWorldPackages(WorldPackages);
+  FEditorFileUtils::GetDirtyContentPackages(ContentPackages);
+  TArray<UPackage*> Blocking;
+  for (UPackage* Package : WorldPackages) {
+    if (IsBlockingDirtyPackageForLevelLoad(Package)) {
+      Blocking.AddUnique(Package);
+    }
+  }
+  OutWorldCount = Blocking.Num();
+  for (UPackage* Package : ContentPackages) {
+    if (IsBlockingDirtyPackageForLevelLoad(Package)) {
+      Blocking.AddUnique(Package);
+    }
+  }
+  return Blocking;
+}
+} // namespace
+
 void CountBlockingDirtyPackages(int32& OutWorldPackages,
                                 int32& OutContentPackages) {
-  OutWorldPackages = 0;
-  OutContentPackages = 0;
-
-  TArray<UPackage*> DirtyWorldPackages;
-  TArray<UPackage*> DirtyContentPackages;
-  FEditorFileUtils::GetDirtyWorldPackages(DirtyWorldPackages);
-  FEditorFileUtils::GetDirtyContentPackages(DirtyContentPackages);
-
-  TSet<UPackage*> SeenPackages;
-  for (UPackage* Package : DirtyWorldPackages) {
-    if (IsBlockingDirtyPackageForLevelLoad(Package) && !SeenPackages.Contains(Package)) {
-      SeenPackages.Add(Package);
-      OutWorldPackages++;
-    }
-  }
-  for (UPackage* Package : DirtyContentPackages) {
-    if (IsBlockingDirtyPackageForLevelLoad(Package) && !SeenPackages.Contains(Package)) {
-      SeenPackages.Add(Package);
-      OutContentPackages++;
-    }
-  }
+  OutContentPackages = CollectBlockingDirtyPackages(OutWorldPackages).Num() - OutWorldPackages;
 }
 
 bool SaveBlockingDirtyPackagesForLevelLoad(int32& OutInitialWorldPackages,
@@ -54,45 +56,18 @@ bool SaveBlockingDirtyPackagesForLevelLoad(int32& OutInitialWorldPackages,
                                            int32& OutRemainingContentPackages,
                                            int32& OutFailedPackages) {
   OutFailedPackages = 0;
-  CountBlockingDirtyPackages(OutInitialWorldPackages, OutInitialContentPackages);
-  if (OutInitialWorldPackages + OutInitialContentPackages == 0) {
-    OutRemainingWorldPackages = 0;
-    OutRemainingContentPackages = 0;
-    return true;
-  }
-
-  TArray<UPackage*> DirtyWorldPackages;
-  TArray<UPackage*> DirtyContentPackages;
-  FEditorFileUtils::GetDirtyWorldPackages(DirtyWorldPackages);
-  FEditorFileUtils::GetDirtyContentPackages(DirtyContentPackages);
-
-  TSet<UPackage*> ProcessedPackages;
-  auto SavePackage = [&ProcessedPackages, &OutFailedPackages](UPackage* Package) {
-    if (!IsBlockingDirtyPackageForLevelLoad(Package) || ProcessedPackages.Contains(Package)) {
-      return;
-    }
-
-    ProcessedPackages.Add(Package);
-    const FString PackagePath = Package->GetName();
+  const TArray<UPackage*> Packages = CollectBlockingDirtyPackages(OutInitialWorldPackages);
+  OutInitialContentPackages = Packages.Num() - OutInitialWorldPackages;
+  for (UPackage* Package : Packages) {
     UWorld* PackageWorld = UWorld::FindWorldInPackage(Package);
     const bool bSaved = PackageWorld && PackageWorld->PersistentLevel
-        ? McpSafeLevelSave(PackageWorld->PersistentLevel, PackagePath)
+        ? McpSafeLevelSave(PackageWorld->PersistentLevel, Package->GetName())
         : McpSafeAssetSave(Package);
-    if (!bSaved) {
-      OutFailedPackages++;
-    }
-  };
-
-  for (UPackage* Package : DirtyWorldPackages) {
-    SavePackage(Package);
-  }
-  for (UPackage* Package : DirtyContentPackages) {
-    SavePackage(Package);
+    OutFailedPackages += bSaved ? 0 : 1;
   }
 
   FlushRenderingCommands();
   CountBlockingDirtyPackages(OutRemainingWorldPackages, OutRemainingContentPackages);
   return OutFailedPackages == 0 && OutRemainingWorldPackages + OutRemainingContentPackages == 0;
 }
-#endif
 } // namespace McpLevelHandlers

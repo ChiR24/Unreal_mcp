@@ -9,41 +9,15 @@
 #include "HAL/IConsoleManager.h"
 #include "Scalability.h"
 
-#if WITH_EDITOR
 #include "Camera/PlayerCameraManager.h"
 #include "Editor/UnrealEd/Public/Editor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ConfigCacheIni.h"
-#endif
 
 namespace McpPerformanceHandlers
 {
-#if WITH_EDITOR
-namespace
-{
-void SetRenderingCVarInt(const TCHAR* Name, int32 Value)
-{
-    if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(Name))
-    {
-        CVar->Set(Value);
-    }
-}
-
-void SetRenderingCVarFloat(const TCHAR* Name, float Value)
-{
-    if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(Name))
-    {
-        CVar->Set(Value);
-    }
-}
-}
-#endif
-
 bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
 {
-#if !WITH_EDITOR
-    return false;
-#else
     if (Context.Lower == TEXT("set_scalability"))
     {
         int32 Level = 3;
@@ -71,7 +45,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
             return true;
         }
 
-        SetRenderingCVarFloat(TEXT("r.ScreenPercentage"), static_cast<float>(Scale));
+        SetCVarIfExists(TEXT("r.ScreenPercentage"), static_cast<float>(Scale));
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
             TEXT("Resolution scale set"), nullptr);
@@ -82,7 +56,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
     {
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-        SetRenderingCVarInt(TEXT("r.VSync"), bEnabled ? 1 : 0);
+        SetCVarIfExists(TEXT("r.VSync"), bEnabled ? 1 : 0);
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
             TEXT("VSync configured"), nullptr);
@@ -111,7 +85,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
     {
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-        SetRenderingCVarInt(TEXT("r.Nanite"), bEnabled ? 1 : 0);
+        SetCVarIfExists(TEXT("r.Nanite"), bEnabled ? 1 : 0);
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
             TEXT("Nanite configured"), nullptr);
@@ -125,13 +99,13 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
         double LODBias = 0.0;
         if (Context.Payload->TryGetNumberField(TEXT("lodBias"), LODBias))
         {
-            SetRenderingCVarFloat(TEXT("r.MipMapLODBias"), static_cast<float>(LODBias));
+            SetCVarIfExists(TEXT("r.MipMapLODBias"), static_cast<float>(LODBias));
             AppliedCVars->SetNumberField(TEXT("r.MipMapLODBias"), LODBias);
         }
         double ForceLOD = -1.0;
         if (Context.Payload->TryGetNumberField(TEXT("forceLOD"), ForceLOD))
         {
-            SetRenderingCVarInt(TEXT("r.ForceLOD"), static_cast<int32>(ForceLOD));
+            SetCVarIfExists(TEXT("r.ForceLOD"), static_cast<int32>(ForceLOD));
             AppliedCVars->SetNumberField(TEXT("r.ForceLOD"), static_cast<int32>(ForceLOD));
         }
         LodResult->SetObjectField(TEXT("appliedCVars"), AppliedCVars);
@@ -150,7 +124,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
         double PoolSize = 0.0;
         if (Context.Payload->TryGetNumberField(TEXT("poolSize"), PoolSize))
         {
-            SetRenderingCVarFloat(
+            SetCVarIfExists(
                 TEXT("r.Streaming.PoolSize"), static_cast<float>(PoolSize));
         }
 
@@ -170,7 +144,7 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
             }
         }
 
-        SetRenderingCVarInt(TEXT("r.TextureStreaming"), bEnabled ? 1 : 0);
+        SetCVarIfExists(TEXT("r.TextureStreaming"), bEnabled ? 1 : 0);
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
             TEXT("Texture streaming configured"), nullptr);
@@ -178,6 +152,5 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
     }
 
     return false;
-#endif
 }
 }

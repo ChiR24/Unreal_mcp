@@ -13,13 +13,10 @@
 #include "UnrealClient.h"
 #include "ViewportClient.h"
 
-#if WITH_EDITOR
 #include "Editor/UnrealEd/Public/Editor.h"
-#endif
 
 namespace McpPerformanceHandlers
 {
-#if WITH_EDITOR
 namespace
 {
 bool RequireEditor(
@@ -49,13 +46,9 @@ bool IsValidStatCategory(const FString& Category)
     return true;
 }
 }
-#endif
 
 bool HandleProfilingAction(const FPerformanceActionContext& Context)
 {
-#if !WITH_EDITOR
-    return false;
-#else
     if (HandleMemoryReportAction(Context))
     {
         return true;
@@ -287,6 +280,5 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
     }
 
     return false;
-#endif
 }
 }

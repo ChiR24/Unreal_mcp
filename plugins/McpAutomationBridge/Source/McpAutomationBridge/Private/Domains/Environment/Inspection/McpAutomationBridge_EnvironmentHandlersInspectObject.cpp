@@ -1,6 +1,6 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool HandleInspectObjectAction(
@@ -45,11 +45,7 @@ bool HandleInspectObjectAction(
         TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
         const FTransform &Transform = Actor->GetActorTransform();
 
-        TSharedPtr<FJsonObject> LocationObj = McpHandlerUtils::CreateResultObject();
-        LocationObj->SetNumberField(TEXT("x"), Transform.GetLocation().X);
-        LocationObj->SetNumberField(TEXT("y"), Transform.GetLocation().Y);
-        LocationObj->SetNumberField(TEXT("z"), Transform.GetLocation().Z);
-        TransformObj->SetObjectField(TEXT("location"), LocationObj);
+        TransformObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Transform.GetLocation()));
 
         TSharedPtr<FJsonObject> RotationObj = McpHandlerUtils::CreateResultObject();
         FRotator Rotator = Transform.GetRotation().Rotator();
@@ -58,11 +54,7 @@ bool HandleInspectObjectAction(
         RotationObj->SetNumberField(TEXT("roll"), Rotator.Roll);
         TransformObj->SetObjectField(TEXT("rotation"), RotationObj);
 
-        TSharedPtr<FJsonObject> ScaleObj = McpHandlerUtils::CreateResultObject();
-        ScaleObj->SetNumberField(TEXT("x"), Transform.GetScale3D().X);
-        ScaleObj->SetNumberField(TEXT("y"), Transform.GetScale3D().Y);
-        ScaleObj->SetNumberField(TEXT("z"), Transform.GetScale3D().Z);
-        TransformObj->SetObjectField(TEXT("scale"), ScaleObj);
+        TransformObj->SetObjectField(TEXT("scale"), McpHandlerUtils::VectorToJson(Transform.GetScale3D()));
 
         Resp->SetObjectField(TEXT("transform"), TransformObj);
 
@@ -121,7 +113,7 @@ bool HandleInspectObjectAction(
     AActor *Owner = Cast<AActor>(TargetObject);
     if (Owner && Payload->TryGetStringField(TEXT("componentName"), ComponentName) && !ComponentName.IsEmpty())
     {
-        UActorComponent *Named = McpHandlerUtils::FindActorComponentByName(Owner, ComponentName);
+        UActorComponent *Named = FindComponentByName(Owner, ComponentName);
         if (!Named)
         {
             TArray<FString> Names;
@@ -140,7 +132,7 @@ bool HandleInspectObjectAction(
     }
     // detailed / propertyNames: UPROPERTY values as text, capped at 200 entries.
     const TArray<FString> PropertyNames = McpReadStringListField(Payload, TEXT("propertyNames"), TEXT("propertyName"));
-    if (PropertyNames.Num() > 0 || McpHandlerUtils::GetOptionalBool(Payload, TEXT("detailed"), false))
+    if (PropertyNames.Num() > 0 || GetJsonBoolField(Payload, TEXT("detailed"), false))
     {
         McpAppendPropertyDump(DumpTarget, PropertyNames, Resp);
     }
@@ -153,4 +145,3 @@ bool HandleInspectObjectAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

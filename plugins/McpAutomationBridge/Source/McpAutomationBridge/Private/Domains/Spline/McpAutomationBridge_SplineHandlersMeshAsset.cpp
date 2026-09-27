@@ -5,39 +5,11 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Components/SplineMeshComponent.h"
 #include "Editor.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
-
-static bool ResolveSplineMeshActorAndWorld(
-    UMcpAutomationBridgeSubsystem* Self,
-    const FString& RequestId,
-    TSharedPtr<FMcpBridgeWebSocket> Socket,
-    const FString& ActorName,
-    AActor*& OutActor,
-    UWorld*& OutWorld)
-{
-    OutWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!OutWorld)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return false;
-    }
-
-    OutActor = FindActorByName(OutWorld, ActorName);
-    if (!OutActor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return false;
-    }
-
-    return true;
-}
 
 bool HandleSetSplineMeshAsset(
     UMcpAutomationBridgeSubsystem* Self,
@@ -56,27 +28,16 @@ bool HandleSetSplineMeshAsset(
         return true;
     }
 
-    FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    const FString SafeMeshPath = RequireSplineProjectPath(Self, RequestId, Socket, TEXT("meshPath"), MeshPath);
     if (SafeMeshPath.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
-            nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
     AActor* Actor = nullptr;
-    UWorld* World = nullptr;
-    if (!ResolveSplineMeshActorAndWorld(Self, RequestId, Socket, ActorName, Actor, World))
-    {
-        return true;
-    }
-
-    USplineMeshComponent* TargetComp = FindSplineMeshComponent(Actor, ComponentName);
+    USplineMeshComponent* TargetComp = ResolveSplineMeshTarget(Self, RequestId, Socket, ActorName, ComponentName, Actor);
     if (!TargetComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No SplineMeshComponent found on actor"), nullptr, TEXT("NO_COMPONENT"));
         return true;
     }
 
@@ -89,7 +50,7 @@ bool HandleSetSplineMeshAsset(
     }
 
     TargetComp->SetStaticMesh(Mesh);
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
@@ -111,32 +72,17 @@ bool HandleConfigureSplineMeshAxis(
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
     FString ForwardAxis = GetJsonStringField(Payload, TEXT("forwardAxis"), TEXT("X"));
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-
     AActor* Actor = nullptr;
-    UWorld* World = nullptr;
-    if (!ResolveSplineMeshActorAndWorld(Self, RequestId, Socket, ActorName, Actor, World))
-    {
-        return true;
-    }
-
-    USplineMeshComponent* TargetComp = FindSplineMeshComponent(Actor, ComponentName);
+    USplineMeshComponent* TargetComp = ResolveSplineMeshTarget(Self, RequestId, Socket, ActorName, ComponentName, Actor);
     if (!TargetComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No SplineMeshComponent found on actor"), nullptr, TEXT("NO_COMPONENT"));
         return true;
     }
 
     const ESplineMeshAxis::Type Axis = ParseSplineMeshAxis(ForwardAxis);
 
     TargetComp->SetForwardAxis(Axis);
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("forwardAxis"), ForwardAxis);
@@ -146,4 +92,3 @@ bool HandleConfigureSplineMeshAxis(
         FString::Printf(TEXT("Spline mesh forward axis set to %s"), *ForwardAxis), Result);
     return true;
 }
-#endif

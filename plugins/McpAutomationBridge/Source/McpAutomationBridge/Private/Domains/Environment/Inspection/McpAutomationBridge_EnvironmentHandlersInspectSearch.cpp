@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool HandleInspectSearchAction(
@@ -18,8 +17,8 @@ bool HandleInspectSearchAction(
             // because the list_objects contract declares the former.
             FString Filter;
             Payload->TryGetStringField(TEXT("filter"), Filter);
-            const int32 Limit = FMath::Max(1, McpHandlerUtils::GetOptionalInt(Payload, TEXT("limit"), 100));
-            const int32 Offset = FMath::Max(0, McpHandlerUtils::GetOptionalInt(Payload, TEXT("offset"), 0));
+            const int32 Limit = FMath::Max(1, GetJsonIntField(Payload, TEXT("limit"), 100));
+            const int32 Offset = FMath::Max(0, GetJsonIntField(Payload, TEXT("offset"), 0));
             UWorld* World = McpGetRuntimeInspectionWorld();
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
             int32 TotalCount = 0;
@@ -172,7 +171,7 @@ bool HandleInspectSearchAction(
                     // /Script/<Module>.<Class> path stays the deterministic route).
                     // FindFirstObject is UE 5.1+; pre-5.1 falls back to ResolveClassByName
                     // (ANY_PACKAGE-era lookup) — same guard as MontageNotifyBlend.cpp.
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
                     TargetClass = FindFirstObject<UClass>(*ClassName, EFindFirstObjectOptions::None);
 #else
                     TargetClass = ResolveClassByName(ClassName);
@@ -182,7 +181,7 @@ bool HandleInspectSearchAction(
                         const TCHAR Prefix = ClassName[0];
                         if ((Prefix == TEXT('A') || Prefix == TEXT('U')) && FChar::IsUpper(ClassName[1]))
                         {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
                             TargetClass = FindFirstObject<UClass>(*ClassName.Mid(1), EFindFirstObjectOptions::None);
 #else
                             TargetClass = ResolveClassByName(ClassName.Mid(1));
@@ -219,4 +218,3 @@ bool HandleInspectSearchAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

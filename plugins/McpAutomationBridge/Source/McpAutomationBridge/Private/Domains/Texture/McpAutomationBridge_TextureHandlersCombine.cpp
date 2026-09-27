@@ -5,60 +5,34 @@ namespace McpTextureHandlers
 TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Params)
 {
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    FString BaseTexturePath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("baseTexture"), TEXT("")));
-    FString OverlayTexturePath = NormalizeTexturePath(GetJsonStringField(
-        Params, TEXT("overlayTexture"), GetJsonStringField(Params, TEXT("blendTexture"), TEXT(""))));
-    const FString BlendMode = GetJsonStringField(Params, TEXT("blendMode"), TEXT("Normal"));
+    const FString BlendMode = GetJsonStringField(Params, TEXT("blendType"), TEXT("Normal"));
     const float Opacity = FMath::Clamp(static_cast<float>(GetJsonNumberField(Params, TEXT("opacity"), 1.0)), 0.0f, 1.0f);
-    FString Name = GetJsonStringField(Params, TEXT("name"), TEXT("Combined"));
-    FString Path = NormalizeTexturePath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Textures")));
-    // The published schema names the result via outputPath (a full /Game
-    // asset path); honour it instead of always writing /Game/Textures/Combined.
-    const FString OutputPath = NormalizeTexturePath(GetJsonStringField(Params, TEXT("outputPath"), TEXT("")));
-    if (!OutputPath.IsEmpty())
+    FString BasePath;
+    FString OverlayPath;
+    FString Error;
+    UTexture2D* BaseTex = LoadSourceTexture(GetJsonStringField(Params, TEXT("baseTexture")), TEXT("baseTexture"), BasePath, Error);
+    UTexture2D* OverlayTex = BaseTex ? LoadSourceTexture(GetJsonStringField(Params, TEXT("blendTexture")), TEXT("blendTexture"), OverlayPath, Error) : nullptr;
+    if (!OverlayTex)
     {
-        Name = FPaths::GetBaseFilename(OutputPath);
-        Path = FPaths::GetPath(OutputPath);
+        TEXTURE_ERROR_RESPONSE(Error);
     }
-    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-
-    if (BaseTexturePath.IsEmpty() || OverlayTexturePath.IsEmpty())
+    const int32 Width = BaseTex->Source.GetSizeX();
+    const int32 Height = BaseTex->Source.GetSizeY();
+    if (OverlayTex->Source.GetSizeX() != Width || OverlayTex->Source.GetSizeY() != Height)
     {
-        TEXTURE_ERROR_RESPONSE(TEXT("baseTexture and overlayTexture are required"));
+        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("blendTexture must match baseTexture's %dx%d size"), Width, Height));
     }
-    const FString SanitizedBase = SanitizeProjectRelativePath(BaseTexturePath);
-    const FString SanitizedOverlay = SanitizeProjectRelativePath(OverlayTexturePath);
-    if (SanitizedBase.IsEmpty() || SanitizedOverlay.IsEmpty())
+    FString Path;
+    FString Name;
+    if (!ResolveOutputTarget(Params, TEXT("/Game/Textures"), TEXT("Combined"), Path, Name, Error))
     {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid baseTexture or overlayTexture path: contains traversal or invalid characters"));
+        TEXTURE_ERROR_RESPONSE(Error);
     }
-    BaseTexturePath = SanitizedBase;
-    OverlayTexturePath = SanitizedOverlay;
-
-    UTexture2D* BaseTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *BaseTexturePath));
-    UTexture2D* OverlayTex = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *OverlayTexturePath));
-    if (!BaseTex || !OverlayTex)
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Failed to load base or overlay texture"));
-    }
-
-    const int32 Width = BaseTex->GetSizeX();
-    const int32 Height = BaseTex->GetSizeY();
     UTexture2D* OutputTexture = CreateEmptyTexture(Path, Name, Width, Height, false);
     if (!OutputTexture)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create output texture"));
     }
-    if (!BaseTex->Source.IsValid())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Base texture has no source data - may be compressed or not fully loaded"));
-    }
-    if (!OverlayTex->Source.IsValid())
-    {
-        TEXTURE_ERROR_RESPONSE(TEXT("Overlay texture has no source data - may be compressed or not fully loaded"));
-    }
-    if (BaseTex->IsStreamable()) BaseTex->SetForceMipLevelsToBeResident(30.0f);
-    if (OverlayTex->IsStreamable()) OverlayTex->SetForceMipLevelsToBeResident(30.0f);
 
     const uint8* BaseData = BaseTex->Source.LockMipReadOnly(0);
     const uint8* OverlayData = OverlayTex->Source.LockMipReadOnly(0);
@@ -104,11 +78,8 @@ TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Par
     OverlayTex->Source.UnlockMip(0);
     OutputTexture->Source.UnlockMip(0);
     OutputTexture->UpdateResource();
-    if (bSave)
-    {
-        FAssetRegistryModule::AssetCreated(OutputTexture);
-        McpSafeAssetSave(OutputTexture);
-    }
+    FAssetRegistryModule::AssetCreated(OutputTexture);
+    McpSafeAssetSave(OutputTexture);
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Textures combined (mode: %s)"), *BlendMode));
     Response->SetStringField(TEXT("assetPath"), Path / Name);

@@ -4,9 +4,6 @@
 #include "HAL/FileManager.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleValidateLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString LevelPath;
     if (Payload.IsValid()) {
@@ -14,7 +11,7 @@ bool HandleValidateLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const F
       if (LevelPath.IsEmpty()) Payload->TryGetStringField(TEXT("assetPath"), LevelPath);
     }
     if (LevelPath.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("levelPath required for validate_level"), nullptr,
                              TEXT("INVALID_ARGUMENT"));
       return true;
@@ -22,7 +19,7 @@ bool HandleValidateLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const F
     LevelPath = NormalizeLevelPackagePath(LevelPath);
     LevelPath = SanitizeProjectRelativePath(LevelPath);
     if (LevelPath.IsEmpty()) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Invalid levelPath"), nullptr,
                              TEXT("SECURITY_VIOLATION"));
       return true;
@@ -38,7 +35,6 @@ bool HandleValidateLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const F
     const bool bExists = bPackageExists || bFileExists;
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("success"), bExists);
     Result->SetBoolField(TEXT("exists"), bExists);
     Result->SetBoolField(TEXT("isValid"), bExists);
     Result->SetStringField(TEXT("levelPath"), LevelPath);
@@ -48,12 +44,9 @@ bool HandleValidateLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const F
     Result->SetBoolField(TEXT("packageExists"), bPackageExists);
     Result->SetBoolField(TEXT("fileExists"), bFileExists);
 
-    SendAutomationResponse(RequestingSocket, RequestId, bExists,
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, bExists,
                            bExists ? TEXT("Level validated") : TEXT("Level not found"),
                            Result, bExists ? FString() : TEXT("NOT_FOUND"));
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

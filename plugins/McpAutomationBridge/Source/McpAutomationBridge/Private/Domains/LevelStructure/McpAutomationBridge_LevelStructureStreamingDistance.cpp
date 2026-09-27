@@ -1,6 +1,6 @@
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureActions.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
-#include "Domains/LevelStructure/McpAutomationBridge_LevelStructurePayload.h"
 
 #include "Engine/LevelStreaming.h"
 #include "Engine/LevelStreamingDynamic.h"
@@ -13,7 +13,6 @@
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -41,8 +40,7 @@ bool HandleSetStreamingDistance(
 
     double StreamingDistance = GetJsonNumberField(Payload, TEXT("streamingDistance"), 10000.0);
     FString StreamingUsage = GetJsonStringField(Payload, TEXT("streamingUsage"), TEXT("LoadingAndVisibility"));
-    TSharedPtr<FJsonObject> VolumeLocationJson = GetObjectField(Payload, TEXT("volumeLocation"));
-    FVector VolumeLocation = VolumeLocationJson.IsValid() ? LevelStructureHelpers::GetVectorFromJson(VolumeLocationJson) : FVector::ZeroVector;
+    FVector VolumeLocation = ExtractVectorField(Payload, TEXT("volumeLocation"), FVector::ZeroVector);
     bool bCreateVolume = GetJsonBoolField(Payload, TEXT("createVolume"), true);
 
     UWorld* World = GetEditorWorld();
@@ -53,57 +51,7 @@ bool HandleSetStreamingDistance(
         return true;
     }
 
-    ULevelStreaming* FoundLevel = nullptr;
-    for (ULevelStreaming* StreamingLevel : World->GetStreamingLevels())
-    {
-        if (StreamingLevel && StreamingLevel->GetWorldAssetPackageFName().ToString().Contains(LevelName))
-        {
-            FoundLevel = StreamingLevel;
-            break;
-        }
-    }
-
-    // This handles cases where the sublevel was created but the streaming reference wasn't loaded
-    if (!FoundLevel)
-    {
-        TArray<FString> PotentialPaths;
-
-        if (LevelName.StartsWith(TEXT("/Game/")))
-        {
-            PotentialPaths.Add(LevelName);
-        }
-        FString WorldPath = FPaths::GetPath(World->GetOutermost()->GetName());
-        PotentialPaths.Add(WorldPath / LevelName);
-        PotentialPaths.Add(FString(TEXT("/Game/")) / LevelName);
-        PotentialPaths.Add(FString(TEXT("/Game/")) + LevelName);
-
-        for (const FString& TestPath : PotentialPaths)
-        {
-            FString TestFullPath = TestPath;
-            if (!TestFullPath.EndsWith(TEXT(".umap")))
-            {
-                // Already a package path, check if package exists
-                if (FPackageName::DoesPackageExist(TestFullPath))
-                {
-                    ULevelStreamingDynamic* NewStreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
-                    if (NewStreamingLevel)
-                    {
-                        NewStreamingLevel->SetWorldAssetByPackageName(FName(*TestFullPath));
-                        NewStreamingLevel->LevelTransform = FTransform::Identity;
-                        NewStreamingLevel->SetShouldBeVisible(true);
-                        NewStreamingLevel->SetShouldBeLoaded(true);
-
-                        World->AddStreamingLevel(NewStreamingLevel);
-                        FoundLevel = NewStreamingLevel;
-
-                        UE_LOG(LogMcpLevelStructureHandlers, Log, TEXT("Created streaming reference for existing level: %s"), *TestFullPath);
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
+    ULevelStreaming* FoundLevel = FindOrAddStreamingLevel(World, LevelName);
     if (!FoundLevel)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -162,26 +110,10 @@ bool HandleSetStreamingDistance(
 
     NewVolume->SetActorLabel(FString::Printf(TEXT("StreamingVolume_%s"), *LevelName));
 
-    if (StreamingUsage == TEXT("Loading"))
-    {
-        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_Loading;
-    }
-    else if (StreamingUsage == TEXT("VisibilityBlockingOnLoad"))
-    {
-        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_VisibilityBlockingOnLoad;
-    }
-    else if (StreamingUsage == TEXT("BlockingOnLoad"))
-    {
-        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_BlockingOnLoad;
-    }
-    else if (StreamingUsage == TEXT("LoadingNotVisible"))
-    {
-        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_LoadingNotVisible;
-    }
-    else // Default: LoadingAndVisibility
-    {
-        NewVolume->StreamingUsage = EStreamingVolumeUsage::SVB_LoadingAndVisibility;
-    }
+    // "Loading", "BlockingOnLoad", ... name SVB_<usage>; anything else is LoadingAndVisibility.
+    const int64 Usage = StaticEnum<EStreamingVolumeUsage>()->GetValueByNameString(TEXT("SVB_") + StreamingUsage);
+    NewVolume->StreamingUsage = Usage >= 0 && Usage < SVB_MAX ? static_cast<EStreamingVolumeUsage>(Usage)
+                                                              : EStreamingVolumeUsage::SVB_LoadingAndVisibility;
 
     // Scale the volume to match the streaming distance (brush default is ~200 units cube)
     // We scale to create a sphere-like volume with radius = StreamingDistance
@@ -204,11 +136,7 @@ bool HandleSetStreamingDistance(
     ResponseJson->SetNumberField(TEXT("streamingDistance"), StreamingDistance);
     ResponseJson->SetStringField(TEXT("streamingUsage"), StreamingUsage);
 
-    TSharedPtr<FJsonObject> LocationJson = McpHandlerUtils::CreateResultObject();
-    LocationJson->SetNumberField(TEXT("x"), VolumeLocation.X);
-    LocationJson->SetNumberField(TEXT("y"), VolumeLocation.Y);
-    LocationJson->SetNumberField(TEXT("z"), VolumeLocation.Z);
-    ResponseJson->SetObjectField(TEXT("volumeLocation"), LocationJson);
+    ResponseJson->SetObjectField(TEXT("volumeLocation"), McpHandlerUtils::VectorToJson(VolumeLocation));
 
     ResponseJson->SetNumberField(TEXT("totalStreamingVolumes"), FoundLevel->EditorStreamingVolumes.Num());
 
@@ -219,4 +147,3 @@ bool HandleSetStreamingDistance(
 }
 
 }
-#endif

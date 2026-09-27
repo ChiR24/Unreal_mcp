@@ -49,7 +49,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-#if WITH_EDITOR
     FString SubAction;
     if (Payload.IsValid())
     {
@@ -76,10 +75,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     else if (SubAction == TEXT("set_streaming_distance"))
     {
         bHandled = HandleSetStreamingDistance(this, RequestId, Payload, Socket);
-    }
-    else if (SubAction == TEXT("configure_level_bounds"))
-    {
-        bHandled = HandleConfigureLevelBounds(this, RequestId, Payload, Socket);
     }
     else if (SubAction == TEXT("enable_world_partition"))
     {
@@ -121,14 +116,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     {
         bHandled = HandleConnectLevelBlueprintNodes(this, RequestId, Payload, Socket);
     }
-    else if (SubAction == TEXT("create_level_instance"))
-    {
-        bHandled = HandleCreateLevelInstance(this, RequestId, Payload, Socket);
-    }
-    else if (SubAction == TEXT("create_packed_level_actor"))
-    {
-        bHandled = HandleCreatePackedLevelActor(this, RequestId, Payload, Socket);
-    }
     else if (SubAction == TEXT("get_level_structure_info"))
     {
         bHandled = HandleGetLevelStructureInfo(this, RequestId, Payload, Socket);
@@ -151,8 +138,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     }
 
     return bHandled;
-#else
-    SendAutomationResponse(Socket, RequestId, false, TEXT("manage_level_structure requires editor build"), nullptr);
-    return true;
-#endif
 }

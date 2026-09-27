@@ -9,16 +9,6 @@
 #include "Modules/ModuleManager.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-bool IsSafeLevelConsoleToken(const FString& Value) {
-  const FString Trimmed = Value.TrimStartAndEnd();
-  return !Trimmed.IsEmpty() && !Trimmed.Contains(TEXT("\n")) &&
-         !Trimmed.Contains(TEXT("\r")) && !Trimmed.Contains(TEXT("&&")) &&
-         !Trimmed.Contains(TEXT("||")) && !Trimmed.Contains(TEXT(";")) &&
-         !Trimmed.Contains(TEXT("|")) && !Trimmed.Contains(TEXT("`")) &&
-         !Trimmed.Contains(TEXT(" ")) && !Trimmed.Contains(TEXT("\t"));
-}
-
 FString NormalizeLevelPackagePath(const FString& InPath) {
   FString PackagePath = InPath;
   int32 ObjectDelimiter = INDEX_NONE;
@@ -92,7 +82,7 @@ bool TryResolveWritableGameMapFilename(const FString& PackagePath,
                                      ErrorMessage, ErrorCode);
 }
 
-void ScanLevelPackagePath(const FString& PackagePath, const FString& AbsoluteMapFilename) {
+void ScanLevelPackagePath(const FString& PackagePath, const FString& AbsoluteMapFilename, bool bRecursive) {
   IAssetRegistry& AssetRegistry =
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
   if (!AbsoluteMapFilename.IsEmpty() && IFileManager::Get().FileExists(*AbsoluteMapFilename)) {
@@ -104,7 +94,7 @@ void ScanLevelPackagePath(const FString& PackagePath, const FString& AbsoluteMap
   if (!PackageDir.IsEmpty()) {
     TArray<FString> PathsToScan;
     PathsToScan.Add(PackageDir);
-    AssetRegistry.ScanPathsSynchronous(PathsToScan, false);
+    AssetRegistry.ScanPathsSynchronous(PathsToScan, bRecursive);
   }
 }
 
@@ -116,5 +106,4 @@ bool IsCurrentEditorWorldPackage(const FString& PackagePath) {
   return EditorWorld && EditorWorld->GetOutermost() &&
          EditorWorld->GetOutermost()->GetName() == PackagePath;
 }
-#endif
 } // namespace McpLevelHandlers

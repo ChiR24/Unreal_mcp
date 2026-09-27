@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 #include "Animation/SkeletalMeshActor.h"
 #include "Camera/CameraActor.h"
 #include "Engine/Brush.h"
@@ -249,4 +248,3 @@ bool HandleInspectStatsAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

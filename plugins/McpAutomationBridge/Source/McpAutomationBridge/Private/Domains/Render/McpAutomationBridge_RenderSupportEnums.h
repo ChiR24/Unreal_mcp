@@ -4,7 +4,6 @@
 
 namespace McpRenderHandlers
 {
-#if WITH_EDITOR
 inline const TMap<FString, FString>& DepthOfFieldMethodMap()
 {
     static const TMap<FString, FString> Map = {
@@ -54,5 +53,4 @@ inline bool ResolveEnumAlias(
         *Input, *AllowedList);
     return false;
 }
-#endif
 }

@@ -11,12 +11,6 @@ bool HandleCreateRenderTarget(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
-bool HandleAttachRenderTargetToVolume(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-
 bool HandleNaniteRebuildMesh(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -57,11 +51,9 @@ bool HandleRenderReflectionResolutionAction(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
-#if WITH_EDITOR
 // The level's single reflection-capture actor, or nullptr with a typed error
 // (AMBIGUOUS when several exist, ACTOR_NOT_FOUND when none).
 AActor* FindSoleReflectionCaptureActor(FString& OutError, FString& OutErrorCode);
-#endif
 
 bool HandleRenderSceneCaptureAction(
     UMcpAutomationBridgeSubsystem* Subsystem,

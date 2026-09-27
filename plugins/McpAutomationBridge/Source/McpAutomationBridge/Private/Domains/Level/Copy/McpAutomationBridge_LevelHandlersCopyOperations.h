@@ -4,7 +4,6 @@
 #include "Dom/JsonObject.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 struct FExternalPackageDirectoryCopyPlan {
   FString SourceDirectory;
   FString DestinationDirectory;
@@ -42,12 +41,12 @@ struct FLevelCopyContext {
 bool GetExternalPackageDirectory(const FString& PackagePath, const FString& RootDirectoryName, FString& OutDirectory);
 bool BuildExternalPackageDirectoryCopyPlan(const FString& SourcePackagePath, const FString& DestinationPackagePath, const FString& RootDirectoryName, bool bOverwrite, FExternalPackageDirectoryCopyPlan& Plan, FString& ErrorMessage, FString& ErrorCode);
 bool DeleteExternalPackageDirectory(const FString& PackagePath, const FString& RootDirectoryName, bool& bSourceExists, bool& bDeleted, FString& ErrorMessage, FString& ErrorCode);
-bool BackupFileForOverwrite(const FString& Filename, const TCHAR* Label, bool& bExisted, FString& BackupFilename, FString& ErrorMessage, FString& ErrorCode);
-bool RestoreFileBackup(const FString& Filename, const FString& BackupFilename);
-void DeleteFileBackup(const FString& BackupFilename);
-bool BackupDirectoryForOverwrite(const FString& Directory, const TCHAR* Label, bool& bExisted, FString& BackupDirectory, FString& ErrorMessage, FString& ErrorCode);
-bool RestoreDirectoryBackup(const FString& Directory, const FString& BackupDirectory);
-void DeleteDirectoryBackup(const FString& BackupDirectory);
+// A file (bDirectory false) or directory tree removed from disk.
+bool DeleteLevelPath(const FString& Path, bool bDirectory);
+// Moves an existing Path aside to BackupPath (empty when Path did not exist) so a copy can overwrite it.
+bool BackupForOverwrite(const FString& Path, bool bDirectory, const TCHAR* Label, bool& bExisted, FString& BackupPath, FString& ErrorMessage, FString& ErrorCode);
+// Puts BackupPath back at Path; true when there was nothing to restore.
+bool RestoreBackup(const FString& Path, const FString& BackupPath, bool bDirectory);
 bool CopyLevelMapPackageFile(const FString& SourcePackagePath, const FString& DestinationPackagePath, bool bOverwrite, TSharedPtr<FJsonObject>& Result, FString& ErrorMessage, FString& ErrorCode);
 bool InitializeLevelCopyContext(const FString& SourcePackagePath, const FString& DestinationPackagePath, bool bOverwrite, FLevelCopyContext& Context, FString& ErrorMessage, FString& ErrorCode);
 bool BackupLevelCopyDestinations(FLevelCopyContext& Context, TSharedPtr<FJsonObject>& Result, FString& ErrorMessage, FString& ErrorCode);
@@ -55,5 +54,4 @@ bool RollbackCopiedDestinationArtifacts(FLevelCopyContext& Context, TSharedPtr<F
 void DeleteLevelCopyDestinationBackups(FLevelCopyContext& Context);
 bool CopyLevelMapAndArtifacts(FLevelCopyContext& Context, TSharedPtr<FJsonObject>& Result, FString& ErrorMessage, FString& ErrorCode);
 void PopulateLevelCopyResult(FLevelCopyContext& Context, TSharedPtr<FJsonObject>& Result);
-#endif
 } // namespace McpLevelHandlers

@@ -15,9 +15,6 @@
 using McpSafeOperations::McpSafeLoadMap;
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
       FString LevelPath;
       Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
@@ -25,7 +22,7 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       Payload->TryGetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
 
       if (LevelPath.IsEmpty()) {
-        SendAutomationError(RequestingSocket, RequestId,
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
                             TEXT("levelPath required"),
                             TEXT("INVALID_ARGUMENT"));
         return true;
@@ -34,7 +31,7 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       // SECURITY: Sanitize LevelPath to prevent path traversal attacks
       FString SanitizedLevelPath = SanitizeProjectRelativePath(LevelPath);
       if (SanitizedLevelPath.IsEmpty()) {
-        SendAutomationError(RequestingSocket, RequestId,
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
                             TEXT("Invalid levelPath: contains path traversal (..) or invalid characters"),
                             TEXT("SECURITY_VIOLATION"));
         return true;
@@ -49,7 +46,7 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       }
 
       if (!GEditor) {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                                TEXT("Editor not available"), nullptr,
                                TEXT("EDITOR_NOT_AVAILABLE"));
         return true;
@@ -101,12 +98,10 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         ResolvedFileToLoad = FolderMapPath;
         const FString LevelName = FPaths::GetBaseFilename(LevelPath);
         ExpectedLoadedPath = FPaths::GetPath(LevelPath) / LevelName / LevelName;
-        UE_LOG(LogTemp, Log, TEXT("load: Found level at folder-based path: %s"), *FullFolderMapPath);
       } else if (!FullFlatMapPath.IsEmpty() && IFileManager::Get().FileExists(*FullFlatMapPath)) {
         bFileExists = true;
         ResolvedFileToLoad = FlatMapPath;
         ExpectedLoadedPath = LevelPath;
-        UE_LOG(LogTemp, Log, TEXT("load: Found level at flat path: %s"), *FullFlatMapPath);
       }
 
       // Also check if it's a valid package path (for levels in memory but not on disk yet)
@@ -120,7 +115,7 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
           ErrorDetails->SetStringField(TEXT("checkedFlat"), FullFlatMapPath);
         }
         ErrorDetails->SetStringField(TEXT("hint"), TEXT("Unreal levels are typically stored as /Game/Path/LevelName/LevelName.umap"));
-        SendAutomationResponse(
+        Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(TEXT("Level file not found. Checked:\n  Folder: %s\n  Flat: %s"),
                           *FullFolderMapPath, *FullFlatMapPath),
@@ -144,7 +139,7 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
           ErrorDetails->SetNumberField(TEXT("dirtyContentPackages"), DirtyContentPackagesBeforeLoad);
           ErrorDetails->SetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
           ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
-          SendAutomationResponse(
+          Subsystem.SendAutomationResponse(
               RequestingSocket, RequestId, false,
               TEXT("Cannot load a level in unattended/headless mode while packages are dirty. Pass saveDirtyPackages=true to save them before loading."),
               ErrorDetails, TEXT("DIRTY_PACKAGES"));
@@ -165,7 +160,7 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
             ErrorDetails->SetNumberField(TEXT("failedPackageSaves"), FailedDirtyPackageSaves);
             ErrorDetails->SetBoolField(TEXT("saveDirtyPackagesSucceeded"), bSavedDirtyPackagesBeforeLoad);
             ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
-            SendAutomationResponse(
+            Subsystem.SendAutomationResponse(
                 RequestingSocket, RequestId, false,
                 TEXT("Cannot load a level in unattended/headless mode while packages remain dirty after non-interactive save."),
                 ErrorDetails, TEXT("DIRTY_PACKAGES"));
@@ -180,10 +175,9 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         UWorld* LoadedWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
         if (LoadedWorld) {
           FString LoadedPath = LoadedWorld->GetOutermost()->GetName();
-          // Normalize paths for comparison (handle case differences)
-          if (LoadedPath.ToLower() != ExpectedLoadedPath.ToLower()) {
+          if (!LoadedPath.Equals(ExpectedLoadedPath, ESearchCase::IgnoreCase)) {
             // The requested level was not actually loaded - engine fell back to default
-            SendAutomationResponse(
+            Subsystem.SendAutomationResponse(
                 RequestingSocket, RequestId, false,
                 FString::Printf(TEXT("Level path mismatch: requested %s but loaded %s"), *ExpectedLoadedPath, *LoadedPath),
                 nullptr, TEXT("LOAD_MISMATCH"));
@@ -202,18 +196,15 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         Resp->SetNumberField(TEXT("dirtyContentPackagesAfterSave"), DirtyContentPackagesAfterSave);
         Resp->SetNumberField(TEXT("failedDirtyPackageSaves"), FailedDirtyPackageSaves);
         VerifyAssetExists(Resp, ExpectedLoadedPath);
-        SendAutomationResponse(RequestingSocket, RequestId, true,
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                                TEXT("Level loaded"), Resp, FString());
         return true;
       } else {
-        SendAutomationResponse(
+        Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             FString::Printf(TEXT("Failed to load map: %s"), *LevelPath),
             nullptr, TEXT("LOAD_FAILED"));
         return true;
       }
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

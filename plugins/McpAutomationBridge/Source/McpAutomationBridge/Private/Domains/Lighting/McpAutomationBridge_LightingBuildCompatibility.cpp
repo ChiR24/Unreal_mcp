@@ -5,7 +5,6 @@
 #include "Engine/World.h"
 #include "Misc/ConfigCacheIni.h"
 
-#if WITH_EDITOR
 namespace McpLightingHandlers
 {
 namespace
@@ -111,4 +110,3 @@ bool RunLegacyLightingBuild(
 }
 
 }
-#endif

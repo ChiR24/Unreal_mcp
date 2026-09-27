@@ -1,62 +1,25 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 UWorld *McpGetRuntimeInspectionWorld()
 {
-    if (!GEditor)
-    {
-        return nullptr;
-    }
-
-    if (GEditor->PlayWorld)
-    {
-        return GEditor->PlayWorld.Get();
-    }
-
+    // A running PIE or standalone game world when there is one, else the editor world.
     if (GEngine)
     {
         for (const FWorldContext &Context : GEngine->GetWorldContexts())
         {
-            if (Context.WorldType == EWorldType::PIE || Context.WorldType == EWorldType::Game)
+            if ((Context.WorldType == EWorldType::PIE || Context.WorldType == EWorldType::Game) && Context.World())
             {
-                if (UWorld *World = Context.World())
-                {
-                    return World;
-                }
+                return Context.World();
             }
         }
     }
-
-    return GEditor->GetEditorWorldContext().World();
+    return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
 }
 FString McpGetWorldTypeName(UWorld *World)
 {
-    if (!World)
-    {
-        return TEXT("None");
-    }
-
-    switch (World->WorldType)
-    {
-    case EWorldType::PIE:
-        return TEXT("PIE");
-    case EWorldType::Game:
-        return TEXT("Game");
-    case EWorldType::Editor:
-        return TEXT("Editor");
-    case EWorldType::EditorPreview:
-        return TEXT("EditorPreview");
-    case EWorldType::GamePreview:
-        return TEXT("GamePreview");
-    case EWorldType::GameRPC:
-        return TEXT("GameRPC");
-    case EWorldType::Inactive:
-        return TEXT("Inactive");
-    default:
-        return TEXT("Unknown");
-    }
+    return World ? LexToString(World->WorldType) : TEXT("None");
 }
 void McpAddActorTags(TSharedPtr<FJsonObject> Obj, const AActor *Actor)
 {
@@ -88,7 +51,7 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, 
     {
         Obj->SetBoolField(TEXT("isSceneComponent"), true);
         Obj->SetBoolField(TEXT("isVisible"), SceneComp->IsVisible());
-        Obj->SetObjectField(TEXT("transform"), McpMakeTransformObject(SceneComp->GetComponentTransform()));
+        Obj->SetObjectField(TEXT("transform"), McpHandlerUtils::TransformToJson(SceneComp->GetComponentTransform()));
         Obj->SetStringField(TEXT("attachParent"), SceneComp->GetAttachParent() ? SceneComp->GetAttachParent()->GetName() : TEXT(""));
     }
 
@@ -118,7 +81,7 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeComponent(UActorComponent *Component, 
             McpHandlerUtils::FPropertyResolveResult PropResult = McpHandlerUtils::ResolveProperty(Component, PropertyName);
             if (PropResult.IsValid())
             {
-                if (TSharedPtr<FJsonValue> Value = ExportPropertyToJsonValue(PropResult.Container, PropResult.Property))
+                if (TSharedPtr<FJsonValue> Value = McpPropertyReflection::ExportPropertyToJsonValue(PropResult.Container, PropResult.Property))
                 {
                     PropertiesObj->SetField(PropertyName, Value);
                 }
@@ -142,7 +105,7 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
     Obj->SetStringField(TEXT("path"), Actor->GetPathName());
     Obj->SetStringField(TEXT("class"), Actor->GetClass() ? Actor->GetClass()->GetName() : TEXT(""));
     Obj->SetStringField(TEXT("classPath"), Actor->GetClass() ? Actor->GetClass()->GetPathName() : TEXT(""));
-    Obj->SetObjectField(TEXT("transform"), McpMakeTransformObject(Actor->GetActorTransform()));
+    Obj->SetObjectField(TEXT("transform"), McpHandlerUtils::TransformToJson(Actor->GetActorTransform()));
     McpAddActorTags(Obj, Actor);
 
     TArray<TSharedPtr<FJsonValue>> ComponentsArray;
@@ -193,4 +156,3 @@ TSharedPtr<FJsonObject> McpDescribeRuntimeActor(AActor *Actor, const TArray<FStr
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

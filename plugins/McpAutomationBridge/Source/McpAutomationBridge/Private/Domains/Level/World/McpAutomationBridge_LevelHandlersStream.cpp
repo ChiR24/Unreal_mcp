@@ -7,9 +7,6 @@
 #include "Engine/World.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, bool bForceStreamUnload) {
     FString LevelName;
     bool bLoad = bForceStreamUnload ? false : true;
@@ -26,7 +23,7 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       bVis = false;
     }
     if (LevelName.TrimStartAndEnd().IsEmpty()) {
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           TEXT("stream_level requires levelName or levelPath"), nullptr,
           TEXT("INVALID_ARGUMENT"));
@@ -36,7 +33,7 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     // CRITICAL FIX: Use UEditorLevelUtils for streaming instead of console command
     // Console command StreamLevel is unreliable and returns EXEC_FAILED in many cases
     if (!GEditor) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
                              TEXT("EDITOR_NOT_AVAILABLE"));
       return true;
@@ -44,7 +41,7 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
 
     UWorld* World = GEditor->GetEditorWorldContext().World();
     if (!World) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,
                              TEXT("NO_WORLD"));
       return true;
@@ -82,46 +79,18 @@ bool HandleStreamLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
           TargetStreamingLevel->IsStreamingStatePending() ? TEXT("Pending") :
           TargetStreamingLevel->IsLevelLoaded() ? TEXT("Loaded") : TEXT("Unloaded"));
 
-      SendAutomationResponse(RequestingSocket, RequestId, true,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                              FString::Printf(TEXT("Streaming level state updated: %s (Loaded=%s, Visible=%s)"),
                                  *NormalizedLevelName,
                                  bLoad ? TEXT("true") : TEXT("false"),
                                  bVis ? TEXT("true") : TEXT("false")),
                              Result);
     } else {
-      // Streaming level not found - try console command as fallback
-      if (!IsSafeLevelConsoleToken(NormalizedLevelName)) {
-        SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Invalid streaming level name"), Result,
-                               TEXT("INVALID_ARGUMENT"));
-        return true;
-      }
-
-      const FString Cmd =
-          FString::Printf(TEXT("StreamLevel %s %s %s"), *NormalizedLevelName,
-                          bLoad ? TEXT("Load") : TEXT("Unload"),
-                          bVis ? TEXT("Show") : TEXT("Hide"));
-
-      const bool bCmdSuccess = GEditor->Exec(World, *Cmd);
-
-      if (bCmdSuccess) {
-        Result->SetStringField(TEXT("method"), TEXT("console_command"));
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Streaming command executed"), Result);
-      } else {
-        // Even if console command returns false, the operation may still be in progress
-        // Remove HANDLED error code — success=true means no error occurred
-        Result->SetStringField(TEXT("method"), TEXT("console_command_fallback"));
-        Result->SetStringField(TEXT("command"), Cmd);
-        Result->SetBoolField(TEXT("handled"), true);
-        SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Streaming command submitted (level may not be in world yet)"),
-                               Result);
-      }
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             FString::Printf(TEXT("Streaming level not found in the editor world: %s (add it with add_sublevel first)"),
+                                             *NormalizedLevelName),
+                             Result, TEXT("STREAMING_LEVEL_NOT_FOUND"));
     }
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

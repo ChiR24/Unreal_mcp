@@ -3,7 +3,6 @@
 
 #include "Misc/PackageName.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool McpFailEnvironmentAction(FString &OutMessage, FString &OutErrorCode, const FString &Message, const TCHAR *ErrorCode)
@@ -58,4 +57,3 @@ bool McpBuildValidatedEnvironmentAssetPath(const FString &RequestedPath, const F
 }
 
 }
-#endif

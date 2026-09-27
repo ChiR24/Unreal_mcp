@@ -9,30 +9,9 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  if (!Action.Equals(TEXT("get_foliage_instances"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("get_foliage_instances payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString FoliageTypePath;
-  Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath);
-  if (!FoliageTypePath.IsEmpty()) {
-    const FString SafePath = SanitizeProjectRelativePath(FoliageTypePath);
-    if (SafePath.IsEmpty()) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *FoliageTypePath),
-                          TEXT("SECURITY_VIOLATION"));
-      return true;
-    }
-    FoliageTypePath = FPaths::GetPath(SafePath).IsEmpty()
-        ? FString::Printf(TEXT("/Game/Foliage/%s"), *SafePath) : SafePath;
+  if (!McpFoliageHandlers::ReadFoliageTypePath(*this, RequestId, RequestingSocket, Payload, FoliageTypePath)) {
+    return true;
   }
   bool bSummary = false;
   Payload->TryGetBoolField(TEXT("summary"), bSummary);
@@ -112,10 +91,4 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
                          FString::Printf(TEXT("%d foliage instance(s) across %d type(s)"), Total, ByType.Num()),
                          Resp, FString());
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("get_foliage_instances requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

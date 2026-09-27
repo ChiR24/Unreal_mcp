@@ -6,115 +6,68 @@
 #include "Misc/Paths.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-bool BackupFileForOverwrite(const FString& Filename,
-                            const TCHAR* Label,
-                            bool& bExisted,
-                            FString& BackupFilename,
-                            FString& ErrorMessage,
-                            FString& ErrorCode) {
-  IFileManager& FileManager = IFileManager::Get();
-  bExisted = FileManager.FileExists(*Filename);
-  BackupFilename.Reset();
+namespace {
+bool PathExists(const FString& Path, bool bDirectory) {
+  return bDirectory ? IFileManager::Get().DirectoryExists(*Path)
+                    : IFileManager::Get().FileExists(*Path);
+}
+
+bool CopyPath(const FString& To, const FString& From, bool bDirectory) {
+  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+  if (!bDirectory) {
+    return PlatformFile.CopyFile(*To, *From);
+  }
+  IFileManager::Get().MakeDirectory(*FPaths::GetPath(To), true);
+  return PlatformFile.CopyDirectoryTree(*To, *From, false);
+}
+} // namespace
+
+bool DeleteLevelPath(const FString& Path, bool bDirectory) {
+  return bDirectory ? IFileManager::Get().DeleteDirectory(*Path, false, true)
+                    : IFileManager::Get().Delete(*Path, false, true, true);
+}
+
+bool BackupForOverwrite(const FString& Path,
+                        bool bDirectory,
+                        const TCHAR* Label,
+                        bool& bExisted,
+                        FString& BackupPath,
+                        FString& ErrorMessage,
+                        FString& ErrorCode) {
+  bExisted = PathExists(Path, bDirectory);
+  BackupPath.Reset();
   if (!bExisted) {
     return true;
   }
-
-  BackupFilename = FString::Printf(TEXT("%s.mcp_backup_%s"), *Filename,
-                                   *FGuid::NewGuid().ToString(EGuidFormats::Digits));
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  if (!PlatformFile.CopyFile(*BackupFilename, *Filename)) {
+  // A directory backup keeps a package-safe name; a file backup gets a suffix no loader reads.
+  const FString Candidate = Path + (bDirectory ? TEXT("_mcp_backup_") : TEXT(".mcp_backup_")) +
+                            FGuid::NewGuid().ToString(EGuidFormats::Digits);
+  if (!CopyPath(Candidate, Path, bDirectory)) {
     ErrorMessage = FString::Printf(TEXT("Failed to back up %s before overwrite: %s"),
-                                   Label, *Filename);
+                                   Label, *Path);
     ErrorCode = TEXT("DESTINATION_BACKUP_FAILED");
-    BackupFilename.Reset();
     return false;
   }
-  if (!FileManager.Delete(*Filename, false, true, true)) {
-    FileManager.Delete(*BackupFilename, false, true, true);
+  if (!DeleteLevelPath(Path, bDirectory)) {
+    DeleteLevelPath(Candidate, bDirectory);
     ErrorMessage = FString::Printf(TEXT("Failed to prepare %s for overwrite: %s"),
-                                   Label, *Filename);
+                                   Label, *Path);
     ErrorCode = TEXT("DESTINATION_DELETE_FAILED");
-    BackupFilename.Reset();
     return false;
   }
+  BackupPath = Candidate;
   return true;
 }
 
-bool RestoreFileBackup(const FString& Filename, const FString& BackupFilename) {
-  if (BackupFilename.IsEmpty() ||
-      !IFileManager::Get().FileExists(*BackupFilename)) {
+bool RestoreBackup(const FString& Path, const FString& BackupPath, bool bDirectory) {
+  if (BackupPath.IsEmpty() || !PathExists(BackupPath, bDirectory)) {
     return true;
   }
-  IFileManager::Get().Delete(*Filename, false, true, true);
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  const bool bRestored = PlatformFile.CopyFile(*Filename, *BackupFilename);
+  DeleteLevelPath(Path, bDirectory);
+  const bool bRestored = CopyPath(Path, BackupPath, bDirectory);
   if (bRestored) {
-    IFileManager::Get().Delete(*BackupFilename, false, true, true);
+    DeleteLevelPath(BackupPath, bDirectory);
   }
   return bRestored;
 }
-
-void DeleteFileBackup(const FString& BackupFilename) {
-  if (!BackupFilename.IsEmpty()) {
-    IFileManager::Get().Delete(*BackupFilename, false, true, true);
-  }
-}
-
-bool BackupDirectoryForOverwrite(const FString& Directory,
-                                 const TCHAR* Label,
-                                 bool& bExisted,
-                                 FString& BackupDirectory,
-                                 FString& ErrorMessage,
-                                 FString& ErrorCode) {
-  IFileManager& FileManager = IFileManager::Get();
-  bExisted = FileManager.DirectoryExists(*Directory);
-  BackupDirectory.Reset();
-  if (!bExisted) {
-    return true;
-  }
-
-  BackupDirectory = FString::Printf(TEXT("%s_mcp_backup_%s"), *Directory,
-                                    *FGuid::NewGuid().ToString(EGuidFormats::Digits));
-  FileManager.MakeDirectory(*FPaths::GetPath(BackupDirectory), true);
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  if (!PlatformFile.CopyDirectoryTree(*BackupDirectory, *Directory, false)) {
-    ErrorMessage = FString::Printf(TEXT("Failed to back up %s before overwrite: %s"),
-                                   Label, *Directory);
-    ErrorCode = TEXT("DESTINATION_BACKUP_FAILED");
-    BackupDirectory.Reset();
-    return false;
-  }
-  if (!FileManager.DeleteDirectory(*Directory, false, true)) {
-    FileManager.DeleteDirectory(*BackupDirectory, false, true);
-    ErrorMessage = FString::Printf(TEXT("Failed to prepare %s for overwrite: %s"),
-                                   Label, *Directory);
-    ErrorCode = TEXT("DESTINATION_DELETE_FAILED");
-    BackupDirectory.Reset();
-    return false;
-  }
-  return true;
-}
-
-bool RestoreDirectoryBackup(const FString& Directory, const FString& BackupDirectory) {
-  if (BackupDirectory.IsEmpty() ||
-      !IFileManager::Get().DirectoryExists(*BackupDirectory)) {
-    return true;
-  }
-  IFileManager::Get().DeleteDirectory(*Directory, false, true);
-  IFileManager::Get().MakeDirectory(*FPaths::GetPath(Directory), true);
-  IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-  const bool bRestored = PlatformFile.CopyDirectoryTree(*Directory, *BackupDirectory, false);
-  if (bRestored) {
-    IFileManager::Get().DeleteDirectory(*BackupDirectory, false, true);
-  }
-  return bRestored;
-}
-
-void DeleteDirectoryBackup(const FString& BackupDirectory) {
-  if (!BackupDirectory.IsEmpty()) {
-    IFileManager::Get().DeleteDirectory(*BackupDirectory, false, true);
-  }
-}
-#endif
 } // namespace McpLevelHandlers

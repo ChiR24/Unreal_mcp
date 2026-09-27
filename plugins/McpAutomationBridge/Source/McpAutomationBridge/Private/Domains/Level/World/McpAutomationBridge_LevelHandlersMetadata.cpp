@@ -4,9 +4,6 @@
 #include "HAL/FileManager.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleSetMetadataAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     TSharedPtr<FJsonObject> AssetPayload = MakeShared<FJsonObject>();
     FString AssetPath;
@@ -28,13 +25,13 @@ bool HandleSetMetadataAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
         ErrorMessage = FString::Printf(TEXT("metadata target must be a /Game level path: %s"), *AssetPath);
         ErrorCode = TEXT("SECURITY_VIOLATION");
       }
-      SendAutomationResponse(RequestingSocket, RequestId, false, ErrorMessage,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, ErrorMessage,
                              nullptr, ErrorCode);
       return true;
     }
     if (!IFileManager::Get().FileExists(*MapFilename) &&
         !FPackageName::DoesPackageExist(AssetPath)) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              FString::Printf(TEXT("Level not found: %s"), *AssetPath),
                              nullptr, TEXT("NOT_FOUND"));
       return true;
@@ -44,7 +41,4 @@ bool HandleSetMetadataAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     return FMcpLevelHandlerAccess::SetMetadata(
         Subsystem, RequestId, AssetPayload, RequestingSocket);
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

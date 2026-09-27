@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 void MarkActorConfigurationResult(FEnvironmentBuildContext &Context, const bool bResult, const FString &Message, const FString &ErrorCode)
@@ -94,4 +93,3 @@ bool HandleBuildEnvironmentEditorAction(
 }
 
 }
-#endif

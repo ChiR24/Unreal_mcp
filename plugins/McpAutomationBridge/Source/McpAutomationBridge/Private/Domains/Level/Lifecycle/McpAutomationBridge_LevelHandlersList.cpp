@@ -7,9 +7,6 @@
 #include "Modules/ModuleManager.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleListLevelsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> LevelsArray;
@@ -94,11 +91,8 @@ bool HandleListLevelsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStr
                            World->GetOutermost()->GetName());
     }
 
-    SendAutomationResponse(RequestingSocket, RequestId, true,
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Levels listed"), Resp, FString());
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

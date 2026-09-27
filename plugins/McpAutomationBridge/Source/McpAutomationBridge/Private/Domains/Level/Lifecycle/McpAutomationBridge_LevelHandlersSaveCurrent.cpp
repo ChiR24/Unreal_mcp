@@ -11,12 +11,9 @@
 using McpSafeOperations::McpSafeLevelSave;
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleSaveCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     if (!GEditor) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("Editor not available"), nullptr,
                              TEXT("EDITOR_NOT_AVAILABLE"));
       return true;
@@ -24,7 +21,7 @@ bool HandleSaveCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, cons
 
     UWorld *World = GEditor->GetEditorWorldContext().World();
     if (!World) {
-      SendAutomationResponse(RequestingSocket, RequestId, false,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
                              TEXT("No world loaded"), nullptr,
                              TEXT("NO_WORLD"));
       return true;
@@ -46,7 +43,7 @@ bool HandleSaveCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, cons
           TEXT("Level is unsaved/temporary. Use save_level_as with a valid path first."));
       ErrorDetail->SetStringField(TEXT("hint"),
           TEXT("Use manage_level with action='save_as' and provide savePath parameter"));
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           TEXT("Cannot save transient level: Level must be saved with 'save_as' first"),
           ErrorDetail, TEXT("TRANSIENT_LEVEL"));
@@ -61,7 +58,7 @@ bool HandleSaveCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, cons
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       FString LevelPath = World->GetOutermost()->GetName();
       VerifyAssetExists(Resp, LevelPath);
-      SendAutomationResponse(RequestingSocket, RequestId, true,
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level saved"), Resp, FString());
     } else {
       TSharedPtr<FJsonObject> ErrorDetail = McpHandlerUtils::CreateResultObject();
@@ -92,14 +89,11 @@ bool HandleSaveCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, cons
       }
 
       ErrorDetail->SetStringField(TEXT("reason"), ErrorReason);
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           FString::Printf(TEXT("Failed to save level: %s"), *ErrorReason),
           ErrorDetail, TEXT("SAVE_FAILED"));
     }
     return true;
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

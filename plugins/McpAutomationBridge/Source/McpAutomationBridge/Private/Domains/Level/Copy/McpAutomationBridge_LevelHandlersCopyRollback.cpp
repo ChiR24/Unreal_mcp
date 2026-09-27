@@ -1,47 +1,39 @@
 #include "Domains/Level/Copy/McpAutomationBridge_LevelHandlersCopyOperations.h"
 
-#include "HAL/FileManager.h"
-
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 namespace {
-void AppendRollbackFailure(FString& RollbackError, const FString& Detail) {
-  if (!RollbackError.IsEmpty()) {
-    RollbackError += TEXT("; ");
-  }
-  RollbackError += Detail;
+// One destination artifact a copy may overwrite: its path, its backup, and whether it existed.
+struct FDestinationArtifact {
+  const FString* Path;
+  FString* Backup;
+  bool* bExisted;
+  bool bDirectory;
+  const TCHAR* Label;
+};
+
+TArray<FDestinationArtifact, TInlineAllocator<4>> DestinationArtifacts(FLevelCopyContext& C) {
+  return {
+      {&C.DestinationFilename, &C.DestinationMapBackup, &C.bDeletedDestinationMap, false,
+       TEXT("destination level")},
+      {&C.DestinationBuiltDataFilename, &C.DestinationBuiltDataBackup,
+       &C.bDeletedDestinationBuiltData, false, TEXT("destination built data")},
+      {&C.ExternalActorsPlan.DestinationDirectory, &C.DestinationExternalActorsBackup,
+       &C.ExternalActorsPlan.bDeletedDestination, true, TEXT("destination external actors")},
+      {&C.ExternalObjectsPlan.DestinationDirectory, &C.DestinationExternalObjectsBackup,
+       &C.ExternalObjectsPlan.bDeletedDestination, true, TEXT("destination external objects")}};
 }
 
 bool RestoreDestinationBackups(FLevelCopyContext& Context, FString& RollbackError) {
   bool bRollbackSucceeded = true;
-  if (!RestoreFileBackup(Context.DestinationFilename, Context.DestinationMapBackup)) {
-    bRollbackSucceeded = false;
-    AppendRollbackFailure(RollbackError,
-                          FString::Printf(TEXT("failed to restore destination level backup: %s"),
-                                          *Context.DestinationMapBackup));
-  }
-  if (!RestoreFileBackup(Context.DestinationBuiltDataFilename,
-                         Context.DestinationBuiltDataBackup)) {
-    bRollbackSucceeded = false;
-    AppendRollbackFailure(RollbackError,
-                          FString::Printf(TEXT("failed to restore destination built data backup: %s"),
-                                          *Context.DestinationBuiltDataBackup));
-  }
-  if (!RestoreDirectoryBackup(Context.ExternalActorsPlan.DestinationDirectory,
-                              Context.DestinationExternalActorsBackup)) {
-    bRollbackSucceeded = false;
-    AppendRollbackFailure(RollbackError,
-                          FString::Printf(TEXT("failed to restore destination external actors backup: %s"),
-                                          *Context.DestinationExternalActorsBackup));
-  }
-  if (!RestoreDirectoryBackup(Context.ExternalObjectsPlan.DestinationDirectory,
-                              Context.DestinationExternalObjectsBackup)) {
-    bRollbackSucceeded = false;
-    AppendRollbackFailure(RollbackError,
-                          FString::Printf(TEXT("failed to restore destination external objects backup: %s"),
-                                          *Context.DestinationExternalObjectsBackup));
+  for (const FDestinationArtifact& Artifact : DestinationArtifacts(Context)) {
+    if (!RestoreBackup(*Artifact.Path, *Artifact.Backup, Artifact.bDirectory)) {
+      bRollbackSucceeded = false;
+      RollbackError += FString::Printf(TEXT("%sfailed to restore %s backup: %s"),
+                                       RollbackError.IsEmpty() ? TEXT("") : TEXT("; "),
+                                       Artifact.Label, **Artifact.Backup);
+    }
   }
   return bRollbackSucceeded;
 }
@@ -63,55 +55,33 @@ bool BackupLevelCopyDestinations(FLevelCopyContext& Context,
                                  TSharedPtr<FJsonObject>& Result,
                                  FString& ErrorMessage,
                                  FString& ErrorCode) {
-  if (BackupFileForOverwrite(Context.DestinationFilename, TEXT("destination level"),
-                             Context.bDeletedDestinationMap,
-                             Context.DestinationMapBackup, ErrorMessage,
-                             ErrorCode) &&
-      (Context.DestinationBuiltDataFilename.IsEmpty() || BackupFileForOverwrite(
-          Context.DestinationBuiltDataFilename, TEXT("destination built data"),
-          Context.bDeletedDestinationBuiltData,
-          Context.DestinationBuiltDataBackup, ErrorMessage, ErrorCode)) &&
-      BackupDirectoryForOverwrite(Context.ExternalActorsPlan.DestinationDirectory,
-                                  TEXT("destination external actors"),
-                                  Context.ExternalActorsPlan.bDeletedDestination,
-                                  Context.DestinationExternalActorsBackup,
-                                  ErrorMessage, ErrorCode) &&
-      BackupDirectoryForOverwrite(Context.ExternalObjectsPlan.DestinationDirectory,
-                                  TEXT("destination external objects"),
-                                  Context.ExternalObjectsPlan.bDeletedDestination,
-                                  Context.DestinationExternalObjectsBackup,
-                                  ErrorMessage, ErrorCode)) {
-    return true;
+  for (const FDestinationArtifact& Artifact : DestinationArtifacts(Context)) {
+    // A level with no BuiltData package has no BuiltData filename.
+    if (Artifact.Path->IsEmpty() ||
+        BackupForOverwrite(*Artifact.Path, Artifact.bDirectory, Artifact.Label,
+                           *Artifact.bExisted, *Artifact.Backup, ErrorMessage, ErrorCode)) {
+      continue;
+    }
+    FString RollbackError;
+    const bool bRollbackSucceeded = RestoreDestinationBackups(Context, RollbackError);
+    RecordRollbackResult(Result, bRollbackSucceeded, RollbackError);
+    if (!bRollbackSucceeded) {
+      ErrorMessage += FString::Printf(TEXT(" Rollback failed: %s"), *RollbackError);
+      ErrorCode = TEXT("ROLLBACK_FAILED");
+    }
+    return false;
   }
-
-  FString RollbackError;
-  const bool bRollbackSucceeded = RestoreDestinationBackups(Context, RollbackError);
-  RecordRollbackResult(Result, bRollbackSucceeded, RollbackError);
-  if (!bRollbackSucceeded) {
-    ErrorMessage += FString::Printf(TEXT(" Rollback failed: %s"), *RollbackError);
-    ErrorCode = TEXT("ROLLBACK_FAILED");
-  }
-  return false;
+  return true;
 }
 
 bool RollbackCopiedDestinationArtifacts(FLevelCopyContext& Context,
                                         TSharedPtr<FJsonObject>& Result,
                                         FString& RollbackError) {
-  IFileManager& FileManager = IFileManager::Get();
-  if (Context.DestinationMapBackup.IsEmpty() && !Context.DestinationFilename.IsEmpty()) {
-    FileManager.Delete(*Context.DestinationFilename, false, true, true);
-  }
-  if (Context.DestinationBuiltDataBackup.IsEmpty() &&
-      !Context.DestinationBuiltDataFilename.IsEmpty()) {
-    FileManager.Delete(*Context.DestinationBuiltDataFilename, false, true, true);
-  }
-  if (Context.DestinationExternalActorsBackup.IsEmpty() &&
-      !Context.ExternalActorsPlan.DestinationDirectory.IsEmpty()) {
-    FileManager.DeleteDirectory(*Context.ExternalActorsPlan.DestinationDirectory, false, true);
-  }
-  if (Context.DestinationExternalObjectsBackup.IsEmpty() &&
-      !Context.ExternalObjectsPlan.DestinationDirectory.IsEmpty()) {
-    FileManager.DeleteDirectory(*Context.ExternalObjectsPlan.DestinationDirectory, false, true);
+  // What this copy created where nothing stood before goes; what it overwrote comes back from its backup.
+  for (const FDestinationArtifact& Artifact : DestinationArtifacts(Context)) {
+    if (Artifact.Backup->IsEmpty() && !Artifact.Path->IsEmpty()) {
+      DeleteLevelPath(*Artifact.Path, Artifact.bDirectory);
+    }
   }
   const bool bRollbackSucceeded = RestoreDestinationBackups(Context, RollbackError);
   RecordRollbackResult(Result, bRollbackSucceeded, RollbackError);
@@ -119,10 +89,10 @@ bool RollbackCopiedDestinationArtifacts(FLevelCopyContext& Context,
 }
 
 void DeleteLevelCopyDestinationBackups(FLevelCopyContext& Context) {
-  DeleteFileBackup(Context.DestinationMapBackup);
-  DeleteFileBackup(Context.DestinationBuiltDataBackup);
-  DeleteDirectoryBackup(Context.DestinationExternalActorsBackup);
-  DeleteDirectoryBackup(Context.DestinationExternalObjectsBackup);
+  for (const FDestinationArtifact& Artifact : DestinationArtifacts(Context)) {
+    if (!Artifact.Backup->IsEmpty()) {
+      DeleteLevelPath(*Artifact.Backup, Artifact.bDirectory);
+    }
+  }
 }
-#endif
 } // namespace McpLevelHandlers

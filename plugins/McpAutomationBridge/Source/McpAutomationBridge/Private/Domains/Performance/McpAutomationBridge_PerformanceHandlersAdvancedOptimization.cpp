@@ -9,77 +9,30 @@
 
 #include "Engine/Engine.h"
 #include "HAL/IConsoleManager.h"
+#include "Scalability.h"
 
-#if WITH_EDITOR
 #include "Editor/UnrealEd/Public/Editor.h"
-#endif
 
 namespace McpPerformanceHandlers
 {
-#if WITH_EDITOR
-namespace
-{
-void SetOptimizationCVarInt(const TCHAR* Name, int32 Value)
-{
-    if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(Name))
-    {
-        CVar->Set(Value);
-    }
-}
-
-void SetOptimizationCVarFloat(const TCHAR* Name, float Value)
-{
-    if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(Name))
-    {
-        CVar->Set(Value);
-    }
-}
-}
-#endif
-
 bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
 {
-#if !WITH_EDITOR
-    return false;
-#else
     if (Context.Lower == TEXT("apply_baseline_settings"))
     {
         FString Profile = TEXT("balanced");
         Context.Payload->TryGetStringField(TEXT("profile"), Profile);
 
-        if (Profile.Equals(TEXT("performance"), ESearchCase::IgnoreCase))
-        {
-            SetOptimizationCVarInt(TEXT("r.VSync"), 0);
-            SetOptimizationCVarInt(TEXT("r.AllowHDR"), 0);
-            SetOptimizationCVarInt(TEXT("r.MotionBlurQuality"), 0);
-            SetOptimizationCVarInt(TEXT("r.DepthOfFieldQuality"), 0);
-            SetOptimizationCVarInt(TEXT("r.BloomQuality"), 0);
-            SetOptimizationCVarInt(TEXT("r.ShadowQuality"), 1);
-            SetOptimizationCVarInt(TEXT("r.MaxAnisotropy"), 4);
-        }
-        else if (Profile.Equals(TEXT("quality"), ESearchCase::IgnoreCase))
-        {
-            SetOptimizationCVarInt(TEXT("r.VSync"), 1);
-            SetOptimizationCVarInt(TEXT("r.AllowHDR"), 1);
-            SetOptimizationCVarInt(TEXT("r.MotionBlurQuality"), 4);
-            SetOptimizationCVarInt(TEXT("r.DepthOfFieldQuality"), 2);
-            SetOptimizationCVarInt(TEXT("r.BloomQuality"), 5);
-            SetOptimizationCVarInt(TEXT("r.ShadowQuality"), 5);
-            SetOptimizationCVarInt(TEXT("r.MaxAnisotropy"), 16);
-        }
-        else
-        {
-            SetOptimizationCVarInt(TEXT("r.VSync"), 1);
-            SetOptimizationCVarInt(TEXT("r.AllowHDR"), 1);
-            SetOptimizationCVarInt(TEXT("r.MotionBlurQuality"), 2);
-            SetOptimizationCVarInt(TEXT("r.DepthOfFieldQuality"), 1);
-            SetOptimizationCVarInt(TEXT("r.BloomQuality"), 3);
-            SetOptimizationCVarInt(TEXT("r.ShadowQuality"), 3);
-            SetOptimizationCVarInt(TEXT("r.MaxAnisotropy"), 8);
-        }
+        // The engine's own profiles: performance = Low, quality = Epic, anything else (balanced) = High.
+        const int32 QualityLevel = Profile.Equals(TEXT("performance"), ESearchCase::IgnoreCase) ? 0
+            : Profile.Equals(TEXT("quality"), ESearchCase::IgnoreCase) ? 3 : 2;
+        Scalability::FQualityLevels Levels;
+        Levels.SetFromSingleQualityLevel(QualityLevel);
+        Scalability::SetQualityLevels(Levels);
+        SetCVarIfExists(TEXT("r.VSync"), QualityLevel == 0 ? 0 : 1);
 
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("profile"), Profile);
+        Resp->SetNumberField(TEXT("qualityLevel"), QualityLevel);
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
             FString::Printf(TEXT("Baseline settings applied: %s"), *Profile), Resp);
@@ -100,9 +53,9 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
             Context.Payload->TryGetBoolField(TEXT("enableInstancing"), bInstancing);
         }
 
-        SetOptimizationCVarInt(
+        SetCVarIfExists(
             TEXT("r.MeshDrawCommands.DynamicInstancing"), bInstancing ? 1 : 0);
-        SetOptimizationCVarInt(
+        SetCVarIfExists(
             TEXT("r.MeshDrawCommands.UseCachedCommands"), bEnabled ? 1 : 0);
 
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -127,15 +80,15 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
         const bool bHasMinRadius = Context.Payload->TryGetNumberField(
             TEXT("minScreenRadius"), MinScreenRadiusForOcclusion);
 
-        SetOptimizationCVarInt(TEXT("r.AllowOcclusionQueries"), bEnabled ? 1 : 0);
+        SetCVarIfExists(TEXT("r.AllowOcclusionQueries"), bEnabled ? 1 : 0);
         if (bHasSlop)
         {
-            SetOptimizationCVarFloat(
+            SetCVarIfExists(
                 TEXT("r.OcclusionSlop"), static_cast<float>(OcclusionSlop));
         }
         if (bHasMinRadius)
         {
-            SetOptimizationCVarFloat(
+            SetCVarIfExists(
                 TEXT("r.OcclusionCullMinScreenRadius"),
                 static_cast<float>(MinScreenRadiusForOcclusion));
         }
@@ -233,15 +186,15 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
             TEXT("WORLD_PARTITION_NOT_ENABLED"));
         return true;
     }
-    SetOptimizationCVarInt(TEXT("wp.Runtime.EnableStreaming"), bEnabled ? 1 : 0);
+    SetCVarIfExists(TEXT("wp.Runtime.EnableStreaming"), bEnabled ? 1 : 0);
     if (bHasCellSize)
     {
-        SetOptimizationCVarFloat(
+        SetCVarIfExists(
             TEXT("wp.Runtime.RuntimeCellSize"), static_cast<float>(CellSize));
     }
     if (bHasLoadingRange)
     {
-        SetOptimizationCVarFloat(
+        SetCVarIfExists(
             TEXT("wp.Runtime.RuntimeStreamingRange"),
             static_cast<float>(LoadingRange));
     }
@@ -260,6 +213,5 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
         Context.RequestingSocket, Context.RequestId, true,
         TEXT("World Partition settings configured"), Resp);
     return true;
-#endif
 }
 }

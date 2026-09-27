@@ -2,29 +2,6 @@
 
 namespace McpTextureHandlers
 {
-namespace
-{
-FString CompressionToString(TextureCompressionSettings Compression)
-{
-    switch (Compression)
-    {
-        case TC_Default: return TEXT("TC_Default");
-        case TC_Normalmap: return TEXT("TC_Normalmap");
-        case TC_Masks: return TEXT("TC_Masks");
-        case TC_Grayscale: return TEXT("TC_Grayscale");
-        case TC_Displacementmap: return TEXT("TC_Displacementmap");
-        case TC_VectorDisplacementmap: return TEXT("TC_VectorDisplacementmap");
-        case TC_HDR: return TEXT("TC_HDR");
-        case TC_EditorIcon: return TEXT("TC_EditorIcon");
-        case TC_Alpha: return TEXT("TC_Alpha");
-        case TC_DistanceFieldFont: return TEXT("TC_DistanceFieldFont");
-        case TC_HDR_Compressed: return TEXT("TC_HDR_Compressed");
-        case TC_BC7: return TEXT("TC_BC7");
-        default: return TEXT("Unknown");
-    }
-}
-}
-
 TSharedPtr<FJsonObject> HandleTextureInfoAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params)
 {
     if (SubAction != TEXT("get_texture_info"))
@@ -60,7 +37,7 @@ TSharedPtr<FJsonObject> HandleTextureInfoAction(const FString& SubAction, const 
     TextureInfo->SetBoolField(TEXT("virtualTextureStreaming"), Texture->VirtualTextureStreaming);
     TextureInfo->SetBoolField(TEXT("neverStream"), Texture->NeverStream);
     TextureInfo->SetNumberField(TEXT("lodBias"), Texture->LODBias);
-    TextureInfo->SetStringField(TEXT("compression"), CompressionToString(Texture->CompressionSettings));
+    TextureInfo->SetStringField(TEXT("compression"), StaticEnum<TextureCompressionSettings>()->GetNameStringByValue(Texture->CompressionSettings));
 
     Response->SetBoolField(TEXT("success"), true);
     Response->SetStringField(TEXT("message"), TEXT("Texture info retrieved"));

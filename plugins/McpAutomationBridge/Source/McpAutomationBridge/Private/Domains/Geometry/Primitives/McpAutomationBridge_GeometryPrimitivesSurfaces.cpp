@@ -1,61 +1,37 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
 bool HandleCreateTorus(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+                              const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bArch)
 {
+    // An arch is a torus revolved part of the way round.
     FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedTorus");
+    if (Name.IsEmpty()) Name = bArch ? TEXT("GeneratedArch") : TEXT("GeneratedTorus");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    // radius/innerRadius/numRings/numSides are the declared names.
-    double MajorRadius = GetJsonNumberField(Payload, TEXT("radius"), GetJsonNumberField(Payload, TEXT("majorRadius"), 50.0));
-    double MinorRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), GetJsonNumberField(Payload, TEXT("minorRadius"), 20.0));
-    int32 MajorSegments = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments"), TEXT("majorSegments")}, 16);
-    int32 MinorSegments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("minorSegments")}, 8);
+    const double MajorRadius = GetJsonNumberField(Payload, TEXT("radius"), bArch ? 100.0 : 50.0);
+    const double MinorRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), bArch ? 25.0 : 20.0);
+    const int32 MajorSegments = DeclaredSegments(Payload, {TEXT("numRings"), TEXT("radialSegments")}, 16);
+    const int32 MinorSegments = DeclaredSegments(Payload, {TEXT("numSides")}, 8);
+    FGeometryScriptRevolveOptions RevolveOptions;
+    RevolveOptions.RevolveDegrees = GetJsonNumberField(Payload, TEXT("angle"), bArch ? 180.0 : 360.0);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
-    FGeometryScriptPrimitiveOptions Options;
-
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendTorus(
-        DynMesh,
-        Options,
-        FTransform::Identity,
-        FGeometryScriptRevolveOptions(),
-        MajorRadius, MinorRadius,
-        MajorSegments, MinorSegments,
-        EGeometryScriptPrimitiveOriginMode::Center,
-        nullptr
-    );
+        DynMesh, FGeometryScriptPrimitiveOptions(), FTransform::Identity, RevolveOptions,
+        MajorRadius, MinorRadius, MajorSegments, MinorSegments,
+        EGeometryScriptPrimitiveOriginMode::Center, nullptr);
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
-    if (!NewActor)
-    {
-        DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
-        return true;
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
-    Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Torus mesh created"), Result);
+    TSharedPtr<FJsonObject> Result;
+    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result)) return true;
+    Result->SetNumberField(TEXT("majorRadius"), MajorRadius);
+    Result->SetNumberField(TEXT("angle"), RevolveOptions.RevolveDegrees);
+    Self->SendAutomationResponse(Socket, RequestId, true, bArch ? TEXT("Arch created") : TEXT("Torus mesh created"), Result);
     return true;
 }
-
-/**
- * Create a DynamicMesh plane from the current schema fields and legacy aliases.
- *
- * Reads `width`, `height`, `widthSegments`, and `heightSegments` from the payload,
- * while preserving `depth`, `widthSubdivisions`, and `depthSubdivisions` as
- * compatibility fallbacks. Returns the effective dimensions and segment counts
- * so clients can verify which values were applied.
- */
 
 bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                               const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -66,10 +42,10 @@ bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Width = ClampDimension(GetJsonNumberField(Payload, TEXT("width"), 100.0));
     double Height = ClampDimension(GetJsonNumberField(Payload, TEXT("height"), GetJsonNumberField(Payload, TEXT("depth"), 100.0)));
-    int32 WidthSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("widthSegments"), GetJsonIntField(Payload, TEXT("widthSubdivisions"), 1)));
-    int32 HeightSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("heightSegments"), GetJsonIntField(Payload, TEXT("depthSubdivisions"), 1)));
+    int32 WidthSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("widthSegments"), 1));
+    int32 HeightSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("heightSegments"), 1));
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendRectangleXY(
@@ -81,19 +57,12 @@ bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
         nullptr
     );
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
-    Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     Result->SetNumberField(TEXT("width"), Width);
     Result->SetNumberField(TEXT("height"), Height);
     Result->SetNumberField(TEXT("widthSegments"), WidthSubdivisions);
@@ -106,51 +75,29 @@ bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 }
 
 bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bRing)
 {
+    // A ring is a disc with a hole.
     FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedDisc");
+    if (Name.IsEmpty()) Name = bRing ? TEXT("GeneratedRing") : TEXT("GeneratedDisc");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    double Radius = GetJsonNumberField(Payload, TEXT("radius"), 50.0);
-    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 16);
+    const double Radius = GetJsonNumberField(Payload, TEXT("outerRadius"), GetJsonNumberField(Payload, TEXT("radius"), 50.0));
+    const double HoleRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), bRing ? 25.0 : 0.0);
+    const int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, bRing ? 32 : 16);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
-    FGeometryScriptPrimitiveOptions Options;
-
-    // UE 5.7 signature: AppendDisc(Mesh, Options, Transform, Radius, AngleSteps, SpokeSteps, StartAngle, EndAngle, HoleRadius, Debug)
-    // (Local space: the actor transform below is the single source of placement —
-    // baking Transform here as well double-placed the mesh.)
+    // Local space: the actor transform is the single source of placement.
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendDisc(
-        DynMesh,
-        Options,
-        FTransform::Identity,
-        Radius,
-        Segments, // AngleSteps
-        1,        // SpokeSteps
-        0.0f,     // StartAngle
-        360.0f,   // EndAngle
-        0.0f,     // HoleRadius
-        nullptr   // Debug
-    );
+        DynMesh, FGeometryScriptPrimitiveOptions(), FTransform::Identity, Radius, Segments, 1, 0.0f, 360.0f, HoleRadius, nullptr);
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
-    if (!NewActor)
-    {
-        DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
-        return true;
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
-    Result->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
-
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
+    if (!NewActor) return true;
+    Result->SetNumberField(TEXT("outerRadius"), Radius);
+    Result->SetNumberField(TEXT("innerRadius"), HoleRadius);
     McpHandlerUtils::AddVerification(Result, NewActor);
-
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Disc mesh created"), Result);
+    Self->SendAutomationResponse(Socket, RequestId, true, bRing ? TEXT("Ring created") : TEXT("Disc mesh created"), Result);
     return true;
 }
 
@@ -164,27 +111,21 @@ bool HandleCreateStairs(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
     float StepDepth = GetJsonNumberField(Payload, TEXT("stepDepth"), 30.0f);
-    int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), 8);
+    int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), GetJsonIntField(Payload, TEXT("steps"), 8));
     bool bFloating = GetJsonBoolField(Payload, TEXT("floating"), false);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendLinearStairs(
         DynMesh, Options, FTransform::Identity, StepWidth, StepHeight, StepDepth, NumSteps, bFloating, nullptr);
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("numSteps"), NumSteps);
 
     McpHandlerUtils::AddVerification(Result, NewActor);
@@ -202,80 +143,31 @@ bool HandleCreateSpiralStairs(UMcpAutomationBridgeSubsystem* Self, const FString
     FTransform Transform = ReadTransformFromPayload(Payload);
     float StepWidth = GetJsonNumberField(Payload, TEXT("stepWidth"), 100.0f);
     float StepHeight = GetJsonNumberField(Payload, TEXT("stepHeight"), 20.0f);
-    float InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 150.0f);
-    // The published schema exposes numTurns ("converted to a curve angle") and does not declare
-    // curveAngle at all, so the only spelling a caller can send was the one never read: every
-    // spiral came out as a fixed 90-degree quarter turn while the response echoed curveAngle 90.
-    float CurveAngle = GetJsonNumberField(Payload, TEXT("curveAngle"), 0.0f);
-    if (CurveAngle <= 0.0f)
-    {
-      const float NumTurns = GetJsonNumberField(Payload, TEXT("numTurns"), 0.0f);
-      CurveAngle = (NumTurns > 0.0f) ? NumTurns * 360.0f : 90.0f;
-    }
-    int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), 8);
+    float InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), GetJsonNumberField(Payload, TEXT("radius"), 150.0));
+    // numTurns is the declared spelling; no turns = a quarter turn.
+    const float NumTurns = GetJsonNumberField(Payload, TEXT("numTurns"), 0.0f);
+    const float CurveAngle = NumTurns > 0.0f ? NumTurns * 360.0f : 90.0f;
+    int32 NumSteps = GetJsonIntField(Payload, TEXT("numSteps"), GetJsonIntField(Payload, TEXT("steps"), 8));
     bool bFloating = GetJsonBoolField(Payload, TEXT("floating"), false);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FGeometryScriptPrimitiveOptions Options;
 
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendCurvedStairs(
         DynMesh, Options, FTransform::Identity, StepWidth, StepHeight, InnerRadius, CurveAngle, NumSteps, bFloating, nullptr);
 
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
+    TSharedPtr<FJsonObject> Result;
+    AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, Transform, Name, DynMesh, Result);
     if (!NewActor)
     {
-        DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
     Result->SetNumberField(TEXT("numSteps"), NumSteps);
     Result->SetNumberField(TEXT("curveAngle"), CurveAngle);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Spiral stairs created"), Result);
     return true;
 }
 
-bool HandleCreateRing(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
-    if (Name.IsEmpty()) Name = TEXT("GeneratedRing");
-
-    FTransform Transform = ReadTransformFromPayload(Payload);
-    double OuterRadius = GetJsonNumberField(Payload, TEXT("outerRadius"), 50.0);
-    double InnerRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), 25.0);
-    int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments"), TEXT("segments")}, 32);
-
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
-    FGeometryScriptPrimitiveOptions Options;
-
-    // Use AppendDisc with HoleRadius to create a ring (local space; the actor
-    // transform below is the single source of placement).
-    UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendDisc(
-        DynMesh, Options, FTransform::Identity, OuterRadius, Segments, 0, 0.0f, 360.0f, InnerRadius, nullptr);
-
-    FString SpawnError;
-    AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
-                                                     SpawnError);
-    if (!NewActor)
-    {
-        DynMesh->MarkAsGarbage();
-        Self->SendAutomationError(Socket, RequestId, SpawnError.IsEmpty() ? TEXT("Failed to spawn DynamicMeshActor") : SpawnError, TEXT("SPAWN_FAILED"));
-        return true;
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("name"), NewActor->GetActorLabel());
-    Result->SetNumberField(TEXT("outerRadius"), OuterRadius);
-    Result->SetNumberField(TEXT("innerRadius"), InnerRadius);
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Ring created"), Result);
-    return true;
-}
-
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

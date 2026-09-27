@@ -1,7 +1,7 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
 #include "Engine/Texture.h"
 
-#if WITH_EDITOR && MCP_HAS_PCG
+#if MCP_HAS_PCG
 namespace McpPCGHandlers
 {
 bool ApplySpawnActorTemplateClass(UPCGSettings* Settings, const FString& ClassName, FString& OutError)
@@ -42,32 +42,6 @@ bool ApplySpawnActorTemplateClass(UPCGSettings* Settings, const FString& ClassNa
     return true;
 }
 
-UStaticMesh* LoadPCGStaticMesh(const FString& RawMeshPath, FString& OutResolvedPath, FString& OutError)
-{
-    FNormalizedAssetPath Normalized = NormalizeAssetPath(RawMeshPath);
-    if (!Normalized.bIsValid)
-    {
-        OutError = Normalized.ErrorMessage;
-        return nullptr;
-    }
-
-    OutResolvedPath = Normalized.Path;
-    UObject* Loaded = UEditorAssetLibrary::LoadAsset(OutResolvedPath);
-    if (!Loaded)
-    {
-        Loaded = StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *ToObjectPath(OutResolvedPath));
-    }
-
-    UStaticMesh* StaticMesh = Cast<UStaticMesh>(Loaded);
-    if (!StaticMesh)
-    {
-        OutError = FString::Printf(TEXT("Could not load static mesh at '%s'."), *OutResolvedPath);
-        return nullptr;
-    }
-
-    return StaticMesh;
-}
-
 bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString& MeshPath, FString& OutError)
 {
     if (MeshPath.IsEmpty())
@@ -83,7 +57,7 @@ bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString& MeshP
     }
 
     FString ResolvedMeshPath;
-    UStaticMesh* StaticMesh = LoadPCGStaticMesh(MeshPath, ResolvedMeshPath, OutError);
+    UStaticMesh* StaticMesh = LoadPCGAsset<UStaticMesh>(MeshPath, TEXT("static mesh"), ResolvedMeshPath, OutError);
     if (!StaticMesh)
     {
         return false;
@@ -144,7 +118,7 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
             // Validate the mesh up front (dogfood #184): a bare or wrong path used to be stored as text
             // and only LogPCG complained at generation time.
             FString ResolvedSamplerMeshPath;
-            if (!LoadPCGStaticMesh(MeshPath, ResolvedSamplerMeshPath, OutError))
+            if (!LoadPCGAsset<UStaticMesh>(MeshPath, TEXT("static mesh"), ResolvedSamplerMeshPath, OutError))
             {
                 return false;
             }
@@ -169,7 +143,7 @@ bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Setting
     }
     if (SubAction == TEXT("add_actor_spawner") || Payload->HasField(TEXT("actorClass")) || (Payload->HasField(TEXT("classPath")) && Settings->IsA<UPCGSpawnActorSettings>()))
     {
-        const FString ActorClass = GetFirstStringField(Payload, {TEXT("actorClass"), TEXT("classPath")});
+        const FString ActorClass = McpGetFirstStringField(Payload, {TEXT("actorClass"), TEXT("classPath")});
         if (!ActorClass.IsEmpty())
         {
             if (!ApplySpawnActorTemplateClass(Settings, ActorClass, OutError))

@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 #include "Engine/Texture.h"
 #include "Engine/Texture2D.h"
 #include "Materials/Material.h"
@@ -137,4 +136,3 @@ void McpDescribeTextureAsset(UTexture *Texture, TSharedPtr<FJsonObject> Resp)
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

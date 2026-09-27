@@ -4,7 +4,6 @@
 #include "Engine/World.h"
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
 TArray<ULevel*> GetAllLevelsFromWorld(UWorld* World) {
   TArray<ULevel*> Levels;
   if (!World) {
@@ -25,5 +24,4 @@ TArray<ULevel*> GetAllLevelsFromWorld(UWorld* World) {
   }
   return Levels;
 }
-#endif
 } // namespace McpLevelHandlers

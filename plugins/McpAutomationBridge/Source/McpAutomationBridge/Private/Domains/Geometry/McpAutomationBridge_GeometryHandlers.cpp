@@ -1,6 +1,5 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR
 
 DEFINE_LOG_CATEGORY(LogMcpGeometryHandlers);
 
@@ -32,7 +31,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
         return true;
     }
 
-    // BB-060: normalize targetActor -> actorName before routing. The TS stdio
+    // Normalize targetActor -> actorName before routing. The TS stdio
     // surface already does this copy; the native /mcp surface bypasses TS
     // normalization, so the seam belongs here too. Non-clobbering.
     FString TargetActor = GetJsonStringField(Payload, TEXT("targetActor"));
@@ -56,8 +55,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("create_disc")) return HandleCreateDisc(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_stairs")) return HandleCreateStairs(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_spiral_stairs")) return HandleCreateSpiralStairs(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("create_ring")) return HandleCreateRing(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("create_arch")) return HandleCreateArch(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("create_ring")) return HandleCreateDisc(this, RequestId, Payload, RequestingSocket, true);
+    if (SubAction == TEXT("create_arch")) return HandleCreateTorus(this, RequestId, Payload, RequestingSocket, true);
     if (SubAction == TEXT("create_pipe")) return HandleCreatePipe(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("create_ramp")) return HandleCreateRamp(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("revolve")) return HandleRevolve(this, RequestId, Payload, RequestingSocket);
@@ -87,7 +86,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("bevel")) return HandleBevel(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("offset_faces")) return HandleOffsetFaces(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("shell")) return HandleShell(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("chamfer")) return HandleChamfer(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("chamfer")) return HandleBevel(this, RequestId, Payload, RequestingSocket);
 
     // Deformers
     if (SubAction == TEXT("bend")) return HandleBend(this, RequestId, Payload, RequestingSocket);
@@ -107,7 +106,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("fill_holes")) return HandleFillHoles(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("remove_degenerates")) return HandleRemoveDegenerates(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("remesh_uniform")) return HandleRemeshUniform(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("merge_vertices")) return HandleMergeVertices(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("merge_vertices")) return HandleWeldVertices(this, RequestId, Payload, RequestingSocket, true);
 
     // Collision Generation
     if (SubAction == TEXT("generate_collision")) return HandleGenerateCollision(this, RequestId, Payload, RequestingSocket);
@@ -118,8 +117,6 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("array_radial")) return HandleArrayRadial(this, RequestId, Payload, RequestingSocket);
 
     // Mesh Topology Operations
-    if (SubAction == TEXT("triangulate")) return HandleTriangulate(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("poke")) return HandlePoke(this, RequestId, Payload, RequestingSocket);
 
     // UV Operations
     if (SubAction == TEXT("project_uv")) return HandleProjectUV(this, RequestId, Payload, RequestingSocket);
@@ -135,28 +132,26 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
 
     // Advanced Operations (Bridge, Loft, Sweep)
     if (SubAction == TEXT("bridge")) return HandleBridge(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("loft")) return HandleLoft(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("loft")) return HandleSegmentedSweep(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("sweep")) return HandleSweep(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("loop_cut")) return HandleLoopCut(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("duplicate_along_spline")) return HandleDuplicateAlongSpline(this, RequestId, Payload, RequestingSocket);
 
     // Vertex and Triangle Operations
     if (SubAction == TEXT("append_vertex")) return HandleAppendVertex(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("delete_vertex")) return HandleDeleteVertex(this, RequestId, Payload, RequestingSocket);
-    if (SubAction == TEXT("delete_triangle")) return HandleDeleteTriangle(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("get_vertex_position")) return HandleGetVertexPosition(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("set_vertex_position")) return HandleSetVertexPosition(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("translate_mesh")) return HandleTranslateMesh(this, RequestId, Payload, RequestingSocket);
 
     // Additional UV Operations
-    if (SubAction == TEXT("unwrap_uv")) return HandleUnwrapUV(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("unwrap_uv")) return HandleAutoUV(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("pack_uv_islands")) return HandlePackUVIslands(this, RequestId, Payload, RequestingSocket);
 
     // Nanite Conversion
-    if (SubAction == TEXT("convert_to_nanite")) return HandleConvertToNanite(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("convert_to_nanite")) return HandleConvertToStaticMesh(this, RequestId, Payload, RequestingSocket, true);
 
     // Spline-based Operations
-    if (SubAction == TEXT("extrude_along_spline")) return HandleExtrudeAlongSpline(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("extrude_along_spline")) return HandleSegmentedSweep(this, RequestId, Payload, RequestingSocket);
 
     // Aliases
     if (SubAction == TEXT("difference")) return HandleBooleanSubtract(this, RequestId, Payload, RequestingSocket);
@@ -165,13 +160,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("edge_split")) return HandleEdgeSplit(this, RequestId, Payload, RequestingSocket);
 
     // Topology Operations
-    if (SubAction == TEXT("quadrangulate")) return HandleQuadrangulate(this, RequestId, Payload, RequestingSocket);
 
     // Remesh Operations
-    if (SubAction == TEXT("remesh_voxel")) return HandleRemeshVoxel(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("remesh_voxel")) return HandleRemeshUniform(this, RequestId, Payload, RequestingSocket, true);
 
     // Complex Collision
-    if (SubAction == TEXT("generate_complex_collision")) return HandleGenerateComplexCollision(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("generate_complex_collision")) return HandleGenerateCollision(this, RequestId, Payload, RequestingSocket, true);
 
     // Collision Simplification
     if (SubAction == TEXT("simplify_collision")) return HandleSimplifyCollision(this, RequestId, Payload, RequestingSocket);
@@ -192,4 +186,3 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
 #endif // MCP_HAS_FULL_GEOMETRY_SCRIPT
 }
 
-#endif // WITH_EDITOR

@@ -1,33 +1,9 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 
-#if WITH_EDITOR && MCP_HAS_PCG
+#if MCP_HAS_PCG
 namespace McpPCGHandlers
 {
-UWorld* GetPCGEditorWorld()
-{
-    return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-}
-
-AActor* FindPCGActor(UWorld* World, const FString& ActorName)
-{
-    if (!World || ActorName.IsEmpty())
-    {
-        return nullptr;
-    }
-
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        AActor* Actor = *It;
-        if (Actor && (Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase) ||
-            Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase)))
-        {
-            return Actor;
-        }
-    }
-
-    return nullptr;
-}
-
 UPCGComponent* FindPCGComponentOnActor(AActor* Actor, const FString& ComponentName)
 {
     if (!Actor)
@@ -45,7 +21,6 @@ UPCGComponent* FindPCGComponentOnActor(AActor* Actor, const FString& ComponentNa
         }
         const bool bIdentifierLooksLikePath = ComponentName.Contains(TEXT(".")) || ComponentName.Contains(TEXT("/"));
         if (ComponentName.IsEmpty() || Component->GetName().Equals(ComponentName, ESearchCase::IgnoreCase) ||
-            Component->GetFName().ToString().Equals(ComponentName, ESearchCase::IgnoreCase) ||
             Component->GetPathName().Equals(ComponentName, ESearchCase::IgnoreCase) ||
             Component->GetFullName().Equals(ComponentName, ESearchCase::IgnoreCase) ||
             (bIdentifierLooksLikePath && Component->GetPathName().EndsWith(ComponentName, ESearchCase::IgnoreCase)))
@@ -67,7 +42,7 @@ UPCGComponent* FindPCGComponent(UWorld* World, const FString& ActorName, const F
 
     if (!ActorName.IsEmpty())
     {
-        OutActor = FindPCGActor(World, ActorName);
+        OutActor = FindActorByNameInWorldForMcp(World, ActorName, true);
         return FindPCGComponentOnActor(OutActor, ComponentName);
     }
 
@@ -87,11 +62,6 @@ UPCGComponent* FindPCGComponent(UWorld* World, const FString& ActorName, const F
     }
 
     return nullptr;
-}
-
-bool HasPCGComponentSelector(const FString& ActorName, const FString& ComponentName)
-{
-    return !ActorName.IsEmpty() || !ComponentName.IsEmpty();
 }
 
 UPCGComponent* CreatePCGComponent(AActor* Actor, const FString& ComponentName)

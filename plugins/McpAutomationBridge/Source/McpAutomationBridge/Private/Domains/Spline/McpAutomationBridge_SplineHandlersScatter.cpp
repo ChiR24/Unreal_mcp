@@ -5,7 +5,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Components/StaticMeshComponent.h"
 #include "Editor.h"
 #include "Engine/StaticMesh.h"
@@ -22,38 +21,19 @@ bool HandleScatterMeshesAlongSpline(
     FString MeshPath = GetJsonStringField(Payload, TEXT("meshPath"));
     bool bAlignToSpline = GetJsonBoolField(Payload, TEXT("alignToSpline"), true);
 
-    FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    const FString SafeMeshPath = RequireSplineProjectPath(Self, RequestId, Socket, TEXT("meshPath"), MeshPath);
     if (SafeMeshPath.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
-            nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    AActor* Actor = FindActorByName(World, ActorName);
-    if (!Actor)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
-        return true;
-    }
-
-    USplineComponent* SplineComp = FindSplineComponent(Actor);
+    AActor* Actor = nullptr;
+    USplineComponent* SplineComp = ResolveSplineTarget(Self, RequestId, Socket, ActorName, Actor);
     if (!SplineComp)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
         return true;
     }
+    UWorld* World = Actor->GetWorld();
 
     const bool bHasSpacing = Payload.IsValid() && Payload->HasField(TEXT("spacing"));
     const bool bHasUseRandomOffset = Payload.IsValid() && Payload->HasField(TEXT("useRandomOffset"));
@@ -150,7 +130,7 @@ bool HandleScatterMeshesAlongSpline(
         }
     }
 
-    World->MarkPackageDirty();
+    Actor->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("meshesCreated"), CreatedMeshes.Num());
@@ -169,4 +149,3 @@ bool HandleScatterMeshesAlongSpline(
         FString::Printf(TEXT("Scattered %d meshes along spline"), CreatedMeshes.Num()), Result);
     return true;
 }
-#endif

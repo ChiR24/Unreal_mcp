@@ -1,6 +1,6 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
@@ -8,22 +8,15 @@ bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 EdgeGroupA = GetJsonIntField(Payload, TEXT("edgeGroupA"), 0);
-    int32 EdgeGroupB = GetJsonIntField(Payload, TEXT("edgeGroupB"), 1);
-    // model_mesh declares segments; subdivisions is undeclared and never reached the handler.
-    int32 Subdivisions = GetJsonIntField(Payload, TEXT("segments"), GetJsonIntField(Payload, TEXT("subdivisions"), 1));
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
     int32 TrisBefore = Mesh->GetTriangleCount();
 
     int32 TrianglesCreated = 0;
     FString BridgeStatus;
+    bool bFillHolesInstead = false;
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
     // Get direct access to FDynamicMesh3 for low-level operations
@@ -40,24 +33,13 @@ bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     {
         // Not enough boundary loops for bridging - fall back to hole filling
         BridgeStatus = FString::Printf(TEXT("Only %d boundary loop(s) found, need at least 2 for bridging. Filling holes instead."), BoundaryLoops.GetLoopCount());
-
-        FGeometryScriptFillHolesOptions FillOptions;
-        FillOptions.FillMethod = EGeometryScriptFillHolesMethod::MinimalFill;
-        int32 NumFilledHoles = 0;
-        int32 NumFailedHoleFills = 0;
-        UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, NumFilledHoles, NumFailedHoleFills, nullptr);
+        bFillHolesInstead = true;
     }
     else
     {
-        int32 LoopCount = BoundaryLoops.GetLoopCount();
-        int32 LoopIndexA = FMath::Clamp(EdgeGroupA, 0, LoopCount - 1);
-        int32 LoopIndexB = FMath::Clamp(EdgeGroupB, 0, LoopCount - 1);
-
-        if (LoopIndexA == LoopIndexB)
-        {
-            // Adjust to pick different loops if same index was provided
-            LoopIndexB = (LoopIndexA + 1) % LoopCount;
-        }
+        // The first two boundary loops.
+        const int32 LoopIndexA = 0;
+        const int32 LoopIndexB = 1;
 
         const UE::Geometry::FEdgeLoop& LoopA = BoundaryLoops[LoopIndexA];
         const UE::Geometry::FEdgeLoop& LoopB = BoundaryLoops[LoopIndexB];
@@ -125,25 +107,23 @@ bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
         }
     }
 #else
-    // UE 5.3 fallback: Use hole filling instead of bridging
-    BridgeStatus = TEXT("Bridging requires UE 5.4+ (FMeshBoundaryLoops). Using hole filling instead.");
-
-    FGeometryScriptFillHolesOptions FillOptions;
-    FillOptions.FillMethod = EGeometryScriptFillHolesMethod::MinimalFill;
-    int32 NumFilledHoles = 0;
-    int32 NumFailedHoleFills = 0;
-    UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, NumFilledHoles, NumFailedHoleFills, nullptr);
-    TrianglesCreated = NumFilledHoles; // Approximate
+    BridgeStatus = TEXT("Bridging requires UE 5.5+ (FMeshBoundaryLoops). Filling holes instead.");
+    bFillHolesInstead = true;
 #endif
+    if (bFillHolesInstead)
+    {
+        FGeometryScriptFillHolesOptions FillOptions;
+        FillOptions.FillMethod = EGeometryScriptFillHolesMethod::MinimalFill;
+        int32 NumFilledHoles = 0;
+        int32 NumFailedHoleFills = 0;
+        UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, NumFilledHoles, NumFailedHoleFills, nullptr);
+    }
 
     int32 TrisAfter = Mesh->GetTriangleCount();
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("edgeGroupA"), EdgeGroupA);
-    Result->SetNumberField(TEXT("edgeGroupB"), EdgeGroupB);
-    Result->SetNumberField(TEXT("subdivisions"), Subdivisions);
     Result->SetStringField(TEXT("bridgeStatus"), BridgeStatus);
     Result->SetNumberField(TEXT("trianglesCreated"), TrianglesCreated);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
@@ -155,67 +135,18 @@ bool HandleBridge(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
-    int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
-    bool bAlignToSpline = GetJsonBoolField(Payload, TEXT("alignToSpline"), true);
-    double ScaleVariation = GetJsonNumberField(Payload, TEXT("scaleVariation"), 0.0);
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
+    const int32 Count = GetJsonIntField(Payload, TEXT("count"), 10);
 
-    if (ActorName.IsEmpty() || SplineActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName and splineActorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
-        return true;
-    }
-    ADynamicMeshActor* SourceActor = nullptr;
-    AActor* SplineActor = nullptr;
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            SourceActor = *It;
-            break;
-        }
-    }
-
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == SplineActorName)
-        {
-            SplineActor = *It;
-            break;
-        }
-    }
-
+    ADynamicMeshActor* SourceActor = FindGeometryActor<ADynamicMeshActor>(ActorName);
     if (!SourceActor)
     {
         Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Source actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
         return true;
     }
-
-    if (!SplineActor)
-    {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Spline actor not found: %s"), *SplineActorName), TEXT("SPLINE_NOT_FOUND"));
-        return true;
-    }
-
-    USplineComponent* SplineComp = SplineActor->FindComponentByClass<USplineComponent>();
-    if (!SplineComp)
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("Actor does not have a spline component"), TEXT("SPLINE_COMPONENT_NOT_FOUND"));
-        return true;
-    }
-
-    float SplineLength = SplineComp->GetSplineLength();
-    TArray<FString> CreatedActors;
-
+    USplineComponent* Spline = ResolveGeometrySpline(Self, RequestId, Socket, SplineActorName);
+    if (!Spline) return true;
     UEditorActorSubsystem* ActorSS = GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
     if (!ActorSS)
     {
@@ -223,28 +154,18 @@ bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FStri
         return true;
     }
 
+    const float SplineLength = Spline->GetSplineLength();
+    TArray<TSharedPtr<FJsonValue>> CreatedActors;
     for (int32 i = 0; i < Count; ++i)
     {
-        float Distance = SplineLength * ((float)i / FMath::Max(Count - 1, 1));
-        FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
-        FRotator Rotation = bAlignToSpline ? SplineComp->GetRotationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World) : FRotator::ZeroRotator;
-
-        AActor* NewActor = ActorSS->DuplicateActor(SourceActor, World);
-        if (NewActor)
-        {
-            NewActor->SetActorLocation(Location);
-            NewActor->SetActorRotation(Rotation);
-
-            if (ScaleVariation > 0.0)
-            {
-                double ScaleFactor = 1.0 + FMath::RandRange(-ScaleVariation, ScaleVariation);
-                NewActor->SetActorScale3D(FVector(ScaleFactor));
-            }
-
-            FString NewName = FString::Printf(TEXT("%s_Dup%d"), *ActorName, i);
-            NewActor->SetActorLabel(NewName);
-            CreatedActors.Add(NewName);
-        }
+        const float Distance = SplineLength * (static_cast<float>(i) / FMath::Max(Count - 1, 1));
+        AActor* NewActor = ActorSS->DuplicateActor(SourceActor, SourceActor->GetWorld());
+        if (!NewActor) continue;
+        NewActor->SetActorLocationAndRotation(
+            Spline->GetLocationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World),
+            Spline->GetRotationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World));
+        NewActor->SetActorLabel(FString::Printf(TEXT("%s_Dup%d"), *ActorName, i));
+        CreatedActors.Add(MakeShared<FJsonValueString>(NewActor->GetActorLabel()));
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -252,11 +173,11 @@ bool HandleDuplicateAlongSpline(UMcpAutomationBridgeSubsystem* Self, const FStri
     Result->SetStringField(TEXT("splineActor"), SplineActorName);
     Result->SetNumberField(TEXT("count"), Count);
     Result->SetNumberField(TEXT("splineLength"), SplineLength);
-    Result->SetBoolField(TEXT("alignToSpline"), bAlignToSpline);
+    Result->SetArrayField(TEXT("createdActors"), CreatedActors);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Duplicates created along spline"), Result);
     return true;
 }
 
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

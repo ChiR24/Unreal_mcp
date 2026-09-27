@@ -16,7 +16,6 @@
 
 namespace McpVolumeHandlers
 {
-#if WITH_EDITOR
 static AActor* ResolveVolumeByName(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, FString& OutVolumeName)
 {
     using namespace VolumeHelpers;
@@ -141,5 +140,4 @@ bool HandleSetVolumeProperties(UMcpAutomationBridgeSubsystem* Subsystem, const F
         FString::Printf(TEXT("Set %d properties for volume: %s"), PropertiesSet.Num(), *VolumeName), ResponseJson);
     return true;
 }
-#endif
 }

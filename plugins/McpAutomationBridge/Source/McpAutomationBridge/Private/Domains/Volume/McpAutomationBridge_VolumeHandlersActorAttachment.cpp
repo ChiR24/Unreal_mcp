@@ -20,7 +20,6 @@
 
 namespace McpVolumeHandlers
 {
-#if WITH_EDITOR
 template<typename TVolumeClass, typename ConfigureFunc>
 static bool AddVolumeToActor(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -151,6 +150,5 @@ bool HandleAddPostProcessVolume(UMcpAutomationBridgeSubsystem* Subsystem, const 
         TEXT("PostProcessVolume"), TEXT("Failed to spawn PostProcessVolume"),
         FPostProcessConfig{static_cast<float>(GetJsonNumberField(Payload, TEXT("priority"), 0.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0)), GetJsonBoolField(Payload, TEXT("enabled"), true), GetJsonBoolField(Payload, TEXT("bUnbound"), false)});
 }
-#endif
 #endif
 }

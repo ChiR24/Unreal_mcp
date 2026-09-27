@@ -6,73 +6,12 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR
 #include "Engine/PostProcessVolume.h"
 #include "Engine/Scene.h"
 
 namespace McpRenderHandlers
 {
-namespace
-{
-bool ApplyLensPostSettings(
-    APostProcessVolume* Volume,
-    const TSharedPtr<FJsonObject>& Settings,
-    TArray<FString>& Applied,
-    TArray<FString>& Unsupported,
-    FString& Error)
-{
-    return ApplyJsonSettings(
-        &Volume->Settings,
-        FPostProcessSettings::StaticStruct(),
-        Settings,
-        true,
-        Applied,
-        Unsupported,
-        Error);
-}
-
-// The vignette/grain/chromatic/SSAO variants declare `amount` in their
-// contract but used to read `intensity`, a name the gateway rejects as
-// undeclared -- so the documented parameter was silently ignored and the
-// undocumented one could never reach the handler, leaving every one of them
-// stuck on its hardcoded default. Read the declared name, and keep accepting
-// `intensity` for anything that learned to send it.
-double LensEffectAmountForMcp(const TSharedPtr<FJsonObject>& Payload, double Fallback)
-{
-    if (Payload.IsValid() && Payload->HasField(TEXT("amount")))
-    {
-        return GetJsonNumberField(Payload, TEXT("amount"), Fallback);
-    }
-    return GetJsonNumberField(Payload, TEXT("intensity"), Fallback);
-}
-
-bool ApplyLensPostNumber(
-    APostProcessVolume* Volume,
-    const FString& Field,
-    double Value,
-    TArray<FString>& Applied,
-    TArray<FString>& Unsupported,
-    FString& Error)
-{
-    TSharedPtr<FJsonObject> Settings = MakeShared<FJsonObject>();
-    Settings->SetNumberField(Field, Value);
-    return ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error);
-}
-
-bool ApplyLensPostEnum(
-    APostProcessVolume* Volume,
-    const FString& Field,
-    const FString& Value,
-    TArray<FString>& Applied,
-    TArray<FString>& Unsupported,
-    FString& Error)
-{
-    TSharedPtr<FJsonObject> Settings = MakeShared<FJsonObject>();
-    Settings->SetStringField(Field, Value);
-    return ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error);
-}
-}
-
+// The vignette/grain/chromatic/SSAO variants read their declared `amount`.
 bool HandleRenderPostProcessLensAction(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
@@ -143,7 +82,7 @@ bool HandleRenderPostProcessLensAction(
          SubAction == TEXT("configure_motion_blur") ||
          SubAction == TEXT("configure_exposure") ||
          SubAction == TEXT("configure_gtao")) &&
-        !ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error))
+        !ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
         return true;
@@ -161,7 +100,7 @@ bool HandleRenderPostProcessLensAction(
         Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")) &&
         !GetJsonBoolField(Payload, TEXT("enabled"), true))
     {
-        ApplyLensPostNumber(Volume, TEXT("LensFlareIntensity"), 0.0, Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("LensFlareIntensity"), MakeShared<FJsonValueNumber>(0.0), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_dof_method"))
     {
@@ -172,31 +111,23 @@ bool HandleRenderPostProcessLensAction(
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
         }
-        ApplyLensPostEnum(Volume, TEXT("DepthOfFieldMethod"), Value, Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("DepthOfFieldMethod"), MakeShared<FJsonValueString>(Value), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_focal_distance"))
     {
-        ApplyLensPostNumber(Volume, TEXT("DepthOfFieldFocalDistance"),
-            GetJsonNumberField(Settings, TEXT("DepthOfFieldFocalDistance"), GetJsonNumberField(Payload, TEXT("distance"), 0.0)),
-            Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("DepthOfFieldFocalDistance"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Settings, TEXT("DepthOfFieldFocalDistance"), GetJsonNumberField(Payload, TEXT("distance"), 0.0))), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_aperture"))
     {
-        ApplyLensPostNumber(Volume, TEXT("DepthOfFieldFstop"),
-            GetJsonNumberField(Settings, TEXT("DepthOfFieldFstop"), GetJsonNumberField(Payload, TEXT("aperture"), 4.0)),
-            Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("DepthOfFieldFstop"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Settings, TEXT("DepthOfFieldFstop"), GetJsonNumberField(Payload, TEXT("aperture"), 4.0))), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_motion_blur_amount"))
     {
-        ApplyLensPostNumber(Volume, TEXT("MotionBlurAmount"),
-            GetJsonNumberField(Settings, TEXT("MotionBlurAmount"), GetJsonNumberField(Payload, TEXT("amount"), 0.0)),
-            Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("MotionBlurAmount"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Settings, TEXT("MotionBlurAmount"), GetJsonNumberField(Payload, TEXT("amount"), 0.0))), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_motion_blur_max"))
     {
-        ApplyLensPostNumber(Volume, TEXT("MotionBlurMax"),
-            GetJsonNumberField(Settings, TEXT("MotionBlurMax"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("max"), 0.0))),
-            Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("MotionBlurMax"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Settings, TEXT("MotionBlurMax"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("max"), 0.0)))), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_exposure_method"))
     {
@@ -207,43 +138,35 @@ bool HandleRenderPostProcessLensAction(
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
             return true;
         }
-        ApplyLensPostEnum(Volume, TEXT("AutoExposureMethod"), Value, Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("AutoExposureMethod"), MakeShared<FJsonValueString>(Value), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_exposure_compensation"))
     {
-        ApplyLensPostNumber(Volume, TEXT("AutoExposureBias"),
-            GetJsonNumberField(Payload, TEXT("compensationValue"), 0.0),
-            Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("AutoExposureBias"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("compensationValue"), 0.0)), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("set_exposure_min_max"))
     {
-        ApplyLensPostNumber(Volume, TEXT("AutoExposureMinBrightness"),
-            GetJsonNumberField(Payload, TEXT("minBrightness"), 1.0), Applied, Unsupported, Error);
-        ApplyLensPostNumber(Volume, TEXT("AutoExposureMaxBrightness"),
-            GetJsonNumberField(Payload, TEXT("maxBrightness"), 1.0), Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("AutoExposureMinBrightness"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("minBrightness"), 1.0)), Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("AutoExposureMaxBrightness"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("maxBrightness"), 1.0)), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("configure_ssao"))
     {
-        ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error);
-        ApplyLensPostNumber(Volume, TEXT("AmbientOcclusionIntensity"),
-            LensEffectAmountForMcp(Payload, 0.5), Applied, Unsupported, Error);
+        ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("AmbientOcclusionIntensity"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 0.5)), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("configure_vignette"))
     {
-        ApplyLensPostNumber(Volume, TEXT("VignetteIntensity"),
-            LensEffectAmountForMcp(Payload, 0.4), Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("VignetteIntensity"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 0.4)), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("configure_chromatic_aberration"))
     {
-        ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error);
-        ApplyLensPostNumber(Volume, TEXT("SceneFringeIntensity"),
-            LensEffectAmountForMcp(Payload, 0.0), Applied, Unsupported, Error);
+        ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("SceneFringeIntensity"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 0.0)), Applied, Unsupported, Error);
     }
     else if (SubAction == TEXT("configure_grain"))
     {
-        ApplyLensPostSettings(Volume, Settings, Applied, Unsupported, Error);
-        ApplyLensPostNumber(Volume, TEXT("FilmGrainIntensity"),
-            LensEffectAmountForMcp(Payload, 0.0), Applied, Unsupported, Error);
+        ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
+        ApplyPostProcessField(Volume, TEXT("FilmGrainIntensity"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 0.0)), Applied, Unsupported, Error);
     }
 
     if (!Error.IsEmpty())
@@ -265,4 +188,3 @@ bool HandleRenderPostProcessLensAction(
     return true;
 }
 }
-#endif

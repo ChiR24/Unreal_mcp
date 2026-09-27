@@ -11,7 +11,6 @@ class UMcpAutomationBridgeSubsystem;
 
 namespace McpLightingHandlers
 {
-#if WITH_EDITOR
 bool HandleListLightTypes(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
@@ -63,18 +62,15 @@ bool HandleSetExposure(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    UEditorActorSubsystem* ActorSS);
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleSetAmbientOcclusion(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    UEditorActorSubsystem* ActorSS);
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleCreateLightingEnabledLevel(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-#endif
 }

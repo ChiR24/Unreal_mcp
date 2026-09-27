@@ -68,7 +68,6 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
         return false;
     }
 
-#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -102,10 +101,4 @@ bool UMcpAutomationBridgeSubsystem::HandlePerformanceAction(
     }
 
     return false;
-#else
-    SendAutomationResponse(RequestingSocket, RequestId, false,
-                           TEXT("Performance actions require editor build"),
-                           nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }

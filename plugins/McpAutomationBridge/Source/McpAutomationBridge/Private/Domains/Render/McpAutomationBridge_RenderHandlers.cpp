@@ -14,7 +14,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
         return false;
     }
 
-#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(
@@ -35,10 +34,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
     if (SubAction == TEXT("create_render_target"))
     {
         return HandleCreateRenderTarget(this, RequestId, Payload, RequestingSocket);
-    }
-    if (SubAction == TEXT("attach_render_target_to_volume"))
-    {
-        return HandleAttachRenderTargetToVolume(this, RequestId, Payload, RequestingSocket);
     }
     if (SubAction == TEXT("nanite_rebuild_mesh"))
     {
@@ -62,14 +57,4 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
     SendAutomationError(
         RequestingSocket, RequestId, TEXT("Unknown subAction."), TEXT("INVALID_SUBACTION"));
     return true;
-#else
-    SendAutomationResponse(
-        RequestingSocket,
-        RequestId,
-        false,
-        TEXT("Render management requires editor build"),
-        nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }

@@ -1,202 +1,96 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
 bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                         const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"), TEXT(""));
-    int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 16);
-    double Twist = GetJsonNumberField(Payload, TEXT("twist"), 0.0);
-    double ScaleStart = GetJsonNumberField(Payload, TEXT("scaleStart"), 1.0);
-    double ScaleEnd = GetJsonNumberField(Payload, TEXT("scaleEnd"), 1.0);
-    bool bCap = GetJsonBoolField(Payload, TEXT("cap"), true);
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const FString SplineActorName = GetJsonStringField(Payload, TEXT("splineActorName"));
+    const int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 16);
+    const bool bCap = GetJsonBoolField(Payload, TEXT("cap"), true);
 
-    if (ActorName.IsEmpty())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("No world available"), TEXT("NO_WORLD"));
-        return true;
-    }
-    ADynamicMeshActor* TargetActor = nullptr;
-    AActor* SplineActor = nullptr;
-
-    for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName)
-        {
-            TargetActor = *It;
-            break;
-        }
-    }
-
+    // A named spline must resolve: silently sweeping a straight line instead hid typos.
+    USplineComponent* Spline = nullptr;
     if (!SplineActorName.IsEmpty())
     {
-        for (TActorIterator<AActor> It(World); It; ++It)
-        {
-            if (It->GetActorLabel() == SplineActorName)
-            {
-                SplineActor = *It;
-                break;
-            }
-        }
+        Spline = ResolveGeometrySpline(Self, RequestId, Socket, SplineActorName);
+        if (!Spline) return true;
     }
+    const int32 TrisBefore = Mesh->GetTriangleCount();
 
-    if (!TargetActor)
-    {
-        Self->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
-        return true;
-    }
-
-    UDynamicMeshComponent* DMC = TargetActor->GetDynamicMeshComponent();
-    if (!DMC || !DMC->GetDynamicMesh())
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("DynamicMesh not available"), TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    UDynamicMesh* Mesh = DMC->GetDynamicMesh();
-    int32 TrisBefore = Mesh->GetTriangleCount();
-
-    // Real sweep implementation: sweep a cross-section profile along a spline path
-    float SplineLength = 0.0f;
-    FString SweepStatus;
-    int32 PathStepsUsed = 0;
-
-    FBox MeshBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
-    FVector MeshCenter = MeshBBox.GetCenter();
-    FVector MeshExtent = MeshBBox.GetExtent();
-
-    TArray<FVector2D> PolygonVertices;
-    int32 NumPolySides = FMath::Clamp(Steps / 2, 4, 32);
+    // Circular profile sized to the mesh footprint.
+    const FBox MeshBBox = UGeometryScriptLibrary_MeshQueryFunctions::GetMeshBoundingBox(Mesh);
+    const FVector MeshExtent = MeshBBox.GetExtent();
+    const int32 NumPolySides = FMath::Clamp(Steps / 2, 4, 32);
     double ProfileRadius = FMath::Max(MeshExtent.X, MeshExtent.Y);
-
-    if (ProfileRadius < KINDA_SMALL_NUMBER)
-    {
-        ProfileRadius = 50.0; // Default fallback
-    }
-
+    if (ProfileRadius < KINDA_SMALL_NUMBER) ProfileRadius = 50.0;
+    TArray<FVector2D> PolygonVertices;
     for (int32 i = 0; i < NumPolySides; ++i)
     {
-        double Angle = 2.0 * PI * i / NumPolySides;
-        PolygonVertices.Add(FVector2D(
-            FMath::Cos(Angle) * ProfileRadius,
-            FMath::Sin(Angle) * ProfileRadius
-        ));
+        const double Angle = 2.0 * PI * i / NumPolySides;
+        PolygonVertices.Add(FVector2D(FMath::Cos(Angle), FMath::Sin(Angle)) * ProfileRadius);
     }
 
+    // Path: along the spline, else a vertical line through the mesh.
+    const int32 PathSteps = FMath::Clamp(Steps, 2, 256);
+    const double SplineLength = Spline ? Spline->GetSplineLength() : 0.0;
+    const double SweepHeight = MeshExtent.Z > KINDA_SMALL_NUMBER ? MeshExtent.Z * 2 : 100.0;
     TArray<FTransform> PathFrames;
-
-    if (SplineActor)
+    for (int32 i = 0; i <= PathSteps; ++i)
     {
-        USplineComponent* SplineComp = SplineActor->FindComponentByClass<USplineComponent>();
-        if (SplineComp)
-        {
-            SplineLength = SplineComp->GetSplineLength();
-            PathStepsUsed = FMath::Clamp(Steps, 2, 256);
-
-            for (int32 i = 0; i <= PathStepsUsed; ++i)
-            {
-                float Alpha = (float)i / PathStepsUsed;
-                float Dist = SplineLength * Alpha;
-
-                FVector Location = SplineComp->GetLocationAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
-                FQuat Rotation = SplineComp->GetQuaternionAtDistanceAlongSpline(Dist, ESplineCoordinateSpace::World);
-
-                float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
-                FQuat TwistRotation = FQuat(FVector::ForwardVector, TwistAngle);
-                Rotation = Rotation * TwistRotation;
-
-                float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
-
-                PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
-            }
-
-            SweepStatus = FString::Printf(TEXT("Swept along spline with %d steps, length %.1f"), PathStepsUsed, SplineLength);
-        }
-        else
-        {
-            SweepStatus = TEXT("Spline actor found but no USplineComponent - using linear sweep");
-        }
+        const double Alpha = static_cast<double>(i) / PathSteps;
+        PathFrames.Add(Spline
+            ? FTransform(Spline->GetQuaternionAtDistanceAlongSpline(SplineLength * Alpha, ESplineCoordinateSpace::World),
+                         Spline->GetLocationAtDistanceAlongSpline(SplineLength * Alpha, ESplineCoordinateSpace::World))
+            : FTransform(MeshBBox.GetCenter() + FVector(0, 0, SweepHeight * (Alpha - 0.5))));
     }
 
-    // Fallback: If no spline or spline invalid, create a linear vertical sweep
-    if (PathFrames.Num() < 2)
-    {
-        double SweepHeight = MeshExtent.Z > KINDA_SMALL_NUMBER ? MeshExtent.Z * 2 : 100.0;
-        PathStepsUsed = FMath::Clamp(Steps, 2, 256);
-
-        for (int32 i = 0; i <= PathStepsUsed; ++i)
-        {
-            float Alpha = (float)i / PathStepsUsed;
-            FVector Location = MeshCenter + FVector(0, 0, -SweepHeight/2 + SweepHeight * Alpha);
-
-            float TwistAngle = FMath::DegreesToRadians(Twist * Alpha);
-            FQuat Rotation = FQuat(FVector::UpVector, TwistAngle);
-
-            float Scale = FMath::Lerp((float)ScaleStart, (float)ScaleEnd, Alpha);
-
-            PathFrames.Add(FTransform(Rotation, Location, FVector(Scale)));
-        }
-
-        if (SweepStatus.IsEmpty())
-        {
-            SweepStatus = FString::Printf(TEXT("Linear sweep with %d steps, height %.1f"), PathStepsUsed, SweepHeight);
-        }
-    }
-
-    // The profile and the path were both built and then thrown away -- the only
-    // thing this branch did was log, so `sweep` returned "Sweep applied" with
-    // trianglesAfter == trianglesBefore on every call. Actually sweep, the way
-    // the working twin extrude_along_spline does. Per-frame scale is already
-    // baked into PathFrames, so Start/EndScale stay at 1.
-    if (PathFrames.Num() >= 2)
-    {
-        FGeometryScriptPrimitiveOptions PrimOptions;
+    FGeometryScriptPrimitiveOptions PrimOptions;
+    UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
+        Mesh, PrimOptions, FTransform::Identity, PolygonVertices, PathFrames,
+        true, bCap, 1.0f, 1.0f, 0.0f,
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
-        UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
-            Mesh, PrimOptions, FTransform::Identity, PolygonVertices, PathFrames,
-            true, bCap, 1.0f, 1.0f, 0.0f, 1.0f, nullptr);
-#else
-        UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendSweepPolygon(
-            Mesh, PrimOptions, FTransform::Identity, PolygonVertices, PathFrames,
-            true, bCap, 1.0f, 1.0f, 0.0f, nullptr);
+        1.0f, // MiterLimit, added in 5.5
 #endif
-    }
-
-    int32 TrisAfter = Mesh->GetTriangleCount();
+        nullptr);
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
-    if (!SplineActorName.IsEmpty())
+    if (Spline)
     {
         Result->SetStringField(TEXT("splineActorName"), SplineActorName);
         Result->SetNumberField(TEXT("splineLength"), SplineLength);
     }
-    Result->SetStringField(TEXT("sweepStatus"), SweepStatus);
-    Result->SetNumberField(TEXT("pathSteps"), PathStepsUsed);
+    Result->SetNumberField(TEXT("pathSteps"), PathSteps);
     Result->SetNumberField(TEXT("profileVertices"), PolygonVertices.Num());
-    Result->SetNumberField(TEXT("steps"), Steps);
-    Result->SetNumberField(TEXT("twist"), Twist);
-    Result->SetNumberField(TEXT("scaleStart"), ScaleStart);
-    Result->SetNumberField(TEXT("scaleEnd"), ScaleEnd);
     Result->SetBoolField(TEXT("cap"), bCap);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
-    Result->SetNumberField(TEXT("trianglesAfter"), TrisAfter);
+    Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());
+    McpHandlerUtils::AddVerification(Result, TargetActor);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Sweep applied"), Result);
     return true;
 }
 
+bool HandleSegmentedSweep(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
+                          const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    // loft and extrude_along_spline are sweeps that name their path step count segments.
+    const TSharedPtr<FJsonObject> SweepPayload = MakeShared<FJsonObject>(*Payload);
+    if (Payload->HasField(TEXT("segments")) && !Payload->HasField(TEXT("steps")))
+    {
+        SweepPayload->SetNumberField(TEXT("steps"), GetJsonIntField(Payload, TEXT("segments"), 16));
+    }
+    return HandleSweep(Self, RequestId, SweepPayload, Socket);
+}
+
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

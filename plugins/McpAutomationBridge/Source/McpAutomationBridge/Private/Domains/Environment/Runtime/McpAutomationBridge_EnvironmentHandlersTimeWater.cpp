@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool McpCreateTimeOfDaySystem(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
@@ -27,77 +26,38 @@ bool McpCreateTimeOfDaySystem(const TSharedPtr<FJsonObject> &Payload, TSharedPtr
         return false;
     }
 
-    double Hour = 12.0;
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("CurrentHour"), Hour);
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("hour"), Hour);
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("time"), Hour);
-    const float ClampedHour = FMath::Clamp(static_cast<float>(Hour), 0.0f, 24.0f);
-
-    double Azimuth = 0.0;
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("azimuth"), Azimuth);
-    double Elevation = (ClampedHour / 24.0f) * 360.0f - 90.0f;
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("elevation"), Elevation);
-
-    double SunIntensity = 10.0;
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("intensity"), SunIntensity);
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("sunIntensity"), SunIntensity);
-    double SkyIntensity = 1.0;
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("skyLightIntensity"), SkyIntensity);
-    McpTryGetNumberFromPayloadOrSettings(Payload, TEXT("skylightIntensity"), SkyIntensity);
+    // create_time_of_day_system declares only name/path/location: the rig starts at noon;
+    // set_time_of_day moves the sun afterwards.
+    constexpr double NoonElevation = 90.0;
+    constexpr float SunIntensity = 10.0f;
+    constexpr float SkyIntensity = 1.0f;
 
     Actor->Modify();
-    Actor->SetActorRotation(McpSunRotation(Elevation, Azimuth));
+    Actor->SetActorRotation(McpSunRotation(NoonElevation, 0.0));
     SunComponent->Modify();
     SunComponent->SetMobility(EComponentMobility::Movable);
-    SunComponent->SetRelativeRotation(McpSunRotation(Elevation, Azimuth));
-    SunComponent->SetIntensity(static_cast<float>(SunIntensity));
+    SunComponent->SetRelativeRotation(McpSunRotation(NoonElevation, 0.0));
+    SunComponent->SetIntensity(SunIntensity);
     SunComponent->SetAtmosphereSunLight(true);
     SunComponent->SetAtmosphereSunLightIndex(0);
     SunComponent->MarkRenderStateDirty();
-
     SkyLightComponent->Modify();
     SkyLightComponent->SetMobility(EComponentMobility::Movable);
-    SkyLightComponent->SetIntensity(static_cast<float>(SkyIntensity));
+    SkyLightComponent->SetIntensity(SkyIntensity);
     SkyLightComponent->MarkRenderStateDirty();
-
     SkyAtmosphereComponent->Modify();
     SkyAtmosphereComponent->SetMobility(EComponentMobility::Movable);
     SkyAtmosphereComponent->MarkRenderStateDirty();
-
-    TArray<FString> Applied;
-    TArray<FString> Failed;
-    const int32 ActorApplied = McpApplyPayloadSettings(Actor, Payload, Applied, Failed);
-    const int32 SunApplied = McpApplyPayloadSettings(SunComponent, Payload, Applied, Failed);
-    const int32 SkyLightApplied = McpApplyPayloadSettings(SkyLightComponent, Payload, Applied, Failed);
-    const int32 SkyAtmosphereApplied = McpApplyPayloadSettings(SkyAtmosphereComponent, Payload, Applied, Failed);
-
-    SunComponent->SetRelativeRotation(McpSunRotation(Elevation, Azimuth));
-    SunComponent->SetIntensity(static_cast<float>(SunIntensity));
-    SunComponent->SetAtmosphereSunLight(true);
-    SunComponent->SetAtmosphereSunLightIndex(0);
-    SunComponent->MarkRenderStateDirty();
-    SkyLightComponent->SetIntensity(static_cast<float>(SkyIntensity));
-    SkyLightComponent->MarkRenderStateDirty();
-    SkyAtmosphereComponent->MarkRenderStateDirty();
-
     Actor->MarkPackageDirty();
+
     Resp->SetStringField(TEXT("actorName"), McpActorRef(Actor));
     Resp->SetStringField(TEXT("actorPath"), Actor->GetPathName());
     Resp->SetStringField(TEXT("sunComponentName"), SunComponent->GetName());
     Resp->SetStringField(TEXT("skyLightComponentName"), SkyLightComponent->GetName());
     Resp->SetStringField(TEXT("skyAtmosphereComponentName"), SkyAtmosphereComponent->GetName());
-    Resp->SetBoolField(TEXT("hasSunLight"), true);
-    Resp->SetBoolField(TEXT("hasSkyLight"), true);
-    Resp->SetBoolField(TEXT("hasSkyAtmosphere"), true);
-    Resp->SetNumberField(TEXT("componentCount"), 3);
-    Resp->SetNumberField(TEXT("currentHour"), ClampedHour);
-    Resp->SetNumberField(TEXT("azimuth"), Azimuth);
-    Resp->SetNumberField(TEXT("elevation"), Elevation);
+    Resp->SetNumberField(TEXT("currentHour"), 12.0);
     Resp->SetNumberField(TEXT("sunIntensity"), SunIntensity);
     Resp->SetNumberField(TEXT("skyLightIntensity"), SkyIntensity);
-    Resp->SetNumberField(TEXT("configuredPropertyCount"), ActorApplied + SunApplied + SkyLightApplied + SkyAtmosphereApplied);
-    McpAddStringArrayField(Resp, TEXT("configuredProperties"), Applied);
-    McpAddStringArrayField(Resp, TEXT("configurationErrors"), Failed);
     McpHandlerUtils::AddVerification(Resp, Actor);
     OutMessage = TEXT("Time-of-day lighting rig created");
     return true;
@@ -160,39 +120,35 @@ bool McpConfigureWaterWavesOnActor(AActor *WaterActor, const TSharedPtr<FJsonObj
     }
 
     TArray<FString> Applied;
+    // One value drives both ends of each generator range: a single wave size.
+    auto ApplyRange = [&](const TCHAR *Key, const TCHAR *MinProperty, const TCHAR *MaxProperty, double Value)
+    {
+        McpApplyNumberProperty(Generator, MinProperty, Value, Key, Resp, Applied);
+        McpApplyNumberProperty(Generator, MaxProperty, Value, Key, Resp, Applied);
+    };
     double NumberValue = 0.0;
-    if (McpGetFirstNumberField(Payload, {TEXT("waveHeight")}, NumberValue))
+    for (const TCHAR *Key : {TEXT("waveHeight"), TEXT("amplitude")})
     {
-        const double Height = FMath::Max(NumberValue, 0.0001);
-        McpApplyNumberProperty(Generator, {TEXT("MinAmplitude")}, Height, TEXT("waveHeight"), Resp, Applied);
-        McpApplyNumberProperty(Generator, {TEXT("MaxAmplitude")}, Height, TEXT("waveHeight"), Resp, Applied);
+        if (McpGetFirstNumberField(Payload, {Key}, NumberValue))
+        {
+            ApplyRange(Key, TEXT("MinAmplitude"), TEXT("MaxAmplitude"), FMath::Max(NumberValue, 0.0001));
+            break;
+        }
     }
-    else if (McpGetFirstNumberField(Payload, {TEXT("amplitude")}, NumberValue))
-    {
-        const double Height = FMath::Max(NumberValue, 0.0001);
-        McpApplyNumberProperty(Generator, {TEXT("MinAmplitude")}, Height, TEXT("amplitude"), Resp, Applied);
-        McpApplyNumberProperty(Generator, {TEXT("MaxAmplitude")}, Height, TEXT("amplitude"), Resp, Applied);
-    }
-
     if (McpGetFirstNumberField(Payload, {TEXT("waveLength")}, NumberValue))
     {
-        const double Wavelength = FMath::Max(NumberValue, 0.0001);
-        McpApplyNumberProperty(Generator, {TEXT("MinWavelength")}, Wavelength, TEXT("waveLength"), Resp, Applied);
-        McpApplyNumberProperty(Generator, {TEXT("MaxWavelength")}, Wavelength, TEXT("waveLength"), Resp, Applied);
+        ApplyRange(TEXT("waveLength"), TEXT("MinWavelength"), TEXT("MaxWavelength"), FMath::Max(NumberValue, 0.0001));
     }
-
     if (McpGetFirstNumberField(Payload, {TEXT("steepness")}, NumberValue))
     {
-        const double Steepness = FMath::Clamp(NumberValue, 0.0, 1.0);
-        McpApplyNumberProperty(Generator, {TEXT("SmallWaveSteepness")}, Steepness, TEXT("steepness"), Resp, Applied);
-        McpApplyNumberProperty(Generator, {TEXT("LargeWaveSteepness")}, Steepness, TEXT("steepness"), Resp, Applied);
+        ApplyRange(TEXT("steepness"), TEXT("SmallWaveSteepness"), TEXT("LargeWaveSteepness"), FMath::Clamp(NumberValue, 0.0, 1.0));
     }
 
     const TSharedPtr<FJsonObject> *DirectionObj = nullptr;
     if (Payload.IsValid() && Payload->TryGetObjectField(TEXT("direction"), DirectionObj) && DirectionObj && DirectionObj->IsValid())
     {
-        const FRotator Direction = McpGetRotatorField(Payload, TEXT("direction"), FRotator::ZeroRotator);
-        McpApplyNumberProperty(Generator, {TEXT("WindAngleDeg")}, Direction.Yaw, TEXT("directionYaw"), Resp, Applied);
+        const FRotator Direction = ExtractRotatorField(Payload, TEXT("direction"), FRotator::ZeroRotator);
+        McpApplyNumberProperty(Generator, TEXT("WindAngleDeg"), Direction.Yaw, TEXT("directionYaw"), Resp, Applied);
     }
 
     if (Applied.Num() == 0)
@@ -253,4 +209,3 @@ bool McpCreateBuoyancyComponent(const TSharedPtr<FJsonObject> &Payload, TSharedP
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

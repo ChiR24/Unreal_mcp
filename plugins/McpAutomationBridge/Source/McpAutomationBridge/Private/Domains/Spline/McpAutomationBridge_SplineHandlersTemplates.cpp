@@ -5,7 +5,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -43,33 +42,14 @@ static bool HandleCreateTemplateSpline(
         return true;
     }
 
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Name = *ActorName;
-    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
-    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-    AActor* NewActor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, FRotator::ZeroRotator, SpawnParams);
-    if (!NewActor)
+    USplineComponent* SplineComp = SpawnSplineActor(World, ActorName, Location, FRotator::ZeroRotator);
+    if (!SplineComp)
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("Failed to spawn spline actor"), nullptr, TEXT("SPAWN_FAILED"));
         return true;
     }
-
-    NewActor->SetActorLabel(*ActorName);
-
-    USplineComponent* SplineComp = NewObject<USplineComponent>(NewActor, TEXT("SplineComponent"));
-    if (!SplineComp)
-    {
-        NewActor->Destroy();
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Failed to create spline component"), nullptr, TEXT("COMPONENT_FAILED"));
-        return true;
-    }
-
-    SplineComp->RegisterComponent();
-    NewActor->AddInstanceComponent(SplineComp);
-    NewActor->SetRootComponent(SplineComp);
+    AActor* NewActor = SplineComp->GetOwner();
 
     // Caller-supplied route. The declared `points` parameter used to be ignored outright and
     // every template emitted the same hardcoded zigzag below, so the capability could only
@@ -228,4 +208,3 @@ bool HandleCreatePipeSpline(
 {
     return HandleCreateTemplateSpline(Self, RequestId, Payload, Socket, TEXT("Pipe"), TEXT(""));
 }
-#endif

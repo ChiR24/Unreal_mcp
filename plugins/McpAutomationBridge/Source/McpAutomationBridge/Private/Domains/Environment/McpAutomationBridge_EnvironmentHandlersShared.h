@@ -9,7 +9,6 @@
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
-#include "Domains/Landscape/McpLandscapeMetadataTags.h"
 #include "HAL/PlatformMemory.h"
 #include "Misc/App.h"
 #include "UObject/UnrealType.h"
@@ -19,27 +18,14 @@
 // =============================================================================
 // Editor-Only Includes
 // =============================================================================
-#if WITH_EDITOR
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
 #include "Engine/Selection.h"
 
 // Subsystem includes with version-specific paths
-#if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
-#elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
-#endif
-#if __has_include("Subsystems/UnrealEditorSubsystem.h")
 #include "Subsystems/UnrealEditorSubsystem.h"
-#elif __has_include("UnrealEditorSubsystem.h")
-#include "UnrealEditorSubsystem.h"
-#endif
-#if __has_include("Subsystems/LevelEditorSubsystem.h")
-#include "Subsystems/LevelEditorSubsystem.h"
-#elif __has_include("LevelEditorSubsystem.h")
 #include "LevelEditorSubsystem.h"
-#endif
 
 // =============================================================================
 // Engine Component Includes
@@ -107,12 +93,9 @@
 #include "FoliageType_InstancedStaticMesh.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
-#endif // WITH_EDITOR
-
 class UTexture;
 
 namespace McpEnvironmentHandlers {
-#if WITH_EDITOR
 struct FEnvironmentBuildContext {
     const TSharedPtr<FJsonObject> &Payload;
     TSharedPtr<FJsonObject> &Resp;
@@ -121,12 +104,6 @@ struct FEnvironmentBuildContext {
     FString &ErrorCode;
 };
 
-TSharedPtr<FJsonObject> McpMakeVectorObject(const FVector &Vector);
-TSharedPtr<FJsonObject> McpMakeRotatorObject(const FRotator &Rotator);
-TSharedPtr<FJsonObject> McpMakeTransformObject(const FTransform &Transform);
-FString McpGetFirstStringField(const TSharedPtr<FJsonObject> &Payload, std::initializer_list<const TCHAR *> Fields);
-FVector McpGetVectorField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, const FVector &DefaultValue);
-FRotator McpGetRotatorField(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, const FRotator &DefaultValue);
 FProperty *McpFindPropertyCaseInsensitive(UObject *Object, const FString &PropertyName);
 // Sun elevation is degrees above the horizon and a directional light shines along
 // its forward axis, so it pitches DOWN by the elevation. Using the elevation as the
@@ -140,15 +117,14 @@ bool McpSetObjectPropertyValue(UObject *Object, const FString &PropertyName, UOb
 UObject *McpInvokeObjectGetter(UObject *Object, const FName &FunctionName);
 bool McpInvokeObjectSetter(UObject *Object, const FName &FunctionName, UObject *Value);
 bool McpGetFirstNumberField(const TSharedPtr<FJsonObject> &Payload, std::initializer_list<const TCHAR *> Fields, double &OutValue);
-bool McpApplyNumberProperty(UObject *Target, std::initializer_list<const TCHAR *> PropertyNames, double Value,
+bool McpApplyNumberProperty(UObject *Target, const TCHAR *PropertyName, double Value,
                                    const FString &ResponseName, TSharedPtr<FJsonObject> Resp, TArray<FString> &Applied);
 int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload,
                                      TArray<FString> &AppliedProperties, TArray<FString> &FailedProperties);
 void McpAddStringArrayField(TSharedPtr<FJsonObject> Obj, const TCHAR *FieldName, const TArray<FString> &Values);
-UWorld *McpGetEditorWorld();
 AActor *McpFindActorByNameOrClass(UClass *ActorClass, const FString &ActorName);
 AActor *McpFindOrSpawnActor(UClass *ActorClass, const FString &ActorName, const FVector &Location,
-                                   const FRotator &Rotation);
+                                   const FRotator &Rotation, bool *bOutSpawned = nullptr);
 UActorComponent *McpFindComponentByClass(AActor *Actor, UClass *ComponentClass);
 UActorComponent *McpFindOrAddComponent(AActor *Actor, UClass *ComponentClass, const FString &ComponentName);
 bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const FString &ActorClassPath,
@@ -175,7 +151,8 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
                                       TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode);
 ALandscape *McpFindLandscapeForEnvironmentAction(const TSharedPtr<FJsonObject> &Payload);
 AActor *McpFindOrSpawnEnvironmentActor(const TSharedPtr<FJsonObject> &Payload, UClass *ActorClass, const FString &DefaultActorName);
-void McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp);
+// Applies payload settings onto Target and reports them on Resp; returns how many applied.
+int32 McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp);
 AActor *McpFindActorFromEnvironmentPayload(const TSharedPtr<FJsonObject> &Payload);
 AActor *McpFindWaterBodyActor(const TSharedPtr<FJsonObject> &Payload);
 int32 McpSetMaterialOnActor(AActor *Actor, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp);
@@ -188,8 +165,6 @@ bool McpConfigureWaterBody(const TSharedPtr<FJsonObject> &Payload, const FString
                                   TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode);
 bool McpConfigureWaterBodyActor(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                        FString &OutMessage, FString &OutErrorCode);
-bool McpPayloadHasWaterWaveSettings(const TSharedPtr<FJsonObject> &Payload);
-bool McpTryGetNumberFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, double &OutValue);
 bool McpTryGetBoolFromPayloadOrSettings(const TSharedPtr<FJsonObject> &Payload, const TCHAR *FieldName, bool &OutValue);
 bool McpReadLandscapeSplinePoint(const TSharedPtr<FJsonValue> &PointValue, FVector &OutPoint);
 TArray<TObjectPtr<ULandscapeSplineSegment>> *McpGetLandscapeSplineSegments(ULandscapeSplinesComponent *SplinesComponent);
@@ -301,5 +276,4 @@ bool HandleInspectActorQueryAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     const FString &LowerSubAction, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-#endif
 }

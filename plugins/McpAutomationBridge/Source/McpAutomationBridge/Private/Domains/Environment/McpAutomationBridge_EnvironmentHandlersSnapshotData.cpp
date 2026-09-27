@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 namespace {
 
@@ -16,7 +15,7 @@ bool MatchesSnapshotActorPath(const AActor *Actor, const FString &ActorPath)
 
 ADirectionalLight *FindSnapshotDirectionalLight(const FString &ActorPath = FString())
 {
-    UWorld *World = McpGetEditorWorld();
+    UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         return nullptr;
@@ -33,7 +32,7 @@ ADirectionalLight *FindSnapshotDirectionalLight(const FString &ActorPath = FStri
 
 ASkyLight *FindSnapshotSkyLight(const FString &ActorPath = FString())
 {
-    UWorld *World = McpGetEditorWorld();
+    UWorld *World = McpHandlerUtils::GetEditorWorld();
     if (!World)
     {
         return nullptr;
@@ -169,7 +168,7 @@ bool McpCaptureEnvironmentSnapshot(
         FMath::Fmod(static_cast<double>(Rotation.Pitch) + 450.0, 360.0) / 360.0 * 24.0;
     Snapshot->SetNumberField(TEXT("version"), 1);
     Snapshot->SetNumberField(TEXT("timeOfDay"), TimeOfDay);
-    Snapshot->SetObjectField(TEXT("directionalLightRotation"), McpMakeRotatorObject(Rotation));
+    Snapshot->SetObjectField(TEXT("directionalLightRotation"), McpHandlerUtils::RotatorToJson(Rotation));
     Snapshot->SetNumberField(TEXT("sunIntensity"), SunComponent->Intensity);
     Snapshot->SetNumberField(TEXT("skylightIntensity"), SkyComponent->Intensity);
     Snapshot->SetStringField(TEXT("directionalLightActorPath"), SunActor->GetPathName());
@@ -228,7 +227,7 @@ bool McpApplyEnvironmentSnapshot(
     SkyActor->MarkPackageDirty();
 
     Resp->SetNumberField(TEXT("timeOfDay"), TimeOfDay);
-    Resp->SetObjectField(TEXT("directionalLightRotation"), McpMakeRotatorObject(Rotation));
+    Resp->SetObjectField(TEXT("directionalLightRotation"), McpHandlerUtils::RotatorToJson(Rotation));
     Resp->SetNumberField(TEXT("sunIntensity"), SunIntensity);
     Resp->SetNumberField(TEXT("skylightIntensity"), SkylightIntensity);
     Resp->SetStringField(TEXT("directionalLightActorPath"), SunActor->GetPathName());
@@ -239,4 +238,3 @@ bool McpApplyEnvironmentSnapshot(
 }
 
 }
-#endif

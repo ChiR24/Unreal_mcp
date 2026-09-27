@@ -36,6 +36,14 @@ bool ValidateTextureIterationCount(double Value, const TCHAR* Name,
                                    int32 MinValue, int32 MaxValue,
                                    int32& OutValue, FString& OutError);
 FString NormalizeTexturePath(const FString& Path);
+// RawPath as a texture whose source mip is 8-bit BGRA, the layout every pixel operation
+// walks; null with OutError set otherwise.
+UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError);
+// Where a generated texture goes: outputPath (a full asset path) when given, else path/name.
+bool ResolveOutputTarget(const TSharedPtr<FJsonObject>& Params, const FString& DefaultPath, const FString& DefaultName,
+                         FString& OutPath, FString& OutName, FString& OutError);
+// BGRA byte offsets a channel param names: R|Red, G|Green, B|Blue, A|Alpha; anything else is RGB.
+TArray<int32> ChannelOffsets(const FString& Channel);
 FAssetData GetTextureAssetDataByObjectPath(const FString& ObjectPath);
 UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& TextureName, int32 Width, int32 Height, bool bHDR);
 bool UpdateTextureBGRA8(UTexture2D* Texture, int32 Width, int32 Height, const TArray<uint8>& Pixels);
@@ -55,9 +63,6 @@ TSharedPtr<FJsonObject> HandleChannelPack(const TSharedPtr<FJsonObject>& Params)
 TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleAdjustCurves(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Params);
-TSharedPtr<FJsonObject> HandleTextureImportAndSamplerAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& Params);
-TSharedPtr<FJsonObject> HandleTexturePlaceholderAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params);
-TSharedPtr<FJsonObject> HandleCreateAoFromMesh(const TSharedPtr<FJsonObject>& Params);
 }
 

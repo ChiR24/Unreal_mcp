@@ -16,7 +16,6 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 
-#if WITH_EDITOR
 namespace McpLightingHandlers
 {
 
@@ -130,4 +129,3 @@ bool HandleCreateLightingEnabledLevel(
 }
 
 }
-#endif

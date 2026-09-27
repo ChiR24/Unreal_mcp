@@ -2,7 +2,6 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#include "Async/Async.h"
 #include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "Engine/World.h"
@@ -13,106 +12,31 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("create_landscape"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("create_landscape payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
-  double X = 0.0, Y = 0.0, Z = 0.0;
-  if (!Payload->TryGetNumberField(TEXT("x"), X) ||
-      !Payload->TryGetNumberField(TEXT("y"), Y) ||
-      !Payload->TryGetNumberField(TEXT("z"), Z)) {
-    const TSharedPtr<FJsonObject> *LocObj = nullptr;
-    if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
-      (*LocObj)->TryGetNumberField(TEXT("x"), X);
-      (*LocObj)->TryGetNumberField(TEXT("y"), Y);
-      (*LocObj)->TryGetNumberField(TEXT("z"), Z);
-    } else {
-      const TArray<TSharedPtr<FJsonValue>> *LocArr = nullptr;
-      if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
-          LocArr->Num() >= 3) {
-        X = (*LocArr)[0]->AsNumber();
-        Y = (*LocArr)[1]->AsNumber();
-        Z = (*LocArr)[2]->AsNumber();
-      }
-    }
-  }
-
   McpLandscapeCreation::FLandscapeCreationRequest Request;
-  bool bHasCX = Payload->TryGetNumberField(TEXT("componentsX"),
-                                           Request.ComponentsX);
-  bool bHasCY = Payload->TryGetNumberField(TEXT("componentsY"),
-                                           Request.ComponentsY);
-
-  int32 ComponentCount = 0;
-  const TSharedPtr<FJsonObject> *ComponentCountObj = nullptr;
-  if (Payload->TryGetObjectField(TEXT("componentCount"), ComponentCountObj) &&
-      ComponentCountObj) {
-    double ComponentCountX = 0.0, ComponentCountY = 0.0;
-    if (!bHasCX &&
-        (*ComponentCountObj)->TryGetNumberField(TEXT("x"), ComponentCountX)) {
-      Request.ComponentsX =
-          FMath::Max(1, static_cast<int32>(ComponentCountX));
-      bHasCX = true;
-    }
-    if (!bHasCY &&
-        (*ComponentCountObj)->TryGetNumberField(TEXT("y"), ComponentCountY)) {
-      Request.ComponentsY =
-          FMath::Max(1, static_cast<int32>(ComponentCountY));
-      bHasCY = true;
-    }
-  } else {
-    Payload->TryGetNumberField(TEXT("componentCount"), ComponentCount);
-  }
-  if (!bHasCX && ComponentCount > 0) {
-    Request.ComponentsX = ComponentCount;
-  }
-  if (!bHasCY && ComponentCount > 0) {
-    Request.ComponentsY = ComponentCount;
-  }
-
-  // quadsPerComponent has to resolve before sizeX/sizeY, because the schema
-  // documents those as "Landscape size in quads" and the component count is
-  // quads / quadsPerComponent. They were previously divided by 1000 as if they
-  // were world units, so a requested 505x505 silently became one 63-quad
-  // component -- an eighth of the size, with no warning.
-  if (!Payload->TryGetNumberField(TEXT("quadsPerComponent"),
-                                  Request.QuadsPerComponent)) {
-    if (!Payload->TryGetNumberField(TEXT("quadsPerSection"),
-                                    Request.QuadsPerComponent)) {
-      Payload->TryGetNumberField(TEXT("sectionSize"),
-                                 Request.QuadsPerComponent);
-    }
+  Request.Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+  if (!Payload->TryGetNumberField(TEXT("quadsPerSection"), Request.QuadsPerComponent)) {
+    Payload->TryGetNumberField(TEXT("sectionSize"), Request.QuadsPerComponent);
   }
   if (Request.QuadsPerComponent <= 0) {
     Request.QuadsPerComponent = 63;
   }
 
-  double SizeXQuads = 0.0, SizeYQuads = 0.0;
-  if (Payload->TryGetNumberField(TEXT("sizeX"), SizeXQuads) && SizeXQuads > 0 &&
-      !bHasCX) {
-    Request.ComponentsX = FMath::Max(
-        1, FMath::DivideAndRoundUp(static_cast<int32>(SizeXQuads),
-                                   Request.QuadsPerComponent));
-  }
-  if (Payload->TryGetNumberField(TEXT("sizeY"), SizeYQuads) && SizeYQuads > 0 &&
-      !bHasCY) {
-    Request.ComponentsY = FMath::Max(
-        1, FMath::DivideAndRoundUp(static_cast<int32>(SizeYQuads),
-                                   Request.QuadsPerComponent));
-  }
-  Payload->TryGetNumberField(TEXT("sectionsPerComponent"),
-                             Request.SectionsPerComponent);
+  // componentCount {x, y} wins; otherwise sizeX/sizeY are sizes in quads, so the count is quads / quadsPerComponent.
+  const TSharedPtr<FJsonObject> *ComponentCount = nullptr;
+  const bool bHasCount = Payload->TryGetObjectField(TEXT("componentCount"), ComponentCount) && ComponentCount;
+  const auto Components = [&](const TCHAR *Axis, const TCHAR *SizeField, int32 &Out) {
+    double Value = 0.0;
+    if (bHasCount && (*ComponentCount)->TryGetNumberField(Axis, Value)) {
+      Out = FMath::Max(1, static_cast<int32>(Value));
+    } else if (Payload->TryGetNumberField(SizeField, Value) && Value > 0) {
+      Out = FMath::Max(1, FMath::DivideAndRoundUp(static_cast<int32>(Value), Request.QuadsPerComponent));
+    }
+  };
+  Components(TEXT("x"), TEXT("sizeX"), Request.ComponentsX);
+  Components(TEXT("y"), TEXT("sizeY"), Request.ComponentsY);
+  Payload->TryGetNumberField(TEXT("sectionsPerComponent"), Request.SectionsPerComponent);
 
-  Payload->TryGetStringField(TEXT("materialPath"), Request.MaterialPath);
+  Request.MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
   if (Request.MaterialPath.IsEmpty()) {
     Request.MaterialPath = TEXT("/Engine/EngineMaterials/WorldGridMaterial");
   }
@@ -124,10 +48,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     return true;
   }
 
-  if (!Payload->TryGetStringField(TEXT("name"), Request.Name) ||
-      Request.Name.IsEmpty()) {
-    Payload->TryGetStringField(TEXT("landscapeName"), Request.Name);
-  }
+  Request.Name = McpGetFirstStringField(Payload, {TEXT("name"), TEXT("landscapeName")});
   if (Request.Name.IsEmpty()) {
     SendAutomationError(
         RequestingSocket, RequestId,
@@ -135,39 +56,17 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  if (Request.Name.Contains(TEXT("/")) || Request.Name.Contains(TEXT("\\")) ||
-      Request.Name.Contains(TEXT(":")) || Request.Name.Contains(TEXT("*")) ||
-      Request.Name.Contains(TEXT("?")) || Request.Name.Contains(TEXT("\"")) ||
-      Request.Name.Contains(TEXT("<")) || Request.Name.Contains(TEXT(">")) ||
-      Request.Name.Contains(TEXT("|"))) {
+  const bool bBadChar = Request.Name.FindLastCharByPredicate(
+      [](TCHAR C) { return FCString::Strchr(TEXT("/\\:*?\"<>|"), C) != nullptr; }) != INDEX_NONE;
+  if (bBadChar || Request.Name.Len() > 128) {
     SendAutomationError(
         RequestingSocket, RequestId,
-        TEXT("name contains invalid characters (/, \\, :, *, ?, \", <, >, |)"),
+        TEXT("name must be at most 128 characters and contain none of / \\ : * ? \" < > |"),
         TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  if (Request.Name.Len() > 128) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("name exceeds maximum length of 128 characters"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
 
-  Request.Location = FVector(X, Y, Z);
-  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(this);
-  AsyncTask(ENamedThreads::GameThread,
-            [WeakSubsystem, RequestId, RequestingSocket, Request]() {
-              UMcpAutomationBridgeSubsystem *Subsystem = WeakSubsystem.Get();
-              if (!Subsystem)
-                return;
-              McpLandscapeCreation::CreateLandscapeOnGameThread(
-                  *Subsystem, RequestId, RequestingSocket, Request);
-            });
+  McpLandscapeCreation::CreateLandscapeOnGameThread(
+      *this, RequestId, RequestingSocket, Request);
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("create_landscape requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

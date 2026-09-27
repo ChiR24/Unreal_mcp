@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Components/StaticMeshComponent.h"
 #include "EdGraphSchema_K2.h"
@@ -281,4 +280,3 @@ bool HandleInspectBlueprintComponentsAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

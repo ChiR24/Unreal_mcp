@@ -8,9 +8,6 @@
 using McpSafeOperations::McpSafeLoadMap;
 
 namespace McpLevelHandlers {
-#if WITH_EDITOR
-#define SendAutomationResponse(...) Subsystem.SendAutomationResponse(__VA_ARGS__)
-#define SendAutomationError(...) Subsystem.SendAutomationError(__VA_ARGS__)
 bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
     FString LevelName;
     if (Payload.IsValid())
@@ -30,7 +27,7 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
         LevelName = LevelName.RightChop(LastSlash + 1);
       }
       if (LevelName.Contains(TEXT(".."))) {
-        SendAutomationResponse(
+        Subsystem.SendAutomationResponse(
             RequestingSocket, RequestId, false,
             TEXT("Invalid levelName: contains path traversal (..)"),
             nullptr, TEXT("SECURITY_VIOLATION"));
@@ -54,7 +51,7 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
     // that could cause engine crashes or security violations
     FString SanitizedLevelPath = SanitizeProjectRelativePath(LevelPath);
     if (!LevelPath.IsEmpty() && SanitizedLevelPath.IsEmpty()) {
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           TEXT("Invalid levelPath: contains path traversal (..), double slashes, or invalid characters"),
           nullptr, TEXT("SECURITY_VIOLATION"));
@@ -90,7 +87,7 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
     }
 
     if (SavePath.IsEmpty()) {
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           TEXT("levelName or levelPath required for create_level"), nullptr,
           TEXT("INVALID_ARGUMENT"));
@@ -111,7 +108,7 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
           Resp->SetStringField(TEXT("currentLevelPath"), LoadedWorld->GetOutermost()->GetName());
         }
       }
-      SendAutomationResponse(
+      Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, bLoaded,
           bLoaded ? FString::Printf(TEXT("Level already exists and was loaded: %s"), *SavePath)
                   : FString::Printf(TEXT("Level already exists but could not be loaded: %s"), *SavePath),
@@ -136,7 +133,4 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
         Subsystem, RequestId, TEXT("manage_level_structure"), CreatePayload,
         RequestingSocket);
 }
-#undef SendAutomationResponse
-#undef SendAutomationError
-#endif
 } // namespace McpLevelHandlers

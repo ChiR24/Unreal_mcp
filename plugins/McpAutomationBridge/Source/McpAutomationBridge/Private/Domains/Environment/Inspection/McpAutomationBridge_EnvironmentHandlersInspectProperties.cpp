@@ -1,7 +1,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 // Reads `<ArrayField>` (array of strings) plus the optional single-value
@@ -99,15 +98,14 @@ TSharedPtr<FJsonObject> McpMakeBoundsObject(const FBox &Box)
 {
     TSharedPtr<FJsonObject> Bounds = McpHandlerUtils::CreateResultObject();
     const FVector Extent = Box.GetExtent();
-    Bounds->SetObjectField(TEXT("origin"), McpMakeVectorObject(Box.GetCenter()));
-    Bounds->SetObjectField(TEXT("extent"), McpMakeVectorObject(Extent));
-    Bounds->SetObjectField(TEXT("min"), McpMakeVectorObject(Box.Min));
-    Bounds->SetObjectField(TEXT("max"), McpMakeVectorObject(Box.Max));
-    Bounds->SetObjectField(TEXT("size"), McpMakeVectorObject(Box.GetSize()));
+    Bounds->SetObjectField(TEXT("origin"), McpHandlerUtils::VectorToJson(Box.GetCenter()));
+    Bounds->SetObjectField(TEXT("extent"), McpHandlerUtils::VectorToJson(Extent));
+    Bounds->SetObjectField(TEXT("min"), McpHandlerUtils::VectorToJson(Box.Min));
+    Bounds->SetObjectField(TEXT("max"), McpHandlerUtils::VectorToJson(Box.Max));
+    Bounds->SetObjectField(TEXT("size"), McpHandlerUtils::VectorToJson(Box.GetSize()));
     Bounds->SetNumberField(TEXT("radius"), Extent.Size());
     Bounds->SetBoolField(TEXT("isValid"), Box.IsValid != 0);
     return Bounds;
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

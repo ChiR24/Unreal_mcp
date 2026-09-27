@@ -12,38 +12,37 @@
 #include "Engine/World.h"
 #include "Subsystems/EditorActorSubsystem.h"
 
-#if WITH_EDITOR
 namespace McpLightingHandlers
 {
+namespace
+{
+// The payload's post-process volume in the editor world (spawned when missing); replies and returns null otherwise.
+APostProcessVolume* ResolvePostProcessOrReply(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
+{
+    FString ResolveError;
+    FString ResolveErrorCode;
+    APostProcessVolume* PPV = McpRenderHandlers::McpResolvePostProcessVolume(
+        McpHandlerUtils::GetEditorWorld(), Payload, true, ResolveError, ResolveErrorCode);
+    if (!PPV)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            ResolveError.IsEmpty() ? FString(TEXT("Failed to find/spawn PostProcessVolume")) : ResolveError,
+            ResolveErrorCode.IsEmpty() ? FString(TEXT("EXECUTION_ERROR")) : ResolveErrorCode);
+    }
+    return PPV;
+}
+}
 
 bool HandleSetExposure(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    UEditorActorSubsystem* ActorSS)
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!ActorSS)
-    {
-        Subsystem.SendAutomationError(
-            RequestingSocket, RequestId,
-            TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-    }
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    FString ResolveError;
-    FString ResolveErrorCode;
-    APostProcessVolume* PPV = McpRenderHandlers::McpResolvePostProcessVolume(
-        World, Payload, true, ResolveError, ResolveErrorCode);
+    APostProcessVolume* PPV = ResolvePostProcessOrReply(Subsystem, RequestId, Payload, RequestingSocket);
     if (!PPV)
     {
-        const FString ErrorMessage = ResolveError.IsEmpty()
-            ? FString(TEXT("Failed to find/spawn PostProcessVolume"))
-            : ResolveError;
-        const FString ErrorCode = ResolveErrorCode.IsEmpty()
-            ? FString(TEXT("EXECUTION_ERROR"))
-            : ResolveErrorCode;
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, ErrorMessage, ErrorCode);
         return true;
     }
 
@@ -76,30 +75,11 @@ bool HandleSetAmbientOcclusion(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    UEditorActorSubsystem* ActorSS)
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    if (!ActorSS)
-    {
-        Subsystem.SendAutomationError(
-            RequestingSocket, RequestId,
-            TEXT("EditorActorSubsystem not available"), TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-        return true;
-    }
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    FString ResolveError;
-    FString ResolveErrorCode;
-    APostProcessVolume* PPV = McpRenderHandlers::McpResolvePostProcessVolume(
-        World, Payload, true, ResolveError, ResolveErrorCode);
+    APostProcessVolume* PPV = ResolvePostProcessOrReply(Subsystem, RequestId, Payload, RequestingSocket);
     if (!PPV)
     {
-        const FString ErrorMessage = ResolveError.IsEmpty()
-            ? FString(TEXT("Failed to find/spawn PostProcessVolume"))
-            : ResolveError;
-        const FString ErrorCode = ResolveErrorCode.IsEmpty()
-            ? FString(TEXT("EXECUTION_ERROR"))
-            : ResolveErrorCode;
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, ErrorMessage, ErrorCode);
         return true;
     }
 
@@ -135,4 +115,3 @@ bool HandleSetAmbientOcclusion(
 
 }
 
-#endif

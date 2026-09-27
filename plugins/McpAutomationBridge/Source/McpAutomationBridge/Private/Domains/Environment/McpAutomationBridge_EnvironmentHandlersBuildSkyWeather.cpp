@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 namespace {
 
@@ -222,4 +221,3 @@ bool HandleBuildSkyWeatherAction(const FString &LowerSub, FEnvironmentBuildConte
 }
 
 }
-#endif

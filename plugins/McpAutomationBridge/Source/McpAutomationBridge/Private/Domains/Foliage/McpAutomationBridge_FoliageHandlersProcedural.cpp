@@ -5,51 +5,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("create_procedural_foliage"),
-                    ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("create_procedural_foliage payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString Name;
   if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
     Name = FString::Printf(TEXT("ProceduralFoliage_%lld"), FDateTime::UtcNow().GetTicks());
   }
 
-  FVector Location(0, 0, 0);
-  FVector Size(1000, 1000, 1000);
-
   const TSharedPtr<FJsonObject> *BoundsObj = nullptr;
-  if (Payload->TryGetObjectField(TEXT("bounds"), BoundsObj) && BoundsObj) {
-    const TSharedPtr<FJsonObject> *LocObj = nullptr;
-    if ((*BoundsObj)->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
-      (*LocObj)->TryGetNumberField(TEXT("x"), Location.X);
-      (*LocObj)->TryGetNumberField(TEXT("y"), Location.Y);
-      (*LocObj)->TryGetNumberField(TEXT("z"), Location.Z);
-    }
-
-    const TSharedPtr<FJsonObject> *SizeObj = nullptr;
-    if ((*BoundsObj)->TryGetObjectField(TEXT("size"), SizeObj) && SizeObj) {
-      (*SizeObj)->TryGetNumberField(TEXT("x"), Size.X);
-      (*SizeObj)->TryGetNumberField(TEXT("y"), Size.Y);
-      (*SizeObj)->TryGetNumberField(TEXT("z"), Size.Z);
-    }
-    const TArray<TSharedPtr<FJsonValue>> *SizeArr = nullptr;
-    if ((*BoundsObj)->TryGetArrayField(TEXT("size"), SizeArr) && SizeArr &&
-        SizeArr->Num() >= 3) {
-      Size.X = (*SizeArr)[0]->AsNumber();
-      Size.Y = (*SizeArr)[1]->AsNumber();
-      Size.Z = (*SizeArr)[2]->AsNumber();
-    }
-  }
+  const TSharedPtr<FJsonObject> Bounds =
+      Payload->TryGetObjectField(TEXT("bounds"), BoundsObj) && BoundsObj ? *BoundsObj : nullptr;
+  const FVector Location = ExtractVectorField(Bounds, TEXT("location"), FVector::ZeroVector);
+  const FVector Size = ExtractVectorField(Bounds, TEXT("size"), FVector(1000.0));
 
   const TArray<TSharedPtr<FJsonValue>> *FoliageTypesArr = nullptr;
   if (!Payload->TryGetArrayField(TEXT("foliageTypes"), FoliageTypesArr)) {
@@ -187,11 +152,4 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Procedural foliage created"), Resp, FString());
   return true;
-#else
-  SendAutomationResponse(
-      RequestingSocket, RequestId, false,
-      TEXT("create_procedural_foliage requires editor build."), nullptr,
-      TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

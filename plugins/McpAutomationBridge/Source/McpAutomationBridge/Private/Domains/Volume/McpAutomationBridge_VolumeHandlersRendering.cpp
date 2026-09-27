@@ -19,7 +19,6 @@
 
 namespace McpVolumeHandlers
 {
-#if WITH_EDITOR
 #if MCP_HAS_POSTPROCESS_VOLUME
 static void ApplyPostProcessSettings(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload)
 {
@@ -123,40 +122,13 @@ bool HandleCreateCullDistanceVolume(UMcpAutomationBridgeSubsystem* Subsystem, co
     return true;
 }
 
-template<typename TVolumeClass>
-static bool CreateStaticRenderVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FVector& DefaultExtent, const FString& ClassText, const FString& FailureText, const FString& MessagePrefix)
-{
-    using namespace VolumeHelpers;
-    FVolumeCreateArgs Args;
-    FVector Extent;
-    UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
-        !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), DefaultExtent, Extent) ||
-        !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
-    {
-        return true;
-    }
-    TVolumeClass* Volume = SpawnVolumeActor<TVolumeClass>(World, Args.VolumeName, Args.Location, Args.Rotation, Extent);
-    if (!Volume)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FailureText, nullptr);
-        return true;
-    }
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        MessagePrefix + Args.VolumeName, CreateVolumeResponse(Volume, ClassText));
-    return true;
-}
-
 bool HandleCreatePrecomputedVisibilityVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return CreateStaticRenderVolume<APrecomputedVisibilityVolume>(Subsystem, RequestId, Payload, Socket,
-        FVector(1000.0f, 1000.0f, 500.0f), TEXT("APrecomputedVisibilityVolume"), TEXT("Failed to spawn PrecomputedVisibilityVolume"), TEXT("Created PrecomputedVisibilityVolume: "));
+    return VolumeHelpers::CreateBoxVolume<APrecomputedVisibilityVolume>(Subsystem, RequestId, Payload, Socket, FVector(1000.0f, 1000.0f, 500.0f));
 }
 
 bool HandleCreateLightmassImportanceVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return CreateStaticRenderVolume<ALightmassImportanceVolume>(Subsystem, RequestId, Payload, Socket,
-        FVector(5000.0f, 5000.0f, 2000.0f), TEXT("ALightmassImportanceVolume"), TEXT("Failed to spawn LightmassImportanceVolume"), TEXT("Created LightmassImportanceVolume: "));
+    return VolumeHelpers::CreateBoxVolume<ALightmassImportanceVolume>(Subsystem, RequestId, Payload, Socket, FVector(5000.0f, 5000.0f, 2000.0f));
 }
-#endif
 }

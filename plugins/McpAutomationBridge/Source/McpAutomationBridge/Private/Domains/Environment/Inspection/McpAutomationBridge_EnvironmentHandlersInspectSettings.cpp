@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 namespace McpEnvironmentHandlers {
 
 bool HandleInspectSettingsAction(
@@ -149,4 +148,3 @@ bool HandleInspectSettingsAction(
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

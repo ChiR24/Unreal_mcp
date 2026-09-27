@@ -1,23 +1,15 @@
 #include "Domains/Volume/McpAutomationBridge_VolumeWorldResolution.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Engine/TriggerBase.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/Volume.h"
-#endif
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
 namespace VolumeHelpers
 {
-#if WITH_EDITOR
-UWorld* GetEditorWorld()
-{
-    return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-}
-
 AActor* FindVolumeByName(UWorld* World, const FString& VolumeName)
 {
     if (!World || VolumeName.IsEmpty())
@@ -71,5 +63,4 @@ bool ResolveEditorWorld(UMcpAutomationBridgeSubsystem* Subsystem, const FString&
     Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Editor world not available"), nullptr);
     return false;
 }
-#endif
 }

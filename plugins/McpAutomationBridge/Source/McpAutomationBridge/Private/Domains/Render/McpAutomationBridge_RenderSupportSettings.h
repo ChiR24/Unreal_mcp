@@ -3,21 +3,13 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "HAL/IConsoleManager.h"
 #include "UObject/UnrealType.h"
-#endif
 
 class APostProcessVolume;
 
 namespace McpRenderHandlers
 {
-#if WITH_EDITOR
-
-// BB-021: bounded post-process volume settings summary exposed for
-// inspect/component reads (implemented in
-// Foundation/Render/McpPostProcessVolumeResolution.cpp).
-TSharedPtr<FJsonObject> McpDescribePostProcessVolume(const APostProcessVolume& Volume);
 
 inline void AddStringArray(
     const TSharedPtr<FJsonObject>& Result,
@@ -213,5 +205,4 @@ inline bool ReadActorReference(
     }
     return !OutReference.IsEmpty();
 }
-#endif
 }

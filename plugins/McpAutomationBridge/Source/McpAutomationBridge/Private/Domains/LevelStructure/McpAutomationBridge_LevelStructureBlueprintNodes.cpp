@@ -1,6 +1,5 @@
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureActions.h"
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
-#include "Domains/LevelStructure/McpAutomationBridge_LevelStructurePayload.h"
 
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphNode.h"
@@ -18,7 +17,6 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -32,9 +30,10 @@ bool HandleAddLevelBlueprintNode(
 
     FString NodeClass = GetJsonStringField(Payload, TEXT("nodeClass"), TEXT(""));
     FString NodeName = GetJsonStringField(Payload, TEXT("nodeName"), TEXT(""));
-    TSharedPtr<FJsonObject> PositionJson = GetObjectField(Payload, TEXT("nodePosition"));
-    int32 PosX = PositionJson.IsValid() ? static_cast<int32>(GetJsonNumberField(PositionJson, TEXT("x"))) : 0;
-    int32 PosY = PositionJson.IsValid() ? static_cast<int32>(GetJsonNumberField(PositionJson, TEXT("y"))) : 0;
+    const TSharedPtr<FJsonObject>* PositionJson = nullptr;
+    Payload->TryGetObjectField(TEXT("nodePosition"), PositionJson);
+    int32 PosX = PositionJson ? static_cast<int32>(GetJsonNumberField(*PositionJson, TEXT("x"))) : 0;
+    int32 PosY = PositionJson ? static_cast<int32>(GetJsonNumberField(*PositionJson, TEXT("y"))) : 0;
     const TArray<TSharedPtr<FJsonValue>>* PositionArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("position"), PositionArray) && PositionArray && PositionArray->Num() >= 2)
     {
@@ -225,4 +224,3 @@ bool HandleAddLevelBlueprintNode(
 }
 
 }
-#endif

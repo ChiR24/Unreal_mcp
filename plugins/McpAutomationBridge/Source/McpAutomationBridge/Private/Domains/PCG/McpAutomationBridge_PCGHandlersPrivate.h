@@ -15,7 +15,6 @@
 #define MCP_HAS_PCG 0
 #endif
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Engine/World.h"
@@ -26,9 +25,8 @@
 #include "Modules/ModuleManager.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectIterator.h"
-#endif
 
-#if WITH_EDITOR && MCP_HAS_PCG
+#if MCP_HAS_PCG
 #include "PCGCommon.h"
 #include "PCGComponent.h"
 #include "PCGEdge.h"
@@ -46,19 +44,30 @@
 
 namespace McpPCGHandlers
 {
-struct FPCGSettingsAlias
-{
-    const TCHAR* Alias;
-    const TCHAR* SettingsClass;
-};
-
-FString NormalizePCGSubAction(const TSharedPtr<FJsonObject>& Payload);
-FString GetFirstStringField(const TSharedPtr<FJsonObject>& Payload, std::initializer_list<const TCHAR*> Fields);
-const FPCGSettingsAlias* FindPCGSettingsAlias(const FString& RawAlias);
+// The PCG settings class a node kind names ("surface_sampler", "add_surface_sampler", "add_landscape_data_node"), or null.
+const TCHAR* FindPCGSettingsAlias(const FString& RawAlias);
 bool IsPCGNodeCreationAction(const FString& SubAction);
 bool TryGetPCGAssetPath(const TSharedPtr<FJsonObject>& Payload, std::initializer_list<const TCHAR*> DirectFields, FString& OutPath, FString& OutError);
 FString ToObjectPath(const FString& PackagePath);
-UPCGGraph* LoadPCGGraph(const FString& RawPath, FString& OutPath, FString& OutError);
+// The TAsset at RawPath (normalized into OutPath); OutError names it as Label when it is missing or another type.
+template <typename TAsset>
+TAsset* LoadPCGAsset(const FString& RawPath, const TCHAR* Label, FString& OutPath, FString& OutError)
+{
+    const FNormalizedAssetPath Normalized = NormalizeAssetPath(RawPath);
+    if (!Normalized.bIsValid)
+    {
+        OutError = Normalized.ErrorMessage;
+        return nullptr;
+    }
+    OutPath = Normalized.Path;
+    UObject* Loaded = UEditorAssetLibrary::LoadAsset(OutPath);
+    TAsset* Asset = Cast<TAsset>(Loaded ? Loaded : StaticLoadObject(TAsset::StaticClass(), nullptr, *ToObjectPath(OutPath)));
+    if (!Asset)
+    {
+        OutError = FString::Printf(TEXT("Could not load %s at '%s'."), Label, *OutPath);
+    }
+    return Asset;
+}
 UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool bSave, bool& bOutCreated, bool& bOutSaved, FString& OutError);
 TSharedPtr<FJsonObject> BuildGraphResult(UPCGGraph* Graph, const FString& GraphPath, bool bCreated, bool bSaved);
 TSharedPtr<FJsonObject> BuildNodeResult(UPCGGraph* Graph, UPCGNode* Node, const FString& GraphPath);
@@ -72,10 +81,7 @@ bool ResolveClassForProperty(UObject* Target, const TCHAR* PropertyName, const F
 bool ApplySpawnActorTemplateClass(UPCGSettings* Settings, const FString& ClassName, FString& OutError);
 bool ApplyStaticMeshSpawnerMeshPath(UPCGSettings* Settings, const FString& MeshPath, FString& OutError);
 bool ApplyPCGConvenienceSettings(const FString& SubAction, UPCGSettings* Settings, const TSharedPtr<FJsonObject>& Payload, FString& OutError, int32& OutAppliedCount);
-UWorld* GetPCGEditorWorld();
-AActor* FindPCGActor(UWorld* World, const FString& ActorName);
 UPCGComponent* FindPCGComponent(UWorld* World, const FString& ActorName, const FString& ComponentName, AActor*& OutActor);
-bool HasPCGComponentSelector(const FString& ActorName, const FString& ComponentName);
 UPCGComponent* CreatePCGComponent(AActor* Actor, const FString& ComponentName);
 bool SaveEditorWorldIfRequested(UWorld* World, bool bSave, bool& bOutSaved, FString& OutError);
 void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload);

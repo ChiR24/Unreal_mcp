@@ -1,11 +1,57 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
 
-#if WITH_EDITOR && MCP_HAS_PCG
+#if MCP_HAS_PCG
 namespace McpPCGHandlers
 {
+namespace
+{
+// Applies the payload's settings object, convenience settings and metadata to Node, saves when asked and replies
+// with the node result.
+bool ConfigurePCGNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction,
+    const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave, UPCGGraph* Graph,
+    const FString& GraphPath, UPCGNode* Node, UPCGSettings* Settings, const TCHAR* Message)
+{
+    FString Error;
+    int32 AppliedSettings = 0;
+    const TSharedPtr<FJsonObject>* SettingsObject = nullptr;
+    if (Payload->TryGetObjectField(TEXT("settings"), SettingsObject) && SettingsObject && SettingsObject->IsValid())
+    {
+        if (!ApplySettingsObject(Settings, *SettingsObject, Error, AppliedSettings))
+        {
+            Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
+            return true;
+        }
+    }
+
+    int32 AppliedConvenienceSettings = 0;
+    if (!ApplyPCGConvenienceSettings(SubAction, Settings, Payload, Error, AppliedConvenienceSettings))
+    {
+        Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
+        return true;
+    }
+
+    ApplyNodeMetadata(Node, Payload);
+    Node->UpdateAfterSettingsChangeDuringCreation();
+    Settings->PostEditChange();
+
+    bool bSaved = false;
+    if (!SaveGraphIfRequested(Graph, bSave, bSaved, Error))
+    {
+        Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("SAVE_FAILED"));
+        return true;
+    }
+
+    TSharedPtr<FJsonObject> Result = BuildNodeResult(Graph, Node, GraphPath);
+    Result->SetNumberField(TEXT("settingsApplied"), AppliedSettings + AppliedConvenienceSettings);
+    Result->SetBoolField(TEXT("saved"), bSaved);
+    Bridge->SendAutomationResponse(Socket, RequestId, true, Message, Result);
+    return true;
+}
+}
+
 bool HandleAddPCGNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave, UPCGGraph* Graph, const FString& GraphPath)
 {
-    FString NodeType = GetFirstStringField(Payload, {TEXT("settingsClass"), TEXT("nodeType")});
+    FString NodeType = McpGetFirstStringField(Payload, {TEXT("settingsClass"), TEXT("nodeType")});
     if (NodeType.IsEmpty())
     {
         NodeType = SubAction;
@@ -27,41 +73,8 @@ bool HandleAddPCGNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
         return true;
     }
 
-    FString Error;
-    const TSharedPtr<FJsonObject>* SettingsObject = nullptr;
-    int32 AppliedSettings = 0;
-    if (Payload->TryGetObjectField(TEXT("settings"), SettingsObject) && SettingsObject && SettingsObject->IsValid())
-    {
-        if (!ApplySettingsObject(DefaultSettings, *SettingsObject, Error, AppliedSettings))
-        {
-            Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
-            return true;
-        }
-    }
-
-    int32 AppliedConvenienceSettings = 0;
-    if (!ApplyPCGConvenienceSettings(SubAction, DefaultSettings, Payload, Error, AppliedConvenienceSettings))
-    {
-        Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
-        return true;
-    }
-
-    ApplyNodeMetadata(Node, Payload);
-    Node->UpdateAfterSettingsChangeDuringCreation();
-    DefaultSettings->PostEditChange();
-
-    bool bSaved = false;
-    if (!SaveGraphIfRequested(Graph, bSave, bSaved, Error))
-    {
-        Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("SAVE_FAILED"));
-        return true;
-    }
-
-    TSharedPtr<FJsonObject> Result = BuildNodeResult(Graph, Node, GraphPath);
-    Result->SetNumberField(TEXT("settingsApplied"), AppliedSettings + AppliedConvenienceSettings);
-    Result->SetBoolField(TEXT("saved"), bSaved);
-    Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("PCG node added."), Result);
-    return true;
+    return ConfigurePCGNode(Bridge, RequestId, SubAction, Payload, Socket, bSave, Graph, GraphPath, Node, DefaultSettings,
+        TEXT("PCG node added."));
 }
 
 bool HandleConnectPCGPins(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave, UPCGGraph* Graph, const FString& GraphPath)
@@ -83,8 +96,8 @@ bool HandleConnectPCGPins(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
     }
 
     FString Error;
-    const FString SourcePinLabel = GetFirstStringField(Payload, {TEXT("sourcePin"), TEXT("outputName")});
-    const FString TargetPinLabel = GetFirstStringField(Payload, {TEXT("targetPin"), TEXT("inputName")});
+    const FString SourcePinLabel = McpGetFirstStringField(Payload, {TEXT("sourcePin"), TEXT("outputName")});
+    const FString TargetPinLabel = McpGetFirstStringField(Payload, {TEXT("targetPin"), TEXT("inputName")});
     FName SourcePin;
     FName TargetPin;
     if (!TryResolvePCGPinLabel(SourceNode, true, SourcePinLabel, SourcePin, Error) ||
@@ -128,7 +141,7 @@ bool HandleConnectPCGPins(UMcpAutomationBridgeSubsystem* Bridge, const FString& 
 
 bool HandleSetPCGNodeSettings(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave, UPCGGraph* Graph, const FString& GraphPath)
 {
-    const FString NodeId = GetFirstStringField(Payload, {TEXT("nodeId"), TEXT("nodeName")});
+    const FString NodeId = McpGetFirstStringField(Payload, {TEXT("nodeId"), TEXT("nodeName")});
     UPCGNode* Node = FindPCGNode(Graph, NodeId);
     if (!Node)
     {
@@ -143,41 +156,8 @@ bool HandleSetPCGNodeSettings(UMcpAutomationBridgeSubsystem* Bridge, const FStri
         return true;
     }
 
-    FString Error;
-    int32 AppliedSettings = 0;
-    const TSharedPtr<FJsonObject>* SettingsObject = nullptr;
-    if (Payload->TryGetObjectField(TEXT("settings"), SettingsObject) && SettingsObject && SettingsObject->IsValid())
-    {
-        if (!ApplySettingsObject(Settings, *SettingsObject, Error, AppliedSettings))
-        {
-            Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
-            return true;
-        }
-    }
-
-    int32 AppliedConvenienceSettings = 0;
-    if (!ApplyPCGConvenienceSettings(SubAction, Settings, Payload, Error, AppliedConvenienceSettings))
-    {
-        Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SETTINGS"));
-        return true;
-    }
-
-    ApplyNodeMetadata(Node, Payload);
-    Node->UpdateAfterSettingsChangeDuringCreation();
-    Settings->PostEditChange();
-
-    bool bSaved = false;
-    if (!SaveGraphIfRequested(Graph, bSave, bSaved, Error))
-    {
-        Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("SAVE_FAILED"));
-        return true;
-    }
-
-    TSharedPtr<FJsonObject> Result = BuildNodeResult(Graph, Node, GraphPath);
-    Result->SetNumberField(TEXT("settingsApplied"), AppliedSettings + AppliedConvenienceSettings);
-    Result->SetBoolField(TEXT("saved"), bSaved);
-    Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("PCG node settings updated."), Result);
-    return true;
+    return ConfigurePCGNode(Bridge, RequestId, SubAction, Payload, Socket, bSave, Graph, GraphPath, Node, Settings,
+        TEXT("PCG node settings updated."));
 }
 }
 #endif

@@ -1,6 +1,6 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
 
-#if WITH_EDITOR && MCP_HAS_PCG
+#if MCP_HAS_PCG
 namespace McpPCGHandlers
 {
 bool HandleCreatePCGGraph(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bSave)
@@ -42,7 +42,7 @@ bool HandleCreatePCGSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
     UPCGGraph* ParentGraph = nullptr;
     if (!ParentGraphRawPath.IsEmpty())
     {
-        ParentGraph = LoadPCGGraph(ParentGraphRawPath, ParentGraphPath, Error);
+        ParentGraph = LoadPCGAsset<UPCGGraph>(ParentGraphRawPath, TEXT("PCG graph"), ParentGraphPath, Error);
         if (!ParentGraph)
         {
             Bridge->SendAutomationError(Socket, RequestId, Error, TEXT("ASSET_NOT_FOUND"));

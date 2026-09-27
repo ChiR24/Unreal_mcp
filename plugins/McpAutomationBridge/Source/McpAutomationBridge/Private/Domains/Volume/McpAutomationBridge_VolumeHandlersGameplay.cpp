@@ -15,49 +15,14 @@
 
 namespace McpVolumeHandlers
 {
-#if WITH_EDITOR
-template<typename TVolumeClass>
-static bool CreateSimpleGameplayVolume(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket,
-    const FVector& DefaultExtent,
-    const FString& ClassText,
-    const FString& FailureText,
-    const FString& CreatedPrefix)
-{
-    using namespace VolumeHelpers;
-    FVolumeCreateArgs Args;
-    FVector Extent;
-    UWorld* World = nullptr;
-    if (!ReadNamedTransform(Subsystem, RequestId, Payload, Socket, TEXT("TriggerVolume"), Args) ||
-        !ReadExtent(Subsystem, RequestId, Payload, Socket, TEXT("extent"), DefaultExtent, Extent) ||
-        !ResolveEditorWorld(Subsystem, RequestId, Socket, World))
-    {
-        return true;
-    }
-    TVolumeClass* Volume = SpawnVolumeActor<TVolumeClass>(World, Args.VolumeName, Args.Location, Args.Rotation, Extent);
-    if (!Volume)
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false, FailureText, nullptr);
-        return true;
-    }
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
-        CreatedPrefix + Args.VolumeName, CreateVolumeResponse(Volume, ClassText));
-    return true;
-}
-
 bool HandleCreateBlockingVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return CreateSimpleGameplayVolume<ABlockingVolume>(Subsystem, RequestId, Payload, Socket,
-        FVector(100.0f, 100.0f, 100.0f), TEXT("ABlockingVolume"), TEXT("Failed to spawn BlockingVolume"), TEXT("Created BlockingVolume: "));
+    return VolumeHelpers::CreateBoxVolume<ABlockingVolume>(Subsystem, RequestId, Payload, Socket, FVector(100.0f, 100.0f, 100.0f));
 }
 
 bool HandleCreateKillZVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    return CreateSimpleGameplayVolume<AKillZVolume>(Subsystem, RequestId, Payload, Socket,
-        FVector(10000.0f, 10000.0f, 100.0f), TEXT("AKillZVolume"), TEXT("Failed to spawn KillZVolume"), TEXT("Created KillZVolume: "));
+    return VolumeHelpers::CreateBoxVolume<AKillZVolume>(Subsystem, RequestId, Payload, Socket, FVector(10000.0f, 10000.0f, 100.0f));
 }
 
 bool HandleCreatePainCausingVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -121,5 +86,4 @@ bool HandleCreatePhysicsVolume(UMcpAutomationBridgeSubsystem* Subsystem, const F
         FString::Printf(TEXT("Created PhysicsVolume: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
-#endif
 }

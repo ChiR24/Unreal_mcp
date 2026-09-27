@@ -17,7 +17,6 @@
 #include "Modules/ModuleManager.h"
 #include "UObject/Package.h"
 
-#if WITH_EDITOR
 namespace McpLevelStructure
 {
 
@@ -201,58 +200,10 @@ bool HandleCreateSublevel(
         McpSafeAssetSave(World);
     }
 
-    // CRITICAL: Clean up the created sublevel world from memory to prevent "World Memory Leaks" crash
-    // Same fix as HandleCreateLevel - see that function for detailed comments
-    // Note: Using bIsWorldInitialized directly for UE 5.0 compatibility (IsInitialized() added in 5.1)
+    // Unload the saved sublevel world so a later LoadMap of it does not die with "World Memory Leaks".
     if (bSaveSucceeded && NewSublevelWorld)
     {
-        if (NewSublevelWorld->bIsWorldInitialized)
-        {
-            NewSublevelWorld->CleanupWorld();
-        }
-
-        NewSublevelWorld->bIsTearingDown = true;
-
-        if (NewSublevelWorld->PersistentLevel)
-        {
-            NewSublevelWorld->PersistentLevel->bIsVisible = false;
-            for (AActor* Actor : NewSublevelWorld->PersistentLevel->Actors)
-            {
-                if (Actor)
-                {
-                    if (Actor->PrimaryActorTick.IsTickFunctionRegistered())
-                    {
-                        Actor->PrimaryActorTick.UnRegisterTickFunction();
-                    }
-                    Actor->PrimaryActorTick.GetPrerequisites().Empty();
-                    for (UActorComponent* Component : Actor->GetComponents())
-                    {
-                        if (Component && Component->PrimaryComponentTick.IsTickFunctionRegistered())
-                        {
-                            Component->PrimaryComponentTick.UnRegisterTickFunction();
-                        }
-                    }
-                }
-            }
-        }
-
-        if (NewSublevelWorld->IsRooted())
-        {
-            NewSublevelWorld->RemoveFromRoot();
-        }
-
-        NewSublevelWorld->SetFlags(RF_Transient);
-        if (SublevelPackage && SublevelPackage->IsRooted())
-        {
-            SublevelPackage->RemoveFromRoot();
-        }
-        if (SublevelPackage)
-        {
-            SublevelPackage->SetFlags(RF_Transient);
-        }
-
-        CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
-        FlushRenderingCommands();
+        CleanupCreatedLevelWorldAfterSave(NewSublevelWorld, SublevelPackage, FullSublevelPath);
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
@@ -276,4 +227,3 @@ bool HandleCreateSublevel(
 }
 
 }
-#endif

@@ -1,6 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR
 #include "Animation/Skeleton.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SkeletalMesh.h"
@@ -155,4 +154,3 @@ void McpDescribeAssetDetails(UObject *Object, TSharedPtr<FJsonObject> Resp)
 }
 
 } // namespace McpEnvironmentHandlers
-#endif

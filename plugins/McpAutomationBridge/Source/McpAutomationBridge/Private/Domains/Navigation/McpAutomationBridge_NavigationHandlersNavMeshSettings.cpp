@@ -1,135 +1,103 @@
 #include "Domains/Navigation/McpAutomationBridge_NavigationHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpNavigationHandlers
 {
-bool HandleConfigureNavMeshSettings(
+namespace
+{
+// configure_nav_mesh_settings (generation fields) and set_nav_agent_properties (agent fields) on the editor world's
+// default RecastNavMesh; both take agentStepHeight, and only the fields sent change.
+bool ConfigureNavMesh(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
+    TSharedPtr<FMcpBridgeWebSocket> Socket,
+    bool bAgentProperties)
 {
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    if (!BlueprintPath.IsEmpty())
-    {
-        if (!IsValidNavigationPath(BlueprintPath))
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
-            return true;
-        }
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
-            return true;
-        }
-    }
-
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
-    if (!NavSys)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Navigation system not available"), nullptr, TEXT("NO_NAV_SYS"));
-        return true;
-    }
-
-    ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
+    UNavigationSystemV1* NavSys = World ? FNavigationSystem::GetCurrent<UNavigationSystemV1>(World) : nullptr;
+    ARecastNavMesh* NavMesh = NavSys ? Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance()) : nullptr;
     if (!NavMesh)
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No RecastNavMesh found in level"), nullptr, TEXT("NO_NAVMESH"));
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            !World ? TEXT("No editor world available") : !NavSys ? TEXT("Navigation system not available") : TEXT("No RecastNavMesh found in level"),
+            nullptr, !World ? TEXT("NO_WORLD") : !NavSys ? TEXT("NO_NAV_SYS") : TEXT("NO_NAVMESH"));
         return true;
     }
 
     bool bModified = false;
-    if (Payload->HasField(TEXT("tileSizeUU")))
+    const auto Apply = [&](const TCHAR* Field, auto& Target)
     {
-        NavMesh->TileSizeUU = GetJsonNumberField(Payload, TEXT("tileSizeUU"), 1000.0f);
-        bModified = true;
-    }
-    if (Payload->HasField(TEXT("minRegionArea")))
-    {
-        NavMesh->MinRegionArea = GetJsonNumberField(Payload, TEXT("minRegionArea"), 0.0f);
-        bModified = true;
-    }
-    if (Payload->HasField(TEXT("mergeRegionSize")))
-    {
-        NavMesh->MergeRegionSize = GetJsonNumberField(Payload, TEXT("mergeRegionSize"), 400.0f);
-        bModified = true;
-    }
-    if (Payload->HasField(TEXT("maxSimplificationError")))
-    {
-        NavMesh->MaxSimplificationError = GetJsonNumberField(Payload, TEXT("maxSimplificationError"), 1.3f);
-        bModified = true;
-    }
-
-    if (Payload->HasField(TEXT("cellSize")) || Payload->HasField(TEXT("cellHeight")))
-    {
+        double Value = 0.0;
+        if (Payload->TryGetNumberField(Field, Value))
+        {
+            Target = static_cast<std::remove_reference_t<decltype(Target)>>(Value);
+            bModified = true;
+        }
+    };
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-        FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-        if (Payload->HasField(TEXT("cellSize")))
-        {
-            DefaultParams.CellSize = GetJsonNumberField(Payload, TEXT("cellSize"), 19.0f);
-            bModified = true;
-        }
-        if (Payload->HasField(TEXT("cellHeight")))
-        {
-            DefaultParams.CellHeight = GetJsonNumberField(Payload, TEXT("cellHeight"), 10.0f);
-            bModified = true;
-        }
-#else
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        if (Payload->HasField(TEXT("cellSize")))
-        {
-            NavMesh->CellSize = GetJsonNumberField(Payload, TEXT("cellSize"), 19.0f);
-            bModified = true;
-        }
-        if (Payload->HasField(TEXT("cellHeight")))
-        {
-            NavMesh->CellHeight = GetJsonNumberField(Payload, TEXT("cellHeight"), 10.0f);
-            bModified = true;
-        }
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+    FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
 #endif
-    }
-
-    if (Payload->HasField(TEXT("agentStepHeight")))
-    {
+    PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-        DefaultParams.AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
+    Apply(TEXT("agentStepHeight"), DefaultParams.AgentMaxStepHeight);
 #else
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        NavMesh->AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
+    Apply(TEXT("agentStepHeight"), NavMesh->AgentMaxStepHeight);
 #endif
-        bModified = true;
+    if (bAgentProperties)
+    {
+        Apply(TEXT("agentRadius"), NavMesh->AgentRadius);
+        Apply(TEXT("agentHeight"), NavMesh->AgentHeight);
+        Apply(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
     }
-
+    else
+    {
+        Apply(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
+        Apply(TEXT("minRegionArea"), NavMesh->MinRegionArea);
+        Apply(TEXT("mergeRegionSize"), NavMesh->MergeRegionSize);
+        Apply(TEXT("maxSimplificationError"), NavMesh->MaxSimplificationError);
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+        Apply(TEXT("cellSize"), DefaultParams.CellSize);
+        Apply(TEXT("cellHeight"), DefaultParams.CellHeight);
+#else
+        Apply(TEXT("cellSize"), NavMesh->CellSize);
+        Apply(TEXT("cellHeight"), NavMesh->CellHeight);
+#endif
+    }
+    PRAGMA_ENABLE_DEPRECATION_WARNINGS
     if (bModified)
     {
         NavMesh->MarkPackageDirty();
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("navMeshName"), NavMesh->GetName());
-    Result->SetNumberField(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
-    Result->SetBoolField(TEXT("modified"), bModified);
-    Result->SetBoolField(TEXT("navMeshPresent"), true);
     Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
-    Result->SetStringField(TEXT("navMeshClass"), NavMesh->GetClass()->GetName());
-    Result->SetBoolField(TEXT("existsAfter"), true);
-
+    Result->SetBoolField(TEXT("modified"), bModified);
+    if (bAgentProperties)
+    {
+        Result->SetNumberField(TEXT("agentRadius"), NavMesh->AgentRadius);
+        Result->SetNumberField(TEXT("agentHeight"), NavMesh->AgentHeight);
+        Result->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
+    }
+    else
+    {
+        Result->SetStringField(TEXT("navMeshName"), NavMesh->GetName());
+        Result->SetStringField(TEXT("navMeshClass"), NavMesh->GetClass()->GetName());
+        Result->SetNumberField(TEXT("tileSizeUU"), NavMesh->TileSizeUU);
+    }
     Self->SendAutomationResponse(Socket, RequestId, true,
-        bModified ? TEXT("NavMesh settings configured") : TEXT("No settings modified"), Result);
+        bAgentProperties ? TEXT("Nav agent properties set")
+        : bModified ? TEXT("NavMesh settings configured") : TEXT("No settings modified"), Result);
     return true;
+}
+}
+
+bool HandleConfigureNavMeshSettings(
+    UMcpAutomationBridgeSubsystem* Self,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    return ConfigureNavMesh(Self, RequestId, Payload, Socket, false);
 }
 
 bool HandleSetNavAgentProperties(
@@ -138,89 +106,6 @@ bool HandleSetNavAgentProperties(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    if (!BlueprintPath.IsEmpty())
-    {
-        if (!IsValidNavigationPath(BlueprintPath))
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
-            return true;
-        }
-        UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
-        if (!Blueprint)
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Blueprint not found: %s"), *BlueprintPath), nullptr, TEXT("NOT_FOUND"));
-            return true;
-        }
-    }
-
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
-        return true;
-    }
-
-    UNavigationSystemV1* NavSys = FNavigationSystem::GetCurrent<UNavigationSystemV1>(World);
-    if (!NavSys)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Navigation system not available"), nullptr, TEXT("NO_NAV_SYS"));
-        return true;
-    }
-
-    ARecastNavMesh* NavMesh = Cast<ARecastNavMesh>(NavSys->GetDefaultNavDataInstance());
-    if (!NavMesh)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("No RecastNavMesh found in level"), nullptr, TEXT("NO_NAVMESH"));
-        return true;
-    }
-
-    bool bModified = false;
-    if (Payload->HasField(TEXT("agentRadius")))
-    {
-        NavMesh->AgentRadius = GetJsonNumberField(Payload, TEXT("agentRadius"), 35.0f);
-        bModified = true;
-    }
-    if (Payload->HasField(TEXT("agentHeight")))
-    {
-        NavMesh->AgentHeight = GetJsonNumberField(Payload, TEXT("agentHeight"), 144.0f);
-        bModified = true;
-    }
-    if (Payload->HasField(TEXT("agentMaxSlope")))
-    {
-        NavMesh->AgentMaxSlope = GetJsonNumberField(Payload, TEXT("agentMaxSlope"), 44.0f);
-        bModified = true;
-    }
-    if (Payload->HasField(TEXT("agentStepHeight")))
-    {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-        FNavMeshResolutionParam& DefaultParams = NavMesh->NavMeshResolutionParams[(uint8)ENavigationDataResolution::Default];
-        DefaultParams.AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
-#else
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        NavMesh->AgentMaxStepHeight = GetJsonNumberField(Payload, TEXT("agentStepHeight"), 35.0f);
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
-        bModified = true;
-    }
-
-    if (bModified)
-    {
-        NavMesh->MarkPackageDirty();
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetNumberField(TEXT("agentRadius"), NavMesh->AgentRadius);
-    Result->SetNumberField(TEXT("agentHeight"), NavMesh->AgentHeight);
-    Result->SetNumberField(TEXT("agentMaxSlope"), NavMesh->AgentMaxSlope);
-    Result->SetBoolField(TEXT("navMeshPresent"), true);
-    Result->SetStringField(TEXT("navMeshPath"), NavMesh->GetPathName());
-    Result->SetBoolField(TEXT("existsAfter"), true);
-
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Nav agent properties set"), Result);
-    return true;
+    return ConfigureNavMesh(Self, RequestId, Payload, Socket, true);
 }
 }
-#endif

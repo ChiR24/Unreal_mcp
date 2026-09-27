@@ -87,14 +87,56 @@ FString NormalizeTexturePath(const FString& Path)
     return McpCanonicalizeContentPath(Path, /*bAssumeGameRoot=*/true);
 }
 
+UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError)
+{
+    OutPath = NormalizeTexturePath(RawPath);
+    UTexture2D* Texture = OutPath.IsEmpty() ? nullptr : LoadObject<UTexture2D>(nullptr, *OutPath);
+    if (!Texture)
+    {
+        OutError = RawPath.IsEmpty() ? FString::Printf(TEXT("%s is required"), Field)
+                                     : FString::Printf(TEXT("%s: no texture at '%s'"), Field, *RawPath);
+        return nullptr;
+    }
+    if (Texture->Source.GetFormat() != TSF_BGRA8)
+    {
+        OutError = FString::Printf(TEXT("%s '%s' has no 8-bit BGRA source data"), Field, *OutPath);
+        return nullptr;
+    }
+    return Texture;
+}
+
+bool ResolveOutputTarget(const TSharedPtr<FJsonObject>& Params, const FString& DefaultPath, const FString& DefaultName,
+                         FString& OutPath, FString& OutName, FString& OutError)
+{
+    const FString OutputPath = GetJsonStringField(Params, TEXT("outputPath"));
+    const FString Path = OutputPath.IsEmpty() ? GetJsonStringField(Params, TEXT("path")) : FPaths::GetPath(OutputPath);
+    const FString Name = OutputPath.IsEmpty() ? GetJsonStringField(Params, TEXT("name")) : FPaths::GetBaseFilename(OutputPath);
+    OutPath = NormalizeTexturePath(Path.IsEmpty() ? DefaultPath : Path);
+    OutName = SanitizeAssetName(Name.IsEmpty() ? DefaultName : Name);
+    if (OutPath.IsEmpty() || OutName.IsEmpty())
+    {
+        OutError = OutPath.IsEmpty() ? TEXT("Invalid output path") : TEXT("name (or outputPath) is required and must be a valid asset name");
+        return false;
+    }
+    return true;
+}
+
+TArray<int32> ChannelOffsets(const FString& Channel)
+{
+    auto Is = [&Channel](const TCHAR* Letter, const TCHAR* Word)
+    {
+        return Channel.Equals(Letter, ESearchCase::IgnoreCase) || Channel.Equals(Word, ESearchCase::IgnoreCase);
+    };
+    if (Is(TEXT("R"), TEXT("Red"))) return {2};
+    if (Is(TEXT("G"), TEXT("Green"))) return {1};
+    if (Is(TEXT("B"), TEXT("Blue"))) return {0};
+    if (Is(TEXT("A"), TEXT("Alpha"))) return {3};
+    return {0, 1, 2};
+}
+
 FAssetData GetTextureAssetDataByObjectPath(const FString& ObjectPath)
 {
-    IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    return AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(ObjectPath));
-#else
-    return AssetRegistry.GetAssetByObjectPath(FName(*ObjectPath));
-#endif
+    return FAssetRegistryModule::GetRegistry().GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(ObjectPath));
 }
 
 float FBMNoise(float X, float Y, int32 Octaves, float Persistence, float Lacunarity, int32 Seed)

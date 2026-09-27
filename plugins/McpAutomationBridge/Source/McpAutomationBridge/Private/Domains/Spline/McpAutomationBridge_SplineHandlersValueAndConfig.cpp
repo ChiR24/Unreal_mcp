@@ -1,26 +1,14 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Spline/McpAutomationBridge_SplineHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/WorldSettings.h"
 #include "Components/SplineMeshComponent.h"
-
-AActor* FindActorByName(UWorld* World, const FString& ActorName)
-{
-    if (!World || ActorName.IsEmpty()) return nullptr;
-
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel() == ActorName || It->GetName() == ActorName)
-        {
-            return *It;
-        }
-    }
-    return nullptr;
-}
+#include "Editor.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "McpAutomationBridgeSubsystem.h"
 
 USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentName)
 {
@@ -44,6 +32,85 @@ USplineComponent* FindSplineComponent(AActor* Actor, const FString& ComponentNam
     }
 
     return SplineComponents[0];
+}
+
+AActor* ResolveSplineActor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName)
+{
+    if (ActorName.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("actorName is required"), nullptr, TEXT("MISSING_PARAM"));
+        return nullptr;
+    }
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No editor world available"), nullptr, TEXT("NO_WORLD"));
+        return nullptr;
+    }
+    AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true);
+    if (!Actor)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+    }
+    return Actor;
+}
+
+USplineComponent* ResolveSplineTarget(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName, AActor*& OutActor)
+{
+    OutActor = ResolveSplineActor(Self, RequestId, Socket, ActorName);
+    USplineComponent* Spline = OutActor ? FindSplineComponent(OutActor) : nullptr;
+    if (OutActor && !Spline)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No spline component found on actor"), nullptr, TEXT("NO_SPLINE"));
+    }
+    return Spline;
+}
+
+USplineMeshComponent* ResolveSplineMeshTarget(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& ActorName, const FString& ComponentName, AActor*& OutActor)
+{
+    OutActor = ResolveSplineActor(Self, RequestId, Socket, ActorName);
+    USplineMeshComponent* Mesh = OutActor ? FindSplineMeshComponent(OutActor, ComponentName) : nullptr;
+    if (OutActor && !Mesh)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("No SplineMeshComponent found on actor"), nullptr, TEXT("NO_COMPONENT"));
+    }
+    return Mesh;
+}
+
+USplineComponent* SpawnSplineActor(UWorld* World, const FString& Name, const FVector& Location, const FRotator& Rotation)
+{
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Name = *Name;
+    SpawnParams.NameMode = FActorSpawnParameters::ESpawnActorNameMode::Requested;
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    AActor* Actor = World->SpawnActor<AActor>(AActor::StaticClass(), Location, Rotation, SpawnParams);
+    if (!Actor)
+    {
+        return nullptr;
+    }
+    Actor->SetActorLabel(*Name);
+    USplineComponent* Spline = NewObject<USplineComponent>(Actor, TEXT("SplineComponent"));
+    Spline->RegisterComponent();
+    Actor->AddInstanceComponent(Spline);
+    Actor->SetRootComponent(Spline);
+    return Spline;
+}
+
+FString RequireSplineProjectPath(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const TCHAR* Field, const FString& Path)
+{
+    const FString Safe = SanitizeProjectRelativePath(Path);
+    if (Safe.IsEmpty())
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Invalid or unsafe %s: %s. Path must be relative to project (e.g., /Game/...)"), Field, *Path),
+            nullptr, TEXT("SECURITY_VIOLATION"));
+    }
+    return Safe;
 }
 
 USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName)
@@ -142,7 +209,7 @@ AActor* ResolveSplineConfigTarget(UWorld* World, const FString& ActorName)
 
     if (!ActorName.TrimStartAndEnd().IsEmpty())
     {
-        return FindActorByName(World, ActorName.TrimStartAndEnd());
+        return FindActorByNameInWorldForMcp(World, ActorName.TrimStartAndEnd(), true);
     }
 
     return World->GetWorldSettings();
@@ -180,4 +247,3 @@ FString BoolToSplineConfigString(bool bValue)
 {
     return bValue ? TEXT("true") : TEXT("false");
 }
-#endif

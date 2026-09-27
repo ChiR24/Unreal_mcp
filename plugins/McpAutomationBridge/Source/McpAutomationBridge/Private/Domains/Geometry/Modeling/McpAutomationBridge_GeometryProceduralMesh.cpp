@@ -1,19 +1,19 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {
 bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    FString Name = GetJsonStringField(Payload, TEXT("name"), GetJsonStringField(Payload, TEXT("actorName")));
     if (Name.IsEmpty()) Name = TEXT("ProceduralMesh");
 
-    FTransform Transform = ReadTransformFromPayload(Payload);
+    const FTransform Transform = FTransform::Identity; // edit_dynamic_mesh declares no placement
     bool bEnableCollision = GetJsonBoolField(Payload, TEXT("enableCollision"), false);
 
-    UDynamicMesh* DynMesh = GetOrCreateDynamicMesh(GetTransientPackage());
+    UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     FString SpawnError;
     AActor* NewActor = SpawnDynamicMeshActorWithMesh(Transform, Name, DynMesh,
                                                      SpawnError);
@@ -52,18 +52,14 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
         return true;
     }
 
-    FVector V0 = ReadVectorFromPayload(Payload, TEXT("v0"), FVector(0, 0, 0));
-    FVector V1 = ReadVectorFromPayload(Payload, TEXT("v1"), FVector(100, 0, 0));
-    FVector V2 = ReadVectorFromPayload(Payload, TEXT("v2"), FVector(50, 100, 0));
+    FVector V0 = ExtractVectorField(Payload, TEXT("v0"), FVector(0, 0, 0));
+    FVector V1 = ExtractVectorField(Payload, TEXT("v1"), FVector(100, 0, 0));
+    FVector V2 = ExtractVectorField(Payload, TEXT("v2"), FVector(50, 100, 0));
     int32 GroupID = GetJsonIntField(Payload, TEXT("groupID"), 0);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
 
     // Use the internal mesh directly to append triangle
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
@@ -86,49 +82,6 @@ bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Triangle appended"), Result);
     return true;
 }
-
-bool HandleDeleteTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                                 const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
-    int32 TriangleIndex = GetJsonIntField(Payload, TEXT("triangleIndex"), -1);
-
-    if (ActorName.IsEmpty() || TriangleIndex < 0)
-    {
-        Self->SendAutomationError(Socket, RequestId, TEXT("actorName and triangleIndex required"), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
-    UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
-
-    if (!EditMesh.IsTriangle(TriangleIndex))
-    {
-        Self->SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Invalid triangle index: %d"), TriangleIndex), TEXT("INVALID_TRIANGLE"));
-        return true;
-    }
-
-    UE::Geometry::EMeshResult RemoveResult = EditMesh.RemoveTriangle(TriangleIndex);
-    bool bSuccess = (RemoveResult == UE::Geometry::EMeshResult::Ok);
-
-    DMC->NotifyMeshUpdated();
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("actorName"), ActorName);
-    Result->SetNumberField(TEXT("triangleIndex"), TriangleIndex);
-    Result->SetBoolField(TEXT("success"), bSuccess);
-    Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Triangle deleted"), Result);
-    return true;
-}
-
 bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                                  const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
@@ -140,13 +93,9 @@ bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     double A = GetJsonNumberField(Payload, TEXT("a"), 1.0);
     bool bSetAll = GetJsonBoolField(Payload, TEXT("setAll"), false);
 
-    ADynamicMeshActor* TargetActor = nullptr;
-    UDynamicMeshComponent* DMC = nullptr;
-    UDynamicMesh* Mesh = nullptr;
-    if (!ResolveDynamicMeshForGeometry(Self, RequestId, ActorName, Socket, TargetActor, DMC, Mesh))
-    {
-        return true;
-    }
+    const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
+    if (!Target) return true;
+    auto [TargetActor, DMC, Mesh] = *Target;
     UE::Geometry::FDynamicMesh3& EditMesh = Mesh->GetMeshRef();
 
     // Enable vertex colors if not already enabled
@@ -193,4 +142,4 @@ bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT

@@ -5,7 +5,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "Components/SplineMeshComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
@@ -37,26 +36,16 @@ bool HandleCreateSplineMeshComponent(
         return true;
     }
 
-    FString SafeBlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
+    const FString SafeBlueprintPath = RequireSplineProjectPath(Self, RequestId, Socket, TEXT("blueprintPath"), BlueprintPath);
     if (SafeBlueprintPath.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid or unsafe blueprintPath: %s. Path must be relative to project (e.g., /Game/...)"), *BlueprintPath),
-            nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }
 
-    FString SafeMeshPath;
-    if (!MeshPath.IsEmpty())
+    const FString SafeMeshPath = MeshPath.IsEmpty() ? FString() : RequireSplineProjectPath(Self, RequestId, Socket, TEXT("meshPath"), MeshPath);
+    if (!MeshPath.IsEmpty() && SafeMeshPath.IsEmpty())
     {
-        SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
-        if (SafeMeshPath.IsEmpty())
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Invalid or unsafe meshPath: %s. Path must be relative to project (e.g., /Game/...)"), *MeshPath),
-                nullptr, TEXT("SECURITY_VIOLATION"));
-            return true;
-        }
+        return true;
     }
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *SafeBlueprintPath);
@@ -139,4 +128,3 @@ bool HandleCreateSplineMeshComponent(
         FString::Printf(TEXT("SplineMeshComponent '%s' added to Blueprint"), *ComponentName), Result);
     return true;
 }
-#endif

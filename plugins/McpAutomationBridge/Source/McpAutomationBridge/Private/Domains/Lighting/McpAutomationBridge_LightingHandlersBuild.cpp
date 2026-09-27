@@ -14,13 +14,8 @@
 #include "GameFramework/WorldSettings.h"
 #include "Lightmass/LightmassImportanceVolume.h"
 
-#if __has_include("Subsystems/LevelEditorSubsystem.h")
-  #include "Subsystems/LevelEditorSubsystem.h"
-#elif __has_include("LevelEditorSubsystem.h")
-  #include "LevelEditorSubsystem.h"
-#endif
+#include "LevelEditorSubsystem.h"
 
-#if WITH_EDITOR
 namespace McpLightingHandlers
 {
 namespace
@@ -81,8 +76,6 @@ bool HandleBuildLighting(
     if (Payload.IsValid())
     {
         Payload->TryGetStringField(TEXT("quality"), Quality);
-        Payload->TryGetBoolField(TEXT("buildOnlySelected"), bBuildOnlySelected);
-        Payload->TryGetBoolField(TEXT("buildReflectionCaptures"), bBuildReflectionCaptures);
     }
 
     if (bBuildOnlySelected)
@@ -230,23 +223,8 @@ bool HandleCreateLightmassVolume(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FVector Location = FVector::ZeroVector;
-    const TSharedPtr<FJsonObject>* LocObj;
-    if (Payload->TryGetObjectField(TEXT("location"), LocObj))
-    {
-        Location.X = GetJsonNumberField((*LocObj), TEXT("x"));
-        Location.Y = GetJsonNumberField((*LocObj), TEXT("y"));
-        Location.Z = GetJsonNumberField((*LocObj), TEXT("z"));
-    }
-
-    FVector Size(1000, 1000, 1000);
-    const TSharedPtr<FJsonObject>* SizeObj;
-    if (Payload->TryGetObjectField(TEXT("size"), SizeObj))
-    {
-        Size.X = GetJsonNumberField((*SizeObj), TEXT("x"));
-        Size.Y = GetJsonNumberField((*SizeObj), TEXT("y"));
-        Size.Z = GetJsonNumberField((*SizeObj), TEXT("z"));
-    }
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    const FVector Size = ExtractVectorField(Payload, TEXT("size"), FVector(1000.0));
 
     AActor* Volume = SpawnActorInActiveWorld<AActor>(
         ALightmassImportanceVolume::StaticClass(), Location, FRotator::ZeroRotator);
@@ -274,4 +252,3 @@ bool HandleCreateLightmassVolume(
 }
 
 }
-#endif

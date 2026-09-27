@@ -1,35 +1,25 @@
 // McpAutomationBridge_GeometrySelection.cpp — triangle selections for the face operators.
 //
-// Dogfood #137: extrude/inset/outset/offset_faces/bevel/chamfer applied to the whole mesh
+// Dogfood #137: extrude/inset/outset/offset_faces/bevel applied to the whole mesh
 // because every handler passed an empty FGeometryScriptMeshSelection. An optional
-// `triangleIndices` (alias `faceIndices`) array now limits the operation to those triangles.
+// `triangleIndices` array now limits the operation to those triangles.
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
-#if WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 #include "GeometryScript/MeshSelectionFunctions.h"
 #include "UDynamicMesh.h"
 
 namespace McpGeometryHandlers
 {
-bool McpBuildTriangleSelection(UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload,
-                               FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection,
-                               FString& OutError)
+static bool BuildTriangleSelection(UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload,
+                                   FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection, FString& OutError)
 {
     bOutHasSelection = false;
-    OutError.Reset();
     const TArray<TSharedPtr<FJsonValue>>* Indices = nullptr;
-    if (!Payload.IsValid() ||
-        (!Payload->TryGetArrayField(TEXT("triangleIndices"), Indices) &&
-         !Payload->TryGetArrayField(TEXT("faceIndices"), Indices)) ||
-        !Indices || Indices->Num() == 0)
+    if (!Payload->TryGetArrayField(TEXT("triangleIndices"), Indices) || Indices->Num() == 0)
     {
         return true; // no selection requested: the operator applies to the whole mesh
-    }
-    if (!Mesh)
-    {
-        OutError = TEXT("triangleIndices given but the dynamic mesh is unavailable");
-        return false;
     }
     TArray<int32> TriangleIds;
     TriangleIds.Reserve(Indices->Num());
@@ -52,6 +42,21 @@ bool McpBuildTriangleSelection(UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>
     bOutHasSelection = true;
     return true;
 }
+
+bool ReadTriangleSelection(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                           UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload,
+                           FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection)
+{
+    FString Error;
+    if (BuildTriangleSelection(Mesh, Payload, OutSelection, bOutHasSelection, Error)) return true;
+    Self->SendAutomationError(Socket, RequestId, Error, TEXT("INVALID_SELECTION"));
+    return false;
+}
+
+double FaceOpDistance(const TSharedPtr<FJsonObject>& Payload, double Default)
+{
+    return GetJsonNumberField(Payload, TEXT("distance"), GetJsonNumberField(Payload, TEXT("amount"), Default));
+}
 } // namespace McpGeometryHandlers
 
-#endif // WITH_EDITOR && MCP_HAS_FULL_GEOMETRY_SCRIPT
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT
