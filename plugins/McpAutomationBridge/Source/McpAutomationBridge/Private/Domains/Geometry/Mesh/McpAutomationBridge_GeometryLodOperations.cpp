@@ -43,7 +43,16 @@ bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FStri
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
 
-    const FString TargetPath = FString::Printf(TEXT("/Game/MCPTest/%s_LOD"), *ActorName);
+    // The bake used to land in a hard-coded /Game/MCPTest folder the caller could
+    // not change; it follows convert_to_static_mesh now (outputPath, else
+    // /Game/GeneratedMeshes).
+    FString TargetPath;
+    FString PathError;
+    if (!ResolveConversionAssetPath(Payload, ActorName + TEXT("_LOD"), TargetPath, PathError))
+    {
+        Self->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
+        return true;
+    }
     FGeometryScriptCreateNewStaticMeshAssetOptions AssetOptions;
     AssetOptions.bEnableRecomputeNormals = true;
     AssetOptions.bEnableRecomputeTangents = true;

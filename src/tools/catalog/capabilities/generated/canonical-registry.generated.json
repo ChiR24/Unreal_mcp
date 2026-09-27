@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cd76ed3185ef8761",
+  "catalogRevision": "c790f4f8d1950874",
   "recordCount": 380,
   "records": [
     {
@@ -52002,6 +52002,10 @@
               "type": "string",
               "description": "Target actor name for boolean operations."
             },
+            "outputPath": {
+              "type": "string",
+              "description": "Where the baked static mesh (the LODs need one) is saved: a folder or a full asset path; default /Game/GeneratedMeshes/<actorName>_LOD."
+            },
             "lodIndex": {
               "type": "integer",
               "description": "Specific LOD index to configure."
@@ -52124,6 +52128,9 @@
             "lodCount": [
               "generate"
             ],
+            "outputPath": [
+              "generate"
+            ],
             "lodIndex": [
               "set_settings"
             ],
@@ -52147,8 +52154,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "04c20c1afb79d49381aeda5fbf96278fa02629e5c49f3a94aadc61b8e8933881",
-        "content": "4ba9cbe0aab520927b0d9f579d5e508933324a40378a09f8d424192a4825bb55"
+        "schema": "23e9c89796ce49134caa7130d6dbfb2912e20874453dc21972640fc5639c34d2",
+        "content": "b5ee02ec93a65708e4d03a10c937c26f381030c2c0cfec776f4d158be1b275f7"
       }
     },
     {

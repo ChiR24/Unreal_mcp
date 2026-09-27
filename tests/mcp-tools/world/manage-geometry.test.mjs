@@ -120,7 +120,7 @@ const testCases = [
   { scenario: 'ACTION: convert_to_static_mesh', toolName: 'manage_geometry', arguments: {"action": "convert_to_static_mesh", "actorName": EDIT_ACTOR, "outputPath": `Game/GeneratedMeshes/TestBox_Static_${ts}`}, expected: 'success' },
   // LOD actions work on a placed static mesh actor: place the mesh just baked.
   { scenario: 'Setup: place baked static mesh', toolName: 'control_actor', arguments: { action: 'spawn', classPath: `/Game/GeneratedMeshes/TestBox_Static_${ts}`, actorName: LOD_ACTOR, location: { x: 400, y: 0, z: 100 } }, expected: 'success' },
-  { scenario: 'ACTION: generate_lods', toolName: 'manage_geometry', arguments: {"action": "generate_lods", "actorName": LOD_ACTOR, "lodCount": 3}, expected: 'success' },
+  { scenario: 'ACTION: generate_lods', toolName: 'manage_geometry', arguments: {"action": "generate_lods", "actorName": LOD_ACTOR, "lodCount": 3, "outputPath": `${TEST_FOLDER}/`}, expected: 'success' },
   { scenario: 'CONFIG: set_lod_settings', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "actorName": LOD_ACTOR, "lodIndex": 1, "reductionPercent": 50, "recomputeNormals": false, "recomputeTangents": false}, expected: 'success' },
   { scenario: 'CONFIG: set_lod_settings triangle percent', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "actorName": LOD_ACTOR, "lodIndex": 1, "trianglePercent": 75}, expected: 'success' },
   { scenario: 'CONFIG: set_lod_screen_sizes', toolName: 'manage_geometry', arguments: {"action": "set_lod_screen_sizes", "actorName": LOD_ACTOR, "screenSizes": [1.0, 0.5, 0.25]}, expected: 'success' },

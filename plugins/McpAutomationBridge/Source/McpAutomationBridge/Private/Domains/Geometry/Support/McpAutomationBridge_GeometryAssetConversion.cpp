@@ -8,8 +8,8 @@ namespace McpGeometryHandlers
 // outputPath names the converted asset (dogfood #135). A folder
 // (trailing '/' or an existing content folder) gets DefaultName appended; anything else
 // is the full asset path. Everything passes the project path sanitizer first.
-static bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, const FString& DefaultName,
-                                       FString& OutAssetPath, FString& OutError)
+bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, const FString& DefaultName,
+                                FString& OutAssetPath, FString& OutError)
 {
     const FString OutRequested = GetJsonStringField(Payload, TEXT("outputPath"));
     if (OutRequested.IsEmpty())

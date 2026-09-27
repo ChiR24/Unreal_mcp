@@ -156,7 +156,7 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'generate_lods', plugins: PLUGIN,
     family: F, summary: 'Generate LODs for a dynamic mesh.', whenToUse: ['LODs must be generated for a mesh.'], whenNotToUse: ['LOD screen sizes must be set; use set_lod_screen_sizes.'],
-    inputProps: { actorName: P.actorName, lodCount: P.lodCount, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { longRunning: true }, costLatency: 'long-running', costResources: 'high',
+    inputProps: { actorName: P.actorName, lodCount: P.lodCount, targetActor: P.targetActor, outputPath: { ...P.outputPath, description: 'Where the baked static mesh (the LODs need one) is saved: a folder or a full asset path; default /Game/GeneratedMeshes/<actorName>_LOD.' } }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { longRunning: true }, costLatency: 'long-running', costResources: 'high',
     exampleInput: { action: 'generate_lods', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
