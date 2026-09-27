@@ -157,6 +157,23 @@ const testCases = [
       { path: 'structuredContent.result.valueCount', equals: 2, label: 'split enum has two values' },
     ],
   },
+  {
+    scenario: 'ENUM: split_enum with an explicit split index',
+    toolName: 'manage_asset',
+    arguments: {
+      action: 'split_enum',
+      enumPath: '${captured:enumPath}',
+      newEnumName: `E_MCP_EnumSplitIdx_${ts}`,
+      values: ['Green'],
+      index: 1,
+      path: TEST_FOLDER,
+      save: false,
+    },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.valueCount', equals: 1, label: 'split enum carries the selected value' },
+    ],
+  },
 
   // === ENUM ERROR PATHS ===
   {

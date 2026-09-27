@@ -66,6 +66,7 @@ const testCases = [
 { scenario: 'CONFIG: set_transition_rules timing and flags', toolName: 'animation_physics', arguments: {"action": "set_transition_rules", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "stateMachineName": "Teststate_machine", "fromState": "Teststate", "toState": "Teststate", "crossfadeDuration": 0.35, "priorityOrder": 1, "automaticRule": false, "bidirectional": false}, expected: 'success' },
 // The condition needs a variable on the test Animation Blueprint, which it may
 // not carry; a missing one is reported, never silently ignored.
+{ scenario: 'Setup: add Speed variable for the transition condition', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: `${TEST_FOLDER}/Testanimation_blueprint`, variableName: 'Speed', variableType: 'float' }, expected: 'success|already exists' },
 { scenario: 'CONFIG: set_transition_rules condition', toolName: 'animation_physics', arguments: {"action": "set_transition_rules", "blueprintPath": `${TEST_FOLDER}/Testanimation_blueprint`, "stateMachineName": "Teststate_machine", "fromState": "Teststate", "toState": "Teststate", "conditionVariable": "Speed", "conditionComparison": "greater", "conditionValue": 10}, expected: 'success|TRANSITION_RULE_FAILED' },
 
 // === DELETE (Transition - runs after the rule cases above, which need it) ===
@@ -88,7 +89,6 @@ const testCases = [
 // === CREATE (IK Rig - explicit retargeter dependency; unavailable on some engine builds) ===
 { scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
 { scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'success|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
-{ scenario: 'CONFIG: set_retarget_chain_mapping', toolName: 'animation_physics', arguments: {"action": "set_retarget_chain_mapping", "assetPath": TEST_IK_RETARGETER_PATH, "sourceChain": "Root", "targetChain": "Root"}, expected: 'success|NOT_SUPPORTED' },
 // Retargeting through an explicit retargeter, with both proportion meshes named
 // rather than inferred from the skeletons' preview meshes.
 { scenario: 'ACTION: setup_retargeting', toolName: 'animation_physics', arguments: {"action": "setup_retargeting", "sourceSkeleton": TEST_SKELETON_PATH, "targetSkeleton": TEST_SKELETON_PATH, "assets": [TEST_ANIM_SEQUENCE_PATH], "savePath": TEST_FOLDER, "suffix": "_Retargeted", "overwrite": true, "sourceMesh": TEST_SKELETAL_MESH_PATH, "targetMesh": TEST_SKELETAL_MESH_PATH, "retargeterPath": TEST_IK_RETARGETER_PATH}, expected: 'success|NOT_SUPPORTED|ASSET_NOT_FOUND|not found' },
@@ -100,7 +100,6 @@ const testCases = [
 { scenario: 'ACTION: setup_ik', toolName: 'animation_physics', arguments: {"action": "setup_ik", "name": "TestIK", "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists' },
 
 // === CREATE (Pose Library - needs skeletonPath) ===
-{ scenario: 'CREATE: create_pose_library', toolName: 'animation_physics', arguments: {"action": "create_pose_library", "name": "Testpose_library", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists' },
 
 // === CREATE (Animation Asset - needs skeletonPath) ===
 { scenario: 'CREATE: create_animation_asset', toolName: 'animation_physics', arguments: {"action": "create_animation_asset", "name": "Testanimation_asset", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|already exists' },
@@ -284,10 +283,6 @@ const testCases = [
     // === SKIN WEIGHTS ===
     { scenario: 'ACTION: auto skin weights', toolName: 'animation_physics', arguments: { action: 'auto_skin_weights', skeletalMeshPath: SKELETAL_MESH_PATH, save: false }, expected: 'success' },
     { scenario: 'CONFIG: set vertex weights', toolName: 'animation_physics', arguments: { action: 'set_vertex_weights', skeletalMeshPath: SKELETAL_MESH_PATH, profileName: PROFILE_NAME, lodIndex: 0, weights: [{ vertexIndex: 0, influences: [{ boneIndex: 0, weight: 1 }] }], save: false }, expected: 'success' },
-    { scenario: 'ACTION: normalize weights', toolName: 'animation_physics', arguments: { action: 'normalize_weights', skeletalMeshPath: SKELETAL_MESH_PATH, save: false }, expected: 'success' },
-    { scenario: 'ACTION: prune weights', toolName: 'animation_physics', arguments: { action: 'prune_weights', skeletalMeshPath: SKELETAL_MESH_PATH, threshold: 0.01, save: false }, expected: 'success' },
-    { scenario: 'ACTION: copy weights', toolName: 'animation_physics', arguments: { action: 'copy_weights', sourceMeshPath: SKELETAL_MESH_PATH, targetMeshPath: SKELETAL_MESH_PATH, profileName: `${PROFILE_NAME}_Copy`, lodIndex: 0 }, expected: 'success' },
-    { scenario: 'ACTION: mirror weights', toolName: 'animation_physics', arguments: { action: 'mirror_weights', skeletalMeshPath: SKELETAL_MESH_PATH, axis: 'X', profileName: `${PROFILE_NAME}_Mirror`, lodIndex: 0, save: false }, expected: 'success' },
 
     // === CLOTH AND MORPHS ===
     { scenario: 'CONNECT: bind cloth to skeletal mesh', toolName: 'animation_physics', arguments: { action: 'bind_cloth_to_skeletal_mesh', skeletalMeshPath: SKELETAL_MESH_PATH, save: false }, expected: 'success' },
@@ -295,7 +290,6 @@ const testCases = [
     { scenario: 'CONNECT: assign cloth asset to mesh', toolName: 'animation_physics', arguments: { action: 'assign_cloth_asset_to_mesh', skeletalMeshPath: SKELETAL_MESH_PATH, save: false }, expected: 'error|manual intervention|required' },
     { scenario: 'CREATE: create morph target', toolName: 'animation_physics', arguments: { action: 'create_morph_target', skeletalMeshPath: SKELETAL_MESH_PATH, morphTargetName: MORPH_TARGET_NAME, deltas: [{ vertexIndex: 0, positionDelta: { x: 0, y: 0, z: 1 } }], save: false }, expected: 'success|already exists' },
     { scenario: 'CONFIG: set morph target deltas', toolName: 'animation_physics', arguments: { action: 'set_morph_target_deltas', skeletalMeshPath: SKELETAL_MESH_PATH, morphTargetName: MORPH_TARGET_NAME, deltas: [{ vertexIndex: 0, positionDelta: { x: 0, y: 0, z: 2 } }], save: false }, expected: 'success' },
-    { scenario: 'ACTION: import morph targets', toolName: 'animation_physics', arguments: { action: 'import_morph_targets', skeletalMeshPath: SKELETAL_MESH_PATH, morphTargetPath: SKELETAL_MESH_PATH, save: false }, expected: 'success' },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

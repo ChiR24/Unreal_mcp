@@ -8,7 +8,6 @@ function context(): GatewayContext {
     {
       isConnected: () => true,
       sendAutomationRequest: async () => ({ success: true }),
-      isCapabilityTokenConfigured: async () => false,
       getAuthority: () => ({ scopes: ['admin'] })
     },
     'describe-execute-parity'

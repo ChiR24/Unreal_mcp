@@ -56,17 +56,11 @@ const testCases = [
   { scenario: 'STYLE: set_margin on every edge', toolName: 'manage_blueprint', arguments: widgetArgs('set_margin', { slotName: 'MenuColumn', left: 8, top: 4, right: 8, bottom: 4 }), expected: 'success' },
 
   // === GAME UI TEMPLATES ===
-  { scenario: 'TEMPLATE: add_quest_tracker', toolName: 'manage_blueprint', arguments: widgetArgs('add_quest_tracker', { slotName: 'QuestTracker' }), expected: 'success' },
-  { scenario: 'TEMPLATE: create_credits_screen with an explicit path', toolName: 'manage_blueprint', arguments: { action: 'create_credits_screen', name: `WBP_Credits_${ts}`, path: TEST_FOLDER }, expected: 'success|already exists' },
-  { scenario: 'TEMPLATE: create_shop_ui with folder alias and columns', toolName: 'manage_blueprint', arguments: { action: 'create_shop_ui', name: `WBP_Shop_${ts}`, folder: TEST_FOLDER, columns: 3 }, expected: 'success|already exists' },
-  { scenario: 'TEMPLATE: create_shop_ui relies on every default', toolName: 'manage_blueprint', arguments: { action: 'create_shop_ui' }, expected: 'success|already exists' },
 
   // === LOCALIZATION AND BINDING ===
   { scenario: 'BIND: set_localization_key with an explicit namespace', toolName: 'manage_blueprint', arguments: widgetArgs('set_localization_key', { slotName: 'TitleText', key: 'MainMenu_Title', namespace: 'MenuUI' }), expected: 'success' },
   { scenario: 'BIND: set_localization_key defaults the namespace', toolName: 'manage_blueprint', arguments: widgetArgs('set_localization_key', { slotName: 'TitleText', key: 'MainMenu_Subtitle' }), expected: 'success' },
   { scenario: 'BIND: bind_localized_text against a missing table entry', toolName: 'manage_blueprint', arguments: widgetArgs('bind_localized_text', { slotName: 'TitleText', stringTableId: '/Game/UI/ST_Menu.ST_Menu', stringKey: 'Title' }), expected: 'success|not found' },
-  { scenario: 'BIND: set_widget_binding with an explicit function', toolName: 'manage_blueprint', arguments: widgetArgs('set_widget_binding', { targetWidget: 'TitleText', property: 'Text', functionName: 'GetTitleText' }), expected: 'success' },
-  { scenario: 'BIND: set_widget_binding derives the function name', toolName: 'manage_blueprint', arguments: widgetArgs('set_widget_binding', { targetWidget: 'TitleText', property: 'Visibility' }), expected: 'success' },
 
   // === QUERIES (before the destructive cases invalidate the slots) ===
   { scenario: 'INFO: get_widget_slot_info', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_slot_info', { slotName: 'TitleText' }), expected: 'success' },

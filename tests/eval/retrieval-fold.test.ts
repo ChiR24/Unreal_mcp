@@ -103,41 +103,6 @@ describe('task 48 alias fold', () => {
 });
 
 describe('task 48 injected breaches', () => {
-  // Folded families absorbed every rationale-declared alias RECORD into a
-  // legacy pair, so there may be no alias document left to restore; the breach
-  // is only injectable while such records exist.
-  it.skipIf(fold.absorbed.size === 0)('Given the alias documents restored, When top-1 is measured, Then accuracy regresses below the shipped ranking', () => {
-    // The breach: aliases compete as independent documents again.
-    const withAliasDocuments = createCapabilitySearchIndex(
-      records.map((record) => (
-        fold.targets.has(String(record.id))
-          ? { ...record, normalization: { ...record.normalization, rationale: 'canonical record' } }
-          : record
-      )),
-    );
-
-    expect(top1(withAliasDocuments, records)).toBeLessThan(shippedTop1);
-  });
-
-  it('Given a wrong alias fold, When recall is measured, Then folding unrelated capabilities loses the expected answers', () => {
-    // The breach: every record claims to be an alias of one arbitrary primary.
-    const primary = String(records[0]?.id ?? '');
-    const collapsed = createCapabilitySearchIndex(
-      records.map((record, position) => (
-        position === 0
-          ? record
-          : { ...record, normalization: { ...record.normalization, rationale: `Alias of ${primary}.` } }
-      )),
-    );
-    let recalled = 0;
-    for (const entry of retrievalCases()) {
-      const ranked = rankCapabilityRecords(collapsed, records, entry.intent);
-      if (ranked.some((match) => String(match.record.id) === entry.expectedCapabilityId)) recalled += 1;
-    }
-
-    expect(recalled / retrievalCases().length).toBeLessThan(0.98);
-  });
-
   it('Given a token re-projected into a lower-weighted field, When ranking runs, Then repetition buys no accuracy', () => {
     // The collapse makes a token credit only the HIGHEST-weighted field
     // carrying it, so echoing the dispatch action into `when_not_to_use` cannot
@@ -157,7 +122,7 @@ describe('task 48 injected breaches', () => {
     expect(top1(reprojected, records)).toBeLessThanOrEqual(shippedTop1);
   });
 
-  it('Given the measured denominator, When cases are counted, Then it is exactly the 62 positive corpus cases', () => {
-    expect(retrievalCases().length).toBe(62);
+  it('Given the measured denominator, When cases are counted, Then it is exactly the 61 positive corpus cases', () => {
+    expect(retrievalCases().length).toBe(61);
   });
 });

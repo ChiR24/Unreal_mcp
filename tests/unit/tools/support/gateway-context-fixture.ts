@@ -12,11 +12,6 @@ import type { AutomationRequestBridge, ITools } from '../../../../src/types/tool
 
 export function gatewayTools(automationBridge: AutomationRequestBridge): ITools {
   return {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: true }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) },
     automationBridge
   };
 }
@@ -28,7 +23,6 @@ export function gatewayContext(
   return {
     tools: gatewayTools(automationBridge),
     logger: new Logger(loggerName, 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => true
   };
 }

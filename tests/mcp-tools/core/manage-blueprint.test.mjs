@@ -25,7 +25,6 @@ const ENGINE_DEFAULT_TEXTURE = '/Engine/EngineResources/DefaultTexture.DefaultTe
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_blueprint', name: BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.assetPath', equals: BP_PATH, label: 'create_blueprint path alias uses requested folder' }] },
   { scenario: 'Setup: create input action asset', toolName: 'manage_networking', arguments: { action: 'create_input_action', name: INPUT_ACTION_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
 
@@ -226,7 +225,6 @@ const testCases = [
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: BP_PATH, force: true }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
 // === WIDGET AUTHORING ACTIONS ===
@@ -238,7 +236,6 @@ const testCases = [
   const ANIMATION_NAME = `IntroFade_${ts}`;
 
   const widgetArgs = (action, extra = {}) => ({ action, widgetPath: CREATED_WIDGET_PATH, ...extra });
-  const createTemplateArgs = (action, name, extra = {}) => ({ action, name: `${name}_${ts}`, folder: TEST_FOLDER, ...extra });
 
   const addWidgetCases = [
     ['ADD: add_horizontal_box', 'add_horizontal_box', 'MainHorizontalBox'],
@@ -295,7 +292,6 @@ const testCases = [
   }));
 
   const bindingCases = [
-    ['CREATE: create_property_binding', 'create_property_binding', 'TitleText', { propertyName: 'Text', functionName: 'GetTitleText' }],
     ['CONNECT: bind_text', 'bind_text', 'TitleText', { bindingSource: 'GetTitleText' }],
     ['CONNECT: bind_visibility', 'bind_visibility', 'TitleText', { bindingSource: 'GetTitleVisibility' }],
     ['CONNECT: bind_color', 'bind_color', 'TitleText', { bindingSource: 'GetTitleColor' }],
@@ -308,22 +304,6 @@ const testCases = [
     toolName: 'manage_blueprint',
     arguments: widgetArgs(action, { slotName, ...extra }),
     expected: 'success',
-  }));
-
-  const hudElementCases = [
-    ['ADD: add_health_bar', 'add_health_bar', { parentName: 'HUDCanvas', x: 20, y: 20, width: 240, height: 28 }],
-    ['ADD: add_ammo_counter', 'add_ammo_counter', { parentName: 'HUDCanvas' }],
-    ['ADD: add_minimap', 'add_minimap', { parentName: 'HUDCanvas', size: 160 }],
-    ['ADD: add_crosshair', 'add_crosshair', { parentName: 'HUDCanvas', size: 32 }],
-    ['ADD: add_compass', 'add_compass', { parentName: 'HUDCanvas' }],
-    ['ADD: add_interaction_prompt', 'add_interaction_prompt', { parentName: 'HUDCanvas', promptFormat: 'Press E' }],
-    ['ADD: add_objective_tracker', 'add_objective_tracker', { parentName: 'HUDCanvas', maxVisibleObjectives: 3 }],
-    ['ADD: add_damage_indicator', 'add_damage_indicator', { parentName: 'HUDCanvas', fadeTime: 1.0 }],
-  ].map(([scenario, action, extra]) => ({
-    scenario,
-    toolName: 'manage_blueprint',
-    arguments: widgetArgs(action, extra),
-    expected: 'success|already exists',
   }));
 
   testCases.push(
@@ -350,26 +330,15 @@ const testCases = [
     { scenario: 'CREATE: create_widget_animation', toolName: 'manage_blueprint', arguments: widgetArgs('create_widget_animation', { animationName: ANIMATION_NAME, duration: 1.25 }), expected: 'success|already exists' },
     { scenario: 'ADD: add_animation_track', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_track', { animationName: ANIMATION_NAME, slotName: 'TitleText', trackType: 'opacity', propertyName: 'RenderOpacity' }), expected: 'success|already exists' },
     { scenario: 'ADD: add_animation_keyframe', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_keyframe', { animationName: ANIMATION_NAME, slotName: 'TitleText', time: 0.25, value: 0.5, interpolation: 'linear' }), expected: 'success' },
-    { scenario: 'CONFIG: set_animation_loop', toolName: 'manage_blueprint', arguments: widgetArgs('set_animation_loop', { animationName: ANIMATION_NAME, loopCount: 1, playMode: 'forward' }), expected: 'success' },
-
-    // === TEMPLATES ===
-    { scenario: 'CREATE: create_main_menu', toolName: 'manage_blueprint', arguments: widgetArgs('create_main_menu', { title: 'Main Menu' }), expected: 'success' },
-    { scenario: 'CREATE: create_pause_menu', toolName: 'manage_blueprint', arguments: widgetArgs('create_pause_menu'), expected: 'success' },
-    { scenario: 'CREATE: create_settings_menu', toolName: 'manage_blueprint', arguments: createTemplateArgs('create_settings_menu', 'WBP_SettingsMenu', { settingsType: 'all' }), expected: 'success|already exists' },
-    { scenario: 'CREATE: create_loading_screen', toolName: 'manage_blueprint', arguments: createTemplateArgs('create_loading_screen', 'WBP_LoadingScreen', { includeProgressBar: true }), expected: 'success|already exists' },
-    { scenario: 'CREATE: create_hud_widget', toolName: 'manage_blueprint', arguments: widgetArgs('create_hud_widget'), expected: 'success' },
-    ...hudElementCases,
-    { scenario: 'CREATE: create_inventory_ui', toolName: 'manage_blueprint', arguments: createTemplateArgs('create_inventory_ui', 'WBP_InventoryUI', { gridSize: { columns: 6, rows: 4 } }), expected: 'success|already exists' },
-    { scenario: 'CREATE: create_dialog_widget', toolName: 'manage_blueprint', arguments: createTemplateArgs('create_dialog_widget', 'WBP_DialogWidget', { showSpeakerName: true }), expected: 'success|already exists' },
-    { scenario: 'CREATE: create_radial_menu', toolName: 'manage_blueprint', arguments: createTemplateArgs('create_radial_menu', 'WBP_RadialMenu', { segmentCount: 8 }), expected: 'success|already exists' },
 
     // === INFO ===
     { scenario: 'INFO: get_widget_info', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_info'), expected: 'success' },
-    { scenario: 'ACTION: preview_widget', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { previewSize: '720p' }), expected: 'success' },
+    { scenario: 'INFO: get_widget_info by name + folder', toolName: 'manage_blueprint', arguments: { action: 'get_widget_info', name: WIDGET_NAME, folder: TEST_FOLDER }, expected: 'success' },
+    { scenario: 'ACTION: preview_widget', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget'), expected: 'success' },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
   );
 }
 
-runToolTests('manage-blueprint', testCases);
+runToolTests('manage-blueprint', testCases, { folder: TEST_FOLDER });

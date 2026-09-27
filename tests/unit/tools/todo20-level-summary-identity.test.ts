@@ -14,13 +14,11 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { ALL_UNFOLDED_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/unfolded.js';
+
 const PRIVATE_ROOT = resolve(
   process.cwd(),
   'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private'
-);
-const RECORDS_ROOT = resolve(
-  process.cwd(),
-  'src/tools/catalog/capabilities/records/manage-level'
 );
 
 function read(path: string): string {
@@ -35,7 +33,6 @@ function code(source: string): string {
 
 const levelHandlersInfo = () =>
   read(resolve(PRIVATE_ROOT, 'Domains', 'Level', 'World', 'McpAutomationBridge_LevelHandlersInfo.cpp'));
-const levelOperationsRecord = () => resolve(RECORDS_ROOT, 'operations.data.ts');
 
 describe('Todo 20 BB-018 loaded-branch get_summary emits full map-asset identity', () => {
   it('the loaded branch emits packageName, assetName, objectPath, assetClass and tagsAndValues', () => {
@@ -86,36 +83,16 @@ describe('Todo 20 BB-018 loaded-branch get_summary emits full map-asset identity
 });
 
 describe('Todo 20 BB-018 the get_summary record still declares the full identity set', () => {
-  // Guard against a Wave-2 record shrink: the native projection depends on the
-  // record advertising all 9 output keys.
-  it('manage_level.get_summary outputProps declares all 9 identity keys', () => {
-    const source = read(levelOperationsRecord());
-    const summaryStart = source.indexOf("action: 'get_summary'");
-    expect(summaryStart).toBeGreaterThan(-1);
-    // Slice to the next record boundary so the full outputProps object is in scope.
-    const summaryBlock = source.slice(
-      summaryStart,
-      source.indexOf('buildCoreRecord({', summaryStart)
-    );
-    const outputStart = summaryBlock.indexOf('outputProps:');
-    expect(outputStart).toBeGreaterThan(-1);
-    const outputBlock = summaryBlock.slice(
-      outputStart,
-      summaryBlock.indexOf('normalizationClass', outputStart)
-    );
-
-    for (const key of [
-      'levelPath',
-      'levelName',
-      'actorCount',
-      'loaded',
-      'packageName',
-      'assetName',
-      'objectPath',
-      'assetClass',
-      'tagsAndValues',
-    ]) {
-      expect(outputBlock, `outputProps must declare ${key}`).toContain(key);
-    }
+  // Guard against a record shrink: the native projection depends on the record
+  // advertising all 9 output keys.
+  it('manage_level.get_summary declares all 9 identity keys', () => {
+    const record = ALL_UNFOLDED_CAPABILITY_RECORDS.find((entry) =>
+      entry.legacyIds.some((legacy) => legacy.tool === 'manage_level' && legacy.action === 'get_summary'));
+    expect(record).toBeDefined();
+    const declared = Object.keys(record?.schemas.output.properties ?? {});
+    expect(declared).toEqual(expect.arrayContaining([
+      'levelPath', 'levelName', 'actorCount', 'loaded', 'packageName',
+      'assetName', 'objectPath', 'assetClass', 'tagsAndValues'
+    ]));
   });
 });

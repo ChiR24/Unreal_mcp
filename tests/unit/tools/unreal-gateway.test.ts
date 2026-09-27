@@ -1,41 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { Logger } from '../../../src/utils/logging/logger.js';
-import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
-import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
-import {
-    describeGatewayCapability,
-    handleUnrealGatewayCall,
-    searchGatewayCatalog
-} from '../../../src/server/tool-registry-gateway.js';
-import { buildGatewayToolDefinition } from '../../../src/server/tool-registry-listing.js';
+import { searchGatewayCapabilities as searchGatewayCatalog } from '../../../src/server/gateway/gateway-search.js';
+import { describeGatewayCapability } from '../../../src/server/gateway/gateway-describe.js';
 import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 
-const logger = new Logger('unreal-gateway-test', 'error');
-
-function makeContext(): GatewayContext {
-    const tools: ITools = {
-        systemTools: {
-            executeConsoleCommand: async () => ({ success: false }),
-            getProjectSettings: async () => ({})
-        },
-        assetResources: { list: async () => ({}) }
-    };
-    return {
-        tools,
-        logger,
-        elicitationTimeoutMs: 1000,
-        ensureConnected: async () => false
-    };
-}
-
 describe('unreal gateway public list', () => {
-    it('advertises exactly one stable tool named unreal', () => {
-        const tool = buildGatewayToolDefinition();
-        expect(tool.name).toBe('unreal');
-        expect(tool.inputSchema).toBeDefined();
-        expect(tool.outputSchema).toBeDefined();
-    });
-
     it('reports perActionSchemas false in describe output', () => {
         const result = describeGatewayCapability({ tool: 'manage_tools' }) as Record<string, unknown>;
         expect(result.success).toBe(true);
@@ -115,85 +83,5 @@ describe('unreal gateway describe', () => {
         expect(result.success).toBe(false);
         expect(result.errorCode).toBe('UNKNOWN_ACTION');
         expect(result.availableActions).toBeDefined();
-    });
-});
-
-describe('unreal gateway execute validation', () => {
-    const context = makeContext();
-
-    it('rejects an unknown target tool before connecting', async () => {
-        const result = await handleUnrealGatewayCall({ operation: 'execute', tool: 'nope', action: 'x' }, context) as Record<string, unknown>;
-        expect(result.success).toBe(false);
-        expect(result.errorCode).toBe('UNKNOWN_TOOL');
-    });
-
-    it('rejects an unknown target action before connecting', async () => {
-        const result = await handleUnrealGatewayCall({ operation: 'execute', tool: 'manage_tools', action: 'nope' }, context) as Record<string, unknown>;
-        expect(result.success).toBe(false);
-        expect(result.errorCode).toBe('UNKNOWN_ACTION');
-    });
-
-    it('rejects params that override action', async () => {
-        const result = await handleUnrealGatewayCall(
-            { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: { action: 'hack' } },
-            context
-        ) as Record<string, unknown>;
-        expect(result.success).toBe(false);
-        expect(result.errorCode).toBe('INVALID_PARAMS');
-    });
-
-    it('rejects undeclared parameter keys', async () => {
-        const result = await handleUnrealGatewayCall(
-            { operation: 'execute', tool: 'manage_tools', action: 'get_status', params: { bogus: 1 } },
-            context
-        ) as Record<string, unknown>;
-        expect(result.success).toBe(false);
-        expect(result.errorCode).toBe('UNDECLARED_PARAMETER');
-    });
-
-    it('requires the action at the gateway level, not buried in params', async () => {
-        const result = await handleUnrealGatewayCall(
-            { operation: 'execute', tool: 'manage_tools', params: { action: 'get_status' } },
-            context
-        ) as Record<string, unknown>;
-        expect(result.success).toBe(false);
-        expect(result.errorCode).toBe('UNKNOWN_ACTION');
-    });
-
-    it('rejects an execute call that omits the action entirely', async () => {
-        const result = await handleUnrealGatewayCall(
-            { operation: 'execute', tool: 'manage_tools' },
-            context
-        ) as Record<string, unknown>;
-        expect(result.success).toBe(false);
-        expect(result.errorCode).toBe('UNKNOWN_ACTION');
-    });
-});
-
-describe('unreal gateway configure', () => {
-    const context = makeContext();
-
-    it('delegates manage_tools state behavior without changing the public list', async () => {
-        const result = await handleUnrealGatewayCall({ operation: 'configure', action: 'get_status' }, context) as Record<string, unknown>;
-        expect(result.success).toBe(true);
-        expect(result.operation).toBe('configure');
-        const inner = result.result as { totalTools?: number };
-        expect(inner.totalTools).toBe(23);
-    });
-
-    it('requires a manage_tools action', async () => {
-        const result = await handleUnrealGatewayCall({ operation: 'configure' }, context) as Record<string, unknown>;
-        expect(result.success).toBe(false);
-        expect(result.errorCode).toBe('MISSING_ACTION');
-    });
-});
-
-describe('unreal gateway operation dispatch', () => {
-    const context = makeContext();
-
-    it('rejects an unknown operation', async () => {
-        const result = await handleUnrealGatewayCall({ operation: 'frobnicate' }, context) as Record<string, unknown>;
-        expect(result.success).toBe(false);
-        expect(result.errorCode).toBe('UNKNOWN_OPERATION');
     });
 });

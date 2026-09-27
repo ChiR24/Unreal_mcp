@@ -104,20 +104,6 @@ const testCases = [
       { path: 'structuredContent.data.result.error', includes: 'ASSET_NOT_FOUND', label: 'missing asset reported on set' },
     ],
   },
-
-  // === Intended full positive coverage (NOT executable with current toolset) =============
-  // These document the contract the handler implements and should be enabled once an
-  // FInstancedStruct property can be created/seeded (e.g. a dedicated action or a fixture asset):
-  //
-  //   SETUP: create inner UDS S_MyInner { Score:Int, Label:String }
-  //   SETUP: create holder blueprint with a variable typed `Struct:/Script/CoreUObject.FInstancedStruct`
-  //   set_instanced_struct_property { structType: S_MyInner, structValues: { Score:42, Label:'hi' }, bSave:true }
-  //     -> success; result.structType includes 'S_MyInner'; result.saved == true
-  //   get_instanced_struct_property -> success; result.value.structType/structPath/fields round-trip
-  //   set_instanced_struct_property { structValues: {...} } with NO structType
-  //     -> error; result.error == 'MISSING_PARAMETER'
-  //   set_instanced_struct_property { structType: S_MyInner, bSave:false }
-  //     -> success; result.saved == false (save-parity opt-out)
 ];
 
 runToolTests('manage-asset', testCases);

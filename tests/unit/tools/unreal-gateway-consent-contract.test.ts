@@ -40,7 +40,6 @@ function makeContext(scopes: readonly string[] | undefined): GatewayContext {
     {
       isConnected: () => true,
       sendAutomationRequest: async () => ({ success: true }),
-      isCapabilityTokenConfigured: async () => false,
       getAuthority: () => (scopes === undefined ? undefined : { scopes: [...scopes] })
     },
     'consent-contract'
@@ -150,9 +149,8 @@ describe('`params` is declared as an open object map, not an underspecified obje
   it('the native /mcp gateway declares params open too, or the surfaces disagree', () => {
     const cpp = readFileSync(nativeGatewayDefinitionPath, 'utf8');
     expect(cpp.includes('.Object(TEXT("params")')).toBe(true);
-    const paramsBlock = cpp.slice(cpp.indexOf('TryGetObjectField(TEXT("params")'));
     expect(
-      /ParamsProp\)->SetBoolField\(TEXT\("additionalProperties"\), true\)/.test(paramsBlock),
+      cpp.includes('GetObjectField(TEXT("params"))->SetBoolField(TEXT("additionalProperties"), true)'),
       'native params must publish additionalProperties: true like the TypeScript surface'
     ).toBe(true);
   });

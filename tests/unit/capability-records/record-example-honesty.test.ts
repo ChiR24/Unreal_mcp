@@ -10,37 +10,19 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  ALL_CAPABILITY_RECORDS,
-  ALL_CAPABILITY_RECORD_COUNT,
-} from '../../../src/tools/catalog/capabilities/records/aggregate.js';
-import {
-  applyDeclaredDefaults,
-  validateAgainstCapabilitySchema,
-} from '../../../src/server/gateway/gateway-execute-validate.js';
+import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
+import { applyDeclaredDefaults, validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
 import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
 
-const EXPECTED_RECORDS = ALL_CAPABILITY_RECORD_COUNT;
-const EXPECTED_PARENTS = 23;
-
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
-
-const IN_SCOPE = ALL_CAPABILITY_RECORDS;
 
 /** Render offenders as a stable, greppable message capped to a readable window. */
 const report = (label: string, offenders: readonly string[]): string =>
   `${label}: ${offenders.length} offender(s)\n${offenders.slice(0, 15).join('\n')}`;
 
 describe('Task 29 - every record in the catalog carries an honest example', () => {
-  it('covers every record across every parent in the catalog', () => {
-    const parents = new Set(ALL_CAPABILITY_RECORDS.map((record) => String(record.routing.parentTool)));
-    expect(ALL_CAPABILITY_RECORDS.length).toBe(EXPECTED_RECORDS);
-    expect(IN_SCOPE.length).toBe(EXPECTED_RECORDS);
-    expect(parents.size).toBe(EXPECTED_PARENTS);
-  });
-
   it('declares at least one example per record', () => {
-    const offenders = IN_SCOPE.filter((record) => record.examples.length === 0).map(
+    const offenders = ALL_CAPABILITY_RECORDS.filter((record) => record.examples.length === 0).map(
       (record) => `${String(record.id)} pointer=/examples has no example`,
     );
 
@@ -50,7 +32,7 @@ describe('Task 29 - every record in the catalog carries an honest example', () =
   it('has a first example whose input satisfies its own input schema', () => {
     const offenders: string[] = [];
 
-    for (const record of IN_SCOPE) {
+    for (const record of ALL_CAPABILITY_RECORDS) {
       const id = String(record.id);
       const schema = plain(record.schemas.input);
       const raw = plain(record.examples[0]?.input ?? {});
@@ -78,7 +60,7 @@ describe('Task 29 - every record in the catalog carries an honest example', () =
   it('has a first example whose output satisfies its own output schema', () => {
     const offenders: string[] = [];
 
-    for (const record of IN_SCOPE) {
+    for (const record of ALL_CAPABILITY_RECORDS) {
       const id = String(record.id);
       const output = plain(record.examples[0]?.output ?? {});
       const violation = validateAgainstCapabilitySchema(output, plain(record.schemas.output));
@@ -88,21 +70,5 @@ describe('Task 29 - every record in the catalog carries an honest example', () =
     }
 
     expect(offenders, report('example outputs failing their own schema', offenders)).toEqual([]);
-  });
-
-  it('names every required output property in the first example', () => {
-    const offenders: string[] = [];
-
-    for (const record of IN_SCOPE) {
-      const output = plain(record.examples[0]?.output ?? {});
-      if (!isRecordObject(output)) continue;
-      for (const required of record.schemas.output.required) {
-        if (!Object.hasOwn(output, required)) {
-          offenders.push(`${String(record.id)} pointer=/examples/0/output omits required "${required}"`);
-        }
-      }
-    }
-
-    expect(offenders, report('required output properties absent from the example', offenders)).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -205,4 +205,11 @@ describe('plugin security contracts', () => {
     expect(renderTargetSource).not.toContain('Width > 16384');
   });
 
+  it('never calls UPackage::SavePackage outside the Safety wrappers', () => {
+    const root = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source');
+    const offenders = readdirSync(root, { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.cpp') || file.endsWith('.h'))
+      .filter((file) => readFileSync(resolve(root, file), 'utf8').includes('UPackage::SavePackage'));
+    expect(offenders).toEqual([]);
+  });
 });

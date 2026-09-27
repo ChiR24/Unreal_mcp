@@ -2,6 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import { expectedCondition as conditionFromExpectation, splitExpectedConditions } from './expectation-utils.mjs';
@@ -743,6 +744,22 @@ export function summarizeResponseForReport(response) {
   };
 }
 
+// The consent grant a {tool}.{action}'s record demands, or undefined when it demands none. The test author is the
+// acknowledging human, so a call without its own `consent` carries this one; `consent: null` sends none.
+let consentByAction;
+function recordConsent(tool, action) {
+  if (consentByAction === undefined) {
+    const registryPath = path.join(repoRoot, 'src/tools/catalog/capabilities/generated/canonical-registry.generated.json');
+    consentByAction = new Map();
+    for (const record of JSON.parse(readFileSync(registryPath, 'utf8')).records) {
+      if (record.policy.consent === 'none') continue;
+      const grant = { capability: record.id, acknowledge: record.policy.consent };
+      for (const legacy of record.legacyIds) consentByAction.set(`${legacy.tool}.${legacy.action}`, grant);
+    }
+  }
+  return consentByAction.get(`${tool}.${action}`);
+}
+
 export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
   return async function callToolOnce(callOptions, baseTimeoutMs) {
     const configuredDefault = Number(process.env.UNREAL_MCP_TEST_CALL_TIMEOUT_MS ?? '60000');
@@ -767,55 +784,37 @@ export function createToolCaller(client, { useProgressTimeouts = false } = {}) {
       ? `server timeout: ${serverTimeoutMs}ms, client timeout: ${clientTimeoutMs}ms`
       : `timeout ${clientTimeoutMs}ms`;
 
+    const gatewayCall = callOptions.name === 'unreal'
+      ? callOptions
+      : toGatewayCall(callOptions.name, callOptions.arguments ?? {});
+    // Consent is an execute envelope sibling carried at the CASE level (never
+    // inside `arguments`), so the parameter audit never mistakes it for an
+    // action param. Attach it to whichever form produced the gateway request.
+    const consent = callOptions.consent === undefined && callOptions.name !== 'unreal'
+      ? recordConsent(callOptions.name, callOptions.arguments?.action)
+      : callOptions.consent;
+    if (isRecord(consent)) {
+      gatewayCall.arguments = { ...gatewayCall.arguments, consent };
+    }
+    const outgoing = withServerTimeout(gatewayCall, serverTimeoutMs);
+    const callTarget = outgoing.name === 'unreal' && typeof outgoing.arguments?.tool === 'string'
+      ? `${outgoing.name}:${outgoing.arguments.tool}`
+      : outgoing.name;
+    console.log(`[CALL] ${callTarget} (${timeoutLabel})`);
+    const callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
+
+    let timeoutId;
+    const timeoutPromise = new Promise((_, rej) => {
+      timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${clientTimeoutMs}ms`)), clientTimeoutMs);
+      if (timeoutId && typeof timeoutId.unref === 'function') {
+        timeoutId.unref();
+      }
+    });
+
     try {
-      const gatewayCall = callOptions.name === 'unreal'
-        ? callOptions
-        : toGatewayCall(callOptions.name, callOptions.arguments ?? {});
-      // Consent is an execute envelope sibling carried at the CASE level (never
-      // inside `arguments`), so the parameter audit never mistakes it for an
-      // action param. Attach it to whichever form produced the gateway request.
-      if (isRecord(callOptions.consent)) {
-        gatewayCall.arguments = { ...gatewayCall.arguments, consent: callOptions.consent };
-      }
-      const outgoing = withServerTimeout(gatewayCall, serverTimeoutMs);
-      const callTarget = outgoing.name === 'unreal' && typeof outgoing.arguments?.tool === 'string'
-        ? `${outgoing.name}:${outgoing.arguments.tool}`
-        : outgoing.name;
-      console.log(`[CALL] ${callTarget} (${timeoutLabel})`);
-      let callPromise;
-      try {
-        callPromise = client.callTool(outgoing, undefined, { timeout: clientTimeoutMs });
-      } catch (err) {
-        try {
-          callPromise = client.callTool(outgoing, { timeout: clientTimeoutMs });
-        } catch (inner) {
-          try {
-            callPromise = client.callTool(outgoing);
-          } catch (inner2) {
-            throw inner2 || inner || err;
-          }
-        }
-      }
-
-      let timeoutId;
-      const timeoutPromise = new Promise((_, rej) => {
-        timeoutId = setTimeout(() => rej(new Error(`Local test runner timeout after ${clientTimeoutMs}ms`)), clientTimeoutMs);
-        if (timeoutId && typeof timeoutId.unref === 'function') {
-          timeoutId.unref();
-        }
-      });
-
-      try {
-        return await Promise.race([callPromise, timeoutPromise]);
-      } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-      }
-    } catch (e) {
-      const msg = String(e?.message || e || '');
-      if (msg.includes('Unknown blueprint action')) {
-        return { structuredContent: { success: false, error: msg } };
-      }
-      throw e;
+      return await Promise.race([callPromise, timeoutPromise]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   };
 }
@@ -1054,10 +1053,21 @@ export function resolveCapturedValues(value, capturedValues, onMissingCapture = 
 /**
  * Main test runner function
  */
-export async function runToolTests(toolName, suiteCases) {
+export async function runToolTests(toolName, suiteCases, { folder } = {}) {
+  // `folder` brackets the suite: created first, deleted last.
+  const bracketed = folder === undefined ? suiteCases : [
+    { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: folder }, expected: 'success|already exists' },
+    ...suiteCases,
+    { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: folder, force: true }, expected: 'success|not found' },
+  ];
+  // The parameter audit imports every suite to read its cases without running them.
+  if (Array.isArray(globalThis.__capturedToolSuites)) {
+    globalThis.__capturedToolSuites.push({ name: toolName, cases: bracketed });
+    return;
+  }
   // Every folded family's advertised primary runs once, derived from the first
   // case that exercises one of the names it folded (tests/fold-twins.mjs).
-  const testCases = withFoldTwins(suiteCases);
+  const testCases = withFoldTwins(bracketed);
   console.log(`Total test cases: ${testCases.length}`);
   console.log('='.repeat(60));
   console.log('');
@@ -1145,40 +1155,30 @@ export async function runToolTests(toolName, suiteCases) {
     try {
       // Delete test levels
       await callToolOnce({ name: 'manage_level', arguments: { action: 'unload', levelName: 'MainLevel' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_level', arguments: { action: 'unload', levelName: 'TestLevel' } }, 10000).catch(() => {});
 
       // Delete geometry actors
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestBox' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSphere' } }, 5000).catch(() => {});
-      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestCylinder' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'ParentActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'ChildActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavTestActor' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestSpline' } }, 5000).catch(() => {});
-      await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'TestRoad' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'SplineControlPoints' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavLinkProxy_Test' } }, 5000).catch(() => {});
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'SmartNavLink_Test' } }, 5000).catch(() => {});
 
       // Delete test assets (blueprints, materials)
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/BP_Test' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/SplineBP' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestMaterial' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/Parent' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/M_Test' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/ConvertedMesh' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestLandscape' } }, 10000).catch(() => {});
       // Delete asset test artifacts
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestAsset' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestMesh' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/MCPTest/TestMat' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete', path: '/Game/MCPTest/TestInstance', force: true } }, 10000).catch(() => {});
 
       // Delete foliage types
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Grass' } }, 10000).catch(() => {});
       await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Tree' } }, 10000).catch(() => {});
-      await callToolOnce({ name: 'manage_asset', arguments: { action: 'delete_asset', path: '/Game/Foliage/Bush' } }, 10000).catch(() => {});
 
       // Delete NavMeshBoundsVolume
       await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'NavMeshBoundsVolume' } }, 5000).catch(() => {});
@@ -1264,36 +1264,6 @@ export async function runToolTests(toolName, suiteCases) {
         }
       }, { maxRetries: 3, timeoutMs: 20000, operationName: 'create BP_Test blueprint' }).catch(err => console.warn('⚠️  BP_Test may already exist:', err?.message || err));
 
-      // Create Test Material
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'create_material',
-          name: 'TestMaterial',
-          path: '/Game/MCPTest'
-        }
-      }, 15000).catch(err => console.warn('⚠️  TestMaterial may already exist:', err?.message || err));
-
-      // Create Parent Material for create_material_instance tests
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'create_material',
-          name: 'Parent',
-          path: '/Game/MCPTest'
-        }
-      }, 15000).catch(err => console.warn('⚠️  Parent material may already exist:', err?.message || err));
-
-      // Create M_Test Material for material authoring tests
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'create_material',
-          name: 'M_Test',
-          path: '/Game/MCPTest'
-        }
-      }, 15000).catch(err => console.warn('⚠️  M_Test material may already exist:', err?.message || err));
-
       // === Asset Test Setup for manage_asset tests ===
       // Create TestMat material for material graph/stats tests
       await callToolOnce({
@@ -1304,29 +1274,6 @@ export async function runToolTests(toolName, suiteCases) {
           path: '/Game/MCPTest'
         }
       }, 15000).catch(err => console.warn('⚠️  TestMat material may already exist:', err?.message || err));
-
-      // Create TestInstance material instance for reset_instance_parameters tests
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'create_material_instance',
-          name: 'TestInstance',
-          parentMaterial: '/Game/MCPTest/Parent',
-          path: '/Game/MCPTest'
-        }
-      }, 15000).catch(err => console.warn('⚠️  TestInstance material instance may already exist:', err?.message || err));
-
-      // Create TestAsset by duplicating an engine cube mesh
-      // This is needed for duplicate/rename/move/get_dependencies/validate etc. tests
-      // Use /Engine/EngineMeshes/Cube (exists in UE 5.3-5.7) instead of /Engine/BasicShapes/Cube (doesn't exist)
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: {
-          action: 'duplicate',
-          sourcePath: '/Engine/EngineMeshes/Cube',
-          destinationPath: '/Game/MCPTest/TestAsset'
-        }
-      }, 15000).catch(err => console.warn('⚠️  TestAsset may already exist:', err?.message || err));
 
       // Create TestMesh for generate_lods and nanite_rebuild_mesh tests
       await callToolOnce({
@@ -1368,16 +1315,6 @@ export async function runToolTests(toolName, suiteCases) {
         }
       }, 15000).catch(err => console.warn('⚠️  Tree foliage type may already exist:', err?.message || err));
 
-      // Create Bush foliage type for procedural foliage tests
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: {
-          action: 'add_foliage_type',
-          name: 'Bush',
-          meshPath: '/Engine/BasicShapes/Sphere',
-          density: 75
-        }
-      }, 15000).catch(err => console.warn('⚠️  Bush foliage type may already exist:', err?.message || err));
       // === End Foliage Setup ===
 
       // === Geometry Setup for manage_geometry tests ===
@@ -1393,11 +1330,6 @@ export async function runToolTests(toolName, suiteCases) {
         arguments: { action: 'create_sphere', name: 'TestSphere', radius: 50, segments: 16 }
       }, 15000).catch(err => console.warn('⚠️  TestSphere may already exist:', err?.message || err));
 
-      // Create TestCylinder for additional geometry tests
-      await callToolOnce({
-        name: 'manage_geometry',
-        arguments: { action: 'create_cylinder', name: 'TestCylinder', radius: 50, height: 100, segments: 16 }
-      }, 15000).catch(err => console.warn('⚠️  TestCylinder may already exist:', err?.message || err));
       // === End Geometry Setup ===
 
       // === Navigation Setup for manage_ai navigation tests ===
@@ -1450,59 +1382,9 @@ export async function runToolTests(toolName, suiteCases) {
         arguments: { action: 'create_spline_actor', actorName: 'TestSpline', location: {x:0,y:0,z:0} }
       }, 15000).catch(err => console.warn('⚠️  TestSpline may already exist:', err?.message || err));
 
-      // Create template spline actors for specialized spline tests
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_road_spline', actorName: 'TestRoad', location: {x:500,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestRoad may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_river_spline', actorName: 'TestRiver', location: {x:1000,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestRiver may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_fence_spline', actorName: 'TestFence', location: {x:1500,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestFence may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_wall_spline', actorName: 'TestWall', location: {x:2000,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestWall may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_cable_spline', actorName: 'TestCable', location: {x:2500,y:0,z:100} }
-      }, 15000).catch(err => console.warn('⚠️  TestCable may already exist:', err?.message || err));
-
-      await callToolOnce({
-        name: 'build_environment',
-        arguments: { action: 'create_pipe_spline', actorName: 'TestPipe', location: {x:3000,y:0,z:0} }
-      }, 15000).catch(err => console.warn('⚠️  TestPipe may already exist:', err?.message || err));
-
-      // Create SplineBP blueprint for create_spline_mesh_component tests
-      // Note: create_blueprint creates directly under path, so /Game/ creates /Game/SplineBP
-      await callToolOnce({
-        name: 'manage_blueprint',
-        arguments: { action: 'create_blueprint', name: 'SplineBP', path: '/Game' }
-      }, 15000).catch(err => console.warn('⚠️  SplineBP may already exist:', err?.message || err));
       // === End Spline Setup ===
 
       // === Level Structure Setup for manage_level_structure tests ===
-      // Create TestLevel for level blueprint and level instance tests
-      // Use retry logic for level creation due to Intel GPU driver instability
-      await callWithRetry({
-        name: 'manage_level_structure',
-        arguments: {
-          action: 'create_level',
-          levelName: 'TestLevel',
-          levelPath: '/Game/MCPTest',
-          bCreateWorldPartition: false,
-          save: true
-        }
-      }, { maxRetries: 5, timeoutMs: 20000, operationName: 'create TestLevel' }).catch(err => console.warn('⚠️  TestLevel creation failed after retries:', err?.message || err));
-
       // Create MainLevel for streaming/sublevel tests
       await callWithRetry({
         name: 'manage_level_structure',
@@ -1515,15 +1397,6 @@ export async function runToolTests(toolName, suiteCases) {
         }
       }, { maxRetries: 5, timeoutMs: 20000, operationName: 'create MainLevel' }).catch(err => console.warn('⚠️  MainLevel creation failed after retries:', err?.message || err));
 
-      // Create DataLayers folder for data layer tests
-      await callToolOnce({
-        name: 'manage_asset',
-        arguments: { action: 'create_folder', path: '/Game/MCPTest/DataLayers' }
-      }, 10000).catch(() => { /* Folder may already exist */ });
-
-      // Note: TestLayer creation requires World Partition enabled on the level
-      // and the DataLayerEditorSubsystem to be available. We create it per-test
-      // with unique names in the test file itself.
       // === End Level Structure Setup ===
 
       console.log('✅ Test assets setup complete\n');
@@ -1640,31 +1513,6 @@ export async function runToolTests(toolName, suiteCases) {
         // Capture results if specified in test case
         if (passed && testCase.captureResult) {
           captureResultValues(testCase, normalizedResponse);
-        }
-
-        // CRITICAL FIX: For performance tests (tests with timeoutMs), if the response
-        // has success=false AND the PRIMARY expectation is success, the test should FAIL.
-        // However, if the PRIMARY expectation is failure (error/not found/etc), then
-        // success=false is the EXPECTED outcome and the test should PASS.
-        // This fixes negative test cases (like delete_object with non-existent actor)
-        // where success=false is the correct expected result.
-        const isPerformanceTest = testCase.arguments?.timeoutMs !== undefined ||
-                                  testCase.scenario?.includes('performance');
-        const responseSuccess = getResponseOutcome(normalizedResponse).structuredSuccess;
-
-        // Check PRIMARY intent - if the test EXPECTS failure, success=false is correct
-        const { primaryExpectsFailure } = getExpectationIntent(testCase.expected || '');
-
-        // Only fail performance test if:
-        // 1. It's a performance test AND
-        // 2. Response shows success=false AND
-        // 3. PRIMARY expectation is NOT failure (test expected success)
-        if (isPerformanceTest && responseSuccess === false && !primaryExpectsFailure) {
-          passed = false;
-          const errorMsg = normalizedResponse?.structuredContent?.error ||
-                          normalizedResponse?.structuredContent?.message ||
-                          'Operation failed during performance test';
-          reason = `Performance test failed: Operation returned success=false. Error: ${errorMsg}`;
         }
 
         const responseSummary = summarizeResponseForReport(normalizedResponse);

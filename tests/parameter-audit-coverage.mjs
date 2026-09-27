@@ -5,6 +5,7 @@ import { extractToolSchemas } from './parameter-audit-schema.mjs';
 import {
   argumentSignature,
   captureTestSuites,
+  caseParameters,
   groupCasesByTool,
   liveReportCases
 } from './parameter-audit-suites.mjs';
@@ -22,7 +23,7 @@ function staticCasesFromSuites(suites) {
         toolName: testCase.toolName,
         action: args.action,
         expected: testCase.expected,
-        parameters: Object.keys(args).filter((key) => key !== 'action').sort(),
+        parameters: caseParameters(args),
         signature: argumentSignature(args)
       });
     }

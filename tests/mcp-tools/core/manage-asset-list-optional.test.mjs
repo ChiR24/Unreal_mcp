@@ -23,7 +23,6 @@ const ts = Date.now();
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: create list-source material A', toolName: 'manage_asset', arguments: { action: 'create_material', name: `M_ListOptA_${ts}`, path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: create list-source material B', toolName: 'manage_asset', arguments: { action: 'create_material', name: `M_ListOptB_${ts}`, path: TEST_FOLDER }, expected: 'success|already exists' },
 
@@ -57,9 +56,6 @@ const testCases = [
     arguments: { action: 'list', path: TEST_FOLDER, recursive: true, pagination: { limit: 2, offset: 0 } },
     expected: 'success'
   },
-
-  // === CLEANUP ===
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('manage-asset-list-optional', testCases);
+runToolTests('manage-asset-list-optional', testCases, { folder: TEST_FOLDER });

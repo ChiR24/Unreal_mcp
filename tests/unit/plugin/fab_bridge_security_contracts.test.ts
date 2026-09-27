@@ -233,20 +233,11 @@ describe('Fab bridge: credentials cannot reach a response or a log', () => {
  * block so the rule cannot silently stop regenerating.
  */
 describe('Fab bridge: mutating console commands are blocked by the console-command policy', () => {
-  it('generated policy contains the Fab command block on both surfaces', () => {
-    const tsPolicy = readFileSync(
-      resolve(here, '../../../src/utils/commands/console-command-policy.generated.ts'),
-      'utf8',
-    );
+  it('the native generated policy blocks the Fab commands as first tokens', () => {
     const nativePolicy = readFileSync(
       resolve(here, '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ConsoleCommand/McpAutomationBridge_ConsoleCommandPolicy.generated.h'),
       'utf8',
     );
-    // The rule id and both command names must appear in the TS mirror...
-    expect(tsPolicy).toContain('both.fab-bridge-console');
-    expect(tsPolicy).toContain('mcp.fab.addtoproject');
-    expect(tsPolicy).toContain('mcp.fab.describecatalogshape');
-    // ...and the native header must carry them as first-token blocked commands.
     expect(nativePolicy).toContain('TEXT("mcp.fab.addtoproject")');
     expect(nativePolicy).toContain('TEXT("mcp.fab.describecatalogshape")');
   });

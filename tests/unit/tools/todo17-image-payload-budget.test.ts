@@ -15,6 +15,11 @@ import { Logger } from '../../../src/utils/logging/logger.js';
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
+import {
+  IMAGE_PAYLOAD_CAPABILITIES,
+  MAX_EXECUTION_RESULT_CHARS,
+  MAX_IMAGE_RESULT_CHARS
+} from '../../../src/server/gateway/gateway-execute-dispatch.js';
 
 // Over the 100k flat cap, far under the 6M image budget: the ONLY thing that can
 // decide these two cases differently is the image exemption itself.
@@ -22,22 +27,18 @@ const PAYLOAD_CHARS = 200_000;
 
 let handlerResult: unknown = { success: true };
 
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async () => handlerResult)
-}));
+const handleConsolidatedToolCall = vi.fn(async (_tool: string, _payload: Record<string, unknown>): Promise<unknown> => handlerResult);
 
 function makeContext(): GatewayContext {
   const tools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
+    automationBridge: {
+      isConnected: () => true,
+      sendAutomationRequest: async (tool: string, payload: Record<string, unknown>) => handleConsolidatedToolCall(tool, payload)
+    }
   } as unknown as ITools;
   return {
     tools,
     logger: new Logger('todo17-image-budget', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => true
   };
 }
@@ -49,9 +50,6 @@ async function executeWithOversizedResult(capability: string): Promise<Record<st
     makeContext()
   )) as Record<string, unknown>;
 }
-
-const dispatch = (): string =>
-  readFileSync(join('src', 'server', 'gateway', 'gateway-execute-dispatch.ts'), 'utf8');
 
 const nativeReceipt = (): string =>
   readFileSync(
@@ -65,7 +63,6 @@ const nativeReceipt = (): string =>
 describe('todo17 BB-062: an indivisible image payload is not refused as pageable', () => {
   it.each([
     'control_editor.screenshot',
-    'control_editor.take_screenshot',
     'system_control.screenshot'
   ])('%s survives a payload the flat cap would refuse', async (capability) => {
     const result = await executeWithOversizedResult(capability);
@@ -74,7 +71,7 @@ describe('todo17 BB-062: an indivisible image payload is not refused as pageable
   });
 
   it('a non-image capability with the SAME payload is still refused', async () => {
-    const result = await executeWithOversizedResult('manage_tools.get_status');
+    const result = await executeWithOversizedResult('asset.list');
 
     // The discriminator: identical bytes, opposite verdict. If the exemption
     // were removed both cases refuse; if it were unscoped neither would.
@@ -84,42 +81,18 @@ describe('todo17 BB-062: an indivisible image payload is not refused as pageable
   });
 });
 
-describe('todo17 BB-062: the exemption is scoped and mirrors the native budget', () => {
-  it('keeps the flat cap as a terminated constant', () => {
-    // Anchored through the semicolon so a widened literal cannot satisfy it.
-    expect(dispatch()).toMatch(/const MAX_EXECUTION_RESULT_CHARS = 100_000;/u);
-  });
-
-  it('raises the image budget to exactly the native figure', () => {
-    expect(dispatch()).toMatch(/const MAX_IMAGE_RESULT_CHARS = 6_000_000;/u);
-    // 6000000 on the native side, same number, different literal spelling.
+describe('todo17 BB-062: the exemption mirrors the native budget', () => {
+  it('uses the native figures', () => {
+    expect(MAX_EXECUTION_RESULT_CHARS).toBe(100_000);
+    expect(MAX_IMAGE_RESULT_CHARS).toBe(6_000_000);
     expect(nativeReceipt()).toMatch(/ResultCharBudget = bIsImagePayload \? 6000000 : 100000;/u);
   });
 
   it('exempts exactly the capabilities the native side names, and no others', () => {
-    const source = dispatch();
-    const set = source.slice(
-      source.indexOf('IMAGE_PAYLOAD_CAPABILITIES'),
-      source.indexOf('export type GatewayContext')
-    );
-    const ids = [...set.matchAll(/'([a-z_]+\.[a-z_]+)'/gu)].map((match) => match[1]);
-
-    expect(ids).toEqual(['control_editor.screenshot', 'control_editor.take_screenshot', 'system_control.screenshot']);
-
+    expect([...IMAGE_PAYLOAD_CAPABILITIES]).toEqual(['control_editor.screenshot', 'system_control.screenshot']);
     const native = nativeReceipt();
-    for (const id of ids) {
+    for (const id of IMAGE_PAYLOAD_CAPABILITIES) {
       expect(native).toContain(`CapabilityId == TEXT("${id}")`);
     }
-  });
-
-  it('selects the budget per capability rather than raising it for everyone', () => {
-    const source = dispatch();
-
-    // The membership test must feed the budget, and the budget must feed the
-    // size predicate; a raise applied unconditionally would drop the `has(`.
-    expect(source).toMatch(
-      /const resultCharBudget = IMAGE_PAYLOAD_CAPABILITIES\.has\(record\.id\)\s*\?\s*MAX_IMAGE_RESULT_CHARS\s*:\s*MAX_EXECUTION_RESULT_CHARS;/u
-    );
-    expect(source).toMatch(/serialized\.length > resultCharBudget;/u);
   });
 });

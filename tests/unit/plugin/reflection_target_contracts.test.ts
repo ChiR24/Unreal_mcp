@@ -34,6 +34,12 @@ const objectGet = (): string =>
   privateSource('Domains', 'Property', 'McpAutomationBridge_PropertyHandlersObjectGet.cpp');
 const objectSet = (): string =>
   privateSource('Domains', 'Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+// get/set resolve their target through ResolvePropertyTarget, which runs the
+// first guard; the handlers re-assert it after any component-template re-point.
+const propertyTarget = (): string =>
+  privateSource('Domains', 'Property', 'McpAutomationBridge_PropertyHandlersTarget.cpp');
+const FIRST_GUARD = 'McpPropertyTarget::ResolvePropertyTarget(';
+const HANDLER_GUARD = 'McpSafeReflectionTarget::IsAddressable(RootObject)';
 
 const propertyDomainFiles = (): string[] =>
   readdirSync(resolve(PRIVATE_ROOT, 'Domains/Property'), { encoding: 'utf8' }).filter((entry) =>
@@ -58,9 +64,18 @@ describe('the reflection surface refuses /Script targets', () => {
     expect(source).toMatch(/Outermost\s*==\s*nullptr\s*\)\s*\{\s*return false;/u);
   });
 
+  it('the shared target resolver refuses a /Script target before returning it', () => {
+    const source = propertyTarget();
+    const guardAt = source.indexOf('McpSafeReflectionTarget::IsAddressable(Out.RootObject)');
+    const acceptAt = source.lastIndexOf('return true;');
+    expect(guardAt, 'the resolver must call the guard').toBeGreaterThan(-1);
+    expect(guardAt, 'the guard must run before the resolver hands the target back').toBeLessThan(acceptAt);
+    expect(source).toContain('McpSafeReflectionTarget::DenyCode()');
+  });
+
   it('get_object_property checks the target BEFORE exporting any property', () => {
     const source = objectGet();
-    const guardAt = source.indexOf('McpSafeReflectionTarget::IsAddressable(RootObject)');
+    const guardAt = source.indexOf(FIRST_GUARD);
     const exportAt = source.indexOf('ExportPropertyToJsonValue(');
     expect(guardAt, 'the read path must call the guard').toBeGreaterThan(-1);
     expect(exportAt).toBeGreaterThan(-1);
@@ -71,10 +86,10 @@ describe('the reflection surface refuses /Script targets', () => {
 
   it('get_object_property re-asserts the guard after the component-template reassignment', () => {
     const source = objectGet();
-    const firstGuardAt = source.indexOf('McpSafeReflectionTarget::IsAddressable(RootObject)');
+    const firstGuardAt = source.indexOf(FIRST_GUARD);
     // The Blueprint component-template branch re-points RootObject, so a second
     // guard must sit AFTER the reassignment and before ResolveProperty.
-    const secondGuardAt = source.lastIndexOf('McpSafeReflectionTarget::IsAddressable(RootObject)');
+    const secondGuardAt = source.lastIndexOf(HANDLER_GUARD);
     const reassignAt = source.indexOf('RootObject = CompTemplate;');
     const resolveAt = source.indexOf('McpHandlerUtils::ResolveProperty(');
     expect(firstGuardAt).toBeGreaterThan(-1);
@@ -106,7 +121,7 @@ describe('the reflection surface refuses /Script targets', () => {
 
   it('set_object_property checks the target BEFORE applying any value', () => {
     const source = objectSet();
-    const guardAt = source.indexOf('McpSafeReflectionTarget::IsAddressable(RootObject)');
+    const guardAt = source.indexOf(FIRST_GUARD);
     const applyAt = source.indexOf('ApplyJsonValueToProperty(');
     const persistAt = source.indexOf('RootObject->PostEditChange()');
     expect(guardAt, 'the write path must call the guard').toBeGreaterThan(-1);
@@ -120,8 +135,8 @@ describe('the reflection surface refuses /Script targets', () => {
 
   it('set_object_property re-asserts the guard after the component-template reassignment', () => {
     const source = objectSet();
-    const firstGuardAt = source.indexOf('McpSafeReflectionTarget::IsAddressable(RootObject)');
-    const secondGuardAt = source.lastIndexOf('McpSafeReflectionTarget::IsAddressable(RootObject)');
+    const firstGuardAt = source.indexOf(FIRST_GUARD);
+    const secondGuardAt = source.lastIndexOf(HANDLER_GUARD);
     const reassignAt = source.indexOf('RootObject = CompTemplate;');
     const modifyAt = source.indexOf('RootObject->Modify()');
     expect(firstGuardAt).toBeGreaterThan(-1);
@@ -175,7 +190,8 @@ describe('the reflection surface refuses /Script targets', () => {
     const containerFiles = propertyDomainFiles().filter(
       (file) =>
         file !== 'McpAutomationBridge_PropertyHandlersObjectGet.cpp' &&
-        file !== 'McpAutomationBridge_PropertyHandlersObjectSet.cpp'
+        file !== 'McpAutomationBridge_PropertyHandlersObjectSet.cpp' &&
+        file !== 'McpAutomationBridge_PropertyHandlersTarget.cpp'
     );
     expect(containerFiles.length).toBeGreaterThan(0);
     for (const file of containerFiles) {

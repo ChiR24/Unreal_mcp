@@ -6,7 +6,8 @@
  * stacked edge decorators (Blackboard + CompareBBEntries + Cooldown) on the Selector->Sequence
  * edge, and a root-sentinel decorator, then calls get_tree and asserts the navigable hierarchy,
  * per-edge decorator attribution, multi-selector keyProperties (R16), and the null-RootNode
- * contract. Also asserts the get_ai_info BB enrichment added in PR1a.
+ * contract. Also asserts the get_ai_info BB enrichment and runtime diagnostics, and the two
+ * add_subnode parent rejections (INVALID_PARENT, INVALID_PARENT_FOR_SUBNODE).
  *
  * MUST run via the dev dist (the test runner spawns `node dist/cli.js`) — the Claude Code MCP
  * connection caches session-start TS (memory reference_claude_hook_timing). Build first:
@@ -96,7 +97,10 @@ const testCases = [
     arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
                  parentNodeId: '${captured:rootSelectorId}', subnodeType: 'Service', nodeClass: 'DefaultFocus' },
     expected: 'success',
-    captureResult: { key: 'serviceId', fromField: 'result.nodeId' } },
+    captureResult: { key: 'serviceId', fromField: 'result.nodeId' },
+    assertions: [
+      { path: 'structuredContent.result.nodeClass', equals: 'BTService_DefaultFocus', label: 'service nodeClass echoed back' }
+    ] },
 
   { scenario: 'Service: set BlackboardKey=TargetActor', toolName: 'manage_ai',
     arguments: { action: 'set_node_properties', assetPath: '${captured:btPath}',
@@ -140,6 +144,38 @@ const testCases = [
     arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
                  parentNodeId: 'root', subnodeType: 'Decorator', nodeClass: 'Cooldown' },
     expected: 'success' },
+
+  { scenario: 'Runtime BT diagnostics after the root sentinel subnode', toolName: 'manage_ai',
+    arguments: { action: 'get_ai_info', behaviorTreePath: '${captured:btPath}' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.aiInfo.assignedBlackboard', equals: bbName,
+        label: 'BT reports the bound BlackboardAsset' },
+      { path: 'structuredContent.result.aiInfo.rootGraphBlackboard', equals: bbName,
+        label: 'BT root graph node reports the bound BlackboardAsset' },
+      { path: 'structuredContent.result.aiInfo.rootGraphBlackboardMatchesAssigned', equals: true,
+        label: 'BT root graph BlackboardAsset matches runtime BT BlackboardAsset' },
+      { path: 'structuredContent.result.aiInfo.rootDecoratorCount', equals: 1,
+        label: 'root decorator count propagated to runtime BT' },
+      { path: 'structuredContent.result.aiInfo.rootDecorators', includesObject: { className: 'BTDecorator_Cooldown' },
+        label: 'runtime root decorators include Cooldown' },
+      { path: 'structuredContent.result.aiInfo.services', includesObject: { className: 'BTService_DefaultFocus', selectedBlackboardKey: 'TargetActor' },
+        label: 'runtime service resolved TargetActor key' },
+      { path: 'structuredContent.result.aiInfo.childDecorators', includesObject: { className: 'BTDecorator_Blackboard', selectedBlackboardKey: 'Spotted' },
+        label: 'runtime child decorator resolved Spotted key' }
+    ] },
+
+  // The code is INVALID_PARENT; the reply message reads "Parent node not found: <guid>".
+  { scenario: 'Negative: nonexistent parentNodeId rejects with INVALID_PARENT', toolName: 'manage_ai',
+    arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
+                 parentNodeId: '00000000-0000-0000-0000-000000000000', subnodeType: 'Decorator', nodeClass: 'Cooldown' },
+    expected: 'error|INVALID_PARENT|not found' },
+
+  // A subnode's own GUID as parentNodeId lands on parent-class validation, not "not found".
+  { scenario: 'Negative: subnode GUID as parentNodeId rejects with INVALID_PARENT_FOR_SUBNODE', toolName: 'manage_ai',
+    arguments: { action: 'add_subnode', assetPath: '${captured:btPath}',
+                 parentNodeId: '${captured:bbDecId}', subnodeType: 'Decorator', nodeClass: 'Cooldown' },
+    expected: 'error|INVALID_PARENT_FOR_SUBNODE|cannot host' },
 
   // === get_tree assertions (paths under structuredContent.result.tree.*) ===
   { scenario: 'get_tree returns navigable hierarchy', toolName: 'manage_ai',

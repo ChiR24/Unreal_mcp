@@ -5,12 +5,12 @@
 // a canonical parent tool's union input schema; keeping one copy here means a
 // catalog shape change surfaces once instead of three times.
 
-import { consolidatedToolDefinitions } from '../../../../src/tools/catalog/consolidated-tool-definitions.js';
+import { generatedParentToolDefinitions } from '../../../../src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.js';
 import { isRecord } from '../../../../src/utils/validation/type-guards.js';
 
 /** The first declared action of a canonical parent tool (fallback `'x'`). */
 export function firstAction(toolName: string): string {
-  const def = consolidatedToolDefinitions.find((tool) => tool.name === toolName);
+  const def = generatedParentToolDefinitions.find((tool) => tool.name === toolName);
   const props = isRecord(def?.inputSchema) && isRecord(def.inputSchema.properties) ? def.inputSchema.properties : undefined;
   const action = isRecord(props) ? props.action : undefined;
   const enumArr = isRecord(action) && Array.isArray(action.enum) ? action.enum : [];

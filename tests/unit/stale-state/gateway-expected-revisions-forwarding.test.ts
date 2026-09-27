@@ -1,34 +1,24 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
-import { getGatewayExpectedRevisions } from '../../../src/automation/gateway-contexts.js';
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
-import type { ExpectedRevisions } from '../../../src/tools/catalog/capabilities/semantic/execution-options.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
-import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 import { Logger } from '../../../src/utils/logging/logger.js';
 
-const observed: Array<ExpectedRevisions | undefined> = [];
-
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async () => {
-    observed.push(getGatewayExpectedRevisions());
-    return { success: true, message: 'ok' };
-  })
-}));
+const observed: unknown[] = [];
 
 function context(): GatewayContext {
-  const tools: ITools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: true }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
-  };
   return {
-    tools,
-    logger: new Logger('task-42-expected-revisions', 'error'),
-    elicitationTimeoutMs: 0,
+    tools: {
+      automationBridge: {
+        isConnected: () => true,
+        sendAutomationRequest: async (_action, _payload, options) => {
+          observed.push(options?.expectedRevisions);
+          return { success: true, message: 'ok' };
+        }
+      }
+    },
+    logger: new Logger('expected-revisions-forwarding', 'error'),
     ensureConnected: async () => true
   };
 }
@@ -36,11 +26,10 @@ function context(): GatewayContext {
 afterEach(() => {
   observed.length = 0;
   dynamicToolManager.reset();
-  vi.clearAllMocks();
 });
 
-describe('gateway expected-revisions context', () => {
-  it('activates validated pins only while dispatching the selected capability', async () => {
+describe('gateway expected-revisions forwarding', () => {
+  it('forwards validated pins with the dispatch of the selected capability', async () => {
     const result = await handleUnrealGatewayCall({
       operation: 'execute',
       capability: 'asset.list',
@@ -52,18 +41,9 @@ describe('gateway expected-revisions context', () => {
     expect(observed).toEqual([{ selection: 7, package: 11 }]);
   });
 
-  it('does not leak pins into a later unpinned gateway dispatch', async () => {
-    await handleUnrealGatewayCall({
-      operation: 'execute',
-      capability: 'asset.list',
-      params: {},
-      options: { expectedRevisions: { level: 3 } }
-    }, context());
-    await handleUnrealGatewayCall({
-      operation: 'execute',
-      capability: 'asset.list',
-      params: {}
-    }, context());
+  it('does not carry pins into a later unpinned dispatch', async () => {
+    await handleUnrealGatewayCall({ operation: 'execute', capability: 'asset.list', params: {}, options: { expectedRevisions: { level: 3 } } }, context());
+    await handleUnrealGatewayCall({ operation: 'execute', capability: 'asset.list', params: {} }, context());
 
     expect(observed).toEqual([{ level: 3 }, undefined]);
   });

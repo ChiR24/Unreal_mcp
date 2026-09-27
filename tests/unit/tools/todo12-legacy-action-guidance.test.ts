@@ -25,25 +25,21 @@ const DIVERGENT_FIXTURES = ['asset.create_render_target', 'asset.query_asset'] a
 
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
 
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+const handleConsolidatedToolCall = vi.fn(async (tool: string, args: Record<string, unknown>) => {
     dispatched.push({ tool, args });
     return { success: true, message: 'ok' };
-  })
-}));
+  });
 
 function makeContext(): GatewayContext {
   const tools: ITools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
+    automationBridge: {
+      isConnected: () => true,
+      sendAutomationRequest: async (tool: string, payload: Record<string, unknown>) => handleConsolidatedToolCall(tool, payload)
+    }
   };
   return {
     tools,
     logger: new Logger('todo12-legacy-action-guidance', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => true
   };
 }

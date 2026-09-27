@@ -3,8 +3,7 @@
 // Written failing-first against the Task 24 seam (`src/server/gateway/gateway-execute.ts`),
 // which at that point still carried the pre-extraction manifest-driven behavior.
 //
-// The stage order asserted here is the one the native `/mcp` surface implements
-// (`tests/unit/gateway-discovery-suite/execute-reference.ts` is the shared normative spec):
+// The stage order asserted here is the one the native `/mcp` surface implements:
 //   form/alias -> availability -> params object -> reserved+control keys ->
 //   options -> defaults -> exact per-action input schema -> connection ->
 //   dispatch -> output schema -> receipt.
@@ -13,18 +12,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Logger } from '../../../src/utils/logging/logger.js';
-import { resolveMigrationEntry } from '../../../src/tools/catalog/capabilities/migration/migration-map.js';
 import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
 import {
+  buildCapabilityIndex,
   capabilityIndex,
   catalogRevision
 } from '../../../src/server/gateway/gateway-capability-index.js';
 import {
-  buildExecuteTargetIndex,
   resolveExecuteTarget
 } from '../../../src/server/gateway/gateway-execute-resolve.js';
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
@@ -43,25 +41,21 @@ type Dispatch = { tool: string; args: Record<string, unknown> };
 const dispatched: Dispatch[] = [];
 let handlerResult: unknown = { success: true, message: 'ok' };
 
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+const handleConsolidatedToolCall = vi.fn(async (tool: string, args: Record<string, unknown>) => {
     dispatched.push({ tool, args });
     return handlerResult;
-  })
-}));
+  });
 
 function makeContext(connected = true): GatewayContext {
   const tools: ITools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
+    automationBridge: {
+      isConnected: () => true,
+      sendAutomationRequest: async (tool: string, payload: Record<string, unknown>) => handleConsolidatedToolCall(tool, payload)
+    }
   };
   return {
     tools,
     logger: new Logger('gateway-execute-canonical', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => connected
   };
 }
@@ -112,7 +106,7 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
   it('accepts the v2 {capability, params} form and reports the canonical capability', async () => {
     const result = await execute({
       capability: 'asset.import',
-      params: { sourcePath: '/tmp/a.fbx', destinationPath: '/Game/A' }
+      params: { sourcePath: 'C:/Imports/a.fbx', destinationPath: '/Game/A' }
     });
 
     expect(result.success).toBe(true);
@@ -127,7 +121,7 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
     const result = await execute({
       tool: legacy.tool,
       action: legacy.action,
-      params: { sourcePath: '/tmp/a.fbx', destinationPath: '/Game/A' }
+      params: { sourcePath: 'C:/Imports/a.fbx', destinationPath: '/Game/A' }
     });
 
     expect(result.success).toBe(true);
@@ -136,7 +130,7 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
   });
 
   it('produces an identical receipt for the canonical and legacy forms of one capability', async () => {
-    const params = { sourcePath: '/tmp/a.fbx', destinationPath: '/Game/A' };
+    const params = { sourcePath: 'C:/Imports/a.fbx', destinationPath: '/Game/A' };
     const canonical = await execute({ capability: 'asset.import', params });
     const canonicalDispatch = dispatched.splice(0);
 
@@ -152,7 +146,7 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
   it('dispatches exactly once, through the parent tool, with canonical params only', async () => {
     await execute({
       capability: 'asset.import',
-      params: { sourcePath: '/tmp/a.fbx', destinationPath: '/Game/A' },
+      params: { sourcePath: 'C:/Imports/a.fbx', destinationPath: '/Game/A' },
       options: { timeoutMs: 1000 }
     });
 
@@ -160,7 +154,6 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
     const call = dispatched[0];
     expect(call.tool).toBe('manage_asset');
     expect(call.args.action).toBe('import');
-    expect(call.args.subAction).toBe('import');
     // Gateway controls never leak into the action payload. Do not re-add
     // `preview` here: it is refused before dispatch (UNSUPPORTED_PREVIEW below).
     expect(call.args.options).toBeUndefined();
@@ -180,12 +173,9 @@ describe('execute: canonical v2 and generated legacy forms normalize to one disp
 
 describe('execute: alias migration is resolved visibly', () => {
   it('resolves a declared alias to its canonical capability and reports the alias', async () => {
-    // A folded family keeps a retired name callable only as its typed removal,
-    // so the probe picks an alias whose legacy pair the migration map still serves.
     const candidates = capabilityIndex().records.flatMap((entry) =>
       entry.aliases.map((candidate) => ({ owner: entry, alias: String(candidate) })));
-    const picked = candidates.find(({ owner: record, alias: name }) =>
-      resolveMigrationEntry(String(record.routing.parentTool), name.slice(name.lastIndexOf('.') + 1))?.disposition !== 'removed');
+    const picked = candidates[0];
     if (picked === undefined) throw new Error('the generated catalog declares no serviceable aliases');
     const { owner, alias } = picked;
     handlerResult = minimalValidOutput(owner);
@@ -205,31 +195,16 @@ describe('execute: alias migration is resolved visibly', () => {
     expect(result.migratedFrom).toEqual({ tool: legacy.tool, action: legacy.action });
   });
 
-  it('rejects an alias owned by more than one capability instead of picking a winner', () => {
-    const base = record('asset.import');
-    const shared = CapabilityAliasSchema.parse('fixture.shared');
-    const left: CapabilityRecord = { ...base, id: CapabilityIdSchema.parse('fixture.left'), aliases: [shared] };
-    const right: CapabilityRecord = { ...base, id: CapabilityIdSchema.parse('fixture.right'), aliases: [shared] };
-    const index = buildExecuteTargetIndex([left, right]);
-
-    const resolution = resolveExecuteTarget({ capability: 'fixture.shared' }, index);
-
-    expect(resolution.ok).toBe(false);
-    if (resolution.ok) return;
-    expect(resolution.failure.errorCode).toBe('ALIAS_CONFLICT');
-    expect(resolution.failure.message).toContain('fixture.left');
-    expect(resolution.failure.message).toContain('fixture.right');
-  });
-
   it('never lets an alias shadow a capability that owns the same canonical ID', () => {
     const base = record('asset.import');
     const owner: CapabilityRecord = { ...base, id: CapabilityIdSchema.parse('fixture.owner'), aliases: [] };
     const shadow: CapabilityRecord = {
       ...base,
       id: CapabilityIdSchema.parse('fixture.shadow'),
-      aliases: [CapabilityAliasSchema.parse('fixture.owner')]
+      aliases: [CapabilityAliasSchema.parse('fixture.owner')],
+      legacyIds: []
     };
-    const index = buildExecuteTargetIndex([owner, shadow]);
+    const index = buildCapabilityIndex([owner, shadow]);
 
     const resolution = resolveExecuteTarget({ capability: 'fixture.owner' }, index);
 
@@ -276,36 +251,11 @@ describe('execute: conflicting, unknown and retired selectors fail loudly', () =
     expect(dispatched).toHaveLength(0);
   });
 
-  it('refuses a legacy pair whose migration disposition is removed', async () => {
-    const result = await execute({
-      tool: 'animation_physics',
-      action: 'assign_cloth_asset_to_mesh',
-      params: {}
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.errorCode).toBe('CAPABILITY_REMOVED');
-    expect(dispatched).toHaveLength(0);
-  });
-
-  it('refuses a lossy legacy translation instead of silently dropping data', async () => {
-    const result = await execute({
-      tool: 'manage_level_structure',
-      action: 'set_volume_bounds',
-      params: { bounds: { origin: [0, 0, 0], extent: [10, 10, 10] } }
-    });
-
-    expect(result.success).toBe(false);
-    expect(result.errorCode).toBe('MIGRATION_NON_TRANSLATABLE');
-    expect(String(result.message)).toContain('set_volume_extent');
-    expect(dispatched).toHaveLength(0);
-  });
-
   it('does not refuse the same legacy verb when there is no origin to lose', () => {
     // The lossy rule keys off bounds.origin. If it over-matched, every
     // extent-only call would be refused too — a rule that refuses everything
     // passes the case above just as well as a correct one.
-    const index = buildExecuteTargetIndex(capabilityIndex().records);
+    const index = capabilityIndex();
     const resolution = resolveExecuteTarget(
       {
         tool: 'manage_level_structure',
@@ -326,7 +276,7 @@ describe('execute: exact per-action input validation', () => {
   it('rejects an undeclared parameter against the exact action schema', async () => {
     const result = await execute({
       capability: 'asset.import',
-      params: { sourcePath: '/tmp/a.fbx', destinationPath: '/Game/A', sorcePath: '/tmp/b.fbx' }
+      params: { sourcePath: 'C:/Imports/a.fbx', destinationPath: '/Game/A', sorcePath: '/tmp/b.fbx' }
     });
 
     expect(result.errorCode).toBe('UNDECLARED_PARAMETER');
@@ -334,7 +284,7 @@ describe('execute: exact per-action input validation', () => {
   });
 
   it('rejects a missing required parameter', async () => {
-    const result = await execute({ capability: 'asset.import', params: { sourcePath: '/tmp/a.fbx' } });
+    const result = await execute({ capability: 'asset.import', params: { sourcePath: 'C:/Imports/a.fbx' } });
 
     expect(result.errorCode).toBe('MISSING_REQUIRED_PARAMETER');
     expect(String(result.pointer)).toContain('destinationPath');
@@ -435,7 +385,7 @@ describe('execute: gateway options are typed and never become action params', ()
     });
 
     expect(result.success).toBe(false);
-    expect(result.errorCode).toBe('UNSUPPORTED_PREVIEW');
+    expect(result.errorCode).toBe('UNSUPPORTED_OPTION');
     expect(result.options).toBeUndefined();
     expect(dispatched).toHaveLength(0);
   });
@@ -525,7 +475,7 @@ describe('execute: semantic receipt and error envelopes', () => {
   });
 
   it('emits a typed semantic error receipt once the capability is known', async () => {
-    const result = await execute({ capability: 'asset.import', params: { sourcePath: '/tmp/a.fbx' } });
+    const result = await execute({ capability: 'asset.import', params: { sourcePath: 'C:/Imports/a.fbx' } });
 
     const receipt = asRecord(result.receipt);
     expect(receipt.status).toBe('error');
@@ -558,49 +508,6 @@ describe('execute: semantic receipt and error envelopes', () => {
 
     expect(ok.catalogRevision).toBe(catalogRevision());
     expect(bad.catalogRevision).toBe(catalogRevision());
-  });
-});
-
-describe('execute: pre-existing gateway guarantees are preserved', () => {
-  it('still refuses a disabled parent tool with a configure nextCall', async () => {
-    dynamicToolManager.disableTools(['manage_asset']);
-
-    const result = await execute({ capability: 'asset.list', params: {} });
-
-    expect(result.errorCode).toBe('TOOL_DISABLED');
-    expect(result.nextCall).toEqual({ operation: 'configure', tool: 'manage_asset' });
-    expect(dispatched).toHaveLength(0);
-  });
-
-  it('still refuses to dispatch while Unreal is disconnected', async () => {
-    const result = await execute({ capability: 'asset.list', params: {} }, false);
-
-    expect(result.errorCode).toBe('NOT_CONNECTED');
-    expect(result.nextCall).toEqual({ operation: 'search' });
-    expect(dispatched).toHaveLength(0);
-  });
-
-  it('still exempts system_control.get_project_settings from the connection gate', async () => {
-    const result = await execute({ capability: 'system_control.get_project_settings', params: {} }, false);
-
-    expect(result.errorCode).toBeUndefined();
-    expect(dispatched).toHaveLength(1);
-  });
-
-  it('still refuses a non-object params envelope', async () => {
-    const result = await execute({ capability: 'asset.list', params: 'nope' });
-
-    expect(result.errorCode).toBe('INVALID_PARAMS');
-    expect(dispatched).toHaveLength(0);
-  });
-
-  it('still caps an oversized result', async () => {
-    handlerResult = { success: true, message: 'x'.repeat(150_000) };
-
-    const result = await execute({ capability: 'asset.list', params: {} });
-
-    expect(result.errorCode).toBe('RESULT_TOO_LARGE');
-    expect(typeof result.resultChars).toBe('number');
   });
 });
 

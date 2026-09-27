@@ -14,15 +14,18 @@ const projectImportSource = path.join(
 );
 const relativeImportSource = `Saved/mcp-manage-asset-${ts}.obj`;
 
-fs.mkdirSync(path.dirname(projectImportSource), { recursive: true });
-fs.writeFileSync(projectImportSource, [
-  'o MCPManageAssetImport',
-  'v 0 0 0',
-  'v 0 100 0',
-  'v 100 0 0',
-  'f 1 2 3',
-  ''
-].join('\n'));
+// The parameter audit imports this suite only to read its cases; it must not write the fixture.
+if (!Array.isArray(globalThis.__capturedToolSuites)) {
+  fs.mkdirSync(path.dirname(projectImportSource), { recursive: true });
+  fs.writeFileSync(projectImportSource, [
+    'o MCPManageAssetImport',
+    'v 0 0 0',
+    'v 0 100 0',
+    'v 100 0 0',
+    'f 1 2 3',
+    ''
+  ].join('\n'));
+}
 
 const asset = (name) => `${TEST_FOLDER}/${name}`;
 
@@ -227,7 +230,7 @@ const testCases = [
     { scenario: 'CREATE: create_material_function', toolName: 'manage_asset', arguments: { action: 'create_material_function', name: FUNCTION_NAME, path: TEST_FOLDER, description: 'MCP material function test', exposeToLibrary: true }, expected: 'success|already exists' },
     { scenario: 'ADD: add_function_input', toolName: 'manage_asset', arguments: { action: 'add_function_input', functionPath: FUNCTION_PATH, inputName: 'InputColor', inputType: 'Vector3', x: -250, y: 0 }, expected: 'success|already exists' },
     { scenario: 'ADD: add_function_output', toolName: 'manage_asset', arguments: { action: 'add_function_output', functionPath: FUNCTION_PATH, inputName: 'OutputColor', inputType: 'Vector3', x: 250, y: 0 }, expected: 'success|already exists' },
-    { scenario: 'INFO: get_material_function_info', toolName: 'manage_asset', arguments: { action: 'get_material_function_info', functionPath: FUNCTION_PATH }, expected: 'success' },
+    { scenario: 'INFO: get_material_function_info', toolName: 'manage_asset', arguments: { action: 'get_material_function_info', assetPath: FUNCTION_PATH }, expected: 'success' },
     { scenario: 'ACTION: use_material_function', toolName: 'manage_asset', arguments: { action: 'use_material_function', assetPath: MATERIAL_PATH, functionPath: FUNCTION_PATH, x: 350, y: 250 }, expected: 'success' },
 
     // === MATERIAL INSTANCES ===
@@ -275,7 +278,6 @@ const testCases = [
   const NOISE_TEXTURE = `${TEST_FOLDER}/Testnoise_texture`;
   const GRADIENT_TEXTURE = `${TEST_FOLDER}/Testgradient_texture`;
   const PATTERN_TEXTURE = `${TEST_FOLDER}/Testpattern_texture`;
-  const ENGINE_CUBE = '/Engine/EngineMeshes/Cube';
 
   testCases.push(
     // === SETUP ===
@@ -289,21 +291,20 @@ const testCases = [
     { scenario: 'CREATE: create_pattern_texture', toolName: 'manage_asset', arguments: { action: 'create_pattern_texture', name: 'Testpattern_texture', path: TEST_FOLDER, width: 64, height: 64 }, expected: 'success|already exists' },
     { scenario: 'OPTIONAL: create_pattern_texture with patternType', toolName: 'manage_asset', arguments: { action: 'create_pattern_texture', name: `Testpattern_texture_Opt_${ts}`, path: TEST_FOLDER, width: 64, height: 64, patternType: 'Checker' }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_normal_from_height', toolName: 'manage_asset', arguments: { action: 'create_normal_from_height', sourceTexture: NOISE_TEXTURE, name: 'Testnormal_from_height', path: TEST_FOLDER, strength: 1.0 }, expected: 'success|already exists' },
-    { scenario: 'CREATE: create_ao_from_mesh', toolName: 'manage_asset', arguments: { action: 'create_ao_from_mesh', meshPath: ENGINE_CUBE, name: 'Testao_from_mesh', path: TEST_FOLDER, width: 64, height: 64, samples: 8 }, expected: 'success|already exists' },
     // === ACTION ===
     { scenario: 'ACTION: resize_texture', toolName: 'manage_asset', arguments: { action: 'resize_texture', sourcePath: NOISE_TEXTURE, name: `Testresize_texture_${ts}`, path: TEST_FOLDER, newWidth: 32, newHeight: 32 }, expected: 'success' },
-    { scenario: 'ACTION: resize_texture filterMethod Lanczos', toolName: 'manage_asset', arguments: { action: 'resize_texture', sourcePath: NOISE_TEXTURE, name: `Testresize_texture_lanczos_${ts}`, path: TEST_FOLDER, newWidth: 24, newHeight: 24, filterMethod: 'Lanczos', save: false }, expected: 'success' },
+    { scenario: 'ACTION: resize_texture filterMethod Lanczos', toolName: 'manage_asset', arguments: { action: 'resize_texture', sourcePath: NOISE_TEXTURE, name: `Testresize_texture_lanczos_${ts}`, path: TEST_FOLDER, newWidth: 24, newHeight: 24, filterMethod: 'Lanczos' }, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: adjust_levels', toolName: 'manage_asset', arguments: { action: 'adjust_levels', assetPath: NOISE_TEXTURE, inBlack: 0.1, inWhite: 0.9, gamma: 1.0 }, expected: 'success' },
     { scenario: 'CONFIG: adjust_curves', toolName: 'manage_asset', arguments: { action: 'adjust_curves', assetPath: NOISE_TEXTURE, curvePoints: [{ x: 0, y: 0 }, { x: 1, y: 1 }] }, expected: 'success' },
     // === ACTION ===
     { scenario: 'ACTION: blur', toolName: 'manage_asset', arguments: { action: 'blur', assetPath: NOISE_TEXTURE, radius: 1.0 }, expected: 'success' },
-    { scenario: 'ACTION: sharpen', toolName: 'manage_asset', arguments: { action: 'sharpen', assetPath: NOISE_TEXTURE, amount: 0.5 }, expected: 'success' },
+    { scenario: 'ACTION: sharpen', toolName: 'manage_asset', arguments: { action: 'sharpen', assetPath: NOISE_TEXTURE, strength: 0.5 }, expected: 'success' },
     { scenario: 'ACTION: invert', toolName: 'manage_asset', arguments: { action: 'invert', assetPath: NOISE_TEXTURE }, expected: 'success' },
     { scenario: 'ACTION: desaturate', toolName: 'manage_asset', arguments: { action: 'desaturate', assetPath: NOISE_TEXTURE, amount: 0.5 }, expected: 'success' },
-    { scenario: 'ACTION: channel_pack', toolName: 'manage_asset', arguments: { action: 'channel_pack', name: `Testchannel_pack_${ts}`, path: TEST_FOLDER, redTexture: NOISE_TEXTURE, greenTexture: GRADIENT_TEXTURE, blueTexture: PATTERN_TEXTURE, alphaTexture: NOISE_TEXTURE, width: 64, height: 64 }, expected: 'success' },
-    { scenario: 'ACTION: channel_extract', toolName: 'manage_asset', arguments: { action: 'channel_extract', texturePath: NOISE_TEXTURE, channel: 'Red', name: `Testchannel_extract_${ts}` }, expected: 'success' },
-    { scenario: 'ACTION: combine_textures', toolName: 'manage_asset', arguments: { action: 'combine_textures', name: `Testcombine_textures_${ts}`, path: TEST_FOLDER, baseTexture: NOISE_TEXTURE, blendTexture: GRADIENT_TEXTURE, blendMode: 'Multiply', opacity: 0.5 }, expected: 'success' },
+    { scenario: 'ACTION: channel_pack', toolName: 'manage_asset', arguments: { action: 'channel_pack', outputPath: `${TEST_FOLDER}/Testchannel_pack_${ts}`, redTexture: NOISE_TEXTURE, greenTexture: GRADIENT_TEXTURE, blueTexture: PATTERN_TEXTURE, alphaTexture: NOISE_TEXTURE }, expected: 'success' },
+    { scenario: 'ACTION: channel_extract', toolName: 'manage_asset', arguments: { action: 'channel_extract', assetPath: NOISE_TEXTURE, channel: 'R', outputPath: `${TEST_FOLDER}/Testchannel_extract_${ts}` }, expected: 'success' },
+    { scenario: 'ACTION: combine_textures', toolName: 'manage_asset', arguments: { action: 'combine_textures', outputPath: `${TEST_FOLDER}/Testcombine_textures_${ts}`, baseTexture: NOISE_TEXTURE, blendTexture: GRADIENT_TEXTURE, blendType: 'Multiply', opacity: 0.5 }, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: set_compression_settings', toolName: 'manage_asset', arguments: { action: 'set_compression_settings', assetPath: NOISE_TEXTURE, compressionSettings: 'TC_Default' }, expected: 'success' },
     { scenario: 'CONFIG: set_texture_group', toolName: 'manage_asset', arguments: { action: 'set_texture_group', assetPath: NOISE_TEXTURE, textureGroup: 'TEXTUREGROUP_World' }, expected: 'success' },

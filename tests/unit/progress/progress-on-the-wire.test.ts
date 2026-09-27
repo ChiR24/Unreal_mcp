@@ -10,101 +10,31 @@
 // CLIENT's own `_meta.progressToken`, with its original JavaScript type, and
 // that no progress frame is emitted after the tools/call result.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { afterEach, describe, expect, it } from 'vitest';
 import { getMcpRequestContext } from '../../../src/automation/request-context.js';
+import { connectFrames, type Frame, initialize, progressFrames, waitFor } from '../support/in-memory-server.js';
 
-type Frame = Record<string, unknown>;
-
-// Set by each case; the mocked tool handler calls it while the request is still
-// in flight, standing in for an Unreal `progress_update` arriving mid-operation.
 let duringCall: (() => void) | undefined;
 
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', async (importOriginal) => {
-    const actual = await importOriginal<Record<string, unknown>>();
-    return {
-        ...actual,
-        handleConsolidatedToolCall: async () => {
-            duringCall?.();
-            return { success: true, operation: 'execute', message: 'done' };
-        },
-    };
-});
-
-const { createServer } = await import('../../../src/server/server-factory.js');
-
-interface Harness {
-    readonly frames: Frame[];
-    readonly send: (message: Frame) => Promise<void>;
-    readonly built: ReturnType<typeof createServer>;
-    readonly close: () => Promise<void>;
-}
-
+type Harness = Awaited<ReturnType<typeof connectFrames>>;
 const active: Harness[] = [];
 
 async function harness(): Promise<Harness> {
-    vi.stubEnv('MOCK_UNREAL_CONNECTION', 'true');
-    vi.stubEnv('NODE_ENV', 'test');
-
-    const built = createServer();
-    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    const frames: Frame[] = [];
-    clientSide.onmessage = (message: unknown) => {
-        frames.push(message as Frame);
-    };
-    await built.server.connect(serverSide);
-    await clientSide.start();
-
-    const ctx: Harness = {
-        frames,
-        send: (message) => clientSide.send(message as never),
-        built,
-        close: async () => {
-            await clientSide.close();
-            built.automationBridge?.stop();
-            built.bridge?.dispose();
-            built.metricsServer?.close();
-        },
-    };
+    const ctx = await connectFrames(async () => {
+        duringCall?.();
+        return { success: true, operation: 'execute', message: 'done' };
+    });
     active.push(ctx);
+    await initialize(ctx, 'task-44-wire');
     return ctx;
 }
 
-// Deterministic settle: resolve as soon as the awaited frame exists, driven by
-// the event loop rather than a fixed sleep.
-async function waitForFrame(
-    frames: readonly Frame[],
-    match: (frame: Frame) => boolean,
-): Promise<Frame> {
-    for (let attempt = 0; attempt < 2000; attempt += 1) {
-        const found = frames.find(match);
-        if (found) return found;
-        await Promise.resolve();
-        await new Promise<void>((resolve) => setImmediate(resolve));
-    }
-    throw new Error('expected frame never arrived');
-}
+const waitForFrame = (frames: readonly Frame[], match: (frame: Frame) => boolean): Promise<Frame> =>
+    waitFor(() => frames.find(match));
 
 const isResult = (id: number) => (frame: Frame) => frame.id === id && 'result' in frame;
-const progressFrames = (frames: readonly Frame[]): Frame[] =>
-    frames.filter((frame) => frame.method === 'notifications/progress');
 const progressParams = (frames: readonly Frame[]): Record<string, unknown>[] =>
     progressFrames(frames).map((frame) => frame.params as Record<string, unknown>);
-
-async function initialize(ctx: Harness): Promise<void> {
-    await ctx.send({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-            protocolVersion: '2025-11-25',
-            capabilities: {},
-            clientInfo: { name: 'task-44-wire', version: '1.0.0' },
-        },
-    });
-    await waitForFrame(ctx.frames, isResult(1));
-    await ctx.send({ jsonrpc: '2.0', method: 'notifications/initialized' });
-}
 
 async function callWithToken(ctx: Harness, meta: Record<string, unknown> | undefined): Promise<void> {
     await ctx.send({
@@ -123,13 +53,11 @@ async function callWithToken(ctx: Harness, meta: Record<string, unknown> | undef
 afterEach(async () => {
     duringCall = undefined;
     for (const ctx of active.splice(0)) await ctx.close();
-    vi.unstubAllEnvs();
 });
 
 describe('Task 44 — the client sees its own progress token on the wire', () => {
     it('echoes a STRING token back as a string', async () => {
         const ctx = await harness();
-        await initialize(ctx);
         duringCall = () => {
             const requestId = getMcpRequestContext()?.requestId;
             if (requestId) ctx.built.automationBridge.reportRequestProgress(requestId, { progress: 30, total: 100 });
@@ -146,7 +74,6 @@ describe('Task 44 — the client sees its own progress token on the wire', () =>
 
     it('echoes a NUMBER token back as a number, never stringified', async () => {
         const ctx = await harness();
-        await initialize(ctx);
         duringCall = () => {
             const requestId = getMcpRequestContext()?.requestId;
             if (requestId) ctx.built.automationBridge.reportRequestProgress(requestId, { progress: 1 });
@@ -162,7 +89,6 @@ describe('Task 44 — the client sees its own progress token on the wire', () =>
 
     it('emits NO progress frame when the client sent no token', async () => {
         const ctx = await harness();
-        await initialize(ctx);
         duringCall = () => {
             const requestId = getMcpRequestContext()?.requestId;
             if (requestId) ctx.built.automationBridge.reportRequestProgress(requestId, { progress: 50 });
@@ -177,7 +103,6 @@ describe('Task 44 — the client sees its own progress token on the wire', () =>
 
     it('never sends a progress frame after the terminal result', async () => {
         const ctx = await harness();
-        await initialize(ctx);
         let late: (() => void) | undefined;
         duringCall = () => {
             const requestId = getMcpRequestContext()?.requestId;
@@ -200,7 +125,6 @@ describe('Task 44 — the client sees its own progress token on the wire', () =>
 
     it('keeps progress monotonic on the wire', async () => {
         const ctx = await harness();
-        await initialize(ctx);
         duringCall = () => {
             const requestId = getMcpRequestContext()?.requestId;
             if (!requestId) return;

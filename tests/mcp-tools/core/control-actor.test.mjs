@@ -39,8 +39,7 @@ const actorArgs = (action, extra = {}) => ({ action, actorName: MAIN_ACTOR, ...e
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-  { scenario: 'Setup: create actor blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  { scenario: 'Setup: create actor blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
   cubeSpawn('Setup: spawn main test actor', MAIN_ACTOR, { x: 0, y: 0, z: 100 }),
   cubeSpawn('Setup: spawn delete test actor', DELETE_ACTOR, { x: 120, y: 0, z: 100 }),
   cubeSpawn('Setup: spawn destroy test actor', DESTROY_ACTOR, { x: 240, y: 0, z: 100 }),
@@ -56,7 +55,7 @@ const testCases = [
   { scenario: 'CREATE: spawn_actor with meshPath', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: spawn_blueprint', toolName: 'control_actor', arguments: { action: 'spawn_blueprint', blueprintPath: BP_PATH, actorName: BP_ACTOR, location: { x: 240, y: 160, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: spawn_batch with shared defaults, a material and tags', toolName: 'control_actor', arguments: { action: 'spawn_batch', defaults: { classPath: '/Engine/BasicShapes/Cube', folder: 'MCPTest/Batch', tags: [BATCH_TAG] }, actors: [{ actorName: `MCP_BatchCube1_${ts}`, location: [0, 320, 50] }, { actorName: `MCP_BatchCube2_${ts}`, location: [120, 320, 50], materialPath: ENGINE_BASIC_MATERIAL }] }, expected: 'success' },
-  { scenario: 'CREATE: spawn_batch reporting failures only (none here)', toolName: 'control_actor', arguments: { action: 'spawn_batch', report: 'failures', defaults: { classPath: '/Engine/BasicShapes/Cube', folder: 'MCPTest/Batch', tags: [BATCH_TAG] }, actors: [{ actorName: `MCP_BatchCube3_${ts}`, location: { x: 240, y: 320, z: 50 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.spawned', equals: 1, label: 'the item spawned' }, { path: 'structuredContent.result.details.results', length: 0, label: 'a clean batch lists no items' }] },
+  { scenario: 'CREATE: spawn_batch reporting failures only (none here)', toolName: 'control_actor', arguments: { action: 'spawn_batch', report: 'failures', defaults: { classPath: '/Engine/BasicShapes/Cube', folder: 'MCPTest/Batch', tags: [BATCH_TAG] }, actors: [{ actorName: `MCP_BatchCube3_${ts}`, location: { x: 240, y: 320, z: 50 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.spawned', equals: 1, label: 'the item spawned' }, { path: 'structuredContent.result.results', length: 0, label: 'a clean batch lists no items' }] },
   { scenario: 'QUERY: list narrowed by tag, class and a parent outliner folder', toolName: 'control_actor', arguments: { action: 'list', tag: BATCH_TAG, className: 'StaticMeshActor', folder: 'MCPTest' }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 3, label: 'the three batch cubes, matched by tag, class and the folder above theirs' }] },
   { scenario: 'DELETE: spawn_batch actors by their shared tag', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: BATCH_TAG }, expected: 'success' },
   { scenario: 'DELETE: delete', toolName: 'control_actor', arguments: { action: 'delete', actorName: DELETE_ACTOR }, expected: 'success|not found' },
@@ -68,9 +67,9 @@ const testCases = [
   { scenario: 'ACTION: duplicate', toolName: 'control_actor', arguments: { action: 'duplicate', actorName: DUPLICATE_ACTOR, newName: DUPLICATE_COPY, offset: { x: 50, y: 0, z: 0 } }, expected: 'success|already exists' },
   { scenario: 'CONFIG: set_transform', toolName: 'control_actor', arguments: actorArgs('set_transform', { location: { x: 10, y: 20, z: 130 }, rotation: { x: 0, y: 0, z: 15 }, scale: { x: 1.1, y: 1.1, z: 1.1 } }), expected: 'success' },
   { scenario: 'QUERY: list summary counts the level instead of listing it', toolName: 'control_actor', arguments: { action: 'list', summary: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'no per-actor rows in a summary' }] },
-  { scenario: 'CONFIG: set_transform on many actors, each its own transform', toolName: 'control_actor', arguments: { action: 'set_transform', actors: [{ actorName: MAIN_ACTOR, location: { x: 10, y: 20, z: 130 } }, { actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.movedActors', equals: 2, label: 'both actors moved' }, { path: 'structuredContent.result.details.results.1.location.2', approximately: 120, tolerance: 1, label: 'each item reports its read-back location' }] },
+  { scenario: 'CONFIG: set_transform on many actors, each its own transform', toolName: 'control_actor', arguments: { action: 'set_transform', actors: [{ actorName: MAIN_ACTOR, location: { x: 10, y: 20, z: 130 } }, { actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.movedActors', equals: 2, label: 'both actors moved' }, { path: 'structuredContent.result.results.1.location.2', approximately: 120, tolerance: 1, label: 'each item reports its read-back location' }] },
   { scenario: 'CONFIG: set_transform moves by an offset', toolName: 'control_actor', arguments: actorArgs('set_transform', { offset: [0, 0, 10] }), expected: 'success' },
-  { scenario: 'CONFIG: set_transform shifts a group, each item by its offset', toolName: 'control_actor', arguments: { action: 'set_transform', actors: [{ actorName: MAIN_ACTOR, offset: [0, 0, -10] }, { actorName: MESH_ACTOR, offset: [0, 0, 5] }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.results.1.location.2', approximately: 125, tolerance: 1, label: 'the second item moved from 120 by +5' }] },
+  { scenario: 'CONFIG: set_transform shifts a group, each item by its offset', toolName: 'control_actor', arguments: { action: 'set_transform', actors: [{ actorName: MAIN_ACTOR, offset: [0, 0, -10] }, { actorName: MESH_ACTOR, offset: [0, 0, 5] }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.results.1.location.2', approximately: 125, tolerance: 1, label: 'the second item moved from 120 by +5' }] },
   { scenario: 'ERROR: set_transform refuses location together with offset', toolName: 'control_actor', arguments: actorArgs('set_transform', { location: { x: 10, y: 20, z: 130 }, offset: [0, 0, 10] }), expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ACTION: teleport_actor', toolName: 'control_actor', arguments: actorArgs('teleport_actor', { location: { x: 20, y: 30, z: 140 } }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_location', toolName: 'control_actor', arguments: actorArgs('set_actor_location', { location: { x: 30, y: 40, z: 150 } }), expected: 'success' },
@@ -124,7 +123,7 @@ const testCases = [
 
   // === MISC ===
   { scenario: 'CONFIG: set_blueprint_variables', toolName: 'control_actor', arguments: actorArgs('set_blueprint_variables', { variables: { InitialLifeSpan: 0 } }), expected: 'success' },
-  { scenario: 'CONFIG: set_blueprint_variables on many actors, each its own values', toolName: 'control_actor', arguments: { action: 'set_blueprint_variables', actors: [{ actorName: MAIN_ACTOR, variables: { InitialLifeSpan: 0 } }, { actorName: PARENT_ACTOR, variables: { InitialLifeSpan: 0 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.details.updatedActors', equals: 2, label: 'both actors took their variables' }] },
+  { scenario: 'CONFIG: set_blueprint_variables on many actors, each its own values', toolName: 'control_actor', arguments: { action: 'set_blueprint_variables', actors: [{ actorName: MAIN_ACTOR, variables: { InitialLifeSpan: 0 } }, { actorName: PARENT_ACTOR, variables: { InitialLifeSpan: 0 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.updatedActors', equals: 2, label: 'both actors took their variables' }] },
   { scenario: 'CREATE: create_snapshot', toolName: 'control_actor', arguments: actorArgs('create_snapshot', { snapshotName: `Snapshot_${ts}` }), expected: 'success|already exists' },
   { scenario: 'ACTION: attach', toolName: 'control_actor', arguments: { action: 'attach', childActor: CHILD_ACTOR, parentActor: PARENT_ACTOR }, expected: 'success' },
   { scenario: 'ACTION: detach', toolName: 'control_actor', arguments: { action: 'detach', actorName: CHILD_ACTOR }, expected: 'success' },
@@ -135,7 +134,6 @@ const testCases = [
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, DUPLICATE_COPY, MESH_ACTOR, PARENT_ACTOR, CHILD_ACTOR, BP_ACTOR, `MCP_SpawnSphere_${ts}`, `MCP_SpawnCylinder_${ts}`] }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('control-actor', testCases);
+runToolTests('control-actor', testCases, { folder: TEST_FOLDER });

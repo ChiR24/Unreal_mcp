@@ -18,7 +18,6 @@ import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/m
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
 import { capabilityIndex, catalogRevision } from '../../../src/server/gateway/gateway-capability-index.js';
-import { resolveMigrationEntry } from '../../../src/tools/catalog/capabilities/migration/migration-map.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
 import {
@@ -31,27 +30,23 @@ import { ALL_CAPABILITY_RECORD_COUNT } from '../../../src/tools/catalog/capabili
 
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
 
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+const handleConsolidatedToolCall = vi.fn(async (tool: string, args: Record<string, unknown>) => {
     dispatched.push({ tool, args });
     const action = typeof args.action === 'string' ? args.action : '';
     const record = capabilityIndex().byLegacyPair.get(`${tool}::${action}`);
     return record === undefined ? { success: true } : minimalValidOutput(record);
-  })
-}));
+  });
 
 function makeContext(): GatewayContext {
   const tools: ITools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
+    automationBridge: {
+      isConnected: () => true,
+      sendAutomationRequest: async (tool: string, payload: Record<string, unknown>) => handleConsolidatedToolCall(tool, payload)
+    }
   };
   return {
     tools,
     logger: new Logger('task26-fixtures', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => true
   };
 }
@@ -77,14 +72,9 @@ const records = capabilityIndex().records;
 // A legacy verb the Task 20 migration map retired must never dispatch, so it is
 // partitioned out of the "valid request succeeds" expectation and given its own
 // refusal expectation instead.
-function isRetired(record: CapabilityRecord): boolean {
-  const legacy = record.legacyIds[0];
-  if (legacy === undefined) return false;
-  return resolveMigrationEntry(legacy.tool, legacy.action)?.disposition === 'removed';
-}
-
-const runnable = records.filter((record) => !isRetired(record));
-const retired = records.filter(isRetired);
+// manage_tools runs in process (gateway configure), never through the bridge.
+const runnable = records.filter((record) => record.routing.parentTool !== 'manage_tools');
+const retired: CapabilityRecord[] = [];
 
 beforeEach(() => {
   dispatched.length = 0;
@@ -97,7 +87,7 @@ afterEach(() => {
 describe('generated fixtures: the catalog under test', () => {
   it('covers every generated capability record', () => {
     expect(records).toHaveLength(ALL_CAPABILITY_RECORD_COUNT);
-    expect(runnable.length + retired.length).toBe(records.length);
+    expect(runnable.length + retired.length).toBe(records.filter((record) => record.routing.parentTool !== 'manage_tools').length);
     expect(runnable.length).toBeGreaterThan(300);
   });
 });

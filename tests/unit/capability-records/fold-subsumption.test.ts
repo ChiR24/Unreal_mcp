@@ -6,7 +6,7 @@
 // property whose type disagrees, a required field dropped by intersection),
 // the member's own example fails validation against the folded record here.
 import { describe, expect, it } from 'vitest';
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-execute-validate.js';
+import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
 import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 import { ALL_UNFOLDED_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/unfolded.js';
 

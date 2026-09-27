@@ -96,11 +96,6 @@ describe('todo14 BB-039: sequence set_metadata reaches a registered handler', ()
     expect(declarations).toContain('MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetMetadata)');
   });
 
-  it('stops dispatching a top-level bridge tool no shard registers', () => {
-    const ts = source('src', 'tools', 'handlers', 'sequence', 'sequence-asset-actions.ts');
-    expect(ts).not.toContain("executeAutomationRequest(tools, 'set_metadata'");
-    expect(ts).toContain("subAction: 'set_metadata'");
-  });
 });
 
 describe('todo14 BB-029/BB-057/BB-066: the already-wired rows stay wired', () => {
@@ -119,10 +114,9 @@ describe('todo14 BB-029/BB-057/BB-066: the already-wired rows stay wired', () =>
     expect(byLegacy('system_control', 'console_command').routing.parentTool).toBe('system_control');
   });
 
-  it('native accepts both remove_variable spellings', () => {
+  it('native accepts remove_variable', () => {
     const text = source(PLUGIN_PRIVATE, 'Domains', 'Blueprint', 'Variables',
       'McpAutomationBridge_BlueprintHandlersVariableRemovalRename.cpp');
-    expect(text).toContain('TEXT("blueprint_remove_variable")');
     expect(text).toContain('TEXT("remove_variable")');
   });
 });

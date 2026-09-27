@@ -4,7 +4,9 @@
 // rule the capability's own schema actually declares. Nothing is invented: if a
 // record declares no enum, it contributes no enum case.
 
-import type { CapabilityLike } from './execute-reference.js';
+import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
+
+type CapabilityLike = CapabilityRecord;
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 export const EXECUTE_RULES = [
@@ -194,16 +196,21 @@ export function buildCasesForRecord(record: CapabilityLike): readonly ExecuteCas
       toolEnabled: false,
       expect: { status: 'error', kind: 'execution', gatewayCode: 'TOOL_DISABLED' }
     },
-    {
+  ];
+
+  // Undeclared output fields are dropped by projection, so the violation a
+  // handler can actually cause is a missing required output.
+  if (requiredOf(record.schemas.output).some((name) => name !== 'success')) {
+    cases.push({
       caseId: `${record.id}#output-mismatch`,
       rule: 'output-mismatch',
       capabilityId: record.id,
       params: valid,
       toolEnabled: true,
-      dispatchOutput: { task27UndeclaredOutputField: true },
+      dispatchOutput: { success: true },
       expect: { status: 'error', kind: 'validation', gatewayCode: 'OUTPUT_SCHEMA_VIOLATION' }
-    }
-  ];
+    });
+  }
 
   const properties = propertiesOf(record.schemas.input);
   const required = requiredOf(record.schemas.input).filter((name) => {

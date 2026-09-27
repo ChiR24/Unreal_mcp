@@ -37,22 +37,18 @@ const CAPABILITY_ID = 'control_editor.save_all';
 
 let handlerResult: unknown = { success: true, message: 'ok' };
 
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async () => handlerResult)
-}));
+const handleConsolidatedToolCall = vi.fn(async (_tool: string, _payload: Record<string, unknown>): Promise<unknown> => handlerResult);
 
 function makeContext(): GatewayContext {
   const tools: ITools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
+    automationBridge: {
+      isConnected: () => true,
+      sendAutomationRequest: async (tool: string, payload: Record<string, unknown>) => handleConsolidatedToolCall(tool, payload)
+    }
   };
   return {
     tools,
     logger: new Logger('task43-compensation', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => true
   };
 }

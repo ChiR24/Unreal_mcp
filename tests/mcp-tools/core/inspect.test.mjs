@@ -22,8 +22,7 @@ const inspectActor = (action, extra = {}) => ({ action, actorName: ACTOR, ...ext
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-  { scenario: 'Setup: create inspect blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  { scenario: 'Setup: create inspect blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn inspect actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: ACTOR, location: { x: 0, y: 0, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn delete actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Sphere', actorName: DELETE_ACTOR, location: { x: 180, y: 0, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'Setup: add inspect component', toolName: 'control_actor', arguments: { action: 'add_component', actorName: ACTOR, componentType: '/Script/Engine.PointLightComponent', componentName: COMPONENT, properties: { Intensity: 900 } }, expected: 'success|already exists' },
@@ -81,7 +80,6 @@ const testCases = [
   { scenario: 'DELETE: delete_object', toolName: 'inspect', arguments: { action: 'delete_object', actorName: DELETE_ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete inspect actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete inspect blueprint', toolName: 'manage_asset', arguments: { action: 'delete_asset', assetPath: BP_PATH, force: true }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('inspect', testCases);
+runToolTests('inspect', testCases, { folder: TEST_FOLDER });

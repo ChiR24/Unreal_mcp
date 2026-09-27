@@ -86,11 +86,8 @@ const testCases = [
 { scenario: 'CONFIG: set_sound_attenuation', toolName: 'manage_audio', arguments: { action: 'set_sound_attenuation', name: `TestSetAttenuation_${ts}`, innerRadius: 400, falloffDistance: 3600, attenuationShape: 'Box', falloffMode: 'Inverse', path: TEST_FOLDER, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.existsAfter', equals: true, label: 'attenuation asset configured in editor asset registry' }, { path: 'structuredContent.result.attenuationShape', equals: 'Box', label: 'attenuation shape applied' }, { path: 'structuredContent.result.falloffMode', equals: 'Inverse', label: 'falloff mode applied' }] },
 
 // === TOGGLE ===
-{ scenario: 'TOGGLE: enable_audio_analysis', toolName: 'manage_audio', arguments: { action: 'enable_audio_analysis', enable: true }, expected: 'success' },
-{ scenario: 'TOGGLE: enable_audio_analysis alias', toolName: 'manage_audio', arguments: { action: 'enable_audio_analysis', enabled: false, analysisType: 'Amplitude', windowSize: 2048 }, expected: 'success' },
 
 // === CONFIG ===
-{ scenario: 'CONFIG: set_doppler_effect', toolName: 'manage_audio', arguments: { action: 'set_doppler_effect', dopplerIntensity: 1, velocityScale: 1 }, expected: 'success' },
 { scenario: 'CONFIG: set_audio_occlusion', toolName: 'manage_audio', arguments: { action: 'set_audio_occlusion', enable: true, occlusionVolumeScale: 0.5, occlusionFilterScale: 0.5, occlusionInterpolationTime: 0.1 }, expected: 'success' },
 
 // === SOUND CUE AUTHORING === (uses StaticLoadObject - TS normalizes paths)

@@ -34,7 +34,6 @@ const MUTATED_SKY_INTENSITY = 0.25;
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn test actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: `TestActor_${ts}`, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
   { scenario: 'Setup: spawn environment delete actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: `EnvDeleteActor_${ts}`, location: { x: 150, y: 0, z: 100 } }, expected: 'success' },
 
@@ -150,7 +149,6 @@ const testCases = [
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: `TestActor_${ts}` }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete base foliage type', toolName: 'manage_asset', arguments: { action: 'delete', path: FOLIAGE_TYPE_PATH, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete environment foliage type', toolName: 'manage_asset', arguments: { action: 'delete', path: ENVIRONMENT_FOLIAGE_TYPE_PATH, force: true }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
 // === LIGHTING ACTIONS ===
@@ -293,4 +291,4 @@ const testCases = [
   );
 }
 
-runToolTests('build-environment', testCases);
+runToolTests('build-environment', testCases, { folder: TEST_FOLDER });

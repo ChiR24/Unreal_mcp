@@ -37,25 +37,21 @@ import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/m
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
 let handlerResult: unknown = { success: true, message: 'ok' };
 
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+const handleConsolidatedToolCall = vi.fn(async (tool: string, args: Record<string, unknown>) => {
     dispatched.push({ tool, args });
     return handlerResult;
-  })
-}));
+  });
 
 function makeContext(connected = true): GatewayContext {
   const tools: ITools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
+    automationBridge: {
+      isConnected: () => true,
+      sendAutomationRequest: async (tool: string, payload: Record<string, unknown>) => handleConsolidatedToolCall(tool, payload)
+    }
   };
   return {
     tools,
     logger: new Logger('task39-correlation', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => connected
   };
 }

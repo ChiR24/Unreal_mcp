@@ -42,15 +42,6 @@ const compile = (): string =>
 const helper = (): string =>
   nativeSource('Foundation', 'BridgeHelpers', 'Responses', 'McpAutomationBridgeHelpersMutationEvidence.h');
 
-// Every Interaction file that mutates a Blueprint asset. RuntimeActors and
-// RuntimeComponents are excluded on purpose: they operate on world actors, hold
-// no UBlueprint and never save, so they need ACTOR identity rather than this
-// asset helper. Info.cpp is a read. Both belong to Todo 18 (BB-007/008/009).
-const ASSET_MUTATING = [
-  'Chest', 'Components', 'Destruction', 'Door', 'Interface',
-  'Lever', 'Switch', 'Triggers', 'WidgetEvents'
-] as const;
-
 describe('todo16 BB-045: a widget mutation yields an asset handle', () => {
   it('widgetPath is recognised as canonical asset identity', () => {
     const handles = extractHandles({ success: true, widgetPath: '/Game/UI/WBP_HUD' });
@@ -93,71 +84,47 @@ describe('todo16: identity and changes reach the receipt, and nothing is invente
   });
 });
 
+// Every Interaction Blueprint handler finishes through SendInteractableResult (BlueprintVariables.cpp), which does the
+// save, the "saved" gate, the verification and the evidence stamp for all of them; Interface still finishes inline.
+const SHARED_FINISH = ['Chest', 'Components', 'Door', 'Lever', 'Switch', 'Triggers'] as const;
+const finisher = (): string => {
+  const source = interaction('BlueprintVariables');
+  const start = source.indexOf('void SendInteractableResult(');
+  return source.slice(start, source.indexOf('\n}', start));
+};
+
 describe('todo16 BB-008: every asset-mutating Interaction handler stamps evidence', () => {
-  it.each(ASSET_MUTATING)('%s routes through the shared evidence helper', (name) => {
+  it.each(SHARED_FINISH)('%s finishes every mutation through SendInteractableResult and never saves on its own', (name) => {
     const source = interaction(name);
+
+    expect(source).toMatch(/SendInteractableResult\(/u);
+    expect(source, `${name}: a save outside the shared finisher would skip its evidence`).not.toMatch(/McpSafeAssetSave\(/u);
+    expect(source, `${name}: evidence is stamped by the finisher`).not.toMatch(/AddMutationEvidence\(/u);
+  });
+
+  it('the shared finisher saves, gates "saved" on that save, verifies and stamps evidence on the saved asset', () => {
+    const source = finisher();
+
+    expect(interaction('BlueprintVariables')).toContain('McpAutomationBridgeHelpersMutationEvidence.h');
+    expect(source).toMatch(/if \(McpSafeAssetSave\(Blueprint\)\)\s*\{\s*Changes\.Add\(TEXT\("saved"\)\);/u);
+    expect((source.match(/Changes\.Add\(TEXT\("saved"\)\)/gu) ?? []).length, '"saved" is added only behind the save').toBe(1);
+    expect(source).toContain('McpHandlerUtils::AddVerification(Result, Blueprint)');
+    expect(source).toContain('AddMutationEvidence(Result, Blueprint, Changes)');
+  });
+
+  it('Interface binds its save result and gates "saved" on it', () => {
+    const source = interaction('Interface');
 
     expect(source).toContain('McpAutomationBridgeHelpersMutationEvidence.h');
-    expect(source).toMatch(/AddMutationEvidence\(/u);
+    expect(source).toMatch(/const bool bInterfaceSaved = McpSafeAssetSave\(InterfaceBP\);/u);
+    expect(source).toMatch(/if \(bInterfaceSaved\)\s*\{\s*InterfaceChanges\.Add\(TEXT\("saved"\)\);/u);
+    expect(source).toContain('AddMutationEvidence(Result, InterfaceBP, InterfaceChanges)');
   });
 
-  it.each(ASSET_MUTATING)('%s captures every save result, on any line', (name) => {
-    const source = interaction(name);
-    const saves = [...source.matchAll(/McpSafeAssetSave\(/gu)];
-
-    expect(saves.length).toBeGreaterThanOrEqual(1);
-    // Not line-start anchored: a fire-and-forget save appended to a shared line
-    // is still a fire-and-forget save.
-    for (const match of saves) {
-      const before = source.slice(Math.max(0, (match.index ?? 0) - 60), match.index);
-      expect(before, `${name}: every save must bind its result`).toMatch(/const bool b\w*Saved = $/u);
-    }
-  });
-
-  it.each(ASSET_MUTATING)('%s gates EVERY saved entry, not just one of them', (name) => {
-    const source = interaction(name);
-    const saved = [...source.matchAll(/\w*Changes\.Add\(TEXT\("saved"\)\)/gu)];
-
-    expect(saved.length).toBeGreaterThanOrEqual(1);
-    // Per call site, not per file: in a two-path file a single surviving gate
-    // must not license an ungated sibling.
-    for (const match of saved) {
-      const before = source.slice(Math.max(0, (match.index ?? 0) - 40), match.index);
-      const gate = /if \((b\w*Saved)\)\s*\{\s*$/u.exec(before);
-      expect(gate, `${name}: each "saved" must sit behind its own flag`).not.toBeNull();
-      // The flag has to be the save's own result. Matching only its NAME let a
-      // hand-written `const bool bAlwaysSaved = true;` claim a save that the
-      // handler never performed.
-      expect(source, `${name}: the gate flag must be bound by a real save`)
-        .toMatch(new RegExp(`const bool ${gate?.[1] ?? 'bSaved'} = McpSafeAssetSave\\(`, 'u'));
-    }
-  });
-
-  it.each(ASSET_MUTATING)('%s never stamps evidence against a null asset', (name) => {
-    const source = interaction(name);
-    const calls = [...source.matchAll(/AddMutationEvidence\(\s*(\w+)\s*,\s*(\w+)\s*,/gu)];
-    const total = (source.match(/AddMutationEvidence\(/gu) ?? []).length;
-
-    expect(calls.length).toBeGreaterThanOrEqual(1);
-    // Counts must agree, or a call whose asset argument is not a bare
-    // identifier (a cast, a member, a call) is skipped by the pattern above
-    // and inspected by nothing at all.
-    expect(calls.length, `${name}: every evidence call must expose an inspectable asset argument`).toBe(total);
-    // A null asset makes AddAssetVerification early-return, producing exactly
-    // the evidence-free receipt BB-008 is about.
-    for (const match of calls) {
-      expect(match[2], `${name}: evidence needs a real asset`).not.toBe('nullptr');
-    }
-  });
-
-  it('create_door_actor keeps its pre-existing verification call', () => {
-    expect(interaction('Door')).toContain('McpHandlerUtils::AddVerification(Result, DoorBP)');
-  });
-
-  it('files with two mutation paths carry two evidence call sites', () => {
-    for (const name of ['Chest', 'Door', 'Switch', 'Triggers', 'WidgetEvents', 'Components']) {
-      const calls = (interaction(name).match(/AddMutationEvidence\(/gu) ?? []).length;
-      expect(calls, `${name} should stamp both of its mutation paths`).toBeGreaterThanOrEqual(2);
+  it('files with two mutation paths finish both through the shared finisher', () => {
+    for (const name of ['Chest', 'Door', 'Switch', 'Components']) {
+      const calls = (interaction(name).match(/SendInteractableResult\(/gu) ?? []).length;
+      expect(calls, `${name} should finish both of its mutation paths`).toBeGreaterThanOrEqual(2);
     }
   });
 });

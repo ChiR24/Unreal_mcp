@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { EXECUTION_OPTION_KEYS } from '../../../src/tools/catalog/capabilities/semantic/execution-options.js';
-import { validateExecutionOptions } from '../../../src/server/gateway/gateway-execute-validate.js';
+import { validateExecutionOptions } from '../../../src/server/gateway/gateway-option-validate.js';
 
 // Task 42 parity mirror of the native
 // McpAutomationBridge.Foundation.LiveStateRevisions.ExpectedRevisionsParsing

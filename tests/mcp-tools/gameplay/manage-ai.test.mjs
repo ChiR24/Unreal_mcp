@@ -271,7 +271,7 @@ const testCases = [
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-    { scenario: 'Setup: create navigation blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: NAV_BLUEPRINT, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success', captureResult: { key: 'navBlueprintPath', fromField: 'result.assetPath' } },
+    { scenario: 'Setup: create navigation blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: NAV_BLUEPRINT, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success', captureResult: { key: 'navBlueprintPath', fromField: 'result.assetPath' } },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_nav_mesh_settings', toolName: 'manage_ai', arguments: {"action": "configure_nav_mesh_settings", "cellSize": 19, "cellHeight": 10, "tileSizeUU": 1000, "minRegionArea": 0, "mergeRegionSize": 400, "maxSimplificationError": 1.3}, expected: 'success' },
     { scenario: 'CONFIG: set_nav_agent_properties', toolName: 'manage_ai', arguments: {"action": "set_nav_agent_properties", "agentRadius": 35, "agentHeight": 144, "agentStepHeight": 35, "agentMaxSlope": 44}, expected: 'success' },

@@ -68,29 +68,6 @@ describe('todo19 BB-015: create_material_function declares its save control', ()
 });
 
 describe('todo19 BB-016: material graph reads advertise the result node', () => {
-  const queries = (): string =>
-    code(nativeSource('Domains', 'MaterialGraph', 'McpAutomationBridge_MaterialGraphHandlersQueries.cpp'));
-
-  it('graph listing emits resultNode = Main', () => {
-    const source = queries();
-    const listingIdx = source.indexOf('availableNodes');
-    const resultNodeIdx = source.indexOf('TEXT("resultNode")');
-    const mainIdx = source.indexOf('TEXT("Main")');
-
-    expect(listingIdx).toBeGreaterThan(-1);
-    expect(resultNodeIdx).toBeGreaterThan(-1);
-    expect(mainIdx).toBeGreaterThan(-1);
-    expect(resultNodeIdx, 'resultNode must be emitted with the node listing').toBeGreaterThan(listingIdx);
-  });
-
-  it('advertises the connectable root inputs', () => {
-    const source = queries();
-    expect(source).toContain('resultNodeInputs');
-    for (const input of ['EmissiveColor', 'BaseColor', 'WorldPositionOffset']) {
-      expect(source).toContain(input);
-    }
-  });
-
   it('get_material_stats also advertises resultNode (the always-reachable read)', () => {
     const source = code(nativeSource(
       'Domains', 'AssetWorkflow', 'Materials', 'McpAutomationBridge_AssetWorkflowMaterialStats.cpp'

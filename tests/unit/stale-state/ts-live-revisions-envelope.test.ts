@@ -6,7 +6,7 @@ import {
   executeSuccessEnvelope,
 } from '../../../src/server/gateway/gateway-execute-envelope.js';
 import type { GatewayReceiptContext } from '../../../src/server/gateway/gateway-receipt-context.js';
-import { normalizeAutomationFrame } from '../../../src/tools/orchestration/automation-frame-normalization.js';
+import { normalizeAutomationFrame } from '../../../src/utils/responses/automation-frame-normalization.js';
 import { CorrelationIdSchema } from '../../../src/tools/catalog/capabilities/semantic/ids.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 

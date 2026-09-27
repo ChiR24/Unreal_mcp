@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { describeGatewayCapability } from '../../../src/server/gateway/gateway-describe.js';
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
-import { executeTargetIndex, resolveExecuteTarget } from '../../../src/server/gateway/gateway-execute-resolve.js';
+import { resolveExecuteTarget } from '../../../src/server/gateway/gateway-execute-resolve.js';
 
 // MCPBB-081 — 343 capabilities are published under an ID prefix that is not a
 // routable tool name (`blueprint.*`, `material.*`, `sequence.*`, ...). A caller
@@ -57,7 +57,7 @@ describe('MCPBB-081 — an advertised capability namespace is addressable as a t
   });
 
   it('execute resolves a namespace-qualified tool to a real dispatch target', () => {
-    const index = executeTargetIndex();
+    const index = capabilityIndex();
     const failures: string[] = [];
     for (const [prefix, parent] of orphanNamespaces()) {
       const actions = index.actionsByParentTool.get(parent) ?? [];
@@ -70,7 +70,7 @@ describe('MCPBB-081 — an advertised capability namespace is addressable as a t
   });
 
   it('a namespace-resolved execute reaches the same record as the parent tool', () => {
-    const index = executeTargetIndex();
+    const index = capabilityIndex();
     const actions = index.actionsByParentTool.get('manage_blueprint') ?? [];
     const action = actions[0] as string;
     const viaNamespace = resolveExecuteTarget({ tool: 'blueprint', action }, index);
@@ -89,7 +89,7 @@ describe('MCPBB-081 — an advertised capability namespace is addressable as a t
 
     const resolution = resolveExecuteTarget(
       { tool: 'definitely_not_a_namespace', action: 'create' },
-      executeTargetIndex()
+      capabilityIndex()
     );
     expect(resolution.ok).toBe(false);
   });

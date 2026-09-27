@@ -90,35 +90,25 @@ describe('Task 44 — Unreal progress reaches the MCP layer instead of being dro
 });
 
 describe('Task 44 — progress resolves to the requests that actually own it', () => {
-  const noop = () => undefined;
-
   it('maps an automation id to its subscribing MCP request', () => {
     const correlation = new RequestCorrelation();
-    correlation.register('num:1', 'auto-1', noop, noop);
+    correlation.register('num:1', 'auto-1');
 
     expect(correlation.mcpRequestIdsForAuto('auto-1')).toEqual(['num:1']);
   });
 
-  it('fans out to every subscriber of a COALESCED automation request', () => {
-    const correlation = new RequestCorrelation();
-    correlation.register('num:1', 'auto-1', noop, noop);
-    correlation.register('str:abc', 'auto-1', noop, noop);
-
-    expect(correlation.mcpRequestIdsForAuto('auto-1').sort()).toEqual(['num:1', 'str:abc']);
-  });
-
   it('deduplicates a request that opened several subscribers on one id', () => {
     const correlation = new RequestCorrelation();
-    correlation.register('num:1', 'auto-1', noop, noop);
-    correlation.register('num:1', 'auto-1', noop, noop);
+    correlation.register('num:1', 'auto-1');
+    correlation.register('num:1', 'auto-1');
 
     expect(correlation.mcpRequestIdsForAuto('auto-1')).toEqual(['num:1']);
   });
 
   it('NEVER reports a request subscribed to a different automation id', () => {
     const correlation = new RequestCorrelation();
-    correlation.register('num:1', 'auto-1', noop, noop);
-    correlation.register('num:2', 'auto-2', noop, noop);
+    correlation.register('num:1', 'auto-1');
+    correlation.register('num:2', 'auto-2');
 
     expect(correlation.mcpRequestIdsForAuto('auto-1')).toEqual(['num:1']);
     expect(correlation.mcpRequestIdsForAuto('auto-2')).toEqual(['num:2']);
@@ -126,7 +116,7 @@ describe('Task 44 — progress resolves to the requests that actually own it', (
 
   it('reports nobody for an unknown or already-settled automation id', () => {
     const correlation = new RequestCorrelation();
-    correlation.register('num:1', 'auto-1', noop, noop);
+    correlation.register('num:1', 'auto-1');
 
     expect(correlation.mcpRequestIdsForAuto('auto-unknown')).toEqual([]);
 
@@ -136,7 +126,7 @@ describe('Task 44 — progress resolves to the requests that actually own it', (
 
   it('skips an anonymous subscriber that has no MCP request id', () => {
     const correlation = new RequestCorrelation();
-    correlation.register(undefined, 'auto-1', noop, noop);
+    correlation.register(undefined, 'auto-1');
 
     expect(correlation.mcpRequestIdsForAuto('auto-1')).toEqual([]);
   });

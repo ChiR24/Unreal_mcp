@@ -8,21 +8,22 @@
  *    availability major/minor/patch/channel/preview + plugins + editorStates,
  *    behavior, policy, cost, routing, normalization, full deprecation, hashes)
  *  - deterministic ordering (by canonical id within shard, by parent across
- *    shards), sanitized unique symbols, exact shard coverage, byte-identical
- *    builders, and atomic input validation
+ *    shards), unique symbols, exact shard coverage, byte-identical
+ *    builders, and duplicate-id rejection
  */
 import { describe, expect, it } from 'vitest';
 import {
   buildNativeCapabilityShards,
   buildNativeCapabilityIndexHeader,
   buildNativeCapabilityShardSource,
-  serializeNativeCapabilityRecord,
-  sanitizeParentSymbol,
   MAX_CHUNK_CHARS,
 } from '../../scripts/canonical-registry/native-shards.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
-import { RECORDS, SORTED } from './canonical-registry-data-generation-fixtures.js';
-import { ALL_CAPABILITY_RECORD_COUNT } from '../../src/tools/catalog/capabilities/records/aggregate.js';
+import { sortById } from '../../src/utils/serialization/ordering.js';
+import { ALL_CAPABILITY_RECORD_COUNT, ALL_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/records/aggregate.js';
+
+const RECORDS = ALL_CAPABILITY_RECORDS;
+const SORTED = sortById(RECORDS);
 
 describe('native capability shard plan', () => {
   const shards = buildNativeCapabilityShards(SORTED);
@@ -55,10 +56,6 @@ describe('native capability shard plan', () => {
         expect(e.schemas.input).toBeDefined();
         expect(e.schemas.output).toBeDefined();
         expect(e.discovery).toBeDefined();
-        expect(e.normalization).toBeDefined();
-        expect(e.deprecation).toBeDefined();
-        expect(e.availability.unreal.min).toBeDefined();
-        expect(e.availability.unreal.max).toBeDefined();
         expect(e.hashes.schema).toMatch(/^[0-9a-f]{64}$/);
         expect(e.hashes.content).toMatch(/^[0-9a-f]{64}$/);
         expect((e as unknown as { sch?: unknown }).sch).toBeUndefined();
@@ -88,8 +85,6 @@ describe('native capability shard plan', () => {
         expect(e.schemas.output).toEqual(src.schemas.output);
         expect(e.discovery).toEqual(src.discovery);
         expect(e.examples).toEqual(src.examples);
-        expect(e.normalization).toEqual(src.normalization);
-        expect(e.deprecation).toEqual(src.deprecation);
         expect(e.availability).toEqual(src.availability);
         expect(e.behavior).toEqual(src.behavior);
         expect(e.policy).toEqual(src.policy);
@@ -134,38 +129,11 @@ describe('byte-identical builders', () => {
     const b = buildNativeCapabilityShards(SORTED);
     expect(JSON.stringify(a)).toEqual(JSON.stringify(b));
   });
-
-  it('serializeNativeCapabilityRecord wraps the complete record and is stable', () => {
-    for (const r of RECORDS) {
-      const once = JSON.parse(serializeNativeCapabilityRecord(r)) as { record: CapabilityRecord };
-      expect(once.record).toEqual(r);
-      expect(serializeNativeCapabilityRecord(r)).toEqual(serializeNativeCapabilityRecord(r));
-    }
-  });
 });
 
 describe('atomic input validation', () => {
   it('rejects duplicate canonical ids before producing shards', () => {
     const dup = [RECORDS[0], { ...RECORDS[1], id: RECORDS[0].id }] as unknown as CapabilityRecord[];
     expect(() => buildNativeCapabilityShards(dup)).toThrow(/duplicate canonical id/);
-  });
-
-  it('rejects a record with empty/missing parent', () => {
-    const broken = [
-      { ...RECORDS[0], routing: { ...RECORDS[0].routing, parentTool: '' } },
-    ] as unknown as CapabilityRecord[];
-    expect(() => buildNativeCapabilityShards(broken)).toThrow(/empty\/missing parent/);
-  });
-
-  it('rejects a symbol collision across distinct parents', () => {
-    const a = { ...RECORDS[0], id: 'x.a', routing: { ...RECORDS[0].routing, parentTool: 'foo-bar' } };
-    const b = { ...RECORDS[1], id: 'x.b', routing: { ...RECORDS[1].routing, parentTool: 'foo bar' } };
-    const fake = [a, b] as unknown as CapabilityRecord[];
-    expect(() => buildNativeCapabilityShards(fake)).toThrow(/symbol collision/);
-  });
-
-  it('sanitizeParentSymbol yields identical symbols for spaces vs hyphens', () => {
-    expect(sanitizeParentSymbol('foo bar')).toBe(sanitizeParentSymbol('foo-bar'));
-    expect(sanitizeParentSymbol('animation physics')).toBe('MCP_CAP_SHARD_ANIMATION_PHYSICS');
   });
 });

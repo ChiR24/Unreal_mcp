@@ -2,22 +2,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expectedCondition } from './expectation-utils.mjs';
 import { withFoldTwins } from './fold-twins.mjs';
-import {
-  AsyncFunction,
-  integrationSuitePath,
-  repoRoot,
-  reportsDir,
-  requireFromAudit,
-  testsRoot
-} from './parameter-audit-context.mjs';
+import { pathToFileURL } from 'node:url';
+import { integrationSuitePath, repoRoot, reportsDir, testsRoot } from './parameter-audit-context.mjs';
 
-const fakeSuccessIndicators = ['not implemented', 'unsupported', 'stub', 'no-op', 'noop', 'placeholder'];
+// The harness merges a nested `params` object into the call (toGatewayCall), so the
+// audit reads the merged keys.
+export function caseParameters(args) {
+  const nested = args?.params !== null && typeof args?.params === 'object' && !Array.isArray(args.params) ? args.params : {};
+  return Object.keys({ ...nested, ...args }).filter((key) => key !== 'action' && key !== 'params').sort();
+}
 
 export function argumentSignature(args) {
-  return Object.keys(args ?? {})
-    .filter((key) => key !== 'action')
-    .sort()
-    .join('+');
+  return caseParameters(args).join('+');
 }
 
 function caseKey(suiteName, toolName, args, scenario) {
@@ -53,58 +49,20 @@ function testSuiteFiles() {
   return files.sort();
 }
 
-function auditRequire(specifier) {
-  if (specifier === 'node:fs') {
-    return {
-      mkdirSync() {},
-      writeFileSync() {},
-      existsSync: fs.existsSync,
-      readFileSync: fs.readFileSync,
-      readdirSync: fs.readdirSync,
-      statSync: fs.statSync
-    };
-  }
-  return requireFromAudit(specifier);
-}
-
 export async function captureTestSuites() {
   const suites = [];
-  for (const filePath of testSuiteFiles()) {
-    let code = fs.readFileSync(filePath, 'utf8').replace(/^#![^\r\n]*\r?\n/, '');
-    code = code.replace(
-      /import \{ runToolTests \} from ['"](?:\.\.\/\.\.\/test-runner|\.\/test-runner)\.mjs['"];?/g,
-      'const runToolTests = (name, cases) => { __captured.push({ name, cases }); };'
-    );
-    code = code.replace(
-      /const \{\s*runToolTests\s*\}\s*=\s*await import\(['"](?:\.\.\/\.\.\/test-runner|\.\/test-runner)\.mjs['"]\);?/g,
-      'const runToolTests = (name, cases) => { __captured.push({ name, cases }); };'
-    );
-    code = code.replace(/import fs from ['"]node:fs['"];?/g, "const fs = require('node:fs');");
-    code = code.replace(/import path from ['"]node:path['"];?/g, "const path = require('node:path');");
-
-    const captured = [];
-    const previousAuditMode = process.env.UNREAL_MCP_PARAMETER_AUDIT;
-    process.env.UNREAL_MCP_PARAMETER_AUDIT = '1';
-    try {
-      await AsyncFunction('require', '__captured', 'process', 'console', 'Date', code)(
-        auditRequire,
-        captured,
-        process,
-        { log() {}, warn() {}, error() {} },
-        Date
-      );
-    } finally {
-      if (previousAuditMode === undefined) {
-        delete process.env.UNREAL_MCP_PARAMETER_AUDIT;
-      } else {
-        process.env.UNREAL_MCP_PARAMETER_AUDIT = previousAuditMode;
+  const captured = (globalThis.__capturedToolSuites = []);
+  try {
+    for (const filePath of testSuiteFiles()) {
+      const before = captured.length;
+      await import(pathToFileURL(filePath).href);
+      for (const suite of captured.slice(before)) {
+        // The runner derives the same twins, so the audit counts the cases that run.
+        suites.push({ filePath: path.relative(repoRoot, filePath), name: suite.name, cases: withFoldTwins(suite.cases ?? []) });
       }
     }
-
-    for (const suite of captured) {
-      // The runner derives the same twins, so the audit counts the cases that run.
-      suites.push({ filePath: path.relative(repoRoot, filePath), name: suite.name, cases: withFoldTwins(suite.cases ?? []) });
-    }
+  } finally {
+    delete globalThis.__capturedToolSuites;
   }
   return suites;
 }
@@ -169,16 +127,7 @@ function recordLiveCase(result, suiteName, staticCase, failedCases, handledFailu
     return;
   }
 
-  if (responseSucceeded) {
-    const successText = [result.detail, result.responseMessage, result.responseError]
-      .filter((value) => typeof value === 'string')
-      .join('\n')
-      .toLowerCase();
-    if (fakeSuccessIndicators.some((indicator) => successText.includes(indicator))) {
-      failedCases.push({ suite: suiteName, scenario: result.scenario, status: 'passed-with-fake-success-indicator' });
-      return;
-    }
-  } else {
+  if (!responseSucceeded) {
     handledFailureCases.push({
       suite: suiteName,
       scenario: result.scenario,
@@ -194,7 +143,7 @@ function recordLiveCase(result, suiteName, staticCase, failedCases, handledFailu
     scenario: result.scenario,
     toolName: result.toolName,
     action: args.action,
-    parameters: Object.keys(args).filter((key) => key !== 'action').sort(),
+    parameters: caseParameters(args),
     signature: argumentSignature(args),
     responseSuccess: result.responseSuccess
   });

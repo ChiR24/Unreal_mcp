@@ -27,7 +27,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-execute-validate.js';
+import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
 // Per-action contracts are authored on the unfolded records; the shipped
 // catalog folds families, so the pins below read the authored source.
 import { MANAGE_BLUEPRINT_UNFOLDED_SOURCES as MANAGE_BLUEPRINT_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-blueprint/index.js';

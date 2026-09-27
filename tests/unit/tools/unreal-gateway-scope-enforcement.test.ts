@@ -27,7 +27,6 @@ function makeContext(scopes: readonly string[] | undefined, log: DispatchLog): G
         log.calls.push(action);
         return { success: true };
       },
-      isCapabilityTokenConfigured: async () => false,
       getAuthority: () => (scopes === undefined ? undefined : { scopes: [...scopes] })
     },
     'scope-enforcement'

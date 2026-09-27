@@ -1,17 +1,14 @@
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import {
   buildManifest,
   serializeManifest,
-  sha256File,
-} from '../../scripts/lib/package-manifest.mjs';
+} from '../../scripts/package-plugin.mjs';
 
-const fixturePath = join(tmpdir(), `unreal-mcp-package-manifest-${process.pid}.zip`);
 const pluginDescriptorSchema = z.object({ VersionName: z.string() });
 // package.json is the canonical version source (see
 // tests/unit/version-consistency.test.ts); comparing against a literal
@@ -20,23 +17,7 @@ const CANONICAL_VERSION = JSON.parse(
   readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'),
 ).version as string;
 
-afterEach(() => {
-  rmSync(fixturePath, { force: true });
-});
-
 describe('plugin package manifest', () => {
-  it('hashes an archive with lowercase SHA-256', async () => {
-    // Given
-    writeFileSync(fixturePath, 'abc', { mode: 0o600 });
-
-    // When
-    const sha256 = await sha256File(fixturePath);
-
-    // Then
-    expect(sha256).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-    expect(sha256).toMatch(/^[a-f0-9]{64}$/);
-  });
-
   it('builds a stable sorted manifest with the descriptor version', () => {
     // Given
     const pluginDescriptor = pluginDescriptorSchema.parse(
@@ -76,25 +57,5 @@ describe('plugin package manifest', () => {
     expect(manifest.version).toBe(CANONICAL_VERSION);
     expect(manifest.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
     expect(serializeManifest(manifest)).toBe(`${JSON.stringify(manifest, null, 2)}\n`);
-  });
-
-  it('wires Linux and Windows packaging through the shared helper', () => {
-    // Given
-    const scripts = ['scripts/package-plugin.sh', 'scripts/package-plugin.bat'].map((path) =>
-      readFileSync(resolve(process.cwd(), path), 'utf8'),
-    );
-
-    // When
-    const helperInvocations = scripts.map((script) =>
-      script.replaceAll('\\', '/').includes('lib/package-manifest.mjs'),
-    );
-
-    // Then
-    expect(helperInvocations).toEqual([true, true]);
-    for (const script of scripts) {
-      expect(script).toContain('MANIFEST_PATH');
-      expect(script).toContain('PLUGIN_VER');
-      expect(script).toContain('ZIP_PATH');
-    }
   });
 });

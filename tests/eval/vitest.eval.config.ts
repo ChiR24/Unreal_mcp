@@ -1,7 +1,5 @@
 // tests/eval/vitest.eval.config.ts
-// Dedicated Vitest configuration for the Task-4 evaluation corpus and scorer.
-// Kept separate so the main `vitest run` (src + tests/unit) is untouched and
-// the Task-4 suite can be run in focused isolation.
+// Separate config so the main run (src + tests/unit) never reaches the eval gate.
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({

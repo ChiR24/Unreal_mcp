@@ -102,9 +102,7 @@ describe('vector coercion TS/native parity', () => {
     expect(cppValidationSource).toContain('McpCoerceCanonicalVectorShapes(\n\t\tMcpApplyCanonicalSchemaDefaults(');
   });
 
-  it('recurses into batch item arrays on both surfaces', () => {
-    const tsCoercionSource = readSource(resolve(repoRoot, 'src/server/gateway/gateway-schema-validate.ts'));
-    expect(tsCoercionSource).toContain('coerceVectorShapes(entry, itemSchema)');
+  it('recurses into batch item arrays on the native surface (TS: vector-shape-coercion.test)', () => {
     expect(cppCoercionSource).toContain('TryGetObjectField(TEXT("items"), ItemSchema)');
     expect(cppCoercionSource).toContain('McpCoerceCanonicalVectorShapes(Item, *ItemSchema)');
   });

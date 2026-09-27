@@ -10,8 +10,7 @@
  *   TEXT("<chunk0>"),
  *   TEXT("<chunk1>"),
  *
- * Reconstruction is the exact inverse of `escapeCppLiteral` (only `\` and `"`
- * are escaped) followed by ordered concatenation. Non-ASCII was already turned
+ * Reconstruction decodes each literal and concatenates them in order. Non-ASCII was already turned
  * into JSON `\uXXXX` escapes BEFORE the C++ escaping, so undoing the C++ layer
  * leaves valid JSON that `JSON.parse` restores to the identical value.
  *
@@ -44,63 +43,15 @@ export const listNativeShardFiles = (): readonly string[] =>
     .sort()
     .map((n) => resolve(SHARD_DIR, n));
 
-/**
- * Undo `escapeCppLiteral`. Only `\\` and `\"` are produced by the emitter, so a
- * single left-to-right pass is exact; a naive `.replace(/\\"/g,'"')` first would
- * corrupt a literal backslash followed by a quote.
- */
-const unescapeCppChunk = (chunk: string): string => {
-  let out = '';
-  for (let i = 0; i < chunk.length; i += 1) {
-    const ch = chunk[i];
-    if (ch === '\\' && i + 1 < chunk.length) {
-      const next = chunk[i + 1];
-      if (next === '\\' || next === '"') {
-        out += next;
-        i += 1;
-        continue;
-      }
-    }
-    out += ch;
-  }
-  return out;
-};
-
-/**
- * Extract the ordered `TEXT("...")` chunk payloads from one shard source.
- * The scan is quote-aware and backslash-aware so an escaped quote inside a
- * chunk never terminates it early.
- */
-const extractChunks = (source: string): readonly string[] => {
-  const chunks: string[] = [];
-  const marker = 'TEXT("';
-  let cursor = 0;
-  for (;;) {
-    const start = source.indexOf(marker, cursor);
-    if (start < 0) break;
-    let i = start + marker.length;
-    let body = '';
-    for (; i < source.length; i += 1) {
-      const ch = source[i];
-      if (ch === '\\') {
-        body += ch;
-        i += 1;
-        if (i < source.length) body += source[i];
-        continue;
-      }
-      if (ch === '"') break;
-      body += ch;
-    }
-    chunks.push(body);
-    cursor = i + 1;
-  }
-  return chunks;
-};
+// The emitter escapes only `\` and `"` — JSON's own string escapes — so every
+// TEXT("...") literal is a JSON string literal, and JSON.parse inverts it exactly.
+const decodeChunks = (source: string): string =>
+  [...source.matchAll(/TEXT\("((?:[^"\\]|\\.)*)"\)/g)].map((match) => JSON.parse(`"${match[1]}"`) as string).join('');
 
 /** Decode one shard source into its canonical records. */
 export const readNativeShard = (path: string): NativeShardFile => {
   const source = readFileSync(path, 'utf8');
-  const payload = extractChunks(source).map(unescapeCppChunk).join('');
+  const payload = decodeChunks(source);
   if (payload.trim().length === 0) {
     throw new Error(`Task 29: native shard ${path} produced an empty payload.`);
   }

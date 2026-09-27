@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidated-tool-definitions.js';
-import { gatewayManifest } from '../../src/gateway/gateway-manifest.generated.js';
+import { generatedParentToolDefinitions } from '../../src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.js';
+import gatewayManifest from '../../src/gateway/gateway-manifest.generated.json' with { type: 'json' };
 
 // T4 follow-up: the canonical manage_asset `list` action runtime (T4) already supports
 // opaque cursors, bounded limit/offset, a nested pagination object, and includeTags, and
@@ -9,8 +9,8 @@ import { gatewayManifest } from '../../src/gateway/gateway-manifest.generated.js
 // generated gateway manifest.
 
 describe('manage_asset list pagination contract (T4 follow-up)', () => {
-  const inputProps = ((consolidatedToolDefinitions.find((t) => t.name === 'manage_asset') as NonNullable<typeof consolidatedToolDefinitions[number]>).inputSchema.properties ?? {}) as Record<string, unknown>;
-  const outputSchema = (consolidatedToolDefinitions.find((t) => t.name === 'manage_asset') as NonNullable<typeof consolidatedToolDefinitions[number]>).outputSchema as { properties?: Record<string, unknown> } | undefined;
+  const inputProps = ((generatedParentToolDefinitions.find((t) => t.name === 'manage_asset') as NonNullable<typeof generatedParentToolDefinitions[number]>).inputSchema.properties ?? {}) as Record<string, unknown>;
+  const outputSchema = (generatedParentToolDefinitions.find((t) => t.name === 'manage_asset') as NonNullable<typeof generatedParentToolDefinitions[number]>).outputSchema as { properties?: Record<string, unknown> } | undefined;
   const outputProps = (outputSchema?.properties ?? {}) as Record<string, unknown>;
 
   it('declares the list pagination input fields (cursor, includeTags, nested pagination)', () => {

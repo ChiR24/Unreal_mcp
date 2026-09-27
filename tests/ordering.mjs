@@ -20,8 +20,3 @@ export function compareAscii(left, right) {
   if (left > right) return 1;
   return 0;
 }
-
-/** Comparator over objects carrying a string field, by that field. */
-export function compareByField(field) {
-  return (left, right) => compareAscii(left[field], right[field]);
-}

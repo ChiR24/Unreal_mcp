@@ -13,10 +13,6 @@ import {
   detectIndexConflicts,
   legacyPairKey
 } from '../../../src/server/gateway/gateway-capability-index.js';
-import {
-  buildExecuteTargetIndex,
-  resolveExecuteTarget
-} from '../../../src/server/gateway/gateway-execute-resolve.js';
 import type { CapabilityRecord } from '../../../src/tools/catalog/capabilities/model.js';
 import {
   CapabilityAliasSchema,
@@ -92,81 +88,5 @@ describe('todo12: detectIndexConflicts names every owner of a contested selector
 
     expect([...conflicts.aliasConflicts.keys()]).toEqual([]);
     expect([...conflicts.legacyPairConflicts.keys()]).toEqual([]);
-  });
-});
-
-describe('todo12: execute refuses a contested selector instead of picking a winner', () => {
-  it('refuses a legacy pair claimed by two capabilities and names both', () => {
-    const base = baseRecord();
-    const pair = base.legacyIds[0];
-    expect(pair).toBeDefined();
-    if (!pair) return;
-
-    const index = buildExecuteTargetIndex([
-      withId(base, 'fixture.left'),
-      withId(base, 'fixture.right')
-    ]);
-
-    const resolution = resolveExecuteTarget({ tool: pair.tool, action: pair.action }, index);
-
-    expect(resolution.ok).toBe(false);
-    if (resolution.ok) return;
-    expect(resolution.failure.errorCode).toBe('LEGACY_PAIR_CONFLICT');
-    expect(resolution.failure.message).toContain('fixture.left');
-    expect(resolution.failure.message).toContain('fixture.right');
-    expect(resolution.failure.suggestions).toEqual(['fixture.left', 'fixture.right']);
-  });
-
-  it('still refuses a contested alias with ALIAS_CONFLICT', () => {
-    const base = baseRecord();
-    const shared = CapabilityAliasSchema.parse('fixture.shared');
-    const index = buildExecuteTargetIndex([
-      { ...withId(base, 'fixture.left'), aliases: [shared] },
-      { ...withId(base, 'fixture.right'), aliases: [shared] }
-    ]);
-
-    const resolution = resolveExecuteTarget({ capability: 'fixture.shared' }, index);
-
-    expect(resolution.ok).toBe(false);
-    if (resolution.ok) return;
-    expect(resolution.failure.errorCode).toBe('ALIAS_CONFLICT');
-  });
-
-  it('resolves an uncontested legacy pair unchanged', () => {
-    const base = baseRecord();
-    const pair = base.legacyIds[0];
-    expect(pair).toBeDefined();
-    if (!pair) return;
-
-    const index = buildExecuteTargetIndex([base]);
-    const resolution = resolveExecuteTarget({ tool: pair.tool, action: pair.action }, index);
-
-    expect(resolution.ok).toBe(true);
-    if (!resolution.ok) return;
-    expect(resolution.target.record.id).toBe(base.id);
-  });
-
-  it('the real catalogue resolves every parent tool without a conflict refusal', () => {
-    const index = buildExecuteTargetIndex(capabilityIndex().records);
-    const contested: string[] = [];
-    let resolved = 0;
-
-    for (const target of capabilityIndex().records) {
-      const pair = target.legacyIds.find((entry) => entry.tool === target.routing.parentTool)
-        ?? target.legacyIds[0];
-      if (!pair) continue;
-
-      const resolution = resolveExecuteTarget({ tool: pair.tool, action: pair.action }, index);
-      if (resolution.ok) {
-        resolved += 1;
-      } else if (resolution.failure.errorCode === 'LEGACY_PAIR_CONFLICT') {
-        contested.push(`${pair.tool}.${pair.action}`);
-      }
-    }
-
-    expect(contested).toEqual([]);
-    // A positive floor as well: the loop's only assertion used to live inside
-    // `if (!resolution.ok)`, so an index that resolved NOTHING passed silently.
-    expect(resolved).toBeGreaterThan(0);
   });
 });

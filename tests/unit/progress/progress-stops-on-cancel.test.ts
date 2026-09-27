@@ -10,11 +10,9 @@
 // further `notifications/progress` for that request may reach it, and
 // cancelling one request must not silence a concurrent one.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { afterEach, describe, expect, it } from 'vitest';
 import { getMcpRequestContext } from '../../../src/automation/request-context.js';
-
-type Frame = Record<string, unknown>;
+import { connectFrames, type Frame, initialize, progressFrames, waitFor } from '../support/in-memory-server.js';
 
 interface Deferred {
     readonly promise: Promise<void>;
@@ -34,54 +32,17 @@ function deferred(): Deferred {
 let onHandlerEntered: ((requestId: string | undefined) => void) | undefined;
 let gate: Deferred | undefined;
 
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', async (importOriginal) => {
-    const actual = await importOriginal<Record<string, unknown>>();
-    return {
-        ...actual,
-        handleConsolidatedToolCall: async () => {
-            onHandlerEntered?.(getMcpRequestContext()?.requestId);
-            if (gate) await gate.promise;
-            return { success: true, operation: 'execute', message: 'done' };
-        },
-    };
-});
-
-const { createServer } = await import('../../../src/server/server-factory.js');
-
-interface Harness {
-    readonly frames: Frame[];
-    readonly send: (message: Frame) => Promise<void>;
-    readonly built: ReturnType<typeof createServer>;
-    readonly close: () => Promise<void>;
-}
-
+type Harness = Awaited<ReturnType<typeof connectFrames>>;
 const active: Harness[] = [];
 
 async function harness(): Promise<Harness> {
-    vi.stubEnv('MOCK_UNREAL_CONNECTION', 'true');
-    vi.stubEnv('NODE_ENV', 'test');
-
-    const built = createServer();
-    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    const frames: Frame[] = [];
-    clientSide.onmessage = (message: unknown) => {
-        frames.push(message as Frame);
-    };
-    await built.server.connect(serverSide);
-    await clientSide.start();
-
-    const ctx: Harness = {
-        frames,
-        send: (message) => clientSide.send(message as never),
-        built,
-        close: async () => {
-            await clientSide.close();
-            built.automationBridge?.stop();
-            built.bridge?.dispose();
-            built.metricsServer?.close();
-        },
-    };
+    const ctx = await connectFrames(async () => {
+        onHandlerEntered?.(getMcpRequestContext()?.requestId);
+        if (gate) await gate.promise;
+        return { success: true, operation: 'execute', message: 'done' };
+    });
     active.push(ctx);
+    await initialize(ctx, 'task-44-cancel');
     return ctx;
 }
 
@@ -90,34 +51,6 @@ async function settle(): Promise<void> {
         await Promise.resolve();
         await new Promise<void>((resolve) => setImmediate(resolve));
     }
-}
-
-async function waitFor<T>(produce: () => T | undefined): Promise<T> {
-    for (let attempt = 0; attempt < 2000; attempt += 1) {
-        const value = produce();
-        if (value !== undefined) return value;
-        await Promise.resolve();
-        await new Promise<void>((resolve) => setImmediate(resolve));
-    }
-    throw new Error('condition never became true');
-}
-
-const progressFrames = (frames: readonly Frame[]): Frame[] =>
-    frames.filter((frame) => frame.method === 'notifications/progress');
-
-async function initialize(ctx: Harness): Promise<void> {
-    await ctx.send({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-            protocolVersion: '2025-11-25',
-            capabilities: {},
-            clientInfo: { name: 'task-44-cancel', version: '1.0.0' },
-        },
-    });
-    await waitFor(() => ctx.frames.find((f) => f.id === 1 && 'result' in f));
-    await ctx.send({ jsonrpc: '2.0', method: 'notifications/initialized' });
 }
 
 function callFrame(id: number, token: string): Frame {
@@ -138,13 +71,11 @@ afterEach(async () => {
     gate?.release();
     gate = undefined;
     for (const ctx of active.splice(0)) await ctx.close();
-    vi.unstubAllEnvs();
 });
 
 describe('Task 44 — a cancelled request stops receiving progress', () => {
     it('emits NO progress frame once the client has cancelled', async () => {
         const ctx = await harness();
-        await initialize(ctx);
         gate = deferred();
         let inflightId: string | undefined;
         onHandlerEntered = (requestId) => {
@@ -177,7 +108,6 @@ describe('Task 44 — a cancelled request stops receiving progress', () => {
 
     it('does not silence a CONCURRENT request when one is cancelled', async () => {
         const ctx = await harness();
-        await initialize(ctx);
         gate = deferred();
         const seen: string[] = [];
         onHandlerEntered = (requestId) => {
@@ -206,7 +136,6 @@ describe('Task 44 — a cancelled request stops receiving progress', () => {
 
     it('releases the per-request marker once the call settles', async () => {
         const ctx = await harness();
-        await initialize(ctx);
         let inflightId: string | undefined;
         onHandlerEntered = (requestId) => {
             inflightId = requestId;

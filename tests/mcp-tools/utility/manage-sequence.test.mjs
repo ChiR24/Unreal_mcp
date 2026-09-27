@@ -7,7 +7,6 @@
 import { runToolTests } from '../../test-runner.mjs';
 
 const TEST_FOLDER = '/Game/MCPTest/AuthoringAssets';
-const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const ts = Date.now();
 
 const SEQUENCE_NAME = `SEQ_Test_${ts}`;
@@ -49,12 +48,11 @@ const TAKE_PRESET_PATH = '/Game/TakePresets/DefaultTakePreset.DefaultTakePreset'
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn sequence actor A', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: ACTOR_A, location: { x: 0, y: 0, z: 100 } }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn sequence actor B', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Sphere', actorName: ACTOR_B, location: { x: 200, y: 0, z: 100 } }, expected: 'success|already exists' },
 
   // === CREATE / OPEN ===
-  { scenario: 'ACTION: create', toolName: 'manage_sequence', arguments: { action: 'create', name: SEQUENCE_NAME, path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
+  { scenario: 'ACTION: create', toolName: 'manage_sequence', arguments: { action: 'create', name: SEQUENCE_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'ACTION: open', toolName: 'manage_sequence', arguments: { action: 'open', path: SEQUENCE_PATH }, expected: 'success' },
 
   // === BINDINGS ===
@@ -73,7 +71,7 @@ const testCases = [
   { scenario: 'ADD: add_keyframe', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Location', frame: 12, value: { x: 100, y: 50, z: 150 } }, expected: 'success' },
   // bindingId is parsed by ReadBindingGuid (Cinematics.cpp:113) as the binding to key against.
   { scenario: 'ADD: add_keyframe via bindingId', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, bindingId: '${captured:actorBindingId}', property: 'Location', frame: 24, value: { x: 10, y: 20, z: 30 } }, expected: 'success' },
-  // normalizeConsolidatedCall merges args.params into the argument record before routing.
+  // The harness merges args.params into the call arguments before routing.
   { scenario: 'PARAMS: get_properties via nested params', toolName: 'manage_sequence', arguments: { action: 'get_properties', params: { path: SEQUENCE_PATH } }, expected: 'success' },
   { scenario: 'INFO: get_properties', toolName: 'manage_sequence', arguments: { action: 'get_properties', path: SEQUENCE_PATH }, expected: 'success' },
   { scenario: 'CONFIG: set_properties', toolName: 'manage_sequence', arguments: { action: 'set_properties', path: SEQUENCE_PATH, frameRate: 24, playbackStart: 0, playbackEnd: 120 }, expected: 'success' },
@@ -101,8 +99,8 @@ const testCases = [
 
   // === CINEMATICS TRACKS / RIG (L1) — close parameter-combination coverage gaps ===
   // create_master_sequence
-  { scenario: 'CINEMATICS: create_master_sequence', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME, path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
-  { scenario: 'CINEMATICS: create_master_sequence optional', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME_2, path: TEST_FOLDER_ALIAS, assetPath: MASTER_PATH_2, save: true }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: create_master_sequence', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: create_master_sequence optional', toolName: 'manage_sequence', arguments: { action: 'create_master_sequence', name: MASTER_NAME_2, path: TEST_FOLDER, assetPath: MASTER_PATH_2, save: true }, expected: 'success|already exists' },
   // add_subsequence
   { scenario: 'CINEMATICS: add_subsequence', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', sequencePath: SEQUENCE_PATH, subsequencePath: SUB_PATH }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: add_subsequence optional', toolName: 'manage_sequence', arguments: { action: 'add_subsequence', sequencePath: SEQUENCE_PATH, subsequencePath: SUB_PATH_2, masterSequencePath: MASTER_PATH, rowIndex: 0, durationFrames: 60, save: true }, expected: 'success|already exists' },
@@ -168,7 +166,7 @@ const testCases = [
   { scenario: 'Cleanup: delete camera crane actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: CRANE_NAME }, expected: 'success|not found' },
 
   // === DUPLICATE / RENAME / DELETE ===
-  { scenario: 'ACTION: duplicate', toolName: 'manage_sequence', arguments: { action: 'duplicate', path: SEQUENCE_PATH, destinationPath: TEST_FOLDER_ALIAS, newName: DUPLICATE_NAME }, expected: 'success' },
+  { scenario: 'ACTION: duplicate', toolName: 'manage_sequence', arguments: { action: 'duplicate', path: SEQUENCE_PATH, destinationPath: TEST_FOLDER, newName: DUPLICATE_NAME }, expected: 'success' },
   { scenario: 'ACTION: rename', toolName: 'manage_sequence', arguments: { action: 'rename', path: DUPLICATE_PATH, newName: RENAMED_NAME }, expected: 'success' },
   { scenario: 'DELETE: delete', toolName: 'manage_sequence', arguments: { action: 'delete', path: RENAMED_PATH }, expected: 'success|not found' },
   { scenario: 'DELETE: remove_actors', toolName: 'manage_sequence', arguments: { action: 'remove_actors', path: SEQUENCE_PATH, actorNames: [ACTOR_A, ACTOR_B] }, expected: 'success|not found' },
@@ -182,7 +180,7 @@ const testCases = [
   // === RECORD REPLAY / TAKE RECORDER (L4/L5) ===
   // Dependencies: a dedicated Level Sequence and a spawned actor so the Take
   // Recorder panel can bind a real source before recording.
-  { scenario: 'Setup: create Take Recorder sequence', toolName: 'manage_sequence', arguments: { action: 'create', name: TAKE_SEQ_NAME, path: TEST_FOLDER_ALIAS }, expected: 'success|already exists' },
+  { scenario: 'Setup: create Take Recorder sequence', toolName: 'manage_sequence', arguments: { action: 'create', name: TAKE_SEQ_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn Take Recorder actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TAKE_ACTOR, location: { x: 0, y: 0, z: 50 } }, expected: 'success|already exists' },
 
   // create_take_recorder_panel (recordingSequencePath / takeSequencePath / takePresetPath / recordInto / frameRate)
@@ -233,7 +231,6 @@ const testCases = [
   { scenario: 'Cleanup: delete actor A', toolName: 'control_actor', arguments: { action: 'delete', actorName: ACTOR_A }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete actor B', toolName: 'control_actor', arguments: { action: 'delete', actorName: ACTOR_B }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete sequence camera', toolName: 'control_actor', arguments: { action: 'delete', actorName: 'SequenceCamera' }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('manage-sequence', testCases);
+runToolTests('manage-sequence', testCases, { folder: TEST_FOLDER });

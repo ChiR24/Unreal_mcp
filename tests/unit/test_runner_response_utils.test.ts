@@ -160,33 +160,17 @@ describe('test runner response helpers', () => {
   it.each([0, -1, 3_600_001])(
     'preserves an explicit server timeout value of %s',
     (timeoutMs) => {
-      expect(
-        withServerTimeout(
-          {
-            name: 'manage_sequence',
-            arguments: { action: 'start_render', timeoutMs },
-          },
-          5000,
-        ),
-      ).toEqual({
-        name: 'manage_sequence',
-        arguments: { action: 'start_render', timeoutMs },
-      });
+      const call = { name: 'unreal', arguments: { operation: 'execute', capability: 'sequence.start_render', options: { timeoutMs } } };
+      expect(withServerTimeout(call, 5000)).toEqual(call);
     },
   );
 
   it('injects the harness timeout when the tool call omits timeoutMs', () => {
     expect(
-      withServerTimeout(
-        {
-          name: 'manage_sequence',
-          arguments: { action: 'start_render' },
-        },
-        5000,
-      ),
+      withServerTimeout({ name: 'unreal', arguments: { operation: 'execute', capability: 'sequence.start_render' } }, 5000),
     ).toEqual({
-      name: 'manage_sequence',
-      arguments: { action: 'start_render', timeoutMs: 5000 },
+      name: 'unreal',
+      arguments: { operation: 'execute', capability: 'sequence.start_render', options: { timeoutMs: 5000 } },
     });
   });
 });

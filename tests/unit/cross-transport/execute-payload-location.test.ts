@@ -16,7 +16,8 @@ import { describe, expect, it } from 'vitest';
 
 import { executeSuccessEnvelope } from '../../../src/server/gateway/gateway-execute-envelope.js';
 import { dataDigestOf } from '../../../src/tools/catalog/capabilities/semantic/envelope.js';
-import { loadRecords } from './matrix-dimensions.mjs';
+import { CANONICAL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/generated/canonical-registry.generated.js';
+
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -79,9 +80,7 @@ describe('Task 46 F1 — the capability payload sits at the documented location 
   it('the stdio producer puts the schema-projected output at `data`, and the receipt binds it by digest', () => {
     // Drives the real producer with the real handler result the bridge sent, so
     // this stays true of the code even if the fixture is later re-captured.
-    const record = loadRecords().find(
-      (candidate: { id: string }) => candidate.id === 'manage_effect.list_debug_shapes'
-    );
+    const record = CANONICAL_CAPABILITY_RECORDS.find((candidate) => candidate.id === 'manage_effect.list_debug_shapes');
     expect(record, 'capability record missing from the generated registry').toBeTruthy();
 
     const stdioStructured = structuredContent(fixture.stdioJsonRpcFrame);

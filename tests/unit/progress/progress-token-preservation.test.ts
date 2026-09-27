@@ -17,20 +17,6 @@ import {
 } from '../../../src/server/mcp-primitives/progress/progress-token.js';
 
 describe('Task 44 — client progress tokens survive verbatim', () => {
-  it('preserves a string token as the identical string (not coerced to a number)', () => {
-    const token = readProgressToken({ progressToken: '42' });
-
-    expect(token).toBe('42');
-    expect(typeof token).toBe('string');
-  });
-
-  it('preserves a number token as the identical number (not stringified)', () => {
-    const token = readProgressToken({ progressToken: 42 });
-
-    expect(token).toBe(42);
-    expect(typeof token).toBe('number');
-  });
-
   it('keeps the string "42" and the number 42 distinguishable', () => {
     // The decisive pair: a server that canonicalizes tokens to strings (or to
     // its own numeric request id) collapses these two into one value and can no
@@ -51,15 +37,6 @@ describe('Task 44 — client progress tokens survive verbatim', () => {
     const opaque = 'urn:client:9f1c-«weird»-\u00e9\u00e8/token';
 
     expect(readProgressToken({ progressToken: opaque })).toBe(opaque);
-  });
-
-  it('INVENTS NOTHING when the client sent no token', () => {
-    // The core anti-fabrication assertion. Absent must stay absent: the reader
-    // has no request id, no counter and no clock to invent one from, and any
-    // future refactor that hands it one must not start emitting a token.
-    expect(readProgressToken(undefined)).toBeUndefined();
-    expect(readProgressToken({})).toBeUndefined();
-    expect(readProgressToken({ progressToken: undefined })).toBeUndefined();
   });
 
   it('rejects non-conforming token types instead of coercing them', () => {

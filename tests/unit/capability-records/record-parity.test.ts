@@ -78,7 +78,6 @@ describe('Task 29 - the full record universe exists on every surface', () => {
     const neutral = loadNeutral();
     expect(neutral.records.length).toBe(EXPECTED_RECORDS);
     expect(neutral.recordCount).toBe(EXPECTED_RECORDS);
-    expect(neutral.summaries.length).toBe(EXPECTED_RECORDS);
     expect(new Set(neutral.records.map((r) => String(r.id))).size).toBe(EXPECTED_RECORDS);
   });
 
@@ -189,7 +188,6 @@ describe('Task 29 - the 23 private parent routes survive intact', () => {
   it('every record carries exactly one legacy {tool, action} pair owned by its own parent', () => {
     const offenders: string[] = [];
     const seenPairs = new Set<string>();
-    const validModes = new Set(['tool', 'action', 'local']);
 
     for (const record of ALL_CAPABILITY_RECORDS) {
       const id = String(record.id);
@@ -218,11 +216,6 @@ describe('Task 29 - the 23 private parent routes survive intact', () => {
         seenPairs.add(pair);
       });
 
-      if (!validModes.has(String(record.routing.dispatchMode))) {
-        offenders.push(
-          `${id} pointer=/routing/dispatchMode unknown mode ${String(record.routing.dispatchMode)}`,
-        );
-      }
       if (String(record.routing.dispatchAction).length === 0) {
         offenders.push(`${id} pointer=/routing/dispatchAction is empty`);
       }

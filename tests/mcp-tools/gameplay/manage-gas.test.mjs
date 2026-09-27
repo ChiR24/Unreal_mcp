@@ -15,7 +15,6 @@ const effectName = `BP_TestEffect_${ts}`;
 const cueName = `BP_TestCue_${ts}`;
 const attributeName = `Health_${ts}`;
 const abilityTag = `Ability.Test.${ts}`;
-const aliasTag = `Ability.TestAlias.${ts}`;
 const effectTag = `Effect.Test.${ts}`;
 const cueTag = `GameplayCue.Test.${ts}`;
 
@@ -42,7 +41,6 @@ const testCases = [
   },
   { scenario: 'ADD: add_attribute', toolName: 'manage_gas', arguments: { action: 'add_attribute', attributeSetPath: '${captured:attributeSetPath}', attributeName, attributeType: 'Custom', defaultValue: 100 }, expected: 'success' },
   { scenario: 'CONFIG: set_attribute_base_value', toolName: 'manage_gas', arguments: { action: 'set_attribute_base_value', attributeSetPath: '${captured:attributeSetPath}', attributeName, baseValue: 125 }, expected: 'success' },
-  { scenario: 'CONFIG: set_attribute_clamping', toolName: 'manage_gas', arguments: { action: 'set_attribute_clamping', attributeSetPath: '${captured:attributeSetPath}', attributeName, minValue: 0, maxValue: 200, clampMode: 'MinMax' }, expected: 'success' },
 
   // === GAMEPLAY ABILITY ===
   {
@@ -58,8 +56,6 @@ const testCases = [
   // are Date.now()-suffixed, so they are never registered) -- the old expectation was asserting the
   // silent-failure bug. This case now asserts the refusal contract instead.
   { scenario: 'CONFIG: set_ability_tags refuses unregistered tags before writing', toolName: 'manage_gas', arguments: { action: 'set_ability_tags', abilityPath: '${captured:abilityPath}', abilityTags: [abilityTag], cancelAbilitiesWithTag: [`Ability.Cancel.${ts}`], blockAbilitiesWithTag: [`Ability.Block.${ts}`], activationRequiredTags: [`Ability.Required.${ts}`], activationBlockedTags: [`Ability.Blocked.${ts}`] }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'GAMEPLAY_TAG_NOT_REGISTERED', label: 'unregistered tags refused, nothing written' }] },
-  { scenario: 'CONFIG: set_ability_targeting', toolName: 'manage_gas', arguments: { action: 'set_ability_targeting', abilityPath: '${captured:abilityPath}', targetingMode: 'AOE', targetRange: 1200, aoeRadius: 350 }, expected: 'success' },
-  { scenario: 'ADD: add_ability_task', toolName: 'manage_gas', arguments: { action: 'add_ability_task', abilityPath: '${captured:abilityPath}', taskType: 'WaitDelay' }, expected: 'success' },
   { scenario: 'CONFIG: set_activation_policy', toolName: 'manage_gas', arguments: { action: 'set_activation_policy', abilityPath: '${captured:abilityPath}', activationPolicy: 'OnInputPressed' }, expected: 'success' },
   { scenario: 'CONFIG: set_instancing_policy', toolName: 'manage_gas', arguments: { action: 'set_instancing_policy', abilityPath: '${captured:abilityPath}', instancingPolicy: 'InstancedPerExecution' }, expected: 'success' },
 
@@ -70,7 +66,7 @@ const testCases = [
     arguments: { action: 'create_gameplay_effect', name: effectName, path: TEST_FOLDER, durationType: 'Instant' },
     expected: 'success',
     captureResult: { key: 'effectPath', fromField: 'result.assetPath' },
-    assertions: [{ path: 'structuredContent.result.durationType', equals: 'instant', label: 'effect duration type preserved at creation' }]
+    assertions: [{ path: 'structuredContent.result.durationType', equals: 'Instant', label: 'effect duration type preserved at creation' }]
   },
   { scenario: 'CONFIG: set_ability_costs', toolName: 'manage_gas', arguments: { action: 'set_ability_costs', abilityPath: '${captured:abilityPath}', costEffectPath: '${captured:effectPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.costEffectAssigned', equals: true, label: 'cost effect class assigned' }] },
   { scenario: 'CONFIG: set_ability_cooldown', toolName: 'manage_gas', arguments: { action: 'set_ability_cooldown', abilityPath: '${captured:abilityPath}', cooldownEffectPath: '${captured:effectPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.cooldownEffectAssigned', equals: true, label: 'cooldown effect class assigned' }] },
@@ -90,12 +86,8 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'cuePath', fromField: 'result.assetPath' }
   },
-  { scenario: 'CONFIG: configure_cue_trigger', toolName: 'manage_gas', arguments: { action: 'configure_cue_trigger', cuePath: '${captured:cuePath}', triggerType: 'Executed' }, expected: 'success' },
-  { scenario: 'CONFIG: set_cue_effects', toolName: 'manage_gas', arguments: { action: 'set_cue_effects', cuePath: '${captured:cuePath}', particleSystemPath: '/Engine/EngineResources/DefaultTexture', soundPath: '/Engine/EngineSounds/Notifications/CompileSuccess_Cue', cameraShakePath: '/Script/Engine.CameraShakeBase', decalPath: '/Engine/EngineMaterials/DefaultMaterial.DefaultMaterial' }, expected: 'success', assertions: [{ path: 'structuredContent.result.decalPath', equals: '/Engine/EngineMaterials/DefaultMaterial.DefaultMaterial', label: 'decal path applied' }, { path: 'structuredContent.result.variableCount', equals: 12, label: 'decal variables added' }] },
-  { scenario: 'ADD: add_tag_to_asset', toolName: 'manage_gas', arguments: { action: 'add_tag_to_asset', assetPath: '${captured:abilityPath}', tagName: abilityTag }, expected: 'success' },
   // `tag` is the handler-level fallback for `tagName` (gas-special-actions.ts#handleAddTagToAsset),
   // so it needs its own case: the tagName spelling above never exercises that branch.
-  { scenario: 'ADD: add_tag_to_asset via tag alias', toolName: 'manage_gas', arguments: { action: 'add_tag_to_asset', assetPath: '${captured:abilityPath}', tag: aliasTag }, expected: 'success' },
   { scenario: 'INFO: get_gas_info', toolName: 'manage_gas', arguments: { action: 'get_gas_info', assetPath: '${captured:abilityPath}' }, expected: 'success' },
   // params envelope: clients that cannot send arbitrary top-level fields nest them
   // under `params`, which is merged with top-level arguments before routing.

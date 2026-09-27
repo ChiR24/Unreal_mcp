@@ -119,7 +119,7 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   ['create input mapping', 'manage_networking.configure_input'],
   ['create input action', 'manage_networking.configure_input'],
   ['create door', 'manage_interaction.create_interactable'],
-  ['create inventory', 'manage_inventory.configure_inventory'],
+  ['create inventory', 'manage_inventory.create_inventory_asset'],
   ['list all tools', 'manage_tools.list_tools'],
   ['undo last change', 'control_editor.undo'],
   ['set cvar', 'system_control.configure_display'],

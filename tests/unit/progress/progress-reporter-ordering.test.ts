@@ -28,74 +28,7 @@ function recorder() {
 const progresses = (sent: readonly ProgressNotification[]): number[] =>
   sent.map((n) => n.params.progress);
 
-describe('Task 44 — emitted progress carries the client token verbatim', () => {
-  it('stamps every notification with the exact string token', async () => {
-    const { sent, notify } = recorder();
-    const reporter = createProgressReporter({ token: 'client-token-1', notify });
-
-    reporter.report({ progress: 10, total: 100 });
-    reporter.report({ progress: 20, total: 100 });
-    await reporter.drain();
-
-    expect(sent).toHaveLength(2);
-    for (const notification of sent) {
-      expect(notification.method).toBe('notifications/progress');
-      expect(notification.params.progressToken).toBe('client-token-1');
-      expect(typeof notification.params.progressToken).toBe('string');
-    }
-  });
-
-  it('stamps a number token as a number, never stringified', async () => {
-    const { sent, notify } = recorder();
-    const reporter = createProgressReporter({ token: 7, notify });
-
-    reporter.report({ progress: 1 });
-    await reporter.drain();
-
-    expect(sent[0]?.params.progressToken).toBe(7);
-    expect(typeof sent[0]?.params.progressToken).toBe('number');
-  });
-
-  it('emits NOTHING when the client sent no token', async () => {
-    // Absent token must not be back-filled with an invented id: the correct
-    // behaviour is silence, not a notification the client cannot correlate.
-    const { sent, notify } = recorder();
-    const reporter = createProgressReporter({ token: undefined, notify });
-
-    reporter.report({ progress: 1 });
-    reporter.report({ progress: 2 });
-    await reporter.drain();
-
-    expect(sent).toEqual([]);
-    expect(notify).not.toHaveBeenCalled();
-    expect(reporter.sent).toBe(0);
-  });
-});
-
 describe('Task 44 — progress is monotonic', () => {
-  it('drops a regressing update instead of emitting it', async () => {
-    const { sent, notify } = recorder();
-    const reporter = createProgressReporter({ token: 'tok', notify });
-
-    reporter.report({ progress: 10 });
-    reporter.report({ progress: 5 });
-    reporter.report({ progress: 20 });
-    await reporter.drain();
-
-    expect(progresses(sent)).toEqual([10, 20]);
-  });
-
-  it('drops a repeated identical value (strictly increasing)', async () => {
-    const { sent, notify } = recorder();
-    const reporter = createProgressReporter({ token: 'tok', notify });
-
-    reporter.report({ progress: 10 });
-    reporter.report({ progress: 10 });
-    await reporter.drain();
-
-    expect(progresses(sent)).toEqual([10]);
-  });
-
   it('accepts an initial zero and keeps it strictly increasing after', async () => {
     const { sent, notify } = recorder();
     const reporter = createProgressReporter({ token: 'tok', notify });

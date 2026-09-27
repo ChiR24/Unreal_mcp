@@ -13,10 +13,9 @@ describe('Todo 11 gateway search truthfulness', () => {
     const result = searchGatewayCapabilities({ query: 'manage_asset', limit: 1, offset: 0 });
 
     // Then every omission and the executable continuation are disclosed
-    expect(result.truncated).toBe(true);
     expect(result.truncationReason).toBe('limit');
-    expect(result.effectiveLimit).toBe(1);
-    expect(result.servedCount).toBe(1);
+    expect(result.limit).toBe(1);
+    expect(rows(result)).toHaveLength(1);
     expect(result.hasMore).toBe(true);
     expect(typeof result.nextCursor).toBe('string');
   });
@@ -28,7 +27,6 @@ describe('Todo 11 gateway search truthfulness', () => {
 
     // Then the applied value and reason remain machine-readable
     expect(result.limit).toBe(25);
-    expect(result.effectiveLimit).toBe(25);
     expect(result.coercions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ parameter: 'limit', requested: 100, applied: 25 })
@@ -37,8 +35,8 @@ describe('Todo 11 gateway search truthfulness', () => {
     // 'byte-budget' joined the accepted set when manage_asset gained
     // add_fab_asset_to_project: the Fab and content-source records all carry long
     // summaries, so this page is now cut by bytes before the clamped limit binds.
-    // What this case guards is that the clamp is disclosed -- limit, effectiveLimit
-    // and the coercion entry above -- and those still hold; the reason is honestly
+    // What this case guards is that the clamp is disclosed -- limit and the
+    // coercion entry above -- and those still hold; the reason is honestly
     // reporting which ceiling actually applied.
     expect(['limit', 'none', 'byte-budget']).toContain(result.truncationReason);
   });
@@ -49,7 +47,6 @@ describe('Todo 11 gateway search truthfulness', () => {
     const result = searchGatewayCapabilities({ domain: 'asset', limit: 25, maxBytes: 1500 });
 
     // Then byte pressure takes precedence over the coincident limit omission
-    expect(result.truncated).toBe(true);
     expect(result.truncationReason).toBe('byte-budget');
     expect(JSON.stringify(result).length).toBeLessThanOrEqual(1500);
     expect(result.hasMore).toBe(true);
@@ -100,7 +97,7 @@ describe('Todo 11 gateway search truthfulness', () => {
 
     // Then both coercions and the effective limit are reported
     expect(result.success).toBe(true);
-    expect(result.effectiveLimit).toBe(1);
+    expect(result.limit).toBe(1);
     expect(result.coercions).toEqual(expect.arrayContaining([
       expect.objectContaining({ parameter: 'offset', requested: -1, applied: 0 }),
       expect.objectContaining({ parameter: 'limit', requested: 0, applied: 1 })

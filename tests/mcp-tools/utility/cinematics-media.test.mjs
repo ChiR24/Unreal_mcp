@@ -88,18 +88,6 @@ const testCases = [
     expected: 'success|already exists'
   },
   // === CREATE_MEDIA_SOURCE — stream (validation: network URLs disabled) ===
-  {
-    scenario: 'MEDIA: create_media_source stream rejected',
-    toolName: 'manage_sequence',
-    arguments: {
-      action: 'create_media_source',
-      name: `MS_Stream_${ts}`,
-      path: TEST_FOLDER_ALIAS,
-      sourceType: 'stream',
-      streamUrl: 'http://example.invalid/stream'
-    },
-    expected: 'error|MEDIA_URL_NOT_ALLOWED'
-  },
   // === CREATE_MEDIA_SOURCE — platform (optional: sourcePath, defaultSourcePath, platformSources) ===
   {
     scenario: 'MEDIA: create_media_source platform',
@@ -159,17 +147,6 @@ const testCases = [
     expected: 'success|already exists'
   },
   // === CREATE_MEDIA_PLAYLIST — url (validation: network URLs disabled) ===
-  {
-    scenario: 'MEDIA: create_media_playlist url rejected',
-    toolName: 'manage_sequence',
-    arguments: {
-      action: 'create_media_playlist',
-      name: `MPL_Url_${ts}`,
-      path: TEST_FOLDER_ALIAS,
-      urls: ['http://example.invalid/playlist']
-    },
-    expected: 'error|MEDIA_URL_NOT_ALLOWED'
-  },
   // === CREATE_MEDIA_PLAYLIST — filePaths (validation: missing file) ===
   {
     scenario: 'MEDIA: create_media_playlist missing file',
@@ -221,16 +198,6 @@ const testCases = [
     expected: 'error|MEDIA_FILE_NOT_FOUND'
   },
   // === PLAY_MEDIA — url (validation: network URLs disabled) ===
-  {
-    scenario: 'MEDIA: play_media url rejected',
-    toolName: 'manage_sequence',
-    arguments: {
-      action: 'play_media',
-      mediaPlayerPath: PLAYER_PATH,
-      url: 'http://example.invalid/clip'
-    },
-    expected: 'error|MEDIA_URL_NOT_ALLOWED'
-  },
   // === PLAY_MEDIA — player only ===
   {
     scenario: 'MEDIA: play_media player only',

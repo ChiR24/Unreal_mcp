@@ -110,13 +110,9 @@ describe('Task 44 — the tool registry drains its progress markers on server cl
 
         const registry = new ToolRegistry(
             server as never,
-            { executeConsoleCommand: vi.fn() } as never,
             automationBridge as never,
             { debug: vi.fn(), error: vi.fn(), isEnabled: () => false } as never,
             { trackPerformance: vi.fn(), recordError: vi.fn() } as never,
-            {} as never,
-            {} as never,
-            {} as never,
             async () => false,
         );
         registry.register();

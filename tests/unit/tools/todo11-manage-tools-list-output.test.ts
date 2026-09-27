@@ -7,7 +7,6 @@ const context = gatewayContext(
   {
     isConnected: () => true,
     sendAutomationRequest: async () => ({ success: true }),
-    isCapabilityTokenConfigured: async () => false,
     getAuthority: () => ({ scopes: ['read', 'write', 'destructive', 'admin'] })
   },
   'todo11-manage-tools'

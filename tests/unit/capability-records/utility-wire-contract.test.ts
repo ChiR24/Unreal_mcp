@@ -19,9 +19,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { MANAGE_AUDIO_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-audio/index.js';
-import { MANAGE_NETWORKING_RECORDS } from '../../../src/tools/catalog/capabilities/records/manage-networking/index.js';
-import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-execute-validate.js';
+import { ALL_CAPABILITY_RECORDS } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
+import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
 import {
   CONTROL_CAPABILITY_ID,
   ENVELOPE_FIELDS,
@@ -32,7 +31,7 @@ import {
 import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-const RECORDS = [...MANAGE_AUDIO_RECORDS, ...MANAGE_NETWORKING_RECORDS];
+const RECORDS = ALL_CAPABILITY_RECORDS.filter((record) => ['manage_audio', 'manage_networking'].includes(String(record.routing.parentTool)));
 
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 

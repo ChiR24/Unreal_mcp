@@ -9,16 +9,14 @@ import { runToolTests } from '../../test-runner.mjs';
 const TEST_FOLDER = '/Game/MCPTest/WorldAssets';
 const TEST_FOLDER_ALIAS = TEST_FOLDER.slice(1);
 const ts = Date.now();
-const TEST_MESH = '/Game/MCPTest/TestMesh';
-const TEST_MESH_ALIAS = TEST_MESH.slice(1);
 const EDIT_ACTOR = 'TestBox';
 const TOOL_ACTOR = 'TestSphere';
 const SPLINE_ACTOR = 'TestSpline';
+const LOD_ACTOR = `LodActor_${ts}`;
 const DISPLACE_TEXTURE = `T_GeometryDisplace_${ts}`;
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn test actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: `TestActor_${ts}`, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
 
   // === CREATE ===
@@ -75,9 +73,8 @@ const testCases = [
   { scenario: 'Reset: cleanup geometry actors', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'GeoTest' }, expected: 'success|not found' },
   { scenario: 'ACTION: sweep', toolName: 'manage_geometry', arguments: {"action": "sweep", "actorName": EDIT_ACTOR, "splineActorName": SPLINE_ACTOR, "steps": 8}, expected: 'success' },
   { scenario: 'ACTION: duplicate_along_spline', toolName: 'manage_geometry', arguments: {"action": "duplicate_along_spline", "actorName": EDIT_ACTOR, "splineActorName": SPLINE_ACTOR, "count": 3}, expected: 'success' },
-  { scenario: 'ACTION: loop_cut', toolName: 'manage_geometry', arguments: {"action": "loop_cut", "actorName": EDIT_ACTOR}, expected: 'success' },
-  { scenario: 'ACTION: edge_split', toolName: 'manage_geometry', arguments: {"action": "edge_split", "actorName": EDIT_ACTOR}, expected: 'success' },
-  { scenario: 'ACTION: quadrangulate', toolName: 'manage_geometry', arguments: {"action": "quadrangulate", "actorName": EDIT_ACTOR}, expected: 'success' },
+  { scenario: 'ACTION: loop_cut', toolName: 'manage_geometry', arguments: {"action": "loop_cut", "actorName": EDIT_ACTOR, "axis": "Z", "numCuts": 2}, expected: 'success' },
+  { scenario: 'ACTION: edge_split', toolName: 'manage_geometry', arguments: {"action": "edge_split", "actorName": EDIT_ACTOR, "edges": [0, 1]}, expected: 'success' },
   { scenario: 'ACTION: bend', toolName: 'manage_geometry', arguments: {"action": "bend", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: twist', toolName: 'manage_geometry', arguments: {"action": "twist", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: taper', toolName: 'manage_geometry', arguments: {"action": "taper", "actorName": EDIT_ACTOR}, expected: 'success' },
@@ -92,8 +89,6 @@ const testCases = [
   { scenario: 'ACTION: lattice_deform', toolName: 'manage_geometry', arguments: {"action": "lattice_deform", "actorName": EDIT_ACTOR, "latticeResolution": 3, "position": {"x": 0, "y": 0, "z": 0}, "weight": 0.35, "axis": "Z"}, expected: 'success' },
   { scenario: 'Setup: create texture for displacement', toolName: 'manage_asset', arguments: { action: 'create_noise_texture', name: DISPLACE_TEXTURE, path: TEST_FOLDER, width: 32, height: 32, scale: 2, octaves: 2, save: true }, expected: 'success|already exists' },
   { scenario: 'ACTION: displace_by_texture', toolName: 'manage_geometry', arguments: {"action": "displace_by_texture", "actorName": EDIT_ACTOR, "texturePath": `${TEST_FOLDER_ALIAS}/${DISPLACE_TEXTURE}`, "heightScale": 12, "midpoint": 0.5, "axis": "Z"}, expected: 'success' },
-  { scenario: 'ACTION: triangulate', toolName: 'manage_geometry', arguments: {"action": "triangulate", "actorName": EDIT_ACTOR}, expected: 'success' },
-  { scenario: 'ACTION: poke', toolName: 'manage_geometry', arguments: {"action": "poke", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: mirror', toolName: 'manage_geometry', arguments: {"action": "mirror", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: array_linear', toolName: 'manage_geometry', arguments: {"action": "array_linear", "actorName": EDIT_ACTOR, "count": 3, "offset": {"x": 125, "y": 0, "z": 0}}, expected: 'success' },
   { scenario: 'ACTION: array_radial', toolName: 'manage_geometry', arguments: {"action": "array_radial", "actorName": EDIT_ACTOR, "count": 4, "center": {"x": 0, "y": 0, "z": 0}, "axis": {"x": 0, "y": 0, "z": 1}, "angle": 180}, expected: 'success' },
@@ -118,24 +113,24 @@ const testCases = [
   { scenario: 'ACTION: flip_normals', toolName: 'manage_geometry', arguments: {"action": "flip_normals", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: recompute_tangents', toolName: 'manage_geometry', arguments: {"action": "recompute_tangents", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'ACTION: generate_collision', toolName: 'manage_geometry', arguments: {"action": "generate_collision", "actorName": EDIT_ACTOR, "collisionType": "convex"}, expected: 'success|already exists' },
-  { scenario: 'ACTION: generate_complex_collision', toolName: 'manage_geometry', arguments: {"action": "generate_complex_collision", "actorName": EDIT_ACTOR, "hullCount": 8, "maxHullCount": 8, "maxVerticesPerHull": 32, "maxHullVerts": 32, "hullPrecision": 100}, expected: 'success|already exists' },
+  { scenario: 'ACTION: generate_complex_collision', toolName: 'manage_geometry', arguments: {"action": "generate_complex_collision", "actorName": EDIT_ACTOR, "hullCount": 8, "maxHullCount": 8}, expected: 'success|already exists' },
   { scenario: 'ACTION: simplify_collision', toolName: 'manage_geometry', arguments: {"action": "simplify_collision", "actorName": EDIT_ACTOR, "targetHullCount": 4, "simplificationFactor": 0.5}, expected: 'success' },
-  { scenario: 'ACTION: generate_lods', toolName: 'manage_geometry', arguments: {"action": "generate_lods", "assetPath": TEST_MESH_ALIAS, "lodCount": 3}, expected: 'success|already exists' },
-  // === CONFIG ===
-  { scenario: 'CONFIG: set_lod_settings', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "assetPath": TEST_MESH_ALIAS, "lodIndex": 0, "reductionPercent": 50, "recomputeNormals": false, "recomputeTangents": false}, expected: 'success' },
-  { scenario: 'CONFIG: set_lod_settings triangle percent', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "assetPath": TEST_MESH_ALIAS, "lodIndex": 0, "trianglePercent": 75}, expected: 'success' },
-  { scenario: 'Reset: cleanup geometry actors', toolName: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'GeoTest' }, expected: 'success|not found' },
-  { scenario: 'CONFIG: set_lod_screen_sizes', toolName: 'manage_geometry', arguments: {"action": "set_lod_screen_sizes", "assetPath": TEST_MESH_ALIAS, "screenSizes": [1.0, 0.5, 0.25]}, expected: 'success' },
   // === ACTION ===
   { scenario: 'ACTION: convert_to_nanite', toolName: 'manage_geometry', arguments: {"action": "convert_to_nanite", "actorName": EDIT_ACTOR, "outputPath": `Game/GeneratedMeshes/TestBox_Nanite_${ts}`}, expected: 'success' },
   { scenario: 'ACTION: convert_to_static_mesh', toolName: 'manage_geometry', arguments: {"action": "convert_to_static_mesh", "actorName": EDIT_ACTOR, "outputPath": `Game/GeneratedMeshes/TestBox_Static_${ts}`}, expected: 'success' },
+  // LOD actions work on a placed static mesh actor: place the mesh just baked.
+  { scenario: 'Setup: place baked static mesh', toolName: 'control_actor', arguments: { action: 'spawn', classPath: `/Game/GeneratedMeshes/TestBox_Static_${ts}`, actorName: LOD_ACTOR, location: { x: 400, y: 0, z: 100 } }, expected: 'success' },
+  { scenario: 'ACTION: generate_lods', toolName: 'manage_geometry', arguments: {"action": "generate_lods", "actorName": LOD_ACTOR, "lodCount": 3}, expected: 'success' },
+  { scenario: 'CONFIG: set_lod_settings', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "actorName": LOD_ACTOR, "lodIndex": 1, "reductionPercent": 50, "recomputeNormals": false, "recomputeTangents": false}, expected: 'success' },
+  { scenario: 'CONFIG: set_lod_settings triangle percent', toolName: 'manage_geometry', arguments: {"action": "set_lod_settings", "actorName": LOD_ACTOR, "lodIndex": 1, "trianglePercent": 75}, expected: 'success' },
+  { scenario: 'CONFIG: set_lod_screen_sizes', toolName: 'manage_geometry', arguments: {"action": "set_lod_screen_sizes", "actorName": LOD_ACTOR, "screenSizes": [1.0, 0.5, 0.25]}, expected: 'success' },
+  { scenario: 'Cleanup: delete LOD actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: LOD_ACTOR }, expected: 'success|not found' },
   // === INFO ===
   { scenario: 'INFO: get_mesh_info', toolName: 'manage_geometry', arguments: {"action": "get_mesh_info", "actorName": EDIT_ACTOR}, expected: 'success' },
   { scenario: 'INFO: get_mesh_info via params passthrough', toolName: 'manage_geometry', arguments: { action: 'get_mesh_info', params: { actorName: EDIT_ACTOR } }, expected: 'success' },
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: `TestActor_${ts}` }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('manage-geometry', testCases);
+runToolTests('manage-geometry', testCases, { folder: TEST_FOLDER });

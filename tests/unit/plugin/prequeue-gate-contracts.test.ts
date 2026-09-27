@@ -61,13 +61,12 @@ const CONVERGED_EXECUTORS = [
   'Domains/Texture/McpAutomationBridge_TextureHandlersShared.cpp'
 ];
 const CONVERGED_ALIAS_SITES = [
-  'MCP/Resources/McpResourceUri.h',
   'Domains/SystemControl/McpAutomationBridge_SystemControlHandlersAssetValidation.cpp',
   'Domains/Sequence/McpAutomationBridge_SequenceHandlersAssetCreation.cpp',
   'Domains/Sequence/Media/McpAutomationBridge_SequenceMediaReflection.cpp',
   'Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersAssetSupport.cpp',
   'Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowRedirectors.cpp',
-  'Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowBulkRename.cpp',
+  'Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowBulkSelection.h',
   'Domains/AssetWorkflow/Analysis/McpAutomationBridge_AssetWorkflowReports.cpp',
   'Domains/GameFramework/McpAutomationBridge_GameFrameworkHandlersContext.cpp'
 ];

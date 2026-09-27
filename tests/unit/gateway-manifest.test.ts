@@ -4,38 +4,31 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidated-tool-definitions.js';
+import { generatedParentToolDefinitions } from '../../src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.js';
 import { prettyManifest } from '../../scripts/generate-gateway-manifest.js';
 import { getGatewayManifestTools, getManifestToolDefinitions } from '../../src/gateway/gateway-manifest.js';
-import { describeGatewayCapability, searchGatewayCatalog } from '../../src/server/tool-registry-gateway.js';
+import { searchGatewayCapabilities as searchGatewayCatalog } from '../../src/server/gateway/gateway-search.js';
+import { describeGatewayCapability } from '../../src/server/gateway/gateway-describe.js';
 import { unrealGatewayToolDefinition } from '../../src/tools/catalog/unreal-gateway-definition.js';
 
 const nativeGatewayDefinitionPath = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Gateway/McpNativeGatewayDefinition.cpp');
 
-const manifestPath = resolve(process.cwd(), 'src/gateway/gateway-manifest.generated.json');
-
-const defActions = (def: (typeof consolidatedToolDefinitions)[number]): string[] => {
+const defActions = (def: (typeof generatedParentToolDefinitions)[number]): string[] => {
   const props = (def.inputSchema.properties ?? {}) as Record<string, unknown>;
   const e = (props.action as { enum?: unknown[] } | undefined)?.enum ?? [];
   return [...e].filter((v): v is string => typeof v === 'string');
 };
 
-const actionsByName = new Map(consolidatedToolDefinitions.map((d) => [d.name, defActions(d)]));
+const actionsByName = new Map(generatedParentToolDefinitions.map((d) => [d.name, defActions(d)]));
 
 describe('gateway manifest', () => {
-  it('is deterministic and matches the committed asset (no drift)', () => {
-    const once = prettyManifest(consolidatedToolDefinitions);
-    expect(once).toBe(prettyManifest(consolidatedToolDefinitions));
-    expect(JSON.parse(readFileSync(manifestPath, 'utf8'))).toEqual(JSON.parse(once));
-  });
-
   it('mirrors every canonical tool with stable metadata', () => {
-    const tools = JSON.parse(prettyManifest(consolidatedToolDefinitions)).tools as Array<{
+    const tools = JSON.parse(prettyManifest(generatedParentToolDefinitions)).tools as Array<{
       name: string; category: string | null; actions: string[]; parameterNames: string[];
     }>;
-    expect(tools).toHaveLength(consolidatedToolDefinitions.length);
-    expect(tools.map((t) => t.name).sort()).toEqual(consolidatedToolDefinitions.map((d) => d.name).sort());
-    for (const def of consolidatedToolDefinitions) {
+    expect(tools).toHaveLength(generatedParentToolDefinitions.length);
+    expect(tools.map((t) => t.name).sort()).toEqual(generatedParentToolDefinitions.map((d) => d.name).sort());
+    for (const def of generatedParentToolDefinitions) {
       const tool = tools.find((t) => t.name === def.name);
       expect(tool?.category).toBe(def.category ?? null);
       expect(tool?.actions).toEqual(actionsByName.get(def.name));

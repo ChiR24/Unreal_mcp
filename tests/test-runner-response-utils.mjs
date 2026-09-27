@@ -184,24 +184,12 @@ export function selectCaptureValues(structuredContent, captureResult) {
 }
 
 export function withServerTimeout(callOptions, serverTimeoutMs) {
+  // Every call reaches here in the `unreal` gateway form; only execute carries options.
   const args = { ...(callOptions.arguments ?? {}) };
-  if (callOptions.name === 'unreal') {
-    if (args.operation !== 'execute') return { ...callOptions, arguments: args };
-
-    const options = args.options !== null
-      && typeof args.options === 'object'
-      && !Array.isArray(args.options)
-      ? { ...args.options }
-      : {};
-    if (!Object.prototype.hasOwnProperty.call(options, 'timeoutMs')) {
-      options.timeoutMs = serverTimeoutMs;
-    }
-    args.options = options;
-    return { ...callOptions, arguments: args };
-  }
-
-  if (!Object.prototype.hasOwnProperty.call(args, 'timeoutMs')) {
-    args.timeoutMs = serverTimeoutMs;
-  }
-  return { ...callOptions, arguments: args };
+  if (args.operation !== 'execute') return { ...callOptions, arguments: args };
+  const options = args.options !== null && typeof args.options === 'object' && !Array.isArray(args.options)
+    ? { ...args.options }
+    : {};
+  if (!Object.prototype.hasOwnProperty.call(options, 'timeoutMs')) options.timeoutMs = serverTimeoutMs;
+  return { ...callOptions, arguments: { ...args, options } };
 }

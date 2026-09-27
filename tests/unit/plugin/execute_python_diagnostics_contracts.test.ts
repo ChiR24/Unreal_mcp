@@ -15,6 +15,10 @@ const messagesPath = resolve(
   pluginSourceRoot,
   'Private/Transport/Connection/McpConnectionManagerMessages.cpp',
 );
+const connectionPrivatePath = resolve(
+  pluginSourceRoot,
+  'Private/Transport/Connection/McpConnectionManagerPrivate.h',
+);
 
 describe('execute_python diagnostics contracts (issue #525)', () => {
   it('logs execution metadata before ExecPythonCommandEx without raw source', () => {
@@ -44,14 +48,12 @@ describe('execute_python diagnostics contracts (issue #525)', () => {
     expect(logRegion).not.toContain('*File');
   });
 
-  it('computes SHA-256 of the code bytes via FSHA256Signature', () => {
+  it('computes SHA-256 of the code bytes through the shared OpenSSL helper', () => {
     // Given
     const source = readFileSync(pythonHandlerPath, 'utf8');
 
-    // Then - the SHA-256 API is used to hash the code bytes (not the raw string).
-    expect(source).toContain('SHA256(');
-    expect(source).toContain('SHA256_DIGEST_LENGTH');
-    expect(source).toContain('CodeBytes');
+    // Then - the code BYTES are hashed (not the raw string), via McpSha256Hex.
+    expect(source).toContain('McpSha256Hex(CodeBytes.GetData(), CodeBytes.Num())');
   });
 
   it('surfaces executionId and codeSha256 in the structured response', () => {
@@ -66,11 +68,14 @@ describe('execute_python diagnostics contracts (issue #525)', () => {
   it('redacts the code field in the generic request log', () => {
     // Given
     const source = readFileSync(messagesPath, 'utf8');
+    const preview = readFileSync(connectionPrivatePath, 'utf8');
 
-    // Then - the `code` payload field is replaced with <redacted> so raw Python
-    // source never enters the bridge request log.
-    expect(source).toContain('FieldName == TEXT("code")');
-    expect(source).toContain('TEXT("<redacted>")');
+    // Then - the request log previews the payload in request mode, where the
+    // `code` field is replaced with <redacted> so raw Python source never
+    // enters the bridge request log.
+    expect(source).toMatch(/PreviewJsonFields\(Payload, \d+, true\)/);
+    expect(preview).toContain('bRequest && Key == TEXT("code")');
+    expect(preview).toContain('TEXT("<redacted>")');
   });
 
   it('preserves the temp-file cleanup RAII and MCP_Python temp directory', () => {

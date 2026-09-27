@@ -122,6 +122,21 @@ describe('test runner gateway adapter', () => {
     }
   });
 
+  it("attaches the consent the action's record demands unless the case sets its own (null sends none)", async () => {
+    const callTool = vi.fn(async () => ({ structuredContent: { success: true } }));
+    const callToolOnce = createToolCaller({ callTool });
+    const consentSent = () => (callTool.mock.lastCall as unknown as [{ arguments: { consent?: unknown } }])[0].arguments.consent;
+
+    await callToolOnce({ name: 'control_actor', arguments: { action: 'delete_by_tag', tag: 'T' } }, 5_000);
+    expect(consentSent()).toEqual({ capability: 'control_actor.delete', acknowledge: 'explicit' });
+
+    await callToolOnce({ name: 'control_actor', arguments: { action: 'delete', actorName: 'A' }, consent: null }, 5_000);
+    expect(consentSent()).toBeUndefined();
+
+    await callToolOnce({ name: 'control_actor', arguments: { action: 'spawn_actor' } }, 5_000);
+    expect(consentSent()).toBeUndefined();
+  });
+
   it('rejects a direct call that has no action selector', () => {
     expect(() => toGatewayCall('control_actor', { actorClass: '/Script/Engine.Actor' }))
       .toThrow(TypeError);

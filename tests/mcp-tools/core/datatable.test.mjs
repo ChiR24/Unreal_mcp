@@ -6,9 +6,6 @@ const TEST_FOLDER = '/Game/MCPTest/CoreDataTables';
 const ts = Date.now();
 
 const testCases = [
-  // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-
   // === DATATABLE AUTHORING (struct ecosystem) ===
   { scenario: 'DATATABLE: create_row_struct', toolName: 'manage_asset', arguments: { action: 'create_row_struct', name: `S_MCP_Row_${ts}`, path: TEST_FOLDER, save: true }, expected: 'success', captureResult: { key: 'rowStructPath', fromField: 'result.assetPath' }, assertions: [{ path: 'structuredContent.result.created', equals: true, label: 'row struct created' }] },
   { scenario: 'DATATABLE: set_struct_as_row_struct', toolName: 'manage_asset', arguments: { action: 'set_struct_as_row_struct', structPath: '${captured:rowStructPath}', save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.set', equals: true, label: 'struct finalized as row struct' }] },
@@ -29,9 +26,6 @@ const testCases = [
   { scenario: 'DATATABLE ERROR: create data table missing path', toolName: 'manage_asset', arguments: { action: 'create_data_table', name: `DT_MCP_Bad_${ts}` }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'MISSING_PARAMETER', label: 'missing path reported' }] },
   { scenario: 'DATATABLE ERROR: get row on missing table', toolName: 'manage_asset', arguments: { action: 'get_data_table_row', dataTablePath: `${TEST_FOLDER}/DT_DoesNotExist_${ts}`, rowName: 'RowOne' }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'ASSET_NOT_FOUND', label: 'missing table reported' }] },
   { scenario: 'DATATABLE ERROR: delete row on missing table', toolName: 'manage_asset', arguments: { action: 'delete_data_table_row', dataTablePath: `${TEST_FOLDER}/DT_DoesNotExist_${ts}`, rowName: 'RowOne' }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'ASSET_NOT_FOUND', label: 'missing table reported' }] },
-
-  // === CLEANUP ===
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('manage_asset', testCases);
+runToolTests('manage_asset', testCases, { folder: TEST_FOLDER });

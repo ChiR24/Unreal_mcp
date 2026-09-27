@@ -4,16 +4,34 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidated-tool-definitions.js';
+import { generatedParentToolDefinitions } from '../../src/tools/catalog/capabilities/generated/parent-tool-definitions.generated.js';
 import { createTrackedTempRoot, registerTempRootCleanup } from './audit-fixture-workspace.js';
-import {
-  canonicalSchema,
-  createActionOverrideFixture,
-  createDefinitionsFixture
-} from './parameter-audit-schema-fixtures.js';
+import { ALL_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/records/aggregate.js';
 import { compareAscii } from '../../src/utils/serialization/ordering.js';
 
 registerTempRootCleanup();
+
+const stringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
+function canonicalSchema(tool: (typeof generatedParentToolDefinitions)[number]) {
+  const properties = tool.inputSchema['properties'];
+  const propertyRecord = properties && typeof properties === 'object' && !Array.isArray(properties) ? properties as Record<string, unknown> : {};
+  const action = propertyRecord['action'];
+  const actionRecord = action && typeof action === 'object' && !Array.isArray(action) ? action as Record<string, unknown> : {};
+  // A folded family still serves the old names it replaced; the extractor lists
+  // them beside the advertised enum, so the expected shape carries them too.
+  const foldedActions = [...new Set(ALL_CAPABILITY_RECORDS
+    .filter((record) => String(record.routing.parentTool) === tool.name)
+    .flatMap((record) => record.legacyIds.filter((legacy) => legacy.folded !== undefined).map((legacy) => String(legacy.action))))].sort();
+  return {
+    name: tool.name,
+    actions: stringArray(actionRecord['enum']).sort(compareAscii),
+    foldedActions,
+    properties: Object.keys(propertyRecord).sort(),
+    required: stringArray(tool.inputSchema['required'])
+  };
+}
 
 describe('parameter audit schema discovery', () => {
   it('matches every canonical tool schema exactly', async () => {
@@ -21,28 +39,10 @@ describe('parameter audit schema discovery', () => {
     const schemas = extractToolSchemas();
 
     expect(schemas).toEqual(
-      consolidatedToolDefinitions
+      generatedParentToolDefinitions
         .map(canonicalSchema)
         .sort((left, right) => compareAscii(left.name, right.name))
     );
-  });
-
-  it('discovers the whole canonical parent surface from the generated runtime facade', async () => {
-    // Given the real repository, where parent definitions are generated rather than hand-written
-    const { extractToolSchemas } = await import('../parameter-audit-schema.mjs');
-
-    // When the audit extracts schemas with no pinned definitions root
-    const schemas = extractToolSchemas();
-
-    // Then every canonical parent is discovered with a usable action enum
-    expect(schemas.length).toBe(consolidatedToolDefinitions.length);
-    expect(schemas.length).toBeGreaterThan(0);
-    expect(
-      schemas.filter((schema: { actions: string[] }) => schema.actions.length === 0)
-    ).toEqual([]);
-    expect(
-      schemas.filter((schema: { properties: string[] }) => !schema.properties.includes('action'))
-    ).toEqual([]);
   });
 
   it('fails closed when the generated runtime facade declares no tools', async () => {
@@ -59,49 +59,4 @@ describe('parameter audit schema discovery', () => {
     );
   });
 
-  it('resolves import aliases without conflating same-named helpers in nested modules', async () => {
-    const { extractToolSchemas } = await import('../parameter-audit-schema.mjs');
-    const definitionsRoot = createDefinitionsFixture();
-
-    expect(extractToolSchemas({ definitionsRoot })).toEqual([
-      {
-        name: 'first_tool',
-        actions: ['first_action'],
-        properties: ['action', 'firstOnly'],
-        required: ['action', 'firstOnly']
-      },
-      {
-        name: 'second_tool',
-        actions: ['second_action', 'shared_action'],
-        properties: ['action', 'secondOnly'],
-        required: ['action']
-      }
-    ]);
-  });
-
-  it('applies explicit action overrides after spread-provided enums', async () => {
-    const { extractToolSchemas } = await import('../parameter-audit-schema.mjs');
-    const definitionsRoot = createActionOverrideFixture();
-
-    expect(extractToolSchemas({ definitionsRoot })).toEqual([
-      {
-        name: 'nested_spread',
-        actions: [],
-        properties: ['action', 'sharedOnly'],
-        required: ['action']
-      },
-      {
-        name: 'with_enum',
-        actions: ['replacement_action'],
-        properties: ['action', 'sharedOnly'],
-        required: ['action']
-      },
-      {
-        name: 'without_enum',
-        actions: [],
-        properties: ['action', 'sharedOnly'],
-        required: ['action']
-      }
-    ]);
-  });
 });

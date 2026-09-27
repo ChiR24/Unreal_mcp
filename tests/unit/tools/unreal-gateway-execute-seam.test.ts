@@ -27,22 +27,19 @@ const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
 // is now itself a contract violation. The mock answers with the smallest result
 // the dispatched record actually promises, derived from the record rather than
 // hand-written, so these cases still exercise dispatch instead of the output gate.
-vi.mock('../../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+const handleConsolidatedToolCall = vi.fn(async (tool: string, args: Record<string, unknown>) => {
     dispatched.push({ tool, args });
     const action = typeof args.action === 'string' ? args.action : '';
     const record = capabilityIndex().byLegacyPair.get(legacyPairKey(tool, action));
     return record === undefined ? { success: true } : minimalValidOutput(record);
-  })
-}));
+  });
 
 function makeContext(connected = true, bridgeTarget?: string): GatewayContext {
   const tools: ITools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
+    automationBridge: {
+      isConnected: () => true,
+      sendAutomationRequest: async (tool: string, payload: Record<string, unknown>) => handleConsolidatedToolCall(tool, payload)
+    }
   };
   if (bridgeTarget !== undefined) {
     tools.automationBridge = {
@@ -54,7 +51,6 @@ function makeContext(connected = true, bridgeTarget?: string): GatewayContext {
   return {
     tools,
     logger: new Logger('gateway-execute-seam', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => connected
   };
 }
@@ -123,7 +119,7 @@ describe('execute seam: guided error envelopes are preserved verbatim', () => {
     expect(conflict.suggestions).toBeUndefined();
     expect(conflict.nextCall).toBeUndefined();
 
-    const echoed = await execute({ tool: 'manage_tools', action: 'list_tools', params: { action: 'list_tools' } });
+    const echoed = await execute({ tool: 'manage_asset', action: 'list', params: { action: 'list' } });
     expect(echoed).toMatchObject({ success: true });
     expect(dispatched).toHaveLength(1);
   });
@@ -168,23 +164,21 @@ describe('execute seam: guided error envelopes are preserved verbatim', () => {
 });
 
 describe('execute seam: dispatch and success envelope are preserved verbatim', () => {
-  it('dispatches through handleConsolidatedToolCall with action and subAction merged in', async () => {
-    const result = await execute({ tool: 'manage_tools', action: 'get_status', params: {} });
+  it('dispatches to the parent tool with the action merged into the payload', async () => {
+    const result = await execute({ tool: 'manage_asset', action: 'list', params: {} });
     expect(result.success).toBe(true);
     expect(result.operation).toBe('execute');
-    expect(result.tool).toBe('manage_tools');
-    expect(result.action).toBe('get_status');
+    expect(result.tool).toBe('manage_asset');
+    expect(result.action).toBe('list');
     expect(dispatched).toHaveLength(1);
-    expect(dispatched[0].tool).toBe('manage_tools');
-    expect(dispatched[0].args.action).toBe('get_status');
-    expect(dispatched[0].args.subAction).toBe('get_status');
+    expect(dispatched[0].tool).toBe('manage_asset');
+    expect(dispatched[0].args).toMatchObject({ action: 'list', path: '/Game' });
   });
 
-  it('system_control:get_project_settings still runs while disconnected', async () => {
-    const result = await execute({ tool: 'system_control', action: 'get_project_settings', params: {} }, false);
-    expect(result.errorCode).toBeUndefined();
+  it('manage_tools runs in process and never reaches the bridge', async () => {
+    const result = await execute({ tool: 'manage_tools', action: 'get_status', params: {} });
     expect(result.success).toBe(true);
-    expect(dispatched).toHaveLength(1);
+    expect(dispatched).toHaveLength(0);
   });
 
   it('every other action is blocked while disconnected before any dispatch', async () => {
@@ -194,7 +188,7 @@ describe('execute seam: dispatch and success envelope are preserved verbatim', (
   });
 
   it('omitted params are treated as an empty object rather than rejected', async () => {
-    const result = await execute({ tool: 'manage_tools', action: 'get_status' });
+    const result = await execute({ tool: 'manage_asset', action: 'list' });
     expect(result.success).toBe(true);
     expect(dispatched).toHaveLength(1);
   });

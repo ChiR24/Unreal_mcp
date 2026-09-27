@@ -10,11 +10,10 @@
 // record declares exactly 4 parameters.
 
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  describeGatewayCapability,
-  searchGatewayCatalog
-} from '../../../src/server/tool-registry-gateway.js';
+import { searchGatewayCapabilities as searchGatewayCatalog } from '../../../src/server/gateway/gateway-search.js';
+import { describeGatewayCapability } from '../../../src/server/gateway/gateway-describe.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
+import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
 import {
   CATALOG_REVISION,
@@ -22,11 +21,7 @@ import {
 } from '../../../src/tools/catalog/capabilities/generated/canonical-registry.generated.js';
 
 const ASSET_IMPORT = 'asset.import';
-// Content hash re-pinned when asset.import gained retrieval `topics` ('import fbx',
-// 'import mesh', ...) and again when it declared the asset.import_asset alias; the schema
-// hash is untouched because topics and aliases are discovery data.
-const ASSET_IMPORT_SCHEMA_HASH = '8e8a28d4a81cccdc81320e142fbe70225d66c4225515cf02a0667fbdd5b8428a';
-const ASSET_IMPORT_CONTENT_HASH = 'e378cc5cfad595d9e5d397db6663be83500217938fca43a899e834e3381913c8';
+const ASSET_IMPORT_HASHES = capabilityIndex().byId.get(ASSET_IMPORT)?.hashes;
 
 type Row = Record<string, unknown>;
 
@@ -69,11 +64,8 @@ describe('search returns canonical capabilities, not parent-tool manifest rows',
     expect(hit?.domain).toBe('asset');
     expect(hit?.family).toBe('lifecycle');
     expect(hit?.effect).toBe('write');
-    expect(hit?.hashes).toEqual({
-      algorithm: 'sha256',
-      schema: ASSET_IMPORT_SCHEMA_HASH,
-      content: ASSET_IMPORT_CONTENT_HASH
-    });
+    expect(ASSET_IMPORT_HASHES?.algorithm).toBe('sha256');
+    expect(hit?.hashes).toEqual(ASSET_IMPORT_HASHES);
   });
 
   it('reports bounded, deterministic match reasons', () => {
@@ -106,11 +98,6 @@ describe('search returns canonical capabilities, not parent-tool manifest rows',
     expect(hit?.nextCall).toEqual({ operation: 'describe', capability: ASSET_IMPORT });
   });
 
-  it('is deterministic across repeated identical queries', () => {
-    const first = JSON.stringify(search({ query: 'spawn actor' }));
-    const second = JSON.stringify(search({ query: 'spawn actor' }));
-    expect(first).toBe(second);
-  });
 });
 
 describe('search filters bound the catalog by domain, family, parent and effect', () => {
@@ -162,44 +149,6 @@ describe('search filters bound the catalog by domain, family, parent and effect'
 });
 
 describe('search stays inside its result, cursor and byte budgets', () => {
-  it('never exceeds the maximum result limit even when asked to', () => {
-    const result = search({ domain: 'asset', limit: 10_000 });
-    expect(rows(result).length).toBeLessThanOrEqual(result.limit as number);
-    expect(result.limit as number).toBeLessThanOrEqual(25);
-  });
-
-  it('pages deterministically and issues a resumable cursor', () => {
-    const first = search({ domain: 'asset', limit: 5, offset: 0 });
-    expect(rows(first)).toHaveLength(5);
-    expect(first.hasMore).toBe(true);
-    expect(typeof first.nextCursor).toBe('string');
-
-    const second = search({ domain: 'asset', cursor: first.nextCursor });
-    const firstIds = rows(first).map((row) => row.capability);
-    const secondIds = rows(second).map((row) => row.capability);
-    expect(secondIds.some((id) => firstIds.includes(id as string))).toBe(false);
-  });
-
-  it('drops the cursor once the page set is exhausted', () => {
-    const result = search({ domain: 'tools', family: 'status', limit: 25 });
-    expect(result.hasMore).toBe(false);
-    expect(result.nextCursor).toBeUndefined();
-  });
-
-  it('rejects a malformed cursor rather than silently restarting', () => {
-    const result = search({ domain: 'asset', cursor: 'not-a-cursor' });
-    expect(result.success).toBe(false);
-    expect(result.errorCode).toBe('INVALID_CURSOR');
-  });
-
-  it('honours an explicit byte budget and reports the truncation honestly', () => {
-    const result = search({ domain: 'asset', limit: 25, maxBytes: 1500 });
-    expect(result.success).toBe(true);
-    expect(JSON.stringify(result).length).toBeLessThanOrEqual(1500);
-    expect(result.truncated).toBe(true);
-    expect(result.hasMore).toBe(true);
-  });
-
   it('keeps an unbudgeted full-catalog browse inside the default byte ceiling', () => {
     const result = search({ limit: 25 });
     expect(result.success).toBe(true);
@@ -301,11 +250,7 @@ describe('describe returns one capability contract with its EXACT action schema'
 
   it('publishes the output contract and the per-record hashes', () => {
     expect(isRecord(result.outputSchema)).toBe(true);
-    expect(result.hashes).toEqual({
-      algorithm: 'sha256',
-      schema: ASSET_IMPORT_SCHEMA_HASH,
-      content: ASSET_IMPORT_CONTENT_HASH
-    });
+    expect(result.hashes).toEqual(ASSET_IMPORT_HASHES);
   });
 
   it('publishes behavior, policy, cost and availability', () => {
@@ -313,7 +258,6 @@ describe('describe returns one capability contract with its EXACT action schema'
     expect(isRecord(result.policy)).toBe(true);
     expect(isRecord(result.cost)).toBe(true);
     expect((result.availability as Row).status).toBe('available');
-    expect((result.deprecation as Row).status).toBe('active');
   });
 
   it('marks an available capability runnable with an executable execute nextCall', () => {

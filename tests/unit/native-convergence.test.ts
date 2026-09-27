@@ -5,10 +5,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { CANONICAL_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/generated/canonical-registry.generated.js';
+import { capabilityIndex } from '../../src/server/gateway/gateway-capability-index.js';
 
-import { buildResolverIndex, executeReference, type CapabilityLike, type DispatchResult } from './gateway-discovery-suite/execute-reference.js';
-import { minimalValidParams } from './gateway-discovery-suite/case-builder.js';
 
 // Task 21 deferred two native divergences to Task 23, which re-deferred them to
 // Task 27 (see .omo/evidence/task-23-*.json task21DivergenceDisposition):
@@ -20,9 +18,6 @@ import { minimalValidParams } from './gateway-discovery-suite/case-builder.js';
 // here (one canonical, schema-validated, deterministically dispatched path for
 // all four capabilities), and the part it cannot is pinned by these tests so it
 // can never be silently claimed as fixed.
-
-const records = CANONICAL_CAPABILITY_RECORDS as readonly CapabilityLike[];
-const index = buildResolverIndex(records);
 
 const pluginPrivate = resolve(
   process.cwd(),
@@ -49,93 +44,6 @@ const filesMentioning = (token: string): readonly string[] =>
     .filter((file) => readFileSync(file, 'utf8').includes(token))
     .map((file) => file.slice(pluginPrivate.length + 1).replaceAll('\\', '/'))
     .sort();
-
-const TASK_21_CAPABILITIES = [
-  'inspect.get_component_details',
-  'inspect.get_editor_state',
-  'system_control.get_project_settings',
-  'system_control.set_project_setting',
-] as const;
-
-const validOutputFor = (record: CapabilityLike): Record<string, unknown> => {
-  const schema = record.schemas.output as { properties?: Record<string, Record<string, unknown>>; required?: string[] };
-  const output: Record<string, unknown> = {};
-  for (const name of schema.required ?? []) {
-    const declared = schema.properties?.[name]?.type;
-    output[name] = declared === 'boolean' ? true
-      : declared === 'number' || declared === 'integer' ? 1
-      : declared === 'array' ? []
-      : declared === 'object' ? {}
-      : 'ok';
-  }
-  return output;
-};
-
-describe('Task 27 / Task 21: the four deferred capabilities are canonically reachable', () => {
-  it('resolves every deferred capability from the canonical registry', () => {
-    for (const id of TASK_21_CAPABILITIES) {
-      expect(index.byId.get(id), `${id} must exist as a canonical record`).toBeDefined();
-    }
-  });
-
-  it('normalizes the canonical and legacy forms of each to one validated dispatch', () => {
-    for (const id of TASK_21_CAPABILITIES) {
-      const record = index.byId.get(id);
-      expect(record).toBeDefined();
-      if (!record) continue;
-      const params = minimalValidParams(record);
-      const legacy = record.legacyIds[0];
-      expect(legacy, `${id} must carry a generated legacy id`).toBeDefined();
-
-      const deps = (queued: string[]) => ({
-        index,
-        isEnabled: () => true,
-        dispatch: (dispatched: CapabilityLike): DispatchResult => {
-          queued.push(dispatched.id);
-          return { ok: true, data: validOutputFor(dispatched) };
-        },
-      });
-
-      const canonicalQueue: string[] = [];
-      const canonical = executeReference({ capability: id, params }, deps(canonicalQueue));
-      const legacyQueue: string[] = [];
-      const viaLegacy = executeReference(
-        { tool: legacy?.tool, action: legacy?.action, params },
-        deps(legacyQueue),
-      );
-
-      expect(canonical.status, `${id} canonical form`).toBe('success');
-      expect(viaLegacy.status, `${id} legacy form`).toBe('success');
-      if (canonical.status !== 'success' || viaLegacy.status !== 'success') continue;
-      expect(viaLegacy.capabilityId).toBe(canonical.capabilityId);
-      expect(viaLegacy.dispatch).toEqual(canonical.dispatch);
-      expect(canonicalQueue).toEqual([id]);
-      expect(legacyQueue).toEqual([id]);
-    }
-  });
-
-  it('rejects an undeclared parameter on each before any dispatch', () => {
-    for (const id of TASK_21_CAPABILITIES) {
-      const record = index.byId.get(id);
-      if (!record) continue;
-      const queued: string[] = [];
-      const receipt = executeReference(
-        { capability: id, params: { ...minimalValidParams(record), task27Undeclared: true } },
-        {
-          index,
-          isEnabled: () => true,
-          dispatch: (dispatched): DispatchResult => {
-            queued.push(dispatched.id);
-            return { ok: true, data: {} };
-          },
-        },
-      );
-      expect(receipt.status).toBe('error');
-      if (receipt.status === 'error') expect(receipt.error.gatewayCode).toBe('UNDECLARED_PARAMETER');
-      expect(queued, `${id} must not reach the queue`).toEqual([]);
-    }
-  });
-});
 
 describe('Task 27 / Task 21: the residual native handler divergence stays visible', () => {
   // Task 21 sublane 4: TS carries component logic locally; native has no
@@ -165,8 +73,8 @@ describe('Task 27 / Task 21: the residual native handler divergence stays visibl
   });
 
   it('keeps both project-setting capabilities advertised under their own parent tools', () => {
-    expect(index.byId.get('inspect.get_editor_state')?.routing.parentTool).toBe('inspect');
-    expect(index.byId.get('system_control.get_project_settings')?.routing.parentTool).toBe('system_control');
-    expect(index.byId.get('system_control.set_project_setting')?.routing.parentTool).toBe('system_control');
+    expect(capabilityIndex().byId.get('inspect.get_editor_state')?.routing.parentTool).toBe('inspect');
+    expect(capabilityIndex().byId.get('system_control.get_project_settings')?.routing.parentTool).toBe('system_control');
+    expect(capabilityIndex().byId.get('system_control.set_project_setting')?.routing.parentTool).toBe('system_control');
   });
 });

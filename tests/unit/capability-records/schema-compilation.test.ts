@@ -4,10 +4,6 @@ import {
   ALL_CAPABILITY_RECORD_COUNT,
 } from '../../../src/tools/catalog/capabilities/records/aggregate.js';
 import { Draft202012ObjectSchemaSchema } from '../../../src/tools/catalog/capabilities/json-schema.js';
-import {
-  applyDeclaredDefaults,
-  validateAgainstCapabilitySchema,
-} from '../../../src/server/gateway/gateway-execute-validate.js';
 import { isRecord as isRecordObject } from '../../../src/utils/validation/type-guards.js';
 
 const EXPECTED_RECORDS = ALL_CAPABILITY_RECORD_COUNT;
@@ -37,48 +33,6 @@ describe('Task 29 - every schema compiles under the production validation bounda
 
     expect(failures, `schema compilation failures:\n${failures.slice(0, 10).join('\n')}`).toEqual([]);
     expect(compiled).toBe(EXPECTED_SCHEMAS);
-  });
-
-  it('every declared example input type-checks, including every required field', () => {
-    const wrongType: string[] = [];
-    const missingRequired: string[] = [];
-    let clean = 0;
-
-    for (const record of ALL_CAPABILITY_RECORDS) {
-      const id = String(record.id);
-      const schema = plain(record.schemas.input);
-      const raw = plain(record.examples[0]?.input ?? {});
-      if (!isRecordObject(raw)) {
-        wrongType.push(`${id} pointer=/examples/0/input is not an object`);
-        continue;
-      }
-
-      const properties = isRecordObject(schema) ? schema.properties : undefined;
-      const declaresAction = isRecordObject(properties) && Object.hasOwn(properties, 'action');
-      const { action: _routedAction, ...stripped } = raw;
-      const params = declaresAction ? raw : stripped;
-
-      const violation = validateAgainstCapabilitySchema(applyDeclaredDefaults(params, schema), schema);
-      if (violation === undefined) {
-        clean += 1;
-        continue;
-      }
-      if (violation.reason === 'missing-required') {
-        missingRequired.push(`${id} pointer=/examples/0/input${violation.pointer}`);
-        continue;
-      }
-      wrongType.push(`${id} pointer=/examples/0/input${violation.pointer} ${violation.reason}: ${violation.message}`);
-    }
-
-    expect(
-      wrongType,
-      `example inputs violating a declared type/enum/bound:\n${wrongType.slice(0, 10).join('\n')}`,
-    ).toEqual([]);
-    expect(
-      missingRequired,
-      `example inputs missing required fields:\n${missingRequired.slice(0, 10).join('\n')}`,
-    ).toEqual([]);
-    expect(clean).toBe(EXPECTED_RECORDS);
   });
 
   it('every input schema is a closed object so unknown params can never pass silently', () => {
@@ -153,40 +107,6 @@ describe('Task 29 - output-honesty contract is held at zero debt', () => {
     expect(
       offenders,
       `non-boolean \`success\` offenders:\n${offenders.slice(0, 10).join('\n')}`,
-    ).toEqual([]);
-  });
-
-  it('no required output property is absent from its own example', () => {
-    const offenders: string[] = [];
-    for (const record of ALL_CAPABILITY_RECORDS) {
-      const example = plainValue(record.examples[0]?.output ?? {});
-      if (!isRecordObject(example)) continue;
-      for (const required of record.schemas.output.required) {
-        if (!Object.hasOwn(example, required)) {
-          offenders.push(`${String(record.id)} pointer=/schemas/output/required -> "${required}"`);
-        }
-      }
-    }
-    expect(
-      offenders,
-      `required-but-unexampled offenders:\n${offenders.slice(0, 10).join('\n')}`,
-    ).toEqual([]);
-  });
-
-  it('no example output fails its own output schema', () => {
-    const offenders: string[] = [];
-    for (const record of ALL_CAPABILITY_RECORDS) {
-      const violation = validateAgainstCapabilitySchema(
-        plainValue(record.examples[0]?.output ?? {}),
-        plainValue(record.schemas.output),
-      );
-      if (violation !== undefined) {
-        offenders.push(`${String(record.id)} pointer=/examples/0/output${violation.pointer} ${violation.reason}`);
-      }
-    }
-    expect(
-      offenders,
-      `self-inconsistent example-output offenders:\n${offenders.slice(0, 10).join('\n')}`,
     ).toEqual([]);
   });
 

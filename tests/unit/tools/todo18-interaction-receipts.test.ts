@@ -67,35 +67,30 @@ describe('todo18 BB-007: get_interaction_info declares what the native reader em
 });
 
 describe('todo18 BB-008: every mutation receipt carries canonical identity', () => {
-  // Every asset-mutating Interaction file that Todo 16 wired through
-  // AddMutationEvidence. Each must still route through the shared helper.
-  const FILES = [
-    'Chest', 'Components', 'Destruction', 'Door', 'Interface',
-    'Lever', 'Switch', 'Triggers', 'WidgetEvents'
-  ] as const;
+  // Every mutation path finishes through SendInteractableResult, which stamps the evidence (Interface finishes
+  // inline). Existence regexes proved too weak here: an oracle probe deleted one of Chest's TWO call sites and
+  // the suite stayed green. Pin exact counts.
+  const EXPECTED_FINISHES = {
+    Chest: 2, Components: 2, Door: 2, Lever: 1, Switch: 2, Triggers: 1,
+  } as const;
+  const source = (name: string): string =>
+    code(nativeSource('Domains', 'Interaction', `McpAutomationBridge_InteractionHandlers${name}.cpp`));
 
-  // Existence regexes proved too weak here: an oracle probe deleted one of
-  // Chest's TWO call sites and the suite stayed green. Pin exact counts.
-  const EXPECTED_CALLS: Record<(typeof FILES)[number], number> = {
-    Chest: 2, Components: 2, Destruction: 1, Door: 2, Interface: 1,
-    Lever: 1, Switch: 2, Triggers: 2, WidgetEvents: 2,
-  };
+  it.each(Object.keys(EXPECTED_FINISHES) as (keyof typeof EXPECTED_FINISHES)[])(
+    '%s finishes every mutating handler through SendInteractableResult', (name) => {
+      const calls = source(name).match(/SendInteractableResult\(/gu) ?? [];
+      expect(calls, `${name} must keep all ${EXPECTED_FINISHES[name]} finishes`).toHaveLength(EXPECTED_FINISHES[name]);
+    });
 
-  it.each(FILES)('%s routes through AddMutationEvidence at every mutating handler', (name) => {
-    const source = code(
-      nativeSource('Domains', 'Interaction', `McpAutomationBridge_InteractionHandlers${name}.cpp`)
-    );
-
-    expect(source).toContain('McpAutomationBridgeHelpersMutationEvidence.h');
-    const calls = source.match(/AddMutationEvidence\(/gu) ?? [];
-    expect(calls, `${name} must keep all ${EXPECTED_CALLS[name]} evidence calls`).toHaveLength(
-      EXPECTED_CALLS[name]
-    );
+  it('the finisher and Interface each stamp evidence once', () => {
+    expect(source('BlueprintVariables')).toContain('McpAutomationBridgeHelpersMutationEvidence.h');
+    expect(source('BlueprintVariables').match(/AddMutationEvidence\(/gu) ?? []).toHaveLength(1);
+    expect(source('Interface').match(/AddMutationEvidence\(/gu) ?? []).toHaveLength(1);
   });
 
-  it('create_door_actor keeps its pre-existing verification call', () => {
-    expect(nativeSource('Domains', 'Interaction', 'McpAutomationBridge_InteractionHandlersDoor.cpp'))
-      .toContain('McpHandlerUtils::AddVerification(Result, DoorBP)');
+  it('create_door_actor keeps its verification (the finisher verifies every Blueprint it saves)', () => {
+    expect(source('BlueprintVariables')).toContain('McpHandlerUtils::AddVerification(Result, Blueprint)');
+    expect(source('Door')).toMatch(/SendInteractableResult\(Subsystem, RequestId, RequestingSocket, DoorBP,/u);
   });
 });
 
@@ -135,34 +130,33 @@ describe('todo18 BB-009a: duplicate create_interactable_interface refuses before
 describe('todo18 BB-009b: configure_door_properties validates target class before mutating', () => {
   const door = (): string =>
     code(nativeSource('Domains', 'Interaction', 'McpAutomationBridge_InteractionHandlersDoor.cpp'));
+  const loader = (): string => {
+    const source = code(nativeSource('Domains', 'Interaction', 'McpAutomationBridge_InteractionHandlersBlueprintVariables.cpp'));
+    const start = source.indexOf('UBlueprint* LoadInteractableBlueprint(');
+    return source.slice(start, source.indexOf('\n}', start));
+  };
 
-  it('scans SCS nodes for DoorPivot and DoorMesh before mutating', () => {
-    const source = door();
-
-    expect(source).toContain('bHasDoorPivot');
-    expect(source).toContain('bHasDoorMesh');
-    expect(source).toContain('GetVariableName()');
+  it('asks the loader to require both DoorPivot and DoorMesh SCS nodes', () => {
+    expect(door()).toMatch(/LoadInteractableBlueprint\([^;]*\{TEXT\("DoorPivot"\), TEXT\("DoorMesh"\)\}\)/u);
+    expect(loader()).toContain('GetVariableName()');
   });
 
-  it('refuses with INVALID_OBJECT_TYPE when neither node is present', () => {
-    const source = door();
+  it('refuses with INVALID_OBJECT_TYPE when any required node is missing', () => {
+    const source = loader();
 
     expect(source).toContain('INVALID_OBJECT_TYPE');
-    expect(source).toContain('is not a door blueprint');
+    expect(source).toContain('is not a %s blueprint');
+    expect(source).toMatch(/if \(!bAllFound\)/u);
   });
 
-  it('does NOT mutate a blueprint that lacks both discriminating nodes', () => {
+  it('does NOT mutate before the class check: configure only authors variables after the loader returns', () => {
     const source = door();
-    const gateIdx = source.indexOf('!bHasDoorPivot || !bHasDoorMesh');
-    // Scope this to the configure path. create_door_actor also authors these
-    // variables, but on a blueprint it just created itself, so it has no target
-    // class to validate; comparing against the first occurrence anywhere in the
-    // file made this assertion depend on where that helper happened to sit.
-    const addVarIdx = source.indexOf('AddBlueprintVariableIfMissing', gateIdx);
+    const configure = source.indexOf('configure_door_properties');
+    const loadIdx = source.indexOf('LoadInteractableBlueprint(', configure);
+    const mutateIdx = source.indexOf('ApplyInteractionVars(', loadIdx);
 
-    expect(gateIdx).toBeGreaterThan(-1);
-    expect(addVarIdx).toBeGreaterThan(-1);
-    // The class check must precede the variable-authoring mutation it guards.
-    expect(gateIdx).toBeLessThan(addVarIdx);
+    expect(loadIdx).toBeGreaterThan(-1);
+    expect(mutateIdx).toBeGreaterThan(-1);
+    expect(loadIdx).toBeLessThan(mutateIdx);
   });
 });

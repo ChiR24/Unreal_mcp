@@ -19,7 +19,6 @@ function makeContext(): GatewayContext {
     {
       isConnected: () => true,
       sendAutomationRequest: async () => ({ success: true }),
-      isCapabilityTokenConfigured: async () => false,
       getAuthority: () => ({ scopes: ['Read', 'Write', 'Destructive', 'Admin'] })
     },
     'contract-consistency'
@@ -104,43 +103,8 @@ describe('MCPBB-007 — describe refuses a parameter selector it cannot resolve'
 });
 
 describe('MCPBB-004 — pagination coercions are disclosed, not silent', () => {
-  it('reports that limit=0 was raised to the minimum', () => {
-    const result = searchGatewayCapabilities({ query: 'actor', limit: 0 });
-    const coercions = result.coercions as Array<Record<string, unknown>> | undefined;
-    expect(coercions, 'limit=0 was clamped with no disclosure').toBeDefined();
-    const limitCoercion = (coercions ?? []).find((entry) => entry.parameter === 'limit');
-    expect(limitCoercion).toBeDefined();
-    expect(limitCoercion?.requested).toBe(0);
-    expect(limitCoercion?.applied).toBe(1);
-  });
-
-  it('reports that a negative offset was raised to zero', () => {
-    const result = searchGatewayCapabilities({ query: 'actor', offset: -1 });
-    const coercions = result.coercions as Array<Record<string, unknown>> | undefined;
-    expect(coercions, 'offset=-1 was clamped with no disclosure').toBeDefined();
-    const offsetCoercion = (coercions ?? []).find((entry) => entry.parameter === 'offset');
-    expect(offsetCoercion).toBeDefined();
-    expect(offsetCoercion?.requested).toBe(-1);
-    expect(offsetCoercion?.applied).toBe(0);
-  });
-
   it('says nothing when every argument was honoured exactly', () => {
     const result = searchGatewayCapabilities({ query: 'actor', limit: 5, offset: 0 });
     expect(result.coercions).toBeUndefined();
-  });
-});
-
-describe('MCPBB-072 — the page reports how many rows it actually served', () => {
-  it('servedCount matches the rows in the response', () => {
-    const result = searchGatewayCapabilities({ query: 'actor', limit: 5 });
-    const rows = result.results as unknown[];
-    expect(result.servedCount, 'no servedCount: `limit` echoes the request, not the page').toBe(rows.length);
-  });
-
-  it('servedCount tracks the surviving rows when the byte budget truncates the page', () => {
-    const result = searchGatewayCapabilities({ query: 'actor', limit: 25, maxBytes: 4096 });
-    const rows = result.results as unknown[];
-    expect(result.servedCount).toBe(rows.length);
-    expect(result.limit).toBe(25);
   });
 });

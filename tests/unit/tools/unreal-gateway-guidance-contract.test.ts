@@ -9,7 +9,7 @@ const AjvCtor = (Ajv as typeof Ajv & { default?: typeof Ajv.default }).default ?
 import { describe, expect, it } from 'vitest';
 
 import { handleUnrealGatewayCall, type GatewayContext } from '../../../src/server/tool-registry-gateway.js';
-import { HONORED_EXECUTION_OPTION_KEYS } from '../../../src/server/gateway/gateway-option-validate.js';
+import { EXECUTION_OPTION_KEYS } from '../../../src/tools/catalog/capabilities/semantic/execution-options.js';
 import {
   UNREAL_GATEWAY_DESCRIPTION,
   UNREAL_GATEWAY_INSTRUCTIONS,
@@ -51,7 +51,6 @@ function context(): GatewayContext {
     {
       isConnected: () => true,
       sendAutomationRequest: async () => ({ success: true }),
-      isCapabilityTokenConfigured: async () => false,
       getAuthority: () => ({ scopes: ['admin'] })
     },
     'guidance-contract'
@@ -103,7 +102,7 @@ describe('initialize `instructions` carry the same procedure on both transports'
 describe('`options` has a legal input channel on the advertised tool', () => {
   it('declares exactly the honored execution option keys, closed to anything else', () => {
     const options = (unrealGatewayToolDefinition.inputSchema.properties as Record<string, { properties?: object; additionalProperties?: boolean }>).options;
-    expect(Object.keys(options?.properties ?? {}).sort()).toEqual([...HONORED_EXECUTION_OPTION_KEYS].sort());
+    expect(Object.keys(options?.properties ?? {}).sort()).toEqual([...EXECUTION_OPTION_KEYS].sort());
     expect(options?.additionalProperties).toBe(false);
   });
 

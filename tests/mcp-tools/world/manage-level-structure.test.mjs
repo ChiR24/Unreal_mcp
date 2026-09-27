@@ -28,7 +28,6 @@ const STREAMING_VOLUME = `StreamingVolume_${SUBLEVEL_PATH}`;
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: spawn actor for data layer assignment', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TEST_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
 
   // === CREATE ===
@@ -38,7 +37,6 @@ const testCases = [
   // === LEVEL CONFIG ===
   { scenario: 'CONFIG: configure_level_streaming', toolName: 'manage_level_structure', arguments: { action: 'configure_level_streaming', levelName: SUBLEVEL_PATH_ALIAS, streamingMethod: 'Blueprint', bShouldBeVisible: true, bShouldBlockOnLoad: false, bDisableDistanceStreaming: false }, expected: 'success|not found' },
   { scenario: 'CONFIG: set_streaming_distance', toolName: 'manage_level_structure', arguments: { action: 'set_streaming_distance', levelName: SUBLEVEL_PATH_ALIAS, streamingDistance: 5000, streamingUsage: 'Blueprint', volumeLocation: { x: 0, y: 0, z: 0 }, createVolume: true }, expected: 'success|not found' },
-  { scenario: 'CONFIG: configure_level_bounds', toolName: 'manage_level_structure', arguments: { action: 'configure_level_bounds', bAutoCalculateBounds: false, boundsOrigin: { x: 0, y: 0, z: 0 }, boundsExtent: { x: 1000, y: 1000, z: 1000 } }, expected: 'success' },
 
   // === WORLD PARTITION GUARDED ACTIONS ===
   { scenario: 'TOGGLE: enable_world_partition', toolName: 'manage_level_structure', arguments: { action: 'enable_world_partition', bEnableWorldPartition: true }, expected: 'success|cannot enable' },
@@ -58,8 +56,6 @@ const testCases = [
   { scenario: 'CONNECT: connect_level_blueprint_nodes', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: SEQUENCE_NODE, targetNodeName: SEQUENCE_TARGET_NODE, sourcePinName: 'then_0', targetPinName: 'execute' }, expected: 'success' },
 
   // === LEVEL INSTANCE / PACKED LEVEL ===
-  { scenario: 'CREATE: create_level_instance', toolName: 'manage_level_structure', arguments: { action: 'create_level_instance', levelAssetPath: SUBLEVEL_PATH, levelInstanceName: LEVEL_INSTANCE, instanceLocation: { x: 500, y: 0, z: 0 }, instanceRotation: { pitch: 0, yaw: 0, roll: 0 }, instanceScale: { x: 1, y: 1, z: 1 } }, expected: 'success|already exists' },
-  { scenario: 'CREATE: create_packed_level_actor', toolName: 'manage_level_structure', arguments: { action: 'create_packed_level_actor', levelAssetPath: SUBLEVEL_PATH, packedLevelName: PACKED_LEVEL, instanceLocation: { x: 700, y: 0, z: 0 }, instanceRotation: { pitch: 0, yaw: 0, roll: 0 }, bPackBlueprints: true, bPackStaticMeshes: true }, expected: 'success|already exists' },
 
   // === INFO ===
   { scenario: 'INFO: get_level_structure_info', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success' },
@@ -75,7 +71,6 @@ const testCases = [
   { scenario: 'Cleanup: delete created levels', toolName: 'manage_level', arguments: { action: 'delete', levelPaths: [SUBLEVEL_PATH, LEVEL_PATH] }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete data layer asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `/Game/DataLayers/${DATA_LAYER}`, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete HLOD asset', toolName: 'manage_asset', arguments: { action: 'delete', path: `${HLOD_FOLDER}/${HLOD_LAYER}`, force: true }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
 // === VOLUME ACTIONS ===
@@ -195,4 +190,4 @@ const testCases = [
   );
 }
 
-runToolTests('manage-level-structure', testCases);
+runToolTests('manage-level-structure', testCases, { folder: TEST_FOLDER });

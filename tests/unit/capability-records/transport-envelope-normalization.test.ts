@@ -40,7 +40,7 @@ import type { GatewayContext } from '../../../src/server/tool-registry-gateway.j
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import { dynamicToolManager } from '../../../src/tools/dynamic/dynamic-tool-manager.js';
-import { normalizeAutomationFrame } from '../../../src/tools/orchestration/automation-frame-normalization.js';
+import { normalizeAutomationFrame } from '../../../src/utils/responses/automation-frame-normalization.js';
 
 const GATEWAY_TOOL = 'animation_physics';
 const GATEWAY_ACTION = 'create_animation_blueprint';
@@ -88,11 +88,6 @@ let bridgeReply: Record<string, unknown> = gatewayFrame();
 
 function makeTools(): ITools {
   return {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({}),
-    },
-    assetResources: { list: async () => ({}) },
     automationBridge: {
       isConnected: () => true,
       sendAutomationRequest: async () => bridgeReply,
@@ -105,7 +100,6 @@ async function executeViaGateway(reply: Record<string, unknown>): Promise<Record
   const context: GatewayContext = {
     tools: makeTools(),
     logger: new Logger('task29-envelope', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => true,
   };
   return await handleUnrealGatewayCall(
@@ -168,7 +162,7 @@ describe('T29-B6 gateway execute publishes the canonical payload, not the automa
     const envelope = await executeViaGateway(gatewayFrame({ ...FAILURE_OVERRIDES }));
 
     expect(envelope.success).toBe(false);
-    expect(envelope.errorCode).toBe('UNREAL_EXECUTION_ERROR');
+    expect(envelope.errorCode).toBe('ACTOR_NOT_FOUND');
     // The exact wording is the domain handler's, not the normalizer's; what the
     // envelope must never do is present this frame as a success.
     expect(String(envelope.message ?? '').length).toBeGreaterThan(0);

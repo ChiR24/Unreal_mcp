@@ -9,9 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { AutomationBridgeStatus } from '../../../src/automation/index.js';
 import { ResourceHandler, type ResourceServer } from '../../../src/handlers/resource-handlers.js';
-import type { ActorResources } from '../../../src/resources/actors.js';
 import type { AssetResources } from '../../../src/resources/assets.js';
-import type { LevelResources } from '../../../src/resources/levels.js';
 import { HealthMonitor } from '../../../src/services/health-monitor.js';
 import { TELEMETRY_ACTION_CLASSES, TELEMETRY_FAILURE_CLASSES } from '../../../src/services/telemetry-schema.js';
 import { Logger } from '../../../src/utils/logging/logger.js';
@@ -36,19 +34,14 @@ function automationStatus(connected: boolean): AutomationBridgeStatus {
     enabled: true,
     host: '127.0.0.1',
     port: 8091,
-    configuredPorts: [8091],
-    listeningPorts: [],
     connected,
     connectedAt: '2026-01-01T00:00:00.000Z',
     activePort: 8091,
     negotiatedProtocol: 'mcp-automation',
     supportedProtocols: ['mcp-automation'],
-    supportedOpcodes: ['automation_request'],
-    expectedResponseOpcodes: ['automation_response'],
     capabilityTokenRequired: true,
     lastHandshakeAt: '2026-01-01T00:00:01.000Z',
     lastHandshakeMetadata: {},
-    lastHandshakeAck: { type: 'bridge_ack' },
     lastHandshakeFailure: null,
     lastDisconnect: null,
     lastError: null,
@@ -57,11 +50,8 @@ function automationStatus(connected: boolean): AutomationBridgeStatus {
     pendingRequests: 0,
     pendingRequestDetails: [],
     connections: [],
-    webSocketListening: false,
-    serverLegacyEnabled: true,
     serverName: 'unreal-engine-mcp',
     serverVersion: '0.0.0',
-    maxConcurrentConnections: 1,
     maxPendingRequests: 25,
     heartbeatIntervalMs: 10000,
   };
@@ -82,10 +72,8 @@ function registerHandler(healthMonitor: HealthMonitor, connected: boolean): Regi
       getEngineVersion: async () => ({}),
       getFeatureFlags: async () => ({}),
     },
-    { getStatus: () => automationStatus(connected) },
+    { getStatus: () => automationStatus(connected), isConnected: () => connected, sendAutomationRequest: async () => ({}) },
     {} as AssetResources,
-    {} as ActorResources,
-    {} as LevelResources,
     healthMonitor,
     async () => true,
   ).registerHandlers();

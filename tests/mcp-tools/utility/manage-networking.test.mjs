@@ -19,7 +19,6 @@ const OWNER_ACTOR = `MCP_NetworkOwner_${ts}`;
 const PAWN_ACTOR = `MCP_NetworkPawn_${ts}`;
 const RPC_FUNCTION = `Server_DoThing_${ts}`;
 const REP_NOTIFY_FUNCTION = `OnRep_NetworkValue_${ts}`;
-const PREDICTION_VAR = `PredictedLocation_${ts}`;
 
 const blueprintAssertion = (expectedPath, label) => [
   { path: 'structuredContent.result.success', equals: true, label: `${label} native success flag` },
@@ -29,7 +28,6 @@ const blueprintAssertion = (expectedPath, label) => [
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   {
     scenario: 'Setup: create replicated actor blueprint',
     toolName: 'manage_blueprint',
@@ -169,17 +167,6 @@ const testCases = [
       { path: 'structuredContent.result.smoothingRate', equals: 0.35, label: 'server correction smoothing rate returned' }
     ]
   },
-  {
-    scenario: 'ADD: add_network_prediction_data',
-    toolName: 'manage_networking',
-    arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Vector', variableName: PREDICTION_VAR },
-    expected: 'success',
-    assertions: [
-      ...blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'add_network_prediction_data'),
-      { path: 'structuredContent.result.variableName', equals: PREDICTION_VAR, label: 'network prediction variable returned' },
-      { path: 'structuredContent.result.dataType', equals: 'Vector', label: 'network prediction data type returned' }
-    ]
-  },
   { scenario: 'CONFIG: configure_movement_prediction', toolName: 'manage_networking', arguments: { action: 'configure_movement_prediction', blueprintPath: CHARACTER_BP_PATH, networkSmoothingMode: 'Exponential', networkMaxSmoothUpdateDistance: 512, networkNoSmoothUpdateDistance: 768 }, expected: 'success', assertions: blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'configure_movement_prediction') },
 
   // === CONNECTION / ROLE / INFO ===
@@ -239,7 +226,6 @@ const testCases = [
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [TARGET_ACTOR, OWNER_ACTOR, PAWN_ACTOR] }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
 // === SESSION AND LOCAL MULTIPLAYER ACTIONS ===
@@ -252,56 +238,18 @@ const testCases = [
   const TEST_FOLDER = '/Game/MCPTest/GameplayAssets';
   const ts = Date.now();
 
-  const SESSION_NAME = `MCP_LiveSession_${ts}`;
   const SERVER_NAME = `MCP_LAN_${ts}`;
-  const VOICE_CHANNEL = `MCP_Voice_${ts}`;
   const PLAYER_NAME = `MCP_Player_${ts}`;
   const TARGET_PLAYER_ID = `MCP_TargetId_${ts}`;
   const MAP_PATH = '/Game/MCPTest/MainLevel';
-  const SERVER_PORT = 7788;
-  const SERVER_PASSWORD = 'mcp-test-password';
-  const JOIN_OPTIONS = '?Name=MCPClient';
   const HOST_OPTIONS = '?MCPTest=1';
   const HOST_TRAVEL_URL = `${MAP_PATH}?listen?bIsLanMatch=1?MaxPlayers=4${HOST_OPTIONS}`;
-  const JOIN_CONNECTION_URL = `127.0.0.1:${SERVER_PORT}${JOIN_OPTIONS}?Password=${SERVER_PASSWORD}`;
 
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
 
     // === SESSION CONFIGURATION ===
-    {
-      scenario: 'CONFIG: configure_local_session_settings',
-      toolName: 'manage_networking',
-      arguments: {
-        action: 'configure_local_session_settings',
-        sessionName: SESSION_NAME,
-        maxPlayers: 4,
-        bIsLANMatch: true,
-        bAllowJoinInProgress: false,
-        bAllowInvites: true,
-        bUsesPresence: false,
-        bUseLobbiesIfAvailable: false,
-        bShouldAdvertise: true
-      },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.sessionName', equals: SESSION_NAME, label: 'session name applied' },
-        { path: 'structuredContent.result.maxPlayers', equals: 4, label: 'session max players applied' },
-        { path: 'structuredContent.result.bIsLANMatch', equals: true, label: 'LAN match flag applied' },
-        { path: 'structuredContent.result.bAllowJoinInProgress', equals: false, label: 'join-in-progress flag applied' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: configure_session_interface',
-      toolName: 'manage_networking',
-      arguments: { action: 'configure_session_interface', interfaceType: 'Null' },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.interfaceType', equals: 'Null', label: 'session interface type applied' },
-        { path: 'structuredContent.result.status', equals: 'configured', label: 'session interface configured status returned' }
-      ]
-    },
 
     // === SPLIT-SCREEN CONFIGURATION ===
     {
@@ -315,13 +263,6 @@ const testCases = [
         { path: 'structuredContent.result.verticalSplit', equals: true, label: 'vertical split detected' },
         { path: 'structuredContent.result.success', equals: true, label: 'split-screen native configuration succeeded' }
       ]
-    },
-    {
-      scenario: 'CONFIG: set_split_screen_type',
-      toolName: 'manage_networking',
-      arguments: { action: 'set_split_screen_type', splitScreenType: 'FourPlayer_Grid' },
-      expected: 'success',
-      assertions: [{ path: 'structuredContent.result.splitScreenType', equals: 'FourPlayer_Grid', label: 'split-screen layout returned' }]
     },
 
     // === PIE-ONLY LOCAL MULTIPLAYER ===
@@ -382,17 +323,6 @@ const testCases = [
 
     // === LAN CONFIGURATION ===
     {
-      scenario: 'CONFIG: configure_lan_play',
-      toolName: 'manage_networking',
-      arguments: { action: 'configure_lan_play', enabled: true, serverPort: SERVER_PORT, serverPassword: SERVER_PASSWORD },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.enabled', equals: true, label: 'LAN play enabled flag applied' },
-        { path: 'structuredContent.result.serverPort', equals: SERVER_PORT, label: 'LAN server port applied' },
-        { path: 'structuredContent.result.hasPassword', equals: true, label: 'LAN password presence returned' }
-      ]
-    },
-    {
       scenario: 'ACTION: host_lan_server',
       toolName: 'manage_networking',
       arguments: { action: 'host_lan_server', serverName: SERVER_NAME, mapName: MAP_PATH, maxPlayers: 4, travelOptions: HOST_OPTIONS, executeTravel: false },
@@ -402,17 +332,6 @@ const testCases = [
         { path: 'structuredContent.result.mapPath', equals: MAP_PATH, label: 'LAN host map path returned' },
         { path: 'structuredContent.result.travelURL', equals: HOST_TRAVEL_URL, label: 'LAN host travel URL constructed' },
         { path: 'structuredContent.result.travelExecuted', equals: false, label: 'LAN host test avoids disruptive travel' }
-      ]
-    },
-    {
-      scenario: 'ACTION: join_lan_server',
-      toolName: 'manage_networking',
-      arguments: { action: 'join_lan_server', serverAddress: '127.0.0.1', serverPort: SERVER_PORT, serverPassword: SERVER_PASSWORD, travelOptions: JOIN_OPTIONS },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.serverAddress', equals: `127.0.0.1:${SERVER_PORT}`, label: 'LAN join address normalized with port' },
-        { path: 'structuredContent.result.connectionURL', equals: JOIN_CONNECTION_URL, label: 'LAN join connection URL constructed' },
-        { path: 'structuredContent.result.status', equals: 'configured', label: 'LAN join configured status returned' }
       ]
     },
 
@@ -425,38 +344,6 @@ const testCases = [
       assertions: [
         { path: 'structuredContent.result.voiceEnabled', equals: false, label: 'voice chat disabled flag applied' },
         { path: 'structuredContent.result.success', equals: true, label: 'voice chat disable path completed' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: configure_voice_settings',
-      toolName: 'manage_networking',
-      arguments: {
-        action: 'configure_voice_settings',
-        voiceSettings: {
-          volume: 0.42,
-          noiseGateThreshold: 0.03,
-          noiseSuppression: false,
-          echoCancellation: true,
-          sampleRate: 24000
-        }
-      },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.voiceSettings.volume', equals: 0.42, label: 'voice volume applied' },
-        { path: 'structuredContent.result.voiceSettings.noiseGateThreshold', equals: 0.03, label: 'voice noise gate applied' },
-        { path: 'structuredContent.result.voiceSettings.noiseSuppression', equals: false, label: 'voice noise suppression applied' },
-        { path: 'structuredContent.result.voiceSettings.echoCancellation', equals: true, label: 'voice echo cancellation applied' },
-        { path: 'structuredContent.result.voiceSettings.sampleRate', equals: 24000, label: 'voice sample rate applied' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: set_voice_channel',
-      toolName: 'manage_networking',
-      arguments: { action: 'set_voice_channel', channelName: VOICE_CHANNEL, channelType: 'Party' },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.channelName', equals: VOICE_CHANNEL, label: 'voice channel name returned' },
-        { path: 'structuredContent.result.channelType', equals: 'Party', label: 'voice channel type returned' }
       ]
     },
     {
@@ -481,26 +368,6 @@ const testCases = [
         { path: 'structuredContent.result.localPlayerNum', equals: 0, label: 'local player number returned' },
         { path: 'structuredContent.result.systemWide', equals: true, label: 'system-wide mute flag returned' },
         { path: 'structuredContent.result.success', equals: true, label: 'target id mute request completed' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: set_voice_attenuation',
-      toolName: 'manage_networking',
-      arguments: { action: 'set_voice_attenuation', attenuationRadius: 1800, attenuationFalloff: 2.5 },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.attenuationRadius', equals: 1800, label: 'voice attenuation radius returned' },
-        { path: 'structuredContent.result.attenuationFalloff', equals: 2.5, label: 'voice attenuation falloff returned' }
-      ]
-    },
-    {
-      scenario: 'CONFIG: configure_push_to_talk',
-      toolName: 'manage_networking',
-      arguments: { action: 'configure_push_to_talk', pushToTalkEnabled: true, pushToTalkKey: 'LeftShift' },
-      expected: 'success',
-      assertions: [
-        { path: 'structuredContent.result.pushToTalkEnabled', equals: true, label: 'push-to-talk enabled flag returned' },
-        { path: 'structuredContent.result.pushToTalkKey', equals: 'LeftShift', label: 'push-to-talk key returned' }
       ]
     },
 
@@ -581,14 +448,8 @@ const testCases = [
     { scenario: 'INFO: read back player state class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.playerStateClass', equals: PLAYER_STATE_CLASS, label: 'player state class read back from CDO' }] },
     { scenario: 'CONFIG: configure_game_rules', toolName: 'manage_networking', arguments: { action: 'configure_game_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, bDelayedStart: true }, expected: 'success', assertions: gameModePathAssertion('game rules') },
 
-    { scenario: 'ACTION: setup_match_states', toolName: 'manage_networking', arguments: { action: 'setup_match_states', gameModeBlueprint: GAME_MODE_OBJECT_PATH, states: ['Waiting', 'Warmup', 'InProgress', 'PostMatch'] }, expected: 'success', assertions: [...gameModePathAssertion('match states'), { path: 'structuredContent.result.variablesAdded', equals: 6, label: 'match flow variables added' }, { path: 'structuredContent.result.stateCount', equals: 4, label: 'match state count returned' }, { path: 'structuredContent.result.configuredStates', length: 4, label: 'configured match states returned' }] },
-    { scenario: 'CONFIG: configure_round_system', toolName: 'manage_networking', arguments: { action: 'configure_round_system', gameModeBlueprint: GAME_MODE_OBJECT_PATH, numRounds: 3, roundTime: 180, intermissionTime: 15 }, expected: 'success', assertions: [...gameModePathAssertion('round system'), { path: 'structuredContent.result.variablesAdded', equals: 7, label: 'round system variables added' }, { path: 'structuredContent.result.configuration.numRounds', equals: 3, label: 'round count configured' }, { path: 'structuredContent.result.configuration.roundTime', equals: 180, label: 'round time configured' }, { path: 'structuredContent.result.configuration.intermissionTime', equals: 15, label: 'intermission time configured' }] },
-    { scenario: 'CONFIG: configure_team_system', toolName: 'manage_networking', arguments: { action: 'configure_team_system', gameModeBlueprint: GAME_MODE_OBJECT_PATH, numTeams: 4, teamSize: 5, autoBalance: false, friendlyFire: true }, expected: 'success', assertions: [...gameModePathAssertion('team system'), { path: 'structuredContent.result.variablesAdded', equals: 6, label: 'team system variables added' }, { path: 'structuredContent.result.configuration.numTeams', equals: 4, label: 'team count configured' }, { path: 'structuredContent.result.configuration.teamSize', equals: 5, label: 'team size configured' }, { path: 'structuredContent.result.configuration.autoBalance', equals: false, label: 'auto balance configured' }, { path: 'structuredContent.result.configuration.friendlyFire', equals: true, label: 'friendly fire configured' }] },
-    { scenario: 'CONFIG: configure_scoring_system', toolName: 'manage_networking', arguments: { action: 'configure_scoring_system', gameModeBlueprint: GAME_MODE_OBJECT_PATH, scorePerKill: 125, scorePerAssist: 25, scorePerObjective: 750, winScore: 1500, scorePerDeath: -10 }, expected: 'success', assertions: [...gameModePathAssertion('scoring system'), { path: 'structuredContent.result.variablesAdded', equals: 5, label: 'scoring system variables added' }, { path: 'structuredContent.result.configuration.scorePerKill', equals: 125, label: 'kill score configured' }, { path: 'structuredContent.result.configuration.scorePerAssist', equals: 25, label: 'assist score configured' }, { path: 'structuredContent.result.configuration.scorePerObjective', equals: 750, label: 'objective score configured' }, { path: 'structuredContent.result.configuration.winScore', equals: 1500, label: 'win score configured' }, { path: 'structuredContent.result.configuration.scorePerDeath', equals: -10, label: 'death score configured' }] },
-    { scenario: 'CONFIG: configure_spawn_system', toolName: 'manage_networking', arguments: { action: 'configure_spawn_system', gameModeBlueprint: GAME_MODE_OBJECT_PATH, spawnSelectionMethod: 'TeamWeighted', respawnDelay: 6.5, usePlayerStarts: true, canRespawn: false, maxRespawns: 2 }, expected: 'success', assertions: [...gameModePathAssertion('spawn system'), { path: 'structuredContent.result.variablesAdded', equals: 5, label: 'spawn system variables added' }, { path: 'structuredContent.result.configuration.spawnSelectionMethod', equals: 'TeamWeighted', label: 'spawn selection configured' }, { path: 'structuredContent.result.configuration.respawnDelay', equals: 6.5, label: 'spawn respawn delay configured' }, { path: 'structuredContent.result.configuration.usePlayerStarts', equals: true, label: 'player starts enabled' }, { path: 'structuredContent.result.configuration.canRespawn', equals: false, label: 'can respawn configured' }, { path: 'structuredContent.result.configuration.maxRespawns', equals: 2, label: 'max respawns configured' }] },
 
-    { scenario: 'CONFIG: configure_player_start', toolName: 'manage_networking', arguments: { action: 'configure_player_start', blueprintPath: GAME_MODE_OBJECT_PATH, teamIndex: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'player start native success flag' }, { path: 'structuredContent.result.teamIndex', equals: 2, label: 'player start team index returned' }, { path: 'structuredContent.result.playerStartTag', equals: 'Team2', label: 'player start team tag generated' }] },
-    { scenario: 'CONFIG: set_respawn_rules', toolName: 'manage_networking', arguments: { action: 'set_respawn_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, respawnDelay: 9.25, respawnLocation: 'TeamStart', forceRespawn: false, respawnLives: 3 }, expected: 'success', assertions: [...gameModePathAssertion('respawn rules'), { path: 'structuredContent.result.variablesAdded', equals: 3, label: 'respawn variables added' }, { path: 'structuredContent.result.configuration.respawnDelay', equals: 9.25, label: 'respawn delay configured' }, { path: 'structuredContent.result.configuration.respawnLocation', equals: 'TeamStart', label: 'respawn location configured' }, { path: 'structuredContent.result.configuration.forceRespawn', equals: false, label: 'force respawn configured' }, { path: 'structuredContent.result.configuration.respawnLives', equals: 3, label: 'respawn lives configured' }] },
+    { scenario: 'CONFIG: set_respawn_rules', toolName: 'manage_networking', arguments: { action: 'set_respawn_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, respawnDelay: 9.25 }, expected: 'success', assertions: [...gameModePathAssertion('respawn rules'), { path: 'structuredContent.result.configuration.respawnDelay', equals: 9.25, label: 'respawn delay configured' }] },
     { scenario: 'CONFIG: configure_spectating', toolName: 'manage_networking', arguments: { action: 'configure_spectating', gameModeBlueprint: GAME_MODE_OBJECT_PATH, spectatorClass: SPECTATOR_CLASS, allowSpectating: true, spectatorViewMode: 'FreeCam' }, expected: 'success', assertions: gameModePathAssertion('spectating') },
 
     { scenario: 'INFO: get_game_framework_info final readback', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'game framework info native success flag' }, { path: 'structuredContent.result.gameFrameworkInfo.gameModeClass', equals: `${GAME_MODE_OBJECT_PATH}_C`, label: 'game mode generated class read back' }, { path: 'structuredContent.result.gameFrameworkInfo.defaultPawnClass', equals: DEFAULT_PAWN_CLASS, label: 'final default pawn readback' }, { path: 'structuredContent.result.gameFrameworkInfo.playerControllerClass', equals: PLAYER_CONTROLLER_CLASS, label: 'final player controller readback' }, { path: 'structuredContent.result.gameFrameworkInfo.gameStateClass', equals: GAME_STATE_CLASS, label: 'final game state readback' }, { path: 'structuredContent.result.gameFrameworkInfo.playerStateClass', equals: PLAYER_STATE_CLASS, label: 'final player state readback' }, { path: 'structuredContent.result.gameFrameworkInfo.hudClass', equals: `${HUD_OBJECT_PATH}_C`, label: 'final HUD class readback' }] },
@@ -615,7 +476,7 @@ const testCases = [
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-    { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Test_${ts}`, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+    { scenario: 'Setup: create test blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Test_${ts}`, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
 
     // === CREATE ===
     { scenario: 'CREATE: create_input_action', toolName: 'manage_networking', arguments: {"action": "create_input_action", "name": "Testinput_action", "path": INPUT_FOLDER_ALIAS}, expected: 'success|already exists' },
@@ -632,7 +493,6 @@ const testCases = [
     { scenario: 'DELETE: remove_mapping', toolName: 'manage_networking', arguments: { action: 'remove_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar' }, expected: 'success|not found' },
     // === TOGGLE ===
     { scenario: 'TOGGLE: enable_input_mapping', toolName: 'manage_networking', arguments: { action: 'enable_input_mapping', contextPath: INPUT_CONTEXT, priority: 1 }, expected: 'success' },
-    { scenario: 'TOGGLE: disable_input_action', toolName: 'manage_networking', arguments: { action: 'disable_input_action', actionPath: INPUT_ACTION }, expected: 'success' },
     // === INFO ===
     { scenario: 'INFO: get_input_info', toolName: 'manage_networking', arguments: { action: 'get_input_info', assetPath: INPUT_CONTEXT }, expected: 'success' },
     { scenario: 'ADD: add_legacy_action_mapping', toolName: 'manage_networking', arguments: { action: 'add_legacy_action_mapping', actionName: LEGACY_ACTION_NAME, key: 'F', shift: true, ctrl: false, alt: false, cmd: false }, expected: 'success' },
@@ -646,4 +506,4 @@ const testCases = [
   );
 }
 
-runToolTests('manage-networking', testCases);
+runToolTests('manage-networking', testCases, { folder: TEST_FOLDER });

@@ -7,37 +7,32 @@ import { Logger } from '../../src/utils/logging/logger.js';
 import type { ITools } from '../../src/types/tools/tool-interfaces.js';
 import type { GatewayContext } from '../../src/server/tool-registry-gateway.js';
 import { handleUnrealGatewayCall } from '../../src/server/tool-registry-gateway.js';
-import { executeTargetIndex, resolveExecuteTarget, type ExecuteTarget } from '../../src/server/gateway/gateway-execute-resolve.js';
+import { resolveExecuteTarget, type ExecuteTarget } from '../../src/server/gateway/gateway-execute-resolve.js';
+import { capabilityIndex } from '../../src/server/gateway/gateway-capability-index.js';
 import { resolveDispatchAction } from '../../src/server/gateway/gateway-dispatch-by.js';
 import { matchedFoldedGrant } from '../../src/server/gateway/gateway-execute-policy.js';
-import {
-  CapabilityRecordSourceSchema,
-  createCapabilityRecord
-} from '../../src/tools/catalog/capabilities/index.js';
-import type { CapabilityRecordSource } from '../../src/tools/catalog/capabilities/index.js';
-import { LEVEL_VOLUME_A_RECORDS } from '../../src/tools/catalog/capabilities/records/world/manage-level-structure.volume-a.data.js';
+import { CapabilityRecordSourceSchema } from '../../src/tools/catalog/capabilities/record-schema.js';
+import { createCapabilityRecord } from '../../src/tools/catalog/capabilities/parser.js';
+import type { CapabilityRecordSource } from '../../src/tools/catalog/capabilities/model.js';
+import { LEVEL_VOLUME_RECORDS } from '../../src/tools/catalog/capabilities/records/world/manage-level-structure.volume.data.js';
 
 const dispatched: Array<{ tool: string; args: Record<string, unknown> }> = [];
 
-vi.mock('../../src/tools/orchestration/consolidated-tool-handlers.js', () => ({
-  handleConsolidatedToolCall: vi.fn(async (tool: string, args: Record<string, unknown>) => {
+const handleConsolidatedToolCall = vi.fn(async (tool: string, args: Record<string, unknown>) => {
     dispatched.push({ tool, args });
     return { success: true, message: 'ok' };
-  })
-}));
+  });
 
 function makeContext(): GatewayContext {
   const tools: ITools = {
-    systemTools: {
-      executeConsoleCommand: async () => ({ success: false }),
-      getProjectSettings: async () => ({})
-    },
-    assetResources: { list: async () => ({}) }
+    automationBridge: {
+      isConnected: () => true,
+      sendAutomationRequest: async (tool: string, payload: Record<string, unknown>) => handleConsolidatedToolCall(tool, payload)
+    }
   };
   return {
     tools,
     logger: new Logger('dispatch-by', 'error'),
-    elicitationTimeoutMs: 0,
     ensureConnected: async () => true
   };
 }
@@ -144,7 +139,7 @@ describe('folded family: discovery', () => {
 });
 
 describe('fold invariants are enforced at authoring time', () => {
-  const source = LEVEL_VOLUME_A_RECORDS[0] as CapabilityRecordSource;
+  const source = LEVEL_VOLUME_RECORDS[0] as CapabilityRecordSource;
   const dispatchBy = source.routing.dispatchBy;
   if (dispatchBy === undefined) throw new Error('the volume fold must declare routing.dispatchBy');
 
@@ -233,7 +228,7 @@ describe('a required-selector family keeps every old name callable', () => {
 describe('a grant naming a folded pair authorizes that pair only', () => {
   const FIND = 'control_actor.find';
   const targetOf = (capability: string): ExecuteTarget => {
-    const index = executeTargetIndex();
+    const index = capabilityIndex();
     const resolution = resolveExecuteTarget({ capability, params: {} }, index);
     if (!resolution.ok) throw new Error(`unresolvable: ${capability}`);
     return resolution.target;
@@ -250,7 +245,7 @@ describe('a grant naming a folded pair authorizes that pair only', () => {
   });
 
   it('a grant naming one folded sibling does not authorize dispatching another', async () => {
-    const index = executeTargetIndex();
+    const index = capabilityIndex();
     const resolution = resolveExecuteTarget(
       { tool: 'control_actor', action: 'find_by_name', params: { name: 'X' } },
       index

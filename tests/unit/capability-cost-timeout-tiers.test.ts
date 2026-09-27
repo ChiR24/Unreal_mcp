@@ -19,11 +19,8 @@ import {
   CAPABILITY_TIMEOUT_TIER_MS,
   MIN_CAPABILITY_TIMEOUT_MS,
 } from '../../src/config.js';
-import {
-  executeAutomationRequest,
-  resolveActionTimeoutMs,
-  resolveCostTimeoutMs,
-} from '../../src/tools/handlers/foundation/dispatch/common-handlers.js';
+import { executeAutomationRequest } from '../../src/tools/handlers/foundation/dispatch/automation-request-dispatch.js';
+import { resolveActionTimeoutMs, resolveCostTimeoutMs } from '../../src/tools/handlers/foundation/dispatch/handler-timeout.js';
 import type { ITools } from '../../src/types/tools/tool-interfaces.js';
 
 const LATENCIES = ['instant', 'interactive', 'long-running'] as const;
@@ -57,20 +54,14 @@ function createRecordingTools(): {
 }
 
 describe('Task 45 capability-cost timeout tiers', () => {
-  const savedCanonical = process.env.MCP_REQUEST_TIMEOUT_MS;
-  const savedLegacy = process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS;
-
   beforeEach(() => {
     // Tier derivation is what is under test; an operator override would mask it.
-    delete process.env.MCP_REQUEST_TIMEOUT_MS;
-    delete process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS;
+    vi.stubEnv('MCP_REQUEST_TIMEOUT_MS', undefined);
+    vi.stubEnv('MCP_AUTOMATION_REQUEST_TIMEOUT_MS', undefined);
   });
 
   afterEach(() => {
-    if (savedCanonical === undefined) delete process.env.MCP_REQUEST_TIMEOUT_MS;
-    else process.env.MCP_REQUEST_TIMEOUT_MS = savedCanonical;
-    if (savedLegacy === undefined) delete process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS;
-    else process.env.MCP_AUTOMATION_REQUEST_TIMEOUT_MS = savedLegacy;
+    vi.unstubAllEnvs();
   });
 
   it('gives a cheap read a strictly smaller budget than a long-running mutation', async () => {
@@ -148,7 +139,7 @@ describe('Task 45 capability-cost timeout tiers', () => {
   });
 
   it('lets an explicit operator override win over every tier', async () => {
-    process.env.MCP_REQUEST_TIMEOUT_MS = '4242';
+    vi.stubEnv('MCP_REQUEST_TIMEOUT_MS', '4242');
     const { tools, timeoutFor } = createRecordingTools();
 
     await executeAutomationRequest(tools, 'inspect', {
@@ -171,7 +162,6 @@ describe('Task 45 capability-cost timeout tiers', () => {
       tools,
       'inspect',
       { action: 'inspect_object', objectPath: '/Game/Example' },
-      undefined,
       { timeoutMs: 777 },
     );
 

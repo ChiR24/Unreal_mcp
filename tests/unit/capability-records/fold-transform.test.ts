@@ -29,8 +29,6 @@ const member = (
     effect: 'read',
     costLatency: 'instant',
     costResources: 'low',
-    normalizationClass: 'C_SAME_VERB_DIFFERENT_TARGET',
-    normalizationRationale: 'test',
     exampleInput: {},
     exampleOutput: { success: true },
   });

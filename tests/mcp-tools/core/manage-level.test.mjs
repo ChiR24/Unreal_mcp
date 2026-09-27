@@ -20,9 +20,6 @@ const RENAMED_LEVEL = `${TEST_FOLDER}/${RENAMED_LEVEL_NAME}`;
 const TEST_ACTOR = `LevelActor_${ts}`;
 
 const testCases = [
-  // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
-
   // === CREATE / SAVE / LOAD ===
   { scenario: 'CREATE: create_level', toolName: 'manage_level', arguments: { action: 'create_level', levelName: `LevelMain_${ts}`, levelPath: TEST_FOLDER, template: '/Engine/Maps/Templates/OpenWorld', useWorldPartition: false, saveDirtyPackages: true }, expected: 'success|already exists' },
   { scenario: 'ACTION: save', toolName: 'manage_level', arguments: { action: 'save' }, expected: 'success' },
@@ -34,12 +31,13 @@ const testCases = [
   { scenario: 'ACTION: load_level alias', toolName: 'manage_level', arguments: { action: 'load_level', levelPath: MAIN_LEVEL, streaming: false, saveDirtyPackages: true }, expected: 'success' },
   { scenario: 'Setup: spawn actor in level', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: TEST_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
 
+  { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: MAIN_LEVEL, parentPath: TEST_FOLDER, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_sublevel via levelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', levelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
+
   // === STREAMING ===
   { scenario: 'ACTION: stream', toolName: 'manage_level', arguments: { action: 'stream', levelPath: SUB_LEVEL, shouldBeLoaded: true, shouldBeVisible: true }, expected: 'success|already loaded' },
   { scenario: 'ACTION: unload', toolName: 'manage_level', arguments: { action: 'unload', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
   { scenario: 'ACTION: unload_level alias', toolName: 'manage_level', arguments: { action: 'unload_level', levelPath: SUB_LEVEL }, expected: 'success|not loaded' },
-  { scenario: 'ADD: add_sublevel', toolName: 'manage_level', arguments: { action: 'add_sublevel', subLevelPath: SUB_LEVEL, parentLevel: MAIN_LEVEL, parentPath: TEST_FOLDER, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
-  { scenario: 'ADD: add_sublevel via levelPath alias', toolName: 'manage_level', arguments: { action: 'add_sublevel', levelPath: SUB_LEVEL, streamingMethod: 'AlwaysLoaded' }, expected: 'success|already exists' },
 
   // === LIGHTING ===
   { scenario: 'CREATE: create_light', toolName: 'manage_level', arguments: { action: 'create_light', lightType: 'Point', name: `LevelLight_${ts}`, location: { x: 150, y: 0, z: 250 }, rotation: { pitch: -20, yaw: 0, roll: 0 }, intensity: 1500, color: [1, 0.85, 0.6, 1] }, expected: 'success|already exists' },
@@ -68,7 +66,6 @@ const testCases = [
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('manage-level', testCases);
+runToolTests('manage-level', testCases, { folder: TEST_FOLDER });

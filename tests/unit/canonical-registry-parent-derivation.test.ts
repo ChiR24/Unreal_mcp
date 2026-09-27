@@ -13,14 +13,12 @@ import { readFileSync } from 'node:fs';
 import { deriveParents } from '../../scripts/canonical-registry/parent-derivation.js';
 import { mergePropertyUnion } from '../../scripts/canonical-registry/schema-merge.js';
 import { buildTargets } from '../../scripts/canonical-registry/targets.js';
-import { buildSortedRecords } from '../../scripts/canonical-registry/types.js';
-import { consolidatedToolDefinitions } from '../../src/tools/catalog/consolidated-tool-definitions.js';
-import { loadAllCapabilityRecords } from '../../scripts/qa/capability-metadata-audit.js';
+import { sortById } from '../../src/utils/serialization/ordering.js';
 import type { CapabilityRecord } from '../../src/tools/catalog/capabilities/model.js';
 import type { JsonSchemaNode } from '../../scripts/canonical-registry/types.js';
 import { compareAscii } from '../../src/utils/serialization/ordering.js';
-
-const PARENT_META = { description: 'fixture parent', category: 'core' as const };
+import { ALL_CAPABILITY_RECORDS } from '../../src/tools/catalog/capabilities/records/aggregate.js';
+import { getParentToolMetadata } from '../../src/tools/catalog/capabilities/records/parent-metadata.js';
 
 type DerivedParent = ReturnType<typeof deriveParents>[number];
 
@@ -49,9 +47,8 @@ function record(
 ): CapabilityRecord {
   return {
     id,
-    parent: PARENT_META,
-    routing: { parentTool: 'fixture_parent', dispatchAction: action as never },
-    legacyIds: [{ tool: 'fixture_parent' as never, action: action as never }],
+    routing: { parentTool: 'manage_tools', dispatchAction: action as never },
+    legacyIds: [{ tool: 'manage_tools' as never, action: action as never }],
     discovery: { domain: 'fixture', family: 'fixture', topics: [], summary: '', whenToUse: [], whenNotToUse: [] },
     schemas: {
       input: { $schema: 'https://json-schema.org/draft/2020-12/schema', type: 'object', properties: inputProps, required: ['action'], additionalProperties: false },
@@ -69,19 +66,16 @@ function record(
   } as unknown as CapabilityRecord;
 }
 
-describe('generator bootstrap is acyclic (no facade/generated/base import)', () => {
-  it('generate-canonical-registry.ts does not import the consolidated facade or generated parent defs', () => {
+describe('generator bootstrap is acyclic (no generated/base import)', () => {
+  it('generate-canonical-registry.ts does not import the generated parent defs', () => {
     const src = readFileSync('./scripts/generate-canonical-registry.ts', 'utf8');
     const importLines = src.split('\n').filter((l) => /^\s*import\s/.test(l)).join('\n');
-    expect(importLines).not.toMatch(/consolidated-tool-definitions/);
     expect(importLines).not.toMatch(/parent-tool-definitions\.generated/);
-    expect(src).not.toMatch(/from '.*consolidated-tool-definitions\.js'/);
     expect(src).not.toMatch(/from '.*parent-tool-definitions\.generated\.js'/);
   });
 
-  it('parent-derivation.ts imports neither the facade nor the generated artifact nor allToolDefinitions', () => {
+  it('parent-derivation.ts imports neither the generated artifact nor allToolDefinitions', () => {
     const src = readFileSync('./scripts/canonical-registry/parent-derivation.ts', 'utf8');
-    expect(src).not.toMatch(/consolidated-tool-definitions/);
     expect(src).not.toMatch(/parent-tool-definitions\.generated/);
     expect(src).not.toMatch(/all-tool-definitions/);
   });
@@ -96,13 +90,13 @@ describe('deriveParents is record-only and deterministic', () => {
   it('produces exactly one parent per distinct parentTool', () => {
     const parents = deriveParents(recs);
     expect(parents.length).toBe(1);
-    expect(parents[0].name).toBe('fixture_parent');
+    expect(parents[0].name).toBe('manage_tools');
   });
 
-  it('takes name/category/description from record parent metadata', () => {
+  it('takes category/description from the parent table', () => {
     const [parent] = deriveParents(recs);
     expect(parent.category).toBe('core');
-    expect(parent.description).toBe('fixture parent');
+    expect(parent.description).toBe(getParentToolMetadata('manage_tools').description);
   });
 
   it('action is a direct string enum (no anyOf) and includes every legacy action', () => {
@@ -136,14 +130,6 @@ describe('deriveParents is record-only and deterministic', () => {
     const b = JSON.stringify(deriveParents(recs));
     expect(a).toEqual(b);
   });
-
-  it('throws when a record parent is not a valid legacy tool name', () => {
-    const bad: CapabilityRecord[] = [
-      record('x', 'act', {}, {}),
-    ];
-    (bad[0] as unknown as { routing: { parentTool: string } }).routing.parentTool = '1bad_parent';
-    expect(() => deriveParents(bad)).toThrow();
-  });
 });
 
 describe('action enum order follows the canonical record sequence', () => {
@@ -167,12 +153,12 @@ describe('action enum order follows the canonical record sequence', () => {
 
   it('keeps the parent list name-sorted regardless of record sequence', () => {
     const recs: CapabilityRecord[] = [record('r1', 'act_one', {}, {}), record('r2', 'act_two', {}, {})];
-    (recs[0] as unknown as { routing: { parentTool: string } }).routing.parentTool = 'z_parent';
-    expect(deriveParents(recs).map((p) => p.name)).toEqual(['fixture_parent', 'z_parent']);
+    (recs[0] as unknown as { routing: { parentTool: string } }).routing.parentTool = 'system_control';
+    expect(deriveParents(recs).map((p) => p.name)).toEqual(['manage_tools', 'system_control']);
   });
 
   it('every real parent enum equals its first-seen record order, and some are non-alphabetical', () => {
-    const recs = loadFixtureRecords();
+    const recs = ALL_CAPABILITY_RECORDS;
     const parents = deriveParents(recs);
     for (const p of parents) expect(actionsOf(p)).toEqual(firstSeenActions(recs, p.name));
     const nonAlphabetical = parents.filter((p) => actionsOf(p).join() !== alphabetised(actionsOf(p)).join());
@@ -180,9 +166,9 @@ describe('action enum order follows the canonical record sequence', () => {
   });
 
   it('record sequence changes the action enum only, never the property unions', () => {
-    const recs = loadFixtureRecords();
+    const recs = ALL_CAPABILITY_RECORDS;
     const natural = deriveParents(recs);
-    const idSorted = deriveParents(buildSortedRecords(recs));
+    const idSorted = deriveParents(sortById(recs));
     expect(idSorted.map((p) => p.name)).toEqual(natural.map((p) => p.name));
     for (const [i, p] of natural.entries()) {
       expect(idSorted[i].outputSchema).toEqual(p.outputSchema);
@@ -248,7 +234,7 @@ describe('conflict-shape resolution (deterministic oneOf, never anyOf)', () => {
 });
 
 describe('generated parent defs equal record-derived parents (end-to-end)', () => {
-  const recs = loadFixtureRecords();
+  const recs = ALL_CAPABILITY_RECORDS;
   const emitted = emittedParentDefs(recs);
 
   it('parent target content deep-equals deriveParents(records)', () => {
@@ -262,32 +248,17 @@ describe('generated parent defs equal record-derived parents (end-to-end)', () =
     const resequenced = [...recs].reverse();
     const emittedResequenced = emittedParentDefs(resequenced);
     expect(emittedResequenced).toEqual(deriveParents(resequenced));
-    expect(emittedResequenced).not.toEqual(deriveParents(buildSortedRecords(resequenced)));
-  });
-
-  it('runtime consolidated facade carries params while generated parents do not', () => {
-    expect(consolidatedToolDefinitions.length).toBe(23);
-    for (const p of consolidatedToolDefinitions) {
-      expect((p.inputSchema.properties as Record<string, unknown>).params).toBeDefined();
-    }
+    expect(emittedResequenced).not.toEqual(deriveParents(sortById(resequenced)));
   });
 });
 
-function loadFixtureRecords(): readonly CapabilityRecord[] {
-  return loadAllCapabilityRecords();
-}
-
 function emittedParentDefs(recs: readonly CapabilityRecord[]): unknown[] {
-  const targets = buildTargets({
-    records: recs,
-    migrationMap: { entries: new Map() },
-    generateAliases: () => ({ aliases: [], conflicts: [] }),
-  });
+  const targets = buildTargets({ records: recs });
   const parentTarget = targets.find(([p]) => p.endsWith('parent-tool-definitions.generated.ts'));
   if (!parentTarget) throw new Error('parent target missing');
-  const body = parentTarget[1].match(
-    /generatedParentToolDefinitions:\s*readonly ToolDefinition\[\]\s*=\s*(\[[\s\S]*?\]);/,
-  );
-  if (!body) throw new Error('generated parent definitions body missing');
-  return JSON.parse(body[1]) as unknown[];
+  const text = parentTarget[1];
+  const start = text.indexOf('= [', text.indexOf('generatedParentToolDefinitions')) + 2;
+  const end = text.lastIndexOf('];');
+  if (start < 0 || end < start) throw new Error('generated parent definitions body missing');
+  return JSON.parse(text.slice(start, end + 1)) as unknown[];
 }

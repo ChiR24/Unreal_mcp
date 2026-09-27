@@ -16,10 +16,9 @@ const cameraRotation = { pitch: -20, yaw: 35, roll: 0 };
 
 const testCases = [
   // === SETUP ===
-  { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
   { scenario: 'Setup: create focus actor', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Cube', actorName: FOCUS_ACTOR, location: { x: 0, y: 0, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'Setup: create PIE pawn', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.DefaultPawn', actorName: PIE_PAWN, location: { x: 180, y: 0, z: 140 } }, expected: 'success|already exists' },
-  { scenario: 'Setup: create asset for editor open/close', toolName: 'manage_blueprint', arguments: { action: 'create', name: BP_NAME, path: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  { scenario: 'Setup: create asset for editor open/close', toolName: 'manage_blueprint', arguments: { action: 'create', name: BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
 
   // === PLAYBACK / PIE STATE ===
   { scenario: 'PLAYBACK: play', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success' },
@@ -95,7 +94,6 @@ const testCases = [
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [FOCUS_ACTOR, PIE_PAWN] }, expected: 'success|not found' },
   { scenario: 'ACTION: open_level via path alias', toolName: 'control_editor', arguments: { action: 'open_level', path: '/Game/MCPTest/MainLevel' }, expected: 'success' },
   { scenario: 'ACTION: open_level', toolName: 'control_editor', arguments: { action: 'open_level', levelPath: '/Game/MCPTest/MainLevel' }, expected: 'success' },
-  { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },
 ];
 
-runToolTests('control-editor', testCases);
+runToolTests('control-editor', testCases, { folder: TEST_FOLDER });

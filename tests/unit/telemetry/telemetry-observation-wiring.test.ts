@@ -6,8 +6,6 @@
 // the exact argument shape the `unreal` gateway receives, and then check that
 // the production call sites actually pass it.
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -90,17 +88,5 @@ describe('Task 47 action_class derivation against the real registry', () => {
       `${TELEMETRY_METRIC_NAMES.failuresByClassTotal}{surface="typescript",action_class="destructive",failure_class="scope_not_granted"} 1`,
     );
     expect(rendered).not.toContain(capability);
-  });
-});
-
-describe('Task 47 production call sites pass the bounded dimensions', () => {
-  it('never calls trackPerformance without dimensions in the tool registry', () => {
-    const source = readFileSync(resolve(process.cwd(), 'src/server/tool-registry.ts'), 'utf8');
-    const calls = [...source.matchAll(/trackPerformance\(([^)]*)\)/g)].map((match) => match[1] ?? '');
-    expect(calls.length, 'expected the registry to still track performance').toBeGreaterThan(0);
-    for (const call of calls) {
-      const argumentCount = call.split(',').length;
-      expect(argumentCount, `trackPerformance(${call}) drops the telemetry dimensions`).toBeGreaterThanOrEqual(3);
-    }
   });
 });
