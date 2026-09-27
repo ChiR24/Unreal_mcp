@@ -141,6 +141,26 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       return true;
     }
 
+    // A name the parent class already uses cannot be a new variable: the
+    // compiler renames the new one, and the reply used to say only "Variable
+    // add verification failed". Name the inherited property and the way out.
+    const FProperty *Inherited = Blueprint->ParentClass
+        ? FindFProperty<FProperty>(Blueprint->ParentClass.Get(), FName(*VarName)) : nullptr;
+    if (Inherited) {
+      const UClass *Owner = Inherited->GetOwnerClass();
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          FString::Printf(TEXT("'%s' is already a property of the parent class %s (declared on %s, type %s), "
+                               "so it cannot be added as a new variable. Use the inherited property "
+                               "(set its default with edit_variable set_default, propertyName '%s'), "
+                               "or pick another variableName."),
+                          *VarName, *Blueprint->ParentClass->GetName(),
+                          Owner ? *Owner->GetName() : *Blueprint->ParentClass->GetName(),
+                          *Inherited->GetCPPType(), *Inherited->GetName()),
+          TEXT("VARIABLE_NAME_CONFLICT"));
+      return true;
+    }
+
     Blueprint->Modify();
 
     FBPVariableDescription NewVar;
@@ -200,26 +220,29 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     // Verify against the variable list (the compiled class may lag a compile);
-    // the entry found is also what the reply reports.
+    // the entry found is also what the reply reports. It is matched by guid:
+    // a name that collides with another member (a component, a function) is
+    // renamed by the compiler, and the caller must hear what it became.
     const FBPVariableDescription *AddedVar = nullptr;
     for (const FBPVariableDescription &Var : Blueprint->NewVariables) {
-      if (Var.VarName == NewVar.VarName) {
+      if (Var.VarGuid == NewVar.VarGuid) {
         AddedVar = &Var;
       }
     }
 
-    if (!AddedVar) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-             TEXT("HandleBlueprintAction: variable '%s' added but verification "
-                  "failed in '%s'"),
-             *VarName, *RegistryKey);
-      TSharedPtr<FJsonObject> Err = McpHandlerUtils::CreateResultObject();
-      Err->SetStringField(
-          TEXT("error"),
-          TEXT("Verification failed: variable not found after add"));
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Variable add verification failed"), Err,
-                             TEXT("VERIFICATION_FAILED"));
+    if (!AddedVar || AddedVar->VarName != NewVar.VarName) {
+      const FString Became = AddedVar ? AddedVar->VarName.ToString() : FString();
+      Bridge.SendAutomationError(
+          RequestingSocket, RequestId,
+          Became.IsEmpty()
+              ? FString::Printf(TEXT("Variable '%s' is not on the Blueprint after compiling: the name collides "
+                                     "with an existing member (a component, function or event). Pick another variableName."),
+                                *VarName)
+              : FString::Printf(TEXT("'%s' collides with an existing member (a component, function or event), so the "
+                                     "compiler renamed the new variable to '%s' and saved it. Rename it with "
+                                     "edit_variable rename_variable, or remove it and pick another variableName."),
+                                *VarName, *Became),
+          TEXT("VARIABLE_NAME_CONFLICT"));
       return true;
     }
 

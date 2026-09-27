@@ -60,9 +60,10 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
         (OutputsField && OutputsField->Num() > 0)
             ? *OutputsField
             : TArray<TSharedPtr<FJsonValue>>();
+    // Omitted, a new function keeps the editor default: public.
     const bool bIsPublic = LocalPayload->HasField(TEXT("isPublic"))
                                ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
-                               : false;
+                               : true;
 
 
     FString Normalized;
@@ -262,6 +263,14 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
           K2Schema->TryCreateConnection(EntryThenPin, ResultExecPin);
         }
       }
+    }
+
+    // isPublic is the Access Specifier the Details panel shows. It used to be
+    // echoed back as applied and never set.
+    if (EntryNode && LocalPayload->HasField(TEXT("isPublic"))) {
+      EntryNode->Modify();
+      EntryNode->ClearExtraFlags(FUNC_AccessSpecifiers);
+      EntryNode->AddExtraFlags(bIsPublic ? FUNC_Public : FUNC_Private);
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);

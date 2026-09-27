@@ -8814,13 +8814,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Grid columns: inventory 1-12 (default 6), shop 1-8 (default 4)."
         },
+        "compile": {
+          "type": "boolean",
+          "description": "Compile the Blueprint after the operations (default false; applyAndSave also compiles)."
+        },
         "componentClass": {
           "type": "string",
           "description": "Component class path for SCS node creation."
         },
         "componentName": {
           "type": "string",
-          "description": "Name for the SCS component node."
+          "description": "Component whose delegate fires the event, added by the Blueprint or inherited (a Character's CapsuleComponent). Makes a component-bound event (K2Node_ComponentBoundEvent) named by eventName."
         },
         "componentNames": {
           "type": "array",
@@ -8842,6 +8846,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "cornerRadius": {
           "type": "number",
           "description": "Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners."
+        },
+        "createIfMissing": {
+          "type": "boolean",
+          "description": "Create the Blueprint when savePath/name does not exist (default true); false only reports whether it exists."
         },
         "createMode": {
           "type": "string",
@@ -9002,7 +9010,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "graphName": {
           "type": "string",
-          "description": "Target graph name (Event Graph, Construction Script, etc.)."
+          "description": "Event graph page to add the event to; omitted, the main EventGraph."
         },
         "heightOverride": {
           "type": "number",
@@ -9097,7 +9105,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isPublic": {
           "type": "boolean",
-          "description": "Whether the variable is exposed to the editor/BP graph."
+          "description": "Access specifier: true public (the default), false private (callable only from this Blueprint)."
         },
         "isReplicated": {
           "type": "boolean",
@@ -9279,16 +9287,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
-              "description": "Batch operations for probe_handle.",
-              "items": {
-                "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true
-              },
-              "x-unreal-reflection-boundary": true
-            },
-            {
-              "type": "array",
               "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied.",
               "items": {
                 "type": "object",
@@ -9308,7 +9306,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. Every function and variable a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind."
             }
           ],
-          "description": "Batch operations for probe_handle."
+          "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied."
         },
         "options": {
           "type": "array",
@@ -9443,7 +9441,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "propertyName": {
           "type": "string",
-          "description": "A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation)."
+          "description": "A member variable to put the metadata on (as set_variable_metadata does); omitted, the keys go on the Blueprint class."
         },
         "propertyValue": {
           "oneOf": [
@@ -9485,6 +9483,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "rows": {
           "type": "number",
           "description": "Inventory grid rows (1-12, default 4)."
+        },
+        "save": {
+          "type": "boolean",
+          "description": "Save the Blueprint after the operations (default true, so the edit survives an editor restart); applyAndSave overrides it."
         },
         "saveAfterCompile": {
           "type": "boolean",
@@ -9847,7 +9849,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "assetClass": {
           "type": "string",
-          "description": "Class of the created node (verification)."
+          "description": "Asset class from the registry, when it exists."
         },
         "assetName": {
           "type": "string",
@@ -10070,6 +10072,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "description": "Event entry: name, eventType."
           }
         },
+        "exists": {
+          "type": "boolean",
+          "description": "Whether the asset exists."
+        },
         "existsAfter": {
           "type": "boolean",
           "description": "Whether the Widget Blueprint exists after inspection (verification)."
@@ -10273,6 +10279,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Optional parent panel name to add the widget under."
         },
+        "path": {
+          "type": "string",
+          "description": "Normalized asset path that was checked."
+        },
         "pinName": {
           "type": "string",
           "description": "Pin name on a graph node."
@@ -10336,29 +10346,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Name of the widget that was removed from the widget tree."
         },
         "results": {
-          "oneOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true
-              },
-              "description": "Per-operation results when operations are provided.",
-              "x-unreal-reflection-boundary": true
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true
-              },
-              "x-unreal-reflection-boundary": true,
-              "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, pins (for created nodes), connected, appliedValue."
-            }
-          ],
-          "description": "Per-operation results when operations are provided."
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, pins (for created nodes), connected, appliedValue."
         },
         "right": {
           "type": "number",

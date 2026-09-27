@@ -10,7 +10,18 @@ bool HandleBlueprintEnsureProbe(const FBlueprintActionContext &Context) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
            TEXT("Entered blueprint_ensure_exists handler: RequestId=%s"),
            *RequestId);
-    FString Path = ResolveBlueprintRequestedPath();
+    // The declared form is name + savePath, and the create below lands there:
+    // check that same place. The check used to resolve the bare name (to
+    // /Game/<name>, or any same-named Blueprint elsewhere), so a Blueprint
+    // ensured under another folder was never found again.
+    FString EnsureName;
+    FString EnsureSavePath;
+    LocalPayload->TryGetStringField(TEXT("name"), EnsureName);
+    LocalPayload->TryGetStringField(TEXT("savePath"), EnsureSavePath);
+    const bool bNamedBySavePath = !LocalPayload->HasField(TEXT("blueprintPath")) &&
+        !LocalPayload->HasField(TEXT("requestedPath")) && !EnsureName.IsEmpty() &&
+        !EnsureName.StartsWith(TEXT("/")) && !EnsureSavePath.TrimStartAndEnd().IsEmpty();
+    FString Path = bNamedBySavePath ? EnsureSavePath / EnsureName : ResolveBlueprintRequestedPath();
     if (Path.IsEmpty()) {
       Bridge.SendAutomationResponse(
           RequestingSocket, RequestId, false,

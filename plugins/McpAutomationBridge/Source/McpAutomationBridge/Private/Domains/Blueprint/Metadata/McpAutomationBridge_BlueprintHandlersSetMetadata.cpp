@@ -31,6 +31,17 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
       return true;
     }
 
+    // propertyName names a member: its metadata is variable metadata, which
+    // set_variable_metadata already writes (and verifies). It used to be
+    // ignored, putting the keys on the class instead.
+    FString MemberName;
+    if (LocalPayload->TryGetStringField(TEXT("propertyName"), MemberName) && !MemberName.IsEmpty()) {
+      TSharedPtr<FJsonObject> MemberPayload = MakeShared<FJsonObject>(*LocalPayload);
+      MemberPayload->SetStringField(TEXT("variableName"), MemberName);
+      return HandleBlueprintSetVariableMetadata(BuildBlueprintActionContext(
+          Bridge, RequestId, TEXT("set_variable_metadata"), MemberPayload, RequestingSocket));
+    }
+
     FString Normalized;
     FString LoadErr;
     UBlueprint* BP = LoadBlueprintAsset(Path, Normalized, LoadErr);
@@ -44,6 +55,14 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
     }
 
     const FString RegistryKey = Normalized.IsEmpty() ? Path : Normalized;
+    // Class metadata lives on the generated class; with none there is nowhere
+    // to write it (every key used to be reported as set anyway).
+    if (!BP->GeneratedClass) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                             TEXT("The Blueprint has no generated class yet, so no metadata was written; compile it (manage_blueprint compile) and retry"),
+                             nullptr, TEXT("BLUEPRINT_NOT_COMPILED"));
+      return true;
+    }
 
     // Set metadata on the blueprint package or asset
     TArray<FString> MetadataSet;
@@ -59,10 +78,7 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
         continue;
       }
 
-      // Set metadata on the blueprint class
-      if (BP->GeneratedClass) {
-        BP->GeneratedClass->SetMetaData(MetaKey, *MetaValue);
-      }
+      BP->GeneratedClass->SetMetaData(MetaKey, *MetaValue);
       // Note: UBlueprint itself doesn't have SetMetaData in UE 5.7+
       // Metadata is stored on the GeneratedClass
       MetadataSet.Add(MetadataKey);

@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 #include "Engine/Blueprint.h"
 
@@ -154,9 +155,10 @@ FString ResolveBlueprintRequestedPath(const TSharedPtr<FJsonObject> &LocalPayloa
 }
 
 UBlueprint *ResolveScsBlueprint(const TSharedPtr<FJsonObject> &Payload) {
-  FString BlueprintPath;
-  if (Payload.IsValid() && (Payload->TryGetStringField(TEXT("name"), BlueprintPath) ||
-      Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath)) && !BlueprintPath.IsEmpty()) {
+  // blueprintPath wins over name for the same reason as in
+  // ResolveBlueprintRequestedPath: `name` can be a component or member name.
+  const FString BlueprintPath = McpGetFirstStringField(Payload, {TEXT("blueprintPath"), TEXT("name")});
+  if (!BlueprintPath.IsEmpty()) {
     return LoadObject<UBlueprint>(nullptr, *BlueprintPath);
   }
   const TArray<TSharedPtr<FJsonValue>> *Candidates = nullptr;

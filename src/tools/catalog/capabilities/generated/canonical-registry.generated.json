@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8b5762fddbacf2d7",
+  "catalogRevision": "fd88166d2fd38b3e",
   "recordCount": 382,
   "records": [
     {
@@ -10141,7 +10141,8 @@
         "summary": "Add a function or an event to a Blueprint.",
         "whenToUse": [
           "A new callable function must be created on the Blueprint.",
-          "An event handler node must be created in the EventGraph."
+          "An event handler node must be created in the EventGraph.",
+          "A component event such as OnComponentBeginOverlap or OnComponentHit must be handled."
         ],
         "whenNotToUse": []
       },
@@ -10182,17 +10183,13 @@
               },
               "x-unreal-reflection-boundary": true
             },
-            "graphName": {
-              "type": "string",
-              "description": "Target graph name (Event Graph, Construction Script, etc.)."
+            "isPublic": {
+              "type": "boolean",
+              "description": "Access specifier: true public (the default), false private (callable only from this Blueprint)."
             },
             "eventType": {
               "type": "string",
               "description": "Event type string for add_event."
-            },
-            "eventName": {
-              "type": "string",
-              "description": "Custom event name."
             },
             "customEventName": {
               "type": "string",
@@ -10215,6 +10212,18 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true
+            },
+            "graphName": {
+              "type": "string",
+              "description": "Event graph page to add the event to; omitted, the main EventGraph."
+            },
+            "eventName": {
+              "type": "string",
+              "description": "Custom event name; with componentName, the component delegate to bind (OnComponentBeginOverlap, OnComponentHit, ...)."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "Component whose delegate fires the event, added by the Blueprint or inherited (a Character's CapsuleComponent). Makes a component-bound event (K2Node_ComponentBoundEvent) named by eventName."
             },
             "kind": {
               "type": "string",
@@ -10337,13 +10346,10 @@
             "outputs": [
               "function"
             ],
-            "graphName": [
-              "event"
+            "isPublic": [
+              "function"
             ],
             "eventType": [
-              "event"
-            ],
-            "eventName": [
               "event"
             ],
             "customEventName": [
@@ -10357,14 +10363,23 @@
             ],
             "parameters": [
               "event"
+            ],
+            "graphName": [
+              "event"
+            ],
+            "eventName": [
+              "event"
+            ],
+            "componentName": [
+              "event"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "291328fedc77a5f9112cbfcf2c58d9ac6e60c52324d358f32c77ca6797b6bfd3",
-        "content": "a168a19801561bb06e3e794e3015d812deaabfe8906afc530c819c402d9739c6"
+        "schema": "991a5d12933ea6bf99ef98cde8b1e68b42b16a56acf9ee6eb600c1ff8874340a",
+        "content": "0edcfa7e2a9be409bd048f9b69ee233b5bab299557c984cc8131eae310aba4bd"
       }
     },
     {
@@ -11879,6 +11894,10 @@
               "type": "string",
               "description": "Blueprint type hint for creation."
             },
+            "createIfMissing": {
+              "type": "boolean",
+              "description": "Create the Blueprint when savePath/name does not exist (default true); false only reports whether it exists."
+            },
             "createMode": {
               "type": "string",
               "enum": [
@@ -11978,18 +11997,23 @@
           },
           "declaredBy": {
             "properties": [
-              "create"
+              "create",
+              "blueprint"
             ],
             "blueprintType": [
+              "create",
               "blueprint"
+            ],
+            "createIfMissing": [
+              "ensure"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b386400149819296b4be2f5fc7ffc0b42a868b5180e7e7daaaa8e4ade2e0ff69",
-        "content": "87f6c6a4f55522f58a5718d1fec57cbf3e425295cdf198c3dea9b9a04359bea0"
+        "schema": "33d527c1a206369346762623e1488370d4cb50fa5674facc52c6391d51343d59",
+        "content": "020cb337e8175373ca7bb8ebe132f19ba42fcc0e69bff9c7ee2894c1382084e8"
       }
     },
     {
@@ -13464,7 +13488,7 @@
         "summary": "Edit the Simple Construction Script: add a component template (or a non-SCS instance), reparent, set a property or transform, or apply batched operations.",
         "whenToUse": [
           "A component template must be owned by the SCS tree for instanced property overrides.",
-          "A component is needed on the Blueprint without SCS node template ownership.",
+          "A component must be added to a Blueprint under the add_component verb.",
           "An SCS-owned component template needs property or transform updates.",
           "An SCS component must move under a different parent node.",
           "One property on an SCS component template must be changed.",
@@ -13507,6 +13531,30 @@
               "type": "string",
               "description": "Material asset path for a component."
             },
+            "location": {
+              "type": "object",
+              "description": "Relative location {x, y, z} for an SCS component template.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "rotation": {
+              "type": "object",
+              "description": "Relative rotation {pitch, yaw, roll} for an SCS component template.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "scale": {
+              "type": "object",
+              "description": "Relative scale {x, y, z} for an SCS component template, or {x, y} for a widget render transform.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "properties": {
+              "type": "object",
+              "description": "Property bag applied to the CDO, component template, or node.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
             "componentType": {
               "type": "string",
               "description": "Component class name to add."
@@ -13515,11 +13563,13 @@
               "type": "string",
               "description": "Socket or parent component to attach to."
             },
-            "properties": {
-              "type": "object",
-              "description": "Property bag applied to the CDO, component template, or node.",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
+            "compile": {
+              "type": "boolean",
+              "description": "Compile the Blueprint after the operations (default false; applyAndSave also compiles)."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the Blueprint after the operations (default true, so the edit survives an editor restart); applyAndSave overrides it."
             },
             "operations": {
               "type": "array",
@@ -13545,24 +13595,6 @@
             },
             "propertyValue": {
               "description": "Value to assign to the property."
-            },
-            "location": {
-              "type": "object",
-              "description": "Relative location {x, y, z} for an SCS component template.",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
-            },
-            "rotation": {
-              "type": "object",
-              "description": "Relative rotation {pitch, yaw, roll} for an SCS component template.",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
-            },
-            "scale": {
-              "type": "object",
-              "description": "Relative scale {x, y, z} for an SCS component template, or {x, y} for a widget render transform.",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
             },
             "edit": {
               "type": "string",
@@ -13706,10 +13738,37 @@
               "add_scs_component"
             ],
             "meshPath": [
-              "add_scs_component"
+              "add_scs_component",
+              "add_component",
+              "modify"
             ],
             "materialPath": [
-              "add_scs_component"
+              "add_scs_component",
+              "add_component",
+              "modify"
+            ],
+            "location": [
+              "add_scs_component",
+              "add_component",
+              "modify",
+              "set_transform"
+            ],
+            "rotation": [
+              "add_scs_component",
+              "add_component",
+              "modify",
+              "set_transform"
+            ],
+            "scale": [
+              "add_scs_component",
+              "add_component",
+              "modify",
+              "set_transform"
+            ],
+            "properties": [
+              "add_scs_component",
+              "add_component",
+              "modify"
             ],
             "componentType": [
               "add_component"
@@ -13717,8 +13776,11 @@
             "attachTo": [
               "add_component"
             ],
-            "properties": [
-              "add_component"
+            "compile": [
+              "modify"
+            ],
+            "save": [
+              "modify"
             ],
             "operations": [
               "modify"
@@ -13734,23 +13796,14 @@
             ],
             "propertyValue": [
               "set_property"
-            ],
-            "location": [
-              "set_transform"
-            ],
-            "rotation": [
-              "set_transform"
-            ],
-            "scale": [
-              "set_transform"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "338a6998cd3931b26fa35cad1b9d72178d148c6dd3408e183b7640a556d92512",
-        "content": "1aaa833ee8458e18614a85ee43ed3bfdccc03376f8f385f579a5d8e8f022dafe"
+        "schema": "761f351d6de0f7f5a45d6edd1ac660a8027ab6d5479400bee831a233ea76fed9",
+        "content": "a2c8ec38aeedf69950ce5d59691935e86837c711faf9285ae622bd5c4254ee1a"
       }
     },
     {
@@ -13888,7 +13941,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property name to set on the CDO or component."
+              "description": "A member variable to put the metadata on (as set_variable_metadata does); omitted, the keys go on the Blueprint class."
             },
             "propertyValue": {
               "description": "Value to assign to the property."
@@ -14050,8 +14103,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0b96e529f773d8535cd3ee239ca56c77f047197958de621a3414dac7af4505ba",
-        "content": "4f150a8256ba21d702532744d2b000b9052d7c3bd55e3795458057e817d1c1ce"
+        "schema": "defd181f01e1da350f1be98e1c984dc91d742625894d142e6bf21f6d67eb7636",
+        "content": "8571dcb78d3efa65cc3936428fd756192502cb5330109fbe655f732c601ffe9d"
       }
     },
     {
@@ -15714,12 +15767,12 @@
         "topics": [
           "probe_handle"
         ],
-        "summary": "Probe a Blueprint handle for reachability and optionally apply a batch of operations.",
+        "summary": "Probe a Blueprint handle for reachability without loading the asset; reports its asset class.",
         "whenToUse": [
           "A Blueprint handle must be validated before a sequence of operations."
         ],
         "whenNotToUse": [
-          "A single operation is needed (call it directly)."
+          "Graph edits must be batched (use edit_graph with edit batch)."
         ]
       },
       "schemas": {
@@ -15734,16 +15787,6 @@
             "blueprintPath": {
               "type": "string",
               "description": "Canonical /Game Blueprint asset path."
-            },
-            "operations": {
-              "type": "array",
-              "description": "Batch operations for probe_handle.",
-              "items": {
-                "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true
-              },
-              "x-unreal-reflection-boundary": true
             }
           },
           "required": [
@@ -15773,15 +15816,17 @@
               "type": "boolean",
               "description": "Whether the Blueprint handle is reachable."
             },
-            "results": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true
-              },
-              "description": "Per-operation results when operations are provided.",
-              "x-unreal-reflection-boundary": true
+            "exists": {
+              "type": "boolean",
+              "description": "Whether the asset exists."
+            },
+            "path": {
+              "type": "string",
+              "description": "Normalized asset path that was checked."
+            },
+            "assetClass": {
+              "type": "string",
+              "description": "Asset class from the registry, when it exists."
             }
           },
           "required": [
@@ -15793,7 +15838,7 @@
       },
       "examples": [
         {
-          "title": "Probe a Blueprint handle for reachability and optionally apply a batch of operations.",
+          "title": "Probe a Blueprint handle for reachability without loading the asset; reports its asset class.",
           "input": {
             "action": "probe_handle",
             "blueprintPath": "/Game/Blueprints/BP_Test"
@@ -15801,7 +15846,9 @@
           "output": {
             "success": true,
             "reachable": true,
-            "results": []
+            "exists": true,
+            "path": "/Game/Blueprints/BP_Test",
+            "assetClass": "Blueprint"
           }
         }
       ],
@@ -15834,8 +15881,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c37dbbda5904a84743802215a0ca6506ea9f8d9c6b8640eb4b6c3d27c60ed85a",
-        "content": "ccafda156b620d6e1e48563f332b02539eaf91a0f0185d0282fdf30d76be601d"
+        "schema": "d17b9c21a789ca01718eb77c18ac5bb45d724ed94d0e49ca57dccc877b875fd0",
+        "content": "49476100274e9e031f20be4f6435f58bcb44806ad75c7ec0f4ad99cbbf7a6fce"
       }
     },
     {
@@ -15889,13 +15936,17 @@
               "type": "string",
               "description": "Function name to add or remove."
             },
-            "graphName": {
-              "type": "string",
-              "description": "Target graph name (Event Graph, Construction Script, etc.)."
-            },
             "nodeId": {
               "type": "string",
               "description": "Existing node identifier returned by create_node or get_graph_details."
+            },
+            "graphName": {
+              "type": "string",
+              "description": "Event graph page to search; omitted, the main EventGraph."
+            },
+            "eventName": {
+              "type": "string",
+              "description": "Custom event to remove by name, in place of nodeId."
             },
             "kind": {
               "type": "string",
@@ -15987,10 +16038,13 @@
             "functionName": [
               "function"
             ],
+            "nodeId": [
+              "event"
+            ],
             "graphName": [
               "event"
             ],
-            "nodeId": [
+            "eventName": [
               "event"
             ]
           }
@@ -15998,8 +16052,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7eadb113067ee6275c9adca7d45891bb2e6d93e344f7a01498b938e1eca253c8",
-        "content": "60553d3c33aa4221405fc6f4f39e62f6021aada1525dea9aaaf44f43a41cae70"
+        "schema": "ceb20df2b24b4ee29f09d23e508b600b9635fa41169b48d066242c6b2705d1e2",
+        "content": "3892be8467cea391f58ef42449489cef51d52acb3fa39f76d7918d405950d687"
       }
     },
     {

@@ -24,7 +24,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     // blueprint-core-actions.ts:87 forwards `properties` into blueprint_create and
     // native ApplyBlueprintProperties writes each entry onto the generated CDO, so
     // the field is consumed here even though no manage_blueprint record declared it.
-    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, properties: P.properties },
+    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, properties: P.properties, blueprintType: P.blueprintType },
     required: ['name', 'savePath', 'parentClass'],
     outputProps: { blueprintPath: P.blueprintPath },
     outputRequired: ['blueprintPath'],
@@ -43,7 +43,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a Blueprint asset with explicit type and path.',
     whenToUse: ['A Blueprint must be created with a specific type hint.'],
     whenNotToUse: ['The simpler create action suffices when only a parent class is needed.'],
-    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, blueprintType: P.blueprintType },
+    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, blueprintType: P.blueprintType, properties: P.properties },
     required: ['name', 'savePath', 'parentClass'],
     outputProps: { blueprintPath: P.blueprintPath },
     outputRequired: ['blueprintPath'],
@@ -121,7 +121,10 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Ensure a Blueprint asset exists, creating it if absent.',
     whenToUse: ['Idempotent setup requires a Blueprint to exist without failing on duplicates.'],
     whenNotToUse: ['A fresh Blueprint is always required even if one exists.'],
-    inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass },
+    inputProps: {
+      name: P.name, savePath: P.savePath, parentClass: P.parentClass,
+      createIfMissing: { type: 'boolean', description: 'Create the Blueprint when savePath/name does not exist (default true); false only reports whether it exists.' },
+    },
     required: ['name', 'savePath', 'parentClass'],
     outputProps: { blueprintPath: P.blueprintPath },
     outputRequired: ['blueprintPath'],

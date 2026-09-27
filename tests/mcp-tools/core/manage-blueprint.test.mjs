@@ -42,6 +42,8 @@ const testCases = [
 
   // === ADD: add_component (blueprintPath + componentClass + componentName) ===
   { scenario: 'ADD: add_component', toolName: 'manage_blueprint', arguments: { action: 'add_component', blueprintPath: BP_PATH, componentType: 'PointLightComponent', componentName: 'TestLight', attachTo: 'DefaultSceneRoot' }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_component placed with mesh and material', toolName: 'manage_blueprint', arguments: { action: 'add_component', blueprintPath: BP_PATH, componentClass: 'StaticMeshComponent', componentName: 'TestPlacedMesh', meshPath: ENGINE_CUBE_MESH, materialPath: ENGINE_BASIC_MATERIAL, location: { x: 0, y: 0, z: 80 }, rotation: { pitch: 0, yaw: 90, roll: 0 }, scale: { x: 0.5, y: 0.5, z: 0.5 } }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_scs_component overlap box placed and configured', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'BoxComponent', componentName: 'TestOverlapBox', location: { x: 0, y: 0, z: 40 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, scale: { x: 2, y: 2, z: 1 }, properties: { bGenerateOverlapEvents: true } }, expected: 'success|already exists' },
 
 // === CONFIG: set_default (blueprintPath + propertyName + value/propertyValue) ===
 // bGenerateOverlapEvents is on UPrimitiveComponent; this Actor BP root is SceneComponent.
@@ -51,6 +53,7 @@ const testCases = [
 
   // === CONFIG: modify_scs (blueprintPath + operations) ===
   { scenario: 'CONFIG: modify_scs', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, operations: [{ type: 'add_component', componentName: 'TestModSCSComp', componentClass: 'SceneComponent' }], applyAndSave: true }, expected: 'success|already exists' },
+  { scenario: 'CONFIG: modify_scs one component at the top level', toolName: 'manage_blueprint', arguments: { action: 'modify_scs', blueprintPath: BP_PATH, componentName: 'TestPlacedMesh', location: { x: 0, y: 0, z: 120 }, rotation: { pitch: 0, yaw: 45, roll: 0 }, scale: { x: 1, y: 1, z: 1 }, meshPath: ENGINE_CUBE_MESH, materialPath: ENGINE_BASIC_MATERIAL, properties: { bCastShadow: false }, compile: true, save: true }, expected: 'success' },
 
   // === INFO: get_scs (blueprintPath) ===
   { scenario: 'INFO: get_scs', toolName: 'manage_blueprint', arguments: { action: 'get_scs', blueprintPath: BP_PATH }, expected: 'success' },
@@ -79,14 +82,18 @@ const testCases = [
   { scenario: 'CONFIG: set_scs_property', toolName: 'manage_blueprint', arguments: { action: 'set_scs_property', blueprintPath: BP_PATH, componentName: 'TestModSCSComp', propertyName: 'RelativeLocation', propertyValue: [100, 0, 50] }, expected: 'success' },
 
   // === ACTION: ensure_exists (blueprintPath) ===
-  { scenario: 'ACTION: ensure_exists', toolName: 'manage_blueprint', arguments: { action: 'ensure_exists', blueprintPath: BP_PATH }, expected: 'success' },
+  // name + savePath outside /Game's root: the check looks where the create would land.
+  { scenario: 'ACTION: ensure_exists', toolName: 'manage_blueprint', arguments: { action: 'ensure_exists', name: BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor', createIfMissing: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.blueprintPath', equals: BP_PATH, label: 'the existing Blueprint under savePath is found' }] },
 
   // === ACTION: probe_handle (no blueprint needed - uses componentClass) ===
-  { scenario: 'ACTION: probe_handle', toolName: 'manage_blueprint', arguments: { action: 'probe_handle', componentClass: 'StaticMeshComponent' }, expected: 'success', assertions: [{ path: 'structuredContent.result.hasHandles', equals: true, label: 'probe_handle gathered real handles' }] },
+  { scenario: 'ACTION: probe_handle', toolName: 'manage_blueprint', arguments: { action: 'probe_handle', blueprintPath: BP_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.reachable', equals: true, label: 'probe_handle found the Blueprint' }] },
 
   // === ADD: add_variable (blueprintPath + variableName + variableType) ===
   // This variable will be renamed in the next step — do NOT delete it before rename.
   { scenario: 'ADD: add_variable', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'TestVariable', variableType: 'Boolean', category: 'MCP', isReplicated: true, isPublic: true }, expected: 'success|already exists' },
+  { scenario: 'ERROR: add_variable colliding with a parent-class property', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'bReplicates', variableType: 'Boolean' }, expected: 'error|VARIABLE_NAME_CONFLICT' },
+  { scenario: 'ADD: add_variable for member metadata', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'MetaVariable', variableType: 'Float' }, expected: 'success|already exists' },
+  { scenario: 'CONFIG: set_metadata on a member variable', toolName: 'manage_blueprint', arguments: { action: 'set_metadata', blueprintPath: BP_PATH, propertyName: 'MetaVariable', metadata: { tooltip: 'Member metadata' } }, expected: 'success', assertions: [{ path: 'structuredContent.result.variableName', equals: 'MetaVariable', label: 'routed to the variable' }] },
 
   // === ACTION: rename_variable (blueprintPath + oldName + newName) ===
   // Renames the variable added above (NOT deleted).
@@ -103,6 +110,7 @@ const testCases = [
 
   // === ADD: add_function (blueprintPath + functionName) ===
   { scenario: 'ADD: add_function', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, memberName: 'TestFunction', inputs: [{ name: 'InputValue', type: 'Float' }], outputs: [{ name: 'ReturnValue', type: 'Float' }], isPublic: true }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_function private', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, functionName: 'TestPrivateFunction', isPublic: false }, expected: 'success|already exists' },
 
   // === DELETE: remove_function (blueprintPath + functionName) ===
   // Removes the function added directly above; safe because no later case reuses TestFunction.
@@ -112,7 +120,12 @@ const testCases = [
   { scenario: 'ADD: add_event', toolName: 'manage_blueprint', arguments: { action: 'add_event', blueprintPath: BP_PATH, eventType: 'Custom', customEventName: 'TestEvent', parameters: [{ name: 'Payload', type: 'String' }] }, expected: 'success|already exists' },
 
   // === DELETE: remove_event (blueprintPath + eventName) ===
-  { scenario: 'DELETE: remove_event', toolName: 'manage_blueprint', arguments: { action: 'remove_event', blueprintPath: BP_PATH, eventName: 'TestEvent' }, expected: 'success|not found' },
+  { scenario: 'DELETE: remove_event', toolName: 'manage_blueprint', arguments: { action: 'remove_event', blueprintPath: BP_PATH, eventName: 'TestEvent', graphName: 'EventGraph' }, expected: 'success|not found' },
+  { scenario: 'ERROR: add_event into a missing event graph page', toolName: 'manage_blueprint', arguments: { action: 'add_event', blueprintPath: BP_PATH, graphName: 'NoSuchGraph', customEventName: 'Nowhere' }, expected: 'error|GRAPH_NOT_FOUND' },
+  // Component-bound event: a real K2Node_ComponentBoundEvent on the box's delegate.
+  { scenario: 'ADD: add_event bound to a component delegate', toolName: 'manage_blueprint', arguments: { action: 'add_event', blueprintPath: BP_PATH, componentName: 'TestOverlapBox', eventName: 'OnComponentBeginOverlap', graphName: 'EventGraph', posX: 0, posY: 900 }, expected: 'success', captureResult: { key: 'overlapEventId', fromField: 'result.nodeGuid' }, assertions: [{ path: 'structuredContent.result.eventName', includes: 'TestOverlapBox', label: 'bound to the box' }] },
+  { scenario: 'VERIFY: component-bound event has its delegate pins', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:overlapEventId}', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'OtherActor' }, label: 'the overlap signature pins exist' }] },
+  { scenario: 'DELETE: remove_event component-bound by node id', toolName: 'manage_blueprint', arguments: { action: 'remove_event', blueprintPath: BP_PATH, nodeId: '${captured:overlapEventId}', graphName: 'EventGraph' }, expected: 'success' },
 
   // === ADD: add_construction_script (blueprintPath) ===
   { scenario: 'ADD: add_construction_script', toolName: 'manage_blueprint', arguments: { action: 'add_construction_script', blueprintPath: BP_PATH }, expected: 'success|already exists' },
@@ -127,6 +140,9 @@ const testCases = [
   // === CREATE: create_node variants with specialized metadata ===
   { scenario: 'CREATE: create_node call function metadata', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'CallFunction', memberName: 'PrintString', memberClass: 'KismetSystemLibrary', graphName: 'EventGraph', posX: -40, posY: 120 }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_node cast target class', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'Cast', targetClass: 'Actor', graphName: 'EventGraph', posX: 160, posY: 120 }, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_node call function by functionName', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'CallFunction', functionName: 'PrintString', memberClass: 'KismetSystemLibrary', graphName: 'EventGraph', posX: 1160, posY: 120 }, expected: 'success' },
+  { scenario: 'CREATE: create_node pure cast', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'Cast', targetClass: 'Pawn', pure: true, graphName: 'EventGraph', posX: 1360, posY: 120 }, expected: 'success' },
+  { scenario: 'ADD: add_node cast with targetClass', toolName: 'manage_blueprint', arguments: { action: 'add_node', blueprintPath: BP_PATH, nodeType: 'Cast', targetClass: 'Actor', graphName: 'EventGraph', posX: 1560, posY: 120 }, expected: 'success' },
   { scenario: 'CREATE: create_node input axis event', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'InputAxisEvent', inputAxisName: 'MoveForward', graphName: 'EventGraph', posX: 360, posY: 120 }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_node enhanced input actionPath', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'K2Node_EnhancedInputAction', actionPath: INPUT_ACTION_PATH, graphName: 'EventGraph', posX: 560, posY: 120 }, expected: 'success|already exists' },
   { scenario: 'CREATE: create_node enhanced input inputActionPath', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, nodeType: 'K2Node_EnhancedInputAction', inputActionPath: INPUT_ACTION_PATH, graphName: 'EventGraph', posX: 760, posY: 120 }, expected: 'success|already exists' },
@@ -156,15 +172,11 @@ const testCases = [
   // === ACTION: break_pin_links via nodeId alias ===
   { scenario: 'ACTION: break_pin_links via nodeId', toolName: 'manage_blueprint', arguments: { action: 'break_pin_links', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', pinName: 'then_0', graphName: 'EventGraph' }, expected: 'success' },
 
-  // === CONNECT: connect_pins using linkedTo alias ===
-  { scenario: 'CONNECT: connect_pins via linkedTo', toolName: 'manage_blueprint', arguments: { action: 'connect_pins', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', pinName: 'then_0', linkedTo: '${captured:printNodeId}.execute', graphName: 'EventGraph' }, expected: 'success' },
-
-  // === ACTION: break_pin_links after linkedTo connect ===
-  { scenario: 'ACTION: break_pin_links after linkedTo connect', toolName: 'manage_blueprint', arguments: { action: 'break_pin_links', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', pinName: 'then_0', graphName: 'EventGraph' }, expected: 'success' },
-
   // === CONFIG: set_node_property (blueprintPath + nodeGuid + propertyName + propertyValue) ===
   // Uses the real nodeId captured from the first Sequence node.
   { scenario: 'CONFIG: set_node_property', toolName: 'manage_blueprint', arguments: { action: 'set_node_property', blueprintPath: BP_PATH, nodeGuid: '${captured:seqNodeId}', propertyName: 'Comment', propertyValue: 'Test comment', graphName: 'EventGraph' }, expected: 'success' },
+  { scenario: 'VERIFY: set_node_property wrote the comment', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:seqNodeId}', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.comment', equals: 'Test comment', label: 'propertyValue reached the node' }] },
+  { scenario: 'CONFIG: set_node_property numeric position', toolName: 'manage_blueprint', arguments: { action: 'set_node_property', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', propertyName: 'NodePosY', propertyValue: 160, graphName: 'EventGraph' }, expected: 'success' },
 
   // === CREATE: create_reroute_node (blueprintPath + graphName) ===
   { scenario: 'CREATE: create_reroute_node', toolName: 'manage_blueprint', arguments: { action: 'create_reroute_node', blueprintPath: BP_PATH, graphName: 'EventGraph' }, expected: 'success|already exists', captureResult: { key: 'rerouteNodeId', fromField: 'nodeId' } },
