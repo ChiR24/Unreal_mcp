@@ -52,6 +52,8 @@ const testCases = [
   { scenario: 'ACTION: screenshot', toolName: 'control_editor', arguments: { action: 'screenshot', filename: SCREENSHOT_NAME, resolution: '640x360', mode: 'editor_viewport', returnBase64: false, includeMetadata: true, metadata: { source: 'control-editor-suite' } }, expected: 'success' },
   { scenario: 'ACTION: take_screenshot', toolName: 'control_editor', arguments: { action: 'take_screenshot', filename: `${SCREENSHOT_NAME}_Alias`, resolution: '640x360' }, expected: 'success' },
   { scenario: 'OPTIONAL: screenshot of a named editor window', toolName: 'control_editor', arguments: { action: 'screenshot', filename: `${SCREENSHOT_NAME}_Window`, mode: 'full_editor_window', window: '0', resolution: '640x360' }, expected: 'success' },
+  { scenario: 'OPTIONAL: screenshot that leaves no file behind', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'full_editor_window', resolution: '320x180', returnBase64: true, keepFile: false }, expected: 'success' },
+  { scenario: 'OPTIONAL: keepFile false without returnBase64 is refused', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', keepFile: false }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'ACTION: start_recording', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_${ts}` }, expected: 'success' },
   { scenario: 'PLAYBACK: stop_recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
   { scenario: 'OPTIONAL: start_recording with durationSeconds and frameRate', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_Opt_${ts}`, durationSeconds: 1, frameRate: 30 }, expected: 'success' },

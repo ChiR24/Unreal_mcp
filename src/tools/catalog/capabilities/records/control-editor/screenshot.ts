@@ -19,7 +19,13 @@ const SCREENSHOT_PROPS = {
     type: 'string',
     description: 'Maximum WxH for the returned PNG (e.g. "1280x720"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit.'
   },
-  mode: P.mode,
+  // P.mode is shared with set_editor_mode and named no screenshot source, so
+  // the one choice that decides whether UMG shows up was undiscoverable.
+  mode: {
+    type: 'string',
+    enum: ['editor_viewport', 'game_viewport', 'full_editor_window'],
+    description: 'Screenshot source: editor_viewport (default, the level viewport), game_viewport (the running game frame WITHOUT any UMG widgets) or full_editor_window (the editor window as displayed: the only mode that shows game UI and asset editors).'
+  },
   // An asset editor (Widget Blueprint designer, material graph) is its own
   // window, so full_editor_window on the main frame alone could never show it.
   window: {
@@ -27,6 +33,10 @@ const SCREENSHOT_PROPS = {
     description: 'With mode full_editor_window, which window to capture: a list index ("2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one.'
   },
   returnBase64: P.returnBase64,
+  keepFile: {
+    type: 'boolean',
+    description: 'false: hand the image back (needs returnBase64: true) without leaving a file in Saved/Screenshots. Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file.'
+  },
   includeMetadata: P.includeMetadata,
   metadata: P.metadata,
 };

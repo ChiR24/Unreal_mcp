@@ -254,12 +254,19 @@ bool HandleScreenshotAction(
   FString FullPath = FPaths::Combine(ScreenshotPath, Filename);
   FPaths::MakeStandardFilename(FullPath);
 
-  IFileManager::Get().MakeDirectory(*ScreenshotPath, true);
-  const bool bSaved = FFileHelper::SaveArrayToFile(PngData, *FullPath);
+  // Same keepFile as control_editor.screenshot: no file left behind.
+  bool bKeepFile = true;
+  Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
+  if (bKeepFile) {
+    IFileManager::Get().MakeDirectory(*ScreenshotPath, true);
+  }
+  const bool bSaved = bKeepFile && FFileHelper::SaveArrayToFile(PngData, *FullPath);
 
   bSuccess = true;
   Message = FString::Printf(TEXT("Screenshot captured (%dx%d)"), Width, Height);
-  Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+  if (bSaved) {
+    Resp->SetStringField(TEXT("screenshotPath"), FullPath);
+  }
   Resp->SetStringField(TEXT("filename"), Filename);
   Resp->SetStringField(TEXT("mode"), TEXT("game_viewport"));
   Resp->SetBoolField(TEXT("usingPieViewport"), bUsingPieViewport);
@@ -274,7 +281,12 @@ bool HandleScreenshotAction(
   Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
   AddScreenshotMetadataForUiMcp(Resp, Payload);
 
-  if (!bSaved && !bReturnBase64) {
+  if (!bKeepFile && !bReturnBase64) {
+    bSuccess = false;
+    Message = TEXT("keepFile:false needs returnBase64:true, or the capture goes nowhere.");
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+    Resp->SetStringField(TEXT("error"), Message);
+  } else if (!bSaved && !bReturnBase64) {
     bSuccess = false;
     Message =
         TEXT("Screenshot captured but failed to save, and returnBase64=false leaves no image output.");

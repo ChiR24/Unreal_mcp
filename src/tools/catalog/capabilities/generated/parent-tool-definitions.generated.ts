@@ -3739,6 +3739,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Alias for type used by simulate_input."
         },
+        "keepFile": {
+          "type": "boolean",
+          "description": "false: hand the image back (needs returnBase64: true) without leaving a file in Saved/Screenshots. Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file."
+        },
         "key": {
           "type": "string",
           "description": "Input key name for simulate_input."

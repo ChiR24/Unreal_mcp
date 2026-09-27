@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "66d0709cb84d6fca",
+  "catalogRevision": "cc8911f27bac236f",
   "recordCount": 378,
   "records": [
     {
@@ -31743,7 +31743,12 @@
             },
             "mode": {
               "type": "string",
-              "description": "Editor mode for set_editor_mode, or screenshot source."
+              "enum": [
+                "editor_viewport",
+                "game_viewport",
+                "full_editor_window"
+              ],
+              "description": "Screenshot source: editor_viewport (default, the level viewport), game_viewport (the running game frame WITHOUT any UMG widgets) or full_editor_window (the editor window as displayed: the only mode that shows game UI and asset editors)."
             },
             "window": {
               "type": "string",
@@ -31752,6 +31757,10 @@
             "returnBase64": {
               "type": "boolean",
               "description": "Return PNG image data as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
+            },
+            "keepFile": {
+              "type": "boolean",
+              "description": "false: hand the image back (needs returnBase64: true) without leaving a file in Saved/Screenshots. Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file."
             },
             "includeMetadata": {
               "type": "boolean",
@@ -31888,8 +31897,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0322ef52843ee3eb62ddd91ee07b8342f9b4d23af191904e821a8bb8ccea0eb6",
-        "content": "1ad35fa53202d1c3c31dc3713907a0317084b427f6e3aeb4f99a2e4835c04f61"
+        "schema": "c2e979b83dca14a4245fc7f5bd0cebca5606408918e14b6b5ee671d9132ee97e",
+        "content": "db0a3f050ffd50821899d8befcc121288407b4c7583af6977440edf27367f667"
       }
     },
     {

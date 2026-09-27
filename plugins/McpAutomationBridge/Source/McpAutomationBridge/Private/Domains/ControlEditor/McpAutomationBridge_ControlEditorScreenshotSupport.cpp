@@ -70,7 +70,11 @@ void SendScreenshotReceiptForMcp(UMcpAutomationBridgeSubsystem *Subsystem,
                                  const TSharedPtr<FJsonObject> &Resp,
                                  const uint8 *PngData, int64 PngBytes,
                                  const FString &FullPath, const TCHAR *What) {
-  const bool bSaved = FFileHelper::SaveArrayToFile(
+  // keepFile:false hands the image back without leaving a file in
+  // Saved/Screenshots: a look at the screen should not litter the project.
+  bool bKeepFile = true;
+  Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
+  const bool bSaved = bKeepFile && FFileHelper::SaveArrayToFile(
       TArrayView<const uint8>(PngData, static_cast<int32>(PngBytes)), *FullPath);
   // Base64 is opt-in: a native 2040x949 viewport PNG is ~2 MB and always blew
   // the base64 cap, so a default-on flag made the DEFAULT call fail. A plain
@@ -92,7 +96,10 @@ void SendScreenshotReceiptForMcp(UMcpAutomationBridgeSubsystem *Subsystem,
 
   FString Error;
   FString ErrorCode;
-  if (!bSaved && !bReturnBase64) {
+  if (!bKeepFile && !bReturnBase64) {
+    Error = TEXT("keepFile:false needs returnBase64:true, or the capture goes nowhere.");
+    ErrorCode = TEXT("INVALID_ARGUMENT");
+  } else if (!bSaved && !bReturnBase64) {
     Error = FString::Printf(TEXT("%s captured but failed to save to %s, and returnBase64=false leaves no image output."),
                             What, *FullPath);
     ErrorCode = TEXT("SAVE_FAILED");
