@@ -41,12 +41,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         }
     }
 
-    // Converge the widget template addressing conventions. The hud/menu/pause/
-    // dialog/loading templates expect a full `widgetPath`, while inventory and a
-    // few others take `name` + `path`/`folder`. A caller that used the other
-    // convention got "Missing required parameter: widgetPath" or silently landed
-    // at the default /Game/UI path. Synthesize the missing form from the one that
-    // was supplied so both spellings address the same asset.
+    // Accept `name` + `path`/`folder` wherever a handler expects `widgetPath`.
     if (Payload.IsValid() && !Payload->HasField(TEXT("widgetPath")))
     {
         FString TemplateName;
@@ -75,40 +70,20 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
     using namespace WidgetAuthoringHandlers;
     static constexpr FWidgetAuthoringActionHandler Handlers[] = {
         HandleWidgetAuthoringCreation,
-        HandleWidgetAuthoringPanelBasics,
-        HandleWidgetAuthoringBasicVisuals,
-        HandleWidgetAuthoringValueWidgets,
+        HandleWidgetAuthoringTypedComponents,
+        HandleWidgetAuthoringTypedPanels,
         HandleWidgetAuthoringInfo,
-        HandleWidgetAuthoringGridPanels,
-        HandleWidgetAuthoringScrollScalePanels,
-        HandleWidgetAuthoringBorderPanel,
-        HandleWidgetAuthoringInputWidgets,
-        HandleWidgetAuthoringCollectionWidgets,
         HandleWidgetAuthoringCanvasSlotGeometry,
         HandleWidgetAuthoringSlotAppearance,
         HandleWidgetAuthoringStyleClipping,
-        HandleWidgetAuthoringPropertyBindings,
         HandleWidgetAuthoringEventBindings,
         HandleWidgetAuthoringAnimationCore,
-        HandleWidgetAuthoringMenuTemplates,
-        HandleWidgetAuthoringHudElements,
         HandleWidgetAuthoringPreview,
         HandleWidgetAuthoringGenericComponent,
-        HandleWidgetAuthoringUnifiedBinding,
-        HandleWidgetAuthoringStyleVariables,
-        HandleWidgetAuthoringSettingsTemplate,
-        HandleWidgetAuthoringLoadingMinimapTemplates,
-        HandleWidgetAuthoringObjectiveDamageTemplates,
-        HandleWidgetAuthoringInventoryTemplate,
-        HandleWidgetAuthoringDialogRadialTemplates,
         HandleWidgetAuthoringManipulation,
-        HandleWidgetAuthoringAdditionalPanels,
         HandleWidgetAuthoringAdvancedStyling,
         HandleWidgetAuthoringAnimationQueries,
-        HandleWidgetAuthoringLocalization,
-        HandleWidgetAuthoringCreditsTemplate,
-        HandleWidgetAuthoringShopTemplate,
-        HandleWidgetAuthoringQuestTemplate
+        HandleWidgetAuthoringLocalization
     };
 
     for (FWidgetAuthoringActionHandler Handler : Handlers)

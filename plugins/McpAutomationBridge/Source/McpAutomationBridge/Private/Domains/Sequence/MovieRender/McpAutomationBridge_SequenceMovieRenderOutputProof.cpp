@@ -40,7 +40,7 @@ bool FindOutputFiles(UMoviePipelineExecutorJob *Job, TArray<FString> &OutFiles,
   const UMcpAutomationBridgeSettings *Settings =
       GetDefault<UMcpAutomationBridgeSettings>();
   const int32 MaxEntries =
-      Settings ? FMath::Max(1, Settings->MaxMovieRenderOutputScanFiles) : 1;
+      FMath::Max(1, Settings->MaxMovieRenderOutputScanFiles);
   class FBoundedOutputVisitor : public IPlatformFile::FDirectoryStatVisitor {
    public:
     FBoundedOutputVisitor(TArray<FString> &InFiles, int32 InMaxEntries)
@@ -194,7 +194,7 @@ int32 AppendRenderOutputProof(UMoviePipelineExecutorJob *Job,
       Result->SetNumberField(TEXT("outputFileCount"), 0);
       Result->SetArrayField(TEXT("outputFiles"),
                             TArray<TSharedPtr<FJsonValue>>());
-      return 0;
+      return INDEX_NONE;
     }
     Files.RemoveAll([&State](const FString &File) {
       if (!MatchesExpectedFormat(File, State))

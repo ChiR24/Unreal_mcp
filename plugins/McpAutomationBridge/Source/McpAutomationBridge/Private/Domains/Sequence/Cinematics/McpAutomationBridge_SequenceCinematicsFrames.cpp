@@ -2,12 +2,9 @@
 
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
-#if WITH_EDITOR
 #include "MovieScene.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 FFrameNumber GetFrame(const TSharedPtr<FJsonObject> &Params,
                       UMovieScene *MovieScene, const TCHAR *Name,
                       double DefaultValue) {
@@ -67,5 +64,4 @@ int32 GetDuration(const TSharedPtr<FJsonObject> &Params, UMovieScene *MovieScene
   }
   return FMath::Max(1, TickDuration.Value);
 }
-#endif
 }

@@ -1,6 +1,5 @@
 #include "Domains/MetaHuman/McpAutomationBridge_MetaHumanHandlers.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
 
@@ -149,4 +148,3 @@ bool HandleExportMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& R
     return true;
 }
 }
-#endif

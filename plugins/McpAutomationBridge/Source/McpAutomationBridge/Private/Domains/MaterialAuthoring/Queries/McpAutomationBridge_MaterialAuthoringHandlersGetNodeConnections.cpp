@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -57,31 +56,9 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     TArray<FEdge> AllEdges;
 
     auto CollectInputEdges = [&](UMaterialExpression *Expr) {
-      if (!Expr) return;
-      // Reflection-based inputs
-      for (TFieldIterator<FStructProperty> It(Expr->GetClass()); It; ++It) {
-        FStructProperty *SP = *It;
-        if (!SP->Struct || SP->Struct->GetFName() != FName(TEXT("ExpressionInput"))) continue;
-        FExpressionInput *InPtr = SP->ContainerPtrToValuePtr<FExpressionInput>(Expr);
-        if (!InPtr || !InPtr->Expression) continue;
-        AllEdges.Add({InPtr->Expression, Expr, InPtr->OutputIndex, SP->GetName()});
-      }
-      // Custom expression named inputs
-      if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
-        for (const FCustomInput &CI : CE->Inputs) {
-          if (CI.Input.Expression) {
-            AllEdges.Add({CI.Input.Expression, Expr, CI.Input.OutputIndex, CI.InputName.ToString()});
-          }
-        }
-      }
-      // MF call inputs
-      if (UMaterialExpressionMaterialFunctionCall *MFC = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
-        for (const FFunctionExpressionInput &FI : MFC->FunctionInputs) {
-          if (FI.Input.Expression) {
-            AllEdges.Add({FI.Input.Expression, Expr, FI.Input.OutputIndex, FI.ExpressionInput->InputName.ToString()});
-          }
-        }
-      }
+      ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &PinName) {
+        if (Input.Expression) AllEdges.Add({Input.Expression, Expr, Input.OutputIndex, PinName});
+      });
     };
 
     for (UMaterialExpression *Expr : AllExpr) {
@@ -91,18 +68,27 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     // Material main pin edges
     TArray<FEdge> MainPinEdges;
     if (Material) {
-#if WITH_EDITORONLY_DATA
       auto AddMainEdge = [&](const FString &PinName, const FExpressionInput &Input) {
         if (Input.Expression) {
           MainPinEdges.Add({Input.Expression, nullptr, Input.OutputIndex, PinName});
         }
       };
       ForEachMainMaterialInput(Material, AddMainEdge);
-#endif
     }
 
     struct FNodeHop { UMaterialExpression *Expr; int32 Hop; };
     TArray<TSharedPtr<FJsonValue>> ResultConns;
+    auto EmitEdge = [&ResultConns](const FString &SourceId, int32 OutputIndex, const FString &TargetId,
+                                   const FString &PinName, int32 Hop, const TCHAR *Direction) {
+      TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+      Obj->SetStringField(TEXT("sourceNodeId"), SourceId);
+      Obj->SetNumberField(TEXT("sourceOutputIndex"), OutputIndex);
+      Obj->SetStringField(TEXT("targetNodeId"), TargetId);
+      Obj->SetStringField(TEXT("targetInput"), PinName);
+      Obj->SetNumberField(TEXT("hop"), Hop);
+      Obj->SetStringField(TEXT("direction"), Direction);
+      ResultConns.Add(MakeShared<FJsonValueObject>(Obj));
+    };
     TSet<FGuid> Visited;
     Visited.Add(StartExpr->MaterialExpressionGuid);
 
@@ -118,14 +104,7 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
       if (bWantInputs) {
         for (const FEdge &E : AllEdges) {
           if (E.Target != Current.Expr) continue;
-          TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-          Obj->SetStringField(TEXT("sourceNodeId"), MCP_NODE_ID(E.Source));
-          Obj->SetNumberField(TEXT("sourceOutputIndex"), E.OutputIndex);
-          Obj->SetStringField(TEXT("targetNodeId"), MCP_NODE_ID(Current.Expr));
-          Obj->SetStringField(TEXT("targetInput"), E.PinName);
-          Obj->SetNumberField(TEXT("hop"), Current.Hop + 1);
-          Obj->SetStringField(TEXT("direction"), TEXT("input"));
-          ResultConns.Add(MakeShared<FJsonValueObject>(Obj));
+          EmitEdge(MCP_NODE_ID(E.Source), E.OutputIndex, MCP_NODE_ID(Current.Expr), E.PinName, Current.Hop + 1, TEXT("input"));
           if (!Visited.Contains(E.Source->MaterialExpressionGuid)) {
             Visited.Add(E.Source->MaterialExpressionGuid);
             Queue.Add({E.Source, Current.Hop + 1});
@@ -137,14 +116,7 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
       if (bWantOutputs) {
         for (const FEdge &E : AllEdges) {
           if (E.Source != Current.Expr) continue;
-          TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-          Obj->SetStringField(TEXT("sourceNodeId"), MCP_NODE_ID(Current.Expr));
-          Obj->SetNumberField(TEXT("sourceOutputIndex"), E.OutputIndex);
-          Obj->SetStringField(TEXT("targetNodeId"), MCP_NODE_ID(E.Target));
-          Obj->SetStringField(TEXT("targetInput"), E.PinName);
-          Obj->SetNumberField(TEXT("hop"), Current.Hop + 1);
-          Obj->SetStringField(TEXT("direction"), TEXT("output"));
-          ResultConns.Add(MakeShared<FJsonValueObject>(Obj));
+          EmitEdge(MCP_NODE_ID(Current.Expr), E.OutputIndex, MCP_NODE_ID(E.Target), E.PinName, Current.Hop + 1, TEXT("output"));
           if (!Visited.Contains(E.Target->MaterialExpressionGuid)) {
             Visited.Add(E.Target->MaterialExpressionGuid);
             Queue.Add({E.Target, Current.Hop + 1});
@@ -153,14 +125,7 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
         // Main pin outputs
         for (const FEdge &E : MainPinEdges) {
           if (E.Source != Current.Expr) continue;
-          TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
-          Obj->SetStringField(TEXT("sourceNodeId"), MCP_NODE_ID(Current.Expr));
-          Obj->SetNumberField(TEXT("sourceOutputIndex"), E.OutputIndex);
-          Obj->SetStringField(TEXT("targetNodeId"), TEXT("Main"));
-          Obj->SetStringField(TEXT("targetInput"), E.PinName);
-          Obj->SetNumberField(TEXT("hop"), Current.Hop + 1);
-          Obj->SetStringField(TEXT("direction"), TEXT("output"));
-          ResultConns.Add(MakeShared<FJsonValueObject>(Obj));
+          EmitEdge(MCP_NODE_ID(Current.Expr), E.OutputIndex, TEXT("Main"), E.PinName, Current.Hop + 1, TEXT("output"));
         }
       }
     }
@@ -178,4 +143,3 @@ bool HandleGetNodeConnections(UMcpAutomationBridgeSubsystem* Bridge, const FStri
   return false;
 }
 }
-#endif

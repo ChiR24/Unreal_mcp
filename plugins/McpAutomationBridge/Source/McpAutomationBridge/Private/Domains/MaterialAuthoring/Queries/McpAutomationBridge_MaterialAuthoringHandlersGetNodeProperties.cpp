@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleGetNodeProperties(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -32,14 +31,8 @@ bool HandleGetNodeProperties(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
     if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
       Result->SetStringField(TEXT("code"), CE->Code);
       Result->SetStringField(TEXT("description"), CE->Description);
-      switch (CE->OutputType) {
-        case CMOT_Float1: Result->SetStringField(TEXT("outputType"), TEXT("Float1")); break;
-        case CMOT_Float2: Result->SetStringField(TEXT("outputType"), TEXT("Float2")); break;
-        case CMOT_Float3: Result->SetStringField(TEXT("outputType"), TEXT("Float3")); break;
-        case CMOT_Float4: Result->SetStringField(TEXT("outputType"), TEXT("Float4")); break;
-        case CMOT_MaterialAttributes: Result->SetStringField(TEXT("outputType"), TEXT("MaterialAttributes")); break;
-        default: Result->SetStringField(TEXT("outputType"), TEXT("Unknown")); break;
-      }
+      Result->SetStringField(TEXT("outputType"),
+                             MaterialEnumShortName(StaticEnum<ECustomMaterialOutputType>(), CE->OutputType));
       TArray<TSharedPtr<FJsonValue>> InputsArr;
       for (const FCustomInput &CI : CE->Inputs) {
         TSharedPtr<FJsonObject> IO = MakeShared<FJsonObject>();
@@ -51,14 +44,8 @@ bool HandleGetNodeProperties(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
       for (const FCustomOutput &CO : CE->AdditionalOutputs) {
         TSharedPtr<FJsonObject> OO = MakeShared<FJsonObject>();
         OO->SetStringField(TEXT("name"), CO.OutputName.ToString());
-        switch (CO.OutputType) {
-          case CMOT_Float1: OO->SetStringField(TEXT("type"), TEXT("Float1")); break;
-          case CMOT_Float2: OO->SetStringField(TEXT("type"), TEXT("Float2")); break;
-          case CMOT_Float3: OO->SetStringField(TEXT("type"), TEXT("Float3")); break;
-          case CMOT_Float4: OO->SetStringField(TEXT("type"), TEXT("Float4")); break;
-          case CMOT_MaterialAttributes: OO->SetStringField(TEXT("type"), TEXT("MaterialAttributes")); break;
-          default: OO->SetStringField(TEXT("type"), TEXT("Unknown")); break;
-        }
+        OO->SetStringField(TEXT("type"),
+                           MaterialEnumShortName(StaticEnum<ECustomMaterialOutputType>(), CO.OutputType));
         OutputsArr.Add(MakeShared<FJsonValueObject>(OO));
       }
       Result->SetArrayField(TEXT("additionalOutputs"), OutputsArr);
@@ -70,12 +57,7 @@ bool HandleGetNodeProperties(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
       Result->SetNumberField(TEXT("sliderMax"), SP->SliderMax);
     } else if (UMaterialExpressionVectorParameter *VP = Cast<UMaterialExpressionVectorParameter>(Expr)) {
       Result->SetStringField(TEXT("parameterName"), VP->ParameterName.ToString());
-      TSharedPtr<FJsonObject> DefVal = MakeShared<FJsonObject>();
-      DefVal->SetNumberField(TEXT("r"), VP->DefaultValue.R);
-      DefVal->SetNumberField(TEXT("g"), VP->DefaultValue.G);
-      DefVal->SetNumberField(TEXT("b"), VP->DefaultValue.B);
-      DefVal->SetNumberField(TEXT("a"), VP->DefaultValue.A);
-      Result->SetObjectField(TEXT("defaultValue"), DefVal);
+      Result->SetObjectField(TEXT("defaultValue"), McpHandlerUtils::LinearColorToJson(VP->DefaultValue));
       Result->SetStringField(TEXT("group"), VP->Group.ToString());
     } else if (UMaterialExpressionStaticSwitchParameter *SSP = Cast<UMaterialExpressionStaticSwitchParameter>(Expr)) {
       Result->SetStringField(TEXT("parameterName"), SSP->ParameterName.ToString());
@@ -142,4 +124,3 @@ bool HandleGetNodeProperties(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
   return false;
 }
 }
-#endif

@@ -137,17 +137,6 @@ bool HandleCreateMediaPlaylist(UMcpAutomationBridgeSubsystem *Subsystem,
     SendMediaError(Subsystem, Socket, RequestId, Code, Error);
     return true;
   }
-  UClass *PlaylistClass = ResolveMediaClass(TEXT("MediaPlaylist"), Error);
-  UObject *Prototype =
-      PlaylistClass
-          ? NewObject<UObject>(GetTransientPackage(), PlaylistClass)
-          : nullptr;
-  if (!Prototype || !ApplyPlaylistItems(Prototype, Items, Error)) {
-    SendMediaError(Subsystem, Socket, RequestId,
-                   TEXT("PLAYLIST_ITEM_FAILED"), Error);
-    return true;
-  }
-
   FMediaAssetCreateResult Created;
   if (!CreateMediaAssetFromPayload(Payload, TEXT("/Game/Media/Playlists"),
                                    TEXT("MediaPlaylist"), Created, Error)) {

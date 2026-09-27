@@ -1,9 +1,7 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR && MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
 namespace McpNiagaraAuthoringHandlers
-{
-namespace
 {
 FString BareInputName(const FString& InputName)
 {
@@ -11,33 +9,26 @@ FString BareInputName(const FString& InputName)
     return InputName.FindLastChar(TEXT('.'), DotIndex) ? InputName.Mid(DotIndex + 1) : InputName;
 }
 
-// Module inputs are stored as "Module.<Name>"; callers may pass the bare name, that form,
-// or the stack's aliased "<ModuleName>.<Name>" form.
-bool ModuleExposesInput(UNiagaraNodeFunctionCall* Module, const FString& InputName)
+UNiagaraNodeInput* FindModuleInputNode(UNiagaraNodeFunctionCall* Module, const FString& InputName)
 {
     UNiagaraGraph* CalledGraph = Module ? Module->GetCalledGraph() : nullptr;
     if (!CalledGraph)
     {
-        return false;
+        return nullptr;
     }
     const FString Bare = BareInputName(InputName);
     for (UEdGraphNode* Node : CalledGraph->Nodes)
     {
         UNiagaraNodeInput* InputNode = Cast<UNiagaraNodeInput>(Node);
-        if (!InputNode)
-        {
-            continue;
-        }
-        const FString Candidate = InputNode->Input.GetName().ToString();
-        if (Candidate.Equals(InputName, ESearchCase::IgnoreCase) ||
+        const FString Candidate = InputNode ? InputNode->Input.GetName().ToString() : FString();
+        if (InputNode && (Candidate.Equals(InputName, ESearchCase::IgnoreCase) ||
             Candidate.Equals(Bare, ESearchCase::IgnoreCase) ||
-            Candidate.EndsWith(TEXT(".") + Bare, ESearchCase::IgnoreCase))
+            Candidate.EndsWith(TEXT(".") + Bare, ESearchCase::IgnoreCase)))
         {
-            return true;
+            return InputNode;
         }
     }
-    return false;
-}
+    return nullptr;
 }
 
 // targetNodeId is optional (the contract only requires systemPath + inputName): without it
@@ -128,7 +119,7 @@ UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
                 }
             }
         }
-        if (bNameMatches && (ModuleExposesInput(Module, InputName) || bGraphUnavailable))
+        if (bNameMatches && (FindModuleInputNode(Module, InputName) || bGraphUnavailable))
         {
             Candidates.Add(Module);
         }

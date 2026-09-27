@@ -15,16 +15,13 @@
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
-#if WITH_EDITOR
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
 #include "MovieSceneSection.h"
-#endif
 
 namespace McpSequenceTracks {
 
-#if WITH_EDITOR
 namespace {
 
 /** Delete keys on one channel family; returns how many went. */
@@ -55,13 +52,11 @@ int32 RemoveChannelKeys(FMovieSceneChannelProxy &Proxy, bool bAllFrames,
 }
 
 } // namespace
-#endif
 
 bool HandleRemoveKeyframe(UMcpAutomationBridgeSubsystem *Subsystem,
                           const FString &RequestId,
                           const TSharedPtr<FJsonObject> &LocalPayload,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-#if WITH_EDITOR
   const FString SeqPath = McpSequence::ResolvePath(LocalPayload);
   if (SeqPath.IsEmpty()) {
     Subsystem->SendAutomationResponse(
@@ -150,13 +145,6 @@ bool HandleRemoveKeyframe(UMcpAutomationBridgeSubsystem *Subsystem,
                       MatchedTracks),
       Result);
   return true;
-#else
-  Subsystem->SendAutomationResponse(
-      RequestingSocket, RequestId, false,
-      TEXT("sequence_remove_keyframe requires editor build."), nullptr,
-      TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 } // namespace McpSequenceTracks

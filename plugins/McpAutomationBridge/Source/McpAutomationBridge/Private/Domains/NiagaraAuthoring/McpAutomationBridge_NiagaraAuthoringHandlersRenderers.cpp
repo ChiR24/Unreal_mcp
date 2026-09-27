@@ -1,6 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 struct FRendererTarget
@@ -54,121 +53,69 @@ static TRenderer* FindOrCreateRenderer(FRendererTarget& Target)
     return NewRenderer;
 }
 
-static bool AddSpriteRenderer(FActionContext& Context)
+// Finds or adds the emitter's TRenderer, applies Configure to it, and replies naming it Label ("Sprite").
+template <typename TRenderer, typename TConfigure>
+static bool AddRenderer(FActionContext& Context, const TCHAR* Label, TConfigure Configure)
 {
     FRendererTarget Target;
     if (!LoadRendererTarget(Context, Target))
     {
         return true;
     }
-    UNiagaraSpriteRendererProperties* Renderer = FindOrCreateRenderer<UNiagaraSpriteRendererProperties>(Target);
+    TRenderer* Renderer = FindOrCreateRenderer<TRenderer>(Target);
+    const FString Lower = FString(Label).ToLower();
     if (!Renderer)
     {
-        Context.SendError(TEXT("Failed to create sprite renderer"), TEXT("CREATION_FAILED"));
+        Context.SendError(FString::Printf(TEXT("Failed to create %s renderer"), *Lower), TEXT("CREATION_FAILED"));
         return true;
     }
-    const FString MaterialPath = GetJsonStringField(Context.Payload, TEXT("materialPath"));
-    if (!MaterialPath.IsEmpty())
-    {
-        if (UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath))
-        {
-            Renderer->Material = Material;
-        }
-    }
+    Configure(*Renderer);
     MarkDirtyAndVerify(Context, Target.System);
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("SpriteRenderer"));
-    Context.Result->SetStringField(TEXT("message"), TEXT("Configured sprite renderer module."));
-    Context.SendSuccess(true, TEXT("Sprite renderer configured."));
-    return true;
-}
-
-static bool AddMeshRenderer(FActionContext& Context)
-{
-    FRendererTarget Target;
-    if (!LoadRendererTarget(Context, Target))
-    {
-        return true;
-    }
-    UNiagaraMeshRendererProperties* Renderer = FindOrCreateRenderer<UNiagaraMeshRendererProperties>(Target);
-    if (!Renderer)
-    {
-        Context.SendError(TEXT("Failed to create mesh renderer"), TEXT("CREATION_FAILED"));
-        return true;
-    }
-    const FString MeshPath = GetJsonStringField(Context.Payload, TEXT("meshPath"));
-    if (!MeshPath.IsEmpty())
-    {
-        if (UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath))
-        {
-            FNiagaraMeshRendererMeshProperties MeshProps;
-            MeshProps.Mesh = Mesh;
-            Renderer->Meshes.Empty();
-            Renderer->Meshes.Add(MeshProps);
-        }
-    }
-    MarkDirtyAndVerify(Context, Target.System);
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("MeshRenderer"));
-    Context.Result->SetStringField(TEXT("message"), TEXT("Configured mesh renderer module."));
-    Context.SendSuccess(true, TEXT("Mesh renderer configured."));
-    return true;
-}
-
-static bool AddRibbonRenderer(FActionContext& Context)
-{
-    FRendererTarget Target;
-    if (!LoadRendererTarget(Context, Target))
-    {
-        return true;
-    }
-    UNiagaraRibbonRendererProperties* Renderer = FindOrCreateRenderer<UNiagaraRibbonRendererProperties>(Target);
-    if (!Renderer)
-    {
-        Context.SendError(TEXT("Failed to create ribbon renderer"), TEXT("CREATION_FAILED"));
-        return true;
-    }
-    const FString MaterialPath = GetJsonStringField(Context.Payload, TEXT("materialPath"));
-    if (!MaterialPath.IsEmpty())
-    {
-        if (UMaterialInterface* Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath))
-        {
-            Renderer->Material = Material;
-        }
-    }
-    MarkDirtyAndVerify(Context, Target.System);
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("RibbonRenderer"));
-    Context.Result->SetStringField(TEXT("message"), TEXT("Configured ribbon renderer module."));
-    Context.SendSuccess(true, TEXT("Ribbon renderer configured."));
-    return true;
-}
-
-static bool AddLightRenderer(FActionContext& Context)
-{
-    FRendererTarget Target;
-    if (!LoadRendererTarget(Context, Target))
-    {
-        return true;
-    }
-    UNiagaraLightRendererProperties* Renderer = FindOrCreateRenderer<UNiagaraLightRendererProperties>(Target);
-    if (!Renderer)
-    {
-        Context.SendError(TEXT("Failed to create light renderer"), TEXT("CREATION_FAILED"));
-        return true;
-    }
-    Renderer->RadiusScale = static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("lightRadius"), 100.0));
-    MarkDirtyAndVerify(Context, Target.System);
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("LightRenderer"));
-    Context.Result->SetStringField(TEXT("message"), TEXT("Configured light renderer module."));
-    Context.SendSuccess(true, TEXT("Light renderer configured."));
+    Context.Result->SetStringField(TEXT("moduleName"), FString::Printf(TEXT("%sRenderer"), Label));
+    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured %s renderer module."), *Lower));
+    Context.SendSuccess(true, FString::Printf(TEXT("%s renderer configured."), Label));
     return true;
 }
 
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
 {
-    if (SubAction == TEXT("add_sprite_renderer_module")) return AddSpriteRenderer(Context);
-    if (SubAction == TEXT("add_mesh_renderer_module")) return AddMeshRenderer(Context);
-    if (SubAction == TEXT("add_ribbon_renderer_module")) return AddRibbonRenderer(Context);
-    if (SubAction == TEXT("add_light_renderer_module")) return AddLightRenderer(Context);
+    const auto SetMaterial = [&Context](auto& Renderer)
+    {
+        const FString Path = GetJsonStringField(Context.Payload, TEXT("materialPath"));
+        if (UMaterialInterface* Material = Path.IsEmpty() ? nullptr : LoadObject<UMaterialInterface>(nullptr, *Path))
+        {
+            Renderer.Material = Material;
+        }
+    };
+    if (SubAction == TEXT("add_sprite_renderer_module"))
+    {
+        return AddRenderer<UNiagaraSpriteRendererProperties>(Context, TEXT("Sprite"), SetMaterial);
+    }
+    if (SubAction == TEXT("add_ribbon_renderer_module"))
+    {
+        return AddRenderer<UNiagaraRibbonRendererProperties>(Context, TEXT("Ribbon"), SetMaterial);
+    }
+    if (SubAction == TEXT("add_mesh_renderer_module"))
+    {
+        return AddRenderer<UNiagaraMeshRendererProperties>(Context, TEXT("Mesh"), [&Context](UNiagaraMeshRendererProperties& Renderer)
+        {
+            const FString Path = GetJsonStringField(Context.Payload, TEXT("meshPath"));
+            if (UStaticMesh* Mesh = Path.IsEmpty() ? nullptr : LoadObject<UStaticMesh>(nullptr, *Path))
+            {
+                FNiagaraMeshRendererMeshProperties MeshProps;
+                MeshProps.Mesh = Mesh;
+                Renderer.Meshes.Empty();
+                Renderer.Meshes.Add(MeshProps);
+            }
+        });
+    }
+    if (SubAction == TEXT("add_light_renderer_module"))
+    {
+        return AddRenderer<UNiagaraLightRendererProperties>(Context, TEXT("Light"), [&Context](UNiagaraLightRendererProperties& Renderer)
+        {
+            Renderer.RadiusScale = static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("lightRadius"), 100.0));
+        });
+    }
     return false;
 }
 }
-#endif

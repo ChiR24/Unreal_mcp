@@ -3,7 +3,6 @@
 
 namespace McpAudioHandlers
 {
-#if WITH_EDITOR
 bool HandleAmbientActions(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -11,8 +10,7 @@ bool HandleAmbientActions(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-  if (Lower == TEXT("create_ambient_sound") ||
-             Lower == TEXT("audio_create_ambient_sound")) {
+  if (Lower == TEXT("create_ambient_sound")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
         SoundPath.IsEmpty()) {
@@ -116,8 +114,7 @@ bool HandleAmbientActions(
     return true;
   }
 
-  else if (Lower == TEXT("spawn_sound_at_location") ||
-             Lower == TEXT("audio_spawn_sound_at_location")) {
+  else if (Lower == TEXT("spawn_sound_at_location")) {
     // Similar to create_ambient_sound but explicit action name
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
@@ -203,5 +200,4 @@ bool HandleAmbientActions(
   }
   return false;
 }
-#endif
 }

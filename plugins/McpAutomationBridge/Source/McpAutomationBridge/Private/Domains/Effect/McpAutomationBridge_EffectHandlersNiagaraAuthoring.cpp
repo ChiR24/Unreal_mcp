@@ -2,7 +2,6 @@
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
@@ -21,11 +20,9 @@
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #include "NiagaraEditorUtilities.h"
 #endif
-#endif
 
 namespace McpEffectHandlers
 {
-#if WITH_EDITOR
 namespace
 {
 // Engine-shipped template emitters (/Niagara/DefaultAssets/Templates/Emitters) keyed by
@@ -219,5 +216,4 @@ bool AuthorProceduralNiagaraSystem(
     }
     return true;
 }
-#endif
 }

@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -93,10 +92,8 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
             ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
         }
 
-        FString FullPath = Path / Name;
-
         // Create Control Rig Blueprint using FKismetEditorUtilities (works in all UE 5.x versions)
-        FString FullPackageName = Path / Name;
+        const FString FullPackageName = Path / Name;
 
         // Create the package
         UPackage* Package = CreatePackage(*FullPackageName);
@@ -177,4 +174,3 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

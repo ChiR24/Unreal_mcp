@@ -2,7 +2,6 @@
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Channels/MovieSceneFloatChannel.h"
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
@@ -15,21 +14,17 @@
 #include "Tracks/MovieSceneFadeTrack.h"
 #include "Tracks/MovieSceneLevelVisibilityTrack.h"
 #include "Tracks/MovieSceneParticleTrack.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
 UMovieSceneSection *CreateBoundSection(ULevelSequence *Sequence, UClass *TrackClass,
                                        const FGuid &BindingGuid,
                                        TSharedPtr<FJsonObject> &OutResult,
                                        const TCHAR *Action) {
-  UMovieSceneTrack *Track =
-      AddTrackForBinding(Sequence->GetMovieScene(), TrackClass, BindingGuid);
-  UMovieSceneSection *Section = Track ? Track->CreateNewSection() : nullptr;
-  if (Track && Section) Track->AddSection(*Section);
+  UMovieScene *MovieScene = Sequence->GetMovieScene();
+  UMovieSceneSection *Section =
+      AddTrackSection(MovieScene, AddTrackForBinding(MovieScene, TrackClass, BindingGuid), true);
   if (!Section) {
-    RemoveTrackAfterSectionFailure(Sequence->GetMovieScene(), Track, true);
     OutResult = MakeResult(false, Action, TEXT("Failed to create track section"),
                            TEXT("SECTION_CREATION_FAILED"));
   }
@@ -51,29 +46,16 @@ bool LoadSequenceAndBindingForAuxiliaryTrack(const TSharedPtr<FJsonObject> &Para
 
 bool BindingSupportsParticleActivation(UMovieScene *MovieScene,
                                        const FGuid &Guid) {
-  const FMovieScenePossessable *Possessable =
-      MovieScene ? MovieScene->FindPossessable(Guid) : nullptr;
-  const UClass *BoundClass =
-      Possessable ? Possessable->GetPossessedObjectClass() : nullptr;
-  const FMovieSceneSpawnable *Spawnable =
-      MovieScene ? MovieScene->FindSpawnable(Guid) : nullptr;
-  const UObject *BoundTemplate =
-      BoundClass
-          ? BoundClass->GetDefaultObject()
-          : (Spawnable ? Spawnable->GetObjectTemplate() : nullptr);
+  const UObject *BoundTemplate = GetBindingTemplate(MovieScene, Guid);
   if (!BoundTemplate) return false;
   if (BoundTemplate->IsA<UFXSystemComponent>()) return true;
   return BoundTemplate->IsA<AEmitter>();
 }
 
 }
-#endif
 
-bool HandleAddFadeTrack(UMcpAutomationBridgeSubsystem *Self,
-                        const TSharedPtr<FJsonObject> &Params,
+bool HandleAddFadeTrack(const TSharedPtr<FJsonObject> &Params,
                         TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
   if (!Sequence) return true;
   UMovieScene *MovieScene = Sequence->GetMovieScene();
@@ -82,10 +64,8 @@ bool HandleAddFadeTrack(UMcpAutomationBridgeSubsystem *Self,
   if (!Track)
     Track = MovieScene->AddTrack<UMovieSceneFadeTrack>();
   UMovieSceneFadeSection *Section =
-      Track ? Cast<UMovieSceneFadeSection>(Track->CreateNewSection()) : nullptr;
-  if (Track && Section) Track->AddSection(*Section);
+      Cast<UMovieSceneFadeSection>(AddTrackSection(MovieScene, Track, bCreatedTrack));
   if (!Section) {
-    RemoveTrackAfterSectionFailure(MovieScene, Track, bCreatedTrack);
     OutResult = MakeResult(false, TEXT("add_fade_track"),
                            TEXT("Failed to create fade track section"),
                            TEXT("SECTION_CREATION_FAILED"));
@@ -105,18 +85,10 @@ bool HandleAddFadeTrack(UMcpAutomationBridgeSubsystem *Self,
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;
   OutResult = MakeResult(true, TEXT("add_fade_track"), TEXT("Fade track added"));
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_fade_track"), TEXT("Editor build required"),
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
-bool HandleAddLevelVisibilityTrack(UMcpAutomationBridgeSubsystem *Self,
-                                   const TSharedPtr<FJsonObject> &Params,
+bool HandleAddLevelVisibilityTrack(const TSharedPtr<FJsonObject> &Params,
                                    TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
   if (!Sequence) return true;
   UMovieScene *MovieScene = Sequence->GetMovieScene();
@@ -126,10 +98,8 @@ bool HandleAddLevelVisibilityTrack(UMcpAutomationBridgeSubsystem *Self,
   if (!Track)
     Track = MovieScene->AddTrack<UMovieSceneLevelVisibilityTrack>();
   UMovieSceneLevelVisibilitySection *Section =
-      Track ? Cast<UMovieSceneLevelVisibilitySection>(Track->CreateNewSection()) : nullptr;
-  if (Track && Section) Track->AddSection(*Section);
+      Cast<UMovieSceneLevelVisibilitySection>(AddTrackSection(MovieScene, Track, bCreatedTrack));
   if (!Section) {
-    RemoveTrackAfterSectionFailure(MovieScene, Track, bCreatedTrack);
     OutResult = MakeResult(
         false, TEXT("add_level_visibility_track"),
         TEXT("Failed to create level visibility track section"),
@@ -155,18 +125,10 @@ bool HandleAddLevelVisibilityTrack(UMcpAutomationBridgeSubsystem *Self,
   OutResult = MakeResult(true, TEXT("add_level_visibility_track"),
                          TEXT("Level visibility track added"));
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_level_visibility_track"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
-bool HandleAddParticleTrack(UMcpAutomationBridgeSubsystem *Self,
-                            const TSharedPtr<FJsonObject> &Params,
+bool HandleAddParticleTrack(const TSharedPtr<FJsonObject> &Params,
                             TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
   if (!LoadSequenceAndBindingForAuxiliaryTrack(Params, TEXT("add_particle_track"), Sequence, Guid,
@@ -218,10 +180,5 @@ bool HandleAddParticleTrack(UMcpAutomationBridgeSubsystem *Self,
   OutResult->SetStringField(TEXT("particleAction"),
                             bActivate ? TEXT("activate") : TEXT("deactivate"));
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_particle_track"), TEXT("Editor build required"),
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 }

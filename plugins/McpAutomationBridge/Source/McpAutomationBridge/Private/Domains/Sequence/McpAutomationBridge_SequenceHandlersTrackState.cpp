@@ -1,133 +1,66 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
+namespace {
+// The payload's sequence and its trackName track; replies and returns null on a miss.
+UMovieSceneTrack *LoadTrackOrReply(UMcpAutomationBridgeSubsystem *Self, const FString &RequestId,
+                                   TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                   const TSharedPtr<FJsonObject> &Payload, const TCHAR *Action,
+                                   ULevelSequence *&OutSequence, UMovieScene *&OutMovieScene) {
+  OutSequence = McpSequence::LoadOrReply(Self, RequestId, Socket, Payload, Action, OutMovieScene);
+  if (!OutSequence)
+    return nullptr;
+  UMovieSceneTrack *Track =
+      FindTrackByName(OutMovieScene, GetJsonStringField(Payload, TEXT("trackName")));
+  if (!Track)
+    Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Track not found"), nullptr,
+                                 TEXT("TRACK_NOT_FOUND"));
+  return Track;
+}
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTrackMuted(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
-  FString SeqPath = ResolveSequencePath(Payload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence path required"), nullptr,
-                           TEXT("INVALID_SEQUENCE"));
+  ULevelSequence *Sequence = nullptr;
+  UMovieScene *MovieScene = nullptr;
+  UMovieSceneTrack *Track = LoadTrackOrReply(this, RequestId, Socket, Payload, TEXT("set_track_muted"), Sequence, MovieScene);
+  if (!Track)
     return true;
-  }
-
-  FString TrackName;
-  Payload->TryGetStringField(TEXT("trackName"), TrackName);
-  bool bMuted = true;
-  Payload->TryGetBoolField(TEXT("muted"), bMuted);
-
-  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
-  if (!Sequence || !Sequence->GetMovieScene()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("SEQUENCE_NOT_FOUND"));
-    return true;
-  }
-
-  UMovieScene *MovieScene = Sequence->GetMovieScene();
-  UMovieSceneTrack *Track = FindTrackByName(MovieScene, TrackName);
-
-  if (!Track) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Track not found"),
-                           nullptr, TEXT("TRACK_NOT_FOUND"));
-    return true;
-  }
-
+  const bool bMuted = GetJsonBoolField(Payload, TEXT("muted"), true);
   Track->SetEvalDisabled(bMuted);
   MovieScene->Modify();
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), Track->GetName());
   Resp->SetBoolField(TEXT("muted"), bMuted);
   SendAutomationResponse(Socket, RequestId, true,
-                         bMuted ? TEXT("Track muted") : TEXT("Track unmuted"),
-                         Resp);
+                         bMuted ? TEXT("Track muted") : TEXT("Track unmuted"), Resp);
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_set_track_muted requires editor build"),
-                         nullptr, TEXT("EDITOR_ONLY"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTrackSolo(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
-  FString SeqPath = ResolveSequencePath(Payload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence path required"), nullptr,
-                           TEXT("INVALID_SEQUENCE"));
+  ULevelSequence *Sequence = nullptr;
+  UMovieScene *MovieScene = nullptr;
+  UMovieSceneTrack *SoloTrack = LoadTrackOrReply(this, RequestId, Socket, Payload, TEXT("set_track_solo"), Sequence, MovieScene);
+  if (!SoloTrack)
     return true;
-  }
-
-  FString TrackName;
-  Payload->TryGetStringField(TEXT("trackName"), TrackName);
-  bool bSolo = true;
-  Payload->TryGetBoolField(TEXT("solo"), bSolo);
-
-  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
-  if (!Sequence || !Sequence->GetMovieScene()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("SEQUENCE_NOT_FOUND"));
-    return true;
-  }
-
-  UMovieScene *MovieScene = Sequence->GetMovieScene();
-  UMovieSceneTrack *SoloTrack = nullptr;
+  const bool bSolo = GetJsonBoolField(Payload, TEXT("solo"), true);
   TArray<UMovieSceneTrack *> AllTracks;
-  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
-    if (Track) {
-      AllTracks.Add(Track);
-      if (Track->GetName().Contains(TrackName)) {
-        SoloTrack = Track;
-      }
-    }
-  }
-
-  for (const FMovieSceneBinding &Binding :
-       const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
-      if (Track) {
-        AllTracks.Add(Track);
-        if (Track->GetName().Contains(TrackName)) {
-          SoloTrack = Track;
-        }
-      }
-    }
-  }
-
-  if (!SoloTrack) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Track not found"),
-                           nullptr, TEXT("TRACK_NOT_FOUND"));
-    return true;
-  }
-
-  int32 AffectedTrackCount = 0;
+  CollectTracksByName(MovieScene, FString(), FString(), AllTracks);
   int32 DisabledOtherTrackCount = 0;
   for (UMovieSceneTrack *Track : AllTracks) {
-    if (!Track) {
-      continue;
-    }
-    if (bSolo) {
-      const bool bDisableTrack = Track != SoloTrack;
-      Track->SetEvalDisabled(bDisableTrack);
-      if (bDisableTrack) {
-        ++DisabledOtherTrackCount;
-      }
-    } else {
-      Track->SetEvalDisabled(false);
-    }
-    ++AffectedTrackCount;
+    const bool bDisableTrack = bSolo && Track != SoloTrack;
+    Track->SetEvalDisabled(bDisableTrack);
+    DisabledOtherTrackCount += bDisableTrack ? 1 : 0;
   }
   MovieScene->Modify();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("trackName"), SoloTrack->GetName());
   Resp->SetBoolField(TEXT("solo"), bSolo);
-  Resp->SetNumberField(TEXT("affectedTrackCount"), AffectedTrackCount);
+  Resp->SetNumberField(TEXT("affectedTrackCount"), AllTracks.Num());
   Resp->SetNumberField(TEXT("disabledOtherTrackCount"), DisabledOtherTrackCount);
   SendAutomationResponse(
       Socket, RequestId, true,
@@ -135,47 +68,17 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTrackSolo(
             : TEXT("Solo disabled; all tracks evaluation-enabled"),
       Resp);
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_set_track_solo requires editor build"),
-                         nullptr, TEXT("EDITOR_ONLY"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTrackLocked(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
-  FString SeqPath = ResolveSequencePath(Payload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence path required"), nullptr,
-                           TEXT("INVALID_SEQUENCE"));
+  ULevelSequence *Sequence = nullptr;
+  UMovieScene *MovieScene = nullptr;
+  UMovieSceneTrack *Track = LoadTrackOrReply(this, RequestId, Socket, Payload, TEXT("set_track_locked"), Sequence, MovieScene);
+  if (!Track)
     return true;
-  }
-
-  FString TrackName;
-  Payload->TryGetStringField(TEXT("trackName"), TrackName);
-  bool bLocked = true;
-  Payload->TryGetBoolField(TEXT("locked"), bLocked);
-
-  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
-  if (!Sequence || !Sequence->GetMovieScene()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("SEQUENCE_NOT_FOUND"));
-    return true;
-  }
-
-  UMovieScene *MovieScene = Sequence->GetMovieScene();
-  UMovieSceneTrack *Track = FindTrackByName(MovieScene, TrackName);
-
-  if (!Track) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Track not found"),
-                           nullptr, TEXT("TRACK_NOT_FOUND"));
-    return true;
-  }
-
+  const bool bLocked = GetJsonBoolField(Payload, TEXT("locked"), true);
   for (UMovieSceneSection *Section : Track->GetAllSections()) {
     if (Section) {
       Section->SetIsLocked(bLocked);
@@ -190,11 +93,34 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTrackLocked(
       Socket, RequestId, true,
       bLocked ? TEXT("Track locked") : TEXT("Track unlocked"), Resp);
   return true;
-#else
-  SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("sequence_set_track_locked requires editor build"), nullptr,
-      TEXT("EDITOR_ONLY"));
+}
+
+bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveTrack(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  ULevelSequence *Sequence = nullptr;
+  UMovieScene *MovieScene = nullptr;
+  UMovieSceneTrack *Track = LoadTrackOrReply(this, RequestId, Socket, Payload, TEXT("remove_track"), Sequence, MovieScene);
+  if (!Track)
+    return true;
+  const FString RemovedTrackName = Track->GetName();
+  // Modify() has to precede the mutation or the transaction records the
+  // post-change state and undo cannot bring the track back. MarkPackageDirty
+  // is what makes the removal reach disk at all: without it the editor never
+  // even offers to save, so a restart resurrected every removed track --
+  // the same defect sequence_remove_actor already documents.
+  Sequence->Modify();
+  MovieScene->Modify();
+  // RemoveTrack only searches the Tracks array, so it silently fails on the
+  // camera cut track, which lives in its own member and needs its own call.
+  if (Track == MovieScene->GetCameraCutTrack()) {
+    MovieScene->RemoveCameraCutTrack();
+  } else {
+    MovieScene->RemoveTrack(*Track);
+  }
+  Sequence->MarkPackageDirty();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetStringField(TEXT("trackName"), RemovedTrackName);
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Track removed"), Resp);
   return true;
-#endif
 }

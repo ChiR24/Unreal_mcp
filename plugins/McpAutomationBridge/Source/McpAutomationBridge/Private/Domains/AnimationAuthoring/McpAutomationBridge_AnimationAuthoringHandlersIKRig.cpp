@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleIKRigActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -93,25 +92,7 @@ if (SubAction == TEXT("create_ik_rig"))
 #endif
 }
 
-    if (SubAction == TEXT("add_ik_chain"))
-    {
-#if MCP_HAS_IKRIG
-        FString ChainName = GetJsonStringField(Params, TEXT("chainName"), TEXT(""));
-
-        if (ChainName.IsEmpty())
-        {
-            ANIM_ERROR_RESPONSE(TEXT("chainName is required"), TEXT("MISSING_CHAIN_NAME"));
-        }
-
-        ANIM_ERROR_RESPONSE(
-            TEXT("add_ik_chain is handled by the animation_physics runtime authoring route; call animation_physics with action=add_ik_chain."),
-            TEXT("WRONG_HANDLER_ROUTE"));
-#else
-        ANIM_ERROR_RESPONSE(TEXT("IK Rig module not available"), TEXT("NOT_SUPPORTED"));
-#endif
-    }
     return nullptr;
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

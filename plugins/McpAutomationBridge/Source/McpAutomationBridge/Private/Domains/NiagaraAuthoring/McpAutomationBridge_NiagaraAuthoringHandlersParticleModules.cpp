@@ -1,35 +1,10 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
-static bool AddModuleAndVerify(
-    FActionContext& Context,
-    const FString& ModulePath,
-    ENiagaraScriptUsage Usage,
-    const FString& SuggestedName,
-    UNiagaraSystem*& System)
-{
-    FNiagaraEmitterHandle* Handle = nullptr;
-    if (!LoadSystemAndEmitter(Context, System, Handle))
-    {
-        return false;
-    }
-    const bool bModuleAdded = (AddModuleToEmitterStack(Handle, ModulePath, Usage, SuggestedName) != nullptr);
-    Context.Result->SetBoolField(TEXT("moduleAdded"), bModuleAdded);
-    // Recorded so an unmet-dependency report can name the actual dependency.
-    Context.Result->SetStringField(TEXT("moduleScriptPath"), ModulePath);
-    if (!bModuleAdded)
-    {
-        // Don't report success when the stack insertion failed (e.g. missing module script or
-        // no matching output node) — surface it so callers don't act on a module that isn't there.
-        Context.SendError(TEXT("Failed to add Niagara module to emitter stack."), TEXT("CREATE_FAILED"));
-        return false;
-    }
-    MarkDirtyAndVerify(Context, System);
-    return true;
-}
-
+// The fixed-module doors insert one stock module with its default inputs; set_parameter_value
+// tunes them afterwards (e.g. parameterName "SpawnRate.SpawnRate"). Only the selectors that pick
+// the module script (forceType, velocityMode) are read here.
 static FString ForceModulePath(const FString& ForceType)
 {
     // DragForce is deprecated on UE 5.7; Drag is its successor.
@@ -45,209 +20,91 @@ static FString ForceModulePath(const FString& ForceType)
     return TEXT("/Niagara/Modules/Update/Forces/GravityForce.GravityForce");
 }
 
-static bool AddForceModule(FActionContext& Context)
+static FString VelocityModulePath(const FString& VelocityMode)
 {
-    const FString ForceType = GetJsonStringField(Context.Payload, TEXT("forceType"), TEXT("Gravity"));
-    const double ForceStrength = GetJsonNumberField(Context.Payload, TEXT("forceStrength"), 980.0);
+    if (VelocityMode.Equals(TEXT("Cone"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocityInCone.AddVelocityInCone");
+    if (VelocityMode.Equals(TEXT("FromPoint"), ESearchCase::IgnoreCase)) return TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocityFromPoint.AddVelocityFromPoint");
+    return TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity");
+}
+
+struct FFixedModule
+{
+    const TCHAR* SubAction;
+    const TCHAR* ModulePath; // null: resolved from a selector below
+    ENiagaraScriptUsage Usage;
+    const TCHAR* ModuleName;
+};
+
+static const FFixedModule FixedModules[] = {
+    {TEXT("add_spawn_rate_module"), TEXT("/Niagara/Modules/Emitter/SpawnRate.SpawnRate"), ENiagaraScriptUsage::EmitterUpdateScript, TEXT("SpawnRate")},
+    {TEXT("add_spawn_burst_module"), TEXT("/Niagara/Modules/Emitter/SpawnBurst_Instantaneous.SpawnBurst_Instantaneous"), ENiagaraScriptUsage::EmitterSpawnScript, TEXT("SpawnBurst")},
+    {TEXT("add_spawn_per_unit_module"), TEXT("/Niagara/Modules/Emitter/SpawnPerUnit.SpawnPerUnit"), ENiagaraScriptUsage::EmitterUpdateScript, TEXT("SpawnPerUnit")},
+    {TEXT("add_initialize_particle_module"), nullptr, ENiagaraScriptUsage::ParticleSpawnScript, TEXT("InitializeParticle")},
+    {TEXT("add_particle_state_module"), TEXT("/Niagara/Modules/Update/Lifetime/ParticleState.ParticleState"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("ParticleState")},
+    {TEXT("add_force_module"), nullptr, ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Force")},
+    {TEXT("add_velocity_module"), nullptr, ENiagaraScriptUsage::ParticleSpawnScript, TEXT("AddVelocity")},
+    {TEXT("add_acceleration_module"), TEXT("/Niagara/Modules/Update/Forces/AccelerationForce.AccelerationForce"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Acceleration Force")},
+    {TEXT("add_size_module"), TEXT("/Niagara/Modules/Update/Size/ScaleSpriteSize.ScaleSpriteSize"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Scale Sprite Size")},
+    {TEXT("add_color_module"), TEXT("/Niagara/Modules/Update/Color/Color.Color"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Color")},
+    {TEXT("add_collision_module"), TEXT("/Niagara/Modules/Collision/Collision.Collision"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Collision")},
+    {TEXT("add_kill_particles_module"), TEXT("/Niagara/Modules/Update/Lifetime/KillParticles.KillParticles"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("KillParticles")},
+    {TEXT("add_camera_offset_module"), TEXT("/Niagara/Modules/Update/Camera/CameraOffset.CameraOffset"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("CameraOffset")},
+};
+
+bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction)
+{
+    const FFixedModule* Module = nullptr;
+    for (const FFixedModule& Candidate : FixedModules)
+    {
+        if (SubAction == Candidate.SubAction) { Module = &Candidate; break; }
+    }
+    if (!Module)
+    {
+        return false;
+    }
+
+    FString ModulePath = Module->ModulePath ? FString(Module->ModulePath) : FString();
+    FString ModuleName = Module->ModuleName;
+    if (SubAction == TEXT("add_force_module"))
+    {
+        const FString ForceType = GetJsonStringField(Context.Payload, TEXT("forceType"), TEXT("Gravity"));
+        ModulePath = ForceModulePath(ForceType);
+        ModuleName = ForceType + TEXT("Force");
+        Context.Result->SetStringField(TEXT("forceType"), ForceType);
+    }
+    else if (SubAction == TEXT("add_velocity_module"))
+    {
+        const FString VelocityMode = GetJsonStringField(Context.Payload, TEXT("velocityMode"), TEXT("Linear"));
+        ModulePath = VelocityModulePath(VelocityMode);
+        Context.Result->SetStringField(TEXT("velocityMode"), VelocityMode);
+    }
+    else if (SubAction == TEXT("add_initialize_particle_module"))
+    {
+        // The non-V2 InitializeParticle is deprecated on UE 5.7.
+        ModulePath = McpPreferredModulePath(
+            TEXT("/Niagara/Modules/Spawn/Initialization/V2/InitializeParticle.InitializeParticle"),
+            TEXT("/Niagara/Modules/Spawn/Initialization/InitializeParticle.InitializeParticle"));
+    }
+
     UNiagaraSystem* System = nullptr;
-    if (!AddModuleAndVerify(Context, ForceModulePath(ForceType), ENiagaraScriptUsage::ParticleUpdateScript, FString::Printf(TEXT("%sForce"), *ForceType), System))
+    FNiagaraEmitterHandle* Handle = nullptr;
+    if (!LoadSystemAndEmitter(Context, System, Handle))
     {
         return true;
     }
-    Context.Result->SetStringField(TEXT("moduleName"), FString::Printf(TEXT("Force_%s"), *ForceType));
-    Context.Result->SetStringField(TEXT("forceType"), ForceType);
-    Context.Result->SetNumberField(TEXT("forceStrength"), ForceStrength);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added %s force module."), *ForceType));
-    Context.SendSuccess(true, TEXT("Force module added."));
-    return true;
-}
-
-static bool AddVelocityModule(FActionContext& Context)
-{
-    const FString VelocityMode = GetJsonStringField(Context.Payload, TEXT("velocityMode"), TEXT("Linear"));
-    FString ModulePath = TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocity.AddVelocity");
-    if (VelocityMode.Equals(TEXT("Cone"), ESearchCase::IgnoreCase))
+    // Recorded so an unmet-dependency report can name the actual dependency.
+    Context.Result->SetStringField(TEXT("moduleScriptPath"), ModulePath);
+    if (!AddModuleToEmitterStack(Handle, ModulePath, Module->Usage, ModuleName))
     {
-        ModulePath = TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocityInCone.AddVelocityInCone");
-    }
-    else if (VelocityMode.Equals(TEXT("FromPoint"), ESearchCase::IgnoreCase))
-    {
-        ModulePath = TEXT("/Niagara/Modules/Spawn/Velocity/AddVelocityFromPoint.AddVelocityFromPoint");
-    }
-    UNiagaraSystem* System = nullptr;
-    if (!AddModuleAndVerify(Context, ModulePath, ENiagaraScriptUsage::ParticleSpawnScript, TEXT("AddVelocity"), System))
-    {
+        Context.SendError(FString::Printf(TEXT("Failed to add the %s module to the emitter stack."), *ModuleName), TEXT("CREATE_FAILED"));
         return true;
     }
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("Velocity"));
-    Context.Result->SetStringField(TEXT("velocityMode"), VelocityMode);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added velocity module: mode=%s"), *VelocityMode));
-    Context.SendSuccess(true, TEXT("Velocity module added."));
+    MarkDirtyAndVerify(Context, System);
+    Context.Result->SetStringField(TEXT("moduleName"), ModuleName);
+    Context.Result->SetBoolField(TEXT("moduleAdded"), true);
+    Context.Result->SetStringField(TEXT("message"), FString::Printf(
+        TEXT("Added the %s module with its default inputs; set them with set_parameter_value (parameterName \"<Module>.<Input>\")."), *ModuleName));
+    Context.SendSuccess(true, FString::Printf(TEXT("%s module added."), *ModuleName));
     return true;
 }
-
-static bool AddAccelerationModule(FActionContext& Context)
-{
-    const TSharedPtr<FJsonObject>* AccelObj;
-    FVector Acceleration = FVector(0, 0, -980);
-    if (Context.Payload->TryGetObjectField(TEXT("acceleration"), AccelObj))
-    {
-        Acceleration = GetVectorFromJson(*AccelObj);
-    }
-    UNiagaraSystem* System = nullptr;
-    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Update/Forces/AccelerationForce.AccelerationForce"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Acceleration Force"), System))
-    {
-        return true;
-    }
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("Acceleration"));
-    Context.Result->SetNumberField(TEXT("accelerationX"), Acceleration.X);
-    Context.Result->SetNumberField(TEXT("accelerationY"), Acceleration.Y);
-    Context.Result->SetNumberField(TEXT("accelerationZ"), Acceleration.Z);
-    Context.Result->SetStringField(TEXT("message"), TEXT("Added acceleration force module."));
-    Context.SendSuccess(true, TEXT("Acceleration module added."));
-    return true;
 }
-
-static bool AddSizeModule(FActionContext& Context)
-{
-    const FString SizeMode = GetJsonStringField(Context.Payload, TEXT("sizeMode"), TEXT("Uniform"));
-    const double UniformSize = GetJsonNumberField(Context.Payload, TEXT("uniformSize"), 10.0);
-    UNiagaraSystem* System = nullptr;
-    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Update/Size/ScaleSpriteSize.ScaleSpriteSize"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Scale Sprite Size"), System))
-    {
-        return true;
-    }
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("Size"));
-    Context.Result->SetStringField(TEXT("sizeMode"), SizeMode);
-    Context.Result->SetNumberField(TEXT("uniformSize"), UniformSize);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Added scale sprite size module: mode=%s, size=%.1f"), *SizeMode, UniformSize));
-    Context.SendSuccess(true, TEXT("Size module added."));
-    return true;
-}
-
-static bool AddColorModule(FActionContext& Context)
-{
-    // The schema documents color as "{r,g,b,a} object OR [r,g,b,a] array", but
-    // only the object form was read: an array left Color at White and the reply
-    // then reported colorR/G/B/A of 1,1,1,1 as if that had been requested.
-    const TSharedPtr<FJsonObject>* ColorObj = nullptr;
-    const TArray<TSharedPtr<FJsonValue>>* ColorArr = nullptr;
-    FLinearColor Color = FLinearColor::White;
-    bool bColorSupplied = false;
-    if (Context.Payload->TryGetObjectField(TEXT("color"), ColorObj))
-    {
-        Color = GetColorFromJson(*ColorObj);
-        bColorSupplied = true;
-    }
-    else if (Context.Payload->TryGetArrayField(TEXT("color"), ColorArr) && ColorArr)
-    {
-        const TArray<TSharedPtr<FJsonValue>>& Values = *ColorArr;
-        auto Component = [&Values](int32 Index, float Fallback) -> float
-        {
-            return Values.IsValidIndex(Index) && Values[Index].IsValid()
-                ? static_cast<float>(Values[Index]->AsNumber()) : Fallback;
-        };
-        Color = FLinearColor(Component(0, 1.0f), Component(1, 1.0f),
-                             Component(2, 1.0f), Component(3, 1.0f));
-        bColorSupplied = Values.Num() > 0;
-    }
-    const FString ColorMode = GetJsonStringField(Context.Payload, TEXT("colorMode"), TEXT("Direct"));
-    UNiagaraSystem* System = nullptr;
-    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Update/Color/Color.Color"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Color"), System))
-    {
-        return true;
-    }
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("Color"));
-    Context.Result->SetStringField(TEXT("colorMode"), ColorMode);
-    Context.Result->SetNumberField(TEXT("colorR"), Color.R);
-    Context.Result->SetNumberField(TEXT("colorG"), Color.G);
-    Context.Result->SetNumberField(TEXT("colorB"), Color.B);
-    Context.Result->SetNumberField(TEXT("colorA"), Color.A);
-    // The module carries its own default until its Color input is written; this
-    // action only inserts it. Say which value is live rather than echoing the
-    // request back as though it had been applied.
-    Context.Result->SetBoolField(TEXT("colorApplied"), false);
-    Context.Result->SetStringField(
-        TEXT("message"),
-        bColorSupplied
-            ? FString::Printf(
-                  TEXT("Added color module: mode=%s. The module keeps its default colour; set the Color input with edit_niagara_system set_parameter_value to apply (%.2f, %.2f, %.2f, %.2f)."),
-                  *ColorMode, Color.R, Color.G, Color.B, Color.A)
-            : FString::Printf(TEXT("Added color module: mode=%s"), *ColorMode));
-    Context.SendSuccess(true, TEXT("Color module added."));
-    return true;
-}
-
-static bool AddCollisionModule(FActionContext& Context)
-{
-    UNiagaraSystem* System = nullptr;
-    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Collision/Collision.Collision"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("Collision"), System))
-    {
-        return true;
-    }
-    const FString CollisionMode = GetJsonStringField(Context.Payload, TEXT("collisionMode"), TEXT("SceneDepth"));
-    const double Restitution = GetJsonNumberField(Context.Payload, TEXT("restitution"), 0.3);
-    const double Friction = GetJsonNumberField(Context.Payload, TEXT("friction"), 0.2);
-    const bool bDieOnCollision = GetJsonBoolField(Context.Payload, TEXT("dieOnCollision"), false);
-    const bool bRestitutionAdded = AddOrSetFloatUserParameter(System, TEXT("MCP_CollisionRestitution"), static_cast<float>(Restitution));
-    const bool bFrictionAdded = AddOrSetFloatUserParameter(System, TEXT("MCP_CollisionFriction"), static_cast<float>(Friction));
-    const bool bDieOnCollisionAdded = AddOrSetBoolUserParameter(System, TEXT("MCP_DieOnCollision"), bDieOnCollision);
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("Collision"));
-    Context.Result->SetStringField(TEXT("collisionMode"), CollisionMode);
-    Context.Result->SetNumberField(TEXT("restitution"), Restitution);
-    Context.Result->SetNumberField(TEXT("friction"), Friction);
-    Context.Result->SetBoolField(TEXT("dieOnCollision"), bDieOnCollision);
-    Context.Result->SetBoolField(TEXT("parameterAdded"), bRestitutionAdded && bFrictionAdded && bDieOnCollisionAdded);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured collision module: mode=%s"), *CollisionMode));
-    Context.SendSuccess(true, TEXT("Collision module configured."));
-    return true;
-}
-
-static bool AddKillParticlesModule(FActionContext& Context)
-{
-    UNiagaraSystem* System = nullptr;
-    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Update/Lifetime/KillParticles.KillParticles"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("KillParticles"), System))
-    {
-        return true;
-    }
-    const FString KillCondition = GetJsonStringField(Context.Payload, TEXT("killCondition"), TEXT("Age"));
-    const bool bParameterAdded = AddOrSetBoolUserParameter(System, TEXT("MCP_KillParticlesEnabled"), true);
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("KillParticles"));
-    Context.Result->SetStringField(TEXT("killCondition"), KillCondition);
-    Context.Result->SetBoolField(TEXT("parameterAdded"), bParameterAdded);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured kill particles module: condition=%s"), *KillCondition));
-    Context.SendSuccess(true, TEXT("Kill particles module configured."));
-    return true;
-}
-
-static bool AddCameraOffsetModule(FActionContext& Context)
-{
-    UNiagaraSystem* System = nullptr;
-    if (!AddModuleAndVerify(Context, TEXT("/Niagara/Modules/Update/Camera/CameraOffset.CameraOffset"), ENiagaraScriptUsage::ParticleUpdateScript, TEXT("CameraOffset"), System))
-    {
-        return true;
-    }
-    const double CameraOffset = GetJsonNumberField(Context.Payload, TEXT("cameraOffset"), 0.0);
-    const bool bParameterAdded = AddOrSetFloatUserParameter(System, TEXT("MCP_CameraOffset"), static_cast<float>(CameraOffset));
-    Context.Result->SetStringField(TEXT("moduleName"), TEXT("CameraOffset"));
-    Context.Result->SetNumberField(TEXT("cameraOffset"), CameraOffset);
-    Context.Result->SetBoolField(TEXT("parameterAdded"), bParameterAdded);
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Configured camera offset module: offset=%.1f"), CameraOffset));
-    Context.SendSuccess(true, TEXT("Camera offset module configured."));
-    return true;
-}
-
-bool HandleDynamicsModuleAction(FActionContext& Context, const FString& SubAction)
-{
-    if (SubAction == TEXT("add_force_module")) return AddForceModule(Context);
-    if (SubAction == TEXT("add_velocity_module")) return AddVelocityModule(Context);
-    if (SubAction == TEXT("add_acceleration_module")) return AddAccelerationModule(Context);
-    if (SubAction == TEXT("add_size_module")) return AddSizeModule(Context);
-    if (SubAction == TEXT("add_color_module")) return AddColorModule(Context);
-    if (SubAction == TEXT("add_collision_module")) return AddCollisionModule(Context);
-    if (SubAction == TEXT("add_kill_particles_module")) return AddKillParticlesModule(Context);
-    if (SubAction == TEXT("add_camera_offset_module")) return AddCameraOffsetModule(Context);
-    return false;
-}
-}
-#endif

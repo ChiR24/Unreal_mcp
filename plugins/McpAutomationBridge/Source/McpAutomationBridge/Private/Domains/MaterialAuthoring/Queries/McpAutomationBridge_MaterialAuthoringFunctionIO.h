@@ -2,7 +2,6 @@
 
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Materials/MaterialExpressionFunctionInput.h"
 #include "Materials/MaterialExpressionFunctionOutput.h"
 
@@ -46,4 +45,3 @@ inline void AppendMaterialFunctionIO(const TSharedPtr<FJsonObject>& Result, cons
   Result->SetArrayField(TEXT("outputs"), OutputsArray);
 }
 } // namespace McpMaterialAuthoringHandlers
-#endif

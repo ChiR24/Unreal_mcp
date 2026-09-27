@@ -11,7 +11,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
         return false;
     }
 
-#if WITH_EDITOR
     if (!FModuleManager::Get().IsModuleLoaded(TEXT("NiagaraEditor")))
     {
         if (!FModuleManager::Get().ModuleExists(TEXT("NiagaraEditor")) ||
@@ -48,8 +47,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
     }
 
     if (McpNiagaraAuthoringHandlers::HandleSystemEmitterAction(Context, SubAction)) return true;
-    if (McpNiagaraAuthoringHandlers::HandleSpawnModuleAction(Context, SubAction)) return true;
-    if (McpNiagaraAuthoringHandlers::HandleDynamicsModuleAction(Context, SubAction)) return true;
+    if (McpNiagaraAuthoringHandlers::HandleFixedModuleAction(Context, SubAction)) return true;
     if (McpNiagaraAuthoringHandlers::HandleRendererAction(Context, SubAction)) return true;
     if (McpNiagaraAuthoringHandlers::HandleParameterAction(Context, SubAction)) return true;
     if (McpNiagaraAuthoringHandlers::HandleDynamicInputAction(Context, SubAction)) return true;
@@ -60,8 +58,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNiagaraAuthoringAction(
 
     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
     return true;
-#else
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Editor only."), TEXT("EDITOR_ONLY"));
-    return true;
-#endif
 }

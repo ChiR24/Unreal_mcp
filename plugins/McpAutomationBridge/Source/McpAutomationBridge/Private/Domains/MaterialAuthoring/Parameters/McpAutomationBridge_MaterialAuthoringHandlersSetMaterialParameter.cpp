@@ -1,7 +1,6 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed)
@@ -112,4 +111,3 @@ bool HandleSetMaterialParameter(UMcpAutomationBridgeSubsystem* Bridge, const FSt
   return false;
 }
 }
-#endif

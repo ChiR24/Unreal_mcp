@@ -1,43 +1,14 @@
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
-#if __has_include("AnimGraphNode_SequencePlayer.h") && __has_include("AnimGraphNode_StateResult.h")
 #include "AnimGraphNode_SequencePlayer.h"
 #include "AnimGraphNode_StateResult.h"
-#define MCP_HAS_ANIM_STATE_PLAYER 1
-#else
-#define MCP_HAS_ANIM_STATE_PLAYER 0
-#endif
 
-#if __has_include("AnimStateEntryNode.h")
 #include "AnimStateEntryNode.h"
-#define MCP_HAS_ANIM_STATE_ENTRY 1
-#else
-#define MCP_HAS_ANIM_STATE_ENTRY 0
-#endif
 
 namespace McpAnimationAuthoring
 {
 namespace
 {
-UEdGraphPin *FindStatePin(UEdGraphNode *Node, const TCHAR *Name,
-                          EEdGraphPinDirection Direction)
-{
-    if (!Node)
-    {
-        return nullptr;
-    }
-    for (UEdGraphPin *Pin : Node->Pins)
-    {
-        if (Pin && Pin->Direction == Direction &&
-            Pin->PinName.ToString().Equals(Name, ESearchCase::IgnoreCase))
-        {
-            return Pin;
-        }
-    }
-    return nullptr;
-}
-
 UEdGraphPin *SolePin(UEdGraphNode *Node, EEdGraphPinDirection Direction)
 {
     if (Node)
@@ -71,7 +42,6 @@ TArray<FString> ReadStateAnimationPaths(const TSharedPtr<FJsonObject> &Params)
     return Paths;
 }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
 // add_state used to create an EMPTY state and answer success: the animations
 // the caller passed were never read at all. A whole locomotion state machine
 // could be authored, compiled and saved without one frame of animation in it --
@@ -94,7 +64,6 @@ void ApplyStateAnimations(UAnimStateNode *StateNode, const TArray<FString> &Anim
     }
     TArray<TSharedPtr<FJsonValue>> Applied;
     TArray<TSharedPtr<FJsonValue>> Failed;
-#if MCP_HAS_ANIM_STATE_PLAYER
     UEdGraph *StateGraph = StateNode ? StateNode->BoundGraph : nullptr;
     UAnimGraphNode_StateResult *ResultNode = nullptr;
     if (StateGraph)
@@ -130,8 +99,8 @@ void ApplyStateAnimations(UAnimStateNode *StateNode, const TArray<FString> &Anim
 #endif
         Creator.Finalize();
         bool bConnected = false;
-        UEdGraphPin *Out = FindStatePin(Player, TEXT("Pose"), EGPD_Output);
-        UEdGraphPin *In = FindStatePin(ResultNode, TEXT("Result"), EGPD_Input);
+        UEdGraphPin *Out = Player->FindPin(TEXT("Pose"), EGPD_Output);
+        UEdGraphPin *In = ResultNode ? ResultNode->FindPin(TEXT("Result"), EGPD_Input) : nullptr;
         // Let the schema break the old pose link, not us. A Result pin takes one
         // link, so TryCreateConnection answers BREAK_OTHERS_B and clears it
         // itself -- and answers DISALLOW without touching anything. Breaking the
@@ -147,12 +116,6 @@ void ApplyStateAnimations(UAnimStateNode *StateNode, const TArray<FString> &Anim
         Entry->SetBoolField(TEXT("connected"), bConnected);
         Applied.Add(MakeShared<FJsonValueObject>(Entry));
     }
-#else
-    for (const FString &Path : AnimPaths)
-    {
-        Failed.Add(MakeShared<FJsonValueString>(Path));
-    }
-#endif
     Response->SetArrayField(TEXT("animationsApplied"), Applied);
     if (Failed.Num() > 0)
     {
@@ -170,7 +133,6 @@ void ApplyStateAnimations(UAnimStateNode *StateNode, const TArray<FString> &Anim
 void EnsureStateMachineEntry(UAnimationStateMachineGraph *SMGraph,
                              UAnimStateNode *StateNode, TSharedPtr<FJsonObject> Response)
 {
-#if MCP_HAS_ANIM_STATE_ENTRY
     if (!SMGraph || !StateNode)
     {
         return;
@@ -178,7 +140,7 @@ void EnsureStateMachineEntry(UAnimationStateMachineGraph *SMGraph,
     for (UEdGraphNode *Node : SMGraph->Nodes)
     {
         UAnimStateEntryNode *Entry = Cast<UAnimStateEntryNode>(Node);
-        UEdGraphPin *EntryPin = Entry ? FindStatePin(Entry, TEXT("Entry"), EGPD_Output) : nullptr;
+        UEdGraphPin *EntryPin = Entry ? Entry->FindPin(TEXT("Entry"), EGPD_Output) : nullptr;
         if (!EntryPin && Entry)
         {
             EntryPin = SolePin(Entry, EGPD_Output);
@@ -198,9 +160,6 @@ void EnsureStateMachineEntry(UAnimationStateMachineGraph *SMGraph,
         }
         return;
     }
-#endif
 }
-#endif
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

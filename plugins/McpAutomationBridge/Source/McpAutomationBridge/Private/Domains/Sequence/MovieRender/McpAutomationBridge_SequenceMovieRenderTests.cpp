@@ -1,6 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
-#if MCP_HAS_MOVIE_RENDER_PIPELINE && WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if MCP_HAS_MOVIE_RENDER_PIPELINE && WITH_DEV_AUTOMATION_TESTS
 
 #include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderInternal.h"
 #include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderResourceLimits.h"

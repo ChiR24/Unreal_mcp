@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -108,12 +107,10 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
 
         // Calculate time from frame
         float FrameRate = 30.0f;
-#if ENGINE_MAJOR_VERSION >= 5
         if (UAnimSequence* Seq = Cast<UAnimSequence>(AnimAsset))
         {
             FrameRate = Seq->GetSamplingFrameRate().AsDecimal();
         }
-#endif
         if (FrameRate <= KINDA_SMALL_NUMBER)
         {
             // A sequence without sampled frames reports a 0 rate; fall back to 30 fps
@@ -174,4 +171,3 @@ TSharedPtr<FJsonObject> HandleSequenceEventActions(const FString& SubAction, con
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

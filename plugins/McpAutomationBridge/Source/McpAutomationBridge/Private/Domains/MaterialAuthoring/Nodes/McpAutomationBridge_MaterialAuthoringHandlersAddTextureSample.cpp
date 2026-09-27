@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleAddTextureSample(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -8,10 +7,9 @@ bool HandleAddTextureSample(UMcpAutomationBridgeSubsystem* Bridge, const FString
   if (SubAction == TEXT("add_texture_sample")) {
     LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
-    FString TexturePath, ParameterName, SamplerType;
+    FString TexturePath, ParameterName;
     Payload->TryGetStringField(TEXT("texturePath"), TexturePath);
     Payload->TryGetStringField(TEXT("parameterName"), ParameterName);
-    Payload->TryGetStringField(TEXT("samplerType"), SamplerType);
 
     // SECURITY: Validate texturePath if provided
     if (!TexturePath.IsEmpty()) {
@@ -30,45 +28,18 @@ bool HandleAddTextureSample(UMcpAutomationBridgeSubsystem* Bridge, const FString
     if (!TexturePath.IsEmpty()) {
       ResolvedTexture = LoadObject<UTexture>(nullptr, *TexturePath);
     }
-    auto ResolveSamplerType = [&SamplerType]() {
-      if (SamplerType == TEXT("LinearColor")) return SAMPLERTYPE_LinearColor;
-      if (SamplerType == TEXT("Normal")) return SAMPLERTYPE_Normal;
-      if (SamplerType == TEXT("Masks")) return SAMPLERTYPE_Masks;
-      if (SamplerType == TEXT("Alpha")) return SAMPLERTYPE_Alpha;
-      return SAMPLERTYPE_Color;
-    };
-
-    UMaterialExpression *CreatedExpr = nullptr;
-    if (!ParameterName.IsEmpty()) {
-      UMaterialExpressionTextureSampleParameter2D *TexSample =
-          NewObject<UMaterialExpressionTextureSampleParameter2D>(
-              HostOuter, UMaterialExpressionTextureSampleParameter2D::StaticClass(),
-              NAME_None, RF_Transactional);
-      if (!TexSample) {
-        Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create texture sample expression"), TEXT("CREATION_FAILED"));
-        return true;
-      }
-      TexSample->ParameterName = FName(*ParameterName);
-      if (ResolvedTexture) TexSample->Texture = ResolvedTexture;
-      TexSample->SamplerType = ResolveSamplerType();
-      TexSample->MaterialExpressionEditorX = (int32)X;
-      TexSample->MaterialExpressionEditorY = (int32)Y;
-      CreatedExpr = TexSample;
-    } else {
-      UMaterialExpressionTextureSample *PlainSample =
-          NewObject<UMaterialExpressionTextureSample>(
-              HostOuter, UMaterialExpressionTextureSample::StaticClass(),
-              NAME_None, RF_Transactional);
-      if (!PlainSample) {
-        Bridge->SendAutomationError(Socket, RequestId, TEXT("Failed to create texture sample expression"), TEXT("CREATION_FAILED"));
-        return true;
-      }
-      if (ResolvedTexture) PlainSample->Texture = ResolvedTexture;
-      PlainSample->SamplerType = ResolveSamplerType();
-      PlainSample->MaterialExpressionEditorX = (int32)X;
-      PlainSample->MaterialExpressionEditorY = (int32)Y;
-      CreatedExpr = PlainSample;
+    // A named sample is a TextureSampleParameter2D, which derives from TextureSample.
+    UMaterialExpressionTextureSample *CreatedExpr = NewObject<UMaterialExpressionTextureSample>(
+        HostOuter,
+        ParameterName.IsEmpty() ? UMaterialExpressionTextureSample::StaticClass()
+                                : UMaterialExpressionTextureSampleParameter2D::StaticClass(),
+        NAME_None, RF_Transactional);
+    if (UMaterialExpressionTextureSampleParameter2D *Param = Cast<UMaterialExpressionTextureSampleParameter2D>(CreatedExpr)) {
+      Param->ParameterName = FName(*ParameterName);
     }
+    if (ResolvedTexture) CreatedExpr->Texture = ResolvedTexture;
+    CreatedExpr->MaterialExpressionEditorX = (int32)X;
+    CreatedExpr->MaterialExpressionEditorY = (int32)Y;
 
     AddExpressionToContainer(Material, Function, CreatedExpr);
     FINALIZE_HOST();
@@ -86,4 +57,3 @@ bool HandleAddTextureSample(UMcpAutomationBridgeSubsystem* Bridge, const FString
   return false;
 }
 }
-#endif

@@ -1,35 +1,16 @@
 #include "Domains/Animation/McpAutomationBridge_AnimationHandlersActionContext.h"
+#include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 #include "Safety/McpSafeOperations.h"
 
 #include "Animation/AnimBlueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#if __has_include("AnimGraphNode_StateMachine.h")
 #include "AnimGraphNode_StateMachine.h"
-#endif
-#if __has_include("AnimStateNode.h")
 #include "AnimStateNode.h"
-#endif
-#if __has_include("AnimStateTransitionNode.h")
 #include "AnimStateTransitionNode.h"
-#define MCP_HAS_ANIM_STATE_TRANSITION 1
-#else
-#define MCP_HAS_ANIM_STATE_TRANSITION 0
-#endif
-#if __has_include("AnimationStateMachineGraph.h")
 #include "AnimationStateMachineGraph.h"
-#define MCP_HAS_ANIM_STATE_MACHINE_GRAPH 1
-#else
-#define MCP_HAS_ANIM_STATE_MACHINE_GRAPH 0
-#endif
-#if __has_include("AnimationStateMachineSchema.h")
 #include "AnimationStateMachineSchema.h"
-#define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 1
-#else
-#define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 0
-#endif
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
   TSharedPtr<FJsonObject> &Resp = Context.Resp;
@@ -38,7 +19,6 @@ bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
   FString &ErrorCode = Context.ErrorCode;
   const FString &RequestId = Context.RequestId;
   TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
-
 
     // ============================================================================
     // State Machine Creation using AnimGraph Editor API
@@ -54,9 +34,7 @@ bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
     }
 
     if (BlueprintPath.IsEmpty()) {
-      Message = TEXT("blueprintPath is required for create_state_machine");
-      ErrorCode = TEXT("INVALID_ARGUMENT");
-      Resp->SetStringField(TEXT("error"), Message);
+      Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("blueprintPath is required for create_state_machine"));
     } else {
       FString MachineName;
       Payload->TryGetStringField(TEXT("machineName"), MachineName);
@@ -67,26 +45,14 @@ bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
       // Load the AnimBlueprint
       UAnimBlueprint* AnimBP = LoadObject<UAnimBlueprint>(nullptr, *BlueprintPath);
       if (!AnimBP) {
-        Message = FString::Printf(TEXT("AnimBlueprint not found: %s"), *BlueprintPath);
-        ErrorCode = TEXT("ASSET_NOT_FOUND");
-        Resp->SetStringField(TEXT("error"), Message);
+        Context.Fail(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("AnimBlueprint not found: %s"), *BlueprintPath));
         Resp->SetStringField(TEXT("blueprintPath"), BlueprintPath);
       } else {
-        // Check if AnimGraph headers are available
-        #if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
         // Find the AnimGraph in the blueprint
-        UEdGraph* AnimGraph = nullptr;
-        for (UEdGraph* Graph : AnimBP->FunctionGraphs) {
-          if (Graph && Graph->GetName() == TEXT("AnimGraph")) {
-            AnimGraph = Graph;
-            break;
-          }
-        }
+        UEdGraph* AnimGraph = McpAnimationAuthoring::GetAnimGraphFromBlueprint(AnimBP);
 
         if (!AnimGraph) {
-          Message = TEXT("Could not find AnimGraph in blueprint");
-          ErrorCode = TEXT("GRAPH_NOT_FOUND");
-          Resp->SetStringField(TEXT("error"), Message);
+          Context.Fail(TEXT("GRAPH_NOT_FOUND"), TEXT("Could not find AnimGraph in blueprint"));
         } else {
           // Check if a state machine with this name already exists
           bool bAlreadyExists = false;
@@ -176,7 +142,6 @@ bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
             // Process transitions array if provided
             const TArray<TSharedPtr<FJsonValue>>* TransitionsArray = nullptr;
             if (Payload->TryGetArrayField(TEXT("transitions"), TransitionsArray) && TransitionsArray) {
-              #if MCP_HAS_ANIM_STATE_TRANSITION
               for (const TSharedPtr<FJsonValue>& TransitionValue : *TransitionsArray) {
                 if (!TransitionValue.IsValid() || TransitionValue->Type != EJson::Object) {
                   continue;
@@ -218,7 +183,6 @@ bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
                   TransNode->CrossfadeDuration = static_cast<float>(CrossfadeDuration);
                 }
               }
-              #endif // MCP_HAS_ANIM_STATE_TRANSITION
             }
 
             FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
@@ -230,18 +194,8 @@ bool HandleAnimationCreateStateMachineAction(FActionContext &Context,
             Resp->SetStringField(TEXT("machineName"), MachineName);
           }
         }
-        #else
-        // AnimGraph headers not available
-        Message = FString::Printf(
-          TEXT("Cannot create state machine '%s': AnimGraph module headers not available. "
-               "Rebuild with AnimGraph module enabled or use add_state_machine action."),
-          *MachineName);
-        ErrorCode = TEXT("ANIMGRAPH_MODULE_UNAVAILABLE");
-        Resp->SetStringField(TEXT("error"), Message);
-        #endif
       }
     }
     return false;
 }
-#endif
 } // namespace McpAnimationHandlers

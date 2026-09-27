@@ -1,89 +1,27 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("create_material_instance")) {
-    FString Name, Path, ParentMaterial;
-    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'name'."),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    FString OriginalName = Name;
-    FString SanitizedName = SanitizeAssetName(Name);
-
-    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
-    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
-    if (NormalizedSanitized != NormalizedOriginal) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid material instance name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
-                                          *OriginalName, *SanitizedName),
-                          TEXT("INVALID_NAME"));
-      return true;
-    }
-    Name = SanitizedName;
-
+    FString Name, ValidatedPath, ParentMaterial;
+    bool bParentFolderCreated = false;
     if (!Payload->TryGetStringField(TEXT("parentMaterial"), ParentMaterial) ||
         ParentMaterial.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'parentMaterial'."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    // The published schema names this parameter `savePath`. Reading only `path`
-    // meant a contract-correct savePath was ignored and creation silently fell
-    // through to the /Game/Materials default below — the asset was reported as
-    // created (success), just not where the caller asked for it.
-    Path = GetJsonStringField(Payload, TEXT("savePath"));
-    if (Path.IsEmpty()) {
-      Path = GetJsonStringField(Payload, TEXT("path"));
+    // savePath is the published spelling (reading only `path` once dropped it and created
+    // the asset under the default folder while reporting success); path is the legacy one.
+    FString RequestedPath = GetJsonStringField(Payload, TEXT("savePath"));
+    if (RequestedPath.IsEmpty()) {
+      RequestedPath = GetJsonStringField(Payload, TEXT("path"));
     }
-    if (Path.IsEmpty()) {
-      Path = TEXT("/Game/Materials");
-    }
-
-    FString ValidatedPath;
-    FString PathError;
-    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
-      Bridge->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
-      return true;
-    }
-
-    if (ValidatedPath.Contains(TEXT(":"))) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *ValidatedPath),
-                          TEXT("INVALID_PATH"));
-      return true;
-    }
-
-    FText MountReason;
-    if (!FPackageName::IsValidLongPackageName(ValidatedPath, true, &MountReason)) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid package path '%s': %s"), *ValidatedPath, *MountReason.ToString()),
-                          TEXT("INVALID_PATH"));
-      return true;
-    }
-
-    // Check for existing asset collision
-    FString FullAssetPath = ValidatedPath + TEXT(".") + Name;
-    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
-      UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
-      if (ExistingAsset) {
-        UClass* ExistingClass = ExistingAsset->GetClass();
-        FString ExistingClassName = ExistingClass ? ExistingClass->GetName() : TEXT("Unknown");
-        Bridge->SendAutomationError(Socket, RequestId,
-                            FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create MaterialInstanceConstant with the same name."),
-                                            *FullAssetPath, *ExistingClassName),
-                            TEXT("ASSET_EXISTS"));
-      } else {
-        Bridge->SendAutomationError(Socket, RequestId,
-                            FString::Printf(TEXT("Asset '%s' already exists. Cannot overwrite with different asset type."),
-                                            *FullAssetPath),
-                            TEXT("ASSET_EXISTS"));
-      }
+    if (!PrepareNewMaterialAsset(Bridge, RequestId, Socket, GetJsonStringField(Payload, TEXT("name")),
+                                 RequestedPath, TEXT("/Game/Materials"), TEXT("MaterialInstanceConstant"),
+                                 Name, ValidatedPath, bParentFolderCreated)) {
       return true;
     }
     // SECURITY: Validate parentMaterial path before loading
@@ -132,7 +70,7 @@ bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const F
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave) {
-      SaveMaterialInstanceAsset(NewInstance);
+      McpSafeAssetSave(NewInstance);
     }
 
     FAssetRegistryModule::AssetCreated(NewInstance);
@@ -164,4 +102,3 @@ bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const F
   return false;
 }
 }
-#endif

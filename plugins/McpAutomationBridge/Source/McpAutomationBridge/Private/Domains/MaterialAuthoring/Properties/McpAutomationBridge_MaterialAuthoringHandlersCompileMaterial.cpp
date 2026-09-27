@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "MaterialShared.h"
 #include "RHI.h"
 
@@ -61,9 +60,9 @@ bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave) {
       if (Material) {
-        SaveMaterialAsset(Material);
+        McpSafeAssetSave(Material);
       } else {
-        SaveMaterialFunctionAsset(Function);
+        McpSafeAssetSave(Function);
       }
     }
 
@@ -90,4 +89,3 @@ bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString&
   return false;
 }
 }
-#endif

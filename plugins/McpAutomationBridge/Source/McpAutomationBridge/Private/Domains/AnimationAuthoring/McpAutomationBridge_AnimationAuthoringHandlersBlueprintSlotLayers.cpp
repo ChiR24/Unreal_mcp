@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -26,7 +25,6 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_SLOT_NODE
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
         if (!AnimGraph)
@@ -51,12 +49,6 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
 
         Response->SetStringField(TEXT("slotName"), FullSlotName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Slot node '%s' created"), *FullSlotName));
-#else
-        // AnimGraph headers not available - return error instead of fake success
-        ANIM_ERROR_RESPONSE(
-            FString::Printf(TEXT("Cannot create slot node '%s': AnimGraph module headers not available in this build."), *SlotName),
-            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
-#endif
         return Response;
     }
 
@@ -74,7 +66,6 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_LAYERED_BLEND
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
         if (!AnimGraph)
@@ -96,16 +87,9 @@ TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction
         SaveAnimAsset(AnimBP, bSave);
 
         ANIM_SUCCESS_RESPONSE(TEXT("Layered blend per bone node created"));
-#else
-        // AnimGraph headers not available - return error instead of fake success
-        ANIM_ERROR_RESPONSE(
-            TEXT("Cannot create layered blend per bone node: AnimGraph module headers not available in this build."),
-            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
-#endif
         return Response;
     }
     return nullptr;
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

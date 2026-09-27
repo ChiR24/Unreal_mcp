@@ -1,6 +1,6 @@
 #include "Domains/Sequence/Cinematics/McpAutomationBridge_SequenceCinematics.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 #include "MovieScene.h"
 #include "Tracks/MovieSceneFadeTrack.h"

@@ -1,4 +1,5 @@
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceTakeRecorderInternal.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceFrameRate.h"
 
 namespace McpSequenceRecordReplay
@@ -37,15 +38,9 @@ AActor* FindTakeRecorderActor(const FString& Name)
 
     for (UWorld* World : Worlds)
     {
-        if (!World) continue;
-        for (TActorIterator<AActor> It(World); It; ++It)
+        if (AActor* Actor = FindActorByNameInWorldForMcp(World, Name, true))
         {
-            if (It->GetName().Equals(Name, ESearchCase::IgnoreCase) ||
-                It->GetActorLabel().Equals(Name, ESearchCase::IgnoreCase) ||
-                It->GetPathName().Equals(Name, ESearchCase::IgnoreCase))
-            {
-                return *It;
-            }
+            return Actor;
         }
     }
     return nullptr;
@@ -95,11 +90,8 @@ FTakeRecorderPanelConfiguration ActivePanelConfiguration;
 
 FString GetRequestedSequencePath(const TSharedPtr<FJsonObject>& Payload)
 {
-    FString Path = McpHandlerUtils::GetOptionalString(Payload, TEXT("sequencePath"));
-    if (Path.IsEmpty()) Path = McpHandlerUtils::GetOptionalString(Payload, TEXT("path"));
-    if (Path.IsEmpty()) Path = McpHandlerUtils::GetOptionalString(Payload, TEXT("recordingSequencePath"));
-    if (Path.IsEmpty()) Path = McpHandlerUtils::GetOptionalString(Payload, TEXT("takeSequencePath"));
-    return Path;
+    return McpGetFirstStringField(Payload, {TEXT("sequencePath"), TEXT("path"),
+                                            TEXT("recordingSequencePath"), TEXT("takeSequencePath")});
 }
 }
 

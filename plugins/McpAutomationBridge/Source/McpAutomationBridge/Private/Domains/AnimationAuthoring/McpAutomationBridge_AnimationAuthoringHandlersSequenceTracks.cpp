@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -56,7 +55,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             );
         }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         // UE 5.1+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
         IAnimationDataController& Controller = Sequence->GetController();
 
@@ -90,7 +89,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
                 );
             }
         }
-#elif ENGINE_MAJOR_VERSION >= 5
+#else
         // UE 5.0 approach - uses FindBoneTrackByName which returns a pointer
         IAnimationDataController& Controller = Sequence->GetController();
 
@@ -114,18 +113,6 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
                 );
             }
         }
-#else
-        // UE4 approach
-        int32 TrackIndex = Sequence->GetRawAnimationData().FindBoneTrackByName(BoneFName);
-        if (TrackIndex == INDEX_NONE)
-        {
-            // Add raw track
-            // AddNewRawTrack is deprecated in UE 5.1+ but needed for UE 4.x compatibility
-            PRAGMA_DISABLE_DEPRECATION_WARNINGS
-            FRawAnimSequenceTrack NewTrack;
-            Sequence->AddNewRawTrack(BoneFName, &NewTrack);
-            PRAGMA_ENABLE_DEPRECATION_WARNINGS
-        }
 #endif
 
         SaveAnimAsset(Sequence, bSave);
@@ -142,9 +129,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         int32 Frame = static_cast<int32>(GetJsonNumberField(Params, TEXT("frame"), 0));
         bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
-        TSharedPtr<FJsonObject> LocationObj = Params->HasField(TEXT("location")) ? Params->GetObjectField(TEXT("location")) : nullptr;
         TSharedPtr<FJsonObject> RotationObj = Params->HasField(TEXT("rotation")) ? Params->GetObjectField(TEXT("rotation")) : nullptr;
-        TSharedPtr<FJsonObject> ScaleObj = Params->HasField(TEXT("scale")) ? Params->GetObjectField(TEXT("scale")) : nullptr;
 
         if (BoneName.IsEmpty())
         {
@@ -158,9 +143,9 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         }
 
         // Build transform key
-        FVector Location = LocationObj.IsValid() ? GetVectorFromJsonAnim(LocationObj) : FVector::ZeroVector;
+        FVector Location = ExtractVectorField(Params, TEXT("location"), FVector::ZeroVector);
         FQuat Rotation = RotationObj.IsValid() ? GetRotatorFromJsonAnim(RotationObj).Quaternion() : FQuat::Identity;
-        FVector Scale = ScaleObj.IsValid() ? GetVectorFromJsonAnim(ScaleObj) : FVector::OneVector;
+        FVector Scale = ExtractVectorField(Params, TEXT("scale"), FVector::OneVector);
 
         int32 TotalFrames = Sequence->GetDataModel()->GetNumberOfFrames();
         if (Frame < 0 || Frame >= TotalFrames)
@@ -171,7 +156,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             );
         }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         // UE 5.1+ API
         IAnimationDataController& Controller = Sequence->GetController();
         FName BoneFName(*BoneName);
@@ -215,7 +200,7 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
                 TEXT("BONE_KEY_SET_FAILED")
             );
         }
-#elif ENGINE_MAJOR_VERSION >= 5
+#else
         // UE 5.0 API - uses FindBoneTrackByName which returns a pointer
         IAnimationDataController& Controller = Sequence->GetController();
         FName BoneFName(*BoneName);
@@ -255,4 +240,3 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

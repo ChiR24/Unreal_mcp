@@ -3,19 +3,16 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 
 #include "Animation/Skeleton.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "ReferenceSkeleton.h"
 #include "UObject/Package.h"
-#if __has_include("Animation/SkeletonModifier.h")
-#include "Animation/SkeletonModifier.h"
-#endif
 
-#if WITH_EDITOR
 
 namespace McpSkeletonHandlers {
 
@@ -51,20 +48,13 @@ bool HandleCreateSkeletonAction(UMcpAutomationBridgeSubsystem* Subsystem, const 
             return true;
         }
 
-        // SECURITY: Validate path to prevent path traversal attacks
-        // Ensure path starts with /Game/ and contains no traversal sequences
+        // SECURITY: the shared canonicalizer refuses traversal and colons; the skeleton itself
+        // may only be created under /Game, /Engine or /Temp.
+        SkeletonPath = McpCanonicalizeContentPath(SkeletonPath);
         if (!SkeletonPath.StartsWith(TEXT("/Game/")) && !SkeletonPath.StartsWith(TEXT("/Engine/")) && !SkeletonPath.StartsWith(TEXT("/Temp/")))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Invalid path. Path must start with /Game/, /Engine/, or /Temp/"), TEXT("INVALID_PATH"));
-            return true;
-        }
-
-        // Check for path traversal attempts
-        if (SkeletonPath.Contains(TEXT("..")) || SkeletonPath.Contains(TEXT("//")) || SkeletonPath.Contains(TEXT("\\")))
-        {
-            Subsystem->SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Invalid path. Path contains illegal characters or traversal sequences"), TEXT("INVALID_PATH"));
+                TEXT("Invalid path. Path must be a traversal-free path under /Game/, /Engine/, or /Temp/"), TEXT("INVALID_PATH"));
             return true;
         }
 
@@ -104,9 +94,7 @@ bool HandleCreateSkeletonAction(UMcpAutomationBridgeSubsystem* Subsystem, const 
         FMeshBoneInfo RootBone;
         RootBone.Name = FName(*RootBoneName);
         RootBone.ParentIndex = INDEX_NONE;
-#if WITH_EDITORONLY_DATA
         RootBone.ExportName = RootBoneName;
-#endif
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
         Modifier.Add(RootBone, FTransform::Identity, true); // bAllowMultipleRoots = true for first bone
 #else
@@ -178,18 +166,16 @@ bool HandleAddBoneAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString
             return true;
         }
 
-        FVector Location = ParseVectorFromJson(Payload, TEXT("location"));
-        FRotator Rotation = ParseRotatorFromJson(Payload, TEXT("rotation"));
-        FVector Scale = ParseVectorFromJson(Payload, TEXT("scale"), FVector::OneVector);
+        FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+        FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
+        FVector Scale = ExtractVectorField(Payload, TEXT("scale"), FVector::OneVector);
         FTransform BoneTransform(Rotation, Location, Scale);
 
         FReferenceSkeletonModifier Modifier(Skeleton);
         FMeshBoneInfo NewBone;
         NewBone.Name = FName(*BoneName);
         NewBone.ParentIndex = ParentIndex;
-#if WITH_EDITORONLY_DATA
         NewBone.ExportName = BoneName;
-#endif
 
         // Allow multiple roots only if no parent is specified and this is the first bone
         bool bAllowMultipleRoots = ParentIndex == INDEX_NONE && RefSkeleton.GetRawBoneNum() == 0;
@@ -214,4 +200,3 @@ bool HandleAddBoneAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString
 
 } // namespace McpSkeletonHandlers
 
-#endif // WITH_EDITOR

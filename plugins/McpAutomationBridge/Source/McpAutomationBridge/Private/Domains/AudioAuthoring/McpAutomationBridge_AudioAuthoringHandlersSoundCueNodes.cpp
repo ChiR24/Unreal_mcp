@@ -1,16 +1,15 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 	if (SubAction == TEXT("add_cue_node"))
 	{
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString NodeType = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeType"), TEXT("wave_player"));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString NodeType = GetJsonStringField(Params, TEXT("nodeType"), TEXT("wave_player"));
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
 		if (!Cue)
 		{
@@ -26,7 +25,7 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		if (NodeTypeLower == TEXT("wave_player") || NodeTypeLower == TEXT("waveplayer"))
 		{
 			USoundNodeWavePlayer* Player = Cue->ConstructSoundNode<USoundNodeWavePlayer>();
-			FString WavePath = McpHandlerUtils::GetOptionalString(Params, TEXT("wavePath"), TEXT(""));
+			FString WavePath = GetJsonStringField(Params, TEXT("wavePath"), TEXT(""));
 			if (!WavePath.IsEmpty())
 			{
 				USoundWave* Wave = LoadSoundWaveFromPath(WavePath);
@@ -42,21 +41,21 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		else if (NodeTypeLower == TEXT("modulator"))
 		{
 			USoundNodeModulator* Mod = Cue->ConstructSoundNode<USoundNodeModulator>();
-			Mod->VolumeMin = Mod->VolumeMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
-			Mod->PitchMin = Mod->PitchMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
+			Mod->VolumeMin = Mod->VolumeMax = static_cast<float>(GetJsonNumberField(Params, TEXT("volume"), 1.0));
+			Mod->PitchMin = Mod->PitchMax = static_cast<float>(GetJsonNumberField(Params, TEXT("pitch"), 1.0));
 			NewNode = Mod;
 		}
 		else if (NodeTypeLower == TEXT("looping"))
 		{
 			USoundNodeLooping* Loop = Cue->ConstructSoundNode<USoundNodeLooping>();
-			Loop->bLoopIndefinitely = McpHandlerUtils::GetOptionalBool(Params, TEXT("indefinite"), true);
-			Loop->LoopCount = static_cast<int32>(McpHandlerUtils::GetOptionalInt(Params, TEXT("loopCount"), 0));
+			Loop->bLoopIndefinitely = GetJsonBoolField(Params, TEXT("indefinite"), true);
+			Loop->LoopCount = static_cast<int32>(GetJsonIntField(Params, TEXT("loopCount"), 0));
 			NewNode = Loop;
 		}
 		else if (NodeTypeLower == TEXT("attenuation"))
 		{
 			USoundNodeAttenuation* Atten = Cue->ConstructSoundNode<USoundNodeAttenuation>();
-			FString AttenPath = McpHandlerUtils::GetOptionalString(Params, TEXT("attenuationPath"), TEXT(""));
+			FString AttenPath = GetJsonStringField(Params, TEXT("attenuationPath"), TEXT(""));
 			if (!AttenPath.IsEmpty())
 			{
 				USoundAttenuation* AttenAsset = LoadSoundAttenuationFromPath(AttenPath);
@@ -71,7 +70,7 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		else if (NodeTypeLower == TEXT("delay"))
 		{
 			USoundNodeDelay* Delay = Cue->ConstructSoundNode<USoundNodeDelay>();
-			Delay->DelayMin = Delay->DelayMax = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("delay"), 0.0));
+			Delay->DelayMin = Delay->DelayMax = static_cast<float>(GetJsonNumberField(Params, TEXT("delay"), 0.0));
 			NewNode = Delay;
 		}
 		else if (NodeTypeLower == TEXT("switch")) { NewNode = Cue->ConstructSoundNode<USoundNodeSwitch>(); }
@@ -95,11 +94,11 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 
 	if (SubAction == TEXT("connect_cue_nodes"))
 	{
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString SourceNodeId = McpHandlerUtils::GetOptionalString(Params, TEXT("sourceNodeId"), TEXT(""));
-		FString TargetNodeId = McpHandlerUtils::GetOptionalString(Params, TEXT("targetNodeId"), TEXT(""));
-		int32 ChildIndex = static_cast<int32>(McpHandlerUtils::GetOptionalInt(Params, TEXT("childIndex"), 0));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString SourceNodeId = GetJsonStringField(Params, TEXT("sourceNodeId"), TEXT(""));
+		FString TargetNodeId = GetJsonStringField(Params, TEXT("targetNodeId"), TEXT(""));
+		int32 ChildIndex = static_cast<int32>(GetJsonIntField(Params, TEXT("childIndex"), 0));
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
 		if (!Cue)
 		{
@@ -113,7 +112,7 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		USoundNode* SourceNode = nullptr;
 		USoundNode* TargetNode = nullptr;
 
-		// BB-032: resolve root/output identifiers to Cue->FirstNode.
+		// Resolve root/output identifiers to Cue->FirstNode.
 		auto ResolveCueRoot = [&Cue, &AssetPath](const FString& NodeId) -> USoundNode* {
 			if (NodeId.Equals(TEXT("Output"), ESearchCase::IgnoreCase) ||
 				NodeId.Equals(TEXT("Root"), ESearchCase::IgnoreCase) ||
@@ -187,9 +186,9 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 
 	if (SubAction == TEXT("set_cue_attenuation"))
 	{
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString AttenuationPath = McpHandlerUtils::GetOptionalString(Params, TEXT("attenuationPath"), TEXT(""));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString AttenuationPath = GetJsonStringField(Params, TEXT("attenuationPath"), TEXT(""));
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
 		if (!Cue)
 		{
@@ -217,9 +216,9 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 
 	if (SubAction == TEXT("set_cue_concurrency"))
 	{
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString ConcurrencyPath = McpHandlerUtils::GetOptionalString(Params, TEXT("concurrencyPath"), TEXT(""));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString ConcurrencyPath = GetJsonStringField(Params, TEXT("concurrencyPath"), TEXT(""));
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		USoundCue* Cue = LoadSoundCueFromPath(AssetPath);
 		if (!Cue)
 		{
@@ -249,4 +248,3 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 	return nullptr;
 }
 }
-#endif

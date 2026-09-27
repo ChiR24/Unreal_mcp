@@ -2,37 +2,14 @@
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Components/PrimitiveComponent.h"
 #include "Materials/MaterialInterface.h"
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
 #include "Tracks/MovieSceneMaterialTrack.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
-bool LoadMaterialTrackTarget(const TSharedPtr<FJsonObject> &Params,
-                             ULevelSequence *&OutSequence, FGuid &OutGuid,
-                             TSharedPtr<FJsonObject> &OutResult) {
-  OutSequence = LoadSequence(Params, OutResult);
-  if (!OutSequence)
-    return false;
-  if (ReadBindingGuid(Params, OutGuid))
-    return true;
-  // The record declares actorName alongside bindingGuid, but only bindingGuid
-  // was ever read, so the documented actorName call was refused outright.
-  if (AActor *BoundActor = ResolveActor(Params))
-    OutGuid = ResolveOrCreateBinding(OutSequence, BoundActor);
-  if (OutGuid.IsValid())
-    return true;
-  OutResult = MakeResult(false, TEXT("add_material_parameter_track"),
-                         TEXT("actorName or bindingGuid is required"),
-                         TEXT("INVALID_ARGUMENT"));
-  return false;
-}
-
 bool ReadLinearColor(const TSharedPtr<FJsonObject> &Value,
                      FLinearColor &OutColor) {
   if (!Value.IsValid())
@@ -121,16 +98,12 @@ FGuid CreateMaterialComponentBinding(ULevelSequence *Sequence,
   return ComponentGuid;
 }
 }
-#endif
 
-bool HandleAddMaterialParameterTrack(UMcpAutomationBridgeSubsystem *Self,
-                                     const TSharedPtr<FJsonObject> &Params,
+bool HandleAddMaterialParameterTrack(const TSharedPtr<FJsonObject> &Params,
                                      TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
-  if (!LoadMaterialTrackTarget(Params, Sequence, Guid, OutResult))
+  if (!LoadSequenceAndBinding(Params, TEXT("add_material_parameter_track"), Sequence, Guid, OutResult))
     return true;
   const FString ParameterName = GetString(Params, TEXT("parameterName"));
   if (ParameterName.IsEmpty()) {
@@ -271,10 +244,5 @@ bool HandleAddMaterialParameterTrack(UMcpAutomationBridgeSubsystem *Self,
   if (!MaterialPath.IsEmpty())
     OutResult->SetStringField(TEXT("materialPath"), MaterialPath);
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_material_parameter_track"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 }

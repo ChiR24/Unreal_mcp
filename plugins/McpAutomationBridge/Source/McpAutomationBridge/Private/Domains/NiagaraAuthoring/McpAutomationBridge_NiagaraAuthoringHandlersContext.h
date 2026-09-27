@@ -11,21 +11,16 @@
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Modules/ModuleManager.h"
 
-#if WITH_EDITOR && ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-#define MCP_HAS_NIAGARA_VERSIONING_APIS 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
 #define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
 #define MCP_GET_EMITTER_DATA(Handle) (Handle).GetEmitterData()
 #define MCP_GET_LATEST_EMITTER_DATA(Emitter) (Emitter)->GetLatestEmitterData()
-#define MCP_GET_EMITTER_VERSION_GUID(Emitter) (Emitter)->GetExposedVersion().VersionGuid
 #else
-#define MCP_HAS_NIAGARA_VERSIONING_APIS 0
 #define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
 #define MCP_GET_EMITTER_DATA(Handle) (&(Handle))->GetInstance()
 #define MCP_GET_LATEST_EMITTER_DATA(Emitter) (Emitter)
-#define MCP_GET_EMITTER_VERSION_GUID(Emitter) FGuid()
 #endif
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
@@ -86,15 +81,7 @@
 #define MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES 0
 #endif
 
-#if __has_include("NiagaraDataInterfaceSkeletalMesh.h")
 #include "NiagaraDataInterfaceSkeletalMesh.h"
-#define MCP_HAS_NIAGARA_SKELETAL_MESH_DI 1
-#elif __has_include("DataInterface/NiagaraDataInterfaceSkeletalMesh.h")
-#include "DataInterface/NiagaraDataInterfaceSkeletalMesh.h"
-#define MCP_HAS_NIAGARA_SKELETAL_MESH_DI 1
-#else
-#define MCP_HAS_NIAGARA_SKELETAL_MESH_DI 0
-#endif
 
 #if __has_include("NiagaraDataInterfaceStaticMesh.h")
 #include "NiagaraDataInterfaceStaticMesh.h"
@@ -107,7 +94,6 @@
 #define MCP_HAS_NIAGARA_STATIC_MESH_DI 1
 #else
 #define MCP_HAS_NIAGARA_STATIC_MESH_DI 0
-#endif
 #endif
 
 namespace McpNiagaraAuthoringHandlers
@@ -194,10 +180,7 @@ FActionContext MakeActionContext(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool ValidateCommonFields(FActionContext& Context);
 bool ValidateNiagaraIdentifier(FActionContext& Context, const FString& Value, const FString& ParamName, bool bAllowDot);
-FVector GetVectorFromJson(const TSharedPtr<FJsonObject>& Obj);
-FLinearColor GetColorFromJson(const TSharedPtr<FJsonObject>& Obj);
 
-#if WITH_EDITOR
 UNiagaraSystem* LoadSystemOrError(FActionContext& Context);
 FNiagaraEmitterHandle* FindEmitterHandle(UNiagaraSystem* System, const FString& TargetEmitter);
 bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNiagaraEmitterHandle*& Handle);
@@ -209,10 +192,6 @@ UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
     const FString& SuggestedName = FString());
 UNiagaraScriptSource* GetEmitterScriptSource(FNiagaraEmitterHandle* Handle);
 bool EnsureScriptOutputGraph(UNiagaraScriptSource* ScriptSource, ENiagaraScriptUsage ScriptUsage, FGuid ScriptUsageId);
-bool AddOrSetFloatUserParameter(UNiagaraSystem* System, const FString& ParamName, float Value);
-bool AddOrSetBoolUserParameter(UNiagaraSystem* System, const FString& ParamName, bool Value);
-bool AddOrSetVectorUserParameter(UNiagaraSystem* System, const FString& ParamName, const FVector& Value);
-bool AddOrSetColorUserParameter(UNiagaraSystem* System, const FString& ParamName, const FLinearColor& Value);
 bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamName, UClass* DataInterfaceClass);
 FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType);
 // Every script whose rapid-iteration store holds module inputs: the system spawn/update scripts
@@ -234,6 +213,11 @@ void CollectNiagaraSystemStackIssues(
     TArray<TSharedPtr<FJsonValue>>& OutErrors,
     TArray<TSharedPtr<FJsonValue>>& OutWarnings);
 #if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+// The last "."-separated part of an input name ("Module.Lifetime" -> "Lifetime").
+FString BareInputName(const FString& InputName);
+// Module's input node for InputName: the bare name, the stored "Module.<Name>" form or the stack's aliased
+// "<ModuleName>.<Name>" form, case ignored; null when the module has no such input (or no graph).
+UNiagaraNodeInput* FindModuleInputNode(UNiagaraNodeFunctionCall* Module, const FString& InputName);
 UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
     FActionContext& Context,
     UNiagaraGraph* Graph,
@@ -244,8 +228,7 @@ UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
 #endif
 
 bool HandleSystemEmitterAction(FActionContext& Context, const FString& SubAction);
-bool HandleSpawnModuleAction(FActionContext& Context, const FString& SubAction);
-bool HandleDynamicsModuleAction(FActionContext& Context, const FString& SubAction);
+bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction);
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction);
 bool HandleParameterAction(FActionContext& Context, const FString& SubAction);
 bool HandleDynamicInputAction(FActionContext& Context, const FString& SubAction);
@@ -253,5 +236,4 @@ bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction
 bool HandleEventAction(FActionContext& Context, const FString& SubAction);
 bool HandleSimulationAction(FActionContext& Context, const FString& SubAction);
 bool HandleInfoValidationAction(FActionContext& Context, const FString& SubAction);
-#endif
 }

@@ -1,17 +1,15 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
-#if WITH_EDITOR
 #include "NiagaraComponent.h"
-#endif
 
 namespace McpEffectHandlers
 {
 bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
 {
-    FString SystemName;
-    Context.Payload->TryGetStringField(TEXT("systemName"), SystemName);
+    const FString SystemName = McpGetFirstStringField(Context.Payload, {TEXT("actorName"), TEXT("systemName")});
     FString ParameterName;
     Context.Payload->TryGetStringField(TEXT("parameterName"), ParameterName);
     FString ParameterType;
@@ -28,7 +26,6 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
         ParameterType = TEXT("Float");
     }
 
-#if WITH_EDITOR
     if (!GEditor)
     {
         Context.Bridge.SendAutomationResponse(
@@ -165,12 +162,5 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, false, ErrorMessage, Response, ErrorCode);
     return true;
-#else
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        TEXT("set_niagara_parameter requires editor build."), nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 }

@@ -3,13 +3,12 @@
 
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "ReferenceSkeleton.h"
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
@@ -94,4 +93,3 @@ bool UMcpAutomationBridgeSubsystem::HandleSetBoneTransform(
     return true;
 }
 
-#endif // WITH_EDITOR

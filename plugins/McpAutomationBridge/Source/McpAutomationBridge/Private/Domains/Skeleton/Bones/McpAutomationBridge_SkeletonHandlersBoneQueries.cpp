@@ -1,4 +1,5 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersAssetLoading.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 
 #include "Animation/Skeleton.h"
@@ -9,7 +10,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "ReferenceSkeleton.h"
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
@@ -17,18 +17,9 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSkeletonInfo(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
-    if (SkeletonPath.IsEmpty())
-    {
-        SkeletonPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    }
-
-    FString Error;
-    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
-
+    USkeleton* Skeleton = LoadPayloadSkeletonOrReply(*this, RequestId, RequestingSocket, Payload);
     if (!Skeleton)
     {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
         return true;
     }
 
@@ -51,18 +42,9 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
-    if (SkeletonPath.IsEmpty())
-    {
-        SkeletonPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    }
-
-    FString Error;
-    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
-
+    USkeleton* Skeleton = LoadPayloadSkeletonOrReply(*this, RequestId, RequestingSocket, Payload);
     if (!Skeleton)
     {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
         return true;
     }
 
@@ -83,11 +65,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListBones(
         }
 
         const FTransform& RefPose = RefSkeleton.GetRefBonePose()[i];
-        TSharedPtr<FJsonObject> TransformObj = McpHandlerUtils::CreateResultObject();
-        TransformObj->SetNumberField(TEXT("x"), RefPose.GetLocation().X);
-        TransformObj->SetNumberField(TEXT("y"), RefPose.GetLocation().Y);
-        TransformObj->SetNumberField(TEXT("z"), RefPose.GetLocation().Z);
-        BoneObj->SetObjectField(TEXT("location"), TransformObj);
+        BoneObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(RefPose.GetLocation()));
 
         BoneArray.Add(MakeShared<FJsonValueObject>(BoneObj));
     }
@@ -158,4 +136,3 @@ bool UMcpAutomationBridgeSubsystem::HandleGetBoneTransform(
     return true;
 }
 
-#endif // WITH_EDITOR

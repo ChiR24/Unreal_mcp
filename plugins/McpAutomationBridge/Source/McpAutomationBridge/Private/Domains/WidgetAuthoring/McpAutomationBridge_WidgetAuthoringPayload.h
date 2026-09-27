@@ -9,7 +9,6 @@ class UClass;
 
 namespace WidgetAuthoringHelpers
 {
-FLinearColor GetColorFromJsonWidget(const TSharedPtr<FJsonObject>& ColorObject, const FLinearColor& Default = FLinearColor::White);
 TSharedPtr<FJsonObject> GetObjectField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName);
 const TArray<TSharedPtr<FJsonValue>>* GetArrayField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName);
 FString GetSlotName(const TSharedPtr<FJsonObject>& Payload);

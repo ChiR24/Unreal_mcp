@@ -1,9 +1,9 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
 
 namespace McpAudioHandlers
 {
-#if WITH_EDITOR
 bool HandlePlaybackActions(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -11,8 +11,7 @@ bool HandlePlaybackActions(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-  if (Lower == TEXT("play_sound_at_location") ||
-             Lower == TEXT("audio_play_sound_at_location")) {
+  if (Lower == TEXT("play_sound_at_location")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
         SoundPath.IsEmpty()) {
@@ -85,11 +84,7 @@ bool HandlePlaybackActions(
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("soundPath"), SoundPath);
-    TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
-    LocObj->SetNumberField(TEXT("x"), Location.X);
-    LocObj->SetNumberField(TEXT("y"), Location.Y);
-    LocObj->SetNumberField(TEXT("z"), Location.Z);
-    Resp->SetObjectField(TEXT("location"), LocObj);
+    Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Location));
 
     Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played at location"), Resp);
@@ -100,8 +95,7 @@ bool HandlePlaybackActions(
   //             "startTime"?: number }
   // Response: { "success": bool, "soundPath": string, "volume": number,
   //             "pitch": number }
-  else if (Lower == TEXT("play_sound_2d") ||
-             Lower == TEXT("audio_play_sound_2d")) {
+  else if (Lower == TEXT("play_sound_2d")) {
     FString SoundPath;
     if (!Payload->TryGetStringField(TEXT("soundPath"), SoundPath) ||
         SoundPath.IsEmpty()) {
@@ -156,8 +150,7 @@ bool HandlePlaybackActions(
   // Payload:  { "soundPath": string, "actorName": string,
   //             "attachPointName"?: string }
   // Response: { "componentName": string }
-  else if (Lower == TEXT("play_sound_attached") ||
-             Lower == TEXT("audio_play_sound_attached")) {
+  else if (Lower == TEXT("play_sound_attached")) {
     FString SoundPath, ActorName, AttachPoint;
     Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
     Payload->TryGetStringField(TEXT("actorName"), ActorName);
@@ -229,5 +222,4 @@ bool HandlePlaybackActions(
   }
   return false;
 }
-#endif
 }

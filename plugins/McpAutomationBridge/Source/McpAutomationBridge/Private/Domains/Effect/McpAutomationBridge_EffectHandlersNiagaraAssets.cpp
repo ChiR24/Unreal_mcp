@@ -2,13 +2,11 @@
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
 #include "Subsystems/EditorActorSubsystem.h"
-#endif
 
 namespace McpEffectHandlers
 {
@@ -18,7 +16,6 @@ bool CreateNiagaraEffectFromPayload(
     const FString& DefaultSystemPath,
     const TSharedPtr<FJsonObject>& ExtraFields)
 {
-#if WITH_EDITOR
     if (!GEditor)
     {
         TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
@@ -73,7 +70,7 @@ bool CreateNiagaraEffectFromPayload(
 
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         ANiagaraActor::StaticClass(),
-        ReadVectorField(Context.Payload, TEXT("location")),
+        ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),
         FRotator::ZeroRotator);
     if (!Spawned)
     {
@@ -131,15 +128,5 @@ bool CreateNiagaraEffectFromPayload(
         Context.Socket, Context.RequestId, true,
         FString::Printf(TEXT("%s created successfully"), *EffectName), Response);
     return true;
-#else
-    TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetBoolField(TEXT("success"), false);
-    Response->SetStringField(TEXT("error"), TEXT("Effect creation requires editor build"));
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        TEXT("Effect creation not available in non-editor build"), Response,
-        TEXT("NOT_AVAILABLE"));
-    return true;
-#endif
 }
 }

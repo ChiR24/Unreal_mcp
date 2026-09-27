@@ -65,7 +65,7 @@ bool ConfigureDemoSettings(UMcpAutomationBridgeSubsystem* Subsystem, const FStri
     FMcpReplaySettings Updated = GMcpReplaySettings;
     FString Value = GetReplayName(Payload);
     if (!Value.IsEmpty()) Updated.DefaultReplayName = Value;
-    Value = McpHandlerUtils::GetOptionalString(Payload, TEXT("friendlyName"));
+    Value = GetJsonStringField(Payload, TEXT("friendlyName"));
     if (!Value.IsEmpty()) Updated.FriendlyName = Value;
     TArray<FString> Options = GetReplayStringArray(Payload, TEXT("additionalOptions"));
     if (Options.Num() > 0) Updated.AdditionalOptions = MoveTemp(Options);
@@ -128,7 +128,7 @@ bool StartDemoRecording(UMcpAutomationBridgeSubsystem* Subsystem, const FString&
     {
         Name = FString::Printf(TEXT("McpReplay_%lld"), static_cast<long long>(FDateTime::UtcNow().ToUnixTimestamp()));
     }
-    FString FriendlyName = McpHandlerUtils::GetOptionalString(Payload, TEXT("friendlyName"));
+    FString FriendlyName = GetJsonStringField(Payload, TEXT("friendlyName"));
     if (FriendlyName.IsEmpty()) FriendlyName = GMcpReplaySettings.FriendlyName.IsEmpty() ? Name : GMcpReplaySettings.FriendlyName;
 
     Replay->RecordReplay(Name, FriendlyName, GetReplayOptions(Payload), nullptr);

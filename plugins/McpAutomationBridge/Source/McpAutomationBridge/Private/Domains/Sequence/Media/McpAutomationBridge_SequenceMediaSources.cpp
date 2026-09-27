@@ -145,36 +145,31 @@ bool HandleCreateMediaSource(UMcpAutomationBridgeSubsystem *Subsystem,
     return true;
   }
   UClass *AssetClass = ResolveMediaClass(ClassName, Error);
-  UObject *Prototype =
-      AssetClass ? NewObject<UObject>(GetTransientPackage(), AssetClass) : nullptr;
-  if (!Prototype || !ApplySourceConfig(Prototype, Config, Error) ||
-      !CallBoolFunction(Prototype, TEXT("Validate"))) {
+  FString PackageName, AssetName, ObjectPath;
+  if (!AssetClass ||
+      !ResolveMediaAssetIdentity(Payload, TEXT("/Game/Media/Sources"), FString(),
+                                 PackageName, AssetName, ObjectPath, Error)) {
+    SendMediaError(Subsystem, Socket, RequestId,
+                   AssetClass ? TEXT("MEDIA_ASSET_CREATE_FAILED") : TEXT("INVALID_MEDIA_SOURCE"),
+                   Error);
+    return true;
+  }
+  FMediaAssetCreateResult Created;
+  if (!CreateMediaAsset(AssetClass, PackageName, AssetName, Created, Error)) {
+    SendMediaError(Subsystem, Socket, RequestId,
+                   Error.Contains(TEXT("[MEDIA_ASSET_ALREADY_EXISTS]"))
+                       ? TEXT("MEDIA_ASSET_ALREADY_EXISTS")
+                       : TEXT("MEDIA_ASSET_CREATE_FAILED"),
+                   Error.IsEmpty() ? TEXT("Failed to create media source") : Error);
+    return true;
+  }
+  if (!ApplySourceConfig(Created.Object, Config, Error) ||
+      !CallBoolFunction(Created.Object, TEXT("Validate"))) {
+    DiscardCreatedMediaAsset(Created);
     SendMediaError(Subsystem, Socket, RequestId, TEXT("INVALID_MEDIA_SOURCE"),
                    Error.IsEmpty()
                        ? TEXT("The media source configuration did not validate")
                        : Error);
-    return true;
-  }
-
-  FString PackageName, AssetName, ObjectPath;
-  if (!ResolveMediaAssetIdentity(Payload, TEXT("/Game/Media/Sources"), FString(),
-                                 PackageName, AssetName, ObjectPath, Error)) {
-    SendMediaError(Subsystem, Socket, RequestId,
-                   TEXT("MEDIA_ASSET_CREATE_FAILED"), Error);
-    return true;
-  }
-  FMediaAssetCreateResult Created;
-  if (!CreateMediaAsset(AssetClass, PackageName, AssetName, Created, Error) ||
-      !ApplySourceConfig(Created.Object, Config, Error)) {
-    DiscardCreatedMediaAsset(Created);
-    const FString ErrorCode =
-        Error.Contains(TEXT("[MEDIA_ASSET_ALREADY_EXISTS]"))
-            ? TEXT("MEDIA_ASSET_ALREADY_EXISTS")
-            : TEXT("MEDIA_ASSET_CREATE_FAILED");
-    SendMediaError(Subsystem, Socket, RequestId,
-                   ErrorCode,
-                   Error.IsEmpty() ? TEXT("Failed to configure media source")
-                                   : Error);
     return true;
   }
   Created.Object->Modify();

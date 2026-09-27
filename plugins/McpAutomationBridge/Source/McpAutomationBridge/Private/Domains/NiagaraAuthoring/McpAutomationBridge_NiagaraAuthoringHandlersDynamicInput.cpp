@@ -1,6 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 #if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
@@ -22,19 +21,10 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
         return true;
     }
 
-    UNiagaraSystem* System = LoadSystemOrError(Context);
-    if (!System) { return true; }
-
-    FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, Context.EmitterName);
-    if (!Handle && System->GetEmitterHandles().Num() == 1)
+    UNiagaraSystem* System = nullptr;
+    FNiagaraEmitterHandle* Handle = nullptr;
+    if (!LoadSystemAndEmitter(Context, System, Handle))
     {
-        // Same single-emitter fallback the module handlers use.
-        Handle = const_cast<FNiagaraEmitterHandle*>(&System->GetEmitterHandles()[0]);
-        Context.Result->SetStringField(TEXT("resolvedEmitterName"), Handle->GetName().ToString());
-    }
-    if (!Handle)
-    {
-        Context.SendError(FString::Printf(TEXT("Emitter '%s' not found."), *Context.EmitterName), TEXT("EMITTER_NOT_FOUND"));
         return true;
     }
     UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(Handle);
@@ -70,40 +60,25 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
     // Module inputs are stored as "Module.<Name>" while the stack addresses them through the
     // aliased "<FunctionName>.<Name>" handle, so accept the bare name, either spelling, and
     // build the aliased handle from the resolved module exactly as the stack does.
-    int32 DotIndex = INDEX_NONE;
-    const FString BareInputName =
-        InputName.FindLastChar(TEXT('.'), DotIndex) ? InputName.Mid(DotIndex + 1) : InputName;
-    const FNiagaraParameterHandle AliasedHandle(FName(*TargetNode->GetFunctionName()), FName(*BareInputName));
-
-    FNiagaraTypeDefinition InputType;
-    bool bFoundType = false;
-    FString AvailableInputs;
-    if (UNiagaraGraph* CalledGraph = TargetNode->GetCalledGraph())
+    const FNiagaraParameterHandle AliasedHandle(FName(*TargetNode->GetFunctionName()), FName(*BareInputName(InputName)));
+    UNiagaraNodeInput* MatchedInput = FindModuleInputNode(TargetNode, InputName);
+    if (!MatchedInput)
     {
-        for (UEdGraphNode* Node : CalledGraph->Nodes)
+        TArray<FString> Available;
+        if (UNiagaraGraph* CalledGraph = TargetNode->GetCalledGraph())
         {
-            if (UNiagaraNodeInput* InputNode = Cast<UNiagaraNodeInput>(Node))
+            for (UEdGraphNode* Node : CalledGraph->Nodes)
             {
-                FString InputNameStr = InputNode->Input.GetName().ToString();
-                if (!AvailableInputs.IsEmpty()) AvailableInputs += TEXT(", ");
-                AvailableInputs += InputNameStr;
-                const bool bMatches = !bFoundType &&
-                    (InputNameStr.Equals(InputName, ESearchCase::IgnoreCase) ||
-                     InputNameStr.Equals(BareInputName, ESearchCase::IgnoreCase) ||
-                     InputNameStr.EndsWith(TEXT(".") + BareInputName, ESearchCase::IgnoreCase));
-                if (bMatches)
+                if (UNiagaraNodeInput* InputNode = Cast<UNiagaraNodeInput>(Node))
                 {
-                    InputType = InputNode->Input.GetType();
-                    bFoundType = true;
+                    Available.Add(InputNode->Input.GetName().ToString());
                 }
             }
         }
-    }
-    if (!bFoundType)
-    {
-        Context.SendError(FString::Printf(TEXT("Input '%s' not found on target node. Available: %s"), *InputName, *AvailableInputs), TEXT("INPUT_NOT_FOUND"));
+        Context.SendError(FString::Printf(TEXT("Input '%s' not found on target node. Available: %s"), *InputName, *FString::Join(Available, TEXT(", "))), TEXT("INPUT_NOT_FOUND"));
         return true;
     }
+    const FNiagaraTypeDefinition InputType = MatchedInput->Input.GetType();
 
     FNiagaraTypeDefinition DIOutputType;
     bool bFoundDIOutputType = false;
@@ -203,4 +178,3 @@ bool HandleDynamicInputAction(FActionContext& Context, const FString& SubAction)
     return false;
 }
 }
-#endif

@@ -3,32 +3,11 @@
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
-bool ApplyRigNumber(UObject *Object, const TSharedPtr<FJsonObject> &Params,
-                    const TCHAR *Field, const TCHAR *PropertyPath,
-                    TArray<FString> &Applied) {
-  double Value = 0.0;
-  if (!Object || !Params.IsValid() ||
-      !Params->TryGetNumberField(Field, Value) || !FMath::IsFinite(Value))
-    return false;
-  void *Container = nullptr;
-  FString Error;
-  FProperty *Property =
-      ResolveNestedPropertyPath(Object, PropertyPath, Container, Error);
-  const bool bApplied = ApplyJsonValueToProperty(
-      Container, Property, MakeShared<FJsonValueNumber>(Value), Error);
-  if (bApplied)
-    Applied.Add(PropertyPath);
-  return bApplied;
-}
-
 bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
                   const TCHAR *ClassPath, bool bRail,
                   TSharedPtr<FJsonObject> &OutResult) {
@@ -62,13 +41,13 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
   }
   TArray<FString> Applied;
   if (bRail) {
-    ApplyRigNumber(Actor, Params, TEXT("positionOnRail"),
+    ApplyNumber(Actor, Params, TEXT("positionOnRail"),
                    TEXT("CurrentPositionOnRail"), Applied);
   } else {
-    ApplyRigNumber(Actor, Params, TEXT("cranePitch"), TEXT("CranePitch"),
+    ApplyNumber(Actor, Params, TEXT("cranePitch"), TEXT("CranePitch"),
                    Applied);
-    ApplyRigNumber(Actor, Params, TEXT("craneYaw"), TEXT("CraneYaw"), Applied);
-    ApplyRigNumber(Actor, Params, TEXT("craneArmLength"),
+    ApplyNumber(Actor, Params, TEXT("craneYaw"), TEXT("CraneYaw"), Applied);
+    ApplyNumber(Actor, Params, TEXT("craneArmLength"),
                    TEXT("CraneArmLength"), Applied);
   }
   if (Applied.IsEmpty()) {
@@ -91,45 +70,32 @@ bool ConfigureRig(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
   return true;
 }
 }
-#endif
 
-bool HandleConfigureCameraRigRail(UMcpAutomationBridgeSubsystem *Self,
-                                  const TSharedPtr<FJsonObject> &Params,
+bool HandleConfigureCameraRigRail(const TSharedPtr<FJsonObject> &Params,
                                   TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
 #if !MCP_HAS_CINEMATIC_CAMERA
   OutResult = MakeResult(false, TEXT("configure_camera_rig_rail"),
                          TEXT("CinematicCamera module is unavailable"),
                          TEXT("NOT_AVAILABLE"));
   return true;
-#elif WITH_EDITOR
+#else
   return ConfigureRig(Params, TEXT("configure_camera_rig_rail"),
                       TEXT("/Script/CinematicCamera.CameraRig_Rail"), true,
                       OutResult);
-#else
-  OutResult = MakeResult(false, TEXT("configure_camera_rig_rail"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
-  return true;
 #endif
 }
 
-bool HandleConfigureCameraRigCrane(UMcpAutomationBridgeSubsystem *Self,
-                                   const TSharedPtr<FJsonObject> &Params,
+bool HandleConfigureCameraRigCrane(const TSharedPtr<FJsonObject> &Params,
                                    TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
 #if !MCP_HAS_CINEMATIC_CAMERA
   OutResult = MakeResult(false, TEXT("configure_camera_rig_crane"),
                          TEXT("CinematicCamera module is unavailable"),
                          TEXT("NOT_AVAILABLE"));
   return true;
-#elif WITH_EDITOR
+#else
   return ConfigureRig(Params, TEXT("configure_camera_rig_crane"),
                       TEXT("/Script/CinematicCamera.CameraRig_Crane"), false,
                       OutResult);
-#else
-  OutResult = MakeResult(false, TEXT("configure_camera_rig_crane"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
-  return true;
 #endif
 }
 }

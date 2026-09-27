@@ -4,7 +4,7 @@
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -17,7 +17,6 @@
 #endif
 #endif
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
@@ -40,17 +39,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
         SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
         return true;
     }
-
-    // Validate path security BEFORE loading asset
-    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
-    if (SanitizedPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
-            TEXT("INVALID_PATH"));
-        return true;
-    }
-    PhysicsAssetPath = SanitizedPath;
 
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
@@ -114,8 +102,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
     Payload->TryGetNumberField(TEXT("height"), Height);
     Payload->TryGetNumberField(TEXT("depth"), Depth);
 
-    FVector Center = ParseVectorFromJson(Payload, TEXT("center"));
-    FRotator Rotation = ParseRotatorFromJson(Payload, TEXT("rotation"));
+    FVector Center = ExtractVectorField(Payload, TEXT("center"), FVector::ZeroVector);
+    FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     if (BodyType.Equals(TEXT("Sphere"), ESearchCase::IgnoreCase))
     {
@@ -134,23 +122,14 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsBody(
         BoxElem.Rotation = Rotation;
         BodySetup->AggGeom.BoxElems.Add(BoxElem);
     }
-    else if (BodyType.Equals(TEXT("Capsule"), ESearchCase::IgnoreCase) ||
-             BodyType.Equals(TEXT("Sphyl"), ESearchCase::IgnoreCase))
+    else
     {
+        // Capsule/Sphyl, and the default for any other bodyType.
         FKSphylElem CapsuleElem;
         CapsuleElem.Radius = static_cast<float>(Radius);
         CapsuleElem.Length = static_cast<float>(Length);
         CapsuleElem.Center = Center;
         CapsuleElem.Rotation = Rotation;
-        BodySetup->AggGeom.SphylElems.Add(CapsuleElem);
-    }
-    else
-    {
-        // Default to capsule
-        FKSphylElem CapsuleElem;
-        CapsuleElem.Radius = static_cast<float>(Radius);
-        CapsuleElem.Length = static_cast<float>(Length);
-        CapsuleElem.Center = Center;
         BodySetup->AggGeom.SphylElems.Add(CapsuleElem);
     }
 
@@ -188,17 +167,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
         SendAutomationError(RequestingSocket, RequestId, TEXT("boneName is required"), TEXT("MISSING_PARAM"));
         return true;
     }
-
-    // Validate path security BEFORE loading asset
-    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
-    if (SanitizedPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
-            TEXT("INVALID_PATH"));
-        return true;
-    }
-    PhysicsAssetPath = SanitizedPath;
 
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
@@ -265,4 +233,3 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigurePhysicsBody(
     return true;
 }
 
-#endif // WITH_EDITOR

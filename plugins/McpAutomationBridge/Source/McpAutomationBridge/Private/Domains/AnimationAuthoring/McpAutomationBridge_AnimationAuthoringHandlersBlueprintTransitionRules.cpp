@@ -3,7 +3,6 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 #include "Kismet/KismetMathLibrary.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 namespace {
@@ -18,7 +17,6 @@ UAnimBlueprint *LoadAnimBlueprintForMcp(const FString &BlueprintPath) {
 }
 } // namespace
 
-#if MCP_HAS_K2NODE_HEADERS && MCP_HAS_ANIM_STATE_TRANSITION
 namespace {
 // A transition whose rule graph leaves bCanEnterTransition unconnected is
 // permanently false, so a state machine authored over MCP could be built
@@ -106,9 +104,7 @@ bool BuildTransitionRule(UEdGraph *RuleGraph, UAnimBlueprint *AnimBP,
   return true;
 }
 } // namespace
-#endif
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
 namespace {
 // One name can match more than one state machine node in the AnimGraph, so the
 // transition is looked for in each of them rather than only the first.
@@ -133,9 +129,7 @@ UAnimStateTransitionNode *FindTransitionInMachines(UEdGraph *AnimGraph,
   return nullptr;
 }
 } // namespace
-#endif
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
 // Shared so add_transition applies exactly what set_transition_rules does.
 // add_transition used to read only crossfadeDuration, and only when it created
 // the node: a caller who passed conditionVariable got `success` with no
@@ -175,7 +169,6 @@ bool ApplyTransitionSettings(UAnimStateTransitionNode* TransNode, UAnimBlueprint
 
     const FString ConditionVariable = GetJsonStringField(Params, TEXT("conditionVariable"), TEXT(""));
     if (ConditionVariable.IsEmpty()) { return true; }
-#if MCP_HAS_K2NODE_HEADERS
     const FString Comparison = GetJsonStringField(Params, TEXT("conditionComparison"), TEXT("greater")).ToLower();
     const double ConditionValue = GetJsonNumberField(Params, TEXT("conditionValue"), 0.0);
     if (!BuildTransitionRule(TransNode->GetBoundGraph(), AnimBP, ConditionVariable,
@@ -189,13 +182,7 @@ bool ApplyTransitionSettings(UAnimStateTransitionNode* TransNode, UAnimBlueprint
                         *FString::SanitizeFloat(ConditionValue)));
     bOutChanged = true;
     return true;
-#else
-    OutError = TEXT("Transition conditions need the BlueprintGraph K2Node headers");
-    OutErrorCode = TEXT("K2NODE_UNAVAILABLE");
-    return false;
-#endif
 }
-#endif
 
 TSharedPtr<FJsonObject> HandleBlueprintTransitionRuleActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
@@ -217,7 +204,6 @@ TSharedPtr<FJsonObject> HandleBlueprintTransitionRuleActions(const FString& SubA
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
     }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
     UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
     if (!AnimGraph)
     {
@@ -261,14 +247,7 @@ TSharedPtr<FJsonObject> HandleBlueprintTransitionRuleActions(const FString& SubA
     SaveAnimAsset(AnimBP, bSave);
 
     ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition rules updated for '%s' -> '%s'"), *FromState, *ToState));
-#else
-    // AnimGraph headers not available - return error instead of fake success
-    ANIM_ERROR_RESPONSE(
-        FString::Printf(TEXT("Cannot update transition '%s' -> '%s': AnimGraph module headers not available in this build."), *FromState, *ToState),
-        TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
-#endif
     return Response;
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

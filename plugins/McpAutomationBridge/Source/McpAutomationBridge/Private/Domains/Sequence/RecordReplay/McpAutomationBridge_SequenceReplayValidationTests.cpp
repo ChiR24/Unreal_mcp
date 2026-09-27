@@ -1,6 +1,6 @@
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceReplayInternal.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"

@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleAddTextureCoordinate(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -42,4 +41,3 @@ bool HandleAddTextureCoordinate(UMcpAutomationBridgeSubsystem* Bridge, const FSt
   return false;
 }
 }
-#endif

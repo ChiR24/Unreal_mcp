@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleDisconnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -30,7 +29,6 @@ bool HandleDisconnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       } else {
         // UMaterialFunction host — clear FunctionOutput's A.Expression by name (or first/all if empty)
         bool bCleared = false;
-#if WITH_EDITORONLY_DATA
         for (UMaterialExpression *Expr : MCP_GET_FUNCTION_EXPRESSIONS(Function)) {
           if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
             if (PinName.IsEmpty() || Out->OutputName.ToString().Equals(PinName)) {
@@ -40,7 +38,6 @@ bool HandleDisconnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString&
             }
           }
         }
-#endif
         if (bCleared) {
           FINALIZE_HOST();
           Bridge->SendAutomationResponse(Socket, RequestId, true,
@@ -91,4 +88,3 @@ bool HandleDisconnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString&
   return false;
 }
 }
-#endif

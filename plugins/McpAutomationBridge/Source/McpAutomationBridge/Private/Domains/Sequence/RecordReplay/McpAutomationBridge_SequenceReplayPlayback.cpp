@@ -19,10 +19,10 @@ namespace McpSequenceRecordReplay
 bool HandleConfigureKillcamDuration(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
     double Duration = GMcpReplaySettings.KillcamDurationSeconds;
-    if (!Payload.IsValid() || !Payload->TryGetNumberField(TEXT("durationSeconds"), Duration) ||
-        !FMath::IsFinite(Duration) || Duration <= 0.0)
+    // ValidateReplayRequest already bounded durationSeconds when present.
+    if (!Payload.IsValid() || !Payload->TryGetNumberField(TEXT("durationSeconds"), Duration))
     {
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("durationSeconds must be greater than zero"), TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("durationSeconds is required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     GMcpReplaySettings.KillcamDurationSeconds = static_cast<float>(Duration);
@@ -106,10 +106,10 @@ bool PauseDemo(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestI
 bool SetDemoSpeed(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, UWorld* World, UReplaySubsystem* Replay)
 {
     double Speed = 0.0;
-    if (!Payload.IsValid() || (!Payload->TryGetNumberField(TEXT("speed"), Speed) && !Payload->TryGetNumberField(TEXT("playbackSpeed"), Speed)) ||
-        !FMath::IsFinite(Speed) || Speed <= 0.0)
+    // ValidateReplayRequest already bounded speed/playbackSpeed when present.
+    if (!Payload.IsValid() || (!Payload->TryGetNumberField(TEXT("speed"), Speed) && !Payload->TryGetNumberField(TEXT("playbackSpeed"), Speed)))
     {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("speed must be greater than zero"), TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("speed (or playbackSpeed) is required"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     GMcpReplaySettings.PlaybackSpeed = static_cast<float>(Speed);
@@ -235,20 +235,6 @@ bool SeekDemo(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId
 bool HandleReplayPlaybackAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UWorld* World, UReplaySubsystem* Replay)
 {
     if (Action == TEXT("play_demo")) return PlayDemo(Subsystem, RequestId, Payload, RequestingSocket, World, Replay);
-    if (Action == TEXT("start_killcam") &&
-        Payload.IsValid() && Payload->HasField(TEXT("durationSeconds")))
-    {
-        double Duration = 0.0;
-        if (!Payload->TryGetNumberField(TEXT("durationSeconds"), Duration) ||
-            !FMath::IsFinite(Duration) || Duration <= 0.0)
-        {
-            Subsystem->SendAutomationError(
-                RequestingSocket, RequestId,
-                TEXT("durationSeconds must be greater than zero"),
-                TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
-    }
     UDemoNetDriver* Driver = nullptr;
     if (Action == TEXT("start_killcam") && !EnsureKillcamReplay(Subsystem, RequestId, Payload, RequestingSocket, World, Replay)) return true;
     if (!RequirePlayback(Subsystem, RequestId, RequestingSocket, World, Replay, Driver)) return true;

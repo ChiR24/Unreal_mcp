@@ -22,7 +22,6 @@
 #endif
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 
 namespace {
 void Fail(FActionContext &Context, const FString &Text, const TCHAR *Code) {
@@ -79,9 +78,7 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
   }
 
   const TArray<TSharedPtr<FJsonValue>> *AssetsArray = nullptr;
-  if (!Payload->TryGetArrayField(TEXT("assets"), AssetsArray)) {
-    Payload->TryGetArrayField(TEXT("retargetAssets"), AssetsArray);
-  }
+  Payload->TryGetArrayField(TEXT("assets"), AssetsArray);
   if (AssetsArray == nullptr || AssetsArray->Num() == 0) {
     Fail(Context, TEXT("setup_retargeting requires at least one animation asset to retarget"),
          TEXT("MISSING_RETARGET_ASSETS"));
@@ -250,5 +247,4 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
   return false;
 #endif
 }
-#endif
 } // namespace McpAnimationHandlers

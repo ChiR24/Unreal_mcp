@@ -4,7 +4,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/SkeletalMesh.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -13,17 +13,10 @@
 #include "UObject/Package.h"
 // UE 5.7 ships PhysicsAssetUtils.h in Developer/PhysicsUtilities (a public
 // dependency of UnrealEd); earlier versions ship it in UnrealEd itself.
-#if __has_include("PhysicsAssetUtils.h")
 #include "PhysicsAssetUtils.h"
-#define MCP_HAS_PHYSICS_ASSET_UTILS 1
-#else
-#define MCP_HAS_PHYSICS_ASSET_UTILS 0
-#endif
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
-#if MCP_HAS_PHYSICS_ASSET_UTILS
 namespace
 {
 // Optional overrides on top of the editor's "Create Physics Asset" defaults.
@@ -65,7 +58,6 @@ void ApplyCreateParams(const TSharedPtr<FJsonObject>& Payload, FPhysAssetCreateP
     }
 }
 } // namespace
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     const FString& RequestId,
@@ -84,12 +76,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
         return true;
     }
 
-#if !MCP_HAS_PHYSICS_ASSET_UTILS
-    SendAutomationError(RequestingSocket, RequestId,
-        TEXT("Physics asset body generation is unavailable in this engine build (PhysicsAssetUtils.h not found)"),
-        TEXT("NOT_SUPPORTED"));
-    return true;
-#else
     FString Error;
     USkeletalMesh* SkeletalMesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
     if (!SkeletalMesh)
@@ -188,7 +174,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
         FString::Printf(TEXT("Physics asset created with %d bodies and %d constraints"),
             PhysicsAsset->SkeletalBodySetups.Num(), PhysicsAsset->ConstraintSetup.Num()), Result);
     return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
@@ -218,13 +203,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
         return true;
     }
 
-    UPhysicsAsset* PhysAsset = Cast<UPhysicsAsset>(
-        StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsAssetPath));
+    // LoadPhysicsAssetFromPath sanitizes the path (this loaded the raw input before).
+    UPhysicsAsset* PhysAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
     if (!PhysAsset)
     {
-        SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Physics asset not found: %s"), *PhysicsAssetPath),
-            TEXT("PHYSICS_ASSET_NOT_FOUND"));
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PHYSICS_ASSET_NOT_FOUND"));
         return true;
     }
 
@@ -242,4 +225,3 @@ bool UMcpAutomationBridgeSubsystem::HandleSetPhysicsAsset(
     return true;
 }
 
-#endif // WITH_EDITOR

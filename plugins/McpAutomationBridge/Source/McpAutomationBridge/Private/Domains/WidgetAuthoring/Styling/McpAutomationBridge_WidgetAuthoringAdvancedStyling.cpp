@@ -245,54 +245,6 @@ bool HandleWidgetAuthoringAdvancedStyling(
         return true;
     }
 
-    if (SubAction.Equals(TEXT("apply_style_to_widget"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
-        FString StyleName = GetJsonStringField(Payload, TEXT("styleName"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty() || StyleName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, slotName, styleName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP || !WidgetBP->WidgetTree)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* TargetWidget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!TargetWidget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found"), *SlotName), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        // Check if style variable exists in blueprint
-        FProperty* StyleProp = WidgetBP->GeneratedClass ? WidgetBP->GeneratedClass->FindPropertyByName(FName(*StyleName)) : nullptr;
-
-        // Nothing above applies anything: it looks up whether a variable of that
-        // name exists and stops. The branch then dirtied and SAVED the asset and
-        // answered "Applied style to widget" with a note claiming a binding had
-        // been created. Report the lookup it really did, and write nothing.
-        ResultJson->SetBoolField(TEXT("success"), false);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("styleName"), StyleName);
-        ResultJson->SetBoolField(TEXT("styleFound"), StyleProp != nullptr);
-        ResultJson->SetBoolField(TEXT("styleApplied"), false);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Style variable '%s' %s on %s, but nothing was applied to '%s' and the widget asset was left unchanged. Write the style through set_style (propertyName/value), which mutates the widget's own style property."),
-                            *StyleName, StyleProp ? TEXT("exists") : TEXT("does not exist"),
-                            *WidgetBP->GetName(), *SlotName),
-            ResultJson, TEXT("NOT_SUPPORTED"));
-        return true;
-    }
-
     return false;
 }
 }

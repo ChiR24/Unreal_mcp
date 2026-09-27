@@ -4,9 +4,8 @@
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/McpAutomationBridge_SequencePathSecurity.h"
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
-#include "Safety/McpSafeOperationsPackageTools.h"
+#include "PackageTools.h"
 
-#if WITH_EDITOR
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "HAL/FileManager.h"
 #include "Misc/PackageName.h"
@@ -19,20 +18,11 @@
 #include "MovieScene.h"
 #include "MovieSceneTrack.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 FString GetString(const TSharedPtr<FJsonObject> &Params, const TCHAR *Name,
                   const TCHAR *Alias) {
-  FString Value;
-  if (Params.IsValid() && Params->TryGetStringField(Name, Value)) {
-    return Value;
-  }
-  if (Alias && Params.IsValid()) {
-    Params->TryGetStringField(Alias, Value);
-  }
-  return Value;
+  return McpGetFirstStringField(Params, {Name, Alias ? Alias : Name});
 }
 
 FString GetSequencePath(const TSharedPtr<FJsonObject> &Params) {
@@ -123,6 +113,17 @@ AActor *ResolveActor(const TSharedPtr<FJsonObject> &Params) {
   return Cast<AActor>(Object);
 }
 
+UObject *GetBindingTemplate(UMovieScene *MovieScene, const FGuid &Guid) {
+  if (!MovieScene) return nullptr;
+  if (const FMovieScenePossessable *Possessable = MovieScene->FindPossessable(Guid)) {
+    if (const UClass *BoundClass = Possessable->GetPossessedObjectClass()) {
+      return BoundClass->GetDefaultObject();
+    }
+  }
+  FMovieSceneSpawnable *Spawnable = MovieScene->FindSpawnable(Guid);
+  return Spawnable ? Spawnable->GetObjectTemplate() : nullptr;
+}
+
 FGuid ResolveOrCreateBinding(ULevelSequence *Sequence, AActor *Actor) {
   if (!Sequence || !Actor || !Sequence->GetMovieScene()) {
     return FGuid();
@@ -140,6 +141,27 @@ FGuid ResolveOrCreateBinding(ULevelSequence *Sequence, AActor *Actor) {
     MovieScene->Modify();
   }
   return BindingGuid;
+}
+
+FGuid ResolveRequestBinding(const TSharedPtr<FJsonObject> &Params, ULevelSequence *Sequence) {
+  FGuid Guid;
+  if (!ReadBindingGuid(Params, Guid))
+    Guid = ResolveOrCreateBinding(Sequence, ResolveActor(Params));
+  return Guid;
+}
+
+bool LoadSequenceAndBinding(const TSharedPtr<FJsonObject> &Params, const TCHAR *Action,
+                            ULevelSequence *&OutSequence, FGuid &OutGuid,
+                            TSharedPtr<FJsonObject> &OutResult) {
+  OutSequence = LoadSequence(Params, OutResult);
+  if (!OutSequence)
+    return false;
+  OutGuid = ResolveRequestBinding(Params, OutSequence);
+  if (OutGuid.IsValid())
+    return true;
+  OutResult = MakeResult(false, Action, TEXT("actorName or bindingGuid is required"),
+                         TEXT("INVALID_ARGUMENT"));
+  return false;
 }
 
 FGuid FindExistingBinding(ULevelSequence *Sequence, UObject *Object,
@@ -186,6 +208,16 @@ void RemoveTrackAfterSectionFailure(UMovieScene *MovieScene,
     MovieScene->RemoveTrack(*Track);
 }
 
+UMovieSceneSection *AddTrackSection(UMovieScene *MovieScene, UMovieSceneTrack *Track, bool bTrackCreated) {
+  UMovieSceneSection *Section = Track ? Track->CreateNewSection() : nullptr;
+  if (Section) {
+    Track->AddSection(*Section);
+  } else {
+    RemoveTrackAfterSectionFailure(MovieScene, Track, bTrackCreated);
+  }
+  return Section;
+}
+
 bool MaybeSaveSequence(ULevelSequence *Sequence,
                        const TSharedPtr<FJsonObject> &Params,
                        TSharedPtr<FJsonObject> &OutResult) {
@@ -201,7 +233,6 @@ bool MaybeSaveSequence(ULevelSequence *Sequence,
   const FString SequencePath = Sequence->GetPathName();
   bool bRolledBack = false;
   FString RollbackError;
-#if MCP_HAS_PACKAGE_TOOLS
   UPackage *Package = Sequence->GetOutermost();
   if (Package) {
     FString PackageFilename;
@@ -220,7 +251,6 @@ bool MaybeSaveSequence(ULevelSequence *Sequence,
         EReloadPackagesInteractionMode::AssumePositive);
     RollbackError = ReloadError.ToString();
   }
-#endif
 
   const FString Action = GetString(Params, TEXT("action"), TEXT("subAction"));
   OutResult = MakeResult(
@@ -238,5 +268,4 @@ bool MaybeSaveSequence(ULevelSequence *Sequence,
   }
   return false;
 }
-#endif
 }

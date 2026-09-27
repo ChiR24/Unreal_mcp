@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -103,28 +102,8 @@ Retargeter->TargetIKRigAsset = TargetRig;
 #endif
     }
 
-    if (SubAction == TEXT("set_retarget_chain_mapping"))
-    {
-#if MCP_HAS_IKRETARGETER
-        FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-        FString SourceChain = GetJsonStringField(Params, TEXT("sourceChain"), TEXT(""));
-        FString TargetChain = GetJsonStringField(Params, TEXT("targetChain"), TEXT(""));
-
-        if (SourceChain.IsEmpty() || TargetChain.IsEmpty())
-        {
-            ANIM_ERROR_RESPONSE(TEXT("sourceChain and targetChain are required"), TEXT("MISSING_CHAINS"));
-        }
-
-        // Deprecated no-op: say so instead of claiming a mutation (dogfood #90).
-        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("set_retarget_chain_mapping is deprecated and does not modify '%s'; setup_retargeting maps chains automatically, and to map '%s' -> '%s' by hand edit the retargeter in the IK Retargeter editor and pass it back as retargeterPath"), *AssetPath, *SourceChain, *TargetChain), TEXT("DEPRECATED"));
-#else
-        ANIM_ERROR_RESPONSE(TEXT("IK Retargeter module not available"), TEXT("NOT_SUPPORTED"));
-#endif
-    }
-
     // ===== Utility =====
     return nullptr;
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

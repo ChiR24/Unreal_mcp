@@ -1,6 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 static bool CreateNiagaraSystem(FActionContext& Context)
@@ -196,4 +195,3 @@ bool HandleSystemEmitterAction(FActionContext& Context, const FString& SubAction
     return false;
 }
 }
-#endif

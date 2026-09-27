@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 UClass* ResolveNotifyClassByName(const FString& Requested, const TCHAR* Prefix, UClass* BaseClass, TArray<FString>& OutTried)
@@ -113,12 +112,10 @@ TSharedPtr<FJsonObject> HandleSequenceNotifyStateAction(const TSharedPtr<FJsonOb
     }
 
     float FrameRate = 30.0f;
-#if ENGINE_MAJOR_VERSION >= 5
     if (UAnimSequence* Seq = Cast<UAnimSequence>(AnimAsset))
     {
         FrameRate = Seq->GetSamplingFrameRate().AsDecimal();
     }
-#endif
     if (FrameRate <= KINDA_SMALL_NUMBER)
     {
         FrameRate = 30.0f;
@@ -163,4 +160,3 @@ TSharedPtr<FJsonObject> HandleSequenceNotifyStateAction(const TSharedPtr<FJsonOb
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

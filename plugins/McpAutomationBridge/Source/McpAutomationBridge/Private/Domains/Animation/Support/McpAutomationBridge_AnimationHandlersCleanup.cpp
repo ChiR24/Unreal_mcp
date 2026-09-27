@@ -3,18 +3,9 @@
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
 #include "RenderingThread.h"
-#if __has_include("Subsystems/AssetEditorSubsystem.h")
 #include "Subsystems/AssetEditorSubsystem.h"
-#define MCP_HAS_ASSET_EDITOR_SUBSYSTEM 1
-#elif __has_include("AssetEditorSubsystem.h")
-#include "AssetEditorSubsystem.h"
-#define MCP_HAS_ASSET_EDITOR_SUBSYSTEM 1
-#else
-#define MCP_HAS_ASSET_EDITOR_SUBSYSTEM 0
-#endif
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 bool HandleAnimationCleanupAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
   TSharedPtr<FJsonObject> &Resp = Context.Resp;
@@ -45,7 +36,6 @@ bool HandleAnimationCleanupAction(FActionContext &Context,
 
         if (UEditorAssetLibrary::DoesAssetExist(ArtifactPath)) {
 // Close editors to ensure asset can be deleted
-#if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
           if (GEditor) {
             UObject *Asset = LoadObject<UObject>(nullptr, *ArtifactPath);
             if (Asset) {
@@ -55,7 +45,6 @@ bool HandleAnimationCleanupAction(FActionContext &Context,
               }
             }
           }
-#endif
 
           // Flush before deleting to release references
           if (GEditor) {
@@ -105,9 +94,7 @@ bool HandleAnimationCleanupAction(FActionContext &Context,
       } else if (Failed.Num() > 0) {
         // Actual failure to delete something that exists
         bSuccess = false;
-        Message = TEXT("Some animation artifacts could not be removed");
-        ErrorCode = TEXT("CLEANUP_PARTIAL");
-        Resp->SetStringField(TEXT("error"), Message);
+        Context.Fail(TEXT("CLEANUP_PARTIAL"), TEXT("Some animation artifacts could not be removed"));
       } else if (Cleaned.Num() == 0 && Missing.Num() > 0 && Failed.Num() == 0) {
         // All artifacts were missing - not an error, just nothing to do
         // The end state (no artifacts at those paths) is what the user wanted
@@ -116,12 +103,9 @@ bool HandleAnimationCleanupAction(FActionContext &Context,
         Resp->SetBoolField(TEXT("noOp"), true);
       } else {
         bSuccess = false;
-        Message = TEXT("No animation artifacts were removed");
-        ErrorCode = TEXT("CLEANUP_NO_OP");
-        Resp->SetStringField(TEXT("error"), Message);
+        Context.Fail(TEXT("CLEANUP_NO_OP"), TEXT("No animation artifacts were removed"));
       }
     }
     return false;
 }
-#endif
 } // namespace McpAnimationHandlers

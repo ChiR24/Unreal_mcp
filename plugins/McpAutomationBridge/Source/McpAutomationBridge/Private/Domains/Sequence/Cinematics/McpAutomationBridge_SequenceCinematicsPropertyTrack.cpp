@@ -2,7 +2,6 @@
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Components/SceneComponent.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
 #include "GameFramework/Actor.h"
@@ -17,22 +16,12 @@
 #include "Tracks/MovieSceneIntegerTrack.h"
 #include "Tracks/MovieScenePropertyTrack.h"
 #include "UObject/UnrealType.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
 FProperty *ResolveBoundPropertyPath(UMovieScene *MovieScene, const FGuid &Guid,
                                     FString &InOutPath, FString &OutError) {
-  const FMovieScenePossessable *Possessable =
-      MovieScene ? MovieScene->FindPossessable(Guid) : nullptr;
-  const UClass *BoundClass =
-      Possessable ? Possessable->GetPossessedObjectClass() : nullptr;
-  FMovieSceneSpawnable *Spawnable =
-      MovieScene ? MovieScene->FindSpawnable(Guid) : nullptr;
-  UObject *DefaultObject =
-      BoundClass ? BoundClass->GetDefaultObject()
-                 : (Spawnable ? Spawnable->GetObjectTemplate() : nullptr);
+  UObject *DefaultObject = GetBindingTemplate(MovieScene, Guid);
   if (!DefaultObject) {
     OutError = TEXT("Binding has no resolvable object template");
     return nullptr;
@@ -94,15 +83,13 @@ bool AddTransformPropertyTrack(ULevelSequence *Sequence, const FGuid &Guid,
     Track = AddTrackForBinding(MovieScene, UMovieScene3DTransformTrack::StaticClass(), Guid);
   }
   UMovieScene3DTransformSection *Section =
-      Track ? Cast<UMovieScene3DTransformSection>(Track->CreateNewSection()) : nullptr;
+      Cast<UMovieScene3DTransformSection>(AddTrackSection(MovieScene, Track, bCreatedTrack));
   if (!Section) {
-    RemoveTrackAfterSectionFailure(MovieScene, Track, bCreatedTrack);
     OutResult = MakeResult(false, TEXT("add_property_track"),
                            TEXT("Failed to create transform section"),
                            TEXT("SECTION_CREATION_FAILED"));
     return true;
   }
-  Track->AddSection(*Section);
   Section->SetMask(FMovieSceneTransformMask(Channels));
   SetSectionRange(MovieScene, Section, Params, 100);
   MovieScene->Modify();
@@ -153,29 +140,13 @@ UClass *ResolvePropertyTrackClass(const FString &Requested,
              : nullptr;
 }
 }
-#endif
 
-bool HandleAddPropertyTrack(UMcpAutomationBridgeSubsystem *Self,
-                            const TSharedPtr<FJsonObject> &Params,
+bool HandleAddPropertyTrack(const TSharedPtr<FJsonObject> &Params,
                             TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
-  ULevelSequence *Sequence = LoadSequence(Params, OutResult);
-  if (!Sequence) return true;
+  ULevelSequence *Sequence = nullptr;
   FGuid Guid;
-  if (!ReadBindingGuid(Params, Guid)) {
-    // Same contradiction as the bound-track loader: the record declares
-    // actorName, so resolve the binding from it before refusing.
-    if (AActor *BoundActor = ResolveActor(Params)) {
-      Guid = ResolveOrCreateBinding(Sequence, BoundActor);
-    }
-    if (!Guid.IsValid()) {
-      OutResult = MakeResult(false, TEXT("add_property_track"),
-                             TEXT("actorName or bindingGuid is required"),
-                             TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-  }
+  if (!LoadSequenceAndBinding(Params, TEXT("add_property_track"), Sequence, Guid, OutResult))
+    return true;
   const FString RequestedName =
       GetString(Params, TEXT("propertyName"), TEXT("property"));
   if (RequestedName.IsEmpty()) {
@@ -230,15 +201,13 @@ bool HandleAddPropertyTrack(UMcpAutomationBridgeSubsystem *Self,
     return true;
   }
   Track->SetPropertyNameAndPath(Property->GetFName(), PropertyPath);
-  UMovieSceneSection *Section = Track->CreateNewSection();
+  UMovieSceneSection *Section = AddTrackSection(Sequence->GetMovieScene(), Track, true);
   if (!Section) {
-    RemoveTrackAfterSectionFailure(Sequence->GetMovieScene(), Track, true);
     OutResult = MakeResult(false, TEXT("add_property_track"),
                            TEXT("Failed to create property section"),
                            TEXT("SECTION_CREATION_FAILED"));
     return true;
   }
-  Track->AddSection(*Section);
   SetSectionRange(Sequence->GetMovieScene(), Section, Params, 100);
   Sequence->GetMovieScene()->Modify();
   Sequence->MarkPackageDirty();
@@ -251,11 +220,5 @@ bool HandleAddPropertyTrack(UMcpAutomationBridgeSubsystem *Self,
   OutResult->SetStringField(TEXT("propertyPath"), PropertyPath);
   OutResult->SetStringField(TEXT("propertyType"), ResolvedType);
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_property_track"),
-                         TEXT("Editor build required"),
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 }

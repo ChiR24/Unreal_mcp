@@ -3,7 +3,6 @@
 #include "UObject/UnrealType.h"
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 bool SetVehicleNumericOnStruct(UStruct *StructType, void *Container,
                                const TArray<FString> &PropertyNames,
                                double Value) {
@@ -155,5 +154,4 @@ bool ConfigureVehicleForwardGearRatios(UObject *Obj,
 
   return false;
 }
-#endif
 } // namespace McpAnimationHandlers

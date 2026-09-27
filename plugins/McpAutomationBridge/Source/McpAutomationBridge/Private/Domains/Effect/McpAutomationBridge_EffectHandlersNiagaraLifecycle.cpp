@@ -2,9 +2,7 @@
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "NiagaraComponent.h"
-#endif
 
 namespace McpEffectHandlers
 {
@@ -19,7 +17,6 @@ bool HandleNiagaraLifecycleAction(
         Context.Payload->TryGetStringField(TEXT("actorName"), SystemName);
     }
 
-#if WITH_EDITOR
     AActor* Actor = FindActorByLabel(SystemName);
     UNiagaraComponent* NiagaraComponent = Actor ? Actor->FindComponentByClass<UNiagaraComponent>() : nullptr;
     const bool bFound = NiagaraComponent != nullptr;
@@ -102,12 +99,5 @@ bool HandleNiagaraLifecycleAction(
         return true;
     }
     return false;
-#else
-    const FString Message = FString::Printf(TEXT("%s requires editor build."), *LowerSubAction);
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false, Message, nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 }

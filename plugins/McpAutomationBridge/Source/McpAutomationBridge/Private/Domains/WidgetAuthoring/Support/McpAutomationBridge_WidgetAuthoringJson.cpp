@@ -4,20 +4,6 @@
 
 namespace WidgetAuthoringHelpers
 {
-FLinearColor GetColorFromJsonWidget(const TSharedPtr<FJsonObject>& ColorObj, const FLinearColor& Default)
-{
-    if (!ColorObj.IsValid())
-    {
-        return Default;
-    }
-    FLinearColor Color = Default;
-    Color.R = ColorObj->HasField(TEXT("r")) ? GetJsonNumberField(ColorObj, TEXT("r")) : Default.R;
-    Color.G = ColorObj->HasField(TEXT("g")) ? GetJsonNumberField(ColorObj, TEXT("g")) : Default.G;
-    Color.B = ColorObj->HasField(TEXT("b")) ? GetJsonNumberField(ColorObj, TEXT("b")) : Default.B;
-    Color.A = ColorObj->HasField(TEXT("a")) ? GetJsonNumberField(ColorObj, TEXT("a")) : Default.A;
-    return Color;
-}
-
 TSharedPtr<FJsonObject> GetObjectField(const TSharedPtr<FJsonObject>& Payload, const FString& FieldName)
 {
     if (Payload.IsValid() && Payload->HasTypedField<EJson::Object>(FieldName))

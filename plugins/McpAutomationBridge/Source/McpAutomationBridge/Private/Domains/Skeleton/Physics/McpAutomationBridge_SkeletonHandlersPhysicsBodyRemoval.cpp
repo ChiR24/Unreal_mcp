@@ -1,6 +1,7 @@
+#include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersAssetLoading.h"
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -10,7 +11,6 @@
 #include "PhysicsEngine/SkeletalBodySetup.h"
 #endif
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
@@ -28,26 +28,16 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
         return true;
     }
 
-    UPhysicsAsset* PhysAsset = Cast<UPhysicsAsset>(
-        StaticLoadObject(UPhysicsAsset::StaticClass(), nullptr, *PhysicsAssetPath));
+    // LoadPhysicsAssetFromPath sanitizes the path (this loaded the raw input before).
+    FString Error;
+    UPhysicsAsset* PhysAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
     if (!PhysAsset)
     {
-        SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Physics asset not found: %s"), *PhysicsAssetPath),
-            TEXT("PHYSICS_ASSET_NOT_FOUND"));
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PHYSICS_ASSET_NOT_FOUND"));
         return true;
     }
 
-    int32 BodyIndex = INDEX_NONE;
-    for (int32 i = 0; i < PhysAsset->SkeletalBodySetups.Num(); ++i)
-    {
-        if (PhysAsset->SkeletalBodySetups[i] &&
-            PhysAsset->SkeletalBodySetups[i]->BoneName == FName(*BoneName))
-        {
-            BodyIndex = i;
-            break;
-        }
-    }
+    const int32 BodyIndex = PhysAsset->FindBodyIndex(FName(*BoneName));
 
     if (BodyIndex == INDEX_NONE)
     {
@@ -89,4 +79,3 @@ bool UMcpAutomationBridgeSubsystem::HandleRemovePhysicsBody(
     return true;
 }
 
-#endif // WITH_EDITOR

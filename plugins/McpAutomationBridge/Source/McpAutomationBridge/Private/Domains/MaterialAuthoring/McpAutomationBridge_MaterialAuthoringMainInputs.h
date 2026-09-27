@@ -3,8 +3,10 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialExpression.h"
+#include "Materials/MaterialExpressionCustom.h"
+#include "Materials/MaterialExpressionFunctionInput.h"
+#include "Materials/MaterialExpressionMaterialFunctionCall.h"
 
-#if WITH_EDITORONLY_DATA
 // Visits the main material inputs as (PinName, FExpressionInput&).
 //
 // Only eleven were listed here, which silently made whole classes of material
@@ -44,18 +46,37 @@ inline void ForEachMainMaterialInput(UMaterial* Material, TVisitor&& Visit)
   Visit(TEXT("Displacement"), MCP_GET_MATERIAL_INPUT(Material, Displacement));
 #endif
 }
-#endif
 
 // Main material input by pin name; nullptr when the name is not a main pin.
 inline FExpressionInput* GetMainMaterialInput(UMaterial* Material, const FString& PinName)
 {
   FExpressionInput* Found = nullptr;
-#if WITH_EDITORONLY_DATA
   if (Material) {
     ForEachMainMaterialInput(Material, [&](const TCHAR* Name, FExpressionInput& Input) {
       if (!Found && PinName == Name) { Found = &Input; }
     });
   }
-#endif
   return Found;
+}
+
+// Visits every input of Expr as (FExpressionInput&, PinName): the reflected
+// ExpressionInput properties by property name, then a Custom node's named
+// inputs and a function call's inputs by their declared names.
+template <typename TVisitor>
+inline void ForEachExpressionInput(UMaterialExpression* Expr, TVisitor&& Visit)
+{
+  if (!Expr) return;
+  for (TFieldIterator<FStructProperty> It(Expr->GetClass()); It; ++It) {
+    if (It->Struct && It->Struct->GetFName() == FName(TEXT("ExpressionInput"))) {
+      Visit(*It->ContainerPtrToValuePtr<FExpressionInput>(Expr), It->GetName());
+    }
+  }
+  if (UMaterialExpressionCustom* Custom = Cast<UMaterialExpressionCustom>(Expr)) {
+    for (FCustomInput& Input : Custom->Inputs) { Visit(Input.Input, Input.InputName.ToString()); }
+  }
+  if (UMaterialExpressionMaterialFunctionCall* Call = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
+    for (FFunctionExpressionInput& Input : Call->FunctionInputs) {
+      Visit(Input.Input, Input.ExpressionInput ? Input.ExpressionInput->InputName.ToString() : FString());
+    }
+  }
 }

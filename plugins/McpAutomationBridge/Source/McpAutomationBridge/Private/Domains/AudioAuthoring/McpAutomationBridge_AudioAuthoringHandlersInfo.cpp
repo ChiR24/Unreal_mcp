@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -11,7 +10,7 @@ TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const T
 		return nullptr;
 	}
 
-	FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
+	FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 	UObject* Asset = StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath);
 	if (!Asset)
 	{
@@ -71,4 +70,3 @@ TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const T
 	return Response;
 }
 }
-#endif

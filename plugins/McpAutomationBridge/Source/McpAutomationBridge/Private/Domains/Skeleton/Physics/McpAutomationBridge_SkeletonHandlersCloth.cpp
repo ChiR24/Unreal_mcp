@@ -3,22 +3,13 @@
 
 #include "Engine/SkeletalMesh.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#if __has_include("ClothingAsset/ClothingAssetBase.h")
-#include "ClothingAsset/ClothingAssetBase.h"
-#elif __has_include("ClothingAssetBase.h")
 #include "ClothingAssetBase.h"
-#endif
-#if __has_include("ClothingAsset.h")
 #include "ClothingAsset.h"
-#elif __has_include("ClothingAssetCommon.h")
-#include "ClothingAssetCommon.h"
-#endif
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 namespace
@@ -201,4 +192,3 @@ bool UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh(
     return true;
 }
 
-#endif // WITH_EDITOR

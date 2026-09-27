@@ -3,13 +3,10 @@
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
 UActorComponent *FindComponentByClassFragment(AActor *Actor, const TCHAR *Fragment) {
   if (!Actor) return nullptr;
@@ -22,11 +19,13 @@ UActorComponent *FindComponentByClassFragment(AActor *Actor, const TCHAR *Fragme
   return nullptr;
 }
 
+}
+
 bool ApplyNumber(UObject *Object, const TSharedPtr<FJsonObject> &Params,
                  const TCHAR *Field, const TCHAR *PropertyPath,
                  TArray<FString> &Applied) {
   double Value = 0.0;
-  if (!Object || !Params.IsValid() || !Params->TryGetNumberField(Field, Value)) {
+  if (!Object || !Params.IsValid() || !Params->TryGetNumberField(Field, Value) || !FMath::IsFinite(Value)) {
     return false;
   }
   void *Container = nullptr;
@@ -37,6 +36,8 @@ bool ApplyNumber(UObject *Object, const TSharedPtr<FJsonObject> &Params,
   if (bOk) Applied.Add(PropertyPath);
   return bOk;
 }
+
+namespace {
 
 bool ApplyNestedNumber(UObject *Object, const TSharedPtr<FJsonObject> &Params,
                        const TCHAR *ObjectField, const TCHAR *Field,
@@ -88,18 +89,15 @@ int32 ApplyCameraSettings(AActor *Actor, const TSharedPtr<FJsonObject> &Params,
 }
 
 }
-#endif
 
-bool HandleCreateCineCameraActor(UMcpAutomationBridgeSubsystem *Self,
-                                 const TSharedPtr<FJsonObject> &Params,
+bool HandleCreateCineCameraActor(const TSharedPtr<FJsonObject> &Params,
                                  TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
 #if !MCP_HAS_CINEMATIC_CAMERA
   OutResult = MakeResult(false, TEXT("create_cine_camera_actor"),
                          TEXT("CinematicCamera module is unavailable"),
                          TEXT("NOT_AVAILABLE"));
   return true;
-#elif WITH_EDITOR
+#else
   ULevelSequence *Sequence = nullptr;
   const FString ExplicitSequencePath =
       GetString(Params, TEXT("sequencePath"), TEXT("path"));
@@ -115,14 +113,10 @@ bool HandleCreateCineCameraActor(UMcpAutomationBridgeSubsystem *Self,
                            TEXT("CLASS_NOT_AVAILABLE"));
     return true;
   }
-  FVector Location = FVector::ZeroVector;
-  FRotator Rotation = FRotator::ZeroRotator;
-  const TSharedPtr<FJsonObject> *LocationObj = nullptr;
-  const TSharedPtr<FJsonObject> *RotationObj = nullptr;
-  if (Params->TryGetObjectField(TEXT("location"), LocationObj) && LocationObj)
-    McpPropertyReflection::JsonToVector(*LocationObj, Location);
-  if (Params->TryGetObjectField(TEXT("rotation"), RotationObj) && RotationObj)
-    McpPropertyReflection::JsonToRotator(*RotationObj, Rotation);
+  const bool bHasLocation = Params->HasField(TEXT("location"));
+  const bool bHasRotation = Params->HasField(TEXT("rotation"));
+  const FVector Location = ExtractVectorField(Params, TEXT("location"), FVector::ZeroVector);
+  const FRotator Rotation = ExtractRotatorField(Params, TEXT("rotation"), FRotator::ZeroRotator);
   const FString Label = GetString(Params, TEXT("actorName"), TEXT("label"));
   AActor *Actor = SpawnActorInActiveWorld<AActor>(CameraClass, Location, Rotation, Label);
   if (!Actor) {
@@ -134,8 +128,8 @@ bool HandleCreateCineCameraActor(UMcpAutomationBridgeSubsystem *Self,
   OutResult = MakeResult(true, TEXT("create_cine_camera_actor"),
                          TEXT("Cine camera actor created"));
   // Echo the transform inputs that were applied; rotation accepts pitch/yaw/roll or x/y/z (dogfood #132).
-  OutResult->SetBoolField(TEXT("locationApplied"), LocationObj != nullptr);
-  OutResult->SetBoolField(TEXT("rotationApplied"), RotationObj != nullptr);
+  OutResult->SetBoolField(TEXT("locationApplied"), bHasLocation);
+  OutResult->SetBoolField(TEXT("rotationApplied"), bHasRotation);
   if (ApplyCameraSettings(Actor, Params, OutResult) == INDEX_NONE) {
     Actor->Destroy();
     OutResult = MakeResult(false, TEXT("create_cine_camera_actor"),
@@ -148,8 +142,8 @@ bool HandleCreateCineCameraActor(UMcpAutomationBridgeSubsystem *Self,
     TArray<TSharedPtr<FJsonValue>> Applied;
     const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
     if (OutResult->TryGetArrayField(TEXT("appliedProperties"), Existing) && Existing) { Applied = *Existing; }
-    if (LocationObj) { Applied.Add(MakeShared<FJsonValueString>(TEXT("location"))); }
-    if (RotationObj) { Applied.Add(MakeShared<FJsonValueString>(TEXT("rotation"))); }
+    if (bHasLocation) { Applied.Add(MakeShared<FJsonValueString>(TEXT("location"))); }
+    if (bHasRotation) { Applied.Add(MakeShared<FJsonValueString>(TEXT("rotation"))); }
     OutResult->SetArrayField(TEXT("appliedProperties"), Applied);
   }
   OutResult->SetStringField(TEXT("actorName"), McpActorRef(Actor));
@@ -160,23 +154,17 @@ bool HandleCreateCineCameraActor(UMcpAutomationBridgeSubsystem *Self,
   }
   McpHandlerUtils::AddVerification(OutResult, Actor);
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("create_cine_camera_actor"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
-  return true;
 #endif
 }
 
-bool HandleConfigureCameraSettings(UMcpAutomationBridgeSubsystem *Self,
-                                   const TSharedPtr<FJsonObject> &Params,
+bool HandleConfigureCameraSettings(const TSharedPtr<FJsonObject> &Params,
                                    TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
 #if !MCP_HAS_CINEMATIC_CAMERA
   OutResult = MakeResult(false, TEXT("configure_camera_settings"),
                          TEXT("CinematicCamera module is unavailable"),
                          TEXT("NOT_AVAILABLE"));
   return true;
-#elif WITH_EDITOR
+#else
   AActor *Actor = ResolveActor(Params);
   if (!Actor) {
     OutResult = MakeResult(false, TEXT("configure_camera_settings"),
@@ -200,10 +188,6 @@ bool HandleConfigureCameraSettings(UMcpAutomationBridgeSubsystem *Self,
   }
   Actor->Modify();
   McpHandlerUtils::AddVerification(OutResult, Actor);
-  return true;
-#else
-  OutResult = MakeResult(false, TEXT("configure_camera_settings"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
   return true;
 #endif
 }

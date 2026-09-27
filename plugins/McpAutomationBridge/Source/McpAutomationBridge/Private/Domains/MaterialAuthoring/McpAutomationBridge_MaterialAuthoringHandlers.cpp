@@ -10,7 +10,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     return false;
   }
 
-#if WITH_EDITOR
   if (!Payload.IsValid()) {
     SendAutomationError(Socket, RequestId, TEXT("Missing payload."),
                         TEXT("INVALID_PAYLOAD"));
@@ -32,6 +31,24 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     SubAction = TEXT("disconnect_nodes");
   } else if (SubAction == TEXT("rebuild_material")) {
     SubAction = TEXT("compile_material");
+  } else if (SubAction == TEXT("remove_material_node")) {
+    SubAction = TEXT("delete_node");
+  } else if (SubAction == TEXT("get_material_function_info")) {
+    SubAction = TEXT("get_material_info");
+  }
+
+  // create_landscape/decal/post_process_material: create_material with a domain + blend preset.
+  static const TMap<FString, TPair<const TCHAR*, const TCHAR*>> MaterialPresets = {
+      {TEXT("create_landscape_material"), {TEXT("Surface"), TEXT("Opaque")}},
+      {TEXT("create_decal_material"), {TEXT("DeferredDecal"), TEXT("Translucent")}},
+      {TEXT("create_post_process_material"), {TEXT("PostProcess"), TEXT("Opaque")}},
+  };
+  TSharedPtr<FJsonObject> EffectivePayload = Payload;
+  if (const TPair<const TCHAR*, const TCHAR*>* Preset = MaterialPresets.Find(SubAction)) {
+    EffectivePayload = MakeShared<FJsonObject>(*Payload);
+    if (!EffectivePayload->HasField(TEXT("materialDomain"))) EffectivePayload->SetStringField(TEXT("materialDomain"), Preset->Key);
+    if (!EffectivePayload->HasField(TEXT("blendMode"))) EffectivePayload->SetStringField(TEXT("blendMode"), Preset->Value);
+    SubAction = TEXT("create_material");
   }
 
   using namespace McpMaterialAuthoringHandlers;
@@ -43,23 +60,12 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
           HandleManageMaterialAuthoringAction(StepId, Action, Step, Socket);
         });
   }
-    if (McpMaterialAuthoringHandlers::HandleCreateMaterial(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleSetBlendMode(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleSetShadingModel(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleSetMaterialDomain(this, RequestId, SubAction, Payload, Socket)) { return true; }
+    if (McpMaterialAuthoringHandlers::HandleCreateMaterial(this, RequestId, SubAction, EffectivePayload, Socket)) { return true; }
+    if (McpMaterialAuthoringHandlers::HandleSetMaterialEnumProperty(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleAddTextureSample(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleAddTextureCoordinate(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddScalarParameter(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddVectorParameter(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddStaticSwitchParameter(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddMathNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddSceneDataNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddConditionalNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddComponentMask(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddDotProduct(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddCrossProduct(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddDesaturation(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleAddAppendVector(this, RequestId, SubAction, Payload, Socket)) { return true; }
+    if (McpMaterialAuthoringHandlers::HandleAddParameterNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
+    if (McpMaterialAuthoringHandlers::HandleAddClassNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleAddCustomExpression(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleConnectNodes(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleDisconnectNodes(this, RequestId, SubAction, Payload, Socket)) { return true; }
@@ -70,12 +76,10 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     if (McpMaterialAuthoringHandlers::HandleSetScalarParameterValue(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetVectorParameterValue(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetTextureParameterValue(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleCreateSpecializedMaterial(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleAddLandscapeLayer(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleConfigureLayerBlend(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleCompileMaterial(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleGetMaterialInfo(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleGetMaterialFunctionInfo(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleFindNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleGetNodeConnections(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleGetNodeProperties(this, RequestId, SubAction, Payload, Socket)) { return true; }
@@ -85,21 +89,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     if (McpMaterialAuthoringHandlers::HandleGetNodeChain(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleGetConnectedSubgraph(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleAddMaterialNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleRemoveMaterialNode(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetNodePosition(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetMaterialParameter(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleGetMaterialNodeDetails(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleSetTwoSided(this, RequestId, SubAction, Payload, Socket)) { return true; }
-    if (McpMaterialAuthoringHandlers::HandleSetCastShadows(this, RequestId, SubAction, Payload, Socket)) { return true; }
 
   SendAutomationError(
       Socket, RequestId,
       FString::Printf(TEXT("Unknown subAction: %s"), *SubAction),
       TEXT("INVALID_SUBACTION"));
   return true;
-#else
-  SendAutomationError(Socket, RequestId, TEXT("Editor only."),
-                      TEXT("EDITOR_ONLY"));
-  return true;
-#endif
 }

@@ -7,7 +7,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 namespace
@@ -173,4 +172,3 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 	return Response;
 }
 }
-#endif

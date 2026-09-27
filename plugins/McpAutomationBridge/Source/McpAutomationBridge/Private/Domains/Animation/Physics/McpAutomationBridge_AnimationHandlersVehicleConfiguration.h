@@ -3,7 +3,6 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #if __has_include("PhysicsEngine/WheeledVehicleMovementComponent4W.h")
 #include "PhysicsEngine/WheeledVehicleMovementComponent4W.h"
 #define MCP_HAS_WHEELED_VEHICLE_4W 1
@@ -33,10 +32,8 @@
 #define MCP_HAS_WHEELED_VEHICLE_4W 1
 #define UWheeledVehicleMovementComponent4W UChaosWheeledVehicleMovementComponent
 #endif
-#endif
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 bool SetVehicleNumericOnStruct(UStruct *StructType, void *Container,
                                const TArray<FString> &PropertyNames,
                                double Value);
@@ -55,5 +52,4 @@ void ConfigureVehicleEngine(UObject *VehicleMC,
                             const TSharedPtr<FJsonObject> &Payload);
 void ConfigureVehicleTransmission(UObject *VehicleMC,
                                   const TSharedPtr<FJsonObject> &Payload);
-#endif
 } // namespace McpAnimationHandlers

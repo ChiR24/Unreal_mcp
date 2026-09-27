@@ -7,16 +7,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
-  FString SeqPath = ResolveSequencePath(Payload);
-  if (SeqPath.IsEmpty()) {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        TEXT("sequence_add_section requires a sequence path"), nullptr,
-        TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
-
   FString TrackName;
   Payload->TryGetStringField(TEXT("trackName"), TrackName);
   FString ActorName;
@@ -34,25 +24,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
   FString BindingId;
   Payload->TryGetStringField(TEXT("bindingId"), BindingId);
 
-  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
-  if (!Sequence || !Sequence->GetMovieScene()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
-                           nullptr, TEXT("SEQUENCE_NOT_FOUND"));
+  UMovieScene *MovieScene = nullptr;
+  ULevelSequence *Sequence = McpSequence::LoadOrReply(this, RequestId, Socket, Payload, TEXT("add_section"), MovieScene);
+  if (!Sequence) {
     return true;
   }
   FFrameNumber Start;
   FFrameNumber End;
   FString FrameError;
-  if (!McpSequenceFrameMath::TryFrameNumber(
-          StartFrame, Start, FrameError) ||
-      !McpSequenceFrameMath::TryFrameNumber(
-          EndFrame, End, FrameError)) {
-    SendAutomationResponse(Socket, RequestId, false, FrameError, nullptr,
-                           TEXT("INVALID_ARGUMENT"));
+  if (!McpSequenceFrameMath::TryFrameNumber(StartFrame, Start, FrameError) ||
+      !McpSequenceFrameMath::TryFrameNumber(EndFrame, End, FrameError)) {
+    SendAutomationResponse(Socket, RequestId, false, FrameError, nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
 
-  UMovieScene *MovieScene = Sequence->GetMovieScene();
   UMovieSceneTrack *Track = FindTrackByName(MovieScene, TrackName, true, ActorName);
 
   if (!Track) {
@@ -109,10 +94,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
                            TEXT("SECTION_CREATION_FAILED"));
   }
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_add_section requires editor build"),
-                         nullptr, TEXT("EDITOR_ONLY"));
-  return true;
-#endif
 }

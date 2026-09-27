@@ -1,7 +1,6 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -39,49 +38,19 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
       // Auto-disconnect: clear all references to this node from other expressions
       for (UMaterialExpression *Other : AllExpr) {
         if (!Other || Other == Expr) continue;
-        for (TFieldIterator<FStructProperty> It(Other->GetClass()); It; ++It) {
-          FStructProperty *SP = *It;
-          if (!SP->Struct || SP->Struct->GetFName() != FName(TEXT("ExpressionInput"))) continue;
-          FExpressionInput *InPtr = SP->ContainerPtrToValuePtr<FExpressionInput>(Other);
-          if (InPtr && InPtr->Expression == Expr) {
-            InPtr->Expression = nullptr;
-            InPtr->OutputIndex = 0;
-          }
-        }
-        if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Other)) {
-          for (FCustomInput &CI : CE->Inputs) {
-            if (CI.Input.Expression == Expr) { CI.Input.Expression = nullptr; CI.Input.OutputIndex = 0; }
-          }
-        }
-        if (UMaterialExpressionMaterialFunctionCall *MFC = Cast<UMaterialExpressionMaterialFunctionCall>(Other)) {
-          for (FFunctionExpressionInput &FI : MFC->FunctionInputs) {
-            if (FI.Input.Expression == Expr) { FI.Input.Expression = nullptr; FI.Input.OutputIndex = 0; }
-          }
-        }
+        ForEachExpressionInput(Other, [&](FExpressionInput &Input, const FString &) {
+          if (Input.Expression == Expr) { Input.Expression = nullptr; Input.OutputIndex = 0; }
+        });
       }
 
       // Clear Material main pin references
       if (Material) {
-#if WITH_EDITORONLY_DATA
         ForEachMainMaterialInput(Material, [&](const TCHAR *, FExpressionInput &Input) {
           if (Input.Expression == Expr) { Input.Expression = nullptr; Input.OutputIndex = 0; }
         });
-#endif
       }
 
-      if (Material) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        Material->GetExpressionCollection().RemoveExpression(Expr);
-#else
-        Material->Expressions.Remove(Expr);
-#endif
-      } else {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-        Function->GetExpressionCollection().RemoveExpression(Expr);
-#else
-        Function->FunctionExpressions.Remove(Expr);
-#endif
-      }
+      AllExpr.Remove(Expr); // what RemoveExpression does on 5.1+, the array itself on 5.0
       Removed.Add(NId);
     }
 
@@ -103,4 +72,3 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
   return false;
 }
 }
-#endif

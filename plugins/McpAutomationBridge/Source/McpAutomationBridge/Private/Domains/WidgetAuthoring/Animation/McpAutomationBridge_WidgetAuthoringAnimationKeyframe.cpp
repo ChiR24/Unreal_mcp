@@ -22,27 +22,12 @@ bool HandleWidgetAuthoringAnimationKeyframe(UMcpAutomationBridgeSubsystem& Subsy
                                             TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
                                             TSharedPtr<FJsonObject> ResultJson)
 {
-    const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
     const FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
     const double Time = GetJsonNumberField(Payload, TEXT("time"), 0.0);
-    if (WidgetPath.IsEmpty() || AnimationName.IsEmpty())
-    {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("Missing required parameters: widgetPath, animationName"), TEXT("MISSING_PARAMETER"));
-        return true;
-    }
-    UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-    if (!WidgetBP)
-    {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-        return true;
-    }
-    UWidgetAnimation* Animation = WidgetAuthoringHelpers::FindWidgetAnimation(WidgetBP, AnimationName);
+    UWidgetBlueprint* WidgetBP = nullptr;
+    UWidgetAnimation* Animation = ResolveWidgetAnimation(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
     if (!Animation)
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Animation '%s' not found; create it with create_widget_animation first"), *AnimationName),
-            TEXT("ANIMATION_NOT_FOUND"));
         return true;
     }
     FString SlotName = GetSlotName(Payload);
@@ -50,16 +35,7 @@ bool HandleWidgetAuthoringAnimationKeyframe(UMcpAutomationBridgeSubsystem& Subsy
     {
         SlotName = Animation->AnimationBindings[0].WidgetName.ToString();
     }
-    UWidget* TargetWidget = nullptr;
-    if (WidgetBP->WidgetTree && !SlotName.IsEmpty())
-    {
-        WidgetBP->WidgetTree->ForEachWidget([&](UWidget* Widget) {
-            if (Widget && Widget->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
-            {
-                TargetWidget = Widget;
-            }
-        });
-    }
+    UWidget* TargetWidget = WidgetBP->WidgetTree && !SlotName.IsEmpty() ? FindWidgetByName(WidgetBP->WidgetTree, SlotName) : nullptr;
     if (!TargetWidget)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,

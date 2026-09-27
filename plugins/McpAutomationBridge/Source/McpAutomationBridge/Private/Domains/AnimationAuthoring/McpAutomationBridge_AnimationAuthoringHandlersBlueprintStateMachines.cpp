@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleBlueprintStateMachineActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -36,7 +35,6 @@ TSharedPtr<FJsonObject> HandleBlueprintStateMachineActions(const FString& SubAct
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
         if (!AnimGraph)
@@ -90,16 +88,9 @@ TSharedPtr<FJsonObject> HandleBlueprintStateMachineActions(const FString& SubAct
 
         Response->SetStringField(TEXT("nodeName"), StateMachineName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State machine '%s' created with entry node"), *StateMachineName));
-#else
-        // AnimGraph headers not available - return error instead of fake success
-        ANIM_ERROR_RESPONSE(
-            FString::Printf(TEXT("Cannot create state machine '%s': AnimGraph module headers not available in this build. Rebuild with AnimGraph module enabled."), *StateMachineName),
-            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
-#endif
         return Response;
     }
     return nullptr;
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

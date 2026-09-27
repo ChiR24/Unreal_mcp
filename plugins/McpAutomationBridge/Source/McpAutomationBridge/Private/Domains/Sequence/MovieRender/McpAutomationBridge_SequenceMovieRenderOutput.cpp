@@ -19,18 +19,6 @@
 
 namespace McpSequenceMovieRender {
 namespace {
-bool TryGetInt(const TSharedPtr<FJsonObject> &Payload, const TCHAR *Name,
-               int32 &Out) {
-  return Payload.IsValid() && Payload->TryGetNumberField(Name, Out);
-}
-
-bool TryGetSettingsInt(const TSharedPtr<FJsonObject> &Payload, const TCHAR *Name,
-                       int32 &Out) {
-  const TSharedPtr<FJsonObject> *Settings = nullptr;
-  return Payload.IsValid() && Payload->TryGetObjectField(TEXT("settings"), Settings) &&
-         Settings && Settings->IsValid() && (*Settings)->TryGetNumberField(Name, Out);
-}
-
 /**
  * The sequence's first frame, in DISPLAY frames.
  *
@@ -52,16 +40,6 @@ int32 SequencePlaybackStartDisplayFrame(const UMoviePipelineExecutorJob *Job) {
                                    MovieScene->GetDisplayRate())
       .FloorToFrame()
       .Value;
-}
-
-bool ParseResolution(const FString &Text, FIntPoint &Out) {
-  FString Left, Right;
-  if (!Text.Split(TEXT("x"), &Left, &Right) &&
-      !Text.Split(TEXT("X"), &Left, &Right))
-    return false;
-  Out.X = FCString::Atoi(*Left);
-  Out.Y = FCString::Atoi(*Right);
-  return Out.X > 0 && Out.Y > 0;
 }
 
 struct FOutputSettingsSnapshot {
@@ -145,7 +123,7 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
   if (Payload.IsValid() &&
       Payload->TryGetStringField(TEXT("resolution"), TextValue) &&
       !TextValue.IsEmpty()) {
-    if (!ParseResolution(TextValue, Resolution)) {
+    if (!TryParseResolution(TextValue, Resolution)) {
       OutMessage = TEXT("resolution must use WIDTHxHEIGHT format.");
       OutCode = TEXT("INVALID_RESOLUTION");
       return nullptr;
@@ -153,8 +131,8 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
     Output->OutputResolution = Resolution;
   }
   int32 Width = 0, Height = 0;
-  if (TryGetInt(Payload, TEXT("width"), Width) &&
-      TryGetInt(Payload, TEXT("height"), Height)) {
+  if (Payload.IsValid() && Payload->TryGetNumberField(TEXT("width"), Width) &&
+      Payload->TryGetNumberField(TEXT("height"), Height)) {
     if (Width <= 0 || Height <= 0) {
       OutMessage = TEXT("width and height must be positive.");
       OutCode = TEXT("INVALID_RESOLUTION");
@@ -173,8 +151,8 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
   }
 
   int32 StartFrame = 0, EndFrame = 0;
-  if (TryGetInt(Payload, TEXT("startFrame"), StartFrame) &&
-      TryGetInt(Payload, TEXT("endFrame"), EndFrame)) {
+  if (Payload.IsValid() && Payload->TryGetNumberField(TEXT("startFrame"), StartFrame) &&
+      Payload->TryGetNumberField(TEXT("endFrame"), EndFrame)) {
     // The MRQ playback range is END-EXCLUSIVE, so endFrame == startFrame is an
     // empty render, not a one-frame render. Accepting it queued a job that
     // produced no frames and reported success.
@@ -224,15 +202,11 @@ bool HandleConfigureOutputSettings(UMcpAutomationBridgeSubsystem *Subsystem,
                                    const TSharedPtr<FJsonObject> &Payload,
                                    TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Message, Code;
-  UMoviePipelineQueueSubsystem *QueueSubsystem =
-      GetQueueSubsystem(Message, Code);
-  if (!QueueSubsystem)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
-  UMoviePipelineQueue *Queue = QueueSubsystem->GetQueue();
+  UMoviePipelineQueue *Queue = nullptr;
   UMoviePipelineExecutorJob *Job =
-      ResolveJob(Payload, Queue, Message, Code);
+      ResolveRequestJob(Subsystem, RequestId, Socket, Payload, Queue);
   if (!Job)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+    return true;
   Message.Reset();
   if (!ApplyOutputSettings(Job, Payload, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;

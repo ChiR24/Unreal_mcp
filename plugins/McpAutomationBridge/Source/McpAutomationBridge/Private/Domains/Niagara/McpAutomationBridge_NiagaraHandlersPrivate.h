@@ -6,7 +6,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Async/Async.h"
@@ -23,11 +22,7 @@
 #include "NiagaraSystem.h"
 #include "UObject/Package.h"
 
-#if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
-#elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
-#endif
 
 #if __has_include("ViewModels/Stack/NiagaraStackGraphUtilities.h")
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
@@ -45,5 +40,4 @@
 #define MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW 1
 #else
 #define MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW 0
-#endif
 #endif

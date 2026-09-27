@@ -5,16 +5,6 @@
 namespace McpSequenceRecordReplay
 {
 #if MCP_SEQUENCE_HAS_TAKE_RECORDER_API
-TArray<FString> GetTakeRecorderStringArray(
-    const TSharedPtr<FJsonObject>& Payload,
-    const TCHAR* FieldName)
-{
-    TArray<FString> Result;
-    FString Ignored;
-    ReadTakeRecorderStringArray(Payload, FieldName, Result, Ignored);
-    return Result;
-}
-
 bool ConfigureSources(
     UTakeRecorderPanel* Panel,
     const TSharedPtr<FJsonObject>& Payload,

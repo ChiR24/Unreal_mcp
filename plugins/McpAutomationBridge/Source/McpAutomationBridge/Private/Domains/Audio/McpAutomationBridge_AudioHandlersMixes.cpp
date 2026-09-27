@@ -3,7 +3,6 @@
 
 namespace McpAudioHandlers
 {
-#if WITH_EDITOR
 bool HandleMixActions(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -11,8 +10,7 @@ bool HandleMixActions(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-  if (Lower == TEXT("push_sound_mix") ||
-             Lower == TEXT("audio_push_sound_mix")) {
+  if (Lower == TEXT("push_sound_mix")) {
     FString MixName;
     if (!Payload->TryGetStringField(TEXT("mixName"), MixName) ||
         MixName.IsEmpty()) {
@@ -43,8 +41,7 @@ bool HandleMixActions(
     return true;
   }
 
-  else if (Lower == TEXT("pop_sound_mix") ||
-             Lower == TEXT("audio_pop_sound_mix")) {
+  else if (Lower == TEXT("pop_sound_mix")) {
     FString MixName;
     if (!Payload->TryGetStringField(TEXT("mixName"), MixName) ||
         MixName.IsEmpty()) {
@@ -75,17 +72,14 @@ bool HandleMixActions(
     return true;
   }
 
-  else if (Lower == TEXT("set_sound_mix_class_override") ||
-             Lower == TEXT("audio_set_sound_mix_class_override")) {
+  else if (Lower == TEXT("set_sound_mix_class_override")) {
     FString MixName, ClassName;
     if (!Payload->TryGetStringField(TEXT("mixName"), MixName) || MixName.IsEmpty()) {
       if (!Payload->TryGetStringField(TEXT("mix"), MixName) || MixName.IsEmpty()) {
         Payload->TryGetStringField(TEXT("name"), MixName);
       }
     }
-    if (!Payload->TryGetStringField(TEXT("soundClassName"), ClassName) || ClassName.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("soundClass"), ClassName);
-    }
+    Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
 
     USoundMix *Mix = ResolveSoundMix(MixName);
     USoundClass *Class = ResolveSoundClass(ClassName);
@@ -104,7 +98,6 @@ bool HandleMixActions(
     double FadeTime = 1.0;
     Payload->TryGetNumberField(TEXT("fadeInTime"), FadeTime);
     bool bApply = true;
-    Payload->TryGetBoolField(TEXT("applyToChildren"), bApply);
 
     if (GEditor && GEditor->GetEditorWorldContext().World()) {
       UGameplayStatics::SetSoundMixClassOverride(
@@ -123,17 +116,14 @@ bool HandleMixActions(
     return true;
   }
 
-  else if (Lower == TEXT("clear_sound_mix_class_override") ||
-             Lower == TEXT("audio_clear_sound_mix_class_override")) {
+  else if (Lower == TEXT("clear_sound_mix_class_override")) {
     FString MixName, ClassName;
     if (!Payload->TryGetStringField(TEXT("mixName"), MixName) || MixName.IsEmpty()) {
       if (!Payload->TryGetStringField(TEXT("mix"), MixName) || MixName.IsEmpty()) {
         Payload->TryGetStringField(TEXT("name"), MixName);
       }
     }
-    if (!Payload->TryGetStringField(TEXT("soundClassName"), ClassName) || ClassName.IsEmpty()) {
-      Payload->TryGetStringField(TEXT("soundClass"), ClassName);
-    }
+    Payload->TryGetStringField(TEXT("soundClassName"), ClassName);
 
     USoundMix *Mix = ResolveSoundMix(MixName);
     USoundClass *Class = ResolveSoundClass(ClassName);
@@ -187,5 +177,4 @@ bool HandleMixActions(
   }
   return false;
 }
-#endif
 }

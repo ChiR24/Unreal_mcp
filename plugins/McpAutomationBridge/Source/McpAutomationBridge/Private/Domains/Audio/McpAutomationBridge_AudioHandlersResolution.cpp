@@ -3,7 +3,6 @@
 
 namespace McpAudioHandlers
 {
-#if WITH_EDITOR
 USoundBase *ResolveSoundAsset(const FString &SoundPath) {
 	if (SoundPath.IsEmpty())
 		return nullptr;
@@ -166,5 +165,4 @@ USoundClass *ResolveSoundClass(const FString &ClassPath) {
   }
   return nullptr;
 }
-#endif
 }

@@ -1,14 +1,12 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
     if (SubAction == TEXT("create_aim_offset"))
     {
-#if MCP_HAS_BLENDSPACE_FACTORY
     FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
     FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Animations")));
     FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
@@ -59,9 +57,6 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Aim Offset '%s' created"), *Name));
-#else
-        ANIM_ERROR_RESPONSE(TEXT("Blend space factory not available"), TEXT("NOT_SUPPORTED"));
-#endif
         return Response;
     }
 
@@ -118,4 +113,3 @@ TSharedPtr<FJsonObject> HandleAimOffsetActions(const FString& SubAction, const T
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

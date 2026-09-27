@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Domains/Sequence/Cinematics/McpAutomationBridge_SequenceCinematics.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -14,7 +15,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
     return true;
   }
 
-#if WITH_EDITOR
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
@@ -23,7 +23,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
     return true;
   }
 
-#if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
   if (GEditor) {
     FString CameraLabel;
     LocalPayload->TryGetStringField(TEXT("actorName"), CameraLabel);
@@ -37,13 +36,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
     if (Spawned) {
       if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
         if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
-          FGuid BindingGuid = MovieScene->AddPossessable(
-              Spawned->GetActorLabel(), Spawned->GetClass());
-          if (MovieScene->FindPossessable(BindingGuid)) {
-            LevelSeq->BindPossessableObject(
-                BindingGuid, *Spawned, Spawned->GetWorld());
+          const FGuid BindingGuid = McpSequenceCinematics::ResolveOrCreateBinding(LevelSeq, Spawned);
+          if (BindingGuid.IsValid()) {
             LevelSeq->MarkPackageDirty();
-            MovieScene->Modify();
             Resp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
           }
         }
@@ -60,18 +55,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddCamera(
   SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to add camera"),
                          nullptr, TEXT("ADD_CAMERA_FAILED"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("UEditorActorSubsystem not available"), nullptr,
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_add_camera requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActor(
@@ -94,19 +77,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActor(
     return true;
   }
 
-#if WITH_EDITOR
   TSharedPtr<FJsonObject> ForwardPayload = McpHandlerUtils::CreateResultObject();
   ForwardPayload->SetStringField(TEXT("path"), SeqPath);
   TArray<TSharedPtr<FJsonValue>> NamesArray;
   NamesArray.Add(MakeShared<FJsonValueString>(ActorName));
   ForwardPayload->SetArrayField(TEXT("actorNames"), NamesArray);
   return HandleSequenceAddActors(RequestId, ForwardPayload, Socket);
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_add_actor requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
@@ -130,7 +106,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
     return true;
   }
 
-#if WITH_EDITOR
   TArray<FString> Names;
   Names.Reserve(Arr->Num());
   for (const TSharedPtr<FJsonValue> &V : *Arr) {
@@ -152,7 +127,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
     return true;
   }
 
-#if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
   if (UEditorActorSubsystem *ActorSS =
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
     TArray<TSharedPtr<FJsonValue>> Results;
@@ -171,11 +145,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
           if (MovieScene) {
             LevelSeq->Modify();
             MovieScene->Modify();
-            FGuid BindingGuid = MovieScene->AddPossessable(
-                Found->GetActorLabel(), Found->GetClass());
-            if (MovieScene->FindPossessable(BindingGuid)) {
-              LevelSeq->BindPossessableObject(BindingGuid, *Found,
-                                              Found->GetWorld());
+            // Reuses an existing binding of the actor instead of adding a duplicate possessable.
+            const FGuid BindingGuid = McpSequenceCinematics::ResolveOrCreateBinding(LevelSeq, Found);
+            if (BindingGuid.IsValid()) {
               LevelSeq->MarkPackageDirty();
               Item->SetBoolField(TEXT("success"), true);
               Item->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
@@ -229,16 +201,5 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddActors(
       Socket, RequestId, false, TEXT("EditorActorSubsystem not available"),
       nullptr, TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                                    TEXT("UEditorActorSubsystem not available"),
-                                    nullptr, TEXT("NOT_AVAILABLE"));
-#endif
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_add_actors requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

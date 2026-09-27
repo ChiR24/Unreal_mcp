@@ -1,6 +1,5 @@
 #include "Domains/MetaHuman/McpAutomationBridge_MetaHumanHandlers.h"
 
-#if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "Factories/Factory.h"
 #include "IAssetTools.h"
@@ -84,4 +83,3 @@ bool HandleCreateMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& R
     return true;
 }
 }
-#endif

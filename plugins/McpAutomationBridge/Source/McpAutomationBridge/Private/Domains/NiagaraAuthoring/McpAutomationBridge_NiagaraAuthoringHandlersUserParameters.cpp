@@ -1,88 +1,7 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
-bool AddOrSetFloatUserParameter(UNiagaraSystem* System, const FString& ParamName, float Value)
-{
-    if (!System || ParamName.IsEmpty())
-    {
-        return false;
-    }
-    FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-    FNiagaraVariable Param(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName));
-    if (!UserStore.FindParameterVariable(Param))
-    {
-        UserStore.AddParameter(Param, true);
-    }
-    if (!UserStore.FindParameterVariable(Param))
-    {
-        return false;
-    }
-    UserStore.SetParameterValue(Value, Param);
-    return true;
-}
-
-bool AddOrSetBoolUserParameter(UNiagaraSystem* System, const FString& ParamName, bool Value)
-{
-    if (!System || ParamName.IsEmpty())
-    {
-        return false;
-    }
-    FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-    FNiagaraVariable Param(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName));
-    if (!UserStore.FindParameterVariable(Param))
-    {
-        UserStore.AddParameter(Param, true);
-    }
-    if (!UserStore.FindParameterVariable(Param))
-    {
-        return false;
-    }
-    UserStore.SetParameterValue(FNiagaraBool(Value), Param);
-    return true;
-}
-
-bool AddOrSetVectorUserParameter(UNiagaraSystem* System, const FString& ParamName, const FVector& Value)
-{
-    if (!System || ParamName.IsEmpty())
-    {
-        return false;
-    }
-    FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-    FNiagaraVariable Param(FNiagaraTypeDefinition::GetVec3Def(), FName(*ParamName));
-    if (!UserStore.FindParameterVariable(Param))
-    {
-        UserStore.AddParameter(Param, true);
-    }
-    if (!UserStore.FindParameterVariable(Param))
-    {
-        return false;
-    }
-    UserStore.SetParameterValue(Value, Param);
-    return true;
-}
-
-bool AddOrSetColorUserParameter(UNiagaraSystem* System, const FString& ParamName, const FLinearColor& Value)
-{
-    if (!System || ParamName.IsEmpty())
-    {
-        return false;
-    }
-    FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-    FNiagaraVariable Param(FNiagaraTypeDefinition::GetColorDef(), FName(*ParamName));
-    if (!UserStore.FindParameterVariable(Param))
-    {
-        UserStore.AddParameter(Param, true);
-    }
-    if (!UserStore.FindParameterVariable(Param))
-    {
-        return false;
-    }
-    UserStore.SetParameterValue(Value, Param);
-    return true;
-}
-
 bool AddDataInterfaceUserParameter(UNiagaraSystem* System, const FString& ParamName, UClass* DataInterfaceClass)
 {
     if (!System || ParamName.IsEmpty() || !DataInterfaceClass || !DataInterfaceClass->IsChildOf(UNiagaraDataInterface::StaticClass()) || DataInterfaceClass->HasAnyClassFlags(CLASS_Abstract))
@@ -126,4 +45,3 @@ FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType)
     return FNiagaraTypeDefinition::GetFloatDef();
 }
 }
-#endif

@@ -8,7 +8,6 @@ class AActor;
 class FMcpBridgeWebSocket;
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 struct FActionContext {
   UMcpAutomationBridgeSubsystem &Bridge;
   const FString &RequestId;
@@ -18,11 +17,15 @@ struct FActionContext {
   FString &Message;
   FString &ErrorCode;
   TFunction<AActor *(const FString &)> FindActorByName;
-  TFunction<bool(const FString &, const TSharedPtr<FJsonObject> &)>
-      InvokePrivateAnimationHandler;
+
+  // A refusal sets Message, ErrorCode and the reply's error field together.
+  void Fail(const TCHAR *Code, const FString &InMessage) {
+    Message = InMessage;
+    ErrorCode = Code;
+    Resp->SetStringField(TEXT("error"), Message);
+  }
 };
 
 using FActionHandler = bool (*)(FActionContext &Context,
                                 const TSharedPtr<FJsonObject> &Payload);
-#endif
 } // namespace McpAnimationHandlers

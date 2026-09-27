@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 /**
@@ -17,12 +16,8 @@ bool HandleSetNodePosition(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     return false;
   }
 
-  FString AssetPath, NodeId;
-  if ((!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) || AssetPath.IsEmpty()) &&
-      (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())) {
-    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'materialPath' (or 'assetPath')."), TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
+  LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
+  FString NodeId;
   if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {
     Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."), TEXT("INVALID_ARGUMENT"));
     return true;
@@ -41,25 +36,6 @@ bool HandleSetNodePosition(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     Bridge->SendAutomationError(Socket, RequestId,
                         TEXT("Both 'x' and 'y' (or 'posX'/'posY') are required."),
                         TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
-
-  FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
-  if (ValidatedPath.IsEmpty()) {
-    Bridge->SendAutomationError(Socket, RequestId,
-                        FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
-                        TEXT("INVALID_PATH"));
-    return true;
-  }
-  AssetPath = ValidatedPath;
-
-  UMaterial *Material = nullptr;
-  UMaterialFunction *Function = nullptr;
-  LoadMaterialOrFunction(AssetPath, Material, Function);
-  if (!Material && !Function) {
-    Bridge->SendAutomationError(Socket, RequestId,
-                        TEXT("Could not load Material or Material Function."),
-                        TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
@@ -91,4 +67,3 @@ bool HandleSetNodePosition(UMcpAutomationBridgeSubsystem* Bridge, const FString&
   return true;
 }
 }
-#endif

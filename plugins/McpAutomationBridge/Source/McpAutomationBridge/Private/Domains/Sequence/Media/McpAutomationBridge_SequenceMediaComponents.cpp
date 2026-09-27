@@ -16,25 +16,12 @@ AActor *FindMediaActorByName(const FString &ActorName) {
   if (ActorName.IsEmpty() || !GEditor) {
     return nullptr;
   }
-  if (GEditor->PlayWorld) {
-    for (TActorIterator<AActor> It(GEditor->PlayWorld.Get()); It; ++It) {
-      AActor *Actor = *It;
-      if (Actor && (Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase) ||
-                    Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
-                    Actor->GetPathName().Equals(ActorName, ESearchCase::IgnoreCase))) {
-        return Actor;
-      }
-    }
+  // The play world first (live actors), then the editor level.
+  if (AActor *Actor = FindActorByNameInWorldForMcp(GEditor->PlayWorld, ActorName, true)) {
+    return Actor;
   }
-  if (UEditorActorSubsystem *ActorSubsystem =
-          GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
-    for (AActor *Actor : ActorSubsystem->GetAllLevelActors()) {
-      if (Actor && (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
-                    Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase) ||
-                    Actor->GetPathName().Equals(ActorName, ESearchCase::IgnoreCase))) {
-        return Actor;
-      }
-    }
+  if (AActor *Actor = FindActorByNameInWorldForMcp(GEditor->GetEditorWorldContext().World(), ActorName, true)) {
+    return Actor;
   }
   return McpHandlerUtils::FindActorByName(ActorName);
 }

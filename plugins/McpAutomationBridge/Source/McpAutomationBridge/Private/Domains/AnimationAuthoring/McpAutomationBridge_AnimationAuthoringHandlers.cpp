@@ -3,7 +3,6 @@
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 
-#if WITH_EDITOR
 
 using namespace McpAnimationAuthoring;
 
@@ -117,11 +116,6 @@ static TSharedPtr<FJsonObject> HandleAnimationAuthoringRequest(const TSharedPtr<
         return Result;
     }
 
-    if (TSharedPtr<FJsonObject> Result = HandleRigUtilityActions(SubAction, Params, Response))
-    {
-        return Result;
-    }
-
     if (TSharedPtr<FJsonObject> Result = HandleIKRigActions(SubAction, Params, Response))
     {
         return Result;
@@ -159,7 +153,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAnimationAuthoringAction(
     if (Result.IsValid())
     {
         bool bSuccess = Result->HasField(TEXT("success")) && GetJsonBoolField(Result, TEXT("success"));
-        FString Message = Result->HasField(TEXT("message")) ? GetJsonStringField(Result, TEXT("message")) : TEXT("");
+        FString Message = GetJsonStringField(Result, TEXT("message"), TEXT(""));
 
         if (bSuccess)
         {
@@ -167,8 +161,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAnimationAuthoringAction(
         }
         else
         {
-            FString Error = Result->HasField(TEXT("error")) ? GetJsonStringField(Result, TEXT("error")) : TEXT("Unknown error");
-            FString ErrorCode = Result->HasField(TEXT("errorCode")) ? GetJsonStringField(Result, TEXT("errorCode")) : TEXT("ANIMATION_AUTHORING_ERROR");
+            FString Error = GetJsonStringField(Result, TEXT("error"), TEXT("Unknown error"));
+            FString ErrorCode = GetJsonStringField(Result, TEXT("errorCode"), TEXT("ANIMATION_AUTHORING_ERROR"));
             // SendAutomationError carries only a message and a code, so every
             // field a failing authoring handler had already gathered -- the
             // states that DO exist, the animation paths that failed to load,
@@ -191,4 +185,3 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAnimationAuthoringAction(
     SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to process animation authoring action"), TEXT("PROCESSING_FAILED"));
     return true;
 }
-#endif // WITH_EDITOR

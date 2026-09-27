@@ -5,7 +5,6 @@
 #include "Domains/Sequence/McpAutomationBridge_SequencePathSecurity.h"
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
-#if WITH_EDITOR
 #include "AssetToolsModule.h"
 #include "Factories/Factory.h"
 #include "Misc/PackageName.h"
@@ -14,10 +13,8 @@
 #include "Sections/MovieSceneSubSection.h"
 #include "Tracks/MovieSceneCinematicShotTrack.h"
 #include "Tracks/MovieSceneSubTrack.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
 bool ResolveAssetTarget(const TSharedPtr<FJsonObject> &Params, FString &OutName,
                         FString &OutFolder, FString &OutPath) {
@@ -49,13 +46,9 @@ bool ResolveAssetTarget(const TSharedPtr<FJsonObject> &Params, FString &OutName,
 }
 
 }
-#endif
 
-bool HandleCreateMasterSequence(UMcpAutomationBridgeSubsystem *Self,
-                                const TSharedPtr<FJsonObject> &Params,
+bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
                                 TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   FString Name, Folder, FullPath;
   if (!ResolveAssetTarget(Params, Name, Folder, FullPath)) {
     OutResult = MakeResult(false, TEXT("create_master_sequence"),
@@ -91,14 +84,7 @@ bool HandleCreateMasterSequence(UMcpAutomationBridgeSubsystem *Self,
     McpHandlerUtils::AddVerification(OutResult, ExistingSequence);
     return true;
   }
-  UClass *FactoryClass =
-      LoadClass<UFactory>(nullptr, TEXT("/Script/LevelSequenceEditor.LevelSequenceFactoryNew"));
-  UFactory *Factory =
-      FactoryClass ? NewObject<UFactory>(GetTransientPackage(), FactoryClass) : nullptr;
-  UObject *NewObj = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"))
-                        .Get()
-                        .CreateAsset(Name, Folder, ULevelSequence::StaticClass(), Factory);
-  ULevelSequence *Sequence = Cast<ULevelSequence>(NewObj);
+  ULevelSequence *Sequence = McpSequence::CreateSequenceAsset(Name, Folder);
   if (!Sequence || !Sequence->GetMovieScene()) {
     OutResult = MakeResult(false, TEXT("create_master_sequence"),
                            TEXT("Failed to create LevelSequence asset"),
@@ -142,18 +128,10 @@ bool HandleCreateMasterSequence(UMcpAutomationBridgeSubsystem *Self,
   OutResult->SetStringField(TEXT("sequencePath"), FullPath);
   McpHandlerUtils::AddVerification(OutResult, Sequence);
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("create_master_sequence"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
-bool HandleAddSubsequence(UMcpAutomationBridgeSubsystem *Self,
-                          const TSharedPtr<FJsonObject> &Params,
+bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
                           TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   // Keep LoadSequence's own refusal (SEQUENCE_PATH_NOT_WRITABLE,
   // ASSET_PREFLIGHT_SAVE_FAILED, ...) instead of overwriting it with a generic
   // INVALID_SEQUENCE, as the sibling add_shot_track already does.
@@ -196,18 +174,10 @@ bool HandleAddSubsequence(UMcpAutomationBridgeSubsystem *Self,
   OutResult->SetStringField(TEXT("subsequencePath"), SubPath);
   OutResult->SetStringField(TEXT("sectionName"), Section->GetName());
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_subsequence"), TEXT("Editor build required"),
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
-bool HandleAddShotTrack(UMcpAutomationBridgeSubsystem *Self,
-                        const TSharedPtr<FJsonObject> &Params,
+bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
                         TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   ULevelSequence *Master = LoadSequence(Params, OutResult);
   if (!Master) return true;
   const FString ShotPath =
@@ -254,11 +224,6 @@ bool HandleAddShotTrack(UMcpAutomationBridgeSubsystem *Self,
   OutResult->SetStringField(TEXT("sequencePath"), GetSequencePath(Params));
   OutResult->SetStringField(TEXT("sectionName"), Shot->GetName());
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_shot_track"), TEXT("Editor build required"),
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 }

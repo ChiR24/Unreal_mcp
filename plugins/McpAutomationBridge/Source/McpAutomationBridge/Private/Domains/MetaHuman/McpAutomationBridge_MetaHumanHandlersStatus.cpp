@@ -1,6 +1,5 @@
 #include "Domains/MetaHuman/McpAutomationBridge_MetaHumanHandlers.h"
 
-#if WITH_EDITOR
 namespace McpMetaHumanHandlers
 {
 // metahuman_status -- read-only readiness probe.
@@ -73,14 +72,7 @@ bool HandleMetaHumanStatus(UMcpAutomationBridgeSubsystem* Self, const FString& R
             // reporting a false that just means "not open yet".
             if (bOpenForEditing)
             {
-                TSharedPtr<FJsonObject> BuildArgs = MakeShared<FJsonObject>();
-                BuildArgs->SetBoolField(TEXT("bInLogError"), false);
-                bool bCanBuild = false;
-                if (InvokeMetaHumanFunction(Subsystem, TEXT("CanBuildMetaHuman"),
-                        BuildArgs, Character, Results, Error) && Results.IsValid())
-                {
-                    Results->TryGetBoolField(TEXT("ReturnValue"), bCanBuild);
-                }
+                const bool bCanBuild = QueryCanBuild(Subsystem, Character, false);
                 Result->SetBoolField(TEXT("canBuild"), bCanBuild);
                 if (!bCanBuild)
                 {
@@ -117,4 +109,3 @@ bool HandleMetaHumanStatus(UMcpAutomationBridgeSubsystem* Self, const FString& R
     return true;
 }
 }
-#endif

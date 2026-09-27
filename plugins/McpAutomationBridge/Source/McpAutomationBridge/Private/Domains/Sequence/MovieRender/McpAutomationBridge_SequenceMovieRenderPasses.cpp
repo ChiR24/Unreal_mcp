@@ -25,10 +25,28 @@ const TCHAR *NormalMaterial =
     TEXT("/MovieRenderPipeline/Materials/MovieRenderQueue_WorldNormal."
          "MovieRenderQueue_WorldNormal");
 
-FString GetRenderPassName(const FString &Input) {
-  FString Pass = Input.ToLower();
-  Pass.ReplaceInline(TEXT("-"), TEXT("_"));
-  return Pass;
+// Lower-case, '-' as '_', and the accepted aliases folded onto one name.
+FString CanonicalPass(const FString &Input) {
+  static const TMap<FString, FString> Aliases = {
+      {TEXT("final"), TEXT("beauty")},        {TEXT("final_image"), TEXT("beauty")},
+      {TEXT("lit"), TEXT("beauty")},          {TEXT("world_depth"), TEXT("depth")},
+      {TEXT("motion_vectors"), TEXT("motion_vector")}, {TEXT("world_normal"), TEXT("normal")},
+      {TEXT("object_ids"), TEXT("object_id")}};
+  const FString Pass = Input.ToLower().Replace(TEXT("-"), TEXT("_"));
+  const FString *Canonical = Aliases.Find(Pass);
+  return Canonical ? *Canonical : Pass;
+}
+
+// The post-process material a material pass renders; empty for any other pass.
+FString PassMaterial(const FString &Pass, const TSharedPtr<FJsonObject> &Payload) {
+  if (Pass == TEXT("depth"))
+    return UMoviePipelineDeferredPassBase::DefaultDepthAsset;
+  if (Pass == TEXT("motion_vector"))
+    return UMoviePipelineDeferredPassBase::DefaultMotionVectorsAsset;
+  if (Pass == TEXT("normal"))
+    return NormalMaterial;
+  return Pass == TEXT("custom_stencil") ? GetJsonStringField(Payload, TEXT("materialPath"))
+                                        : FString();
 }
 
 UMoviePipelineDeferredPassBase *GetDeferred(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config) {
@@ -62,8 +80,7 @@ bool ValidatePostProcessMaterial(const FString &MaterialPath,
 
 bool UpsertMaterialPass(UMoviePipelineDeferredPassBase *Deferred,
                         const FString &MaterialPath, const FString &Name,
-                        bool bHighPrecision, FString &OutMessage,
-                        FString &OutCode) {
+                        FString &OutMessage, FString &OutCode) {
   if (!Deferred) {
     OutMessage = TEXT("Deferred MRQ pass is unavailable.");
     OutCode = TEXT("RENDER_PASS_UNAVAILABLE");
@@ -72,50 +89,36 @@ bool UpsertMaterialPass(UMoviePipelineDeferredPassBase *Deferred,
   if (!ValidatePostProcessMaterial(MaterialPath, OutMessage, OutCode)) {
     return false;
   }
-  for (FMoviePipelinePostProcessPass &Pass :
-       Deferred->AdditionalPostProcessMaterials) {
-    if (Pass.Material.ToSoftObjectPath().ToString() == MaterialPath) {
-      Pass.bEnabled = true;
-#if MCP_HAS_MOVIE_PIPELINE_PASS_METADATA
-      Pass.Name = Name;
-      Pass.bHighPrecisionOutput = bHighPrecision;
-#if MCP_HAS_MOVIE_PIPELINE_LOSSLESS
-      Pass.bUseLosslessCompression = true;
-#endif
-#else
-      (void)Name;
-      (void)bHighPrecision;
-#endif
-      return true;
-    }
+  FMoviePipelinePostProcessPass *Pass =
+      Deferred->AdditionalPostProcessMaterials.FindByPredicate(
+          [&MaterialPath](const FMoviePipelinePostProcessPass &Existing) {
+            return Existing.Material.ToSoftObjectPath().ToString() == MaterialPath;
+          });
+  if (!Pass) {
+    Pass = &Deferred->AdditionalPostProcessMaterials.AddDefaulted_GetRef();
+    Pass->Material = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(MaterialPath));
   }
-  FMoviePipelinePostProcessPass &Pass =
-      Deferred->AdditionalPostProcessMaterials.AddDefaulted_GetRef();
-  Pass.bEnabled = true;
+  Pass->bEnabled = true;
 #if MCP_HAS_MOVIE_PIPELINE_PASS_METADATA
-  Pass.Name = Name;
-#endif
-  Pass.Material = TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(MaterialPath));
-#if MCP_HAS_MOVIE_PIPELINE_PASS_METADATA
-  Pass.bHighPrecisionOutput = bHighPrecision;
+  Pass->Name = Name;
+  Pass->bHighPrecisionOutput = true;
 #if MCP_HAS_MOVIE_PIPELINE_LOSSLESS
-  Pass.bUseLosslessCompression = true;
+  Pass->bUseLosslessCompression = true;
 #endif
 #else
   (void)Name;
-  (void)bHighPrecision;
 #endif
   return true;
 }
 
+// Runs after ValidateSinglePass accepted every requested pass.
 bool ApplySinglePass(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config,
                      const TSharedPtr<FJsonObject> &Payload,
                      const FString &PassName, FString &OutMessage,
                      FString &OutCode) {
-  const FString Pass = GetRenderPassName(PassName);
+  const FString Pass = CanonicalPass(PassName);
   UMoviePipelineDeferredPassBase *Deferred = GetDeferred(Config);
-  if (Pass == TEXT("beauty") || Pass == TEXT("final") ||
-      Pass == TEXT("final_image") || Pass == TEXT("lit")) {
+  if (Pass == TEXT("beauty")) {
     if (!Deferred) {
       OutMessage = TEXT("Deferred beauty pass is unavailable.");
       OutCode = TEXT("RENDER_PASS_UNAVAILABLE");
@@ -124,24 +127,8 @@ bool ApplySinglePass(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config,
     Deferred->bRenderMainPass = true;
     return true;
   }
-  if (Pass == TEXT("depth") || Pass == TEXT("world_depth"))
-    return UpsertMaterialPass(Deferred,
-                              UMoviePipelineDeferredPassBase::DefaultDepthAsset,
-                              TEXT("depth"), true, OutMessage, OutCode);
-  if (Pass == TEXT("motion_vector") || Pass == TEXT("motion_vectors"))
-    return UpsertMaterialPass(
-        Deferred, UMoviePipelineDeferredPassBase::DefaultMotionVectorsAsset,
-        TEXT("motion_vector"), true, OutMessage, OutCode);
-  if (Pass == TEXT("normal") || Pass == TEXT("world_normal"))
-    return UpsertMaterialPass(Deferred, NormalMaterial, TEXT("normal"), true,
-                              OutMessage, OutCode);
-  if (Pass == TEXT("object_id") || Pass == TEXT("object_ids")) {
+  if (Pass == TEXT("object_id")) {
 #if MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS
-    if (!LoadRequiredModule(TEXT("MoviePipelineMaskRenderPass"), OutMessage,
-                            OutCode)) {
-      OutCode = TEXT("RENDER_PASS_UNAVAILABLE");
-      return false;
-    }
     UMoviePipelineObjectIdRenderPass *ObjectPass =
         Cast<UMoviePipelineObjectIdRenderPass>(Config->FindOrAddSettingByClass(
             UMoviePipelineObjectIdRenderPass::StaticClass(), true));
@@ -151,43 +138,18 @@ bool ApplySinglePass(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config,
       return false;
     }
     ObjectPass->bIncludeTranslucentObjects =
-        McpHandlerUtils::GetOptionalBool(Payload, TEXT("includeTranslucentObjects"),
-                                         false);
+        GetJsonBoolField(Payload, TEXT("includeTranslucentObjects"), false);
     return true;
-#else
-    OutMessage =
-        TEXT("Object ID render passes require MoviePipelineMaskRenderPass.");
-    OutCode = TEXT("RENDER_PASS_UNAVAILABLE");
-    return false;
 #endif
   }
-  if (Pass == TEXT("custom_stencil")) {
-    FString MaterialPath;
-    Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
-    if (MaterialPath.IsEmpty()) {
-      OutMessage = TEXT("custom_stencil requires materialPath for classic MRQ.");
-      OutCode = TEXT("RENDER_PASS_UNSUPPORTED");
-      return false;
-    }
-    return UpsertMaterialPass(Deferred, MaterialPath, TEXT("custom_stencil"),
-                              true, OutMessage, OutCode);
-  }
-  OutMessage = FString::Printf(TEXT("Unsupported MRQ render pass: %s"), *PassName);
-  OutCode = TEXT("RENDER_PASS_UNSUPPORTED");
-  return false;
+  return UpsertMaterialPass(Deferred, PassMaterial(Pass, Payload), Pass, OutMessage, OutCode);
 }
 
 bool ValidateSinglePass(const TSharedPtr<FJsonObject> &Payload,
                         const FString &PassName, FString &OutMessage,
                         FString &OutCode) {
-  const FString Pass = GetRenderPassName(PassName);
-  if (Pass == TEXT("beauty") || Pass == TEXT("final") ||
-      Pass == TEXT("final_image") || Pass == TEXT("lit") ||
-      Pass == TEXT("depth") || Pass == TEXT("world_depth") ||
-      Pass == TEXT("motion_vector") || Pass == TEXT("motion_vectors") ||
-      Pass == TEXT("normal") || Pass == TEXT("world_normal"))
-    return true;
-  if (Pass == TEXT("object_id") || Pass == TEXT("object_ids")) {
+  const FString Pass = CanonicalPass(PassName);
+  if (Pass == TEXT("object_id")) {
 #if MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS
     if (LoadRequiredModule(TEXT("MoviePipelineMaskRenderPass"), OutMessage,
                            OutCode))
@@ -198,9 +160,8 @@ bool ValidateSinglePass(const TSharedPtr<FJsonObject> &Payload,
     OutCode = TEXT("RENDER_PASS_UNAVAILABLE");
     return false;
   }
+  const FString MaterialPath = PassMaterial(Pass, Payload);
   if (Pass == TEXT("custom_stencil")) {
-    FString MaterialPath;
-    Payload->TryGetStringField(TEXT("materialPath"), MaterialPath);
     if (MaterialPath.IsEmpty()) {
       OutMessage =
           TEXT("custom_stencil requires a valid materialPath for classic MRQ.");
@@ -209,6 +170,8 @@ bool ValidateSinglePass(const TSharedPtr<FJsonObject> &Payload,
     }
     return ValidatePostProcessMaterial(MaterialPath, OutMessage, OutCode);
   }
+  if (Pass == TEXT("beauty") || !MaterialPath.IsEmpty())
+    return true;
   OutMessage = FString::Printf(TEXT("Unsupported MRQ render pass: %s"), *PassName);
   OutCode = TEXT("RENDER_PASS_UNSUPPORTED");
   return false;
@@ -233,15 +196,11 @@ bool HandleAddRenderPass(UMcpAutomationBridgeSubsystem *Subsystem,
                          const TSharedPtr<FJsonObject> &Payload,
                          TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Message, Code;
-  UMoviePipelineQueueSubsystem *QueueSubsystem =
-      GetQueueSubsystem(Message, Code);
-  if (!QueueSubsystem)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
-  UMoviePipelineQueue *Queue = QueueSubsystem->GetQueue();
+  UMoviePipelineQueue *Queue = nullptr;
   UMoviePipelineExecutorJob *Job =
-      ResolveJob(Payload, Queue, Message, Code);
+      ResolveRequestJob(Subsystem, RequestId, Socket, Payload, Queue);
   if (!Job)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+    return true;
   MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, Message, Code);
   if (!Config)
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;

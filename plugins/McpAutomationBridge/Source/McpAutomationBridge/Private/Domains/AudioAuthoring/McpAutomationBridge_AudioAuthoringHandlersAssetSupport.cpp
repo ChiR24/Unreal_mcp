@@ -2,7 +2,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 FString NormalizeAudioPath(const FString& Path, bool bForLoad)
@@ -159,4 +158,3 @@ USoundEffectSourcePreset* CreateSourceEffectPresetByType(const FString& EffectTy
 }
 #endif
 }
-#endif

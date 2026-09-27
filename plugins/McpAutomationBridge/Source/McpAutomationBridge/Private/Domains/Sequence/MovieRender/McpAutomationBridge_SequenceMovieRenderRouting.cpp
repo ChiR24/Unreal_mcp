@@ -20,55 +20,27 @@ FString NormalizeAction(const FString &Action,
     Normalized.RightChopInline(9);
   return Normalized;
 }
-
-bool IsMovieRenderAction(const FString &Action) {
-  static const TSet<FString> Actions = {
-      TEXT("create_render_job"),
-      TEXT("configure_output_settings"),
-      TEXT("add_render_pass"),
-      TEXT("configure_anti_aliasing"),
-      TEXT("configure_console_variables"),
-      TEXT("configure_burn_ins"),
-      TEXT("queue_render"),
-      TEXT("start_render"),
-  };
-  return Actions.Contains(Action);
-}
 }
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE
 
-FString NormalizeMovieRenderAction(const FString &Action,
-                                   const TSharedPtr<FJsonObject> &Payload) {
-  return NormalizeAction(Action, Payload);
-}
-
 bool TryHandle(UMcpAutomationBridgeSubsystem *Subsystem, const FString &RequestId,
                const FString &Action, const TSharedPtr<FJsonObject> &Payload,
                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Normalized = NormalizeMovieRenderAction(Action, Payload);
-  if (!IsMovieRenderAction(Normalized))
-    return false;
-  if (Normalized == TEXT("create_render_job"))
-    return HandleCreateRenderJob(Subsystem, RequestId, Payload, RequestingSocket);
-  if (Normalized == TEXT("configure_output_settings"))
-    return HandleConfigureOutputSettings(Subsystem, RequestId, Payload,
-                                         RequestingSocket);
-  if (Normalized == TEXT("add_render_pass"))
-    return HandleAddRenderPass(Subsystem, RequestId, Payload, RequestingSocket);
-  if (Normalized == TEXT("configure_anti_aliasing"))
-    return HandleConfigureAntiAliasing(Subsystem, RequestId, Payload,
-                                       RequestingSocket);
-  if (Normalized == TEXT("configure_console_variables"))
-    return HandleConfigureConsoleVariables(Subsystem, RequestId, Payload,
-                                           RequestingSocket);
-  if (Normalized == TEXT("configure_burn_ins"))
-    return HandleConfigureBurnIns(Subsystem, RequestId, Payload, RequestingSocket);
-  if (Normalized == TEXT("queue_render"))
-    return HandleQueueRender(Subsystem, RequestId, Payload, RequestingSocket);
-  if (Normalized == TEXT("start_render"))
-    return HandleStartRender(Subsystem, RequestId, Payload, RequestingSocket);
-  return false;
+  using FHandler = bool (*)(UMcpAutomationBridgeSubsystem *, const FString &,
+                            const TSharedPtr<FJsonObject> &, TSharedPtr<FMcpBridgeWebSocket>);
+  static const TMap<FString, FHandler> Handlers = {
+      {TEXT("create_render_job"), &HandleCreateRenderJob},
+      {TEXT("configure_output_settings"), &HandleConfigureOutputSettings},
+      {TEXT("add_render_pass"), &HandleAddRenderPass},
+      {TEXT("configure_anti_aliasing"), &HandleConfigureAntiAliasing},
+      {TEXT("configure_console_variables"), &HandleConfigureConsoleVariables},
+      {TEXT("configure_burn_ins"), &HandleConfigureBurnIns},
+      {TEXT("queue_render"), &HandleQueueRender},
+      {TEXT("start_render"), &HandleStartRender},
+  };
+  const FHandler *Handler = Handlers.Find(NormalizeAction(Action, Payload));
+  return Handler && (*Handler)(Subsystem, RequestId, Payload, RequestingSocket);
 }
 
 #else
@@ -77,7 +49,13 @@ bool TryHandle(UMcpAutomationBridgeSubsystem *Subsystem,
                const FString &RequestId, const FString &Action,
                const TSharedPtr<FJsonObject> &Payload,
                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  if (!IsMovieRenderAction(NormalizeAction(Action, Payload)))
+  static const TSet<FString> Actions = {
+      TEXT("create_render_job"), TEXT("configure_output_settings"),
+      TEXT("add_render_pass"), TEXT("configure_anti_aliasing"),
+      TEXT("configure_console_variables"), TEXT("configure_burn_ins"),
+      TEXT("queue_render"), TEXT("start_render"),
+  };
+  if (!Actions.Contains(NormalizeAction(Action, Payload)))
     return false;
   Subsystem->SendAutomationError(
       RequestingSocket, RequestId,

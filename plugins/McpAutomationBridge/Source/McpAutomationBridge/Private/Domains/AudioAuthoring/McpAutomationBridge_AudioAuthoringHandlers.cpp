@@ -1,11 +1,10 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJsonObject>& Params)
 {
 	TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-	FString SubAction = McpHandlerUtils::GetOptionalString(Params, TEXT("subAction"), TEXT(""));
+	FString SubAction = GetJsonStringField(Params, TEXT("subAction"), TEXT(""));
 
 	using namespace McpAudioAuthoring;
 	if (TSharedPtr<FJsonObject> Result = HandleSoundCueAssetActions(SubAction, Params, Response)) { return Result; }
@@ -24,7 +23,6 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 
 	return McpHandlerUtils::BuildErrorResponse(TEXT("UNKNOWN_ACTION"), FString::Printf(TEXT("Unknown audio authoring action: %s"), *SubAction));
 }
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
 	const FString& RequestId,
@@ -38,7 +36,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
 		return false;
 	}
 
-#if WITH_EDITOR
 	if (!Payload.IsValid())
 	{
 		SendAutomationError(RequestingSocket, RequestId, TEXT("Audio authoring payload missing"), TEXT("INVALID_PAYLOAD"));
@@ -50,8 +47,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
 	if (Response.IsValid())
 	{
 		bool bSuccess = Response->HasField(TEXT("success")) && GetJsonBoolField(Response, TEXT("success"));
-		FString Message = Response->HasField(TEXT("message")) ? GetJsonStringField(Response, TEXT("message")) : TEXT("Operation complete");
-		FString ErrorCode = Response->HasField(TEXT("code")) ? GetJsonStringField(Response, TEXT("code")) : TEXT("");
+		FString Message = GetJsonStringField(Response, TEXT("message"), TEXT("Operation complete"));
+		FString ErrorCode = GetJsonStringField(Response, TEXT("code"), TEXT(""));
 
 		if (bSuccess)
 		{
@@ -68,7 +65,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
 			for (const auto& Pair : Response->Values)
 			{
 				const FString Key(Pair.Key.Len(), *Pair.Key);
-				if (Key == TEXT("success") || Key == TEXT("error") || Key == TEXT("errorCode") ||
+				if (Key == TEXT("success") || Key == TEXT("error") ||
 					Key == TEXT("code") || Key == TEXT("message") || Key == TEXT("type") ||
 					Key == TEXT("requestId") || Key == TEXT("data") || Key == TEXT("result"))
 				{
@@ -93,8 +90,4 @@ bool UMcpAutomationBridgeSubsystem::HandleManageAudioAuthoringAction(
 	}
 
 	return true;
-#else
-	SendAutomationError(RequestingSocket, RequestId, TEXT("Audio authoring requires editor build"), TEXT("EDITOR_REQUIRED"));
-	return true;
-#endif
 }

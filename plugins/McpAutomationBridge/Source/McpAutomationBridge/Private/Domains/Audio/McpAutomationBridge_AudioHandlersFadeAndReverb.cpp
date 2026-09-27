@@ -1,10 +1,10 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "EngineUtils.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
 
 namespace McpAudioHandlers
 {
-#if WITH_EDITOR
 bool HandleFadeAndReverbActions(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -12,7 +12,7 @@ bool HandleFadeAndReverbActions(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-   if (Lower == TEXT("fade_sound") || Lower == TEXT("audio_fade_sound")) {
+   if (Lower == TEXT("fade_sound")) {
      FString ActorName;
      Payload->TryGetStringField(TEXT("soundName"), ActorName);
      if (ActorName.IsEmpty()) {
@@ -135,7 +135,7 @@ bool HandleFadeAndReverbActions(
      return true;
    }
 
-   if (Lower == TEXT("create_reverb_zone") || Lower == TEXT("audio_create_reverb_zone")) {
+   if (Lower == TEXT("create_reverb_zone")) {
      FString ZoneName;
      if (!Payload->TryGetStringField(TEXT("name"), ZoneName) || ZoneName.IsEmpty()) {
        Self->SendAutomationError(RequestingSocket, RequestId,
@@ -226,11 +226,7 @@ bool HandleFadeAndReverbActions(
      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
      Resp->SetBoolField(TEXT("success"), true);
      Resp->SetStringField(TEXT("actorName"), AudioVolume->GetName());
-     TSharedPtr<FJsonObject> LocObj = McpHandlerUtils::CreateResultObject();
-     LocObj->SetNumberField(TEXT("x"), Location.X);
-     LocObj->SetNumberField(TEXT("y"), Location.Y);
-     LocObj->SetNumberField(TEXT("z"), Location.Z);
-     Resp->SetObjectField(TEXT("location"), LocObj);
+     Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Location));
      McpHandlerUtils::AddVerification(Resp, AudioVolume);
      Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                             TEXT("Reverb zone created"), Resp);
@@ -238,5 +234,4 @@ bool HandleFadeAndReverbActions(
    }
   return false;
 }
-#endif
 }

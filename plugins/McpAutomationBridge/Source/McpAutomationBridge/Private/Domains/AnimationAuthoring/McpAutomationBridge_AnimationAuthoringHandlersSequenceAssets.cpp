@@ -1,7 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
+#include "Domains/Animation/Assets/McpAutomationBridge_AnimationHandlersProceduralTracks.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -35,75 +35,32 @@ TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, con
         }
     }
 
-    // Check if an asset already exists at the target path to prevent assertion failure
-        FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
-        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
-        {
-            UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
-            if (ExistingAsset)
-            {
-                if (Cast<UAnimSequence>(ExistingAsset))
-                {
-                    // Same type - return success with existing asset info
-                    Response->SetStringField(TEXT("assetPath"), ObjectPath);
-                    Response->SetBoolField(TEXT("existingAsset"), true);
-                    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' already exists - reusing existing asset"), *Name));
-                    McpHandlerUtils::AddVerification(Response, ExistingAsset);
-                    return Response;
-                }
-                else
-                {
-                    // Different type - return error to prevent crash
-                    FString ExistingClassName = ExistingAsset->GetClass()->GetName();
-                    ANIM_ERROR_RESPONSE(
-                        FString::Printf(TEXT("Cannot create animation sequence: asset '%s' already exists as type '%s'"),
-                            *ObjectPath, *ExistingClassName),
-                        TEXT("ASSET_TYPE_MISMATCH")
-                    );
-                }
-            }
-        }
-
-        // Create package and asset directly to avoid UI dialogs
-        FString PackagePath = Path / Name;
-        UPackage* Package = CreatePackage(*PackagePath);
-        if (!Package)
-        {
-            ANIM_ERROR_RESPONSE(TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
-        }
-
-        UAnimSequenceFactory* Factory = NewObject<UAnimSequenceFactory>();
-        Factory->TargetSkeleton = Skeleton;
-        UAnimSequence* NewSequence = Cast<UAnimSequence>(
-            Factory->FactoryCreateNew(UAnimSequence::StaticClass(), Package,
-                                      FName(*Name), RF_Public | RF_Standalone,
-                                      nullptr, GWarn));
-        if (!NewSequence)
-        {
-            ANIM_ERROR_RESPONSE(TEXT("Failed to create animation sequence"), TEXT("CREATE_FAILED"));
-        }
-
-        // Set sequence length
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        // UE 5.1+: Use SetNumberOfFrames with FFrameNumber
-        NewSequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
-        NewSequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
-#else
-        // SequenceLength is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
-        const float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        NewSequence->SequenceLength = Duration;
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
-
-        SaveAnimAsset(NewSequence, bSave);
-
-        FString FullPath = Path / Name;
-        Response->SetStringField(TEXT("assetPath"), FullPath);
-        Response->SetBoolField(TEXT("existingAsset"), false);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' created"), *Name));
+    UAnimSequenceFactory* Factory = NewObject<UAnimSequenceFactory>();
+    Factory->TargetSkeleton = Skeleton;
+    bool bExisting = false;
+    FString Code;
+    FString Error;
+    UAnimSequence* NewSequence = Cast<UAnimSequence>(McpAnimationHandlers::CreateOrReuseAnimAsset(
+        UAnimSequence::StaticClass(), Factory, Path, Name, bExisting, Code, Error));
+    if (!NewSequence)
+    {
+        ANIM_ERROR_RESPONSE(Error, Code);
+    }
+    if (bExisting)
+    {
+        Response->SetStringField(TEXT("assetPath"), Path / Name);
+        Response->SetBoolField(TEXT("existingAsset"), true);
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' already exists - reusing existing asset"), *Name));
         McpHandlerUtils::AddVerification(Response, NewSequence);
         return Response;
+    }
+    McpAnimationHandlers::SetAnimSequenceFrames(NewSequence, NumFrames, FrameRate);
+    SaveAnimAsset(NewSequence, bSave);
+    Response->SetStringField(TEXT("assetPath"), Path / Name);
+    Response->SetBoolField(TEXT("existingAsset"), false);
+    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Animation sequence '%s' created"), *Name));
+    McpHandlerUtils::AddVerification(Response, NewSequence);
+    return Response;
     }
 
     if (SubAction == TEXT("set_sequence_length"))
@@ -119,17 +76,7 @@ TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, con
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation sequence: %s"), *AssetPath), TEXT("SEQUENCE_NOT_FOUND"));
         }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
-        // UE 5.1+: Use SetNumberOfFrames with FFrameNumber
-        Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
-        Sequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
-#else
-        // SequenceLength is deprecated in UE 5.1+ but needed for UE 5.0 compatibility
-        const float Duration = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        Sequence->SequenceLength = Duration;
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
+        McpAnimationHandlers::SetAnimSequenceFrames(Sequence, NumFrames, FrameRate);
 
         SaveAnimAsset(Sequence, bSave);
 
@@ -141,4 +88,3 @@ TSharedPtr<FJsonObject> HandleSequenceAssetActions(const FString& SubAction, con
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

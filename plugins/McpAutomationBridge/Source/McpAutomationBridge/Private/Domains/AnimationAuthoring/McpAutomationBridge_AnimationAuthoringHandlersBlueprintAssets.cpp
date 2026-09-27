@@ -1,16 +1,15 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
-    // The capability record publishes this as `create_animation_blueprint`
-    // while the handler only ever matched `create_anim_blueprint`, so the
-    // documented call fell through to UNKNOWN_ACTION. Accept both.
-    if (SubAction == TEXT("create_anim_blueprint") ||
-        SubAction == TEXT("create_animation_blueprint"))
+    // The one Animation Blueprint creator: the record's name and the two former
+    // names folded into it all reach this branch.
+    if (SubAction == TEXT("create_animation_blueprint") ||
+        SubAction == TEXT("create_anim_blueprint") ||
+        SubAction == TEXT("create_animation_bp"))
     {
     FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
     FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Blueprints")));
@@ -124,4 +123,3 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

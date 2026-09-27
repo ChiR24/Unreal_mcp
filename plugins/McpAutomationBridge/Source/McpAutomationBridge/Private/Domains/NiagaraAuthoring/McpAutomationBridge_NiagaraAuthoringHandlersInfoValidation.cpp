@@ -1,6 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 // A module input's current value in its own type (int for an enum), or null for a type not rendered.
@@ -129,16 +128,11 @@ static bool GetNiagaraInfo(FActionContext& Context)
         return true;
     }
     const FString TargetPath = Context.AssetPath.IsEmpty() ? Context.SystemPath : Context.AssetPath;
-    if (!UEditorAssetLibrary::DoesAssetExist(TargetPath))
-    {
-        Context.SendError(FString::Printf(TEXT("Niagara asset not found: %s"), *TargetPath), TEXT("ASSET_NOT_FOUND"));
-        return true;
-    }
-    UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *TargetPath);
-    UNiagaraEmitter* Emitter = System ? nullptr : LoadObject<UNiagaraEmitter>(nullptr, *TargetPath);
+    UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *TargetPath, nullptr, LOAD_NoWarn);
+    UNiagaraEmitter* Emitter = System ? nullptr : LoadObject<UNiagaraEmitter>(nullptr, *TargetPath, nullptr, LOAD_NoWarn);
     if (!System && !Emitter)
     {
-        Context.SendError(TEXT("Could not load Niagara asset."), TEXT("ASSET_NOT_FOUND"));
+        Context.SendError(FString::Printf(TEXT("Niagara asset not found: %s"), *TargetPath), TEXT("ASSET_NOT_FOUND"));
         return true;
     }
     TSharedPtr<FJsonObject> InfoObj = McpHandlerUtils::CreateResultObject();
@@ -167,23 +161,12 @@ static bool GetNiagaraInfo(FActionContext& Context)
 
 static bool ValidateNiagaraSystem(FActionContext& Context)
 {
-    if (Context.SystemPath.IsEmpty())
-    {
-        Context.SendError(TEXT("Missing 'systemPath'."), TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-    if (!UEditorAssetLibrary::DoesAssetExist(Context.SystemPath))
-    {
-        Context.SendError(FString::Printf(TEXT("Niagara system asset not found: %s"), *Context.SystemPath), TEXT("ASSET_NOT_FOUND"));
-        return true;
-    }
     UNiagaraSystem* System = LoadSystemOrError(Context);
     if (!System)
     {
         return true;
     }
 
-    TSharedPtr<FJsonObject> ValidationResult = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> ErrorsArray;
     TArray<TSharedPtr<FJsonValue>> WarningsArray;
 
@@ -206,12 +189,9 @@ static bool ValidateNiagaraSystem(FActionContext& Context)
     CollectNiagaraSystemStackIssues(System, ErrorsArray, WarningsArray);
 
     const bool bIsValid = ErrorsArray.Num() == 0;
-    ValidationResult->SetBoolField(TEXT("isValid"), bIsValid);
-    ValidationResult->SetArrayField(TEXT("errors"), ErrorsArray);
-    ValidationResult->SetArrayField(TEXT("warnings"), WarningsArray);
-    Context.Result->SetObjectField(TEXT("validationResult"), ValidationResult);
     Context.Result->SetBoolField(TEXT("valid"), bIsValid);
     Context.Result->SetArrayField(TEXT("errors"), ErrorsArray);
+    Context.Result->SetArrayField(TEXT("warnings"), WarningsArray);
     Context.Result->SetStringField(TEXT("message"), bIsValid ? TEXT("System is valid.") : TEXT("System has errors."));
     Context.SendSuccess(true, TEXT("Validation complete."));
     return true;
@@ -224,4 +204,3 @@ bool HandleInfoValidationAction(FActionContext& Context, const FString& SubActio
     return false;
 }
 }
-#endif

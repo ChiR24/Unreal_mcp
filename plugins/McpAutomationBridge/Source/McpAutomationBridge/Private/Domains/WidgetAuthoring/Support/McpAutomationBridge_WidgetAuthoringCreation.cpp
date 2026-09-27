@@ -10,11 +10,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#if __has_include("Subsystems/AssetEditorSubsystem.h")
 #include "Subsystems/AssetEditorSubsystem.h"
-#elif __has_include("AssetEditorSubsystem.h")
-#include "AssetEditorSubsystem.h"
-#endif
 #include "UObject/Package.h"
 #include "WidgetBlueprint.h"
 #include "Widgets/Notifications/SNotificationList.h"

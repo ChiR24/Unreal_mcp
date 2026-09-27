@@ -15,7 +15,7 @@ namespace {
 TSharedPtr<FJsonObject> BuildRenderResult(
     UMoviePipelineExecutorBase *Executor, UMoviePipelineExecutorJob *Job,
     UMoviePipelineQueue *Queue, bool bCompleted, bool bRenderSucceeded,
-    bool bTimedOut, const FRenderWaitState &State) {
+    bool bTimedOut, const FRenderWaitState &State, int32 &OutFileCount) {
   TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);
   if (Executor) {
     Result->SetStringField(TEXT("executorClass"),
@@ -24,6 +24,7 @@ TSharedPtr<FJsonObject> BuildRenderResult(
   Result->SetBoolField(TEXT("renderCompleted"), bCompleted);
   Result->SetBoolField(TEXT("renderSucceeded"), bRenderSucceeded);
   Result->SetBoolField(TEXT("timedOut"), bTimedOut);
+  OutFileCount = 0;
   if (State.bOutputPathInvalidated) {
     Result->SetStringField(TEXT("outputProof"),
                            TEXT("path_revalidation_failed"));
@@ -31,7 +32,7 @@ TSharedPtr<FJsonObject> BuildRenderResult(
     Result->SetArrayField(TEXT("outputFiles"),
                           TArray<TSharedPtr<FJsonValue>>());
   } else {
-    AppendRenderOutputProof(Job, State, Result);
+    OutFileCount = AppendRenderOutputProof(Job, State, Result);
   }
   return Result;
 }
@@ -71,14 +72,10 @@ void SendStartRenderCompletion(
   }
 
   bool bFinalSuccess = bSuccess && !State->bHadFatalError;
+  int32 OutputFileCount = 0;
   TSharedPtr<FJsonObject> Result =
       BuildRenderResult(Executor, WeakJob.Get(), WeakQueue.Get(), !bWasTimedOut,
-                        bFinalSuccess, bWasTimedOut, *State);
-  FString OutputProofErrorCode;
-  FString OutputProofError;
-  Result->TryGetStringField(TEXT("outputProofErrorCode"),
-                            OutputProofErrorCode);
-  Result->TryGetStringField(TEXT("outputProofError"), OutputProofError);
+                        bFinalSuccess, bWasTimedOut, *State, OutputFileCount);
   if (State->bOutputPathInvalidated) {
     Result->SetBoolField(TEXT("renderSucceeded"), false);
     Result->SetStringField(TEXT("outputPathValidationError"),
@@ -89,22 +86,16 @@ void SendStartRenderCompletion(
         Result, TEXT("MRQ_OUTPUT_PATH_CHANGED"));
     return;
   }
-  if (!OutputProofErrorCode.IsEmpty()) {
+  if (OutputFileCount == INDEX_NONE) {
     Result->SetBoolField(TEXT("renderSucceeded"), false);
     Subsystem->SendAutomationResponse(
         Socket, RequestId, false,
-        OutputProofError.IsEmpty()
-            ? TEXT("Movie Render Queue output proof failed.")
-            : OutputProofError,
-        Result, OutputProofErrorCode);
+        TEXT("MRQ output discovery exceeded its configured scan limit."), Result,
+        TEXT("MRQ_OUTPUT_SCAN_LIMIT_EXCEEDED"));
     return;
   }
 
-  double OutputFileCount = 0.0;
-  const bool bHasOutputCount =
-      Result->TryGetNumberField(TEXT("outputFileCount"), OutputFileCount);
-  if (!bWasTimedOut && bFinalSuccess &&
-      (!bHasOutputCount || OutputFileCount <= 0.0)) {
+  if (!bWasTimedOut && bFinalSuccess && OutputFileCount <= 0) {
     bFinalSuccess = false;
     Result->SetBoolField(TEXT("renderSucceeded"), false);
     Result->SetStringField(
@@ -132,18 +123,18 @@ void SendStartRenderCompletion(
     return;
   }
 
-  const bool bProducedNoOutput =
-      bSuccess && !State->bHadFatalError && !bFinalSuccess;
+  if (bFinalSuccess) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+                                      TEXT("Movie Render Queue render completed."), Result);
+    return;
+  }
+  // A render that succeeded without a fatal error but proved no files.
+  const bool bProducedNoOutput = bSuccess && !State->bHadFatalError;
   Subsystem->SendAutomationResponse(
-      Socket, RequestId, bFinalSuccess,
-      bFinalSuccess ? TEXT("Movie Render Queue render completed.")
-                    : (bProducedNoOutput
-                           ? TEXT("Movie Render Queue render produced no output files.")
-                           : TEXT("Movie Render Queue render failed.")),
-      Result, bFinalSuccess ? TEXT("")
-                            : (bProducedNoOutput
-                                   ? TEXT("MRQ_RENDER_NO_OUTPUT")
-                                   : TEXT("MRQ_RENDER_FAILED")));
+      Socket, RequestId, false,
+      bProducedNoOutput ? TEXT("Movie Render Queue render produced no output files.")
+                        : TEXT("Movie Render Queue render failed."),
+      Result, bProducedNoOutput ? TEXT("MRQ_RENDER_NO_OUTPUT") : TEXT("MRQ_RENDER_FAILED"));
 }
 
 }

@@ -20,12 +20,9 @@ bool ReadTakeRecorderStringArray(
             TEXT("%s must be an array of strings"), FieldName);
         return false;
     }
-    const UMcpAutomationBridgeSettings* Settings =
-        GetDefault<UMcpAutomationBridgeSettings>();
-    const int32 MaxItems =
-        Settings ? FMath::Max(1, Settings->MaxTakeRecorderSourceItems) : 64;
-    const int32 MaxStringLength =
-        Settings ? FMath::Max(1, Settings->MaxTakeRecorderStringLength) : 1024;
+    const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
+    const int32 MaxItems = FMath::Max(1, Settings->MaxTakeRecorderSourceItems);
+    const int32 MaxStringLength = FMath::Max(1, Settings->MaxTakeRecorderStringLength);
     if (Values->Num() > MaxItems)
     {
         OutError = FString::Printf(

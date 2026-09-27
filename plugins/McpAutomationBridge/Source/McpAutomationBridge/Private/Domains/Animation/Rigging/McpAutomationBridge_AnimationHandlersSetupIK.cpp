@@ -5,7 +5,6 @@
 #include "Animation/Skeleton.h"
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 bool HandleAnimationSetupIKAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
   TSharedPtr<FJsonObject> &Resp = Context.Resp;
@@ -16,9 +15,7 @@ bool HandleAnimationSetupIKAction(FActionContext &Context,
 
     FString IKName;
     if (!Payload->TryGetStringField(TEXT("name"), IKName) || IKName.IsEmpty()) {
-      Message = TEXT("name field required for IK setup");
-      ErrorCode = TEXT("INVALID_ARGUMENT");
-      Resp->SetStringField(TEXT("error"), Message);
+      Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("name field required for IK setup"));
     } else {
       FString SavePath;
       Payload->TryGetStringField(TEXT("savePath"), SavePath);
@@ -33,16 +30,12 @@ bool HandleAnimationSetupIKAction(FActionContext &Context,
       FString SkeletonPath;
       if (!Payload->TryGetStringField(TEXT("skeletonPath"), SkeletonPath) ||
           SkeletonPath.IsEmpty()) {
-        Message = TEXT("skeletonPath is required to bind IK to a skeleton");
-        ErrorCode = TEXT("INVALID_ARGUMENT");
-        Resp->SetStringField(TEXT("error"), Message);
+        Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("skeletonPath is required to bind IK to a skeleton"));
       } else {
         USkeleton *TargetSkeleton =
             LoadObject<USkeleton>(nullptr, *SkeletonPath);
         if (!TargetSkeleton) {
-          Message = TEXT("Failed to load skeleton for IK");
-          ErrorCode = TEXT("LOAD_FAILED");
-          Resp->SetStringField(TEXT("error"), Message);
+          Context.Fail(TEXT("LOAD_FAILED"), TEXT("Failed to load skeleton for IK"));
         } else {
           FString FactoryError;
           UBlueprint *ControlRigBlueprint = nullptr;
@@ -54,10 +47,8 @@ bool HandleAnimationSetupIKAction(FActionContext &Context,
               TEXT("Control Rig factory not available in this editor build");
 #endif
           if (!ControlRigBlueprint) {
-            Message = FactoryError.IsEmpty() ? TEXT("Failed to create IK asset")
-                                             : FactoryError;
-            ErrorCode = TEXT("ASSET_CREATION_FAILED");
-            Resp->SetStringField(TEXT("error"), Message);
+            Context.Fail(TEXT("ASSET_CREATION_FAILED"), FactoryError.IsEmpty() ? TEXT("Failed to create IK asset")
+                                             : FactoryError);
           } else {
             bSuccess = true;
             Message = TEXT("IK setup created successfully");
@@ -72,5 +63,4 @@ bool HandleAnimationSetupIKAction(FActionContext &Context,
     }
     return false;
 }
-#endif
 } // namespace McpAnimationHandlers

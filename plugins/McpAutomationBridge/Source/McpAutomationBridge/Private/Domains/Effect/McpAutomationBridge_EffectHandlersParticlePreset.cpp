@@ -2,7 +2,6 @@
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Modules/ModuleManager.h"
@@ -10,11 +9,9 @@
 #include "Particles/Emitter.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleSystemComponent.h"
-#endif
 
 namespace McpEffectHandlers
 {
-#if WITH_EDITOR
 namespace
 {
 // Finds a UNiagaraSystem whose asset name contains the preset (an exact or NS_-prefixed
@@ -82,8 +79,8 @@ bool SpawnCascadeEmitter(const FEffectActionContext& Context, UParticleSystem* T
 {
     AEmitter* Emitter = Cast<AEmitter>(SpawnActorInActiveWorld<AActor>(
         AEmitter::StaticClass(),
-        ReadVectorField(Context.Payload, TEXT("location")),
-        ReadRotatorField(Context.Payload, TEXT("rotation"))));
+        ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),
+        ExtractRotatorField(Context.Payload, TEXT("rotation"), FRotator::ZeroRotator)));
     if (!Emitter)
     {
         Context.Bridge.SendAutomationResponse(
@@ -117,7 +114,6 @@ bool SpawnCascadeEmitter(const FEffectActionContext& Context, UParticleSystem* T
     return true;
 }
 }
-#endif
 
 bool HandleParticleEffect(const FEffectActionContext& Context)
 {
@@ -136,7 +132,6 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
             TEXT("preset or systemPath is required for particle"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
-#if WITH_EDITOR
     if (!GEditor)
     {
         Context.Bridge.SendAutomationResponse(
@@ -199,11 +194,5 @@ bool HandleParticleEffect(const FEffectActionContext& Context)
     }
     Details->SetStringField(TEXT("backend"), TEXT("niagara"));
     return CreateNiagaraEffectFromPayload(Context, TEXT("particle"), SystemPath, Details);
-#else
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        TEXT("particle requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 }

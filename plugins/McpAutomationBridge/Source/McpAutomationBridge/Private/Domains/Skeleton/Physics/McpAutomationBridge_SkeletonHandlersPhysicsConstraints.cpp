@@ -2,14 +2,13 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "PhysicsEngine/PhysicsConstraintTemplate.h"
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
@@ -33,17 +32,6 @@ bool UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint(
         SendAutomationError(RequestingSocket, RequestId, TEXT("bodyA and bodyB are required"), TEXT("MISSING_PARAM"));
         return true;
     }
-
-    // Validate path security BEFORE loading asset
-    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
-    if (SanitizedPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
-            TEXT("INVALID_PATH"));
-        return true;
-    }
-    PhysicsAssetPath = SanitizedPath;
 
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
@@ -141,17 +129,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
         return true;
     }
 
-    // Validate path security BEFORE loading asset
-    FString SanitizedPath = SanitizeProjectRelativePath(PhysicsAssetPath);
-    if (SanitizedPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences or invalid characters"), *PhysicsAssetPath),
-            TEXT("INVALID_PATH"));
-        return true;
-    }
-    PhysicsAssetPath = SanitizedPath;
-
     FString Error;
     UPhysicsAsset* PhysicsAsset = LoadPhysicsAssetFromPath(PhysicsAssetPath, Error);
     if (!PhysicsAsset)
@@ -239,4 +216,3 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureConstraintLimits(
     return true;
 }
 
-#endif // WITH_EDITOR

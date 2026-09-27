@@ -15,6 +15,24 @@ namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;
 
+// Timing and track count of one animation, shared by the list and the single-animation reply.
+static void DescribeWidgetAnimation(UWidgetAnimation* Anim, const TSharedPtr<FJsonObject>& Out)
+{
+    UMovieScene* MovieScene = Anim->MovieScene;
+    if (!MovieScene)
+    {
+        return;
+    }
+    const FFrameRate FrameRate = MovieScene->GetTickResolution();
+    const FFrameNumber Start = MovieScene->GetPlaybackRange().GetLowerBoundValue();
+    const FFrameNumber End = MovieScene->GetPlaybackRange().GetUpperBoundValue();
+    Out->SetNumberField(TEXT("durationSeconds"), (End - Start).Value / FrameRate.AsDecimal());
+    Out->SetNumberField(TEXT("frameRate"), FrameRate.AsDecimal());
+    Out->SetNumberField(TEXT("startFrame"), Start.Value);
+    Out->SetNumberField(TEXT("endFrame"), End.Value);
+    Out->SetNumberField(TEXT("trackCount"), MCP_GET_MOVIESCENE_TRACKS(MovieScene).Num());
+}
+
 bool HandleWidgetAuthoringAnimationQueries(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
@@ -23,51 +41,6 @@ bool HandleWidgetAuthoringAnimationQueries(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    if (SubAction.Equals(TEXT("set_animation_speed"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
-        float PlaybackSpeed = GetJsonNumberField(Payload, TEXT("speed"), 1.0f);
-
-        if (WidgetPath.IsEmpty() || AnimationName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, animationName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidgetAnimation* TargetAnim = WidgetAuthoringHelpers::FindWidgetAnimation(WidgetBP, AnimationName);
-
-        if (!TargetAnim || !TargetAnim->MovieScene)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Animation '%s' not found"), *AnimationName), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        // A widget animation stores no playback speed: speed is the PlaybackSpeed argument to
-        // PlayAnimation() at runtime. This branch used to answer "Set animation speed" with
-        // success:true while storing nothing, and it dirtied and saved the asset for that
-        // non-change. Same shape as set_animation_loop, which already reports honestly.
-        ResultJson->SetBoolField(TEXT("success"), false);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetStringField(TEXT("animationName"), AnimationName);
-        ResultJson->SetNumberField(TEXT("requestedSpeed"), PlaybackSpeed);
-        ResultJson->SetBoolField(TEXT("applied"), false);
-        ResultJson->SetStringField(TEXT("note"), TEXT("Nothing was stored and the widget asset was left unchanged. Playback speed is passed to PlayAnimation() as PlaybackSpeed at runtime."));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("A widget animation has no stored playback speed, so there is nothing to apply on '%s'. Pass PlaybackSpeed to PlayAnimation() at runtime instead. Requested speed=%.3f."),
-                            *AnimationName, PlaybackSpeed),
-            ResultJson, TEXT("NOT_APPLICABLE"));
-        return true;
-    }
-
     if (SubAction.Equals(TEXT("get_animation_info"), ESearchCase::IgnoreCase))
     {
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
@@ -95,19 +68,7 @@ bool HandleWidgetAuthoringAnimationQueries(
                 {
                     TSharedPtr<FJsonObject> AnimInfo = McpHandlerUtils::CreateResultObject();
                     AnimInfo->SetStringField(TEXT("name"), Anim->GetName());
-                    if (Anim->MovieScene)
-                    {
-                        FFrameRate FrameRate = Anim->MovieScene->GetTickResolution();
-                        FFrameNumber Start = Anim->MovieScene->GetPlaybackRange().GetLowerBoundValue();
-                        FFrameNumber End = Anim->MovieScene->GetPlaybackRange().GetUpperBoundValue();
-                        float Duration = (End - Start).Value / FrameRate.AsDecimal();
-                        AnimInfo->SetNumberField(TEXT("durationSeconds"), Duration);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                        AnimInfo->SetNumberField(TEXT("trackCount"), Anim->MovieScene->GetTracks().Num());
-#else
-                        AnimInfo->SetNumberField(TEXT("trackCount"), Anim->MovieScene->GetMasterTracks().Num());
-#endif
-                    }
+                    DescribeWidgetAnimation(Anim, AnimInfo);
                     AnimationsArray.Add(MakeShared<FJsonValueObject>(AnimInfo));
                 }
             }
@@ -130,27 +91,11 @@ bool HandleWidgetAuthoringAnimationQueries(
             ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
             ResultJson->SetStringField(TEXT("animationName"), AnimationName);
 
+            DescribeWidgetAnimation(TargetAnim, ResultJson);
             if (TargetAnim->MovieScene)
             {
-                FFrameRate FrameRate = TargetAnim->MovieScene->GetTickResolution();
-                FFrameNumber Start = TargetAnim->MovieScene->GetPlaybackRange().GetLowerBoundValue();
-                FFrameNumber End = TargetAnim->MovieScene->GetPlaybackRange().GetUpperBoundValue();
-                float Duration = (End - Start).Value / FrameRate.AsDecimal();
-
-                ResultJson->SetNumberField(TEXT("durationSeconds"), Duration);
-                ResultJson->SetNumberField(TEXT("frameRate"), FrameRate.AsDecimal());
-                ResultJson->SetNumberField(TEXT("startFrame"), Start.Value);
-                ResultJson->SetNumberField(TEXT("endFrame"), End.Value);
-
                 TArray<TSharedPtr<FJsonValue>> TracksArray;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-                // UE 5.1+: GetMasterTracks() replaced with GetTracks()
-                const TArray<UMovieSceneTrack*>& MasterTracks = TargetAnim->MovieScene->GetTracks();
-#else
-                // UE 5.0: Use GetMasterTracks()
-                const TArray<UMovieSceneTrack*>& MasterTracks = TargetAnim->MovieScene->GetMasterTracks();
-#endif
-                for (UMovieSceneTrack* Track : MasterTracks)
+                for (UMovieSceneTrack* Track : MCP_GET_MOVIESCENE_TRACKS(TargetAnim->MovieScene))
                 {
                     if (Track)
                     {
@@ -170,39 +115,16 @@ bool HandleWidgetAuthoringAnimationQueries(
 
     if (SubAction.Equals(TEXT("delete_animation"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
-
-        if (WidgetPath.IsEmpty() || AnimationName.IsEmpty())
+        const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+        const FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidgetAnimation* Animation = ResolveWidgetAnimation(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
+        if (!Animation)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, animationName"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        int32 FoundIndex = INDEX_NONE;
-        for (int32 i = 0; i < WidgetBP->Animations.Num(); ++i)
-        {
-            if (WidgetBP->Animations[i] && WidgetBP->Animations[i]->GetName().Equals(AnimationName, ESearchCase::IgnoreCase))
-            {
-                FoundIndex = i;
-                break;
-            }
-        }
-
-        if (FoundIndex == INDEX_NONE)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Animation '%s' not found"), *AnimationName), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        WidgetBP->Animations.RemoveAt(FoundIndex);
+        WidgetBP->Animations.Remove(Animation);
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);

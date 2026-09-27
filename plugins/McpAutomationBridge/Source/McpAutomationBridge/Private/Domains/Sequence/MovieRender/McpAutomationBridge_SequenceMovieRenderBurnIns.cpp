@@ -19,15 +19,11 @@ bool HandleConfigureBurnIns(UMcpAutomationBridgeSubsystem *Subsystem,
                             const TSharedPtr<FJsonObject> &Payload,
                             TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Message, Code;
-  UMoviePipelineQueueSubsystem *QueueSubsystem =
-      GetQueueSubsystem(Message, Code);
-  if (!QueueSubsystem)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
-  UMoviePipelineQueue *Queue = QueueSubsystem->GetQueue();
+  UMoviePipelineQueue *Queue = nullptr;
   UMoviePipelineExecutorJob *Job =
-      ResolveJob(Payload, Queue, Message, Code);
+      ResolveRequestJob(Subsystem, RequestId, Socket, Payload, Queue);
   if (!Job)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+    return true;
   MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, Message, Code);
   const TSharedPtr<FJsonObject> *BurnInObj = nullptr;
   if (!Config || !Payload.IsValid() ||

@@ -1,6 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 static bool AddUserParameter(FActionContext& Context)
@@ -26,8 +25,8 @@ static bool AddUserParameter(FActionContext& Context)
     return true;
 }
 
-// One rapid-iteration value in the variable's own type. Position types are skipped: the store asserts
-// unless it already tracks position data under that name.
+// One parameter-store value (user or rapid-iteration) in the variable's own type. Position types are skipped: the
+// store asserts unless it already tracks position data under that name.
 static bool WriteRapidIterationValue(FNiagaraParameterStore& Store, const FNiagaraVariable& Var, const TSharedPtr<FJsonObject>& Payload)
 {
     const FNiagaraTypeDefinition& Type = Var.GetType();
@@ -41,8 +40,8 @@ static bool WriteRapidIterationValue(FNiagaraParameterStore& Store, const FNiaga
     if ((Type == FNiagaraTypeDefinition::GetIntDef() || Type.IsEnum()) && bNum) return Store.SetParameterValue(static_cast<int32>(Num), Var);
     if (Type == FNiagaraTypeDefinition::GetBoolDef() && (bBool || bNum)) return Store.SetParameterValue(FNiagaraBool(bBool ? Bool : Num != 0.0), Var);
     if (!Obj) return false;
-    if (Type == FNiagaraTypeDefinition::GetColorDef()) return Store.SetParameterValue(GetColorFromJson(*Obj), Var);
-    const FVector V = GetVectorFromJson(*Obj);
+    if (Type == FNiagaraTypeDefinition::GetColorDef()) return Store.SetParameterValue(ExtractLinearColorField(Payload, TEXT("parameterValue"), FLinearColor::White), Var);
+    const FVector V = ExtractVectorField(Payload, TEXT("parameterValue"), FVector::ZeroVector);
     if (Type == FNiagaraTypeDefinition::GetVec3Def()) return Store.SetParameterValue(FVector3f(V), Var);
     if (Type == FNiagaraTypeDefinition::GetVec2Def()) return Store.SetParameterValue(FVector2f(V.X, V.Y), Var);
     if (Type == FNiagaraTypeDefinition::GetVec4Def()) return Store.SetParameterValue(FVector4f(V.X, V.Y, V.Z, static_cast<float>(GetJsonNumberField(*Obj, TEXT("w"), 0.0))), Var);
@@ -96,32 +95,16 @@ static bool SetParameterValue(FActionContext& Context)
         return true;
     }
     FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-    FNiagaraVariable FloatVar(FNiagaraTypeDefinition::GetFloatDef(), FName(*ParamName));
-    FNiagaraVariable IntVar(FNiagaraTypeDefinition::GetIntDef(), FName(*ParamName));
-    FNiagaraVariable BoolVar(FNiagaraTypeDefinition::GetBoolDef(), FName(*ParamName));
-    FNiagaraVariable VecVar(FNiagaraTypeDefinition::GetVec3Def(), FName(*ParamName));
-    double NumVal = 0;
-    bool BoolVal = false;
-    Context.Payload->TryGetNumberField(TEXT("parameterValue"), NumVal);
-    Context.Payload->TryGetBoolField(TEXT("parameterValue"), BoolVal);
-    if (UserStore.FindParameterVariable(FloatVar))
+    const FString UserName = ParamName.StartsWith(TEXT("User.")) ? ParamName : TEXT("User.") + ParamName;
+    const FNiagaraVariableWithOffset* UserVar = UserStore.ReadParameterVariables().FindByPredicate(
+        [&UserName](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == UserName; });
+    if (UserVar)
     {
-        UserStore.SetParameterValue(static_cast<float>(NumVal), FloatVar);
-    }
-    else if (UserStore.FindParameterVariable(IntVar))
-    {
-        UserStore.SetParameterValue(static_cast<int32>(NumVal), IntVar);
-    }
-    else if (UserStore.FindParameterVariable(BoolVar))
-    {
-        UserStore.SetParameterValue(FNiagaraBool(BoolVal), BoolVar);
-    }
-    else if (UserStore.FindParameterVariable(VecVar))
-    {
-        const TSharedPtr<FJsonObject>* ValObj;
-        if (Context.Payload->TryGetObjectField(TEXT("parameterValue"), ValObj))
+        if (!WriteRapidIterationValue(UserStore, FNiagaraVariable(*UserVar), Context.Payload))
         {
-            UserStore.SetParameterValue(GetVectorFromJson(*ValObj), VecVar);
+            Context.SendError(FString::Printf(TEXT("User parameter '%s' is a %s; parameterValue must be a number (float/int/bool) or an {x,y,z[,w]} / {r,g,b,a} object to match."),
+                *ParamName, *UserVar->GetType().GetName()), TEXT("PARAM_TYPE_MISMATCH"));
+            return true;
         }
     }
     else
@@ -255,4 +238,3 @@ bool HandleParameterAction(FActionContext& Context, const FString& SubAction)
     return false;
 }
 }
-#endif

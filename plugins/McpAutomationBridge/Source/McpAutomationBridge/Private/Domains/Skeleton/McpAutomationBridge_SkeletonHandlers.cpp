@@ -5,7 +5,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
-#if WITH_EDITOR
 
 namespace McpSkeletonHandlers {
 
@@ -40,9 +39,6 @@ static bool TryHandleFreeRoute(
         {TEXT("set_bone_parent"), &HandleSetBoneParentAction},
         {TEXT("set_vertex_weights"), &HandleSetVertexWeightsAction},
         {TEXT("auto_skin_weights"), &HandleAutoSkinWeightsAction},
-        {TEXT("copy_weights"), &HandleCopyWeightsAction},
-        {TEXT("mirror_weights"), &HandleMirrorWeightsAction},
-        {TEXT("preview_physics"), &HandlePreviewPhysicsAction},
     };
 
     for (const FSkeletonFreeRoute& Route : Routes)
@@ -109,7 +105,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         {TEXT("set_bone_transform"), &UMcpAutomationBridgeSubsystem::HandleSetBoneTransform},
         {TEXT("create_morph_target"), &UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget},
         {TEXT("set_morph_target_deltas"), &UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas},
-        {TEXT("import_morph_targets"), &UMcpAutomationBridgeSubsystem::HandleImportMorphTargets},
         {TEXT("set_morph_target_value"), &UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue},
         {TEXT("list_morph_targets"), &UMcpAutomationBridgeSubsystem::HandleListMorphTargets},
         {TEXT("delete_morph_target"), &UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget},
@@ -118,8 +113,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
         {TEXT("get_bone_transform"), &UMcpAutomationBridgeSubsystem::HandleGetBoneTransform},
         {TEXT("list_virtual_bones"), &UMcpAutomationBridgeSubsystem::HandleListVirtualBones},
         {TEXT("delete_virtual_bone"), &UMcpAutomationBridgeSubsystem::HandleDeleteVirtualBone},
-        {TEXT("normalize_weights"), &UMcpAutomationBridgeSubsystem::HandleNormalizeWeights},
-        {TEXT("prune_weights"), &UMcpAutomationBridgeSubsystem::HandlePruneWeights},
         {TEXT("bind_cloth_to_skeletal_mesh"), &UMcpAutomationBridgeSubsystem::HandleBindClothToSkeletalMesh},
         {TEXT("assign_cloth_asset_to_mesh"), &UMcpAutomationBridgeSubsystem::HandleAssignClothAssetToMesh},
         {TEXT("set_physics_constraint"), &UMcpAutomationBridgeSubsystem::HandleAddPhysicsConstraint},
@@ -148,4 +141,3 @@ bool UMcpAutomationBridgeSubsystem::HandleManageSkeleton(
     return true;
 }
 
-#endif // WITH_EDITOR

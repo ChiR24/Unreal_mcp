@@ -4,7 +4,6 @@
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
 namespace McpSequenceMetadata {
-#if WITH_EDITOR
 TSharedPtr<FJsonObject> BuildMetadataObject(UObject *Asset) {
   TSharedPtr<FJsonObject> Metadata = McpHandlerUtils::CreateResultObject();
   if (!Asset) return Metadata;
@@ -17,7 +16,6 @@ TSharedPtr<FJsonObject> BuildMetadataObject(UObject *Asset) {
   }
   return Metadata;
 }
-#endif
 
 bool HandleGetMetadata(UMcpAutomationBridgeSubsystem *Subsystem,
                        const FString &RequestId,
@@ -33,7 +31,6 @@ bool HandleGetMetadata(UMcpAutomationBridgeSubsystem *Subsystem,
         TEXT("INVALID_SEQUENCE"));
     return true;
   }
-#if WITH_EDITOR
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
     Subsystem->SendAutomationResponse(Socket, RequestId, false,
@@ -60,12 +57,5 @@ bool HandleGetMetadata(UMcpAutomationBridgeSubsystem *Subsystem,
                                     TEXT("Sequence metadata retrieved"), Resp,
                                     FString());
   return true;
-#else
-  Subsystem->SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("sequence_get_metadata requires editor build."), nullptr,
-      TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }
 }

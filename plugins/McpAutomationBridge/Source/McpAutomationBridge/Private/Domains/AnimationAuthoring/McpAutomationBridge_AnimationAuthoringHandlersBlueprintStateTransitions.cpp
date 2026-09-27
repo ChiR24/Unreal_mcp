@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -40,7 +39,6 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
         if (!AnimGraph)
@@ -153,11 +151,6 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
         Response->SetStringField(TEXT("requestedName"), StateName);
         Response->SetStringField(TEXT("stateMachine"), StateMachineName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' created in state machine '%s'"), *ActualStateName, *StateMachineName));
-#else
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
-        SaveAnimAsset(AnimBP, bSave);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("State '%s' marked for creation (requires AnimGraph module)"), *StateName));
-#endif
         return Response;
     }
 
@@ -190,7 +183,6 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA && MCP_HAS_ANIM_STATE_TRANSITION
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
         if (!AnimGraph)
@@ -321,16 +313,9 @@ TSharedPtr<FJsonObject> HandleBlueprintStateTransitionActions(const FString& Sub
         Response->SetStringField(TEXT("fromState"), FromState);
         Response->SetStringField(TEXT("toState"), ToState);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Transition from '%s' to '%s' created"), *FromState, *ToState));
-#else
-        // AnimGraph headers not available - return error instead of fake success
-        ANIM_ERROR_RESPONSE(
-            FString::Printf(TEXT("Cannot create transition from '%s' to '%s': AnimGraph module headers not available in this build."), *FromState, *ToState),
-            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
-#endif
         return Response;
     }
     return nullptr;
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

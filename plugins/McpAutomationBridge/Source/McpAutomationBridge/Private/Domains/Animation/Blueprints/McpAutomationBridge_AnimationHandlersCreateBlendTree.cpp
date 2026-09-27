@@ -1,4 +1,5 @@
 #include "Domains/Animation/McpAutomationBridge_AnimationHandlersActionContext.h"
+#include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Safety/McpSafeOperations.h"
 
@@ -8,20 +9,14 @@
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraph/EdGraphSchema.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#if __has_include("AnimGraphNode_BlendListByInt.h") && __has_include("AnimGraphNode_SequencePlayer.h") && __has_include("AnimGraphNode_Root.h")
 #include "AnimGraphNode_BlendListByInt.h"
 #include "AnimGraphNode_Root.h"
 #include "AnimGraphNode_SequencePlayer.h"
-#define MCP_HAS_BLEND_LIST_GRAPH 1
-#else
-#define MCP_HAS_BLEND_LIST_GRAPH 0
-#endif
 
 // create_blend_tree (dogfood #87): UE 5 has no "blend tree asset"; a blend tree is a graph of
 // blend nodes inside an AnimBlueprint. This authors one: a Blend List (by int) node fed by one
 // Sequence Player per animation, optionally wired into the AnimGraph output pose.
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 namespace {
 // FAnimNode_BlendListBase::BlendPose is protected; the pose count is the number of BlendPose_N input pins.
 int32 CountBlendPosePins(const UEdGraphNode *Node) {
@@ -32,15 +27,6 @@ int32 CountBlendPosePins(const UEdGraphNode *Node) {
     }
   }
   return Count;
-}
-
-UEdGraphPin *FindPinByName(UEdGraphNode *Node, const FString &Name, EEdGraphPinDirection Direction) {
-  for (UEdGraphPin *Pin : Node->Pins) {
-    if (Pin && Pin->Direction == Direction && Pin->PinName.ToString().Equals(Name, ESearchCase::IgnoreCase)) {
-      return Pin;
-    }
-  }
-  return nullptr;
 }
 } // namespace
 
@@ -53,9 +39,7 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
   FString BlueprintPath;
   Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath);
   if (BlueprintPath.IsEmpty()) {
-    Message = TEXT("blueprintPath is required for create_blend_tree (the AnimBlueprint that owns the graph)");
-    ErrorCode = TEXT("INVALID_ARGUMENT");
-    Resp->SetStringField(TEXT("error"), Message);
+    Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("blueprintPath is required for create_blend_tree (the AnimBlueprint that owns the graph)"));
     return false; // the animation dispatcher sends Context.Resp when a handler returns false
   }
   FString TreeName;
@@ -79,23 +63,12 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
   }
   UAnimBlueprint *AnimBP = LoadObject<UAnimBlueprint>(nullptr, *BlueprintPath);
   if (!AnimBP) {
-    Message = FString::Printf(TEXT("AnimBlueprint not found: %s"), *BlueprintPath);
-    ErrorCode = TEXT("ASSET_NOT_FOUND");
-    Resp->SetStringField(TEXT("error"), Message);
+    Context.Fail(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("AnimBlueprint not found: %s"), *BlueprintPath));
     return false; // the animation dispatcher sends Context.Resp when a handler returns false
   }
-#if MCP_HAS_BLEND_LIST_GRAPH
-  UEdGraph *AnimGraph = nullptr;
-  for (UEdGraph *Graph : AnimBP->FunctionGraphs) {
-    if (Graph && Graph->GetName() == TEXT("AnimGraph")) {
-      AnimGraph = Graph;
-      break;
-    }
-  }
+  UEdGraph *AnimGraph = McpAnimationAuthoring::GetAnimGraphFromBlueprint(AnimBP);
   if (!AnimGraph) {
-    Message = TEXT("Could not find AnimGraph in blueprint");
-    ErrorCode = TEXT("GRAPH_NOT_FOUND");
-    Resp->SetStringField(TEXT("error"), Message);
+    Context.Fail(TEXT("GRAPH_NOT_FOUND"), TEXT("Could not find AnimGraph in blueprint"));
     return false; // the animation dispatcher sends Context.Resp when a handler returns false
   }
   const int32 PoseCount = FMath::Max(2, AnimationPaths.Num());
@@ -129,8 +102,8 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
     Player->Node.SetSequence(Sequence);
 #endif
     PlayerCreator.Finalize();
-    UEdGraphPin *Out = FindPinByName(Player, TEXT("Pose"), EGPD_Output);
-    UEdGraphPin *In = FindPinByName(BlendNode, FString::Printf(TEXT("BlendPose_%d"), Index), EGPD_Input);
+    UEdGraphPin *Out = Player->FindPin(TEXT("Pose"), EGPD_Output);
+    UEdGraphPin *In = BlendNode->FindPin(FString::Printf(TEXT("BlendPose_%d"), Index), EGPD_Input);
     const bool bLinked = Out && In && Schema && Schema->TryCreateConnection(Out, In);
     if (!bLinked) {
       Warnings.Add(FString::Printf(TEXT("could not connect %s to BlendPose_%d"), *Sequence->GetName(), Index));
@@ -146,8 +119,8 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
   if (bConnectToOutput) {
     for (UEdGraphNode *GraphNode : AnimGraph->Nodes) {
       if (UAnimGraphNode_Root *Root = Cast<UAnimGraphNode_Root>(GraphNode)) {
-        UEdGraphPin *BlendOut = FindPinByName(BlendNode, TEXT("Pose"), EGPD_Output);
-        UEdGraphPin *ResultIn = FindPinByName(Root, TEXT("Result"), EGPD_Input);
+        UEdGraphPin *BlendOut = BlendNode->FindPin(TEXT("Pose"), EGPD_Output);
+        UEdGraphPin *ResultIn = Root->FindPin(TEXT("Result"), EGPD_Input);
         if (BlendOut && ResultIn && Schema) {
           ResultIn->BreakAllPinLinks();
           bConnectedToOutput = Schema->TryCreateConnection(BlendOut, ResultIn);
@@ -178,12 +151,5 @@ bool HandleAnimationCreateBlendTreeAction(FActionContext &Context,
                             *TreeName, CountBlendPosePins(BlendNode), Players.Num(),
                             bConnectedToOutput ? TEXT(", wired to the AnimGraph output") : TEXT(""));
   return false; // the animation dispatcher sends Context.Resp when a handler returns false
-#else
-  Message = TEXT("Blend tree authoring needs the AnimGraph editor module (BlendListByInt / SequencePlayer nodes), which is unavailable in this build");
-  ErrorCode = TEXT("NOT_SUPPORTED");
-  Resp->SetStringField(TEXT("error"), Message);
-  return false; // the animation dispatcher sends Context.Resp when a handler returns false
-#endif
 }
-#endif
 } // namespace McpAnimationHandlers

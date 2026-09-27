@@ -3,16 +3,12 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 
 #include "Animation/Skeleton.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "ReferenceSkeleton.h"
-#if __has_include("Animation/SkeletonModifier.h")
-#include "Animation/SkeletonModifier.h"
-#endif
 
-#if WITH_EDITOR
 
 namespace McpSkeletonHandlers {
 
@@ -147,4 +143,3 @@ bool HandleSetBoneParentAction(UMcpAutomationBridgeSubsystem* Subsystem, const F
 
 } // namespace McpSkeletonHandlers
 
-#endif // WITH_EDITOR

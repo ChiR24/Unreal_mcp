@@ -1,19 +1,17 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 	if (SubAction == TEXT("create_dialogue_voice"))
 	{
-#if MCP_HAS_DIALOGUE && MCP_HAS_DIALOGUE_FACTORY
-		FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
-		FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Dialogue")), false);
-		FString Gender = McpHandlerUtils::GetOptionalString(Params, TEXT("gender"), TEXT("Masculine"));
-		FString Plurality = McpHandlerUtils::GetOptionalString(Params, TEXT("plurality"), TEXT("Singular"));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+		FString Path = NormalizeAudioPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Audio/Dialogue")), false);
+		FString Gender = GetJsonStringField(Params, TEXT("gender"), TEXT("Masculine"));
+		FString Plurality = GetJsonStringField(Params, TEXT("plurality"), TEXT("Singular"));
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 		if (Name.Len() > 100) { return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters")); }
@@ -36,18 +34,14 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		Response->SetStringField(TEXT("assetPath"), NewVoice->GetPathName());
 		McpHandlerUtils::AddVerification(Response, NewVoice);
 		return Response;
-#else
-		return McpHandlerUtils::BuildErrorResponse(TEXT("DIALOGUE_NOT_AVAILABLE"), TEXT("Dialogue system not available"));
-#endif
 	}
 
 	if (SubAction == TEXT("create_dialogue_wave"))
 	{
-#if MCP_HAS_DIALOGUE && MCP_HAS_DIALOGUE_FACTORY
-		FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
-		FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Dialogue")), false);
-		FString SpokenText = McpHandlerUtils::GetOptionalString(Params, TEXT("spokenText"), TEXT(""));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+		FString Path = NormalizeAudioPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Audio/Dialogue")), false);
+		FString SpokenText = GetJsonStringField(Params, TEXT("spokenText"), TEXT(""));
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 		if (Name.Len() > 100) { return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters")); }
@@ -65,18 +59,14 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		Response->SetStringField(TEXT("assetPath"), NewWave->GetPathName());
 		McpHandlerUtils::AddVerification(Response, NewWave);
 		return Response;
-#else
-		return McpHandlerUtils::BuildErrorResponse(TEXT("DIALOGUE_NOT_AVAILABLE"), TEXT("Dialogue system not available"));
-#endif
 	}
 
 	if (SubAction == TEXT("set_dialogue_context"))
 	{
-#if MCP_HAS_DIALOGUE
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString SpeakerPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("speakerPath"), TEXT("")));
-		FString SoundWavePath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("soundWavePath"), TEXT("")));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString SpeakerPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("speakerPath"), TEXT("")));
+		FString SoundWavePath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("soundWavePath"), TEXT("")));
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		UDialogueWave* Wave = Cast<UDialogueWave>(StaticLoadObject(UDialogueWave::StaticClass(), nullptr, *AssetPath));
 		if (!Wave) { return McpHandlerUtils::BuildErrorResponse(TEXT("WAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load DialogueWave: %s"), *AssetPath)); }
@@ -114,9 +104,9 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		NewMapping.Context.Speaker = SpeakerVoice;
 		for (UDialogueVoice* TargetVoice : TargetVoices) { NewMapping.Context.Targets.Add(TargetVoice); }
 		NewMapping.SoundWave = ContextSoundWave;
-		NewMapping.LocalizationKeyFormat = McpHandlerUtils::GetOptionalString(Params, TEXT("localizationKeyFormat"), TEXT("{ContextHash}"));
+		NewMapping.LocalizationKeyFormat = GetJsonStringField(Params, TEXT("localizationKeyFormat"), TEXT("{ContextHash}"));
 
-		bool bReplaceExisting = McpHandlerUtils::GetOptionalBool(Params, TEXT("replace"), false);
+		bool bReplaceExisting = GetJsonBoolField(Params, TEXT("replace"), false);
 		if (bReplaceExisting)
 		{
 			bool bFound = false;
@@ -141,12 +131,8 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		McpHandlerUtils::AddVerification(Response, Wave);
 		Response->SetBoolField(TEXT("success"), true);
 		return Response;
-#else
-		return McpHandlerUtils::BuildErrorResponse(TEXT("DIALOGUE_NOT_AVAILABLE"), TEXT("Dialogue system not available"));
-#endif
 	}
 
 	return nullptr;
 }
 }
-#endif

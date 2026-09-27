@@ -3,12 +3,11 @@
 
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateVirtualBone(
@@ -117,18 +116,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameBone(
         return true;
     }
 
-    const TArray<FVirtualBone>& VirtualBones = Skeleton->GetVirtualBones();
-    bool bIsVirtualBone = false;
-    for (const FVirtualBone& VB : VirtualBones)
-    {
-        if (VB.VirtualBoneName == FName(*BoneName))
-        {
-            bIsVirtualBone = true;
-            break;
-        }
-    }
-
-    if (bIsVirtualBone)
+    const FName BoneFName(*BoneName);
+    if (Skeleton->GetVirtualBones().ContainsByPredicate([&BoneFName](const FVirtualBone& VB) { return VB.VirtualBoneName == BoneFName; }))
     {
         Skeleton->RenameVirtualBone(FName(*BoneName), FName(*NewBoneName));
         McpSafeAssetSave(Skeleton);
@@ -159,34 +148,17 @@ bool UMcpAutomationBridgeSubsystem::HandleListVirtualBones(
     FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
     FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
 
-    USkeleton* Skeleton = nullptr;
-
-    if (!SkeletonPath.IsEmpty())
-    {
-        FString Error;
-        Skeleton = LoadSkeletonFromPathSkel(SkeletonPath, Error);
-        if (!Skeleton)
-        {
-            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
-            return true;
-        }
-    }
-    else if (!SkeletalMeshPath.IsEmpty())
-    {
-        FString Error;
-        USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
-        if (!Mesh)
-        {
-            SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
-            return true;
-        }
-        Skeleton = Mesh->GetSkeleton();
-    }
-
-    if (!Skeleton)
+    if (SkeletonPath.IsEmpty() && SkeletalMeshPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
             TEXT("skeletonPath or skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
+        return true;
+    }
+    FString Error;
+    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath.IsEmpty() ? SkeletalMeshPath : SkeletonPath, Error);
+    if (!Skeleton)
+    {
+        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
         return true;
     }
 
@@ -233,18 +205,9 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteVirtualBone(
         return true;
     }
 
-    const TArray<FVirtualBone>& VirtualBones = Skeleton->GetVirtualBones();
-    int32 FoundIndex = INDEX_NONE;
-    for (int32 i = 0; i < VirtualBones.Num(); ++i)
-    {
-        if (VirtualBones[i].VirtualBoneName == FName(*VirtualBoneName))
-        {
-            FoundIndex = i;
-            break;
-        }
-    }
-
-    if (FoundIndex == INDEX_NONE)
+    const FName VirtualBoneFName(*VirtualBoneName);
+    if (!Skeleton->GetVirtualBones().ContainsByPredicate(
+            [&VirtualBoneFName](const FVirtualBone& VB) { return VB.VirtualBoneName == VirtualBoneFName; }))
     {
         SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Virtual bone '%s' not found"), *VirtualBoneName), TEXT("VBONE_NOT_FOUND"));
@@ -266,4 +229,3 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteVirtualBone(
     return true;
 }
 
-#endif // WITH_EDITOR

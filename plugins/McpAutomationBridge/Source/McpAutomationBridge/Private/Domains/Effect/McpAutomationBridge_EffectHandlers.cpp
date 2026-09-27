@@ -94,8 +94,7 @@ bool UMcpAutomationBridgeSubsystem::HandleEffectAction(
         const FString RoutedAction =
             (NativeSubAction == TEXT("list_debug_shapes") ||
              NativeSubAction == TEXT("clear_debug_shapes") ||
-             NativeSubAction == TEXT("spawn_niagara") ||
-             NativeSubAction == TEXT("set_niagara_parameter"))
+             NativeSubAction == TEXT("spawn_niagara"))
                 ? NativeSubAction
                 : TEXT("create_effect");
         return HandleEffectAction(RequestId, RoutedAction, LocalPayload, RequestingSocket);

@@ -2,12 +2,10 @@
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "NiagaraActor.h"
 #include "NiagaraComponent.h"
 #include "NiagaraSystem.h"
-#endif
 
 namespace McpEffectHandlers
 {
@@ -41,8 +39,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         return true;
     }
 
-#if WITH_EDITOR
-    // BB-028: package ('/Game/Dir/NS') and object ('/Game/Dir/NS.NS') forms resolve identically.
+    // Package ('/Game/Dir/NS') and object ('/Game/Dir/NS.NS') forms resolve identically.
     UObject* NiagaraObject = LoadEffectAsset(SystemPath);
     if (!NiagaraObject)
     {
@@ -76,8 +73,8 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
 
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         ANiagaraActor::StaticClass(),
-        ReadVectorField(Context.Payload, TEXT("location")),
-        ReadRotatorField(Context.Payload, TEXT("rotation")));
+        ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),
+        ExtractRotatorField(Context.Payload, TEXT("rotation"), FRotator::ZeroRotator));
     if (!Spawned)
     {
         Context.Bridge.SendAutomationResponse(
@@ -141,12 +138,5 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
         Context.Socket, Context.RequestId, true,
         bActive ? TEXT("Niagara spawned") : TEXT("Niagara spawned (inactive until the world ticks)"), Response);
     return true;
-#else
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        TEXT("spawn_niagara requires editor build."), nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 }

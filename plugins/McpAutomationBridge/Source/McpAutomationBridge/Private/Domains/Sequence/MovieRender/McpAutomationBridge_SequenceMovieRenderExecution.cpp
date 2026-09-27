@@ -23,21 +23,17 @@ bool HandleQueueRender(UMcpAutomationBridgeSubsystem *Subsystem,
                        const TSharedPtr<FJsonObject> &Payload,
                        TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Message, Code;
-  UMoviePipelineQueueSubsystem *QueueSubsystem =
-      GetQueueSubsystem(Message, Code);
-  if (!QueueSubsystem)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
-  UMoviePipelineQueue *Queue = QueueSubsystem->GetQueue();
+  UMoviePipelineQueue *Queue = nullptr;
   UMoviePipelineExecutorJob *Job =
-      ResolveJob(Payload, Queue, Message, Code);
+      ResolveRequestJob(Subsystem, RequestId, Socket, Payload, Queue);
   if (!Job)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+    return true;
   const bool bUseCurrentLevel =
-      McpHandlerUtils::GetOptionalBool(Payload, TEXT("useCurrentLevel"), false);
+      GetJsonBoolField(Payload, TEXT("useCurrentLevel"), false);
   if (!ValidateJobForExecution(Job, bUseCurrentLevel, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   const bool bOnlyJob =
-      McpHandlerUtils::GetOptionalBool(Payload, TEXT("onlyJob"), false);
+      GetJsonBoolField(Payload, TEXT("onlyJob"), false);
   struct FJobState {
     UMoviePipelineExecutorJob *Job = nullptr;
     bool bEnabled = false;
@@ -108,7 +104,7 @@ bool HandleStartRender(UMcpAutomationBridgeSubsystem *Subsystem,
   // undone by the scope guard if the start fails, and by the render teardown
   // (DiscardPreparedRenderStart) once the job has run.
   TArray<TPair<TWeakObjectPtr<UMoviePipelineExecutorJob>, bool>> OnlyJobPrevious;
-  if (McpHandlerUtils::GetOptionalBool(Payload, TEXT("onlyJob"), false)) {
+  if (GetJsonBoolField(Payload, TEXT("onlyJob"), false)) {
     for (UMoviePipelineExecutorJob *Other : Queue->GetJobs())
       if (Other) {
         OnlyJobPrevious.Emplace(Other, Other->IsEnabled());
@@ -125,7 +121,7 @@ bool HandleStartRender(UMcpAutomationBridgeSubsystem *Subsystem,
                      TEXT("MRQ_JOB_NOT_QUEUED")),
            true;
   const bool bUseCurrentLevel =
-      McpHandlerUtils::GetOptionalBool(Payload, TEXT("useCurrentLevel"), false);
+      GetJsonBoolField(Payload, TEXT("useCurrentLevel"), false);
   for (UMoviePipelineExecutorJob *QueuedJob : Queue->GetJobs()) {
     if (QueuedJob && QueuedJob->IsEnabled() &&
         !ValidateJobForExecution(QueuedJob, bUseCurrentLevel, Message, Code))

@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 static FString BuildMetaSoundClassName(const FString& ActualNamespace, const FString& ActualName, const FString& ActualVariant)
@@ -13,15 +12,28 @@ static FString BuildMetaSoundClassName(const FString& ActualNamespace, const FSt
 			: FString::Printf(TEXT("%s.%s.%s"), *ActualNamespace, *ActualName, *ActualVariant));
 }
 
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+// nodeType shorthands: "alias[/alias]" -> UE.<Name>.<Variant>.
+struct FMcpMetaSoundNodeAlias { const TCHAR* Aliases; const TCHAR* Name; const TCHAR* Variant; };
+static const FMcpMetaSoundNodeAlias MetaSoundNodeAliases[] = {
+	{TEXT("oscillator/sine"), TEXT("Sine"), TEXT("Audio")},
+	{TEXT("gain/multiply"), TEXT("Multiply"), TEXT("Float")},
+	{TEXT("multiply_audio"), TEXT("Multiply"), TEXT("Audio")},
+	{TEXT("add"), TEXT("Add"), TEXT("Float")},
+	{TEXT("add_audio"), TEXT("Add"), TEXT("Audio")},
+	{TEXT("waveplayer/wave_player"), TEXT("Wave Player"), TEXT("Mono")},
+};
+#endif
+
 TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 	if (SubAction == TEXT("add_metasound_node"))
 	{
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString NodeClassName = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeClassName"), TEXT(""));
-		FString NodeType = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeType"), TEXT(""));
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString NodeClassName = GetJsonStringField(Params, TEXT("nodeClassName"), TEXT(""));
+		FString NodeType = GetJsonStringField(Params, TEXT("nodeType"), TEXT(""));
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		if (AssetPath.IsEmpty())
 		{
@@ -41,11 +53,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		}
 
 		TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
-#if MCP_HAS_METASOUND_FRONTEND_V2
-		FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
-#else
-		FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
-#endif
+		MCP_METASOUND_BUILDER(Builder, ScriptInterface);
 
 		FString ActualNamespace;
 		FString ActualName;
@@ -73,14 +81,19 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		}
 		else if (!NodeType.IsEmpty())
 		{
-			FString NodeTypeLower = NodeType.ToLower();
-			if (NodeTypeLower == TEXT("oscillator") || NodeTypeLower == TEXT("sine")) { ActualNamespace = TEXT("UE"); ActualName = TEXT("Sine"); ActualVariant = TEXT("Audio"); }
-			else if (NodeTypeLower == TEXT("gain") || NodeTypeLower == TEXT("multiply")) { ActualNamespace = TEXT("UE"); ActualName = TEXT("Multiply"); ActualVariant = TEXT("Float"); }
-			else if (NodeTypeLower == TEXT("multiply_audio")) { ActualNamespace = TEXT("UE"); ActualName = TEXT("Multiply"); ActualVariant = TEXT("Audio"); }
-			else if (NodeTypeLower == TEXT("add")) { ActualNamespace = TEXT("UE"); ActualName = TEXT("Add"); ActualVariant = TEXT("Float"); }
-			else if (NodeTypeLower == TEXT("add_audio")) { ActualNamespace = TEXT("UE"); ActualName = TEXT("Add"); ActualVariant = TEXT("Audio"); }
-			else if (NodeTypeLower == TEXT("waveplayer") || NodeTypeLower == TEXT("wave_player")) { ActualNamespace = TEXT("UE"); ActualName = TEXT("Wave Player"); ActualVariant = TEXT("Mono"); }
-			else { ActualName = NodeType; }
+			ActualName = NodeType;
+			for (const FMcpMetaSoundNodeAlias& Alias : MetaSoundNodeAliases)
+			{
+				TArray<FString> Spellings;
+				FString(Alias.Aliases).ParseIntoArray(Spellings, TEXT("/"));
+				if (Spellings.Contains(NodeType.ToLower()))
+				{
+					ActualNamespace = TEXT("UE");
+					ActualName = Alias.Name;
+					ActualVariant = Alias.Variant;
+					break;
+				}
+			}
 		}
 
 		if (ActualName.IsEmpty())
@@ -141,25 +154,23 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 				*FullClassName,
 				CandidateText.IsEmpty() ? TEXT("") : TEXT("; matching classes: "),
 				*CandidateText));
-			Response->SetStringField(TEXT("errorCode"), TEXT("NODE_CLASS_NOT_FOUND"));
 			Response->SetStringField(TEXT("code"), TEXT("NODE_CLASS_NOT_FOUND"));
-			TArray<FString> Accepted = { TEXT("oscillator/sine -> UE.Sine.Audio"), TEXT("gain/multiply -> UE.Multiply.Float"), TEXT("multiply_audio -> UE.Multiply.Audio"), TEXT("add -> UE.Add.Float"), TEXT("add_audio -> UE.Add.Audio"), TEXT("waveplayer/wave_player -> UE.Wave Player.Mono") };
 			TArray<TSharedPtr<FJsonValue>> AcceptedArray;
-			for (const FString& A : Accepted) { AcceptedArray.Add(MakeShared<FJsonValueString>(A)); }
+			for (const FMcpMetaSoundNodeAlias& Alias : MetaSoundNodeAliases)
+			{
+				AcceptedArray.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%s -> UE.%s.%s"), Alias.Aliases, Alias.Name, Alias.Variant)));
+			}
 			Response->SetArrayField(TEXT("acceptedNodeTypes"), AcceptedArray);
 			Response->SetArrayField(TEXT("candidateNodeClasses"), CandidateArray);
 		}
 
-#if MCP_HAS_METASOUND_FRONTEND_V2
-		Builder.FinishBuilding();
-#endif
+		MCP_METASOUND_FINISH(Builder);
 		return Response;
 #elif MCP_HAS_METASOUND
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString NodeType = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeType"), TEXT(""));
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString NodeType = GetJsonStringField(Params, TEXT("nodeType"), TEXT(""));
 		Response->SetBoolField(TEXT("success"), false);
 		Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Cannot add MetaSound node '%s' - Frontend Builder not available"), *NodeType));
-		Response->SetStringField(TEXT("errorCode"), TEXT("METASOUND_FRONTEND_NOT_SUPPORTED"));
 		Response->SetStringField(TEXT("code"), TEXT("METASOUND_FRONTEND_NOT_SUPPORTED"));
 		Response->SetStringField(TEXT("requiredVersion"), TEXT("UE 5.3+"));
 		return Response;
@@ -176,4 +187,3 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 	return nullptr;
 }
 }
-#endif

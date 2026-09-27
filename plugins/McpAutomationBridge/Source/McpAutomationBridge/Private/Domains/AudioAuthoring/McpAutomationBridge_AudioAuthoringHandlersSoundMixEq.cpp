@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 static void ClampMixEq(USoundMix* Mix)
@@ -30,18 +29,18 @@ TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const 
 		return nullptr;
 	}
 
-	FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-	bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+	FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+	bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 	USoundMix* Mix = LoadSoundMixFromPath(AssetPath);
 	if (!Mix)
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("MIX_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundMix: %s"), *AssetPath));
 	}
 
-	Mix->bApplyEQ = McpHandlerUtils::GetOptionalBool(Params, TEXT("applyEQ"), true);
+	Mix->bApplyEQ = GetJsonBoolField(Params, TEXT("applyEQ"), true);
 	if (Params->HasField(TEXT("eqPriority")))
 	{
-		Mix->EQPriority = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("eqPriority"), 1.0));
+		Mix->EQPriority = static_cast<float>(GetJsonNumberField(Params, TEXT("eqPriority"), 1.0));
 	}
 
 	const TSharedPtr<FJsonObject>* EQObj;
@@ -62,14 +61,14 @@ TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const 
 	}
 	else
 	{
-		if (Params->HasField(TEXT("lowFrequency"))) { Mix->EQSettings.FrequencyCenter0 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("lowFrequency"), 600.0)); }
-		if (Params->HasField(TEXT("lowGain"))) { Mix->EQSettings.Gain0 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("lowGain"), 1.0)); }
-		if (Params->HasField(TEXT("midFrequency"))) { Mix->EQSettings.FrequencyCenter1 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("midFrequency"), 1000.0)); }
-		if (Params->HasField(TEXT("midGain"))) { Mix->EQSettings.Gain1 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("midGain"), 1.0)); }
-		if (Params->HasField(TEXT("highMidFrequency"))) { Mix->EQSettings.FrequencyCenter2 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highMidFrequency"), 2000.0)); }
-		if (Params->HasField(TEXT("highMidGain"))) { Mix->EQSettings.Gain2 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highMidGain"), 1.0)); }
-		if (Params->HasField(TEXT("highFrequency"))) { Mix->EQSettings.FrequencyCenter3 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highFrequency"), 10000.0)); }
-		if (Params->HasField(TEXT("highGain"))) { Mix->EQSettings.Gain3 = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("highGain"), 1.0)); }
+		if (Params->HasField(TEXT("lowFrequency"))) { Mix->EQSettings.FrequencyCenter0 = static_cast<float>(GetJsonNumberField(Params, TEXT("lowFrequency"), 600.0)); }
+		if (Params->HasField(TEXT("lowGain"))) { Mix->EQSettings.Gain0 = static_cast<float>(GetJsonNumberField(Params, TEXT("lowGain"), 1.0)); }
+		if (Params->HasField(TEXT("midFrequency"))) { Mix->EQSettings.FrequencyCenter1 = static_cast<float>(GetJsonNumberField(Params, TEXT("midFrequency"), 1000.0)); }
+		if (Params->HasField(TEXT("midGain"))) { Mix->EQSettings.Gain1 = static_cast<float>(GetJsonNumberField(Params, TEXT("midGain"), 1.0)); }
+		if (Params->HasField(TEXT("highMidFrequency"))) { Mix->EQSettings.FrequencyCenter2 = static_cast<float>(GetJsonNumberField(Params, TEXT("highMidFrequency"), 2000.0)); }
+		if (Params->HasField(TEXT("highMidGain"))) { Mix->EQSettings.Gain2 = static_cast<float>(GetJsonNumberField(Params, TEXT("highMidGain"), 1.0)); }
+		if (Params->HasField(TEXT("highFrequency"))) { Mix->EQSettings.FrequencyCenter3 = static_cast<float>(GetJsonNumberField(Params, TEXT("highFrequency"), 10000.0)); }
+		if (Params->HasField(TEXT("highGain"))) { Mix->EQSettings.Gain3 = static_cast<float>(GetJsonNumberField(Params, TEXT("highGain"), 1.0)); }
 	}
 
 	ClampMixEq(Mix);
@@ -89,4 +88,3 @@ TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const 
 	return Response;
 }
 }
-#endif

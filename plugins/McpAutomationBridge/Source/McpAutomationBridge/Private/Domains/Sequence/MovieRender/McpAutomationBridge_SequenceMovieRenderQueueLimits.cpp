@@ -17,13 +17,6 @@ namespace McpSequenceMovieRender {
 namespace {
 constexpr int32 MaximumEffectiveFrameRate = 240;
 
-bool QueueResourceLimitExceeded(const FString &Message, FString &OutMessage,
-                                FString &OutCode) {
-  OutMessage = Message;
-  OutCode = TEXT("MRQ_RESOURCE_LIMIT_EXCEEDED");
-  return false;
-}
-
 int64 SaturatingMultiply(int64 Left, int64 Right) {
   if (Left <= 0 || Right <= 0)
     return 0;
@@ -122,8 +115,7 @@ int64 ResolveMovieRenderFrameCount(UMoviePipelineExecutorJob *Job,
   const UMcpAutomationBridgeSettings *Settings =
       GetDefault<UMcpAutomationBridgeSettings>();
   const int32 MaximumFrameRate = FMath::Clamp(
-      Settings ? Settings->MaxMovieRenderEffectiveFrameRate
-               : MaximumEffectiveFrameRate,
+      Settings->MaxMovieRenderEffectiveFrameRate,
       1, MaximumEffectiveFrameRate);
   if (!IsMovieRenderEffectiveFrameRateAllowed(EffectiveOutputRate,
                                                MaximumFrameRate)) {
@@ -159,15 +151,14 @@ bool ValidateQueueResourceLimits(UMoviePipelineQueue *Queue,
                                  FString &OutMessage, FString &OutCode) {
   const UMcpAutomationBridgeSettings *Settings =
       GetDefault<UMcpAutomationBridgeSettings>();
-  if (!Queue || !Settings)
-    return QueueResourceLimitExceeded(
-        TEXT("Movie Render Queue security settings are unavailable."),
-        OutMessage, OutCode);
+  if (!Queue)
+    return ResourceLimitExceeded(TEXT("No Movie Render Queue is available."),
+                                 OutMessage, OutCode);
   const int32 MaxJobs = FMath::Max(1, Settings->MaxMovieRenderEnabledJobs);
   const int32 MaxQueueJobs =
       FMath::Max(MaxJobs, Settings->MaxMovieRenderQueueJobs);
   if (Queue->GetJobs().Num() > MaxQueueJobs)
-    return QueueResourceLimitExceeded(
+    return ResourceLimitExceeded(
         TEXT("MRQ total job count exceeds the configured queue limit."),
         OutMessage, OutCode);
   const int64 MaxWork =
@@ -178,12 +169,12 @@ bool ValidateQueueResourceLimits(UMoviePipelineQueue *Queue,
     if (!Job || !Job->IsEnabled())
       continue;
     if (++EnabledJobs > MaxJobs)
-      return QueueResourceLimitExceeded(
+      return ResourceLimitExceeded(
           TEXT("MRQ enabled job count exceeds the configured limit."),
           OutMessage, OutCode);
     const int64 JobWork = EstimateJobWork(Job);
     if (JobWork == MAX_int64 || AggregateWork > MaxWork - JobWork)
-      return QueueResourceLimitExceeded(
+      return ResourceLimitExceeded(
           TEXT("MRQ aggregate render work exceeds the configured limit."),
           OutMessage, OutCode);
     AggregateWork += JobWork;

@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 
 class FJsonObject;
+class FMcpBridgeWebSocket;
+class UMcpAutomationBridgeSubsystem;
 class UPhysicsAsset;
 class USkeletalMesh;
 class USkeleton;
@@ -13,6 +15,9 @@ USkeleton* LoadSkeletonFromPathSkel(const FString& SkeletonPath, FString& OutErr
 USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FString& OutError);
 // The skeleton at Path, or the skeleton of the skeletal mesh at Path.
 USkeleton* LoadSkeletonOrMeshSkeleton(const FString& Path, FString& OutError);
+// skeletonPath (else skeletalMeshPath) as a skeleton or a mesh's skeleton; null after replying SKELETON_NOT_FOUND.
+USkeleton* LoadPayloadSkeletonOrReply(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload);
 UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FString& OutError);
 
 // The skeletal mesh a skeleton-addressed request can read or write: the

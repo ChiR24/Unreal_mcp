@@ -1,6 +1,5 @@
 #include "Domains/NiagaraGraph/McpAutomationBridge_NiagaraGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraGraphHandlers
 {
 namespace
@@ -216,4 +215,3 @@ bool HandleConnectPins(
     return true;
 }
 }
-#endif

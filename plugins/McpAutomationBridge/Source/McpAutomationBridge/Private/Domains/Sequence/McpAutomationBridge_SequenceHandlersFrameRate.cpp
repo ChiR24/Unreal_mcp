@@ -5,7 +5,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetDisplayRate(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   TSharedPtr<FJsonObject> LocalPayload =
       Payload.IsValid() ? Payload : McpHandlerUtils::CreateResultObject();
   FString SeqPath = ResolveSequencePath(LocalPayload);
@@ -52,19 +51,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetDisplayRate(
                          TEXT("Invalid sequence type"), nullptr,
                          TEXT("INVALID_SEQUENCE"));
   return true;
-#else
-  SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("sequence_set_display_rate requires editor build"), nullptr,
-      TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTickResolution(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   FString ResolutionStr;
   Payload->TryGetStringField(TEXT("resolution"), ResolutionStr);
 
@@ -124,7 +115,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTickResolution(
                            nullptr, TEXT("NOT_FOUND"));
   }
   return true;
-#else
-  return false;
-#endif
 }

@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "Components/CanvasPanelSlot.h"
 #include "Components/PanelSlot.h"
 #include "Components/Widget.h"
@@ -148,4 +147,3 @@ inline bool Apply(UWidget *Widget, const TSharedPtr<FJsonObject> &AlignmentObj,
   return true;
 }
 } // namespace McpWidgetSlotAlignment
-#endif

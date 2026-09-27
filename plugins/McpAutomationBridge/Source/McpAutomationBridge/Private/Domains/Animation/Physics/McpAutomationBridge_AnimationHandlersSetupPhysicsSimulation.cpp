@@ -14,7 +14,6 @@
 #include "PhysicsEngine/PhysicsAsset.h"
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload) {
   TSharedPtr<FJsonObject> &Resp = Context.Resp;
@@ -46,9 +45,7 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
     USkeletalMesh *TargetMesh = nullptr;
 
     if (!bSkeletonProvided && !bSkeletalMeshProvided && !bActorProvided) {
-      Message = TEXT("setup_physics_simulation requires skeletonPath, skeletalMeshPath, or actorName");
-      ErrorCode = TEXT("INVALID_ARGUMENT");
-      Resp->SetStringField(TEXT("error"), Message);
+      Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("setup_physics_simulation requires skeletonPath, skeletalMeshPath, or actorName"));
       Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, Message, Resp, ErrorCode);
       return true;
     }
@@ -60,7 +57,7 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
 			// Try to get skeletal mesh component
         if (USkeletalMeshComponent *SkelComp =
                 FoundActor->FindComponentByClass<USkeletalMeshComponent>()) {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
           TargetMesh = SkelComp->GetSkeletalMeshAsset();
 #else
           TargetMesh = SkelComp->SkeletalMesh;
@@ -196,9 +193,7 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
         FString NormalizedPath;
         if (!FPackageName::TryConvertFilenameToLongPackageName(
                 SavePath, NormalizedPath)) {
-          Message = TEXT("Invalid savePath for physics asset");
-          ErrorCode = TEXT("INVALID_ARGUMENT");
-          Resp->SetStringField(TEXT("error"), Message);
+          Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("Invalid savePath for physics asset"));
           SavePath.Reset();
         } else {
           SavePath = NormalizedPath;
@@ -232,18 +227,14 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
         } else {
           UPackage *Package = CreatePackage(*PhysicsAssetObjectPath);
           if (!Package) {
-            Message = TEXT("Failed to create physics asset package");
-            ErrorCode = TEXT("PACKAGE_ERROR");
-            Resp->SetStringField(TEXT("error"), Message);
+            Context.Fail(TEXT("PACKAGE_ERROR"), TEXT("Failed to create physics asset package"));
           } else {
             UPhysicsAsset *PhysicsAsset = NewObject<UPhysicsAsset>(
                 Package, FName(*PhysicsAssetName),
                 RF_Public | RF_Standalone | RF_Transactional);
 
             if (!PhysicsAsset) {
-              Message = TEXT("Failed to create physics asset");
-              ErrorCode = TEXT("ASSET_CREATION_FAILED");
-              Resp->SetStringField(TEXT("error"), Message);
+              Context.Fail(TEXT("ASSET_CREATION_FAILED"), TEXT("Failed to create physics asset"));
             } else {
               PhysicsAsset->SetPreviewMesh(TargetMesh);
               PhysicsAsset->UpdateBodySetupIndexMap();
@@ -288,5 +279,4 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
     }
     return false;
 }
-#endif
 } // namespace McpAnimationHandlers

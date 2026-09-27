@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -25,38 +24,19 @@ bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FSt
 
     TMultiMap<UMaterialExpression*, UMaterialExpression*> Adj;
     for (UMaterialExpression *Expr : AllExpr) {
-      if (!Expr) continue;
-      for (TFieldIterator<FStructProperty> It(Expr->GetClass()); It; ++It) {
-        FStructProperty *SP = *It;
-        if (!SP->Struct || SP->Struct->GetFName() != FName(TEXT("ExpressionInput"))) continue;
-        FExpressionInput *InPtr = SP->ContainerPtrToValuePtr<FExpressionInput>(Expr);
-        if (InPtr && InPtr->Expression) {
-          Adj.Add(InPtr->Expression, Expr);
-          Adj.Add(Expr, InPtr->Expression);
-        }
-      }
-      if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
-        for (const FCustomInput &CI : CE->Inputs) {
-          if (CI.Input.Expression) { Adj.Add(CI.Input.Expression, Expr); Adj.Add(Expr, CI.Input.Expression); }
-        }
-      }
-      if (UMaterialExpressionMaterialFunctionCall *MFC = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
-        for (const FFunctionExpressionInput &FI : MFC->FunctionInputs) {
-          if (FI.Input.Expression) { Adj.Add(FI.Input.Expression, Expr); Adj.Add(Expr, FI.Input.Expression); }
-        }
-      }
+      ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) {
+        if (Input.Expression) { Adj.Add(Input.Expression, Expr); Adj.Add(Expr, Input.Expression); }
+      });
     }
 
     // Find nodes connected to Material main pins (or MF FunctionOutputs)
     TSet<UMaterialExpression*> OutputConnected;
     TArray<UMaterialExpression*> FloodQueue;
     if (Material) {
-#if WITH_EDITORONLY_DATA
       auto SeedMain = [&](const TCHAR *, const FExpressionInput &Input) {
         if (Input.Expression) { OutputConnected.Add(Input.Expression); FloodQueue.Add(Input.Expression); }
       };
       ForEachMainMaterialInput(Material, SeedMain);
-#endif
     } else {
       // For MF, seed from FunctionOutput nodes
       for (UMaterialExpression *Expr : AllExpr) {
@@ -145,4 +125,3 @@ bool HandleGetConnectedSubgraph(UMcpAutomationBridgeSubsystem* Bridge, const FSt
   return false;
 }
 }
-#endif

@@ -22,7 +22,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSpawnable(
     return true;
   }
 
-#if WITH_EDITOR
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
@@ -30,17 +29,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSpawnable(
     return true;
   }
 
-  UClass *ResolvedClass = nullptr;
-  if (ClassName.StartsWith(TEXT("/")) || ClassName.Contains(TEXT("/"))) {
-    if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(ClassName)) {
-      if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
-        ResolvedClass = BP->GeneratedClass;
-      else if (UClass *C = Cast<UClass>(Loaded))
-        ResolvedClass = C;
-    }
-  }
-  if (!ResolvedClass)
-    ResolvedClass = ResolveClassByName(ClassName);
+  UClass *ResolvedClass = ResolveClassByName(ClassName);
   if (!ResolvedClass) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Class not found"),
                            nullptr, TEXT("CLASS_NOT_FOUND"));
@@ -77,13 +66,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSpawnable(
                          TEXT("Sequence object is not a LevelSequence"),
                          nullptr, TEXT("INVALID_SEQUENCE_TYPE"));
   return true;
-#else
-  SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("sequence_add_spawnable_from_class requires editor build."), nullptr,
-      TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceGetBindings(
@@ -99,7 +81,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetBindings(
         TEXT("INVALID_SEQUENCE"));
     return true;
   }
-#if WITH_EDITOR
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
@@ -131,10 +112,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetBindings(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("bindings listed (empty)"), Resp, FString());
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_get_bindings requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

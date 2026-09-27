@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 
 // build_material_graph: one call that adds a material's nodes, wires them and
@@ -269,4 +268,3 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
   return true;
 }
 }
-#endif

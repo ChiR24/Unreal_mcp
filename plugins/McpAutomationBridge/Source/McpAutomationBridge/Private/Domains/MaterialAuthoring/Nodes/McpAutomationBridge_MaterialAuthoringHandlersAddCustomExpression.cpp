@@ -1,8 +1,41 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
+ECustomMaterialOutputType ParseCustomOutputType(FString Type, ECustomMaterialOutputType Fallback)
+{
+  Type.RemoveFromStart(TEXT("CMOT_"));
+  return Type == TEXT("Float1") ? CMOT_Float1
+       : Type == TEXT("Float2") ? CMOT_Float2
+       : Type == TEXT("Float3") ? CMOT_Float3
+       : Type == TEXT("Float4") ? CMOT_Float4
+       : Type == TEXT("MaterialAttributes") ? CMOT_MaterialAttributes
+       : Fallback;
+}
+
+void ApplyCustomInputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload)
+{
+  const TArray<TSharedPtr<FJsonValue>> *InputsArray = nullptr;
+  if (!Payload->TryGetArrayField(TEXT("inputs"), InputsArray) || !InputsArray) {
+    return;
+  }
+  const TArray<FCustomInput> OldInputs = Custom->Inputs;
+  Custom->Inputs.Empty();
+  for (const auto &InputVal : *InputsArray) {
+    const TSharedPtr<FJsonObject> *InputObj = nullptr;
+    FString InputName;
+    if (!InputVal->TryGetObject(InputObj) || !InputObj ||
+        !(*InputObj)->TryGetStringField(TEXT("name"), InputName) || InputName.IsEmpty()) {
+      continue;
+    }
+    const FCustomInput *Kept = OldInputs.FindByPredicate(
+        [&InputName](const FCustomInput &Old) { return Old.InputName == FName(*InputName); });
+    FCustomInput NewInput = Kept ? *Kept : FCustomInput();
+    NewInput.InputName = FName(*InputName);
+    Custom->Inputs.Add(NewInput);
+  }
+}
+
 bool ApplyCustomAdditionalOutputs(UMaterialExpressionCustom* Custom, const TSharedPtr<FJsonObject>& Payload)
 {
   const TArray<TSharedPtr<FJsonValue>> *OutputsArray = nullptr;
@@ -18,14 +51,9 @@ bool ApplyCustomAdditionalOutputs(UMaterialExpressionCustom* Custom, const TShar
       continue;
     }
     (*OutputObj)->TryGetStringField(TEXT("type"), OType);
-    OType.RemoveFromStart(TEXT("CMOT_"));
     FCustomOutput NewOutput;
     NewOutput.OutputName = FName(*OutputName);
-    NewOutput.OutputType = OType == TEXT("Float2") ? CMOT_Float2
-                         : OType == TEXT("Float3") ? CMOT_Float3
-                         : OType == TEXT("Float4") ? CMOT_Float4
-                         : OType == TEXT("MaterialAttributes") ? CMOT_MaterialAttributes
-                         : CMOT_Float1;
+    NewOutput.OutputType = ParseCustomOutputType(OType, CMOT_Float1);
     Custom->AdditionalOutputs.Add(NewOutput);
   }
   // The output pins are Outputs, not AdditionalOutputs, and the engine rebuilds them only from the
@@ -62,48 +90,20 @@ bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FStr
             RF_Transactional);
     CustomExpr->Code = Code;
 
-    if (OutputType == TEXT("Float1") || OutputType == TEXT("CMOT_Float1"))
-      CustomExpr->OutputType = CMOT_Float1;
-    else if (OutputType == TEXT("Float2") || OutputType == TEXT("CMOT_Float2"))
-      CustomExpr->OutputType = CMOT_Float2;
-    else if (OutputType == TEXT("Float3") || OutputType == TEXT("CMOT_Float3"))
-      CustomExpr->OutputType = CMOT_Float3;
-    else if (OutputType == TEXT("Float4") || OutputType == TEXT("CMOT_Float4"))
-      CustomExpr->OutputType = CMOT_Float4;
-    else if (OutputType == TEXT("MaterialAttributes"))
-      CustomExpr->OutputType = CMOT_MaterialAttributes;
-    else
-      CustomExpr->OutputType = CMOT_Float1;
+    CustomExpr->OutputType = ParseCustomOutputType(OutputType, CMOT_Float1);
 
     if (!Description.IsEmpty()) {
       CustomExpr->Description = Description;
     }
 
-    const TArray<TSharedPtr<FJsonValue>> *InputsArray = nullptr;
-    if (Payload->TryGetArrayField(TEXT("inputs"), InputsArray) && InputsArray) {
-      CustomExpr->Inputs.Empty();
-      for (const auto &InputVal : *InputsArray) {
-        const TSharedPtr<FJsonObject> *InputObj = nullptr;
-        if (InputVal->TryGetObject(InputObj) && InputObj) {
-          FString InputName;
-          (*InputObj)->TryGetStringField(TEXT("name"), InputName);
-          if (!InputName.IsEmpty()) {
-            FCustomInput NewInput;
-            NewInput.InputName = FName(*InputName);
-            CustomExpr->Inputs.Add(NewInput);
-          }
-        }
-      }
-    }
+    ApplyCustomInputs(CustomExpr, Payload);
 
     ApplyCustomAdditionalOutputs(CustomExpr, Payload);
 
     CustomExpr->MaterialExpressionEditorX = (int32)X;
     CustomExpr->MaterialExpressionEditorY = (int32)Y;
 
-#if WITH_EDITORONLY_DATA
     AddExpressionToContainer(Material, Function, CustomExpr);
-#endif
 
     FINALIZE_HOST();
 
@@ -124,4 +124,3 @@ bool HandleAddCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FStr
   return false;
 }
 }
-#endif

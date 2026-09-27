@@ -101,43 +101,23 @@ bool HandleWidgetAuthoringAnimationCore(
 
     if (SubAction.Equals(TEXT("add_animation_track"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
-        FString SlotName = GetSlotName(Payload);
-        FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"), TEXT("RenderOpacity"));
-
-        if (WidgetPath.IsEmpty() || AnimationName.IsEmpty() || SlotName.IsEmpty())
+        const FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
+        const FString SlotName = GetSlotName(Payload);
+        const FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"), TEXT("RenderOpacity"));
+        if (SlotName.IsEmpty())
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, animationName, slotName"), TEXT("MISSING_PARAMETER"));
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: slotName"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidgetAnimation* Animation = WidgetAuthoringHelpers::FindWidgetAnimation(WidgetBP, AnimationName);
-
+        UWidgetBlueprint* WidgetBP = nullptr;
+        UWidgetAnimation* Animation = ResolveWidgetAnimation(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
         if (!Animation)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Animation '%s' not found"), *AnimationName), TEXT("ANIMATION_NOT_FOUND"));
             return true;
         }
 
-        UWidget* TargetWidget = nullptr;
-        if (WidgetBP->WidgetTree)
-        {
-            WidgetBP->WidgetTree->ForEachWidget([&](UWidget* Widget) {
-                if (Widget && Widget->GetFName().ToString().Equals(SlotName, ESearchCase::IgnoreCase))
-                {
-                    TargetWidget = Widget;
-                }
-            });
-        }
-
+        UWidget* TargetWidget = WidgetBP->WidgetTree ? FindWidgetByName(WidgetBP->WidgetTree, SlotName) : nullptr;
         if (!TargetWidget)
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' not found in tree"), *SlotName), TEXT("WIDGET_NOT_FOUND"));
@@ -189,52 +169,6 @@ bool HandleWidgetAuthoringAnimationCore(
     {
         return HandleWidgetAuthoringAnimationKeyframe(Subsystem, RequestId, Payload, RequestingSocket, ResultJson);
     }
-    if (SubAction.Equals(TEXT("set_animation_loop"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
-        bool bLoop = GetJsonBoolField(Payload, TEXT("loop"), true);
-        int32 LoopCount = static_cast<int32>(GetJsonNumberField(Payload, TEXT("loopCount"), 0)); // 0 = infinite
-
-        if (WidgetPath.IsEmpty() || AnimationName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath, animationName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidgetAnimation* Animation = WidgetAuthoringHelpers::FindWidgetAnimation(WidgetBP, AnimationName);
-
-        if (!Animation)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Animation '%s' not found"), *AnimationName), TEXT("ANIMATION_NOT_FOUND"));
-            return true;
-        }
-
-        // UMG widget animations have no persisted loop setting: looping is a PlayAnimation()
-        // NumLoopsToPlay argument at runtime. This branch used to answer "Animation loop settings
-        // configured" with success:true while storing nothing, and then marked the asset modified and
-        // saved it for that non-change. Report what actually happened, and leave the asset untouched.
-        ResultJson->SetBoolField(TEXT("success"), false);
-        ResultJson->SetStringField(TEXT("animationName"), AnimationName);
-        ResultJson->SetBoolField(TEXT("requestedLoop"), bLoop);
-        ResultJson->SetNumberField(TEXT("requestedLoopCount"), LoopCount);
-        ResultJson->SetBoolField(TEXT("applied"), false);
-        ResultJson->SetStringField(TEXT("note"), TEXT("Nothing was stored and the widget asset was left unchanged. Loop behaviour is passed to PlayAnimation() as NumLoopsToPlay at runtime."));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("A widget animation has no stored loop setting, so no loop configuration exists to apply on '%s'. Pass NumLoopsToPlay to PlayAnimation() at runtime instead. Requested loop=%s, loopCount=%d."),
-                            *AnimationName, bLoop ? TEXT("true") : TEXT("false"), LoopCount),
-            ResultJson, TEXT("NOT_APPLICABLE"));
-        return true;
-    }
-
     return false;
 }
 }

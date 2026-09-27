@@ -23,17 +23,6 @@ namespace McpSequenceMovieRender {
 namespace {
 const TCHAR *JobIdPrefix = TEXT("mcp.renderJobId=");
 
-FString GetString(const TSharedPtr<FJsonObject> &Payload, const TCHAR *First,
-                  const TCHAR *Second = nullptr) {
-  FString Value;
-  if (Payload.IsValid() && Payload->TryGetStringField(First, Value) &&
-      !Value.IsEmpty())
-    return Value;
-  return Payload.IsValid() && Second && Payload->TryGetStringField(Second, Value)
-             ? Value
-             : FString();
-}
-
 FString GetJobId(UMoviePipelineExecutorJob *Job) {
   if (!Job)
     return FString();
@@ -85,9 +74,9 @@ UMoviePipelineExecutorJob *ResolveJob(const TSharedPtr<FJsonObject> &Payload,
     OutCode = TEXT("MRQ_QUEUE_UNAVAILABLE");
     return nullptr;
   }
-  const FString WantedId = GetString(Payload, TEXT("jobId"), TEXT("renderJobId"));
+  const FString WantedId = McpGetFirstStringField(Payload, {TEXT("jobId"), TEXT("renderJobId")});
   const FString WantedName =
-      GetString(Payload, TEXT("renderJobName"), TEXT("jobName"));
+      McpGetFirstStringField(Payload, {TEXT("renderJobName"), TEXT("jobName")});
   if (!WantedName.IsEmpty() &&
       !ValidateRenderJobName(WantedName, OutMessage)) {
     OutCode = TEXT("INVALID_RENDER_JOB_NAME");
@@ -109,6 +98,22 @@ UMoviePipelineExecutorJob *ResolveJob(const TSharedPtr<FJsonObject> &Payload,
                                      *WantedId);
   OutCode = TEXT("MRQ_JOB_NOT_FOUND");
   return nullptr;
+}
+
+UMoviePipelineExecutorJob *ResolveRequestJob(UMcpAutomationBridgeSubsystem *Subsystem,
+                                             const FString &RequestId,
+                                             TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                             const TSharedPtr<FJsonObject> &Payload,
+                                             UMoviePipelineQueue *&OutQueue) {
+  FString Message, Code;
+  UMoviePipelineQueueSubsystem *QueueSubsystem = GetQueueSubsystem(Message, Code);
+  OutQueue = QueueSubsystem ? QueueSubsystem->GetQueue() : nullptr;
+  UMoviePipelineExecutorJob *Job =
+      QueueSubsystem ? ResolveJob(Payload, OutQueue, Message, Code) : nullptr;
+  if (!Job) {
+    SendError(Subsystem, RequestId, Socket, Message, Code);
+  }
+  return Job;
 }
 
 MCP_MOVIE_PIPELINE_CONFIG_CLASS *ResolveConfig(UMoviePipelineExecutorJob *Job,

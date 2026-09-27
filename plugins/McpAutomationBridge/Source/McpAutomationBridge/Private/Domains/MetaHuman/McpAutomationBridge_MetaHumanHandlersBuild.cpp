@@ -1,6 +1,5 @@
 #include "Domains/MetaHuman/McpAutomationBridge_MetaHumanHandlers.h"
 
-#if WITH_EDITOR
 #include "Safety/McpSafeOperations.h"
 
 namespace McpMetaHumanHandlers
@@ -55,16 +54,7 @@ bool HandleRigMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 
     // The request reports its own outcome through delegates, not a return value,
     // so re-read build readiness rather than claiming the rig succeeded.
-    bool bCanBuild = false;
-    TSharedPtr<FJsonObject> CanBuildArgs = MakeShared<FJsonObject>();
-    CanBuildArgs->SetBoolField(TEXT("bInLogError"), false);
-    TSharedPtr<FJsonObject> CanBuildResults;
-    FString CanBuildError;
-    if (InvokeMetaHumanFunction(Subsystem, TEXT("CanBuildMetaHuman"), CanBuildArgs, Character, CanBuildResults, CanBuildError)
-        && CanBuildResults.IsValid())
-    {
-        CanBuildResults->TryGetBoolField(TEXT("ReturnValue"), bCanBuild);
-    }
+    const bool bCanBuild = QueryCanBuild(Subsystem, Character, false);
 
     McpSafeAssetSave(Character);
 
@@ -108,17 +98,7 @@ bool HandleBuildMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 
     // Refuse up front rather than letting BuildMetaHuman fail with only a log
     // line and report success to the caller.
-    TSharedPtr<FJsonObject> CanBuildArgs = MakeShared<FJsonObject>();
-    CanBuildArgs->SetBoolField(TEXT("bInLogError"), true);
-    TSharedPtr<FJsonObject> CanBuildResults;
-    FString CanBuildError;
-    bool bCanBuild = false;
-    if (InvokeMetaHumanFunction(Subsystem, TEXT("CanBuildMetaHuman"), CanBuildArgs, Character, CanBuildResults, CanBuildError)
-        && CanBuildResults.IsValid())
-    {
-        CanBuildResults->TryGetBoolField(TEXT("ReturnValue"), bCanBuild);
-    }
-    if (!bCanBuild)
+    if (!QueryCanBuild(Subsystem, Character, true))
     {
         Self->SendAutomationError(Socket, RequestId,
             TEXT("The character is not ready to build (most often: not rigged). ")
@@ -161,4 +141,3 @@ bool HandleBuildMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& Re
     return true;
 }
 }
-#endif

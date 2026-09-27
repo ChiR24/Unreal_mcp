@@ -1,51 +1,13 @@
-// =============================================================================
-// McpAutomationBridge_NiagaraGraphHandlers.cpp
-// =============================================================================
-// MCP Automation Bridge - Niagara Graph Manipulation Handlers
-//
-// UE Version Support: 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7
-//
-// Handler Summary:
-// -----------------------------------------------------------------------------
-// Action: manage_niagara_graph (Editor Only)
-//   - add_module: Add Niagara module (function call) node to graph
-//   - connect_pins: Connect two pins in Niagara graph
-//   - remove_node: Remove node from Niagara graph
-//   - set_parameter: Set exposed parameter value (Float/Bool only)
-//
-// Dependencies:
-//   - Core: McpAutomationBridgeSubsystem, McpAutomationBridgeHelpers
-//   - Engine: NiagaraSystem, NiagaraEmitter, NiagaraScript, NiagaraGraph
-//   - Editor: Niagara nodes, EdGraph
-//
-// Version Compatibility Notes:
-//   - UE 5.1+: GetInstance() returns FNiagaraEmitterHandleRef with .Emitter
-//   - UE 5.0: GetInstance() returns UNiagaraEmitter* directly
-//   - GetLatestEmitterData() can be null - must guard before dereferencing
-//
-// Architecture:
-//   - System has multiple scripts (Spawn, Update, etc.)
-//   - Emitter has multiple scripts per lifecycle stage
-//   - Target graph resolved via scriptType parameter
-// =============================================================================
-
 #include "Core/Compatibility/McpVersionCompatibility.h"  // MUST be first - UE version compatibility macros
 
-// -----------------------------------------------------------------------------
-// Core Includes
-// -----------------------------------------------------------------------------
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/NiagaraGraph/McpAutomationBridge_NiagaraGraphHandlersPrivate.h"
 
-// -----------------------------------------------------------------------------
-// Engine Includes
-// -----------------------------------------------------------------------------
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "NiagaraSystem.h"
 #include "NiagaraEmitter.h"
 #include "NiagaraScript.h"
@@ -58,11 +20,6 @@
 #include "ViewModels/Stack/NiagaraStackGraphUtilities.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphSchema.h"
-#endif
-
-// =============================================================================
-// Handler Implementation
-// =============================================================================
 
 bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
     const FString& RequestId,
@@ -75,7 +32,6 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         return false;
     }
 
-#if WITH_EDITOR
     if (!Payload.IsValid())
     {
         SendAutomationError(RequestingSocket, RequestId,
@@ -353,10 +309,4 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         FString::Printf(TEXT("Unknown subAction: %s"), *SubAction), TEXT("INVALID_SUBACTION"));
     return true;
 
-#else
-    // Non-editor build
-    SendAutomationError(RequestingSocket, RequestId,
-        TEXT("Editor only."), TEXT("EDITOR_ONLY"));
-    return true;
-#endif
 }

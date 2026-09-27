@@ -11,7 +11,7 @@
 #define MCP_HAS_TAKE_RECORDER 0
 #endif
 
-#if WITH_EDITOR && MCP_HAS_TAKE_RECORDER && \
+#if MCP_HAS_TAKE_RECORDER && \
     __has_include("Recorder/TakeRecorderBlueprintLibrary.h") && \
     __has_include("TakeRecorderSource.h") && \
     __has_include("TakeRecorderSources.h")
@@ -37,7 +37,6 @@ bool IsTakeRecorderAction(const FString& Action);
 void SendTakeRecorderUnavailable(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket);
 
 #if MCP_SEQUENCE_HAS_TAKE_RECORDER_API
-TArray<FString> GetTakeRecorderStringArray(const TSharedPtr<FJsonObject>& Payload, const TCHAR* FieldName);
 UTakeRecorderPanel* GetPanel(bool bOpen);
 AActor* FindTakeRecorderActor(const FString& Name);
 struct FPreparedTakeRecorderSources

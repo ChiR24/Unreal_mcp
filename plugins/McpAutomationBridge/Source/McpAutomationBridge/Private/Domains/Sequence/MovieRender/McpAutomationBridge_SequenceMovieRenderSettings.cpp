@@ -84,15 +84,11 @@ bool HandleConfigureAntiAliasing(UMcpAutomationBridgeSubsystem *Subsystem,
                                  const TSharedPtr<FJsonObject> &Payload,
                                  TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Message, Code;
-  UMoviePipelineQueueSubsystem *QueueSubsystem =
-      GetQueueSubsystem(Message, Code);
-  if (!QueueSubsystem)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
-  UMoviePipelineQueue *Queue = QueueSubsystem->GetQueue();
+  UMoviePipelineQueue *Queue = nullptr;
   UMoviePipelineExecutorJob *Job =
-      ResolveJob(Payload, Queue, Message, Code);
+      ResolveRequestJob(Subsystem, RequestId, Socket, Payload, Queue);
   if (!Job)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+    return true;
   MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, Message, Code);
   int32 SpatialSamples = 0;
   const bool bHasSpatial =
@@ -163,15 +159,11 @@ bool HandleConfigureConsoleVariables(UMcpAutomationBridgeSubsystem *Subsystem,
                                      const TSharedPtr<FJsonObject> &Payload,
                                      TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString Message, Code;
-  UMoviePipelineQueueSubsystem *QueueSubsystem =
-      GetQueueSubsystem(Message, Code);
-  if (!QueueSubsystem)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
-  UMoviePipelineQueue *Queue = QueueSubsystem->GetQueue();
+  UMoviePipelineQueue *Queue = nullptr;
   UMoviePipelineExecutorJob *Job =
-      ResolveJob(Payload, Queue, Message, Code);
+      ResolveRequestJob(Subsystem, RequestId, Socket, Payload, Queue);
   if (!Job)
-    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+    return true;
   MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, Message, Code);
   const TSharedPtr<FJsonObject> *Object = nullptr;
   if (!Config || !Payload.IsValid() ||
@@ -185,20 +177,8 @@ bool HandleConfigureConsoleVariables(UMcpAutomationBridgeSubsystem *Subsystem,
       Cast<UMoviePipelineConsoleVariableSetting>(
           Config->FindSettingByClass(
               UMoviePipelineConsoleVariableSetting::StaticClass(), true));
-  if (ExistingCVars) {
-    if (ExistingCVars->ConsoleVariablePresets.Num() > 0 ||
-        ExistingCVars->StartConsoleCommands.Num() > 0 ||
-        ExistingCVars->EndConsoleCommands.Num() > 0)
-      return SendError(
-                 Subsystem, RequestId, Socket,
-                 TEXT("MRQ console-variable presets and console commands are not allowed."),
-                 TEXT("MRQ_CONSOLE_COMMANDS_NOT_ALLOWED")),
-             true;
-    for (const FMoviePipelineConsoleVariableEntry &Entry :
-         ExistingCVars->GetConsoleVariables())
-      if (Entry.bIsEnabled)
-        ParsedValues.Add(Entry.Name, Entry.Value);
-  }
+  if (!ReadAllowedConsoleVariables(ExistingCVars, ParsedValues, Message, Code))
+    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   for (const TPair<FString, TSharedPtr<FJsonValue>> Entry : (*Object)->Values) {
     float Value = 0.0f;
     if (Entry.Key.TrimStartAndEnd().IsEmpty() ||

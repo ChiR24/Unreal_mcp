@@ -131,7 +131,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
 
   TSharedPtr<FJsonObject> CinematicsResult;
   if (McpSequenceCinematics::TryHandleCinematics(
-          this, EffectiveAction, LocalPayload, CinematicsResult)) {
+          EffectiveAction, LocalPayload, CinematicsResult)) {
     bool bSuccess = false;
     FString Message;
     FString ErrorCode;

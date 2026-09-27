@@ -4,12 +4,11 @@
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/SkeletalMeshSocket.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleListSockets(
@@ -17,18 +16,9 @@ bool UMcpAutomationBridgeSubsystem::HandleListSockets(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
-    if (SkeletonPath.IsEmpty())
-    {
-        SkeletonPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    }
-
-    FString Error;
-    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
-
+    USkeleton* Skeleton = LoadPayloadSkeletonOrReply(*this, RequestId, RequestingSocket, Payload);
     if (!Skeleton)
     {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
         return true;
     }
 
@@ -61,12 +51,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
-    if (SkeletonPath.IsEmpty())
-    {
-        SkeletonPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    }
-
     FString SocketName = GetJsonStringField(Payload, TEXT("socketName"));
     FString BoneName = GetJsonStringField(Payload, TEXT("attachBoneName"));
     if (BoneName.IsEmpty())
@@ -86,12 +70,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
         return true;
     }
 
-    FString Error;
-    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
-
+    USkeleton* Skeleton = LoadPayloadSkeletonOrReply(*this, RequestId, RequestingSocket, Payload);
     if (!Skeleton)
     {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
         return true;
     }
 
@@ -121,9 +102,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateSocket(
         return true;
     }
     NewSocket->SocketName = FName(*SocketName);
-    NewSocket->RelativeLocation = ParseVectorFromJson(Payload, TEXT("relativeLocation"));
-    NewSocket->RelativeRotation = ParseRotatorFromJson(Payload, TEXT("relativeRotation"));
-    NewSocket->RelativeScale = ParseVectorFromJson(Payload, TEXT("relativeScale"), FVector::OneVector);
+    NewSocket->RelativeLocation = ExtractVectorField(Payload, TEXT("relativeLocation"), FVector::ZeroVector);
+    NewSocket->RelativeRotation = ExtractRotatorField(Payload, TEXT("relativeRotation"), FRotator::ZeroRotator);
+    NewSocket->RelativeScale = ExtractVectorField(Payload, TEXT("relativeScale"), FVector::OneVector);
     NewSocket->BoneName = FName(*BoneName);
 
     // delete_socket already calls Modify() before it mutates Sockets; without
@@ -147,12 +128,6 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
-    FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
-    if (SkeletonPath.IsEmpty())
-    {
-        SkeletonPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    }
-
     FString SocketName = GetJsonStringField(Payload, TEXT("socketName"));
     if (SocketName.IsEmpty())
     {
@@ -160,24 +135,13 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
         return true;
     }
 
-    FString Error;
-    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
-
+    USkeleton* Skeleton = LoadPayloadSkeletonOrReply(*this, RequestId, RequestingSocket, Payload);
     if (!Skeleton)
     {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
         return true;
     }
 
-    USkeletalMeshSocket* Socket = nullptr;
-    for (USkeletalMeshSocket* S : Skeleton->Sockets)
-    {
-        if (S && S->SocketName == FName(*SocketName))
-        {
-            Socket = S;
-            break;
-        }
-    }
+    USkeletalMeshSocket* Socket = Skeleton->FindSocket(FName(*SocketName));
 
     if (!Socket)
     {
@@ -208,17 +172,17 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
 
     if (Payload->HasField(TEXT("relativeLocation")))
     {
-        Socket->RelativeLocation = ParseVectorFromJson(Payload, TEXT("relativeLocation"));
+        Socket->RelativeLocation = ExtractVectorField(Payload, TEXT("relativeLocation"), FVector::ZeroVector);
     }
 
     if (Payload->HasField(TEXT("relativeRotation")))
     {
-        Socket->RelativeRotation = ParseRotatorFromJson(Payload, TEXT("relativeRotation"));
+        Socket->RelativeRotation = ExtractRotatorField(Payload, TEXT("relativeRotation"), FRotator::ZeroRotator);
     }
 
     if (Payload->HasField(TEXT("relativeScale")))
     {
-        Socket->RelativeScale = ParseVectorFromJson(Payload, TEXT("relativeScale"), FVector::OneVector);
+        Socket->RelativeScale = ExtractVectorField(Payload, TEXT("relativeScale"), FVector::OneVector);
     }
 
     McpSafeAssetSave(Skeleton);
@@ -232,4 +196,3 @@ bool UMcpAutomationBridgeSubsystem::HandleConfigureSocket(
     return true;
 }
 
-#endif // WITH_EDITOR

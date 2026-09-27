@@ -65,7 +65,6 @@ bool IsNiagaraAuthoringSubAction(const FString& SubAction)
         TEXT("add_collision_query_data_interface"),
         TEXT("add_event_generator"),
         TEXT("add_event_receiver"),
-        TEXT("configure_event_payload"),
         TEXT("enable_gpu_simulation"),
         TEXT("add_simulation_stage"),
         TEXT("get_niagara_info"),

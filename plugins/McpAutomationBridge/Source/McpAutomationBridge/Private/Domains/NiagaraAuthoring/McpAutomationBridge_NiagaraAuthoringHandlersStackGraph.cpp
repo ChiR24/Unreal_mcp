@@ -1,6 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 UNiagaraNodeFunctionCall* AddModuleToEmitterStack(
@@ -127,4 +126,3 @@ bool EnsureScriptOutputGraph(UNiagaraScriptSource* ScriptSource, ENiagaraScriptU
     return true;
 }
 }
-#endif

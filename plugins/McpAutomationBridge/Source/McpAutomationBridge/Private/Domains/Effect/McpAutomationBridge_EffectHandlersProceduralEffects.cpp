@@ -2,12 +2,10 @@
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Engine/ExponentialHeightFog.h"
 #include "Subsystems/EditorActorSubsystem.h"
-#endif
 
 namespace McpEffectHandlers
 {
@@ -40,7 +38,6 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
         return true;
     }
 
-#if WITH_EDITOR
     if (!GEditor)
     {
         Context.Bridge.SendAutomationResponse(
@@ -84,17 +81,10 @@ bool HandleCleanup(const FEffectActionContext& Context, bool bIsCreateEffect)
         FString::Printf(TEXT("Cleanup completed (removed=%d)"), Removed.Num()),
         Response);
     return true;
-#else
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        TEXT("cleanup requires editor build."), nullptr, TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 
 static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
 {
-#if WITH_EDITOR
     if (!GEditor)
     {
         Context.Bridge.SendAutomationResponse(
@@ -120,7 +110,7 @@ static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
 
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
         AExponentialHeightFog::StaticClass(),
-        ReadVectorField(Context.Payload, TEXT("location")),
+        ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector),
         FRotator::ZeroRotator);
     if (Spawned)
     {
@@ -151,13 +141,6 @@ static bool HandleCreateVolumetricFog(const FEffectActionContext& Context)
         return true;
     }
     return false;
-#else
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        TEXT("create_volumetric_fog requires editor build."), nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 
 bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsCreateEffect)
@@ -205,7 +188,6 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
         // An existing system was named: place it, never author a duplicate.
         return CreateNiagaraEffectFromPayload(Context, EffectName, SystemPath);
     }
-#if WITH_EDITOR
     if (!GEditor)
     {
         Context.Bridge.SendAutomationResponse(
@@ -227,12 +209,5 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
         return true;
     }
     return CreateNiagaraEffectFromPayload(Context, EffectName, AuthoredSystemPath, Details);
-#else
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        FString::Printf(TEXT("%s requires editor build."), *EffectName), nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 }

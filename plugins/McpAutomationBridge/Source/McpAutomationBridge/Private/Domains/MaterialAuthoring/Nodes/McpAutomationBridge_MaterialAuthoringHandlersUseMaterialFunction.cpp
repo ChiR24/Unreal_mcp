@@ -1,44 +1,11 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleUseMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("use_material_function")) {
-    FString AssetPath;
-    // The published schema spells this `materialPath` and forbids `assetPath`, so reading
-    // only `assetPath` made the capability uncallable through the gateway. Accept both.
-    if ((!Payload->TryGetStringField(TEXT("materialPath"), AssetPath) || AssetPath.IsEmpty()) &&
-        (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty())) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'materialPath' (or 'assetPath')."),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-    FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);
-    if (ValidatedAssetPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
-                          TEXT("INVALID_PATH"));
-      return true;
-    }
-    AssetPath = ValidatedAssetPath;
-
-    UMaterial *Material = nullptr;
-    UMaterialFunction *HostFunction = nullptr;
-    LoadMaterialOrFunction(AssetPath, Material, HostFunction);
-    if (!Material && !HostFunction) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          TEXT("Could not load Material or Material Function host."),
-                          TEXT("ASSET_NOT_FOUND"));
-      return true;
-    }
-    UObject *HostOuter = Material ? static_cast<UObject*>(Material)
-                                  : static_cast<UObject*>(HostFunction);
-
-    float X = 0.0f, Y = 0.0f;
-    Payload->TryGetNumberField(TEXT("x"), X);
-    Payload->TryGetNumberField(TEXT("y"), Y);
+    LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
     FString FunctionPath;
     if (!Payload->TryGetStringField(TEXT("functionPath"), FunctionPath) ||
@@ -68,7 +35,7 @@ bool HandleUseMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     }
 
     // Guard against self-reference when host is itself a MF
-    if (HostFunction && Func == HostFunction) {
+    if (Function && Func == Function) {
       Bridge->SendAutomationError(Socket, RequestId,
                           TEXT("A material function cannot call itself."),
                           TEXT("INVALID_ARGUMENT"));
@@ -83,9 +50,7 @@ bool HandleUseMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     FuncCall->MaterialExpressionEditorX = (int32)X;
     FuncCall->MaterialExpressionEditorY = (int32)Y;
 
-#if WITH_EDITORONLY_DATA
-    AddExpressionToContainer(Material, HostFunction, FuncCall);
-#endif
+    AddExpressionToContainer(Material, Function, FuncCall);
 
     HostOuter->PostEditChange();
     HostOuter->MarkPackageDirty();
@@ -103,4 +68,3 @@ bool HandleUseMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const FStr
   return false;
 }
 }
-#endif

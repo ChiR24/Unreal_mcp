@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -12,9 +11,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, co
 	}
 
 #if MCP_HAS_METASOUND
-	FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
-	FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/MetaSounds")), false);
-	bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+	FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+	FString Path = NormalizeAudioPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Audio/MetaSounds")), false);
+	bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 	if (Name.IsEmpty())
 	{
@@ -57,4 +56,3 @@ TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, co
 #endif
 }
 }
-#endif

@@ -7,29 +7,12 @@
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
-#if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
-#elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
-#endif
 
 bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  const FString Lower = Action.ToLower();
-  if (!Lower.Equals(TEXT("play_anim_montage"), ESearchCase::IgnoreCase)) {
-    return false;
-  }
-
-#if WITH_EDITOR
-  if (!Payload.IsValid()) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("play_anim_montage payload missing"),
-                        TEXT("INVALID_PAYLOAD"));
-    return true;
-  }
-
   FString ActorName;
   if (!Payload->TryGetStringField(TEXT("actorName"), ActorName) ||
       ActorName.IsEmpty()) {
@@ -64,49 +47,10 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
     return true;
   }
 
-  UEditorActorSubsystem *ActorSS =
-      GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-  if (!ActorSS) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("EditorActorSubsystem not available"),
-                        TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
-    return true;
-  }
-
-  // During PIE the editor subsystem refuses (and logs an error); search the play world instead.
+  // During PIE the play world holds the live actors; the editor world otherwise.
   UWorld *PieWorld = GEditor->PlayWorld;
-  TArray<AActor *> AllActors;
-  if (!PieWorld) {
-    AllActors = ActorSS->GetAllLevelActors();
-  }
-  AActor *TargetActor = nullptr;
-
-  if (GEditor && GEditor->GetEditorWorldContext().World()) {
-    UWorld *World = PieWorld ? PieWorld : GEditor->GetEditorWorldContext().World();
-    for (TActorIterator<AActor> It(World); It; ++It) {
-      AActor *Actor = *It;
-      if (Actor) {
-        if (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
-            Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase)) {
-          TargetActor = Actor;
-          break;
-        }
-      }
-    }
-  }
-
-  // Fallback to ActorSS search if iterator didn't find it (rare but redundant
-  // safety)
-  if (!TargetActor) {
-    for (AActor *Actor : AllActors) {
-      if (Actor &&
-          (Actor->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
-           Actor->GetName().Equals(ActorName, ESearchCase::IgnoreCase))) {
-        TargetActor = Actor;
-        break;
-      }
-    }
-  }
+  AActor *TargetActor = FindActorByNameInWorldForMcp(
+      PieWorld ? PieWorld : GEditor->GetEditorWorldContext().World(), ActorName, true);
 
   if (!TargetActor) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -170,10 +114,4 @@ bool UMcpAutomationBridgeSubsystem::HandlePlayAnimMontage(
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          TEXT("Animation montage playing"), Resp, FString());
   return true;
-#else
-  SendAutomationResponse(RequestingSocket, RequestId, false,
-                         TEXT("play_anim_montage requires editor build"),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

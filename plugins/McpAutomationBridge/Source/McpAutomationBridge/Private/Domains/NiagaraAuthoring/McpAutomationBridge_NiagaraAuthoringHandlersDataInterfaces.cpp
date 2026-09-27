@@ -1,6 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 static bool FinishDataInterfaceAction(
@@ -31,12 +30,7 @@ static bool AddSkeletalMeshDI(FActionContext& Context)
     }
     const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"), TEXT("MCP_SkeletalMeshDataInterface"));
     bool bDataInterfaceAdded = false;
-#if MCP_HAS_NIAGARA_SKELETAL_MESH_DI
     bDataInterfaceAdded = AddDataInterfaceUserParameter(System, ParamName, UNiagaraDataInterfaceSkeletalMesh::StaticClass());
-#else
-    Context.SendError(TEXT("Skeletal mesh data interface is not available in this engine build."), TEXT("NIAGARA_DI_UNAVAILABLE"));
-    return true;
-#endif
     return FinishDataInterfaceAction(Context, System, TEXT("SkeletalMesh"), ParamName, bDataInterfaceAdded, TEXT("Added Skeletal Mesh data interface."), TEXT("Skeletal Mesh DI added."));
 }
 
@@ -110,4 +104,3 @@ bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction
     return false;
 }
 }
-#endif

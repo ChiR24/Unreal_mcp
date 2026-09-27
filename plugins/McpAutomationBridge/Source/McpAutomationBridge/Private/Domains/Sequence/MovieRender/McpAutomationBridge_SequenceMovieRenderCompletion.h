@@ -55,8 +55,6 @@ struct FRenderWaitState {
 bool TryAcquireRenderStartOwnership(UMoviePipelineExecutorBase *Executor,
                                     TSharedRef<FRenderWaitState> State);
 bool RequestRenderCancellation(UMoviePipelineExecutorBase *Executor);
-void ReleaseRenderStartOwnership(UMoviePipelineExecutorBase *Executor,
-                                 TSharedRef<FRenderWaitState> State);
 void DiscardPreparedRenderStart(UMoviePipelineExecutorBase *Executor,
                                 TSharedRef<FRenderWaitState> State);
 // Puts back the enabled flags onlyJob overrode for one render, then empties
@@ -77,6 +75,7 @@ bool CaptureRenderOutputSnapshot(UMoviePipelineExecutorJob *Job,
                                  FString &OutMessage, FString &OutCode);
 void CaptureRenderOutputData(const FMoviePipelineOutputData &OutputData,
                              TSharedRef<FRenderWaitState> State);
+// Writes the output-proof fields; returns the proven file count, or INDEX_NONE when the scan limit refused.
 int32 AppendRenderOutputProof(UMoviePipelineExecutorJob *Job,
                               const FRenderWaitState &State,
                               TSharedPtr<FJsonObject> Result);

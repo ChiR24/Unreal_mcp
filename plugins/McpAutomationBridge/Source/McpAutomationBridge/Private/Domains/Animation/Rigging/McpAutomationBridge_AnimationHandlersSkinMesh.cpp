@@ -25,7 +25,6 @@
 #endif
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 
 // A garment parented to an actor is still rigid: it holds its shape while the
 // body underneath animates, so arms push through sleeves and the hem stays put
@@ -186,5 +185,4 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   return false;
 #endif
 }
-#endif
 } // namespace McpAnimationHandlers

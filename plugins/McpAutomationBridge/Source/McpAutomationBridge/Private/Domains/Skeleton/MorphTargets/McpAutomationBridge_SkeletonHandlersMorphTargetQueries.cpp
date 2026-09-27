@@ -8,73 +8,13 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "GameFramework/Actor.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/Paths.h"
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
-
-bool UMcpAutomationBridgeSubsystem::HandleImportMorphTargets(
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-    FString SkeletalMeshPath = GetJsonStringField(Payload, TEXT("skeletalMeshPath"));
-    FString SourceFilePath = GetJsonStringField(Payload, TEXT("morphTargetPath"));
-    if (SourceFilePath.IsEmpty())
-    {
-        SourceFilePath = GetJsonStringField(Payload, TEXT("sourcePath"));
-    }
-
-    if (SkeletalMeshPath.IsEmpty())
-    {
-        SendAutomationError(RequestingSocket, RequestId, TEXT("skeletalMeshPath is required"), TEXT("MISSING_PARAM"));
-        return true;
-    }
-
-    FString Error;
-    USkeletalMesh* Mesh = LoadSkeletalMeshFromPathSkel(SkeletalMeshPath, Error);
-    if (!Mesh)
-    {
-        SendAutomationError(RequestingSocket, RequestId, Error, TEXT("MESH_NOT_FOUND"));
-        return true;
-    }
-
-    // Importing morph targets from an FBX (or any external file) is not
-    // implemented by this action; advertising the current inventory as a
-    // completed import misled callers (dogfood #96). Fail closed with the
-    // guidance and attach the inventory so the caller still learns what the
-    // mesh has.
-    TArray<TSharedPtr<FJsonValue>> MorphTargetArray;
-    for (UMorphTarget* MT : Mesh->GetMorphTargets())
-    {
-        if (!MT) continue;
-
-        TSharedPtr<FJsonObject> MTObj = McpHandlerUtils::CreateResultObject();
-        MTObj->SetStringField(TEXT("name"), MT->GetName());
-        MorphTargetArray.Add(MakeShared<FJsonValueObject>(MTObj));
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("skeletalMeshPath"), SkeletalMeshPath);
-    Result->SetArrayField(TEXT("morphTargets"), MorphTargetArray);
-    Result->SetNumberField(TEXT("count"), MorphTargetArray.Num());
-    Result->SetNumberField(TEXT("imported"), 0);
-    if (!SourceFilePath.IsEmpty())
-    {
-        Result->SetStringField(TEXT("sourcePath"), SourceFilePath);
-    }
-
-    const FString Guidance = SourceFilePath.IsEmpty()
-        ? FString(TEXT("import_morph_targets is not supported by this action; morph targets are imported together with the skeletal mesh. Use manage_asset import with the FBX file (no morphTargetPath/sourcePath was given)."))
-        : FString::Printf(TEXT("import_morph_targets is not supported by this action; morph targets are imported together with the skeletal mesh. Use manage_asset import with the FBX file '%s'."), *SourceFilePath);
-    SendAutomationResponse(RequestingSocket, RequestId, false, Guidance, Result, TEXT("NOT_SUPPORTED"));
-    return true;
-}
-
 bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
@@ -134,15 +74,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetValue(
 #endif
     if (SkelMesh)
     {
-        bool bHasMorphTarget = false;
-        for (const UMorphTarget* MT : SkelMesh->GetMorphTargets())
-        {
-            if (MT && MT->GetFName() == FName(*MorphTargetName))
-            {
-                bHasMorphTarget = true;
-                break;
-            }
-        }
+        const bool bHasMorphTarget = SkelMesh->FindMorphTarget(FName(*MorphTargetName)) != nullptr;
 
         if (!bHasMorphTarget && !bAddMissing)
         {
@@ -250,19 +182,8 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget(
         return true;
     }
 
-    UMorphTarget* TargetToRemove = nullptr;
-    int32 Index = INDEX_NONE;
-    for (int32 i = 0; i < Mesh->GetMorphTargets().Num(); ++i)
-    {
-        if (Mesh->GetMorphTargets()[i] && Mesh->GetMorphTargets()[i]->GetFName() == FName(*MorphTargetName))
-        {
-            TargetToRemove = Mesh->GetMorphTargets()[i];
-            Index = i;
-            break;
-        }
-    }
-
-    if (!TargetToRemove || Index == INDEX_NONE)
+    UMorphTarget* TargetToRemove = Mesh->FindMorphTarget(FName(*MorphTargetName));
+    if (!TargetToRemove)
     {
         SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Morph target '%s' not found"), *MorphTargetName), TEXT("MORPH_NOT_FOUND"));
@@ -284,4 +205,3 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteMorphTarget(
     return true;
 }
 
-#endif // WITH_EDITOR

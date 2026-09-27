@@ -9,7 +9,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Safety/McpSafeOperations.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
@@ -41,49 +40,23 @@
 #include "Factories/SoundCueFactoryNew.h"
 #include "Factories/SoundMixFactory.h"
 
-#if __has_include("Sound/DialogueVoice.h")
 #include "Sound/DialogueVoice.h"
 #include "Sound/DialogueWave.h"
-#define MCP_HAS_DIALOGUE 1
-#else
-#define MCP_HAS_DIALOGUE 0
-#endif
 
-#if __has_include("Factories/DialogueVoiceFactory.h")
 #include "Factories/DialogueVoiceFactory.h"
 #include "Factories/DialogueWaveFactory.h"
-#define MCP_HAS_DIALOGUE_FACTORY 1
-#else
-#define MCP_HAS_DIALOGUE_FACTORY 0
-#endif
 
-#if __has_include("Sound/SoundEffectSource.h")
 #include "Sound/SoundEffectSource.h"
-#define MCP_HAS_SOURCE_EFFECT 1
-#else
-#define MCP_HAS_SOURCE_EFFECT 0
-#endif
 
-#if __has_include("Sound/SoundSubmixSend.h")
 #include "Sound/SoundSubmixSend.h"
-#endif
 
-#if __has_include("Sound/SoundSubmix.h")
 #include "Sound/SoundSubmix.h"
-#define MCP_HAS_SUBMIX 1
-#else
-#define MCP_HAS_SUBMIX 0
-#endif
 
 #if __has_include("AudioMixerTypes.h")
 #include "AudioMixerTypes.h"
 #endif
 
-#if __has_include("SourceEffects/SourceEffectChain.h")
-#include "SourceEffects/SourceEffectChain.h"
-#elif __has_include("Sound/SoundEffectPreset.h")
 #include "Sound/SoundEffectPreset.h"
-#endif
 
 #if __has_include("SourceEffects/SourceEffectEQ.h")
 #include "SourceEffects/SourceEffectEQ.h"
@@ -113,12 +86,7 @@
 #define MCP_HAS_SOURCE_EFFECT_PRESETS 0
 #endif
 
-#if __has_include("Sound/ReverbEffect.h")
 #include "Sound/ReverbEffect.h"
-#define MCP_HAS_REVERB_EFFECT 1
-#else
-#define MCP_HAS_REVERB_EFFECT 0
-#endif
 
 #if __has_include("MetasoundSource.h")
 #include "MetasoundSource.h"
@@ -149,7 +117,16 @@
 #define MCP_HAS_METASOUND_FRONTEND_V2 0
 #endif
 
-#if MCP_HAS_METASOUND_FRONTEND && WITH_EDITORONLY_DATA && __has_include("MetasoundFrontendSearchEngine.h")
+// A document builder over a MetaSound; 5.5+ opens it for edits and needs FinishBuilding().
+#if MCP_HAS_METASOUND_FRONTEND_V2
+#define MCP_METASOUND_BUILDER(Name, Document) FMetaSoundFrontendDocumentBuilder Name(Document, nullptr, true)
+#define MCP_METASOUND_FINISH(Name) Name.FinishBuilding()
+#else
+#define MCP_METASOUND_BUILDER(Name, Document) FMetaSoundFrontendDocumentBuilder Name(Document)
+#define MCP_METASOUND_FINISH(Name)
+#endif
+
+#if MCP_HAS_METASOUND_FRONTEND && __has_include("MetasoundFrontendSearchEngine.h")
 #include "MetasoundFrontendSearchEngine.h"
 #define MCP_HAS_METASOUND_SEARCH_ENGINE 1
 #else
@@ -158,16 +135,10 @@
 
 #if __has_include("MetasoundFactory.h")
 #include "MetasoundFactory.h"
-#define MCP_HAS_METASOUND_FACTORY 1
-#else
-#define MCP_HAS_METASOUND_FACTORY 0
 #endif
 
 #if __has_include("MetasoundEditorSubsystem.h")
 #include "MetasoundEditorSubsystem.h"
-#define MCP_HAS_METASOUND_EDITOR 1
-#else
-#define MCP_HAS_METASOUND_EDITOR 0
 #endif
 
 namespace McpAudioAuthoring
@@ -212,4 +183,3 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 }
 
-#endif

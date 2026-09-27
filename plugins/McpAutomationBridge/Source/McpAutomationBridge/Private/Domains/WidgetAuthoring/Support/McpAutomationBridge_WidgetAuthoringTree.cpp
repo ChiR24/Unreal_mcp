@@ -47,6 +47,13 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
     RegisterWidgetGuid(WidgetBP, NewWidget);
     if (ParentSlot.IsEmpty())
     {
+        if (WidgetTree->RootWidget == NewWidget)
+        {
+            // The root's own slotName re-used: it is already seated. Adding it
+            // under the root made it its own child, and UMG recursed through
+            // that cycle until the editor died of a stack overflow.
+            return true;
+        }
         if (!WidgetTree->RootWidget)
         {
             // A leaf at the root can hold no siblings, so the *second* top-level
@@ -110,6 +117,16 @@ bool SeatWidgetInTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FStr
     {
         UE_LOG(LogTemp, Warning, TEXT("SafeAddWidgetToTree: Parent '%s' is not a panel widget"), *ParentSlot);
         return false;
+    }
+    // Same cycle one level down: a widget cannot be seated inside itself or its own subtree.
+    for (const UWidget* Ancestor = ParentPanel; Ancestor; Ancestor = Ancestor->GetParent())
+    {
+        if (Ancestor == NewWidget)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("SafeAddWidgetToTree: '%s' cannot be seated inside its own subtree ('%s')"),
+                *NewWidget->GetName(), *ParentSlot);
+            return false;
+        }
     }
     ParentPanel->AddChild(NewWidget);
     UE_LOG(LogTemp, Verbose, TEXT("SafeAddWidgetToTree: Added '%s' as child of '%s'"),

@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -11,13 +10,13 @@ TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, con
 		return nullptr;
 	}
 
-	FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
-	FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Cues")), false);
-	FString WavePath = McpHandlerUtils::GetOptionalString(Params, TEXT("wavePath"), TEXT(""));
-	bool bLooping = McpHandlerUtils::GetOptionalBool(Params, TEXT("looping"), false);
-	float Volume = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volume"), 1.0));
-	float Pitch = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitch"), 1.0));
-	bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+	FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+	FString Path = NormalizeAudioPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Audio/Cues")), false);
+	FString WavePath = GetJsonStringField(Params, TEXT("wavePath"), TEXT(""));
+	bool bLooping = GetJsonBoolField(Params, TEXT("looping"), false);
+	float Volume = static_cast<float>(GetJsonNumberField(Params, TEXT("volume"), 1.0));
+	float Pitch = static_cast<float>(GetJsonNumberField(Params, TEXT("pitch"), 1.0));
+	bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 	if (Name.IsEmpty())
 	{
@@ -58,44 +57,31 @@ TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, con
 			PlayerNode->SetSoundWave(Wave);
 			USoundNode* LastNode = PlayerNode;
 
+			// Put Parent above the chain so far: the data child and the graph pin link.
+			auto Chain = [&LastNode](USoundNode* Parent)
+			{
+				Parent->InsertChildNode(0);
+				Parent->ChildNodes[0] = LastNode;
+				USoundCueGraphNode* ParentGraphNode = Cast<USoundCueGraphNode>(Parent->GetGraphNode());
+				USoundCueGraphNode* ChildGraphNode = Cast<USoundCueGraphNode>(LastNode->GetGraphNode());
+				TArray<UEdGraphPin*> Pins;
+				if (ParentGraphNode) { ParentGraphNode->GetInputPins(Pins); }
+				if (Pins.Num() > 0 && Pins[0] && ChildGraphNode && ChildGraphNode->GetOutputPin())
+				{
+					Pins[0]->MakeLinkTo(ChildGraphNode->GetOutputPin());
+				}
+				LastNode = Parent;
+			};
 			if (bLooping)
 			{
-				USoundNodeLooping* LoopNode = NewCue->ConstructSoundNode<USoundNodeLooping>();
-				LoopNode->InsertChildNode(0);
-				LoopNode->ChildNodes[0] = LastNode;
-				USoundCueGraphNode* LoopGraphNode = Cast<USoundCueGraphNode>(LoopNode->GetGraphNode());
-				USoundCueGraphNode* LastGraphNode = Cast<USoundCueGraphNode>(LastNode->GetGraphNode());
-				if (LoopGraphNode && LastGraphNode)
-				{
-					TArray<UEdGraphPin*> Pins;
-					LoopGraphNode->GetInputPins(Pins);
-					if (Pins.Num() > 0 && Pins[0] && LastGraphNode->GetOutputPin())
-					{
-						Pins[0]->MakeLinkTo(LastGraphNode->GetOutputPin());
-					}
-				}
-				LastNode = LoopNode;
+				Chain(NewCue->ConstructSoundNode<USoundNodeLooping>());
 			}
-
 			if (Volume != 1.0f || Pitch != 1.0f)
 			{
 				USoundNodeModulator* ModNode = NewCue->ConstructSoundNode<USoundNodeModulator>();
-				ModNode->InsertChildNode(0);
-				ModNode->ChildNodes[0] = LastNode;
 				ModNode->PitchMin = ModNode->PitchMax = Pitch;
 				ModNode->VolumeMin = ModNode->VolumeMax = Volume;
-				USoundCueGraphNode* ModGraphNode = Cast<USoundCueGraphNode>(ModNode->GetGraphNode());
-				USoundCueGraphNode* LastGraphNode = Cast<USoundCueGraphNode>(LastNode->GetGraphNode());
-				if (ModGraphNode && LastGraphNode)
-				{
-					TArray<UEdGraphPin*> Pins;
-					ModGraphNode->GetInputPins(Pins);
-					if (Pins.Num() > 0 && Pins[0] && LastGraphNode->GetOutputPin())
-					{
-						Pins[0]->MakeLinkTo(LastGraphNode->GetOutputPin());
-					}
-				}
-				LastNode = ModNode;
+				Chain(ModNode);
 			}
 
 			NewCue->FirstNode = LastNode;
@@ -114,10 +100,11 @@ TSharedPtr<FJsonObject> HandleSoundCueAssetActions(const FString& SubAction, con
 
 	SaveAudioAsset(NewCue, bSave);
 	FString FullPath = NewCue->GetPathName();
-	Response = McpHandlerUtils::BuildSuccessResponse(FString::Printf(TEXT("SoundCue '%s' created"), *Name));
+	Response = MakeShared<FJsonObject>();
+	Response->SetBoolField(TEXT("success"), true);
+	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("SoundCue '%s' created"), *Name));
 	Response->SetStringField(TEXT("assetPath"), FullPath);
 	McpHandlerUtils::AddVerification(Response, NewCue);
 	return Response;
 }
 }
-#endif

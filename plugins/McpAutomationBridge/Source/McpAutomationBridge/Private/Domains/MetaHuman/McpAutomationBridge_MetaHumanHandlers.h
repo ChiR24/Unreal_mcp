@@ -25,7 +25,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpMetaHumanHandlers, Log, All);
 
-#if WITH_EDITOR
 namespace McpMetaHumanHandlers
 {
 using FMetaHumanSocket = TSharedPtr<FMcpBridgeWebSocket>;
@@ -64,6 +63,9 @@ bool InvokeMetaHumanFunction(UObject* Target, const TCHAR* FunctionName,
     const TSharedPtr<FJsonObject>& Args, UObject* CharacterArg,
     TSharedPtr<FJsonObject>& OutResults, FString& OutError);
 
+/** CanBuildMetaHuman(Character) on Subsystem; false when it says no or cannot be asked. bLogError asks it to log why. */
+bool QueryCanBuild(UObject* Subsystem, UObject* Character, bool bLogError);
+
 /** Load a MetaHuman character asset by package path, or nullptr. */
 UObject* LoadMetaHumanCharacter(const FString& AssetPath);
 
@@ -86,4 +88,3 @@ bool HandleRigMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleBuildMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 bool HandleExportMetaHuman(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FMetaHumanSocket Socket);
 }
-#endif

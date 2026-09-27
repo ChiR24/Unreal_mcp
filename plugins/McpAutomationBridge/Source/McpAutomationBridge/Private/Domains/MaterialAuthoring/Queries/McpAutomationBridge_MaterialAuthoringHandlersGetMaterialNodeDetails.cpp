@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -63,12 +62,7 @@ bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const F
       Result->SetNumberField(TEXT("scalarDefault"), ScalarParam->DefaultValue);
     } else if (UMaterialExpressionVectorParameter *VectorParam = Cast<UMaterialExpressionVectorParameter>(Expr)) {
       Result->SetStringField(TEXT("parameterName"), VectorParam->ParameterName.ToString());
-      TSharedPtr<FJsonObject> Rgba = McpHandlerUtils::CreateResultObject();
-      Rgba->SetNumberField(TEXT("r"), VectorParam->DefaultValue.R);
-      Rgba->SetNumberField(TEXT("g"), VectorParam->DefaultValue.G);
-      Rgba->SetNumberField(TEXT("b"), VectorParam->DefaultValue.B);
-      Rgba->SetNumberField(TEXT("a"), VectorParam->DefaultValue.A);
-      Result->SetObjectField(TEXT("vectorDefault"), Rgba);
+      Result->SetObjectField(TEXT("vectorDefault"), McpHandlerUtils::LinearColorToJson(VectorParam->DefaultValue));
     }
 
     if (UMaterialExpressionFunctionInput *In = Cast<UMaterialExpressionFunctionInput>(Expr)) {
@@ -88,4 +82,3 @@ bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const F
   return false;
 }
 }
-#endif

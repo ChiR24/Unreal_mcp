@@ -14,17 +14,6 @@
 namespace McpSequenceMovieRender {
 namespace {
 
-const UMcpAutomationBridgeSettings *SecuritySettings() {
-  return GetDefault<UMcpAutomationBridgeSettings>();
-}
-
-bool ResourceLimitExceeded(const FString &Message, FString &OutMessage,
-                           FString &OutCode) {
-  OutMessage = Message;
-  OutCode = TEXT("MRQ_RESOURCE_LIMIT_EXCEEDED");
-  return false;
-}
-
 bool IsAllowlisted(const FString &Name, const TArray<FString> &Allowlist) {
   return Allowlist.ContainsByPredicate(
       [&Name](const FString &Entry) {
@@ -36,11 +25,7 @@ bool IsAllowlisted(const FString &Name, const TArray<FString> &Allowlist) {
 
 bool ValidateResolutionResourceLimits(int32 Width, int32 Height,
                                       FString &OutMessage, FString &OutCode) {
-  const UMcpAutomationBridgeSettings *Settings = SecuritySettings();
-  if (!Settings)
-    return ResourceLimitExceeded(
-        TEXT("Movie Render Queue security settings are unavailable."),
-        OutMessage, OutCode);
+  const UMcpAutomationBridgeSettings *Settings = GetDefault<UMcpAutomationBridgeSettings>();
   const int32 MaxDimension =
       FMath::Max(1, Settings->MaxMovieRenderResolutionDimension);
   const int64 MaxPixels =
@@ -61,11 +46,7 @@ bool ValidateResolutionResourceLimits(int32 Width, int32 Height,
 bool ValidateFrameResourceLimits(bool bHasCustomRange, int32 StartFrame,
                                  int32 EndFrame, int32 HandleFrameCount,
                                  FString &OutMessage, FString &OutCode) {
-  const UMcpAutomationBridgeSettings *Settings = SecuritySettings();
-  if (!Settings)
-    return ResourceLimitExceeded(
-        TEXT("Movie Render Queue security settings are unavailable."),
-        OutMessage, OutCode);
+  const UMcpAutomationBridgeSettings *Settings = GetDefault<UMcpAutomationBridgeSettings>();
 
   // Per-shot handle frames are bounded independently of the playback range.
   if (HandleFrameCount >
@@ -104,11 +85,7 @@ bool ValidateFrameResourceLimits(bool bHasCustomRange, int32 StartFrame,
 
 bool ValidateSampleResourceLimits(int32 SpatialSamples, int32 TemporalSamples,
                                   FString &OutMessage, FString &OutCode) {
-  const UMcpAutomationBridgeSettings *Settings = SecuritySettings();
-  if (!Settings)
-    return ResourceLimitExceeded(
-        TEXT("Movie Render Queue security settings are unavailable."),
-        OutMessage, OutCode);
+  const UMcpAutomationBridgeSettings *Settings = GetDefault<UMcpAutomationBridgeSettings>();
   const int32 MaxSamples =
       FMath::Max(1, Settings->MaxMovieRenderSampleCount);
   const int64 CombinedSamples =
@@ -127,11 +104,7 @@ bool ValidateSampleResourceLimits(int32 SpatialSamples, int32 TemporalSamples,
 bool ValidateConsoleVariableResourceLimits(
     const TMap<FString, float> &ConsoleVariables, FString &OutMessage,
     FString &OutCode) {
-  const UMcpAutomationBridgeSettings *Settings = SecuritySettings();
-  if (!Settings)
-    return ResourceLimitExceeded(
-        TEXT("Movie Render Queue security settings are unavailable."),
-        OutMessage, OutCode);
+  const UMcpAutomationBridgeSettings *Settings = GetDefault<UMcpAutomationBridgeSettings>();
   if (ConsoleVariables.Num() >
       FMath::Max(0, Settings->MaxMovieRenderConsoleVariables)) {
     return ResourceLimitExceeded(
@@ -162,14 +135,13 @@ bool ValidateConsoleVariableResourceLimits(
 
 bool ValidateRenderTimeoutResourceLimit(double TimeoutMs, FString &OutMessage,
                                         FString &OutCode) {
-  const UMcpAutomationBridgeSettings *Settings = SecuritySettings();
+  const UMcpAutomationBridgeSettings *Settings = GetDefault<UMcpAutomationBridgeSettings>();
   if (!FMath::IsFinite(TimeoutMs) || TimeoutMs <= 0.0) {
     OutMessage = TEXT("timeoutMs must be finite and positive.");
     OutCode = TEXT("INVALID_TIMEOUT");
     return false;
   }
-  if (!Settings ||
-      TimeoutMs > FMath::Max(1, Settings->MaxMovieRenderTimeoutMs)) {
+  if (TimeoutMs > FMath::Max(1, Settings->MaxMovieRenderTimeoutMs)) {
     return ResourceLimitExceeded(
         TEXT("MRQ timeoutMs exceeds the configured resource limit."),
         OutMessage, OutCode);
@@ -196,7 +168,7 @@ bool ValidateJobResourceLimits(UMoviePipelineExecutorJob *Job,
            OutCode))) {
     return false;
   }
-  const UMcpAutomationBridgeSettings *Settings = SecuritySettings();
+  const UMcpAutomationBridgeSettings *Settings = GetDefault<UMcpAutomationBridgeSettings>();
   const int64 EffectiveFrameCount =
       ResolveMovieRenderFrameCount(Job, Output);
   if (EffectiveFrameCount == MAX_int64) {
@@ -205,7 +177,7 @@ bool ValidateJobResourceLimits(UMoviePipelineExecutorJob *Job,
         OutMessage, OutCode);
   }
   if (EffectiveFrameCount >
-      FMath::Max(1, Settings ? Settings->MaxMovieRenderFrameCount : 1)) {
+      FMath::Max(1, Settings->MaxMovieRenderFrameCount)) {
     return ResourceLimitExceeded(
         TEXT("MRQ effective output frame count exceeds the configured resource limit."),
         OutMessage, OutCode);
@@ -219,9 +191,17 @@ bool ValidateJobResourceLimits(UMoviePipelineExecutorJob *Job,
                                     OutCode)) {
     return false;
   }
-  UMoviePipelineConsoleVariableSetting *CVars =
-      Cast<UMoviePipelineConsoleVariableSetting>(Config->FindSettingByClass(
-          UMoviePipelineConsoleVariableSetting::StaticClass(), true));
+  TMap<FString, float> Values;
+  return ReadAllowedConsoleVariables(
+             Cast<UMoviePipelineConsoleVariableSetting>(Config->FindSettingByClass(
+                 UMoviePipelineConsoleVariableSetting::StaticClass(), true)),
+             Values, OutMessage, OutCode) &&
+         ValidateConsoleVariableResourceLimits(Values, OutMessage, OutCode);
+}
+
+bool ReadAllowedConsoleVariables(UMoviePipelineConsoleVariableSetting *CVars,
+                                 TMap<FString, float> &Out, FString &OutMessage,
+                                 FString &OutCode) {
   if (!CVars)
     return true;
   if (CVars->ConsoleVariablePresets.Num() > 0 ||
@@ -232,13 +212,12 @@ bool ValidateJobResourceLimits(UMoviePipelineExecutorJob *Job,
     OutCode = TEXT("MRQ_CONSOLE_COMMANDS_NOT_ALLOWED");
     return false;
   }
-  TMap<FString, float> Values;
   for (const FMoviePipelineConsoleVariableEntry &Entry :
        CVars->GetConsoleVariables()) {
     if (Entry.bIsEnabled)
-      Values.Add(Entry.Name, Entry.Value);
+      Out.Add(Entry.Name, Entry.Value);
   }
-  return ValidateConsoleVariableResourceLimits(Values, OutMessage, OutCode);
+  return true;
 }
 
 }

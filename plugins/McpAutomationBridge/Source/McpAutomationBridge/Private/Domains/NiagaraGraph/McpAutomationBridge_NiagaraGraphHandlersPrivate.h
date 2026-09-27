@@ -9,7 +9,6 @@
 
 #include "Dom/JsonObject.h"
 
-#if WITH_EDITOR
 #include "NiagaraGraph.h"
 #include "NiagaraSystem.h"
 #include "EdGraph/EdGraph.h"
@@ -30,4 +29,3 @@ bool RemoveNiagaraGraphNodeSafely(
     UEdGraphNode* TargetNode,
     FString& OutError);
 }
-#endif

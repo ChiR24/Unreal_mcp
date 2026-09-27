@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -21,7 +20,6 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
         if (!AnimGraph)
@@ -32,7 +30,6 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
         FString CreatedNodeType;
         FString CreatedNodeName = NodeName;
 
-#if MCP_HAS_LAYERED_BLEND
         if (BlendType == TEXT("LayeredBlend") || BlendType == TEXT("LayeredBoneBlend"))
         {
             FGraphNodeCreator<UAnimGraphNode_LayeredBoneBlend> NodeCreator(*AnimGraph);
@@ -53,10 +50,8 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
             }
         }
         else
-#endif
         {
             // Default fallback
-#if MCP_HAS_TWO_WAY_BLEND
             FGraphNodeCreator<UAnimGraphNode_TwoWayBlend> NodeCreator(*AnimGraph);
             UAnimGraphNode_TwoWayBlend* BlendNode = NodeCreator.CreateNode();
             BlendNode->NodePosX = NodePosX;
@@ -73,9 +68,6 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
             {
                 CreatedNodeName = FString::Printf(TEXT("BlendNode_%d"), BlendNode->NodeGuid.A);
             }
-#else
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Cannot create blend node '%s': AnimGraph blend node headers not available in this build."), *BlendType), TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
-#endif
         }
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
@@ -84,12 +76,6 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
         Response->SetStringField(TEXT("nodeType"), CreatedNodeType);
         Response->SetStringField(TEXT("nodeName"), CreatedNodeName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend node '%s' (name: %s) created"), *CreatedNodeType, *CreatedNodeName));
-#else
-        // AnimGraph headers not available - return error instead of fake success
-        ANIM_ERROR_RESPONSE(
-            FString::Printf(TEXT("Cannot create blend node '%s': AnimGraph module headers not available in this build."), *BlendType),
-            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
-#endif
         return Response;
     }
 
@@ -112,7 +98,6 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_CACHED_POSE
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
         if (!AnimGraph)
@@ -133,15 +118,9 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
 
         Response->SetStringField(TEXT("cacheName"), CacheName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose node '%s' created"), *CacheName));
-#else
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(AnimBP);
-        SaveAnimAsset(AnimBP, bSave);
-        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Cached pose '%s' marked for creation (requires AnimGraph module)"), *CacheName));
-#endif
         return Response;
     }
     return nullptr;
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

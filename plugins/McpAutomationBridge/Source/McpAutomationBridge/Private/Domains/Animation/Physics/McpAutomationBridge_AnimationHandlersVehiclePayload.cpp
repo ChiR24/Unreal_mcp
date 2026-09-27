@@ -3,7 +3,6 @@
 #include "UObject/UnrealType.h"
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
 int32 ConfigureVehicleWheels(UObject *VehicleMC,
                              const TSharedPtr<FJsonObject> &Payload) {
   int32 ConfiguredWheels = 0;
@@ -176,5 +175,4 @@ void ConfigureVehicleTransmission(UObject *VehicleMC,
     }
   }
 }
-#endif
 } // namespace McpAnimationHandlers

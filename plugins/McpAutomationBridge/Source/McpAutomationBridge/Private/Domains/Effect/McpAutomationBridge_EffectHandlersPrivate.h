@@ -36,27 +36,17 @@ FString ResolveCreateEffectSubAction(
     const FString& Lower,
     const TSharedPtr<FJsonObject>& Payload);
 
-FVector ReadVectorField(
-    const TSharedPtr<FJsonObject>& Payload,
-    const TCHAR* FieldName,
-    const FVector& DefaultValue = FVector::ZeroVector);
-FRotator ReadRotatorField(
-    const TSharedPtr<FJsonObject>& Payload,
-    const TCHAR* FieldName,
-    const FRotator& DefaultValue = FRotator::ZeroRotator);
 FColor ReadColorField(
     const TSharedPtr<FJsonObject>& Payload,
     const TCHAR* FieldName,
     const FColor& DefaultValue = FColor::White);
 FVector ReadScaleField(const TSharedPtr<FJsonObject>& Payload);
 
-#if WITH_EDITOR
-UWorld* GetEditorWorld();
+using McpHandlerUtils::GetEditorWorld;
 UEditorActorSubsystem* GetEditorActorSubsystem();
 // Both keep working while PIE runs; the actor lookup searches the play world then.
 UObject* LoadEffectAsset(const FString& AssetPath);
 AActor* FindActorByLabel(const FString& ActorName);
-#endif
 
 bool HandleEffectDiscoveryAction(const FEffectActionContext& Context);
 bool HandleCreateEffectSubAction(
@@ -65,7 +55,6 @@ bool HandleCreateEffectSubAction(
 bool HandleDrawDebugShape(const FEffectActionContext& Context);
 bool HandleParticleEffect(const FEffectActionContext& Context);
 FString ReadNiagaraSystemPathField(const TSharedPtr<FJsonObject>& Payload);
-#if WITH_EDITOR
 bool AuthorProceduralNiagaraSystem(
     const FEffectActionContext& Context,
     const FString& EffectName,
@@ -73,7 +62,6 @@ bool AuthorProceduralNiagaraSystem(
     TSharedPtr<FJsonObject>& OutDetails,
     FString& OutError,
     FString& OutErrorCode);
-#endif
 bool HandleSetNiagaraParameter(const FEffectActionContext& Context);
 bool HandleNiagaraLifecycleAction(
     const FEffectActionContext& Context,

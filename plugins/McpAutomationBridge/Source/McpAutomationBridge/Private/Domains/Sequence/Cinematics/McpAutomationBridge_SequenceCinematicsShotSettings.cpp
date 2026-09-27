@@ -2,14 +2,11 @@
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
-#if WITH_EDITOR
 #include "MovieScene.h"
 #include "Sections/MovieSceneCinematicShotSection.h"
 #include "Tracks/MovieSceneCinematicShotTrack.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
 UMovieSceneCinematicShotSection *FindShotSection(UMovieScene *MovieScene,
                                                  const FString &ShotName,
@@ -43,13 +40,9 @@ UMovieSceneCinematicShotSection *FindShotSection(UMovieScene *MovieScene,
   return nullptr;
 }
 }
-#endif
 
-bool HandleConfigureShotSettings(UMcpAutomationBridgeSubsystem *Self,
-                                 const TSharedPtr<FJsonObject> &Params,
+bool HandleConfigureShotSettings(const TSharedPtr<FJsonObject> &Params,
                                  TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   // The contract names the target shotSequencePath; the shared loader reads sequencePath (dogfood #120).
   TSharedPtr<FJsonObject> EffectiveParams = Params;
   FString ShotSequencePath;
@@ -95,11 +88,5 @@ bool HandleConfigureShotSettings(UMcpAutomationBridgeSubsystem *Self,
                          TEXT("Shot settings updated"));
   OutResult->SetStringField(TEXT("shotName"), Shot->GetShotDisplayName());
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("configure_shot_settings"),
-                         TEXT("Editor build required"),
-                         TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 }

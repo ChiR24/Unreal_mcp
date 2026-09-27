@@ -17,7 +17,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
     return true;
   }
 
-#if WITH_EDITOR
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
@@ -156,12 +155,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetProperties(
            "for this sequence type"),
       Resp, TEXT("NOT_IMPLEMENTED"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_set_properties requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(
@@ -177,7 +170,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(
         TEXT("INVALID_SEQUENCE"));
     return true;
   }
-#if WITH_EDITOR
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
@@ -189,7 +181,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
     if (UMovieScene *MovieScene = LevelSeq->GetMovieScene()) {
       FFrameRate FR = MovieScene->GetDisplayRate();
-      // BB-040: the record declares frameRate as a number|string union, so the
+      // The record declares frameRate as a number|string union, so the
       // {numerator,denominator} object this used to emit failed output
       // validation. get_properties only; the set_properties site is unchanged.
       Resp->SetNumberField(TEXT("frameRate"), FR.AsDecimal());
@@ -218,10 +210,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetProperties(
   SendAutomationResponse(Socket, RequestId, true, TEXT("properties retrieved"),
                          Resp, FString());
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_get_properties requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

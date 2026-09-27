@@ -1,30 +1,69 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
-bool SaveMaterialAsset(UMaterial *Material) {
-  if (!Material)
+bool PrepareNewMaterialAsset(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                             const FString& RawName, FString RequestedPath, const TCHAR* DefaultPath, const TCHAR* Noun,
+                             FString& OutName, FString& OutPackagePath, bool& bOutParentFolderCreated) {
+  bOutParentFolderCreated = false;
+  if (RawName.IsEmpty()) {
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'name'."), TEXT("INVALID_ARGUMENT"));
     return false;
-
-  // Use McpSafeAssetSave for proper asset registry notification
-  return McpSafeAssetSave(Material);
-}
-
-bool SaveMaterialFunctionAsset(UMaterialFunction *Function) {
-  if (!Function)
+  }
+  // Only underscores may change: anything else means the name had characters an asset name cannot hold.
+  OutName = SanitizeAssetName(RawName);
+  if (OutName.Replace(TEXT("_"), TEXT("")) != RawName.Replace(TEXT("_"), TEXT(""))) {
+    Bridge->SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Invalid %s name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
+                        Noun, *RawName, *OutName),
+        TEXT("INVALID_NAME"));
     return false;
-
-  // Use McpSafeAssetSave for proper asset registry notification
-  return McpSafeAssetSave(Function);
-}
-
-bool SaveMaterialInstanceAsset(UMaterialInstanceConstant *Instance) {
-  if (!Instance)
+  }
+  if (RequestedPath.IsEmpty()) {
+    RequestedPath = DefaultPath;
+  }
+  FString PathError;
+  if (!ValidateAssetCreationPath(RequestedPath, OutName, OutPackagePath, PathError)) {
+    Bridge->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
     return false;
-
-  // Use McpSafeAssetSave for proper asset registry notification
-  return McpSafeAssetSave(Instance);
+  }
+  if (OutPackagePath.Contains(TEXT(":"))) {
+    Bridge->SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *OutPackagePath),
+        TEXT("INVALID_PATH"));
+    return false;
+  }
+  FText MountReason;
+  if (!FPackageName::IsValidLongPackageName(OutPackagePath, true, &MountReason)) {
+    Bridge->SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Invalid package path '%s': %s"), *OutPackagePath, *MountReason.ToString()),
+        TEXT("INVALID_PATH"));
+    return false;
+  }
+  // Make the parent chain rather than refusing: create_folder creates parents too. The asset
+  // registry can lag a folder already on disk, so ask the directory itself.
+  const FString ParentFolderPath = FPackageName::GetLongPackagePath(OutPackagePath);
+  if (!FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().PathExists(FName(*ParentFolderPath))) {
+    const bool bAlreadyOnDisk = UEditorAssetLibrary::DoesDirectoryExist(ParentFolderPath);
+    if (!UEditorAssetLibrary::MakeDirectory(ParentFolderPath)) {
+      Bridge->SendAutomationError(Socket, RequestId,
+          FString::Printf(TEXT("Parent folder does not exist: %s. Create the folder first or use an existing path."), *ParentFolderPath),
+          TEXT("PARENT_FOLDER_NOT_FOUND"));
+      return false;
+    }
+    bOutParentFolderCreated = !bAlreadyOnDisk;
+  }
+  // Creating over an existing asset of another class is a fatal engine error.
+  const FString FullAssetPath = OutPackagePath + TEXT(".") + OutName;
+  if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
+    const UObject* Existing = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+    Bridge->SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create %s with the same name."),
+                        *FullAssetPath, Existing ? *Existing->GetClass()->GetName() : TEXT("Unknown"), Noun),
+        TEXT("ASSET_EXISTS"));
+    return false;
+  }
+  return true;
 }
 
 // Shared lookup logic for expressions in any array.
@@ -133,11 +172,7 @@ UObject *LoadMaterialOrFunction(const FString &AssetPath,
   // LoadObject<UMaterial> null when the target is actually a function.
   UObject *Loaded = StaticLoadObject(UObject::StaticClass(), nullptr, *AssetPath);
   if (!Loaded) {
-    // Fallback: try both concrete types directly.
-    OutMaterial = LoadObject<UMaterial>(nullptr, *AssetPath);
-    if (OutMaterial) return OutMaterial;
-    OutFunction = LoadObject<UMaterialFunction>(nullptr, *AssetPath);
-    return OutFunction;
+    return nullptr;
   }
 
   if (UMaterial *AsMaterial = Cast<UMaterial>(Loaded)) {
@@ -166,27 +201,15 @@ void AddExpressionToContainer(UMaterial *Material,
                                      UMaterialFunction *Function,
                                      UMaterialExpression *Expr) {
   if (!Expr) return;
-#if WITH_EDITORONLY_DATA
   if (Material) {
     MCP_GET_MATERIAL_EXPRESSIONS(Material).Add(Expr);
   } else if (Function) {
     MCP_GET_FUNCTION_EXPRESSIONS(Function).Add(Expr);
   }
-#endif
 }
 
 FString FunctionInputTypeToString(EFunctionInputType InType) {
-  switch (InType) {
-  case EFunctionInputType::FunctionInput_Scalar:             return TEXT("Scalar");
-  case EFunctionInputType::FunctionInput_Vector2:            return TEXT("Vector2");
-  case EFunctionInputType::FunctionInput_Vector3:            return TEXT("Vector3");
-  case EFunctionInputType::FunctionInput_Vector4:            return TEXT("Vector4");
-  case EFunctionInputType::FunctionInput_Texture2D:          return TEXT("Texture2D");
-  case EFunctionInputType::FunctionInput_TextureCube:        return TEXT("TextureCube");
-  case EFunctionInputType::FunctionInput_StaticBool:         return TEXT("StaticBool");
-  case EFunctionInputType::FunctionInput_MaterialAttributes: return TEXT("MaterialAttributes");
-  default:                                                   return TEXT("Unknown");
-  }
+  const FString Name = StaticEnum<EFunctionInputType>()->GetNameStringByValue(InType);
+  return Name.IsEmpty() ? FString(TEXT("Unknown")) : Name.RightChop(14); // "FunctionInput_"
 }
 }
-#endif

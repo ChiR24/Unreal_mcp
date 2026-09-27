@@ -1,6 +1,5 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
-#if WITH_EDITOR
 namespace McpNiagaraAuthoringHandlers
 {
 static bool EnableGpuSimulation(FActionContext& Context)
@@ -27,12 +26,23 @@ static bool EnableGpuSimulation(FActionContext& Context)
         Emitter->SimTarget = ENiagaraSimTarget::GPUComputeSim;
     }
 #endif
-    const bool bFixedBounds = GetJsonBoolField(Context.Payload, TEXT("fixedBoundsEnabled"), false);
-    const bool bDeterministic = GetJsonBoolField(Context.Payload, TEXT("deterministicEnabled"), false);
+    // fixedBoundsEnabled/deterministicEnabled set the system's bFixedBounds/bDeterminism when given (by reflection:
+    // their C++ access differs across engine versions); the reply reads both back. They were only echoed before.
+    System->Modify();
+    const auto ApplySystemFlag = [&](const TCHAR* Field, const TCHAR* PropertyName)
+    {
+        const FBoolProperty* Property = FindFProperty<FBoolProperty>(UNiagaraSystem::StaticClass(), PropertyName);
+        bool bValue = false;
+        if (Property && Context.Payload->TryGetBoolField(Field, bValue))
+        {
+            Property->SetPropertyValue_InContainer(System, bValue);
+        }
+        Context.Result->SetBoolField(Field, Property && Property->GetPropertyValue_InContainer(System));
+    };
+    ApplySystemFlag(TEXT("fixedBoundsEnabled"), TEXT("bFixedBounds"));
+    ApplySystemFlag(TEXT("deterministicEnabled"), TEXT("bDeterminism"));
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetBoolField(TEXT("gpuEnabled"), true);
-    Context.Result->SetBoolField(TEXT("fixedBoundsEnabled"), bFixedBounds);
-    Context.Result->SetBoolField(TEXT("deterministicEnabled"), bDeterministic);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Enabled GPU simulation for emitter '%s'."), *Context.EmitterName));
     Context.SendSuccess(true, TEXT("GPU simulation enabled."));
     return true;
@@ -124,4 +134,3 @@ bool HandleSimulationAction(FActionContext& Context, const FString& SubAction)
     return false;
 }
 }
-#endif

@@ -1,14 +1,12 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
     if (SubAction == TEXT("create_blend_space_1d"))
     {
-#if MCP_HAS_BLENDSPACE_FACTORY
     FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
     FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Animations")));
     FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
@@ -107,15 +105,12 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 1D '%s' created"), *Name));
         McpHandlerUtils::AddVerification(Response, NewBlendSpace);
-#else
-        ANIM_ERROR_RESPONSE(TEXT("Blend space factory not available"), TEXT("NOT_SUPPORTED"));
-#endif
         return Response;
     }
 
-    if (SubAction == TEXT("create_blend_space_2d"))
+    // create_blend_space is the 2D blend space (create_blend_space_1d is the single-axis one).
+    if (SubAction == TEXT("create_blend_space_2d") || SubAction == TEXT("create_blend_space"))
     {
-#if MCP_HAS_BLENDSPACE_FACTORY
     FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
     FString Path = NormalizeAnimPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Animations")));
     FString SkeletonPath = GetJsonStringField(Params, TEXT("skeletonPath"), TEXT(""));
@@ -225,13 +220,9 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
         FString FullPath = Path / Name;
         Response->SetStringField(TEXT("assetPath"), FullPath);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Blend Space 2D '%s' created"), *Name));
-#else
-        ANIM_ERROR_RESPONSE(TEXT("Blend space factory not available"), TEXT("NOT_SUPPORTED"));
-#endif
         return Response;
     }
     return nullptr;
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

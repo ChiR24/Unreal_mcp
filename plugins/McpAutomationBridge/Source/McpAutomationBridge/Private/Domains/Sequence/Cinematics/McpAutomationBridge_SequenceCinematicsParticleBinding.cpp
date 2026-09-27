@@ -2,17 +2,14 @@
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
-#if WITH_EDITOR
 #include "GameFramework/Actor.h"
 #include "MovieScene.h"
 #include "MovieScenePossessable.h"
 #include "MovieSceneSpawnable.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "UObject/UObjectHash.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
 // The class default / spawnable template owns its native FX component as a default
 // subobject (ANiagaraActor's NiagaraComponent0, AEmitter's ParticleSystemComponent0).
@@ -39,7 +36,6 @@ FGuid FindExistingFxComponentBinding(UMovieScene *MovieScene,
   return FGuid();
 }
 }
-#endif
 
 // The particle evaluator only resolves AEmitter or UFXSystemComponent objects, so an
 // actor that merely owns a Niagara/particle component (ANiagaraActor, a Blueprint
@@ -48,7 +44,6 @@ FGuid FindExistingFxComponentBinding(UMovieScene *MovieScene,
 FGuid ResolveParticleComponentBinding(ULevelSequence *Sequence,
                                       const FGuid &ActorGuid,
                                       TSharedPtr<FJsonObject> &OutDetails) {
-#if WITH_EDITOR
   OutDetails = McpHandlerUtils::CreateResultObject();
   UMovieScene *MovieScene = Sequence ? Sequence->GetMovieScene() : nullptr;
   if (!MovieScene || !ActorGuid.IsValid()) return FGuid();
@@ -82,12 +77,8 @@ FGuid ResolveParticleComponentBinding(ULevelSequence *Sequence,
     }
   }
   if (!Component) {
-    const FMovieScenePossessable *Possessable = MovieScene->FindPossessable(ActorGuid);
     FMovieSceneSpawnable *Spawnable = MovieScene->FindSpawnable(ActorGuid);
-    const UClass *BoundClass =
-        Possessable ? Possessable->GetPossessedObjectClass() : nullptr;
-    UObject *Template = BoundClass ? BoundClass->GetDefaultObject()
-                                   : (Spawnable ? Spawnable->GetObjectTemplate() : nullptr);
+    UObject *Template = GetBindingTemplate(MovieScene, ActorGuid);
     Component = FindFxComponentOnTemplate(Template);
     if (Component) {
       Context = Template;
@@ -118,9 +109,5 @@ FGuid ResolveParticleComponentBinding(ULevelSequence *Sequence,
                              Component->GetClass()->GetName());
   OutDetails->SetBoolField(TEXT("componentBindingCreated"), true);
   return ComponentGuid;
-#else
-  OutDetails = McpHandlerUtils::CreateResultObject();
-  return FGuid();
-#endif
 }
 }

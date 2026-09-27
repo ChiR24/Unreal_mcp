@@ -9,13 +9,12 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR && MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
 #include "MetasoundFrontendDataTypeRegistry.h"
 #include <type_traits>
 #include <utility>
 #endif
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
@@ -172,10 +171,10 @@ bool MsBuildLiteral(const TSharedPtr<FJsonValue>& Value, const FString& TypeName
 bool MetaSoundLiteralFromParams(const TSharedPtr<FJsonObject>& Params, const FString& TypeName,
 	FMetasoundFrontendLiteral& Out, FString& OutError)
 {
-	if (Params->HasField(TEXT("floatValue"))) { Out.Set(static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("floatValue"), 0.0))); }
-	else if (Params->HasField(TEXT("intValue"))) { Out.Set(static_cast<int32>(McpHandlerUtils::GetOptionalInt(Params, TEXT("intValue"), 0))); }
-	else if (Params->HasField(TEXT("boolValue"))) { Out.Set(McpHandlerUtils::GetOptionalBool(Params, TEXT("boolValue"), false)); }
-	else if (Params->HasField(TEXT("stringValue"))) { Out.Set(McpHandlerUtils::GetOptionalString(Params, TEXT("stringValue"), TEXT(""))); }
+	if (Params->HasField(TEXT("floatValue"))) { Out.Set(static_cast<float>(GetJsonNumberField(Params, TEXT("floatValue"), 0.0))); }
+	else if (Params->HasField(TEXT("intValue"))) { Out.Set(static_cast<int32>(GetJsonIntField(Params, TEXT("intValue"), 0))); }
+	else if (Params->HasField(TEXT("boolValue"))) { Out.Set(GetJsonBoolField(Params, TEXT("boolValue"), false)); }
+	else if (Params->HasField(TEXT("stringValue"))) { Out.Set(GetJsonStringField(Params, TEXT("stringValue"), TEXT(""))); }
 	else
 	{
 		const TSharedPtr<FJsonValue> Value = Params->TryGetField(TEXT("defaultValue"));
@@ -221,9 +220,9 @@ TSharedPtr<FJsonObject> MsListNodeInputs(FMetaSoundFrontendDocumentBuilder& Buil
 TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
-	const FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-	const FString InputName = McpHandlerUtils::GetOptionalString(Params, TEXT("inputName"), TEXT(""));
-	const FString NodeRef = McpHandlerUtils::GetOptionalString(Params, TEXT("nodeId"), TEXT(""));
+	const FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+	const FString InputName = GetJsonStringField(Params, TEXT("inputName"), TEXT(""));
+	const FString NodeRef = GetJsonStringField(Params, TEXT("nodeId"), TEXT(""));
 	if (AssetPath.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_PATH"), TEXT("Asset path is required")); }
 	if (InputName.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_INPUT_NAME"), TEXT("Input name is required")); }
 
@@ -233,11 +232,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 		return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_NOT_FOUND"), FString::Printf(TEXT("Could not load MetaSound: %s"), *AssetPath));
 	}
 	TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
-#if MCP_HAS_METASOUND_FRONTEND_V2
-	FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
-#else
-	FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
-#endif
+	MCP_METASOUND_BUILDER(Builder, ScriptInterface);
 
 	// Resolve the target first: its data type decides how defaultValue converts.
 	FGuid NodeGuid;
@@ -287,9 +282,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 	const bool bSuccess = NodeInput
 		? Builder.SetNodeInputDefault(NodeGuid, NodeInput->VertexID, Literal)
 		: Builder.SetGraphInputDefault(FName(*InputName), Literal);
-#if MCP_HAS_METASOUND_FRONTEND_V2
-	Builder.FinishBuilding();
-#endif
+	MCP_METASOUND_FINISH(Builder);
 	if (!bSuccess)
 	{
 		TSharedPtr<FJsonObject> Error = McpHandlerUtils::BuildErrorResponse(TEXT("SET_DEFAULT_FAILED"), FString::Printf(
@@ -309,4 +302,3 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 #endif
 }
 }
-#endif

@@ -16,25 +16,11 @@
 #include "MovieSceneTrack.h"
 #include "UObject/UObjectIterator.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-#define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetTracks()
-#else
-#define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetMasterTracks()
-#endif
 #define MCP_GET_BINDING_TRACKS(Binding) (Binding).GetTracks()
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
-#if __has_include("Subsystems/EditorActorSubsystem.h")
 #include "Subsystems/EditorActorSubsystem.h"
-#define MCP_HAS_EDITOR_ACTOR_SUBSYSTEM 1
-#elif __has_include("EditorActorSubsystem.h")
-#include "EditorActorSubsystem.h"
-#define MCP_HAS_EDITOR_ACTOR_SUBSYSTEM 1
-#else
-#define MCP_HAS_EDITOR_ACTOR_SUBSYSTEM 0
-#endif
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
@@ -45,57 +31,42 @@
 #include "LevelSequenceEditorBlueprintLibrary.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-#include "LevelSequenceEditorSubsystem.h"
-#define MCP_HAS_LEVELSEQUENCE_EDITOR_SUBSYSTEM 1
-#else
-#define MCP_HAS_LEVELSEQUENCE_EDITOR_SUBSYSTEM 0
-#endif
 
 #if __has_include("ILevelSequenceEditorToolkit.h")
 #include "ILevelSequenceEditorToolkit.h"
 #endif
 
-#if __has_include("ISequencer.h")
 #include "ISequencer.h"
 #include "MovieSceneSequencePlayer.h"
-#endif
 
-#if __has_include("Tracks/MovieSceneFloatTrack.h")
 #include "Sections/MovieSceneFloatSection.h"
 #include "Tracks/MovieSceneFloatTrack.h"
-#endif
 
-#if __has_include("Tracks/MovieSceneBoolTrack.h")
 #include "Sections/MovieSceneBoolSection.h"
 #include "Tracks/MovieSceneBoolTrack.h"
-#endif
 
-#if __has_include("Tracks/MovieScene3DTransformTrack.h")
 #include "Tracks/MovieScene3DTransformTrack.h"
-#endif
 
 #include "Tracks/MovieSceneAudioTrack.h"
 #include "Tracks/MovieSceneEventTrack.h"
 
-#if __has_include("Sections/MovieScene3DTransformSection.h")
 #include "Sections/MovieScene3DTransformSection.h"
-#endif
-#if __has_include("Channels/MovieSceneDoubleChannel.h")
 #include "Channels/MovieSceneDoubleChannel.h"
-#endif
-#if __has_include("Channels/MovieSceneChannelProxy.h")
 #include "Channels/MovieSceneChannelProxy.h"
-#endif
 
 #include "ScopedTransaction.h"
-#if __has_include("Camera/CameraActor.h")
 #include "Camera/CameraActor.h"
-#endif
-#endif
 
 namespace McpSequence {
 FString ResolvePath(const TSharedPtr<FJsonObject> &Payload);
+// The payload's level sequence and its movie scene; null after replying INVALID_SEQUENCE,
+// SEQUENCE_NOT_FOUND or MOVIESCENE_UNAVAILABLE.
+ULevelSequence *LoadOrReply(UMcpAutomationBridgeSubsystem *Subsystem, const FString &RequestId,
+                            TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
+                            const TCHAR *Action, UMovieScene *&OutMovieScene);
+// A new LevelSequence asset Folder/Name made by the editor's LevelSequenceFactoryNew; null when
+// the factory is unavailable or AssetTools refuses.
+ULevelSequence *CreateSequenceAsset(const FString &Name, const FString &Folder);
 }
 
 // Display name of a possessable or spawnable binding; empty when the guid is unknown.

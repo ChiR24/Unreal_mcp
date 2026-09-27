@@ -4,14 +4,13 @@
 
 #include "Animation/MorphTarget.h"
 #include "Engine/SkeletalMesh.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Rendering/SkeletalMeshLODModel.h"
 #include "Rendering/SkeletalMeshModel.h"
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 bool UMcpAutomationBridgeSubsystem::HandleCreateMorphTarget(
@@ -189,4 +188,3 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMorphTargetDeltas(
     return true;
 }
 
-#endif // WITH_EDITOR

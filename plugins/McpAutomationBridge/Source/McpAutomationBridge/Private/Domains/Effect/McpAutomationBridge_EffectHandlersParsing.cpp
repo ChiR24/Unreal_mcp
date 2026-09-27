@@ -1,67 +1,15 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "EngineUtils.h"
 #include "Misc/PackageName.h"
 #include "Subsystems/EditorActorSubsystem.h"
-#endif
 
 namespace McpEffectHandlers
 {
-FVector ReadVectorField(
-    const TSharedPtr<FJsonObject>& Payload,
-    const TCHAR* FieldName,
-    const FVector& DefaultValue)
-{
-    const TSharedPtr<FJsonValue> Value = Payload->TryGetField(FieldName);
-    if (!Value.IsValid())
-    {
-        return DefaultValue;
-    }
-    if (Value->Type == EJson::Array)
-    {
-        const TArray<TSharedPtr<FJsonValue>>& Values = Value->AsArray();
-        if (Values.Num() >= 3)
-        {
-            return FVector(
-                static_cast<float>(Values[0]->AsNumber()),
-                static_cast<float>(Values[1]->AsNumber()),
-                static_cast<float>(Values[2]->AsNumber()));
-        }
-    }
-    if (Value->Type == EJson::Object)
-    {
-        const TSharedPtr<FJsonObject> Object = Value->AsObject();
-        if (Object.IsValid())
-        {
-            return FVector(
-                static_cast<float>(Object->HasField(TEXT("x")) ? GetJsonNumberField(Object, TEXT("x")) : 0.0),
-                static_cast<float>(Object->HasField(TEXT("y")) ? GetJsonNumberField(Object, TEXT("y")) : 0.0),
-                static_cast<float>(Object->HasField(TEXT("z")) ? GetJsonNumberField(Object, TEXT("z")) : 0.0));
-        }
-    }
-    return DefaultValue;
-}
-
-FRotator ReadRotatorField(
-    const TSharedPtr<FJsonObject>& Payload,
-    const TCHAR* FieldName,
-    const FRotator& DefaultValue)
-{
-    const TArray<TSharedPtr<FJsonValue>>* Values = nullptr;
-    if (Payload->TryGetArrayField(FieldName, Values) && Values && Values->Num() >= 3)
-    {
-        return FRotator(
-            static_cast<float>((*Values)[0]->AsNumber()),
-            static_cast<float>((*Values)[1]->AsNumber()),
-            static_cast<float>((*Values)[2]->AsNumber()));
-    }
-    return DefaultValue;
-}
-
 FColor ReadColorField(
     const TSharedPtr<FJsonObject>& Payload,
     const TCHAR* FieldName,
@@ -114,12 +62,6 @@ FString ReadNiagaraSystemPathField(const TSharedPtr<FJsonObject>& Payload)
     return FString();
 }
 
-#if WITH_EDITOR
-UWorld* GetEditorWorld()
-{
-    return GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-}
-
 UEditorActorSubsystem* GetEditorActorSubsystem()
 {
     return GEditor ? GEditor->GetEditorSubsystem<UEditorActorSubsystem>() : nullptr;
@@ -147,19 +89,7 @@ UObject* LoadEffectAsset(const FString& AssetPath)
 AActor* FindActorByLabel(const FString& ActorName)
 {
     UWorld* World = GEditor && GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GetEditorWorld();
-    if (!World || ActorName.IsEmpty())
-    {
-        return nullptr;
-    }
-    for (TActorIterator<AActor> It(World); It; ++It)
-    {
-        if (It->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase))
-        {
-            return *It;
-        }
-    }
-    return nullptr;
+    return FindActorByNameInWorldForMcp(World, ActorName, true);
 }
 
-#endif
 }

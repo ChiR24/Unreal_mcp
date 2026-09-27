@@ -75,7 +75,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
       NormalizeSequenceTransformAlias(LocalPayload, PropertyName, TEXT("Scale"),
                                       TEXT("scale"));
 
-#if WITH_EDITOR
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
@@ -168,10 +167,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
                          TEXT("Sequence object is not a LevelSequence"),
                          nullptr, TEXT("INVALID_SEQUENCE_TYPE"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_add_keyframe requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

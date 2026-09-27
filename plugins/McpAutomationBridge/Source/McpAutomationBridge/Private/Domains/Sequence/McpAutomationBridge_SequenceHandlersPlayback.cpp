@@ -14,7 +14,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
     return true;
   }
 
-#if WITH_EDITOR
   ULevelSequence *LevelSeq =
       Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
   if (LevelSeq) {
@@ -41,12 +40,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
                                     TEXT("Failed to open or play sequence"),
                                     nullptr, TEXT("EXECUTION_ERROR"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_play requires editor build."), nullptr,
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
@@ -71,7 +64,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
     return true;
   }
 
-#if WITH_EDITOR
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false,
@@ -110,13 +102,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
       TEXT("Sequence editor not open or interface unavailable"), nullptr,
       TEXT("EDITOR_NOT_OPEN"));
   return true;
-#else
-  SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("sequence_set_playback_speed requires editor build."), nullptr,
-      TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequencePause(
@@ -131,7 +116,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(
                            nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
-#if WITH_EDITOR
   ULevelSequence *LevelSeq =
       Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
   if (LevelSeq) {
@@ -148,12 +132,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(
       TEXT("Sequence not currently open in editor"), nullptr,
       TEXT("EXECUTION_ERROR"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_pause requires editor build."), nullptr,
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(
@@ -168,7 +146,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(
                            nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
-#if WITH_EDITOR
   ULevelSequence *LevelSeq =
       Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
   if (LevelSeq) {
@@ -194,10 +171,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(
       TEXT("Sequence not currently open in editor"), nullptr,
       TEXT("EXECUTION_ERROR"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_stop requires editor build."), nullptr,
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }

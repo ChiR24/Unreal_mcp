@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 namespace {
@@ -53,10 +52,8 @@ void AddSequenceBaseInfo(const UAnimSequenceBase* Asset, const TSharedPtr<FJsonO
     const double Length = Asset->GetPlayLength();
     Response->SetNumberField(TEXT("length"), Length);
     Response->SetNumberField(TEXT("duration"), Length);
-#if ENGINE_MAJOR_VERSION >= 5
     Response->SetNumberField(TEXT("frameRate"), Asset->GetSamplingFrameRate().AsDecimal());
     Response->SetNumberField(TEXT("numFrames"), Asset->GetNumberOfSampledKeys());
-#endif
     Response->SetNumberField(TEXT("rateScale"), Asset->RateScale);
     AddNotifyList(Asset, Response);
     AddCurveNames(Asset, Response);
@@ -174,4 +171,3 @@ TSharedPtr<FJsonObject> HandleAnimationInfoActions(const FString& SubAction, con
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

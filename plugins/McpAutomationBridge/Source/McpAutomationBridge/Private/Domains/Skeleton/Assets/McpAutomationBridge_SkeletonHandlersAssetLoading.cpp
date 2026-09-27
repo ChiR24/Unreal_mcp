@@ -3,7 +3,10 @@
 
 #include "Animation/Skeleton.h"
 #include "Engine/SkeletalMesh.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
+#include "McpAutomationBridgeSubsystem.h"
+#include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 
 namespace McpSkeletonHandlers
@@ -80,6 +83,19 @@ USkeleton* LoadSkeletonOrMeshSkeleton(const FString& Path, FString& OutError)
     return Mesh ? Mesh->GetSkeleton() : nullptr;
 }
 
+USkeleton* LoadPayloadSkeletonOrReply(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
+                                      TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload)
+{
+    const FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"), GetJsonStringField(Payload, TEXT("skeletalMeshPath")));
+    FString Error;
+    USkeleton* Skeleton = LoadSkeletonOrMeshSkeleton(SkeletonPath, Error);
+    if (!Skeleton)
+    {
+        Bridge.SendAutomationError(Socket, RequestId, Error, TEXT("SKELETON_NOT_FOUND"));
+    }
+    return Skeleton;
+}
+
 UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FString& OutError)
 {
     OutError.Reset();
@@ -121,11 +137,7 @@ USkeletalMesh* FindSkeletalMeshForSkeleton(USkeleton* Skeleton)
     {
         return PreviewMesh;
     }
-#if WITH_EDITORONLY_DATA
     return Skeleton->FindCompatibleMesh();
-#else
-    return nullptr;
-#endif
 }
 
 FSkeletonMeshTarget ResolveSkeletonMeshTarget(const TSharedPtr<FJsonObject>& Payload)

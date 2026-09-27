@@ -1,7 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR && MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND && MCP_HAS_METASOUND_SEARCH_ENGINE
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND && MCP_HAS_METASOUND_SEARCH_ENGINE
 namespace McpAudioAuthoring
 {
 namespace

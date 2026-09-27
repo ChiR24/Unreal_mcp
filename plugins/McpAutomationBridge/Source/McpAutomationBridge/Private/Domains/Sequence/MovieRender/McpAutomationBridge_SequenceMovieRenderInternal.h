@@ -10,7 +10,24 @@ class UMoviePipelineQueue;
 class UMoviePipelineQueueSubsystem;
 class UMoviePipelineOutputSetting;
 
+#include "String/LexFromString.h"
+
 namespace McpSequenceMovieRender {
+// Payload.settings.<Name> as an int.
+inline bool TryGetSettingsInt(const TSharedPtr<FJsonObject> &Payload, const TCHAR *Name, int32 &Out) {
+  const TSharedPtr<FJsonObject> *Settings = nullptr;
+  return Payload.IsValid() && Payload->TryGetObjectField(TEXT("settings"), Settings) &&
+         Settings && Settings->IsValid() && (*Settings)->TryGetNumberField(Name, Out);
+}
+
+// "WIDTHxHEIGHT" with two positive integers.
+inline bool TryParseResolution(const FString &Text, FIntPoint &Out) {
+  FString Left, Right;
+  if (!Text.Split(TEXT("x"), &Left, &Right) && !Text.Split(TEXT("X"), &Left, &Right))
+    return false;
+  return LexTryParseString(Out.X, *Left) && LexTryParseString(Out.Y, *Right) && Out.X > 0 && Out.Y > 0;
+}
+
 bool LoadRequiredModule(const TCHAR *ModuleName, FString &OutMessage,
                         FString &OutCode);
 UMoviePipelineQueueSubsystem *GetQueueSubsystem(FString &OutMessage,
@@ -41,8 +58,12 @@ TSharedPtr<FJsonObject> BuildJobResult(UMoviePipelineExecutorJob *Job,
 void SendError(UMcpAutomationBridgeSubsystem *Subsystem, const FString &RequestId,
                TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &Message,
                const FString &Code);
-FString NormalizeMovieRenderAction(const FString &Action,
-                                   const TSharedPtr<FJsonObject> &Payload);
+// The queue subsystem's queue and the payload's job; sends the refusal and returns null on a miss.
+UMoviePipelineExecutorJob *ResolveRequestJob(UMcpAutomationBridgeSubsystem *Subsystem,
+                                             const FString &RequestId,
+                                             TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                             const TSharedPtr<FJsonObject> &Payload,
+                                             UMoviePipelineQueue *&OutQueue);
 
 bool HandleCreateRenderJob(UMcpAutomationBridgeSubsystem *Subsystem,
                            const FString &RequestId,

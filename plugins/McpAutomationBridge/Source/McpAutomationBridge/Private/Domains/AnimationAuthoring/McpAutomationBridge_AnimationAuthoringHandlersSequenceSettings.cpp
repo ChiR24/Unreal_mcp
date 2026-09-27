@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -26,9 +25,7 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
 
         // Calculate time from frame
         float FrameRate = 30.0f;
-#if ENGINE_MAJOR_VERSION >= 5
         FrameRate = Sequence->GetSamplingFrameRate().AsDecimal();
-#endif
         float Time = static_cast<float>(Frame) / FrameRate;
 
         // Add sync marker
@@ -150,4 +147,3 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -17,7 +16,6 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     if (StartNodeId.IsEmpty()) {
       Payload->TryGetStringField(TEXT("nodeId"), StartNodeId);
     }
-    Payload->TryGetStringField(TEXT("endNodeId"), EndNodeId);
     Payload->TryGetStringField(TEXT("endPin"), EndPin);
 
     if (StartNodeId.IsEmpty()) {
@@ -39,25 +37,9 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     // Build downstream adjacency: Source → list of Targets
     TMultiMap<UMaterialExpression*, UMaterialExpression*> Downstream;
     for (UMaterialExpression *Expr : AllExpr) {
-      if (!Expr) continue;
-      for (TFieldIterator<FStructProperty> It(Expr->GetClass()); It; ++It) {
-        FStructProperty *SP = *It;
-        if (!SP->Struct || SP->Struct->GetFName() != FName(TEXT("ExpressionInput"))) continue;
-        FExpressionInput *InPtr = SP->ContainerPtrToValuePtr<FExpressionInput>(Expr);
-        if (InPtr && InPtr->Expression) {
-          Downstream.Add(InPtr->Expression, Expr);
-        }
-      }
-      if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
-        for (const FCustomInput &CI : CE->Inputs) {
-          if (CI.Input.Expression) Downstream.Add(CI.Input.Expression, Expr);
-        }
-      }
-      if (UMaterialExpressionMaterialFunctionCall *MFC = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
-        for (const FFunctionExpressionInput &FI : MFC->FunctionInputs) {
-          if (FI.Input.Expression) Downstream.Add(FI.Input.Expression, Expr);
-        }
-      }
+      ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) {
+        if (Input.Expression) Downstream.Add(Input.Expression, Expr);
+      });
     }
 
     // Check if endPin refers to a Material main pin
@@ -86,7 +68,6 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
         bPathFound = true; PathEnd = Cur; break;
       }
       if (bEndIsMainPin && Material) {
-#if WITH_EDITORONLY_DATA
         bool bHit = false;
         ForEachMainMaterialInput(Material, [&](const TCHAR *PinName, const FExpressionInput &Input) {
           bHit = bHit || ((bAnyMainPin || EndPin == PinName) && Input.Expression == Cur);
@@ -94,7 +75,6 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
         if (bHit) {
           bPathFound = true; PathEnd = Cur; break;
         }
-#endif
       }
 
       TArray<UMaterialExpression*> Neighbors;
@@ -149,4 +129,3 @@ bool HandleGetNodeChain(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
   return false;
 }
 }
-#endif

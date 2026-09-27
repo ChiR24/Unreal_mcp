@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 namespace
@@ -198,7 +197,6 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       } else {
         // UMaterialFunction host — find a FunctionOutput by name (or first one)
         UMaterialExpressionFunctionOutput *TargetOutput = nullptr;
-#if WITH_EDITORONLY_DATA
         for (UMaterialExpression *Expr : MCP_GET_FUNCTION_EXPRESSIONS(Function)) {
           if (UMaterialExpressionFunctionOutput *Out = Cast<UMaterialExpressionFunctionOutput>(Expr)) {
             if (InputName.IsEmpty() || Out->OutputName.ToString().Equals(InputName)) {
@@ -207,7 +205,6 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
             }
           }
         }
-#endif
         if (!TargetOutput) {
           Bridge->SendAutomationError(Socket, RequestId,
                               FString::Printf(TEXT("No FunctionOutput%s found in material function."),
@@ -281,4 +278,3 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
   return false;
 }
 }
-#endif

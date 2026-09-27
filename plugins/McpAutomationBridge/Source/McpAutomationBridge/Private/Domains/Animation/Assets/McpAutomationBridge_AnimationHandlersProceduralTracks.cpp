@@ -4,12 +4,59 @@
 
 #include "Animation/AnimSequence.h"
 #include "Animation/Skeleton.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "EditorAssetLibrary.h"
+#include "Factories/Factory.h"
 #if __has_include("AnimData/IAnimationDataController.h")
 #include "AnimData/IAnimationDataController.h"
 #endif
 
 namespace McpAnimationHandlers {
-#if WITH_EDITOR
+UObject *CreateOrReuseAnimAsset(UClass *AssetClass, UFactory *Factory, const FString &Path,
+                                const FString &Name, bool &bOutExisting, FString &OutCode,
+                                FString &OutError) {
+  bOutExisting = false;
+  const FString PackagePath = Path / Name;
+  if (UEditorAssetLibrary::DoesAssetExist(PackagePath)) {
+    UObject *Existing = UEditorAssetLibrary::LoadAsset(PackagePath);
+    if (Existing && Existing->IsA(AssetClass)) {
+      bOutExisting = true;
+      return Existing;
+    }
+    OutCode = Existing ? TEXT("ASSET_TYPE_MISMATCH") : TEXT("ASSET_LOAD_FAILED");
+    OutError = Existing
+        ? FString::Printf(TEXT("Cannot create %s: asset '%s' already exists as type '%s'"),
+                          *AssetClass->GetName(), *PackagePath, *Existing->GetClass()->GetName())
+        : FString::Printf(TEXT("Asset exists but failed to load: %s"), *PackagePath);
+    return nullptr;
+  }
+  // CreatePackage + the factory directly: AssetTools' CreateAsset can raise dialogs nobody can answer.
+  UPackage *Package = CreatePackage(*PackagePath);
+  UObject *NewAsset = Package && Factory
+      ? Factory->FactoryCreateNew(AssetClass, Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn)
+      : nullptr;
+  if (!NewAsset) {
+    OutCode = TEXT("ASSET_CREATION_FAILED");
+    OutError = FString::Printf(TEXT("Failed to create %s at %s"), *AssetClass->GetName(), *PackagePath);
+    return nullptr;
+  }
+  FAssetRegistryModule::AssetCreated(NewAsset);
+  NewAsset->MarkPackageDirty();
+  return NewAsset;
+}
+
+void SetAnimSequenceFrames(UAnimSequence *Sequence, int32 NumFrames, int32 FrameRate) {
+#if ENGINE_MINOR_VERSION >= 1
+  Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
+  Sequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
+#else
+  // SequenceLength is deprecated in UE 5.1+ but is the only length on 5.0.
+  PRAGMA_DISABLE_DEPRECATION_WARNINGS
+  Sequence->SequenceLength = static_cast<float>(NumFrames) / static_cast<float>(FrameRate);
+  PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif
+}
+
 int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
                                 USkeleton *TargetSkeleton,
                                 const TArray<TSharedPtr<FJsonValue>> &Tracks,
@@ -46,11 +93,11 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
       continue;
     }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
     if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName)) {
       Controller.AddBoneCurve(BoneFName);
     }
-#elif ENGINE_MAJOR_VERSION >= 5
+#else
     const FBoneAnimationTrack *ExistingTrack =
         Controller.GetModel()->FindBoneTrackByName(BoneFName);
     if (ExistingTrack == nullptr) {
@@ -177,5 +224,4 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
 
   return AppliedTrackCount;
 }
-#endif
 } // namespace McpAnimationHandlers

@@ -3,7 +3,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 // Empty means REFUSED, not "unchanged": the shared canonicalizer rejects a
@@ -61,27 +60,13 @@ bool SaveAnimAsset(UObject* Asset, bool bShouldSave)
     Asset->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(Asset);
 
-    const bool bSaved = SaveLoadedAssetThrottled(Asset, -1.0, true);
+    const bool bSaved = SaveLoadedAssetThrottled(Asset, true);
     if (bSaved)
     {
         ScanPathSynchronous(Asset->GetOutermost()->GetName());
     }
 
     return bSaved;
-}
-
-// Helper to get FVector from JSON object
-FVector GetVectorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj)
-{
-    if (!Obj.IsValid())
-    {
-        return FVector::ZeroVector;
-    }
-    return FVector(
-        GetJsonNumberField(Obj, TEXT("x"), 0.0),
-        GetJsonNumberField(Obj, TEXT("y"), 0.0),
-        GetJsonNumberField(Obj, TEXT("z"), 0.0)
-    );
 }
 
 // Helper to get FRotator from JSON object
@@ -116,8 +101,6 @@ FRotator GetRotatorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj)
 // ============================================================================
 // AnimGraph Helper Functions for State Machine Implementation
 // ============================================================================
-
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
 
 // Helper to find the main AnimGraph from an Animation Blueprint
 UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP)
@@ -247,7 +230,6 @@ UAnimStateTransitionNode* FindTransitionNode(UAnimationStateMachineGraph* SMGrap
 
     for (UEdGraphNode* Node : SMGraph->Nodes)
     {
-#if MCP_HAS_ANIM_STATE_TRANSITION
         if (UAnimStateTransitionNode* Trans = Cast<UAnimStateTransitionNode>(Node))
         {
             UAnimStateNodeBase* PrevState = Trans->GetPreviousState();
@@ -259,7 +241,6 @@ UAnimStateTransitionNode* FindTransitionNode(UAnimationStateMachineGraph* SMGrap
                 return Trans;
             }
         }
-#endif
     }
 
     return nullptr;
@@ -313,7 +294,6 @@ void AddStateInventory(UEdGraph* AnimGraph, const FString& MachineName, TSharedP
             {
                 States.Add(MakeShared<FJsonValueString>(Label + TEXT(".") + StateNode->GetStateName()));
             }
-#if MCP_HAS_ANIM_STATE_TRANSITION
             else if (UAnimStateTransitionNode* Trans = Cast<UAnimStateTransitionNode>(Node))
             {
                 UAnimStateNodeBase* Prev = Trans->GetPreviousState();
@@ -323,14 +303,10 @@ void AddStateInventory(UEdGraph* AnimGraph, const FString& MachineName, TSharedP
                         + Prev->GetStateName() + TEXT(" -> ") + Next->GetStateName()));
                 }
             }
-#endif
         }
     }
     Response->SetArrayField(TEXT("availableStates"), States);
     Response->SetArrayField(TEXT("availableTransitions"), Transitions);
 }
 
-#endif // MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
-
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

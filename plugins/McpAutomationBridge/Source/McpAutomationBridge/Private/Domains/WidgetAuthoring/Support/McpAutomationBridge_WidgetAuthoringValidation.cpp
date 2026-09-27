@@ -63,18 +63,4 @@ bool ValidateWidgetCreation(UWidgetBlueprint* WidgetBP, const FString& WidgetNam
     return true;
 }
 
-bool CheckWidgetExists(UWidgetBlueprint* WidgetBP, const FString& WidgetName, FString& OutError)
-{
-    if (!WidgetBP || !WidgetBP->WidgetTree)
-    {
-        return false;
-    }
-    UWidget* ExistingWidget = WidgetBP->WidgetTree->FindWidget(FName(*WidgetName));
-    if (ExistingWidget)
-    {
-        OutError = FString::Printf(TEXT("Widget '%s' already exists in blueprint"), *WidgetName);
-        return true;
-    }
-    return false;
-}
 }

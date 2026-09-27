@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -27,28 +26,11 @@ bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Reques
     for (UMaterialExpression *Expr : Exprs) {
       if (!Expr) continue;
       int32 Count = 0;
-      // Count input connections via reflection
-      for (TFieldIterator<FStructProperty> It(Expr->GetClass()); It; ++It) {
-        FStructProperty *SP = *It;
-        if (!SP->Struct || SP->Struct->GetFName() != FName(TEXT("ExpressionInput"))) continue;
-        FExpressionInput *InPtr = SP->ContainerPtrToValuePtr<FExpressionInput>(Expr);
-        if (InPtr && InPtr->Expression) Count++;
-      }
-      if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
-        for (const FCustomInput &CI : CE->Inputs) { if (CI.Input.Expression) Count++; }
-      }
-      if (UMaterialExpressionMaterialFunctionCall *MFC = Cast<UMaterialExpressionMaterialFunctionCall>(Expr)) {
-        for (const FFunctionExpressionInput &FI : MFC->FunctionInputs) { if (FI.Input.Expression) Count++; }
-      }
-      // Count output connections (other exprs referencing this one)
+      // Inputs wired into this node, then other nodes' inputs wired from it.
+      ForEachExpressionInput(Expr, [&](FExpressionInput &Input, const FString &) { Count += Input.Expression ? 1 : 0; });
       for (UMaterialExpression *Other : Exprs) {
         if (!Other || Other == Expr) continue;
-        for (TFieldIterator<FStructProperty> It2(Other->GetClass()); It2; ++It2) {
-          FStructProperty *SP2 = *It2;
-          if (!SP2->Struct || SP2->Struct->GetFName() != FName(TEXT("ExpressionInput"))) continue;
-          FExpressionInput *InPtr2 = SP2->ContainerPtrToValuePtr<FExpressionInput>(Other);
-          if (InPtr2 && InPtr2->Expression == Expr) Count++;
-        }
+        ForEachExpressionInput(Other, [&](FExpressionInput &Input, const FString &) { Count += Input.Expression == Expr ? 1 : 0; });
       }
       ConnectionCountMap.Add(Expr->MaterialExpressionGuid, Count);
     }
@@ -103,4 +85,3 @@ bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Reques
   return false;
 }
 }
-#endif

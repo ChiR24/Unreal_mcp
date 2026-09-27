@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleMontageNotifyBlendActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -30,14 +29,14 @@ if (SubAction == TEXT("add_montage_notify"))
             FullClassName = TEXT("AnimNotify_") + NotifyClass;
         }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         ResolvedNotifyClass = FindFirstObject<UClass>(*FullClassName, EFindFirstObjectOptions::None);
 #else
         ResolvedNotifyClass = ResolveClassByName(FullClassName);
 #endif
         if (!ResolvedNotifyClass)
         {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
             ResolvedNotifyClass = FindFirstObject<UClass>(*NotifyClass, EFindFirstObjectOptions::None);
 #else
             ResolvedNotifyClass = ResolveClassByName(NotifyClass);
@@ -67,7 +66,6 @@ if (SubAction == TEXT("add_montage_notify"))
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load montage: %s"), *AssetPath), TEXT("MONTAGE_NOT_FOUND"));
     }
 
-#if WITH_EDITOR
     if (TrackIndex >= 0)
     {
         while (!Montage->AnimNotifyTracks.IsValidIndex(TrackIndex))
@@ -77,7 +75,6 @@ if (SubAction == TEXT("add_montage_notify"))
             );
         }
     }
-#endif
 
     FAnimNotifyEvent& NotifyEvent = Montage->Notifies.AddDefaulted_GetRef();
     NotifyEvent.Link(Montage, Time);
@@ -220,4 +217,3 @@ if (SubAction == TEXT("add_montage_notify"))
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

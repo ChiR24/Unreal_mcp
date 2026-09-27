@@ -17,6 +17,8 @@
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "McpAutomationBridgeSubsystem.h"
 
 namespace WidgetAuthoringHelpers
 {
@@ -83,11 +85,7 @@ static UWidgetBlueprint* LoadWidgetBlueprintRaw(const FString& WidgetPath)
     }
 
     IAssetRegistry& Registry = FAssetRegistryModule::GetRegistry();
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    FAssetData AssetData = Registry.GetAssetByObjectPath(FSoftObjectPath(ObjectPath));
-#else
-    FAssetData AssetData = Registry.GetAssetByObjectPath(FName(*ObjectPath));
-#endif
+    FAssetData AssetData = Registry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(ObjectPath));
     if (AssetData.IsValid())
     {
         if (UWidgetBlueprint* WB = Cast<UWidgetBlueprint>(AssetData.GetAsset()))
@@ -103,50 +101,6 @@ static UWidgetBlueprint* LoadWidgetBlueprintRaw(const FString& WidgetPath)
 }
 // Template actions (create_pause_menu, create_hud_widget, ...) author a widget from
 // scratch, so a missing asset is created instead of answering NOT_FOUND (dogfood #26/#187).
-UWidgetBlueprint* LoadOrCreateWidgetBlueprint(const FString& WidgetPath, bool* bOutCreated)
-{
-    if (bOutCreated)
-    {
-        *bOutCreated = false;
-    }
-    if (UWidgetBlueprint* Existing = LoadWidgetBlueprint(WidgetPath))
-    {
-        return Existing;
-    }
-    FString PackagePath = WidgetPath;
-    if (PackagePath.Contains(TEXT(".")))
-    {
-        PackagePath = PackagePath.Left(PackagePath.Find(TEXT(".")));
-    }
-    if (!PackagePath.StartsWith(TEXT("/")))
-    {
-        PackagePath = TEXT("/Game/") + PackagePath;
-    }
-    const FString SafePackagePath = SanitizeProjectRelativePath(PackagePath);
-    if (SafePackagePath.IsEmpty())
-    {
-        return nullptr;
-    }
-    const FString AssetName = FPaths::GetBaseFilename(SafePackagePath);
-    UPackage* Package = CreatePackage(*SafePackagePath);
-    if (!Package)
-    {
-        return nullptr;
-    }
-    UWidgetBlueprint* Created = Cast<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
-        UUserWidget::StaticClass(), Package, FName(*AssetName), BPTYPE_Normal,
-        UWidgetBlueprint::StaticClass(), UWidgetBlueprintGeneratedClass::StaticClass()));
-    if (Created)
-    {
-        FAssetRegistryModule::AssetCreated(Created);
-        Package->MarkPackageDirty();
-        if (bOutCreated)
-        {
-            *bOutCreated = true;
-        }
-    }
-    return Created;
-}
 // Dogfood c22: the widget compiler ensures that every source widget and animation has a
 // WidgetVariableNameToGuidMap entry. Assets authored before the registry existed (or renamed
 // without moving their entry) trip that ensure on the next compile, so repair the map on load.
@@ -179,6 +133,34 @@ UWidgetAnimation* FindWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString&
         }
     }
     return nullptr;
+}
+
+UWidgetAnimation* ResolveWidgetAnimation(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload,
+                                         UWidgetBlueprint*& OutWidgetBP)
+{
+    const FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
+    const FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
+    if (WidgetPath.IsEmpty() || AnimationName.IsEmpty())
+    {
+        Subsystem.SendAutomationError(Socket, RequestId,
+            TEXT("Missing required parameters: widgetPath, animationName"), TEXT("MISSING_PARAMETER"));
+        return nullptr;
+    }
+    OutWidgetBP = LoadWidgetBlueprint(WidgetPath);
+    if (!OutWidgetBP)
+    {
+        Subsystem.SendAutomationError(Socket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+        return nullptr;
+    }
+    UWidgetAnimation* Animation = FindWidgetAnimation(OutWidgetBP, AnimationName);
+    if (!Animation)
+    {
+        Subsystem.SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Animation '%s' not found; create it with create_widget_animation first"), *AnimationName),
+            TEXT("ANIMATION_NOT_FOUND"));
+    }
+    return Animation;
 }
 
 UWidget* FindWidgetByName(UWidgetTree* Tree, const FString& WidgetName)

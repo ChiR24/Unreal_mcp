@@ -2,7 +2,6 @@
 
 DEFINE_LOG_CATEGORY(LogMcpMetaHumanHandlers);
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "EditorSubsystem.h"
 #include "Foundation/Reflection/McpReflectedInvoke.h"
@@ -67,6 +66,20 @@ bool IsCoreDataInstalled(FString& OutDetail)
 
     OutDetail = FString::Printf(TEXT("Core Data present at %s"), *OptionalDir);
     return true;
+}
+
+bool QueryCanBuild(UObject* Subsystem, UObject* Character, bool bLogError)
+{
+    TSharedPtr<FJsonObject> Args = MakeShared<FJsonObject>();
+    Args->SetBoolField(TEXT("bInLogError"), bLogError);
+    TSharedPtr<FJsonObject> Results;
+    FString Error;
+    bool bCanBuild = false;
+    if (InvokeMetaHumanFunction(Subsystem, TEXT("CanBuildMetaHuman"), Args, Character, Results, Error) && Results.IsValid())
+    {
+        Results->TryGetBoolField(TEXT("ReturnValue"), bCanBuild);
+    }
+    return bCanBuild;
 }
 
 bool InvokeMetaHumanFunction(UObject* Target, const TCHAR* FunctionName,
@@ -174,4 +187,3 @@ UObject* RequireEditableCharacter(UMcpAutomationBridgeSubsystem* Self, const FSt
     return Character;
 }
 }
-#endif

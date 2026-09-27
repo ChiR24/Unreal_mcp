@@ -23,7 +23,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(
     return true;
   }
 
-#if WITH_EDITOR
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
@@ -37,7 +36,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(
     return true;
   }
 
-#if MCP_HAS_EDITOR_ACTOR_SUBSYSTEM
   if (UEditorActorSubsystem *ActorSS =
           GEditor->GetEditorSubsystem<UEditorActorSubsystem>()) {
     TArray<TSharedPtr<FJsonValue>> Removed;
@@ -52,25 +50,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(
       if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
         UMovieScene *MovieScene = LevelSeq->GetMovieScene();
         if (MovieScene) {
-          bool bRemoved = false;
-          for (const FMovieSceneBinding &Binding :
-               const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-            FString BindingName = GetBindingName(MovieScene, Binding.GetObjectGuid());
-
-            if (BindingName.Equals(Name, ESearchCase::IgnoreCase)) {
-              // The sequence's own object-binding map outlives RemovePossessable,
-              // and without MarkPackageDirty the removal never reached disk and
-              // the editor never offered to save it -- the mirror image of what
-              // sequence_add_actors already does.
-              const FGuid RemovedGuid = Binding.GetObjectGuid();
-              LevelSeq->Modify();
-              MovieScene->Modify();
-              LevelSeq->UnbindPossessableObjects(RemovedGuid);
-              MovieScene->RemovePossessable(RemovedGuid);
-              LevelSeq->MarkPackageDirty();
-              bRemoved = true;
-              break;
-            }
+          const FGuid RemovedGuid =
+              McpSequenceKeyframes::ResolveBindingGuid(MovieScene, FString(), Name);
+          const bool bRemoved = RemovedGuid.IsValid();
+          if (bRemoved) {
+            // The sequence's own object-binding map outlives RemovePossessable,
+            // and without MarkPackageDirty the removal never reached disk and
+            // the editor never offered to save it -- the mirror image of what
+            // sequence_add_actors already does.
+            LevelSeq->Modify();
+            MovieScene->Modify();
+            LevelSeq->UnbindPossessableObjects(RemovedGuid);
+            MovieScene->RemovePossessable(RemovedGuid);
+            LevelSeq->MarkPackageDirty();
           }
           if (bRemoved) {
             Item->SetBoolField(TEXT("success"), true);
@@ -111,16 +103,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveActors(
                          TEXT("EditorActorSubsystem not available"), nullptr,
                          TEXT("EDITOR_ACTOR_SUBSYSTEM_MISSING"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("UEditorActorSubsystem not available"), nullptr,
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_remove_actors requires editor build."),
-                         nullptr, TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }

@@ -40,62 +40,17 @@ bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
 
       if (LocalPayload->TryGetObjectField(TEXT("value"), ValueObj) &&
           ValueObj && Channels.Num() >= 9) {
-        const TSharedPtr<FJsonObject> *LocObj = nullptr;
-        if ((*ValueObj)->TryGetObjectField(TEXT("location"), LocObj)) {
-          double X, Y, Z;
-          if ((*LocObj)->TryGetNumberField(TEXT("x"), X)) {
-            Channels[0]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(X));
-            bModified = true;
-          }
-          if ((*LocObj)->TryGetNumberField(TEXT("y"), Y)) {
-            Channels[1]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(Y));
-            bModified = true;
-          }
-          if ((*LocObj)->TryGetNumberField(TEXT("z"), Z)) {
-            Channels[2]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(Z));
-            bModified = true;
-          }
-        }
-
-        const TSharedPtr<FJsonObject> *RotObj = nullptr;
-        if ((*ValueObj)->TryGetObjectField(TEXT("rotation"), RotObj)) {
-          double P, Yaw, R;
-          if ((*RotObj)->TryGetNumberField(TEXT("roll"), R)) {
-            Channels[3]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(R));
-            bModified = true;
-          }
-          if ((*RotObj)->TryGetNumberField(TEXT("pitch"), P)) {
-            Channels[4]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(P));
-            bModified = true;
-          }
-          if ((*RotObj)->TryGetNumberField(TEXT("yaw"), Yaw)) {
-            Channels[5]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(Yaw));
-            bModified = true;
-          }
-        }
-
-        const TSharedPtr<FJsonObject> *ScaleObj = nullptr;
-        if ((*ValueObj)->TryGetObjectField(TEXT("scale"), ScaleObj)) {
-          double X, Y, Z;
-          if ((*ScaleObj)->TryGetNumberField(TEXT("x"), X)) {
-            Channels[6]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(X));
-            bModified = true;
-          }
-          if ((*ScaleObj)->TryGetNumberField(TEXT("y"), Y)) {
-            Channels[7]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(Y));
-            bModified = true;
-          }
-          if ((*ScaleObj)->TryGetNumberField(TEXT("z"), Z)) {
-            Channels[8]->GetData().AddKey(TickFrame,
-                                          FMovieSceneDoubleValue(Z));
+        // Channel order: location x/y/z, rotation roll/pitch/yaw, scale x/y/z.
+        static const TCHAR *const Fields[9][2] = {
+            {TEXT("location"), TEXT("x")}, {TEXT("location"), TEXT("y")}, {TEXT("location"), TEXT("z")},
+            {TEXT("rotation"), TEXT("roll")}, {TEXT("rotation"), TEXT("pitch")}, {TEXT("rotation"), TEXT("yaw")},
+            {TEXT("scale"), TEXT("x")}, {TEXT("scale"), TEXT("y")}, {TEXT("scale"), TEXT("z")}};
+        for (int32 Index = 0; Index < 9; ++Index) {
+          const TSharedPtr<FJsonObject> *Part = nullptr;
+          double Value = 0.0;
+          if ((*ValueObj)->TryGetObjectField(Fields[Index][0], Part) &&
+              (*Part)->TryGetNumberField(Fields[Index][1], Value)) {
+            Channels[Index]->GetData().AddKey(TickFrame, FMovieSceneDoubleValue(Value));
             bModified = true;
           }
         }

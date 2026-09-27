@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -24,7 +23,6 @@ TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction
             ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Could not load animation blueprint: %s"), *BlueprintPath), TEXT("ANIM_BP_NOT_FOUND"));
         }
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH
         // Get the main AnimGraph
         UEdGraph* AnimGraph = GetAnimGraphFromBlueprint(AnimBP);
         if (!AnimGraph)
@@ -145,12 +143,6 @@ TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction
         Response->SetStringField(TEXT("nodeName"), NodeName);
         Response->SetStringField(TEXT("propertyName"), PropertyName);
         ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("Property '%s' set on node '%s'"), *PropertyName, *NodeName));
-#else
-        // AnimGraph headers not available - return error
-        ANIM_ERROR_RESPONSE(
-            FString::Printf(TEXT("Cannot set node value on '%s': AnimGraph module headers not available in this build."), *NodeName),
-            TEXT("ANIMGRAPH_MODULE_UNAVAILABLE"));
-#endif
         return Response;
     }
 
@@ -158,4 +150,3 @@ TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

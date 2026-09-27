@@ -1,25 +1,24 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("add_landscape_layer")) {
-#if MCP_HAS_LANDSCAPE_LAYER
     FString LayerName;
     if (!Payload->TryGetStringField(TEXT("layerName"), LayerName) || LayerName.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'layerName'."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
-    // Accept path via multiple parameter names (assetPath, materialPath, or path)
-    FString Path;
-    if (Payload->TryGetStringField(TEXT("assetPath"), Path) && !Path.IsEmpty()) {
-    } else if (Payload->TryGetStringField(TEXT("materialPath"), Path) && !Path.IsEmpty()) {
-    } else if (Payload->TryGetStringField(TEXT("path"), Path) && !Path.IsEmpty()) {
-    } else {
-      Path = TEXT("/Game/Landscape/Layers");
+    // The folder: assetPath, materialPath or path, else /Game/Landscape/Layers.
+    FString Path = TEXT("/Game/Landscape/Layers");
+    for (const TCHAR* Field : {TEXT("assetPath"), TEXT("materialPath"), TEXT("path")}) {
+      FString Candidate;
+      if (Payload->TryGetStringField(Field, Candidate) && !Candidate.IsEmpty()) {
+        Path = Candidate;
+        break;
+      }
     }
 
     // Validate path security - reject traversal and invalid paths
@@ -85,11 +84,10 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       }
     }
 
-#if WITH_EDITORONLY_DATA
     // Set blend method if specified (replaces bNoWeightBlend)
     bool bNoWeightBlend = false;
     if (Payload->TryGetBoolField(TEXT("noWeightBlend"), bNoWeightBlend)) {
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
+#if ENGINE_MINOR_VERSION >= 7
       // UE 5.7+: Use SetBlendMethod with ELandscapeTargetLayerBlendMethod
       LayerInfo->SetBlendMethod(bNoWeightBlend ? ELandscapeTargetLayerBlendMethod::None : ELandscapeTargetLayerBlendMethod::FinalWeightBlending, false);
 #else
@@ -97,7 +95,6 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
       LayerInfo->bNoWeightBlend = bNoWeightBlend;
 #endif
     }
-#endif
 
     FAssetRegistryModule::AssetCreated(LayerInfo);
 
@@ -115,12 +112,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
                            FString::Printf(TEXT("Landscape layer '%s' created."), *LayerName),
                            Result);
     return true;
-#else
-    Bridge->SendAutomationError(Socket, RequestId, TEXT("Landscape module not available."), TEXT("NOT_SUPPORTED"));
-    return true;
-#endif
   }
   return false;
 }
 }
-#endif

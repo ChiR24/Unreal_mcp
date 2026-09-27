@@ -1,81 +1,15 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleCreateMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("create_material_function")) {
-    FString Name, Path, Description;
-    if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'name'."),
-                          TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-
-    FString OriginalName = Name;
-    FString SanitizedName = SanitizeAssetName(Name);
-
-    // Check if sanitization significantly changed the name (indicates invalid characters)
-    FString NormalizedOriginal = OriginalName.Replace(TEXT("_"), TEXT(""));
-    FString NormalizedSanitized = SanitizedName.Replace(TEXT("_"), TEXT(""));
-    if (NormalizedSanitized != NormalizedOriginal) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid material function name '%s': contains characters that cannot be used in asset names. Valid name would be: '%s'"),
-                                          *OriginalName, *SanitizedName),
-                          TEXT("INVALID_NAME"));
-      return true;
-    }
-    Name = SanitizedName;
-
-    Path = GetJsonStringField(Payload, TEXT("path"));
-    if (Path.IsEmpty()) {
-      Path = TEXT("/Game/Materials/Functions");
-    }
-
-    FString ValidatedPath;
-    FString PathError;
-    if (!ValidateAssetCreationPath(Path, Name, ValidatedPath, PathError)) {
-      Bridge->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_PATH"));
-      return true;
-    }
-
-    // Additional validation: reject Windows absolute paths (contain colon)
-    if (ValidatedPath.Contains(TEXT(":"))) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid path '%s': absolute Windows paths are not allowed"), *ValidatedPath),
-                          TEXT("INVALID_PATH"));
-      return true;
-    }
-
-    // Additional validation: verify mount point using engine API
-    FText MountReason;
-    if (!FPackageName::IsValidLongPackageName(ValidatedPath, true, &MountReason)) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid package path '%s': %s"), *ValidatedPath, *MountReason.ToString()),
-                          TEXT("INVALID_PATH"));
-      return true;
-    }
-
-    // Check for existing asset collision to prevent UE crash
-    // Creating a MaterialFunction over an existing Material causes fatal error
-    FString FullAssetPath = ValidatedPath + TEXT(".") + Name;
-    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
-      // Get the existing asset's class to provide helpful error
-      UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
-      if (ExistingAsset) {
-        UClass* ExistingClass = ExistingAsset->GetClass();
-        FString ExistingClassName = ExistingClass ? ExistingClass->GetName() : TEXT("Unknown");
-        Bridge->SendAutomationError(Socket, RequestId,
-                            FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create MaterialFunction with the same name."),
-                                            *FullAssetPath, *ExistingClassName),
-                            TEXT("ASSET_EXISTS"));
-      } else {
-        Bridge->SendAutomationError(Socket, RequestId,
-                            FString::Printf(TEXT("Asset '%s' already exists. Cannot overwrite with different asset type."),
-                                            *FullAssetPath),
-                            TEXT("ASSET_EXISTS"));
-      }
+    FString Name, ValidatedPath, Description;
+    bool bParentFolderCreated = false;
+    if (!PrepareNewMaterialAsset(Bridge, RequestId, Socket, GetJsonStringField(Payload, TEXT("name")),
+                                 GetJsonStringField(Payload, TEXT("path")), TEXT("/Game/Materials/Functions"),
+                                 TEXT("MaterialFunction"), Name, ValidatedPath, bParentFolderCreated)) {
       return true;
     }
 
@@ -116,7 +50,7 @@ bool HandleCreateMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const F
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
     if (bSave) {
-      SaveMaterialFunctionAsset(NewFunc);
+      McpSafeAssetSave(NewFunc);
     }
 
     FAssetRegistryModule::AssetCreated(NewFunc);
@@ -132,4 +66,3 @@ bool HandleCreateMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const F
   return false;
 }
 }
-#endif

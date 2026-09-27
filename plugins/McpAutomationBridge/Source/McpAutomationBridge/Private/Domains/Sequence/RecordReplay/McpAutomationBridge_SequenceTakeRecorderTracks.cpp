@@ -11,11 +11,6 @@ namespace {
 struct FMapState {
     UObject* Map = nullptr; FBoolProperty* Property = nullptr; void* Entry = nullptr;
     bool bBefore = false; bool bAfter = false;
-}; struct FSourceState {
-    UTakeRecorderSource* Source = nullptr;
-    FBoolProperty* Reduce = nullptr; FBoolProperty* Parent = nullptr;
-    FEnumProperty* RecordType = nullptr;
-    bool bReduce = false; bool bParent = false; int64 RecordTypeValue = 0;
 };
 
 bool ReadNames(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field,
@@ -97,40 +92,6 @@ void CollectMapStates(UObject* Map, const TSet<FString>& Names,
         CollectMapStates(
             ChildType->GetObjectPropertyValue(Helper.GetRawPtr(Index)),
             Names, bEnabled, bDisableOthers, OutStates, OutMatched); }
-
-FSourceState CaptureSource(UTakeRecorderSource* Source,
-    const TSharedPtr<FJsonObject>& Payload) {
-    FSourceState State; State.Source = Source;
-    if (Payload->HasField(TEXT("reduceKeys"))) {
-        State.Reduce = FindFProperty<FBoolProperty>(
-            Source->GetClass(), TEXT("bReduceKeys"));
-        if (State.Reduce)
-            State.bReduce = State.Reduce->GetPropertyValue_InContainer(Source);
-    }
-    if (Payload->HasField(TEXT("recordParentHierarchy"))) {
-        State.Parent = FindFProperty<FBoolProperty>(
-            Source->GetClass(), TEXT("bRecordParentHierarchy"));
-        if (State.Parent)
-            State.bParent = State.Parent->GetPropertyValue_InContainer(Source);
-    }
-    if (Payload->HasField(TEXT("recordType"))) {
-        State.RecordType = FindFProperty<FEnumProperty>(
-            Source->GetClass(), TEXT("RecordType"));
-        if (State.RecordType) State.RecordTypeValue =
-            State.RecordType->GetUnderlyingProperty()->GetSignedIntPropertyValue(
-                State.RecordType->ContainerPtrToValuePtr<void>(Source));
-    }
-    return State; }
-
-void RestoreSources(const TArray<FSourceState>& States) {
-    for (const FSourceState& State : States) {
-        if (State.Reduce) State.Reduce->SetPropertyValue_InContainer(State.Source, State.bReduce);
-        if (State.Parent) State.Parent->SetPropertyValue_InContainer(State.Source, State.bParent);
-        if (State.RecordType)
-            State.RecordType->GetUnderlyingProperty()->SetIntPropertyValue(
-                State.RecordType->ContainerPtrToValuePtr<void>(State.Source),
-                State.RecordTypeValue);
-    } }
 
 void RollBackAdded(UTakeRecorderSources* Sources,
     const TSet<UTakeRecorderSource*>& Before) {
@@ -242,13 +203,13 @@ bool HandleConfigureRecordedTracks(UMcpAutomationBridgeSubsystem* Subsystem,
         return Fail(TEXT("None of the requested recorded properties were found"),
             TEXT("RECORDED_PROPERTY_NOT_FOUND")); }
 
-    TArray<FSourceState> SourceStates;
-    for (UTakeRecorderSource* Source : Targets) SourceStates.Add(CaptureSource(Source, Payload));
+    TArray<FTakeRecorderActorSourceState> SourceStates;
+    for (UTakeRecorderSource* Source : Targets) SourceStates.Add(CaptureActorSourceOptions(Source, Payload));
     int32 AppliedOptions = 0;
     for (UTakeRecorderSource* Source : Targets) {
         Source->Modify();
         if (!ConfigureActorSource(Source, Payload, AppliedOptions, Error)) {
-            RestoreSources(SourceStates); RollBackAdded(Sources, Before);
+            RestoreActorSourceOptions(SourceStates); RollBackAdded(Sources, Before);
             return Fail(Error, TEXT("SOURCE_CONFIGURATION_FAILED")); }
     }
     int32 Changed = 0; TSet<UObject*> ModifiedMaps;

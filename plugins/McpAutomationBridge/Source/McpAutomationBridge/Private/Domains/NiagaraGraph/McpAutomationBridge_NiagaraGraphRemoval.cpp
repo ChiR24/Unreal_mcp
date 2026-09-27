@@ -1,6 +1,5 @@
 #include "Domains/NiagaraGraph/McpAutomationBridge_NiagaraGraphHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "NiagaraNode.h"
 
 namespace McpNiagaraGraphHandlers
@@ -117,4 +116,3 @@ bool RemoveNiagaraGraphNodeSafely(
     return true;
 }
 }
-#endif

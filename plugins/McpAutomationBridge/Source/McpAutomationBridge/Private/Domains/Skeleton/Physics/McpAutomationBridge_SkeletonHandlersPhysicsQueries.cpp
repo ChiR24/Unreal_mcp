@@ -14,7 +14,6 @@
 #endif
 #endif
 
-#if WITH_EDITOR
 using namespace McpSkeletonHandlers;
 
 namespace
@@ -205,4 +204,3 @@ bool UMcpAutomationBridgeSubsystem::HandleGetPhysicsAssetInfo(
     return true;
 }
 
-#endif // WITH_EDITOR

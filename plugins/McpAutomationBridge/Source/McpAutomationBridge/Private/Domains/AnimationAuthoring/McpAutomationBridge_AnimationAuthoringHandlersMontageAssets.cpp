@@ -1,7 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
-#if WITH_EDITOR
 namespace McpAnimationAuthoring {
 
 TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -131,7 +130,7 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
 
         // Add animation to slot track
         FAnimSegment& Segment = SlotTrack->AnimTrack.AnimSegments.AddDefaulted_GetRef();
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 1
         Segment.SetAnimReference(Animation);
 #else
         // UE 5.0: Direct member access
@@ -191,4 +190,3 @@ TSharedPtr<FJsonObject> HandleMontageAssetActions(const FString& SubAction, cons
 }
 
 } // namespace McpAnimationAuthoring
-#endif // WITH_EDITOR

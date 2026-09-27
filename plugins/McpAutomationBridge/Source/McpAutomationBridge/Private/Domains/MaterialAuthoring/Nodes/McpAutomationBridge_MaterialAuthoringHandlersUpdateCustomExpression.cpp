@@ -1,6 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -39,34 +38,10 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
 
     FString NewOutputType;
     if (Payload->TryGetStringField(TEXT("outputType"), NewOutputType)) {
-      if (NewOutputType == TEXT("Float1")) CustomExpr->OutputType = CMOT_Float1;
-      else if (NewOutputType == TEXT("Float2")) CustomExpr->OutputType = CMOT_Float2;
-      else if (NewOutputType == TEXT("Float3")) CustomExpr->OutputType = CMOT_Float3;
-      else if (NewOutputType == TEXT("Float4")) CustomExpr->OutputType = CMOT_Float4;
-      else if (NewOutputType == TEXT("MaterialAttributes")) CustomExpr->OutputType = CMOT_MaterialAttributes;
+      CustomExpr->OutputType = ParseCustomOutputType(NewOutputType, CustomExpr->OutputType);
     }
 
-    const TArray<TSharedPtr<FJsonValue>> *InputsArray = nullptr;
-    if (Payload->TryGetArrayField(TEXT("inputs"), InputsArray) && InputsArray) {
-      // An input that keeps its name keeps its wire; rebuilding the list from
-      // bare names used to drop every connection into the node.
-      const TArray<FCustomInput> OldInputs = CustomExpr->Inputs;
-      CustomExpr->Inputs.Empty();
-      for (const auto &InputVal : *InputsArray) {
-        const TSharedPtr<FJsonObject> *InputObj = nullptr;
-        if (InputVal->TryGetObject(InputObj) && InputObj) {
-          FString InputName;
-          (*InputObj)->TryGetStringField(TEXT("name"), InputName);
-          if (!InputName.IsEmpty()) {
-            const FCustomInput *Kept = OldInputs.FindByPredicate(
-                [&InputName](const FCustomInput &Old) { return Old.InputName == FName(*InputName); });
-            FCustomInput NewInput = Kept ? *Kept : FCustomInput();
-            NewInput.InputName = FName(*InputName);
-            CustomExpr->Inputs.Add(NewInput);
-          }
-        }
-      }
-    }
+    ApplyCustomInputs(CustomExpr, Payload);
 
     ApplyCustomAdditionalOutputs(CustomExpr, Payload);
 
@@ -84,4 +59,3 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
   return false;
 }
 }
-#endif

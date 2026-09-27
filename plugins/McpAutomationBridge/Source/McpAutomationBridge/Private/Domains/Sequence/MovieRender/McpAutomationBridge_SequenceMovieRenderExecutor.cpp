@@ -57,9 +57,7 @@ TSubclassOf<UMoviePipelineExecutorBase> ResolveExecutorClass(
   const UMovieRenderPipelineProjectSettings *Settings =
       GetDefault<UMovieRenderPipelineProjectSettings>();
   TSubclassOf<UMoviePipelineExecutorBase> DefaultExecutor =
-      Settings ? Settings->DefaultLocalExecutor
-                       .TryLoadClass<UMoviePipelineExecutorBase>()
-               : nullptr;
+      Settings->DefaultLocalExecutor.TryLoadClass<UMoviePipelineExecutorBase>();
   if (DefaultExecutor &&
       ValidateExecutorClassAllowlist(DefaultExecutor->GetPathName(),
                                      OutMessage, OutCode))

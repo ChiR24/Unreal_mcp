@@ -6,30 +6,15 @@ namespace McpSequenceTracks {
 bool HandleListTrackTypes(UMcpAutomationBridgeSubsystem *Subsystem,
                           const FString &RequestId,
                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  TArray<TSharedPtr<FJsonValue>> Types;
-  Types.Add(MakeShared<FJsonValueString>(TEXT("transform")));
-  Types.Add(MakeShared<FJsonValueString>(TEXT("3dtransform")));
-  Types.Add(MakeShared<FJsonValueString>(TEXT("audio")));
-  Types.Add(MakeShared<FJsonValueString>(TEXT("event")));
-
-  TSet<FString> AddedNames;
-  AddedNames.Add(TEXT("transform"));
-  AddedNames.Add(TEXT("3dtransform"));
-  AddedNames.Add(TEXT("audio"));
-  AddedNames.Add(TEXT("event"));
-
+  // add_track's short names first, then every concrete track class.
+  TArray<FString> Names = {TEXT("transform"), TEXT("3dtransform"), TEXT("audio"), TEXT("event")};
   for (TObjectIterator<UClass> It; It; ++It) {
-    if (It->IsChildOf(UMovieSceneTrack::StaticClass()) &&
-        !It->HasAnyClassFlags(CLASS_Abstract) &&
-        !AddedNames.Contains(It->GetName())) {
-      Types.Add(MakeShared<FJsonValueString>(It->GetName()));
-      AddedNames.Add(It->GetName());
-    }
+    if (It->IsChildOf(UMovieSceneTrack::StaticClass()) && !It->HasAnyClassFlags(CLASS_Abstract))
+      Names.AddUnique(It->GetName());
   }
-
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetArrayField(TEXT("types"), Types);
-  Resp->SetNumberField(TEXT("count"), Types.Num());
+  Resp->SetArrayField(TEXT("types"), McpHandlerUtils::ToJsonStringArray(Names));
+  Resp->SetNumberField(TEXT("count"), Names.Num());
   Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                                     TEXT("Available track types"), Resp);
   return true;
@@ -39,90 +24,39 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
                       const FString &RequestId,
                       const TSharedPtr<FJsonObject> &LocalPayload,
                       TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  FString SeqPath = McpSequence::ResolvePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("sequence_list_tracks requires a sequence path"), nullptr,
-        TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
-
-#if WITH_EDITOR
-  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
+  UMovieScene *MovieScene = nullptr;
+  ULevelSequence *Sequence = McpSequence::LoadOrReply(Subsystem, RequestId, RequestingSocket, LocalPayload, TEXT("list_tracks"), MovieScene);
   if (!Sequence) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                      TEXT("Level sequence not found"), nullptr,
-                                      TEXT("SEQUENCE_NOT_FOUND"));
-    return true;
-  }
-
-  UMovieScene *MovieScene = Sequence->GetMovieScene();
-  if (!MovieScene) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                      TEXT("MovieScene not available"), nullptr,
-                                      TEXT("MOVIESCENE_UNAVAILABLE"));
     return true;
   }
 
   TArray<TSharedPtr<FJsonValue>> TracksArray;
-  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
+  // Binding is null for a master track.
+  auto AddTrack = [&](UMovieSceneTrack *Track, const FMovieSceneBinding *Binding) {
     if (!Track)
-      continue;
+      return;
     TSharedPtr<FJsonObject> TrackObj = McpHandlerUtils::CreateResultObject();
     TrackObj->SetStringField(TEXT("trackName"), Track->GetName());
     TrackObj->SetStringField(TEXT("trackType"), Track->GetClass()->GetName());
-    TrackObj->SetStringField(TEXT("displayName"),
-                             Track->GetDisplayName().ToString());
-    TrackObj->SetBoolField(TEXT("isMasterTrack"), true);
-    TrackObj->SetNumberField(TEXT("sectionCount"),
-                             Track->GetAllSections().Num());
-    TrackObj->SetBoolField(TEXT("isCameraCut"),
-                           Track->IsA<UMovieSceneCameraCutTrack>());
+    TrackObj->SetStringField(TEXT("displayName"), Track->GetDisplayName().ToString());
+    TrackObj->SetBoolField(TEXT("isMasterTrack"), Binding == nullptr);
+    if (Binding) {
+      TrackObj->SetStringField(TEXT("bindingName"), GetBindingName(MovieScene, Binding->GetObjectGuid()));
+      TrackObj->SetStringField(TEXT("bindingGuid"), Binding->GetObjectGuid().ToString());
+    }
+    TrackObj->SetNumberField(TEXT("sectionCount"), Track->GetAllSections().Num());
+    TrackObj->SetBoolField(TEXT("isCameraCut"), Track->IsA<UMovieSceneCameraCutTrack>());
     TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
-  }
-
-  // The camera cut track is stored in its own UMovieScene member
-  // (GetCameraCutTrack()), NOT in the Tracks array that GetTracks() returns —
-  // so a successfully-added camera cut was invisible to this readback and a
-  // caller was told "Camera cut added" only to find no such track afterwards.
-  // Enumerate it explicitly.
-  if (UMovieSceneTrack *CameraCutTrack = MovieScene->GetCameraCutTrack()) {
-    TSharedPtr<FJsonObject> TrackObj = McpHandlerUtils::CreateResultObject();
-    TrackObj->SetStringField(TEXT("trackName"), CameraCutTrack->GetName());
-    TrackObj->SetStringField(TEXT("trackType"),
-                             CameraCutTrack->GetClass()->GetName());
-    TrackObj->SetStringField(TEXT("displayName"),
-                             CameraCutTrack->GetDisplayName().ToString());
-    TrackObj->SetBoolField(TEXT("isMasterTrack"), true);
-    TrackObj->SetNumberField(TEXT("sectionCount"),
-                             CameraCutTrack->GetAllSections().Num());
-    TrackObj->SetBoolField(TEXT("isCameraCut"), true);
-    TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
-  }
-
+  };
+  for (UMovieSceneTrack *Track : MCP_GET_MOVIESCENE_TRACKS(MovieScene))
+    AddTrack(Track, nullptr);
+  // The camera cut track lives in its own UMovieScene member, not in GetTracks(),
+  // so an added camera cut was invisible to this readback until listed explicitly.
+  AddTrack(MovieScene->GetCameraCutTrack(), nullptr);
   for (const FMovieSceneBinding &Binding :
        const_cast<const UMovieScene *>(MovieScene)->GetBindings()) {
-    FString BindingName = GetBindingName(MovieScene, Binding.GetObjectGuid());
-
-    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding)) {
-      if (!Track)
-        continue;
-      TSharedPtr<FJsonObject> TrackObj = McpHandlerUtils::CreateResultObject();
-      TrackObj->SetStringField(TEXT("trackName"), Track->GetName());
-      TrackObj->SetStringField(TEXT("trackType"), Track->GetClass()->GetName());
-      TrackObj->SetStringField(TEXT("displayName"),
-                               Track->GetDisplayName().ToString());
-      TrackObj->SetBoolField(TEXT("isMasterTrack"), false);
-      TrackObj->SetStringField(TEXT("bindingName"), BindingName);
-      TrackObj->SetStringField(TEXT("bindingGuid"),
-                               Binding.GetObjectGuid().ToString());
-      TrackObj->SetNumberField(TEXT("sectionCount"),
-                               Track->GetAllSections().Num());
-      TrackObj->SetBoolField(TEXT("isCameraCut"),
-                             Track->IsA<UMovieSceneCameraCutTrack>());
-      TracksArray.Add(MakeShared<FJsonValueObject>(TrackObj));
-    }
+    for (UMovieSceneTrack *Track : MCP_GET_BINDING_TRACKS(Binding))
+      AddTrack(Track, &Binding);
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -131,20 +65,11 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
   // Echo the canonical package path rather than whatever spelling the caller
   // passed in: `/Game/X.X` and `/Game/X` are the same asset, and a caller that
   // feeds this value back should not have the two forms alternate.
-  Resp->SetStringField(TEXT("sequencePath"),
-                       Sequence->GetOutermost()
-                           ? Sequence->GetOutermost()->GetName()
-                           : SeqPath);
+  Resp->SetStringField(TEXT("sequencePath"), Sequence->GetOutermost()->GetName());
   Subsystem->SendAutomationResponse(
       RequestingSocket, RequestId, true,
       FString::Printf(TEXT("Found %d tracks"), TracksArray.Num()), Resp,
       FString());
   return true;
-#else
-  Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                    TEXT("sequence_list_tracks requires editor build"),
-                                    nullptr, TEXT("EDITOR_ONLY"));
-  return true;
-#endif
 }
 }

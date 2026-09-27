@@ -2,8 +2,8 @@
 // McpAutomationBridge_AudioAuthoringHandlersMetaSoundNodes.cpp).
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 namespace
@@ -38,14 +38,14 @@ void AliasInterfaceEndpoint(FString& NodeRef, FString& PinName)
 TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString SourceNodeId = McpHandlerUtils::GetOptionalString(Params, TEXT("sourceNodeId"), TEXT(""));
-		FString SourceOutputName = McpHandlerUtils::GetOptionalString(Params, TEXT("sourceOutputName"), TEXT(""));
-		FString TargetNodeId = McpHandlerUtils::GetOptionalString(Params, TEXT("targetNodeId"), TEXT(""));
-		FString TargetInputName = McpHandlerUtils::GetOptionalString(Params, TEXT("targetInputName"), TEXT(""));
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString SourceNodeId = McpGetFirstStringField(Params, {TEXT("sourceNodeId"), TEXT("sourceNode")});
+		FString SourceOutputName = McpGetFirstStringField(Params, {TEXT("sourceOutputName"), TEXT("sourcePin")});
+		FString TargetNodeId = McpGetFirstStringField(Params, {TEXT("targetNodeId"), TEXT("targetNode")});
+		FString TargetInputName = McpGetFirstStringField(Params, {TEXT("targetInputName"), TEXT("targetPin")});
 		AliasInterfaceEndpoint(SourceNodeId, SourceOutputName);
 		AliasInterfaceEndpoint(TargetNodeId, TargetInputName);
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		if (AssetPath.IsEmpty())
 		{
@@ -59,11 +59,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 		}
 
 		TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
-#if MCP_HAS_METASOUND_FRONTEND_V2
-		FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface, nullptr, true);
-#else
-		FMetaSoundFrontendDocumentBuilder Builder(ScriptInterface);
-#endif
+		MCP_METASOUND_BUILDER(Builder, ScriptInterface);
 
 		FGuid SourceGuid;
 		FGuid TargetGuid;
@@ -247,7 +243,6 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 		{
 			Response->SetBoolField(TEXT("success"), false);
 			Response->SetStringField(TEXT("error"), TEXT("Failed to create edge connection - check pin names against availableNodes inputs/outputs"));
-			Response->SetStringField(TEXT("errorCode"), TEXT("EDGE_FAILED"));
 			Response->SetStringField(TEXT("code"), TEXT("EDGE_FAILED"));
 #if MCP_HAS_METASOUND_FRONTEND_V2
 			TArray<TSharedPtr<FJsonValue>> NodeIdArray = BuildAvailableNodesArray();
@@ -258,15 +253,12 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 #endif
 		}
 
-#if MCP_HAS_METASOUND_FRONTEND_V2
-		Builder.FinishBuilding();
-#endif
+		MCP_METASOUND_FINISH(Builder);
 		return Response;
 #elif MCP_HAS_METASOUND
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
 		Response->SetBoolField(TEXT("success"), false);
 		Response->SetStringField(TEXT("error"), TEXT("Cannot connect MetaSound nodes - Frontend Builder not available"));
-		Response->SetStringField(TEXT("errorCode"), TEXT("METASOUND_FRONTEND_NOT_SUPPORTED"));
 		Response->SetStringField(TEXT("code"), TEXT("METASOUND_FRONTEND_NOT_SUPPORTED"));
 		Response->SetStringField(TEXT("requiredVersion"), TEXT("UE 5.3+"));
 		return Response;
@@ -275,4 +267,3 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 #endif
 }
 }
-#endif

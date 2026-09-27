@@ -77,10 +77,7 @@ TArray<FString> GetReplayStringArray(const TSharedPtr<FJsonObject>& Payload, con
 
 FString GetReplayName(const TSharedPtr<FJsonObject>& Payload)
 {
-    FString Name = McpHandlerUtils::GetOptionalString(Payload, TEXT("replayName"));
-    if (Name.IsEmpty()) Name = McpHandlerUtils::GetOptionalString(Payload, TEXT("demoName"));
-    if (Name.IsEmpty()) Name = McpHandlerUtils::GetOptionalString(Payload, TEXT("name"));
-    return Name;
+    return McpGetFirstStringField(Payload, {TEXT("replayName"), TEXT("demoName"), TEXT("name")});
 }
 
 TArray<FString> GetReplayOptions(const TSharedPtr<FJsonObject>& Payload)

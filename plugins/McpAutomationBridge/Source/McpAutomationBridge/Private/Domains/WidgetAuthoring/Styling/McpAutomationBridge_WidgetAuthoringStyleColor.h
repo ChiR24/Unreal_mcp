@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
@@ -247,4 +246,3 @@ inline bool McpApplyWidgetStyleConvenience(
   }
   return true;
 }
-#endif

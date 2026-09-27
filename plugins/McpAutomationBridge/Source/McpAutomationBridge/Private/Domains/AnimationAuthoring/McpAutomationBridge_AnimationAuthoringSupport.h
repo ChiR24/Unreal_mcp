@@ -8,7 +8,6 @@
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Misc/EngineVersionComparison.h"
 
-#if WITH_EDITOR
 // UE 5.0 deprecation warning suppression - BlendSpaceBase.h is deprecated but transitively included by engine headers
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
 #pragma warning(push)
@@ -39,20 +38,12 @@
 #include "Kismet2/Kismet2NameValidators.h"
 
 // Blend Space factories
-#if __has_include("Factories/BlendSpaceFactoryNew.h") && __has_include("Factories/BlendSpaceFactory1D.h")
 #include "Factories/BlendSpaceFactoryNew.h"
 #include "Factories/BlendSpaceFactory1D.h"
-#define MCP_HAS_BLENDSPACE_FACTORY 1
-#else
-#define MCP_HAS_BLENDSPACE_FACTORY 0
-#endif
 
 // Control Rig support (optional module)
 #if __has_include("ControlRig.h")
 #include "ControlRig.h"
-#define MCP_HAS_CONTROLRIG 1
-#else
-#define MCP_HAS_CONTROLRIG 0
 #endif
 
 // Control Rig Blueprint - header location changed in UE 5.5+
@@ -137,91 +128,34 @@
 #define MCP_HAS_IKRETARGETER_CONTROLLER 0
 #endif
 
-// Pose Asset
-#if __has_include("Animation/PoseAsset.h")
-#include "Animation/PoseAsset.h"
-#define MCP_HAS_POSEASSET 1
-#else
-#define MCP_HAS_POSEASSET 0
-#endif
-
 // Animation Blueprint Graph
-#if __has_include("AnimationGraph.h")
 #include "AnimationGraph.h"
-#endif
-#if __has_include("AnimGraphNode_StateMachine.h")
 #include "AnimGraphNode_StateMachine.h"
-#endif
-#if __has_include("AnimGraphNode_TransitionResult.h")
 #include "AnimGraphNode_TransitionResult.h"
-#endif
-#if __has_include("AnimStateNode.h")
 #include "AnimStateNode.h"
-#endif
 
 // Additional AnimGraph node types for state machine implementation
-#if __has_include("AnimStateTransitionNode.h")
 #include "AnimStateTransitionNode.h"
-#define MCP_HAS_ANIM_STATE_TRANSITION 1
-#else
-#define MCP_HAS_ANIM_STATE_TRANSITION 0
-#endif
 
-#if __has_include("AnimStateEntryNode.h")
 #include "AnimStateEntryNode.h"
-#endif
 
-#if __has_include("AnimationStateMachineGraph.h")
 #include "AnimationStateMachineGraph.h"
-#define MCP_HAS_ANIM_STATE_MACHINE_GRAPH 1
-#else
-#define MCP_HAS_ANIM_STATE_MACHINE_GRAPH 0
-#endif
 
-#if __has_include("AnimationStateMachineSchema.h")
 #include "AnimationStateMachineSchema.h"
-#define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 1
-#else
-#define MCP_HAS_ANIM_STATE_MACHINE_SCHEMA 0
-#endif
 
 // Animation State Graph (for creating individual states with BoundGraph)
-#if __has_include("AnimationStateGraph.h")
 #include "AnimationStateGraph.h"
-#endif
 
-#if __has_include("AnimationStateGraphSchema.h")
 #include "AnimationStateGraphSchema.h"
-#endif
 
 // Blend node types
-#if __has_include("AnimGraphNode_TwoWayBlend.h")
 #include "AnimGraphNode_TwoWayBlend.h"
-#define MCP_HAS_TWO_WAY_BLEND 1
-#else
-#define MCP_HAS_TWO_WAY_BLEND 0
-#endif
 
-#if __has_include("AnimGraphNode_LayeredBoneBlend.h")
 #include "AnimGraphNode_LayeredBoneBlend.h"
-#define MCP_HAS_LAYERED_BLEND 1
-#else
-#define MCP_HAS_LAYERED_BLEND 0
-#endif
 
-#if __has_include("AnimGraphNode_SaveCachedPose.h")
 #include "AnimGraphNode_SaveCachedPose.h"
-#define MCP_HAS_CACHED_POSE 1
-#else
-#define MCP_HAS_CACHED_POSE 0
-#endif
 
-#if __has_include("AnimGraphNode_Slot.h")
 #include "AnimGraphNode_Slot.h"
-#define MCP_HAS_SLOT_NODE 1
-#else
-#define MCP_HAS_SLOT_NODE 0
-#endif
 
 // Helper macros
 #define ANIM_ERROR_RESPONSE(Msg, Code) \
@@ -241,10 +175,8 @@ USkeleton* LoadSkeletonFromPathAnim(const FString& SkeletonPath);
 USkeletalMesh* LoadSkeletalMeshFromPathAnim(const FString& MeshPath);
 UAnimSequence* LoadAnimSequenceFromPath(const FString& AnimPath);
 bool SaveAnimAsset(UObject* Asset, bool bShouldSave);
-FVector GetVectorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj);
 FRotator GetRotatorFromJsonAnim(const TSharedPtr<FJsonObject>& Obj);
 
-#if MCP_HAS_ANIM_STATE_MACHINE_GRAPH && MCP_HAS_ANIM_STATE_MACHINE_SCHEMA
 UEdGraph* GetAnimGraphFromBlueprint(UAnimBlueprint* AnimBP);
 UAnimGraphNode_StateMachine* FindStateMachineNode(UEdGraph* Graph, const FString& Name);
 TArray<UAnimGraphNode_StateMachine*> FindStateMachineNodes(UEdGraph* Graph, const FString& Name);
@@ -262,7 +194,6 @@ void EnsureStateMachineEntry(UAnimationStateMachineGraph* SMGraph, UAnimStateNod
 // state name was to guess until a call stopped erroring.
 void AddStateMachineInventory(UEdGraph* AnimGraph, TSharedPtr<FJsonObject> Response);
 void AddStateInventory(UEdGraph* AnimGraph, const FString& MachineName, TSharedPtr<FJsonObject> Response);
-#if MCP_HAS_ANIM_STATE_TRANSITION
 // Applies crossfade / priority / automaticRule / bidirectional / the condition
 // rule to one transition. Shared so add_transition arms what it creates instead
 // of accepting those fields and dropping them. bOutChanged reports whether any
@@ -271,8 +202,6 @@ void AddStateInventory(UEdGraph* AnimGraph, const FString& MachineName, TSharedP
 bool ApplyTransitionSettings(UAnimStateTransitionNode* TransNode, UAnimBlueprint* AnimBP,
                              const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response,
                              FString& OutError, FString& OutErrorCode, bool& bOutChanged);
-#endif
-#endif
 // The `animations` array as add_state receives it; empty when none was sent.
 TArray<FString> ReadStateAnimationPaths(const TSharedPtr<FJsonObject>& Params);
 
@@ -293,7 +222,6 @@ TSharedPtr<FJsonObject> HandleBlueprintBlendNodeActions(const FString& SubAction
 TSharedPtr<FJsonObject> HandleBlueprintSlotLayerActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleBlueprintNodeValueActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
-TSharedPtr<FJsonObject> HandleRigUtilityActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleIKRigActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleAnimationInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
@@ -309,4 +237,3 @@ TSharedPtr<FJsonObject> HandleSequenceNotifyStateAction(const TSharedPtr<FJsonOb
 
 } // namespace McpAnimationAuthoring
 
-#endif // WITH_EDITOR

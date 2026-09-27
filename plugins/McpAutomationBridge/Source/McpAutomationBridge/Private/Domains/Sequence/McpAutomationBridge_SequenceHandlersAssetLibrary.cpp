@@ -5,7 +5,6 @@
 bool UMcpAutomationBridgeSubsystem::HandleSequenceList(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if WITH_EDITOR
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   TArray<TSharedPtr<FJsonValue>> SequencesArray;
 
@@ -43,12 +42,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceList(
       FString::Printf(TEXT("Found %d sequences"), SequencesArray.Num()), Resp,
       FString());
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_list requires editor build."), nullptr,
-                         TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceDuplicate(
@@ -79,7 +72,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDuplicate(
   FString NewName;
   LocalPayload->TryGetStringField(TEXT("newName"), NewName);
   NewName.TrimStartAndEndInline();
-#if WITH_EDITOR
   const bool bDestinationIsFolder =
       UEditorAssetLibrary::DoesDirectoryExist(DestinationPath) ||
       DestinationPath.EndsWith(TEXT("/")) ||
@@ -90,9 +82,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDuplicate(
   } else if (bDestinationIsFolder) {
     DestinationPath = DestinationPath / FPaths::GetBaseFilename(SourcePath);
   }
-#endif
 
-#if WITH_EDITOR
   UObject *SourceSeq = UEditorAssetLibrary::LoadAsset(SourcePath);
   if (!SourceSeq) {
     SendAutomationResponse(
@@ -118,12 +108,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDuplicate(
                          TEXT("Failed to duplicate sequence"), nullptr,
                          TEXT("OPERATION_FAILED"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_duplicate requires editor build."),
-                         nullptr, TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceRename(
@@ -147,7 +131,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRename(
     NewName = FString::Printf(TEXT("%s/%s"), *ParentPath, *NewName);
   }
 
-#if WITH_EDITOR
   if (UEditorAssetLibrary::RenameAsset(Path, NewName)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("oldPath"), Path);
@@ -161,12 +144,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRename(
                          TEXT("Failed to rename sequence"), nullptr,
                          TEXT("OPERATION_FAILED"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_rename requires editor build."),
-                         nullptr, TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceDelete(
@@ -182,7 +159,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDelete(
                            TEXT("INVALID_ARGUMENT"));
     return true;
   }
-#if WITH_EDITOR
   if (!UEditorAssetLibrary::DoesAssetExist(Path)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("deletedPath"), Path);
@@ -206,10 +182,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDelete(
                          TEXT("Failed to delete sequence"), nullptr,
                          TEXT("OPERATION_FAILED"));
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_delete requires editor build."),
-                         nullptr, TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }

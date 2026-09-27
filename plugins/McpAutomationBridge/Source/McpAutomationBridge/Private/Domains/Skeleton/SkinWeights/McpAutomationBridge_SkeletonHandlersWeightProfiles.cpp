@@ -2,7 +2,7 @@
 #include "Domains/Skeleton/Assets/McpAutomationBridge_SkeletonHandlersPayload.h"
 
 #include "Engine/SkeletalMesh.h"
-#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersSafeOperationsFacade.h"
+#include "Safety/McpSafeOperations.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -12,7 +12,6 @@
 #include "Animation/SkinWeightProfile.h"
 #endif
 
-#if WITH_EDITOR
 
 namespace McpSkeletonHandlers {
 
@@ -46,7 +45,6 @@ bool HandleSetVertexWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, cons
             return true;
         }
 
-#if WITH_EDITORONLY_DATA
         FSkeletalMeshModel* ImportedModel = Mesh->GetImportedModel();
         if (!ImportedModel || ImportedModel->LODModels.Num() == 0)
         {
@@ -145,10 +143,6 @@ bool HandleSetVertexWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, cons
         Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
             FString::Printf(TEXT("Set weights for %d vertices in profile '%s'"), WeightsSet, *ProfileName), Result);
         return true;
-#else
-        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("set_vertex_weights requires editor mode"), TEXT("NOT_EDITOR"));
-        return true;
-#endif
 }
 
 bool HandleAutoSkinWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -198,4 +192,3 @@ bool HandleAutoSkinWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const
 
 } // namespace McpSkeletonHandlers
 
-#endif // WITH_EDITOR

@@ -3,7 +3,6 @@
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
-#if WITH_EDITOR
 #include "Engine/Blueprint.h"
 #include "GameFramework/Actor.h"
 #include "MovieScene.h"
@@ -11,10 +10,8 @@
 #include "Sections/MovieSceneCameraCutSection.h"
 #include "Tracks/MovieSceneCameraCutTrack.h"
 #include "Tracks/MovieSceneCameraShakeTrack.h"
-#endif
 
 namespace McpSequenceCinematics {
-#if WITH_EDITOR
 namespace {
 FString GetCameraShakePath(const TSharedPtr<FJsonObject> &Params) {
   FString Path = GetString(Params, TEXT("cameraShakePath"));
@@ -40,13 +37,9 @@ UClass *LoadCameraShakeClass(const FString &Path) {
              : nullptr;
 }
 }
-#endif
 
-bool HandleAddCameraCutTrack(UMcpAutomationBridgeSubsystem *Self,
-                             const TSharedPtr<FJsonObject> &Params,
+bool HandleAddCameraCutTrack(const TSharedPtr<FJsonObject> &Params,
                              TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
   if (!Sequence) return true;
   FGuid Guid;
@@ -102,18 +95,10 @@ bool HandleAddCameraCutTrack(UMcpAutomationBridgeSubsystem *Self,
   CutChanges.Add(FString::Printf(TEXT("section %s"), *Section->GetName()));
   AddMutationEvidence(OutResult, Sequence, CutChanges);
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_camera_cut_track"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 
-bool HandleAddCameraShakeTrack(UMcpAutomationBridgeSubsystem *Self,
-                               const TSharedPtr<FJsonObject> &Params,
+bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
                                TSharedPtr<FJsonObject> &OutResult) {
-  (void)Self;
-#if WITH_EDITOR
   const FString ShakePath = GetCameraShakePath(Params);
   if (ShakePath.IsEmpty()) {
     OutResult = MakeResult(false, TEXT("add_camera_shake_track"),
@@ -157,10 +142,5 @@ bool HandleAddCameraShakeTrack(UMcpAutomationBridgeSubsystem *Self,
   OutResult->SetStringField(TEXT("cameraShakePath"),
                             ShakeClass->GetPathName());
   return true;
-#else
-  OutResult = MakeResult(false, TEXT("add_camera_shake_track"),
-                         TEXT("Editor build required"), TEXT("NOT_IMPLEMENTED"));
-  return true;
-#endif
 }
 }

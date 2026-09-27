@@ -1,5 +1,6 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 #include "Safety/McpSafeOperations.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -20,7 +21,6 @@ bool IsStackModuleAuthoringSubAction(const FString& SubAction)
         SubAction == TEXT("add_simulation_stage");
 }
 
-#if WITH_EDITOR
 // After a stack-module sub-action succeeds, run the same stack-issue harvest that
 // validate_niagara_system performs so "The module has unmet dependencies" reaches the
 // caller on the add call itself (dogfood #106), not five calls later.
@@ -57,13 +57,10 @@ static void AppendStackIssueWarnings(const FActionContext& Context, bool bSucces
     Context.Result->SetBoolField(TEXT("hasUnmetDependencies"), bUnmetDependencies);
     if (bUnmetDependencies) { McpAnnotateUnmetDependencies(Context.Result); }
 }
-#endif
 
 void FActionContext::SendSuccess(bool bSuccess, const FString& Message) const
 {
-#if WITH_EDITOR
     AppendStackIssueWarnings(*this, bSuccess);
-#endif
     Subsystem->SendAutomationResponse(RequestingSocket, RequestId, bSuccess, Message, Result);
 }
 
@@ -95,7 +92,7 @@ FActionContext MakeActionContext(
         Context.SystemPath = Context.AssetPath;
     }
     Context.EmitterPath = GetJsonStringField(Payload, TEXT("emitterPath"));
-    Context.EmitterName = GetJsonStringField(Payload, TEXT("emitterName"));
+    Context.EmitterName = McpGetFirstStringField(Payload, {TEXT("emitterName"), TEXT("emitter")});
     Context.bSave = GetJsonBoolField(Payload, TEXT("save"), true);
     Context.Result = McpHandlerUtils::CreateResultObject();
     return Context;
@@ -164,32 +161,6 @@ bool ValidateCommonFields(FActionContext& Context)
         && ValidateNiagaraIdentifier(Context, Context.EmitterName, TEXT("emitterName"), true);
 }
 
-FVector GetVectorFromJson(const TSharedPtr<FJsonObject>& Obj)
-{
-    if (!Obj.IsValid())
-    {
-        return FVector::ZeroVector;
-    }
-    return FVector(
-        GetJsonNumberField(Obj, TEXT("x"), 0.0),
-        GetJsonNumberField(Obj, TEXT("y"), 0.0),
-        GetJsonNumberField(Obj, TEXT("z"), 0.0));
-}
-
-FLinearColor GetColorFromJson(const TSharedPtr<FJsonObject>& Obj)
-{
-    if (!Obj.IsValid())
-    {
-        return FLinearColor::White;
-    }
-    return FLinearColor(
-        static_cast<float>(GetJsonNumberField(Obj, TEXT("r"), 1.0)),
-        static_cast<float>(GetJsonNumberField(Obj, TEXT("g"), 1.0)),
-        static_cast<float>(GetJsonNumberField(Obj, TEXT("b"), 1.0)),
-        static_cast<float>(GetJsonNumberField(Obj, TEXT("a"), 1.0)));
-}
-
-#if WITH_EDITOR
 UNiagaraSystem* LoadSystemOrError(FActionContext& Context)
 {
     if (Context.SystemPath.IsEmpty())
@@ -197,10 +168,10 @@ UNiagaraSystem* LoadSystemOrError(FActionContext& Context)
         Context.SendError(TEXT("Missing 'systemPath'."), TEXT("INVALID_ARGUMENT"));
         return nullptr;
     }
-    UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *Context.SystemPath);
+    UNiagaraSystem* System = LoadObject<UNiagaraSystem>(nullptr, *Context.SystemPath, nullptr, LOAD_NoWarn);
     if (!System)
     {
-        Context.SendError(TEXT("Could not load Niagara System."), TEXT("ASSET_NOT_FOUND"));
+        Context.SendError(FString::Printf(TEXT("Niagara system not found: %s"), *Context.SystemPath), TEXT("ASSET_NOT_FOUND"));
     }
     return System;
 }
@@ -223,9 +194,9 @@ FNiagaraEmitterHandle* FindEmitterHandle(UNiagaraSystem* System, const FString& 
 
 bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNiagaraEmitterHandle*& Handle)
 {
-    if (Context.SystemPath.IsEmpty() || Context.EmitterName.IsEmpty())
+    if (Context.SystemPath.IsEmpty())
     {
-        Context.SendError(TEXT("Missing 'systemPath' or 'emitterName'."), TEXT("INVALID_ARGUMENT"));
+        Context.SendError(TEXT("Missing 'systemPath'."), TEXT("INVALID_ARGUMENT"));
         return false;
     }
     System = LoadSystemOrError(Context);
@@ -271,5 +242,4 @@ void MarkDirtyAndVerify(FActionContext& Context, UObject* Object)
     }
     McpHandlerUtils::AddVerification(Context.Result, Object);
 }
-#endif
 }

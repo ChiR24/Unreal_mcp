@@ -40,17 +40,8 @@ FString CanonicalMediaAction(const FString &Action) {
 FString GetStringAny(const TSharedPtr<FJsonObject> &Payload,
                      std::initializer_list<const TCHAR *> Fields,
                      const FString &DefaultValue) {
-  if (!Payload.IsValid()) {
-    return DefaultValue;
-  }
-  for (const TCHAR *Field : Fields) {
-    FString Value;
-    if (Payload->TryGetStringField(Field, Value) &&
-        !Value.TrimStartAndEnd().IsEmpty()) {
-      return Value.TrimStartAndEnd();
-    }
-  }
-  return DefaultValue;
+  const FString Value = McpGetFirstStringField(Payload, Fields).TrimStartAndEnd();
+  return Value.IsEmpty() ? DefaultValue : Value;
 }
 
 bool GetBoolAny(const TSharedPtr<FJsonObject> &Payload,
@@ -257,11 +248,7 @@ TSharedPtr<FJsonObject> BuildAssetResponse(
 }
 
 bool SaveMediaAsset(UObject *Object) {
-#if WITH_EDITOR
   return Object && McpSafeOperations::McpSafeAssetSave(Object);
-#else
-  return false;
-#endif
 }
 
 }

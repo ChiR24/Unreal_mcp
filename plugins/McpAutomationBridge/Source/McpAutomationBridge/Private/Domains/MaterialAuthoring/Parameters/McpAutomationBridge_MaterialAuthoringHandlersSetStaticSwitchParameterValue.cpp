@@ -1,137 +1,45 @@
-#include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
-#include "Safety/McpSafeOperationsOpenEditorGuard.h"
+#include "Domains/MaterialAuthoring/Parameters/McpAutomationBridge_MaterialAuthoringParameterValue.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleSetStaticSwitchParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-  if (SubAction == TEXT("set_static_switch_parameter_value")) {
-    FString AssetPath, ParamName;
-    if (!Payload->TryGetStringField(TEXT("assetPath"), AssetPath) || AssetPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'assetPath'."), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-    if (!Payload->TryGetStringField(TEXT("parameterName"), ParamName) || ParamName.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'parameterName'."), TEXT("INVALID_ARGUMENT"));
-      return true;
-    }
-    bool Value = false;
-    Payload->TryGetBoolField(TEXT("value"), Value);
-
-    FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
-    if (ValidatedPath.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid path '%s'"), *AssetPath), TEXT("INVALID_PATH"));
-      return true;
-    }
-    AssetPath = ValidatedPath;
-
-    UMaterialInstanceConstant *Instance = LoadObject<UMaterialInstanceConstant>(nullptr, *AssetPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
-    if (!Instance) {
-      // A base UMaterial keeps its switch default on the
-      // UMaterialExpressionStaticBoolParameter rather than in an override table.
-      // Mirrors the scalar, vector and texture setters, which all accept a base
-      // material here; without it a master material's switch defaults could not
-      // be set through this capability at all.
-      if (UMaterial *BaseMaterial = LoadObject<UMaterial>(nullptr, *AssetPath)) {
-        // The material editor edits a preview duplicate and writes it back over
-        // the original on close, so a write taken now is silently reverted the
-        // moment the tab closes. Refuse instead of reporting a success the
-        // caller only discovers was a lie much later.
-        if (McpSafeOperations::IsAssetEditorOpen(BaseMaterial)) {
-          Bridge->SendAutomationError(
-              Socket, RequestId,
-              McpSafeOperations::OpenAssetEditorRefusal(BaseMaterial),
-              TEXT("ASSET_EDITOR_OPEN"));
-          return true;
-        }
-        UMaterialExpressionStaticBoolParameter *Param = nullptr;
-        TArray<FString> AvailableParams;
-        const FName ParamFName(*ParamName);
-        for (UMaterialExpression *Expr : MCP_GET_MATERIAL_EXPRESSIONS(BaseMaterial)) {
-          if (UMaterialExpressionStaticBoolParameter *Switch =
-                  Cast<UMaterialExpressionStaticBoolParameter>(Expr)) {
-            AvailableParams.Add(Switch->ParameterName.ToString());
-            if (Switch->ParameterName == ParamFName) {
-              Param = Switch;
-            }
-          }
-        }
-        if (!Param) {
-          Bridge->SendAutomationError(Socket, RequestId,
-                              FString::Printf(TEXT("Static switch parameter '%s' not found on base material. Available: [%s]"),
-                                              *ParamName, *FString::Join(AvailableParams, TEXT(", "))),
-                              TEXT("PARAMETER_NOT_FOUND"));
-          return true;
-        }
-        Param->DefaultValue = Value;
-        BaseMaterial->PostEditChange();
-        BaseMaterial->MarkPackageDirty();
-
-        bool bSaveBase = true;
-        Payload->TryGetBoolField(TEXT("save"), bSaveBase);
-        if (bSaveBase) {
-          SaveMaterialAsset(BaseMaterial);
-        }
-
-        TSharedPtr<FJsonObject> BaseResult = McpHandlerUtils::CreateResultObject();
-        McpHandlerUtils::AddVerification(BaseResult, BaseMaterial);
-        BaseResult->SetStringField(TEXT("parameterName"), ParamName);
-        BaseResult->SetStringField(TEXT("note"), TEXT("Base material (not an instance): the StaticBoolParameter expression's DefaultValue was updated."));
-        Bridge->SendAutomationResponse(
-            Socket, RequestId, true,
-            FString::Printf(TEXT("Static switch parameter '%s' default set on base material."), *ParamName),
-            BaseResult);
-        return true;
-      }
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Could not load a material instance or material at this path."), TEXT("ASSET_NOT_FOUND"));
-      return true;
-    }
-
+  if (SubAction != TEXT("set_static_switch_parameter_value")) {
+    return false;
+  }
+  bool Value = false;
+  Payload->TryGetBoolField(TEXT("value"), Value);
+  FParameterValueWriter Writer;
+  Writer.Kind = TEXT("Static switch");
+  Writer.Type = EMaterialParameterType::StaticSwitch;
+  Writer.SetDefault = [Value](UMaterial* Material, FName Name, TArray<FString>& Available) {
+    UMaterialExpressionStaticBoolParameter* Param =
+        FindParameterExpression<UMaterialExpressionStaticBoolParameter>(Material, Name, Available);
+    if (Param) { Param->DefaultValue = Value; }
+    return Param != nullptr;
+  };
+  // A switch lives in the static parameter set, which has to be rebuilt.
+  Writer.SetOverride = [Value](UMaterialInstanceConstant* Instance, FName Name) {
     FStaticParameterSet StaticParams;
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     Instance->GetStaticParameterValues(StaticParams);
 #else
     StaticParams = Instance->GetStaticParameters();
 #endif
-    bool bFound = false;
-    for (auto &Switch : StaticParams.StaticSwitchParameters) {
-      if (Switch.ParameterInfo.Name == FName(*ParamName)) {
-        Switch.Value = Value;
-        Switch.bOverride = true;
-        bFound = true;
-        break;
-      }
+    FStaticSwitchParameter* Switch = StaticParams.StaticSwitchParameters.FindByPredicate(
+        [Name](const FStaticSwitchParameter& Entry) { return Entry.ParameterInfo.Name == Name; });
+    if (!Switch) {
+      Switch = &StaticParams.StaticSwitchParameters.AddDefaulted_GetRef();
+      Switch->ParameterInfo.Name = Name;
     }
-    if (!bFound) {
-      FStaticSwitchParameter NewSwitch;
-      NewSwitch.ParameterInfo.Name = FName(*ParamName);
-      NewSwitch.Value = Value;
-      NewSwitch.bOverride = true;
-      StaticParams.StaticSwitchParameters.Add(NewSwitch);
-    }
+    Switch->Value = Value;
+    Switch->bOverride = true;
     Instance->UpdateStaticPermutation(StaticParams);
-    Instance->PostEditChange();
-    Instance->MarkPackageDirty();
-
-    bool bSave = true;
-    Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave) {
-      SaveMaterialInstanceAsset(Instance);
-    }
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(Result, Instance);
-    Result->SetStringField(TEXT("parameterName"), ParamName);
+  };
+  Writer.DescribeValue = [Value](UMaterialInterface*, FName, const TSharedPtr<FJsonObject>& Result) {
     Result->SetBoolField(TEXT("value"), Value);
-    Bridge->SendAutomationResponse(Socket, RequestId, true,
-                           FString::Printf(TEXT("Static switch '%s' set to %s."), *ParamName, Value ? TEXT("true") : TEXT("false")),
-                           Result);
-    return true;
-  }
-
-  return false;
+  };
+  SetMaterialParameterValue(Bridge, RequestId, Payload, Socket, Writer);
+  return true;
 }
 }
-#endif

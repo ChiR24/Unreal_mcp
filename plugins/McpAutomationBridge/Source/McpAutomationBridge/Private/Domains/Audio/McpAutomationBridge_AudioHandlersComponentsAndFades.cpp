@@ -3,7 +3,6 @@
 
 namespace McpAudioHandlers
 {
-#if WITH_EDITOR
 bool HandleComponentActions(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -12,9 +11,7 @@ bool HandleComponentActions(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
 	if (Lower == TEXT("fade_sound_out") ||
-		Lower == TEXT("fade_sound_in") ||
-		Lower == TEXT("audio_fade_sound_out") ||
-		Lower == TEXT("audio_fade_sound_in")) {
+		Lower == TEXT("fade_sound_in")) {
 	FString ActorName;
 	Payload->TryGetStringField(TEXT("actorName"), ActorName);
 	FString ComponentName;
@@ -34,10 +31,10 @@ bool HandleComponentActions(
 		Payload->TryGetNumberField(TEXT("fadeOutTime"), FadeTime);
 	}
 	double TargetVol =
-		(Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
+		(Lower == TEXT("fade_sound_in"))
 		? 1.0
 		: 0.0;
-	if (Lower == TEXT("fade_sound_in") || Lower == TEXT("audio_fade_sound_in"))
+	if (Lower == TEXT("fade_sound_in"))
 		Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
 
 	if (!GEditor)
@@ -128,8 +125,7 @@ bool HandleComponentActions(
 	}
 
 		if (AudioComp) {
-			if (Lower == TEXT("fade_sound_in") ||
-				Lower == TEXT("audio_fade_sound_in"))
+			if (Lower == TEXT("fade_sound_in"))
 				AudioComp->FadeIn((float)FadeTime, (float)TargetVol);
 			else
 				AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
@@ -271,5 +267,4 @@ bool HandleComponentActions(
   }
   return false;
 }
-#endif
 }

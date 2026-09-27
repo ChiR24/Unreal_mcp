@@ -12,16 +12,13 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
-#if WITH_EDITOR
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
 #include "MovieSceneSection.h"
-#endif
 
 namespace McpSequenceTracks {
 
-#if WITH_EDITOR
 namespace {
 
 /** Ticks to DISPLAY frames -- the unit every keyframe capability speaks in. */
@@ -36,7 +33,7 @@ double TickToDisplayFrame(const UMovieScene *MovieScene, FFrameNumber Tick) {
 template <typename ChannelType>
 void DescribeChannels(const UMovieScene *MovieScene,
                       FMovieSceneChannelProxy &Proxy, const TCHAR *TypeName,
-                      TArray<TSharedPtr<FJsonValue>> &OutChannels) {
+                      TArray<TSharedPtr<FJsonValue>> &OutChannels, int32 &OutKeyCount) {
   TArrayView<ChannelType *> Channels = Proxy.GetChannels<ChannelType>();
   TArrayView<const FMovieSceneChannelMetaData> Meta =
       Proxy.GetMetaData<ChannelType>();
@@ -65,6 +62,7 @@ void DescribeChannels(const UMovieScene *MovieScene,
       KeysArray.Add(MakeShared<FJsonValueObject>(KeyObj));
     }
     ChannelObj->SetNumberField(TEXT("keyCount"), KeysArray.Num());
+    OutKeyCount += KeysArray.Num();
     ChannelObj->SetArrayField(TEXT("keys"), KeysArray);
     OutChannels.Add(MakeShared<FJsonValueObject>(ChannelObj));
   }
@@ -93,27 +91,19 @@ TSharedPtr<FJsonObject> DescribeSectionKeys(const UMovieScene *MovieScene,
   TArray<TSharedPtr<FJsonValue>> ChannelsArray;
   FMovieSceneChannelProxy &Proxy = Section->GetChannelProxy();
   DescribeChannels<FMovieSceneDoubleChannel>(MovieScene, Proxy, TEXT("double"),
-                                             ChannelsArray);
+                                             ChannelsArray, OutKeyCount);
   DescribeChannels<FMovieSceneFloatChannel>(MovieScene, Proxy, TEXT("float"),
-                                            ChannelsArray);
-  for (const TSharedPtr<FJsonValue> &ChannelValue : ChannelsArray) {
-    if (ChannelValue.IsValid() && ChannelValue->AsObject().IsValid()) {
-      OutKeyCount += static_cast<int32>(
-          ChannelValue->AsObject()->GetNumberField(TEXT("keyCount")));
-    }
-  }
+                                            ChannelsArray, OutKeyCount);
   Obj->SetArrayField(TEXT("channels"), ChannelsArray);
   return Obj;
 }
 
 } // namespace
-#endif
 
 bool HandleListTrackKeys(UMcpAutomationBridgeSubsystem *Subsystem,
                          const FString &RequestId,
                          const TSharedPtr<FJsonObject> &LocalPayload,
                          TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-#if WITH_EDITOR
   const FString SeqPath = McpSequence::ResolvePath(LocalPayload);
   if (SeqPath.IsEmpty()) {
     Subsystem->SendAutomationResponse(
@@ -164,13 +154,6 @@ bool HandleListTrackKeys(UMcpAutomationBridgeSubsystem *Subsystem,
   Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
                                     TEXT("Track keys listed"), Result);
   return true;
-#else
-  Subsystem->SendAutomationResponse(
-      RequestingSocket, RequestId, false,
-      TEXT("sequence_list_track_keys requires editor build."), nullptr,
-      TEXT("NOT_SUPPORTED"));
-  return true;
-#endif
 }
 
 } // namespace McpSequenceTracks

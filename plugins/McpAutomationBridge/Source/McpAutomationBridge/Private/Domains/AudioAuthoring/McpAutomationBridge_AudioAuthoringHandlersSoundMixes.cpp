@@ -1,16 +1,15 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
-#if WITH_EDITOR
 namespace McpAudioAuthoring
 {
 TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 	if (SubAction == TEXT("create_sound_mix"))
 	{
-		FString Name = McpHandlerUtils::GetOptionalString(Params, TEXT("name"), TEXT(""));
-		FString Path = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("path"), TEXT("/Game/Audio/Mixes")), false);
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
+		FString Path = NormalizeAudioPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Audio/Mixes")), false);
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		if (Name.IsEmpty())
 		{
@@ -46,14 +45,14 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 
 	if (SubAction == TEXT("add_mix_modifier"))
 	{
-		FString AssetPath = NormalizeAudioPath(McpHandlerUtils::GetOptionalString(Params, TEXT("assetPath"), TEXT("")));
-		FString SoundClassPath = McpHandlerUtils::GetOptionalString(Params, TEXT("soundClassPath"), TEXT(""));
-		float VolumeAdjust = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("volumeAdjuster"), 1.0));
-		float PitchAdjust = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("pitchAdjuster"), 1.0));
-		float FadeInTime = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("fadeInTime"), 0.0));
-		float FadeOutTime = static_cast<float>(McpHandlerUtils::GetOptionalFloat(Params, TEXT("fadeOutTime"), 0.0));
-		bool bApplyToChildren = McpHandlerUtils::GetOptionalBool(Params, TEXT("applyToChildren"), true);
-		bool bSave = McpHandlerUtils::GetOptionalBool(Params, TEXT("save"), true);
+		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+		FString SoundClassPath = GetJsonStringField(Params, TEXT("soundClassPath"), TEXT(""));
+		float VolumeAdjust = static_cast<float>(GetJsonNumberField(Params, TEXT("volumeAdjuster"), 1.0));
+		float PitchAdjust = static_cast<float>(GetJsonNumberField(Params, TEXT("pitchAdjuster"), 1.0));
+		float FadeInTime = static_cast<float>(GetJsonNumberField(Params, TEXT("fadeInTime"), 0.0));
+		float FadeOutTime = static_cast<float>(GetJsonNumberField(Params, TEXT("fadeOutTime"), 0.0));
+		bool bApplyToChildren = GetJsonBoolField(Params, TEXT("applyToChildren"), true);
+		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		USoundMix* Mix = LoadSoundMixFromPath(AssetPath);
 		if (!Mix)
@@ -88,4 +87,3 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 	return nullptr;
 }
 }
-#endif

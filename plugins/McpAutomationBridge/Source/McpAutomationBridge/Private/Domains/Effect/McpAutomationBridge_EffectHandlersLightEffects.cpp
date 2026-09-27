@@ -2,7 +2,6 @@
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/LightComponent.h"
@@ -14,35 +13,9 @@
 #include "Engine/RectLight.h"
 #include "Engine/SpotLight.h"
 #include "Subsystems/EditorActorSubsystem.h"
-#endif
 
 namespace McpEffectHandlers
 {
-static bool ReadLightColor(const TSharedPtr<FJsonObject>& Payload, FLinearColor& OutColor)
-{
-    const TArray<TSharedPtr<FJsonValue>>* ColorArray = nullptr;
-    if (Payload->TryGetArrayField(TEXT("color"), ColorArray) && ColorArray && ColorArray->Num() >= 3)
-    {
-        OutColor = FLinearColor(
-            static_cast<float>((*ColorArray)[0]->AsNumber()),
-            static_cast<float>((*ColorArray)[1]->AsNumber()),
-            static_cast<float>((*ColorArray)[2]->AsNumber()),
-            ColorArray->Num() > 3 ? static_cast<float>((*ColorArray)[3]->AsNumber()) : 1.0f);
-        return true;
-    }
-    const TSharedPtr<FJsonObject>* ColorObject = nullptr;
-    if (Payload->TryGetObjectField(TEXT("color"), ColorObject) && ColorObject && (*ColorObject).IsValid())
-    {
-        OutColor = FLinearColor(
-            static_cast<float>((*ColorObject)->HasField(TEXT("r")) ? GetJsonNumberField(*ColorObject, TEXT("r")) : 1.0),
-            static_cast<float>((*ColorObject)->HasField(TEXT("g")) ? GetJsonNumberField(*ColorObject, TEXT("g")) : 1.0),
-            static_cast<float>((*ColorObject)->HasField(TEXT("b")) ? GetJsonNumberField(*ColorObject, TEXT("b")) : 1.0),
-            static_cast<float>((*ColorObject)->HasField(TEXT("a")) ? GetJsonNumberField(*ColorObject, TEXT("a")) : 1.0));
-        return true;
-    }
-    return false;
-}
-
 bool HandleCreateDynamicLight(const FEffectActionContext& Context)
 {
     if (!Context.Payload->HasField(TEXT("location")))
@@ -71,8 +44,8 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
     }
     double Intensity = 0.0;
     Context.Payload->TryGetNumberField(TEXT("intensity"), Intensity);
-    FLinearColor LightColor;
-    const bool bHasColor = ReadLightColor(Context.Payload, LightColor);
+    const bool bHasColor = Context.Payload->HasField(TEXT("color"));
+    const FLinearColor LightColor = ExtractLinearColorField(Context.Payload, TEXT("color"), FLinearColor::White);
     bool bPulseEnabled = false;
     double PulseFrequency = 1.0;
     const TSharedPtr<FJsonObject>* PulseObject = nullptr;
@@ -82,7 +55,6 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
         (*PulseObject)->TryGetNumberField(TEXT("frequency"), PulseFrequency);
     }
 
-#if WITH_EDITOR
     if (!GEditor)
     {
         Context.Bridge.SendAutomationResponse(
@@ -119,7 +91,7 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
     }
 
     AActor* Spawned = SpawnActorInActiveWorld<AActor>(
-        ChosenClass, ReadVectorField(Context.Payload, TEXT("location")), FRotator::ZeroRotator);
+        ChosenClass, ExtractVectorField(Context.Payload, TEXT("location"), FVector::ZeroVector), FRotator::ZeroRotator);
     if (!Spawned)
     {
         Context.Bridge.SendAutomationResponse(
@@ -157,12 +129,5 @@ bool HandleCreateDynamicLight(const FEffectActionContext& Context)
         Context.Socket, Context.RequestId, true,
         TEXT("Dynamic light created"), Response);
     return true;
-#else
-    Context.Bridge.SendAutomationResponse(
-        Context.Socket, Context.RequestId, false,
-        TEXT("create_dynamic_light requires editor build."), nullptr,
-        TEXT("NOT_IMPLEMENTED"));
-    return true;
-#endif
 }
 }

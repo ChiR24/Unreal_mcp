@@ -9,25 +9,6 @@
 #include "Domains/Sequence/Metadata/McpAutomationBridge_SequenceMetadata.h"
 #include "Safety/McpSafeOperations.h"
 
-namespace {
-// Same bounded coercion the Blueprint metadata handler uses: only scalars become
-// tag values, so a nested object is skipped rather than silently stringified into
-// a shape no reader expects.
-bool CoerceMetadataValue(const TSharedPtr<FJsonValue> &Value, FString &OutValue) {
-  if (!Value.IsValid()) return false;
-  if (Value->Type == EJson::String) {
-    OutValue = Value->AsString();
-  } else if (Value->Type == EJson::Boolean) {
-    OutValue = Value->AsBool() ? TEXT("true") : TEXT("false");
-  } else if (Value->Type == EJson::Number) {
-    OutValue = FString::Printf(TEXT("%g"), Value->AsNumber());
-  } else {
-    return false;
-  }
-  return true;
-}
-}
-
 bool UMcpAutomationBridgeSubsystem::HandleSequenceSetMetadata(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -52,7 +33,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetMetadata(
       FString MetaValue;
       // UE 5.8 keys Values by UE::FSharedString; *Pair.Key is const TCHAR* on
       // both versions, so FString gets built either way.
-      if (CoerceMetadataValue(Pair.Value, MetaValue)) {
+      if (McpJsonScalarToString(Pair.Value, MetaValue)) {
         Pending.Emplace(FString(*Pair.Key), MetaValue);
       }
     }
@@ -60,7 +41,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetMetadata(
   FString Key;
   FString SingleValue;
   if (LocalPayload->TryGetStringField(TEXT("key"), Key) && !Key.IsEmpty() &&
-      CoerceMetadataValue(LocalPayload->TryGetField(TEXT("value")), SingleValue)) {
+      McpJsonScalarToString(LocalPayload->TryGetField(TEXT("value")), SingleValue)) {
     Pending.Emplace(Key, SingleValue);
   }
   if (Pending.Num() == 0) {
@@ -70,7 +51,6 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetMetadata(
         nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
-#if WITH_EDITOR
   UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
@@ -95,10 +75,4 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetMetadata(
   SendAutomationResponse(Socket, RequestId, true,
                          TEXT("Sequence metadata set"), Resp, FString());
   return true;
-#else
-  SendAutomationResponse(Socket, RequestId, false,
-                         TEXT("sequence_set_metadata requires editor build."),
-                         nullptr, TEXT("NOT_AVAILABLE"));
-  return true;
-#endif
 }

@@ -7,30 +7,12 @@ bool HandleAddTrack(UMcpAutomationBridgeSubsystem *Subsystem,
                     const FString &RequestId,
                     const TSharedPtr<FJsonObject> &LocalPayload,
                     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  FString SeqPath = McpSequence::ResolvePath(LocalPayload);
-  if (SeqPath.IsEmpty()) {
-    Subsystem->SendAutomationResponse(
-        RequestingSocket, RequestId, false,
-        TEXT("sequence_add_track requires a sequence path"), nullptr,
-        TEXT("INVALID_SEQUENCE"));
-    return true;
-  }
-
-  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *SeqPath);
+  UMovieScene *MovieScene = nullptr;
+  ULevelSequence *Sequence = McpSequence::LoadOrReply(Subsystem, RequestId, RequestingSocket, LocalPayload, TEXT("add_track"), MovieScene);
   if (!Sequence) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                      TEXT("Level sequence not found"), nullptr,
-                                      TEXT("SEQUENCE_NOT_FOUND"));
     return true;
   }
-
-  UMovieScene *MovieScene = Sequence->GetMovieScene();
-  if (!MovieScene) {
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                      TEXT("MovieScene not available"), nullptr,
-                                      TEXT("MOVIESCENE_UNAVAILABLE"));
-    return true;
-  }
+  const FString SeqPath = Sequence->GetPathName();
 
   FString TrackType;
   LocalPayload->TryGetStringField(TEXT("trackType"), TrackType);
@@ -48,17 +30,9 @@ bool HandleAddTrack(UMcpAutomationBridgeSubsystem *Subsystem,
   FString ActorName;
   LocalPayload->TryGetStringField(TEXT("actorName"), ActorName);
 
-  FGuid BindingGuid;
+  const FGuid BindingGuid =
+      McpSequenceKeyframes::ResolveBindingGuid(MovieScene, FString(), ActorName);
   if (!ActorName.IsEmpty()) {
-    const UMovieScene *ConstMovieScene = MovieScene;
-    for (const FMovieSceneBinding &Binding : ConstMovieScene->GetBindings()) {
-      FString BindingName = GetBindingName(MovieScene, Binding.GetObjectGuid());
-
-      if (BindingName.Contains(ActorName)) {
-        BindingGuid = Binding.GetObjectGuid();
-        break;
-      }
-    }
     if (!BindingGuid.IsValid()) {
       Subsystem->SendAutomationResponse(
           RequestingSocket, RequestId, false,
@@ -78,17 +52,10 @@ bool HandleAddTrack(UMcpAutomationBridgeSubsystem *Subsystem,
   if (ResolvedTrackType.Equals(TEXT("transform"), ESearchCase::IgnoreCase)) {
     ResolvedTrackType = TEXT("MovieScene3DTransformTrack");
   }
+  // UClass names carry no U prefix, so "Audio" and "MovieSceneAudioTrack" are the spellings that can match.
   UClass *TrackClass = ResolveUClass(ResolvedTrackType);
   if (!TrackClass) {
-    TrackClass = ResolveUClass(
-        FString::Printf(TEXT("UMovieScene%sTrack"), *ResolvedTrackType));
-  }
-  if (!TrackClass) {
-    TrackClass =
-        ResolveUClass(FString::Printf(TEXT("MovieScene%sTrack"), *ResolvedTrackType));
-  }
-  if (!TrackClass) {
-    TrackClass = ResolveUClass(FString::Printf(TEXT("U%s"), *ResolvedTrackType));
+    TrackClass = ResolveUClass(TEXT("MovieScene") + ResolvedTrackType + TEXT("Track"));
   }
 
   if (TrackClass && TrackClass->IsChildOf(UMovieSceneTrack::StaticClass())) {

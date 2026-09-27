@@ -3,7 +3,6 @@
 
 namespace McpAudioHandlers
 {
-#if WITH_EDITOR
 bool HandleSpatialActions(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -36,7 +35,7 @@ bool HandleSpatialActions(
 
     if (!SoundPath.IsEmpty()) {
       // Validate path for security
-      FString ValidatedPath = McpHandlerUtils::ValidateAssetPath(SoundPath);
+      FString ValidatedPath = SanitizeProjectRelativePath(SoundPath);
       if (ValidatedPath.IsEmpty()) {
         Self->SendAutomationError(RequestingSocket, RequestId,
                             TEXT("Invalid sound path"), TEXT("INVALID_PATH"));
@@ -133,7 +132,7 @@ bool HandleSpatialActions(
      return true;
    }
 
-   if (Lower == TEXT("set_sound_attenuation") || Lower == TEXT("audio_set_sound_attenuation")) {
+   if (Lower == TEXT("set_sound_attenuation")) {
      FString Name;
      if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
        Self->SendAutomationError(RequestingSocket, RequestId,
@@ -237,5 +236,4 @@ bool HandleSpatialActions(
    }
   return false;
 }
-#endif
 }

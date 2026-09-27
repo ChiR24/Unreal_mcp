@@ -1,7 +1,6 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 #include "Domains/MaterialAuthoring/Queries/McpAutomationBridge_MaterialAuthoringFunctionIO.h"
 
-#if WITH_EDITOR
 namespace McpMaterialAuthoringHandlers
 {
 namespace
@@ -28,12 +27,8 @@ void SendMaterialInstanceInfo(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     AddOverride(Param.ParameterInfo.Name, TEXT("scalar"), MakeShared<FJsonValueNumber>(Param.ParameterValue));
   for (const FVectorParameterValue& Param : Instance->VectorParameterValues)
   {
-    TSharedPtr<FJsonObject> Color = McpHandlerUtils::CreateResultObject();
-    Color->SetNumberField(TEXT("r"), Param.ParameterValue.R);
-    Color->SetNumberField(TEXT("g"), Param.ParameterValue.G);
-    Color->SetNumberField(TEXT("b"), Param.ParameterValue.B);
-    Color->SetNumberField(TEXT("a"), Param.ParameterValue.A);
-    AddOverride(Param.ParameterInfo.Name, TEXT("vector"), MakeShared<FJsonValueObject>(Color));
+    AddOverride(Param.ParameterInfo.Name, TEXT("vector"),
+                MakeShared<FJsonValueObject>(McpHandlerUtils::LinearColorToJson(Param.ParameterValue)));
   }
   for (const FTextureParameterValue& Param : Instance->TextureParameterValues)
     AddOverride(Param.ParameterInfo.Name, TEXT("texture"),
@@ -105,50 +100,10 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     Result->SetNumberField(TEXT("nodeCount"), AllExpressions.Num());
 
     if (Material) {
-      switch (Material->MaterialDomain) {
-      case EMaterialDomain::MD_Surface:
-        Result->SetStringField(TEXT("domain"), TEXT("Surface"));
-        break;
-      case EMaterialDomain::MD_DeferredDecal:
-        Result->SetStringField(TEXT("domain"), TEXT("DeferredDecal"));
-        break;
-      case EMaterialDomain::MD_LightFunction:
-        Result->SetStringField(TEXT("domain"), TEXT("LightFunction"));
-        break;
-      case EMaterialDomain::MD_Volume:
-        Result->SetStringField(TEXT("domain"), TEXT("Volume"));
-        break;
-      case EMaterialDomain::MD_PostProcess:
-        Result->SetStringField(TEXT("domain"), TEXT("PostProcess"));
-        break;
-      case EMaterialDomain::MD_UI:
-        Result->SetStringField(TEXT("domain"), TEXT("UI"));
-        break;
-      default:
-        Result->SetStringField(TEXT("domain"), TEXT("Unknown"));
-        break;
-      }
-
-      switch (Material->BlendMode) {
-      case EBlendMode::BLEND_Opaque:
-        Result->SetStringField(TEXT("blendMode"), TEXT("Opaque"));
-        break;
-      case EBlendMode::BLEND_Masked:
-        Result->SetStringField(TEXT("blendMode"), TEXT("Masked"));
-        break;
-      case EBlendMode::BLEND_Translucent:
-        Result->SetStringField(TEXT("blendMode"), TEXT("Translucent"));
-        break;
-      case EBlendMode::BLEND_Additive:
-        Result->SetStringField(TEXT("blendMode"), TEXT("Additive"));
-        break;
-      case EBlendMode::BLEND_Modulate:
-        Result->SetStringField(TEXT("blendMode"), TEXT("Modulate"));
-        break;
-      default:
-        Result->SetStringField(TEXT("blendMode"), TEXT("Unknown"));
-        break;
-      }
+      Result->SetStringField(TEXT("domain"),
+                             MaterialEnumShortName(StaticEnum<EMaterialDomain>(), Material->MaterialDomain));
+      Result->SetStringField(TEXT("blendMode"),
+                             MaterialEnumShortName(StaticEnum<EBlendMode>(), Material->BlendMode));
 
       Result->SetBoolField(TEXT("twoSided"), Material->TwoSided);
     } else {
@@ -219,4 +174,3 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
   return false;
 }
 }
-#endif

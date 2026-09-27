@@ -1,9 +1,9 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
 
 namespace McpAudioHandlers
 {
-#if WITH_EDITOR
 bool BuildSanitizedAssetPath(
     const FString& InDirectory, const FString& AssetName,
     FString& OutDirectory, FString& OutFullPath)
@@ -45,16 +45,7 @@ AActor *FindAudioActorByName(const FString &ActorName, UWorld *World) {
   if (Actor && Actor->IsValidLowLevel())
     return Actor;
 
-  // Fallback: Label search (limited scope)
-  if (World) {
-    for (TActorIterator<AActor> It(World); It; ++It) {
-      if (It->GetActorLabel().Equals(ActorName, ESearchCase::IgnoreCase) ||
-          It->GetName().Equals(ActorName, ESearchCase::IgnoreCase)) {
-        return *It;
-      }
-    }
-  }
-  return nullptr;
+  return FindActorByNameInWorldForMcp(World, ActorName, true);
 }
 
 USceneComponent* EnsureAudioAttachRoot(AActor* Actor)
@@ -112,13 +103,10 @@ UAudioComponent* CreateAudioComponentAtEditorLocation(UWorld* World, USoundBase*
   if (!Owner)
     return nullptr;
 
-#if WITH_EDITOR
   if (!ActorName.IsEmpty())
     Owner->SetActorLabel(ActorName);
-#endif
 
   return CreateRegisteredAudioComponent(Owner, Sound, FVector::ZeroVector, FRotator::ZeroRotator);
 }
 
-#endif
 }

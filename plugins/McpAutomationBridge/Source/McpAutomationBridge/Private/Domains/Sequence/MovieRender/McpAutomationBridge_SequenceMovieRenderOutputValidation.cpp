@@ -14,31 +14,6 @@
 
 namespace McpSequenceMovieRender {
 namespace {
-bool TryGetValidationInt(const TSharedPtr<FJsonObject> &Payload,
-                         const TCHAR *Name, int32 &Out) {
-  return Payload.IsValid() && Payload->TryGetNumberField(Name, Out);
-}
-
-bool TryParseResolution(const FString &Text, int32 &OutWidth,
-                        int32 &OutHeight) {
-  FString Left, Right;
-  if (!Text.Split(TEXT("x"), &Left, &Right) &&
-      !Text.Split(TEXT("X"), &Left, &Right))
-    return false;
-  return LexTryParseString(OutWidth, *Left) &&
-         LexTryParseString(OutHeight, *Right) &&
-         OutWidth > 0 && OutHeight > 0;
-}
-
-bool TryGetValidationSettingsInt(const TSharedPtr<FJsonObject> &Payload,
-                                 const TCHAR *Name, int32 &Out) {
-  const TSharedPtr<FJsonObject> *Settings = nullptr;
-  return Payload.IsValid() &&
-         Payload->TryGetObjectField(TEXT("settings"), Settings) &&
-         Settings && Settings->IsValid() &&
-         (*Settings)->TryGetNumberField(Name, Out);
-}
-
 bool AreFileNameTokensSafe(const FString &Format) {
   static const TSet<FString> Allowed = {
       TEXT("camera_name"), TEXT("date"), TEXT("day"), TEXT("file_dup"),
@@ -152,21 +127,20 @@ bool ValidateOutputSettingsPayload(const TSharedPtr<FJsonObject> &Payload,
   }
   if (Payload->TryGetStringField(TEXT("resolution"), TextValue) &&
       !TextValue.IsEmpty()) {
-    int32 ResolutionWidth = 0;
-    int32 ResolutionHeight = 0;
-    if (!TryParseResolution(TextValue, ResolutionWidth, ResolutionHeight)) {
+    FIntPoint Resolution;
+    if (!TryParseResolution(TextValue, Resolution)) {
       OutMessage = TEXT("resolution must use WIDTHxHEIGHT format.");
       OutCode = TEXT("INVALID_RESOLUTION");
       return false;
     }
     if (!ValidateResolutionResourceLimits(
-            ResolutionWidth, ResolutionHeight, OutMessage, OutCode)) {
+            Resolution.X, Resolution.Y, OutMessage, OutCode)) {
       return false;
     }
   }
   int32 Width = 0, Height = 0;
-  const bool bHasWidth = TryGetValidationInt(Payload, TEXT("width"), Width);
-  const bool bHasHeight = TryGetValidationInt(Payload, TEXT("height"), Height);
+  const bool bHasWidth = Payload->TryGetNumberField(TEXT("width"), Width);
+  const bool bHasHeight = Payload->TryGetNumberField(TEXT("height"), Height);
   if (bHasWidth != bHasHeight || (bHasWidth && (Width <= 0 || Height <= 0))) {
     OutMessage = TEXT("width and height must be positive.");
     OutCode = TEXT("INVALID_RESOLUTION");
@@ -186,9 +160,9 @@ bool ValidateOutputSettingsPayload(const TSharedPtr<FJsonObject> &Payload,
   }
   int32 StartFrame = 0, EndFrame = 0;
   const bool bHasStart =
-      TryGetValidationInt(Payload, TEXT("startFrame"), StartFrame);
+      Payload->TryGetNumberField(TEXT("startFrame"), StartFrame);
   const bool bHasEnd =
-      TryGetValidationInt(Payload, TEXT("endFrame"), EndFrame);
+      Payload->TryGetNumberField(TEXT("endFrame"), EndFrame);
   if (bHasStart != bHasEnd) {
     OutMessage = TEXT("startFrame and endFrame must be provided together.");
     OutCode = TEXT("INVALID_FRAME_RANGE");
@@ -203,7 +177,7 @@ bool ValidateOutputSettingsPayload(const TSharedPtr<FJsonObject> &Payload,
     return false;
   }
   int32 HandleFrameCount = 0;
-  if (TryGetValidationSettingsInt(Payload, TEXT("handleFrameCount"),
+  if (TryGetSettingsInt(Payload, TEXT("handleFrameCount"),
                                   HandleFrameCount) &&
       HandleFrameCount < 0) {
     OutMessage = TEXT("handleFrameCount must not be negative.");
@@ -211,7 +185,7 @@ bool ValidateOutputSettingsPayload(const TSharedPtr<FJsonObject> &Payload,
     return false;
   }
   int32 ZeroPadFrameNumbers = 0;
-  if (TryGetValidationSettingsInt(Payload, TEXT("zeroPadFrameNumbers"),
+  if (TryGetSettingsInt(Payload, TEXT("zeroPadFrameNumbers"),
                                   ZeroPadFrameNumbers)) {
     const UMcpAutomationBridgeSettings *Settings =
         GetDefault<UMcpAutomationBridgeSettings>();

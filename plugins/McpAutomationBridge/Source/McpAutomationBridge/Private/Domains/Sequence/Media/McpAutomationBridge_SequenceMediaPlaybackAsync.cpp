@@ -45,18 +45,26 @@ void ReleasePlayback(const TSharedRef<FMediaPlaybackWaitState> &State) {
   }
 }
 
-void FinishMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State,
-                         bool bSuccess, const FString &Message,
-                         const FString &ErrorCode = FString(),
-                         bool bTimedOut = false) {
+// Marks the wait complete, releases the playback slot and removes the ticker; false when already complete.
+bool EndPlaybackWait(const TSharedRef<FMediaPlaybackWaitState> &State) {
   if (State->bCompleted) {
-    return;
+    return false;
   }
   State->bCompleted = true;
   ReleasePlayback(State);
   if (State->TickerHandle.IsValid()) {
     FTSTicker::GetCoreTicker().RemoveTicker(State->TickerHandle);
     State->TickerHandle = FTSTicker::FDelegateHandle();
+  }
+  return true;
+}
+
+void FinishMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State,
+                         bool bSuccess, const FString &Message,
+                         const FString &ErrorCode = FString(),
+                         bool bTimedOut = false) {
+  if (!EndPlaybackWait(State)) {
+    return;
   }
 
   UMediaPlayer *Player = State->Player.Get();
@@ -81,14 +89,8 @@ void FinishMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State,
 }
 
 void CancelMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State) {
-  if (State->bCompleted) {
+  if (!EndPlaybackWait(State)) {
     return;
-  }
-  State->bCompleted = true;
-  ReleasePlayback(State);
-  if (State->TickerHandle.IsValid()) {
-    FTSTicker::GetCoreTicker().RemoveTicker(State->TickerHandle);
-    State->TickerHandle = FTSTicker::FDelegateHandle();
   }
   if (UMediaPlayer *Player = State->Player.Get()) {
     Player->Close();

@@ -12,19 +12,53 @@ FString McpSequence::ResolvePath(const TSharedPtr<FJsonObject> &Payload) {
     }
   }
   if (!Path.IsEmpty()) {
-#if WITH_EDITOR
     if (UEditorAssetLibrary::DoesAssetExist(Path)) {
       UObject *Obj = UEditorAssetLibrary::LoadAsset(Path);
       if (Obj) {
         return Obj->GetPathName();
       }
     }
-#endif
     return Path;
   }
   if (!GCurrentSequencePath.IsEmpty())
     return GCurrentSequencePath;
   return FString();
+}
+
+ULevelSequence *McpSequence::LoadOrReply(UMcpAutomationBridgeSubsystem *Subsystem, const FString &RequestId,
+                                         TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject> &Payload,
+                                         const TCHAR *Action, UMovieScene *&OutMovieScene) {
+  OutMovieScene = nullptr;
+  const FString Path = ResolvePath(Payload);
+  if (Path.IsEmpty()) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        FString::Printf(TEXT("%s requires a sequence path"), Action), nullptr, TEXT("INVALID_SEQUENCE"));
+    return nullptr;
+  }
+  ULevelSequence *Sequence = LoadObject<ULevelSequence>(nullptr, *Path);
+  if (!Sequence) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        FString::Printf(TEXT("Level sequence not found: %s"), *Path), nullptr, TEXT("SEQUENCE_NOT_FOUND"));
+    return nullptr;
+  }
+  OutMovieScene = Sequence->GetMovieScene();
+  if (!OutMovieScene) {
+    Subsystem->SendAutomationResponse(Socket, RequestId, false,
+        TEXT("MovieScene not available"), nullptr, TEXT("MOVIESCENE_UNAVAILABLE"));
+    return nullptr;
+  }
+  return Sequence;
+}
+
+ULevelSequence *McpSequence::CreateSequenceAsset(const FString &Name, const FString &Folder) {
+  UClass *FactoryClass = LoadClass<UFactory>(nullptr, TEXT("/Script/LevelSequenceEditor.LevelSequenceFactoryNew"));
+  if (!FactoryClass) {
+    return nullptr;
+  }
+  UFactory *Factory = NewObject<UFactory>(GetTransientPackage(), FactoryClass);
+  return Cast<ULevelSequence>(FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"))
+                                  .Get()
+                                  .CreateAsset(Name, Folder, ULevelSequence::StaticClass(), Factory));
 }
 
 FString UMcpAutomationBridgeSubsystem::ResolveSequencePath(
