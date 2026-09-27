@@ -20,7 +20,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Connect two graph pins (exec or data) by nodeGuid and pin name.',
     whenToUse: ['An exec or data link between two existing nodes must be created.'],
     whenNotToUse: ['Links must be broken (use break_pin_links).'],
-    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: P.fromNodeId, fromPinName: P.fromPinName, toNodeId: P.toNodeId, toPinName: P.toPinName, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: P.sourcePin, targetPin: P.targetPin, linkedTo: P.linkedTo },
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: P.fromNodeId, fromPinName: P.fromPinName, toNodeId: P.toNodeId, toPinName: P.toPinName, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: P.sourcePin, targetPin: P.targetPin },
     required: ['blueprintPath', 'fromNodeId', 'fromPinName', 'toNodeId', 'toPinName'],
     // The handler already reported which pins it resolved and whether the asset
     // was saved, but the default closed output schema stripped all of it, so a
@@ -52,7 +52,8 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['All links from a specific pin must be removed.'],
     whenNotToUse: ['A single link should be redirected (use connect_pins after breaking).'],
     inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, nodeGuid: P.nodeGuid },
-    required: ['blueprintPath', 'nodeId', 'pinName'],
+    required: ['blueprintPath', 'pinName'],
+    requiredOneOf: ['nodeId', 'nodeGuid'],
     effect: 'destructive',
     behavior: {  },
     latency: 'instant',
@@ -68,8 +69,12 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set a property on a graph node by nodeGuid.',
     whenToUse: ['A node-level property (e.g. comment, position) must be updated.'],
     whenNotToUse: ['A pin default value is the target (use set_pin_default_value).'],
-    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, propertyName: P.propertyName, propertyValue: P.propertyValue, nodeGuid: P.nodeGuid },
-    required: ['blueprintPath', 'nodeId', 'propertyName'],
+    inputProps: {
+      blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, propertyName: P.propertyName, nodeGuid: P.nodeGuid,
+      propertyValue: { ...P.propertyValue, description: 'Value to write: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field.' },
+    },
+    required: ['blueprintPath', 'propertyName', 'propertyValue'],
+    requiredOneOf: ['nodeId', 'nodeGuid'],
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',
@@ -86,7 +91,8 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A pin\'s default literal value must be set when it has no incoming link.', 'A read-only text, string, name or number pin (TextRender Set Text\'s Value) needs a literal.'],
     whenNotToUse: ['The pin should receive its value from a linked node (use connect_pins).'],
     inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, propertyValue: P.propertyValue, nodeGuid: P.nodeGuid },
-    required: ['blueprintPath', 'nodeId', 'pinName'],
+    required: ['blueprintPath', 'pinName'],
+    requiredOneOf: ['nodeId', 'nodeGuid'],
     // appliedValue is read back off the pin after the schema has had its say, so
     // a caller can distinguish an accepted literal from one silently rejected —
     // the failure mode that let empty defaults pass as success.

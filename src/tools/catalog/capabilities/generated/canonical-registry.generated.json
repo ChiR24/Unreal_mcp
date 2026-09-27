@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d3d7cd915e839bf7",
+  "catalogRevision": "8b5762fddbacf2d7",
   "recordCount": 382,
   "records": [
     {
@@ -12628,10 +12628,13 @@
           },
           "required": [
             "action",
-            "blueprintPath",
-            "nodeId"
+            "blueprintPath"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "nodeId",
+            "nodeGuid"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -12713,8 +12716,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "34156732cd46e49a49940df4dee023a73ca9a4115705a5cb7753f319257a54cc",
-        "content": "ebc72334ee66b173408aed04dbfc51b6cf55d5d35c1d1d7f186eec7601d9bebd"
+        "schema": "8100bc78b5b50c8a0db97bce9ce6c9c2c8fbdca389e12deaee5d9f625b1a7df9",
+        "content": "06821db565aedb1d072ed31cdd0c8da752220330a4d05c635e59eb964bb5b68e"
       }
     },
     {
@@ -12862,7 +12865,7 @@
             },
             "functionName": {
               "type": "string",
-              "description": "Function name to add or remove."
+              "description": "Function a CallFunction node calls (the same as memberName), e.g. PrintString."
             },
             "eventName": {
               "type": "string",
@@ -12872,6 +12875,14 @@
               "type": "string",
               "description": "Human-readable node name."
             },
+            "targetClass": {
+              "type": "string",
+              "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, or the subsystem a Get Subsystem node returns. Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
+            },
+            "pure": {
+              "type": "boolean",
+              "description": "Build a Cast node pure (no exec pins, as in the editor's Convert to pure cast); default false."
+            },
             "customEventName": {
               "type": "string",
               "description": "Custom event name to create."
@@ -12879,10 +12890,6 @@
             "memberClass": {
               "type": "string",
               "description": "Member class (function, variable, event, etc.)."
-            },
-            "targetClass": {
-              "type": "string",
-              "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, or the subsystem a Get Subsystem node returns. Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
             },
             "inputAxisName": {
               "type": "string",
@@ -12946,10 +12953,6 @@
               "type": "string",
               "description": "Target pin name on the destination node."
             },
-            "linkedTo": {
-              "type": "string",
-              "description": "Target pin descriptor for a pin link."
-            },
             "nodeId": {
               "type": "string",
               "description": "Existing node identifier returned by create_node or get_graph_details."
@@ -12958,12 +12961,12 @@
               "type": "string",
               "description": "Property name to set on the CDO or component."
             },
-            "propertyValue": {
-              "description": "Value to assign to the property."
-            },
             "nodeGuid": {
               "type": "string",
               "description": "Node GUID accepted in place of nodeId."
+            },
+            "propertyValue": {
+              "description": "Value to write: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field."
             },
             "pinName": {
               "type": "string",
@@ -13302,13 +13305,17 @@
             "nodeName": [
               "add_node"
             ],
+            "targetClass": [
+              "add_node",
+              "create_node"
+            ],
+            "pure": [
+              "create_node"
+            ],
             "customEventName": [
               "create_node"
             ],
             "memberClass": [
-              "create_node"
-            ],
-            "targetClass": [
               "create_node"
             ],
             "inputAxisName": [
@@ -13353,9 +13360,6 @@
             "targetPin": [
               "connect_pins"
             ],
-            "linkedTo": [
-              "connect_pins"
-            ],
             "nodeId": [
               "set_node_property",
               "set_pin_default_value"
@@ -13363,11 +13367,11 @@
             "propertyName": [
               "set_node_property"
             ],
-            "propertyValue": [
+            "nodeGuid": [
               "set_node_property",
               "set_pin_default_value"
             ],
-            "nodeGuid": [
+            "propertyValue": [
               "set_node_property",
               "set_pin_default_value"
             ],
@@ -13382,8 +13386,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "68404e6f87b2b56d6454718e8431b46f535999c63abe8ba7d62e03a2012a7362",
-        "content": "1abc190dfac3c2eeecf243f1710e0af0ae8e61729d1d5371f47f2e9c550d0cce"
+        "schema": "9cf783fefd09fd0494965e902a058f90d447f35d4f5aba7ec20282190a914542",
+        "content": "61338aa0c2f0e512471e91b5bc8e76ff584fc66b457aaa430aad276a0165012c"
       }
     },
     {
@@ -15487,6 +15491,10 @@
               "type": "string",
               "description": "Node GUID accepted in place of nodeId."
             },
+            "pinName": {
+              "type": "string",
+              "description": "Report only this pin; omitted, every pin on the node."
+            },
             "info": {
               "type": "string",
               "enum": [
@@ -15678,14 +15686,17 @@
             "nodeGuid": [
               "node",
               "pins"
+            ],
+            "pinName": [
+              "pins"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9dd130c69b5474b86923a4d6ff6e15fa7a0f5f40a2839822a00e97a7d0c8ebc0",
-        "content": "f8e1e48fa562827c72dafe2d78ffc79b371e7f08e3810660d2fd28edbe626372"
+        "schema": "f5d347ea89786ac7136be6488c04edcbc6f34aae6f79f3936a12b9f5dcd26ecb",
+        "content": "54c8e55fbf9e26e8804d4bad4e7363c8b685064998044577ed789abfd500612a"
       }
     },
     {

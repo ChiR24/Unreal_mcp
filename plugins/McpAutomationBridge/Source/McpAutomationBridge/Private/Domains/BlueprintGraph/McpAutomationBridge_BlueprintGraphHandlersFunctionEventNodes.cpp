@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 #include "K2Node_CallArrayFunction.h"
 #include "K2Node_CallFunction.h"
@@ -33,9 +34,11 @@ static bool TryCreateFunctionNode(
         return false;
     }
 
-    FString MemberName;
+    // create_node declares functionName for exactly this node, but only
+    // memberName was read, so {nodeType: CallFunction, functionName: X} failed
+    // with "Function '' not found". Either spelling names the function.
+    const FString MemberName = McpGetFirstStringField(Context.Payload, {TEXT("memberName"), TEXT("functionName")});
     FString MemberClass;
-    Context.Payload->TryGetStringField(TEXT("memberName"), MemberName);
     Context.Payload->TryGetStringField(TEXT("memberClass"), MemberClass);
     // `targetClass` is published alongside `memberClass` and reads as the obvious way to say
     // which class owns the function, but it was never consulted here. A call naming it was

@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -200,12 +201,8 @@ static FString DescribeMissingGraph(UBlueprint* Blueprint, const FString& GraphN
 
 bool PrepareBlueprintAndGraph(FActionContext& Context)
 {
-    FString AssetPath;
-    if (!Context.Payload->TryGetStringField(TEXT("assetPath"), AssetPath) ||
-        AssetPath.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("blueprintPath"), AssetPath);
-    }
+    // blueprintPath is the declared name, so it wins over the legacy assetPath.
+    FString AssetPath = McpGetFirstStringField(Context.Payload, {TEXT("blueprintPath"), TEXT("assetPath")});
 
     AssetPath = SanitizeProjectRelativePath(AssetPath);
     if (AssetPath.IsEmpty())

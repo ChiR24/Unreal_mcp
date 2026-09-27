@@ -94,6 +94,8 @@ export const P = {
   structPath: S('Blueprint Struct asset path (UserDefinedStruct or native UScriptStruct).'),
   // Functions / events
   functionName: S('Function name to add or remove.'),
+  nodeFunctionName: S('Function a CallFunction node calls (the same as memberName), e.g. PrintString.'),
+  pure: B('Build a Cast node pure (no exec pins, as in the editor\'s Convert to pure cast); default false.'),
   eventType: S('Event type string for add_event.'),
   eventName: S('Custom event name.'),
   customEventName: S('Custom event name to create.'),

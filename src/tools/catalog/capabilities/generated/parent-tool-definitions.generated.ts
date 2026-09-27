@@ -8998,7 +8998,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "functionName": {
           "type": "string",
-          "description": "Function name to add or remove."
+          "description": "Function a CallFunction node calls (the same as memberName), e.g. PrintString."
         },
         "graphName": {
           "type": "string",
@@ -9158,10 +9158,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "limit": {
           "type": "number",
           "description": "Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph."
-        },
-        "linkedTo": {
-          "type": "string",
-          "description": "Target pin descriptor for a pin link."
         },
         "location": {
           "type": "object",
@@ -9450,7 +9446,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "A variable or CDO property (Health, MaxWalkSpeed), or Component.Property for a component the Blueprint adds (Shield.bVisible, Mesh.RelativeLocation)."
         },
         "propertyValue": {
+          "oneOf": [
+            {
+              "description": "Value to assign to the property."
+            },
+            {
+              "description": "Value to write: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field."
+            }
+          ],
           "description": "Value to assign to the property."
+        },
+        "pure": {
+          "type": "boolean",
+          "description": "Build a Cast node pure (no exec pins, as in the editor's Convert to pure cast); default false."
         },
         "renderOpacity": {
           "type": "number",

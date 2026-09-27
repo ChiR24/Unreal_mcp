@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 #include "K2Node_Knot.h"
 #include "ScopedTransaction.h"
@@ -12,8 +13,7 @@ static bool DeleteNode(FActionContext& Context)
         return false;
     }
 
-    FString NodeId;
-    Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
+    const FString NodeId = McpGetFirstStringField(Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid")});
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
     {
@@ -90,13 +90,14 @@ static bool CreateRerouteNode(FActionContext& Context)
     float Y = 0.0f;
     // Match create_node: accept the tool-facing posX/posY names, which reach the
     // native transport unnormalized (the TS bridge's posX->x mapping is bypassed).
-    if (!Context.Payload->TryGetNumberField(TEXT("x"), X))
+    // posX/posY are the declared names, so they win over the legacy x/y.
+    if (!Context.Payload->TryGetNumberField(TEXT("posX"), X))
     {
-        Context.Payload->TryGetNumberField(TEXT("posX"), X);
+        Context.Payload->TryGetNumberField(TEXT("x"), X);
     }
-    if (!Context.Payload->TryGetNumberField(TEXT("y"), Y))
+    if (!Context.Payload->TryGetNumberField(TEXT("posY"), Y))
     {
-        Context.Payload->TryGetNumberField(TEXT("posY"), Y);
+        Context.Payload->TryGetNumberField(TEXT("y"), Y);
     }
 
     FGraphNodeCreator<UK2Node_Knot> NodeCreator(*Context.TargetGraph);
@@ -128,19 +129,34 @@ static bool SetNodeProperty(FActionContext& Context)
         return false;
     }
 
+    // The contract declares propertyValue (any scalar); only `value` used to be
+    // read, which the gateway refuses, so every call wrote an empty value
+    // (comment cleared, position 0) and reported success. `value` stays for the
+    // build_graph steps that still send it.
+    TSharedPtr<FJsonValue> ValueField = Context.Payload->TryGetField(TEXT("propertyValue"));
+    if (!ValueField.IsValid())
+    {
+        ValueField = Context.Payload->TryGetField(TEXT("value"));
+    }
+    FString Value;
+    if (!McpJsonScalarToString(ValueField, Value))
+    {
+        Context.SendError(
+            TEXT("propertyValue is required: a string, number or boolean (e.g. \"Entry point\" for NodeComment, 320 for NodePosX)."),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     const FScopedTransaction Transaction(
         FText::FromString(TEXT("Set Blueprint Node Property")));
     Context.Blueprint->Modify();
     Context.TargetGraph->Modify();
 
-    FString NodeId;
+    const FString NodeId = McpGetFirstStringField(Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid")});
     FString PropertyName;
-    FString Value;
-    Context.Payload->TryGetStringField(TEXT("nodeId"), NodeId);
     Context.Payload->TryGetStringField(
         TEXT("propertyName"),
         PropertyName);
-    Context.Payload->TryGetStringField(TEXT("value"), Value);
 
     UEdGraphNode* TargetNode = Context.FindNode(NodeId);
     if (!TargetNode)
@@ -163,28 +179,14 @@ static bool SetNodeProperty(FActionContext& Context)
         PropertyName.Equals(TEXT("X"), ESearchCase::IgnoreCase) ||
         PropertyName.Equals(TEXT("NodePosX"), ESearchCase::IgnoreCase))
     {
-        double NumberValue = 0.0;
-        if (!Context.Payload->TryGetNumberField(
-                TEXT("value"),
-                NumberValue))
-        {
-            NumberValue = FCString::Atod(*Value);
-        }
-        TargetNode->NodePosX = static_cast<float>(NumberValue);
+        TargetNode->NodePosX = static_cast<float>(FCString::Atod(*Value));
         bHandled = true;
     }
     else if (
         PropertyName.Equals(TEXT("Y"), ESearchCase::IgnoreCase) ||
         PropertyName.Equals(TEXT("NodePosY"), ESearchCase::IgnoreCase))
     {
-        double NumberValue = 0.0;
-        if (!Context.Payload->TryGetNumberField(
-                TEXT("value"),
-                NumberValue))
-        {
-            NumberValue = FCString::Atod(*Value);
-        }
-        TargetNode->NodePosY = static_cast<float>(NumberValue);
+        TargetNode->NodePosY = static_cast<float>(FCString::Atod(*Value));
         bHandled = true;
     }
     else if (PropertyName.Equals(
@@ -257,7 +259,7 @@ static bool SetNodeProperty(FActionContext& Context)
         Context.SendError(
             FString::Printf(
                 TEXT("Unsupported node property '%s' (supported: comment, ")
-                TEXT("NodePosX/X, NodePosY/Y, bCommentBubbleVisible, ")
+                TEXT("NodePosX (or X), NodePosY (or Y), bCommentBubbleVisible, ")
                 TEXT("bCommentBubblePinned, EnabledState, bDisabled, plus any ")
                 TEXT("reflected node field such as an AnimGraph player's ")
                 TEXT("Sequence or BlendSpace, set by asset path)."),
