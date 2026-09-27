@@ -167,23 +167,22 @@ bool MsBuildLiteral(const TSharedPtr<FJsonValue>& Value, const FString& TypeName
 
 }
 
-// The legacy typed fields, then `defaultValue`. False with OutError when nothing usable was sent.
+// `defaultValue` (the contract), then the legacy typed fields, which used to win over it. False with OutError when nothing usable was sent.
 bool MetaSoundLiteralFromParams(const TSharedPtr<FJsonObject>& Params, const FString& TypeName,
 	FMetasoundFrontendLiteral& Out, FString& OutError)
 {
-	if (Params->HasField(TEXT("floatValue"))) { Out.Set(static_cast<float>(GetJsonNumberField(Params, TEXT("floatValue"), 0.0))); }
+	if (const TSharedPtr<FJsonValue> Value = Params->TryGetField(TEXT("defaultValue")))
+	{
+		if (!MsBuildLiteral(Value, TypeName, Out, OutError)) { return false; }
+	}
+	else if (Params->HasField(TEXT("floatValue"))) { Out.Set(static_cast<float>(GetJsonNumberField(Params, TEXT("floatValue"), 0.0))); }
 	else if (Params->HasField(TEXT("intValue"))) { Out.Set(static_cast<int32>(GetJsonIntField(Params, TEXT("intValue"), 0))); }
 	else if (Params->HasField(TEXT("boolValue"))) { Out.Set(GetJsonBoolField(Params, TEXT("boolValue"), false)); }
 	else if (Params->HasField(TEXT("stringValue"))) { Out.Set(GetJsonStringField(Params, TEXT("stringValue"), TEXT(""))); }
 	else
 	{
-		const TSharedPtr<FJsonValue> Value = Params->TryGetField(TEXT("defaultValue"));
-		if (!Value.IsValid())
-		{
-			OutError = TEXT("defaultValue is required (a number, boolean, string, an asset path for an asset input, or an array of them for an array input)");
-			return false;
-		}
-		if (!MsBuildLiteral(Value, TypeName, Out, OutError)) { return false; }
+		OutError = TEXT("defaultValue is required (a number, boolean, string, an asset path for an asset input, or an array of them for an array input)");
+		return false;
 	}
 	// The document builder accepts any literal and the asset saves fine; a type
 	// the input cannot be built from only fails when the graph is built for
@@ -290,7 +289,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 		Error->SetStringField(TEXT("expectedDataType"), TypeName);
 		return Error;
 	}
-	McpSafeAssetSave(MetaSound);
+	if (GetJsonBoolField(Params, TEXT("save"), true)) { McpSafeAssetSave(MetaSound); }
 	Response->SetBoolField(TEXT("success"), true);
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound %s '%s' set"), NodeInput ? TEXT("node input") : TEXT("default for"), *InputName));
 	Response->SetStringField(TEXT("dataType"), TypeName);

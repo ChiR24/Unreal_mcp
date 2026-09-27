@@ -53,14 +53,18 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
 		}
 
-		if (Params->HasField(TEXT("innerRadius"))) { Atten->Attenuation.AttenuationShapeExtents.X = static_cast<float>(GetJsonNumberField(Params, TEXT("innerRadius"), 400.0)); }
-		if (Params->HasField(TEXT("falloffDistance"))) { Atten->Attenuation.FalloffDistance = static_cast<float>(GetJsonNumberField(Params, TEXT("falloffDistance"), 3600.0)); }
-
-		FString FunctionType = GetJsonStringField(Params, TEXT("distanceAlgorithm"), TEXT("linear")).ToLower();
+		// Only when sent: defaulting to "linear" reset every curve a caller had chosen before.
+		const FString FunctionType = GetJsonStringField(Params, TEXT("distanceAlgorithm")).ToLower();
 		if (FunctionType == TEXT("linear")) { Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Linear; }
 		else if (FunctionType == TEXT("logarithmic")) { Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Logarithmic; }
 		else if (FunctionType == TEXT("inverse")) { Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::Inverse; }
 		else if (FunctionType == TEXT("naturalsound")) { Atten->Attenuation.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound; }
+		else if (!FunctionType.IsEmpty())
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("distanceAlgorithm '%s' is not Linear, Logarithmic, Inverse or NaturalSound"), *FunctionType));
+		}
+		if (Params->HasField(TEXT("innerRadius"))) { Atten->Attenuation.AttenuationShapeExtents.X = static_cast<float>(GetJsonNumberField(Params, TEXT("innerRadius"), 400.0)); }
+		if (Params->HasField(TEXT("falloffDistance"))) { Atten->Attenuation.FalloffDistance = static_cast<float>(GetJsonNumberField(Params, TEXT("falloffDistance"), 3600.0)); }
 
 		SaveAudioAsset(Atten, bSave);
 		McpHandlerUtils::AddVerification(Response, Atten);
@@ -78,13 +82,15 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
 		}
 
-		Atten->Attenuation.bSpatialize = GetJsonBoolField(Params, TEXT("spatialize"), true);
-		if (Params->HasField(TEXT("spatializationAlgorithm")))
+		// The contract names the algorithm `spatialization`; only `spatializationAlgorithm` was read.
+		const FString Algorithm = McpGetFirstStringField(Params, {TEXT("spatialization"), TEXT("spatializationAlgorithm")}).ToLower();
+		if (Algorithm == TEXT("default") || Algorithm == TEXT("panner")) { Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_Default; }
+		else if (Algorithm == TEXT("binaural") || Algorithm == TEXT("hrtf")) { Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_HRTF; }
+		else if (!Algorithm.IsEmpty())
 		{
-			FString Algorithm = GetJsonStringField(Params, TEXT("spatializationAlgorithm"), TEXT("panner"));
-			if (Algorithm.ToLower() == TEXT("panner")) { Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_Default; }
-			else if (Algorithm.ToLower() == TEXT("hrtf") || Algorithm.ToLower() == TEXT("binaural")) { Atten->Attenuation.SpatializationAlgorithm = ESoundSpatializationAlgorithm::SPATIALIZATION_HRTF; }
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("spatialization '%s' is not Default or Binaural"), *Algorithm));
 		}
+		Atten->Attenuation.bSpatialize = GetJsonBoolField(Params, TEXT("spatialize"), true);
 
 		SaveAudioAsset(Atten, bSave);
 		Response->SetBoolField(TEXT("spatialize"), Atten->Attenuation.bSpatialize);
@@ -113,9 +119,14 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AssetPath));
 		}
 
-		Atten->Attenuation.bEnableOcclusion = GetJsonBoolField(Params, TEXT("enableOcclusion"), true);
-		if (Params->HasField(TEXT("occlusionLowPassFilterFrequency"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionLowPassFilterFrequency"), 20000.0)); }
-		if (Params->HasField(TEXT("occlusionVolumeAttenuation"))) { Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionVolumeAttenuation"), 0.0)); }
+		// The contract spells these enable, occlusionVolumeScale and occlusionFilterScale (as set_audio_occlusion
+		// does); only the engine field names were read, so enable:false could never arrive and every call turned
+		// occlusion on. The engine spellings stay as fallbacks.
+		Atten->Attenuation.bEnableOcclusion = GetJsonBoolField(Params, TEXT("enable"), GetJsonBoolField(Params, TEXT("enableOcclusion"), true));
+		if (Params->HasField(TEXT("occlusionFilterScale"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(20000.0 * GetJsonNumberField(Params, TEXT("occlusionFilterScale"), 1.0)); }
+		else if (Params->HasField(TEXT("occlusionLowPassFilterFrequency"))) { Atten->Attenuation.OcclusionLowPassFilterFrequency = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionLowPassFilterFrequency"), 20000.0)); }
+		if (Params->HasField(TEXT("occlusionVolumeScale"))) { Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionVolumeScale"), 0.0)); }
+		else if (Params->HasField(TEXT("occlusionVolumeAttenuation"))) { Atten->Attenuation.OcclusionVolumeAttenuation = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionVolumeAttenuation"), 0.0)); }
 		if (Params->HasField(TEXT("occlusionInterpolationTime"))) { Atten->Attenuation.OcclusionInterpolationTime = static_cast<float>(GetJsonNumberField(Params, TEXT("occlusionInterpolationTime"), 0.5)); }
 
 		SaveAudioAsset(Atten, bSave);

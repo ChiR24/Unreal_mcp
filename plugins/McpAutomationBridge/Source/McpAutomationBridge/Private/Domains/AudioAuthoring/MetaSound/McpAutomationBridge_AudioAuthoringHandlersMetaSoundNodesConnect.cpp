@@ -230,7 +230,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 #endif
 		if (bSuccess && bConnected)
 		{
-			McpSafeAssetSave(MetaSound);
+			if (bSave) { McpSafeAssetSave(MetaSound); }
 			Response->SetBoolField(TEXT("success"), true);
 			Response->SetStringField(TEXT("message"), TEXT("MetaSound nodes connected"));
 			Response->SetNumberField(TEXT("edgesCreated"), FMath::Max(1, CreatedEdges.Num()));

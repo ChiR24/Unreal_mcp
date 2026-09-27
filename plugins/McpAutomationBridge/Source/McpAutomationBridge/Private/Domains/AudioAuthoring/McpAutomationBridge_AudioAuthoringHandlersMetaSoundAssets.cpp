@@ -44,6 +44,11 @@ TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, co
 
 	MetaSound->MarkPackageDirty();
 	FAssetRegistryModule::AssetCreated(MetaSound);
+	// bSave was read and never used: the new MetaSound lived in memory only.
+	if (bSave && !McpSafeAssetSave(MetaSound))
+	{
+		return McpHandlerUtils::BuildErrorResponse(TEXT("SAVE_FAILED"), FString::Printf(TEXT("MetaSound '%s' was created but could not be saved"), *Name));
+	}
 
 	FString FullPath = MetaSound->GetPathName();
 	Response->SetStringField(TEXT("assetPath"), FullPath);

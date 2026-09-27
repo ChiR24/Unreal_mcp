@@ -24,18 +24,15 @@ bool HandleComponentActions(
 	} else if (ComponentName.IsEmpty()) {
 		ComponentName = SoundName;
 	}
+	// The records spell the duration fadeInTime and fadeOutTime; the undeclared fadeTime used to win over them.
+	const bool bFadeIn = Lower == TEXT("fade_sound_in");
 	double FadeTime = 1.0;
-	if (!Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime) &&
-		!Payload->TryGetNumberField(TEXT("fadeInTime"), FadeTime)) {
-		// The runtime records spell the duration fadeInTime / fadeOutTime.
-		Payload->TryGetNumberField(TEXT("fadeOutTime"), FadeTime);
+	if (!Payload->TryGetNumberField(bFadeIn ? TEXT("fadeInTime") : TEXT("fadeOutTime"), FadeTime)) {
+		Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime);
 	}
-	double TargetVol =
-		(Lower == TEXT("fade_sound_in"))
-		? 1.0
-		: 0.0;
-	if (Lower == TEXT("fade_sound_in"))
-		Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
+	// fade_sound_out declares targetVolume too (the level it fades down to); it was read for fade-in only.
+	double TargetVol = bFadeIn ? 1.0 : 0.0;
+	Payload->TryGetNumberField(TEXT("targetVolume"), TargetVol);
 
 	if (!GEditor)
 	{
@@ -125,7 +122,7 @@ bool HandleComponentActions(
 	}
 
 		if (AudioComp) {
-			if (Lower == TEXT("fade_sound_in"))
+			if (bFadeIn)
 				AudioComp->FadeIn((float)FadeTime, (float)TargetVol);
 			else
 				AudioComp->FadeOut((float)FadeTime, (float)TargetVol);
@@ -178,8 +175,8 @@ bool HandleComponentActions(
   // Creates a UAudioComponent, optionally attached to an actor or at a location.
   //
   // Payload:  { "soundPath": string, "location"?: [x,y,z], "rotation"?: [p,y,r],
-  //             "attachTo"?: string, "actorName"?: string,
-  //             "volume"?: string, "pitch"?: string }
+  //             "actorName"?: string, "componentName"?: string,
+  //             "volume"?: number, "pitch"?: number, "autoPlay"?: bool }
   // Response: { "success": bool, "componentPath": string,
   //             "componentName": string }
   // -------------------------------------------------------------------------
@@ -206,10 +203,8 @@ bool HandleComponentActions(
         ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     FRotator Rotation =
         ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
-    FString AttachTo;
-    Payload->TryGetStringField(TEXT("attachTo"), AttachTo);
-    if (AttachTo.IsEmpty())
-      Payload->TryGetStringField(TEXT("actorName"), AttachTo);
+    // actorName is the contract's spelling; the older attachTo stays as a fallback.
+    const FString AttachTo = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("attachTo")});
 
     UAudioComponent *AudioComp = nullptr;
     UWorld *World =
@@ -223,34 +218,23 @@ bool HandleComponentActions(
 
     if (!AttachTo.IsEmpty()) {
       AActor *ParentActor = FindAudioActorByName(AttachTo, World);
-      if (ParentActor) {
-        AudioComp = CreateRegisteredAudioComponent(ParentActor, Sound, Location, Rotation);
-      } else {
-        UE_LOG(LogMcpAudioHandlers, Warning,
-               TEXT("create_audio_component: attachTo actor '%s' not found, "
-                    "spawning at location."),
-               *AttachTo);
+      if (!ParentActor) {
+        // A wrong name used to spawn a stray actor at the location and still report success.
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Actor '%s' not found; omit actorName to create the component on a new actor"), *AttachTo),
+            TEXT("ACTOR_NOT_FOUND"));
+        return true;
       }
-    }
-
-    if (!AudioComp) {
+      AudioComp = CreateRegisteredAudioComponent(ParentActor, Sound, Location, Rotation);
+    } else {
       AudioComp = CreateAudioComponentAtEditorLocation(World, Sound, Location, Rotation, FString());
     }
 
     if (AudioComp) {
-      // Honour the requested componentName so later calls can address it (dogfood #112).
-      FString RequestedName;
-      if (Payload->TryGetStringField(TEXT("componentName"), RequestedName) && !RequestedName.IsEmpty() &&
-          !FindObject<UObject>(AudioComp->GetOuter(), *RequestedName)) {
-        AudioComp->Rename(*RequestedName, nullptr, REN_DontCreateRedirectors | REN_NonTransactional);
-      }
-      FString VolumeStr;
-      if (Payload->TryGetStringField(TEXT("volume"), VolumeStr))
-        AudioComp->SetVolumeMultiplier(FCString::Atof(*VolumeStr));
-      FString PitchStr;
-      if (Payload->TryGetStringField(TEXT("pitch"), PitchStr))
-        AudioComp->SetPitchMultiplier(FCString::Atof(*PitchStr));
-      AudioComp->Activate(true);
+      // volume and pitch are numbers in the contract; they were read as strings and so never applied.
+      ApplyAudioComponentOptions(AudioComp, Payload);
+      if (GetJsonBoolField(Payload, TEXT("autoPlay"), true))
+        AudioComp->Activate(true);
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);

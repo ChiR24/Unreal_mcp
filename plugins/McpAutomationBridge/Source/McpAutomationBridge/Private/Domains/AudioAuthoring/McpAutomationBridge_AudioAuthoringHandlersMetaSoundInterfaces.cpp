@@ -81,7 +81,7 @@ static TSharedPtr<FJsonObject> AddMetaSoundGraphVertex(const TSharedPtr<FJsonObj
 	return Response;
 #else
 	// Without the Frontend document builder (UE 5.3+) nothing can be added; this used to report success.
-	return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_NOT_AVAILABLE"), TEXT("Adding MetaSound graph inputs/outputs requires the MetaSound Frontend builder (UE 5.3+)"));
+	return McpHandlerUtils::BuildErrorResponse(TEXT("METASOUND_NOT_AVAILABLE"), TEXT("Adding MetaSound graph inputs or outputs requires the MetaSound Frontend builder (UE 5.3+)"));
 #endif
 }
 

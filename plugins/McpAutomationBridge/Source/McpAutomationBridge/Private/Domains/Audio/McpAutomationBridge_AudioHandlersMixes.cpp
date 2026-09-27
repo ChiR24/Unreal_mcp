@@ -95,8 +95,10 @@ bool HandleMixActions(
     Payload->TryGetNumberField(TEXT("volume"), Volume);
     double Pitch = 1.0;
     Payload->TryGetNumberField(TEXT("pitch"), Pitch);
+    // The contract names the fade `fadeTime`; only `fadeInTime` was read, so it never arrived.
     double FadeTime = 1.0;
-    Payload->TryGetNumberField(TEXT("fadeInTime"), FadeTime);
+    if (!Payload->TryGetNumberField(TEXT("fadeTime"), FadeTime))
+      Payload->TryGetNumberField(TEXT("fadeInTime"), FadeTime);
     bool bApply = true;
 
     if (GEditor && GEditor->GetEditorWorldContext().World()) {

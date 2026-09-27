@@ -49,8 +49,6 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 		FString SoundClassPath = GetJsonStringField(Params, TEXT("soundClassPath"), TEXT(""));
 		float VolumeAdjust = static_cast<float>(GetJsonNumberField(Params, TEXT("volumeAdjuster"), 1.0));
 		float PitchAdjust = static_cast<float>(GetJsonNumberField(Params, TEXT("pitchAdjuster"), 1.0));
-		float FadeInTime = static_cast<float>(GetJsonNumberField(Params, TEXT("fadeInTime"), 0.0));
-		float FadeOutTime = static_cast<float>(GetJsonNumberField(Params, TEXT("fadeOutTime"), 0.0));
 		bool bApplyToChildren = GetJsonBoolField(Params, TEXT("applyToChildren"), true);
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
@@ -72,7 +70,12 @@ TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TS
 		Adjuster.PitchAdjuster = PitchAdjust;
 		Adjuster.bApplyToChildren = bApplyToChildren;
 		Mix->SoundClassEffects.Add(Adjuster);
+		// A class adjuster has no fade of its own: the fade times belong to the mix. They were read and dropped.
+		if (Params->HasField(TEXT("fadeInTime"))) { Mix->FadeInTime = static_cast<float>(GetJsonNumberField(Params, TEXT("fadeInTime"))); }
+		if (Params->HasField(TEXT("fadeOutTime"))) { Mix->FadeOutTime = static_cast<float>(GetJsonNumberField(Params, TEXT("fadeOutTime"))); }
 		SaveAudioAsset(Mix, bSave);
+		Response->SetNumberField(TEXT("fadeInTime"), Mix->FadeInTime);
+		Response->SetNumberField(TEXT("fadeOutTime"), Mix->FadeOutTime);
 
 		Response->SetStringField(TEXT("soundClassPath"), SoundClassPath);
 		Response->SetNumberField(TEXT("volumeAdjuster"), VolumeAdjust);

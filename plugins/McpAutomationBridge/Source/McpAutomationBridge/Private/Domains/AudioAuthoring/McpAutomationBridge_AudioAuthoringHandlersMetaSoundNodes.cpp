@@ -132,7 +132,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 
 		if (NewNode)
 		{
-			McpSafeAssetSave(MetaSound);
+			if (bSave) { McpSafeAssetSave(MetaSound); }
 			Response->SetStringField(TEXT("nodeId"), NewNode->GetID().ToString());
 			Response->SetStringField(TEXT("nodeClassName"), FullClassName);
 			Response->SetBoolField(TEXT("success"), true);

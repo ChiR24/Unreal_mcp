@@ -170,7 +170,7 @@ bool ResolveMetaSoundNodeClassName(
 TSharedPtr<FJsonObject> HandleMetaSoundInterfaceActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
-/** floatValue/intValue/boolValue/stringValue, else `defaultValue` converted to TypeName (e.g. "Float", "Int32:Array"). */
+/** `defaultValue` converted to TypeName (e.g. "Float", "Int32:Array"), else the legacy floatValue, intValue, boolValue or stringValue. */
 bool MetaSoundLiteralFromParams(const TSharedPtr<FJsonObject>& Params, const FString& TypeName, FMetasoundFrontendLiteral& Out, FString& OutError);
 #endif
 TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

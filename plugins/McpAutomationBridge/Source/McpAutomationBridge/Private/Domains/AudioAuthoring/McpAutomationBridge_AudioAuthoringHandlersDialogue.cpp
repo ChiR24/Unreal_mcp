@@ -15,6 +15,16 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 		if (Name.Len() > 100) { return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters")); }
+		const FString LowerGender = Gender.ToLower();
+		const FString LowerPlurality = Plurality.ToLower();
+		if (LowerGender != TEXT("masculine") && LowerGender != TEXT("feminine") && LowerGender != TEXT("neuter"))
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("gender '%s' is not Masculine, Feminine or Neuter"), *Gender));
+		}
+		if (LowerPlurality != TEXT("singular") && LowerPlurality != TEXT("plural"))
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("plurality '%s' is not Singular or Plural"), *Plurality));
+		}
 
 		UPackage* Package = CreatePackage(*(Path / Name));
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
@@ -23,11 +33,9 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		UDialogueVoice* NewVoice = Cast<UDialogueVoice>(Factory->FactoryCreateNew(UDialogueVoice::StaticClass(), Package, FName(*Name), RF_Public | RF_Standalone, nullptr, GWarn));
 		if (!NewVoice) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create DialogueVoice")); }
 
-		if (Gender.ToLower() == TEXT("masculine")) { NewVoice->Gender = EGrammaticalGender::Masculine; }
-		else if (Gender.ToLower() == TEXT("feminine")) { NewVoice->Gender = EGrammaticalGender::Feminine; }
-		else if (Gender.ToLower() == TEXT("neuter")) { NewVoice->Gender = EGrammaticalGender::Neuter; }
-		if (Plurality.ToLower() == TEXT("singular")) { NewVoice->Plurality = EGrammaticalNumber::Singular; }
-		else if (Plurality.ToLower() == TEXT("plural")) { NewVoice->Plurality = EGrammaticalNumber::Plural; }
+		NewVoice->Gender = LowerGender == TEXT("feminine") ? EGrammaticalGender::Feminine
+			: LowerGender == TEXT("neuter") ? EGrammaticalGender::Neuter : EGrammaticalGender::Masculine;
+		NewVoice->Plurality = LowerPlurality == TEXT("plural") ? EGrammaticalNumber::Plural : EGrammaticalNumber::Singular;
 
 		SaveAudioAsset(NewVoice, bSave);
 		Response->SetBoolField(TEXT("success"), true);
@@ -46,6 +54,14 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 		if (Name.Len() > 100) { return McpHandlerUtils::BuildErrorResponse(TEXT("NAME_TOO_LONG"), TEXT("Asset name exceeds maximum length of 100 characters")); }
 
+		// wavePath and speakerPath were declared and never read: they now seed the first context mapping.
+		const FString WavePath = GetJsonStringField(Params, TEXT("wavePath"));
+		const FString SpeakerPath = GetJsonStringField(Params, TEXT("speakerPath"));
+		USoundWave* ContextWave = WavePath.IsEmpty() ? nullptr : LoadSoundWaveFromPath(WavePath);
+		UDialogueVoice* Speaker = SpeakerPath.IsEmpty() ? nullptr : Cast<UDialogueVoice>(StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *NormalizeAudioPath(SpeakerPath)));
+		if (!WavePath.IsEmpty() && !ContextWave) { return McpHandlerUtils::BuildErrorResponse(TEXT("SOUNDWAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *WavePath)); }
+		if (!SpeakerPath.IsEmpty() && !Speaker) { return McpHandlerUtils::BuildErrorResponse(TEXT("SPEAKER_NOT_FOUND"), FString::Printf(TEXT("Could not load speaker DialogueVoice: %s"), *SpeakerPath)); }
+
 		UPackage* Package = CreatePackage(*(Path / Name));
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
 
@@ -54,7 +70,15 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 		if (!NewWave) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create DialogueWave")); }
 
 		NewWave->SpokenText = SpokenText;
+		if (ContextWave || Speaker)
+		{
+			// A new wave already carries one empty mapping (UDialogueWave's constructor adds it): fill that one.
+			if (NewWave->ContextMappings.Num() == 0) { NewWave->ContextMappings.AddDefaulted(); }
+			NewWave->ContextMappings[0].Context.Speaker = Speaker;
+			NewWave->ContextMappings[0].SoundWave = ContextWave;
+		}
 		SaveAudioAsset(NewWave, bSave);
+		Response->SetNumberField(TEXT("contextCount"), NewWave->ContextMappings.Num());
 		Response->SetBoolField(TEXT("success"), true);
 		Response->SetStringField(TEXT("assetPath"), NewWave->GetPathName());
 		McpHandlerUtils::AddVerification(Response, NewWave);
@@ -95,7 +119,8 @@ TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TS
 				if (!TargetPath.IsEmpty())
 				{
 					UDialogueVoice* TargetVoice = Cast<UDialogueVoice>(StaticLoadObject(UDialogueVoice::StaticClass(), nullptr, *TargetPath));
-					if (TargetVoice) { TargetVoices.Add(TargetVoice); }
+					if (!TargetVoice) { return McpHandlerUtils::BuildErrorResponse(TEXT("TARGET_NOT_FOUND"), FString::Printf(TEXT("Could not load target DialogueVoice: %s"), *TargetPath)); }
+					TargetVoices.Add(TargetVoice);
 				}
 			}
 		}

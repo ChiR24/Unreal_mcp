@@ -28,20 +28,10 @@ bool HandlePlaybackActions(
       return true;
     }
 
-    FVector Location = FVector::ZeroVector;
-    FRotator Rotation = FRotator::ZeroRotator;
-    const TArray<TSharedPtr<FJsonValue>> *LocArr;
-    if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
-        LocArr->Num() >= 3) {
-      Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
-                         (*LocArr)[2]->AsNumber());
-    }
-    const TArray<TSharedPtr<FJsonValue>> *RotArr;
-    if (Payload->TryGetArrayField(TEXT("rotation"), RotArr) && RotArr &&
-        RotArr->Num() >= 3) {
-      Rotation = FRotator((*RotArr)[0]->AsNumber(), (*RotArr)[1]->AsNumber(),
-                          (*RotArr)[2]->AsNumber());
-    }
+    // Both {x,y,z} and [x,y,z] (and the rotator forms): the array-only read ignored
+    // every object the gateway passes, so the sound always played at the origin.
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     double Volume = 1.0;
     Payload->TryGetNumberField(TEXT("volume"), Volume);
@@ -51,17 +41,11 @@ bool HandlePlaybackActions(
     Payload->TryGetNumberField(TEXT("startTime"), StartTime);
 
     USoundAttenuation *Attenuation = nullptr;
-    FString AttenPath;
-    if (Payload->TryGetStringField(TEXT("attenuationPath"), AttenPath) &&
-        !AttenPath.IsEmpty()) {
-      Attenuation = LoadObject<USoundAttenuation>(nullptr, *AttenPath);
-    }
-
     USoundConcurrency *Concurrency = nullptr;
-    FString ConcPath;
-    if (Payload->TryGetStringField(TEXT("concurrencyPath"), ConcPath) &&
-        !ConcPath.IsEmpty()) {
-      Concurrency = LoadObject<USoundConcurrency>(nullptr, *ConcPath);
+    FString LoadError;
+    if (!LoadOptionalAudioSettings(Payload, Attenuation, Concurrency, LoadError)) {
+      Self->SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("ASSET_NOT_FOUND"));
+      return true;
     }
 
     if (!GEditor)
@@ -147,9 +131,9 @@ bool HandlePlaybackActions(
     return true;
   }
 
-  // Payload:  { "soundPath": string, "actorName": string,
-  //             "attachPointName"?: string }
-  // Response: { "componentName": string }
+  // Payload:  { "soundPath": string, "actorName": string, "attachPointName"?: string,
+  //             "componentName"?: string, "volume"?: number, "pitch"?: number }
+  // Response: { "componentName": string, "attachedTo": string, "playing": bool }
   else if (Lower == TEXT("play_sound_attached")) {
     FString SoundPath, ActorName, AttachPoint;
     Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
@@ -183,32 +167,46 @@ bool HandlePlaybackActions(
       return true;
     }
 
+    // attachPointName names a scene component or a socket; a component name wins.
     USceneComponent *AttachComp = EnsureAudioAttachRoot(TargetActor);
+    FName SocketName = NAME_None;
     if (!AttachPoint.IsEmpty()) {
-      // Try to find socket or component
       USceneComponent *FoundComp = nullptr;
       TArray<USceneComponent *> Components;
       TargetActor->GetComponents(Components);
       for (USceneComponent *Comp : Components) {
-        if (Comp->GetName() == AttachPoint ||
-            Comp->DoesSocketExist(FName(*AttachPoint))) {
+        if (!FoundComp && Comp && Comp->GetName() == AttachPoint)
           FoundComp = Comp;
-          break;
+      }
+      for (USceneComponent *Comp : Components) {
+        if (!FoundComp && Comp && Comp->DoesSocketExist(FName(*AttachPoint))) {
+          FoundComp = Comp;
+          SocketName = FName(*AttachPoint);
         }
       }
-      if (FoundComp)
-        AttachComp = FoundComp;
+      if (!FoundComp) {
+        Self->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("'%s' is neither a component nor a socket on the actor"), *AttachPoint),
+            TEXT("ATTACH_POINT_NOT_FOUND"));
+        return true;
+      }
+      AttachComp = FoundComp;
     }
 
-    UAudioComponent *AudioComp = nullptr;
-    if (AttachComp)
-    {
-      AudioComp = CreateRegisteredAudioComponent(TargetActor, Sound, FVector::ZeroVector, FRotator::ZeroRotator);
-    }
+    // The attach point used to be resolved and then dropped (the component went on the
+    // root, inactive), and nothing started it, yet the reply said "Sound attached".
+    UAudioComponent *AudioComp = AttachComp
+        ? CreateRegisteredAudioComponent(TargetActor, Sound, FVector::ZeroVector, FRotator::ZeroRotator)
+        : nullptr;
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     if (AudioComp) {
+      AudioComp->AttachToComponent(AttachComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+      ApplyAudioComponentOptions(AudioComp, Payload);
+      AudioComp->Play();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
+      Resp->SetStringField(TEXT("attachedTo"), AttachComp->GetName());
+      Resp->SetBoolField(TEXT("playing"), AudioComp->IsPlaying());
       McpHandlerUtils::AddVerification(Resp, Sound);
       AddComponentVerification(Resp, AudioComp);
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,

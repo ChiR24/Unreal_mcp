@@ -25,6 +25,7 @@ export const BOOLEAN_FIELDS = new Set([
   'bIsLANMatch', 'bAllowJoinInProgress', 'bAllowInvites', 'bUsesPresence',
   'bUseLobbiesIfAvailable', 'bShouldAdvertise', 'executeTravel', 'forceRespawn',
   'canRespawn', 'systemWide',
+  'indefinite', 'bypass', 'applyToChildren', 'applyEQ', 'spatialize', 'replace',
   // Legacy input-mapping modifier flags. The native handler reads these with
   // TryGetBoolField (McpAutomationBridge_InputHandlersLegacyMappings.cpp), so
   // publishing them as strings made a schema-valid boolean unrepresentable.
@@ -43,13 +44,24 @@ export const NUMBER_FIELDS = new Set([
   'teamSize', 'scorePerKill', 'scorePerAssist', 'scorePerObjective', 'winScore',
   'respawnDelay', 'teamIndex', 'scale',
   'lowPassFilterFrequency', 'maxRespawns', 'localPlayerNum', 'maxPlayers',
+  'loopCount', 'delay', 'childIndex', 'pitchAdjuster', 'eqPriority', 'lowFrequency', 'lowGain',
+  'midFrequency', 'midGain', 'highMidFrequency', 'highMidGain', 'highFrequency', 'highGain',
+  'density', 'diffusion', 'gain', 'gainHF', 'decayTime', 'decayHFRatio', 'lfeBleed',
+  'voiceCenterChannelVolume',
 ]);
 
 /** Field names whose value is an arbitrary reflection-boundary object. */
-export const OBJECT_FIELDS = new Set(['location', 'rotation', 'size', 'properties', 'settings', 'voiceSettings']);
+export const OBJECT_FIELDS = new Set(['properties', 'settings', 'voiceSettings', 'eqSettings']);
+
+/**
+ * Three-number vectors. Declared as arrays so both gateways convert an {x, y, z}
+ * (or {pitch, yaw, roll}) object into the array before validation; a free object
+ * with no declared keys could not be converted the other way, so [x, y, z] was refused.
+ */
+export const VECTOR_FIELDS = new Set(['location', 'rotation', 'size']);
 
 /** Field names whose JSON-Schema type is `array`. */
-export const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings']);
+export const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings', 'targetVoices']);
 
 /**
  * Real descriptions for fields whose bare names read as placeholder text.
@@ -58,7 +70,7 @@ export const ARRAY_FIELDS = new Set(['states', 'sessions', 'players', 'mappings'
  * (the MCPBB-091 defect class).
  */
 export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
-  name: 'Name of the asset or mapping to create or remove.',
+  name: 'Name of the asset, actor or mapping to create, or of the mapping to remove.',
   actionName: 'Legacy input action name. Overrides name when both are supplied.',
   key: 'Input key name, e.g. SpaceBar, W, LeftMouseButton.',
   shift: 'Whether the Shift modifier must be held.',
@@ -73,7 +85,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   attachPointName: 'Socket or bone name to attach the sound to.',
   attenuationPath: 'Canonical /Game SoundAttenuation asset path.',
   attenuationShape: 'Attenuation shape (Sphere, Capsule, Box, Cone).',
-  autoPlay: 'Whether the sound starts playing on spawn.',
+  autoPlay: 'Whether the sound starts playing when it is created (default true).',
   componentName: 'Name of the component to create or address.',
   concurrencyPath: 'Canonical /Game SoundConcurrency asset path.',
   defaultValue: 'Default value for the input.',
@@ -91,7 +103,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   innerRadius: 'Inner radius of full volume, in centimetres.',
   inputName: 'Graph input name.',
   inputType: 'Graph input data type (Float, Int32, Bool, String, Trigger, Audio).',
-  location: 'World location as {x, y, z} (an [x, y, z] array is accepted).',
+  location: 'World location as [x, y, z] (an {x, y, z} object is accepted).',
   looping: 'Whether playback loops.',
   lowPassFilterFrequency: 'Low-pass filter cutoff frequency in Hz.',
   mixName: 'Sound Mix name.',
@@ -111,9 +123,9 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   reverbEffect: 'Canonical /Game ReverbEffect asset path.',
   reverbWetLevelMax: 'Maximum reverb wet level (0-1).',
   reverbWetLevelMin: 'Minimum reverb wet level (0-1).',
-  rotation: 'World rotation as {pitch, yaw, roll}.',
+  rotation: 'World rotation in degrees as [pitch, yaw, roll] (a {pitch, yaw, roll} object is accepted).',
   save: 'Persist the created or modified asset to disk.',
-  size: 'Reverb zone extent as {x, y, z}.',
+  size: 'Reverb zone box size in centimetres as [x, y, z] (default 500 each; an {x, y, z} object is accepted).',
   soundClassName: 'Sound Class name.',
   soundClassPath: 'Canonical /Game SoundClass asset path.',
   soundCue: 'Sound cue.',
@@ -123,7 +135,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   sourceNodeId: 'Source graph node id.',
   sourceOutputName: 'Output pin name on the source node.',
   sourcePin: 'Output pin name on the source node.',
-  spatialization: 'Spatialization method (Default, Binaural).',
+  spatialization: 'Spatialization algorithm: Default (the panner) or Binaural (HRTF). Left unchanged when omitted.',
   speakerPath: 'Canonical /Game DialogueVoice asset path of the speaker.',
   startTime: 'Playback start offset in seconds.',
   targetInputName: 'Input pin name on the target node.',
@@ -136,6 +148,42 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   volumeAdjuster: 'Volume multiplier applied by the mix modifier.',
   wavePath: 'Canonical /Game SoundWave asset path.',
   windowSize: 'Analysis window size in samples.',
+  applyEQ: 'Whether the mix applies its EQ (default true).',
+  applyToChildren: 'Whether the modifier also applies to the child sound classes (default true).',
+  bypass: 'Add the effect bypassed (default false).',
+  childIndex: 'Input pin of the source node that receives the target (default 0); missing pins are added up to the node maximum.',
+  decayHFRatio: 'Reverb high-frequency to mid-frequency decay time ratio (0.1 to 2).',
+  decayTime: 'Reverb decay time in seconds (0.1 to 20).',
+  delay: 'Delay in seconds, for a delay node.',
+  density: 'Reverb modal density (0 to 1).',
+  diffusion: 'Reverb echo density (0 to 1).',
+  distanceAlgorithm: 'Distance falloff curve: Linear, Logarithmic, Inverse or NaturalSound. Left unchanged when omitted.',
+  effectPresetPath: 'Canonical /Game source effect preset asset to add; an alternative to effectType.',
+  eqPriority: 'EQ priority of the mix; the active mix with the highest priority supplies the EQ.',
+  eqSettings: 'Four-band EQ as {frequencyCenter0..3, gain0..3, bandwidth0..3}; a missing key keeps its value.',
+  gain: 'Reverb master volume (0 to 1).',
+  gainHF: 'Reverb high-frequency gain (0 to 1).',
+  gender: 'Grammatical gender of the voice: Masculine, Feminine or Neuter (default Masculine).',
+  highFrequency: 'Centre frequency of EQ band 3 in Hz.',
+  highGain: 'Linear gain of EQ band 3 (0 to 4).',
+  highMidFrequency: 'Centre frequency of EQ band 2 in Hz.',
+  highMidGain: 'Linear gain of EQ band 2 (0 to 4).',
+  indefinite: 'Whether a looping node loops forever (default true); false plays loopCount extra times.',
+  lfeBleed: 'Share of the sound sent to the LFE channel (0 to 1).',
+  localizationKeyFormat: 'Localization key format of the context (default {ContextHash}).',
+  loopCount: 'Extra plays of a looping node when indefinite is false.',
+  lowFrequency: 'Centre frequency of EQ band 0 in Hz.',
+  lowGain: 'Linear gain of EQ band 0 (0 to 4).',
+  midFrequency: 'Centre frequency of EQ band 1 in Hz.',
+  midGain: 'Linear gain of EQ band 1 (0 to 4).',
+  pitchAdjuster: 'Pitch multiplier applied by the mix modifier.',
+  plurality: 'Grammatical number of the voice: Singular or Plural (default Singular).',
+  replace: 'Replace the context mapping of the same speaker instead of adding another (default false).',
+  soundWavePath: 'Canonical /Game SoundWave asset spoken in this context.',
+  spatialize: 'Whether the sound is spatialized (default true).',
+  spokenText: 'Transcript of the spoken line.',
+  targetVoices: 'Canonical /Game DialogueVoice asset paths the line is spoken to.',
+  voiceCenterChannelVolume: 'Share of the sound sent to the centre speaker (0 to 1).',
   sessionName: 'Session name.',
   maxPlayers: 'Max players.',
   bIsLANMatch: 'Whether lan match applies.',
@@ -267,6 +315,7 @@ export function property(name: string): JsonObject {
   if (description === undefined) throw new TypeError(`utility field has no pinned description: ${name}`);
   if (BOOLEAN_FIELDS.has(name)) return { type: 'boolean', description };
   if (NUMBER_FIELDS.has(name)) return { type: 'number', description };
+  if (VECTOR_FIELDS.has(name)) return { type: 'array', description, items: { type: 'number' }, minItems: 3, maxItems: 3 };
   if (OBJECT_FIELDS.has(name)) {
     return {
       type: 'object',

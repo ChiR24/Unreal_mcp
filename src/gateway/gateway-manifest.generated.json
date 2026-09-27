@@ -6731,19 +6731,32 @@
       ],
       "parameterNames": [
         "actorName",
+        "applyEQ",
+        "applyToChildren",
         "assetPath",
         "attachPointName",
         "attenuationPath",
         "attenuationShape",
         "autoPlay",
+        "bypass",
+        "childIndex",
         "componentName",
         "concurrencyPath",
         "control",
+        "decayHFRatio",
+        "decayTime",
         "defaultValue",
+        "delay",
+        "density",
+        "diffusion",
+        "distanceAlgorithm",
         "edit",
+        "effectPresetPath",
         "effectType",
         "enable",
         "enableReverbSend",
+        "eqPriority",
+        "eqSettings",
         "fade",
         "fadeInTime",
         "fadeOutTime",
@@ -6751,13 +6764,28 @@
         "fadeType",
         "falloffDistance",
         "falloffMode",
+        "gain",
+        "gainHF",
+        "gender",
+        "highFrequency",
+        "highGain",
+        "highMidFrequency",
+        "highMidGain",
+        "indefinite",
         "innerRadius",
         "inputName",
         "inputType",
         "kind",
+        "lfeBleed",
+        "localizationKeyFormat",
         "location",
+        "loopCount",
         "looping",
+        "lowFrequency",
+        "lowGain",
         "lowPassFilterFrequency",
+        "midFrequency",
+        "midGain",
         "mixName",
         "name",
         "nodeClassName",
@@ -6772,8 +6800,10 @@
         "parentClass",
         "path",
         "pitch",
+        "pitchAdjuster",
         "playback",
-        "properties",
+        "plurality",
+        "replace",
         "reverbDistanceMax",
         "reverbDistanceMin",
         "reverbEffect",
@@ -6787,18 +6817,19 @@
         "soundClassPath",
         "soundName",
         "soundPath",
-        "sourceNode",
+        "soundWavePath",
         "sourceNodeId",
         "sourceOutputName",
-        "sourcePin",
         "spatialization",
+        "spatialize",
         "speakerPath",
+        "spokenText",
         "startTime",
         "targetInputName",
-        "targetNode",
         "targetNodeId",
-        "targetPin",
+        "targetVoices",
         "targetVolume",
+        "voiceCenterChannelVolume",
         "volume",
         "volumeAdjuster",
         "wavePath"
@@ -6809,6 +6840,14 @@
           "actorName": {
             "type": "string",
             "description": "Target actor label or name in the current level."
+          },
+          "applyEQ": {
+            "type": "boolean",
+            "description": "Whether the mix applies its EQ (default true)."
+          },
+          "applyToChildren": {
+            "type": "boolean",
+            "description": "Whether the modifier also applies to the child sound classes (default true)."
           },
           "assetPath": {
             "type": "string",
@@ -6828,7 +6867,15 @@
           },
           "autoPlay": {
             "type": "boolean",
-            "description": "Whether the sound starts playing on spawn."
+            "description": "Whether the sound starts playing when it is created (default true)."
+          },
+          "bypass": {
+            "type": "boolean",
+            "description": "Add the effect bypassed (default false)."
+          },
+          "childIndex": {
+            "type": "number",
+            "description": "Input pin of the source node that receives the target (default 0); missing pins are added up to the node maximum."
           },
           "componentName": {
             "type": "string",
@@ -6849,8 +6896,32 @@
             ],
             "description": "Which control sound mix variant to run."
           },
+          "decayHFRatio": {
+            "type": "number",
+            "description": "Reverb high-frequency to mid-frequency decay time ratio (0.1 to 2)."
+          },
+          "decayTime": {
+            "type": "number",
+            "description": "Reverb decay time in seconds (0.1 to 20)."
+          },
           "defaultValue": {
             "description": "Value in the data type of the input: a number (Float, Int32, Time, enums), a boolean, a string, or a JSON array of them for an array input such as Float:Array. Converted to the declared type; a mismatch is refused."
+          },
+          "delay": {
+            "type": "number",
+            "description": "Delay in seconds, for a delay node."
+          },
+          "density": {
+            "type": "number",
+            "description": "Reverb modal density (0 to 1)."
+          },
+          "diffusion": {
+            "type": "number",
+            "description": "Reverb echo density (0 to 1)."
+          },
+          "distanceAlgorithm": {
+            "type": "string",
+            "description": "Distance falloff curve: Linear, Logarithmic, Inverse or NaturalSound. Left unchanged when omitted."
           },
           "edit": {
             "type": "string",
@@ -6868,6 +6939,10 @@
             ],
             "description": "Which edit metasound variant to run."
           },
+          "effectPresetPath": {
+            "type": "string",
+            "description": "Canonical /Game source effect preset asset to add; an alternative to effectType."
+          },
           "effectType": {
             "type": "string",
             "description": "Source effect preset class or short name."
@@ -6879,6 +6954,16 @@
           "enableReverbSend": {
             "type": "string",
             "description": "Whether the sound sends to reverb."
+          },
+          "eqPriority": {
+            "type": "number",
+            "description": "EQ priority of the mix; the active mix with the highest priority supplies the EQ."
+          },
+          "eqSettings": {
+            "type": "object",
+            "description": "Four-band EQ as {frequencyCenter0..3, gain0..3, bandwidth0..3}; a missing key keeps its value.",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
           },
           "fade": {
             "type": "string",
@@ -6914,6 +6999,38 @@
             "type": "string",
             "description": "Attenuation falloff mode."
           },
+          "gain": {
+            "type": "number",
+            "description": "Reverb master volume (0 to 1)."
+          },
+          "gainHF": {
+            "type": "number",
+            "description": "Reverb high-frequency gain (0 to 1)."
+          },
+          "gender": {
+            "type": "string",
+            "description": "Grammatical gender of the voice: Masculine, Feminine or Neuter (default Masculine)."
+          },
+          "highFrequency": {
+            "type": "number",
+            "description": "Centre frequency of EQ band 3 in Hz."
+          },
+          "highGain": {
+            "type": "number",
+            "description": "Linear gain of EQ band 3 (0 to 4)."
+          },
+          "highMidFrequency": {
+            "type": "number",
+            "description": "Centre frequency of EQ band 2 in Hz."
+          },
+          "highMidGain": {
+            "type": "number",
+            "description": "Linear gain of EQ band 2 (0 to 4)."
+          },
+          "indefinite": {
+            "type": "boolean",
+            "description": "Whether a looping node loops forever (default true); false plays loopCount extra times."
+          },
           "innerRadius": {
             "type": "number",
             "description": "Inner radius of full volume, in centimetres."
@@ -6944,19 +7061,50 @@
             ],
             "description": "Which create audio actor variant to run."
           },
+          "lfeBleed": {
+            "type": "number",
+            "description": "Share of the sound sent to the LFE channel (0 to 1)."
+          },
+          "localizationKeyFormat": {
+            "type": "string",
+            "description": "Localization key format of the context (default {ContextHash})."
+          },
           "location": {
-            "type": "object",
-            "description": "World location as {x, y, z} (an [x, y, z] array is accepted).",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
+            "type": "array",
+            "description": "World location as [x, y, z] (an {x, y, z} object is accepted).",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "loopCount": {
+            "type": "number",
+            "description": "Extra plays of a looping node when indefinite is false."
           },
           "looping": {
             "type": "boolean",
             "description": "Whether playback loops."
           },
+          "lowFrequency": {
+            "type": "number",
+            "description": "Centre frequency of EQ band 0 in Hz."
+          },
+          "lowGain": {
+            "type": "number",
+            "description": "Linear gain of EQ band 0 (0 to 4)."
+          },
           "lowPassFilterFrequency": {
             "type": "number",
             "description": "Low-pass filter cutoff frequency in Hz."
+          },
+          "midFrequency": {
+            "type": "number",
+            "description": "Centre frequency of EQ band 1 in Hz."
+          },
+          "midGain": {
+            "type": "number",
+            "description": "Linear gain of EQ band 1 (0 to 4)."
           },
           "mixName": {
             "type": "string",
@@ -6964,7 +7112,7 @@
           },
           "name": {
             "type": "string",
-            "description": "Name of the asset or mapping to create or remove."
+            "description": "Name of the asset, actor or mapping to create, or of the mapping to remove."
           },
           "nodeClassName": {
             "type": "string",
@@ -7010,7 +7158,7 @@
           },
           "parentClass": {
             "type": "string",
-            "description": "Parent class path or short name."
+            "description": "Canonical /Game SoundClass asset path of the new parent; omit it to clear the parent."
           },
           "path": {
             "type": "string",
@@ -7019,6 +7167,10 @@
           "pitch": {
             "type": "number",
             "description": "Pitch multiplier."
+          },
+          "pitchAdjuster": {
+            "type": "number",
+            "description": "Pitch multiplier applied by the mix modifier."
           },
           "playback": {
             "type": "string",
@@ -7031,11 +7183,13 @@
             ],
             "description": "Which play sound variant to run."
           },
-          "properties": {
-            "type": "object",
-            "description": "Key-value property map applied by reflection.",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
+          "plurality": {
+            "type": "string",
+            "description": "Grammatical number of the voice: Singular or Plural (default Singular)."
+          },
+          "replace": {
+            "type": "boolean",
+            "description": "Replace the context mapping of the same speaker instead of adding another (default false)."
           },
           "reverbDistanceMax": {
             "type": "string",
@@ -7058,14 +7212,17 @@
             "description": "Minimum reverb wet level (0-1)."
           },
           "rotation": {
-            "type": "object",
-            "description": "World rotation as {pitch, yaw, roll}.",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
+            "type": "array",
+            "description": "World rotation in degrees as [pitch, yaw, roll] (a {pitch, yaw, roll} object is accepted).",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
           },
           "save": {
             "type": "boolean",
-            "description": "Persist the created or modified asset to disk."
+            "description": "Persist the asset to disk (default true); false leaves the change in memory only."
           },
           "setting": {
             "type": "string",
@@ -7084,10 +7241,13 @@
             "description": "Which configure sound attenuation variant to run."
           },
           "size": {
-            "type": "object",
-            "description": "Reverb zone extent as {x, y, z}.",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
+            "type": "array",
+            "description": "Reverb zone box size in centimetres as [x, y, z] (default 500 each; an {x, y, z} object is accepted).",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
           },
           "soundClassName": {
             "type": "string",
@@ -7105,9 +7265,9 @@
             "type": "string",
             "description": "Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound)."
           },
-          "sourceNode": {
+          "soundWavePath": {
             "type": "string",
-            "description": "Source node id or name."
+            "description": "Canonical /Game SoundWave asset spoken in this context."
           },
           "sourceNodeId": {
             "type": "string",
@@ -7117,17 +7277,21 @@
             "type": "string",
             "description": "Output pin name on the source node."
           },
-          "sourcePin": {
-            "type": "string",
-            "description": "Output pin name on the source node."
-          },
           "spatialization": {
             "type": "string",
-            "description": "Spatialization method (Default, Binaural)."
+            "description": "Spatialization algorithm: Default (the panner) or Binaural (HRTF). Left unchanged when omitted."
+          },
+          "spatialize": {
+            "type": "boolean",
+            "description": "Whether the sound is spatialized (default true)."
           },
           "speakerPath": {
             "type": "string",
             "description": "Canonical /Game DialogueVoice asset path of the speaker."
+          },
+          "spokenText": {
+            "type": "string",
+            "description": "Transcript of the spoken line."
           },
           "startTime": {
             "type": "number",
@@ -7137,21 +7301,22 @@
             "type": "string",
             "description": "Input pin name on the target node."
           },
-          "targetNode": {
-            "type": "string",
-            "description": "Target node id or name."
-          },
           "targetNodeId": {
             "type": "string",
             "description": "Target graph node id."
           },
-          "targetPin": {
-            "type": "string",
-            "description": "Input pin name on the target node."
+          "targetVoices": {
+            "type": "array",
+            "description": "Canonical /Game DialogueVoice asset paths the line is spoken to.",
+            "items": {}
           },
           "targetVolume": {
             "type": "number",
             "description": "Target volume multiplier (0-1)."
+          },
+          "voiceCenterChannelVolume": {
+            "type": "number",
+            "description": "Share of the sound sent to the centre speaker (0 to 1)."
           },
           "volume": {
             "type": "number",
@@ -12485,7 +12650,7 @@
           },
           "name": {
             "type": "string",
-            "description": "Name of the asset or mapping to create or remove."
+            "description": "Name of the asset, actor or mapping to create, or of the mapping to remove."
           },
           "netCullDistanceSquared": {
             "type": "number",

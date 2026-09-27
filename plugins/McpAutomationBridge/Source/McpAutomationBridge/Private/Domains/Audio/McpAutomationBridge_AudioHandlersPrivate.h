@@ -27,6 +27,7 @@
 #include "Sound/ReverbEffect.h"
 #include "Sound/SoundAttenuation.h"
 #include "Sound/SoundClass.h"
+#include "Sound/SoundConcurrency.h"
 #include "Sound/SoundCue.h"
 #include "Sound/SoundEffectSubmix.h"
 #include "Sound/SoundMix.h"
@@ -59,6 +60,12 @@ UAudioComponent* CreateAudioComponentAtEditorLocation(
     const FVector& Location,
     const FRotator& Rotation,
     const FString& ActorName);
+// "/Game/A/B" names the asset B inside package /Game/A/B; an object path passes through.
+FString AudioObjectPath(const FString& Path);
+// componentName (a rename when free), volume and pitch, each only when sent.
+void ApplyAudioComponentOptions(UAudioComponent* AudioComp, const TSharedPtr<FJsonObject>& Payload);
+// attenuationPath and concurrencyPath, each optional; false with OutError when one is sent and does not load.
+bool LoadOptionalAudioSettings(const TSharedPtr<FJsonObject>& Payload, USoundAttenuation*& OutAttenuation, USoundConcurrency*& OutConcurrency, FString& OutError);
 USoundBase* ResolveSoundAsset(const FString& SoundPath);
 USoundMix* ResolveSoundMix(const FString& MixPath);
 USoundClass* ResolveSoundClass(const FString& ClassPath);

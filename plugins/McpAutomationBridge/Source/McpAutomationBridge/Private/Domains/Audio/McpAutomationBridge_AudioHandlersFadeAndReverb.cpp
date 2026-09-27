@@ -2,6 +2,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "EngineUtils.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
+#include "Domains/Volume/McpAutomationBridge_VolumeGeometry.h"
 
 namespace McpAudioHandlers
 {
@@ -143,22 +144,25 @@ bool HandleFadeAndReverbActions(
        return true;
      }
 
-     FVector Location = FVector::ZeroVector;
-     const TArray<TSharedPtr<FJsonValue>> *LocArr;
-     if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr && LocArr->Num() >= 3) {
-       Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
-                          (*LocArr)[2]->AsNumber());
-     }
-
-     FVector Size = FVector(500.0f, 500.0f, 500.0f);
-     const TArray<TSharedPtr<FJsonValue>> *SizeArr;
-     if (Payload->TryGetArrayField(TEXT("size"), SizeArr) && SizeArr && SizeArr->Num() >= 3) {
-       Size = FVector((*SizeArr)[0]->AsNumber(), (*SizeArr)[1]->AsNumber(),
-                      (*SizeArr)[2]->AsNumber());
+     // Either vector spelling; both were read as arrays only.
+     const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+     const FVector Size = ExtractVectorField(Payload, TEXT("size"), FVector(500.0f, 500.0f, 500.0f));
+     if (Size.X <= 0.0 || Size.Y <= 0.0 || Size.Z <= 0.0) {
+       Self->SendAutomationError(RequestingSocket, RequestId,
+                           TEXT("size must be positive on every axis"), TEXT("INVALID_ARGUMENT"));
+       return true;
      }
 
      FString ReverbEffectPath;
      Payload->TryGetStringField(TEXT("reverbEffect"), ReverbEffectPath);
+     // Loaded before the spawn: a wrong path used to leave a zone with no reverb and report success.
+     UReverbEffect *ReverbEffect = ReverbEffectPath.IsEmpty() ? nullptr
+         : LoadObject<UReverbEffect>(nullptr, *AudioObjectPath(ReverbEffectPath), nullptr, LOAD_NoWarn);
+     if (!ReverbEffectPath.IsEmpty() && !ReverbEffect) {
+       Self->SendAutomationError(RequestingSocket, RequestId,
+           FString::Printf(TEXT("ReverbEffect not found: %s"), *ReverbEffectPath), TEXT("ASSET_NOT_FOUND"));
+       return true;
+     }
      double Volume = 1.0;
      Payload->TryGetNumberField(TEXT("volume"), Volume);
      double FadeTime = 2.0;
@@ -198,23 +202,15 @@ bool HandleFadeAndReverbActions(
      // Set actor label
      AudioVolume->SetActorLabel(ZoneName);
 
-      // Configure brush bounds
-      if (UBrushComponent *BrushComp = AudioVolume->GetBrushComponent()) {
-        // Set volume bounds via brush
-        BrushComp->SetRelativeLocation(FVector::ZeroVector);
-      }
+      // A spawned volume has no brush, so the zone enclosed nothing and size was never used:
+      // build the box the way the volume tools do (the extent is half the size).
+      VolumeHelpers::CreateBoxBrushForVolume(AudioVolume, Size * 0.5f);
 
       // Create reverb settings and apply via public API
       FReverbSettings ReverbSettings;
       ReverbSettings.bApplyReverb = true;
 
-      // Load and apply reverb effect if provided
-      if (!ReverbEffectPath.IsEmpty()) {
-        UReverbEffect *ReverbEffect = LoadObject<UReverbEffect>(nullptr, *ReverbEffectPath);
-        if (ReverbEffect) {
-          ReverbSettings.ReverbEffect = ReverbEffect;
-        }
-      }
+      ReverbSettings.ReverbEffect = ReverbEffect;
 
       // Set volume settings
       ReverbSettings.Volume = (float)Volume;

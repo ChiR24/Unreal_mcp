@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
+#include "Sound/SoundEffectSubmix.h"
 
 namespace McpAudioAuthoring
 {
@@ -45,7 +46,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		USoundEffectSourcePresetChain* NewChain = NewObject<USoundEffectSourcePresetChain>(Package, FName(*Name), RF_Public | RF_Standalone);
 		if (!NewChain) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create source effect chain")); }
 
-		McpSafeAssetSave(NewChain);
+		SaveAudioAsset(NewChain, bSave);
 		Response->SetStringField(TEXT("assetPath"), NewChain->GetPathName());
 		Response->SetBoolField(TEXT("success"), true);
 		Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Source effect chain '%s' created"), *Name));
@@ -68,6 +69,10 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		if (!EffectPresetPath.IsEmpty())
 		{
 			EffectPreset = Cast<USoundEffectSourcePreset>(StaticLoadObject(USoundEffectSourcePreset::StaticClass(), nullptr, *NormalizeAudioPath(EffectPresetPath)));
+			if (!EffectPreset)
+			{
+				return McpHandlerUtils::BuildErrorResponse(TEXT("PRESET_NOT_FOUND"), FString::Printf(TEXT("Could not load source effect preset: %s"), *EffectPresetPath));
+			}
 		}
 #if MCP_HAS_SOURCE_EFFECT_PRESETS
 		if (!EffectPreset && !EffectType.IsEmpty())
@@ -80,7 +85,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 				if (EffectPreset)
 				{
 					EffectPreset->SetFlags(RF_Public | RF_Standalone);
-					McpSafeAssetSave(EffectPreset);
+					SaveAudioAsset(EffectPreset, bSave);
 					Response->SetStringField(TEXT("effectPresetPath"), EffectPreset->GetPathName());
 				}
 			}
@@ -92,7 +97,7 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 			NewEntry.Preset = EffectPreset;
 			NewEntry.bBypass = GetJsonBoolField(Params, TEXT("bypass"), false);
 			Chain->Chain.Add(NewEntry);
-			McpSafeAssetSave(Chain);
+			SaveAudioAsset(Chain, bSave);
 			Response->SetNumberField(TEXT("effectCount"), Chain->Chain.Num());
 			Response->SetBoolField(TEXT("success"), true);
 			Response->SetStringField(TEXT("message"), TEXT("Source effect added to chain"));
@@ -115,15 +120,33 @@ TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSha
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 		if (Name.IsEmpty()) { return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required")); }
 
+		// effectType used to be read and dropped, so every call made a submix with no effect.
+		// The AudioMixer preset classes are looked up by path, so no module dependency is added.
+		const FString LowerType = EffectType.ToLower();
+		const TCHAR* PresetClassPath = LowerType == TEXT("reverb") ? TEXT("/Script/AudioMixer.SubmixEffectReverbPreset")
+			: (LowerType == TEXT("eq") || LowerType == TEXT("equalizer")) ? TEXT("/Script/AudioMixer.SubmixEffectSubmixEQPreset")
+			: (LowerType == TEXT("dynamics") || LowerType == TEXT("compressor")) ? TEXT("/Script/AudioMixer.SubmixEffectDynamicsProcessorPreset")
+			: nullptr;
+		UClass* PresetClass = PresetClassPath ? StaticLoadClass(USoundEffectSubmixPreset::StaticClass(), nullptr, PresetClassPath) : nullptr;
+		if (!PresetClass)
+		{
+			return McpHandlerUtils::BuildErrorResponse(TEXT("UNSUPPORTED_EFFECT_TYPE"), FString::Printf(TEXT("effectType '%s' is not Reverb, EQ or Dynamics"), *EffectType));
+		}
+
 		UPackage* Package = CreatePackage(*(Path / Name));
 		if (!Package) { return McpHandlerUtils::BuildErrorResponse(TEXT("PACKAGE_ERROR"), TEXT("Failed to create package")); }
 		USoundSubmix* NewSubmix = NewObject<USoundSubmix>(Package, FName(*Name), RF_Public | RF_Standalone);
 		if (!NewSubmix) { return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create submix")); }
+		// The preset lives inside the submix package, so the one save persists both.
+		USoundEffectSubmixPreset* Preset = NewObject<USoundEffectSubmixPreset>(NewSubmix, PresetClass, NAME_None, RF_Public | RF_Transactional);
+		NewSubmix->SubmixEffectChain.Add(Preset);
 
-		McpSafeAssetSave(NewSubmix);
+		SaveAudioAsset(NewSubmix, bSave);
 		Response->SetStringField(TEXT("assetPath"), NewSubmix->GetPathName());
+		Response->SetStringField(TEXT("effectClass"), PresetClass->GetName());
+		Response->SetNumberField(TEXT("effectCount"), NewSubmix->SubmixEffectChain.Num());
 		Response->SetBoolField(TEXT("success"), true);
-		Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Submix '%s' created"), *Name));
+		Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Submix '%s' created with a %s"), *Name, *PresetClass->GetName()));
 		McpHandlerUtils::AddVerification(Response, NewSubmix);
 		return Response;
 	}

@@ -27,36 +27,14 @@ bool HandleAmbientActions(
       return true;
     }
 
-    FVector Location = FVector::ZeroVector;
-    const TArray<TSharedPtr<FJsonValue>> *LocArr;
-    if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
-        LocArr->Num() >= 3) {
-      Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
-                         (*LocArr)[2]->AsNumber());
-    } else {
-      const TSharedPtr<FJsonObject> *LocObj = nullptr; // {x, y, z} spelling (dogfood #226)
-      if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
-        Location = FVector((*LocObj)->GetNumberField(TEXT("x")), (*LocObj)->GetNumberField(TEXT("y")), (*LocObj)->GetNumberField(TEXT("z")));
-      }
-    }
-
-    double Volume = 1.0;
-    Payload->TryGetNumberField(TEXT("volume"), Volume);
-    double Pitch = 1.0;
-    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
 
     USoundAttenuation *Attenuation = nullptr;
-    FString AttenPath;
-    if (Payload->TryGetStringField(TEXT("attenuationPath"), AttenPath) &&
-        !AttenPath.IsEmpty()) {
-      Attenuation = LoadObject<USoundAttenuation>(nullptr, *AttenPath);
-    }
-
     USoundConcurrency *Concurrency = nullptr;
-    FString ConcPath;
-    if (Payload->TryGetStringField(TEXT("concurrencyPath"), ConcPath) &&
-        !ConcPath.IsEmpty()) {
-      Concurrency = LoadObject<USoundConcurrency>(nullptr, *ConcPath);
+    FString LoadError;
+    if (!LoadOptionalAudioSettings(Payload, Attenuation, Concurrency, LoadError)) {
+      Self->SendAutomationError(RequestingSocket, RequestId, LoadError, TEXT("ASSET_NOT_FOUND"));
+      return true;
     }
 
     if (!GEditor)
@@ -86,8 +64,6 @@ bool HandleAmbientActions(
       if (AudioComp)
       {
         AudioComp->SetSound(Sound);
-        AudioComp->SetVolumeMultiplier((float)Volume);
-        AudioComp->SetPitchMultiplier((float)Pitch);
         AudioComp->bAutoActivate = false;
       }
     }
@@ -97,6 +73,12 @@ bool HandleAmbientActions(
     }
 
     if (AudioComp) {
+      ApplyAudioComponentOptions(AudioComp, Payload);
+      // Both were loaded and then dropped: the component never used the requested settings.
+      if (Attenuation)
+        AudioComp->AttenuationSettings = Attenuation;
+      if (Concurrency)
+        AudioComp->ConcurrencySet.Add(Concurrency);
       AudioComp->Activate(true);
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -132,31 +114,9 @@ bool HandleAmbientActions(
       return true;
     }
 
-    FVector Location = FVector::ZeroVector;
-    const TArray<TSharedPtr<FJsonValue>> *LocArr;
-    if (Payload->TryGetArrayField(TEXT("location"), LocArr) && LocArr &&
-        LocArr->Num() >= 3) {
-      Location = FVector((*LocArr)[0]->AsNumber(), (*LocArr)[1]->AsNumber(),
-                         (*LocArr)[2]->AsNumber());
-    } else {
-      const TSharedPtr<FJsonObject> *LocObj = nullptr; // {x, y, z} spelling (dogfood #226)
-      if (Payload->TryGetObjectField(TEXT("location"), LocObj) && LocObj) {
-        Location = FVector((*LocObj)->GetNumberField(TEXT("x")), (*LocObj)->GetNumberField(TEXT("y")), (*LocObj)->GetNumberField(TEXT("z")));
-      }
-    }
-
-    FRotator Rotation = FRotator::ZeroRotator;
-    const TArray<TSharedPtr<FJsonValue>> *RotArr;
-    if (Payload->TryGetArrayField(TEXT("rotation"), RotArr) && RotArr &&
-        RotArr->Num() >= 3) {
-      Rotation = FRotator((*RotArr)[0]->AsNumber(), (*RotArr)[1]->AsNumber(),
-                          (*RotArr)[2]->AsNumber());
-    }
-
-    double Volume = 1.0;
-    Payload->TryGetNumberField(TEXT("volume"), Volume);
-    double Pitch = 1.0;
-    Payload->TryGetNumberField(TEXT("pitch"), Pitch);
+    // Either vector spelling; rotation used to be read as an array only.
+    const FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
+    const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
 
     if (!GEditor)
     {
@@ -182,8 +142,7 @@ bool HandleAmbientActions(
     UAudioComponent *AudioComp = CreateAudioComponentAtEditorLocation(World, Sound, Location, Rotation, SpawnedName);
 
     if (AudioComp) {
-      AudioComp->SetVolumeMultiplier((float)Volume);
-      AudioComp->SetPitchMultiplier((float)Pitch);
+      ApplyAudioComponentOptions(AudioComp, Payload);
       AudioComp->Activate(true);
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());

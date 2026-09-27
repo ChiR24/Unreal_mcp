@@ -33,7 +33,14 @@ bool HandleSpatialActions(
     USoundBase* Sound = nullptr;
     bool bAttenuationCreated = false;
 
-    if (!SoundPath.IsEmpty()) {
+    // Without soundPath this configured a transient attenuation nothing used and reported success.
+    if (SoundPath.IsEmpty()) {
+      Self->SendAutomationError(RequestingSocket, RequestId,
+                          TEXT("soundPath is required: the sound (or SoundAttenuation asset) whose occlusion to set"),
+                          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    {
       // Validate path for security
       FString ValidatedPath = SanitizeProjectRelativePath(SoundPath);
       if (ValidatedPath.IsEmpty()) {
@@ -80,10 +87,6 @@ bool HandleSpatialActions(
           bAttenuationCreated = true;
         }
       }
-    } else {
-      // Create a new attenuation settings for occlusion configuration
-      AttenuationSettings = NewObject<USoundAttenuation>(GetTransientPackage(),
-                                                          FName(TEXT("TempOcclusionSettings")));
     }
 
     if (AttenuationSettings) {
@@ -99,7 +102,7 @@ bool HandleSpatialActions(
       AttenuationSettings->Attenuation.OcclusionInterpolationTime = (float)OcclusionInterpolationTime;
 
       AttenuationSettings->MarkPackageDirty();
-	if (bSave && !SoundPath.IsEmpty()) {
+	if (bSave) {
 		if (!McpSafeAssetSave(AttenuationSettings)) {
 			Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to save attenuation settings"), TEXT("SAVE_FAILED"));
 			return true;
@@ -116,13 +119,11 @@ bool HandleSpatialActions(
       Resp->SetNumberField(TEXT("occlusionVolumeScale"), OcclusionVolumeScale);
       Resp->SetNumberField(TEXT("occlusionFilterScale"), OcclusionFilterScale);
       Resp->SetNumberField(TEXT("occlusionInterpolationTime"), OcclusionInterpolationTime);
-      if (!SoundPath.IsEmpty()) {
-        Resp->SetStringField(TEXT("soundPath"), Sound ? Sound->GetPathName() : SoundPath);
-        Resp->SetStringField(TEXT("attenuationPath"), AttenuationSettings->GetPathName());
-        Resp->SetBoolField(TEXT("attenuationCreated"), bAttenuationCreated);
-        Resp->SetBoolField(TEXT("assignedToSound"), Sound != nullptr);
-        McpHandlerUtils::AddVerification(Resp, AttenuationSettings);
-      }
+      Resp->SetStringField(TEXT("soundPath"), Sound ? Sound->GetPathName() : SoundPath);
+      Resp->SetStringField(TEXT("attenuationPath"), AttenuationSettings->GetPathName());
+      Resp->SetBoolField(TEXT("attenuationCreated"), bAttenuationCreated);
+      Resp->SetBoolField(TEXT("assignedToSound"), Sound != nullptr);
+      McpHandlerUtils::AddVerification(Resp, AttenuationSettings);
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Audio occlusion configured"), Resp);
     } else {

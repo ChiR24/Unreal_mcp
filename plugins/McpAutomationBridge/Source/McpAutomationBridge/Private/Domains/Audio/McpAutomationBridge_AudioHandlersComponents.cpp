@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
+#include "Misc/PackageName.h"
 
 namespace McpAudioHandlers
 {
@@ -106,7 +107,51 @@ UAudioComponent* CreateAudioComponentAtEditorLocation(UWorld* World, USoundBase*
   if (!ActorName.IsEmpty())
     Owner->SetActorLabel(ActorName);
 
-  return CreateRegisteredAudioComponent(Owner, Sound, FVector::ZeroVector, FRotator::ZeroRotator);
+  UAudioComponent* AudioComp = CreateRegisteredAudioComponent(Owner, Sound, FVector::ZeroVector, FRotator::ZeroRotator);
+  // A bare AActor has no root when it spawns, so the spawn transform was dropped and the
+  // sound sat at the origin; the root exists now, so place the actor.
+  Owner->SetActorLocationAndRotation(Location, Rotation);
+  return AudioComp;
+}
+
+void ApplyAudioComponentOptions(UAudioComponent* AudioComp, const TSharedPtr<FJsonObject>& Payload)
+{
+  // Honour the requested componentName so later calls can address it (dogfood #112).
+  FString RequestedName;
+  if (Payload->TryGetStringField(TEXT("componentName"), RequestedName) && !RequestedName.IsEmpty() &&
+      !FindObject<UObject>(AudioComp->GetOuter(), *RequestedName)) {
+    AudioComp->Rename(*RequestedName, nullptr, REN_DontCreateRedirectors | REN_NonTransactional);
+  }
+  double Volume = 1.0;
+  if (Payload->TryGetNumberField(TEXT("volume"), Volume))
+    AudioComp->SetVolumeMultiplier(static_cast<float>(Volume));
+  double Pitch = 1.0;
+  if (Payload->TryGetNumberField(TEXT("pitch"), Pitch))
+    AudioComp->SetPitchMultiplier(static_cast<float>(Pitch));
+}
+
+FString AudioObjectPath(const FString& Path)
+{
+  return Path.Contains(TEXT(".")) ? Path : Path + TEXT(".") + FPackageName::GetShortName(Path);
+}
+
+bool LoadOptionalAudioSettings(const TSharedPtr<FJsonObject>& Payload, USoundAttenuation*& OutAttenuation, USoundConcurrency*& OutConcurrency, FString& OutError)
+{
+  const FString AttenPath = GetJsonStringField(Payload, TEXT("attenuationPath"));
+  const FString ConcPath = GetJsonStringField(Payload, TEXT("concurrencyPath"));
+  OutAttenuation = AttenPath.IsEmpty() ? nullptr : LoadObject<USoundAttenuation>(nullptr, *AudioObjectPath(AttenPath), nullptr, LOAD_NoWarn);
+  OutConcurrency = ConcPath.IsEmpty() ? nullptr : LoadObject<USoundConcurrency>(nullptr, *AudioObjectPath(ConcPath), nullptr, LOAD_NoWarn);
+  if (!AttenPath.IsEmpty() && !OutAttenuation)
+  {
+    OutError = FString::Printf(TEXT("SoundAttenuation not found: %s"), *AttenPath);
+    return false;
+  }
+  if (!ConcPath.IsEmpty() && !OutConcurrency)
+  {
+    OutError = FString::Printf(TEXT("SoundConcurrency not found: %s"), *ConcPath);
+    return false;
+  }
+  return true;
 }
 
 }

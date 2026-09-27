@@ -59,7 +59,7 @@ TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const 
 		if ((*EQObj)->HasField(TEXT("gain3"))) { Mix->EQSettings.Gain3 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("gain3"))); }
 		if ((*EQObj)->HasField(TEXT("bandwidth3"))) { Mix->EQSettings.Bandwidth3 = static_cast<float>(GetJsonNumberField((*EQObj), TEXT("bandwidth3"))); }
 	}
-	else
+	// The flat band fields apply on top of eqSettings rather than being dropped when both are sent.
 	{
 		if (Params->HasField(TEXT("lowFrequency"))) { Mix->EQSettings.FrequencyCenter0 = static_cast<float>(GetJsonNumberField(Params, TEXT("lowFrequency"), 600.0)); }
 		if (Params->HasField(TEXT("lowGain"))) { Mix->EQSettings.Gain0 = static_cast<float>(GetJsonNumberField(Params, TEXT("lowGain"), 1.0)); }

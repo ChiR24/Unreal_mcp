@@ -15,6 +15,13 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
 		}
+		// Loaded before any node exists: a wrong path used to leave an empty node and report success.
+		const FString WavePath = GetJsonStringField(Params, TEXT("wavePath"));
+		const FString AttenPath = GetJsonStringField(Params, TEXT("attenuationPath"));
+		USoundWave* Wave = WavePath.IsEmpty() ? nullptr : LoadSoundWaveFromPath(WavePath);
+		USoundAttenuation* AttenAsset = AttenPath.IsEmpty() ? nullptr : LoadSoundAttenuationFromPath(AttenPath);
+		if (!WavePath.IsEmpty() && !Wave) { return McpHandlerUtils::BuildErrorResponse(TEXT("WAVE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundWave: %s"), *WavePath)); }
+		if (!AttenPath.IsEmpty() && !AttenAsset) { return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AttenPath)); }
 		if (!Cue->SoundCueGraph)
 		{
 			Cue->CreateGraph();
@@ -25,15 +32,7 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		if (NodeTypeLower == TEXT("wave_player") || NodeTypeLower == TEXT("waveplayer"))
 		{
 			USoundNodeWavePlayer* Player = Cue->ConstructSoundNode<USoundNodeWavePlayer>();
-			FString WavePath = GetJsonStringField(Params, TEXT("wavePath"), TEXT(""));
-			if (!WavePath.IsEmpty())
-			{
-				USoundWave* Wave = LoadSoundWaveFromPath(WavePath);
-				if (Wave)
-				{
-					Player->SetSoundWave(Wave);
-				}
-			}
+			if (Wave) { Player->SetSoundWave(Wave); }
 			NewNode = Player;
 		}
 		else if (NodeTypeLower == TEXT("mixer")) { NewNode = Cue->ConstructSoundNode<USoundNodeMixer>(); }
@@ -55,15 +54,7 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 		else if (NodeTypeLower == TEXT("attenuation"))
 		{
 			USoundNodeAttenuation* Atten = Cue->ConstructSoundNode<USoundNodeAttenuation>();
-			FString AttenPath = GetJsonStringField(Params, TEXT("attenuationPath"), TEXT(""));
-			if (!AttenPath.IsEmpty())
-			{
-				USoundAttenuation* AttenAsset = LoadSoundAttenuationFromPath(AttenPath);
-				if (AttenAsset)
-				{
-					Atten->AttenuationSettings = AttenAsset;
-				}
-			}
+			if (AttenAsset) { Atten->AttenuationSettings = AttenAsset; }
 			NewNode = Atten;
 		}
 		else if (NodeTypeLower == TEXT("concatenator")) { NewNode = Cue->ConstructSoundNode<USoundNodeConcatenator>(); }
@@ -195,18 +186,13 @@ TSharedPtr<FJsonObject> HandleSoundCueNodeActions(const FString& SubAction, cons
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CUE_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundCue: %s"), *AssetPath));
 		}
 
-		if (!AttenuationPath.IsEmpty())
+		// Omitted clears the settings; a path that does not load is refused rather than ignored with success.
+		USoundAttenuation* Atten = AttenuationPath.IsEmpty() ? nullptr : LoadSoundAttenuationFromPath(AttenuationPath);
+		if (!AttenuationPath.IsEmpty() && !Atten)
 		{
-			USoundAttenuation* Atten = LoadSoundAttenuationFromPath(AttenuationPath);
-			if (Atten)
-			{
-				Cue->AttenuationSettings = Atten;
-			}
+			return McpHandlerUtils::BuildErrorResponse(TEXT("ATTENUATION_NOT_FOUND"), FString::Printf(TEXT("Could not load SoundAttenuation: %s"), *AttenuationPath));
 		}
-		else
-		{
-			Cue->AttenuationSettings = nullptr;
-		}
+		Cue->AttenuationSettings = Atten;
 		SaveAudioAsset(Cue, bSave);
 		Response->SetStringField(TEXT("attenuationPath"), Cue->AttenuationSettings ? Cue->AttenuationSettings->GetPathName() : TEXT(""));
 		McpHandlerUtils::AddVerification(Response, Cue);
