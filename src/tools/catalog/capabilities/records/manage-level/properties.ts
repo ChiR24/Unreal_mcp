@@ -25,7 +25,6 @@ export const P = {
   assetPath: str('Alias of levelPath resolved by the manage_level argument normalizer.'),
   path: str('Alias of levelPath resolved by the manage_level argument normalizer.'),
   targetPath: str('Alias of destinationPath resolved by the manage_level argument normalizer.'),
-  template: str('Level template path accepted for compatibility; create_level dispatch does not apply it.'),
   parentLevel: str('Parent level path for the sub-level.'),
   parentPath: str('Parent directory path for the sub-level.'),
   streamingMethod: str('Streaming method: Blueprint or AlwaysLoaded.'),

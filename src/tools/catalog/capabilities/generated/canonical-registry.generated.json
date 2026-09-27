@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d04789867f8c3912",
+  "catalogRevision": "66d0709cb84d6fca",
   "recordCount": 378,
   "records": [
     {
@@ -57566,11 +57566,11 @@
             },
             "levelPath": {
               "type": "string",
-              "description": "Level asset path (e.g. /Game/Maps/Demo)."
+              "description": "Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps."
             },
             "savePath": {
               "type": "string",
-              "description": "Path to save the level asset."
+              "description": "Alias of levelPath."
             },
             "useWorldPartition": {
               "type": "boolean",
@@ -57579,10 +57579,6 @@
             "saveDirtyPackages": {
               "type": "boolean",
               "description": "Save dirty packages before the operation."
-            },
-            "template": {
-              "type": "string",
-              "description": "Level template path accepted for compatibility; create_level dispatch does not apply it."
             }
           },
           "required": [
@@ -57655,8 +57651,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "417b010b110c4c9f85ad14f41da3679d3a8980524aa6628706d9bc168234d20a",
-        "content": "77d7a0a11d8ce06c56b59d5e18bfedd36fbc9012a21149f34f2653f7bae19005"
+        "schema": "077a4ed403469de80a98c20bf5526551cdf46894032c200a04b865f1c5a88b66",
+        "content": "2a7596355045eae6e86b3a0942ee9db014f3334833f60d59f1df0aad4a18db9b"
       }
     },
     {

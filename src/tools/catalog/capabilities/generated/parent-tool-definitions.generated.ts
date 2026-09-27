@@ -13627,7 +13627,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "levelPath": {
           "type": "string",
-          "description": "Level asset path (e.g. /Game/Maps/Demo)."
+          "description": "Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps."
         },
         "levelPaths": {
           "type": "array",
@@ -13705,7 +13705,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "savePath": {
           "type": "string",
-          "description": "Path to save the level asset."
+          "description": "Alias of levelPath."
         },
         "shouldBeLoaded": {
           "type": "boolean",
@@ -13743,10 +13743,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetPath": {
           "type": "string",
           "description": "Alias of destinationPath resolved by the manage_level argument normalizer."
-        },
-        "template": {
-          "type": "string",
-          "description": "Level template path accepted for compatibility; create_level dispatch does not apply it."
         },
         "timeDilation": {
           "type": "number",

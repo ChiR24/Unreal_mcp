@@ -27,6 +27,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Text justification** — `McpApplyWidgetStyleConvenience` applies `justification` through `UTextLayoutWidget::SetJustification` and refuses a widget that lays out no text or a value other than left, center or right.
 - **PIE save reason** — `HandleObjectSetProperty` checks `PKG_PlayInEditor` before `ContainsMap` (a PIE package holds a map too), and the actor shortcut `SendActorWrite` reports the running-game reason when the actor's world `IsPlayInEditor`.
 - **Receipt digest fractions** — `McpNativeReceiptEnrichment` renders the published payload with `bAllowFractions`, as the idempotency fingerprint already did.
+- **create_level paths** — `HandleCreateLevel` reads `levelPath` or `savePath` through `McpGetFirstStringField` and treats a folder that ends in `levelName` as the full path.
 - **`set_transform` `offset`** — `HandleControlActorSetTransform` adds `offset` to the actor's current location (refusing it together with `location`); the `actors` path forwards each item's `offset` through the same handler.
 - **Unknown-action guidance** — `GatewayGuideUnknownAction` (`McpNativeGatewayGuidance.cpp`) builds the suggestions, `nextCall` and message hint for `UNKNOWN_ACTION` on describe and execute: the one other tool that owns the action (`FMcpCapabilityStore::GetParentsWithAction`) first, a search on the action's words when no suggestion shares its verb within one edit, else the closest action.
 

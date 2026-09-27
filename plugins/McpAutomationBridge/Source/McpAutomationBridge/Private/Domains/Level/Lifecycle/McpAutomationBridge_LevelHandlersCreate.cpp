@@ -2,6 +2,7 @@
 
 #include "Editor.h"
 #include "Engine/World.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 #include "Safety/McpSafeOperationsMapLoad.h"
 
@@ -35,9 +36,9 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
       }
     }
 
-    FString LevelPath;
-    if (Payload.IsValid())
-      Payload->TryGetStringField(TEXT("levelPath"), LevelPath);
+    // savePath is the published alias: create_level declared it but read only
+    // levelPath, so a savePath call quietly landed in /Game/Maps.
+    const FString LevelPath = McpGetFirstStringField(Payload, {TEXT("levelPath"), TEXT("savePath")});
 
     // Parse useWorldPartition - default to false for faster level creation
     // World Partition levels take 20+ seconds to unload in UE 5.7
@@ -64,7 +65,11 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
     // If only levelPath is provided, it's treated as a full path (backwards compatibility)
     FString SavePath;
 
-    if (!SanitizedLevelPath.IsEmpty() && !LevelName.IsEmpty()) {
+    if (!SanitizedLevelPath.IsEmpty() && !LevelName.IsEmpty() &&
+        FPaths::GetBaseFilename(SanitizedLevelPath).Equals(LevelName, ESearchCase::IgnoreCase)) {
+      // The folder already ends in the level name: it is the full path.
+      SavePath = SanitizedLevelPath;
+    } else if (!SanitizedLevelPath.IsEmpty() && !LevelName.IsEmpty()) {
       // Both provided: levelPath is parent directory, levelName is the level name
       // Combine them: /Game/MCPTest + TestLevel = /Game/MCPTest/TestLevel
       SavePath = SanitizedLevelPath;

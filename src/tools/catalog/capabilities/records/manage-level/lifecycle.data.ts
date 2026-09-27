@@ -59,9 +59,12 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A brand-new level must be created and opened.'],
     whenNotToUse: ['An existing level should be loaded instead.'],
     inputProps: {
-      levelName: P.levelName, levelPath: P.levelPath, savePath: P.savePath,
+      // The handler reads levelPath (or its alias savePath) as the folder for
+      // levelName; it never applied a template, so none is declared.
+      levelName: P.levelName,
+      levelPath: { ...P.levelPath, description: 'Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps.' },
+      savePath: { ...P.savePath, description: 'Alias of levelPath.' },
       useWorldPartition: P.useWorldPartition, saveDirtyPackages: P.saveDirtyPackages,
-      template: P.template,
     },
     required: ['levelName'],
     effect: 'write', costLatency: 'interactive', costResources: 'medium',

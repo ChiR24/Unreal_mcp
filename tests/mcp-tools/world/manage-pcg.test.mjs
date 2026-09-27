@@ -446,7 +446,6 @@ const realWorldCoverageCases = [
       action: 'create_level',
       levelName: REAL_LEVEL_NAME,
       levelPath: REAL_TEST_FOLDER,
-      template: '/Engine/Maps/Templates/OpenWorld',
       useWorldPartition: false,
       saveDirtyPackages: true
     },
