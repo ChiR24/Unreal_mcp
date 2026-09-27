@@ -1,4 +1,4 @@
-// Todo 9 (BB-005) lane 2 - diagnostics hook sequence automation tests.
+// Todo 9 lane 2 - diagnostics hook sequence automation tests.
 //
 // These run IN the editor process against a UNIQUE temp root injected through
 // SetRootOverride, so a real user's <Project>/Saved/MCP/diagnostics tree is
@@ -22,9 +22,9 @@
 //     source-contract + limitation-model gated). In-window first-close-wins
 //     live proof is Todo 39 double-DELETE.
 
-#include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
+#include "Tests/Diagnostics/McpDiagnosticsTestFixture.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Containers/StringConv.h"
 #include "HAL/PlatformFileManager.h"
 #include "HAL/PlatformProcess.h"
@@ -32,38 +32,6 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Guid.h"
 #include "Misc/Paths.h"
-
-namespace
-{
-FString MakeTestRoot()
-{
-	const FString Unique = FString::Printf(
-		TEXT("McpDiagnosticsHookTests_%d_%s"),
-		FPlatformProcess::GetCurrentProcessId(),
-		*FGuid::NewGuid().ToString(EGuidFormats::Digits));
-	const FString Root = FPaths::Combine(FPlatformProcess::UserTempDir(), Unique);
-	IFileManager::Get().MakeDirectory(*Root, true);
-	return Root;
-}
-
-void TearDownStore(FMcpDiagnosticsSnapshot& Store, const FString& Root)
-{
-	Store.Reset();
-	IFileManager::Get().DeleteDirectory(*Root, false, true);
-}
-
-FString ReadFileText(const FString& Path)
-{
-	FString Content;
-	FFileHelper::LoadFileToString(Content, *Path);
-	return Content;
-}
-
-bool FileContains(const FString& Content, const TCHAR* Needle)
-{
-	return Content.Contains(Needle);
-}
-} // namespace
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FMcpDiagnosticsHookSequenceTerminalInPreviousTest,
@@ -73,12 +41,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMcpDiagnosticsHookSequenceTerminalInPreviousTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
-	FMcpDiagnosticsSnapshot& Store = FMcpDiagnosticsSnapshot::Get();
-	const FString Root = MakeTestRoot();
-	Store.Reset();
-	Store.SetRootOverride(Root);
-	double FakeNow = 1000.0;
-	Store.SetClock([&FakeNow]() { return FakeNow; });
+	FMcpDiagnosticsTestStore Fixture(1000.0);
+	FMcpDiagnosticsSnapshot& Store = Fixture.Store;
+	const FString& Root = Fixture.Root;
 
 	// The editor "crashes" right after the last pre-dispatch refresh: admission
 	// + pre-dispatch + terminal were persisted, then the session is rotated on
@@ -86,7 +51,7 @@ bool FMcpDiagnosticsHookSequenceTerminalInPreviousTest::RunTest(const FString& P
 	Store.RecordAdmission(
 		TEXT("req-hook-1"), TEXT("corr-hook-1"),
 		TEXT("manage_asset.import_asset"), TEXT("WebSocket"), 2);
-	FakeNow += 1.0;
+	Fixture.Now += 1.0;
 	Store.RecordPreDispatch(TEXT("req-hook-1"), 1);
 	Store.RecordTerminal(TEXT("req-hook-1"), TEXT("success"));
 	TestTrue(TEXT("terminal record persisted before rotation"), Store.PersistCurrent());
@@ -94,19 +59,18 @@ bool FMcpDiagnosticsHookSequenceTerminalInPreviousTest::RunTest(const FString& P
 	Store.RotateOnStartup();
 
 	const FString RootDir = Root + TEXT("/");
-	const FString Previous = ReadFileText(RootDir + TEXT("previous-session.json"));
+	const FString Previous = McpTestReadFile(RootDir + TEXT("previous-session.json"));
 	TestTrue(TEXT("previous exists after rotation"),
 		FPaths::FileExists(RootDir + TEXT("previous-session.json")));
 	TestTrue(TEXT("previous keeps the terminal request id"),
-		FileContains(Previous, TEXT("\"requestId\":\"req-hook-1\"")));
+		Previous.Contains(TEXT("\"requestId\":\"req-hook-1\"")));
 	TestTrue(TEXT("previous keeps the terminal class"),
-		FileContains(Previous, TEXT("\"terminalClass\":\"success\"")));
+		Previous.Contains(TEXT("\"terminalClass\":\"success\"")));
 
-	const FString Current = ReadFileText(RootDir + TEXT("current-session.json"));
+	const FString Current = McpTestReadFile(RootDir + TEXT("current-session.json"));
 	TestFalse(TEXT("fresh current carries no stale terminal"),
-		FileContains(Current, TEXT("req-hook-1")));
+		Current.Contains(TEXT("req-hook-1")));
 
-	TearDownStore(Store, Root);
 	return true;
 }
 
@@ -118,12 +82,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMcpDiagnosticsHookSequenceRefusalCoercesTerminalTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
-	FMcpDiagnosticsSnapshot& Store = FMcpDiagnosticsSnapshot::Get();
-	const FString Root = MakeTestRoot();
-	Store.Reset();
-	Store.SetRootOverride(Root);
-	double FakeNow = 2000.0;
-	Store.SetClock([&FakeNow]() { return FakeNow; });
+	FMcpDiagnosticsTestStore Fixture(2000.0);
+	FMcpDiagnosticsSnapshot& Store = Fixture.Store;
+	const FString& Root = Fixture.Root;
 
 	// H3: a queue-full refusal records memory-only at the socket-thread call
 	// site; its disk write is COALESCED into the next game-thread persist.
@@ -133,13 +94,12 @@ bool FMcpDiagnosticsHookSequenceRefusalCoercesTerminalTest::RunTest(const FStrin
 	TestTrue(TEXT("coalesced refusal persisted on next game-thread persist"),
 		Store.PersistCurrent());
 
-	const FString Current = ReadFileText(Root + TEXT("/current-session.json"));
+	const FString Current = McpTestReadFile(Root + TEXT("/current-session.json"));
 	TestTrue(TEXT("refusals counter incremented"),
-		FileContains(Current, TEXT("\"refusals\":1")));
+		Current.Contains(TEXT("\"refusals\":1")));
 	TestTrue(TEXT("non-allowlist refusal coerces to unknown terminal"),
-		FileContains(Current, TEXT("\"terminalClass\":\"unknown\"")));
+		Current.Contains(TEXT("\"terminalClass\":\"unknown\"")));
 
-	TearDownStore(Store, Root);
 	return true;
 }
 
@@ -151,12 +111,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMcpDiagnosticsHookSequenceSessionBalanceWindowIndependentTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
-	FMcpDiagnosticsSnapshot& Store = FMcpDiagnosticsSnapshot::Get();
-	const FString Root = MakeTestRoot();
-	Store.Reset();
-	Store.SetRootOverride(Root);
-	double FakeNow = 3000.0;
-	Store.SetClock([&FakeNow]() { return FakeNow; });
+	FMcpDiagnosticsTestStore Fixture(3000.0);
+	FMcpDiagnosticsSnapshot& Store = Fixture.Store;
+	const FString& Root = Fixture.Root;
 
 	// H2/H6 summaries: handshake success is overwritten by a later disconnect
 	// summary (last-value, not a counter). H7 created once, H8 closed THREE
@@ -165,7 +122,7 @@ bool FMcpDiagnosticsHookSequenceSessionBalanceWindowIndependentTest::RunTest(con
 	// NOT dedupe; dedupe lives in the H8 funnel's retained-128-close window.
 	// On-disk JSON carries the verbatim counters "closed":3 and "active":0.
 	Store.RecordHandshake(true);
-	FakeNow += 1.0;
+	Fixture.Now += 1.0;
 	Store.RecordDisconnect(TEXT("closed"));
 	Store.RecordSessionCreated(TEXT("raw-native-session-credential-123"));
 	Store.RecordSessionClosed();
@@ -173,24 +130,23 @@ bool FMcpDiagnosticsHookSequenceSessionBalanceWindowIndependentTest::RunTest(con
 	Store.RecordSessionClosed();
 	TestTrue(TEXT("summaries persisted"), Store.PersistCurrent());
 
-	const FString Current = ReadFileText(Root + TEXT("/current-session.json"));
+	const FString Current = McpTestReadFile(Root + TEXT("/current-session.json"));
 	TestTrue(TEXT("handshake summary is serialized"),
-		FileContains(Current, TEXT("lastHandshake")));
+		Current.Contains(TEXT("lastHandshake")));
 	TestTrue(TEXT("disconnect summary is serialized"),
-		FileContains(Current, TEXT("lastDisconnect")));
+		Current.Contains(TEXT("lastDisconnect")));
 	TestTrue(TEXT("disconnect reason stays in the bounded allowlist"),
-		FileContains(Current, TEXT("\"reason\":\"closed\"")));
+		Current.Contains(TEXT("\"reason\":\"closed\"")));
 	TestTrue(TEXT("created counter is verbatim"),
-		FileContains(Current, TEXT("\"created\":1")));
+		Current.Contains(TEXT("\"created\":1")));
 	TestTrue(TEXT("closed may exceed created at the store level"),
-		FileContains(Current, TEXT("\"closed\":3")));
+		Current.Contains(TEXT("\"closed\":3")));
 	TestTrue(TEXT("SessionsActive clamps to zero, never negative"),
-		FileContains(Current, TEXT("\"active\":0")));
+		Current.Contains(TEXT("\"active\":0")));
 	TestFalse(TEXT("a raw session credential never reaches disk"),
-		FileContains(Current, TEXT("raw-native-session-credential-123")));
+		Current.Contains(TEXT("raw-native-session-credential-123")));
 
-	TearDownStore(Store, Root);
 	return true;
 }
 
-#endif // WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#endif // WITH_DEV_AUTOMATION_TESTS

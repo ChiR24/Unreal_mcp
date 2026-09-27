@@ -1,7 +1,5 @@
 #define MCP_SUBSYSTEM_ASSET_TOOLING_DECLARATIONS \
 MCP_DECLARE_ACTION_HANDLER(HandleAssetAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleGetAssetReferences); \
-MCP_DECLARE_ACTION_HANDLER(HandleGetAssetDependencies); \
 MCP_DECLARE_ACTION_HANDLER(HandleSourceControlCheckout); \
 MCP_DECLARE_ACTION_HANDLER(HandleSourceControlSubmit); \
 MCP_DECLARE_ACTION_HANDLER(HandleGetSourceControlState); \
@@ -12,6 +10,4 @@ MCP_DECLARE_ACTION_HANDLER(HandleBulkRenameAssets); \
 MCP_DECLARE_ACTION_HANDLER(HandleBulkDeleteAssets); \
 MCP_DECLARE_ACTION_HANDLER(HandleGenerateThumbnail); \
 MCP_DECLARE_ACTION_HANDLER(HandleNaniteRebuildMesh); \
-MCP_DECLARE_ACTION_HANDLER(HandleFindByTag); \
-MCP_DECLARE_ACTION_HANDLER(HandleSearchAssets); \
 MCP_DECLARE_ACTION_HANDLER(HandleStructAction);

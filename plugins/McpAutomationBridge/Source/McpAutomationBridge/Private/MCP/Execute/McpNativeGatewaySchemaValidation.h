@@ -37,9 +37,6 @@ struct FMcpSchemaViolationDetail
 /** Stable gateway error code for a violation reason, shared with TypeScript. */
 const TCHAR* McpSchemaViolationCode(EMcpSchemaViolation Reason);
 
-/** Semantic error kind for a violation reason ("validation" or "range"). */
-const TCHAR* McpSchemaViolationKind(EMcpSchemaViolation Reason);
-
 /** True when the value satisfies the schema. OutViolation is set otherwise. */
 bool McpValidateAgainstCanonicalSchema(
 	const TSharedPtr<FJsonValue>& Value, const TSharedPtr<FJsonObject>& Schema,

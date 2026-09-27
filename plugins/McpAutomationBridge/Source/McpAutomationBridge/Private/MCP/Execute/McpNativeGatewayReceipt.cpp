@@ -54,31 +54,31 @@ FMcpSemanticError McpRangeError(const FString& Field, const FString& Message)
 	return Error;
 }
 
-FMcpSemanticError McpExecutionError(
-	const FString& GatewayCode, const FString& Message, bool bRetryable)
+// The execution/capability/dispatch kinds always say whether a retry can help.
+static FMcpSemanticError McpRetryableError(
+	const TCHAR* Kind, const FString& Code, const FString& GatewayCode, const FString& Message, bool bRetryable)
 {
-	FMcpSemanticError Error = McpGatewayMakeSemanticError(TEXT("execution"), TEXT("EXECUTION_ERROR"), GatewayCode, Message);
+	FMcpSemanticError Error = McpGatewayMakeSemanticError(Kind, *Code, GatewayCode, Message);
 	Error.bHasRetryable = true;
 	Error.bRetryable = bRetryable;
 	return Error;
+}
+
+FMcpSemanticError McpExecutionError(const FString& GatewayCode, const FString& Message, bool bRetryable)
+{
+	return McpRetryableError(TEXT("execution"), TEXT("EXECUTION_ERROR"), GatewayCode, Message, bRetryable);
 }
 
 FMcpSemanticError McpCapabilityError(
 	const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable)
 {
-	FMcpSemanticError Error = McpGatewayMakeSemanticError(TEXT("capability"), *Code, GatewayCode, Message);
-	Error.bHasRetryable = true;
-	Error.bRetryable = bRetryable;
-	return Error;
+	return McpRetryableError(TEXT("capability"), Code, GatewayCode, Message, bRetryable);
 }
 
 FMcpSemanticError McpDispatchError(
 	const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable)
 {
-	FMcpSemanticError Error = McpGatewayMakeSemanticError(TEXT("dispatch"), *Code, GatewayCode, Message);
-	Error.bHasRetryable = true;
-	Error.bRetryable = bRetryable;
-	return Error;
+	return McpRetryableError(TEXT("dispatch"), Code, GatewayCode, Message, bRetryable);
 }
 
 FMcpSemanticError McpOutputError(const FString& Code, const FString& Message, const FString& Pointer)

@@ -27,12 +27,6 @@ const TCHAR* McpSchemaViolationCode(EMcpSchemaViolation Reason)
 	default: return TEXT("VALIDATION_ERROR");
 	}
 }
-
-const TCHAR* McpSchemaViolationKind(EMcpSchemaViolation Reason)
-{
-	return Reason == EMcpSchemaViolation::Range ? TEXT("range") : TEXT("validation");
-}
-
 bool McpSchemaDeclaresProperty(const TSharedPtr<FJsonObject>& Schema, const TCHAR* PropertyName)
 {
 	const TSharedPtr<FJsonObject>* Properties = nullptr;
@@ -145,7 +139,7 @@ bool ValidateObjectBody(
 	const TSharedPtr<FJsonObject>& Object, const TSharedPtr<FJsonObject>& Schema,
 	const FString& Pointer, FMcpSchemaViolationDetail& OutViolation)
 {
-	// A reflection boundary is an intentionally open object (Task 2): its interior
+	// A reflection boundary is an intentionally open object: its interior
 	// is arbitrary Unreal property data, so interior keys are not whitelisted.
 	bool bReflectionBoundary = false;
 	if (Schema->TryGetBoolField(TEXT("x-unreal-reflection-boundary"), bReflectionBoundary) &&

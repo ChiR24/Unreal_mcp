@@ -1,20 +1,15 @@
-#if WITH_EDITOR
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
-#endif
 
 #include "McpAutomationBridgeSubsystem.h"
 
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "Kismet2/KismetEditorUtilities.h"
-#endif
 
 #if MCP_HAS_CONTROLRIG_FACTORY
 #include "Animation/Skeleton.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "EditorAssetLibrary.h"
 #include "Engine/SkeletalMesh.h"
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
@@ -33,7 +28,6 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
     const TArray<FString>& Commands,
     FString& OutErrorMessage)
 {
-#if WITH_EDITOR
     check(IsInGameThread());
 
     if (!GEditor)
@@ -91,10 +85,6 @@ bool UMcpAutomationBridgeSubsystem::ExecuteEditorCommands(
     }
 
     return true;
-#else
-    OutErrorMessage = TEXT("Editor commands only available in editor builds");
-    return false;
-#endif
 }
 
 #if MCP_HAS_CONTROLRIG_FACTORY
@@ -104,7 +94,6 @@ UBlueprint* UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
     USkeleton* TargetSkeleton,
     FString& OutError)
 {
-#if WITH_EDITOR
     if (AssetName.IsEmpty())
     {
         OutError = TEXT("Asset name cannot be empty");
@@ -133,53 +122,26 @@ UBlueprint* UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
 
     const FString FullPackageName = NormalizedPath / AssetName;
     const FString FullObjectPath = FullPackageName + TEXT(".") + AssetName;
-    if (UEditorAssetLibrary::DoesAssetExist(FullObjectPath))
+    // An object already at the path, in memory or on disk: reuse a Control Rig, refuse anything else.
+    UObject* Existing = FindObject<UObject>(nullptr, *FullObjectPath);
+    if (!Existing && FPackageName::DoesPackageExist(FullPackageName))
     {
-        UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullObjectPath);
-        if (ExistingAsset)
-        {
-            if (ExistingAsset->IsA<UControlRigBlueprint>())
-            {
-                UE_LOG(
-                    LogMcpAutomationBridgeSubsystem,
-                    Log,
-                    TEXT("Control Rig Blueprint already exists, reusing: %s"),
-                    *FullObjectPath);
-                return Cast<UBlueprint>(ExistingAsset);
-            }
-
-            OutError = FString::Printf(
-                TEXT("Asset exists at path but is not a ControlRigBlueprint (is %s). "
-                     "Cannot create ControlRigBlueprint at this path."),
-                *ExistingAsset->GetClass()->GetName());
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *OutError);
-            return nullptr;
-        }
+        Existing = LoadObject<UObject>(nullptr, *FullObjectPath, nullptr, LOAD_NoWarn);
     }
-
-    UPackage* ExistingPackage = FindPackage(nullptr, *FullPackageName);
-    if (ExistingPackage)
+    if (Existing)
     {
-        UObject* ExistingObject = FindObject<UObject>(ExistingPackage, *AssetName);
-        if (ExistingObject)
+        if (Existing->IsA<UControlRigBlueprint>())
         {
-            if (ExistingObject->IsA<UControlRigBlueprint>())
-            {
-                UE_LOG(
-                    LogMcpAutomationBridgeSubsystem,
-                    Log,
-                    TEXT("Control Rig Blueprint already exists in memory, reusing: %s"),
-                    *FullObjectPath);
-                return Cast<UBlueprint>(ExistingObject);
-            }
-
-            OutError = FString::Printf(
-                TEXT("In-memory object exists at path but is not a ControlRigBlueprint (is %s). "
-                     "Cannot create ControlRigBlueprint at this path."),
-                *ExistingObject->GetClass()->GetName());
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *OutError);
-            return nullptr;
+            UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+                TEXT("Control Rig Blueprint already exists, reusing: %s"), *FullObjectPath);
+            return Cast<UBlueprint>(Existing);
         }
+        OutError = FString::Printf(
+            TEXT("Asset exists at path but is not a ControlRigBlueprint (is %s). "
+                 "Cannot create ControlRigBlueprint at this path."),
+            *Existing->GetClass()->GetName());
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *OutError);
+        return nullptr;
     }
 
     UPackage* Package = CreatePackage(*FullPackageName);
@@ -224,9 +186,5 @@ UBlueprint* UMcpAutomationBridgeSubsystem::CreateControlRigBlueprint(
         TEXT("Created Control Rig Blueprint: %s"),
         *FullPackageName);
     return NewBlueprint;
-#else
-    OutError = TEXT("Control Rig creation only available in editor builds");
-    return nullptr;
-#endif
 }
 #endif

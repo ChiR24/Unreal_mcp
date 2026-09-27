@@ -44,9 +44,9 @@ void AppendEscaped(const FString& Value, FString& Out)
 	Out.AppendChar(TEXT('"'));
 }
 
-bool AppendValue(const TSharedPtr<FJsonValue>& Value, FString& Out);
+bool AppendValue(const TSharedPtr<FJsonValue>& Value, FString& Out, bool bAllowFractions);
 
-bool AppendObject(const TSharedPtr<FJsonObject>& Object, FString& Out)
+bool AppendObject(const TSharedPtr<FJsonObject>& Object, FString& Out, bool bAllowFractions)
 {
 	if (!Object.IsValid())
 	{
@@ -73,13 +73,13 @@ bool AppendObject(const TSharedPtr<FJsonObject>& Object, FString& Out)
 		if (Index > 0) Out.AppendChar(TEXT(','));
 		AppendEscaped(Entries[Index].Key, Out);
 		Out.AppendChar(TEXT(':'));
-		if (!AppendValue(Entries[Index].Value, Out)) return false;
+		if (!AppendValue(Entries[Index].Value, Out, bAllowFractions)) return false;
 	}
 	Out.AppendChar(TEXT('}'));
 	return true;
 }
 
-bool AppendValue(const TSharedPtr<FJsonValue>& Value, FString& Out)
+bool AppendValue(const TSharedPtr<FJsonValue>& Value, FString& Out, bool bAllowFractions)
 {
 	if (!Value.IsValid() || Value->Type == EJson::Null)
 	{
@@ -97,7 +97,12 @@ bool AppendValue(const TSharedPtr<FJsonValue>& Value, FString& Out)
 	case EJson::Number:
 	{
 		const double Number = Value->AsNumber();
-		if (Number != FMath::TruncToDouble(Number)) return false;
+		if (Number != FMath::TruncToDouble(Number))
+		{
+			if (!bAllowFractions) return false;
+			Out.Append(FString::SanitizeFloat(Number));
+			return true;
+		}
 		Out.Append(FString::Printf(TEXT("%lld"), static_cast<int64>(Number)));
 		return true;
 	}
@@ -108,32 +113,21 @@ bool AppendValue(const TSharedPtr<FJsonValue>& Value, FString& Out)
 		for (int32 Index = 0; Index < Items.Num(); ++Index)
 		{
 			if (Index > 0) Out.AppendChar(TEXT(','));
-			if (!AppendValue(Items[Index], Out)) return false;
+			if (!AppendValue(Items[Index], Out, bAllowFractions)) return false;
 		}
 		Out.AppendChar(TEXT(']'));
 		return true;
 	}
 	case EJson::Object:
-		return AppendObject(Value->AsObject(), Out);
+		return AppendObject(Value->AsObject(), Out, bAllowFractions);
 	default:
 		return false;
 	}
 }
 }
 
-bool McpCanonicalJson(const TSharedPtr<FJsonValue>& Value, FString& OutJson)
+bool McpCanonicalJsonObject(const TSharedPtr<FJsonObject>& Object, FString& OutJson, bool bAllowFractions)
 {
 	OutJson.Reset();
-	return AppendValue(Value, OutJson);
-}
-
-bool McpCanonicalJsonObject(const TSharedPtr<FJsonObject>& Object, FString& OutJson)
-{
-	OutJson.Reset();
-	return AppendObject(Object, OutJson);
-}
-
-int32 McpCanonicalByteLength(const FString& CanonicalJson)
-{
-	return CanonicalJson.Len();
+	return AppendObject(Object, OutJson, bAllowFractions);
 }

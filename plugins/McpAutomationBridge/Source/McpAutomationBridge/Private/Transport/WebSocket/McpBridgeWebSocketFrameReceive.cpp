@@ -2,6 +2,8 @@
 
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
+#include "Misc/ByteSwap.h"
+
 #include "Transport/WebSocket/McpBridgeWebSocketPrivate.h"
 
 #include "HAL/Event.h"
@@ -15,7 +17,7 @@ using namespace McpBridgeWebSocket;
 
 void FMcpBridgeWebSocket::HandleTextPayload(const TArray<uint8> &Payload) {
   const FString Message = BytesToStringView(Payload);
-  DispatchOnGameThread([WeakThis = SelfWeakPtr, Message] {
+  DispatchOnGameThread([WeakThis = AsWeak(), Message] {
     if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
       Pinned->MessageDelegate.Broadcast(Pinned, Message);
     }
@@ -52,7 +54,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
     }
     uint16 ShortVal = 0;
     FMemory::Memcpy(&ShortVal, Extended, sizeof(uint16));
-    PayloadLength = FromNetwork16(ShortVal);
+    PayloadLength = NETWORK_ORDER16(ShortVal);
   } else if (PayloadLength == 127) {
     uint8 Extended[8];
     if (!ReceiveExact(Extended, sizeof(Extended))) {
@@ -61,7 +63,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
     }
     uint64 LongVal = 0;
     FMemory::Memcpy(&LongVal, Extended, sizeof(uint64));
-    PayloadLength = FromNetwork64(LongVal);
+    PayloadLength = NETWORK_ORDER64(LongVal);
   }
 
   if (PayloadLength > MaxWebSocketFramePayloadBytes) {
@@ -116,7 +118,7 @@ bool FMcpBridgeWebSocket::ReceiveFrame() {
       // (FMcpConnectionManager::HandleHeartbeat) also writes
       // LastHeartbeatTimestamp / bHeartbeatTrackingEnabled, which Tick() reads
       // on the game thread -- unsynchronized from here, ordinary from there.
-      DispatchOnGameThread([WeakThis = SelfWeakPtr] {
+      DispatchOnGameThread([WeakThis = AsWeak()] {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
           Pinned->HeartbeatDelegate.Broadcast(Pinned);
         }

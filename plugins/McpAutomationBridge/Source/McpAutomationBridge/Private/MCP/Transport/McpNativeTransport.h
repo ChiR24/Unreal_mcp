@@ -4,10 +4,6 @@
 #include "HAL/Runnable.h"
 #include "Dom/JsonValue.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
-#include "MCP/DynamicTools/McpSessionConfigureStore.h"
-#include "MCP/Primitives/McpSubscriptionStore.h"
-#include "MCP/Primitives/McpNotificationCoalescer.h"
-#include "MCP/Primitives/McpTaskMethods.h"
 #include "Async/Future.h"
 #include <atomic>
 #include "MCP/Transport/McpNativeTransportConnectionTypes.h"
@@ -68,10 +64,6 @@ public:
 	void SendSSEProgressUpdate(const FString& RequestId, float Percent,
 		const FString& Message);
 
-	/** Broadcast a JSON-RPC notification to persistent GET /mcp streams. */
-	int32 BroadcastNotification(const FString& Method,
-		const TSharedPtr<FJsonObject>& Params = nullptr);
-
 	bool SetLogEventSubscriptionForRequest(
 		const FString& RequestId, bool bSubscribed);
 
@@ -113,6 +105,10 @@ private:
 
 	// Low-level socket helpers
 	static bool SendAllBytes(FSocket* Socket, const uint8* Data, int32 Length);
+	/** One SSE `message` frame; the caller holds the socket's write mutex. */
+	static bool SendSSEFrame(FSocket* Socket, const FString& EventData);
+	/** Close, destroy and null a socket; the caller holds whatever guards it. */
+	static void CloseSocket(FSocket*& Socket);
 
 	// HTTP parsing and response helpers
 	bool ReadHttpRequest(FSocket* Socket, FParsedHttpRequest& OutRequest);
@@ -125,10 +121,6 @@ private:
 		const FString& CorsOrigin = FString());
 	// Send a response then tear down the client socket (close + destroy). Returns SendHttpResponse result so callers branch on send success.
 	bool SendAndClose(FSocket* ClientSocket, int32 StatusCode, const FString& ContentType, const FString& Body, const TMap<FString, FString>& ExtraHeaders = {}, const FString& CorsOrigin = FString());
-	// Send a prebuilt JSON-RPC body and tear down the client socket. Shared by
-	// the early-return error paths in HandleToolsCall so each stays a one-liner.
-	void SendBodyAndClose(FSocket* ClientSocket, const FString& Body,
-		int32 Status, const FString& CorsOrigin);
 	bool SendSSEHeaders(FSocket* Socket, const FString& SessionId,
 		const FString& CorsOrigin = FString());
 	static bool WriteSSEEvent(FSSEConnection& Conn, const FString& EventData);
@@ -152,9 +144,8 @@ private:
 		FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin,
 		const TSharedPtr<FJsonValue>& ProgressToken = nullptr);
 
-	// Gateway mode pre-dispatch: route 'unreal' or reject a direct canonical call.
-	// Returns true when it handled (or rejected) the call so the caller returns.
-	bool HandleGatewayModePreDispatch(
+	// Gateway mode pre-dispatch: route 'unreal' or answer a removed direct tool call.
+	void HandleGatewayModePreDispatch(
 		const FString& ToolName, const TSharedPtr<FJsonObject>& Arguments,
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 		const FString& SessionId, const FString& CorsOrigin,
@@ -222,22 +213,12 @@ private:
 	bool NegotiateInitializeProtocolVersion(
 		const TSharedPtr<FJsonObject>& Params, FString& OutNegotiated,
 		FString& OutError);
-	// Resolve the MCP-Protocol-Version header for a post-initialize request.
-	// Returns false when the header value is present but unsupported/invalid
-	// (caller responds HTTP 400). When absent, derives from the negotiated
-	// session version or McpDefaultProtocolVersion().
-	bool ResolveRequestProtocolVersion(
-		const FString& HeaderValue, const FString& SessionId,
-		FString& OutVersion, FString& OutError);
 	// Validate the protocol-version header for a POST/GET request; on failure
 	// send HTTP 400 and close the socket. Returns false when the request was
 	// rejected (caller must return). bJsonBody selects the 400 body format.
 	bool GuardProtocolVersionHeader(
 		FSocket* ClientSocket, const FParsedHttpRequest& Req,
 		const TSharedPtr<FJsonValue>& Id, bool bJsonBody);
-
-	void OnToolsListChanged();
-	void BroadcastToolsListChanged();
 
 	// Persistent notification stream helpers (GET /mcp)
 	void HandleGetMcp(FSocket* ClientSocket, const FString& SessionId,
@@ -260,32 +241,14 @@ private:
 		const FString& Method, const TSharedPtr<FJsonObject>& Params,
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 		const FString& SessionId, const FString& CorsOrigin);
-	// Lazily construct the coalescer + wire the subscription release hook once.
-	void InitializePrimitivesIfNeeded();
-	// The single per-session primitive cleanup seam: drains a session's
-	// subscriptions + coalescer pending. Invoked at every session-teardown moment.
-	void ReleaseSessionPrimitives(const FString& SessionId);
-	// URI-only resources/updated over the reused async notification writer.
-	void SendResourceUpdatedNotification(const FString& SessionId, const FString& Uri);
-	// Drain due coalesced notifications from the existing keepalive loop.
-	void FlushDuePrimitiveNotifications();
 
 	UMcpAutomationBridgeSubsystem* Subsystem;
 	FMcpDynamicToolManager ToolManager;
-	// Per-session MCP primitive state (Tasks 34/36). The coalescer holds
-	// references to the store + configure store, so those are declared first.
-	FMcpSubscriptionStore SubscriptionStore;
-	FMcpSessionConfigureStore SessionConfigureStore;
-	TUniquePtr<FMcpNotificationCoalescer> NotificationCoalescer;
-	// Task 44: owns the bounded per-session task store AND the tasks/* handlers,
-	// so routing costs the transport no method of its own.
-	FMcpTaskSurface TaskSurface;
-	mutable FCriticalSection PrimitiveStateMutex;
 	int32 ListenPort = 0;
 
 	// Server identity & instructions (loaded from server-info.json + settings)
 	FString ServerName = TEXT("unreal-mcp");
-	FString ServerVersion = TEXT("0.6.0-beta-b");
+	FString ServerVersion;
 	FString BaseInstructions;
 	FString UserInstructions;
 
@@ -311,7 +274,13 @@ private:
 
 	// Session state (multi-session, with activity tracking)
 	TMap<FString, double> ActiveSessions;  // SessionId → LastActivityTime
-	TMap<FString, FString> SessionProtocolVersions;  // SessionId → negotiated MCP-Protocol-Version
+	/** Drops every per-session map entry; true when the session was active. Caller holds SessionMutex. */
+	bool ForgetSessionLocked(const FString& SessionId)
+	{
+		SessionRateStates.Remove(SessionId);
+		SessionPrincipals.Remove(SessionId);
+		return ActiveSessions.Remove(SessionId) > 0;
+	}
 	// SessionId → bound principal. The presented token is never stored here.
 	TMap<FString, FMcpCapabilityPrincipal> SessionPrincipals;
 	struct FSessionRateState

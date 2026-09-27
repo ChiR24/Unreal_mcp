@@ -14,10 +14,6 @@ MCP_DECLARE_ACTION_HANDLER(HandleManageVolumesAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleManageNavigationAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleManageSplinesAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleManagePCGAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleMiscAction); \
-MCP_DECLARE_ACTION_HANDLER(HandlePipelineAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleTestAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleLogAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleDebugAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleAssetQueryAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleInsightsAction);

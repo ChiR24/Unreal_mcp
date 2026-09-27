@@ -45,7 +45,6 @@ bool FMcpNativeTransport::RehydrateColdBootSessionLocked(
 	FSessionRateState Adopted;
 	Adopted.ClientRateKey = TEXT("rehydrated:") + SessionId;
 	SessionRateStates.Add(SessionId, Adopted);
-	SessionProtocolVersions.Add(SessionId, McpDefaultProtocolVersion());
 	// Bind the principal from the token this request presented, exactly as
 	// initialize does. Without it GetSessionPrincipal returns the empty
 	// principal, whose scope set is empty, and every write capability is then
@@ -183,10 +182,7 @@ FString FMcpNativeTransport::HandleInitialize(
 						"active or streaming. Close a session with HTTP DELETE "
 						"and its Mcp-Session-Id, or retry shortly."));
 			}
-			ActiveSessions.Remove(EvictedSessionId);
-			SessionRateStates.Remove(EvictedSessionId);
-			SessionProtocolVersions.Remove(EvictedSessionId);
-			SessionPrincipals.Remove(EvictedSessionId);
+			ForgetSessionLocked(EvictedSessionId);
 			// Evictions were the one session close that left no trace, which made
 			// the lifecycle unreadable from the log: initialize was logged, the
 			// matching close never was, so a churning client looked like a leak.
@@ -196,7 +192,6 @@ FString FMcpNativeTransport::HandleInitialize(
 		}
 		OutSessionId = FGuid::NewGuid().ToString();
 		ActiveSessions.Add(OutSessionId, Now);
-		SessionProtocolVersions.Add(OutSessionId, NegotiatedVersion);
 		FSessionRateState RateState;
 		RateState.ClientRateKey = ClientRateKey;
 		SessionRateStates.Add(OutSessionId, RateState);
@@ -224,29 +219,10 @@ FString FMcpNativeTransport::HandleInitialize(
 	// and an explicit false are different claims); the tools object is still sent.
 	auto ToolsCapability = MakeShared<FJsonObject>();
 	Capabilities->SetObjectField(TEXT("tools"), ToolsCapability);
-	// Task 37: advertise exactly the implemented session-profile primitives —
-	// resources (with subscribe), prompts, and completions — all backed by
-	// HandlePrimitiveMethod. Nothing unbacked is ever claimed: no logging and no
-	// list-changed member, and tasks only since Task 44 backed it below.
-	auto ResourcesCapability = MakeShared<FJsonObject>();
-	ResourcesCapability->SetBoolField(TEXT("subscribe"), true);
-	Capabilities->SetObjectField(TEXT("resources"), ResourcesCapability);
+	// resources, prompts and completions are all answered by HandlePrimitiveMethod.
+	Capabilities->SetObjectField(TEXT("resources"), MakeShared<FJsonObject>());
 	Capabilities->SetObjectField(TEXT("prompts"), MakeShared<FJsonObject>());
 	Capabilities->SetObjectField(TEXT("completions"), MakeShared<FJsonObject>());
-	// Task 44: tasks is advertised ONLY because FMcpTaskSurface answers all four
-	// tasks/* methods and accepts a task-augmented tools/call. requests.tools.call
-	// is the claim that a tools/call MAY be task-augmented; the surface then
-	// refuses the mutating operations per call, which is a policy the capability
-	// vocabulary cannot express at parameter granularity.
-	auto TasksCapability = MakeShared<FJsonObject>();
-	TasksCapability->SetObjectField(TEXT("list"), MakeShared<FJsonObject>());
-	TasksCapability->SetObjectField(TEXT("cancel"), MakeShared<FJsonObject>());
-	auto TasksToolRequests = MakeShared<FJsonObject>();
-	TasksToolRequests->SetObjectField(TEXT("call"), MakeShared<FJsonObject>());
-	auto TasksRequests = MakeShared<FJsonObject>();
-	TasksRequests->SetObjectField(TEXT("tools"), TasksToolRequests);
-	TasksCapability->SetObjectField(TEXT("requests"), TasksRequests);
-	Capabilities->SetObjectField(TEXT("tasks"), TasksCapability);
 	Result->SetObjectField(TEXT("capabilities"), Capabilities);
 
 	auto ServerInfo = MakeShared<FJsonObject>();

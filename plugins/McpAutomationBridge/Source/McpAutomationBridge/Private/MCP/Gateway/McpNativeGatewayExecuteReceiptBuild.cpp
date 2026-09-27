@@ -112,7 +112,6 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	// Deliberately narrow: this must not become a general escape hatch.
 	const bool bIsImagePayload =
 		CapabilityId == TEXT("control_editor.screenshot") ||
-		CapabilityId == TEXT("control_editor.take_screenshot") ||
 		CapabilityId == TEXT("system_control.screenshot");
 	const int32 ResultCharBudget = bIsImagePayload ? 6000000 : 100000;
 

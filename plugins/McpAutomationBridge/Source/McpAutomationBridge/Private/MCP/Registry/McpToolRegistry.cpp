@@ -1,43 +1,8 @@
-// McpToolRegistry.cpp — Singleton registry for self-describing MCP tool definitions
+// McpToolRegistry.cpp — Singleton registry of the canonical parent tools
 
 #include "MCP/Registry/McpToolRegistry.h"
 
-#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "MCP/Registry/McpToolDefinition.h"
-
-namespace
-{
-bool IsCanonicalMcpToolName(const FString& Name)
-{
-	static const TSet<FString> CanonicalToolNames = {
-		TEXT("manage_tools"),
-		TEXT("manage_asset"),
-		TEXT("manage_blueprint"),
-		TEXT("control_actor"),
-		TEXT("control_editor"),
-		TEXT("manage_level"),
-		TEXT("build_environment"),
-		TEXT("animation_physics"),
-		TEXT("system_control"),
-		TEXT("manage_sequence"),
-		TEXT("inspect"),
-		TEXT("manage_audio"),
-		TEXT("manage_geometry"),
-		TEXT("manage_effect"),
-		TEXT("manage_gas"),
-		TEXT("manage_character"),
-		TEXT("manage_combat"),
-		TEXT("manage_ai"),
-		TEXT("manage_inventory"),
-		TEXT("manage_interaction"),
-		TEXT("manage_networking"),
-		TEXT("manage_level_structure"),
-		TEXT("manage_pcg")
-	};
-
-	return CanonicalToolNames.Contains(Name);
-}
-}
 
 FMcpToolRegistry& FMcpToolRegistry::Get()
 {
@@ -52,13 +17,8 @@ void FMcpToolRegistry::Register(FMcpToolDefinition* Tool)
 		return;
 	}
 
-	FScopeLock Lock(&CacheMutex);
-	const FString Name = Tool->GetName();
-	if (!IsCanonicalMcpToolName(Name))
-	{
-		return;
-	}
-
+	FScopeLock Lock(&Mutex);
+	const FString& Name = Tool->GetName();
 	if (ToolsByName.Contains(Name))
 	{
 		return; // Already registered (possible with unity builds reloading)
@@ -66,7 +26,6 @@ void FMcpToolRegistry::Register(FMcpToolDefinition* Tool)
 
 	Tools.Add(Tool);
 	ToolsByName.Add(Name, Tool);
-	bCacheValid = false;
 }
 
 FMcpToolDefinition* FMcpToolRegistry::FindTool(const FString& Name) const
@@ -96,61 +55,4 @@ FString FMcpToolRegistry::GetToolCategory(const FString& ToolName) const
 		return Tool->GetCategory();
 	}
 	return TEXT("utility");
-}
-
-void FMcpToolRegistry::EnsureCache()
-{
-	if (bCacheValid)
-	{
-		return;
-	}
-
-	CachedToolSchemas.Empty();
-	CachedToolSchemas.Reserve(Tools.Num());
-	for (FMcpToolDefinition* Tool : Tools)
-	{
-		CachedToolSchemas.Add(Tool->GetName(), BuildToolJson(Tool));
-	}
-	bCacheValid = true;
-}
-
-TSharedPtr<FJsonObject> FMcpToolRegistry::BuildToolJson(FMcpToolDefinition* Tool)
-{
-	auto ToolObj = MakeShared<FJsonObject>();
-	ToolObj->SetStringField(TEXT("name"), Tool->GetName());
-	ToolObj->SetStringField(TEXT("description"), Tool->GetDescription());
-	ToolObj->SetStringField(TEXT("category"), Tool->GetCategory());
-
-	TSharedPtr<FJsonObject> InputSchema = Tool->BuildInputSchema();
-	if (InputSchema.IsValid())
-	{
-		ToolObj->SetObjectField(TEXT("inputSchema"), InputSchema);
-	}
-
-	return ToolObj;
-}
-
-TSharedPtr<FJsonObject> FMcpToolRegistry::GetFilteredToolsResponse(
-	const TSet<FString>& EnabledTools)
-{
-	FScopeLock Lock(&CacheMutex);
-	EnsureCache();
-
-	TArray<TSharedPtr<FJsonValue>> FilteredTools;
-	FilteredTools.Reserve(EnabledTools.Num());
-
-	for (const FMcpToolDefinition* Tool : Tools)
-	{
-		if (EnabledTools.Contains(Tool->GetName()))
-		{
-			if (const auto* Cached = CachedToolSchemas.Find(Tool->GetName()))
-			{
-				FilteredTools.Add(MakeShared<FJsonValueObject>(*Cached));
-			}
-		}
-	}
-
-	auto Result = MakeShared<FJsonObject>();
-	Result->SetArrayField(TEXT("tools"), FilteredTools);
-	return Result;
 }

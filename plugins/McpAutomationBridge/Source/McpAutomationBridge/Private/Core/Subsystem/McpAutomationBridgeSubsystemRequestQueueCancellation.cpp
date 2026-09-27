@@ -11,9 +11,7 @@
 bool UMcpAutomationBridgeSubsystem::CancelAutomationRequest(
     const FString& RequestId)
 {
-    TArray<FString> RequestIds;
-    RequestIds.Add(RequestId);
-    return CancelAutomationRequests(RequestIds);
+    return CancelAutomationRequests({RequestId});
 }
 
 bool UMcpAutomationBridgeSubsystem::CancelAutomationRequests(
@@ -24,14 +22,9 @@ bool UMcpAutomationBridgeSubsystem::CancelAutomationRequests(
         return false;
     }
 
-    TSet<FString> UniqueRequestIds;
-    UniqueRequestIds.Reserve(RequestIds.Num());
-    for (const FString& RequestId : RequestIds)
-    {
-        UniqueRequestIds.Add(RequestId);
-    }
+    const TSet<FString> UniqueRequestIds(RequestIds);
     int32 RemovedCount = 0;
-    std::atomic<bool> bNeedsExecutionBarrier{false};
+    bool bNeedsExecutionBarrier = false; // only this thread touches it
     {
         FScopeLock Lock(&PendingAutomationRequestsMutex);
         RemovedCount = PendingAutomationRequests.RemoveAll(
@@ -53,7 +46,7 @@ bool UMcpAutomationBridgeSubsystem::CancelAutomationRequests(
                 // already dispatched on the game thread keeps running to
                 // completion. The transports suppress the resulting late
                 // response. We do NOT stop the in-flight editor work.
-                bNeedsExecutionBarrier.store(true, std::memory_order_release);
+                bNeedsExecutionBarrier = true;
             }
             if (bWasInFlight)
             {
@@ -64,7 +57,7 @@ bool UMcpAutomationBridgeSubsystem::CancelAutomationRequests(
 
     // Acquire the execution mutex as a barrier to ensure ProcessPendingAutomationRequests
     // observes the cancellation flags above before it begins processing the next request.
-    if (bNeedsExecutionBarrier.load(std::memory_order_acquire))
+    if (bNeedsExecutionBarrier)
     {
         FScopeLock ExecutionLock(&AutomationRequestExecutionMutex);
     }
@@ -186,9 +179,3 @@ void UMcpAutomationBridgeSubsystem::ClearAutomationRequestCancellation(
     CanceledAutomationRequestIds.Remove(RequestId);
 }
 
-void UMcpAutomationBridgeSubsystem::DiscardCanceledAutomationRequest(
-    const FString& RequestId)
-{
-    FScopeLock Lock(&PendingAutomationRequestsMutex);
-    CanceledAutomationRequestIds.Remove(RequestId);
-}

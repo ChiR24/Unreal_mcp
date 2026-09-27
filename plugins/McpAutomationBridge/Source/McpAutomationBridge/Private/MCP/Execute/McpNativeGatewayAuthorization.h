@@ -5,7 +5,7 @@
 #include "Foundation/McpCapabilityAuthorization.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 
-// Task 40 native /mcp security glue.
+// Native /mcp security glue.
 //
 // The native surface binds a principal to a SESSION (the WebSocket bridge binds
 // one to a socket) and re-consults it on every request, so a client cannot

@@ -15,7 +15,6 @@ namespace
 {
 	const TCHAR* CatalogUri = TEXT("ue://capability/catalog");
 	const TCHAR* ProjectUri = TEXT("ue://project");
-	const TCHAR* VersionUri = TEXT("ue://version");
 	const TCHAR* AutomationBridgeUri = TEXT("ue://automation-bridge");
 	constexpr int32 MaxCatalogCapabilities = 50;
 
@@ -103,10 +102,6 @@ namespace McpResourceRead
 		{
 			Data = McpResourceHealth::BuildHealthData();
 		}
-		else if (Uri == VersionUri)
-		{
-			Data = McpResourceBridge::BuildEngineVersionData();
-		}
 		else if (Uri == AutomationBridgeUri)
 		{
 			Data = McpResourceBridge::BuildAutomationBridgeData();
@@ -124,11 +119,6 @@ namespace McpResourceRead
 		Root->SetNumberField(TEXT("revision"), static_cast<double>(Revision));
 		Root->SetObjectField(TEXT("data"), Data);
 		return { Revision, SerializeCompact(Root) };
-	}
-
-	FString BuildReadBodyText(const FString& Uri, FMcpResourceRevision Revision)
-	{
-		return BuildReadBody(Uri, Revision).Text;
 	}
 
 	TSharedPtr<FJsonValue> ListEntry(const FMcpResourceDefinition& Def)

@@ -11,16 +11,5 @@
 #include "Dom/JsonObject.h"
 #include "HAL/CriticalSection.h"
 
-extern TMap<FString,
-            TArray<TPair<FString, TSharedPtr<class FMcpBridgeWebSocket>>>>
-    GBlueprintCreateInflight;
-extern TMap<FString, double> GBlueprintCreateInflightTs;
-extern FCriticalSection GBlueprintCreateMutex;
-extern TSet<FString> GBlueprintBusySet;
-extern TMap<FString, TSharedPtr<FJsonObject>> GBlueprintRegistry;
-
 extern FString GCurrentSequencePath;
 
-extern TMap<FString, double> GRecentAssetSaveTs;
-extern FCriticalSection GRecentAssetSaveMutex;
-extern double GRecentAssetSaveThrottleSeconds;

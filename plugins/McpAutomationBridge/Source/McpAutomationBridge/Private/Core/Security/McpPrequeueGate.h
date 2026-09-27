@@ -5,11 +5,11 @@
 
 #include "Foundation/McpCapabilityAuthorization.h"
 
-// Task 40 pre-queue authorization gate — the ONE place both transports ask
+// Pre-queue authorization gate — the ONE place both transports ask
 // "may this principal run this request?" before anything is enqueued.
 //
 // It lives in Core because it is the only layer allowed to see all three of the
-// canonical capability catalogue (MCP/Gateway), the Task 22 console-command
+// canonical capability catalogue (MCP/Gateway), the console-command
 // policy (Domains) and the shared Foundation predicates. Foundation stays free
 // of those dependencies so its predicates remain unit-testable in isolation.
 //
@@ -71,7 +71,7 @@ void ForgetConsentForRequest(const FString& RequestId);
 // not consume the principal's budget.
 FMcpAuthorizationDecision Authorize(const FMcpPrequeueRequest& Request);
 
-// Task 47: the BOUNDED telemetry action class for a dispatch action, resolved
+// The BOUNDED telemetry action class for a dispatch action, resolved
 // from the same catalogue demand the gate uses, so "how dangerous was it" is
 // reported by the authority rather than re-derived from the action string.
 // Returns one of read/write/destructive/admin, or "unknown" when no catalogue

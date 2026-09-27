@@ -12,7 +12,7 @@
 
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeSerializers.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "BehaviorTree/BTNode.h"
 #include "BehaviorTree/Decorators/BTDecorator_DoesPathExist.h"
 #include "Misc/AutomationTest.h"
@@ -102,4 +102,4 @@ bool FMcpBehaviorTreeCycleTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif // WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#endif // WITH_DEV_AUTOMATION_TESTS

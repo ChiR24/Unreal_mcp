@@ -21,18 +21,6 @@ class USkeleton;
 class UMcpAutomationBridgeSubsystem;
 enum class EMcpStateKind : uint8;
 
-namespace McpProcessRequestDispatch
-{
-bool DispatchFallbackAutomationRequest(
-    UMcpAutomationBridgeSubsystem* Bridge,
-    const FString& RequestId,
-    const FString& Action,
-    const FString& LowerAction,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-    FString& OutConsumedHandlerLabel);
-}
-
 namespace McpAutomationBridge
 {
 // Returns the automation action currently executing on the bridge (empty when idle). Thread-safe; readable
@@ -82,31 +70,6 @@ public:
   TMap<FString, FString> Properties;
 };
 
-UENUM(BlueprintType)
-enum class EMcpAutomationBridgeState : uint8
-{
-  Disconnected,
-  Connecting,
-  Connected
-};
-
-USTRUCT(BlueprintType)
-struct MCPAUTOMATIONBRIDGE_API FMcpAutomationMessage
-{
-  GENERATED_BODY()
-
-  UPROPERTY(BlueprintReadOnly, Category = "MCP Automation")
-  FString Type;
-
-  UPROPERTY(BlueprintReadOnly, Category = "MCP Automation")
-  FString PayloadJson;
-};
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FMcpAutomationMessageReceived,
-    const FMcpAutomationMessage&,
-    Message);
-
 enum class ERequestOrigin : uint8
 {
   WebSocket,
@@ -127,21 +90,8 @@ public:
   virtual void Initialize(FSubsystemCollectionBase& Collection) override;
   virtual void Deinitialize() override;
 
-  UFUNCTION(BlueprintCallable, Category = "MCP Automation")
-  bool IsBridgeActive() const;
-
-  UFUNCTION(BlueprintCallable, Category = "MCP Automation")
-  EMcpAutomationBridgeState GetBridgeState() const;
-
-  UFUNCTION(BlueprintCallable, Category = "MCP Automation")
-  bool SendRawMessage(const FString& Message);
-
-  void BroadcastAutomationEvent(
-      const TSharedPtr<FJsonObject>& Event,
-      TSharedPtr<FMcpBridgeWebSocket> TargetSocket = nullptr);
-
-  UPROPERTY(BlueprintAssignable, Category = "MCP Automation")
-  FMcpAutomationMessageReceived OnMessageReceived;
+  /** Fan a log automation_event out to the log subscribers on both transports. */
+  void BroadcastAutomationEvent(const TSharedPtr<FJsonObject>& Event);
 
   void SendAutomationResponse(
       TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
@@ -158,6 +108,8 @@ public:
   void SendAutomationRejection(
       TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
       const FString& RequestId, EAutomationQueueRejection Reason);
+  /** The typed code and message every surface answers a queue rejection with. */
+  static void DescribeQueueRejection(EAutomationQueueRejection Reason, FString& OutCode, FString& OutMessage);
   void SendProgressUpdate(
       const FString& RequestId,
       float Percent = -1.0f,
@@ -181,7 +133,6 @@ public:
       TSharedPtr<FMcpBridgeWebSocket>)>;
 
   bool RegisterHandler(const FString& Action, FAutomationHandler Handler);
-  bool RegisterActionAlias(const FString& AliasAction, const FString& TargetAction);
 
   struct FRequestErrorCapture
   {
@@ -191,8 +142,6 @@ public:
     int32 WarningCount = 0;
     bool bErrorMessagesTruncated = false;
     bool bWarningMessagesTruncated = false;
-    std::atomic<bool> bHasErrors{false};
-    std::atomic<bool> bHasWarnings{false};
     uint32 CapturingThreadId = 0;
     bool bActive = false;
 
@@ -244,14 +193,10 @@ public:
       const FString& RequestId,
       TFunction<void()> Callback);
   void ClearAutomationRequestCancellation(const FString& RequestId);
-  void DiscardCanceledAutomationRequest(const FString& RequestId);
 
   TSharedPtr<class FMcpConnectionManager> ConnectionManager;
   TSharedPtr<FMcpNativeTransport> NativeTransport;
 
-  FString CurrentBusyBlueprintKey;
-  bool bCurrentBlueprintBusyMarked = false;
-  bool bCurrentBlueprintBusyScheduled = false;
 
   struct FPendingAutomationRequest
   {
@@ -278,42 +223,22 @@ public:
   bool bAcceptingAutomationRequests = true;
   static constexpr int32 MaxPendingAutomationRequests = 64;
   static constexpr int32 MaxAutomationRequestsPerTick = 16;
-  // Task 45 round-robin rotation + single-mutation-lane guard. See McpQueueFairness.h.
+  // Round-robin rotation + single-mutation-lane guard. See McpQueueFairness.h.
   FMcpQueueFairnessState QueueFairness;
   void ProcessPendingAutomationRequests();
 
   ERequestOrigin CurrentRequestOrigin = ERequestOrigin::WebSocket;
-  void RecordAutomationTelemetry(
-      const FString& RequestId,
-      bool bSuccess,
-      const FString& Message,
-      const FString& ErrorCode);
 
   TSharedPtr<FOutputDevice> LogCaptureDevice;
 
 private:
   FTSTicker::FDelegateHandle TickHandle;
   TMap<FString, FAutomationHandler> AutomationHandlers;
-  TSet<FString> AutomationAliasActions;
-  TMap<FString, FString> PendingAutomationActionAliases;
   void InitializeHandlers();
-  void LoadConfiguredHandlerAliases();
   void StartAcceptingAutomationRequests();
   void StopAcceptingAutomationRequests();
-  bool RegisterActionAliasInternal(
-      const FString& AliasAction,
-      const FString& TargetAction,
-      bool bAllowPendingTarget);
-  void TryActivatePendingActionAliases(const FString& TargetAction);
   void StartNativeTransport();
   void ReconcileLogCaptureDevice();
-  void RegisterCoreAndAssetHandlers();
-  void RegisterEnvironmentMediaHandlers();
-  void RegisterSystemAndEditorHandlers();
-  void RegisterAssetRoutingHandlers();
-  void RegisterBlueprintAndDomainHandlers();
-  void RegisterAudioAnimationHandlers();
-  void RegisterWorldAndMiscHandlers();
 
   MCP_SUBSYSTEM_PROPERTY_COLLECTION_DECLARATIONS
   MCP_SUBSYSTEM_ACTION_ROUTING_DECLARATIONS
@@ -347,18 +272,9 @@ private:
       const FString& SessionKey = FString());
 
   friend struct FMcpLevelHandlerAccess;
-  friend struct FMcpEditorFunctionHandlerAccess; friend struct FMcpUiHandlerAccess;
+  friend struct FMcpUiHandlerAccess;
   friend class FMcpNativeTransport;
-  friend class FMcpCustomHandlerAliasDispatchTest;
   friend class FMcpAutomationShutdownCancellationTest;
-  friend bool McpProcessRequestDispatch::DispatchFallbackAutomationRequest(
-      UMcpAutomationBridgeSubsystem* Bridge,
-      const FString& RequestId,
-      const FString& Action,
-      const FString& LowerAction,
-      const TSharedPtr<FJsonObject>& Payload,
-      TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
-      FString& OutConsumedHandlerLabel);
 };
 
 #undef MCP_SUBSYSTEM_ASSET_WORKFLOW_DECLARATIONS

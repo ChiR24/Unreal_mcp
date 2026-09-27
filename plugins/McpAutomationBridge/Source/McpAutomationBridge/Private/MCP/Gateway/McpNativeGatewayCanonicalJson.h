@@ -15,11 +15,9 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 
-/** Render a JSON value canonically. Returns false if a non-integer number is reached. */
-bool McpCanonicalJson(const TSharedPtr<FJsonValue>& Value, FString& OutJson);
-
-/** Render a JSON object canonically. Returns false if a non-integer number is reached. */
-bool McpCanonicalJsonObject(const TSharedPtr<FJsonObject>& Object, FString& OutJson);
-
-/** UTF-8 byte length of an already-rendered canonical string (ASCII-only, so 1 byte per char). */
-int32 McpCanonicalByteLength(const FString& CanonicalJson);
+/**
+ * Render a JSON object canonically; the output is ASCII, so Len() is its UTF-8 byte
+ * length. A non-integer number fails the render unless bAllowFractions, which an
+ * in-process consumer (the idempotency fingerprint) sets: it prints SanitizeFloat.
+ */
+bool McpCanonicalJsonObject(const TSharedPtr<FJsonObject>& Object, FString& OutJson, bool bAllowFractions = false);

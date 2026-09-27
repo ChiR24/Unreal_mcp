@@ -4,12 +4,13 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 #include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
+#include "McpAutomationBridgeSubsystem.h"
 
 // Enriches an outgoing automation result with transport-level context that the handler itself
 // cannot know, without ever overriding the handler's own verdict.
 //
 // Two things are attached:
-//   * the world the request ran against (WORLD-01). An actor mutation reports success for the world
+//   * the world the request ran against. An actor mutation reports success for the world
 //     that was current when it ran; if a level load replaces that world, the receipt gives the caller
 //     no way to notice. Naming the world makes the mismatch detectable instead of invisible.
 //   * engine-log errors observed during the request. These are ATTACHED for the caller to judge; the
@@ -39,16 +40,33 @@ inline void McpAppendPieRefusalHint(FString& Message, const bool bPieRequest,
     }
 }
 
+// engine<Kind>sObserved / engine<Kind>Count / engine<Kind>s (the first 3, sanitized) /
+// engine<Kind>sTruncated; returns the attached values.
+inline TArray<TSharedPtr<FJsonValue>> McpAttachCapturedEngineMessages(
+    const TSharedPtr<FJsonObject>& Enriched, const TCHAR* Kind,
+    const TArray<FString>& Messages, const int32 Total, const bool bTruncated)
+{
+    constexpr int32 MaxInResponse = 3;
+    TArray<TSharedPtr<FJsonValue>> Values;
+    for (int32 Index = 0; Index < FMath::Min(Messages.Num(), MaxInResponse); ++Index)
+    {
+        Values.Add(MakeShared<FJsonValueString>(SanitizeEngineErrorForResponse(Messages[Index])));
+    }
+    Enriched->SetBoolField(FString::Printf(TEXT("engine%ssObserved"), Kind), true);
+    Enriched->SetNumberField(FString::Printf(TEXT("engine%sCount"), Kind), Total);
+    Enriched->SetArrayField(FString::Printf(TEXT("engine%ss"), Kind), Values);
+    if (bTruncated || Messages.Num() > MaxInResponse)
+    {
+        Enriched->SetBoolField(FString::Printf(TEXT("engine%ssTruncated"), Kind), true);
+    }
+    return Values;
+}
+
 inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     const TSharedPtr<FJsonObject>& Result,
     const FString& WorldName,
     const bool bIsTransientWorld,
-    const TArray<FString>& CapturedErrors,
-    const int32 TotalCapturedErrorCount,
-    const bool bCapturedErrorsTruncated,
-    const TArray<FString>& CapturedWarnings,
-    const int32 TotalCapturedWarningCount,
-    const bool bCapturedWarningsTruncated)
+    const UMcpAutomationBridgeSubsystem::FRequestErrorCapture& Captured)
 {
     TSharedPtr<FJsonObject> Enriched = MakeShared<FJsonObject>();
     if (Result.IsValid())
@@ -85,31 +103,13 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
         }
     }
 
-    const int32 MaxCapturedInResponse = 3;
-    if (CapturedWarnings.Num() > 0)
+    if (Captured.WarningMessages.Num() > 0)
     {
-        TArray<TSharedPtr<FJsonValue>> EngineWarningValues;
-        const int32 WarningResponseCount =
-            FMath::Min(CapturedWarnings.Num(), MaxCapturedInResponse);
-        for (int32 WarningIndex = 0; WarningIndex < WarningResponseCount; ++WarningIndex)
-        {
-            EngineWarningValues.Add(MakeShared<FJsonValueString>(
-                SanitizeEngineErrorForResponse(CapturedWarnings[WarningIndex])));
-        }
-        Enriched->SetBoolField(TEXT("engineWarningsObserved"), true);
-        Enriched->SetNumberField(TEXT("engineWarningCount"), TotalCapturedWarningCount);
-        Enriched->SetArrayField(TEXT("engineWarnings"), EngineWarningValues);
-        if (bCapturedWarningsTruncated || CapturedWarnings.Num() > MaxCapturedInResponse)
-        {
-            Enriched->SetBoolField(TEXT("engineWarningsTruncated"), true);
-        }
-        for (const TSharedPtr<FJsonValue>& WarningValue : EngineWarningValues)
-        {
-            WarningValues.Add(WarningValue);
-        }
+        WarningValues.Append(McpAttachCapturedEngineMessages(Enriched, TEXT("Warning"),
+            Captured.WarningMessages, Captured.WarningCount, Captured.bWarningMessagesTruncated));
     }
 
-    if (CapturedErrors.Num() == 0)
+    if (Captured.ErrorMessages.Num() == 0)
     {
         if (WarningValues.Num() > 0)
         {
@@ -118,21 +118,8 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
         return Enriched;
     }
 
-    TArray<TSharedPtr<FJsonValue>> ErrorValues;
-    const int32 MaxErrorsInResponse = 3;
-    const int32 ErrorResponseCount = FMath::Min(CapturedErrors.Num(), MaxErrorsInResponse);
-    for (int32 ErrorIndex = 0; ErrorIndex < ErrorResponseCount; ++ErrorIndex)
-    {
-        ErrorValues.Add(MakeShared<FJsonValueString>(
-            SanitizeEngineErrorForResponse(CapturedErrors[ErrorIndex])));
-    }
-    Enriched->SetBoolField(TEXT("engineErrorsObserved"), true);
-    Enriched->SetNumberField(TEXT("engineErrorCount"), TotalCapturedErrorCount);
-    Enriched->SetArrayField(TEXT("engineErrors"), ErrorValues);
-    if (bCapturedErrorsTruncated || CapturedErrors.Num() > MaxErrorsInResponse)
-    {
-        Enriched->SetBoolField(TEXT("engineErrorsTruncated"), true);
-    }
+    McpAttachCapturedEngineMessages(Enriched, TEXT("Error"),
+        Captured.ErrorMessages, Captured.ErrorCount, Captured.bErrorMessagesTruncated);
 
     // The errors were only reachable under `details`, while `warnings` is the channel a caller watches
     // for "it succeeded, but read this" -- so a mutation that tripped 32 engine errors, including an
@@ -140,7 +127,7 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     WarningValues.Add(MakeShared<FJsonValueString>(FString::Printf(
         TEXT("%d engine error(s) were logged while this request ran. The handler still reports success; ")
         TEXT("see engineErrors for the captured text."),
-        TotalCapturedErrorCount)));
+        Captured.ErrorCount)));
     Enriched->SetArrayField(TEXT("warnings"), WarningValues);
     return Enriched;
 }

@@ -111,11 +111,8 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		{
 			{
 				FScopeLock Lock(&SessionMutex);
-				if (ActiveSessions.Remove(HttpReq.SessionId) > 0)
+				if (ForgetSessionLocked(HttpReq.SessionId))
 				{
-					SessionRateStates.Remove(HttpReq.SessionId);
-					SessionProtocolVersions.Remove(HttpReq.SessionId);
-					SessionPrincipals.Remove(HttpReq.SessionId);
 					UE_LOG(LogMcpNativeTransport, Log,
 						TEXT("Session terminated by client (remaining: %d)"),
 						ActiveSessions.Num());
@@ -267,10 +264,7 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		{
 			{
 				FScopeLock Lock(&SessionMutex);
-				ActiveSessions.Remove(NewSessionId);
-				SessionRateStates.Remove(NewSessionId);
-				SessionProtocolVersions.Remove(NewSessionId);
-				SessionPrincipals.Remove(NewSessionId);
+				ForgetSessionLocked(NewSessionId);
 			}
 			CloseSessionConnections(NewSessionId);
 		}
@@ -307,17 +301,6 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	if (HandlePrimitiveMethod(Rpc.Method, Rpc.Params, Rpc.Id, ClientSocket, HttpReq.SessionId, HttpReq.Origin))
 	{
 		return;
-	}
-
-	// Task 44: tasks/get|list|cancel|result. Session-scoped inside the surface,
-	// so one session can never read or cancel another session's task.
-	{
-		FString TaskBody;
-		if (TaskSurface.HandleMethod(Rpc.Method, Rpc.Params, Rpc.Id, HttpReq.SessionId, TaskBody))
-		{
-			SendAndClose(ClientSocket, 200, TEXT("application/json"), TaskBody, {}, HttpReq.Origin);
-			return;
-		}
 	}
 
 	// Unknown method

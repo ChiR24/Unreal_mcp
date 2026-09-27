@@ -125,7 +125,7 @@ FString ActionSuffix(const FString& CapabilityId)
 	return CapabilityId;
 }
 
-// Exactly what MCP_DISPATCH_SUBACTION will resolve for this request.
+// Exactly the sub-action the domain handler will resolve for this request.
 FString ResolveDispatchedAction(const FMcpPrequeueRequest& Request)
 {
 	return McpHandlerUtils::NormalizeAction(Request.DispatchAction, Request.Payload);

@@ -1,30 +1,6 @@
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 #include "Foundation/McpLiveStateRevisions.h"
 
-bool FMcpConnectionManager::SendRawMessage(const FString &Message) {
-  if (Message.IsEmpty())
-    return false;
-  bool bSent = false;
-  for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
-    if (!Sock.IsValid() || !Sock->IsConnected())
-      continue;
-    if (Sock->Send(Message)) {
-      bSent = true;
-      break;
-    }
-  }
-  return bSent;
-}
-
-bool FMcpConnectionManager::SendRawMessageToSocket(
-    TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString &Message) {
-  if (Message.IsEmpty() || !TargetSocket.IsValid() ||
-      !TargetSocket->IsConnected()) {
-    return false;
-  }
-  return TargetSocket->Send(Message);
-}
-
 bool FMcpConnectionManager::SendRawMessageToLogSubscribers(
     const FString &Message) {
   if (Message.IsEmpty()) {
@@ -73,42 +49,16 @@ void FMcpConnectionManager::SendAutomationResponse(
       TJsonWriterFactory<>::Create(&Serialized);
   FJsonSerializer::Serialize(Response, Writer);
 
-  // Get action from telemetry for better logging context
-  FString ActionName = TEXT("unknown");
-  if (FAutomationRequestTelemetry* Entry = ActiveRequestTelemetry.Find(RequestId)) {
-    ActionName = Entry->Action;
-  }
+  const FString* KnownAction = ActiveRequestActions.Find(RequestId);
+  const FString ActionName = KnownAction ? *KnownAction : TEXT("unknown");
 
   // Skip logging for console_command - Unreal already logs the command
   const bool bSkipLogging = ActionName.Equals(TEXT("console_command"), ESearchCase::IgnoreCase);
 
   // Log result with actual values for verification
   if (!bSkipLogging) {
-    FString ResultPreview;
-    if (Result.IsValid() && Result->Values.Num() > 0) {
-      TArray<FString> Parts;
-      for (const auto& Pair : Result->Values) {
-        const FString FieldName(Pair.Key.Len(), *Pair.Key);
-        FString Val;
-        if (IsImagePayloadPreviewField(FieldName)) {
-          Val = TEXT("\"<omitted; see image content>\"");
-        } else if (Pair.Value->Type == EJson::String) {
-          Val = FString::Printf(TEXT("\"%s\""), *Pair.Value->AsString().Left(40));
-        } else if (Pair.Value->Type == EJson::Boolean) {
-          Val = Pair.Value->AsBool() ? TEXT("true") : TEXT("false");
-        } else if (Pair.Value->Type == EJson::Number) {
-          Val = FString::Printf(TEXT("%g"), Pair.Value->AsNumber());
-        } else if (Pair.Value->Type == EJson::Array) {
-          Val = FString::Printf(TEXT("[%d]"), Pair.Value->AsArray().Num());
-        } else if (Pair.Value->Type == EJson::Object) {
-          Val = TEXT("{...}");
-        } else {
-          Val = TEXT("?");
-        }
-        Parts.Add(FString::Printf(TEXT("%s=%s"), *FieldName, *Val));
-      }
-      ResultPreview = FString::Printf(TEXT(" (%s)"), *FString::Join(Parts, TEXT(" ")));
-    }
+    const FString Fields = PreviewJsonFields(Result, 40, false);
+    const FString ResultPreview = Fields.IsEmpty() ? FString() : FString::Printf(TEXT(" (%s)"), *Fields);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("Response: %s %s%s%s"),
            *ActionName,
@@ -172,13 +122,7 @@ void FMcpConnectionManager::SendProgressUpdate(
 
   Update->SetBoolField(TEXT("stillWorking"), bStillWorking);
 
-  // Add timestamp in ISO format
-  const FDateTime Now = FDateTime::UtcNow();
-  const FString Timestamp = FString::Printf(TEXT("%04d-%02d-%02dT%02d:%02d:%02d.%03dZ"),
-    Now.GetYear(), Now.GetMonth(), Now.GetDay(),
-    Now.GetHour(), Now.GetMinute(), Now.GetSecond(),
-    Now.GetMillisecond());
-  Update->SetStringField(TEXT("timestamp"), Timestamp);
+  Update->SetStringField(TEXT("timestamp"), FDateTime::UtcNow().ToIso8601());
 
   FString Serialized;
   const TSharedRef<TJsonWriter<>> Writer =

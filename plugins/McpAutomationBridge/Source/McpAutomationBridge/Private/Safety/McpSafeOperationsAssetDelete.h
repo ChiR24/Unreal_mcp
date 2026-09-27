@@ -3,15 +3,12 @@
 #include "Safety/McpSafeOperationsDeleteCompilation.h"
 #include "Safety/McpSafeOperationsMaterial.h"
 
-#if WITH_EDITOR
 #include "EditorAssetLibrary.h"
 #include "UObject/Linker.h"
-#endif
 
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
 /**
  * UEditorAssetLibrary::DeleteAsset can succeed without removing the file: for
@@ -40,13 +37,11 @@ inline bool McpDeleteAssetAndFile(const FString& AssetPath)
     UE_LOG(LogMcpSafeOperations, Warning,
         TEXT("McpDeleteAssetAndFile: '%s' was deleted in memory but its file remained; unloading the package and removing the file"),
         *PackageName);
-#if MCP_HAS_PACKAGE_TOOLS
     if (UPackage* Leftover = FindObject<UPackage>(nullptr, *PackageName))
     {
         FText UnloadError;
         UPackageTools::UnloadPackages({Leftover}, UnloadError, true);
     }
-#endif
     if (FindObject<UPackage>(nullptr, *PackageName))
     {
         UE_LOG(LogMcpSafeOperations, Warning,
@@ -63,6 +58,5 @@ inline bool McpDeleteAssetAndFile(const FString& AssetPath)
     return !FPackageName::DoesPackageExist(PackageName);
 }
 
-#endif
 
 }

@@ -9,6 +9,14 @@ using namespace McpAutomationBridgeSubsystemResponse;
 static constexpr int32 MaxCapturedRequestMessages = 32;
 static constexpr int32 MaxCapturedRequestMessageChars = 1024;
 
+static void AppendSanitized(TArray<FString>& Out, const TArray<FString>& Messages)
+{
+    for (const FString& Message : Messages)
+    {
+        Out.Add(SanitizeEngineErrorForResponse(Message));
+    }
+}
+
 static bool IsKnownBenignMcpCompilerWarning(const FString& Message)
 {
     return Message.Contains(TEXT("CooldownGameplayEffectClass"), ESearchCase::IgnoreCase) &&
@@ -66,7 +74,6 @@ void FMcpRequestErrorDevice::Serialize(
         {
             Capture.bErrorMessagesTruncated = true;
         }
-        Capture.bHasErrors = true;
         return;
     }
 
@@ -79,7 +86,6 @@ void FMcpRequestErrorDevice::Serialize(
     {
         Capture.bWarningMessagesTruncated = true;
     }
-    Capture.bHasWarnings = true;
 }
 
 bool FMcpRequestErrorDevice::CanBeUsedOnAnyThread() const
@@ -100,8 +106,6 @@ void UMcpAutomationBridgeSubsystem::FRequestErrorCapture::Reset()
     WarningCount = 0;
     bErrorMessagesTruncated = false;
     bWarningMessagesTruncated = false;
-    bHasErrors = false;
-    bHasWarnings = false;
     CapturingThreadId = 0;
     bActive = false;
 }
@@ -138,14 +142,8 @@ TArray<FString> UMcpAutomationBridgeSubsystem::EndErrorCapture()
     AllMessages.Reserve(
         CurrentErrorCapture.ErrorMessages.Num() +
         CurrentErrorCapture.WarningMessages.Num());
-    for (const FString& ErrorMessage : CurrentErrorCapture.ErrorMessages)
-    {
-        AllMessages.Add(SanitizeEngineErrorForResponse(ErrorMessage));
-    }
-    for (const FString& WarningMessage : CurrentErrorCapture.WarningMessages)
-    {
-        AllMessages.Add(SanitizeEngineErrorForResponse(WarningMessage));
-    }
+    AppendSanitized(AllMessages, CurrentErrorCapture.ErrorMessages);
+    AppendSanitized(AllMessages, CurrentErrorCapture.WarningMessages);
     CurrentErrorCapture.bActive = false;
     CurrentErrorCapture.CapturingThreadId = 0;
     return AllMessages;
@@ -154,17 +152,13 @@ TArray<FString> UMcpAutomationBridgeSubsystem::EndErrorCapture()
 bool UMcpAutomationBridgeSubsystem::HasCapturedErrors() const
 {
     FScopeLock Lock(&ErrorCaptureMutex);
-    return CurrentErrorCapture.bHasErrors.load();
+    return CurrentErrorCapture.ErrorCount > 0;
 }
 
 TArray<FString> UMcpAutomationBridgeSubsystem::GetCapturedErrorMessages() const
 {
     FScopeLock Lock(&ErrorCaptureMutex);
     TArray<FString> SanitizedMessages;
-    SanitizedMessages.Reserve(CurrentErrorCapture.ErrorMessages.Num());
-    for (const FString& ErrorMessage : CurrentErrorCapture.ErrorMessages)
-    {
-        SanitizedMessages.Add(SanitizeEngineErrorForResponse(ErrorMessage));
-    }
+    AppendSanitized(SanitizedMessages, CurrentErrorCapture.ErrorMessages);
     return SanitizedMessages;
 }

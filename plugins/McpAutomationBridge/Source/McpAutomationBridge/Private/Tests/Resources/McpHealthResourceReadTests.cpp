@@ -1,7 +1,8 @@
 #include "Foundation/McpTelemetryRegistry.h"
+#include "Tests/McpTelemetryTestSupport.h"
 #include "Foundation/McpTelemetrySchema.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 #include "MCP/Resources/McpResourceCatalog.h"
 #include "MCP/Resources/McpResourceReadContent.h"
@@ -9,7 +10,7 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
-// Task 47 follow-up: proves the native telemetry is CLIENT-READABLE.
+// Follow-up: proves the native telemetry is CLIENT-READABLE.
 //
 // Before this, FMcpTelemetryRegistry accumulated real counters in production
 // and RenderPrometheus produced the shared exposition format, but nothing
@@ -19,28 +20,6 @@
 
 namespace
 {
-double GHealthClockSeconds = 0.0;
-
-void InstallHealthFakeClock(FMcpTelemetryRegistry& Registry, double StartSeconds)
-{
-	GHealthClockSeconds = StartSeconds;
-	Registry.SetClock([]() { return GHealthClockSeconds; });
-}
-
-double SampleMetricValue(const FString& Rendered, const FString& Prefix)
-{
-	TArray<FString> Lines;
-	Rendered.ParseIntoArrayLines(Lines);
-	for (const FString& Line : Lines)
-	{
-		if (Line.StartsWith(Prefix + TEXT(" "), ESearchCase::CaseSensitive))
-		{
-			return FCString::Atod(*Line.Mid(Prefix.Len() + 1));
-		}
-	}
-	return -1.0;
-}
-
 // Reproduces EXACTLY what FMcpNativeTransport::HandlePrimitiveMethod does for a
 // resources/read: Classify(), then BuildReadBody(). Calling RenderPrometheus()
 // here would prove only that the renderer works - which was already true while
@@ -154,12 +133,12 @@ bool FMcpHealthResourceTelemetryServedTest::RunTest(const FString& Parameters)
 	(void)Parameters;
 	FMcpTelemetryRegistry& Registry = FMcpTelemetryRegistry::Get();
 	Registry.Reset();
-	InstallHealthFakeClock(Registry, 2000.0);
+	InstallTelemetryFakeClock(Registry, 2000.0);
 
 	Registry.BeginRequest(TEXT("req-served-1"), TEXT("write"));
-	GHealthClockSeconds = 2000.05;
+	McpTelemetryTestClockSeconds() = 2000.05;
 	Registry.MarkDispatched(TEXT("req-served-1"));
-	GHealthClockSeconds = 2000.2;
+	McpTelemetryTestClockSeconds() = 2000.2;
 	Registry.EndRequest(TEXT("req-served-1"), TEXT("failure"), TEXT("SCOPE_NOT_GRANTED"));
 
 	const FString Served = ServeHealthResourceThroughReadPath(*this);
@@ -192,7 +171,7 @@ bool FMcpHealthResourceTelemetryServedTest::RunTest(const FString& Parameters)
 	const FString QueueSum = FString::Printf(TEXT("%s_sum{surface=\"native\",action_class=\"write\"}"),
 		McpTelemetrySchema::MetricQueueWaitSeconds());
 	TestTrue(TEXT("the served exposition carries the real queue-wait sample"),
-		FMath::IsNearlyEqual(SampleMetricValue(Exposition, QueueSum), 0.05, 1e-4));
+		FMath::IsNearlyEqual(SampleTelemetryValue(Exposition, QueueSum), 0.05, 1e-4));
 
 	Registry.SetClock(nullptr);
 	Registry.Reset();
@@ -209,7 +188,7 @@ bool FMcpHealthResourceTelemetryRedactionTest::RunTest(const FString& Parameters
 	(void)Parameters;
 	FMcpTelemetryRegistry& Registry = FMcpTelemetryRegistry::Get();
 	Registry.Reset();
-	InstallHealthFakeClock(Registry, 0.0);
+	InstallTelemetryFakeClock(Registry, 0.0);
 
 	for (int32 Index = 0; Index < 500; ++Index)
 	{
@@ -239,4 +218,4 @@ bool FMcpHealthResourceTelemetryRedactionTest::RunTest(const FString& Parameters
 	return true;
 }
 
-#endif // WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#endif // WITH_DEV_AUTOMATION_TESTS

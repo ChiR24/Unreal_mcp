@@ -17,15 +17,11 @@ void FMcpConnectionManager::Initialize(
       EnvListenHost = Settings->ListenHost;
     if (!Settings->ListenPorts.IsEmpty())
       EnvListenPorts = Settings->ListenPorts;
-    if (!Settings->EndpointUrl.IsEmpty())
-      EndpointUrl = Settings->EndpointUrl;
     // Route through the capability-token store so auto-generation and token-file
     // persistence are handled in one place, consistently for both transports.
     CapabilityToken = McpCapabilityTokenStore::ResolveEffectiveToken(Settings);
     if (Settings->AutoReconnectDelay > 0.0f)
       AutoReconnectDelaySeconds = Settings->AutoReconnectDelay;
-    if (Settings->ClientPort > 0)
-      ClientPort = Settings->ClientPort;
     bRequireCapabilityToken = Settings->bRequireCapabilityToken;
     if (Settings->HeartbeatTimeoutSeconds > 0.0f)
       HeartbeatTimeoutSeconds = Settings->HeartbeatTimeoutSeconds;
@@ -38,67 +34,20 @@ void FMcpConnectionManager::Initialize(
       TlsCertificatePath = Settings->TlsCertificatePath;
     if (!Settings->TlsPrivateKeyPath.IsEmpty())
       TlsPrivateKeyPath = Settings->TlsPrivateKeyPath;
-
-    // ListenPorts is a single comma-separated FString, so a partial ini override
-    // (e.g. ListenPorts=9000) REPLACES the "8090,8091" default wholesale rather than
-    // adding to it (UE config semantics). When multi-listen is on, that can silently
-    // drop a default bridge port the TypeScript bridge / external MCP clients expect
-    // to connect on. We keep the user's ports authoritative (no surprise extra binds)
-    // but warn loudly so an accidental drop is visible instead of a mystery no-connect.
-    if (Settings->bMultiListen && !Settings->ListenPorts.IsEmpty()) {
-      TArray<FString> ConfiguredTokens;
-      Settings->ListenPorts.ParseIntoArray(ConfiguredTokens, TEXT(","), true);
-      TSet<int32> ConfiguredPorts;
-      for (const FString &Token : ConfiguredTokens) {
-        int32 ParsedPort = 0;
-        if (LexTryParseString(ParsedPort, *Token.TrimStartAndEnd()) &&
-            ParsedPort > 0 && ParsedPort <= 65535)
-          ConfiguredPorts.Add(ParsedPort);
-      }
-      // Mirrors the ListenPorts default in UMcpAutomationBridgeSettings' constructor.
-      static const int32 DefaultBridgePorts[] = {8090, 8091};
-      FString MissingDefaults;
-      for (int32 DefaultPort : DefaultBridgePorts) {
-        if (!ConfiguredPorts.Contains(DefaultPort)) {
-          if (!MissingDefaults.IsEmpty())
-            MissingDefaults += TEXT(",");
-          MissingDefaults += FString::FromInt(DefaultPort);
-        }
-      }
-      if (ConfiguredPorts.Num() > 0 && !MissingDefaults.IsEmpty()) {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
-               TEXT("ListenPorts=\"%s\" does not include the default bridge port(s) "
-                    "%s. A partial ListenPorts override replaces the \"8090,8091\" "
-                    "default entirely, so MCP clients or the TypeScript bridge "
-                    "expecting %s will not be able to connect. Add them to "
-                    "ListenPorts if this was unintended."),
-               *Settings->ListenPorts, *MissingDefaults, *MissingDefaults);
-      }
-    }
   }
 
   // Allow environment variable overrides for rate limiting (useful for tests)
   // Set MCP_MAX_MESSAGES_PER_MINUTE=0 or MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE=0 to disable
-  FString EnvMaxMessages = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_MAX_MESSAGES_PER_MINUTE"));
-  if (!EnvMaxMessages.IsEmpty()) {
+  const auto ApplyEnvLimit = [](const TCHAR *Name, int32 &Target) {
     int32 ParsedValue = 0;
-    if (LexTryParseString(ParsedValue, *EnvMaxMessages)) {
-      MaxMessagesPerMinute = ParsedValue;
+    if (LexTryParseString(ParsedValue, *FPlatformMisc::GetEnvironmentVariable(Name))) {
+      Target = ParsedValue;
       UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-             TEXT("Rate limit override from env: MCP_MAX_MESSAGES_PER_MINUTE=%d"),
-             MaxMessagesPerMinute);
+             TEXT("Rate limit override from env: %s=%d"), Name, Target);
     }
-  }
-  FString EnvMaxAutomation = FPlatformMisc::GetEnvironmentVariable(TEXT("MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE"));
-  if (!EnvMaxAutomation.IsEmpty()) {
-    int32 ParsedValue = 0;
-    if (LexTryParseString(ParsedValue, *EnvMaxAutomation)) {
-      MaxAutomationRequestsPerMinute = ParsedValue;
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-             TEXT("Rate limit override from env: MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE=%d"),
-             MaxAutomationRequestsPerMinute);
-    }
-  }
+  };
+  ApplyEnvLimit(TEXT("MCP_MAX_MESSAGES_PER_MINUTE"), MaxMessagesPerMinute);
+  ApplyEnvLimit(TEXT("MCP_MAX_AUTOMATION_REQUESTS_PER_MINUTE"), MaxAutomationRequestsPerMinute);
 }
 
 void FMcpConnectionManager::Start() {
@@ -139,50 +88,20 @@ void FMcpConnectionManager::Stop() {
   bReconnectEnabled = false;
   TimeUntilReconnect = 0.0f;
 
-  // Close all active sockets
+  // Unbind first so closing the sockets below reaches no handler of a stopped manager.
   for (TSharedPtr<FMcpBridgeWebSocket> &Socket : ActiveSockets) {
     if (Socket.IsValid()) {
-      Socket->OnConnected().RemoveAll(this);
-      Socket->OnConnectionError().RemoveAll(this);
-      Socket->OnClosed().RemoveAll(this);
-      Socket->OnMessage().RemoveAll(this);
-      Socket->OnHeartbeat().RemoveAll(this);
-      Socket->Close();
+      Socket->ConnectedDelegate.RemoveAll(this);
+      Socket->ConnectionErrorDelegate.RemoveAll(this);
+      Socket->ClosedDelegate.RemoveAll(this);
+      Socket->MessageDelegate.RemoveAll(this);
+      Socket->HeartbeatDelegate.RemoveAll(this);
     }
   }
-  ActiveSockets.Empty();
-  {
-    FScopeLock Lock(&AuthSocketsMutex);
-    AuthenticatedSockets.Empty();
-    // Resolved principals are security state keyed by a raw socket pointer, so
-    // they must not outlive the sockets ActiveSockets just released. Stop() used
-    // to drop the authenticated set and keep the principals; ForceReconnect
-    // already clears both, and this is the same teardown.
-    SocketPrincipals.Empty();
-  }
-  {
-    FScopeLock Lock(&LogSubscribersMutex);
-    LogSubscriberSockets.Empty();
-  }
-  {
-    FScopeLock Lock(&RateLimitMutex);
-    SocketRateLimits.Empty();
-  }
-  {
-    FScopeLock Lock(&PendingRequestsMutex);
-    PendingRequestsToSockets.Empty();
-  }
+  ForgetAllSockets();
 
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("MCP connection manager stopped."));
-}
-
-bool FMcpConnectionManager::IsConnected() const {
-  for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
-    if (Sock.IsValid() && Sock->IsConnected())
-      return true;
-  }
-  return false;
 }
 
 void FMcpConnectionManager::SetOnMessageReceived(
@@ -212,9 +131,6 @@ bool FMcpConnectionManager::Tick(float DeltaTime) {
       ForceReconnect(TEXT("Heartbeat timeout"));
     }
   }
-
-  // Telemetry summary
-  EmitAutomationTelemetrySummaryIfNeeded(FPlatformTime::Seconds());
 
   return true;
 }

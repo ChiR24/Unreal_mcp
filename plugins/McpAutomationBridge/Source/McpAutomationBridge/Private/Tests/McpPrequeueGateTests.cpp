@@ -1,11 +1,12 @@
 #include "Core/Security/McpPrequeueGate.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
+#include "Tests/McpTestFixtures.h"
 #include "Misc/AutomationTest.h"
 #include "Foundation/McpPrincipalQuota.h"
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 
-// Regression tests for the Task 40 pre-queue gate.
+// Regression tests for the pre-queue gate.
 //
 // The gate previously had NO tests at all, so deleting its central security
 // claims broke nothing. Two of these cases are the exact bypasses a review
@@ -18,27 +19,6 @@
 
 namespace
 {
-FMcpCapabilityPrincipal MakeGatePrincipal(
-	const TArray<EMcpCapabilityScope>& Scopes, const TArray<FString>& Prefixes = {})
-{
-	FMcpCapabilityPrincipal Principal;
-	Principal.Identity = TEXT("scoped:gate-test");
-	Principal.Scopes = Scopes;
-	Principal.AllowedPathPrefixes = Prefixes;
-	Principal.bAuthenticated = true;
-	return Principal;
-}
-
-TSharedPtr<FJsonObject> GatePayload(const TMap<FString, FString>& Fields)
-{
-	TSharedPtr<FJsonObject> Object = MakeShared<FJsonObject>();
-	for (const TPair<FString, FString>& Field : Fields)
-	{
-		Object->SetStringField(Field.Key, Field.Value);
-	}
-	return Object;
-}
-
 FMcpPrequeueRequest MakeGateRequest(const FString& DispatchAction, const TSharedPtr<FJsonObject>& InPayload)
 {
 	FMcpPrequeueRequest Request;
@@ -68,13 +48,13 @@ bool FMcpPrequeueGateDemandTest::RunTest(const FString& Parameters)
 	// dispatcher resolves subAction, so the gate must too.
 	{
 		const FMcpCapabilityDemand Honest = McpPrequeueGate::ResolveDemand(MakeGateRequest(
-			TEXT("system_control"), GatePayload({ { TEXT("subAction"), TEXT("console_command") } })));
+			TEXT("system_control"), McpTestFields({ { TEXT("subAction"), TEXT("console_command") } })));
 		TestTrue(TEXT("positive control: console_command demands write"),
 			Honest.RequiredScope == EMcpCapabilityScope::Write);
 
 		const FMcpCapabilityDemand Decoyed = McpPrequeueGate::ResolveDemand(MakeGateRequest(
 			TEXT("system_control"),
-			GatePayload({ { TEXT("subAction"), TEXT("console_command") },
+			McpTestFields({ { TEXT("subAction"), TEXT("console_command") },
 					  { TEXT("action"), TEXT("find_by_class") },
 					  { TEXT("command"), TEXT("obliterate") } })));
 		TestTrue(TEXT("a decoy payload.action does NOT downgrade the required scope"),
@@ -86,7 +66,7 @@ bool FMcpPrequeueGateDemandTest::RunTest(const FString& Parameters)
 	// An action with no catalogue match demands Admin.
 	{
 		const FMcpCapabilityDemand Demand = McpPrequeueGate::ResolveDemand(MakeGateRequest(
-			TEXT("system_control"), GatePayload({ { TEXT("subAction"), TEXT("no_such_action_xyz") } })));
+			TEXT("system_control"), McpTestFields({ { TEXT("subAction"), TEXT("no_such_action_xyz") } })));
 		TestTrue(TEXT("unknown action demands admin"),
 			Demand.RequiredScope == EMcpCapabilityScope::Admin);
 	}
@@ -95,12 +75,12 @@ bool FMcpPrequeueGateDemandTest::RunTest(const FString& Parameters)
 	// and write on manage_asset, so an unnarrowed resolve must take destructive.
 	{
 		const FMcpCapabilityDemand Ambiguous = McpPrequeueGate::ResolveDemand(
-			MakeGateRequest(FString(), GatePayload({ { TEXT("subAction"), TEXT("delete_node") } })));
+			MakeGateRequest(FString(), McpTestFields({ { TEXT("subAction"), TEXT("delete_node") } })));
 		TestTrue(TEXT("strictest scope wins across ambiguous candidates"),
 			Ambiguous.RequiredScope == EMcpCapabilityScope::Destructive);
 
 		const FMcpCapabilityDemand Narrowed = McpPrequeueGate::ResolveDemand(MakeGateRequest(
-			TEXT("manage_asset"), GatePayload({ { TEXT("subAction"), TEXT("delete_node") } })));
+			TEXT("manage_asset"), McpTestFields({ { TEXT("subAction"), TEXT("delete_node") } })));
 		TestTrue(TEXT("positive control: narrowing to the real parent keeps its own scope"),
 			Narrowed.RequiredScope == EMcpCapabilityScope::Write);
 	}
@@ -109,7 +89,7 @@ bool FMcpPrequeueGateDemandTest::RunTest(const FString& Parameters)
 	// rather than fall back to the un-narrowed candidate list.
 	{
 		const FMcpCapabilityDemand Demand = McpPrequeueGate::ResolveDemand(MakeGateRequest(
-			TEXT("manage_level"), GatePayload({ { TEXT("subAction"), TEXT("delete_node") } })));
+			TEXT("manage_level"), McpTestFields({ { TEXT("subAction"), TEXT("delete_node") } })));
 		TestTrue(TEXT("an action that does not belong to the named parent demands admin"),
 			Demand.RequiredScope == EMcpCapabilityScope::Admin);
 	}
@@ -128,8 +108,8 @@ bool FMcpPrequeueGatePathConfinementTest::RunTest(const FString& Parameters)
 	using namespace McpCapabilityAuthorization;
 
 	const FMcpCapabilityPrincipal Confined =
-		MakeGatePrincipal({ EMcpCapabilityScope::Destructive }, { TEXT("/Game/TeamA") });
-	const FMcpCapabilityPrincipal Unconfined = MakeGatePrincipal({ EMcpCapabilityScope::Destructive });
+		McpTestPrincipal(TEXT("scoped:gate-test"), { EMcpCapabilityScope::Destructive }, { TEXT("/Game/TeamA") });
+	const FMcpCapabilityPrincipal Unconfined = McpTestPrincipal(TEXT("scoped:gate-test"), { EMcpCapabilityScope::Destructive });
 
 	auto Allows = [&](const FMcpCapabilityPrincipal& Principal, const TSharedPtr<FJsonObject>& P)
 	{
@@ -138,40 +118,40 @@ bool FMcpPrequeueGatePathConfinementTest::RunTest(const FString& Parameters)
 
 	// Positive controls first: confinement must still ADMIT what it should.
 	TestTrue(TEXT("control: an in-prefix /Game path is allowed"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("/Game/TeamA/Sub") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamA/Sub") } })));
 	TestTrue(TEXT("control: the prefix itself is allowed"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("/Game/TeamA") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamA") } })));
 	TestTrue(TEXT("control: a /Content alias INSIDE the prefix is allowed"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("/Content/TeamA/Sub") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("/Content/TeamA/Sub") } })));
 	TestTrue(TEXT("control: a non-path scalar is not mistaken for a path"),
-		Allows(Confined, GatePayload({ { TEXT("actorName"), TEXT("SomeActor") } })));
+		Allows(Confined, McpTestFields({ { TEXT("actorName"), TEXT("SomeActor") } })));
 	TestTrue(TEXT("control: an OS import path is not content-confined"),
-		Allows(Confined, GatePayload({ { TEXT("sourcePath"), TEXT("/home/dev/mesh.fbx") } })));
+		Allows(Confined, McpTestFields({ { TEXT("sourcePath"), TEXT("/home/dev/mesh.fbx") } })));
 	TestTrue(TEXT("control: an unrestricted principal is unaffected"),
-		Allows(Unconfined, GatePayload({ { TEXT("folderPath"), TEXT("/Content/TeamB") } })));
+		Allows(Unconfined, McpTestFields({ { TEXT("folderPath"), TEXT("/Content/TeamB") } })));
 
 	// BLOCKER 2 REGRESSION — every alias the handler would root at /Game/TeamB
 	// must be refused for a principal confined to /Game/TeamA.
 	TestFalse(TEXT("/Content alias is confined"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("/Content/TeamB") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("/Content/TeamB") } })));
 	TestFalse(TEXT("backslash /Content alias is confined"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("\\Content\\TeamB") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("\\Content\\TeamB") } })));
 	TestFalse(TEXT("lower-case /content alias is confined"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("/content/TeamB") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("/content/TeamB") } })));
 	TestFalse(TEXT("bare relative path is confined"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("TeamB/Secret") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("TeamB/Secret") } })));
 	TestFalse(TEXT("bare single token under a path key is confined"),
-		Allows(Confined, GatePayload({ { TEXT("packagePath"), TEXT("Secret") } })));
+		Allows(Confined, McpTestFields({ { TEXT("packagePath"), TEXT("Secret") } })));
 	TestFalse(TEXT("doubled separators do not evade confinement"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("//Content//TeamB") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("//Content//TeamB") } })));
 	TestFalse(TEXT("traversal out of the prefix is refused"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("/Game/TeamA/../TeamB") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamA/../TeamB") } })));
 	TestFalse(TEXT("a sibling prefix is not admitted by string prefix alone"),
-		Allows(Confined, GatePayload({ { TEXT("folderPath"), TEXT("/Game/TeamAOther") } })));
+		Allows(Confined, McpTestFields({ { TEXT("folderPath"), TEXT("/Game/TeamAOther") } })));
 
 	// A nested path is collected exactly like a top-level one.
 	{
-		TSharedPtr<FJsonObject> Inner = GatePayload({ { TEXT("folderPath"), TEXT("/Content/TeamB") } });
+		TSharedPtr<FJsonObject> Inner = McpTestFields({ { TEXT("folderPath"), TEXT("/Content/TeamB") } });
 		TSharedPtr<FJsonObject> Outer = MakeShared<FJsonObject>();
 		Outer->SetObjectField(TEXT("options"), Inner);
 		TestFalse(TEXT("a nested /Content alias is confined"), Allows(Confined, Outer));
@@ -191,12 +171,12 @@ bool FMcpPrequeueGateQuotaOrderTest::RunTest(const FString& Parameters)
 	FMcpPrincipalQuotaLedger::Get().Reset();
 
 	// One request per minute, and a scope this principal does not hold.
-	FMcpCapabilityPrincipal Principal = MakeGatePrincipal({ EMcpCapabilityScope::Read });
+	FMcpCapabilityPrincipal Principal = McpTestPrincipal(TEXT("scoped:gate-test"), { EMcpCapabilityScope::Read });
 	Principal.Identity = TEXT("scoped:quota-order");
 	Principal.MaxRequestsPerMinute = 1;
 
 	FMcpPrequeueRequest Refused = MakeGateRequest(
-		TEXT("manage_asset"), GatePayload({ { TEXT("subAction"), TEXT("delete_asset") } }));
+		TEXT("manage_asset"), McpTestFields({ { TEXT("subAction"), TEXT("delete_asset") } }));
 	Refused.Principal = &Principal;
 
 	const FMcpAuthorizationDecision First = McpPrequeueGate::Authorize(Refused);
@@ -207,7 +187,7 @@ bool FMcpPrequeueGateQuotaOrderTest::RunTest(const FString& Parameters)
 
 	// The budget survived both refusals, so an authorized call still fits.
 	FMcpPrequeueRequest Allowed = MakeGateRequest(
-		TEXT("control_actor"), GatePayload({ { TEXT("subAction"), TEXT("find_by_class") } }));
+		TEXT("control_actor"), McpTestFields({ { TEXT("subAction"), TEXT("find_by_class") } }));
 	Allowed.Principal = &Principal;
 	TestTrue(TEXT("an authorized request still fits the unspent budget"),
 		McpPrequeueGate::Authorize(Allowed).bAllowed);
@@ -231,10 +211,10 @@ bool FMcpPrequeueGateReadDemandTest::RunTest(const FString& Parameters)
 	(void)Parameters;
 	FMcpPrincipalQuotaLedger::Get().Reset();
 
-	const FMcpCapabilityPrincipal Reader = MakeGatePrincipal({ EMcpCapabilityScope::Read });
-	const FMcpCapabilityPrincipal Writer = MakeGatePrincipal({ EMcpCapabilityScope::Write });
+	const FMcpCapabilityPrincipal Reader = McpTestPrincipal(TEXT("scoped:gate-test"), { EMcpCapabilityScope::Read });
+	const FMcpCapabilityPrincipal Writer = McpTestPrincipal(TEXT("scoped:gate-test"), { EMcpCapabilityScope::Write });
 	const FMcpCapabilityPrincipal Confined =
-		MakeGatePrincipal({ EMcpCapabilityScope::Read }, { TEXT("/Game/TeamA") });
+		McpTestPrincipal(TEXT("scoped:gate-test"), { EMcpCapabilityScope::Read }, { TEXT("/Game/TeamA") });
 
 	FMcpPrequeueRequest Request;
 	Request.Principal = &Reader;
@@ -249,10 +229,10 @@ bool FMcpPrequeueGateReadDemandTest::RunTest(const FString& Parameters)
 
 	// A resource that addresses a content path is confined like any other path.
 	Request.Principal = &Confined;
-	Request.Payload = GatePayload({ { TEXT("path"), TEXT("/Game/TeamA/Thing") } });
+	Request.Payload = McpTestFields({ { TEXT("path"), TEXT("/Game/TeamA/Thing") } });
 	TestTrue(TEXT("control: an in-prefix resource path is readable"),
 		McpPrequeueGate::AuthorizeRead(Request).bAllowed);
-	Request.Payload = GatePayload({ { TEXT("path"), TEXT("/Game/TeamB/Secret") } });
+	Request.Payload = McpTestFields({ { TEXT("path"), TEXT("/Game/TeamB/Secret") } });
 	TestFalse(TEXT("an out-of-prefix resource path is refused"),
 		McpPrequeueGate::AuthorizeRead(Request).bAllowed);
 

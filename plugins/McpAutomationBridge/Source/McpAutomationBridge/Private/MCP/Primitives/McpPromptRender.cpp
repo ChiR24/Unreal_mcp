@@ -1,6 +1,5 @@
 #include "MCP/Primitives/McpPromptRender.h"
 #include "MCP/Primitives/McpPromptCatalog.h"
-#include "MCP/Primitives/McpPromptArgumentValidation.h"
 #include "Dom/JsonObject.h"
 
 namespace
@@ -25,7 +24,7 @@ namespace
 	FString RenderBody(const FMcpWorkflowPrompt& Prompt, const TArray<TPair<FString, FString>>& Inputs)
 	{
 		TArray<FString> Lines;
-		Lines.Add(FString::Printf(TEXT("# %s  (prompt %s v%d)"), *Prompt.Title, *Prompt.Id, Prompt.Version));
+		Lines.Add(FString::Printf(TEXT("# %s  (prompt %s)"), *Prompt.Title, *Prompt.Id));
 		Lines.Add(TEXT(""));
 		Lines.Add(Disclaimer);
 		Lines.Add(TEXT(""));
@@ -89,75 +88,35 @@ TArray<TSharedPtr<FJsonValue>> McpBuildPromptListEntries()
 FMcpPromptRenderResult McpRenderWorkflowPrompt(const FString& Name, const TMap<FString, FString>& Args)
 {
 	FMcpPromptRenderResult Result;
-	const FMcpWorkflowPrompt* Prompt = McpIsWorkflowPromptId(Name) ? FindPrompt(Name) : nullptr;
+	const FMcpWorkflowPrompt* Prompt = FindPrompt(Name);
 	if (Prompt == nullptr)
 	{
-		Result.ErrorCode = McpPromptErrorCodes::NotFound;
 		Result.ErrorMessage = FString::Printf(TEXT("Unknown workflow prompt: %s"), *Name);
 		return Result;
 	}
-
 	for (const TPair<FString, FString>& Arg : Args)
 	{
-		if (McpPromptArgumentNamesSecret(Arg.Key))
+		if (!Prompt->Arguments.ContainsByPredicate([&Arg](const FMcpPromptArgumentSpec& Spec) { return Spec.Name == Arg.Key; }))
 		{
-			Result.ErrorCode = McpPromptErrorCodes::SecretArgument;
-			Result.ErrorMessage = FString::Printf(TEXT("Argument \"%s\" names a secret; prompts never accept or interpolate secrets"), *Arg.Key);
-			return Result;
-		}
-		if (McpPromptValueLooksSecret(Arg.Value))
-		{
-			Result.ErrorCode = McpPromptErrorCodes::SecretArgument;
-			Result.ErrorMessage = FString::Printf(TEXT("Argument \"%s\" holds a secret-looking value; prompts never interpolate secrets"), *Arg.Key);
-			return Result;
-		}
-	}
-
-	TSet<FString> Declared;
-	for (const FMcpPromptArgumentSpec& Spec : Prompt->Arguments)
-	{
-		Declared.Add(Spec.Name);
-	}
-	for (const TPair<FString, FString>& Arg : Args)
-	{
-		if (!Declared.Contains(Arg.Key))
-		{
-			Result.ErrorCode = McpPromptErrorCodes::UnknownArgument;
 			Result.ErrorMessage = FString::Printf(TEXT("Unknown argument: %s"), *Arg.Key);
 			return Result;
 		}
 	}
-
 	TArray<TPair<FString, FString>> Inputs;
 	for (const FMcpPromptArgumentSpec& Spec : Prompt->Arguments)
 	{
-		const FString* Raw = Args.Find(Spec.Name);
-		if (Raw == nullptr)
+		if (const FString* Raw = Args.Find(Spec.Name))
 		{
-			if (Spec.bRequired)
-			{
-				Result.ErrorCode = McpPromptErrorCodes::MissingArgument;
-				Result.ErrorMessage = FString::Printf(TEXT("Missing required argument: %s"), *Spec.Name);
-				return Result;
-			}
-			continue;
+			Inputs.Add(TPair<FString, FString>(Spec.Name, *Raw));
 		}
-		if (!McpValidatePromptArgument(Spec, *Raw, Result.ErrorCode, Result.ErrorMessage))
+		else if (Spec.bRequired)
 		{
+			Result.ErrorMessage = FString::Printf(TEXT("Missing required argument: %s"), *Spec.Name);
 			return Result;
 		}
-		Inputs.Add(TPair<FString, FString>(Spec.Name, *Raw));
-	}
-
-	const FString Body = RenderBody(*Prompt, Inputs);
-	if (FTCHARToUTF8(*Body).Length() > McpMaxPromptBytes)
-	{
-		Result.ErrorCode = McpPromptErrorCodes::TooLarge;
-		Result.ErrorMessage = FString::Printf(TEXT("Prompt body exceeds the %d byte budget"), McpMaxPromptBytes);
-		return Result;
 	}
 	Result.bOk = true;
-	Result.Body = Body;
+	Result.Body = RenderBody(*Prompt, Inputs);
 	Result.Description = Prompt->Description;
 	return Result;
 }

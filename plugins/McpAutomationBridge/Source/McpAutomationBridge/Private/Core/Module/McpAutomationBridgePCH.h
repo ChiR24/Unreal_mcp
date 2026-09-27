@@ -114,8 +114,6 @@ class UAnimBlueprint;
 // EDITOR-ONLY INCLUDES
 // ============================================================================
 
-#if WITH_EDITOR
-
 // Editor subsystem
 // Only EditorSubsystem.h exists; the Subsystems/ spelling that used to sit
 // beside it names no real header. NoPCHs meant this file was never compiled,
@@ -123,25 +121,11 @@ class UAnimBlueprint;
 #include "EditorSubsystem.h"
 
 // Scoped Transaction (for undo/redo support)
-#if __has_include("ScopedTransaction.h")
 #include "ScopedTransaction.h"
 #define MCP_PCH_HAS_SCOPED_TRANSACTION 1
-#elif __has_include("Editor/ScopedTransaction.h")
-#include "Editor/ScopedTransaction.h"
-#define MCP_PCH_HAS_SCOPED_TRANSACTION 1
-#elif __has_include("Misc/ScopedTransaction.h")
-#include "Misc/ScopedTransaction.h"
-#define MCP_PCH_HAS_SCOPED_TRANSACTION 1
-#else
-#define MCP_PCH_HAS_SCOPED_TRANSACTION 0
-#endif
 
 // Editor asset library
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#elif __has_include("Editor/EditorAssetLibrary.h")
-#include "Editor/EditorAssetLibrary.h"
-#endif
 
 // Asset tools
 #include "AssetToolsModule.h"
@@ -163,4 +147,3 @@ class UAnimBlueprint;
 // Modules
 #include "Modules/ModuleManager.h"
 
-#endif // WITH_EDITOR

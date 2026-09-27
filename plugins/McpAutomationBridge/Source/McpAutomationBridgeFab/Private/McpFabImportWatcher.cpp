@@ -76,24 +76,30 @@ void SetBusy(bool bBusy)
 	bOperationInFlight = bBusy;
 }
 
+// State one watch shares between the registry hook and the ticker; it lives until the ticker stops.
+struct FImportWatch
+{
+	double Elapsed = 0.0;
+	double QuietFor = 0.0;
+	int32 LastCount = 0;
+	TSet<FString> AddedSet;
+	FCriticalSection AddedLock;
+	FDelegateHandle AddedHandle;
+	FTSTicker::FDelegateHandle TickerHandle;
+	FUnattendedDuringImport Unattended;
+};
+
 void WatchForImport(
 	TSet<FString> Before,
 	FMcpFabAddResult Partial,
 	TFunction<void(const FMcpFabAddResult&)> OnComplete)
 {
-	TSharedRef<double> Elapsed = MakeShared<double>(0.0);
-	TSharedRef<double> QuietFor = MakeShared<double>(0.0);
-	TSharedRef<int32> LastCount = MakeShared<int32>(0);
-	TSharedRef<TSet<FString>> AddedSet = MakeShared<TSet<FString>>();
-	TSharedRef<FCriticalSection> AddedLock = MakeShared<FCriticalSection>();
-	TSharedRef<FDelegateHandle> AddedHandle = MakeShared<FDelegateHandle>();
-	TSharedRef<FTSTicker::FDelegateHandle> TickerHandle = MakeShared<FTSTicker::FDelegateHandle>();
-	TSharedRef<FUnattendedDuringImport> Unattended = MakeShared<FUnattendedDuringImport>();
+	TSharedRef<FImportWatch> Watch = MakeShared<FImportWatch>();
 
 	IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 		TEXT("AssetRegistry")).Get();
-	*AddedHandle = Registry.OnAssetAdded().AddLambda(
-		[Before, AddedSet, AddedLock](const FAssetData& AssetData)
+	Watch->AddedHandle = Registry.OnAssetAdded().AddLambda(
+		[Before, Watch](const FAssetData& AssetData)
 		{
 			const FString Path = AssetData.GetObjectPathString();
 			// Skip the baseline and sub-objects: a map contributes entries like
@@ -103,26 +109,25 @@ void WatchForImport(
 			{
 				return;
 			}
-			FScopeLock Lock(&AddedLock.Get());
-			AddedSet->Add(Path);
+			FScopeLock Lock(&Watch->AddedLock);
+			Watch->AddedSet.Add(Path);
 		});
 
-	*TickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
-		[Partial, OnComplete, Elapsed, QuietFor, LastCount, AddedSet, AddedLock, AddedHandle, TickerHandle,
-			Unattended](float Delta) mutable
+	Watch->TickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+		[Partial, OnComplete, Watch](float Delta) mutable
 		{
-			*Elapsed += Delta;
+			Watch->Elapsed += Delta;
 
 			int32 Count;
 			{
-				FScopeLock Lock(&AddedLock.Get());
-				Count = AddedSet->Num();
+				FScopeLock Lock(&Watch->AddedLock);
+				Count = Watch->AddedSet.Num();
 			}
-			if (Count != *LastCount) { *LastCount = Count; *QuietFor = 0.0; }
-			else if (Count > 0) { *QuietFor += Delta; }
+			if (Count != Watch->LastCount) { Watch->LastCount = Count; Watch->QuietFor = 0.0; }
+			else if (Count > 0) { Watch->QuietFor += Delta; }
 
-			const bool bSettled = Count > 0 && *QuietFor >= SettleSeconds;
-			const bool bExpired = *Elapsed >= MaxWaitSeconds;
+			const bool bSettled = Count > 0 && Watch->QuietFor >= SettleSeconds;
+			const bool bExpired = Watch->Elapsed >= MaxWaitSeconds;
 			if (!bSettled && !bExpired)
 			{
 				return true; // keep ticking
@@ -130,8 +135,8 @@ void WatchForImport(
 
 			TArray<FString> Added;
 			{
-				FScopeLock Lock(&AddedLock.Get());
-				Added = AddedSet->Array();
+				FScopeLock Lock(&Watch->AddedLock);
+				Added = Watch->AddedSet.Array();
 			}
 			Added.Sort();
 			Partial.AssetCount = Count;
@@ -163,8 +168,8 @@ void WatchForImport(
 
 			IAssetRegistry& RegistryRef = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 				TEXT("AssetRegistry")).Get();
-			RegistryRef.OnAssetAdded().Remove(*AddedHandle);
-			FTSTicker::GetCoreTicker().RemoveTicker(*TickerHandle);
+			RegistryRef.OnAssetAdded().Remove(Watch->AddedHandle);
+			FTSTicker::GetCoreTicker().RemoveTicker(Watch->TickerHandle);
 			bOperationInFlight = false;
 			OnComplete(Partial);
 			return false;

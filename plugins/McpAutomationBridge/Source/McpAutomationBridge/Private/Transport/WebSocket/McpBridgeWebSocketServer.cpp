@@ -22,24 +22,35 @@ uint32 FMcpBridgeWebSocket::RunServer() {
          TEXT("FMcpBridgeWebSocket::RunServer begin (host=%s, port=%d, IPv6=%s)"),
          *ListenHost, Port, bIsIpv6Host ? TEXT("true") : TEXT("false"));
 
-  const FName ProtocolName = bIsIpv6Host ? FName(TEXT("IPv6")) : FName();
-  ListenSocket = SocketSubsystem->CreateSocket(
-      NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), ProtocolName);
-  if (!ListenSocket) {
-    const FString ErrorMessage = DescribeSocketError(
-        SocketSubsystem, TEXT("Failed to create listen socket"));
+  // Logs What with the socket error and tells the game thread; RunServer then returns 0.
+  const auto Fail = [this, SocketSubsystem](const TCHAR *What) -> uint32 {
+    const FString ErrorMessage = DescribeSocketError(SocketSubsystem, What);
     UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *ErrorMessage);
-    DispatchOnGameThread([WeakThis = SelfWeakPtr, ErrorMessage] {
+    DispatchOnGameThread([WeakThis = AsWeak(), ErrorMessage] {
       if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
         Pinned->ConnectionErrorDelegate.Broadcast(ErrorMessage);
       }
     });
     return 0;
+  };
+  // (Re)creates the blocking, reuse-addr listen socket for a family (NAME_None = IPv4).
+  const auto OpenListenSocket = [this, SocketSubsystem](const FName Protocol) {
+    if (ListenSocket) {
+      SocketSubsystem->DestroySocket(ListenSocket);
+    }
+    ListenSocket = SocketSubsystem->CreateSocket(
+        NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), Protocol);
+    if (ListenSocket) {
+      ListenSocket->SetReuseAddr(true);
+      ListenSocket->SetNonBlocking(false);
+    }
+    return ListenSocket != nullptr;
+  };
+
+  if (!OpenListenSocket(bIsIpv6Host ? FName(TEXT("IPv6")) : FName())) {
+    return Fail(TEXT("Failed to create listen socket"));
   }
   ON_SCOPE_EXIT { DestroyListenSocket(); };
-
-  ListenSocket->SetReuseAddr(true);
-  ListenSocket->SetNonBlocking(false);
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Listen socket created."));
 
   TSharedRef<FInternetAddr> ListenAddr = SocketSubsystem->CreateInternetAddr();
@@ -71,18 +82,9 @@ uint32 FMcpBridgeWebSocket::RunServer() {
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("IPv6 loopback '::1' not supported on this system. Falling back to 127.0.0.1."));
 
-      SocketSubsystem->DestroySocket(ListenSocket);
-      ListenSocket = SocketSubsystem->CreateSocket(
-          NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), FName());
-      if (!ListenSocket) {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-               TEXT("Failed to re-create IPv4 socket for fallback."));
-        return 0;
+      if (!OpenListenSocket(FName())) {
+        return Fail(TEXT("Failed to re-create IPv4 socket for fallback"));
       }
-      ListenSocket->SetReuseAddr(true);
-      ListenSocket->SetNonBlocking(false);
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-             TEXT("Re-created socket for IPv4 fallback."));
 
       bool bFallbackIsValidIp = false;
       ListenAddr->SetIp(TEXT("127.0.0.1"), bFallbackIsValidIp);
@@ -139,19 +141,9 @@ uint32 FMcpBridgeWebSocket::RunServer() {
                  bResolvedIsIpv6 ? TEXT("IPv6") : TEXT("IPv4"),
                  bIsIpv6Host ? TEXT("IPv6") : TEXT("IPv4"));
 
-          SocketSubsystem->DestroySocket(ListenSocket);
-          const FName NewProtocolName =
-              bResolvedIsIpv6 ? FName(TEXT("IPv6")) : FName();
-          ListenSocket = SocketSubsystem->CreateSocket(
-              NAME_Stream, TEXT("McpAutomationBridgeListenSocket"),
-              NewProtocolName);
-          if (!ListenSocket) {
-            UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-                   TEXT("Failed to re-create socket for resolved address family."));
-            return 0;
+          if (!OpenListenSocket(bResolvedIsIpv6 ? FName(TEXT("IPv6")) : FName())) {
+            return Fail(TEXT("Failed to re-create socket for resolved address family"));
           }
-          ListenSocket->SetReuseAddr(true);
-          ListenSocket->SetNonBlocking(false);
         }
       } else {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
@@ -167,19 +159,8 @@ uint32 FMcpBridgeWebSocket::RunServer() {
            TEXT("ListenHost '%s' is not a loopback address and bAllowNonLoopback is false. Falling back to 127.0.0.1. Enable 'Allow Non Loop Back' in Project Settings to use LAN addresses."),
            *HostToBind);
 
-    if (bIsIpv6Host) {
-      SocketSubsystem->DestroySocket(ListenSocket);
-      ListenSocket = SocketSubsystem->CreateSocket(
-          NAME_Stream, TEXT("McpAutomationBridgeListenSocket"), FName());
-      if (!ListenSocket) {
-        UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-               TEXT("Failed to re-create IPv4 socket for fallback."));
-        return 0;
-      }
-      ListenSocket->SetReuseAddr(true);
-      ListenSocket->SetNonBlocking(false);
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-             TEXT("Re-created socket for IPv4 fallback (non-loopback path)."));
+    if (bIsIpv6Host && !OpenListenSocket(FName())) {
+      return Fail(TEXT("Failed to re-create IPv4 socket for fallback"));
     }
 
     bool bFallbackIsValidIp = false;
@@ -190,36 +171,20 @@ uint32 FMcpBridgeWebSocket::RunServer() {
   ListenAddr->SetPort(Port);
 
   if (!ListenSocket->Bind(*ListenAddr)) {
-    const FString ErrorMessage =
-        DescribeSocketError(SocketSubsystem, TEXT("Failed to bind listen socket"));
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *ErrorMessage);
-    DispatchOnGameThread([WeakThis = SelfWeakPtr, ErrorMessage] {
-      if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
-        Pinned->ConnectionErrorDelegate.Broadcast(ErrorMessage);
-      }
-    });
-    return 0;
+    return Fail(TEXT("Failed to bind listen socket"));
   }
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log, TEXT("Listen socket bound to %s."),
          *ListenAddr->ToString(false));
 
   if (!ListenSocket->Listen(ListenBacklog > 0 ? ListenBacklog : 10)) {
-    const FString ErrorMessage =
-        DescribeSocketError(SocketSubsystem, TEXT("Failed to listen on socket"));
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Error, TEXT("%s"), *ErrorMessage);
-    DispatchOnGameThread([WeakThis = SelfWeakPtr, ErrorMessage] {
-      if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
-        Pinned->ConnectionErrorDelegate.Broadcast(ErrorMessage);
-      }
-    });
-    return 0;
+    return Fail(TEXT("Failed to listen on socket"));
   }
 
   bListening = true;
   const FString BoundAddress = ListenAddr->ToString(false);
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("MCP Automation Bridge listening on %s"), *BoundAddress);
-  DispatchOnGameThread([WeakThis = SelfWeakPtr, BoundAddress] {
+  DispatchOnGameThread([WeakThis = AsWeak(), BoundAddress] {
     if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
       Pinned->ConnectedDelegate.Broadcast(Pinned);
     }

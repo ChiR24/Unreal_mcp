@@ -74,13 +74,3 @@ TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	const TSharedPtr<FJsonObject>& CanonicalOutput, const TSharedPtr<FJsonObject>& RawResult,
 	const FMcpReceiptContext& Context);
 
-/**
- * Per-action strictness for the direct (non-gateway) tools/call path.
- *
- * Resolves {ParentTool, arguments.action} to its canonical record and validates
- * against that action's exact input schema. Callers must gate on
- * McpCanonicalRecordsAvailable() first.
- */
-bool McpValidateCanonicalToolArguments(
-	const FString& ParentTool, const TSharedPtr<FJsonObject>& Arguments,
-	FString& OutArgumentPath, FString& OutErrorCode, FString& OutErrorMessage);

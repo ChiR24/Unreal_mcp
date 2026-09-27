@@ -12,11 +12,7 @@ const TArray<FString>& McpExecutionOptionKeys()
 		TEXT("idempotencyKey"),
 		TEXT("expectedCatalogRevision"),
 		TEXT("expectedRevisions"),
-		TEXT("preview"),
-		TEXT("savePolicy"),
 		TEXT("timeoutMs"),
-		TEXT("validationLevel"),
-		TEXT("taskPreference"),
 	};
 	return Keys;
 }
@@ -78,13 +74,6 @@ bool McpValidateExecutionOptions(
 		}
 	}
 
-	const TSharedPtr<FJsonValue> Preview = Options->TryGetField(TEXT("preview"));
-	if (Preview.IsValid() && Preview->Type != EJson::Boolean)
-	{
-		OutError = McpValidationError(TEXT("INVALID_OPTIONS"),
-			TEXT("options.preview must be a boolean."), TEXT("/options/preview"));
-		return false;
-	}
 	// Mirrors the 1..128 bound in gateway-execute-validate.ts. Only the key NAME
 	// was checked here, so a malformed value fell through to TryGetStringField in
 	// McpNativeTransportGatewayExecute, left Context.IdempotencyId empty and took
@@ -263,7 +252,7 @@ bool McpParseGatewayExecuteRequest(
 		}
 		Options = RawOptions->AsObject();
 	}
-	if (!McpValidateExecuteOptionsForCapability(Options, ActionParams, Record, OutError, OutGuidance))
+	if (!McpValidateExecutionOptions(Options, OutError))
 	{
 		return false;
 	}

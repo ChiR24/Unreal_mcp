@@ -20,7 +20,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::EnableTools(const TArray<FString
 			if (!TS->bEnabled)
 			{
 				TS->bEnabled = true;
-				if (CS) CS->EnabledCount++;
 				bAnyActualChange = true;
 			}
 			Enabled.Add(MakeShared<FJsonValueString>(Name));
@@ -61,8 +60,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::DisableTools(const TArray<FStrin
 			if (TS->bEnabled)
 			{
 				TS->bEnabled = false;
-				FCategoryState* CS = CategoryStates.Find(TS->Category);
-				if (CS && CS->EnabledCount > 0) CS->EnabledCount--;
 				bAnyActualChange = true;
 			}
 			Disabled.Add(MakeShared<FJsonValueString>(Name));

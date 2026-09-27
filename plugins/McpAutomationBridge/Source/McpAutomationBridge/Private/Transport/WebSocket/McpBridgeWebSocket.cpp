@@ -14,68 +14,24 @@
 
 using namespace McpBridgeWebSocket;
 
-FMcpBridgeWebSocket::FMcpBridgeWebSocket(
-    const FString &InUrl, const FString &InProtocols,
-    const TMap<FString, FString> &InHeaders, bool bInEnableTls,
-    const FString &InTlsCertificatePath, const FString &InTlsPrivateKeyPath)
-    : Url(InUrl), Socket(nullptr), Port(0), Protocols(InProtocols),
-      Headers(InHeaders), ListenHost(), PendingReceived(),
-      FragmentAccumulator(), bFragmentMessageActive(false), SelfWeakPtr(),
-      bServerMode(false), bServerAcceptedConnection(false),
-      ListenSocket(nullptr), Thread(nullptr), StopEvent(nullptr),
-      ClientSockets(), ListenBacklog(10), AcceptSleepSeconds(0.01f),
-      bConnected(false), bListening(false), bStopping(false),
-      bCloseStarted(false),
-      bUseTls(bInEnableTls), bTlsServer(false), bSslInitialized(false),
-      bOwnsSslContext(false), SslContext(nullptr), SslHandle(nullptr),
-      NativeSocketHandle(0), bNativeSocketReleased(false),
-      TlsCertificatePath(InTlsCertificatePath),
-      TlsPrivateKeyPath(InTlsPrivateKeyPath) {
-  HandlerReadyEvent = nullptr;
-  bHandlerRegistered = false;
-}
-
 FMcpBridgeWebSocket::FMcpBridgeWebSocket(int32 InPort, const FString &InHost,
                                          int32 InListenBacklog,
                                          float InAcceptSleepSeconds,
                                          bool bInEnableTls,
                                          const FString &InTlsCertificatePath,
                                          const FString &InTlsPrivateKeyPath)
-    : Url(), Socket(nullptr), Port(InPort), Protocols(TEXT("mcp-automation")),
-      Headers(), ListenHost(InHost), PendingReceived(), FragmentAccumulator(),
-      bFragmentMessageActive(false), SelfWeakPtr(), bServerMode(true),
-      bServerAcceptedConnection(false), ListenSocket(nullptr), Thread(nullptr),
-      StopEvent(nullptr), ClientSockets(), ListenBacklog(InListenBacklog),
-      AcceptSleepSeconds(InAcceptSleepSeconds), bConnected(false),
-      bListening(false), bStopping(false), bCloseStarted(false),
-      bUseTls(bInEnableTls),
-      bTlsServer(true), bSslInitialized(false), bOwnsSslContext(false),
-      SslContext(nullptr), SslHandle(nullptr), NativeSocketHandle(0),
-      bNativeSocketReleased(false), TlsCertificatePath(InTlsCertificatePath),
-      TlsPrivateKeyPath(InTlsPrivateKeyPath) {
-  HandlerReadyEvent = nullptr;
-  bHandlerRegistered = false;
-}
+    : Port(InPort), ListenHost(InHost), bServerMode(true),
+      ListenBacklog(InListenBacklog), AcceptSleepSeconds(InAcceptSleepSeconds),
+      bUseTls(bInEnableTls), TlsCertificatePath(InTlsCertificatePath),
+      TlsPrivateKeyPath(InTlsPrivateKeyPath) {}
 
 FMcpBridgeWebSocket::FMcpBridgeWebSocket(FSocket *InClientSocket,
                                          bool bInEnableTls,
                                          const FString &InTlsCertificatePath,
                                          const FString &InTlsPrivateKeyPath)
-    : Url(), Socket(InClientSocket), Port(0), Protocols(TEXT("mcp-automation")),
-      Headers(), ListenHost(), PendingReceived(), FragmentAccumulator(),
-      bFragmentMessageActive(false), SelfWeakPtr(), bServerMode(false),
-      bServerAcceptedConnection(true), ListenSocket(nullptr), Thread(nullptr),
-      StopEvent(nullptr), ClientSockets(), ListenBacklog(10),
-      AcceptSleepSeconds(0.01f), bConnected(true), bListening(false),
-      bStopping(false), bCloseStarted(false), bUseTls(bInEnableTls),
-      bTlsServer(true),
-      bSslInitialized(false), bOwnsSslContext(false), SslContext(nullptr),
-      SslHandle(nullptr), NativeSocketHandle(0), bNativeSocketReleased(false),
-      TlsCertificatePath(InTlsCertificatePath),
-      TlsPrivateKeyPath(InTlsPrivateKeyPath) {
-  HandlerReadyEvent = nullptr;
-  bHandlerRegistered = false;
-}
+    : Socket(InClientSocket), bServerAcceptedConnection(true), bConnected(true),
+      bUseTls(bInEnableTls), TlsCertificatePath(InTlsCertificatePath),
+      TlsPrivateKeyPath(InTlsPrivateKeyPath) {}
 
 FMcpBridgeWebSocket::~FMcpBridgeWebSocket() {
   Close();
@@ -138,11 +94,6 @@ void FMcpBridgeWebSocket::NotifyMessageHandlerRegistered() {
   }
 }
 
-void FMcpBridgeWebSocket::InitializeWeakSelf(
-    const TSharedPtr<FMcpBridgeWebSocket> &InShared) {
-  SelfWeakPtr = InShared;
-}
-
 void FMcpBridgeWebSocket::Connect() {
   if (Thread) {
     return;
@@ -153,7 +104,7 @@ void FMcpBridgeWebSocket::Connect() {
   Thread = FRunnableThread::Create(this, TEXT("FMcpBridgeWebSocketWorker"), 0,
                                    TPri_Normal);
   if (!Thread) {
-    DispatchOnGameThread([WeakThis = SelfWeakPtr] {
+    DispatchOnGameThread([WeakThis = AsWeak()] {
       if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
         Pinned->ConnectionErrorDelegate.Broadcast(
             TEXT("Failed to create WebSocket worker thread."));
@@ -177,7 +128,7 @@ void FMcpBridgeWebSocket::Listen() {
   if (!Thread) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
            TEXT("Failed to create server thread for MCP automation bridge."));
-    DispatchOnGameThread([WeakThis = SelfWeakPtr] {
+    DispatchOnGameThread([WeakThis = AsWeak()] {
       if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
         Pinned->ConnectionErrorDelegate.Broadcast(
             TEXT("Failed to create WebSocket server worker thread."));
@@ -267,7 +218,7 @@ void FMcpBridgeWebSocket::TearDown(const FString &Reason, bool bWasClean,
   bConnected = false;
   ResetFragmentState();
 
-  DispatchOnGameThread([WeakThis = SelfWeakPtr, Reason, bWasClean, StatusCode,
+  DispatchOnGameThread([WeakThis = AsWeak(), Reason, bWasClean, StatusCode,
                         bWasConnected] {
     if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
       if (!bWasConnected) {

@@ -12,16 +12,12 @@
 #include "McpFabBridgeDispatch.h"
 
 #include "Dom/JsonObject.h"
+#include "McpFabAddScript.h"
 #include "Misc/Guid.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpFabDetails, Log, All);
-
-namespace McpFabAddOperation
-{
-bool IsSafeListingIdShared(const FString& Value);
-}
 
 namespace McpFabDetailsOperation
 {
@@ -134,7 +130,7 @@ FString BuildDetailsScript(const FString& RequestId, const FString& ListingId)
 
 bool Start(const FString& ListingId, TFunction<void(bool, const FString&)> OnComplete)
 {
-	if (!McpFabAddOperation::IsSafeListingIdShared(ListingId))
+	if (!McpFabAddOperation::IsSafeListingId(ListingId))
 	{
 		OnComplete(false, TEXT("{\"error\":\"INVALID_LISTING_ID\"}"));
 		return true;
@@ -146,10 +142,7 @@ bool Start(const FString& ListingId, TFunction<void(bool, const FString&)> OnCom
 		{
 			return BuildDetailsScript(RequestId, ListingId);
 		},
-		[OnComplete](bool bSuccess, const FString& Payload)
-		{
-			OnComplete(bSuccess, Payload);
-		},
+		OnComplete,
 		Error, ErrorCode);
 
 	if (!bDispatched)

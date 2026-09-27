@@ -17,7 +17,7 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpFabAdd, Log, All);
 
-namespace
+namespace McpFabAddOperation
 {
 /**
  * A listing id is an opaque Fab uid, so anything outside this set is a caller
@@ -47,7 +47,7 @@ bool IsSafeListingId(const FString& Value)
  * through encodeURIComponent as well; the format and file segments come from
  * Fab's own response, not from any caller.
  */
-FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, const FString& EngineVersion)
+FString BuildAddScript(const FString& RequestId, const FString& ListingId, const FString& EngineVersion)
 {
 	return FString::Printf(TEXT(R"JS(
 (function () {
@@ -369,15 +369,4 @@ FString BuildAddScriptImpl(const FString& RequestId, const FString& ListingId, c
 })();
 )JS"), *RequestId, *ListingId, *EngineVersion);
 }
-} // namespace
-
-namespace McpFabAddOperation
-{
-/** The single script this module ever runs against Fab's page. */
-FString BuildAddScript(const FString& RequestId, const FString& ListingId, const FString& EngineVersion)
-{
-	return BuildAddScriptImpl(RequestId, ListingId, EngineVersion);
-}
-
-bool IsSafeListingIdShared(const FString& Value) { return IsSafeListingId(Value); }
 } // namespace McpFabAddOperation

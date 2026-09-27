@@ -63,53 +63,20 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 		.Required({ TEXT("operation") })
 		.Build();
 
-	// Mirror the TypeScript gateway contract: the gateway level rejects extra properties.
+	// Mirror the TypeScript gateway contract: closed at the gateway level and for
+	// consent and options (execute refuses any other option key as UNSUPPORTED_OPTION
+	// anyway); params stays open because its keys are per-action; the TS bounds on
+	// the paging fields.
 	InputSchema->SetBoolField(TEXT("additionalProperties"), false);
-
-	// Match the TS gateway schema bounds (parity audit only covers canonical 23).
-	if (InputSchema->HasField(TEXT("properties")))
-	{
-		const TSharedPtr<FJsonObject> Props = InputSchema->GetObjectField(TEXT("properties"));
-		if (Props.IsValid())
-		{
-			const TSharedPtr<FJsonObject>* ConsentProp = nullptr;
-			if (Props->TryGetObjectField(TEXT("consent"), ConsentProp) && ConsentProp && (*ConsentProp).IsValid())
-			{
-				(*ConsentProp)->SetBoolField(TEXT("additionalProperties"), false);
-			}
-			// Closed like consent: the honored option keys are enumerated above, and
-			// the execute stage refuses any other key as UNSUPPORTED_OPTION anyway.
-			const TSharedPtr<FJsonObject>* OptionsProp = nullptr;
-			if (Props->TryGetObjectField(TEXT("options"), OptionsProp) && OptionsProp && (*OptionsProp).IsValid())
-			{
-				(*OptionsProp)->SetBoolField(TEXT("additionalProperties"), false);
-			}
-			// Open on purpose, unlike consent above: params keys are per-action and
-			// unenumerable here, so closing it would reject every execute.
-			const TSharedPtr<FJsonObject>* ParamsProp = nullptr;
-			if (Props->TryGetObjectField(TEXT("params"), ParamsProp) && ParamsProp && (*ParamsProp).IsValid())
-			{
-				(*ParamsProp)->SetBoolField(TEXT("additionalProperties"), true);
-			}
-			const TSharedPtr<FJsonObject>* LimitProp = nullptr;
-			const TSharedPtr<FJsonObject>* OffsetProp = nullptr;
-			const TSharedPtr<FJsonObject>* MaxBytesProp = nullptr;
-			if (Props->TryGetObjectField(TEXT("limit"), LimitProp) && LimitProp && (*LimitProp).IsValid())
-			{
-				(*LimitProp)->SetNumberField(TEXT("minimum"), 1);
-				(*LimitProp)->SetNumberField(TEXT("maximum"), 25);
-			}
-			if (Props->TryGetObjectField(TEXT("offset"), OffsetProp) && OffsetProp && (*OffsetProp).IsValid())
-			{
-				(*OffsetProp)->SetNumberField(TEXT("minimum"), 0);
-			}
-			if (Props->TryGetObjectField(TEXT("maxBytes"), MaxBytesProp) && MaxBytesProp && (*MaxBytesProp).IsValid())
-			{
-				(*MaxBytesProp)->SetNumberField(TEXT("minimum"), 512);
-				(*MaxBytesProp)->SetNumberField(TEXT("maximum"), 262144);
-			}
-		}
-	}
+	const TSharedPtr<FJsonObject> Props = InputSchema->GetObjectField(TEXT("properties"));
+	Props->GetObjectField(TEXT("consent"))->SetBoolField(TEXT("additionalProperties"), false);
+	Props->GetObjectField(TEXT("options"))->SetBoolField(TEXT("additionalProperties"), false);
+	Props->GetObjectField(TEXT("params"))->SetBoolField(TEXT("additionalProperties"), true);
+	Props->GetObjectField(TEXT("limit"))->SetNumberField(TEXT("minimum"), 1);
+	Props->GetObjectField(TEXT("limit"))->SetNumberField(TEXT("maximum"), 25);
+	Props->GetObjectField(TEXT("offset"))->SetNumberField(TEXT("minimum"), 0);
+	Props->GetObjectField(TEXT("maxBytes"))->SetNumberField(TEXT("minimum"), 512);
+	Props->GetObjectField(TEXT("maxBytes"))->SetNumberField(TEXT("maximum"), 262144);
 
 	auto Tool = MakeShared<FJsonObject>();
 	Tool->SetStringField(TEXT("name"), TEXT("unreal"));

@@ -1,4 +1,5 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
+#include "Interfaces/IPluginManager.h"
 
 DEFINE_LOG_CATEGORY(LogMcpNativeTransport);
 
@@ -81,11 +82,9 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 			if (FJsonSerializer::Deserialize(Reader, JsonObj) && JsonObj.IsValid())
 			{
 				JsonObj->TryGetStringField(TEXT("name"), ServerName);
-				JsonObj->TryGetStringField(TEXT("version"), ServerVersion);
 				JsonObj->TryGetStringField(TEXT("instructions"), BaseInstructions);
 
-				UE_LOG(LogMcpNativeTransport, Log,
-					TEXT("Loaded server-info.json: %s v%s"), *ServerName, *ServerVersion);
+				UE_LOG(LogMcpNativeTransport, Log, TEXT("Loaded server-info.json: %s"), *ServerName);
 			}
 			else
 			{
@@ -99,6 +98,8 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 				TEXT("server-info.json not found at %s -- using defaults"), *ServerInfoPath);
 		}
 	}
+	// The .uplugin VersionName is the native side's only copy of the version.
+	if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("McpAutomationBridge"))) { ServerVersion = Plugin->GetDescriptor().VersionName; }
 
 	// Initialize dynamic tool manager from self-describing C++ tool registry
 	{
@@ -107,7 +108,6 @@ bool FMcpNativeTransport::Start(int32 Port, const FString& PluginDir, bool bLoad
 			TEXT("Tool registry: %d self-describing tools registered"), Registry.GetToolCount());
 		ToolManager.Initialize(Registry, bLoadAllTools);
 	}
-	ToolManager.OnToolsChanged.BindRaw(this, &FMcpNativeTransport::OnToolsListChanged);
 
 	// Create stop event and launch accept thread
 	StopEvent = FPlatformProcess::GetSynchEventFromPool(true);
@@ -237,7 +237,6 @@ void FMcpNativeTransport::Shutdown()
 	// Close all active SSE connections with error.
 	// WriteMutex is taken per-connection to synchronize with in-flight async writes.
 	{
-		ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 		FScopeLock Lock(&SSEConnectionsMutex);
 		// First pass: mark every conn for removal under SSEConnectionsMutex so
 		// any SendSSEProgressUpdate / CompletePendingRequest async task that
@@ -262,18 +261,9 @@ void FMcpNativeTransport::Shutdown()
 					FString ErrorJson = FMcpJsonRpc::BuildError(
 						Conn->JsonRpcId, FMcpJsonRpc::ErrorInternalError,
 						TEXT("Server shutting down"));
-					FString Frame = FString::Printf(
-						TEXT("event: message\ndata: %s\n\n"), *ErrorJson);
-					FTCHARToUTF8 Utf8(*Frame);
-					SendAllBytes(Conn->Socket,
-						reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+					SendSSEFrame(Conn->Socket, ErrorJson);
 
-					Conn->Socket->Close();
-					if (SocketSub)
-					{
-						SocketSub->DestroySocket(Conn->Socket);
-					}
-					Conn->Socket = nullptr;
+					CloseSocket(Conn->Socket);
 				}
 			}
 		}
@@ -300,15 +290,10 @@ void FMcpNativeTransport::Shutdown()
 		NotificationStreams.Empty();
 	}
 
-	// Task 37: drain each active session's MCP primitive state before the session
-	// maps below are emptied — the fifth teardown moment (shutdown all-clear).
-	TArray<FString> PrimSids; { FScopeLock Lock(&SessionMutex); ActiveSessions.GetKeys(PrimSids); }
-	for (const FString& PrimSid : PrimSids) { ReleaseSessionPrimitives(PrimSid); }
 	{
 		FScopeLock Lock(&SessionMutex);
 		ActiveSessions.Empty();
 		SessionRateStates.Empty();
-		SessionProtocolVersions.Empty();
 		ClientRateStates.Empty();
 	}
 	{

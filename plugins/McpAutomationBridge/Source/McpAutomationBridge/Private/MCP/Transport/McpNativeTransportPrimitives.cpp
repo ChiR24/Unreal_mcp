@@ -7,83 +7,16 @@
 #include "MCP/Primitives/McpResourceRevision.h"
 #include "MCP/Primitives/McpPromptCatalog.h"
 #include "MCP/Primitives/McpPromptRender.h"
-#include "MCP/Primitives/McpCompletionProvider.h"
-#include "MCP/Primitives/McpCompletionPools.h"
-#include "MCP/Primitives/McpSubscriptionStore.h"
+#include "MCP/Primitives/McpCompletions.h"
 
-// Task 37 (native mirror of primitive-handlers.ts + primitive-wiring.ts): the
-// JSON-RPC handlers for resources/*, prompts/*, and completion/complete. Each
-// delegates to the pure Tasks 31-36 primitives; none re-implements their
-// algorithms. Static capability/project reads are served safely from the socket
-// thread; editor-state URIs return a typed RESOURCE_UNAVAILABLE rather than
-// scanning editor APIs off-thread. resources/updated delivery lives in the
-// sibling McpNativeTransportPrimitiveNotifications.cpp.
-
-void FMcpNativeTransport::InitializePrimitivesIfNeeded()
-{
-	FScopeLock Lock(&PrimitiveStateMutex);
-	if (NotificationCoalescer.IsValid())
-	{
-		return;
-	}
-	// Seed the per-session configure overlay ONCE from the same registry the
-	// global ToolManager reads. SeedFrom empties overlays, so it belongs in this
-	// construct-once seam; each session's overlay is cloned lazily on its first
-	// configure mutation and carries its own catalog-state revision.
-	const FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
-	TArray<FMcpSessionConfigureStore::FSeedEntry> ConfigureSeed;
-	for (const FString& ToolName : Registry.GetToolNames())
-	{
-		ConfigureSeed.Add({ ToolName, Registry.GetToolCategory(ToolName) });
-	}
-	SessionConfigureStore.SeedFrom(ConfigureSeed);
-	// Releasing a (session, URI) drops its coalescer pending so a released
-	// subscription can never flush a late update.
-	SubscriptionStore.SetReleaseHook(
-		[this](const FString& InSessionId, const FString& InUri)
-		{
-			if (NotificationCoalescer.IsValid())
-			{
-				NotificationCoalescer->DropPending(InSessionId, InUri);
-			}
-		});
-	NotificationCoalescer = MakeUnique<FMcpNotificationCoalescer>(
-		SubscriptionStore,
-		[](const FString&) -> FMcpResourceRevision { return McpInitialResourceRevision; },
-		SessionConfigureStore,
-		[this](const FString& InSessionId, const FMcpResourceUpdatedPayload& Payload)
-		{
-			SendResourceUpdatedNotification(InSessionId, Payload.Uri);
-		},
-		[]() -> int64 { return static_cast<int64>(FPlatformTime::Seconds() * 1000.0); });
-}
-
-void FMcpNativeTransport::ReleaseSessionPrimitives(const FString& SessionId)
-{
-	if (SessionId.IsEmpty())
-	{
-		return;
-	}
-	// ClearSession fires the store release hook (dropping matching pending); the
-	// coalescer ClearSession then drops the session's cursor. Both idempotent.
-	SubscriptionStore.ClearSession(SessionId);
-	// Drop this session's configure overlay so a reused session id restarts
-	// pristine; the coalescer cursor is dropped just below, so no revision leaks.
-	SessionConfigureStore.ClearSession(SessionId);
-	TaskSurface.CloseSession(SessionId);
-	FScopeLock Lock(&PrimitiveStateMutex);
-	if (NotificationCoalescer.IsValid())
-	{
-		NotificationCoalescer->ClearSession(SessionId);
-	}
-}
-
+// resources/*, prompts/* and completion/complete. Static capability/project
+// reads are served from the socket thread; editor-state URIs answer a typed
+// RESOURCE_UNAVAILABLE rather than scanning editor APIs off-thread.
 bool FMcpNativeTransport::HandlePrimitiveMethod(
 	const FString& Method, const TSharedPtr<FJsonObject>& Params,
 	const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 	const FString& SessionId, const FString& CorsOrigin)
 {
-	InitializePrimitivesIfNeeded();
 	auto Reply = [&](const FString& Body)
 	{
 		SendAndClose(ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
@@ -172,26 +105,6 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		Reply(FMcpJsonRpc::BuildResponse(Id, Result));
 		return true;
 	}
-	if (Method == TEXT("resources/subscribe"))
-	{
-		const FMcpSubscribeResult Sub = SubscriptionStore.Subscribe(SessionId, Uri);
-		if (!Sub.bAccepted)
-		{
-			// A server-originated error (not method-not-found): the handler exists
-			// and discriminated the URI against the Task 31 allowlist.
-			Reply(FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams,
-				FString::Printf(TEXT("Resource is not subscribable: %s"), *Uri)));
-			return true;
-		}
-		Reply(FMcpJsonRpc::BuildResponse(Id, MakeShared<FJsonObject>()));
-		return true;
-	}
-	if (Method == TEXT("resources/unsubscribe"))
-	{
-		SubscriptionStore.Unsubscribe(SessionId, Uri);
-		Reply(FMcpJsonRpc::BuildResponse(Id, MakeShared<FJsonObject>()));
-		return true;
-	}
 	if (Method == TEXT("prompts/list"))
 	{
 		auto Result = MakeShared<FJsonObject>();
@@ -222,9 +135,7 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 		const FMcpPromptRenderResult Render = McpRenderWorkflowPrompt(Name, Args);
 		if (!Render.bOk)
 		{
-			auto Data = MakeShared<FJsonObject>();
-			Data->SetStringField(TEXT("code"), Render.ErrorCode);
-			Reply(FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams, Render.ErrorMessage, Data));
+			Reply(FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams, Render.ErrorMessage));
 			return true;
 		}
 		auto ContentObj = MakeShared<FJsonObject>();
@@ -259,20 +170,17 @@ bool FMcpNativeTransport::HandlePrimitiveMethod(
 			(*ArgObj)->TryGetStringField(TEXT("name"), ArgName);
 			(*ArgObj)->TryGetStringField(TEXT("value"), Value);
 		}
-		const TSet<FString> Enabled = McpEnabledCapabilityIds(
-			[this, &SessionId](const FString& Parent) { return SessionConfigureStore.IsToolEnabled(SessionId, Parent); });
-		const FMcpCompletionOutcome Outcome = McpCompleteFromPool(
-			RefType, RefId, ArgName, Value,
-			McpCapabilityCompletionPool(), McpProjectHandleCompletionPool(), Enabled);
+		const FMcpCompletionResult Outcome = McpComplete(RefType, RefId, ArgName, Value,
+			[this](const FString& Parent) { return ToolManager.IsToolEnabled(Parent); });
 		auto Completion = MakeShared<FJsonObject>();
 		TArray<TSharedPtr<FJsonValue>> Values;
-		for (const FString& Candidate : Outcome.Result.Values)
+		for (const FString& Candidate : Outcome.Values)
 		{
 			Values.Add(MakeShared<FJsonValueString>(Candidate));
 		}
 		Completion->SetArrayField(TEXT("values"), Values);
-		Completion->SetNumberField(TEXT("total"), Outcome.Result.Total);
-		Completion->SetBoolField(TEXT("hasMore"), Outcome.Result.bHasMore);
+		Completion->SetNumberField(TEXT("total"), Outcome.Total);
+		Completion->SetBoolField(TEXT("hasMore"), Outcome.bHasMore);
 		auto Result = MakeShared<FJsonObject>();
 		Result->SetObjectField(TEXT("completion"), Completion);
 		Reply(FMcpJsonRpc::BuildResponse(Id, Result));

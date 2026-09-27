@@ -10,14 +10,8 @@
 using namespace McpBridgeWebSocket;
 
 uint32 FMcpBridgeWebSocket::RunClient() {
-  if (bServerAcceptedConnection) {
-    if (!PerformServerHandshake()) {
-      return 0;
-    }
-  } else {
-    if (!PerformHandshake()) {
-      return 0;
-    }
+  if (!PerformServerHandshake()) {
+    return 0;
   }
 
   bConnected = true;
@@ -25,7 +19,7 @@ uint32 FMcpBridgeWebSocket::RunClient() {
       LogMcpAutomationBridgeSubsystem, Log,
       TEXT("FMcpBridgeWebSocket connection established (serverAccepted=%s)."),
       bServerAcceptedConnection ? TEXT("true") : TEXT("false"));
-  DispatchOnGameThread([WeakThis = SelfWeakPtr] {
+  DispatchOnGameThread([WeakThis = AsWeak()] {
     if (TSharedPtr<FMcpBridgeWebSocket> Pinned = WeakThis.Pin()) {
       Pinned->ConnectedDelegate.Broadcast(Pinned);
     }

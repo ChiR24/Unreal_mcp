@@ -50,11 +50,8 @@ public:
 	/** Build a JSON-RPC 2.0 success response string. */
 	static FString BuildResponse(const TSharedPtr<FJsonValue>& Id, const TSharedPtr<FJsonObject>& Result);
 
-	/** Build a JSON-RPC 2.0 error response string. */
-	static FString BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message);
-
 	/** Build a JSON-RPC 2.0 error response string with an optional data object. */
-	static FString BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message, const TSharedPtr<FJsonObject>& Data);
+	static FString BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message, const TSharedPtr<FJsonObject>& Data = nullptr);
 
 	/** Build an MCP tool result object (content array + isError). */
 	static TSharedPtr<FJsonObject> BuildToolResult(

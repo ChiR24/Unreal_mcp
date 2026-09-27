@@ -57,9 +57,8 @@ constexpr int32 McpSearchWordCoverageBonus = 5;
 constexpr int32 McpSearchActionCoveredBonus = 50;
 constexpr int32 McpDescribeDefaultLimit = 20;
 constexpr int32 McpDescribeMaxLimit = 50;
-// Genuinely binding: the widest 25 results the catalog can produce total 10,263
-// bytes, so a 16 KB cap could never fire. 8 KB bounds a full page of typical
-// results and is exercised by real queries on both surfaces.
+// Search result byte budget (24 KB); a page that would pass it is cut short and
+// reported as truncated by "byte-budget".
 constexpr int32 McpMaxResultBytes = 24576; // matches DEFAULT_SEARCH_MAX_BYTES on the TS gateway (dogfood #3)
 
 /** Typed error emitted when the generated capability catalog failed to load. */

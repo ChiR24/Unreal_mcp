@@ -5,8 +5,6 @@
 
 class FMcpToolRegistry;
 
-DECLARE_DELEGATE(FOnToolsChanged);
-
 /**
  * Manages MCP tool visibility at runtime.
  * Port of src/tools/dynamic-tool-manager.ts.
@@ -20,23 +18,9 @@ public:
 	/** Check if a tool is enabled (tool AND category must be enabled). */
 	bool IsToolEnabled(const FString& ToolName) const;
 
-	/** Get set of all currently enabled tool names. */
-	TSet<FString> GetEnabledToolNames() const;
-
-	/**
-	 * Process-local monotonic counter of effective catalog state mutations.
-	 * Starts at 0 after Initialize() and advances once per effective batch.
-	 * This is runtime visibility state, NOT the immutable generated catalog
-	 * content fingerprint; the two are separate and must not be conflated.
-	 */
-	uint64 GetCatalogStateRevision() const;
-
 	/** Dispatch a manage_tools action. Returns JSON result for the response. */
 	TSharedPtr<FJsonObject> HandleAction(const FString& Action,
 		const TSharedPtr<FJsonObject>& Args);
-
-	/** Fired after any mutation that changes the enabled tool set. */
-	FOnToolsChanged OnToolsChanged;
 
 private:
 	struct FToolState
@@ -50,8 +34,6 @@ private:
 	{
 		FString Name;
 		bool bEnabled = true;
-		int32 ToolCount = 0;
-		int32 EnabledCount = 0;
 	};
 
 	TMap<FString, FToolState> ToolStates;
@@ -67,7 +49,10 @@ private:
 	 */
 	mutable FCriticalSection StateMutex;
 
-	/** Bumped once per effective mutation batch; see GetCatalogStateRevision(). */
+	/**
+	 * Process-local count of effective visibility mutations, reported by
+	 * get_status. Runtime state, not the generated catalog's content revision.
+	 */
 	uint64 CatalogStateRevision = 0;
 
 	/** Lock-free impl — caller must hold StateMutex. */
@@ -76,6 +61,8 @@ private:
 	// Actions
 	TSharedPtr<FJsonObject> ListTools();
 	TSharedPtr<FJsonObject> ListCategories();
+	/** Categories with their tool counts, counted on read. */
+	TArray<TSharedPtr<FJsonValue>> DescribeCategories_NoLock() const;
 	TSharedPtr<FJsonObject> EnableTools(const TArray<FString>& ToolNames, bool& bOutChanged);
 	TSharedPtr<FJsonObject> DisableTools(const TArray<FString>& ToolNames, bool& bOutChanged);
 	TSharedPtr<FJsonObject> EnableCategory(const FString& Category, bool& bOutChanged);

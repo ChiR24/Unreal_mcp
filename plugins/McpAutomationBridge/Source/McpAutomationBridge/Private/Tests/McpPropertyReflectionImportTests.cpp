@@ -1,6 +1,6 @@
 #include "Foundation/Reflection/McpPropertyReflectionPrivate.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Components/SkyLightComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "HAL/PlatformTime.h"
@@ -58,68 +58,34 @@ bool FMcpPropertyReflectionRejectsInvalidEnumNumbersTest::RunTest(const FString 
     }
 
     FString Error;
-    TestFalse(
-        TEXT("Fractional enum values are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(1.5), Error));
+    // Clears Error, applies Value to Property on Container and asserts whether it was accepted.
+    auto Expect = [this, &Error](const TCHAR *What, bool bAccepted, void *Container, FProperty *Property,
+                                 const TSharedPtr<FJsonValue> &Value)
+    {
+        Error.Empty();
+        const bool bResult = McpPropertyReflection::ApplyJsonValueToProperty(Container, Property, Value, Error);
+        bAccepted ? TestTrue(What, bResult) : TestFalse(What, bResult);
+    };
+    Expect(TEXT("Fractional enum values are rejected"), false, Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(1.5));
     TestTrue(TEXT("Fractional enum error explains the integer requirement"), Error.Contains(TEXT("integer")));
 
-    Error.Empty();
-    TestFalse(
-        TEXT("Out-of-range enum values are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(9223372036854775808.0), Error));
+    Expect(TEXT("Out-of-range enum values are rejected"), false, Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(9223372036854775808.0));
     TestTrue(TEXT("Out-of-range enum error explains the int64 requirement"), Error.Contains(TEXT("int64")));
 
-    Error.Empty();
-    TestTrue(
-        TEXT("Valid numeric enum values remain supported"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(0.0), Error));
+    Expect(TEXT("Valid numeric enum values remain supported"), true, Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(0.0));
 
-    Error.Empty();
-    TestTrue(
-        TEXT("Valid enum names remain supported"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty,
-            MakeShared<FJsonValueString>(TEXT("SLS_SpecifiedCubemap")), Error));
+    Expect(TEXT("Valid enum names remain supported"), true, Component, SourceTypeProperty, MakeShared<FJsonValueString>(TEXT("SLS_SpecifiedCubemap")));
 
-    Error.Empty();
-    TestFalse(
-        TEXT("Non-finite enum values are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty,
-            MakeShared<FJsonValueNumber>(
-                std::numeric_limits<double>::infinity()),
-            Error));
+    Expect(TEXT("Non-finite enum values are rejected"), false, Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(std::numeric_limits<double>::infinity()));
 
-    Error.Empty();
-    TestFalse(
-        TEXT("NaN enum values are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty,
-            MakeShared<FJsonValueNumber>(
-                std::numeric_limits<double>::quiet_NaN()),
-            Error));
+    Expect(TEXT("NaN enum values are rejected"), false, Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(std::numeric_limits<double>::quiet_NaN()));
 
-    Error.Empty();
-    TestFalse(
-        TEXT("Byte-backed enum max sentinels are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty,
-            MakeShared<FJsonValueNumber>(
-                static_cast<double>(SLS_MAX)),
-            Error));
+    Expect(TEXT("Byte-backed enum max sentinels are rejected"), false, Component, SourceTypeProperty, MakeShared<FJsonValueNumber>(static_cast<double>(SLS_MAX)));
 
     FString EmbeddedNullName(TEXT("SLS_CapturedScene"));
     EmbeddedNullName.GetCharArray().Insert(TEXT('\0'), EmbeddedNullName.Len());
     EmbeddedNullName.Append(TEXT("SLS_MAX"));
-    Error.Empty();
-    TestFalse(
-        TEXT("Enum names containing an embedded NUL are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty,
-            MakeShared<FJsonValueString>(EmbeddedNullName), Error));
+    Expect(TEXT("Enum names containing an embedded NUL are rejected"), false, Component, SourceTypeProperty, MakeShared<FJsonValueString>(EmbeddedNullName));
     TestTrue(
         TEXT("Embedded NUL error identifies the invalid string"),
         Error.Contains(TEXT("NUL")));
@@ -130,12 +96,7 @@ bool FMcpPropertyReflectionRejectsInvalidEnumNumbersTest::RunTest(const FString 
     TestTrue(
         TEXT("Unknown enum fixture starts outside the FName pool"),
         FName(*UnknownEnumName, FNAME_Find).IsNone());
-    Error.Empty();
-    TestFalse(
-        TEXT("Unknown enum names are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Component, SourceTypeProperty,
-            MakeShared<FJsonValueString>(UnknownEnumName), Error));
+    Expect(TEXT("Unknown enum names are rejected"), false, Component, SourceTypeProperty, MakeShared<FJsonValueString>(UnknownEnumName));
     TestTrue(
         TEXT("Rejected enum names are not added to the FName pool"),
         FName(*UnknownEnumName, FNAME_Find).IsNone());
@@ -144,45 +105,20 @@ bool FMcpPropertyReflectionRejectsInvalidEnumNumbersTest::RunTest(const FString 
     FEnumProperty *EnumProperty = CreateIntEnumProperty(TestEnum);
     int32 EnumStorage = 0;
 
-    Error.Empty();
-    TestTrue(
-        TEXT("A visible negative enum value is accepted by name"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            &EnumStorage, EnumProperty,
-            MakeShared<FJsonValueString>(TEXT("Negative")), Error));
+    Expect(TEXT("A visible negative enum value is accepted by name"), true, &EnumStorage, EnumProperty, MakeShared<FJsonValueString>(TEXT("Negative")));
     TestEqual(TEXT("Named negative enum value is stored"), EnumStorage, -1);
 
     EnumStorage = 0;
-    Error.Empty();
-    TestTrue(
-        TEXT("A visible negative enum value is accepted numerically"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            &EnumStorage, EnumProperty, MakeShared<FJsonValueNumber>(-1.0), Error));
+    Expect(TEXT("A visible negative enum value is accepted numerically"), true, &EnumStorage, EnumProperty, MakeShared<FJsonValueNumber>(-1.0));
     TestEqual(TEXT("Numeric negative enum value is stored"), EnumStorage, -1);
 
-    Error.Empty();
-    TestTrue(
-        TEXT("Enum display names remain supported"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            &EnumStorage, EnumProperty,
-            MakeShared<FJsonValueString>(TEXT("Friendly Visible")), Error));
+    Expect(TEXT("Enum display names remain supported"), true, &EnumStorage, EnumProperty, MakeShared<FJsonValueString>(TEXT("Friendly Visible")));
     TestEqual(TEXT("Display-name enum value is stored"), EnumStorage, 0);
 
-    Error.Empty();
-    TestFalse(
-        TEXT("Hidden enum values are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            &EnumStorage, EnumProperty, MakeShared<FJsonValueNumber>(1.0), Error));
+    Expect(TEXT("Hidden enum values are rejected"), false, &EnumStorage, EnumProperty, MakeShared<FJsonValueNumber>(1.0));
 
     const int32 MaxIndex = TestEnum->NumEnums() - 1;
-    Error.Empty();
-    TestFalse(
-        TEXT("Generated enum max sentinels are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            &EnumStorage, EnumProperty,
-            MakeShared<FJsonValueNumber>(
-                static_cast<double>(TestEnum->GetValueByIndex(MaxIndex))),
-            Error));
+    Expect(TEXT("Generated enum max sentinels are rejected"), false, &EnumStorage, EnumProperty, MakeShared<FJsonValueNumber>(static_cast<double>(TestEnum->GetValueByIndex(MaxIndex))));
 
     UCharacterMovementComponent *Movement =
         NewObject<UCharacterMovementComponent>();
@@ -196,12 +132,7 @@ bool FMcpPropertyReflectionRejectsInvalidEnumNumbersTest::RunTest(const FString 
     }
     const int32 OriginalSimulationIterations =
         Movement->MaxSimulationIterations;
-    Error.Empty();
-    TestFalse(
-        TEXT("Positive int32 overflow is rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Movement, IntProperty,
-            MakeShared<FJsonValueNumber>(2147483648.0), Error));
+    Expect(TEXT("Positive int32 overflow is rejected"), false, Movement, IntProperty, MakeShared<FJsonValueNumber>(2147483648.0));
     TestEqual(
         TEXT("Rejected positive overflow leaves the int property unchanged"),
         Movement->MaxSimulationIterations,
@@ -209,22 +140,12 @@ bool FMcpPropertyReflectionRejectsInvalidEnumNumbersTest::RunTest(const FString 
     TestTrue(
         TEXT("Positive overflow error identifies the 32-bit requirement"),
         Error.Contains(TEXT("32-bit")));
-    Error.Empty();
-    TestFalse(
-        TEXT("Negative int32 overflow strings are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Movement, IntProperty,
-            MakeShared<FJsonValueString>(TEXT("-2147483649")), Error));
+    Expect(TEXT("Negative int32 overflow strings are rejected"), false, Movement, IntProperty, MakeShared<FJsonValueString>(TEXT("-2147483649")));
     TestEqual(
         TEXT("Rejected negative overflow leaves the int property unchanged"),
         Movement->MaxSimulationIterations,
         OriginalSimulationIterations);
-    Error.Empty();
-    TestTrue(
-        TEXT("Valid int32 strings remain supported"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Movement, IntProperty,
-            MakeShared<FJsonValueString>(TEXT("42")), Error));
+    Expect(TEXT("Valid int32 strings remain supported"), true, Movement, IntProperty, MakeShared<FJsonValueString>(TEXT("42")));
     TestEqual(
         TEXT("Valid int32 value is assigned"),
         Movement->MaxSimulationIterations,
@@ -238,26 +159,10 @@ bool FMcpPropertyReflectionRejectsInvalidEnumNumbersTest::RunTest(const FString 
         return false;
     }
     TestNull(TEXT("Plain byte property has no enum"), ByteProperty->Enum);
-    Error.Empty();
-    TestFalse(
-        TEXT("Fractional plain byte values are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Movement, ByteProperty, MakeShared<FJsonValueNumber>(1.5), Error));
-    Error.Empty();
-    TestFalse(
-        TEXT("Malformed plain byte strings are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Movement, ByteProperty, MakeShared<FJsonValueString>(TEXT("12x")), Error));
-    Error.Empty();
-    TestFalse(
-        TEXT("Oversized plain byte values are rejected"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Movement, ByteProperty, MakeShared<FJsonValueNumber>(9223372036854775808.0), Error));
-    Error.Empty();
-    TestTrue(
-        TEXT("Valid plain byte strings remain supported"),
-        McpPropertyReflection::ApplyJsonValueToProperty(
-            Movement, ByteProperty, MakeShared<FJsonValueString>(TEXT("255")), Error));
+    Expect(TEXT("Fractional plain byte values are rejected"), false, Movement, ByteProperty, MakeShared<FJsonValueNumber>(1.5));
+    Expect(TEXT("Malformed plain byte strings are rejected"), false, Movement, ByteProperty, MakeShared<FJsonValueString>(TEXT("12x")));
+    Expect(TEXT("Oversized plain byte values are rejected"), false, Movement, ByteProperty, MakeShared<FJsonValueNumber>(9223372036854775808.0));
+    Expect(TEXT("Valid plain byte strings remain supported"), true, Movement, ByteProperty, MakeShared<FJsonValueString>(TEXT("255")));
     TestEqual(
         TEXT("Valid plain byte value is assigned"),
         Movement->CustomMovementMode, static_cast<uint8>(255));

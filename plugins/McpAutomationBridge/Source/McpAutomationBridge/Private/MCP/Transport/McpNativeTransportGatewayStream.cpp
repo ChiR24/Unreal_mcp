@@ -11,8 +11,6 @@ void FMcpNativeTransport::StreamToolCall(
 	const TSharedPtr<FJsonValue>& ProgressToken, const FString& CapabilityId,
 	const TSharedPtr<FJsonObject>& OutputSchema, const FMcpReceiptContext& Context)
 {
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-
 	// Minted by the caller before the pre-queue gate ran, so the consent burn it
 	// recorded is keyed to the same id the response funnel will settle on.
 	const FString RequestId = Context.QueueRequestId.IsEmpty()
@@ -21,7 +19,7 @@ void FMcpNativeTransport::StreamToolCall(
 	TSharedPtr<FSSEConnection> Conn = MakeShared<FSSEConnection>();
 	Conn->Socket = ClientSocket;
 	Conn->JsonRpcId = Id;
-	Conn->ClientRequestIdKey = McpJsonRpcIdKey(Id);
+	Conn->ClientRequestIdKey = McpCanonicalizeRequestId(Id);
 	Conn->ProgressToken = ProgressToken;
 	Conn->bHasProgressToken = ProgressToken.IsValid();
 	Conn->StartTime = FPlatformTime::Seconds();
@@ -114,9 +112,7 @@ void FMcpNativeTransport::StreamToolCall(
 				Conn->Socket, SessionId, CorsOrigin);
 			if (!bHeadersSent)
 			{
-				Conn->Socket->Close();
-				if (SocketSub) SocketSub->DestroySocket(Conn->Socket);
-				Conn->Socket = nullptr;
+				CloseSocket(Conn->Socket);
 			}
 		}
 	}
@@ -192,35 +188,9 @@ void FMcpNativeTransport::StreamToolCall(
 			// Mirror the WebSocket surface's per-code refusal
 			// (SendAutomationRejection): every queue rejection answers with one
 			// typed response and never entered the queue.
-			const TCHAR* ErrorCode = TEXT("AUTOMATION_QUEUE_FULL");
-			const TCHAR* RefusalMessage =
-				TEXT("Automation request rejected: queue is full");
-			switch (QueueRejection)
-			{
-			case EAutomationQueueRejection::GameThreadStalled:
-				ErrorCode = TEXT("EDITOR_BLOCKED");
-				RefusalMessage = TEXT("Automation request rejected: the editor game thread has not ticked for over 15 s (a modal dialog or a blocking operation is holding it); dismiss it and retry");
-				break;
-			case EAutomationQueueRejection::NotAccepting:
-				ErrorCode = TEXT("AUTOMATION_NOT_ACCEPTING");
-				RefusalMessage = TEXT(
-					"Automation request rejected: subsystem is not accepting requests");
-				break;
-			case EAutomationQueueRejection::AlreadyCanceled:
-				ErrorCode = TEXT("AUTOMATION_ALREADY_CANCELED");
-				RefusalMessage = TEXT(
-					"Automation request rejected: request was already canceled");
-				break;
-			case EAutomationQueueRejection::SessionQueueFull:
-				ErrorCode = TEXT("AUTOMATION_SESSION_QUEUE_FULL");
-				RefusalMessage = TEXT(
-					"Automation request rejected: this session already has the maximum number of queued requests; retry after your queued work drains");
-				break;
-			case EAutomationQueueRejection::QueueFull:
-			case EAutomationQueueRejection::None:
-			default:
-				break;
-			}
+			FString ErrorCode;
+			FString RefusalMessage;
+			UMcpAutomationBridgeSubsystem::DescribeQueueRejection(QueueRejection, ErrorCode, RefusalMessage);
 			CompletePendingRequest(
 				CapturedRequestId, false, RefusalMessage, nullptr,
 				ErrorCode);

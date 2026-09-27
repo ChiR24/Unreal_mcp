@@ -4,6 +4,13 @@
 bool McpRejectReservedParams(
 	const TSharedPtr<FJsonObject>& Params, const FString& GatewayAction, FMcpSemanticError& OutError)
 {
+	const auto RefuseOverride = [&OutError]()
+	{
+		OutError = McpValidationError(TEXT("INVALID_PARAMS"),
+			TEXT("params must not override action or subAction. "
+				"Supply the selected action at the gateway level."));
+		return false;
+	};
 	FString ParamsAction;
 	if (Params->TryGetStringField(TEXT("action"), ParamsAction))
 	{
@@ -18,18 +25,12 @@ bool McpRejectReservedParams(
 		}
 		else
 		{
-			OutError = McpValidationError(TEXT("INVALID_PARAMS"),
-				TEXT("params must not override action or subAction. "
-					"Supply the selected action at the gateway level."));
-			return false;
+			return RefuseOverride();
 		}
 	}
 	if (Params->HasField(TEXT("subAction")))
 	{
-		OutError = McpValidationError(TEXT("INVALID_PARAMS"),
-			TEXT("params must not override action or subAction. "
-				"Supply the selected action at the gateway level."));
-		return false;
+		return RefuseOverride();
 	}
 	for (const FString& Control : McpExecutionOptionKeys())
 	{

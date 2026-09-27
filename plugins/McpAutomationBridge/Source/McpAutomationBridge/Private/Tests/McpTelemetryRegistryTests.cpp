@@ -1,36 +1,9 @@
 #include "Foundation/McpTelemetryRegistry.h"
+#include "Tests/McpTelemetryTestSupport.h"
 #include "Foundation/McpTelemetrySchema.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
-
-namespace
-{
-// Fake clock shared by the tests below. Queue wait and duration are exact
-// deltas from this value, so nothing here sleeps or samples the wall clock.
-double GFakeClockSeconds = 0.0;
-
-void InstallFakeClock(FMcpTelemetryRegistry& Registry, double StartSeconds)
-{
-	GFakeClockSeconds = StartSeconds;
-	Registry.SetClock([]() { return GFakeClockSeconds; });
-}
-
-double SampleValue(const FString& Rendered, const FString& Prefix)
-{
-	TArray<FString> Lines;
-	Rendered.ParseIntoArrayLines(Lines);
-	for (const FString& Line : Lines)
-	{
-		if (Line.StartsWith(Prefix + TEXT(" "), ESearchCase::CaseSensitive))
-		{
-			return FCString::Atod(*Line.Mid(Prefix.Len() + 1));
-		}
-	}
-	return -1.0;
-}
-
-} // namespace
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FMcpTelemetryRegistryTimingTest,
@@ -42,12 +15,12 @@ bool FMcpTelemetryRegistryTimingTest::RunTest(const FString& Parameters)
 	(void)Parameters;
 	FMcpTelemetryRegistry& Registry = FMcpTelemetryRegistry::Get();
 	Registry.Reset();
-	InstallFakeClock(Registry, 1000.0);
+	InstallTelemetryFakeClock(Registry, 1000.0);
 
 	Registry.BeginRequest(TEXT("req-a"), TEXT("write"));
-	GFakeClockSeconds = 1000.12;
+	McpTelemetryTestClockSeconds() = 1000.12;
 	Registry.MarkDispatched(TEXT("req-a"));
-	GFakeClockSeconds = 1000.5;
+	McpTelemetryTestClockSeconds() = 1000.5;
 	Registry.EndRequest(TEXT("req-a"), TEXT("success"), FString());
 
 	const FString Rendered = Registry.RenderPrometheus();
@@ -57,9 +30,9 @@ bool FMcpTelemetryRegistryTimingTest::RunTest(const FString& Parameters)
 		McpTelemetrySchema::MetricRequestDurationSeconds());
 
 	TestTrue(TEXT("queue wait is the enqueue->dispatch delta"),
-		FMath::IsNearlyEqual(SampleValue(Rendered, QueueSum), 0.12, 1e-4));
+		FMath::IsNearlyEqual(SampleTelemetryValue(Rendered, QueueSum), 0.12, 1e-4));
 	TestTrue(TEXT("duration is the dispatch->terminal delta"),
-		FMath::IsNearlyEqual(SampleValue(Rendered, DurationSum), 0.38, 1e-4));
+		FMath::IsNearlyEqual(SampleTelemetryValue(Rendered, DurationSum), 0.38, 1e-4));
 	TestEqual(TEXT("terminal drops the in-flight entry"), Registry.InFlightCount(), 0);
 
 	Registry.SetClock(nullptr);
@@ -77,7 +50,7 @@ bool FMcpTelemetryRegistryPercentileTest::RunTest(const FString& Parameters)
 	(void)Parameters;
 	FMcpTelemetryRegistry& Registry = FMcpTelemetryRegistry::Get();
 	Registry.Reset();
-	InstallFakeClock(Registry, 0.0);
+	InstallTelemetryFakeClock(Registry, 0.0);
 
 	for (int32 Index = 1; Index <= 10; ++Index)
 	{
@@ -100,7 +73,7 @@ bool FMcpTelemetryRegistryPercentileTest::RunTest(const FString& Parameters)
 	const FString Count = FString::Printf(TEXT("%s_count{surface=\"native\",action_class=\"read\"}"),
 		McpTelemetrySchema::MetricRequestDurationSeconds());
 	TestTrue(TEXT("histogram counts every observation"),
-		FMath::IsNearlyEqual(SampleValue(Rendered, Count), 10.0, 1e-9));
+		FMath::IsNearlyEqual(SampleTelemetryValue(Rendered, Count), 10.0, 1e-9));
 
 	Registry.SetClock(nullptr);
 	Registry.Reset();
@@ -117,7 +90,7 @@ bool FMcpTelemetryRegistryCardinalityTest::RunTest(const FString& Parameters)
 	(void)Parameters;
 	FMcpTelemetryRegistry& Registry = FMcpTelemetryRegistry::Get();
 	Registry.Reset();
-	InstallFakeClock(Registry, 0.0);
+	InstallTelemetryFakeClock(Registry, 0.0);
 
 	for (int32 Index = 0; Index < 500; ++Index)
 	{
@@ -144,4 +117,4 @@ bool FMcpTelemetryRegistryCardinalityTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif // WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#endif // WITH_DEV_AUTOMATION_TESTS

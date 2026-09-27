@@ -85,20 +85,6 @@ TSharedPtr<FJsonObject> ParameterView(const TSharedPtr<FJsonObject>& Schema, con
 	return View;
 }
 
-TArray<FString> DistinctSortedOf(const TArray<const FMcpCapabilityRecord*>& Records,
-	TFunctionRef<const FString&(const FMcpCapabilityRecord&)> Project)
-{
-	TArray<FString> Values;
-	for (const FMcpCapabilityRecord* Record : Records)
-	{
-		const FString& Value = Project(*Record);
-		const bool bSeen = Values.ContainsByPredicate(
-			[&Value](const FString& Existing) { return Existing.Equals(Value, ESearchCase::CaseSensitive); });
-		if (!bSeen) Values.Add(Value);
-	}
-	Values.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
-	return Values;
-}
 
 void SetObjectOrEmpty(const TSharedPtr<FJsonObject>& Out, const TCHAR* Field, const TSharedPtr<FJsonObject>& Value)
 {
@@ -135,11 +121,11 @@ TSharedPtr<FJsonObject> ToolSummary(
 	Out->SetNumberField(TEXT("capabilityCount"), Siblings.Num());
 	Out->SetStringField(TEXT("catalogRevision"), Revision);
 	Out->SetArrayField(TEXT("domains"), GatewayStringArray(
-		DistinctSortedOf(Siblings, [](const FMcpCapabilityRecord& R) -> const FString& { return R.Domain; })));
+		McpDistinctSorted(Siblings, [](const FMcpCapabilityRecord& R) -> FString { return R.Domain; })));
 	const FString First = Paged.Num() > 0 ? Paged[0] : (Actions.Num() > 0 ? Actions[0] : FString());
 	Out->SetObjectField(TEXT("drillDown"), GatewayBuildNextCall(TEXT("describe"), Tool, First, FString()));
 	Out->SetArrayField(TEXT("families"), GatewayStringArray(
-		DistinctSortedOf(Siblings, [](const FMcpCapabilityRecord& R) -> const FString& { return R.Family; })));
+		McpDistinctSorted(Siblings, [](const FMcpCapabilityRecord& R) -> FString { return R.Family; })));
 	Out->SetStringField(TEXT("message"), TEXT("Tool summary. Drill into an action to receive that capability's exact contract."));
 	Out->SetStringField(TEXT("operation"), TEXT("describe"));
 	Out->SetStringField(TEXT("scope"), TEXT("tool"));
@@ -183,10 +169,9 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	Out->SetStringField(TEXT("catalogRevision"), Revision);
 	if (const TSharedPtr<FJsonObject> Grant = ConsentGrant(Record)) Out->SetObjectField(TEXT("consentGrant"), Grant);
 	SetObjectOrEmpty(Out, TEXT("cost"), Record.Cost);
-	SetObjectOrEmpty(Out, TEXT("deprecation"), Record.Deprecation);
 	Out->SetStringField(TEXT("domain"), Record.Domain);
 	Out->SetStringField(TEXT("effect"), Record.Effect);
-	Out->SetNumberField(TEXT("exampleCount"), Record.ExampleCount);
+	Out->SetNumberField(TEXT("exampleCount"), Record.Examples.Num());
 	if (Record.Examples.Num() > 0)
 	{
 		Out->SetArrayField(TEXT("examples"), Record.Examples);
@@ -242,7 +227,7 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 	const TArray<const FMcpCapabilityRecord*> Siblings = Store.GetRecordsForParent(Input.Tool);
 	// PUBLIC action names, not internal DispatchAction: all 50 manage_audio
 	// capabilities share one DispatchAction, so this listed 1 action for 50.
-	const TArray<FString> Actions = McpDistinctSortedComputed(
+	const TArray<FString> Actions = McpDistinctSorted(
 		Siblings, [](const FMcpCapabilityRecord& R) -> FString { return McpCapabilityPublicAction(R); });
 
 	if (!Input.bHasAction)
@@ -296,8 +281,5 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 		return Out;
 	}
 
-	const bool bAvailable =
-		!Record->DeprecationStatus.Equals(TEXT("removed"), ESearchCase::CaseSensitive) &&
-		IsToolEnabled(Record->Parent);
-	return CapabilityContract(*Record, Input.Tool, Revision, bAvailable);
+	return CapabilityContract(*Record, Input.Tool, Revision, IsToolEnabled(Record->Parent));
 }

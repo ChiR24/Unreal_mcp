@@ -1,5 +1,5 @@
 // McpNativeGatewayExecuteValidationSampleValues.h — synthesizing a schema-shaped
-// sample value for the Task 27 execute-validation suite.
+// sample value for the execute-validation suite.
 //
 // Split out of McpNativeGatewayExecuteValidationTests.cpp so both stay under the
 // 250 pure-line ceiling. This half answers one question: given a declared

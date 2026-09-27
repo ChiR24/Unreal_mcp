@@ -1,6 +1,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Foundation/McpLiveStateRevisions.h"
 #include "Misc/AutomationTest.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -252,8 +252,6 @@ bool FMcpQueueSingleMutationLaneTest::RunTest(const FString& Parameters)
 
 	TestEqual(TEXT("no two handlers are ever in flight at once"),
 		MaxConcurrentDispatches, 1);
-	TestEqual(TEXT("the queue's own lane counter never exceeds one"),
-		Subsystem->QueueFairness.MaxObservedDispatchDepth, 1);
 	TestEqual(TEXT("the lane depth unwinds to zero"),
 		Subsystem->QueueFairness.DispatchDepth, 0);
 	TestEqual(TEXT("a re-entrant drain neither drops nor delays work"),

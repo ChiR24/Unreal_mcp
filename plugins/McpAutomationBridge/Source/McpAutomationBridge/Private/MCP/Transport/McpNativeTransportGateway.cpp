@@ -9,55 +9,6 @@
 #include "MCP/Gateway/McpNativeGatewaySearch.h"
 #include "MCP/Gateway/McpNativeGatewayDirectCallMigration.h"
 
-namespace
-{
-// The visibility-changing configure actions (native mirror of the TS
-// TOOL_LIST_CHANGED_ACTIONS set). Only these fold into a catalog revision.
-bool McpIsVisibilityConfigureAction(const FString& Action)
-{
-	return Action == TEXT("enable_tools") || Action == TEXT("disable_tools")
-		|| Action == TEXT("enable_category") || Action == TEXT("disable_category")
-		|| Action == TEXT("reset");
-}
-
-// Mirror a successful visibility change onto this session's revisioned overlay.
-// The store advances its per-session revision only when the enabled-flag
-// fingerprint actually moves, so a no-op configure leaves the revision (and the
-// downstream SyncCatalog) idle. The store has no EnableCategory mutator, so
-// enable_category re-enables the category's tools via EnableTools (which also
-// re-enables their category), keeping parity with the global manager.
-void McpApplyConfigureVisibility(
-	FMcpSessionConfigureStore& Store, const FString& Action,
-	const FString& SessionId, const TSharedPtr<FJsonObject>& Args)
-{
-	auto ToolNames = [&Args]() { return McpHandlerUtils::GetStringArrayField(Args, TEXT("tools")); };
-
-	if (Action == TEXT("enable_tools")) { Store.EnableTools(SessionId, ToolNames()); return; }
-	if (Action == TEXT("disable_tools")) { Store.DisableTools(SessionId, ToolNames()); return; }
-	if (Action == TEXT("reset")) { Store.Reset(SessionId); return; }
-
-	FString Category;
-	if (Args.IsValid()) Args->TryGetStringField(TEXT("category"), Category);
-	if (Action == TEXT("disable_category")) { Store.DisableCategory(SessionId, Category); return; }
-	if (Action == TEXT("enable_category"))
-	{
-		const FMcpToolRegistry& Registry = FMcpToolRegistry::Get();
-		TArray<FString> InCategory;
-		// `all` is a wildcard, not a category name. DisableCategory already
-		// special-cases it in the store, but the mirror here only matched exact
-		// category names -- so `enable_category all` re-enabled everything in the
-		// global manager while leaving the session overlay fully disabled, and
-		// because the overlay fingerprint never moved, no resources/updated
-		// announced the divergence.
-		const bool bAll = Category == TEXT("all");
-		for (const FString& ToolName : Registry.GetToolNames())
-		{
-			if (bAll || Registry.GetToolCategory(ToolName) == Category) InCategory.Add(ToolName);
-		}
-		Store.EnableTools(SessionId, InCategory);
-	}
-}
-}  // namespace
 
 void FMcpNativeTransport::HandleGatewayCall(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
@@ -70,20 +21,16 @@ void FMcpNativeTransport::HandleGatewayCall(
 		SendAndClose(ClientSocket, Status, TEXT("application/json"), Body, {}, CorsOrigin);
 	};
 
-	if (!Params.IsValid())
+	const auto UnknownOperation = [&]()
 	{
 		SendOneShot(FMcpJsonRpc::BuildToolResult(false,
 			TEXT("operation must be search, describe, execute, or configure."),
 			nullptr, TEXT("UNKNOWN_OPERATION")));
-		return;
-	}
-
+	};
 	FString Operation;
-	if (!Params->TryGetStringField(TEXT("operation"), Operation) || Operation.IsEmpty())
+	if (!Params.IsValid() || !Params->TryGetStringField(TEXT("operation"), Operation) || Operation.IsEmpty())
 	{
-		SendOneShot(FMcpJsonRpc::BuildToolResult(false,
-			TEXT("operation must be search, describe, execute, or configure."),
-			nullptr, TEXT("UNKNOWN_OPERATION")));
+		UnknownOperation();
 		return;
 	}
 
@@ -199,23 +146,6 @@ void FMcpNativeTransport::HandleGatewayCall(
 		bool bOk = false;
 		if (Result.IsValid()) Result->TryGetBoolField(TEXT("success"), bOk);
 
-		// A successful visibility change is mirrored onto this session's revisioned
-		// configure overlay, then folded into one coalesced ue://capability/catalog
-		// resources/updated for subscribed sessions. The overlay fingerprint compare
-		// plus SyncCatalog's per-session cursor make this effective-change-only: a
-		// no-op configure advances no revision and enqueues no notification.
-		if (bOk && McpIsVisibilityConfigureAction(Action))
-		{
-			InitializePrimitivesIfNeeded();
-			McpApplyConfigureVisibility(SessionConfigureStore, Action, SessionId, ManageArgs);
-			FMcpNotificationCoalescer* Coalescer = nullptr;
-			{
-				FScopeLock PrimitiveLock(&PrimitiveStateMutex);
-				Coalescer = NotificationCoalescer.Get();
-			}
-			if (Coalescer) Coalescer->SyncCatalog(SessionId);
-		}
-
 		const FString Msg = bOk ? TEXT("ok")
 			: (Result.IsValid() ? Result->GetStringField(TEXT("error")) : TEXT("configure failed"));
 		SendOneShot(FMcpJsonRpc::BuildToolResult(bOk, Msg, Result));
@@ -228,12 +158,10 @@ void FMcpNativeTransport::HandleGatewayCall(
 		return;
 	}
 
-	SendOneShot(FMcpJsonRpc::BuildToolResult(false,
-		TEXT("operation must be search, describe, execute, or configure."),
-		nullptr, TEXT("UNKNOWN_OPERATION")));
+	UnknownOperation();
 }
 
-bool FMcpNativeTransport::HandleGatewayModePreDispatch(
+void FMcpNativeTransport::HandleGatewayModePreDispatch(
 	const FString& ToolName, const TSharedPtr<FJsonObject>& Arguments,
 	const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 	const FString& SessionId, const FString& CorsOrigin,
@@ -244,7 +172,7 @@ bool FMcpNativeTransport::HandleGatewayModePreDispatch(
 	if (ToolName == TEXT("unreal"))
 	{
 		HandleGatewayCall(Arguments, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);
-		return true;
+		return;
 	}
 
 	// Every other (removed) direct tool name gets a bounded, executable migration
@@ -259,5 +187,4 @@ bool FMcpNativeTransport::HandleGatewayModePreDispatch(
 		false, Message, Migration, TEXT("DIRECT_TOOL_CALL_REMOVED"));
 	const FString Body = FMcpJsonRpc::BuildResponse(Id, ToolResult);
 	SendAndClose(ClientSocket, 200, TEXT("application/json"), Body, {}, CorsOrigin);
-	return true;
 }

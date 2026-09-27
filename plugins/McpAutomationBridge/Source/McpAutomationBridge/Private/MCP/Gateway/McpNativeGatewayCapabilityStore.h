@@ -43,7 +43,6 @@ struct FMcpCapabilityRecord
 	FString Family;
 	FString Summary;
 	FString Effect;
-	FString DeprecationStatus;
 	TArray<FString> Topics;
 	TArray<FString> Aliases;
 	TArray<FString> WhenToUse;
@@ -55,9 +54,7 @@ struct FMcpCapabilityRecord
 	TSharedPtr<FJsonObject> Behavior;
 	TSharedPtr<FJsonObject> Policy;
 	TSharedPtr<FJsonObject> Cost;
-	TSharedPtr<FJsonObject> Deprecation;
 	TSharedPtr<FJsonObject> Hashes;
-	int32 ExampleCount = 0;
 	/** Every pair execute accepts; the first is the advertised primary. */
 	TArray<FMcpLegacyPair> LegacyPairs;
 	/** routing.dispatchBy: the selector parameter and value -> bridge action. Empty unless the record is a fold. */
@@ -76,22 +73,21 @@ struct FMcpCapabilityRecord
  * is INTERNAL routing and is not unique per capability (every manage_audio
  * capability dispatches through "manage_audio"), so it cannot identify one.
  */
-inline FString McpCapabilityPublicAction(const FMcpCapabilityRecord& Record)
+// The part of a capability id after its last '.', or the whole id when it has none.
+inline FString McpLastDottedSegment(const FString& Id)
 {
 	int32 LastDot = INDEX_NONE;
-	if (Record.Id.FindLastChar(TEXT('.'), LastDot) && LastDot != INDEX_NONE)
-	{
-		return Record.Id.RightChop(LastDot + 1);
-	}
-	return Record.DispatchAction;
+	return Id.FindLastChar(TEXT('.'), LastDot) ? Id.RightChop(LastDot + 1) : Id;
 }
 
-/**
- * Distinct, byte-order-sorted projection over records, for projections that
- * COMPUTE a string. The reference-returning variant in the describe unit cannot
- * be used for those: binding a temporary to `const FString&` would dangle.
- */
-inline TArray<FString> McpDistinctSortedComputed(
+inline FString McpCapabilityPublicAction(const FMcpCapabilityRecord& Record)
+{
+	return Record.Id.Contains(TEXT(".")) ? McpLastDottedSegment(Record.Id) : Record.DispatchAction;
+}
+
+// Distinct (case-sensitive), byte-order-sorted projection over records. The
+// projection returns by value, so computed strings are safe too.
+inline TArray<FString> McpDistinctSorted(
 	const TArray<const FMcpCapabilityRecord*>& Records,
 	TFunctionRef<FString(const FMcpCapabilityRecord&)> Project)
 {

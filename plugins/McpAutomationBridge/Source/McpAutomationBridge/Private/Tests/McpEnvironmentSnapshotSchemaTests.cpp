@@ -1,6 +1,6 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 
 namespace {
@@ -13,6 +13,23 @@ TSharedPtr<FJsonObject> MakeLightingSnapshot(
     Snapshot->SetNumberField(TEXT("sunIntensity"), SunIntensity);
     Snapshot->SetNumberField(TEXT("skylightIntensity"), SkylightIntensity);
     return Snapshot;
+}
+
+struct FParsedLighting
+{
+    bool bParsed = false;
+    double TimeOfDay = 0.0;
+    double SunIntensity = 0.0;
+    double SkylightIntensity = 0.0;
+    FRotator Rotation = FRotator::ZeroRotator;
+};
+
+FParsedLighting ParseLighting(const TSharedPtr<FJsonObject> &Snapshot)
+{
+    FParsedLighting Out;
+    Out.bParsed = McpEnvironmentHandlers::McpParseEnvironmentSnapshotLighting(
+        Snapshot, Out.TimeOfDay, Out.SunIntensity, Out.SkylightIntensity, Out.Rotation);
+    return Out;
 }
 
 TSharedPtr<FJsonObject> MakeVersionedLightingSnapshot(const double Version)
@@ -38,13 +55,7 @@ bool FMcpEnvironmentSnapshotUnversionedSchemaTest::RunTest(const FString &Parame
 {
     (void)Parameters;
     const TSharedPtr<FJsonObject> Snapshot = MakeLightingSnapshot(9.5, 7.25, 1.5);
-    double TimeOfDay = 0.0;
-    double SunIntensity = 0.0;
-    double SkylightIntensity = 0.0;
-    FRotator Rotation = FRotator::ZeroRotator;
-
-    const bool bParsed = McpEnvironmentHandlers::McpParseEnvironmentSnapshotLighting(
-        Snapshot, TimeOfDay, SunIntensity, SkylightIntensity, Rotation);
+    const auto [bParsed, TimeOfDay, SunIntensity, SkylightIntensity, Rotation] = ParseLighting(Snapshot);
 
     TestTrue(TEXT("Unversioned lighting snapshot parses"), bParsed);
     TestTrue(TEXT("Time of day is preserved"), FMath::IsNearlyEqual(TimeOfDay, 9.5));
@@ -66,15 +77,7 @@ bool FMcpEnvironmentSnapshotVersionedMissingRotationSchemaTest::RunTest(const FS
     (void)Parameters;
     const TSharedPtr<FJsonObject> Snapshot = MakeLightingSnapshot(12.0, 5.0, 1.0);
     Snapshot->SetNumberField(TEXT("version"), 1);
-    double TimeOfDay = 0.0;
-    double SunIntensity = 0.0;
-    double SkylightIntensity = 0.0;
-    FRotator Rotation = FRotator::ZeroRotator;
-
-    TestFalse(
-        TEXT("Versioned snapshot requires an explicit rotation"),
-        McpEnvironmentHandlers::McpParseEnvironmentSnapshotLighting(
-            Snapshot, TimeOfDay, SunIntensity, SkylightIntensity, Rotation));
+    TestFalse(TEXT("Versioned snapshot requires an explicit rotation"), ParseLighting(Snapshot).bParsed);
     return true;
 }
 
@@ -92,15 +95,7 @@ bool FMcpEnvironmentSnapshotMalformedRotationSchemaTest::RunTest(const FString &
     RotationObject->SetNumberField(TEXT("yaw"), 0.0);
     RotationObject->SetNumberField(TEXT("roll"), 0.0);
     Snapshot->SetObjectField(TEXT("directionalLightRotation"), RotationObject);
-    double TimeOfDay = 0.0;
-    double SunIntensity = 0.0;
-    double SkylightIntensity = 0.0;
-    FRotator Rotation = FRotator::ZeroRotator;
-
-    TestFalse(
-        TEXT("Malformed explicit rotation is rejected"),
-        McpEnvironmentHandlers::McpParseEnvironmentSnapshotLighting(
-            Snapshot, TimeOfDay, SunIntensity, SkylightIntensity, Rotation));
+    TestFalse(TEXT("Malformed explicit rotation is rejected"), ParseLighting(Snapshot).bParsed);
     return true;
 }
 
@@ -113,15 +108,7 @@ bool FMcpEnvironmentSnapshotSupportedVersionSchemaTest::RunTest(const FString &P
 {
     (void)Parameters;
     const TSharedPtr<FJsonObject> Snapshot = MakeVersionedLightingSnapshot(1.0);
-    double TimeOfDay = 0.0;
-    double SunIntensity = 0.0;
-    double SkylightIntensity = 0.0;
-    FRotator Rotation = FRotator::ZeroRotator;
-
-    TestTrue(
-        TEXT("Supported snapshot version parses"),
-        McpEnvironmentHandlers::McpParseEnvironmentSnapshotLighting(
-            Snapshot, TimeOfDay, SunIntensity, SkylightIntensity, Rotation));
+    TestTrue(TEXT("Supported snapshot version parses"), ParseLighting(Snapshot).bParsed);
     return true;
 }
 
@@ -134,15 +121,7 @@ bool FMcpEnvironmentSnapshotUnknownVersionSchemaTest::RunTest(const FString &Par
 {
     (void)Parameters;
     const TSharedPtr<FJsonObject> Snapshot = MakeVersionedLightingSnapshot(2.0);
-    double TimeOfDay = 0.0;
-    double SunIntensity = 0.0;
-    double SkylightIntensity = 0.0;
-    FRotator Rotation = FRotator::ZeroRotator;
-
-    TestFalse(
-        TEXT("Unknown snapshot version is rejected"),
-        McpEnvironmentHandlers::McpParseEnvironmentSnapshotLighting(
-            Snapshot, TimeOfDay, SunIntensity, SkylightIntensity, Rotation));
+    TestFalse(TEXT("Unknown snapshot version is rejected"), ParseLighting(Snapshot).bParsed);
     return true;
 }
 
@@ -155,15 +134,7 @@ bool FMcpEnvironmentSnapshotFractionalVersionSchemaTest::RunTest(const FString &
 {
     (void)Parameters;
     const TSharedPtr<FJsonObject> Snapshot = MakeVersionedLightingSnapshot(1.5);
-    double TimeOfDay = 0.0;
-    double SunIntensity = 0.0;
-    double SkylightIntensity = 0.0;
-    FRotator Rotation = FRotator::ZeroRotator;
-
-    TestFalse(
-        TEXT("Fractional snapshot version is rejected"),
-        McpEnvironmentHandlers::McpParseEnvironmentSnapshotLighting(
-            Snapshot, TimeOfDay, SunIntensity, SkylightIntensity, Rotation));
+    TestFalse(TEXT("Fractional snapshot version is rejected"), ParseLighting(Snapshot).bParsed);
     return true;
 }
 
@@ -177,15 +148,7 @@ bool FMcpEnvironmentSnapshotNonnumericVersionSchemaTest::RunTest(const FString &
     (void)Parameters;
     const TSharedPtr<FJsonObject> Snapshot = MakeVersionedLightingSnapshot(1.0);
     Snapshot->SetStringField(TEXT("version"), TEXT("1"));
-    double TimeOfDay = 0.0;
-    double SunIntensity = 0.0;
-    double SkylightIntensity = 0.0;
-    FRotator Rotation = FRotator::ZeroRotator;
-
-    TestFalse(
-        TEXT("Nonnumeric snapshot version is rejected"),
-        McpEnvironmentHandlers::McpParseEnvironmentSnapshotLighting(
-            Snapshot, TimeOfDay, SunIntensity, SkylightIntensity, Rotation));
+    TestFalse(TEXT("Nonnumeric snapshot version is rejected"), ParseLighting(Snapshot).bParsed);
     return true;
 }
 

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Safety/McpSafeOperationsAssetEditorSubsystem.h"
+#include "Subsystems/AssetEditorSubsystem.h"
 
-#if WITH_EDITOR
 #include "Editor.h"
 #include "UObject/Object.h"
 
@@ -25,7 +24,6 @@ namespace McpSafeOperations
 /** True when an asset editor is currently open for this asset. */
 inline bool IsAssetEditorOpen(UObject* Asset)
 {
-#if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
 	if (Asset == nullptr || GEditor == nullptr)
 	{
 		return false;
@@ -37,10 +35,6 @@ inline bool IsAssetEditorOpen(UObject* Asset)
 		return false;
 	}
 	return AssetEditorSubsystem->FindEditorForAsset(Asset, /*bFocusIfOpen*/ false) != nullptr;
-#else
-	(void)Asset;
-	return false;
-#endif
 }
 
 /** Message explaining why the write was refused, naming the asset. */
@@ -54,4 +48,3 @@ inline FString OpenAssetEditorRefusal(const UObject* Asset)
 		*AssetName, *AssetName);
 }
 }
-#endif

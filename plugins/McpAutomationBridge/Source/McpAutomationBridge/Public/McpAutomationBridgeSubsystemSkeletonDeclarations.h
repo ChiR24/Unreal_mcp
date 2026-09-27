@@ -16,9 +16,6 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleRenameBone); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSetBoneTransform); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateMorphTarget); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSetMorphTargetDeltas); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleImportMorphTargets); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleNormalizeWeights); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandlePruneWeights); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleBindClothToSkeletalMesh); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleAssignClothAssetToMesh); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSetPhysicsAsset); \

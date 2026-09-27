@@ -1,17 +1,16 @@
 #pragma once
 
 #include "Safety/McpSafeOperationsAssetClassification.h"
+#include "Safety/McpSafeOperationsAssetSave.h"
 #include "Safety/McpSafeOperationsDeleteQuiesce.h"
 
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
-inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterAssets, bool bForce)
+inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterAssets)
 {
     int32 DeletedCount = 0;
-    (void)bForce;
 
     TArray<FAssetData> OrderedAssets = ClusterAssets;
     OrderedAssets.Sort([](const FAssetData& A, const FAssetData& B)
@@ -30,14 +29,12 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
         TEXT("DeleteAnimationRigClusterOrdered: Deleting %d cluster assets via ordered engine-owned deletion"),
         OrderedAssets.Num());
 
-#if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
     UAssetEditorSubsystem* AssetEditorSubsystem = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
     if (AssetEditorSubsystem)
     {
         AssetEditorSubsystem->CloseAllAssetEditors();
         UE_LOG(LogMcpSafeOperations, Log, TEXT("DeleteAnimationRigClusterOrdered: Closed all asset editors"));
     }
-#endif
 
     if (GEditor)
     {
@@ -45,12 +42,7 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
         GEditor->SelectNone(false, true, false);
     }
 
-    FlushRenderingCommands();
-    if (GEditor)
-    {
-        GEditor->ForceGarbageCollection(true);
-    }
-    FlushRenderingCommands();
+    McpSafePostDeleteGC();
     FPlatformProcess::Sleep(0.1f);
 
     TArray<FAssetData> InMemoryOnlyAssets;
@@ -58,27 +50,7 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
 
     for (const FAssetData& AssetData : OrderedAssets)
     {
-        const FString PackagePath = AssetData.PackageName.ToString();
-        FString AssetFilePath;
-        bool bHasBackingFile = false;
-
-        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AssetFilePath, FPackageName::GetAssetPackageExtension()))
-        {
-            FString AbsolutePath = FPaths::IsRelative(AssetFilePath)
-                ? FPaths::ConvertRelativePathToFull(AssetFilePath)
-                : AssetFilePath;
-            FPaths::NormalizeFilename(AbsolutePath);
-            bHasBackingFile = IFileManager::Get().FileExists(*AbsolutePath);
-        }
-
-        if (!bHasBackingFile)
-        {
-            InMemoryOnlyAssets.Add(AssetData);
-        }
-        else
-        {
-            FileBackedAssets.Add(AssetData);
-        }
+        (McpPackageHasBackingFile(AssetData.PackageName.ToString()) ? FileBackedAssets : InMemoryOnlyAssets).Add(AssetData);
     }
 
     if (InMemoryOnlyAssets.Num() > 0)
@@ -161,6 +133,16 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
             return true;
         };
 
+        const auto LoadForDelete = [](const FAssetData& BatchAsset) -> UObject*
+        {
+            UObject* AssetObject = BatchAsset.GetAsset();
+            if (!AssetObject)
+            {
+                UE_LOG(LogMcpSafeOperations, Error, TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"), *MCP_ASSET_DATA_GET_OBJECT_PATH(BatchAsset));
+            }
+            return AssetObject;
+        };
+
         const bool bDeleteAnimBlueprintsIndividually = FCString::Strcmp(BatchLabel, TEXT("AnimBlueprintFamily")) == 0;
         if (bDeleteAnimBlueprintsIndividually)
         {
@@ -170,16 +152,9 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
 
             for (const FAssetData& BatchAsset : BatchAssets)
             {
-                UObject* AssetObject = BatchAsset.GetAsset();
-                if (!AssetObject)
-                {
-                    UE_LOG(LogMcpSafeOperations, Error, TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"), *MCP_ASSET_DATA_GET_OBJECT_PATH(BatchAsset));
-                    return false;
-                }
-
-                TArray<UObject*> SingleObjectToDelete;
-                SingleObjectToDelete.Add(AssetObject);
-                if (!ForceDeleteLoadedObjects(SingleObjectToDelete))
+                UObject* AssetObject = LoadForDelete(BatchAsset);
+                TArray<UObject*> SingleObjectToDelete{AssetObject};
+                if (!AssetObject || !ForceDeleteLoadedObjects(SingleObjectToDelete))
                 {
                     return false;
                 }
@@ -193,13 +168,11 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
 
         for (const FAssetData& BatchAsset : BatchAssets)
         {
-            UObject* AssetObject = BatchAsset.GetAsset();
+            UObject* AssetObject = LoadForDelete(BatchAsset);
             if (!AssetObject)
             {
-                UE_LOG(LogMcpSafeOperations, Error, TEXT("DeleteAnimationRigClusterOrdered: Failed to load file-backed asset for delete: %s"), *MCP_ASSET_DATA_GET_OBJECT_PATH(BatchAsset));
                 return false;
             }
-
             ObjectsToDelete.Add(AssetObject);
         }
 
@@ -257,12 +230,7 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
         }
     }
 
-    FlushRenderingCommands();
-    if (GEditor)
-    {
-        GEditor->ForceGarbageCollection(true);
-    }
-    FlushRenderingCommands();
+    McpSafePostDeleteGC();
 
     UE_LOG(LogMcpSafeOperations, Log,
         TEXT("DeleteAnimationRigClusterOrdered: Deleted %d/%d cluster assets via engine-owned ordered deletion"),
@@ -271,6 +239,5 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
     return DeletedCount;
 }
 
-#endif
 
 }

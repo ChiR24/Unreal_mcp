@@ -1,7 +1,7 @@
 #include "Foundation/McpCompensationReceipt.h"
 #include "Foundation/McpScopedEditorTransaction.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Components/SceneComponent.h"
 #include "Editor.h"
 #include "Editor/Transactor.h"

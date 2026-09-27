@@ -2,9 +2,8 @@
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Safety/McpSafeOperationsLog.h"
-#include "Safety/McpSafeOperationsPackageTools.h"
+#include "PackageTools.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "CoreGlobals.h"
 #include "FileHelpers.h"
@@ -15,12 +14,29 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "UObject/UObjectHash.h"
-#endif
 
 namespace McpSafeOperations
 {
+// Refreshes the Asset Registry for one package or folder path right away.
+inline void ScanPathSynchronous(const FString& InPath, bool bRecursive = true)
+{
+    FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().ScanPathsSynchronous({InPath}, bRecursive);
+}
 
-#if WITH_EDITOR
+// Whether PackageName has a .uasset or .umap file on disk.
+inline bool McpPackageHasBackingFile(const FString& PackageName)
+{
+    FString Filename;
+    for (const FString& Extension : {FPackageName::GetAssetPackageExtension(), FPackageName::GetMapPackageExtension()})
+    {
+        if (FPackageName::TryConvertLongPackageNameToFilename(PackageName, Filename, Extension) &&
+            IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(Filename)))
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
 inline bool McpSafeAssetSave(UObject* Asset)
 {
@@ -69,30 +85,6 @@ inline bool McpSafeAssetSave(UObject* Asset)
         FAssetRegistryModule::AssetCreated(AssetToSave);
     }
 
-    auto ScanSavedPackage = [&PackageName]()
-    {
-        TArray<FString> PathsToScan;
-        PathsToScan.Add(FPaths::GetPath(PackageName));
-        FAssetRegistryModule& AssetRegistryModule =
-            FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-        AssetRegistryModule.Get().ScanPathsSynchronous(PathsToScan, false);
-    };
-
-    auto PackageExistsOnDisk = [&PackageName]()
-    {
-        FString AssetFilename;
-        FString MapFilename;
-        const bool bHasAssetFilename = FPackageName::TryConvertLongPackageNameToFilename(
-            PackageName, AssetFilename, FPackageName::GetAssetPackageExtension());
-        const bool bHasMapFilename = FPackageName::TryConvertLongPackageNameToFilename(
-            PackageName, MapFilename, FPackageName::GetMapPackageExtension());
-
-        return
-            (bHasAssetFilename && IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(AssetFilename))) ||
-            (bHasMapFilename && IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(MapFilename)));
-    };
-
-#if MCP_HAS_PACKAGE_TOOLS
     // Nobody can answer a modal during an MCP call. A save that failed opened the
     // editor's message or checkout dialog and blocked the game thread until the
     // process was killed (a build_graph batch on BP_LaserGate, 2026-09-25).
@@ -106,9 +98,9 @@ inline bool McpSafeAssetSave(UObject* Asset)
         FlushRenderingCommands();
 
         const bool bSaved = UPackageTools::SavePackagesForObjects(ObjectsToSave);
-        if (bSaved && PackageExistsOnDisk())
+        if (bSaved && McpPackageHasBackingFile(PackageName))
         {
-            ScanSavedPackage();
+            ScanPathSynchronous(FPaths::GetPath(PackageName), false);
             return true;
         }
 
@@ -128,20 +120,16 @@ inline bool McpSafeAssetSave(UObject* Asset)
         PromptSaveResult == FEditorFileUtils::PR_Success;
     const bool bEditorSaveSucceeded =
         !bPromptSaveSucceeded && UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
-    const bool bExistsOnDisk = PackageExistsOnDisk();
+    const bool bExistsOnDisk = McpPackageHasBackingFile(PackageName);
 
     if ((bPromptSaveSucceeded || bEditorSaveSucceeded) && bExistsOnDisk)
     {
-        ScanSavedPackage();
+        ScanPathSynchronous(FPaths::GetPath(PackageName), false);
         return true;
     }
 
     return false;
-#else
-    return false;
-#endif
 }
 
-#endif
 
 }

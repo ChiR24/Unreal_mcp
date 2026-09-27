@@ -1,7 +1,7 @@
 // McpNativeGatewayReceipt.h — semantic receipt and typed error envelope
 //
 // Mirrors the TypeScript contracts in
-// src/tools/catalog/capabilities/semantic/{envelope,errors}.ts (Task 3): a
+// src/tools/catalog/capabilities/semantic/{envelope,errors}.ts: a
 // receipt is discriminated by `status`, always names its capability, and an
 // error carries the typed algebra (`kind` + `code`) rather than a bare string.
 //
@@ -29,15 +29,15 @@ struct FMcpSemanticError
 	// TypeScript execution variant's `handlerCode`: the fixed algebra label stays
 	// on Code, this names the specific reason.
 	FString HandlerCode;
-	// Task 39: a real boolean carried on the typed error (kinds capability,
+	// A real boolean carried on the typed error (kinds capability,
 	// dispatch and execution), replacing the earlier Field="retryable" string
 	// hack so retryability is a true boolean matching the TypeScript algebra.
 	bool bHasRetryable = false;
 	bool bRetryable = false;
-	// Task 39: stale-revision references, set only on a staleState error.
+	// Stale-revision references, set only on a staleState error.
 	FString CurrentRevision;
 	FString ExpectedRevision;
-	// Task 40 security-policy payload, each set only on its own kind:
+	// Security-policy payload, each set only on its own kind:
 	// authorization (requiredScope + grantedScopes) and consent (scope).
 	FString RequiredScope;
 	TArray<FString> GrantedScopes;
@@ -72,7 +72,7 @@ struct FMcpReceiptContext
 	FString IdempotencySlot;
 	double StartTimeSeconds = 0.0;
 
-	/** Task 42 live-state pins, carried to the game-thread gate that enforces them. */
+	/** Live-state pins, carried to the game-thread gate that enforces them. */
 	TMap<EMcpStateKind, int64> ExpectedRevisions;
 };
 
@@ -81,17 +81,17 @@ FMcpSemanticError McpOptionError(const FString& Option, const TArray<FString>& S
 FMcpSemanticError McpRangeError(const FString& Field, const FString& Message);
 FMcpSemanticError McpExecutionError(const FString& GatewayCode, const FString& Message, bool bRetryable);
 FMcpSemanticError McpUnrealExecutionError(const FString& Message, const TSharedPtr<FJsonObject>& UnrealDetail);
-// Task 39 plan-class constructors mirroring the TypeScript typed error algebra.
+// Plan-class constructors mirroring the TypeScript typed error algebra.
 FMcpSemanticError McpCapabilityError(const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable);
 FMcpSemanticError McpDispatchError(const FString& GatewayCode, const FString& Code, const FString& Message, bool bRetryable);
 FMcpSemanticError McpOutputError(const FString& Code, const FString& Message, const FString& Pointer = FString());
 FMcpSemanticError McpStaleStateError(const FString& Message, const FString& CurrentRevision, const FString& ExpectedRevision);
 
-/** Task 41: order-independent SHA-256 digest of the post-normalization params;
+/** Order-independent SHA-256 digest of the post-normalization params;
  *  the ledger conflicts a key replayed with different effective arguments. */
 FString McpCanonicalFingerprint(const FString& CapabilityId, const TSharedPtr<FJsonObject>& Params);
 
-/** Task 41: settle one ledger slot from the completed receipt at the single
+/** Settle one ledger slot from the completed receipt at the single
  *  completion funnel — success is recorded for replay, anything else releases
  *  the slot so the key stays retryable. A blank slot is a no-op. */
 void McpSettleIdempotency(const FString& Slot, bool bSuccess, const TSharedPtr<FJsonObject>& Receipt);

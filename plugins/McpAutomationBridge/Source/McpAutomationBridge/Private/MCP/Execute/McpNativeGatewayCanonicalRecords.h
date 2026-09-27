@@ -4,7 +4,7 @@
 // does a canonical id name, which capability does a generated legacy
 // {tool, action} pair name, and is an alias unambiguous. Many records carry a
 // legacy action that differs from routing.dispatchAction (for example
-// manage_asset.find_by_tag dispatches asset_query), and a folded family carries
+// query_asset dispatches exists), and a folded family carries
 // one legacy pair per name it absorbed, so a legacy caller cannot be resolved
 // by dispatch action alone.
 //
@@ -69,9 +69,6 @@ private:
 	TMap<FString, FString> CapabilityIdToLegacyAction;
 	TMap<FString, TArray<FString>> AliasToCapabilityIds;
 };
-
-/** True when per-action canonical validation may replace the legacy per-tool gate. */
-bool McpCanonicalRecordsAvailable();
 
 /** Stable key for a generated legacy {tool, action} pair. */
 FString McpLegacyCapabilityKey(const FString& Tool, const FString& Action);

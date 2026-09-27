@@ -123,10 +123,8 @@ inline void SelectFairBatch(
 /**
  * Scheduler state owned by the subsystem and mutated only under
  * PendingAutomationRequestsMutex (rotation) or on the game thread inside the
- * drain (lane guard). DispatchDepth/MaxObservedDispatchDepth exist so the
- * single-mutation-lane invariant is observable by a test instead of merely
- * assumed: the drain asserts DispatchDepth == 1 around every dispatch, and
- * MaxObservedDispatchDepth records the high-water mark across a whole run.
+ * drain (lane guard). The drain checkf's DispatchDepth == 1 around every
+ * dispatch, so the single-mutation-lane invariant is enforced, not assumed.
  */
 struct FMcpQueueFairnessState
 {
@@ -140,5 +138,4 @@ struct FMcpQueueFairnessState
 	FString LastServedSessionKey;
 	bool bDraining = false;
 	int32 DispatchDepth = 0;
-	int32 MaxObservedDispatchDepth = 0;
 };

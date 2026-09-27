@@ -63,20 +63,6 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::StringEnum(const FString& Name,
 	return *this;
 }
 
-FMcpSchemaBuilder& FMcpSchemaBuilder::Number(const FString& Name, const FString& Description)
-{
-	auto Prop = MakeTypedProperty(TEXT("number"), Description);
-	AddProperty(Name, Prop);
-	return *this;
-}
-
-FMcpSchemaBuilder& FMcpSchemaBuilder::Bool(const FString& Name, const FString& Description)
-{
-	auto Prop = MakeTypedProperty(TEXT("boolean"), Description);
-	AddProperty(Name, Prop);
-	return *this;
-}
-
 FMcpSchemaBuilder& FMcpSchemaBuilder::Integer(const FString& Name, const FString& Description)
 {
 	auto Prop = MakeTypedProperty(TEXT("integer"), Description);
@@ -101,75 +87,10 @@ FMcpSchemaBuilder& FMcpSchemaBuilder::Object(const FString& Name, const FString&
 	return *this;
 }
 
-FMcpSchemaBuilder& FMcpSchemaBuilder::Array(const FString& Name, const FString& Description,
-	const FString& ItemType)
-{
-	auto Prop = MakeTypedProperty(TEXT("array"), Description);
-
-	auto Items = MakeShared<FJsonObject>();
-	Items->SetStringField(TEXT("type"), ItemType);
-	Prop->SetObjectField(TEXT("items"), Items);
-
-	AddProperty(Name, Prop);
-	return *this;
-}
-
-FMcpSchemaBuilder& FMcpSchemaBuilder::ArrayOfAny(const FString& Name, const FString& Description)
-{
-	auto Prop = MakeTypedProperty(TEXT("array"), Description);
-	Prop->SetObjectField(TEXT("items"), MakeShared<FJsonObject>());
-	AddProperty(Name, Prop);
-	return *this;
-}
-
-FMcpSchemaBuilder& FMcpSchemaBuilder::ArrayOfObjects(const FString& Name,
-	const FString& Description, TFunction<void(FMcpSchemaBuilder&)> ItemBuilder)
-{
-	auto Prop = MakeTypedProperty(TEXT("array"), Description);
-
-	auto Items = MakeShared<FJsonObject>();
-	Items->SetStringField(TEXT("type"), TEXT("object"));
-	if (ItemBuilder)
-	{
-		FMcpSchemaBuilder Sub;
-		ItemBuilder(Sub);
-		Items->SetObjectField(TEXT("properties"), Sub.Properties);
-		AddRequiredFields(Items, Sub.RequiredFields);
-	}
-	Prop->SetObjectField(TEXT("items"), Items);
-
-	AddProperty(Name, Prop);
-	return *this;
-}
-
 FMcpSchemaBuilder& FMcpSchemaBuilder::FreeformObject(const FString& Name,
 	const FString& Description)
 {
 	auto Prop = MakeTypedProperty(TEXT("object"), Description);
-	AddProperty(Name, Prop);
-	return *this;
-}
-
-FMcpSchemaBuilder& FMcpSchemaBuilder::AnyValue(const FString& Name, const FString& Description)
-{
-	auto Prop = MakeShared<FJsonObject>();
-	if (!Description.IsEmpty())
-	{
-		Prop->SetStringField(TEXT("description"), Description);
-	}
-	AddProperty(Name, Prop);
-	return *this;
-}
-
-FMcpSchemaBuilder& FMcpSchemaBuilder::TypeUnion(const FString& Name,
-	const TArray<FString>& Types, const FString& Description)
-{
-	auto Prop = MakeShared<FJsonObject>();
-	Prop->SetArrayField(TEXT("type"), MakeStringValueArray(Types));
-	if (!Description.IsEmpty())
-	{
-		Prop->SetStringField(TEXT("description"), Description);
-	}
 	AddProperty(Name, Prop);
 	return *this;
 }

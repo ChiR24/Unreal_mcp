@@ -19,60 +19,8 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "Misc/Crc.h"
 
-// =============================================================================
-// Default Feature Detection
-// =============================================================================
-
-#ifndef MCP_HAS_CINEMATIC_CAMERA
-#define MCP_HAS_CINEMATIC_CAMERA 0
-#endif
-
-#ifndef MCP_HAS_MEDIA_ASSETS
-#define MCP_HAS_MEDIA_ASSETS 0
-#endif
-
-#ifndef MCP_HAS_MOVIE_RENDER_PIPELINE
-#define MCP_HAS_MOVIE_RENDER_PIPELINE 0
-#endif
-
-#ifndef MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS
-#define MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS 0
-#endif
-
-#ifndef MCP_HAS_MOVIE_PIPELINE_PASS_METADATA
-#define MCP_HAS_MOVIE_PIPELINE_PASS_METADATA 0
-#endif
-
-#ifndef MCP_HAS_MOVIE_PIPELINE_LOSSLESS
-#define MCP_HAS_MOVIE_PIPELINE_LOSSLESS 0
-#endif
-
-#ifndef MCP_HAS_SMAA
-#define MCP_HAS_SMAA 0
-#endif
-
-#ifndef MCP_HAS_TAKE_RECORDER
-#define MCP_HAS_TAKE_RECORDER 0
-#endif
-
-#ifndef MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER
-#define MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER 0
-#endif
-
-#ifndef MCP_HAS_REPLAY_API
-#define MCP_HAS_REPLAY_API 0
-#endif
-
-#ifndef MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME
-#define MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME 0
-#endif
-
-// Probed from GeometryScriptingCore's MeshBooleanFunctions.h in Build.cs: the
-// field is not present on every 5.x the plugin supports, and naming it on an
-// engine that lacks it is a hard compile error.
-#ifndef MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT
-#define MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT 0
-#endif
+// The MCP_HAS_* feature macros (cinematic camera, media, MRQ, take recorder,
+// replay, SMAA, ...) are always defined, to 1 or 0, by McpAutomationBridge.Build.cs.
 
 // MCP_DISALLOW_SHRINKING is passed as the bAllowShrinking argument to
 // TArray::RemoveAt. On UE 5.6+ it is the EAllowShrinking enum
@@ -224,10 +172,8 @@
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   #define MCP_NIAGARA_EMITTER_DATA_TYPE FVersionedNiagaraEmitterData
-  #define MCP_HAS_NIAGARA_VERSIONING 1
 #else
   #define MCP_NIAGARA_EMITTER_DATA_TYPE UNiagaraEmitter
-  #define MCP_HAS_NIAGARA_VERSIONING 0
 #endif
 
 // =============================================================================
@@ -251,6 +197,8 @@
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
   #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClassPath.ToString()
   #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).GetSoftObjectPath().ToString()
+  // IAssetRegistry::GetAssetByObjectPath's argument for an object path string.
+  #define MCP_ASSET_REGISTRY_OBJECT_PATH(Path) FSoftObjectPath(Path)
 #else
   #define MCP_ASSET_DATA_GET_CLASS_PATH(AssetData) (AssetData).AssetClass.ToString()
   // ObjectPath, not PackageName: ObjectPath yields "/Game/Foo.Foo" while
@@ -259,6 +207,7 @@
   // an older spelling. UE 5.0's FAssetData::ObjectPath is the exact equivalent
   // of the 5.1+ GetSoftObjectPath() used in the branch above.
   #define MCP_ASSET_DATA_GET_SOFT_PATH(AssetData) (AssetData).ObjectPath.ToString()
+  #define MCP_ASSET_REGISTRY_OBJECT_PATH(Path) FName(*(Path))
 #endif
 
 // =============================================================================
@@ -276,23 +225,6 @@
 #endif
 
 // =============================================================================
-// K2Node Header Location Compatibility (UE 5.0 - 5.8)
-// =============================================================================
-// K2Node headers moved between engine versions:
-// UE 5.0-5.3: K2Node_*.h at root level
-// UE 5.4+: May be under BlueprintGraph/ or BlueprintGraph/Classes/
-
-// This is handled in the source files with __has_include chains
-// The MCP_HAS_K2NODE_HEADERS macro is set during include probing
-
-// =============================================================================
-// SubobjectDataSubsystem API Compatibility (UE 5.1+)
-// =============================================================================
-
-// MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM is defined via build system or include probing
-// Used for SCS (Simple Construction Script) operations
-
-// =============================================================================
 // FAssetCompilingManager API Compatibility (UE 5.0 vs 5.1+)
 // =============================================================================
 // Grepped out of Engine/Source/Runtime/Engine/Public/AssetCompilingManager.h at
@@ -307,22 +239,12 @@
 // UE 5.2+: FinishCompilationForObjects(TArrayView<UObject* const>) for selective compilation
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-#define MCP_HAS_FINISH_COMPILATION_FOR_OBJECTS 1
 #define MCP_FINISH_COMPILATION_FOR_OBJECTS(Manager, Objects) (Manager).FinishCompilationForObjects(Objects)
 #else
-#define MCP_HAS_FINISH_COMPILATION_FOR_OBJECTS 0
 // UE 5.0-5.1: Fall back to global compilation finish
 #define MCP_FINISH_COMPILATION_FOR_OBJECTS(Manager, Objects) (Manager).FinishAllCompilation()
 #endif
 
-// =============================================================================
-// UPackageTools API Compatibility (UE 5.0 vs 5.1+)
-// =============================================================================
-// We always use the simple overload UnloadPackages(TArray<UPackage*>, FText&, bool)
-// because it works reliably across all UE 5.x versions (5.0 through 5.8+).
-// The FUnloadPackageParams struct is version‑unstable and removed in 5.7+.
-#define MCP_HAS_UNLOAD_PACKAGE_PARAMS 0
-// MCP_UNLOAD_PACKAGE_PARAMS_TYPE is not defined because it is never used.
 
 // =============================================================================
 // UWidgetBlueprint API Compatibility (UE 5.0 vs 5.1 vs 5.2-5.6 vs 5.7+)
@@ -382,11 +304,9 @@
 // SetIKRig(ERetargetSourceOrTarget, ...) — which is not there on that version —
 // while the SetSourceIKRig/SetTargetIKRig pair it should have used was.
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-    #define MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM 1
     #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Source, Rig)
     #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetIKRig(ERetargetSourceOrTarget::Target, Rig)
 #else
-    #define MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM 0
     // UE 5.0-5.1: use separate methods
     #define MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, Rig) (Controller)->SetSourceIKRig(Rig)
     #define MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, Rig) (Controller)->SetTargetIKRig(Rig)
@@ -447,4 +367,11 @@
 #else
   #define MCP_SET_ENUMS(EnumPtr, Names, CppForm)                                \
     (EnumPtr)->SetEnums((Names), (CppForm))
+#endif
+
+// UMovieScene::GetMasterTracks was renamed GetTracks in 5.1.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetTracks()
+#else
+#define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetMasterTracks()
 #endif

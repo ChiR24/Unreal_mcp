@@ -1,11 +1,11 @@
 #pragma once
 
+#include "Safety/McpSafeOperationsDeleteCompilation.h"
 #include "Safety/McpSafeOperationsMaterial.h"
 
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 namespace FolderDeleteInternal
 {
 
@@ -34,12 +34,7 @@ inline void RemoveRegistryPathsAndDirectory(const FString& FolderPath, IAssetReg
 
             if (PlatformFile.DirectoryExists(*LocalPath))
             {
-                FlushRenderingCommands();
-                if (GEditor)
-                {
-                    GEditor->ForceGarbageCollection(true);
-                }
-                FlushRenderingCommands();
+                McpSafePostDeleteGC();
                 FPlatformProcess::Sleep(0.05f);
 
                 PlatformFile.DeleteDirectoryRecursively(*LocalPath);
@@ -47,31 +42,6 @@ inline void RemoveRegistryPathsAndDirectory(const FString& FolderPath, IAssetReg
             }
         }
     }
-}
-
-inline bool AssetDataHasBackingFile(const FAssetData& AssetData)
-{
-    const FString PackagePath = AssetData.PackageName.ToString();
-
-    FString AssetFilename;
-    if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, AssetFilename, FPackageName::GetAssetPackageExtension()))
-    {
-        if (IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(AssetFilename)))
-        {
-            return true;
-        }
-    }
-
-    FString MapFilename;
-    if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, MapFilename, FPackageName::GetMapPackageExtension()))
-    {
-        if (IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(MapFilename)))
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 inline bool VerifyFolderDeleted(const FString& FolderPath, IAssetRegistry& AssetRegistry)
@@ -86,7 +56,7 @@ inline bool VerifyFolderDeleted(const FString& FolderPath, IAssetRegistry& Asset
     TArray<FAssetData> RemainingFileBackedAssets;
     for (const FAssetData& RemainingAsset : RemainingAssets)
     {
-        if (AssetDataHasBackingFile(RemainingAsset))
+        if (McpPackageHasBackingFile(RemainingAsset.PackageName.ToString()))
         {
             RemainingFileBackedAssets.Add(RemainingAsset);
         }
@@ -137,6 +107,5 @@ inline bool VerifyFolderDeleted(const FString& FolderPath, IAssetRegistry& Asset
 }
 
 }
-#endif
 
 }

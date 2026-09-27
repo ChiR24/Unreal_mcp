@@ -15,7 +15,7 @@ inline const TArray<FString>& AnimationAuthoring()
 		TEXT("add_montage_slot"), TEXT("set_section_timing"),
 		TEXT("add_montage_notify"), TEXT("set_blend_in"),
 		TEXT("set_blend_out"), TEXT("link_sections"),
-		TEXT("create_blend_space_1d"), TEXT("create_blend_space_2d"),
+		TEXT("create_blend_space"), TEXT("create_blend_space_1d"), TEXT("create_blend_space_2d"),
 		TEXT("add_blend_sample"), TEXT("force_rebuild_blend_space"),
 		TEXT("set_axis_settings"), TEXT("set_interpolation_settings"),
 		TEXT("create_aim_offset"), TEXT("add_aim_offset_sample"),
@@ -28,7 +28,7 @@ inline const TArray<FString>& AnimationAuthoring()
 		TEXT("add_layered_blend_per_bone"),
 		TEXT("set_anim_graph_node_value"), TEXT("create_control_rig"),
 		TEXT("create_ik_rig"), TEXT("create_ik_retargeter"),
-		TEXT("set_retarget_chain_mapping"), TEXT("get_animation_info")
+		TEXT("get_animation_info")
 	};
 	return Actions;
 }
@@ -41,13 +41,12 @@ inline const TArray<FString>& Skeleton()
 		TEXT("set_bone_parent"), TEXT("create_virtual_bone"),
 		TEXT("create_socket"), TEXT("configure_socket"),
 		TEXT("auto_skin_weights"), TEXT("set_vertex_weights"),
-		TEXT("normalize_weights"), TEXT("prune_weights"), TEXT("copy_weights"),
-		TEXT("mirror_weights"), TEXT("create_physics_asset"),
+		TEXT("create_physics_asset"),
 		TEXT("add_physics_body"), TEXT("configure_physics_body"),
 		TEXT("add_physics_constraint"), TEXT("configure_constraint_limits"),
 		TEXT("bind_cloth_to_skeletal_mesh"),
 		TEXT("assign_cloth_asset_to_mesh"), TEXT("create_morph_target"),
-		TEXT("set_morph_target_deltas"), TEXT("import_morph_targets"),
+		TEXT("set_morph_target_deltas"),
 		TEXT("get_skeleton_info"), TEXT("list_bones"), TEXT("list_sockets"),
 		TEXT("list_physics_bodies"),
 		TEXT("add_socket"), TEXT("modify_socket"), TEXT("delete_socket"),
@@ -99,6 +98,19 @@ inline const TArray<FString>& Performance()
 		TEXT("merge_actors"), TEXT("configure_occlusion_culling"),
 		TEXT("optimize_shaders"), TEXT("configure_nanite"),
 		TEXT("configure_world_partition")
+	};
+	return Actions;
+}
+
+// system_control actions served by the Ui domain (HandleUiAction).
+inline const TArray<FString>& SystemUi()
+{
+	static const TArray<FString> Actions = {
+		TEXT("create_widget"), TEXT("show_widget"), TEXT("add_widget_child"),
+		TEXT("screenshot"), TEXT("get_project_settings"), TEXT("set_project_setting"),
+		TEXT("lumen_update_scene"), TEXT("spawn_category"), TEXT("play_sound"),
+		TEXT("set_cvar"), TEXT("set_quality"), TEXT("set_resolution"),
+		TEXT("set_fullscreen"), TEXT("profile")
 	};
 	return Actions;
 }

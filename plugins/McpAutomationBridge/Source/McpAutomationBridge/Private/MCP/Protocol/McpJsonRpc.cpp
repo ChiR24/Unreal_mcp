@@ -89,20 +89,6 @@ FString FMcpJsonRpc::BuildResponse(const TSharedPtr<FJsonValue>& Id, const TShar
 	return JsonToString(Root);
 }
 
-FString FMcpJsonRpc::BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code, const FString& Message)
-{
-	auto ErrorObj = MakeShared<FJsonObject>();
-	ErrorObj->SetNumberField(TEXT("code"), Code);
-	ErrorObj->SetStringField(TEXT("message"), Message);
-
-	auto Root = MakeShared<FJsonObject>();
-	Root->SetStringField(TEXT("jsonrpc"), TEXT("2.0"));
-	Root->SetField(TEXT("id"), Id.IsValid() ? Id : MakeShared<FJsonValueNull>());
-	Root->SetObjectField(TEXT("error"), ErrorObj);
-
-	return JsonToString(Root);
-}
-
 FString FMcpJsonRpc::BuildError(const TSharedPtr<FJsonValue>& Id, int32 Code,
 	const FString& Message, const TSharedPtr<FJsonObject>& Data)
 {
@@ -130,34 +116,15 @@ TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 
 	TArray<TSharedPtr<FJsonValue>> Content;
 
-	FString Text;
-	if (bSuccess)
+	FString Text = bSuccess ? Message
+		: ErrorCode.IsEmpty() ? FString::Printf(TEXT("Error: %s"), *Message)
+		: FString::Printf(TEXT("Error [%s]: %s"), *ErrorCode, *Message);
+	// Success and failure both carry the receipt as text: a failure's errorCode,
+	// suggestions[], executable nextCall and partial results live in Data, and a
+	// client that renders only the text block needs them to recover.
+	if (Data.IsValid())
 	{
-		Text = Message;
-		if (Data.IsValid())
-		{
-			Text += TEXT("\n\n") + JsonToString(MakeToolTextData(Data));
-		}
-	}
-	else
-	{
-		if (ErrorCode.IsEmpty())
-		{
-			Text = FString::Printf(TEXT("Error: %s"), *Message);
-		}
-		else
-		{
-			Text = FString::Printf(TEXT("Error [%s]: %s"), *ErrorCode, *Message);
-		}
-		// A failure carries a receipt too - errorCode, suggestions[], the
-		// executable nextCall and any partial results the handler computed all
-		// live in Data. The success branch has always appended it; omitting it
-		// here left every client that renders only the text block with a bare
-		// one-line error and no route to recovery.
-		if (Data.IsValid())
-		{
-			Text += TEXT("\n\n") + JsonToString(MakeToolTextData(Data));
-		}
+		Text += TEXT("\n\n") + JsonToString(MakeToolTextData(Data));
 	}
 
 	auto TextContent = MakeShared<FJsonObject>();

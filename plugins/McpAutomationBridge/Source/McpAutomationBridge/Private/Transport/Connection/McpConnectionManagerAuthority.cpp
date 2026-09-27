@@ -82,26 +82,10 @@ void FMcpConnectionManager::SendBridgeAck(
 	Ack->SetStringField(TEXT("type"), TEXT("bridge_ack"));
 	Ack->SetStringField(TEXT("message"), TEXT("Automation bridge ready"));
 	Ack->SetStringField(TEXT("serverName"), TEXT("UnrealEditor"));
-	Ack->SetStringField(TEXT("serverVersion"), TEXT("unreal-engine"));
 
 	if (ActiveSessionId.IsEmpty()) ActiveSessionId = FGuid::NewGuid().ToString();
 	Ack->SetStringField(TEXT("sessionId"), ActiveSessionId);
 	Ack->SetNumberField(TEXT("protocolVersion"), 1);
-
-	TArray<TSharedPtr<FJsonValue>> SupportedOps;
-	SupportedOps.Add(MakeShared<FJsonValueString>(TEXT("automation_request")));
-	Ack->SetArrayField(TEXT("supportedOpcodes"), SupportedOps);
-
-	TArray<TSharedPtr<FJsonValue>> ExpectedOps;
-	ExpectedOps.Add(MakeShared<FJsonValueString>(TEXT("automation_response")));
-	Ack->SetArrayField(TEXT("expectedResponseOpcodes"), ExpectedOps);
-
-	TArray<TSharedPtr<FJsonValue>> Caps;
-	Caps.Add(MakeShared<FJsonValueString>(TEXT("console_commands")));
-	Caps.Add(MakeShared<FJsonValueString>(TEXT("native_plugin")));
-	Ack->SetArrayField(TEXT("capabilities"), Caps);
-
-	Ack->SetNumberField(TEXT("heartbeatIntervalMs"), 0);
 
 	// Additive and secret-free: the resolved profile, its granted scopes, and
 	// boolean flags only. The token, the path prefixes and the numeric limits are

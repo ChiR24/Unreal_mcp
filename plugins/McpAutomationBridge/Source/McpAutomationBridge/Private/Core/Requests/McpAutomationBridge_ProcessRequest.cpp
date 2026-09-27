@@ -6,7 +6,6 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "McpAutomationBridgeSubsystem.h"
-#include "Core/Requests/McpAutomationBridge_ProcessRequestDispatch.h"
 #include "McpConnectionManager.h"
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
@@ -40,24 +39,23 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
     const TMap<EMcpStateKind, int64> &ExpectedRevisions,
     const FString &SessionKey) {
   UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-         TEXT(">>> ProcessAutomationRequest ENTRY: RequestId=%s action='%s' "
-              "(thread=%s)"),
-         *RequestId, *Action,
-         IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"));
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
          TEXT("ProcessAutomationRequest invoked (thread=%s) RequestId=%s "
               "action=%s activeSockets=%d"),
          IsInGameThread() ? TEXT("GameThread") : TEXT("SocketThread"),
          *RequestId, *Action,
          ConnectionManager.IsValid() ? ConnectionManager->GetActiveSocketCount()
                                      : 0);
-  if (!IsInGameThread()) {
+  // Off the game thread, mid save/GC/load, or re-entrant: queue it (or refuse).
+  const auto QueueOrRefuse = [&]() {
     const EAutomationQueueRejection Reason = QueueAutomationRequest(
         RequestId, Action, Payload, RequestingSocket, Origin,
         ExpectedRevisions, SessionKey);
     if (Reason != EAutomationQueueRejection::None) {
       SendAutomationRejection(RequestingSocket, RequestId, Reason);
     }
+  };
+  if (!IsInGameThread()) {
+    QueueOrRefuse();
     return;
   }
 
@@ -70,12 +68,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
                 "Serialization/GC/Loading: RequestId=%s Action=%s"),
            *RequestId, *Action);
 
-    const EAutomationQueueRejection Reason = QueueAutomationRequest(
-        RequestId, Action, Payload, RequestingSocket, Origin,
-        ExpectedRevisions, SessionKey);
-    if (Reason != EAutomationQueueRejection::None) {
-      SendAutomationRejection(RequestingSocket, RequestId, Reason);
-    }
+    QueueOrRefuse();
     return;
   }
 
@@ -85,20 +78,13 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
          *RequestId, *Action,
          bProcessingAutomationRequest ? TEXT("true") : TEXT("false"));
 
-  const FString LowerAction = Action.ToLower();
-
   if (ConnectionManager.IsValid()) {
     ConnectionManager->StartRequestTelemetry(RequestId, Action);
   }
 
   // Reentrancy guard / enqueue
   if (bProcessingAutomationRequest) {
-    const EAutomationQueueRejection Reason = QueueAutomationRequest(
-        RequestId, Action, Payload, RequestingSocket, Origin,
-        ExpectedRevisions, SessionKey);
-    if (Reason != EAutomationQueueRejection::None) {
-      SendAutomationRejection(RequestingSocket, RequestId, Reason);
-    }
+    QueueOrRefuse();
     return;
   }
 
@@ -140,17 +126,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
   McpAutomationBridge::SetInFlightAction(Action);
   bool bDispatchHandled = false;
   bool bErrorCaptureStarted = false;
-  FString ConsumedHandlerLabel = TEXT("unknown-handler");
   const double DispatchStartSeconds = FPlatformTime::Seconds();
-
-  auto HandleAndLog = [&](const TCHAR *HandlerLabel, auto &&Callable) -> bool {
-    const bool bResult = Callable();
-    if (bResult) {
-      bDispatchHandled = true;
-      ConsumedHandlerLabel = HandlerLabel;
-    }
-    return bResult;
-  };
 
   {
     ON_SCOPE_EXIT {
@@ -188,9 +164,9 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
           (DispatchEndSeconds - DispatchStartSeconds) * 1000.0;
       if (bDispatchHandled) {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-               TEXT("ProcessAutomationRequest: Completed handler='%s' "
+               TEXT("ProcessAutomationRequest: Completed "
                     "RequestId=%s action='%s' (%.3f ms) engineErrors=%s"),
-               *ConsumedHandlerLabel, *RequestId, *Action, DurationMs,
+               *RequestId, *Action, DurationMs,
                bHadEngineErrors ? TEXT("true") : TEXT("false"));
       } else {
         UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
@@ -207,79 +183,38 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       }
     };
 
-    try {
-      if (LowerAction == TEXT("manage_logs")) {
-        if (HandleAndLog(TEXT("HandleLogAction (direct)"), [&]() {
-              return HandleLogAction(RequestId, Action, Payload,
-                                     RequestingSocket);
-            }))
-          return;
-      }
+    // =========================================================================
+    // Begin Error Capture for this request
+    // =========================================================================
+    // This captures engine-level errors (like ensure failures) that occur
+    // during handler execution. SendAutomationResponse checks the capture and
+    // turns otherwise successful responses into ENGINE_ERROR failures so tool
+    // responses stay aligned with the Unreal log.
+    BeginErrorCapture();
+    bErrorCaptureStarted = true;
 
-      // =========================================================================
-      // Begin Error Capture for this request (inside try block)
-      // =========================================================================
-      // This captures engine-level errors (like ensure failures) that occur
-      // during handler execution. SendAutomationResponse checks the capture and
-      // turns otherwise successful responses into ENGINE_ERROR failures so tool
-      // responses stay aligned with the Unreal log.
-      // Note: BeginErrorCapture is placed inside the try block to avoid
-      // capturing our own catch-block error logging.
-      BeginErrorCapture();
-      bErrorCaptureStarted = true;
+    // Map this requestId to the requesting socket so responses can be
+    // delivered reliably
+    if (!RequestId.IsEmpty() && RequestingSocket.IsValid() &&
+        ConnectionManager.IsValid()) {
+      ConnectionManager->RegisterRequestSocket(RequestId, RequestingSocket);
+    }
 
-      // Map this requestId to the requesting socket so responses can be
-      // delivered reliably
-      if (!RequestId.IsEmpty() && RequestingSocket.IsValid() &&
-          ConnectionManager.IsValid()) {
-        ConnectionManager->RegisterRequestSocket(RequestId, RequestingSocket);
-      }
-
-      // ---------------------------------------------------------
-      // Check Handler Registry (O(1) dispatch)
-      // ---------------------------------------------------------
-      if (const FAutomationHandler *Handler = AutomationHandlers.Find(Action)) {
-        if (HandleAndLog(*Action, [&]() {
-              return (*Handler)(RequestId, Action, Payload, RequestingSocket);
-            })) {
-          return;
-        }
-      }
-
-      if (McpProcessRequestDispatch::DispatchFallbackAutomationRequest(
-              this, RequestId, Action, LowerAction, Payload, RequestingSocket,
-              ConsumedHandlerLabel)) {
+    // ---------------------------------------------------------
+    // Check Handler Registry (O(1) dispatch)
+    // ---------------------------------------------------------
+    if (const FAutomationHandler *Handler = AutomationHandlers.Find(Action)) {
+      if ((*Handler)(RequestId, Action, Payload, RequestingSocket)) {
         bDispatchHandled = true;
         return;
       }
-
-      // Unhandled action
-      bDispatchHandled = true;
-      ConsumedHandlerLabel = TEXT("SendAutomationError (unknown action)");
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Unknown automation action: %s"), *Action),
-          TEXT("UNKNOWN_ACTION"));
-    } catch (const std::exception &E) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
-             TEXT("Unhandled exception processing automation request %s: %s"),
-             *RequestId, ANSI_TO_TCHAR(E.what()));
-      bDispatchHandled = true;
-      ConsumedHandlerLabel = TEXT("Exception handler");
-      SendAutomationError(
-          RequestingSocket, RequestId,
-          FString::Printf(TEXT("Internal error: %s"), ANSI_TO_TCHAR(E.what())),
-          TEXT("INTERNAL_ERROR"));
-    } catch (...) {
-      UE_LOG(
-          LogMcpAutomationBridgeSubsystem, Error,
-          TEXT("Unhandled unknown exception processing automation request %s"),
-          *RequestId);
-      bDispatchHandled = true;
-      ConsumedHandlerLabel = TEXT("Exception handler (unknown)");
-      SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Internal error (unknown)."),
-                          TEXT("INTERNAL_ERROR"));
     }
+
+    // Unhandled action
+    bDispatchHandled = true;
+    SendAutomationError(
+        RequestingSocket, RequestId,
+        FString::Printf(TEXT("Unknown automation action: %s"), *Action),
+        TEXT("UNKNOWN_ACTION"));
   }
 }

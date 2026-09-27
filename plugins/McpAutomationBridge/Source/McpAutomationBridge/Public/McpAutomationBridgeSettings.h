@@ -9,19 +9,6 @@
 // them in Project Settings -> Plugins. Use defaultconfig so the values are
 // written to the project's default INI file when persisted.
 
-UENUM()
-enum class EMcpLogVerbosity : uint8
-{
-    NoLogging     UMETA(DisplayName = "No Logging"),
-    Fatal         UMETA(DisplayName = "Fatal"),
-    Error         UMETA(DisplayName = "Error"),
-    Warning       UMETA(DisplayName = "Warning"),
-    Display       UMETA(DisplayName = "Display"),
-    Log           UMETA(DisplayName = "Log"),
-    Verbose       UMETA(DisplayName = "Verbose"),
-    VeryVerbose   UMETA(DisplayName = "VeryVerbose")
-};
-
 UCLASS(config=Game, defaultconfig, meta = (DisplayName = "MCP Automation Bridge"))
 class MCPAUTOMATIONBRIDGE_API UMcpAutomationBridgeSettings : public UDeveloperSettings
 {
@@ -44,9 +31,6 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Connection")
     FString ListenPorts;
 
-    UPROPERTY(config, EditAnywhere, Category = "Connection")
-    FString EndpointUrl;
-
     UPROPERTY(config, EditAnywhere, Category = "Security")
     FString CapabilityToken;
 
@@ -59,10 +43,6 @@ public:
 
     UPROPERTY(config, EditAnywhere, Category = "Connection", meta = (ClampMin = "0.0"))
     float AutoReconnectDelay;
-
-    /** Port the plugin expects the MCP server to use when the tool connects back as a client (optional). */
-    UPROPERTY(config, EditAnywhere, Category = "Connection")
-    int32 ClientPort;
 
     /** When true, require a capability token for incoming connections (enforces matching token). */
     UPROPERTY(config, EditAnywhere, Category = "Security")
@@ -209,33 +189,11 @@ public:
     UPROPERTY(config, EditAnywhere, Category = "Security", meta = (ClampMin = "0"))
     int32 MaxAutomationRequestsPerMinute;
 
-    /** Optional runtime log verbosity override exposed via Project Settings. */
-
-    UPROPERTY(config, EditAnywhere, Category = "Debug")
-    EMcpLogVerbosity LogVerbosity;
-
-    /** When true, apply the selected LogVerbosity to this plugin's log category at runtime. */
-    UPROPERTY(config, EditAnywhere, Category = "Debug")
-    bool bApplyLogVerbosityToAll;
-
-    /** When true, emit extra per-socket telemetry for control/response delivery
-     * attempts. This is intended for short-term debugging of intermittent
-     * delivery failures and is off by default to avoid log spam. When enabled
-     * the subsystem will raise aggregated delivery summaries to Log level and
-     * include per-socket details for inspection.
-     */
-    UPROPERTY(config, EditAnywhere, Category = "Debug")
-    bool bEnableSocketTelemetry;
-
     /** When true, the plugin will open multiple listen sockets provided by ListenPorts. */
     UPROPERTY(config, EditAnywhere, Category = "Connection")
     bool bMultiListen;
 
     // Heartbeat settings
-    /** Heartbeat interval to advertise to connected clients (milliseconds). If <= 0, server default will be used. */
-    UPROPERTY(config, EditAnywhere, Category = "Heartbeat")
-    int32 HeartbeatIntervalMs;
-
     /** How many seconds without a heartbeat before a connection is considered timed out. If <= 0, heartbeat timeout checking is disabled. */
     UPROPERTY(config, EditAnywhere, Category = "Heartbeat", meta = (ClampMin = "0.0"))
     float HeartbeatTimeoutSeconds;
@@ -300,7 +258,6 @@ public:
         return FPlatformAtomics::AtomicRead(&EditGenerationCounter());
     }
 
-#if WITH_EDITOR
     // Persist changed properties immediately when edited in Project Settings
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override
     {
@@ -308,5 +265,4 @@ public:
         FPlatformAtomics::InterlockedIncrement(&EditGenerationCounter());
         SaveConfig();
     }
-#endif
 };

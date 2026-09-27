@@ -34,7 +34,6 @@ void FMcpConnectionManager::AttemptConnection() {
 
     const FString HostToBind =
         EnvListenHost.IsEmpty() ? Settings->ListenHost : EnvListenHost;
-    TWeakPtr<FMcpConnectionManager> WeakSelf = AsShared();
 
     for (const FString &Token : PortTokens) {
       const FString Trimmed = Token.TrimStartAndEnd();
@@ -65,28 +64,9 @@ void FMcpConnectionManager::AttemptConnection() {
                                           Settings->AcceptSleepSeconds,
                                           bEnableTls, TlsCertificatePath,
                                           TlsPrivateKeyPath);
-      ServerSocket->InitializeWeakSelf(ServerSocket);
-
-      ServerSocket->OnConnected().AddLambda(
-          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
-              StrongSelf->HandleConnected(Sock);
-            }
-          });
-
-      ServerSocket->OnClientConnected().AddLambda(
-          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> ClientSock) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
-              StrongSelf->HandleClientConnected(ClientSock);
-            }
-          });
-
-      ServerSocket->OnConnectionError().AddLambda(
-          [WeakSelf](const FString &Err) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
-              StrongSelf->HandleServerConnectionError(Err);
-            }
-          });
+      ServerSocket->ConnectedDelegate.AddSP(this, &FMcpConnectionManager::HandleConnected);
+      ServerSocket->ClientConnectedDelegate.AddSP(this, &FMcpConnectionManager::HandleClientConnected);
+      ServerSocket->ConnectionErrorDelegate.AddSP(this, &FMcpConnectionManager::HandleServerConnectionError);
 
       if (!ActiveSockets.Contains(ServerSocket))
         ActiveSockets.Add(ServerSocket);
@@ -94,57 +74,6 @@ void FMcpConnectionManager::AttemptConnection() {
     }
   }
 
-  if (!EndpointUrl.IsEmpty()) {
-    bool bHasClientForEndpoint = false;
-    for (const TSharedPtr<FMcpBridgeWebSocket> &Sock : ActiveSockets) {
-      if (Sock.IsValid() && !Sock->IsListening() &&
-          Sock->GetPort() == ClientPort) {
-        bHasClientForEndpoint = true;
-        break;
-      }
-    }
-
-    if (!bHasClientForEndpoint) {
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-             TEXT("AttemptConnection: creating client socket to %s"),
-             *EndpointUrl);
-      TMap<FString, FString> Headers;
-      if (!CapabilityToken.IsEmpty()) {
-        Headers.Add(TEXT("X-MCP-Capability-Token"), CapabilityToken);
-      }
-      TSharedPtr<FMcpBridgeWebSocket> ClientSocket =
-          MakeShared<FMcpBridgeWebSocket>(EndpointUrl, TEXT("mcp-automation"),
-                                          Headers, bEnableTls,
-                                          TlsCertificatePath,
-                                          TlsPrivateKeyPath);
-      ClientSocket->InitializeWeakSelf(ClientSocket);
-
-      TWeakPtr<FMcpConnectionManager> WeakSelf = AsShared();
-
-      ClientSocket->OnConnected().AddLambda(
-          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
-              StrongSelf->HandleConnected(Sock);
-            }
-          });
-      ClientSocket->OnConnectionError().AddLambda(
-          [WeakSelf, ClientSocket](const FString &Err) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
-              StrongSelf->HandleConnectionError(ClientSocket, Err);
-            }
-          });
-      ClientSocket->OnMessage().AddLambda(
-          [WeakSelf](TSharedPtr<FMcpBridgeWebSocket> Sock,
-                     const FString &Message) {
-            if (TSharedPtr<FMcpConnectionManager> StrongSelf = WeakSelf.Pin()) {
-              StrongSelf->HandleMessage(Sock, Message);
-            }
-          });
-
-      ActiveSockets.Add(ClientSocket);
-      ClientSocket->Connect();
-    }
-  }
 }
 
 void FMcpConnectionManager::ForceReconnect(const FString &Reason,
@@ -152,29 +81,7 @@ void FMcpConnectionManager::ForceReconnect(const FString &Reason,
   UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("ForceReconnect: %s"),
          *Reason);
 
-  for (TSharedPtr<FMcpBridgeWebSocket> &Socket : ActiveSockets) {
-    if (Socket.IsValid()) {
-      Socket->Close();
-    }
-  }
-  ActiveSockets.Empty();
-  {
-    FScopeLock Lock(&AuthSocketsMutex);
-    AuthenticatedSockets.Empty();
-    SocketPrincipals.Empty();
-  }
-  {
-    FScopeLock Lock(&LogSubscribersMutex);
-    LogSubscriberSockets.Empty();
-  }
-  {
-    FScopeLock Lock(&RateLimitMutex);
-    SocketRateLimits.Empty();
-  }
-  {
-    FScopeLock Lock(&PendingRequestsMutex);
-    PendingRequestsToSockets.Empty();
-  }
+  ForgetAllSockets();
 
   bBridgeAvailable = false;
   if (bReconnectEnabled) {

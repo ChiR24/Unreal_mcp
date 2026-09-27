@@ -94,9 +94,7 @@ void FMcpNativeTransport::CleanupStaleRequests()
 		}
 		for (const FString& SessionId : ExpiredSessions)
 		{
-			ActiveSessions.Remove(SessionId);
-			SessionRateStates.Remove(SessionId);
-			SessionPrincipals.Remove(SessionId);
+			ForgetSessionLocked(SessionId);
 			UE_LOG(LogMcpNativeTransport, Log,
 				TEXT("Session expired after %.0f min inactivity (remaining: %d)"),
 				SessionTimeoutSeconds / 60.0, ActiveSessions.Num());
@@ -206,9 +204,6 @@ void FMcpNativeTransport::RunKeepaliveLoop()
 			break;
 		}
 		SweepNotificationKeepalives();
-		// Task 37: drain any due coalesced resources/updated from the same
-		// existing keepalive thread — no dedicated primitive-notification thread.
-		FlushDuePrimitiveNotifications();
 	}
 }
 

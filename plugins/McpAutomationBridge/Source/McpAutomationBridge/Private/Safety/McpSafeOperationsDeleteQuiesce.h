@@ -5,7 +5,6 @@
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
 inline void McpQuiesceBeforeBatchDelete(TArray<UObject*>& BatchObjects)
 {
@@ -13,7 +12,6 @@ inline void McpQuiesceBeforeBatchDelete(TArray<UObject*>& BatchObjects)
         TEXT("McpQuiesceBeforeBatchDelete: Starting pre-delete quiesce for %d objects"),
         BatchObjects.Num());
 
-#if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
     UAssetEditorSubsystem* AssetEditorSubsystem = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
     if (AssetEditorSubsystem)
     {
@@ -25,19 +23,11 @@ inline void McpQuiesceBeforeBatchDelete(TArray<UObject*>& BatchObjects)
             }
         }
     }
-#endif
 
     McpFinishCompilationForBatch(BatchObjects, TEXT("pre-delete"));
     FlushRenderingCommands();
     FPlatformProcess::Sleep(0.016f);
-    FlushRenderingCommands();
-
-    if (GEditor)
-    {
-        GEditor->ForceGarbageCollection(true);
-    }
-
-    FlushRenderingCommands();
+    McpSafePostDeleteGC();
 
     UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpQuiesceBeforeBatchDelete: Pre-delete quiesce complete"));
@@ -51,14 +41,7 @@ inline void McpQuiesceAfterBatchDelete(const TArray<UObject*>& BatchObjects)
 
     FlushRenderingCommands();
     FPlatformProcess::Sleep(0.016f);
-    FlushRenderingCommands();
-
-    if (GEditor)
-    {
-        GEditor->ForceGarbageCollection(true);
-    }
-
-    FlushRenderingCommands();
+    McpSafePostDeleteGC();
 
     UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpQuiesceAfterBatchDelete: Post-delete quiesce complete"));
@@ -75,22 +58,16 @@ inline void McpQuiesceAnimBlueprintBeforeDelete(UAnimBlueprint* AnimBlueprint)
         TEXT("McpQuiesceAnimBlueprintBeforeDelete: Starting AnimBlueprint-specific quiesce for '%s'"),
         *AnimBlueprint->GetName());
 
-#if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
     UAssetEditorSubsystem* AssetEditorSubsystem = GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
     if (AssetEditorSubsystem)
     {
-        for (int32 i = 0; i < 3; ++i)
-        {
-            AssetEditorSubsystem->CloseAllEditorsForAsset(AnimBlueprint);
-        }
+        AssetEditorSubsystem->CloseAllEditorsForAsset(AnimBlueprint);
 
         UE_LOG(LogMcpSafeOperations, Log,
             TEXT("McpQuiesceAnimBlueprintBeforeDelete: Closed all editors for '%s'"),
             *AnimBlueprint->GetName());
     }
-#endif
 
-#if MCP_HAS_SELECTION
     if (GEditor)
     {
         USelection* SelectedObjects = GEditor->GetSelectedObjects();
@@ -104,7 +81,6 @@ inline void McpQuiesceAnimBlueprintBeforeDelete(UAnimBlueprint* AnimBlueprint)
 
         GEditor->SelectNone(false, true, false);
     }
-#endif
 
     FlushRenderingCommands();
     FPlatformProcess::Sleep(0.050f);
@@ -115,6 +91,5 @@ inline void McpQuiesceAnimBlueprintBeforeDelete(UAnimBlueprint* AnimBlueprint)
         *AnimBlueprint->GetName());
 }
 
-#endif
 
 }

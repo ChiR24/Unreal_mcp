@@ -4,7 +4,7 @@
 
 #include "McpCapabilityScopes.generated.h"
 
-// Task 40 canonical capability scopes. Exact-set semantics with an Admin
+// Canonical capability scopes. Exact-set semantics with an Admin
 // wildcard: a principal is authorized iff it holds Admin OR the exact required
 // scope. This is NOT rank-based — Write does NOT imply Read or Destructive. The
 // same predicate is mirrored by the TypeScript fail-fast layer; the plugin

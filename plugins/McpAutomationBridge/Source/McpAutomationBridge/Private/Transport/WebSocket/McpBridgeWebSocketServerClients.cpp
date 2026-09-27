@@ -21,7 +21,6 @@ void FMcpBridgeWebSocket::HandleAcceptedClient(FSocket* ClientSocket) {
 
   auto ClientWebSocket = MakeShared<FMcpBridgeWebSocket>(
       ClientSocket, bUseTls, TlsCertificatePath, TlsPrivateKeyPath);
-  ClientWebSocket->InitializeWeakSelf(ClientWebSocket);
   ClientWebSocket->bServerMode = false;
   ClientWebSocket->bServerAcceptedConnection = true;
   ClientWebSocket->Port = Port;
@@ -31,7 +30,7 @@ void FMcpBridgeWebSocket::HandleAcceptedClient(FSocket* ClientSocket) {
     ClientSockets.Add(ClientWebSocket);
   }
 
-  TWeakPtr<FMcpBridgeWebSocket> LocalWeakThis = SelfWeakPtr;
+  TWeakPtr<FMcpBridgeWebSocket> LocalWeakThis = AsWeak();
   auto RemoveFromClientList = [LocalWeakThis, ClientWebSocket] {
     if (TSharedPtr<FMcpBridgeWebSocket> Pinned = LocalWeakThis.Pin()) {
       FScopeLock Lock(&Pinned->ClientSocketsMutex);
@@ -42,27 +41,23 @@ void FMcpBridgeWebSocket::HandleAcceptedClient(FSocket* ClientSocket) {
     }
   };
 
-  ClientWebSocket->OnConnected().AddLambda(
-      [LocalWeakThis, ClientWebSocket](TSharedPtr<FMcpBridgeWebSocket>) {
+  // ConnectedDelegate is broadcast on the game thread already.
+  ClientWebSocket->ConnectedDelegate.AddLambda(
+      [LocalWeakThis](TSharedPtr<FMcpBridgeWebSocket> ClientSocket) {
         if (TSharedPtr<FMcpBridgeWebSocket> Pinned = LocalWeakThis.Pin()) {
-          DispatchOnGameThread(
-              [ParentWeak = LocalWeakThis, ClientSocket = ClientWebSocket] {
-                if (TSharedPtr<FMcpBridgeWebSocket> DispatchPinned = ParentWeak.Pin()) {
-                  UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
-                         TEXT("Broadcasting client connected delegate."));
-                  DispatchPinned->ClientConnectedDelegate.Broadcast(ClientSocket);
-                }
-              });
+          UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
+                 TEXT("Broadcasting client connected delegate."));
+          Pinned->ClientConnectedDelegate.Broadcast(ClientSocket);
         }
       });
 
-  ClientWebSocket->OnClosed().AddLambda(
+  ClientWebSocket->ClosedDelegate.AddLambda(
       [RemoveFromClientList](TSharedPtr<FMcpBridgeWebSocket>, int32,
                              const FString&, bool) {
         RemoveFromClientList();
       });
 
-  ClientWebSocket->OnConnectionError().AddLambda(
+  ClientWebSocket->ConnectionErrorDelegate.AddLambda(
       [RemoveFromClientList](const FString&) { RemoveFromClientList(); });
 
   ClientWebSocket->Connect();

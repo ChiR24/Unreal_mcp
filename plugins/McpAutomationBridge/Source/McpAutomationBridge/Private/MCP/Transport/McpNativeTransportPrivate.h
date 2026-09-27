@@ -2,6 +2,9 @@
 
 #include "MCP/Transport/McpNativeTransport.h"
 #include "MCP/Protocol/McpJsonRpc.h"
+// McpCanonicalizeRequestId keys an in-flight call by its JSON-RPC id; "str:"/"num:"
+// namespacing keeps a string "1" and a numeric 1 from cross-cancelling.
+#include "MCP/Execute/McpNativeReceiptEnrichment.h"
 #include "Foundation/McpSecureTokenCompare.h"
 #include "MCP/Registry/McpToolRegistry.h"
 #include "MCP/Registry/McpToolDefinition.h"
@@ -20,25 +23,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpNativeTransport, Log, All);
 
-// Canonical key for a JSON-RPC request id (string or number) so an incoming
-// notifications/cancelled requestId correlates to the inflight SSE connection
-// whose JsonRpcId matches. The key is namespaced by JSON type ("s:" for
-// strings, "n:" for numbers) so a string id "1" and a numeric id 1 cannot
-// collide into the same key and cross-cancel unrelated in-flight requests.
-// Null/object/array/bool ids are unsupported and key empty.
-inline FString McpJsonRpcIdKey(const TSharedPtr<FJsonValue>& Id)
-{
-	if (!Id.IsValid()) return FString();
-	if (Id->Type == EJson::String)
-	{
-		FString S; Id->TryGetString(S); return TEXT("s:") + S;
-	}
-	if (Id->Type == EJson::Number)
-	{
-		return TEXT("n:") + LexToString(Id->AsNumber());
-	}
-	return FString();
-}
 
 // Native MCP protocol-version set.
 //
@@ -66,13 +50,6 @@ inline const TArray<FString>& McpSupportedProtocolVersions()
 inline const FString& McpLatestProtocolVersion()
 {
     static const FString Version(TEXT("2025-11-25"));
-    return Version;
-}
-
-// Used when a post-initialize request omits MCP-Protocol-Version and no session version is known.
-inline const FString& McpDefaultProtocolVersion()
-{
-    static const FString Version(TEXT("2025-03-26"));
     return Version;
 }
 

@@ -1,17 +1,15 @@
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Foundation/McpIdempotencyLedger.h"
 #include "Foundation/McpLiveStateRevisions.h"
-#include "MCP/Primitives/McpSubscriptionStore.h"
-#include "MCP/Primitives/McpTaskStore.h"
 #include "McpConnectionManager.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/McpLaneOracle.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 
-// Task 46 gate - "maps/queues/tasks/subscriptions/ledgers/sockets drain on
-// EVERY terminal path".
+// Maps, queues, ledgers and sockets drain on
+// EVERY terminal path.
 //
 // The existing shutdown test proves the cancellation CALLBACK runs. That is a
 // different claim from "nothing was retained": a queue can run every callback
@@ -50,6 +48,13 @@ static McpLaneOracle::FDrainVerdict SnapshotQueue(
 		Verdict, TEXT("AutomationRequestCancellationCallbacks"),
 		Subsystem->AutomationRequestCancellationCallbacks.Num());
 	return Verdict;
+}
+
+/** Asserts Verdict holds no residue, naming the terminal path and whatever is left. */
+static void ExpectDrained(FAutomationTestBase& Test, const TCHAR* Path, const McpLaneOracle::FDrainVerdict& Verdict)
+{
+	Test.TestTrue(FString::Printf(TEXT("%s drains every container (residue: %s)"), Path,
+		*FString::Join(Verdict.Residue, TEXT(","))), Verdict.IsDrained());
 }
 
 static UMcpAutomationBridgeSubsystem* MakeSubsystem(
@@ -96,10 +101,7 @@ bool FMcpDrainCancelQueuedTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("a cancelled queued request never reaches the editor"),
 		Dispatched.Num(), 0);
 	const McpLaneOracle::FDrainVerdict Verdict = SnapshotQueue(Subsystem);
-	TestTrue(
-		FString::Printf(TEXT("cancel-while-queued drains every container (residue: %s)"),
-			*FString::Join(Verdict.Residue, TEXT(","))),
-		Verdict.IsDrained());
+	ExpectDrained(*this, TEXT("cancel-while-queued"), Verdict);
 	return true;
 }
 
@@ -139,10 +141,7 @@ bool FMcpDrainCancelInFlightTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("in-flight work is not interrupted, only marked"),
 		Dispatched.Num(), 1);
 	const McpLaneOracle::FDrainVerdict Verdict = SnapshotQueue(Subsystem);
-	TestTrue(
-		FString::Printf(TEXT("cancel-while-in-flight drains every container (residue: %s)"),
-			*FString::Join(Verdict.Residue, TEXT(","))),
-		Verdict.IsDrained());
+	ExpectDrained(*this, TEXT("cancel-while-in-flight"), Verdict);
 	return true;
 }
 
@@ -176,10 +175,7 @@ bool FMcpDrainStaleRefusalTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("a stale request never reaches the editor"),
 		Dispatched.Num(), 0);
 	const McpLaneOracle::FDrainVerdict Verdict = SnapshotQueue(Subsystem);
-	TestTrue(
-		FString::Printf(TEXT("a pre-dispatch refusal drains every container (residue: %s)"),
-			*FString::Join(Verdict.Residue, TEXT(","))),
-		Verdict.IsDrained());
+	ExpectDrained(*this, TEXT("a pre-dispatch refusal"), Verdict);
 	return true;
 }
 
@@ -217,10 +213,7 @@ bool FMcpDrainShutdownTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("shutdown dispatches no queued editor work"),
 		Dispatched.Num(), 0);
 	const McpLaneOracle::FDrainVerdict Verdict = SnapshotQueue(Subsystem);
-	TestTrue(
-		FString::Printf(TEXT("shutdown drains every container (residue: %s)"),
-			*FString::Join(Verdict.Residue, TEXT(","))),
-		Verdict.IsDrained());
+	ExpectDrained(*this, TEXT("shutdown"), Verdict);
 	return true;
 }
 
@@ -232,47 +225,10 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 bool FMcpDrainSessionTeardownTest::RunTest(const FString& Parameters)
 {
 	(void)Parameters;
-	// The per-session half of the same criterion: tasks, subscriptions, sockets
-	// and the ledger. Each is populated for TWO sessions and torn down for ONE,
-	// so a teardown that over-drains (taking the neighbour's state with it) is
-	// caught as well as one that under-drains.
-	//
-	// EVERY setup below is asserted before the drain is judged. A drain proof
-	// over a container that was never populated is vacuous - it reads 0 both
-	// before and after and passes against a teardown that does nothing at all.
-	// The first version of this test subscribed to a URI outside the closed
-	// subscribable allowlist, so both subscriptions were silently refused and
-	// the "drained" assertion held over an empty store; only the neighbour
-	// control caught it.
-	FMcpTaskStore Tasks;
-	FMcpTaskRecord Created;
-	TestEqual(TEXT("task setup: session a has a task to drain"),
-		Tasks.CreateTask(TEXT("s-a"), false, 0, Created),
-		EMcpTaskStoreError::None);
-	TestEqual(TEXT("task setup: session b has a task that must survive"),
-		Tasks.CreateTask(TEXT("s-b"), false, 0, Created),
-		EMcpTaskStoreError::None);
-	TestEqual(TEXT("task setup: session a is non-empty before teardown"),
-		Tasks.SessionSize(TEXT("s-a")), 1);
-	Tasks.CloseSession(TEXT("s-a"));
+	// The per-session half of the same criterion: sockets and the ledger. Every
+	// setup is asserted before the drain is judged, so a drain proof never runs
+	// over a container that was never populated.
 	McpLaneOracle::FDrainVerdict Verdict;
-	McpLaneOracle::RecordResidue(
-		Verdict, TEXT("TaskStore"), Tasks.SessionSize(TEXT("s-a")));
-
-	FMcpSubscriptionStore Subscriptions;
-	TestTrue(TEXT("subscription setup: session a subscribe accepted"),
-		Subscriptions.Subscribe(TEXT("s-a"), TEXT("ue://selection")).bAccepted);
-	TestTrue(TEXT("subscription setup: session b subscribe accepted"),
-		Subscriptions.Subscribe(TEXT("s-b"), TEXT("ue://selection")).bAccepted);
-	TestEqual(TEXT("subscription setup: session a is non-empty before teardown"),
-		Subscriptions.Count(TEXT("s-a")), 1);
-	Subscriptions.ClearSession(TEXT("s-a"));
-	McpLaneOracle::RecordResidue(
-		Verdict, TEXT("SubscriptionStore"), Subscriptions.Count(TEXT("s-a")));
-	McpLaneOracle::RecordResidue(
-		Verdict, TEXT("SubscriptionSession"),
-		Subscriptions.HasSession(TEXT("s-a")) ? 1 : 0);
-
 	FMcpConnectionManager Manager;
 	TSharedPtr<FMcpBridgeWebSocket> Socket = MakeShared<FMcpBridgeWebSocket>(0);
 	Manager.RegisterRequestSocket(TEXT("teardown-req"), Socket);
@@ -299,14 +255,7 @@ bool FMcpDrainSessionTeardownTest::RunTest(const FString& Parameters)
 	McpLaneOracle::RecordResidue(
 		Verdict, TEXT("IdempotencyLedger"), Ledger.GetEntryCount());
 
-	TestTrue(
-		FString::Printf(TEXT("session teardown drains every container (residue: %s)"),
-			*FString::Join(Verdict.Residue, TEXT(","))),
-		Verdict.IsDrained());
-	TestEqual(TEXT("teardown does not drain a neighbouring session's tasks"),
-		Tasks.SessionSize(TEXT("s-b")), 1);
-	TestEqual(TEXT("teardown does not drain a neighbouring subscription"),
-		Subscriptions.Count(TEXT("s-b")), 1);
+	McpTerminalDrain::ExpectDrained(*this, TEXT("session teardown"), Verdict);
 	return true;
 }
 

@@ -29,8 +29,6 @@ DEFINE_LOG_CATEGORY_STATIC(LogMcpFabAddOp, Log, All);
 
 namespace McpFabAddOperation
 {
-FString BuildAddScript(const FString& RequestId, const FString& ListingId, const FString& EngineVersion);
-
 namespace
 {
 /** Every /Game package path the registry knows right now. */
@@ -53,15 +51,13 @@ TSet<FString> SnapshotGameAssets()
 bool Start(const FString& ListingId, const FString& EngineVersion,
 	TFunction<void(const FMcpFabAddResult&)> OnComplete)
 {
-	// Fail closed at this entry point too: the provider validates, but the
-	// function interpolates ListingId into a JS string literal inside Fab's
-	// authenticated page, so the allowlist belongs here as well -- an id that
-	// cannot reach the page cannot steer the path.
-	if (!IsSafeListingIdShared(ListingId))
+	// Fail closed where ListingId is interpolated into a JS string literal inside
+	// Fab's authenticated page: an id that cannot reach the page cannot steer the path.
+	if (!IsSafeListingId(ListingId))
 	{
 		FMcpFabAddResult Rejected;
-		Rejected.ErrorCode = TEXT("INVALID_ARGUMENT");
-		Rejected.Error = TEXT("ListingId must be a Fab listing uid of [A-Za-z0-9_-], 64 chars max.");
+		Rejected.ErrorCode = TEXT("INVALID_LISTING_ID");
+		Rejected.Error = TEXT("A listing id must be [A-Za-z0-9_-] and at most 64 characters.");
 		OnComplete(Rejected);
 		return true;
 	}

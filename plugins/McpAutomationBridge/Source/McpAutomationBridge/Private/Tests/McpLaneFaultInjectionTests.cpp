@@ -1,17 +1,17 @@
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Async/Async.h"
 #include "Foundation/McpIdempotencyLedger.h"
 #include "Misc/AutomationTest.h"
 #include "Tests/McpLaneOracle.h"
 
-// Task 46 gate - PROOF THAT THE GATE CAN FAIL.
+// Gate - PROOF THAT THE GATE CAN FAIL.
 //
 // The acceptance criterion is "injected race, stale state, unauthorized action
 // or duplicate mutation is detected". A green concurrency run does not
 // establish that: an oracle that returns "clean" unconditionally would produce
-// exactly the same green. So every predicate the Task 46 native tests judge a
+// exactly the same green. So every predicate the native tests judge a
 // run with is driven RED here, deliberately, from a hand-built observation
 // carrying the corresponding fault.
 //

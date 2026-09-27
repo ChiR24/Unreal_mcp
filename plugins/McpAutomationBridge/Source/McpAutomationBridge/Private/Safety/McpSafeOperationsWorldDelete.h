@@ -5,7 +5,6 @@
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
 inline bool HasLoadedWorlds(const TArray<FAssetData>& WorldAssets)
 {
@@ -91,9 +90,7 @@ inline int32 DeleteWorldPackagesByPath(const TArray<FAssetData>& WorldAssets)
             }
         }
 
-        TArray<FString> ScanPaths;
-        ScanPaths.Add(FPaths::GetPath(PackagePath));
-        AssetRegistry.ScanPathsSynchronous(ScanPaths, false);
+        AssetRegistry.ScanPathsSynchronous({FPaths::GetPath(PackagePath)}, false);
 
         TArray<FAssetData> RemainingWorldAssets;
         AssetRegistry.GetAssetsByPackageName(AssetData.PackageName, RemainingWorldAssets, true);
@@ -114,16 +111,10 @@ inline int32 DeleteWorldPackagesByPath(const TArray<FAssetData>& WorldAssets)
         }
     }
 
-    FlushRenderingCommands();
-    if (GEditor)
-    {
-        GEditor->ForceGarbageCollection(true);
-    }
-    FlushRenderingCommands();
+    McpSafePostDeleteGC();
 
     return DeletedCount;
 }
 
-#endif
 
 }

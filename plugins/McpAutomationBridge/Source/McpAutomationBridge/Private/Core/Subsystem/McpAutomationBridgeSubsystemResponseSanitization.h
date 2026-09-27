@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "MCP/Execute/McpNativeReceiptRedaction.h"
 
 namespace McpAutomationBridgeSubsystemResponse
 {
@@ -276,19 +277,18 @@ inline void RedactKeyedValueForResponse(FString& Text, const TCHAR* Key)
 
 inline FString SanitizeEngineErrorForResponse(const FString& In)
 {
-    FString Out = RedactFilesystemPathsForResponse(SanitizeForLog(In));
+    // The receipt masker first (passwd/pwd/api-key, quoted JSON and Bearer forms), then
+    // this path's own markers, which also swallow a whole header value ("Authorization: Basic a b").
+    FString Out = McpMaskSecrets(RedactFilesystemPathsForResponse(SanitizeForLog(In)));
     for (const TCHAR* Key : {TEXT("userid"), TEXT("accountid"), TEXT("loginid")})
     {
         RedactKeyedValueForResponse(Out, Key);
     }
-    RedactFollowingValueForResponse(Out, TEXT("token="));
-    RedactFollowingValueForResponse(Out, TEXT("capabilitytoken="));
-    RedactFollowingValueForResponse(Out, TEXT("password="));
-    RedactFollowingValueForResponse(Out, TEXT("secret="));
-    RedactFollowingValueForResponse(Out, TEXT("api_key="));
-    RedactFollowingValueForResponse(Out, TEXT("apikey="));
-    RedactFollowingValueForResponse(Out, TEXT("authorization:"));
-    RedactFollowingValueForResponse(Out, TEXT("bearer "));
+    for (const TCHAR* Marker : {TEXT("token="), TEXT("capabilitytoken="), TEXT("password="), TEXT("secret="),
+                                TEXT("api_key="), TEXT("apikey="), TEXT("authorization:"), TEXT("bearer ")})
+    {
+        RedactFollowingValueForResponse(Out, Marker);
+    }
 
     if (Out.Len() > 512)
     {

@@ -95,10 +95,10 @@ namespace McpResourceHealth
 
 		const FMcpTelemetryRegistry& Registry = FMcpTelemetryRegistry::Get();
 		auto Data = MakeShared<FJsonObject>();
-		Data->SetStringField(TEXT("surface"), McpTelemetrySchema::CoerceSurface(TEXT("native")));
+		Data->SetStringField(TEXT("surface"), TEXT("native"));
 		Data->SetObjectField(TEXT("readiness"), Readiness);
 		Data->SetObjectField(TEXT("diagnostics"), Registry.SnapshotJson());
-		// NF-6: identical null-when-empty projection to the automation-bridge
+		// Identical null-when-empty projection to the automation-bridge
 		// presenter (McpResourceBridgeContent.cpp) - cross-transport parity with
 		// the TS reader's null for a missing previous FILE.
 		const TSharedRef<FJsonObject> PreviousSummary = FMcpDiagnosticsSnapshot::Get().PreviousSummaryJson();

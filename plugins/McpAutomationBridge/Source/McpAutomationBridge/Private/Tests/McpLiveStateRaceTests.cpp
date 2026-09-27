@@ -1,6 +1,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Foundation/McpLiveStateRevisions.h"
 #include "Misc/AutomationTest.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -41,7 +41,7 @@ bool FMcpLiveStateRaceBeforeDispatchTest::RunTest(const FString& Parameters)
 
 	Revisions.Advance(EMcpStateKind::Selection);
 	TestEqual(TEXT("race refusal uses the canonical code"),
-		FString(FMcpLiveStateRevisions::StaleStateErrorCode()),
+		FString(FMcpLiveStateRevisions::StaleStateErrorCode),
 		FString(TEXT("STALE_STATE")));
 	Subsystem->ProcessPendingAutomationRequests();
 	TestEqual(TEXT("stale race invokes no handler"), DispatchCount, 0);

@@ -116,7 +116,7 @@ bool ScanForBlockedCommand(
 	return false;
 }
 
-// Task 22 console-command policy, applied BEFORE the queue. The in-handler check
+// Console-command policy, applied BEFORE the queue. The in-handler check
 // in Domains/ConsoleCommand stays as post-queue defence in depth; both call the
 // same ConsoleCommandSecurity::IsBlockedCommand predicate, so they cannot drift.
 FMcpAuthorizationDecision CheckConsoleCommands(const TSharedPtr<FJsonObject>& Payload)
@@ -230,7 +230,7 @@ FMcpAuthorizationDecision AuthorizeWithDemand(
 	// surface) skip the ledger entirely.
 	if (Grant.bConsentPresent && !Grant.ConsentNonce.IsEmpty())
 	{
-		if (!McpCapabilityAuthorization::FMcpConsentLedger::Get().TryConsume(Grant.ConsentNonce, Grant.ConsentCapability))
+		if (!McpCapabilityAuthorization::FMcpConsentLedger::Get().TryConsume(Grant.ConsentNonce))
 		{
 			return FMcpAuthorizationDecision::Deny(McpAuthorizationCodes::ConsentReused,
 				TEXT("This consent grant was already used by an earlier call. Consent grants are single-use: re-run describe for a fresh grant and retry."));

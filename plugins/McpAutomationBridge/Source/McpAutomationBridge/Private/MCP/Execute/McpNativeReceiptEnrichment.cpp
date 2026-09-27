@@ -37,22 +37,6 @@ void McpSetReceiptRecordRevisions(const TSharedPtr<FJsonObject>& Receipt, const 
 
 namespace
 {
-TArray<FString> DeprecationWarnings(const FString& CapabilityId)
-{
-	TArray<FString> Warnings;
-	const FMcpCapabilityRecord* Record = FMcpCanonicalRecordIndex::Get().FindById(CapabilityId);
-	if (Record != nullptr && Record->DeprecationStatus == TEXT("deprecated"))
-	{
-		FString Guidance;
-		if (Record->Deprecation.IsValid())
-		{
-			Record->Deprecation->TryGetStringField(TEXT("guidance"), Guidance);
-		}
-		Warnings.Add(FString::Printf(TEXT("Capability '%s' is deprecated: %s"), *CapabilityId, *Guidance));
-	}
-	return Warnings;
-}
-
 TSharedPtr<FJsonObject> BuildCanonicalError(const FMcpSemanticError& Error)
 {
 	TSharedPtr<FJsonObject> Object = MakeShared<FJsonObject>();
@@ -209,7 +193,7 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 			}
 		}
 		Receipt->SetArrayField(TEXT("changes"), McpBoundJsonArray(MoveTemp(Changes)));
-		TArray<FString> WarningTexts = DeprecationWarnings(CapabilityId);
+		TArray<FString> WarningTexts;
 		McpCollectResultWarnings(RawResult, WarningTexts);
 		McpCollectResultWarnings(Data, WarningTexts);
 		if (bMutates)
@@ -239,9 +223,7 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 		const FTCHARToUTF8 Utf8(*CanonicalData);
 		uint8 Hash[20];
 		FSHA1::HashBuffer(Utf8.Get(), Utf8.Length(), Hash);
-		FString Digest = TEXT("sha1:");
-		for (int32 Index = 0; Index < 20; ++Index) { Digest += FString::Printf(TEXT("%02x"), Hash[Index]); }
-		Receipt->SetStringField(TEXT("dataDigest"), Digest);
+		Receipt->SetStringField(TEXT("dataDigest"), TEXT("sha1:") + BytesToHex(Hash, 20).ToLower());
 	}
 	else if (Error != nullptr)
 	{

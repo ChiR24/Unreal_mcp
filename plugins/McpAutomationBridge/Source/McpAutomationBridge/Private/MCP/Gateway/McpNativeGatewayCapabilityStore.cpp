@@ -95,37 +95,26 @@ bool ParseRecord(const TSharedPtr<FJsonObject>& Entry, FMcpCapabilityRecord& Out
 	Out.Behavior = ReadObject(Record, TEXT("behavior"));
 	Out.Policy = ReadObject(Record, TEXT("policy"));
 	Out.Cost = ReadObject(Record, TEXT("cost"));
-	Out.Deprecation = ReadObject(Record, TEXT("deprecation"));
 	Out.Hashes = Hashes;
 	if (Out.Behavior.IsValid()) Out.Behavior->TryGetStringField(TEXT("effect"), Out.Effect);
-	if (Out.Deprecation.IsValid()) Out.Deprecation->TryGetStringField(TEXT("status"), Out.DeprecationStatus);
 
 	const TArray<TSharedPtr<FJsonValue>>* Examples = nullptr;
 	if (Record->TryGetArrayField(TEXT("examples"), Examples) && Examples)
 	{
 		Out.Examples = *Examples;
-		Out.ExampleCount = Out.Examples.Num();
-	}
-	else
-	{
-		Out.ExampleCount = 0;
 	}
 	return true;
 }
 
 TArray<FString> DistinctSorted(const TArray<FMcpCapabilityRecord>& Records,
-	TFunctionRef<const FString&(const FMcpCapabilityRecord&)> Project)
+	TFunctionRef<FString(const FMcpCapabilityRecord&)> Project)
 {
-	TArray<FString> Values;
+	TArray<const FMcpCapabilityRecord*> Pointers;
 	for (const FMcpCapabilityRecord& Record : Records)
 	{
-		const FString& Value = Project(Record);
-		const bool bSeen = Values.ContainsByPredicate(
-			[&Value](const FString& Existing) { return Existing.Equals(Value, ESearchCase::CaseSensitive); });
-		if (!bSeen) Values.Add(Value);
+		Pointers.Add(&Record);
 	}
-	Values.Sort([](const FString& L, const FString& R) { return L.Compare(R, ESearchCase::CaseSensitive) < 0; });
-	return Values;
+	return McpDistinctSorted(Pointers, Project);
 }
 }
 
@@ -210,17 +199,17 @@ const FMcpCapabilityStore& FMcpCapabilityStore::Get()
 
 TArray<FString> FMcpCapabilityStore::GetParents() const
 {
-	return DistinctSorted(Records, [](const FMcpCapabilityRecord& R) -> const FString& { return R.Parent; });
+	return DistinctSorted(Records, [](const FMcpCapabilityRecord& R) -> FString { return R.Parent; });
 }
 
 TArray<FString> FMcpCapabilityStore::GetDomains() const
 {
-	return DistinctSorted(Records, [](const FMcpCapabilityRecord& R) -> const FString& { return R.Domain; });
+	return DistinctSorted(Records, [](const FMcpCapabilityRecord& R) -> FString { return R.Domain; });
 }
 
 TArray<FString> FMcpCapabilityStore::GetFamilies() const
 {
-	return DistinctSorted(Records, [](const FMcpCapabilityRecord& R) -> const FString& { return R.Family; });
+	return DistinctSorted(Records, [](const FMcpCapabilityRecord& R) -> FString { return R.Family; });
 }
 
 TArray<const FMcpCapabilityRecord*> FMcpCapabilityStore::GetRecordsForParent(const FString& Parent) const

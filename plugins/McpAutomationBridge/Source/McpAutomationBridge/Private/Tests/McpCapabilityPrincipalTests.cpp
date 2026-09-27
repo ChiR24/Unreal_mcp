@@ -1,6 +1,6 @@
 #include "Foundation/McpCapabilityPrincipal.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 #include "McpAutomationBridgeSettings.h"
 #include "McpCapabilityScopes.h"

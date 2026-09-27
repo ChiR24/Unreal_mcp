@@ -33,16 +33,7 @@ void FMcpDynamicToolManager::Initialize(const FMcpToolRegistry& Registry, bool b
 		TS.Category = Category;
 		TS.bEnabled = bEnabled;
 
-		FCategoryState& CS = CategoryStates.FindOrAdd(Category);
-		if (CS.Name.IsEmpty())
-		{
-			CS.Name = Category;
-			CS.bEnabled = true;
-			CS.ToolCount = 0;
-			CS.EnabledCount = 0;
-		}
-		CS.ToolCount++;
-		if (bEnabled) CS.EnabledCount++;
+		CategoryStates.FindOrAdd(Category).Name = Category;
 	}
 
 	InitialToolEnabled.Empty();
@@ -74,21 +65,6 @@ bool FMcpDynamicToolManager::IsToolEnabled(const FString& ToolName) const
 	FScopeLock Lock(&StateMutex);
 	return IsToolEnabled_NoLock(ToolName);
 }
-
-TSet<FString> FMcpDynamicToolManager::GetEnabledToolNames() const
-{
-	FScopeLock Lock(&StateMutex);
-	TSet<FString> Result;
-	for (const auto& Pair : ToolStates)
-	{
-		if (IsToolEnabled_NoLock(Pair.Key))
-		{
-			Result.Add(Pair.Key);
-		}
-	}
-	return Result;
-}
-
 TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 	const FString& Action, const TSharedPtr<FJsonObject>& Args)
 {
@@ -108,9 +84,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		return GetStatus();
 	}
 
-	// Effective mutations bump CatalogStateRevision under StateMutex so a
-	// concurrent status read never sees new state with a stale revision; the
-	// delegate fires only after unlock, with the new revision already visible.
 	if (Action != TEXT("reset") && !Args.IsValid())
 	{
 		auto Err = MakeShared<FJsonObject>();
@@ -119,68 +92,19 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::HandleAction(
 		return Err;
 	}
 
-	// Each mutation repeats the lock/bump/notify ritual deliberately: the Task 28
-	// source contract pins one such site per mutation so the revision bump can be
-	// proven to land before observers wake. Do not fold these into one helper.
+	// The revision bump shares the mutation's lock, so a status read never sees
+	// new state with a stale revision.
+	FScopeLock Lock(&StateMutex);
 	bool bChanged = false;
 	TSharedPtr<FJsonObject> Result;
-
-	if (Action == TEXT("reset"))
+	if (Action == TEXT("reset")) Result = Reset(bChanged);
+	else if (Action == TEXT("enable_tools")) Result = EnableTools(McpHandlerUtils::GetStringArrayField(Args, TEXT("tools")), bChanged);
+	else if (Action == TEXT("disable_tools")) Result = DisableTools(McpHandlerUtils::GetStringArrayField(Args, TEXT("tools")), bChanged);
+	else if (Action == TEXT("enable_category")) Result = EnableCategory(GetJsonStringField(Args, TEXT("category")), bChanged);
+	else if (Action == TEXT("disable_category")) Result = DisableCategory(GetJsonStringField(Args, TEXT("category")), bChanged);
+	if (Result.IsValid())
 	{
-		{
-			FScopeLock Lock(&StateMutex);
-			Result = Reset(bChanged);
-			if (bChanged) ++CatalogStateRevision;
-		}
-		if (bChanged) OnToolsChanged.ExecuteIfBound();
-		return Result;
-	}
-
-	if (Action == TEXT("enable_tools"))
-	{
-		const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Args, TEXT("tools"));
-		{
-			FScopeLock Lock(&StateMutex);
-			Result = EnableTools(Names, bChanged);
-			if (bChanged) ++CatalogStateRevision;
-		}
-		if (bChanged) OnToolsChanged.ExecuteIfBound();
-		return Result;
-	}
-
-	if (Action == TEXT("disable_tools"))
-	{
-		const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Args, TEXT("tools"));
-		{
-			FScopeLock Lock(&StateMutex);
-			Result = DisableTools(Names, bChanged);
-			if (bChanged) ++CatalogStateRevision;
-		}
-		if (bChanged) OnToolsChanged.ExecuteIfBound();
-		return Result;
-	}
-
-	if (Action == TEXT("enable_category"))
-	{
-		const FString Cat = McpHandlerUtils::GetOptionalString(Args, TEXT("category"));
-		{
-			FScopeLock Lock(&StateMutex);
-			Result = EnableCategory(Cat, bChanged);
-			if (bChanged) ++CatalogStateRevision;
-		}
-		if (bChanged) OnToolsChanged.ExecuteIfBound();
-		return Result;
-	}
-
-	if (Action == TEXT("disable_category"))
-	{
-		const FString Cat = McpHandlerUtils::GetOptionalString(Args, TEXT("category"));
-		{
-			FScopeLock Lock(&StateMutex);
-			Result = DisableCategory(Cat, bChanged);
-			if (bChanged) ++CatalogStateRevision;
-		}
-		if (bChanged) OnToolsChanged.ExecuteIfBound();
+		if (bChanged) ++CatalogStateRevision;
 		return Result;
 	}
 

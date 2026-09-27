@@ -3,28 +3,13 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using EpicGames.Core;
 
 public class McpAutomationBridge : ModuleRules {
     private const BindingFlags InstanceFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MEMORYSTATUSEX {
-        internal uint dwLength, dwMemoryLoad;
-        internal ulong ullTotalPhys, ullAvailPhys, ullTotalPageFile, ullAvailPageFile, ullTotalVirtual, ullAvailVirtual, ullAvailExtendedVirtual;
-    }
-
-    [DllImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
-
     public McpAutomationBridge(ReadOnlyTargetRules Target) : base(Target) {
-        long AvailableMemoryMB, TotalMemoryMB;
-        GetHostMemoryMB(out AvailableMemoryMB, out TotalMemoryMB);
-
         ApplyMsvcCompatibility(Target);
-        Console.WriteLine(string.Format("McpAutomationBridge: Detected {0}MB available memory (of {1}MB total)", AvailableMemoryMB, TotalMemoryMB));
 
         // NoPCHs made every unity blob re-parse the engine headers from scratch,
         // which on 1194 files was the single largest cost in a full build. The
@@ -43,66 +28,59 @@ public class McpAutomationBridge : ModuleRules {
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "Json", "JsonUtilities", "LevelSequence", "MovieScene", "MovieSceneTracks", "GameplayTags", "AIModule", "Landscape" });
 
-        if (Target.bBuildEditor) {
-            PublicDependencyModuleNames.AddRange(new string[] { "Sequencer", "MovieSceneTools", "Niagara", "UnrealEd", "WorldPartitionEditor", "DataLayerEditor", "MaterialEditor" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Sequencer", "MovieSceneTools", "Niagara", "UnrealEd", "WorldPartitionEditor", "DataLayerEditor", "MaterialEditor" });
 
-            PrivateDependencyModuleNames.AddRange(new string[] { "ApplicationCore", "Slate", "SlateCore", "Projects", "InputCore", "DeveloperSettings", "Settings", "EngineSettings", "Sockets", "Networking", "HTTP", "EditorSubsystem", "EditorScriptingUtilities", "BlueprintGraph", "SSL", "Kismet", "KismetCompiler", "AssetRegistry", "AssetTools", "SourceControl", "AudioEditor", "AudioMixer", "PythonScriptPlugin", "GraphEditor", "UATHelper" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "ApplicationCore", "Slate", "SlateCore", "Projects", "InputCore", "DeveloperSettings", "Settings", "EngineSettings", "Sockets", "Networking", "HTTP", "EditorSubsystem", "EditorScriptingUtilities", "BlueprintGraph", "SSL", "Kismet", "KismetCompiler", "AssetRegistry", "AssetTools", "SourceControl", "AudioEditor", "AudioMixer", "PythonScriptPlugin", "GraphEditor", "UATHelper" });
 
-            AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "OpenSSL");
 
-            PrivateDependencyModuleNames.AddRange(new string[] { "LandscapeEditor", "LandscapeEditorUtilities", "Foliage", "FoliageEdit", "AnimGraph", "AnimationBlueprintLibrary", "Persona", "ToolMenus", "EditorWidgets", "PropertyEditor", "LevelEditor", "RigVM", "RigVMDeveloper", "UMG", "UMGEditor", "MergeActors", "RenderCore", "RHI", "ImageWrapper", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph", "MeshUtilities", "MeshMergeUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon", "ClothingSystemRuntimeInterface", "PhysicsUtilities", "GeometryCore", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription", "SkeletalMeshDescription", "NavigationSystem" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "LandscapeEditor", "LandscapeEditorUtilities", "Foliage", "FoliageEdit", "AnimGraph", "AnimationBlueprintLibrary", "Persona", "ToolMenus", "EditorWidgets", "PropertyEditor", "LevelEditor", "RigVM", "RigVMDeveloper", "UMG", "UMGEditor", "MergeActors", "RenderCore", "RHI", "ImageWrapper", "AutomationController", "GameplayDebugger", "TraceLog", "TraceAnalysis", "AIGraph", "MeshUtilities", "MeshMergeUtilities", "MaterialUtilities", "PhysicsCore", "ClothingSystemRuntimeCommon", "ClothingSystemRuntimeInterface", "PhysicsUtilities", "GeometryCore", "GeometryFramework", "DynamicMesh", "MeshDescription", "StaticMeshDescription", "SkeletalMeshDescription", "NavigationSystem" });
 
-            string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
-            AddOptionalModules(Target, EngineDir, new string[] { "D|GameplayAbilities|GameplayAbilities", "D|MetasoundEngine|MetasoundEngine", "C|MetasoundFrontend|MetasoundFrontend", "D|MetasoundEditor|MetasoundEditor", "D|StateTreeModule|StateTreeModule", "D|StateTreeEditorModule|StateTreeEditorModule", "D|SmartObjectsModule|SmartObjectsModule", "D|SmartObjectsEditorModule|SmartObjectsEditorModule", "C|StructUtils|StructUtils", "D|MassEntity|MassEntity", "D|MassSpawner|MassSpawner", "D|MassActors|MassActors", "D|OnlineSubsystem|OnlineSubsystem", "D|OnlineSubsystemUtils|OnlineSubsystemUtils", "D|ControlRig|ControlRig", "D|ControlRigDeveloper|ControlRigDeveloper", "D|ControlRigEditor|ControlRigEditor", "D|ProceduralMeshComponent|ProceduralMeshComponent", "D|EnvironmentQueryEditor|EnvironmentQueryEditor", "D|GeometryScriptingCore|GeometryScriptingCore", "D|GeometryScriptingEditor|GeometryScriptingEditor" });
+        string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
+        AddOptionalModules(Target, EngineDir, new string[] { "D|GameplayAbilities|GameplayAbilities", "D|MetasoundEngine|MetasoundEngine", "C|MetasoundFrontend|MetasoundFrontend", "D|MetasoundEditor|MetasoundEditor", "D|StateTreeModule|StateTreeModule", "D|StateTreeEditorModule|StateTreeEditorModule", "D|SmartObjectsModule|SmartObjectsModule", "D|SmartObjectsEditorModule|SmartObjectsEditorModule", "C|StructUtils|StructUtils", "D|MassEntity|MassEntity", "D|MassSpawner|MassSpawner", "D|MassActors|MassActors", "D|OnlineSubsystem|OnlineSubsystem", "D|OnlineSubsystemUtils|OnlineSubsystemUtils", "D|ControlRig|ControlRig", "D|ControlRigDeveloper|ControlRigDeveloper", "D|ControlRigEditor|ControlRigEditor", "D|ProceduralMeshComponent|ProceduralMeshComponent", "D|EnvironmentQueryEditor|EnvironmentQueryEditor", "D|GeometryScriptingCore|GeometryScriptingCore", "D|GeometryScriptingEditor|GeometryScriptingEditor" });
 
-            ProjectDescriptor Project = Target.ProjectFile == null ? null : ProjectDescriptor.FromFile(Target.ProjectFile);
-            PluginDescriptor Bridge = PluginDescriptor.FromFile(new FileReference(Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "McpAutomationBridge.uplugin"))));
-            bool bPcgExportsData = Target.Version.MajorVersion > 5 || (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 8);
-            bool bHasPCG = ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalModule(Target, EngineDir, "PCG", "PCG", !bPcgExportsData); // UE 5.8 PCG exports a data symbol (PCG::Private::UserParameterTagData) and MSVC cannot delay-load a DLL you import data from (LNK1194), so link it normally there. Earlier engines keep the delay-load, so a prebuilt package still loads in projects where PCG is off (it is not enabled by default before 5.8). The .uplugin keeps PCG Optional, so UE 5.0-5.1, which have no PCG, still load the bridge.
-            PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
-            bool bHasCinematicCamera = AddOptionalModuleGroup(EngineDir, "CinematicCamera", new string[] { "CinematicCamera" });
-            bool bHasMediaAssets = AddOptionalModuleGroup(EngineDir, "MediaAssets", new string[] { "MediaAssets" });
-            bool bHasMovieRenderPipeline = AddOptionalModuleGroup(EngineDir, "Movie Render Pipeline", new string[] {
-                "MovieRenderPipelineCore", "MovieRenderPipelineRenderPasses",
-                "MovieRenderPipelineSettings", "MovieRenderPipelineEditor"
-            });
-            bool bHasMoviePipelineMaskModule = bHasMovieRenderPipeline &&
-                AddOptionalModuleGroup(EngineDir, "Movie Pipeline Mask Render Pass", new string[] { "MoviePipelineMaskRenderPass" });
-            bool bHasMoviePipelineObjectIdPass = bHasMoviePipelineMaskModule &&
-                File.Exists(Path.Combine(EngineDir, "Plugins", "MovieScene", "MoviePipelineMaskRenderPass", "Source", "MoviePipelineMaskRenderPass", "Public", "MoviePipelineObjectIdPass.h"));
-            bool bHasMoviePipelinePassMetadata = bHasMovieRenderPipeline && FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bHighPrecisionOutput");
-            bool bHasMoviePipelineLossless = bHasMovieRenderPipeline && FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bUseLosslessCompression");
-            bool bHasSmaa = FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "SceneUtils.h"), "AAM_SMAA");
-            bool bHasTakeRecorder = AddOptionalModuleGroup(EngineDir, "Take Recorder", new string[] { "TakesCore", "TakeRecorder", "TakeRecorderSources" });
-            bool bHasReplayApi = File.Exists(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"));
-            bool bHasReplaySubsystemTotalTime = bHasReplayApi && FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
-            bool bHasTakeRecorderOpenSequencer = bHasTakeRecorder && FileContains(Path.Combine(EngineDir, "Plugins", "VirtualProduction", "Takes", "Source", "TakeRecorder", "Public", "Recorder", "TakeRecorderParameters.h"), "bOpenSequencer");
-            // FGeometryScriptMeshBooleanOptions::bAllowEmptyResult arrived in a later 5.x; probe the header so the
-            // field is only referenced on engines that declare it, rather than pinning a minor version.
-            bool bHasGeometryBooleanEmptyResult = FileContains(Path.Combine(EngineDir, "Plugins", "Runtime", "GeometryScripting", "Source", "GeometryScriptingCore", "Public", "GeometryScript", "MeshBooleanFunctions.h"), "bAllowEmptyResult");
+        ProjectDescriptor Project = Target.ProjectFile == null ? null : ProjectDescriptor.FromFile(Target.ProjectFile);
+        PluginDescriptor Bridge = PluginDescriptor.FromFile(new FileReference(Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "McpAutomationBridge.uplugin"))));
+        // UE 5.8 PCG exports a data symbol (PCG::Private::UserParameterTagData), and MSVC cannot delay-load a DLL
+        // data is imported from (LNK1194), so link it normally there. Earlier engines keep the delay-load, so a prebuilt
+        // package still loads in projects where PCG is off; the .uplugin keeps PCG Optional for UE 5.0-5.1, which lack it.
+        bool bPcgExportsData = Target.Version.MajorVersion > 5 || (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 8);
+        bool bHasPCG = ((Project?.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled) ?? false) || (Bridge.Plugins?.Any(Reference => string.Equals(Reference.Name, "PCG", StringComparison.OrdinalIgnoreCase) && Reference.bEnabled && !Reference.bOptional) ?? false)) && AddOptionalModule(Target, EngineDir, "PCG", "PCG", !bPcgExportsData);
+        PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
+        bool bHasCinematicCamera = AddOptionalModuleGroup(EngineDir, "CinematicCamera", new string[] { "CinematicCamera" });
+        bool bHasMediaAssets = AddOptionalModuleGroup(EngineDir, "MediaAssets", new string[] { "MediaAssets" });
+        bool bHasMovieRenderPipeline = AddOptionalModuleGroup(EngineDir, "Movie Render Pipeline", new string[] {
+            "MovieRenderPipelineCore", "MovieRenderPipelineRenderPasses",
+            "MovieRenderPipelineSettings", "MovieRenderPipelineEditor"
+        });
+        bool bHasMoviePipelineMaskModule = bHasMovieRenderPipeline &&
+            AddOptionalModuleGroup(EngineDir, "Movie Pipeline Mask Render Pass", new string[] { "MoviePipelineMaskRenderPass" });
+        bool bHasMoviePipelineObjectIdPass = bHasMoviePipelineMaskModule &&
+            File.Exists(Path.Combine(EngineDir, "Plugins", "MovieScene", "MoviePipelineMaskRenderPass", "Source", "MoviePipelineMaskRenderPass", "Public", "MoviePipelineObjectIdPass.h"));
+        bool bHasMoviePipelinePassMetadata = bHasMovieRenderPipeline && FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bHighPrecisionOutput");
+        bool bHasMoviePipelineLossless = bHasMovieRenderPipeline && FileContains(Path.Combine(EngineDir, "Plugins", "MovieScene", "MovieRenderPipeline", "Source", "MovieRenderPipelineRenderPasses", "Public", "MoviePipelineDeferredPasses.h"), "bUseLosslessCompression");
+        bool bHasSmaa = FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "SceneUtils.h"), "AAM_SMAA");
+        bool bHasTakeRecorder = AddOptionalModuleGroup(EngineDir, "Take Recorder", new string[] { "TakesCore", "TakeRecorder", "TakeRecorderSources" });
+        bool bHasReplayApi = File.Exists(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"));
+        bool bHasReplaySubsystemTotalTime = bHasReplayApi && FileContains(Path.Combine(EngineDir, "Source", "Runtime", "Engine", "Public", "ReplaySubsystem.h"), "GetReplayTotalTime");
+        bool bHasTakeRecorderOpenSequencer = bHasTakeRecorder && FileContains(Path.Combine(EngineDir, "Plugins", "VirtualProduction", "Takes", "Source", "TakeRecorder", "Public", "Recorder", "TakeRecorderParameters.h"), "bOpenSequencer");
+        bool bHasTeds = AddOptionalModuleGroup(EngineDir, "TypedElementFramework", new string[] { "TypedElementFramework" });
+        PublicDefinitions.AddRange(new string[] {
+            bHasCinematicCamera ? "MCP_HAS_CINEMATIC_CAMERA=1" : "MCP_HAS_CINEMATIC_CAMERA=0", bHasMediaAssets ? "MCP_HAS_MEDIA_ASSETS=1" : "MCP_HAS_MEDIA_ASSETS=0",
+            bHasMovieRenderPipeline ? "MCP_HAS_MOVIE_RENDER_PIPELINE=1" : "MCP_HAS_MOVIE_RENDER_PIPELINE=0", bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0",
+            bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0",
+            bHasMoviePipelineLossless ? "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=1" : "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0", bHasTeds ? "MCP_HAS_TEDS=1" : "MCP_HAS_TEDS=0", bHasMoviePipelinePassMetadata ? "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=1" : "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0",
+            bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0", bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0",
+            bHasTakeRecorderOpenSequencer ? "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=1" : "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", bHasReplaySubsystemTotalTime ? "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=1" : "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0"
+        });
 
-            bool bHasTeds = AddOptionalModuleGroup(EngineDir, "TypedElementFramework", new string[] { "TypedElementFramework" });
-            PublicDefinitions.AddRange(new string[] {
-                bHasCinematicCamera ? "MCP_HAS_CINEMATIC_CAMERA=1" : "MCP_HAS_CINEMATIC_CAMERA=0", bHasMediaAssets ? "MCP_HAS_MEDIA_ASSETS=1" : "MCP_HAS_MEDIA_ASSETS=0",
-                bHasMovieRenderPipeline ? "MCP_HAS_MOVIE_RENDER_PIPELINE=1" : "MCP_HAS_MOVIE_RENDER_PIPELINE=0", bHasSmaa ? "MCP_HAS_SMAA=1" : "MCP_HAS_SMAA=0",
-                bHasMoviePipelineObjectIdPass ? "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=1" : "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0",
-                bHasMoviePipelineLossless ? "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=1" : "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0", bHasTeds ? "MCP_HAS_TEDS=1" : "MCP_HAS_TEDS=0", bHasMoviePipelinePassMetadata ? "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=1" : "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0",
-                bHasTakeRecorder ? "MCP_HAS_TAKE_RECORDER=1" : "MCP_HAS_TAKE_RECORDER=0", bHasReplayApi ? "MCP_HAS_REPLAY_API=1" : "MCP_HAS_REPLAY_API=0", bHasGeometryBooleanEmptyResult ? "MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT=1" : "MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT=0",
-                bHasTakeRecorderOpenSequencer ? "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=1" : "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", bHasReplaySubsystemTotalTime ? "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=1" : "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0"
-            });
+        AddOptionalModules(Target, EngineDir, new string[] { "D|LevelSequenceEditor|LevelSequenceEditor", "D|NiagaraEditor|NiagaraEditor", "D|EnhancedInput|EnhancedInput", "D|InputEditor|InputEditor", "D|BehaviorTreeEditor|BehaviorTreeEditor", "D|DataValidation|DataValidation", "D|Synthesis|Synthesis", "D|IKRig|IKRig", "D|IKRigEditor|IKRigEditor", "D|ChaosVehicles|ChaosVehicles", "D|AnimationData|AnimationData" });
 
-            AddOptionalModules(Target, EngineDir, new string[] { "D|LevelSequenceEditor|LevelSequenceEditor", "D|NiagaraEditor|NiagaraEditor", "D|EnhancedInput|EnhancedInput", "D|InputEditor|InputEditor", "D|BehaviorTreeEditor|BehaviorTreeEditor", "D|DataValidation|DataValidation", "D|Synthesis|Synthesis", "D|IKRig|IKRig", "D|IKRigEditor|IKRigEditor", "D|ChaosVehicles|ChaosVehicles", "D|AnimationData|AnimationData" });
+        ConfigureSubobjectData(EngineDir);
+        PublicDefinitions.Add(HasWorldPartitionForEachDataLayer(EngineDir) ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
 
-            PublicDefinitions.AddRange(new string[] { "MCP_HAS_K2NODE_HEADERS=1", "MCP_HAS_EDGRAPH_SCHEMA_K2=1" });
-            ConfigureSubobjectData(EngineDir);
-            PublicDefinitions.Add(HasWorldPartitionForEachDataLayer(EngineDir) ? "MCP_HAS_WP_FOR_EACH_DATALAYER=1" : "MCP_HAS_WP_FOR_EACH_DATALAYER=0");
-
-            if (Target.Platform == UnrealTargetPlatform.Win64 && Target.Configuration == UnrealTargetConfiguration.Debug)
-                PublicDefinitions.Add("MCP_ENABLE_EDIT_AND_CONTINUE=1");
-        }
-        else {
-            PublicDefinitions.AddRange(new string[] { "MCP_HAS_K2NODE_HEADERS=0", "MCP_HAS_EDGRAPH_SCHEMA_K2=0", "MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=0", "MCP_HAS_WP_FOR_EACH_DATALAYER=0", "MCP_HAS_PCG=0", "MCP_HAS_CINEMATIC_CAMERA=0", "MCP_HAS_MEDIA_ASSETS=0", "MCP_HAS_MOVIE_RENDER_PIPELINE=0", "MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS=0", "MCP_HAS_MOVIE_PIPELINE_PASS_METADATA=0", "MCP_HAS_MOVIE_PIPELINE_LOSSLESS=0", "MCP_HAS_SMAA=0", "MCP_HAS_TAKE_RECORDER=0", "MCP_HAS_TAKE_RECORDER_OPEN_SEQUENCER=0", "MCP_HAS_REPLAY_API=0", "MCP_HAS_REPLAY_SUBSYSTEM_TOTAL_TIME=0", "MCP_HAS_TEDS=0", "MCP_HAS_GEOMETRY_BOOLEAN_EMPTY_RESULT=0" });
-        }
+        if (Target.Platform == UnrealTargetPlatform.Win64 && Target.Configuration == UnrealTargetConfiguration.Debug)
+            PublicDefinitions.Add("MCP_ENABLE_EDIT_AND_CONTINUE=1");
 
         if (Target.Version.MajorVersion == 5 && Target.Version.MinorVersion >= 6)
             SetCppWarningLevel("ShadowVariableWarningLevel", WarningLevel.Warning);
@@ -199,32 +177,9 @@ public class McpAutomationBridge : ModuleRules {
         Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(Logger, $"McpAutomationBridge: could not set UBT warning level {warningName}; UBT renamed the setting.");
     }
 
-    private static bool TryGetWindowsMemoryMB(out long availableMemoryMB, out long totalMemoryMB) {
-        availableMemoryMB = 0; totalMemoryMB = 0;
-        if (Environment.OSVersion.Platform != PlatformID.Win32NT) return false;
-
-        var memStatus = new MEMORYSTATUSEX { dwLength = (uint)Marshal.SizeOf(typeof(MEMORYSTATUSEX)) };
-        if (!GlobalMemoryStatusEx(ref memStatus)) return false;
-        availableMemoryMB = (long)(memStatus.ullAvailPhys / (1024 * 1024)); totalMemoryMB = (long)(memStatus.ullTotalPhys / (1024 * 1024));
-        return true;
-    }
-
     private static bool FileContains(string path, string text) {
         try { return File.Exists(path) && File.ReadAllText(path).Contains(text); }
         catch { return false; }
-    }
-
-    private static void GetHostMemoryMB(out long availableMB, out long totalMB) {
-        try {
-            if (TryGetWindowsMemoryMB(out availableMB, out totalMB)) return;
-        }
-        catch (Exception Ex) {
-            Console.WriteLine(string.Format("McpAutomationBridge: Memory detection failed: {0}", Ex.Message));
-        }
-        string memoryHint = Environment.GetEnvironmentVariable("UE_BUILD_MEMORY_MB");
-        long hintValue;
-        availableMB = !string.IsNullOrEmpty(memoryHint) && long.TryParse(memoryHint, out hintValue) && hintValue > 0 ? hintValue : 4096;
-        totalMB = 8192;
     }
 
     private void AddOptionalModules(ReadOnlyTargetRules Target, string EngineDir, string[] specs) {
@@ -277,9 +232,6 @@ public class McpAutomationBridge : ModuleRules {
         return true;
     }
 
-    private bool AddOptionalDynamicModule(ReadOnlyTargetRules Target, string EngineDir, string ModuleName, string SearchName)
-        => AddOptionalModule(Target, EngineDir, ModuleName, SearchName, true);
-
     private bool AddOptionalModuleGroup(string EngineDir, string FeatureName, string[] ModuleNames) {
         string[] MissingModules = ModuleNames.Where(
             ModuleName => !FindOptionalModule(EngineDir, ModuleName)).ToArray();
@@ -302,7 +254,6 @@ public class McpAutomationBridge : ModuleRules {
         else if (!PrivateDependencyModuleNames.Contains("SubobjectData")) {
             PrivateDependencyModuleNames.Add("SubobjectData");
         }
-        PublicDefinitions.Add("MCP_HAS_SUBOBJECT_DATA_SUBSYSTEM=1");
     }
 
     private static bool HasWorldPartitionForEachDataLayer(string EngineDir) {

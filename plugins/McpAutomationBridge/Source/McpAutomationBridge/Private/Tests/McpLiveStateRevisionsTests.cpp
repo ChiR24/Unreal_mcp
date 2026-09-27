@@ -1,6 +1,6 @@
 #include "Foundation/McpLiveStateRevisions.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "Misc/AutomationTest.h"
 #include "UObject/Package.h"
@@ -260,4 +260,4 @@ bool FMcpLiveStateTrackerTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif // WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#endif // WITH_DEV_AUTOMATION_TESTS

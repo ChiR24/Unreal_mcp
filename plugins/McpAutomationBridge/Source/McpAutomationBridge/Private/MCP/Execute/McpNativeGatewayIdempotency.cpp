@@ -4,121 +4,22 @@
 #include "Containers/StringConv.h"
 #include "Dom/JsonValue.h"
 #include "Foundation/McpIdempotencyLedger.h"
+#include "MCP/Gateway/McpNativeGatewayCanonicalJson.h"
 #include "MCP/Execute/McpNativeGatewayExecuteRequest.h"
 #include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
-#include "openssl/sha.h"
-
-namespace
-{
-void AppendCanonical(FString& Out, const TSharedPtr<FJsonValue>& Value);
-
-void AppendCanonicalObject(FString& Out, const TSharedPtr<FJsonObject>& Object)
-{
-	// FJsonObject's key type is FString before UE 5.8 and UE::FSharedString from
-	// 5.8 on, so the keys are copied out rather than read into a TArray<FString>.
-	TArray<FString> Keys;
-	Keys.Reserve(Object->Values.Num());
-	for (const auto& Pair : Object->Values)
-	{
-		Keys.Add(FString(*Pair.Key));
-	}
-	// Sorting the keys is what makes the digest order-independent: two payloads
-	// that differ only in key order produce the same fingerprint.
-	Keys.Sort();
-	Out += TEXT("{");
-	for (int32 Index = 0; Index < Keys.Num(); ++Index)
-	{
-		if (Index > 0)
-		{
-			Out += TEXT(",");
-		}
-		FString EncodedKey;
-		const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> KeyWriter =
-			TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&EncodedKey);
-		KeyWriter->WriteValue(Keys[Index]);
-		KeyWriter->Close();
-		Out += EncodedKey;
-		Out += TEXT(":");
-		AppendCanonical(Out, Object->Values.FindChecked(*Keys[Index]));
-	}
-	Out += TEXT("}");
-}
-
-void AppendCanonical(FString& Out, const TSharedPtr<FJsonValue>& Value)
-{
-	if (!Value.IsValid())
-	{
-		Out += TEXT("null");
-		return;
-	}
-	switch (Value->Type)
-	{
-	case EJson::Object:
-		AppendCanonicalObject(Out, Value->AsObject());
-		return;
-	case EJson::Array:
-	{
-		// Array order carries meaning, so it is preserved, not sorted.
-		const TArray<TSharedPtr<FJsonValue>>& Items = Value->AsArray();
-		Out += TEXT("[");
-		for (int32 Index = 0; Index < Items.Num(); ++Index)
-		{
-			if (Index > 0)
-			{
-				Out += TEXT(",");
-			}
-			AppendCanonical(Out, Items[Index]);
-		}
-		Out += TEXT("]");
-		return;
-	}
-	case EJson::String:
-	{
-		FString Encoded;
-		const TSharedRef<TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>> Writer =
-			TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Encoded);
-		Writer->WriteValue(Value->AsString());
-		Writer->Close();
-		Out += Encoded;
-		return;
-	}
-	case EJson::Number:
-		Out += FString::SanitizeFloat(Value->AsNumber());
-		return;
-	case EJson::Boolean:
-		Out += Value->AsBool() ? TEXT("true") : TEXT("false");
-		return;
-	default:
-		Out += TEXT("null");
-		return;
-	}
-}
-} // namespace
+#include "Foundation/McpSecureTokenCompare.h"
 
 FString McpCanonicalFingerprint(const FString& CapabilityId, const TSharedPtr<FJsonObject>& Params)
 {
-	FString Canonical = CapabilityId + TEXT(" ");
-	if (Params.IsValid())
-	{
-		AppendCanonicalObject(Canonical, Params);
-	}
-	else
-	{
-		Canonical += TEXT("{}");
-	}
+	// Sorted keys make the digest order-independent: payloads differing only in
+	// key order share a fingerprint. A null Params renders as {}.
+	FString Rendered;
+	McpCanonicalJsonObject(Params, Rendered, /*bAllowFractions=*/true);
+	const FString Canonical = CapabilityId + TEXT(" ") + Rendered;
 
-	const FTCHARToUTF8 Utf8(*Canonical);
-	unsigned char Hash[SHA256_DIGEST_LENGTH];
-	SHA256(reinterpret_cast<const unsigned char*>(Utf8.Get()), static_cast<size_t>(Utf8.Length()), Hash);
-	FString Digest;
-	Digest.Reserve(SHA256_DIGEST_LENGTH * 2);
-	for (int32 Index = 0; Index < SHA256_DIGEST_LENGTH; ++Index)
-	{
-		Digest += FString::Printf(TEXT("%02x"), Hash[Index]);
-	}
-	return Digest;
+	return McpSha256Hex(Canonical);
 }
 
 bool McpValidateIdempotencyKeyOption(

@@ -2,7 +2,6 @@
 
 #include "Safety/McpSafeOperationsLog.h"
 
-#if WITH_EDITOR
 #include "CoreGlobals.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
@@ -12,12 +11,10 @@
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "RenderingThread.h"
-#endif
 
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
 inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRetries = 5)
 {
@@ -149,67 +146,31 @@ inline bool McpSafeLevelSave(ULevel* Level, const FString& FullPath, int32 MaxRe
     }
     if (bSaveSucceeded)
     {
-        FString VerifyFilename;
-        if (FPackageName::TryConvertLongPackageNameToFilename(PackagePath, VerifyFilename,
-            FPackageName::GetMapPackageExtension()))
+        // The file can land a moment after SaveLevel returns: poll with growing delays, the last round after a flush.
+        const FString AbsoluteSaveFilename = FPaths::ConvertRelativePathToFull(SaveFilename);
+        const int32 ActualRetries = FMath::Clamp(MaxRetries, 1, 10);
+        const float RetryDelays[] = { 0.05f, 0.10f, 0.25f, 0.50f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f };
+        for (int32 Retry = 0; Retry <= ActualRetries; ++Retry)
         {
-            FString AbsoluteVerifyFilename = FPaths::ConvertRelativePathToFull(VerifyFilename);
-
-            const int32 ActualRetries = FMath::Clamp(MaxRetries, 1, 10);
-            const float RetryDelays[] = { 0.05f, 0.10f, 0.25f, 0.50f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f };
-
-            for (int32 Retry = 0; Retry < ActualRetries; ++Retry)
+            if (Retry == ActualRetries)
             {
-                FPlatformProcess::Sleep(RetryDelays[Retry]);
-
-                if (IFileManager::Get().FileExists(*VerifyFilename) ||
-                    IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
-                {
-                    UE_LOG(LogMcpSafeOperations, Log,
-                        TEXT("McpSafeLevelSave: Successfully saved level: %s"), *PackagePath);
-                    return true;
-                }
-
-                if (FPackageName::DoesPackageExist(PackagePath))
-                {
-                    UE_LOG(LogMcpSafeOperations, Log,
-                        TEXT("McpSafeLevelSave: Package exists in UE system: %s"), *PackagePath);
-                    return true;
-                }
+                FlushRenderingCommands();
             }
-
-            FlushRenderingCommands();
-            FPlatformProcess::Sleep(0.5f);
-            if (IFileManager::Get().FileExists(*VerifyFilename) ||
-                IFileManager::Get().FileExists(*AbsoluteVerifyFilename))
+            FPlatformProcess::Sleep(Retry == ActualRetries ? 0.5f : RetryDelays[Retry]);
+            if (IFileManager::Get().FileExists(*AbsoluteSaveFilename) || FPackageName::DoesPackageExist(PackagePath))
             {
-                UE_LOG(LogMcpSafeOperations, Log,
-                    TEXT("McpSafeLevelSave: Successfully saved level after final flush: %s"), *PackagePath);
+                UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLevelSave: Successfully saved level: %s"), *PackagePath);
                 return true;
             }
-
-            if (FPackageName::DoesPackageExist(PackagePath))
-            {
-                UE_LOG(LogMcpSafeOperations, Log,
-                    TEXT("McpSafeLevelSave: Package exists in UE system after final flush: %s"), *PackagePath);
-                return true;
-            }
-
-            UE_LOG(LogMcpSafeOperations, Error,
-                TEXT("McpSafeLevelSave: Save reported success but file not found after %d retries: %s"),
-                ActualRetries, *VerifyFilename);
         }
-        else
-        {
-            UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("McpSafeLevelSave: Failed to convert package path to filename: %s"), *PackagePath);
-        }
+        UE_LOG(LogMcpSafeOperations, Error,
+            TEXT("McpSafeLevelSave: Save reported success but file not found after %d retries: %s"),
+            ActualRetries, *AbsoluteSaveFilename);
     }
 
     UE_LOG(LogMcpSafeOperations, Error, TEXT("McpSafeLevelSave: Failed to save level: %s"), *PackagePath);
     return false;
 }
 
-#endif
 
 }

@@ -144,7 +144,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 				Context, nullptr);
 		}
 	}
-	// Task 39 pre-dispatch policy seam: a client that pinned the catalog revision
+	// Pre-dispatch policy seam: a client that pinned the catalog revision
 	// it planned against is refused before dispatch if the live digest moved on,
 	// so a stale call never reaches the subsystem queue or editor work.
 	if (Request.Options.IsValid() && Request.Options->HasField(TEXT("expectedCatalogRevision")))
@@ -157,8 +157,8 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		const TSharedPtr<FJsonValue>* PinValue = Request.Options->Values.Find(TEXT("expectedCatalogRevision"));
 		const bool bIsStringPin = PinValue != nullptr && PinValue->IsValid()
 			&& (*PinValue)->Type == EJson::String;
-		FString Expected;
-		if (!bIsStringPin || !McpHandlerUtils::TryGetJsonValueString(*PinValue, Expected) || !IsCatalogRevisionDigest(Expected))
+		const FString Expected = bIsStringPin ? (*PinValue)->AsString() : FString();
+		if (!IsCatalogRevisionDigest(Expected))
 		{
 			// Fail closed: a present-but-malformed pin (non-string / empty / non-hex
 			// / over-length) is a validation error, never coerced into a stale-state
@@ -182,7 +182,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 		}
 	}
 
-	// Task 42: the live-state pins are shape-checked here so a malformed envelope
+	// The live-state pins are shape-checked here so a malformed envelope
 	// is refused before dispatch, but the revision COMPARISON is deliberately not
 	// done here — it belongs on the game thread immediately before mutation,
 	// because a transport-thread snapshot is already stale by dispatch time.
@@ -238,7 +238,7 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	OutPlan.CapabilityId = Request.CapabilityId;
 	OutPlan.ParentTool = ParentTool;
 	OutPlan.LegacyAction = DispatchTarget;
-	OutPlan.DispatchAction = Tool->UsesToolNameDispatch() ? ParentTool : DispatchTarget;
+	OutPlan.DispatchAction = ParentTool;
 	OutPlan.Arguments = Arguments;
 	OutPlan.OutputSchema = Request.Record->OutputSchema;
 	return nullptr;
@@ -270,53 +270,4 @@ TSharedPtr<FJsonObject> ValidateGatewayExecuteOutput(
 	// discards the structured detail Unreal actually reported.
 	Error.UnrealDetail = RawResult;
 	return McpBuildErrorReceipt(CapabilityId, Error, Context);
-}
-
-bool McpValidateCanonicalToolArguments(
-	const FString& ParentTool, const TSharedPtr<FJsonObject>& Arguments,
-	FString& OutArgumentPath, FString& OutErrorCode, FString& OutErrorMessage)
-{
-	if (!Arguments.IsValid())
-	{
-		OutErrorCode = TEXT("INVALID_TOOL_ARGUMENT");
-		OutErrorMessage = TEXT("Tool arguments could not be validated");
-		return false;
-	}
-
-	FString Action;
-	Arguments->TryGetStringField(TEXT("action"), Action);
-
-	const FMcpCanonicalRecordIndex& Index = FMcpCanonicalRecordIndex::Get();
-	const FMcpCapabilityRecord* Record = Index.FindByLegacy(ParentTool, Action);
-	if (!Record)
-	{
-		OutArgumentPath = TEXT("action");
-		OutErrorCode = TEXT("UNKNOWN_ACTION");
-		OutErrorMessage = FString::Printf(
-			TEXT("Unknown action '%s' for tool '%s'."), *Action, *ParentTool);
-		return false;
-	}
-
-	// action/subAction are transport-owned routing fields; they are validated
-	// only when the capability's own schema declares them.
-	TSharedPtr<FJsonObject> Candidate = McpApplyCanonicalSchemaDefaults(
-		Arguments, Record->InputSchema);
-	if (!McpSchemaDeclaresProperty(Record->InputSchema, TEXT("action")))
-	{
-		Candidate->RemoveField(TEXT("action"));
-	}
-	if (!McpSchemaDeclaresProperty(Record->InputSchema, TEXT("subAction")))
-	{
-		Candidate->RemoveField(TEXT("subAction"));
-	}
-
-	FMcpSchemaViolationDetail Violation;
-	if (McpValidateObjectAgainstCanonicalSchema(Candidate, Record->InputSchema, Violation))
-	{
-		return true;
-	}
-	OutArgumentPath = Violation.Pointer;
-	OutErrorCode = McpSchemaViolationCode(Violation.Reason);
-	OutErrorMessage = Violation.Message;
-	return false;
 }

@@ -80,14 +80,8 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 		Effects.Sort();
 		if (!Effects.Contains(Input.Effect))
 		{
-			FString Declared; // no FString::Join: the POSIX parity harness shim lacks it
-			for (const FString& Effect : Effects)
-			{
-				if (!Declared.IsEmpty()) Declared += TEXT(", ");
-				Declared += Effect;
-			}
 			return GuidedFilterError(TEXT("UNKNOWN_EFFECT"),
-				FString::Printf(TEXT("Unknown effect '%s'. Declared effects: %s."), *Input.Effect, *Declared),
+				FString::Printf(TEXT("Unknown effect '%s'. Declared effects: %s."), *Input.Effect, *FString::Join(Effects, TEXT(", "))),
 				Effects, Input.Effect, Revision);
 		}
 	}
@@ -138,9 +132,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	{
 		const FScoredRecord& Entry = Scored[Index];
 		auto View = MakeShared<FJsonObject>();
-		View->SetBoolField(TEXT("available"),
-			!Entry.Record->DeprecationStatus.Equals(TEXT("removed"), ESearchCase::CaseSensitive) &&
-			IsToolEnabled(Entry.Record->Parent));
+		View->SetBoolField(TEXT("available"), IsToolEnabled(Entry.Record->Parent));
 		View->SetStringField(TEXT("capability"), Entry.Record->Id);
 		View->SetStringField(TEXT("domain"), Entry.Record->Domain);
 		View->SetStringField(TEXT("effect"), Entry.Record->Effect);
@@ -158,7 +150,7 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 			return GatewayError(TEXT("search"), TEXT("CAPABILITY_RENDER_FAILED"),
 				FString::Printf(TEXT("Capability '%s' could not be rendered deterministically."), *Entry.Record->Id));
 		}
-		const int32 Size = McpCanonicalByteLength(Rendered);
+		const int32 Size = Rendered.Len();
 		// The first result is always emitted, so an oversized single entry is
 		// reported rather than silently producing an empty page.
 		if (Bytes + Size > Budget && Results.Num() > 0)
@@ -171,13 +163,10 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	}
 
 	const bool bHasMore = Offset + Results.Num() < Total;
-	const bool bByteBudgetTruncated = bTruncated;
-	bTruncated = bByteBudgetTruncated || bHasMore;
 	auto Out = MakeShared<FJsonObject>();
 	Out->SetStringField(TEXT("catalogRevision"), Revision);
 	Out->SetBoolField(TEXT("hasMore"), bHasMore);
 	Out->SetNumberField(TEXT("limit"), Limit);
-	Out->SetNumberField(TEXT("effectiveLimit"), Limit);
 	Out->SetStringField(TEXT("message"),
 		TEXT("Results are capability-level and bounded. Call describe with the exact capability before execute."));
 	Out->SetNumberField(TEXT("offset"), Offset);
@@ -186,9 +175,8 @@ TSharedPtr<FJsonObject> McpGatewaySearchCapabilities(
 	Out->SetArrayField(TEXT("results"), Results);
 	Out->SetBoolField(TEXT("success"), true);
 	Out->SetNumberField(TEXT("total"), Total);
-	Out->SetBoolField(TEXT("truncated"), bTruncated);
 	Out->SetStringField(TEXT("truncationReason"),
-		bByteBudgetTruncated ? TEXT("byte-budget") : (bHasMore ? TEXT("limit") : TEXT("none")));
+		bTruncated ? TEXT("byte-budget") : (bHasMore ? TEXT("limit") : TEXT("none")));
 	// An empty page is where a caller starts inventing names: say what to change
 	// and hand over the one call that always works.
 	if (Results.Num() == 0 && Total == 0)

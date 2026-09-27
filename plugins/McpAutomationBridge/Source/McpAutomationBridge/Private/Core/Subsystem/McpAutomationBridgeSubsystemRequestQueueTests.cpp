@@ -1,6 +1,6 @@
 #include "McpAutomationBridgeSubsystem.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 #include "Misc/ScopeExit.h"
 #include "McpConnectionManager.h"
@@ -138,7 +138,7 @@ namespace McpAutomationSaturationTestUtils
 static const TMap<EMcpStateKind, int64> NoRevisions;
 }  // namespace McpAutomationSaturationTestUtils
 
-// BB-003 regression harness: saturate one session key, assert the precise
+// Regression harness: saturate one session key, assert the precise
 // refusal, drain admitted work at lane depth one, then accept a NEW request
 // after recovery (plan Todo 8 acceptance, run on the game thread like the
 // sibling RequestQueue tests).
@@ -223,9 +223,6 @@ bool FMcpAutomationSaturationRecoveryTest::RunTest(const FString &Parameters) {
       TEXT("one admitted request remains queued after the first drain"),
       Subsystem->PendingAutomationRequests.Num(), 1);
   TestEqual(
-      TEXT("the single game-thread lane never exceeded depth one"),
-      Subsystem->QueueFairness.MaxObservedDispatchDepth, 1);
-  TestEqual(
       TEXT("the lane depth unwinds to zero"),
       Subsystem->QueueFairness.DispatchDepth, 0);
 
@@ -241,9 +238,6 @@ bool FMcpAutomationSaturationRecoveryTest::RunTest(const FString &Parameters) {
   TestEqual(
       TEXT("all 17 admitted requests drained; the queue is empty"),
       Subsystem->PendingAutomationRequests.Num(), 0);
-  TestEqual(
-      TEXT("the single game-thread lane never exceeded depth one"),
-      Subsystem->QueueFairness.MaxObservedDispatchDepth, 1);
   TestEqual(
       TEXT("the lane depth unwinds to zero"),
       Subsystem->QueueFairness.DispatchDepth, 0);
@@ -265,9 +259,6 @@ bool FMcpAutomationSaturationRecoveryTest::RunTest(const FString &Parameters) {
   TestEqual(
       TEXT("the queue is empty after the post-recovery drain"),
       Subsystem->PendingAutomationRequests.Num(), 0);
-  TestEqual(
-      TEXT("the single game-thread lane never exceeded depth one"),
-      Subsystem->QueueFairness.MaxObservedDispatchDepth, 1);
   TestEqual(
       TEXT("the lane depth unwinds to zero"),
       Subsystem->QueueFairness.DispatchDepth, 0);

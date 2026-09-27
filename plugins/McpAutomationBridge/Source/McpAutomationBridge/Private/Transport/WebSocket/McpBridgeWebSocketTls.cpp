@@ -131,7 +131,7 @@ bool FMcpBridgeWebSocket::EstablishTls(bool bServer) {
     return true;
   }
 
-#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 7
+#if ENGINE_MINOR_VERSION >= 7
   if (!Socket || bNativeSocketReleased) {
     UE_LOG(LogMcpAutomationBridgeSubsystem, Error,
            TEXT("TLS requested without a valid socket."));

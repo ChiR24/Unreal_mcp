@@ -3,9 +3,8 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Safety/McpSafeOperationsDeleteEditorSupport.h"
 #include "Safety/McpSafeOperationsLog.h"
-#include "Safety/McpSafeOperationsPackageTools.h"
+#include "PackageTools.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
@@ -15,12 +14,10 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 #include "RenderingThread.h"
-#endif
 
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
 inline void McpPreClearBlueprintActionDatabase(UObject* Asset)
 {
@@ -29,7 +26,6 @@ inline void McpPreClearBlueprintActionDatabase(UObject* Asset)
         return;
     }
 
-#if MCP_HAS_BLUEPRINT_ACTION_DATABASE
     if (!Asset->IsA<UBlueprint>())
     {
         return;
@@ -53,42 +49,10 @@ inline void McpPreClearBlueprintActionDatabase(UObject* Asset)
     UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpPreClearBlueprintActionDatabase: Pre-clear complete for '%s'"),
         *Asset->GetName());
-#endif
 }
 
-inline void McpSafePostDeleteGC(bool bFullPurge = true)
+inline void McpSafePostDeleteGC()
 {
-    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafePostDeleteGC: Starting post-delete cleanup"));
-
-    FlushRenderingCommands();
-
-    if (GEditor)
-    {
-        GEditor->ForceGarbageCollection(bFullPurge);
-    }
-
-    FlushRenderingCommands();
-
-    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafePostDeleteGC: Post-delete cleanup completed"));
-}
-
-inline void McpQuiesceAllState()
-{
-    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpQuiesceAllState: Starting full editor quiesce"));
-
-#if MCP_HAS_ASSET_COMPILING_MANAGER
-    FAssetCompilingManager& CompilingManager = FAssetCompilingManager::Get();
-    int32 RemainingAssets = CompilingManager.GetNumRemainingAssets();
-    if (RemainingAssets > 0)
-    {
-        UE_LOG(LogMcpSafeOperations, Log,
-            TEXT("McpQuiesceAllState: Waiting for %d compiling assets"), RemainingAssets);
-        CompilingManager.FinishAllCompilation();
-    }
-#endif
-
-    FlushRenderingCommands();
-    FPlatformProcess::Sleep(0.016f);
     FlushRenderingCommands();
 
     if (GEditor)
@@ -97,13 +61,30 @@ inline void McpQuiesceAllState()
     }
 
     FlushRenderingCommands();
+}
+
+inline void McpQuiesceAllState()
+{
+    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpQuiesceAllState: Starting full editor quiesce"));
+
+    FAssetCompilingManager& CompilingManager = FAssetCompilingManager::Get();
+    int32 RemainingAssets = CompilingManager.GetNumRemainingAssets();
+    if (RemainingAssets > 0)
+    {
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("McpQuiesceAllState: Waiting for %d compiling assets"), RemainingAssets);
+        CompilingManager.FinishAllCompilation();
+    }
+
+    FlushRenderingCommands();
+    FPlatformProcess::Sleep(0.016f);
+    McpSafePostDeleteGC();
 
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpQuiesceAllState: Editor quiesce completed"));
 }
 
 inline void McpFinishCompilationForBatch(TArray<UObject*>& BatchObjects, const TCHAR* Context)
 {
-#if MCP_HAS_ASSET_COMPILING_MANAGER
     FAssetCompilingManager& CompilingManager = FAssetCompilingManager::Get();
 
     int32 GlobalRemaining = CompilingManager.GetNumRemainingAssets();
@@ -127,13 +108,6 @@ inline void McpFinishCompilationForBatch(TArray<UObject*>& BatchObjects, const T
 
     UE_LOG(LogMcpSafeOperations, Log,
         TEXT("McpFinishCompilationForBatch: [%s] Compilation barriers complete"), Context);
-#else
-    UE_LOG(LogMcpSafeOperations, Log,
-        TEXT("McpFinishCompilationForBatch: [%s] FAssetCompilingManager not available, skipping batch compilation"),
-        Context);
-    (void)BatchObjects;
-    (void)Context;
-#endif
 }
 
 inline bool UnloadLoadedPackagesForAssets(const TArray<FAssetData>& Assets, const TCHAR* LogContext)
@@ -185,7 +159,6 @@ inline bool UnloadLoadedPackagesForAssets(const TArray<FAssetData>& Assets, cons
         GEditor->SelectNone(false, true, false);
     }
 
-#if MCP_HAS_PACKAGE_TOOLS
     bool bAllUnloaded = true;
 
     for (UPackage* PackageToUnload : PackagesToUnload)
@@ -229,14 +202,7 @@ inline bool UnloadLoadedPackagesForAssets(const TArray<FAssetData>& Assets, cons
 
     FlushRenderingCommands();
     return bAllUnloaded;
-#else
-    UE_LOG(LogMcpSafeOperations, Error,
-        TEXT("%s: PackageTools not available; cannot safely unload loaded packages"),
-        LogContext);
-    return false;
-#endif
 }
 
-#endif
 
 }

@@ -32,27 +32,54 @@ bool FMcpNativeTransport::SendAllBytes(FSocket* Socket, const uint8* Data, int32
 	return true;
 }
 
+bool FMcpNativeTransport::SendSSEFrame(FSocket* Socket, const FString& EventData)
+{
+	const FTCHARToUTF8 Utf8(*FString::Printf(TEXT("event: message\ndata: %s\n\n"), *EventData));
+	return SendAllBytes(Socket, reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+}
+
+void FMcpNativeTransport::CloseSocket(FSocket*& Socket)
+{
+	if (!Socket)
+	{
+		return;
+	}
+	Socket->Close();
+	if (ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM))
+	{
+		SocketSub->DestroySocket(Socket);
+	}
+	Socket = nullptr;
+}
+
 // ─── Accept Loop (FRunnable::Run) ───────────────────────────────────────────
 
 uint32 FMcpNativeTransport::Run()
 {
 	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-	if (!SocketSub)
+	// Every bind-phase failure: drop the socket, tell Start() and end the thread.
+	const auto FailBind = [this, SocketSub](const FString& Why) -> uint32
 	{
-		UE_LOG(LogMcpNativeTransport, Error, TEXT("Failed to get socket subsystem"));
+		UE_LOG(LogMcpNativeTransport, Error, TEXT("%s"), *Why);
+		if (SocketSub && ListenSocket)
+		{
+			SocketSub->DestroySocket(ListenSocket);
+			ListenSocket = nullptr;
+		}
 		bBindSuccess.store(false);
 		if (BindCompleteEvent) BindCompleteEvent->Trigger();
 		return 1;
+	};
+	if (!SocketSub)
+	{
+		return FailBind(TEXT("Failed to get socket subsystem"));
 	}
 
 	ListenSocket = SocketSub->CreateSocket(NAME_Stream,
 		TEXT("McpNativeHTTPListenSocket"), FName());
 	if (!ListenSocket)
 	{
-		UE_LOG(LogMcpNativeTransport, Error, TEXT("Failed to create listen socket"));
-		bBindSuccess.store(false);
-		if (BindCompleteEvent) BindCompleteEvent->Trigger();
-		return 1;
+		return FailBind(TEXT("Failed to create listen socket"));
 	}
 
 	ListenSocket->SetReuseAddr(true);
@@ -72,23 +99,11 @@ uint32 FMcpNativeTransport::Run()
 
 	if (!ListenSocket->Bind(*BindAddr))
 	{
-		UE_LOG(LogMcpNativeTransport, Error,
-			TEXT("Failed to bind to %s:%d"), *ListenHost, ListenPort);
-		SocketSub->DestroySocket(ListenSocket);
-		ListenSocket = nullptr;
-		bBindSuccess.store(false);
-		if (BindCompleteEvent) BindCompleteEvent->Trigger();
-		return 1;
+		return FailBind(FString::Printf(TEXT("Failed to bind to %s:%d"), *ListenHost, ListenPort));
 	}
-
 	if (!ListenSocket->Listen(5))
 	{
-		UE_LOG(LogMcpNativeTransport, Error, TEXT("Failed to listen on socket"));
-		SocketSub->DestroySocket(ListenSocket);
-		ListenSocket = nullptr;
-		bBindSuccess.store(false);
-		if (BindCompleteEvent) BindCompleteEvent->Trigger();
-		return 1;
+		return FailBind(TEXT("Failed to listen on socket"));
 	}
 
 	// Signal Start() that bind/listen succeeded
@@ -141,12 +156,7 @@ uint32 FMcpNativeTransport::Run()
 	}
 
 	// Cleanup listen socket
-	if (ListenSocket)
-	{
-		ListenSocket->Close();
-		SocketSub->DestroySocket(ListenSocket);
-		ListenSocket = nullptr;
-	}
+	CloseSocket(ListenSocket);
 
 	UE_LOG(LogMcpNativeTransport, Verbose, TEXT("Accept loop exited"));
 	return 0;

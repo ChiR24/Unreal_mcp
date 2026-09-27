@@ -1,34 +1,26 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 
-// Send a prebuilt JSON-RPC body and tear down the client socket. Shared by the
-// early-return error paths in HandleToolsCall so each stays a one-liner: the
-// application/json content type is the only thing it adds over SendAndClose.
-void FMcpNativeTransport::SendBodyAndClose(FSocket* ClientSocket,
-	const FString& Body, int32 Status, const FString& CorsOrigin)
-{
-	SendAndClose(ClientSocket, Status, TEXT("application/json"), Body, {}, CorsOrigin);
-}
-
 // ─── Tools Call (SSE streaming) ─────────────────────────────────────────────
 
 void FMcpNativeTransport::HandleToolsCall(
 	const TSharedPtr<FJsonObject>& Params, const TSharedPtr<FJsonValue>& Id,
 	FSocket* ClientSocket, const FString& SessionId, const FString& CorsOrigin)
 {
+	const auto RejectParams = [&](const TCHAR* Message)
+	{
+		SendAndClose(ClientSocket, 200, TEXT("application/json"),
+			FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams, Message), {}, CorsOrigin);
+	};
 	if (!Params.IsValid())
 	{
-		SendBodyAndClose(ClientSocket,
-			FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams, TEXT("Missing params")),
-			200, CorsOrigin);
+		RejectParams(TEXT("Missing params"));
 		return;
 	}
 
 	FString ToolName;
 	if (!Params->TryGetStringField(TEXT("name"), ToolName))
 	{
-		SendBodyAndClose(ClientSocket,
-			FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams, TEXT("Missing tool name")),
-			200, CorsOrigin);
+		RejectParams(TEXT("Missing tool name"));
 		return;
 	}
 
@@ -39,31 +31,13 @@ void FMcpNativeTransport::HandleToolsCall(
 	{
 		if (ArgsValue->Type != EJson::Object)
 		{
-			SendBodyAndClose(ClientSocket,
-				FMcpJsonRpc::BuildError(Id, FMcpJsonRpc::ErrorInvalidParams,
-					TEXT("'arguments' must be an object if provided")),
-				200, CorsOrigin);
+			RejectParams(TEXT("'arguments' must be an object if provided"));
 			return;
 		}
 		Arguments = ArgsValue->AsObject();
 	}
 
 	if (!Arguments.IsValid()) Arguments = MakeShared<FJsonObject>();
-
-	// Task 44: a task-augmented call asks for a POLLABLE handle, so it is routed
-	// here BEFORE pre-dispatch — answering it any other way would strand the
-	// client polling an id that never existed, and a refusal must never arrive
-	// after the work it refuses has already run.
-	const TSharedPtr<FJsonObject>* TaskCreation = nullptr;
-	if (Params->TryGetObjectField(TEXT("task"), TaskCreation) && TaskCreation)
-	{
-		auto IsToolEnabled = [this](const FString& Name) { return ToolManager.IsToolEnabled(Name); };
-		FString TaskBody;
-		TaskSurface.HandleToolCallCheckpoint(ToolName, Arguments, *TaskCreation, Id,
-			SessionId, IsToolEnabled, TaskBody);
-		SendBodyAndClose(ClientSocket, TaskBody, 200, CorsOrigin);
-		return;
-	}
 
 	// The public surface is permanently the single static 'unreal' gateway tool.
 	// Capture the client's _meta.progressToken (if any) and thread it through the
@@ -81,7 +55,7 @@ void FMcpNativeTransport::HandleToolsCall(
 			ProgressToken = *TokenValue;
 		}
 	}
-	if (HandleGatewayModePreDispatch(ToolName, Arguments, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken)) return;
+	HandleGatewayModePreDispatch(ToolName, Arguments, Id, ClientSocket, SessionId, CorsOrigin, ProgressToken);
 }
 
 // ─── SSE Connection Management ──────────────────────────────────────────────

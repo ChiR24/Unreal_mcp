@@ -43,17 +43,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::EnableCategory(const FString& Ca
 				Enabled.Add(MakeShared<FJsonValueString>(Pair.Key));
 			}
 		}
-		for (auto& CatPair : CategoryStates)
-		{
-			CatPair.Value.EnabledCount = 0;
-			for (const auto& ToolPair : ToolStates)
-			{
-				if (ToolPair.Value.Category == CatPair.Key && ToolPair.Value.bEnabled)
-				{
-					CatPair.Value.EnabledCount++;
-				}
-			}
-		}
 	}
 	else
 	{
@@ -77,7 +66,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::EnableCategory(const FString& Ca
 				Enabled.Add(MakeShared<FJsonValueString>(Pair.Key));
 			}
 		}
-		CS->EnabledCount = CS->ToolCount;
 	}
 
 	bOutChanged = (Enabled.Num() > 0) || bAnyCategoryToggled;
@@ -107,7 +95,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::DisableCategory(const FString& C
 			{
 				if (CatPair.Value.bEnabled) bAnyCategoryToggled = true;
 				CatPair.Value.bEnabled = false;
-				CatPair.Value.EnabledCount = 0;
 			}
 		}
 		for (auto& Pair : ToolStates)
@@ -120,20 +107,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::DisableCategory(const FString& C
 			{
 				Pair.Value.bEnabled = false;
 				Disabled.Add(MakeShared<FJsonValueString>(Pair.Key));
-			}
-		}
-		for (auto& CatPair : CategoryStates)
-		{
-			if (IsProtectedCategory(CatPair.Key))
-			{
-				CatPair.Value.EnabledCount = 0;
-				for (const auto& ToolPair : ToolStates)
-				{
-					if (ToolPair.Value.Category == CatPair.Key && ToolPair.Value.bEnabled)
-					{
-						CatPair.Value.EnabledCount++;
-					}
-				}
 			}
 		}
 	}
@@ -173,15 +146,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::DisableCategory(const FString& C
 					Pair.Value.bEnabled = false;
 					Disabled.Add(MakeShared<FJsonValueString>(Pair.Key));
 				}
-			}
-		}
-
-		CS->EnabledCount = 0;
-		for (const auto& Pair : ToolStates)
-		{
-			if (Pair.Value.Category == Category && Pair.Value.bEnabled)
-			{
-				CS->EnabledCount++;
 			}
 		}
 	}

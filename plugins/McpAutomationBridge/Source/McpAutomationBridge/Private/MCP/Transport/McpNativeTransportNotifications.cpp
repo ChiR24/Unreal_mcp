@@ -10,33 +10,6 @@ bool IsLogAutomationEvent(const TSharedPtr<FJsonObject>& Event)
 		EventName.Equals(TEXT("log"), ESearchCase::CaseSensitive);
 }
 }
-
-int32 FMcpNativeTransport::BroadcastNotification(
-	const FString& Method, const TSharedPtr<FJsonObject>& Params)
-{
-	if (Method.IsEmpty())
-	{
-		return 0;
-	}
-
-	const FString NotificationJson = FMcpJsonRpc::BuildNotification(Method, Params);
-	TArray<TSharedPtr<FNotificationStream>> StreamSnapshot;
-	{
-		FScopeLock Lock(&NotificationStreamsMutex);
-		StreamSnapshot.Reserve(NotificationStreams.Num());
-		for (auto& [StreamId, Stream] : NotificationStreams)
-		{
-			if (Stream.IsValid() && Stream->bReady.load() &&
-				!Stream->bMarkedForRemoval.load())
-			{
-				StreamSnapshot.Add(Stream);
-			}
-		}
-	}
-
-	return QueueNotificationEventWrites(StreamSnapshot, NotificationJson);
-}
-
 bool FMcpNativeTransport::SetLogEventSubscriptionForRequest(
 	const FString& RequestId, const bool bSubscribed)
 {
@@ -109,8 +82,6 @@ int32 FMcpNativeTransport::BroadcastLogEventNotification(
 void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& SessionId,
 	const FString& CorsOrigin)
 {
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-
 	const double Now = FPlatformTime::Seconds();
 	TSharedPtr<FNotificationStream> Stream = MakeShared<FNotificationStream>();
 	Stream->Socket = ClientSocket;
@@ -211,9 +182,7 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 				Stream->Socket, SessionId, CorsOrigin);
 			if (!bHeadersSent)
 			{
-				Stream->Socket->Close();
-				if (SocketSub) SocketSub->DestroySocket(Stream->Socket);
-				Stream->Socket = nullptr;
+				CloseSocket(Stream->Socket);
 			}
 		}
 	}
@@ -236,15 +205,8 @@ void FMcpNativeTransport::HandleGetMcp(FSocket* ClientSocket, const FString& Ses
 
 bool FMcpNativeTransport::WriteNotificationEvent(FNotificationStream& Stream, const FString& EventData)
 {
-	FString Frame = FString::Printf(TEXT("event: message\ndata: %s\n\n"), *EventData);
-	FTCHARToUTF8 Utf8(*Frame);
-
 	FScopeLock Lock(&Stream.WriteMutex);
-	if (!Stream.Socket)
-	{
-		return false;
-	}
-	return SendAllBytes(Stream.Socket, reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+	return Stream.Socket && SendSSEFrame(Stream.Socket, EventData);
 }
 
 bool FMcpNativeTransport::WriteNotificationKeepalive(FNotificationStream& Stream)
@@ -266,15 +228,6 @@ void FMcpNativeTransport::CloseNotificationStream(TSharedPtr<FNotificationStream
 	{
 		return;
 	}
-	ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 	FScopeLock Lock(&Stream->WriteMutex);
-	if (Stream->Socket)
-	{
-		Stream->Socket->Close();
-		if (SocketSub)
-		{
-			SocketSub->DestroySocket(Stream->Socket);
-		}
-		Stream->Socket = nullptr;
-	}
+	CloseSocket(Stream->Socket);
 }

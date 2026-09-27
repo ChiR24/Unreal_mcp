@@ -1,24 +1,18 @@
 #include "MCP/Execute/McpNativeReceiptOutcome.h"
+#include "MCP/Resources/McpResourceUri.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // McpNativeReceiptOutcome.cpp — see header for the parity contract.
 
 
 namespace
 {
-const TArray<FString>& AllowedRoots()
-{
-	static const TArray<FString> Roots = {
-		TEXT("/Game"), TEXT("/Engine"), TEXT("/Script"), TEXT("/Temp"), TEXT("/Niagara")};
-	return Roots;
-}
-
 bool IsAllowedPath(const FString& Path)
 {
 	if (Path.IsEmpty() || Path.Len() > 512 || Path.Contains(TEXT("..")))
 	{
 		return false;
 	}
-	for (const FString& Root : AllowedRoots())
+	for (const FString& Root : McpResourceUri::ContentRoots())
 	{
 		if (Path == Root || Path.StartsWith(Root + TEXT("/")))
 		{

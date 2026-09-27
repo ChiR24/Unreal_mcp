@@ -222,18 +222,8 @@ void FMcpNativeTransport::AppendCorsHeaders(FString& Response, const FString& Or
 
 bool FMcpNativeTransport::WriteSSEEvent(FSSEConnection& Conn, const FString& EventData)
 {
-	FString Frame = FString::Printf(
-		TEXT("event: message\ndata: %s\n\n"), *EventData);
-
-	FTCHARToUTF8 Utf8(*Frame);
-
 	FScopeLock Lock(&Conn.WriteMutex);
-	if (!Conn.Socket)
-	{
-		return false;
-	}
-	return SendAllBytes(Conn.Socket, reinterpret_cast<const uint8*>(Utf8.Get()),
-		Utf8.Length());
+	return Conn.Socket && SendSSEFrame(Conn.Socket, EventData);
 }
 
 // ─── Persistent Notification Streams (GET /mcp) ────────────────────────────

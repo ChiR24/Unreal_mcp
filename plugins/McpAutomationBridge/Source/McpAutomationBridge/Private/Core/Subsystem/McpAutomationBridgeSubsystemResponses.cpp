@@ -30,18 +30,9 @@ bool LooksLikeErrorCode(const FString& Candidate)
     return !Candidate.IsEmpty();
 }
 
-bool IsLogAutomationEvent(const TSharedPtr<FJsonObject>& Event)
-{
-    FString EventName;
-    return Event.IsValid() &&
-        Event->TryGetStringField(TEXT("event"), EventName) &&
-        EventName.Equals(TEXT("log"), ESearchCase::CaseSensitive);
-}
 }
 
-void UMcpAutomationBridgeSubsystem::BroadcastAutomationEvent(
-    const TSharedPtr<FJsonObject>& Event,
-    TSharedPtr<FMcpBridgeWebSocket> TargetSocket)
+void UMcpAutomationBridgeSubsystem::BroadcastAutomationEvent(const TSharedPtr<FJsonObject>& Event)
 {
     if (!Event.IsValid())
     {
@@ -64,20 +55,12 @@ void UMcpAutomationBridgeSubsystem::BroadcastAutomationEvent(
         return;
     }
 
-    const bool bLogEvent = IsLogAutomationEvent(Event);
     if (ConnectionManager.IsValid())
     {
-        if (bLogEvent)
-        {
-            ConnectionManager->SendRawMessageToLogSubscribers(SerializedEvent);
-        }
-        else if (TargetSocket.IsValid())
-        {
-            ConnectionManager->SendRawMessageToSocket(TargetSocket, SerializedEvent);
-        }
+        ConnectionManager->SendRawMessageToLogSubscribers(SerializedEvent);
     }
 
-    if (bLogEvent && NativeTransport)
+    if (NativeTransport)
     {
         NativeTransport->BroadcastLogEventNotification(Event);
     }
@@ -106,7 +89,6 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     if (bSuccess) { McpPrequeueGate::ForgetConsentForRequest(RequestId); }
     else { McpPrequeueGate::RefundConsentForRequest(RequestId); }
 
-    bool bEffectiveSuccess = bSuccess;
     FString EffectiveMessage = Message;
     FString EffectiveErrorCode = ErrorCode;
     TSharedPtr<FJsonObject> EffectiveResult = Result;
@@ -116,24 +98,13 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
         // Warnings were captured alongside errors and then never read, so every
         // "it worked, but..." the engine logged died at this line. Both are
         // copied unconditionally now; an empty capture copies empty arrays.
-        TArray<FString> CapturedErrors;
-        TArray<FString> CapturedWarnings;
-        int32 TotalCapturedErrorCount = 0;
-        int32 TotalCapturedWarningCount = 0;
-        bool bCapturedErrorsTruncated = false;
-        bool bCapturedWarningsTruncated = false;
+        FRequestErrorCapture Captured;
         {
             FScopeLock Lock(&ErrorCaptureMutex);
-            const auto& Capture = CurrentErrorCapture;
-            CapturedErrors = Capture.ErrorMessages;
-            CapturedWarnings = Capture.WarningMessages;
-            TotalCapturedErrorCount = Capture.ErrorCount;
-            TotalCapturedWarningCount = Capture.WarningCount;
-            bCapturedErrorsTruncated = Capture.bErrorMessagesTruncated;
-            bCapturedWarningsTruncated = Capture.bWarningMessagesTruncated;
+            Captured = CurrentErrorCapture;
         }
 
-        // WORLD-01: name the world this request ran against. An actor mutation reports success for
+        // Name the world this request ran against. An actor mutation reports success for
         // whichever world was current at that instant; if a level load then replaces it, the actor is
         // unreachable and the receipt gives no hint. Reporting the world (and flagging a transient
         // /Temp one) makes that detectable. PIE context wins when present, since that is the world an
@@ -159,10 +130,7 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
             bTransientWorld = WorldName.StartsWith(TEXT("/Temp/"));
         }
 
-        EffectiveResult = McpBuildEnrichedResponseResult(
-            Result, WorldName, bTransientWorld, CapturedErrors,
-            TotalCapturedErrorCount, bCapturedErrorsTruncated, CapturedWarnings,
-            TotalCapturedWarningCount, bCapturedWarningsTruncated);
+        EffectiveResult = McpBuildEnrichedResponseResult(Result, WorldName, bTransientWorld, Captured);
     }
 
     // Dozens of dispatch wrappers hand the handler's `error` sentence straight
@@ -170,12 +138,12 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     // `Error [Parent component not found: X]: execute failed` - the message in
     // the code slot and a placeholder in the message slot. Normalizing at the
     // one funnel every response passes through fixes all of them at once.
-    if (!bEffectiveSuccess && !LooksLikeErrorCode(EffectiveErrorCode))
+    if (!bSuccess && !LooksLikeErrorCode(EffectiveErrorCode))
     {
         if (EffectiveMessage.IsEmpty()) { EffectiveMessage = EffectiveErrorCode; }
         EffectiveErrorCode.Reset();
     }
-    if (!bEffectiveSuccess)
+    if (!bSuccess)
     {
         EffectiveMessage = SanitizeEngineErrorForResponse(EffectiveMessage);
         FScopeLock Lock(&ErrorCaptureMutex);
@@ -188,20 +156,17 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
     // AsyncTask/timer/delegate reached this line with it already cleared, and
     // every native /mcp response from such a handler went down the WebSocket
     // path, was dropped, and hung the caller until the 300s SSE sweeper.
-    ERequestOrigin EffectiveOrigin =
-        Origin == ERequestOrigin::WebSocket ? CurrentRequestOrigin : Origin;
     ERequestOrigin RecordedOrigin = ERequestOrigin::WebSocket;
-    if (FMcpRequestOriginRegistry::Get().Resolve(RequestId, RecordedOrigin))
-    {
-        EffectiveOrigin = RecordedOrigin;
-    }
+    const ERequestOrigin EffectiveOrigin = FMcpRequestOriginRegistry::Get().Resolve(RequestId, RecordedOrigin)
+        ? RecordedOrigin
+        : (Origin == ERequestOrigin::WebSocket ? CurrentRequestOrigin : Origin);
     // Released here: the single funnel every delivered response passes through.
     FMcpRequestOriginRegistry::Get().Forget(RequestId);
-    // BB-005 bounded terminal in the single response funnel, before the
+    // Bounded terminal in the single response funnel, before the
     // transport branch. Persist inline ONLY on the game thread (deferred
     // replies coalesce to the next game-thread persist); the native branch
     // below RETURNS, so this must precede it.
-    FMcpDiagnosticsSnapshot::Get().RecordTerminal(RequestId, bEffectiveSuccess ? TEXT("success") : EffectiveErrorCode.IsEmpty() ? TEXT("failure") : EffectiveErrorCode);
+    FMcpDiagnosticsSnapshot::Get().RecordTerminal(RequestId, bSuccess ? TEXT("success") : EffectiveErrorCode.IsEmpty() ? TEXT("failure") : EffectiveErrorCode);
     if (IsInGameThread()) { FMcpDiagnosticsSnapshot::Get().PersistCurrent(); }
     // F3 fix: removed the response-stealing override that redirected a
     // WebSocket-originated response to the Native HTTP transport when the
@@ -222,11 +187,11 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
         // asset paths and object names.
         FMcpTelemetryRegistry::Get().EndRequest(
             RequestId,
-            bEffectiveSuccess ? TEXT("success") : TEXT("failure"),
+            bSuccess ? TEXT("success") : TEXT("failure"),
             EffectiveErrorCode);
         if (!NativeTransport->CompletePendingRequest(
                 RequestId,
-                bEffectiveSuccess,
+                bSuccess,
                 EffectiveMessage,
                 EffectiveResult,
                 EffectiveErrorCode))
@@ -244,7 +209,7 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
         ConnectionManager->SendAutomationResponse(
             TargetSocket,
             RequestId,
-            bEffectiveSuccess,
+            bSuccess,
             EffectiveMessage,
             EffectiveResult,
             EffectiveErrorCode);
@@ -268,8 +233,17 @@ void UMcpAutomationBridgeSubsystem::SendAutomationRejection(
     const FString& RequestId,
     EAutomationQueueRejection Reason)
 {
-    const TCHAR* Code = TEXT("AUTOMATION_REQUEST_REJECTED");
-    FString Message = TEXT("Automation request rejected");
+    FString Code;
+    FString Message;
+    DescribeQueueRejection(Reason, Code, Message);
+    SendAutomationError(TargetSocket, RequestId, Message, Code);
+}
+
+void UMcpAutomationBridgeSubsystem::DescribeQueueRejection(
+    EAutomationQueueRejection Reason, FString& Code, FString& Message)
+{
+    Code = TEXT("AUTOMATION_REQUEST_REJECTED");
+    Message = TEXT("Automation request rejected");
     switch (Reason)
     {
         case EAutomationQueueRejection::NotAccepting:
@@ -295,7 +269,6 @@ void UMcpAutomationBridgeSubsystem::SendAutomationRejection(
         default:
             break;
     }
-    SendAutomationError(TargetSocket, RequestId, Message, Code);
 }
 
 void UMcpAutomationBridgeSubsystem::SendProgressUpdate(
@@ -316,18 +289,3 @@ void UMcpAutomationBridgeSubsystem::SendProgressUpdate(
     }
 }
 
-void UMcpAutomationBridgeSubsystem::RecordAutomationTelemetry(
-    const FString& RequestId,
-    const bool bSuccess,
-    const FString& Message,
-    const FString& ErrorCode)
-{
-    if (ConnectionManager.IsValid())
-    {
-        ConnectionManager->RecordAutomationTelemetry(
-            RequestId,
-            bSuccess,
-            Message,
-            ErrorCode);
-    }
-}

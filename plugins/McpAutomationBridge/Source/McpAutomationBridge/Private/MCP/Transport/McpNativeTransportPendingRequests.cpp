@@ -69,16 +69,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		Conn->IdempotencySlot.Reset();
 
 		FScopeLock WriteLock(&Conn->WriteMutex);
-		if (Conn->Socket)
-		{
-			Conn->Socket->Close();
-			ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-			if (SocketSub)
-			{
-				SocketSub->DestroySocket(Conn->Socket);
-			}
-			Conn->Socket = nullptr;
-		}
+		CloseSocket(Conn->Socket);
 		return true;
 	}
 
@@ -135,19 +126,9 @@ bool FMcpNativeTransport::CompletePendingRequest(
 			}
 
 			// Inline SSE write — we already hold WriteMutex
-			FString Frame = FString::Printf(
-				TEXT("event: message\ndata: %s\n\n"), *ResponseBody);
-			FTCHARToUTF8 Utf8(*Frame);
-			bWroteResponse = SendAllBytes(Conn->Socket,
-				reinterpret_cast<const uint8*>(Utf8.Get()), Utf8.Length());
+			bWroteResponse = SendSSEFrame(Conn->Socket, ResponseBody);
 
-			Conn->Socket->Close();
-			ISocketSubsystem* SocketSub = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
-			if (SocketSub)
-			{
-				SocketSub->DestroySocket(Conn->Socket);
-			}
-			Conn->Socket = nullptr;
+			CloseSocket(Conn->Socket);
 		}
 		if (bWroteResponse)
 		{

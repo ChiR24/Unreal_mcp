@@ -57,6 +57,8 @@ public:
 
 private:
 	void Settle(const FString& RequestId, bool bSuccess, const FString& Payload);
+	/** Disarms the request and calls its completion once. */
+	void Finish(bool bSuccess, const FString& Payload);
 
 	FString PendingId;
 	TFunction<void(bool, const FString&)> Completion;

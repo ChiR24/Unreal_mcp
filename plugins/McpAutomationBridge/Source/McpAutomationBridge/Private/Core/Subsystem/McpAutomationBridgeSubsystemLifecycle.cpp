@@ -26,7 +26,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
         return;
     }
 
-    // BB-005: cache the diagnostics root on the game thread (socket-thread
+    // Cache the diagnostics root on the game thread (socket-thread
     // hooks never resolve project paths), then perform crash-tolerant startup
     // rotation before request acceptance - a non-empty current is promoted to
     // previous so a hard crash in a prior run leaves readable evidence.
@@ -39,11 +39,7 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
         Log,
         TEXT("McpAutomationBridgeSubsystem initializing."));
 
-    // StartAcceptingAutomationRequests() is called explicitly even though the
-    // default value of bAcceptingAutomationRequests is true. The explicit call
-    // preserves start/stop symmetry (every Deinitialize calls Stop), and it makes
-    // the lifecycle intent obvious to readers — any future change to the
-    // default (e.g. a deferred-start mode) does not silently flip this code.
+    // Explicit although accepting is the default: Deinitialize always calls Stop.
     StartAcceptingAutomationRequests();
     McpStartLiveStateTracking();
     ConnectionManager = MakeShared<FMcpConnectionManager>();
@@ -99,12 +95,10 @@ void UMcpAutomationBridgeSubsystem::Deinitialize()
     FMcpReadinessState::Get().Reset();
     StopAcceptingAutomationRequests();
     McpStopLiveStateTracking();
-#if WITH_EDITOR
     // Enhanced Input holds live on the core ticker, which outlives this module.
     // Live Coding unloads the module routinely, so a hold left registered would
     // tick into code that is no longer mapped.
     StopAllEnhancedInputHoldsForMcp();
-#endif
 
     if (TickHandle.IsValid())
     {
@@ -158,37 +152,6 @@ void UMcpAutomationBridgeSubsystem::Deinitialize()
 
     Super::Deinitialize();
 }
-
-bool UMcpAutomationBridgeSubsystem::IsBridgeActive() const
-{
-    return ConnectionManager.IsValid() && ConnectionManager->GetActiveSocketCount() > 0;
-}
-
-EMcpAutomationBridgeState UMcpAutomationBridgeSubsystem::GetBridgeState() const
-{
-    if (ConnectionManager.IsValid())
-    {
-        if (ConnectionManager->GetActiveSocketCount() > 0)
-        {
-            return EMcpAutomationBridgeState::Connected;
-        }
-        if (ConnectionManager->IsReconnectPending())
-        {
-            return EMcpAutomationBridgeState::Connecting;
-        }
-    }
-    return EMcpAutomationBridgeState::Disconnected;
-}
-
-bool UMcpAutomationBridgeSubsystem::SendRawMessage(const FString& Message)
-{
-    if (ConnectionManager.IsValid())
-    {
-        return ConnectionManager->SendRawMessage(Message);
-    }
-    return false;
-}
-
 bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime)
 {
     if (!GIsSavingPackage && !IsGarbageCollecting() && !IsAsyncLoading())
@@ -206,7 +169,7 @@ bool UMcpAutomationBridgeSubsystem::Tick(float DeltaTime)
 void UMcpAutomationBridgeSubsystem::StartNativeTransport()
 {
     const auto* Settings = GetDefault<UMcpAutomationBridgeSettings>();
-    if (!Settings || !Settings->bEnableNativeMCP)
+    if (!Settings->bEnableNativeMCP)
     {
         return;
     }

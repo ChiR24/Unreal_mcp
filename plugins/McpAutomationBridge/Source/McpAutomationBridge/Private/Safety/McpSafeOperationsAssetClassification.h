@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 
-#if WITH_EDITOR
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "HAL/FileManager.h"
@@ -13,19 +12,14 @@
 #include "Modules/ModuleManager.h"
 #include "ObjectTools.h"
 #include "UObject/SoftObjectPath.h"
-#endif
 
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
 inline bool IsAnyBlueprintAsset(const FAssetData& AssetData)
 {
-    FString ClassName = MCP_ASSET_DATA_GET_CLASS_PATH(AssetData);
-    return ClassName.Contains(TEXT("Blueprint")) ||
-           ClassName.Contains(TEXT("WidgetBlueprint")) ||
-           ClassName.Contains(TEXT("ControlRigBlueprint"));
+    return MCP_ASSET_DATA_GET_CLASS_PATH(AssetData).Contains(TEXT("Blueprint"));
 }
 
 inline bool IsRiskyAnimationAsset(const FAssetData& AssetData)
@@ -83,42 +77,20 @@ inline int32 GetAnimationRigClusterDeletePriority(const FAssetData& AssetData)
     return 4;
 }
 
+// Whether Assets holds at least two of the cluster types (AnimBlueprint, IKRigDefinition, AnimSequence,
+// ControlRigBlueprint), which have to be deleted in priority order.
 inline bool IsMixedAnimationRigCluster(const TArray<FAssetData>& Assets)
 {
-    bool bHasIKRigDefinition = false;
-    bool bHasAnimSequence = false;
-    bool bHasAnimBlueprint = false;
-    bool bHasControlRigBlueprint = false;
-
+    TSet<int32> ClusterTypes;
     for (const FAssetData& AssetData : Assets)
     {
         const int32 Priority = GetAnimationRigClusterDeletePriority(AssetData);
-        switch (Priority)
+        if (Priority < 4)
         {
-        case 0:
-            bHasAnimBlueprint = true;
-            break;
-        case 1:
-            bHasIKRigDefinition = true;
-            break;
-        case 2:
-            bHasAnimSequence = true;
-            break;
-        case 3:
-            bHasControlRigBlueprint = true;
-            break;
-        default:
-            break;
+            ClusterTypes.Add(Priority);
         }
     }
-
-    const int32 ClusterTypeCount =
-        (bHasIKRigDefinition ? 1 : 0) +
-        (bHasAnimSequence ? 1 : 0) +
-        (bHasAnimBlueprint ? 1 : 0) +
-        (bHasControlRigBlueprint ? 1 : 0);
-
-    return ClusterTypeCount >= 2;
+    return ClusterTypes.Num() >= 2;
 }
 
 inline bool IsWorldAsset(const FAssetData& AssetData)
@@ -128,6 +100,5 @@ inline bool IsWorldAsset(const FAssetData& AssetData)
            ClassName.EndsWith(TEXT(".World"), ESearchCase::IgnoreCase);
 }
 
-#endif
 
 }

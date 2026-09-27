@@ -5,7 +5,6 @@
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
 inline UMaterialInterface* McpLoadMaterialWithFallback(const FString& MaterialPath, bool bSilent = false)
 {
@@ -50,17 +49,6 @@ inline UMaterialInterface* McpLoadMaterialWithFallback(const FString& MaterialPa
     return nullptr;
 }
 
-inline void ScanPathSynchronous(const FString& InPath, bool bRecursive = true)
-{
-    FAssetRegistryModule& AssetRegistryModule =
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 
-    TArray<FString> PathsToScan;
-    PathsToScan.Add(InPath);
-    AssetRegistry.ScanPathsSynchronous(PathsToScan, bRecursive);
-}
-
-#endif
 
 }

@@ -1,7 +1,7 @@
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpLiveStateRevisions.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Curves/CurveFloat.h"
 #include "Editor.h"

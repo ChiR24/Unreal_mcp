@@ -25,7 +25,6 @@ public:
     {
         UE_LOG(LogMcpAutomationBridge, Log, TEXT("MCP Automation Bridge module initialized."));
 
-#if WITH_EDITOR
         // UDeveloperSettings (UMcpAutomationBridgeSettings) are auto-registered with the
         // Project Settings UI. Do not manually register them via ISettingsModule as this
         // produces duplicate entries in Project Settings. The settings class saves
@@ -34,7 +33,6 @@ public:
 
         UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(
             this, &FMcpAutomationBridgeModule::RegisterStatusBarWidget));
-#endif
     }
 
     /**
@@ -47,10 +45,8 @@ public:
     {
         UE_LOG(LogMcpAutomationBridge, Log, TEXT("MCP Automation Bridge module shut down."));
 
-#if WITH_EDITOR
         UToolMenus::UnRegisterStartupCallback(this);
         UToolMenus::UnregisterOwner(this);
-#endif
     }
 
 private:

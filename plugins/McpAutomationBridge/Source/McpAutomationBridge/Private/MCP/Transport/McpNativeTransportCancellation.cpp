@@ -20,7 +20,7 @@ void FMcpNativeTransport::HandleCancelledNotification(
 	{
 		return;
 	}
-	const FString ClientIdKey = McpJsonRpcIdKey(*Found);
+	const FString ClientIdKey = McpCanonicalizeRequestId(*Found);
 	if (ClientIdKey.IsEmpty())
 	{
 		return;  // unsupported id type

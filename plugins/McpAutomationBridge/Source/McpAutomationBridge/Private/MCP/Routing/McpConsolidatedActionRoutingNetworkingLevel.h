@@ -12,7 +12,7 @@ inline const TArray<FString>& Input()
 		TEXT("add_legacy_action_mapping"), TEXT("remove_legacy_action_mapping"),
 		TEXT("add_legacy_axis_mapping"), TEXT("remove_legacy_axis_mapping"),
 		TEXT("set_input_trigger"), TEXT("set_input_modifier"),
-		TEXT("enable_input_mapping"), TEXT("disable_input_action"),
+		TEXT("enable_input_mapping"),
 		TEXT("get_input_info")
 	};
 	return Actions;
@@ -26,10 +26,8 @@ inline const TArray<FString>& GameFramework()
 		TEXT("create_game_instance"), TEXT("create_hud_class"),
 		TEXT("set_default_pawn_class"), TEXT("set_player_controller_class"),
 		TEXT("set_game_state_class"), TEXT("set_player_state_class"), TEXT("set_hud_class"),
-		TEXT("configure_game_rules"), TEXT("setup_match_states"),
-		TEXT("configure_round_system"), TEXT("configure_team_system"),
-		TEXT("configure_scoring_system"), TEXT("configure_spawn_system"),
-		TEXT("configure_player_start"), TEXT("set_respawn_rules"),
+		TEXT("configure_game_rules"),
+		TEXT("set_respawn_rules"),
 		TEXT("configure_spectating"), TEXT("get_game_framework_info")
 	};
 	return Actions;
@@ -38,14 +36,9 @@ inline const TArray<FString>& GameFramework()
 inline const TArray<FString>& Sessions()
 {
 	static const TArray<FString> Actions = {
-		TEXT("configure_local_session_settings"),
-		TEXT("configure_session_interface"), TEXT("configure_split_screen"),
-		TEXT("set_split_screen_type"), TEXT("add_local_player"),
-		TEXT("remove_local_player"), TEXT("configure_lan_play"),
-		TEXT("host_lan_server"), TEXT("join_lan_server"),
-		TEXT("enable_voice_chat"), TEXT("configure_voice_settings"),
-		TEXT("set_voice_channel"), TEXT("mute_player"),
-		TEXT("set_voice_attenuation"), TEXT("configure_push_to_talk"),
+		TEXT("configure_split_screen"), TEXT("add_local_player"),
+		TEXT("remove_local_player"), TEXT("host_lan_server"),
+		TEXT("enable_voice_chat"), TEXT("mute_player"),
 		TEXT("get_sessions_info")
 	};
 	return Actions;

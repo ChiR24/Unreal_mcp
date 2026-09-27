@@ -1,21 +1,13 @@
 #include "Foundation/McpCapabilityAuthorization.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
+#include "Tests/McpTestFixtures.h"
 #include "Misc/AutomationTest.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
 namespace
 {
-FMcpCapabilityPrincipal MakePrincipal(const TArray<EMcpCapabilityScope>& Scopes)
-{
-	FMcpCapabilityPrincipal Principal;
-	Principal.Identity = TEXT("scoped:test");
-	Principal.Scopes = Scopes;
-	Principal.bAuthenticated = true;
-	return Principal;
-}
-
 FMcpCapabilityDemand MakeDemand(EMcpCapabilityScope Scope, const TCHAR* Consent)
 {
 	FMcpCapabilityDemand Demand;
@@ -44,9 +36,9 @@ bool FMcpCapabilityAuthorizationScopeConsentTest::RunTest(const FString& Paramet
 	(void)Parameters;
 	using namespace McpCapabilityAuthorization;
 
-	const FMcpCapabilityPrincipal Writer = MakePrincipal({ EMcpCapabilityScope::Write });
-	const FMcpCapabilityPrincipal Admin = MakePrincipal({ EMcpCapabilityScope::Admin });
-	const FMcpCapabilityPrincipal Nothing = MakePrincipal({});
+	const FMcpCapabilityPrincipal Writer = McpTestPrincipal(TEXT("scoped:test"), { EMcpCapabilityScope::Write });
+	const FMcpCapabilityPrincipal Admin = McpTestPrincipal(TEXT("scoped:test"), { EMcpCapabilityScope::Admin });
+	const FMcpCapabilityPrincipal Nothing = McpTestPrincipal(TEXT("scoped:test"), {});
 
 	const FMcpCapabilityDemand NeedsWrite = MakeDemand(EMcpCapabilityScope::Write, TEXT("none"));
 	const FMcpCapabilityDemand NeedsDestructive =
@@ -122,9 +114,9 @@ bool FMcpCapabilityAuthorizationPathProjectTest::RunTest(const FString& Paramete
 	TestTrue(TEXT("trailing slash is insignificant"),
 		IsPathWithinPrefix(TEXT("/Game/Team/"), TEXT("/Game/Team")));
 
-	FMcpCapabilityPrincipal Restricted = MakePrincipal({ EMcpCapabilityScope::Write });
+	FMcpCapabilityPrincipal Restricted = McpTestPrincipal(TEXT("scoped:test"), { EMcpCapabilityScope::Write });
 	Restricted.AllowedPathPrefixes = { TEXT("/Game/Team") };
-	const FMcpCapabilityPrincipal Unrestricted = MakePrincipal({ EMcpCapabilityScope::Write });
+	const FMcpCapabilityPrincipal Unrestricted = McpTestPrincipal(TEXT("scoped:test"), { EMcpCapabilityScope::Write });
 
 	TestTrue(TEXT("unrestricted principal passes any path"),
 		CheckPaths(Unrestricted, { TEXT("/Game/Anything") }).bAllowed);
@@ -139,7 +131,7 @@ bool FMcpCapabilityAuthorizationPathProjectTest::RunTest(const FString& Paramete
 		CheckPaths(Restricted, { TEXT("/Game/Other") }).ErrorCode,
 		FString(TEXT("PATH_NOT_PERMITTED")));
 
-	FMcpCapabilityPrincipal ProjectBound = MakePrincipal({ EMcpCapabilityScope::Write });
+	FMcpCapabilityPrincipal ProjectBound = McpTestPrincipal(TEXT("scoped:test"), { EMcpCapabilityScope::Write });
 	ProjectBound.AllowedProjects = { TEXT("MCPtest") };
 	TestTrue(TEXT("allowed project passes"), CheckProject(ProjectBound, TEXT("MCPtest")).bAllowed);
 	TestFalse(TEXT("other project refused"), CheckProject(ProjectBound, TEXT("OtherGame")).bAllowed);

@@ -1,6 +1,5 @@
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
 #include "MCP/Generated/McpGeneratedCapabilityShards.h"
-#include "Misc/ScopeLock.h"
 
 TSharedPtr<FJsonObject> FMcpDynamicToolManager::ListTools()
 {
@@ -26,22 +25,34 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::ListTools()
 	return Result;
 }
 
-TSharedPtr<FJsonObject> FMcpDynamicToolManager::ListCategories()
+TArray<TSharedPtr<FJsonValue>> FMcpDynamicToolManager::DescribeCategories_NoLock() const
 {
+	TMap<FString, TPair<int32, int32>> Counts; // category -> (tools, enabled tools)
+	for (const auto& Pair : ToolStates)
+	{
+		TPair<int32, int32>& Count = Counts.FindOrAdd(Pair.Value.Category);
+		++Count.Key;
+		Count.Value += Pair.Value.bEnabled ? 1 : 0;
+	}
 	TArray<TSharedPtr<FJsonValue>> CatsArr;
 	for (const auto& Pair : CategoryStates)
 	{
+		const TPair<int32, int32> Count = Counts.FindRef(Pair.Key);
 		auto Obj = MakeShared<FJsonObject>();
 		Obj->SetStringField(TEXT("name"), Pair.Value.Name);
 		Obj->SetBoolField(TEXT("enabled"), Pair.Value.bEnabled);
-		Obj->SetNumberField(TEXT("toolCount"), Pair.Value.ToolCount);
-		Obj->SetNumberField(TEXT("enabledCount"), Pair.Value.EnabledCount);
+		Obj->SetNumberField(TEXT("toolCount"), Count.Key);
+		Obj->SetNumberField(TEXT("enabledCount"), Count.Value);
 		CatsArr.Add(MakeShared<FJsonValueObject>(Obj));
 	}
+	return CatsArr;
+}
 
+TSharedPtr<FJsonObject> FMcpDynamicToolManager::ListCategories()
+{
 	auto Result = MakeShared<FJsonObject>();
 	Result->SetBoolField(TEXT("success"), true);
-	Result->SetArrayField(TEXT("categories"), CatsArr);
+	Result->SetArrayField(TEXT("categories"), DescribeCategories_NoLock());
 	return Result;
 }
 
@@ -61,24 +72,8 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::GetStatus()
 	Result->SetStringField(TEXT("catalogRevision"), McpGeneratedCapabilityShards::CatalogRevision());
 	Result->SetNumberField(TEXT("catalogStateRevision"), static_cast<double>(CatalogStateRevision));
 
-	TArray<TSharedPtr<FJsonValue>> CatsArr;
-	for (const auto& Pair : CategoryStates)
-	{
-		auto Obj = MakeShared<FJsonObject>();
-		Obj->SetStringField(TEXT("name"), Pair.Value.Name);
-		Obj->SetBoolField(TEXT("enabled"), Pair.Value.bEnabled);
-		Obj->SetNumberField(TEXT("toolCount"), Pair.Value.ToolCount);
-		Obj->SetNumberField(TEXT("enabledCount"), Pair.Value.EnabledCount);
-		CatsArr.Add(MakeShared<FJsonValueObject>(Obj));
-	}
-	Result->SetArrayField(TEXT("categories"), CatsArr);
+	Result->SetArrayField(TEXT("categories"), DescribeCategories_NoLock());
 	return Result;
-}
-
-uint64 FMcpDynamicToolManager::GetCatalogStateRevision() const
-{
-	FScopeLock Lock(&StateMutex);
-	return CatalogStateRevision;
 }
 
 TSharedPtr<FJsonObject> FMcpDynamicToolManager::Reset(bool& bOutChanged)
@@ -104,12 +99,6 @@ TSharedPtr<FJsonObject> FMcpDynamicToolManager::Reset(bool& bOutChanged)
 			Pair.Value.bEnabled = bTarget;
 			Changed++;
 		}
-		Pair.Value.EnabledCount = 0;
-	}
-	for (const auto& Pair : ToolStates)
-	{
-		FCategoryState* CS = CategoryStates.Find(Pair.Value.Category);
-		if (CS && Pair.Value.bEnabled) CS->EnabledCount++;
 	}
 
 	bOutChanged = (Changed > 0);

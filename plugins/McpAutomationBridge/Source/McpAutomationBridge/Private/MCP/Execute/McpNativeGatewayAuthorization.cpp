@@ -37,35 +37,20 @@ FMcpSemanticError McpAuthorizationSemanticError(const FMcpAuthorizationDecision&
 	Error.GrantedScopes = Decision.GrantedScopes;
 	Error.ConsentScope = Decision.ConsentScope;
 
-	if (Decision.ErrorCode == McpAuthorizationCodes::ScopeNotGranted)
+	static const TMap<FString, const TCHAR*> KindByCode = {
+		{ McpAuthorizationCodes::ScopeNotGranted, TEXT("authorization") },
+		{ McpAuthorizationCodes::ConsentRequired, TEXT("consent") },
+		{ McpAuthorizationCodes::ProjectNotPermitted, TEXT("project") },
+		{ McpAuthorizationCodes::PathNotPermitted, TEXT("pathPolicy") },
+		{ McpAuthorizationCodes::CommandBlocked, TEXT("command") },
+		{ McpAuthorizationCodes::QuotaExceeded, TEXT("quota") },
+	};
+	const TCHAR* const* Kind = KindByCode.Find(Decision.ErrorCode);
+	Error.Kind = Kind ? *Kind : TEXT("validation");
+	if (Decision.ErrorCode == McpAuthorizationCodes::QuotaExceeded)
 	{
-		Error.Kind = TEXT("authorization");
-	}
-	else if (Decision.ErrorCode == McpAuthorizationCodes::ConsentRequired)
-	{
-		Error.Kind = TEXT("consent");
-	}
-	else if (Decision.ErrorCode == McpAuthorizationCodes::ProjectNotPermitted)
-	{
-		Error.Kind = TEXT("project");
-	}
-	else if (Decision.ErrorCode == McpAuthorizationCodes::PathNotPermitted)
-	{
-		Error.Kind = TEXT("pathPolicy");
-	}
-	else if (Decision.ErrorCode == McpAuthorizationCodes::CommandBlocked)
-	{
-		Error.Kind = TEXT("command");
-	}
-	else if (Decision.ErrorCode == McpAuthorizationCodes::QuotaExceeded)
-	{
-		Error.Kind = TEXT("quota");
 		Error.bHasRetryable = true;
 		Error.bRetryable = Decision.bRetryable;
-	}
-	else
-	{
-		Error.Kind = TEXT("validation");
 	}
 	return Error;
 }

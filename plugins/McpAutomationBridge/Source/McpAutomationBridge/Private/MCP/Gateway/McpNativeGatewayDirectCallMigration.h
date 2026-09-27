@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
-// Task 30: native mirror of src/server/gateway/direct-call-migration.ts. A direct
+// Native mirror of src/server/gateway/direct-call-migration.ts. A direct
 // call to a removed canonical parent tool is answered with this bounded, copy-
 // paste-executable migration receipt (used as the tool-result structuredContent)
 // instead of a routed dispatch. Pure: ParentNames is the authoritative known-

@@ -59,12 +59,6 @@ static constexpr int32 MaxFabTabIndex = 16;
  * Guarded to a rendering editor: FFabBrowser::OpenTab asserts under -NullRHI,
  * which is why this is not attempted headless.
  */
-/** Defined in McpFabDirectApi.cpp: opens the tab with no UI path at all. */
-} // namespace McpFabBrowserSession
-namespace McpFabDirectApi { bool TryOpenFabTabViaReflection(FString& OutDiagnostic); }
-namespace McpFabBrowserSession
-{
-
 static bool TryOpenFabTabViaMenu()
 {
 	if (!FSlateApplication::IsInitialized() || !FApp::CanEverRender() || IsRunningCommandlet())
@@ -138,8 +132,7 @@ static TSharedPtr<SDockTab> FindLiveFabTab()
  * inside Epic's FFabBrowser::OpenTab under -NullRHI.
  */
 
-/** OutTree is filled with the walked hierarchy for callers that want to print it. */
-TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic, FString* OutTree = nullptr)
+TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic)
 {
 	if (!FSlateApplication::IsInitialized())
 	{
@@ -154,7 +147,6 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic, FString* OutTre
 		FString WindowTree;
 		if (TSharedPtr<SWidget> Existing = FindFabBrowserInAnyWindow(WindowTree))
 		{
-			if (OutTree != nullptr) { *OutTree = WindowTree; }
 			OutDiagnostic = TEXT("Found an existing Fab browser outside the known tab ids.");
 			return Existing;
 		}
@@ -174,12 +166,6 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic, FString* OutTre
 		bOpenAttempted = TryOpenFabTabViaMenu();
 		UE_LOG(LogMcpFabBridge, Log, TEXT("Fab tab auto-open (menu): %s"),
 			bOpenAttempted ? TEXT("dispatched") : TEXT("no menu entry"));
-		if (!bOpenAttempted)
-		{
-			FString OpenDiagnostic;
-			bOpenAttempted = McpFabDirectApi::TryOpenFabTabViaReflection(OpenDiagnostic);
-			UE_LOG(LogMcpFabBridge, Log, TEXT("Fab tab auto-open (reflection): %s"), *OpenDiagnostic);
-		}
 	}
 	if (!FabTab.IsValid() && bOpenAttempted)
 	{
@@ -205,10 +191,6 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic, FString* OutTre
 	TSharedPtr<SWidget> Browser;
 	FString Tree;
 	WalkWidget(FabTab->GetContent(), 0, Visited, Browser, Tree);
-	if (OutTree != nullptr)
-	{
-		*OutTree = Tree;
-	}
 
 	if (!Browser.IsValid())
 	{
@@ -224,26 +206,6 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic, FString* OutTre
 	return Browser;
 }
 } // namespace McpFabBrowserSession
-
-/**
- * Console probe. Dumps the live Fab tab's widget hierarchy to the log and says
- * whether a browser widget is reachable, which is the one fact the rest of the
- * design depends on. Diagnostic only: it executes no script and binds nothing.
- */
-static FAutoConsoleCommand GMcpFabDumpBrowserTree(
-	TEXT("Mcp.Fab.DumpBrowserTree"),
-	TEXT("Logs the Slate widget hierarchy of the open Fab tab and reports whether a web browser widget was found."),
-	FConsoleCommandDelegate::CreateStatic([]()
-	{
-		FString Diagnostic;
-		FString Tree;
-		const TSharedPtr<SWidget> Browser =
-			McpFabBrowserSession::FindFabBrowserWidget(Diagnostic, &Tree);
-		UE_LOG(LogMcpFabBridge, Log, TEXT("Mcp.Fab.DumpBrowserTree:\n%s"), *Tree);
-		UE_LOG(LogMcpFabBridge, Log, TEXT("Mcp.Fab.DumpBrowserTree: %s"), *Diagnostic);
-		UE_LOG(LogMcpFabBridge, Log, TEXT("Mcp.Fab.DumpBrowserTree: browserReachable=%s"),
-			Browser.IsValid() ? TEXT("true") : TEXT("false"));
-	}));
 
 // ---------------------------------------------------------------------------
 // Talking to the page.

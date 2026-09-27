@@ -16,16 +16,6 @@ FString FoldingReadString(const TSharedPtr<FJsonObject>& Object, const TCHAR* Fi
 	return Value;
 }
 
-FString FoldingActionSegment(const FString& CapabilityId)
-{
-	int32 LastDot = INDEX_NONE;
-	if (CapabilityId.FindLastChar(TEXT('.'), LastDot) && LastDot != INDEX_NONE)
-	{
-		return CapabilityId.RightChop(LastDot + 1);
-	}
-	return CapabilityId;
-}
-
 bool ParseLegacyPairs(const TSharedPtr<FJsonObject>& Record, FMcpCapabilityRecord& Out, FString& OutError)
 {
 	const TArray<TSharedPtr<FJsonValue>>* LegacyIds = nullptr;
@@ -164,7 +154,7 @@ FString McpRequestedLegacyAction(const TSharedPtr<FJsonObject>& GatewayParams, c
 	{
 		return FString();
 	}
-	return FoldingActionSegment(Capability);
+	return McpLastDottedSegment(Capability);
 }
 
 // Inject the pins a folded old name implies, never overriding what the caller

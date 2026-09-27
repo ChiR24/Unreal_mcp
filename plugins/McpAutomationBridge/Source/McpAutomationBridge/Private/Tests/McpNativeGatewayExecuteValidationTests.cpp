@@ -1,5 +1,5 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
-// McpNativeGatewayExecuteValidationTests.cpp — in-editor run of the Task 27 suite
+// McpNativeGatewayExecuteValidationTests.cpp — in-editor run of the suite
 //
 // The TypeScript side runs the same generated suite in
 // tests/unit/native-execute-suite.test.ts. Both build their cases from
@@ -23,7 +23,7 @@
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Execute/McpNativeGatewaySchemaValidation.h"
 
-#if WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 #include "Tests/McpNativeGatewayExecuteValidationSampleValues.h"
 
@@ -209,7 +209,7 @@ bool FMcpNativeGatewayExecuteSuiteTest::RunTest(const FString& Parameters)
 		ValidateAndReportCode(MakeShared<FJsonObject>(), ConditionalSchema),
 		FString(TEXT("UNSUPPORTED_SCHEMA_KEYWORD")));
 
-	// Options are bounded to the Task 3 key set.
+	// Options are bounded to the key set.
 	FMcpSemanticError OptionError;
 	TSharedPtr<FJsonObject> BadOptions = MakeShared<FJsonObject>();
 	BadOptions->SetBoolField(TEXT("task27NotAnOption"), true);
@@ -229,4 +229,4 @@ bool FMcpNativeGatewayExecuteSuiteTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-#endif  // WITH_EDITOR && WITH_DEV_AUTOMATION_TESTS
+#endif  // WITH_DEV_AUTOMATION_TESTS

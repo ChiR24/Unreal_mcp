@@ -1,16 +1,8 @@
 #define MCP_SUBSYSTEM_ENVIRONMENT_MEDIA_DECLARATIONS \
 MCP_DECLARE_ACTION_HANDLER(HandleAudioAction); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateDialogueVoice); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateDialogueWave); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleSetDialogueContext); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateReverbEffect); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateSourceEffectChain); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleAddSourceEffect); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateSubmixEffect); \
 MCP_DECLARE_ACTION_HANDLER(HandleLightingAction); \
 MCP_DECLARE_ACTION_HANDLER(HandlePerformanceAction); \
 MCP_DECLARE_ACTION_HANDLER(HandleBuildEnvironmentAction); \
-MCP_DECLARE_ACTION_HANDLER(HandleControlEnvironmentAction); \
 MCP_DECLARE_ACTION_HANDLER(HandlePaintFoliage); \
 MCP_DECLARE_ACTION_HANDLER(HandleGetFoliageInstances); \
 MCP_DECLARE_ACTION_HANDLER(HandleRemoveFoliage); \

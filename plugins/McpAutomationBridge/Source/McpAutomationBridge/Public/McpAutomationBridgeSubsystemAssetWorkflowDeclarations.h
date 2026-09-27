@@ -13,14 +13,10 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleImportMegascansAsset); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleOpenEditorTab); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleDescribeReflectedApi); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleInvokeReflectedFunction); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateMaterial); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateMaterialInstance); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleDuplicateAsset); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleRenameAsset); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleMoveAsset); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleDeleteAssets); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleListAssets); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleGetAsset); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleCreateFolder); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleGetDependencies); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleGetAssetGraph); \
@@ -33,5 +29,4 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleAddMaterialParameter); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleListMaterialInstances); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleResetInstanceParameters); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleDoesAssetExist); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleGetMaterialStats); \
-MCP_DECLARE_PAYLOAD_HANDLER(HandleRebuildMaterial);
+MCP_DECLARE_PAYLOAD_HANDLER(HandleGetMaterialStats);

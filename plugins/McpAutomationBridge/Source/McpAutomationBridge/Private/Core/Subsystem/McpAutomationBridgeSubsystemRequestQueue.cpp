@@ -29,19 +29,15 @@ EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
         SessionKey, RequestingSocket.Get());
 
     EAutomationQueueRejection Rejection = EAutomationQueueRejection::None;
-    int32 AdmissionDepthCarrier = 0;
+    int32 AdmissionDepth = 0; // read in the lock, just before the Add, so it is race-free
     {
         FScopeLock Lock(&PendingAutomationRequestsMutex);
         if (!bAcceptingAutomationRequests)
         {
-            // BB-005: refuse while the lock is held so the queue-depth read is
-            // race-free (same NF-3 discipline applied to admissions).
-            FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, TEXT("AUTOMATION_NOT_ACCEPTING"), PendingAutomationRequests.Num());
             Rejection = EAutomationQueueRejection::NotAccepting;
         }
         else if (CanceledAutomationRequestIds.Remove(RequestId) > 0)
         {
-            FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, TEXT("AUTOMATION_ALREADY_CANCELED"), PendingAutomationRequests.Num());
             Rejection = EAutomationQueueRejection::AlreadyCanceled;
         }
         // Per-session admission cap, checked BEFORE the global cap so a
@@ -72,7 +68,6 @@ EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
                     TEXT("Session automation queue is full (%d pending); rejecting action=%s"),
                     SessionPendingNum,
                     *Action);
-                FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, TEXT("AUTOMATION_SESSION_QUEUE_FULL"), PendingAutomationRequests.Num());
                 Rejection = EAutomationQueueRejection::SessionQueueFull;
             }
         }
@@ -84,20 +79,24 @@ EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
                 Warning,
                 TEXT("Automation request queue is full; rejecting action=%s"),
                 *Action);
-            FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, TEXT("AUTOMATION_QUEUE_FULL"), PendingAutomationRequests.Num());
             Rejection = EAutomationQueueRejection::QueueFull;
         }
-        if (Rejection == EAutomationQueueRejection::None)
+        if (Rejection != EAutomationQueueRejection::None)
         {
-            // NF-2: the depth is captured IN the lock, as the last statement before
-            // the Add, so the queue-depth read is race-free against socket threads.
-            const int32 AdmissionDepth = PendingAutomationRequests.Num();
-            AdmissionDepthCarrier = AdmissionDepth;
+            // Recorded while the lock is held so the queue-depth read is race-free.
+            FString Code;
+            FString Unused;
+            DescribeQueueRejection(Rejection, Code, Unused);
+            FMcpDiagnosticsSnapshot::Get().RecordRefusal(RequestId, Code, PendingAutomationRequests.Num());
+        }
+        else
+        {
+            AdmissionDepth = PendingAutomationRequests.Num();
             PendingAutomationRequests.Add(MoveTemp(Pending));
         }
     }
 
-    // BB-005 queue refusal: the refusal record is memory-only in-lock; its disk
+    // Queue refusal: the refusal record is memory-only in-lock; its disk
     // write is deferred OFF the lock to the game thread, so a hard crash after
     // StopAcceptingAutomationRequests() (or on an empty queue) still leaves the
     // last refusal persisted (plan line 197). The admission path coalesces its
@@ -108,13 +107,12 @@ EAutomationQueueRejection UMcpAutomationBridgeSubsystem::QueueAutomationRequest(
         return Rejection;
     }
 
-    // BB-005: admission records memory-only on the socket/HTTP thread. The
+    // Admission records memory-only on the socket/HTTP thread. The
     // depth was read in-lock above; these store calls take the store's own
     // mutex. NF-1: NO latch - every WebSocket admission records handshake
     // success (last-writer-wins under the store mutex, always fresh). An
     // admitted WS automation_request PROVES the bridge_hello gate passed for
     // THIS connection; a later 4004/4005 close (H6) overwrites ok=false.
-    const int32 AdmissionDepth = AdmissionDepthCarrier;
     FMcpDiagnosticsSnapshot::Get().RecordAdmission(RequestId, FString(), Action,
         Origin == ERequestOrigin::NativeHTTP ? TEXT("NativeHTTP") : TEXT("WebSocket"), AdmissionDepth);
     if (Origin == ERequestOrigin::WebSocket) { FMcpDiagnosticsSnapshot::Get().RecordHandshake(true); }
@@ -176,7 +174,7 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
     TGuardValue<bool> DrainGuard(QueueFairness.bDraining, true);
 
     TArray<FPendingAutomationRequest> LocalQueue;
-    int32 PendingCountAfterBatchCarrier = 0;
+    int32 PendingCountAfterBatch = 0; // the post-batch remainder, read in the lock
     {
         FScopeLock Lock(&PendingAutomationRequestsMutex);
         if (PendingAutomationRequests.Num() == 0)
@@ -214,15 +212,8 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
             PendingAutomationRequests.RemoveAt(
                 Index, 1, MCP_DISALLOW_SHRINKING);
         }
-        // NF-3: the post-batch count is captured IN the lock, after the
-        // RemoveAt loop, so the depth a pre-dispatch record reports is the
-        // race-free remainder seen by the mutation lane. Declared as a const
-        // inside the lock; the carrier below carries it past the lock scope
-        // because the pre-dispatch record runs after release.
-        const int32 PendingCountAfterBatch = PendingAutomationRequests.Num();
-        PendingCountAfterBatchCarrier = PendingCountAfterBatch;
+        PendingCountAfterBatch = PendingAutomationRequests.Num();
     }
-    const int32 PendingCountAfterBatch = PendingCountAfterBatchCarrier;
 
     for (const FPendingAutomationRequest& Req : LocalQueue)
     {
@@ -257,7 +248,7 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
         {
             continue;
         }
-        // Task 42 authoritative precondition gate. It runs HERE — on the game
+        // Authoritative precondition gate. It runs HERE — on the game
         // thread, after the queue wait, immediately before dispatch — so a state
         // change that lands between enqueue and dispatch still refuses. Checking
         // at parse or transport time would admit a request the editor has already
@@ -275,7 +266,7 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
                 FString::Printf(
                     TEXT("Editor '%s' state changed since it was read (expected %lld, current %lld). Re-read the state and retry."),
                     FMcpLiveStateRevisions::KeyFor(StaleKind), StaleExpected, StaleCurrent),
-                nullptr, FMcpLiveStateRevisions::StaleStateErrorCode(), Req.Origin);
+                nullptr, FMcpLiveStateRevisions::StaleStateErrorCode, Req.Origin);
             {
                 FScopeLock Lock(&PendingAutomationRequestsMutex);
                 ActiveAutomationRequestIds.Remove(Req.RequestId);
@@ -288,13 +279,8 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
             // Single mutation lane, guard 2 of 2: the lane is asserted, not
             // assumed. Depth is raised only here, around the one call that
             // mutates the editor, so a depth above 1 means two mutations are
-            // in flight at once. MaxObservedDispatchDepth keeps the high-water
-            // mark after the depth unwinds so a test can prove the lane held
-            // for a whole run without relying on the assert firing.
+            // in flight at once.
             ++QueueFairness.DispatchDepth;
-            QueueFairness.MaxObservedDispatchDepth = FMath::Max(
-                QueueFairness.MaxObservedDispatchDepth,
-                QueueFairness.DispatchDepth);
             ON_SCOPE_EXIT { --QueueFairness.DispatchDepth; };
             FMcpTelemetryRegistry::Get().MarkDispatched(Req.RequestId);
             checkf(
@@ -302,7 +288,7 @@ void UMcpAutomationBridgeSubsystem::ProcessPendingAutomationRequests()
                 TEXT("MCP editor mutation lane violated: depth=%d gameThread=%d"),
                 QueueFairness.DispatchDepth,
                 IsInGameThread() ? 1 : 0);
-            // BB-005 pre-dispatch refresh immediately before mutation dispatch:
+            // Pre-dispatch refresh immediately before mutation dispatch:
             // this inline game-thread persist is THE crash anchor - a hard
             // crash after this line leaves the last pre-dispatch record on disk.
             FMcpDiagnosticsSnapshot::Get().RecordPreDispatch(Req.RequestId, PendingCountAfterBatch);

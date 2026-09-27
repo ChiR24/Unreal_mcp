@@ -1,10 +1,9 @@
 #pragma once
 
-#include "Safety/McpSafeOperationsAssetEditorSubsystem.h"
+#include "Subsystems/AssetEditorSubsystem.h"
 #include "Safety/McpSafeOperationsLog.h"
-#include "Safety/McpSafeOperationsPackageTools.h"
+#include "PackageTools.h"
 
-#if WITH_EDITOR
 #include "Components/ActorComponent.h"
 #include "Editor.h"
 #include "Engine/Level.h"
@@ -19,17 +18,11 @@
 #include "RenderingThread.h"
 #include "UObject/UObjectHash.h"
 
-#if __has_include("EditorAssetLibrary.h")
 #include "EditorAssetLibrary.h"
-#else
-#include "Editor/EditorAssetLibrary.h"
-#endif
-#endif
 
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
 inline bool ResolveExpectedMapPackageName(const FString& MapPath, FString& OutPackageName)
 {
@@ -93,19 +86,17 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     }
 
     UWorld* CurrentWorld = GEditor->GetEditorWorldContext().World();
+    // Callers pass a long package name or a .umap filename; every check below needs the package name (the
+    // in-memory check never matched a filename, so a resident create_level world slipped past it and hit the
+    // EditorServer "World Memory Leaks" fatal).
+    FString ExpectedPackageName;
+    const bool bResolvedExpectedPackage = ResolveExpectedMapPackageName(MapPath, ExpectedPackageName);
+    const FString NormalizedMapPath = bResolvedExpectedPackage
+        ? ExpectedPackageName
+        : (MapPath.EndsWith(TEXT(".umap")) ? MapPath.LeftChop(5) : MapPath);
     if (CurrentWorld)
     {
         FString CurrentMapPath = CurrentWorld->GetOutermost()->GetName();
-        FString NormalizedMapPath;
-        if (!ResolveExpectedMapPackageName(MapPath, NormalizedMapPath))
-        {
-            NormalizedMapPath = MapPath;
-            if (NormalizedMapPath.EndsWith(TEXT(".umap")))
-            {
-                NormalizedMapPath.LeftChopInline(5);
-            }
-        }
-
         if (CurrentMapPath.Equals(NormalizedMapPath, ESearchCase::IgnoreCase))
         {
             UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLoadMap: Map '%s' is already loaded, skipping"), *MapPath);
@@ -131,12 +122,10 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
             TEXT("McpSafeLoadMap: Cleaning up current world '%s' before loading '%s'"),
             *CurrentWorld->GetName(), *MapPath);
 
-#if MCP_HAS_ASSET_EDITOR_SUBSYSTEM
         if (UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
         {
             AssetEditorSubsystem->CloseAllAssetEditors();
         }
-#endif
 
         FlushRenderingCommands();
         GEditor->ForceGarbageCollection(true);
@@ -148,20 +137,6 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     }
 
     {
-        // Callers pass either a long package name or a .umap filename; the
-        // in-memory check must use the package name or it never matches (a
-        // create_level world left resident slipped past this guard and hit
-        // the EditorServer "World Memory Leaks" fatal).
-        FString NormalizedMapPath;
-        if (!ResolveExpectedMapPackageName(MapPath, NormalizedMapPath))
-        {
-            NormalizedMapPath = MapPath;
-            if (NormalizedMapPath.EndsWith(TEXT(".umap")))
-            {
-                NormalizedMapPath.LeftChopInline(5);
-            }
-        }
-
         UPackage* ExistingPackage = FindObject<UPackage>(nullptr, *NormalizedMapPath);
         if (ExistingPackage)
         {
@@ -172,7 +147,6 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
                     TEXT("McpSafeLoadMap: Target package '%s' already exists in memory; unloading before load"),
                     *NormalizedMapPath);
 
-#if MCP_HAS_PACKAGE_TOOLS
                 TArray<UPackage*> PackagesToUnload;
                 PackagesToUnload.Add(ExistingPackage);
                 // RF_Standalone survives GARBAGE_COLLECTION_KEEPFLAGS; strip it so
@@ -209,12 +183,6 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
                 UE_LOG(LogMcpSafeOperations, Log,
                     TEXT("McpSafeLoadMap: Unloaded pre-existing world package '%s'"),
                     *NormalizedMapPath);
-#else
-                UE_LOG(LogMcpSafeOperations, Error,
-                    TEXT("McpSafeLoadMap: PackageTools unavailable and target package '%s' is already loaded; aborting map load to avoid EditorServer fatal"),
-                    *NormalizedMapPath);
-                return false;
-#endif
             }
         }
     }
@@ -222,10 +190,6 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeLoadMap: Loading map '%s'"), *MapPath);
     bool bLoaded = FEditorFileUtils::LoadMap(*MapPath);
 
-    FString ExpectedPackageName;
-    const bool bResolvedExpectedPackage = ResolveExpectedMapPackageName(
-        MapPath,
-        ExpectedPackageName);
     UWorld* LoadedWorld = GEditor->GetEditorWorldContext().World();
     const FString LoadedWorldPackageName = LoadedWorld
         ? LoadedWorld->GetOutermost()->GetName()
@@ -276,6 +240,5 @@ inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)
     return bLoadedRequestedWorld;
 }
 
-#endif
 
 }

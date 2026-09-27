@@ -39,7 +39,6 @@ namespace McpResourceRead
 
 	FReadBody BuildReadBody(const FString& Uri, FMcpResourceRevision Revision);
 
-	FString BuildReadBodyText(const FString& Uri, FMcpResourceRevision Revision);
 
 	TSharedPtr<FJsonValue> ListEntry(const FMcpResourceDefinition& Def);
 

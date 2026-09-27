@@ -5,7 +5,6 @@
 #include "Foundation/McpReadinessState.h"
 #include "Foundation/McpTelemetryRegistry.h"
 #include "Dom/JsonValue.h"
-#include "Misc/EngineVersion.h"
 
 namespace
 {
@@ -27,22 +26,6 @@ namespace
 
 namespace McpResourceBridge
 {
-	TSharedRef<FJsonObject> BuildEngineVersionData()
-	{
-		const FEngineVersion& Version = FEngineVersion::Current();
-		const int32 Major = static_cast<int32>(Version.GetMajor());
-		const int32 Minor = static_cast<int32>(Version.GetMinor());
-		const int32 Patch = static_cast<int32>(Version.GetPatch());
-		auto Data = MakeShared<FJsonObject>();
-		Data->SetStringField(TEXT("version"),
-			FString::Printf(TEXT("%d.%d.%d"), Major, Minor, Patch));
-		Data->SetNumberField(TEXT("major"), Major);
-		Data->SetNumberField(TEXT("minor"), Minor);
-		Data->SetNumberField(TEXT("patch"), Patch);
-		Data->SetBoolField(TEXT("isUE56OrAbove"), Major > 5 || (Major == 5 && Minor >= 6));
-		return Data;
-	}
-
 	TSharedRef<FJsonObject> BuildAutomationBridgeData()
 	{
 		const UMcpAutomationBridgeSettings* Settings = GetDefault<UMcpAutomationBridgeSettings>();
@@ -79,7 +62,7 @@ namespace McpResourceBridge
 		Data->SetField(TEXT("lastHandshakeFailure"), MakeShared<FJsonValueNull>());
 		Data->SetField(TEXT("lastError"), MakeShared<FJsonValueNull>());
 		Data->SetBoolField(TEXT("listening"), Readiness.IsTransportReady());
-		// NF-6: PreviousSummaryJson() is an EMPTY object when no previous record
+		// PreviousSummaryJson() is an EMPTY object when no previous record
 		// exists (store returns MakeShared<FJsonObject>() when !bHasPrevious). The
 		// TS reader emits null for a missing previous FILE, so native must emit
 		// JSON null for the same semantic state. CurrentSummaryJson() is NEVER

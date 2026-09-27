@@ -1,40 +1,14 @@
 #include "MCP/Execute/McpNativeGatewayCanonicalRecords.h"
-#include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 // McpNativeGatewayCanonicalRecords.cpp — see header for the resolution contract.
 
 #include "MCP/Gateway/McpNativeGatewayCapabilityStore.h"
 #include "MCP/Generated/McpGeneratedCapabilityShards.h"
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
-#include "Serialization/JsonReader.h"
-#include "Serialization/JsonSerializer.h"
 
 FString McpLegacyCapabilityKey(const FString& Tool, const FString& Action)
 {
 	return Tool + TEXT("\t") + Action;
-}
-
-namespace
-{
-FString ConcatenateShardChunks(const McpGeneratedCapabilityShards::FMcpCapabilityShard& Shard)
-{
-	FString Payload;
-	for (int32 Index = 0; Index < Shard.ChunkCount; ++Index)
-	{
-		Payload.Append(Shard.Chunks[Index]);
-	}
-	return Payload;
-}
-
-const TSharedPtr<FJsonObject>* ReadObjectField(const TSharedPtr<FJsonObject>& Owner, const TCHAR* Field)
-{
-	const TSharedPtr<FJsonObject>* Nested = nullptr;
-	if (Owner.IsValid() && Owner->TryGetObjectField(Field, Nested) && Nested)
-	{
-		return Nested;
-	}
-	return nullptr;
-}
 }
 
 FMcpCanonicalRecordIndex FMcpCanonicalRecordIndex::Build()
@@ -54,87 +28,21 @@ FMcpCanonicalRecordIndex FMcpCanonicalRecordIndex::Build()
 	for (const FMcpCapabilityRecord& Record : Store.GetRecords())
 	{
 		Index.RecordsById.Add(Record.Id, &Record);
-	}
-
-	// The store keeps schemas/routing but not aliases/legacyIds, so this pass
-	// projects exactly those two fields out of the same generated shards.
-	for (int32 ShardIndex = 0; ShardIndex < McpGeneratedCapabilityShards::Num(); ++ShardIndex)
-	{
-		const McpGeneratedCapabilityShards::FMcpCapabilityShard& Shard =
-			McpGeneratedCapabilityShards::At(ShardIndex);
-		const FString Payload = ConcatenateShardChunks(Shard);
-
-		TArray<TSharedPtr<FJsonValue>> Entries;
-		TSharedRef<TJsonReader<TCHAR>> Reader = TJsonReaderFactory<TCHAR>::Create(Payload);
-		if (!FJsonSerializer::Deserialize(Reader, Entries))
+		for (const FMcpLegacyPair& Pair : Record.LegacyPairs)
 		{
-			Index.RecordsById.Reset();
-			Index.LegacyToCapabilityId.Reset();
-			Index.CapabilityIdToLegacyAction.Reset();
-			Index.AliasToCapabilityIds.Reset();
-			Index.LoadError = FString::Printf(
-				TEXT("shard '%s' could not be parsed for alias/legacy resolution"), Shard.ParentTool);
-			return Index;
+			Index.LegacyToCapabilityId.Add(McpLegacyCapabilityKey(Pair.Tool, Pair.Action), Record.Id);
 		}
-
-		for (const TSharedPtr<FJsonValue>& Entry : Entries)
+		// The first pair is the advertised primary; a folded family's former
+		// names follow it and must not displace it.
+		if (Record.LegacyPairs.Num() > 0)
 		{
-			const TSharedPtr<FJsonObject>* EntryObject = nullptr;
-			if (!Entry.IsValid() || !Entry->TryGetObject(EntryObject) || !EntryObject)
+			Index.CapabilityIdToLegacyAction.Add(Record.Id, Record.LegacyPairs[0].Action);
+		}
+		for (const FString& Alias : Record.Aliases)
+		{
+			if (!Alias.IsEmpty())
 			{
-				continue;
-			}
-			const TSharedPtr<FJsonObject>* RecordObject = ReadObjectField(*EntryObject, TEXT("record"));
-			if (!RecordObject)
-			{
-				continue;
-			}
-
-			FString CapabilityId;
-			if (!(*RecordObject)->TryGetStringField(TEXT("id"), CapabilityId) || CapabilityId.IsEmpty())
-			{
-				continue;
-			}
-
-			const TArray<TSharedPtr<FJsonValue>>* LegacyIds = nullptr;
-			if ((*RecordObject)->TryGetArrayField(TEXT("legacyIds"), LegacyIds) && LegacyIds)
-			{
-				for (const TSharedPtr<FJsonValue>& LegacyValue : *LegacyIds)
-				{
-					const TSharedPtr<FJsonObject>* LegacyObject = nullptr;
-					if (!LegacyValue.IsValid() || !LegacyValue->TryGetObject(LegacyObject) || !LegacyObject)
-					{
-						continue;
-					}
-					FString LegacyTool;
-					FString LegacyAction;
-					if ((*LegacyObject)->TryGetStringField(TEXT("tool"), LegacyTool) &&
-						(*LegacyObject)->TryGetStringField(TEXT("action"), LegacyAction) &&
-						!LegacyTool.IsEmpty() && !LegacyAction.IsEmpty())
-					{
-						Index.LegacyToCapabilityId.Add(
-							McpLegacyCapabilityKey(LegacyTool, LegacyAction), CapabilityId);
-						// The first pair is the advertised primary; a folded family's
-						// former names follow it and must not displace it.
-						if (!Index.CapabilityIdToLegacyAction.Contains(CapabilityId))
-						{
-							Index.CapabilityIdToLegacyAction.Add(CapabilityId, LegacyAction);
-						}
-					}
-				}
-			}
-
-			const TArray<TSharedPtr<FJsonValue>>* Aliases = nullptr;
-			if ((*RecordObject)->TryGetArrayField(TEXT("aliases"), Aliases) && Aliases)
-			{
-				for (const TSharedPtr<FJsonValue>& AliasValue : *Aliases)
-				{
-					FString Alias;
-					if (AliasValue.IsValid() && McpHandlerUtils::TryGetJsonValueString(AliasValue, Alias) && !Alias.IsEmpty())
-					{
-						Index.AliasToCapabilityIds.FindOrAdd(Alias).AddUnique(CapabilityId);
-					}
-				}
+				Index.AliasToCapabilityIds.FindOrAdd(Alias).AddUnique(Record.Id);
 			}
 		}
 	}
@@ -218,9 +126,4 @@ TArray<FString> FMcpCanonicalRecordIndex::GetCapabilityIds() const
 	RecordsById.GetKeys(Ids);
 	Ids.Sort();
 	return Ids;
-}
-
-bool McpCanonicalRecordsAvailable()
-{
-	return FMcpCanonicalRecordIndex::Get().IsLoaded();
 }

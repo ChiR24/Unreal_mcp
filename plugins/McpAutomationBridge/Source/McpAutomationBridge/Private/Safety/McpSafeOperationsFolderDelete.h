@@ -6,11 +6,10 @@
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 
-inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
+inline bool McpSafeDeleteFolder(const FString& FolderPath)
 {
-    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Starting deletion of '%s' (force=%d)"), *FolderPath, bForce);
+    UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Starting deletion of '%s'"), *FolderPath);
 
     FAssetRegistryModule& AssetRegistryModule =
         FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -26,7 +25,8 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
     if (AllAssets.Num() == 0)
     {
         UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: No assets found in '%s'"), *FolderPath);
-        return FolderDeleteInternal::DeleteEmptyFolder(FolderPath, AssetRegistry);
+        FolderDeleteInternal::RemoveRegistryPathsAndDirectory(FolderPath, AssetRegistry);
+        return FolderDeleteInternal::VerifyFolderDeleted(FolderPath, AssetRegistry);
     }
 
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Found %d assets in '%s'"), AllAssets.Num(), *FolderPath);
@@ -51,7 +51,7 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
         TEXT("McpSafeDeleteFolder: Partitioned: %d risky special-delete, %d safe, %d world"),
         RiskyAnimationAssets.Num(), SafeAssets.Num(), WorldAssets.Num());
 
-    if (!FolderDeleteInternal::DeleteRiskySpecialAssets(FolderPath, RiskyAnimationAssets, bForce))
+    if (!FolderDeleteInternal::DeleteRiskySpecialAssets(FolderPath, RiskyAnimationAssets))
     {
         return false;
     }
@@ -77,12 +77,7 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
             DeletedWorlds, WorldAssets.Num());
     }
 
-    FlushRenderingCommands();
-    if (GEditor)
-    {
-        GEditor->ForceGarbageCollection(true);
-    }
-    FlushRenderingCommands();
+    McpSafePostDeleteGC();
 
     const FString ParentFolderPath = FPaths::GetPath(FolderPath);
     if (!ParentFolderPath.IsEmpty())
@@ -94,6 +89,5 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath, bool bForce = true)
     return FolderDeleteInternal::VerifyFolderDeleted(FolderPath, AssetRegistry);
 }
 
-#endif
 
 }

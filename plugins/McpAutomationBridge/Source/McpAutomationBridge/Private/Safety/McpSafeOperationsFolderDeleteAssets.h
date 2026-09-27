@@ -8,44 +8,8 @@
 namespace McpSafeOperations
 {
 
-#if WITH_EDITOR
 namespace FolderDeleteInternal
 {
-
-inline bool DeleteEmptyFolder(const FString& FolderPath, IAssetRegistry& AssetRegistry)
-{
-    TArray<FString> EmptySubPaths;
-    AssetRegistry.GetSubPaths(FolderPath, EmptySubPaths, true);
-    EmptySubPaths.Sort([](const FString& A, const FString& B)
-    {
-        return A.Len() > B.Len();
-    });
-    for (const FString& SubPath : EmptySubPaths)
-    {
-        AssetRegistry.RemovePath(SubPath);
-    }
-    AssetRegistry.RemovePath(FolderPath);
-
-    FString EmptyLocalPath;
-    bool bDirectoryExistsOnDisk = false;
-    if (FPackageName::TryConvertLongPackageNameToFilename(FolderPath, EmptyLocalPath))
-    {
-        IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
-        if (PlatformFile.DirectoryExists(*EmptyLocalPath))
-        {
-            PlatformFile.DeleteDirectoryRecursively(*EmptyLocalPath);
-        }
-        bDirectoryExistsOnDisk = PlatformFile.DirectoryExists(*EmptyLocalPath);
-    }
-
-    TArray<FString> RemainingEmptySubPaths;
-    AssetRegistry.GetSubPaths(FolderPath, RemainingEmptySubPaths, true);
-    const bool bDeleted = RemainingEmptySubPaths.Num() == 0 && !bDirectoryExistsOnDisk;
-    UE_LOG(LogMcpSafeOperations, Log,
-        TEXT("McpSafeDeleteFolder: Empty folder deletion result for '%s' (remainingSubPaths=%d existsOnDisk=%d)"),
-        *FolderPath, RemainingEmptySubPaths.Num(), bDirectoryExistsOnDisk ? 1 : 0);
-    return bDeleted;
-}
 
 inline void PartitionWorldAssets(
     const TArray<FAssetData>& AllAssets,
@@ -114,12 +78,7 @@ inline bool SwitchAwayFromFolderWorldsIfNeeded(const FString& FolderPath, const 
         return false;
     }
 
-    FlushRenderingCommands();
-    if (GEditor)
-    {
-        GEditor->ForceGarbageCollection(true);
-    }
-    FlushRenderingCommands();
+    McpSafePostDeleteGC();
 
     UWorld* CurrentEditorWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     const FString SafeWorldPackage = CurrentEditorWorld
@@ -162,8 +121,7 @@ inline void PartitionRiskyAssets(
 
 inline bool DeleteRiskySpecialAssets(
     const FString& FolderPath,
-    const TArray<FAssetData>& RiskyAnimationAssets,
-    bool bForce)
+    const TArray<FAssetData>& RiskyAnimationAssets)
 {
     if (RiskyAnimationAssets.Num() == 0)
     {
@@ -193,7 +151,7 @@ inline bool DeleteRiskySpecialAssets(
         UE_LOG(LogMcpSafeOperations, Warning,
             TEXT("McpSafeDeleteFolder: Mixed animation/rig cluster detected; deleting %d cluster assets in explicit order"),
             OrderedClusterAssets.Num());
-        const int32 OrderedClusterDeleted = DeleteAnimationRigClusterOrdered(OrderedClusterAssets, bForce);
+        const int32 OrderedClusterDeleted = DeleteAnimationRigClusterOrdered(OrderedClusterAssets);
         if (OrderedClusterDeleted == INDEX_NONE)
         {
             UE_LOG(LogMcpSafeOperations, Error,
@@ -211,7 +169,7 @@ inline bool DeleteRiskySpecialAssets(
             TEXT("McpSafeDeleteFolder: Deleting %d remaining risky special-delete assets via ordered engine-owned deletion"),
             TotalRisky);
 
-        const int32 GenericDeleted = DeleteAnimationRigClusterOrdered(GenericRiskyAssets, bForce);
+        const int32 GenericDeleted = DeleteAnimationRigClusterOrdered(GenericRiskyAssets);
         DeletedRisky += GenericDeleted;
 
         UE_LOG(LogMcpSafeOperations, Log,
@@ -266,6 +224,5 @@ inline bool DeleteSafeAssets(const TArray<FAssetData>& SafeAssets)
 }
 
 }
-#endif
 
 }

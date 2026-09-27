@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "HAL/CriticalSection.h"
 
-// Task 46 gate - the SHARED verdict for "one editor mutation lane, on the game
+// Gate - the SHARED verdict for "one editor mutation lane, on the game
 // thread, exactly once".
 //
 // Why this is its own header rather than a helper inside one test file: a gate

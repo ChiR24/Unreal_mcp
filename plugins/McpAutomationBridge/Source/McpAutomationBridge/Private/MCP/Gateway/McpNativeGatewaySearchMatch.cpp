@@ -48,21 +48,7 @@ bool IsFunctionWord(const FString& Word)
 
 bool EndsWith(const FString& Word, const TCHAR* Suffix)
 {
-	int32 SuffixLen = 0;
-	while (Suffix[SuffixLen] != 0) ++SuffixLen;
-	if (Word.Len() < SuffixLen) return false;
-	for (int32 Index = 0; Index < SuffixLen; ++Index)
-	{
-		if (Word[Word.Len() - SuffixLen + Index] != Suffix[Index]) return false;
-	}
-	return true;
-}
-
-FString LeftPart(const FString& Word, int32 Count)
-{
-	FString Out;
-	for (int32 Index = 0; Index < Count && Index < Word.Len(); ++Index) Out.AppendChar(Word[Index]);
-	return Out;
+	return Word.EndsWith(Suffix, ESearchCase::CaseSensitive);
 }
 
 // Regular plurals and the two regular verb inflections, first matching rule
@@ -71,14 +57,14 @@ FString LeftPart(const FString& Word, int32 Count)
 FString FoldInflection(const FString& Word)
 {
 	const int32 Len = Word.Len();
-	if (Len > 4 && EndsWith(Word, TEXT("ies"))) return LeftPart(Word, Len - 3) + FString(TEXT("y"));
+	if (Len > 4 && EndsWith(Word, TEXT("ies"))) return Word.Left(Len - 3) + FString(TEXT("y"));
 	if (Len > 4 && (EndsWith(Word, TEXT("ses")) || EndsWith(Word, TEXT("xes")) || EndsWith(Word, TEXT("ches")) || EndsWith(Word, TEXT("shes"))))
 	{
-		return LeftPart(Word, Len - 2);
+		return Word.Left(Len - 2);
 	}
-	if (Len > 3 && EndsWith(Word, TEXT("s")) && !EndsWith(Word, TEXT("ss"))) return LeftPart(Word, Len - 1);
-	if (Len > 5 && EndsWith(Word, TEXT("ing"))) return LeftPart(Word, Len - 3);
-	if (Len > 4 && EndsWith(Word, TEXT("ed"))) return LeftPart(Word, Len - 2);
+	if (Len > 3 && EndsWith(Word, TEXT("s")) && !EndsWith(Word, TEXT("ss"))) return Word.Left(Len - 1);
+	if (Len > 5 && EndsWith(Word, TEXT("ing"))) return Word.Left(Len - 3);
+	if (Len > 4 && EndsWith(Word, TEXT("ed"))) return Word.Left(Len - 2);
 	return Word;
 }
 
@@ -106,37 +92,25 @@ bool ContainsWord(const FString& Text, const FString& Word)
 	return false;
 }
 
-FString ActionSegment(const FString& Id)
-{
-	int32 Dot = -1;
-	return Id.FindLastChar(TEXT('.'), Dot) ? Id.RightChop(Dot + 1) : Id;
-}
-
 FString JoinWords(const TArray<FString>& Words)
 {
-	FString Out;
-	for (int32 Index = 0; Index < Words.Num(); ++Index)
-	{
-		if (Index > 0) Out.AppendChar(TEXT('_'));
-		Out.Append(Words[Index]);
-	}
-	return Out;
+	return FString::Join(Words, TEXT("_"));
 }
 
 /** The folded action key of an id or alias: "blueprint.list_blueprint_variables" -> "list_blueprint_variable". */
 FString ActionKey(const FString& Id)
 {
 	TArray<FString> Words;
-	McpSearchWords(ActionSegment(Id), Words);
+	McpSearchWords(McpLastDottedSegment(Id), Words);
 	return JoinWords(Words);
 }
 
 bool ActionHasWord(const FMcpCapabilityRecord& Record, const FString& Word)
 {
-	if (ContainsWord(ActionSegment(Record.Id), Word)) return true;
+	if (ContainsWord(McpLastDottedSegment(Record.Id), Word)) return true;
 	for (const FString& Alias : Record.Aliases)
 	{
-		if (ContainsWord(ActionSegment(Alias), Word)) return true;
+		if (ContainsWord(McpLastDottedSegment(Alias), Word)) return true;
 	}
 	return false;
 }
@@ -262,7 +236,7 @@ bool McpSearchScoreRecord(
 	}
 	Score += Matched * McpSearchWordCoverageBonus;
 	TArray<FString> OwnAction;
-	McpSearchWords(ActionSegment(Record.Id), OwnAction);
+	McpSearchWords(McpLastDottedSegment(Record.Id), OwnAction);
 	bool bOwnCovered = OwnAction.Num() >= 2;
 	for (const FString& Word : OwnAction)
 	{
@@ -275,7 +249,7 @@ bool McpSearchScoreRecord(
 	for (const FString& Alias : Record.Aliases)
 	{
 		TArray<FString> AliasWords;
-		McpSearchWords(ActionSegment(Alias), AliasWords);
+		McpSearchWords(McpLastDottedSegment(Alias), AliasWords);
 		bAliasRun = bAliasRun || (AliasWords.Num() >= 2 && QueryRun.Contains(SpacedRun(AliasWords), ESearchCase::CaseSensitive));
 	}
 	if (Matched == ContentWords.Num() && (bOwnCovered || bAliasRun)) Score += McpSearchActionCoveredBonus;

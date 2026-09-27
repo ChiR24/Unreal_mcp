@@ -30,10 +30,7 @@ FMcpNativeTransport::ESessionValidationResult FMcpNativeTransport::ValidateSessi
 			return ESessionValidationResult::Valid;
 		}
 
-		ActiveSessions.Remove(SessionId);
-		SessionRateStates.Remove(SessionId);
-		SessionProtocolVersions.Remove(SessionId);
-		SessionPrincipals.Remove(SessionId);
+		ForgetSessionLocked(SessionId);
 	}
 	CloseSessionConnections(SessionId);
 	OutError = TEXT("Invalid or expired session ID");
@@ -161,7 +158,7 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 	// A blocked GameThread (modal dialog, blocking import) would hold the request until the client
 	// gave up; refuse with a typed code instead (dogfood #79).
 	const double Heartbeat = LastGameThreadHeartbeat.load(); if (Heartbeat > 0.0 && FPlatformTime::Seconds() - Heartbeat > 15.0) { OutRejection = EAutomationQueueRejection::GameThreadStalled; return false; }
-	// Task 45: a native request carries no socket, so the MCP session id is the
+	// A native request carries no socket, so the MCP session id is the
 	// only thing that keeps its queue fairness lane and per-session cap distinct
 	// from every other session's. The rejection is surfaced so the /mcp surface
 	// can answer each refusal with its precise typed code.
@@ -175,7 +172,7 @@ bool FMcpNativeTransport::QueueAutomationRequestForSession(
 	return Rejection == EAutomationQueueRejection::None;
 }
 
-// H8 (NF-4): bounded first-close-wins dedupe set, file-local (compressed form
+// H8: bounded first-close-wins dedupe set, file-local (compressed form
 // keeps this file inside the 250 pure-line ceiling). ClaimSessionClose returns
 // true at most once per session WHILE the id is retained in the 128-close
 // window; a re-close of an EVICTED id double-counts by design (documented
@@ -198,12 +195,6 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 	// idempotent. The record is memory-only here; the disk write is deferred.
 	if (ClaimSessionClose(SessionId)) { FMcpDiagnosticsSnapshot::Get().RecordSessionClosed();
 	FMcpDiagnosticsSnapshot::PersistCurrentAsync(); }
-
-	// Task 37: the single close funnel is where DELETE, init-eviction, failed
-	// init, and the inactivity-timeout close converge, so draining the session's
-	// MCP primitive state (subscriptions + coalescer pending) here covers all of
-	// those teardown moments with one seam.
-	ReleaseSessionPrimitives(SessionId);
 
 	{
 		FScopeLock Lock(&LogEventSubscriptionsMutex);
@@ -256,46 +247,17 @@ void FMcpNativeTransport::CloseSessionConnections(const FString& SessionId)
 		Subsystem->CancelAutomationRequests(RequestIds);
 	}
 
-	ISocketSubsystem* SocketSub =
-		ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM);
 	for (const TPair<FString, TSharedPtr<FSSEConnection>>& Entry :
 		PendingCallsToClose)
 	{
 		const TSharedPtr<FSSEConnection>& Connection = Entry.Value;
 		Connection->bMarkedForRemoval.store(true);
 		FScopeLock WriteLock(&Connection->WriteMutex);
-		if (Connection->Socket)
-		{
-			Connection->Socket->Close();
-			if (SocketSub)
-			{
-				SocketSub->DestroySocket(Connection->Socket);
-			}
-			Connection->Socket = nullptr;
-		}
+		CloseSocket(Connection->Socket);
 	}
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-void FMcpNativeTransport::OnToolsListChanged()
-{
-	// The public tools/list is permanently the single static 'unreal' gateway
-	// tool, so a dynamic-tool visibility change never alters its shape; the
-	// notifications/tools/list_changed broadcast is suppressed unconditionally.
-	UE_LOG(LogMcpNativeTransport, Verbose,
-		TEXT("Tool list changed — suppressed (public surface is a static single tool)"));
-}
-
-void FMcpNativeTransport::BroadcastToolsListChanged()
-{
-	const int32 SentCount = BroadcastNotification(
-		TEXT("notifications/tools/list_changed"));
-
-	UE_LOG(LogMcpNativeTransport, Log,
-		TEXT("Broadcast list_changed to %d notification stream(s)"),
-		SentCount);
-}
 
 int32 FMcpNativeTransport::GetActiveSessionCount() const
 {

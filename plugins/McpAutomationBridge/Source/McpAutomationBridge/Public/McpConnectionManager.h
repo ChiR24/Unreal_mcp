@@ -37,13 +37,6 @@ public:
 	void Start();
 	void Stop();
 
-	bool IsConnected() const;
-	bool IsReconnectPending() const { return TimeUntilReconnect > 0.0f; }
-
-    bool SendRawMessage(const FString& Message);
-    bool SendRawMessageToSocket(
-        TSharedPtr<FMcpBridgeWebSocket> TargetSocket,
-        const FString& Message);
     bool SendRawMessageToLogSubscribers(const FString& Message);
     void SendAutomationResponse(TSharedPtr<FMcpBridgeWebSocket> TargetSocket, const FString& RequestId, bool bSuccess, const FString& Message, const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode);
 
@@ -93,14 +86,13 @@ private:
 
 	void HandleConnected(TSharedPtr<FMcpBridgeWebSocket> Socket);
 	void HandleClientConnected(TSharedPtr<FMcpBridgeWebSocket> ClientSocket);
-	void HandleConnectionError(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Error);
+	void HandleConnectionError(const FString& Error, TWeakPtr<FMcpBridgeWebSocket> WeakSocket);
 	void HandleServerConnectionError(const FString& Error);
 	void HandleClosed(TSharedPtr<FMcpBridgeWebSocket> Socket, int32 StatusCode, const FString& Reason, bool bWasClean);
 	void HandleMessage(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& Message);
 	void HandleCancelRequest(TSharedPtr<FMcpBridgeWebSocket> Socket, const FString& RequestId);
 	void HandleHeartbeat(TSharedPtr<FMcpBridgeWebSocket> Socket);
 
-	void EmitAutomationTelemetrySummaryIfNeeded(double NowSeconds);
 	bool UpdateRateLimit(FMcpBridgeWebSocket* SocketPtr, bool bIncrementMessage, bool bIncrementAutomation, FString& OutReason);
 
 	// Resolve the socket's capability principal from the presented bridge_hello
@@ -115,6 +107,10 @@ private:
 	// Drop the socket's principal. Takes AuthSocketsMutex itself so every teardown
 	// site keeps its AuthenticatedSockets scope to a single guarded statement.
 	void ForgetSocketPrincipal(FMcpBridgeWebSocket* SocketPtr);
+	// Drops one socket's auth, principal, log subscription, rate limit and pending routes, then the socket itself.
+	void ForgetSocket(const TSharedPtr<FMcpBridgeWebSocket>& Socket);
+	// Closes every socket and drops all per-socket state.
+	void ForgetAllSockets();
 
 	// Pre-queue security gate for one automation_request. Returns false when the
 	// request was refused and a typed automation_response has already been sent,
@@ -142,13 +138,11 @@ private:
 	// Configuration
 	FString EnvListenHost;
 	FString EnvListenPorts;
-	FString EndpointUrl;
 	FString CapabilityToken;
 	FString ActiveSessionId;
 	FString TlsCertificatePath;
 	FString TlsPrivateKeyPath;
 
-	int32 ClientPort = 0;
 	float AutoReconnectDelaySeconds = 5.0f;
 	float HeartbeatTimeoutSeconds = 0.0f;
 
@@ -168,23 +162,6 @@ private:
 	int32 MaxMessagesPerMinute = 0;
 	int32 MaxAutomationRequestsPerMinute = 0;
 
-	// Telemetry
-	struct FAutomationRequestTelemetry
-	{
-		FString Action;
-		double StartTimeSeconds = 0.0;
-	};
-
-	struct FAutomationActionStats
-	{
-		int32 SuccessCount = 0;
-		int32 FailureCount = 0;
-		double TotalSuccessDurationSeconds = 0.0;
-		double TotalFailureDurationSeconds = 0.0;
-		double LastDurationSeconds = 0.0;
-		double LastUpdatedSeconds = 0.0;
-	};
-
 	struct FSocketRateState
 	{
 		double WindowStartSeconds = 0.0;
@@ -192,11 +169,9 @@ private:
 		int32 AutomationRequestCount = 0;
 	};
 
-	TMap<FString, FAutomationRequestTelemetry> ActiveRequestTelemetry;
-	TMap<FString, FAutomationActionStats> AutomationActionTelemetry;
+	/** In-flight request id -> lower-cased action, for the response log line. */
+	TMap<FString, FString> ActiveRequestActions;
 	TMap<FMcpBridgeWebSocket*, FSocketRateState> SocketRateLimits;
-	double TelemetrySummaryIntervalSeconds = 120.0;
-	double LastTelemetrySummaryLogSeconds = 0.0;
 
   mutable FCriticalSection PendingRequestsMutex;
   mutable FCriticalSection RateLimitMutex;
