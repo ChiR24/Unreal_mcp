@@ -22,6 +22,7 @@ import { buildRecord, P, TAKE_PLUGINS } from './helpers.js';
 
 const F = 'take';
 const D = 'take_recorder';
+const REDUCE_KEYS = { type: 'boolean', description: 'Whether to reduce keyframes.' };
 
 export const TAKE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
@@ -38,7 +39,9 @@ export const TAKE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Configure Take Recorder sources (actors, components) for recording.',
     whenToUse: ['Recording sources must be specified before starting a take.'],
     whenNotToUse: ['Sources are already configured.'],
-    inputProps: { sourceActors: P.actorNames, actorNames: P.actorNames, actorName: P.actorName, sourceClasses: P.sourceClasses, clearSources: P.clearSources, takePresetPath: P.takePresetPath, recordType: P.recordType, actors: A.actors, recordParentHierarchy: A.recordParentHierarchy, reduceKeys: { type: 'boolean', description: 'Whether to reduce keyframes.' }, recordingSequencePath: P.recordingSequencePath, takeSequencePath: P.takeSequencePath, sequencePath: P.sequencePath },
+    // ConfigurePanel (TakeRecorderRuntime.cpp) applies the sequence or take
+    // preset, frameRate and recordInto before the sources are configured.
+    inputProps: { sourceActors: P.actorNames, actorNames: P.actorNames, actorName: P.actorName, sourceClasses: P.sourceClasses, clearSources: P.clearSources, takePresetPath: P.takePresetPath, recordType: P.recordType, actors: A.actors, recordParentHierarchy: A.recordParentHierarchy, reduceKeys: REDUCE_KEYS, recordingSequencePath: P.recordingSequencePath, takeSequencePath: P.takeSequencePath, sequencePath: P.sequencePath, frameRate: P.frameRate, recordInto: P.recordInto },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: TAKE_PLUGINS,
     exampleInput: { action: 'configure_take_sources', sourceActors: ['Actor1', 'Actor2'] },
   }),
@@ -47,7 +50,9 @@ export const TAKE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Start a Take Recorder recording into a Level Sequence. Recording runs until stop_recording. No interrupt/cancel available.',
     whenToUse: ['A take recording must be started.'],
     whenNotToUse: ['A recording is already in progress (ALREADY_RECORDING).'],
-    inputProps: { sequencePath: P.sequencePath, recordingSequencePath: P.recordingSequencePath, takeSequencePath: P.takeSequencePath, recordInto: P.recordInto, frameRate: P.frameRate, duration: { type: 'number', description: 'Optional max recording duration in seconds.' } },
+    // HandleStartTakeRecording (TakeRecorderRecording.cpp) configures sources
+    // inline when any source field is sent, and stops the take after duration.
+    inputProps: { sequencePath: P.sequencePath, recordingSequencePath: P.recordingSequencePath, takeSequencePath: P.takeSequencePath, recordInto: P.recordInto, frameRate: P.frameRate, duration: { type: 'number', minimum: 0, maximum: 86400, description: 'Seconds (above 0) to record after the countdown before the take stops by itself.' }, sourceActors: P.actorNames, actorNames: P.actorNames, actorName: P.actorName, sourceClasses: P.sourceClasses, clearSources: P.clearSources, recordType: P.recordType, recordParentHierarchy: A.recordParentHierarchy, reduceKeys: REDUCE_KEYS },
     effect: 'write',
     behavior: { longRunning: true, safeToRetry: false },
     latency: 'long-running', resources: 'medium', plugins: TAKE_PLUGINS,
@@ -71,7 +76,7 @@ export const TAKE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Configure which tracks are recorded for each Take Recorder source.',
     whenToUse: ['Specific tracks (transform, animation, etc.) must be recorded per source.'],
     whenNotToUse: ['Default track recording is sufficient.'],
-    inputProps: { sourceActors: P.actorNames, actorName: P.actorName, tracks: P.recordedTracks, reduceKeys: { type: 'boolean', description: 'Whether to reduce keyframes.' }, sequencePath: P.sequencePath, properties: A.properties, trackNames: A.trackNames, actors: A.actors, enabled: A.enabled, disableOthers: A.disableOthers, recordParentHierarchy: A.recordParentHierarchy, recordType: P.recordType },
+    inputProps: { sourceActors: P.actorNames, actorNames: P.actorNames, actorName: P.actorName, tracks: P.recordedTracks, reduceKeys: REDUCE_KEYS, sequencePath: P.sequencePath, frameRate: P.frameRate, recordInto: P.recordInto, properties: A.properties, trackNames: A.trackNames, actors: A.actors, enabled: A.enabled, disableOthers: A.disableOthers, recordParentHierarchy: A.recordParentHierarchy, recordType: P.recordType },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: TAKE_PLUGINS,
     exampleInput: { action: 'configure_recorded_tracks', sourceActors: ['Actor1'], tracks: ['transform', 'animation'] },
   }),

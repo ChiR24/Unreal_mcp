@@ -29,13 +29,38 @@ import { buildRecord, MRQ_PLUGINS, P } from './helpers.js';
 const F = 'mrq';
 const D = 'movie_render';
 
+/** ValidateOutputSettingsPayload + ApplyOutputSettings (Output*.cpp), read by create_render_job and configure_output_settings. */
+const OUTPUT_SETTINGS = {
+  outputDirectory: P.outputDirectory,
+  fileNameFormat: P.fileNameFormat, resolution: P.mrqResolution,
+  width: P.width, height: P.height, frameRate: P.frameRate,
+  startFrame: P.startFrame,
+  endFrame: { type: 'integer', minimum: 1, description: 'Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE.' },
+};
+
+/** ResolveJob (State.cpp) selects the job by jobId or renderJobName. */
+const JOB_SELECTOR = ['jobId', 'renderJobName'];
+
+/** Output.cpp:187-189 reads only these two members of settings. */
+const OUTPUT_ONLY_SETTINGS = {
+  type: 'object',
+  description: 'Nested output settings.',
+  additionalProperties: false,
+  properties: {
+    handleFrameCount: P.mrqSettings.properties.handleFrameCount,
+    zeroPadFrameNumbers: P.mrqSettings.properties.zeroPadFrameNumbers,
+  },
+};
+
 export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.mrq.create_render_job', action: 'create_render_job', family: F, domain: D,
     summary: 'Create a new Movie Render Queue job for a sequence.',
     whenToUse: ['A new render job must be created for a cinematic sequence.'],
     whenNotToUse: ['A render job already exists for the sequence.'],
-    inputProps: { sequencePath: P.sequencePath, mapPath: P.mapPath, renderJobName: P.renderJobName, jobName: A.jobName, outputDirectory: P.outputDirectory },
+    // HandleCreateRenderJob (JobCreation.cpp) validates and applies the same
+    // output settings configure_output_settings takes.
+    inputProps: { sequencePath: P.sequencePath, mapPath: P.mapPath, renderJobName: P.renderJobName, jobName: A.jobName, ...OUTPUT_SETTINGS, settings: OUTPUT_ONLY_SETTINGS },
     required: ['sequencePath'],
     outputProps: { jobId: P.jobId },
     outputRequired: ['jobId'],
@@ -49,15 +74,11 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Render output settings must be specified.'],
     whenNotToUse: ['The job does not exist.'],
     inputProps: {
-      jobId: P.jobId, outputDirectory: P.outputDirectory,
-      fileNameFormat: P.fileNameFormat, resolution: P.mrqResolution,
-      width: P.width, height: P.height, frameRate: P.frameRate,
-      startFrame: P.startFrame,
-      endFrame: { type: 'integer', minimum: 1, description: 'Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE.' },
+      jobId: P.jobId, ...OUTPUT_SETTINGS,
       settings: P.mrqSettings,
       renderJobName: P.renderJobName,
     },
-    required: ['jobId'],
+    requiredOneOf: JOB_SELECTOR,
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
     exampleInput: { action: 'configure_output_settings', jobId: 'render-job-1', outputDirectory: '/tmp/renders', resolution: '1920x1080' },
   }),
@@ -67,11 +88,11 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['An additional render pass must be added to the job.'],
     whenNotToUse: ['The pass is not supported by the MRQ configuration.'],
     inputProps: {
-      jobId: P.jobId, renderPass: P.renderPass,
+      jobId: P.jobId, renderJobName: P.renderJobName, renderPass: P.renderPass,
       renderPasses: P.renderPasses, materialPath: P.materialPath,
       includeTranslucentObjects: P.includeTranslucentObjects,
     },
-    required: ['jobId'],
+    requiredOneOf: JOB_SELECTOR,
     effect: 'write', latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
     exampleInput: { action: 'add_render_pass', jobId: 'render-job-1', renderPass: 'beauty' },
   }),
@@ -81,7 +102,7 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['Anti-aliasing settings must be specified for render quality.'],
     whenNotToUse: ['Default anti-aliasing is acceptable.'],
     inputProps: { jobId: P.jobId, renderJobName: P.renderJobName, antiAliasingMethod: P.antiAliasingMethod, method: A.method, spatialSampleCount: P.sampleCount, temporalSampleCount: P.sampleCount, settings: P.mrqSettings },
-    required: ['jobId'],
+    requiredOneOf: JOB_SELECTOR,
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
     exampleInput: { action: 'configure_anti_aliasing', jobId: 'render-job-1', antiAliasingMethod: 'TSAA', spatialSampleCount: 4, temporalSampleCount: 4 },
   }),
@@ -90,8 +111,9 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set console variables for an MRQ job render.',
     whenToUse: ['CVars must be set for render-specific behavior.'],
     whenNotToUse: ['Default CVars are acceptable.'],
-    inputProps: { jobId: P.jobId, consoleVariables: { type: 'object', description: 'CVar name-value pairs.', additionalProperties: true, 'x-unreal-reflection-boundary': true } },
-    required: ['jobId', 'consoleVariables'],
+    inputProps: { jobId: P.jobId, renderJobName: P.renderJobName, consoleVariables: { type: 'object', description: 'CVar name-value pairs.', additionalProperties: true, 'x-unreal-reflection-boundary': true } },
+    required: ['consoleVariables'],
+    requiredOneOf: JOB_SELECTOR,
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
     exampleInput: { action: 'configure_console_variables', jobId: 'render-job-1', consoleVariables: { 'r.AntiAliasingMethod': 2 } },
   }),
@@ -100,8 +122,8 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Configure burn-in overlay settings for an MRQ job.',
     whenToUse: ['Burn-in overlays must be composited onto rendered frames.'],
     whenNotToUse: ['Burn-ins are not needed for the render.'],
-    inputProps: { jobId: P.jobId, burnIn: { type: 'object', description: 'Burn-in settings.', additionalProperties: false, properties: { enabled: { type: 'boolean', description: 'Whether burn-ins are enabled.' }, compositeOntoFinalImage: { type: 'boolean', description: 'Whether to composite onto the final image.' }, classPath: P.burnInClassPath }, required: ['enabled'] } },
-    required: ['jobId'],
+    inputProps: { jobId: P.jobId, renderJobName: P.renderJobName, burnIn: { type: 'object', description: 'Burn-in settings.', additionalProperties: false, properties: { enabled: { type: 'boolean', description: 'Whether burn-ins are enabled.' }, compositeOntoFinalImage: { type: 'boolean', description: 'Whether to composite onto the final image.' }, classPath: P.burnInClassPath }, required: ['enabled'] } },
+    requiredOneOf: JOB_SELECTOR,
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
     exampleInput: { action: 'configure_burn_ins', jobId: 'render-job-1', burnIn: { enabled: true, compositeOntoFinalImage: true, classPath: '/Script/MovieRenderPipelineCore.MoviePipelineBurnInWidget' } },
   }),
@@ -111,7 +133,7 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A job must be added to the render queue for later execution.'],
     whenNotToUse: ['The render should start immediately. Use start_render instead.'],
     inputProps: { jobId: P.jobId, renderJobId: A.renderJobId, renderJobName: P.renderJobName, onlyJob: { type: 'boolean', description: 'Whether to queue only this job.' }, useCurrentLevel: P.useCurrentLevel },
-    required: ['jobId'],
+    requiredOneOf: JOB_SELECTOR,
     outputProps: { message: P.message },
     outputRequired: [],
     effect: 'write', latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
@@ -122,8 +144,11 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Start MRQ render execution. Blocks until completion, fatal error, or timeout. Supports advisory cancellation. Default timeout 300000ms, max 3600000ms, transport grace 35000ms.',
     whenToUse: ['The MRQ queue must be executed to produce rendered output files.'],
     whenNotToUse: ['A render is already in progress (MRQ_ALREADY_RENDERING).'],
-    inputProps: { jobId: P.jobId, executorClass: P.executorClass, useCurrentLevel: P.useCurrentLevel },
-    required: ['jobId'],
+    // ExecuteStartRender (Execution.cpp) selects the job by jobId or
+    // renderJobName, honours onlyJob, and takes a render deadline no longer
+    // than the 300000ms the transport waits for (it waits 335000ms in all).
+    inputProps: { jobId: P.jobId, renderJobName: P.renderJobName, onlyJob: { type: 'boolean', description: 'Render only this job; every other queued job is disabled for this render.' }, timeoutMs: { type: 'integer', minimum: 1, maximum: 300000, description: 'Render deadline in milliseconds (default and maximum 300000).' }, executorClass: P.executorClass, useCurrentLevel: P.useCurrentLevel },
+    requiredOneOf: JOB_SELECTOR,
     outputProps: {
       outputDirectory: P.outputDirectory,
       renderContinuesAsynchronously: { type: 'boolean', description: 'Whether render continued asynchronously after timeout.' },

@@ -15942,7 +15942,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "duration": {
           "type": "number",
-          "description": "Optional max recording duration in seconds."
+          "minimum": 0,
+          "maximum": 86400,
+          "description": "Seconds (above 0) to record after the countdown before the take stops by itself."
         },
         "durationFrames": {
           "type": "integer",
@@ -16389,7 +16391,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "replayName": {
           "type": "string",
-          "description": "Name for the demo replay."
+          "description": "Default replay name for recordings that do not name one."
         },
         "resolution": {
           "type": [
@@ -16505,35 +16507,55 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which configure cinematic variant to run."
         },
         "settings": {
-          "type": "object",
-          "description": "Nested MRQ settings.",
-          "additionalProperties": false,
-          "properties": {
-            "handleFrameCount": {
-              "type": "integer",
-              "description": "Handle frame count clamped to >= 0."
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Nested MRQ settings.",
+              "additionalProperties": false,
+              "properties": {
+                "handleFrameCount": {
+                  "type": "integer",
+                  "description": "Handle frame count clamped to >= 0."
+                },
+                "zeroPadFrameNumbers": {
+                  "type": "integer",
+                  "description": "Zero-padding width for frame numbers."
+                },
+                "spatialSampleCount": {
+                  "type": "integer",
+                  "description": "Spatial sample count per render sample pass."
+                },
+                "temporalSampleCount": {
+                  "type": "integer",
+                  "description": "Temporal sample count per render sample pass."
+                },
+                "antiAliasingMethod": {
+                  "type": "string",
+                  "description": "Anti-aliasing method name, such as TSAA or FXAA."
+                },
+                "method": {
+                  "type": "string",
+                  "description": "Anti-aliasing method alias."
+                }
+              }
             },
-            "zeroPadFrameNumbers": {
-              "type": "integer",
-              "description": "Zero-padding width for frame numbers."
-            },
-            "spatialSampleCount": {
-              "type": "integer",
-              "description": "Spatial sample count per render sample pass."
-            },
-            "temporalSampleCount": {
-              "type": "integer",
-              "description": "Temporal sample count per render sample pass."
-            },
-            "antiAliasingMethod": {
-              "type": "string",
-              "description": "Anti-aliasing method name, such as TSAA or FXAA."
-            },
-            "method": {
-              "type": "string",
-              "description": "Anti-aliasing method alias."
+            {
+              "type": "object",
+              "description": "Nested output settings.",
+              "additionalProperties": false,
+              "properties": {
+                "handleFrameCount": {
+                  "type": "integer",
+                  "description": "Handle frame count clamped to >= 0."
+                },
+                "zeroPadFrameNumbers": {
+                  "type": "integer",
+                  "description": "Zero-padding width for frame numbers."
+                }
+              }
             }
-          }
+          ],
+          "description": "Nested MRQ settings."
         },
         "shotName": {
           "type": "string",
@@ -16631,6 +16653,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "timeSeconds": {
           "type": "number",
           "description": "Seek time in seconds (<=86400)."
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300000,
+          "description": "Render deadline in milliseconds (default and maximum 300000)."
         },
         "to": {
           "type": "number",

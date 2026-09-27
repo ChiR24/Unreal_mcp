@@ -126,7 +126,26 @@ bool ConfigurePanel(
         return false;
     }
     const FString SequencePath = GetRequestedSequencePath(Payload);
-    if (!SequencePath.IsEmpty())
+    const FString PresetPath =
+        McpGetFirstStringField(Payload, {TEXT("takePresetPath")});
+    if (!PresetPath.IsEmpty())
+    {
+        // A preset seeds a new take from its own template sequence, so it
+        // cannot be combined with a sequence to record into or from.
+        UTakePreset* Preset =
+            Cast<UTakePreset>(UEditorAssetLibrary::LoadAsset(PresetPath));
+        if (!SequencePath.IsEmpty() || bRecordInto || !Preset)
+        {
+            OutErrorCode = Preset ? TEXT("INVALID_ARGUMENT") : TEXT("TAKE_PRESET_NOT_FOUND");
+            OutError = Preset
+                ? FString(TEXT("takePresetPath cannot be combined with a sequence path or recordInto"))
+                : FString::Printf(TEXT("Take preset not found: %s"), *PresetPath);
+            return false;
+        }
+        Panel->SetupForRecording_TakePreset(Preset);
+        ActivePanelConfiguration.Reset();
+    }
+    else if (!SequencePath.IsEmpty())
     {
         ULevelSequence* Sequence =
             Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SequencePath));

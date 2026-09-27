@@ -1,5 +1,6 @@
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceTakeRecorderInternal.h"
 
+#include "Containers/Ticker.h"
 #include "Engine/Engine.h"
 #include "MovieScene.h"
 #include "UObject/StrongObjectPtr.h"
@@ -39,6 +40,24 @@ void CountSources(UTakeRecorderSources* Sources, int32& OutSourceCount, int32& O
         ++OutSourceCount;
         if (Source->bEnabled && Source->IsValid()) ++OutValidSourceCount;
     }
+}
+
+// Stops Recorder once it has recorded for DurationSeconds after its countdown;
+// a recording stopped or replaced sooner is left alone.
+void StopTakeRecordingAfter(UTakeRecorder* Recorder, double DurationSeconds)
+{
+    const TWeakObjectPtr<UTakeRecorder> WeakRecorder(Recorder);
+    const double StopAt = FPlatformTime::Seconds() + Recorder->GetCountdownSeconds() + DurationSeconds;
+    FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+        [WeakRecorder, StopAt](float)
+        {
+            UTakeRecorder* Active = WeakRecorder.Get();
+            if (!Active || UTakeRecorderBlueprintLibrary::GetActiveRecorder() != Active) return false;
+            if (FPlatformTime::Seconds() < StopAt || Active->GetState() == ETakeRecorderState::CountingDown ||
+                Active->GetState() == ETakeRecorderState::PreRecord) return true;
+            if (Active->GetState() == ETakeRecorderState::Started) UTakeRecorderBlueprintLibrary::StopRecording();
+            return false;
+        }), 0.1f);
 }
 
 }
@@ -112,6 +131,14 @@ bool HandleStartTakeRecording(UMcpAutomationBridgeSubsystem* Subsystem, const FS
     if (UTakeRecorderBlueprintLibrary::GetActiveRecorder())
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("Take Recorder already has an active recording"), TEXT("ALREADY_RECORDING"));
+        return true;
+    }
+    double DurationSeconds = 0.0;
+    const bool bHasDuration = Payload.IsValid() && Payload->HasField(TEXT("duration"));
+    if (bHasDuration && (!Payload->TryGetNumberField(TEXT("duration"), DurationSeconds) ||
+                         !FMath::IsFinite(DurationSeconds) || DurationSeconds <= 0.0 || DurationSeconds > 86400.0))
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId, TEXT("duration must be a number of seconds above 0 and at most 86400"), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     int32 AddedSources = 0;
@@ -195,6 +222,7 @@ bool HandleStartTakeRecording(UMcpAutomationBridgeSubsystem* Subsystem, const FS
     RollbackState->SourceSnapshots =
         MoveTemp(OriginalSourceSnapshots);
     RollbackState->bRestoreSources = bHasSourceConfiguration;
+    if (bHasDuration) StopTakeRecordingAfter(Recorder, DurationSeconds);
     SendStartRecordingResult(
         TWeakObjectPtr<UMcpAutomationBridgeSubsystem>(Subsystem),
         TWeakObjectPtr<UTakeRecorder>(Recorder), RequestId, RequestingSocket,

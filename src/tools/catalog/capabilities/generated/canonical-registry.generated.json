@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6ca4df1417ba21fb",
+  "catalogRevision": "101ee3c647bb7d06",
   "recordCount": 382,
   "records": [
     {
@@ -75200,9 +75200,7 @@
           },
           "required": [
             "action",
-            "kind",
-            "name",
-            "path"
+            "kind"
           ],
           "additionalProperties": false
         },
@@ -75344,6 +75342,12 @@
             "sound_component": "create_media_sound_component"
           },
           "declaredBy": {
+            "path": [
+              "source",
+              "player",
+              "playlist",
+              "texture"
+            ],
             "assetPath": [
               "source",
               "player"
@@ -75417,8 +75421,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b9a781501cba60800425e0d524dc89171fb080799ba089d17bceb8c41a4a7da4",
-        "content": "a124e1b79c0e4939480365f358dbdfa6ae90113dab3a1f41571ec2141ee3143f"
+        "schema": "4f467303258d789ec26d1f488ddb7b799f8fab5ad064639087c499eccb4b167e",
+        "content": "4c6c8fb76eb792a2df2a487b7fd91f6bc8b59c4c4f8ce82cb166da4a65db30e2"
       }
     },
     {
@@ -75894,10 +75898,13 @@
           },
           "required": [
             "action",
-            "setting",
-            "jobId"
+            "setting"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "jobId",
+            "renderJobName"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -76003,10 +76010,6 @@
               "output",
               "anti_aliasing"
             ],
-            "renderJobName": [
-              "output",
-              "anti_aliasing"
-            ],
             "antiAliasingMethod": [
               "anti_aliasing"
             ],
@@ -76042,8 +76045,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1701c289965b400abeeb0d3e174ad17c316889dd57bc9f94b66812755cd3e299",
-        "content": "3d8bff7c46453d24a2ad11be62a70d2b69a49537f676e013ffce9da95b155ef3"
+        "schema": "ff6c31979c043d5a35f22657cc6294415f5db0af8457e8d0bf105371309c423d",
+        "content": "431651736ecaace47994633f193e2b556864ea1adb8491508275b69c302e9a16"
       }
     },
     {
@@ -76123,6 +76126,53 @@
               "type": "string",
               "description": "Output directory for rendered frames."
             },
+            "fileNameFormat": {
+              "type": "string",
+              "description": "Output file name format string."
+            },
+            "resolution": {
+              "type": "string",
+              "description": "Output resolution in WIDTHxHEIGHT format, such as 1920x1080."
+            },
+            "width": {
+              "type": "integer",
+              "description": "Output width in pixels (positive; paired with height)."
+            },
+            "height": {
+              "type": "integer",
+              "description": "Output height in pixels (positive; paired with width)."
+            },
+            "frameRate": {
+              "type": [
+                "number",
+                "string"
+              ],
+              "description": "Frame rate as fps or a rate string such as 24fps or 24000/1001."
+            },
+            "startFrame": {
+              "type": "integer",
+              "description": "Custom playback range start frame (paired with endFrame)."
+            },
+            "endFrame": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
+            },
+            "settings": {
+              "type": "object",
+              "description": "Nested output settings.",
+              "additionalProperties": false,
+              "properties": {
+                "handleFrameCount": {
+                  "type": "integer",
+                  "description": "Handle frame count clamped to >= 0."
+                },
+                "zeroPadFrameNumbers": {
+                  "type": "integer",
+                  "description": "Zero-padding width for frame numbers."
+                }
+              }
+            },
             "jobId": {
               "type": "string",
               "description": "Render job identifier."
@@ -76138,6 +76188,12 @@
             "useCurrentLevel": {
               "type": "boolean",
               "description": "Whether to render against the currently loaded level."
+            },
+            "timeoutMs": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300000,
+              "description": "Render deadline in milliseconds (default and maximum 300000)."
             },
             "executorClass": {
               "type": "string",
@@ -76255,14 +76311,34 @@
             "mapPath": [
               "create"
             ],
-            "renderJobName": [
-              "create",
-              "queue"
-            ],
             "jobName": [
               "create"
             ],
             "outputDirectory": [
+              "create"
+            ],
+            "fileNameFormat": [
+              "create"
+            ],
+            "resolution": [
+              "create"
+            ],
+            "width": [
+              "create"
+            ],
+            "height": [
+              "create"
+            ],
+            "frameRate": [
+              "create"
+            ],
+            "startFrame": [
+              "create"
+            ],
+            "endFrame": [
+              "create"
+            ],
+            "settings": [
               "create"
             ],
             "jobId": [
@@ -76273,10 +76349,14 @@
               "queue"
             ],
             "onlyJob": [
-              "queue"
+              "queue",
+              "start"
             ],
             "useCurrentLevel": [
               "queue",
+              "start"
+            ],
+            "timeoutMs": [
               "start"
             ],
             "executorClass": [
@@ -76287,8 +76367,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e0a086f98334490fb7d30e9de65e838b15ef6db296352a7b1577e6201dc97381",
-        "content": "bde48e5edf5d43c27e05aa7703bb7fd89428775beee53de27aec1d6d8129292f"
+        "schema": "e6ffc51142ebe3ccf32f571ea029be00769fe14c9afaabf64ab8e7228f092c55",
+        "content": "de79e917feee1e99cae1fb9745258e20ec57a4e914389ccf17f9c9a7343c229e"
       }
     },
     {
@@ -76510,6 +76590,10 @@
               "type": "string",
               "description": "The action to execute on the parent tool."
             },
+            "replayName": {
+              "type": "string",
+              "description": "Default replay name for recordings that do not name one."
+            },
             "maxRecordTimeSeconds": {
               "type": "number",
               "description": "Max record time (<=86400)."
@@ -76633,6 +76717,9 @@
             "killcam_duration": "configure_killcam_duration"
           },
           "declaredBy": {
+            "replayName": [
+              "demo"
+            ],
             "maxRecordTimeSeconds": [
               "demo"
             ],
@@ -76662,8 +76749,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a449912ed117f3d708bf97c238ffa43f046d6bfbc4006503b7f6438f7debfd8d",
-        "content": "764a24d4e3cf0e9490be05694154a89a7344b831249dcb0e70816a9050b2cc45"
+        "schema": "ee2329241ddcd6368da62828b985e047ac297ae4cee5f980ca807340c85f3274",
+        "content": "6078b5807ebb9847b1b568e71be2b90c2c106243dff5a4225864234a270b01d2"
       }
     },
     {
@@ -76769,6 +76856,14 @@
               "type": "string",
               "description": "Name for the demo replay."
             },
+            "additionalOptions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Replay option string."
+              },
+              "description": "Additional replay streamer options."
+            },
             "paused": {
               "type": "boolean",
               "description": "Whether replay playback is paused."
@@ -76792,14 +76887,6 @@
             "friendlyName": {
               "type": "string",
               "description": "Human-readable replay name."
-            },
-            "additionalOptions": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "description": "Replay option string."
-              },
-              "description": "Additional replay streamer options."
             },
             "durationSeconds": {
               "type": "number",
@@ -76916,6 +77003,11 @@
               "start_recording",
               "start_killcam"
             ],
+            "additionalOptions": [
+              "play",
+              "start_recording",
+              "start_killcam"
+            ],
             "paused": [
               "pause"
             ],
@@ -76934,9 +77026,6 @@
             "friendlyName": [
               "start_recording"
             ],
-            "additionalOptions": [
-              "start_recording"
-            ],
             "durationSeconds": [
               "start_killcam"
             ]
@@ -76946,7 +77035,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f8d744e76d3bf545c162ba2a503379438fcd2da8c71fc3ad4e72bb81535d4b94",
-        "content": "ed20df20f59315bb1e897e39e16018d0b4e5613c8cbe7b160e52c0bc0168048c"
+        "content": "958306025d97d6fdc640c4f7a87096f9c2a3db13e5f850f8593e3afbb1aecfe8"
       }
     },
     {
@@ -77504,6 +77593,17 @@
               "type": "string",
               "description": "Canonical /Game sequence asset path."
             },
+            "frameRate": {
+              "type": [
+                "number",
+                "string"
+              ],
+              "description": "Frame rate as fps or a rate string such as 24fps or 24000/1001."
+            },
+            "recordInto": {
+              "type": "boolean",
+              "description": "Whether to record into the supplied sequence rather than a new take."
+            },
             "tracks": {
               "type": "array",
               "items": {
@@ -77536,20 +77636,11 @@
               "type": "boolean",
               "description": "Whether non-matching recorded tracks are disabled."
             },
-            "recordInto": {
-              "type": "boolean",
-              "description": "Whether to record into the supplied sequence rather than a new take."
-            },
-            "frameRate": {
-              "type": [
-                "number",
-                "string"
-              ],
-              "description": "Frame rate as fps or a rate string such as 24fps or 24000/1001."
-            },
             "duration": {
               "type": "number",
-              "description": "Optional max recording duration in seconds."
+              "minimum": 0,
+              "maximum": 86400,
+              "description": "Seconds (above 0) to record after the countdown before the take stops by itself."
             },
             "setting": {
               "type": "string",
@@ -77656,27 +77747,34 @@
           "declaredBy": {
             "sourceActors": [
               "sources",
-              "recorded_tracks"
+              "recorded_tracks",
+              "start_recording"
             ],
             "actorNames": [
-              "sources"
+              "sources",
+              "recorded_tracks",
+              "start_recording"
             ],
             "actorName": [
               "sources",
-              "recorded_tracks"
+              "recorded_tracks",
+              "start_recording"
             ],
             "sourceClasses": [
-              "sources"
+              "sources",
+              "start_recording"
             ],
             "clearSources": [
-              "sources"
+              "sources",
+              "start_recording"
             ],
             "takePresetPath": [
               "sources"
             ],
             "recordType": [
               "sources",
-              "recorded_tracks"
+              "recorded_tracks",
+              "start_recording"
             ],
             "actors": [
               "sources",
@@ -77684,11 +77782,13 @@
             ],
             "recordParentHierarchy": [
               "sources",
-              "recorded_tracks"
+              "recorded_tracks",
+              "start_recording"
             ],
             "reduceKeys": [
               "sources",
-              "recorded_tracks"
+              "recorded_tracks",
+              "start_recording"
             ],
             "recordingSequencePath": [
               "sources",
@@ -77699,6 +77799,16 @@
               "start_recording"
             ],
             "sequencePath": [
+              "sources",
+              "recorded_tracks",
+              "start_recording"
+            ],
+            "frameRate": [
+              "sources",
+              "recorded_tracks",
+              "start_recording"
+            ],
+            "recordInto": [
               "sources",
               "recorded_tracks",
               "start_recording"
@@ -77718,12 +77828,6 @@
             "disableOthers": [
               "recorded_tracks"
             ],
-            "recordInto": [
-              "start_recording"
-            ],
-            "frameRate": [
-              "start_recording"
-            ],
             "duration": [
               "start_recording"
             ]
@@ -77732,8 +77836,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "855733e91c096087eb58ff1499d240264d588b21ee41a7d88c18c142c636ccf1",
-        "content": "81a260b80903d9e430c9ad20b8cabf62a1a3f60a20a9b763ef2d175d57e1732a"
+        "schema": "a644179f8db367fe14eb2421769d5d1b5808f6045c5aeb28f47241e6a99f4426",
+        "content": "c956f07c0bdb55ebcc36196acbec26840928e1c4219aecfd7a5c72e26cd90013"
       }
     },
     {
