@@ -219,7 +219,9 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 		TSharedPtr<FJsonObject> Published = Data.IsValid() ? Data : MakeShared<FJsonObject>();
 		McpMaskSecretsDeep(Published);
 		FString CanonicalData;
-		McpCanonicalJsonObject(Published, CanonicalData);
+		// Fractions allowed, as the idempotency fingerprint does: without them the render
+		// stopped at the first non-integer, so every motion sample (56.2...) hashed the same prefix.
+		McpCanonicalJsonObject(Published, CanonicalData, /*bAllowFractions=*/true);
 		const FTCHARToUTF8 Utf8(*CanonicalData);
 		uint8 Hash[20];
 		FSHA1::HashBuffer(Utf8.Get(), Utf8.Length(), Hash);
