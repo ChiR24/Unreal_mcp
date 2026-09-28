@@ -2,6 +2,7 @@
 
 #include "Foundation/Reflection/McpReflectedInvoke.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "UObject/Script.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -214,6 +215,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
   TArray<TSharedPtr<FJsonValue>> Unset;
   TSharedPtr<FJsonObject> Outputs;
 
+  // AActor::ProcessEvent drops every call on an actor whose world has not initialized its actors (the
+  // editor world) unless GAllowActorScriptExecutionInEditor is set, so a Blueprint custom event such as
+  // BP_Block's BecomeUsed "succeeded" and changed nothing. The guard is what the editor itself uses for
+  // CallInEditor functions and editor utility calls.
+  FEditorScriptExecutionGuard ScriptGuard;
   if (Function->ParmsSize > 0) {
     // The parameter block must be constructed, bound and destroyed through the
     // function's own property chain. Handing ProcessEvent a merely zeroed buffer
