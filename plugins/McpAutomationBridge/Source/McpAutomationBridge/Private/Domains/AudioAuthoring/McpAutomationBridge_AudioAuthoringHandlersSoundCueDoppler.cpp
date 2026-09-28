@@ -4,8 +4,11 @@
 #include "Sound/SoundNodeDoppler.h"
 
 // set_doppler_effect: the engine's one Doppler mechanism is a USoundNodeDoppler in a Sound
-// Cue graph. It goes at the cue root, above whatever the cue already plays, the same way
-// the engine's own sound factory inserts a node (SoundFactory.cpp InsertSoundNode).
+// Cue graph. An existing Doppler is updated wherever it sits; otherwise one goes at the cue
+// root, above whatever the cue already plays, the same way the engine's own sound factory
+// inserts a node (SoundFactory.cpp InsertSoundNode).
+// USoundNodeDoppler has no ENGINE_API or MinimalAPI, so its StaticClass does not link from
+// outside Engine: the class is resolved by path and only its public fields are touched.
 namespace McpAudioAuthoring
 {
 TSharedPtr<FJsonObject> HandleSoundCueDopplerAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
@@ -43,7 +46,20 @@ TSharedPtr<FJsonObject> HandleSoundCueDopplerAction(const FString& SubAction, co
 		Cue->CreateGraph();
 	}
 
-	USoundNodeDoppler* Doppler = Cast<USoundNodeDoppler>(Cue->FirstNode);
+	UClass* DopplerClass = LoadClass<USoundNode>(nullptr, TEXT("/Script/Engine.SoundNodeDoppler"));
+	if (!DopplerClass)
+	{
+		return McpHandlerUtils::BuildErrorResponse(TEXT("DOPPLER_CLASS_MISSING"), TEXT("The engine's Doppler sound node class could not be resolved in this editor."));
+	}
+	USoundNodeDoppler* Doppler = nullptr;
+	for (USoundNode* Node : Cue->AllNodes)
+	{
+		if (Node && Node->IsA(DopplerClass))
+		{
+			Doppler = static_cast<USoundNodeDoppler*>(Node);
+			break;
+		}
+	}
 	const bool bInserted = Doppler == nullptr;
 	Cue->Modify();
 	if (bInserted)
@@ -57,29 +73,30 @@ TSharedPtr<FJsonObject> HandleSoundCueDopplerAction(const FString& SubAction, co
 			return McpHandlerUtils::BuildErrorResponse(TEXT("GRAPH_NODE_ERROR"), FString::Printf(
 				TEXT("The graph of '%s' has no Output node linked to its root sound node; open and resave the cue, then retry."), *AssetPath));
 		}
-		Doppler = Cast<USoundNodeDoppler>(Cue->ConstructSoundNode<USoundNode>(USoundNodeDoppler::StaticClass(), false));
-		USoundCueGraphNode* DopplerGraphNode = Doppler ? Cast<USoundCueGraphNode>(Doppler->GetGraphNode()) : nullptr;
-		if (DopplerGraphNode && Doppler->ChildNodes.Num() == 0)
+		USoundNode* NewNode = Cue->ConstructSoundNode<USoundNode>(DopplerClass, false);
+		USoundCueGraphNode* DopplerGraphNode = NewNode ? Cast<USoundCueGraphNode>(NewNode->GetGraphNode()) : nullptr;
+		if (DopplerGraphNode && NewNode->ChildNodes.Num() == 0)
 		{
-			Doppler->CreateStartingConnectors();
+			NewNode->CreateStartingConnectors();
 		}
 		TArray<UEdGraphPin*> InputPins;
 		if (DopplerGraphNode)
 		{
 			DopplerGraphNode->GetInputPins(InputPins);
 		}
-		if (!DopplerGraphNode || InputPins.Num() == 0 || Doppler->ChildNodes.Num() == 0 || !DopplerGraphNode->GetOutputPin())
+		if (!DopplerGraphNode || InputPins.Num() == 0 || NewNode->ChildNodes.Num() == 0 || !DopplerGraphNode->GetOutputPin())
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_NODE_FAILED"), TEXT("The Doppler node could not be created with an input for the cue's current root."));
 		}
 		DopplerGraphNode->NodePosX = OldGraphNode->NodePosX + 220;
 		DopplerGraphNode->NodePosY = OldGraphNode->NodePosY;
 		// Data and graph are linked the same way, so a later CompileSoundNodesFromGraphNodes keeps the Doppler.
-		Doppler->ChildNodes[0] = Cue->FirstNode;
+		NewNode->ChildNodes[0] = Cue->FirstNode;
 		InputPins[0]->MakeLinkTo(OldGraphNode->GetOutputPin());
 		Roots[0]->Pins[0]->BreakAllPinLinks();
 		Roots[0]->Pins[0]->MakeLinkTo(DopplerGraphNode->GetOutputPin());
-		Cue->FirstNode = Doppler;
+		Cue->FirstNode = NewNode;
+		Doppler = static_cast<USoundNodeDoppler*>(NewNode);
 	}
 	Doppler->Modify();
 	Doppler->DopplerIntensity = static_cast<float>(Intensity);
@@ -89,10 +106,12 @@ TSharedPtr<FJsonObject> HandleSoundCueDopplerAction(const FString& SubAction, co
 
 	const bool bSaved = bSave && SaveAudioAsset(Cue, true);
 	Response->SetBoolField(TEXT("success"), true);
-	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("%s a Doppler node at the root of %s (intensity %.2f)"),
-		bInserted ? TEXT("Inserted") : TEXT("Updated"), *Cue->GetName(), Doppler->DopplerIntensity));
+	const bool bAtRoot = Cue->FirstNode == Doppler;
+	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("%s the Doppler node %s of %s (intensity %.2f)"),
+		bInserted ? TEXT("Inserted") : TEXT("Updated"), bAtRoot ? TEXT("at the root") : TEXT("below the root"), *Cue->GetName(), Doppler->DopplerIntensity));
 	Response->SetStringField(TEXT("nodeName"), Doppler->GetName());
 	Response->SetBoolField(TEXT("inserted"), bInserted);
+	Response->SetBoolField(TEXT("atRoot"), bAtRoot);
 	Response->SetStringField(TEXT("rootNodeClass"), Cue->FirstNode ? Cue->FirstNode->GetClass()->GetName() : TEXT(""));
 	Response->SetStringField(TEXT("drivesNode"), Doppler->ChildNodes.Num() > 0 && Doppler->ChildNodes[0] ? Doppler->ChildNodes[0]->GetName() : TEXT(""));
 	Response->SetNumberField(TEXT("dopplerIntensity"), Doppler->DopplerIntensity);
