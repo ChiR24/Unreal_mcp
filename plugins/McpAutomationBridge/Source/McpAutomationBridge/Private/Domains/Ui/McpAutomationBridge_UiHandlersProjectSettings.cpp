@@ -1,12 +1,12 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Ui/McpAutomationBridge_UiHandlersPrivate.h"
+#include "Foundation/HandlerUtils/McpHandlerUtilsProjectConfig.h"
 
 #include "Engine/Engine.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/App.h"
 #include "Misc/ConfigCacheIni.h"
-#include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectGlobals.h"
@@ -215,11 +215,12 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
   // the editor sees the change immediately, then persist it to the project's
   // Default<Config>.ini (the old code only wrote DefaultEngine.ini in memory).
   UClass *Class = ResolveSettingsClass(NormalizedSection);
-  FString ConfigFile = FPaths::ProjectConfigDir() / TEXT("DefaultEngine.ini");
+  const FString ConfigName = Class ? Class->ClassConfigName.ToString() : FString(TEXT("Engine"));
+  FString ConfigFile = FPaths::ConvertRelativePathToFull(
+      FPaths::ProjectConfigDir() / FString::Printf(TEXT("Default%s.ini"), *ConfigName));
   bool bAppliedToObject = false;
   bool bPersisted = false;
   if (Class) {
-    ConfigFile = FPaths::ProjectConfigDir() / FString::Printf(TEXT("Default%s.ini"), *Class->ClassConfigName.ToString());
     if (UObject *CDO = Class->GetDefaultObject()) {
       FProperty *Property = Class->FindPropertyByName(FName(*Key));
       if (!Property) {
@@ -250,27 +251,13 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
       }
     }
   }
-  // GConfig keys its file map by the EXACT path string it is handed, and
-  // FPaths::ProjectConfigDir() is relative ("../../../../../Games/X/Config/").
-  // That does not match the absolute name the engine loaded the file under, so
-  // SetString lands on a phantom entry and Flush writes nothing -- the engine
-  // says so with "GConfig::Find attempting to access config with
-  // non-normalized path". Callers were still told persisted:true, so a setting
-  // that never reached disk was reported as written.
-  ConfigFile = FPaths::ConvertRelativePathToFull(ConfigFile);
-
   if (!bPersisted) {
-    GConfig->SetString(*NormalizedSection, *Key, *Value, ConfigFile);
-    GConfig->Flush(false, ConfigFile);
-    // Evidence, not assumption: read the file back. A flush that silently
-    // no-ops must not be reported as a successful write.
-    FString OnDisk;
-    const FString Assignment = Key + TEXT("=");
-    bPersisted = FFileHelper::LoadFileToString(OnDisk, *ConfigFile) && OnDisk.Contains(Assignment);
+    // The shared writer makes the path absolute (a relative one never reaches
+    // disk) and reads the file back, so a flush that wrote nothing fails here.
+    FString PersistError;
+    bPersisted = McpHandlerUtils::WriteProjectConfigValue(NormalizedSection, Key, Value, ConfigName, ConfigFile, PersistError);
     if (!bPersisted) {
-      Message = FString::Printf(
-          TEXT("%s.%s was not written to %s: the config flush left no '%s' on disk."),
-          *NormalizedSection, *Key, *ConfigFile, *Assignment);
+      Message = PersistError;
       ErrorCode = TEXT("PERSIST_FAILED");
       Resp->SetStringField(TEXT("error"), Message);
       return true;
