@@ -52,7 +52,7 @@ function layout<K extends string>(action: string, id: string, summary: string, e
 // {left,top,right,bottom}; see WidgetAuthoringCanvasSlotGeometry/SlotAppearance.
 export const WIDGET_LAYOUT_RECORDS: readonly CapabilityRecordSource[] = [
   layout('set_anchor', 'blueprint.set_anchor', 'Set the anchor points (min/max) for a widget in a canvas panel slot.',
-    { props: { anchorMin: P.anchorMin, anchorMax: P.anchorMax, preset: P.preset }, required: ['anchorMin', 'anchorMax'], example: { anchorMin: { x: 0, y: 0 }, anchorMax: { x: 1, y: 1 } } }),
+    { props: { anchorMin: P.anchorMin, anchorMax: P.anchorMax, preset: P.preset }, required: [], example: { preset: 'StretchAll' } }),
   layout('set_alignment', 'blueprint.set_alignment', 'Set the alignment (0-1) for a widget in its slot.',
     { props: { alignment: P.alignment }, required: ['alignment'], example: { alignment: { x: 0.5, y: 0.5 } } }),
   layout('set_position', 'blueprint.set_position', 'Set the position offset for a widget in its slot.',
@@ -71,7 +71,7 @@ export const WIDGET_LAYOUT_RECORDS: readonly CapabilityRecordSource[] = [
   // declared here, so the gateway rejected them as undeclared and there was no
   // published way to change an existing widget's label or icon at all.
   layout('set_style', 'blueprint.set_style', 'Set the visual style (color, font, text, text justification, brush texture, button hover/press sounds) for a widget.',
-    { props: { colorAndOpacity: P.colorAndOpacity, fontSize: P.fontSize, text: P.text, texturePath: P.texturePath, renderOpacity: P.renderOpacity, value: P.value, cornerRadius: P.cornerRadius, outlineColor: P.outlineColor, outlineWidth: P.outlineWidth, hoverSoundPath: P.hoverSoundPath, pressSoundPath: P.pressSoundPath, justification: P.justification }, required: [], example: { cornerRadius: 18 } }),
+    { props: { colorAndOpacity: P.colorAndOpacity, fontSize: P.fontSize, text: P.text, texturePath: P.texturePath, renderOpacity: P.renderOpacity, propertyName: { type: 'string', description: 'Any other widget property, by reflection (such as WidgetStyle or Brush): read without value, written with it.' }, value: { description: 'New value for propertyName: a string, number or bool, or an object or array for a struct property.' }, cornerRadius: P.cornerRadius, outlineColor: P.outlineColor, outlineWidth: P.outlineWidth, hoverSoundPath: P.hoverSoundPath, pressSoundPath: P.pressSoundPath, justification: P.justification }, required: [], example: { cornerRadius: 18 } }),
   layout('set_clipping', 'blueprint.set_clipping', 'Set the clipping mode (Inherit, ClipToBounds, etc.) for a widget.',
     { props: { clipping: P.clipping }, required: ['clipping'], example: { clipping: 'ClipToBounds' } }),
 ];

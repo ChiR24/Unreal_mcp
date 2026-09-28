@@ -44,24 +44,27 @@ FString GetSlotName(const TSharedPtr<FJsonObject>& Payload)
     return FString();
 }
 
+bool TryParseVisibility(const FString& Name, ESlateVisibility& Out)
+{
+    static const TPair<const TCHAR*, ESlateVisibility> Names[] = {
+        { TEXT("Visible"), ESlateVisibility::Visible }, { TEXT("Collapsed"), ESlateVisibility::Collapsed },
+        { TEXT("Hidden"), ESlateVisibility::Hidden }, { TEXT("HitTestInvisible"), ESlateVisibility::HitTestInvisible },
+        { TEXT("SelfHitTestInvisible"), ESlateVisibility::SelfHitTestInvisible } };
+    for (const TPair<const TCHAR*, ESlateVisibility>& Entry : Names)
+    {
+        if (Name.Equals(Entry.Key, ESearchCase::IgnoreCase))
+        {
+            Out = Entry.Value;
+            return true;
+        }
+    }
+    return false;
+}
+
 ESlateVisibility GetVisibility(const FString& VisibilityStr)
 {
-    if (VisibilityStr.Equals(TEXT("Collapsed"), ESearchCase::IgnoreCase))
-    {
-        return ESlateVisibility::Collapsed;
-    }
-    if (VisibilityStr.Equals(TEXT("Hidden"), ESearchCase::IgnoreCase))
-    {
-        return ESlateVisibility::Hidden;
-    }
-    if (VisibilityStr.Equals(TEXT("HitTestInvisible"), ESearchCase::IgnoreCase))
-    {
-        return ESlateVisibility::HitTestInvisible;
-    }
-    if (VisibilityStr.Equals(TEXT("SelfHitTestInvisible"), ESearchCase::IgnoreCase))
-    {
-        return ESlateVisibility::SelfHitTestInvisible;
-    }
-    return ESlateVisibility::Visible;
+    ESlateVisibility Visibility = ESlateVisibility::Visible;
+    TryParseVisibility(VisibilityStr, Visibility);
+    return Visibility;
 }
 }

@@ -2,19 +2,57 @@
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringPayload.h"
 
+#include "Algo/Find.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Domains/WidgetAuthoring/Layout/McpAutomationBridge_WidgetAuthoringSlotAlignment.h"
 #include "Components/Widget.h"
-#include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
+// set_anchor, set_alignment, set_position, set_size. A canvas-only setting on a widget
+// that sits in a box or overlay is refused (set_anchor and set_position used to answer
+// success and write nothing), and every reply carries the slot read back.
 namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;
+
+namespace
+{
+struct FAnchorPreset
+{
+    const TCHAR* Name;
+    FAnchors Anchors;
+};
+
+const FAnchorPreset GAnchorPresets[] = {
+    { TEXT("TopLeft"), FAnchors(0, 0) }, { TEXT("TopCenter"), FAnchors(0.5f, 0) }, { TEXT("TopRight"), FAnchors(1, 0) },
+    { TEXT("CenterLeft"), FAnchors(0, 0.5f) }, { TEXT("Center"), FAnchors(0.5f, 0.5f) }, { TEXT("CenterRight"), FAnchors(1, 0.5f) },
+    { TEXT("BottomLeft"), FAnchors(0, 1) }, { TEXT("BottomCenter"), FAnchors(0.5f, 1) }, { TEXT("BottomRight"), FAnchors(1, 1) },
+    { TEXT("StretchHorizontal"), FAnchors(0, 0.5f, 1, 0.5f) }, { TEXT("StretchVertical"), FAnchors(0.5f, 0, 0.5f, 1) },
+    { TEXT("StretchAll"), FAnchors(0, 0, 1, 1) },
+};
+
+FVector2D ReadPair(const TSharedPtr<FJsonObject>& Object, const FVector2D& Default)
+{
+    return FVector2D(GetJsonNumberField(Object, TEXT("x"), Default.X), GetJsonNumberField(Object, TEXT("y"), Default.Y));
+}
+
+UCanvasPanelSlot* RequireCanvas(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId,
+                                TSharedPtr<FMcpBridgeWebSocket> Socket, UWidget* Widget, const FString& SubAction)
+{
+    UCanvasPanelSlot* Canvas = Cast<UCanvasPanelSlot>(Widget->Slot);
+    if (!Canvas)
+    {
+        Subsystem.SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("%s needs a CanvasPanel child; '%s' sits in a %s. Use set_alignment or set_padding for box and overlay slots."),
+            *SubAction, *Widget->GetName(), Widget->Slot ? *Widget->Slot->GetClass()->GetName() : TEXT("no slot")), TEXT("INVALID_SLOT"));
+    }
+    return Canvas;
+}
+}
 
 bool HandleWidgetAuthoringCanvasSlotGeometry(
     UMcpAutomationBridgeSubsystem& Subsystem,
@@ -24,279 +62,88 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    if (SubAction.Equals(TEXT("set_anchor"), ESearchCase::IgnoreCase))
+    const bool bAnchor = SubAction.Equals(TEXT("set_anchor"), ESearchCase::IgnoreCase);
+    const bool bAlignment = SubAction.Equals(TEXT("set_alignment"), ESearchCase::IgnoreCase);
+    const bool bPosition = SubAction.Equals(TEXT("set_position"), ESearchCase::IgnoreCase);
+    if (!bAnchor && !bAlignment && !bPosition && !SubAction.Equals(TEXT("set_size"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!Widget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
-        if (CanvasSlot)
-        {
-            FAnchors Anchors;
-            TSharedPtr<FJsonObject> AnchorMin = GetObjectField(Payload, TEXT("anchorMin"));
-            TSharedPtr<FJsonObject> AnchorMax = GetObjectField(Payload, TEXT("anchorMax"));
-
-            if (AnchorMin.IsValid())
-            {
-                Anchors.Minimum.X = GetJsonNumberField(AnchorMin, TEXT("x"), 0.0);
-                Anchors.Minimum.Y = GetJsonNumberField(AnchorMin, TEXT("y"), 0.0);
-            }
-            if (AnchorMax.IsValid())
-            {
-                Anchors.Maximum.X = GetJsonNumberField(AnchorMax, TEXT("x"), 1.0);
-                Anchors.Maximum.Y = GetJsonNumberField(AnchorMax, TEXT("y"), 1.0);
-            }
-
-            FString Preset = GetJsonStringField(Payload, TEXT("preset"));
-            if (!Preset.IsEmpty())
-            {
-                if (Preset.Equals(TEXT("TopLeft"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0, 0);
-                    Anchors.Maximum = FVector2D(0, 0);
-                }
-                else if (Preset.Equals(TEXT("TopCenter"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0.5, 0);
-                    Anchors.Maximum = FVector2D(0.5, 0);
-                }
-                else if (Preset.Equals(TEXT("TopRight"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(1, 0);
-                    Anchors.Maximum = FVector2D(1, 0);
-                }
-                else if (Preset.Equals(TEXT("CenterLeft"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0, 0.5);
-                    Anchors.Maximum = FVector2D(0, 0.5);
-                }
-                else if (Preset.Equals(TEXT("Center"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0.5, 0.5);
-                    Anchors.Maximum = FVector2D(0.5, 0.5);
-                }
-                else if (Preset.Equals(TEXT("CenterRight"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(1, 0.5);
-                    Anchors.Maximum = FVector2D(1, 0.5);
-                }
-                else if (Preset.Equals(TEXT("BottomLeft"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0, 1);
-                    Anchors.Maximum = FVector2D(0, 1);
-                }
-                else if (Preset.Equals(TEXT("BottomCenter"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0.5, 1);
-                    Anchors.Maximum = FVector2D(0.5, 1);
-                }
-                else if (Preset.Equals(TEXT("BottomRight"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(1, 1);
-                    Anchors.Maximum = FVector2D(1, 1);
-                }
-                else if (Preset.Equals(TEXT("StretchHorizontal"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0, 0.5);
-                    Anchors.Maximum = FVector2D(1, 0.5);
-                }
-                else if (Preset.Equals(TEXT("StretchVertical"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0.5, 0);
-                    Anchors.Maximum = FVector2D(0.5, 1);
-                }
-                else if (Preset.Equals(TEXT("StretchAll"), ESearchCase::IgnoreCase))
-                {
-                    Anchors.Minimum = FVector2D(0, 0);
-                    Anchors.Maximum = FVector2D(1, 1);
-                }
-            }
-
-            CanvasSlot->SetAnchors(Anchors);
-        }
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Anchor set"));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Anchor set"), ResultJson);
+        return false;
+    }
+    UWidgetBlueprint* WidgetBP = nullptr;
+    UWidget* Widget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
+    if (!Widget)
+    {
         return true;
     }
-
-    if (SubAction.Equals(TEXT("set_alignment"), ESearchCase::IgnoreCase))
+    if (bAlignment)
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!Widget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
         FString AlignError;
-        if (!McpWidgetSlotAlignment::Apply(Widget, GetObjectField(Payload, TEXT("alignment")),
-                                           ResultJson, AlignError))
+        if (!McpWidgetSlotAlignment::Apply(Widget, GetObjectField(Payload, TEXT("alignment")), ResultJson, AlignError))
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, AlignError,
-                                          TEXT("ALIGNMENT_UNSUPPORTED"));
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, AlignError, TEXT("ALIGNMENT_UNSUPPORTED"));
             return true;
         }
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Alignment set"));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Alignment set"), ResultJson);
+        ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Alignment set"));
         return true;
     }
-
-    if (SubAction.Equals(TEXT("set_position"), ESearchCase::IgnoreCase))
+    UCanvasPanelSlot* Canvas = RequireCanvas(Subsystem, RequestId, RequestingSocket, Widget, SubAction);
+    if (!Canvas)
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!Widget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        TArray<TSharedPtr<FJsonValue>> Applied;
-        UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
-        if (CanvasSlot)
-        {
-            TSharedPtr<FJsonObject> PositionObj = GetObjectField(Payload, TEXT("position"));
-            if (PositionObj.IsValid()) {
-                CanvasSlot->SetPosition(FVector2D(GetJsonNumberField(PositionObj, TEXT("x"), 0.0),
-                                                  GetJsonNumberField(PositionObj, TEXT("y"), 0.0)));
-                Applied.Add(MakeShared<FJsonValueString>(TEXT("position")));
-            }
-            // A caller placing a widget sends position, size and zOrder in one
-            // call; layoutProperty only picks which one NAMES the variant. The
-            // other two used to be dropped without a word, so a button ended up
-            // at the right spot in the default size behind everything else.
-            if (TSharedPtr<FJsonObject> SizeObj = GetObjectField(Payload, TEXT("size"))) {
-                CanvasSlot->SetSize(FVector2D(GetJsonNumberField(SizeObj, TEXT("x"), 0.0),
-                                              GetJsonNumberField(SizeObj, TEXT("y"), 0.0)));
-                Applied.Add(MakeShared<FJsonValueString>(TEXT("size")));
-            }
-            double ZOrder = 0.0;
-            if (Payload->TryGetNumberField(TEXT("zOrder"), ZOrder)) {
-                CanvasSlot->SetZOrder(static_cast<int32>(ZOrder));
-                Applied.Add(MakeShared<FJsonValueString>(TEXT("zOrder")));
-            }
-        }
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetArrayField(TEXT("applied"), Applied);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Position set"));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Position set"), ResultJson);
         return true;
     }
-
-    if (SubAction.Equals(TEXT("set_size"), ESearchCase::IgnoreCase))
+    if (bAnchor)
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
+        // Partial input keeps the other corner, instead of resetting it to 0,0 and 1,1.
+        FAnchors Anchors = Canvas->GetAnchors();
+        const TSharedPtr<FJsonObject> Min = GetObjectField(Payload, TEXT("anchorMin"));
+        const TSharedPtr<FJsonObject> Max = GetObjectField(Payload, TEXT("anchorMax"));
+        const FString Preset = GetJsonStringField(Payload, TEXT("preset"));
+        if (!Preset.IsEmpty())
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
+            const FAnchorPreset* Match = Algo::FindByPredicate(GAnchorPresets, [&Preset](const FAnchorPreset& Candidate)
+                { return Preset.Equals(Candidate.Name, ESearchCase::IgnoreCase); });
+            if (!Match)
+            {
+                TArray<FString> Names;
+                for (const FAnchorPreset& Candidate : GAnchorPresets) { Names.Add(Candidate.Name); }
+                Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("preset '%s' is not one of %s."),
+                    *Preset, *FString::Join(Names, TEXT(", "))), TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+            Anchors = Match->Anchors;
         }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
+        else if (!Min.IsValid() && !Max.IsValid())
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!Widget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
-
-        if (!CanvasSlot)
-        {
-            // Only canvas slots carry this setting; reporting success on a box/overlay slot was a no-op (dogfood #190).
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("set_size needs a CanvasPanel child; '%s' sits in a %s"), *SlotName, Widget->Slot ? *Widget->Slot->GetClass()->GetName() : TEXT("no slot")),
-                TEXT("INVALID_SLOT"));
+                TEXT("set_anchor needs preset, or anchorMin and anchorMax ({x,y} in 0-1)."), TEXT("MISSING_PARAMETER"));
             return true;
         }
-        TSharedPtr<FJsonObject> SizeObj = GetObjectField(Payload, TEXT("size"));
-        if (SizeObj.IsValid())
-        {
-            FVector2D Size;
-            Size.X = GetJsonNumberField(SizeObj, TEXT("x"), 100.0);
-            Size.Y = GetJsonNumberField(SizeObj, TEXT("y"), 100.0);
-            CanvasSlot->SetSize(Size);
-        }
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Size set"));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Size set"), ResultJson);
+        Anchors.Minimum = Min.IsValid() ? ReadPair(Min, Anchors.Minimum) : Anchors.Minimum;
+        Anchors.Maximum = Max.IsValid() ? ReadPair(Max, Anchors.Maximum) : Anchors.Maximum;
+        Canvas->SetAnchors(Anchors);
+        ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Anchor set"));
         return true;
     }
-
-    return false;
+    const TSharedPtr<FJsonObject> Position = GetObjectField(Payload, TEXT("position"));
+    const TSharedPtr<FJsonObject> Size = GetObjectField(Payload, TEXT("size"));
+    double ZOrder = 0.0;
+    const bool bZOrder = Payload->TryGetNumberField(TEXT("zOrder"), ZOrder);
+    if (bPosition ? !Position.IsValid() && !Size.IsValid() && !bZOrder : !Size.IsValid())
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, bPosition
+            ? TEXT("set_position needs position {x,y} (size and zOrder may ride along).")
+            : TEXT("set_size needs size {x,y}."), TEXT("MISSING_PARAMETER"));
+        return true;
+    }
+    // A caller placing a widget sends position, size and zOrder together; each lands.
+    if (Position.IsValid()) { Canvas->SetPosition(ReadPair(Position, Canvas->GetPosition())); }
+    if (Size.IsValid())
+    {
+        Canvas->SetAutoSize(false);
+        Canvas->SetSize(ReadPair(Size, Canvas->GetSize()));
+    }
+    if (bZOrder) { Canvas->SetZOrder(static_cast<int32>(ZOrder)); }
+    ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, bPosition ? TEXT("Position set") : TEXT("Size set"));
+    return true;
 }
 }

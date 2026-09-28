@@ -13,6 +13,7 @@
 #include "Sound/SoundBase.h"
 #include "Styling/SlateBrush.h"
 #include "Styling/SlateColor.h"
+#include "Domains/WidgetAuthoring/Styling/McpAutomationBridge_WidgetAuthoringStyleText.h"
 
 // `colorAndOpacity` on set_style used to be honoured for UTextBlock only. On any
 // other widget the field was quietly ignored, nothing was applied, and the call
@@ -174,19 +175,14 @@ inline bool McpApplyWidgetStyleConvenience(
     UWidget *Widget, const TSharedPtr<FJsonObject> &Payload,
     const TSharedPtr<FJsonObject> &ResultJson,
     TArray<TSharedPtr<FJsonValue>> &Applied, FString &OutUnsupported) {
-  if (UTextBlock *Text = Cast<UTextBlock>(Widget)) {
-    double FontSize = 0.0;
-    if (Payload->TryGetNumberField(TEXT("fontSize"), FontSize) && FontSize > 0.0) {
-      FSlateFontInfo Font = Text->GetFont();
-      Font.Size = static_cast<int32>(FontSize);
-      Text->SetFont(Font);
-      Applied.Add(MakeShared<FJsonValueString>(TEXT("fontSize")));
-    }
-    FString NewText;
-    if (Payload->TryGetStringField(TEXT("text"), NewText)) {
-      Text->SetText(FText::FromString(NewText));
-      Applied.Add(MakeShared<FJsonValueString>(TEXT("text")));
-    }
+  if (!McpApplyWidgetText(Widget, Payload, Applied, OutUnsupported)) {
+    return false;
+  }
+  if (!Payload->HasField(TEXT("cornerRadius")) &&
+      (Payload->HasField(TEXT("outlineColor")) || Payload->HasField(TEXT("outlineWidth")))) {
+    OutUnsupported = TEXT("An outline is drawn by a rounded brush: pass cornerRadius with outlineColor ")
+                     TEXT("and outlineWidth (a small radius such as 2 keeps the corners nearly square).");
+    return false;
   }
   FString Justify;
   if (Payload->TryGetStringField(TEXT("justification"), Justify)) {

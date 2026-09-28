@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Components/SlateWrapperTypes.h"
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 
@@ -17,7 +18,8 @@ UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath);
 // Loads the widget blueprint, creating an empty UUserWidget-based asset at the path when missing.
 // Marks the Widget Blueprint structurally modified and saves it through the safe wrapper, so
 // authoring edits survive an editor restart (dogfood c27: widgets added via MCP vanished).
-void MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP);
+// Returns whether the save landed.
+bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP);
 
 // Case-insensitive lookups shared by the animation and layout handlers; nullptr when absent.
 UWidgetAnimation* FindWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName);
@@ -28,4 +30,19 @@ UWidget* FindWidgetByName(UWidgetTree* Tree, const FString& WidgetName);
 UWidgetAnimation* ResolveWidgetAnimation(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId,
                                          TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload,
                                          UWidgetBlueprint*& OutWidgetBP);
+
+// widgetPath + slotName -> the widget. On any miss the refusal (MISSING_PARAMETER, NOT_FOUND,
+// WIDGET_NOT_FOUND) is already sent and null returned.
+UWidget* ResolveWidgetTarget(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId,
+                             TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload,
+                             UWidgetBlueprint*& OutWidgetBP);
+
+// What the widget and its slot hold now: visibility, render transform, and the slot's
+// canvas geometry or box padding and alignment.
+TSharedPtr<FJsonObject> McpDescribeWidgetLayout(const UWidget* Widget);
+const TCHAR* McpVisibilityName(ESlateVisibility Visibility);
+
+// Saves, then replies success with the layout read back under "applied" and "saved".
+void ReplyWidgetLayout(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                       TSharedPtr<FJsonObject> ResultJson, UWidgetBlueprint* WidgetBP, UWidget* Widget, const FString& Message);
 }

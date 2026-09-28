@@ -16,6 +16,7 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Styling/SlateTypes.h"
 #include "UObject/UnrealType.h"
+#include "Styling/CoreStyle.h"
 #include "WidgetBlueprint.h"
 
 namespace WidgetAuthoringHelpers
@@ -63,7 +64,9 @@ bool HandleWidgetAuthoringAdvancedStyling(
         FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
         FString SlotName = GetJsonStringField(Payload, TEXT("slotName"));
         FString FontPath = GetJsonStringField(Payload, TEXT("font"));
-        float FontSize = GetJsonNumberField(Payload, TEXT("fontSize"), 24.0f);
+        // A font-only call keeps the current size (it used to reset every size to 24).
+        double FontSize = 0.0;
+        const bool bSize = Payload->TryGetNumberField(TEXT("fontSize"), FontSize) && FontSize > 0.0;
 
         if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
         {
@@ -88,9 +91,25 @@ bool HandleWidgetAuthoringAdvancedStyling(
         UObject* FontObject = FontPath.IsEmpty()
             ? nullptr
             : StaticLoadObject(UObject::StaticClass(), nullptr, *FontPath);
-        auto ApplyFont = [FontSize, FontObject](FSlateFontInfo& FontInfo)
+        if (!FontPath.IsEmpty() && !FontObject)
         {
-            FontInfo.Size = FontSize;
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                TEXT("font '%s' does not load; pass a Font asset path such as /Game/UI/Fonts/F_Title."), *FontPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+        if (!FontObject && !bSize)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("set_font needs font, fontSize, or both."), TEXT("MISSING_PARAMETER"));
+            return true;
+        }
+        int32 AppliedSize = 0;
+        auto ApplyFont = [bSize, FontSize, FontObject, &AppliedSize](FSlateFontInfo& FontInfo)
+        {
+            if (bSize)
+            {
+                FontInfo.Size = static_cast<int32>(FontSize);
+            }
+            AppliedSize = FontInfo.Size;
             if (FontObject)
             {
                 FontInfo.FontObject = FontObject;
@@ -133,16 +152,14 @@ bool HandleWidgetAuthoringAdvancedStyling(
             EditText->SetWidgetStyle(Style);
             bFontApplied = true;
         }
-        else if (Cast<URichTextBlock>(TargetWidget))
+        else if (URichTextBlock* RichText = Cast<URichTextBlock>(TargetWidget))
         {
-            // This branch used to set bFontApplied = true with an empty body and
-            // a "// Acknowledge but note limitation" comment, so every rich-text
-            // call answered "Set font" having changed nothing. A RichTextBlock
-            // takes its fonts from the rows of its TextStyleSet DataTable.
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("'%s' is a RichTextBlock: its fonts live in the rows of its TextStyleSet DataTable, not on the widget, so set_font cannot change it. Edit the FRichTextStyleRow rows of that table instead."), *SlotName),
-                TEXT("UNSUPPORTED_WIDGET"));
-            return true;
+            // Unstyled runs use the widget's default text style; its override takes the font
+            // (rows of a TextStyleSet still style their own tagged runs).
+            FSlateFontInfo FontInfo = FCoreStyle::GetDefaultFontStyle("Regular", 18);
+            ApplyFont(FontInfo);
+            RichText->SetDefaultFont(FontInfo);
+            bFontApplied = true;
         }
 
         if (!bFontApplied)
@@ -153,12 +170,12 @@ bool HandleWidgetAuthoringAdvancedStyling(
                 TEXT("UNSUPPORTED_WIDGET"));
             return true;
         }
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
+        ResultJson->SetBoolField(TEXT("saved"), WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP));
         ResultJson->SetBoolField(TEXT("success"), bFontApplied);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetNumberField(TEXT("fontSize"), FontSize);
+        ResultJson->SetNumberField(TEXT("fontSize"), AppliedSize);
+        ResultJson->SetStringField(TEXT("font"), FontObject ? FontObject->GetPathName() : FString());
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Set font"), ResultJson);
         return true;

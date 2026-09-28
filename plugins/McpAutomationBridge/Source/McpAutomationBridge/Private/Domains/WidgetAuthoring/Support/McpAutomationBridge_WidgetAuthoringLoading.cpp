@@ -113,14 +113,14 @@ UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath)
     }
     return WidgetBP;
 }
-void MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP)
+bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP)
 {
     if (!WidgetBP)
     {
-        return;
+        return false;
     }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-    McpSafeOperations::McpSafeAssetSave(WidgetBP);
+    return McpSafeOperations::McpSafeAssetSave(WidgetBP);
 }
 
 UWidgetAnimation* FindWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName)

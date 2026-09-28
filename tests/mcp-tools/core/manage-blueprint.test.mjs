@@ -245,21 +245,21 @@ const testCases = [
     ['ADD: add_uniform_grid', 'add_uniform_grid', 'UniformGrid', { slotPadding: { left: 4, top: 4, right: 4, bottom: 4 }, minDesiredSlotWidth: 32, minDesiredSlotHeight: 32 }],
     ['ADD: add_wrap_box', 'add_wrap_box', 'TagWrap', { innerSlotPadding: { left: 2, top: 2, right: 2, bottom: 2 }, wrapWidth: 256, explicitWrapWidth: true }],
     ['ADD: add_scroll_box', 'add_scroll_box', 'OptionsScroll', { orientation: 'Vertical', scrollBarVisibility: 'Visible', alwaysShowScrollbar: true }],
-    ['ADD: add_size_box', 'add_size_box', 'SizedPanel', { widthOverride: 300, heightOverride: 120, minDesiredWidth: 200, minDesiredHeight: 80 }],
+    ['ADD: add_size_box', 'add_size_box', 'SizedPanel', { widthOverride: 300, heightOverride: 120, minDesiredWidth: 200, minDesiredHeight: 80, maxDesiredWidth: 400, maxDesiredHeight: 160 }],
     ['ADD: add_scale_box', 'add_scale_box', 'ScaledPanel', { stretch: 'UserSpecified', stretchDirection: 'Both', userSpecifiedScale: 0.85 }],
-    ['ADD: add_border', 'add_border', 'FramedBorder', { brushColor: { r: 0.1, g: 0.2, b: 0.8, a: 1 } }],
+    ['ADD: add_border', 'add_border', 'FramedBorder', { brushColor: { r: 0.1, g: 0.2, b: 0.8, a: 1 }, contentColorAndOpacity: { r: 1, g: 1, b: 1, a: 0.9 } }],
     ['ADD: add_text_block', 'add_text_block', 'TitleText', { text: 'Widget Authoring Test', fontSize: 24, colorAndOpacity: { r: 1, g: 0.9, b: 0.6, a: 1 }, autoWrap: true }],
     ['ADD: add_rich_text_block', 'add_rich_text_block', 'RichBodyText', { text: '<Rich>Body</>' }],
     ['ADD: add_image', 'add_image', 'LogoImage', { texturePath: ENGINE_DEFAULT_TEXTURE, brushSize: { x: 64, y: 64 } }],
-    ['ADD: add_button', 'add_button', 'PlayButton', { isEnabled: true }],
+    ['ADD: add_button', 'add_button', 'PlayButton', { isEnabled: true, text: 'Play', colorAndOpacity: { r: 1, g: 1, b: 1, a: 1 } }],
     ['ADD: add_check_box', 'add_check_box', 'OptionCheckBox', { isChecked: true }],
     ['ADD: add_slider', 'add_slider', 'VolumeSlider', { value: 0.5, minValue: 0, maxValue: 1, stepSize: 0.1 }],
     ['ADD: add_progress_bar', 'add_progress_bar', 'LoadingProgress', { percent: 0.75, fillColorAndOpacity: { r: 0.2, g: 0.8, b: 0.3, a: 1 }, isMarquee: false }],
     ['ADD: add_text_input', 'add_text_input', 'NameInput', { hintText: 'Name', inputType: 'single' }],
     ['ADD: add_combo_box', 'add_combo_box', 'QualityCombo', { options: ['Low', 'High'], selectedOption: 'High' }],
     ['ADD: add_spin_box', 'add_spin_box', 'AmountSpinBox', { value: 5, minValue: 0, maxValue: 10, delta: 0.5 }],
-    ['ADD: add_list_view', 'add_list_view', 'InventoryList'],
-    ['ADD: add_tree_view', 'add_tree_view', 'QuestTree'],
+    ['ADD: add_list_view', 'add_list_view', 'InventoryList', { orientation: 'Vertical' }],
+    ['ADD: add_tree_view', 'add_tree_view', 'QuestTree', { orientation: 'Horizontal' }],
   ].map(([scenario, action, slotName, extra = {}]) => ({
     scenario,
     toolName: 'manage_blueprint',
@@ -268,7 +268,8 @@ const testCases = [
   }));
 
   const layoutCases = [
-    ['CONFIG: set_anchor', 'set_anchor', { preset: 'TopCenter', anchorMin: { x: 0.5, y: 0 }, anchorMax: { x: 0.5, y: 0 } }],
+    ['CONFIG: set_anchor', 'set_anchor', { preset: 'TopCenter' }],
+    ['CONFIG: set_anchor by corners', 'set_anchor', { anchorMin: { x: 0.5, y: 0 }, anchorMax: { x: 0.5, y: 0 } }],
     ['CONFIG: set_alignment', 'set_alignment', { alignment: { x: 0.5, y: 0 } }],
     ['CONFIG: set_position', 'set_position', { position: { x: 80, y: 40 } }],
     ['CONFIG: set_size', 'set_size', { size: { x: 420, y: 72 } }],
@@ -296,13 +297,15 @@ const testCases = [
   }));
 
   const bindingCases = [
-    ['CONNECT: bind_text', 'bind_text', 'TitleText', { bindingSource: 'GetTitleText' }],
-    ['CONNECT: bind_visibility', 'bind_visibility', 'TitleText', { bindingSource: 'GetTitleVisibility' }],
-    ['CONNECT: bind_color', 'bind_color', 'TitleText', { bindingSource: 'GetTitleColor' }],
-    ['CONNECT: bind_enabled', 'bind_enabled', 'PlayButton', { bindingSource: 'CanPlay' }],
-    ['CONNECT: bind_on_clicked', 'bind_on_clicked', 'PlayButton', { functionName: 'HandlePlayClicked' }],
+    // Property bindings read a variable of the widget; the getter that converts it is generated.
+    ['CONNECT: bind_text', 'bind_text', 'TitleText', { bindingSource: 'Score' }],
+    ['CONNECT: bind_visibility', 'bind_visibility', 'TitleText', { bindingSource: 'bShowTitle' }],
+    ['CONNECT: bind_color', 'bind_color', 'LogoImage', { bindingSource: 'LogoTint' }],
+    ['CONNECT: bind_enabled', 'bind_enabled', 'PlayButton', { bindingSource: 'bCanPlay' }],
+    // Event bindings call the named function, created with the event inputs when missing.
+    ['CONNECT: bind_on_clicked', 'bind_on_clicked', 'PlayButton', { bindingSource: 'HandlePlayClicked' }],
     ['CONNECT: bind_on_hovered', 'bind_on_hovered', 'PlayButton', { onHoveredFunction: 'HandlePlayHovered', onUnhoveredFunction: 'HandlePlayUnhovered' }],
-    ['CONNECT: bind_on_value_changed', 'bind_on_value_changed', 'VolumeSlider', { functionName: 'HandleVolumeChanged' }],
+    ['CONNECT: bind_on_value_changed', 'bind_on_value_changed', 'VolumeSlider', { bindingSource: 'HandleVolumeChanged' }],
   ].map(([scenario, action, slotName, extra]) => ({
     scenario,
     toolName: 'manage_blueprint',
@@ -332,11 +335,17 @@ const testCases = [
     { scenario: 'CONFIG: set_alignment numeric on a box slot', toolName: 'manage_blueprint', arguments: widgetArgs('set_alignment', { slotName: 'BoxedText', alignment: { x: 0.5, y: 0.5 } }), expected: 'success' },
 
     // === CONNECT ===
+    { scenario: 'Setup: Score variable to bind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CREATED_WIDGET_PATH, variableName: 'Score', variableType: 'Integer' }, expected: 'success|already exists' },
+    { scenario: 'Setup: bShowTitle variable to bind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CREATED_WIDGET_PATH, variableName: 'bShowTitle', variableType: 'Boolean' }, expected: 'success|already exists' },
+    { scenario: 'Setup: LogoTint variable to bind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CREATED_WIDGET_PATH, variableName: 'LogoTint', variableType: 'LinearColor' }, expected: 'success|already exists' },
+    { scenario: 'Setup: bCanPlay variable to bind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CREATED_WIDGET_PATH, variableName: 'bCanPlay', variableType: 'Boolean' }, expected: 'success|already exists' },
     ...bindingCases,
+    { scenario: 'CONNECT: bind_text to a missing source is refused', toolName: 'manage_blueprint', arguments: widgetArgs('bind_text', { slotName: 'TitleText', bindingSource: 'NoSuchVariable' }), expected: 'error|SOURCE_NOT_FOUND' },
+
 
     // === ANIMATION ===
     { scenario: 'CREATE: create_widget_animation', toolName: 'manage_blueprint', arguments: widgetArgs('create_widget_animation', { animationName: ANIMATION_NAME, duration: 1.25 }), expected: 'success|already exists' },
-    { scenario: 'ADD: add_animation_track', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_track', { animationName: ANIMATION_NAME, slotName: 'TitleText', trackType: 'opacity', propertyName: 'RenderOpacity' }), expected: 'success|already exists' },
+    { scenario: 'ADD: add_animation_track', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_track', { animationName: ANIMATION_NAME, slotName: 'TitleText', trackType: 'opacity' }), expected: 'success|already exists' },
     { scenario: 'ADD: add_animation_keyframe', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_keyframe', { animationName: ANIMATION_NAME, slotName: 'TitleText', time: 0.25, value: 0.5, interpolation: 'linear' }), expected: 'success' },
 
     // === INFO ===

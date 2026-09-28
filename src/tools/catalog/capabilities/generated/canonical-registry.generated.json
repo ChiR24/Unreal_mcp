@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c790f4f8d1950874",
+  "catalogRevision": "f381902beb891285",
   "recordCount": 380,
   "records": [
     {
@@ -9719,6 +9719,22 @@
               "type": "string",
               "description": "Parent slot to add the widget to."
             },
+            "positionX": {
+              "type": "number",
+              "description": "Canvas slot X position, applied only when the parent is a canvas panel."
+            },
+            "positionY": {
+              "type": "number",
+              "description": "Canvas slot Y position, applied only when the parent is a canvas panel."
+            },
+            "sizeX": {
+              "type": "number",
+              "description": "Slot width in slate units."
+            },
+            "sizeY": {
+              "type": "number",
+              "description": "Slot height in slate units."
+            },
             "text": {
               "type": "string",
               "description": "Text content for a text block or button."
@@ -9737,6 +9753,10 @@
               "type": "boolean",
               "description": "Enable text auto-wrap."
             },
+            "isEnabled": {
+              "type": "boolean",
+              "description": "Widget enabled state."
+            },
             "texturePath": {
               "type": "string",
               "description": "Texture asset path for an image or brush."
@@ -9746,10 +9766,6 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "Brush/image size."
-            },
-            "isEnabled": {
-              "type": "boolean",
-              "description": "Widget enabled state."
             },
             "isChecked": {
               "type": "boolean",
@@ -9821,15 +9837,6 @@
               ],
               "description": "Widget orientation."
             },
-            "scrollBarVisibility": {
-              "type": "string",
-              "enum": [
-                "Visible",
-                "Collapsed",
-                "Auto"
-              ],
-              "description": "Scroll bar visibility."
-            },
             "componentType": {
               "type": "string",
               "description": "Component class name to add."
@@ -9841,22 +9848,6 @@
             "parentName": {
               "type": "string",
               "description": "Optional parent panel name to add the widget under."
-            },
-            "positionX": {
-              "type": "number",
-              "description": "Canvas slot X position, applied only when the parent is a canvas panel."
-            },
-            "positionY": {
-              "type": "number",
-              "description": "Canvas slot Y position, applied only when the parent is a canvas panel."
-            },
-            "sizeX": {
-              "type": "number",
-              "description": "Slot width in slate units."
-            },
-            "sizeY": {
-              "type": "number",
-              "description": "Slot height in slate units."
             },
             "widgetKind": {
               "type": "string",
@@ -10029,23 +10020,31 @@
             ],
             "colorAndOpacity": [
               "text_block",
-              "image"
+              "image",
+              "button"
             ],
             "autoWrap": [
               "text_block"
+            ],
+            "isEnabled": [
+              "text_block",
+              "rich_text_block",
+              "image",
+              "button",
+              "check_box",
+              "combo_box",
+              "slider",
+              "spin_box",
+              "progress_bar",
+              "text_input",
+              "list_view",
+              "tree_view"
             ],
             "texturePath": [
               "image"
             ],
             "brushSize": [
               "image"
-            ],
-            "isEnabled": [
-              "button",
-              "check_box",
-              "combo_box",
-              "slider",
-              "text_input"
             ],
             "isChecked": [
               "check_box"
@@ -10065,8 +10064,7 @@
               "spin_box"
             ],
             "stepSize": [
-              "slider",
-              "spin_box"
+              "slider"
             ],
             "value": [
               "slider",
@@ -10094,10 +10092,6 @@
               "list_view",
               "tree_view"
             ],
-            "scrollBarVisibility": [
-              "list_view",
-              "tree_view"
-            ],
             "componentType": [
               "component"
             ],
@@ -10106,26 +10100,14 @@
             ],
             "parentName": [
               "component"
-            ],
-            "positionX": [
-              "component"
-            ],
-            "positionY": [
-              "component"
-            ],
-            "sizeX": [
-              "component"
-            ],
-            "sizeY": [
-              "component"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "116274deaeba9e156d1781caff6e0ff200e3207c27e38b2a5661213d7bbce810",
-        "content": "bd5b024330907d39fc1b5df61a1657d9550d0665c37792072130a38e1bed411a"
+        "schema": "58d43e466888a64d1a7c31b8610f3f5d5a7a65cd9b414b3ca9b488efa5245cd4",
+        "content": "bdb5073a8532e7ae66a19ce26d18cd57eb5c38bd2252f224f3fe05ff4ae03f10"
       }
     },
     {
@@ -10558,13 +10540,29 @@
               "type": "string",
               "description": "Parent slot to add the widget to."
             },
+            "positionX": {
+              "type": "number",
+              "description": "Canvas slot X position, applied only when the parent is a canvas panel."
+            },
+            "positionY": {
+              "type": "number",
+              "description": "Canvas slot Y position, applied only when the parent is a canvas panel."
+            },
+            "sizeX": {
+              "type": "number",
+              "description": "Slot width in slate units."
+            },
+            "sizeY": {
+              "type": "number",
+              "description": "Slot height in slate units."
+            },
             "columnCount": {
               "type": "number",
-              "description": "Number of columns in a uniform/grid panel."
+              "description": "Columns given an equal share of the width (0-64)."
             },
             "rowCount": {
               "type": "number",
-              "description": "Number of rows in a uniform/grid panel."
+              "description": "Rows given an equal share of the height (0-64)."
             },
             "slotPadding": {
               "type": "object",
@@ -10606,6 +10604,12 @@
               "x-unreal-reflection-boundary": true,
               "description": "Widget slot padding {left,top,right,bottom}."
             },
+            "contentColorAndOpacity": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Tint (0-1 values) a border applies to its content."
+            },
             "scrollBarVisibility": {
               "type": "string",
               "enum": [
@@ -10643,6 +10647,14 @@
               "type": "number",
               "description": "Minimum desired height."
             },
+            "maxDesiredWidth": {
+              "type": "number",
+              "description": "Maximum desired width of a size box."
+            },
+            "maxDesiredHeight": {
+              "type": "number",
+              "description": "Maximum desired height of a size box."
+            },
             "stretch": {
               "type": "string",
               "enum": [
@@ -10668,14 +10680,6 @@
             "userSpecifiedScale": {
               "type": "number",
               "description": "User specified scale value."
-            },
-            "sizeX": {
-              "type": "number",
-              "description": "Slot width in slate units."
-            },
-            "sizeY": {
-              "type": "number",
-              "description": "Slot height in slate units."
             },
             "activeIndex": {
               "type": "number",
@@ -10815,11 +10819,67 @@
             "widget_switcher": "add_widget_switcher"
           },
           "declaredBy": {
+            "positionX": [
+              "canvas_panel",
+              "overlay",
+              "vertical_box",
+              "horizontal_box",
+              "grid_panel",
+              "uniform_grid",
+              "wrap_box",
+              "border",
+              "scroll_box",
+              "size_box",
+              "scale_box",
+              "spacer"
+            ],
+            "positionY": [
+              "canvas_panel",
+              "overlay",
+              "vertical_box",
+              "horizontal_box",
+              "grid_panel",
+              "uniform_grid",
+              "wrap_box",
+              "border",
+              "scroll_box",
+              "size_box",
+              "scale_box",
+              "spacer"
+            ],
+            "sizeX": [
+              "canvas_panel",
+              "overlay",
+              "vertical_box",
+              "horizontal_box",
+              "grid_panel",
+              "uniform_grid",
+              "wrap_box",
+              "border",
+              "scroll_box",
+              "size_box",
+              "scale_box",
+              "spacer"
+            ],
+            "sizeY": [
+              "canvas_panel",
+              "overlay",
+              "vertical_box",
+              "horizontal_box",
+              "grid_panel",
+              "uniform_grid",
+              "wrap_box",
+              "border",
+              "scroll_box",
+              "size_box",
+              "scale_box",
+              "spacer"
+            ],
             "columnCount": [
-              "uniform_grid"
+              "grid_panel"
             ],
             "rowCount": [
-              "uniform_grid"
+              "grid_panel"
             ],
             "slotPadding": [
               "uniform_grid"
@@ -10845,6 +10905,9 @@
             "padding": [
               "border"
             ],
+            "contentColorAndOpacity": [
+              "border"
+            ],
             "scrollBarVisibility": [
               "scroll_box"
             ],
@@ -10866,6 +10929,12 @@
             "minDesiredHeight": [
               "size_box"
             ],
+            "maxDesiredWidth": [
+              "size_box"
+            ],
+            "maxDesiredHeight": [
+              "size_box"
+            ],
             "stretch": [
               "scale_box"
             ],
@@ -10875,12 +10944,6 @@
             "userSpecifiedScale": [
               "scale_box"
             ],
-            "sizeX": [
-              "spacer"
-            ],
-            "sizeY": [
-              "spacer"
-            ],
             "activeIndex": [
               "widget_switcher"
             ]
@@ -10889,8 +10952,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d649dda7cc435a5b75da1d2a84ce5ae6bfbbebab17f80d6a3e91449ee2303458",
-        "content": "3a5e483ea2cc5254ac8d491161a112536bf6666a4c8f93cd9e7ddb066721e837"
+        "schema": "d4b2bd1ded58362f36e640b699a38b14fb0913cb15dcb3f530b5b4575e5a2780",
+        "content": "9e82240b471718741cfdce22c848e1c701e7ce85b79d750000ccb4f72f49fc37"
       }
     },
     {
@@ -10983,20 +11046,24 @@
           "bind text",
           "bind visibility",
           "on clicked",
+          "button click",
+          "slider changed",
+          "property binding",
           "localized text",
           "localization key"
         ],
-        "summary": "Bind a widget property or event: text, color, enabled, visibility, on-clicked/hovered/value-changed, localized text or a localization key.",
+        "summary": "Bind a widget property to a variable or pure function (text, color, enabled, visibility; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.",
         "whenToUse": [
           "A bind text must be created on a widget.",
           "A bind color must be created on a widget.",
           "A bind enabled must be created on a widget.",
           "A bind visibility must be created on a widget.",
           "A bind on clicked must be created on a widget.",
-          "A bind on hovered must be created on a widget."
+          "A button must react when the pointer moves onto or off it."
         ],
         "whenNotToUse": [
           "The widget should be set directly rather than bound.",
+          "Only a hover sound is wanted (set_style hoverSoundPath).",
           "The text is authored inline and never localized (set it directly instead)."
         ]
       },
@@ -11019,15 +11086,15 @@
             },
             "bindingSource": {
               "type": "string",
-              "description": "Variable or function name to bind to."
+              "description": "For bind_text, bind_color, bind_enabled and bind_visibility: the variable (a getter converting it is generated) or pure no-input function the property reads. For bind_on_clicked and bind_on_value_changed: the function the event calls, created with the event inputs when it does not exist."
             },
             "onHoveredFunction": {
               "type": "string",
-              "description": "Function to call on hover."
+              "description": "Function the Button calls when the pointer moves onto it; created when it does not exist."
             },
             "onUnhoveredFunction": {
               "type": "string",
-              "description": "Function to call on unhover."
+              "description": "Function the Button calls when the pointer leaves it; created when it does not exist."
             },
             "stringTableId": {
               "type": "string",
@@ -11123,7 +11190,7 @@
       },
       "examples": [
         {
-          "title": "Bind a widget property or event: text, color, enabled, visibility, on-clicked/hovered/value-changed, localized text or a localization key.",
+          "title": "Bind a widget property to a variable or pure function (text, color, enabled, visibility; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.",
           "input": {
             "action": "bind_widget",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -11184,7 +11251,6 @@
               "enabled",
               "visibility",
               "on_clicked",
-              "on_hovered",
               "on_value_changed"
             ],
             "onHoveredFunction": [
@@ -11210,8 +11276,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "39eb2e9007d62d7f8ec04360489f258f5eabe82c8d04d6e7cf67db03e9d9a2e6",
-        "content": "c344e2db872da8c0c70ddf3c248dbe3e0ee3decb85a8b1a6bbf5ed652efc61a0"
+        "schema": "d421de393f82118d441b776d5cd65f47754ed9a49b18088992ba66ae21bdd396",
+        "content": "9895551a5959a1c9dac2de77387f21b4dfce9291d39053a02b798fa83dc43fca"
       }
     },
     {
@@ -13249,7 +13315,6 @@
                 "color",
                 "opacity",
                 "renderOpacity",
-                "material",
                 "translation",
                 "scale",
                 "angle",
@@ -13453,8 +13518,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e166f7e71348e666f5ab420b4104a6c6f41067464111f80d636ca550c8211b12",
-        "content": "1ef097c9689f661d9732fecbaad77df7dc079cdd4500cefd4918e2e126147f36"
+        "schema": "86370e9dc9ee70bf9728a4b71a25f88c930694668b7ffe7749f0dcb973f022d7",
+        "content": "e35530a201ca2d2e7cfa1ee2c3d4ba48e97de527f5c152726feabf4d0257d13e"
       }
     },
     {
@@ -15538,7 +15603,7 @@
             },
             "font": {
               "type": "string",
-              "description": "Font asset path; the size is applied even when this is omitted."
+              "description": "Font asset path. Omitted keeps the current font; fontSize alone resizes it."
             },
             "fontSize": {
               "type": "number",
@@ -15706,8 +15771,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d8b7ec6b591244588b15fc68a72e7736c2fd57f82c4915d5f9cb417549dac5eb",
-        "content": "b5aa4ef71335750e3cbaed905cad20a182cbd3add5c8a9226582a660c3909d5c"
+        "schema": "bc4d779f81e74aa77a37fd6fe07d7de7fc0e4cea35cec65d3e9360f8da97bc91",
+        "content": "bd3020b8323baa678d02a9484e4b2c643e37ddd25c96c18f2305354a855748f5"
       }
     },
     {
@@ -15963,9 +16028,12 @@
               "type": "number",
               "description": "Render opacity (0-1) applied to the widget and everything under it."
             },
+            "propertyName": {
+              "type": "string",
+              "description": "Any other widget property, by reflection (such as WidgetStyle or Brush): read without value, written with it."
+            },
             "value": {
-              "type": "number",
-              "description": "Numeric value for a slider, spin box, or animation keyframe."
+              "description": "New value for propertyName: a string, number or bool, or an object or array for a struct property."
             },
             "cornerRadius": {
               "type": "number",
@@ -16049,14 +16117,7 @@
             "action": "set_widget_layout",
             "widgetPath": "/Game/UI/WBP_MainUI",
             "slotName": "Widget_Button",
-            "anchorMin": {
-              "x": 0,
-              "y": 0
-            },
-            "anchorMax": {
-              "x": 1,
-              "y": 1
-            },
+            "preset": "StretchAll",
             "layoutProperty": "anchor"
           },
           "output": {
@@ -16164,6 +16225,9 @@
             "renderOpacity": [
               "style"
             ],
+            "propertyName": [
+              "style"
+            ],
             "value": [
               "style"
             ],
@@ -16190,8 +16254,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3acbab894cb8de6d9d729b7c61dc25ae45da4f1407c0e7f209133c9e9846f9ab",
-        "content": "e7a67f20a409e27feef8ca0631122b5474eec0bc7f360f930f1969c1a950a242"
+        "schema": "cad7f57a76ffa49b7857d358082e253012d01801fcfafeb9de90deea1fc0d222",
+        "content": "1946cc769db66c6a4bf7bc44b3d544de04796066eed2315aa98952336bcde191"
       }
     },
     {

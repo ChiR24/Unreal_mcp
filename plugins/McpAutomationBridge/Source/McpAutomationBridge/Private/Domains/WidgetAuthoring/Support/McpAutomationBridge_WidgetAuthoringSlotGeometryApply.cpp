@@ -44,14 +44,14 @@ void ApplyCanvasSlotGeometry(const TSharedPtr<FJsonObject>& Payload, UWidget* Wi
         return;
     }
 
-    // Explicit pixel geometry only means what the caller wrote when the slot is
-    // pinned to the top-left corner and aligned to its own origin. Without this
-    // the default centre anchor reinterprets every coordinate as a fraction.
-    CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));
-    CanvasSlot->SetAlignment(FVector2D(0.0f, 0.0f));
-
     if (bHasPosition)
     {
+        // An explicit pixel position only means what the caller wrote when the slot
+        // is pinned to the top-left corner and aligned to its own origin. A size on
+        // its own keeps the anchoring: re-pinning for it moved a centred spacer or
+        // HUD piece into the corner.
+        CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));
+        CanvasSlot->SetAlignment(FVector2D(0.0f, 0.0f));
         FVector2D Position = CanvasSlot->GetPosition();
         Position.X = static_cast<float>(GetJsonNumberField(Payload, TEXT("positionX"), Position.X));
         Position.Y = static_cast<float>(GetJsonNumberField(Payload, TEXT("positionY"), Position.Y));

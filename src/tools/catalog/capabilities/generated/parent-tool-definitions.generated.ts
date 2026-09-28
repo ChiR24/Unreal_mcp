@@ -8751,7 +8751,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bindingSource": {
           "type": "string",
-          "description": "Variable or function name to bind to."
+          "description": "For bind_text, bind_color, bind_enabled and bind_visibility: the variable (a getter converting it is generated) or pure no-input function the property reads. For bind_on_clicked and bind_on_value_changed: the function the event calls, created with the event inputs when it does not exist."
         },
         "blueprintPath": {
           "type": "string",
@@ -8800,7 +8800,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "columnCount": {
           "type": "number",
-          "description": "Number of columns in a uniform/grid panel."
+          "description": "Columns given an equal share of the width (0-64)."
         },
         "componentClass": {
           "type": "string",
@@ -8820,6 +8820,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "componentType": {
           "type": "string",
           "description": "Component class name to add."
+        },
+        "contentColorAndOpacity": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Tint (0-1 values) a border applies to its content."
         },
         "cornerRadius": {
           "type": "number",
@@ -8920,7 +8926,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "font": {
           "type": "string",
-          "description": "Font asset path; the size is applied even when this is omitted."
+          "description": "Font asset path. Omitted keeps the current font; fontSize alone resizes it."
         },
         "fontSize": {
           "type": "number",
@@ -9091,6 +9097,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Material asset path for a component."
         },
+        "maxDesiredHeight": {
+          "type": "number",
+          "description": "Maximum desired height of a size box."
+        },
+        "maxDesiredWidth": {
+          "type": "number",
+          "description": "Maximum desired width of a size box."
+        },
         "maxValue": {
           "type": "number",
           "description": "Maximum slider/spinbox value."
@@ -9175,11 +9189,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "onHoveredFunction": {
           "type": "string",
-          "description": "Function to call on hover."
+          "description": "Function the Button calls when the pointer moves onto it; created when it does not exist."
         },
         "onUnhoveredFunction": {
           "type": "string",
-          "description": "Function to call on unhover."
+          "description": "Function the Button calls when the pointer leaves it; created when it does not exist."
         },
         "operations": {
           "oneOf": [
@@ -9370,7 +9384,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "rowCount": {
           "type": "number",
-          "description": "Number of rows in a uniform/grid panel."
+          "description": "Rows given an equal share of the height (0-64)."
         },
         "saveAfterCompile": {
           "type": "boolean",
@@ -9527,7 +9541,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "color",
             "opacity",
             "renderOpacity",
-            "material",
             "translation",
             "scale",
             "angle",
@@ -9546,8 +9559,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "User specified scale value."
         },
         "value": {
-          "type": "number",
-          "description": "Numeric value for a slider, spin box, or animation keyframe."
+          "oneOf": [
+            {
+              "description": "New value for propertyName: a string, number or bool, or an object or array for a struct property."
+            },
+            {
+              "type": "number",
+              "description": "Numeric value for a slider, spin box, or animation keyframe."
+            }
+          ],
+          "description": "New value for propertyName: a string, number or bool, or an object or array for a struct property."
         },
         "variableName": {
           "type": "string",

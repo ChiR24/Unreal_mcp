@@ -123,14 +123,20 @@ bool HandleWidgetAuthoringTypedPanels(
     }
     if (SubAction.Equals(TEXT("add_grid_panel"), ESearchCase::IgnoreCase))
     {
-        return Add(UGridPanel::StaticClass(), TEXT("GridPanel"), TEXT("grid panel"), [&](UWidget*)
+        return Add(UGridPanel::StaticClass(), TEXT("GridPanel"), TEXT("grid panel"), [&](UWidget* Widget)
         {
-            // A UGridPanel has no column/row count: its extent comes from the
-            // Row/Column each child slot claims, so say the fields were ignored.
-            if (Payload->HasField(TEXT("columnCount")) || Payload->HasField(TEXT("rowCount")))
+            // A GridPanel takes its extent from its children's Row/Column; columnCount and
+            // rowCount give it that many equal-share columns and rows to fill.
+            UGridPanel* Grid = CastChecked<UGridPanel>(Widget);
+            const int32 Columns = FMath::Clamp(static_cast<int32>(GetJsonNumberField(Payload, TEXT("columnCount"), 0.0)), 0, 64);
+            const int32 Rows = FMath::Clamp(static_cast<int32>(GetJsonNumberField(Payload, TEXT("rowCount"), 0.0)), 0, 64);
+            for (int32 Index = 0; Index < Columns; ++Index)
             {
-                ResultJson->SetBoolField(TEXT("gridSizeApplied"), false);
-                ResultJson->SetStringField(TEXT("gridSizeNote"), TEXT("columnCount/rowCount were ignored: a GridPanel sizes itself from the Row and Column its children claim. Set those on each child's slot."));
+                Grid->SetColumnFill(Index, 1.0f);
+            }
+            for (int32 Index = 0; Index < Rows; ++Index)
+            {
+                Grid->SetRowFill(Index, 1.0f);
             }
         });
     }
@@ -158,8 +164,15 @@ bool HandleWidgetAuthoringTypedPanels(
             {
                 WrapBox->SetInnerSlotPadding(FVector2D(GetJsonNumberField(Padding, TEXT("x"), 0.0), GetJsonNumberField(Padding, TEXT("y"), 0.0)));
             }
+            // wrapWidth only takes effect with explicitWrapWidth; giving a width turns it on.
+            const bool bExplicit = GetJsonBoolField(Payload, TEXT("explicitWrapWidth"), Payload->HasField(TEXT("wrapWidth")));
+            const float Width = static_cast<float>(GetJsonNumberField(Payload, TEXT("wrapWidth"), 500.0));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            ReadFloat(TEXT("wrapSize"), 0.0, [WrapBox](float V) { WrapBox->SetWrapSize(V); });
+            WrapBox->SetExplicitWrapSize(bExplicit);
+            WrapBox->SetWrapSize(Width);
+#else
+            WrapBox->bExplicitWrapSize = bExplicit;
+            WrapBox->WrapSize = Width;
 #endif
         });
     }

@@ -9,6 +9,7 @@
 #include "Animation/WidgetAnimation.h"
 #include "Animation/WidgetAnimationBinding.h"
 #include "Components/Widget.h"
+#include "Animation/MovieScene2DTransformTrack.h"
 #include "Tracks/MovieSceneColorTrack.h"
 #include "Tracks/MovieSceneFloatTrack.h"
 #include "WidgetBlueprint.h"
@@ -176,5 +177,46 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
         MovieScene->SetPlaybackRange(TRange<FFrameNumber>(LowerBound, UpperBound));
     }
     return true;
+}
+bool McpAddWidgetAnimationTrack(UWidgetAnimation* Animation, UWidget* Target, const FString& TrackType,
+                                FMcpWidgetKeyResult& Out, FString& OutError)
+{
+    UMovieScene* MovieScene = Animation ? Animation->GetMovieScene() : nullptr;
+    if (!MovieScene || !Target)
+    {
+        OutError = TEXT("The animation has no MovieScene or the target widget is missing");
+        return false;
+    }
+    const FString Kind = TrackType.ToLower();
+    MovieScene->Modify();
+    Animation->Modify();
+    UMovieSceneTrack* Track = nullptr;
+    bool bBinding = false;
+    const FGuid Guid = FindOrCreateBinding(MovieScene, Animation, Target, bBinding);
+    if (Kind == TEXT("opacity") || Kind == TEXT("renderopacity"))
+    {
+        Track = FindOrAddPropertyTrack<UMovieSceneFloatTrack>(MovieScene, Guid, TEXT("RenderOpacity"), Out.bCreatedTrack);
+        Out.PropertyName = TEXT("RenderOpacity");
+    }
+    else if (Kind == TEXT("color"))
+    {
+        Track = FindOrAddPropertyTrack<UMovieSceneColorTrack>(MovieScene, Guid, TEXT("ColorAndOpacity"), Out.bCreatedTrack);
+        Out.PropertyName = TEXT("ColorAndOpacity");
+    }
+    else if (IsTransformKind(Kind))
+    {
+        Track = FindOrAddPropertyTrack<UMovieScene2DTransformTrack>(MovieScene, Guid, TEXT("RenderTransform"), Out.bCreatedTrack);
+        Out.PropertyName = TEXT("RenderTransform");
+    }
+    else
+    {
+        OutError = FString::Printf(TEXT("trackType '%s' is not one of opacity, color, translation, scale, angle, shear, transform"), *TrackType);
+        return false;
+    }
+    Out.bCreatedBinding = bBinding;
+    Out.BindingGuid = Guid.ToString();
+    Out.TrackType = Kind;
+    Out.TrackClass = Track ? Track->GetClass()->GetName() : FString();
+    return FindOrAddSection(Track) != nullptr;
 }
 } // namespace WidgetAuthoringHelpers

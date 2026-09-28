@@ -55,10 +55,20 @@ bool HandleWidgetAuthoringGenericComponent(
             return true;
         }
 
-        // parentName when it names a panel, else the root (SafeAddWidgetToTree makes a canvas root when there is none).
+        // parentName must name a panel; without it the root takes the widget (SafeAddWidgetToTree
+        // makes a canvas root when there is none). A name that missed used to seat it at the root.
         FString ParentSlot;
-        if (const UPanelWidget* Parent = Cast<UPanelWidget>(FindWidgetByName(WidgetBP->WidgetTree, GetJsonStringField(Payload, TEXT("parentName")))))
+        const FString ParentName = GetJsonStringField(Payload, TEXT("parentName"));
+        if (!ParentName.IsEmpty())
         {
+            const UPanelWidget* Parent = Cast<UPanelWidget>(FindWidgetByName(WidgetBP->WidgetTree, ParentName));
+            if (!Parent)
+            {
+                Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                    TEXT("parentName '%s' is not a panel in '%s' (get_widget_info lists the tree)."), *ParentName, *WidgetPath),
+                    TEXT("PARENT_NOT_FOUND"));
+                return true;
+            }
             ParentSlot = Parent->GetName();
         }
 

@@ -57,7 +57,11 @@ bool HandleWidgetAuthoringStyleClipping(
         {
             FString ClippingStr = GetJsonStringField(Payload, TEXT("clipping"), TEXT("Inherit"));
             EWidgetClipping Clipping = EWidgetClipping::Inherit;
-            if (ClippingStr.Equals(TEXT("ClipToBounds"), ESearchCase::IgnoreCase))
+            if (ClippingStr.Equals(TEXT("Inherit"), ESearchCase::IgnoreCase))
+            {
+                Clipping = EWidgetClipping::Inherit;
+            }
+            else if (ClippingStr.Equals(TEXT("ClipToBounds"), ESearchCase::IgnoreCase))
             {
                 Clipping = EWidgetClipping::ClipToBounds;
             }
@@ -72,6 +76,14 @@ bool HandleWidgetAuthoringStyleClipping(
             else if (ClippingStr.Equals(TEXT("OnDemand"), ESearchCase::IgnoreCase))
             {
                 Clipping = EWidgetClipping::OnDemand;
+            }
+            else
+            {
+                // An unknown name used to reset clipping to Inherit and report success.
+                Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                    TEXT("clipping '%s' is not one of Inherit, ClipToBounds, ClipToBoundsWithoutIntersecting, ClipToBoundsAlways, OnDemand."),
+                    *ClippingStr), TEXT("INVALID_ARGUMENT"));
+                return true;
             }
             Widget->SetClipping(Clipping);
             WidgetBP->MarkPackageDirty();
@@ -160,37 +172,15 @@ bool HandleWidgetAuthoringStyleClipping(
 
             if (PropertyName.IsEmpty())
             {
-                // Legacy path: if no propertyName given, try "style" param against "Style" property
-                // Reset state from any prior "value" field extraction to avoid stale data
-                bUseJsonConverter = false;
-                RawJsonValue.Reset();
-                Value.Empty();
-
-                PropertyName = TEXT("Style");
-                bHasValueField = Payload->HasField(TEXT("style"));
-                if (bHasValueField)
-                {
-                    const TSharedPtr<FJsonValue> StyleField = Payload->TryGetField(TEXT("style"));
-                    if (StyleField.IsValid() && (StyleField->Type == EJson::Object || StyleField->Type == EJson::Array))
-                    {
-                        bUseJsonConverter = true;
-                        RawJsonValue = StyleField;
-                    }
-                    else
-                    {
-                        Value = GetJsonStringField(Payload, TEXT("style"));
-                    }
-                }
-            }
-
-            if (PropertyName.IsEmpty())
-            {
-                Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: propertyName"), TEXT("MISSING_PARAMETER"));
+                Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                    TEXT("set_style needs at least one of colorAndOpacity, fontSize, text, justification, texturePath, renderOpacity, ")
+                    TEXT("cornerRadius, hoverSoundPath, pressSoundPath, or propertyName (with value to write it, without to read it)."),
+                    TEXT("MISSING_PARAMETER"));
                 return true;
             }
 
             FProperty* Prop = Widget->GetClass()->FindPropertyByName(FName(*PropertyName));
-            if (!Prop && PropertyName.Equals(TEXT("Style"), ESearchCase::IgnoreCase))
+            if (!Prop && PropertyName.Equals(TEXT("Style"), ESearchCase::IgnoreCase) && Widget)
             {
                 Prop = FindWidgetStyleProperty(Widget->GetClass());
                 PropertyName = Prop ? Prop->GetName() : PropertyName;

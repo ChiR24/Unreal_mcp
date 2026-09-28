@@ -7,12 +7,13 @@
 #include "Components/PanelSlot.h"
 #include "UObject/UnrealType.h"
 #include "Components/Widget.h"
-#include "Kismet2/BlueprintEditorUtils.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
+// set_padding, set_z_order, set_render_transform, set_visibility; each reply carries the
+// widget's layout read back after the write.
 namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;
@@ -25,226 +26,109 @@ bool HandleWidgetAuthoringSlotAppearance(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
-    if (SubAction.Equals(TEXT("set_padding"), ESearchCase::IgnoreCase))
+    const bool bPadding = SubAction.Equals(TEXT("set_padding"), ESearchCase::IgnoreCase);
+    const bool bZOrder = SubAction.Equals(TEXT("set_z_order"), ESearchCase::IgnoreCase);
+    const bool bTransform = SubAction.Equals(TEXT("set_render_transform"), ESearchCase::IgnoreCase);
+    if (!bPadding && !bZOrder && !bTransform && !SubAction.Equals(TEXT("set_visibility"), ESearchCase::IgnoreCase))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
+        return false;
+    }
+    UWidgetBlueprint* WidgetBP = nullptr;
+    UWidget* Widget = ResolveWidgetTarget(Subsystem, RequestId, RequestingSocket, Payload, WidgetBP);
+    if (!Widget)
+    {
+        return true;
+    }
+    const FString SlotClass = Widget->Slot ? Widget->Slot->GetClass()->GetName() : TEXT("no slot");
 
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!Widget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
+    if (bPadding)
+    {
         TSharedPtr<FJsonObject> PaddingObj = GetObjectField(Payload, TEXT("padding"));
         if (!PaddingObj.IsValid())
         {
-            // No padding object used to fall straight through to "Padding set".
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("set_padding needs a `padding` object, e.g. {\"left\":8,\"top\":4,\"right\":8,\"bottom\":4}."),
-                TEXT("MISSING_PARAMETER"));
+                TEXT("set_padding needs a `padding` object, e.g. {\"left\":8,\"top\":4,\"right\":8,\"bottom\":4}."), TEXT("MISSING_PARAMETER"));
             return true;
         }
-        FMargin Padding;
-        Padding.Left = GetJsonNumberField(PaddingObj, TEXT("left"), 0.0);
-        Padding.Top = GetJsonNumberField(PaddingObj, TEXT("top"), 0.0);
-        Padding.Right = GetJsonNumberField(PaddingObj, TEXT("right"), 0.0);
-        Padding.Bottom = GetJsonNumberField(PaddingObj, TEXT("bottom"), 0.0);
-
-        // Fifteen UMG slot classes declare an FMargin Padding UPROPERTY; the
-        // cast ladder here covered three of them and every other slot fell
-        // through and still got "Padding set" with success:true -- padding a
-        // Border, ScrollBox, SizeBox, Grid or WrapBox child reported a write
-        // that never happened. One reflection write covers all fifteen, the
-        // same way set_alignment next door was fixed.
+        // Fifteen UMG slot classes declare an FMargin Padding UPROPERTY; one reflection
+        // write covers all of them (a cast ladder used to cover three and fake the rest).
         UPanelSlot* TargetSlot = Widget->Slot;
-        FStructProperty* PaddingProp = TargetSlot
-            ? FindFProperty<FStructProperty>(TargetSlot->GetClass(), TEXT("Padding"))
-            : nullptr;
+        FStructProperty* PaddingProp = TargetSlot ? FindFProperty<FStructProperty>(TargetSlot->GetClass(), TEXT("Padding")) : nullptr;
         if (!PaddingProp || PaddingProp->Struct != TBaseStructure<FMargin>::Get())
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("'%s' sits in a %s, which carries no padding. A CanvasPanel child is positioned with set_position instead."),
-                    *SlotName, TargetSlot ? *TargetSlot->GetClass()->GetName() : TEXT("no slot")),
-                TEXT("INVALID_SLOT"));
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                TEXT("'%s' sits in a %s, which carries no padding. A CanvasPanel child is positioned with set_position instead."),
+                *Widget->GetName(), *SlotClass), TEXT("INVALID_SLOT"));
             return true;
         }
+        // Omitted sides keep their current value.
+        FMargin& Padding = *PaddingProp->ContainerPtrToValuePtr<FMargin>(TargetSlot);
         TargetSlot->Modify();
-        *PaddingProp->ContainerPtrToValuePtr<FMargin>(TargetSlot) = Padding;
+        Padding = FMargin(GetJsonNumberField(PaddingObj, TEXT("left"), Padding.Left), GetJsonNumberField(PaddingObj, TEXT("top"), Padding.Top),
+                          GetJsonNumberField(PaddingObj, TEXT("right"), Padding.Right), GetJsonNumberField(PaddingObj, TEXT("bottom"), Padding.Bottom));
         TargetSlot->SynchronizeProperties();
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("slotClass"), TargetSlot->GetClass()->GetName());
-        ResultJson->SetStringField(TEXT("message"), TEXT("Padding set"));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Padding set"), ResultJson);
+        ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Padding set"));
         return true;
     }
-
-    if (SubAction.Equals(TEXT("set_z_order"), ESearchCase::IgnoreCase))
+    if (bZOrder)
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        int32 ZOrder = static_cast<int32>(GetJsonNumberField(Payload, TEXT("zOrder"), 0));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!Widget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
         UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(Widget->Slot);
-
-        if (!CanvasSlot)
+        double ZOrder = 0.0;
+        if (!CanvasSlot || !Payload->TryGetNumberField(TEXT("zOrder"), ZOrder))
         {
-            // Only canvas slots carry this setting; reporting success on a box/overlay slot was a no-op (dogfood #190).
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, CanvasSlot
+                ? FString(TEXT("set_z_order needs zOrder (an integer; higher draws on top)."))
+                : FString::Printf(TEXT("set_z_order needs a CanvasPanel child; '%s' sits in a %s. In a box or overlay, order follows the child order (reparent_widget)."),
+                                  *Widget->GetName(), *SlotClass), CanvasSlot ? TEXT("MISSING_PARAMETER") : TEXT("INVALID_SLOT"));
+            return true;
+        }
+        CanvasSlot->SetZOrder(static_cast<int32>(ZOrder));
+        ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Z-order set"));
+        return true;
+    }
+    if (bTransform)
+    {
+        // Start from the widget's own transform, so setting only the angle keeps its translation and scale.
+        FWidgetTransform Transform = Widget->GetRenderTransform();
+        const TSharedPtr<FJsonObject> Translation = GetObjectField(Payload, TEXT("translation"));
+        const TSharedPtr<FJsonObject> Scale = GetObjectField(Payload, TEXT("scale"));
+        const TSharedPtr<FJsonObject> Shear = GetObjectField(Payload, TEXT("shear"));
+        if (!Translation.IsValid() && !Scale.IsValid() && !Shear.IsValid() && !Payload->HasField(TEXT("angle")))
+        {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("set_z_order needs a CanvasPanel child; '%s' sits in a %s"), *SlotName, Widget->Slot ? *Widget->Slot->GetClass()->GetName() : TEXT("no slot")),
-                TEXT("INVALID_SLOT"));
+                TEXT("set_render_transform needs at least one of translation, scale, shear ({x,y}) or angle."), TEXT("MISSING_PARAMETER"));
             return true;
         }
-        CanvasSlot->SetZOrder(ZOrder);
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Z-order set to %d"), ZOrder));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Z-order set"), ResultJson);
+        if (Translation.IsValid())
+        {
+            Transform.Translation = FVector2D(GetJsonNumberField(Translation, TEXT("x"), Transform.Translation.X), GetJsonNumberField(Translation, TEXT("y"), Transform.Translation.Y));
+        }
+        if (Scale.IsValid())
+        {
+            Transform.Scale = FVector2D(GetJsonNumberField(Scale, TEXT("x"), Transform.Scale.X), GetJsonNumberField(Scale, TEXT("y"), Transform.Scale.Y));
+        }
+        if (Shear.IsValid())
+        {
+            Transform.Shear = FVector2D(GetJsonNumberField(Shear, TEXT("x"), Transform.Shear.X), GetJsonNumberField(Shear, TEXT("y"), Transform.Shear.Y));
+        }
+        Transform.Angle = static_cast<float>(GetJsonNumberField(Payload, TEXT("angle"), Transform.Angle));
+        Widget->SetRenderTransform(Transform);
+        ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Render transform set"));
         return true;
     }
-
-    if (SubAction.Equals(TEXT("set_render_transform"), ESearchCase::IgnoreCase))
+    // A misspelling ("Hiden") used to fall through to Visible and report success.
+    const FString Requested = GetJsonStringField(Payload, TEXT("visibility"));
+    ESlateVisibility Visibility = ESlateVisibility::Visible;
+    if (!TryParseVisibility(Requested, Visibility))
     {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!Widget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        FWidgetTransform RenderTransform;
-
-        TSharedPtr<FJsonObject> TranslationObj = GetObjectField(Payload, TEXT("translation"));
-        if (TranslationObj.IsValid())
-        {
-            RenderTransform.Translation.X = GetJsonNumberField(TranslationObj, TEXT("x"), 0.0);
-            RenderTransform.Translation.Y = GetJsonNumberField(TranslationObj, TEXT("y"), 0.0);
-        }
-
-        TSharedPtr<FJsonObject> ScaleObj = GetObjectField(Payload, TEXT("scale"));
-        if (ScaleObj.IsValid())
-        {
-            RenderTransform.Scale.X = GetJsonNumberField(ScaleObj, TEXT("x"), 1.0);
-            RenderTransform.Scale.Y = GetJsonNumberField(ScaleObj, TEXT("y"), 1.0);
-        }
-
-        TSharedPtr<FJsonObject> ShearObj = GetObjectField(Payload, TEXT("shear"));
-        if (ShearObj.IsValid())
-        {
-            RenderTransform.Shear.X = GetJsonNumberField(ShearObj, TEXT("x"), 0.0);
-            RenderTransform.Shear.Y = GetJsonNumberField(ShearObj, TEXT("y"), 0.0);
-        }
-
-        if (Payload->HasField(TEXT("angle")))
-        {
-            RenderTransform.Angle = static_cast<float>(GetJsonNumberField(Payload, TEXT("angle"), 0.0));
-        }
-
-        Widget->SetRenderTransform(RenderTransform);
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), TEXT("Render transform set"));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Render transform set"), ResultJson);
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+            TEXT("visibility '%s' is not one of Visible, Collapsed, Hidden, HitTestInvisible, SelfHitTestInvisible."), *Requested),
+            TEXT("INVALID_ARGUMENT"));
         return true;
     }
-
-    if (SubAction.Equals(TEXT("set_visibility"), ESearchCase::IgnoreCase))
-    {
-        FString WidgetPath = GetJsonStringField(Payload, TEXT("widgetPath"));
-        FString SlotName = GetSlotName(Payload);
-        FString VisibilityStr = GetJsonStringField(Payload, TEXT("visibility"), TEXT("Visible"));
-
-        if (WidgetPath.IsEmpty() || SlotName.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameters: widgetPath and slotName"), TEXT("MISSING_PARAMETER"));
-            return true;
-        }
-
-        UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
-        if (!WidgetBP)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
-            return true;
-        }
-
-        UWidget* Widget = WidgetBP->WidgetTree->FindWidget(FName(*SlotName));
-        if (!Widget)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
-            return true;
-        }
-
-        ESlateVisibility Visibility = GetVisibility(VisibilityStr);
-        Widget->SetVisibility(Visibility);
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Visibility set to %s"), *VisibilityStr));
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Visibility set"), ResultJson);
-        return true;
-    }
-
-    return false;
+    Widget->SetVisibility(Visibility);
+    ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget,
+                      FString::Printf(TEXT("Visibility set to %s"), McpVisibilityName(Visibility)));
+    return true;
 }
 }

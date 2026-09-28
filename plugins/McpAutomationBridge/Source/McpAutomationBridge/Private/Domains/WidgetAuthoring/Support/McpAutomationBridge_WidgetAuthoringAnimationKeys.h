@@ -30,6 +30,11 @@ struct FMcpWidgetKeyResult
 bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation, UWidget* Target,
                                  const TSharedPtr<FJsonObject>& Payload, FMcpWidgetKeyResult& Out,
                                  FString& OutError, FString& OutErrorCode);
+
+// Finds or creates the widget's binding and the property track for trackType (opacity, color,
+// translation, scale, angle, shear, transform), with an empty section ready for keys.
+bool McpAddWidgetAnimationTrack(UWidgetAnimation* Animation, UWidget* Target, const FString& TrackType,
+                                FMcpWidgetKeyResult& Out, FString& OutError);
 }
 
 namespace WidgetAuthoringHandlers

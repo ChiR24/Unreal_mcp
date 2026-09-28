@@ -83,7 +83,8 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         HandleWidgetAuthoringManipulation,
         HandleWidgetAuthoringAdvancedStyling,
         HandleWidgetAuthoringAnimationQueries,
-        HandleWidgetAuthoringLocalization
+        HandleWidgetAuthoringLocalization,
+        HandleWidgetAuthoringPropertyBindings
     };
 
     for (FWidgetAuthoringActionHandler Handler : Handlers)

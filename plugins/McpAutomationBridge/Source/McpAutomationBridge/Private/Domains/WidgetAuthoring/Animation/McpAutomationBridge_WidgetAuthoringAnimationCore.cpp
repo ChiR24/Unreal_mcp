@@ -103,7 +103,7 @@ bool HandleWidgetAuthoringAnimationCore(
     {
         const FString AnimationName = GetJsonStringField(Payload, TEXT("animationName"));
         const FString SlotName = GetSlotName(Payload);
-        const FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"), TEXT("RenderOpacity"));
+        const FString TrackType = GetJsonStringField(Payload, TEXT("trackType"), TEXT("opacity"));
         if (SlotName.IsEmpty())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: slotName"), TEXT("MISSING_PARAMETER"));
@@ -124,44 +124,28 @@ bool HandleWidgetAuthoringAnimationCore(
             return true;
         }
 
-        // This creates the possessable binding (the widget's row in the UMG animation panel).
-        // No property track is created here -- propertyName only picks which track
-        // add_animation_keyframe will author, so the reply must not claim it exists yet.
-        UMovieScene* MovieScene = Animation->GetMovieScene();
-        if (!MovieScene)
+        // The binding and the property track are found or created, so a repeat call adds
+        // nothing (it used to append a second possessable and binding every time).
+        FMcpWidgetKeyResult Track;
+        FString TrackError;
+        if (!McpAddWidgetAnimationTrack(Animation, TargetWidget, TrackType, Track, TrackError))
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Animation has no MovieScene"), TEXT("ANIMATION_ERROR"));
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TrackError, TEXT("INVALID_ARGUMENT"));
             return true;
         }
-
-        FGuid BindingGuid = MovieScene->AddPossessable(TargetWidget->GetFName().ToString(), TargetWidget->GetClass());
-
-        // CRITICAL: For editor-time (WidgetBlueprint context), we cannot use BindPossessableObject
-        // because it expects a UUserWidget runtime context and will crash with CastChecked.
-        // Instead, directly add the binding to AnimationBindings array.
-        FWidgetAnimationBinding NewBinding;
-        NewBinding.AnimationGuid = BindingGuid;
-        NewBinding.WidgetName = TargetWidget->GetFName();
-        NewBinding.SlotWidgetName = NAME_None;
-        NewBinding.bIsRootWidget = false;
-
-        Animation->AnimationBindings.Add(NewBinding);
-
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
+        ResultJson->SetBoolField(TEXT("saved"), McpSafeAssetSave(WidgetBP));
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("animationName"), AnimationName);
         ResultJson->SetStringField(TEXT("slotName"), SlotName);
-        ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
-        ResultJson->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
-        ResultJson->SetBoolField(TEXT("bindingCreated"), true);
-        ResultJson->SetBoolField(TEXT("propertyTrackCreated"), false);
-
-        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
-        McpSafeAssetSave(WidgetBP);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-            FString::Printf(TEXT("Bound '%s' into animation '%s'. No %s track exists yet -- add_animation_keyframe creates the property track on its first key."),
-                            *SlotName, *AnimationName, *PropertyName),
-            ResultJson);
+        ResultJson->SetStringField(TEXT("trackType"), Track.TrackType);
+        ResultJson->SetStringField(TEXT("propertyName"), Track.PropertyName);
+        ResultJson->SetStringField(TEXT("trackClass"), Track.TrackClass);
+        ResultJson->SetStringField(TEXT("bindingGuid"), Track.BindingGuid);
+        ResultJson->SetBoolField(TEXT("bindingCreated"), Track.bCreatedBinding);
+        ResultJson->SetBoolField(TEXT("trackCreated"), Track.bCreatedTrack);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("%s track %s on '%s' in '%s'"),
+            *Track.PropertyName, Track.bCreatedTrack ? TEXT("added") : TEXT("already present"), *SlotName, *AnimationName), ResultJson);
         return true;
     }
 

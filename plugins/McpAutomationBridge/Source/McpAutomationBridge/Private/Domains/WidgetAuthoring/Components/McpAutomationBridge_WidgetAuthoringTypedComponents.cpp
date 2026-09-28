@@ -13,7 +13,11 @@
 #include "Components/Slider.h"
 #include "Components/SpinBox.h"
 #include "Components/TextBlock.h"
+#include "Blueprint/WidgetTree.h"
 #include "Components/TreeView.h"
+#include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
+#include "Styling/CoreStyle.h"
+#include "WidgetBlueprint.h"
 #include "Engine/Texture2D.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -32,9 +36,18 @@ bool HandleWidgetAuthoringTypedComponents(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     TSharedPtr<FJsonObject> ResultJson)
 {
+    // isEnabled is declared for most typed adds; it is applied here once instead of per widget.
     const auto Add = [&](UClass* Class, const TCHAR* DefaultSlot, const TCHAR* Label, TFunctionRef<void(UWidget*)> Configure)
     {
-        return AddConfiguredWidget(Subsystem, RequestId, Payload, RequestingSocket, ResultJson, Class, DefaultSlot, Label, Configure);
+        return AddConfiguredWidget(Subsystem, RequestId, Payload, RequestingSocket, ResultJson, Class, DefaultSlot, Label,
+            [&](UWidget* Widget)
+            {
+                Configure(Widget);
+                if (Payload->HasField(TEXT("isEnabled")))
+                {
+                    Widget->SetIsEnabled(GetJsonBoolField(Payload, TEXT("isEnabled"), true));
+                }
+            });
     };
     const auto ReadColor = [&Payload](const TCHAR* Field, const FLinearColor& Default, TFunctionRef<void(const FLinearColor&)> Apply)
     {
@@ -51,6 +64,17 @@ bool HandleWidgetAuthoringTypedComponents(
         }
     };
 
+    const auto ApplyOrientation = [&Payload](UWidget* Widget)
+    {
+        FByteProperty* Orientation = FindFProperty<FByteProperty>(Widget->GetClass(), TEXT("Orientation"));
+        const FString Wanted = GetJsonStringField(Payload, TEXT("orientation"));
+        if (Orientation && !Wanted.IsEmpty())
+        {
+            Orientation->SetPropertyValue_InContainer(Widget, static_cast<uint8>(
+                Wanted.Equals(TEXT("Horizontal"), ESearchCase::IgnoreCase) ? Orient_Horizontal : Orient_Vertical));
+        }
+    };
+
     if (SubAction.Equals(TEXT("add_text_block"), ESearchCase::IgnoreCase))
     {
         return Add(UTextBlock::StaticClass(), TEXT("TextBlock"), TEXT("text block"), [&](UWidget* Widget)
@@ -62,7 +86,7 @@ bool HandleWidgetAuthoringTypedComponents(
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
                 FSlateFontInfo FontInfo = TextBlock->GetFont();
 #else
-                FSlateFontInfo FontInfo = FSlateFontInfo();
+                FSlateFontInfo FontInfo = TextBlock->Font;
 #endif
                 FontInfo.Size = static_cast<int32>(GetJsonNumberField(Payload, TEXT("fontSize"), 12.0));
                 TextBlock->SetFont(FontInfo);
@@ -76,16 +100,26 @@ bool HandleWidgetAuthoringTypedComponents(
     }
     if (SubAction.Equals(TEXT("add_image"), ESearchCase::IgnoreCase))
     {
+        const FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
+        UTexture2D* Texture = TexturePath.IsEmpty() ? nullptr
+            : Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *TexturePath));
+        if (!TexturePath.IsEmpty() && !Texture)
+        {
+            // A bad path used to add a white image and report success.
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("texturePath '%s' is not a Texture2D that loads."), *TexturePath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
         return Add(UImage::StaticClass(), TEXT("Image"), TEXT("image"), [&](UWidget* Widget)
         {
             UImage* Image = CastChecked<UImage>(Widget);
-            const FString TexturePath = GetJsonStringField(Payload, TEXT("texturePath"));
-            if (!TexturePath.IsEmpty())
+            if (Texture)
             {
-                if (UTexture2D* Texture = Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *TexturePath)))
-                {
-                    Image->SetBrushFromTexture(Texture);
-                }
+                Image->SetBrushFromTexture(Texture);
+            }
+            if (const TSharedPtr<FJsonObject> Size = GetObjectField(Payload, TEXT("brushSize")))
+            {
+                Image->SetDesiredSizeOverride(FVector2D(GetJsonNumberField(Size, TEXT("x"), 32.0), GetJsonNumberField(Size, TEXT("y"), 32.0)));
             }
             ReadColor(TEXT("colorAndOpacity"), FLinearColor::White, [Image](const FLinearColor& Color) { Image->SetColorAndOpacity(Color); });
         });
@@ -95,9 +129,23 @@ bool HandleWidgetAuthoringTypedComponents(
         return Add(UButton::StaticClass(), TEXT("Button"), TEXT("button"), [&](UWidget* Widget)
         {
             UButton* Button = CastChecked<UButton>(Widget);
-            if (Payload->HasField(TEXT("isEnabled")))
+            FString Label;
+            if (Payload->TryGetStringField(TEXT("text"), Label))
             {
-                Button->SetIsEnabled(GetJsonBoolField(Payload, TEXT("isEnabled"), true));
+                // The default button face is light and a new text block white, so the label is dark.
+                const FString LabelName = GetJsonStringField(Payload, TEXT("slotName"), TEXT("Button")) + TEXT("_Text");
+                UWidgetTree* Tree = Cast<UWidgetTree>(Widget->GetOuter());
+                UTextBlock* Text = CreateAndRegisterWidget<UTextBlock>(Tree ? Cast<UWidgetBlueprint>(Tree->GetOuter()) : nullptr, Tree, FName(*LabelName));
+                if (!Text)
+                {
+                    return;
+                }
+                Text->SetText(FText::FromString(Label));
+                Text->SetColorAndOpacity(FSlateColor(FLinearColor(0.02f, 0.02f, 0.02f, 1.0f)));
+                if (Button->GetChildrenCount() == 0)
+                {
+                    Button->AddChild(Text);
+                }
             }
             ReadColor(TEXT("colorAndOpacity"), FLinearColor::White, [Button](const FLinearColor& Color) { Button->SetColorAndOpacity(Color); });
         });
@@ -115,17 +163,22 @@ bool HandleWidgetAuthoringTypedComponents(
     }
     if (SubAction.Equals(TEXT("add_list_view"), ESearchCase::IgnoreCase))
     {
-        return Add(UListView::StaticClass(), TEXT("ListView"), TEXT("list view"), [](UWidget*) {});
+        return Add(UListView::StaticClass(), TEXT("ListView"), TEXT("list view"), ApplyOrientation);
     }
     if (SubAction.Equals(TEXT("add_tree_view"), ESearchCase::IgnoreCase))
     {
-        return Add(UTreeView::StaticClass(), TEXT("TreeView"), TEXT("tree view"), [](UWidget*) {});
+        return Add(UTreeView::StaticClass(), TEXT("TreeView"), TEXT("tree view"), ApplyOrientation);
     }
     if (SubAction.Equals(TEXT("add_rich_text_block"), ESearchCase::IgnoreCase))
     {
         return Add(URichTextBlock::StaticClass(), TEXT("RichTextBlock"), TEXT("rich text block"), [&](UWidget* Widget)
         {
-            CastChecked<URichTextBlock>(Widget)->SetText(FText::FromString(GetJsonStringField(Payload, TEXT("text"), TEXT("Rich Text"))));
+            URichTextBlock* Rich = CastChecked<URichTextBlock>(Widget);
+            Rich->SetText(FText::FromString(GetJsonStringField(Payload, TEXT("text"), TEXT("Rich Text"))));
+            if (Payload->HasField(TEXT("fontSize")))
+            {
+                Rich->SetDefaultFont(FCoreStyle::GetDefaultFontStyle("Regular", static_cast<int32>(GetJsonNumberField(Payload, TEXT("fontSize"), 18.0))));
+            }
         });
     }
     if (SubAction.Equals(TEXT("add_check_box"), ESearchCase::IgnoreCase))
@@ -138,7 +191,7 @@ bool HandleWidgetAuthoringTypedComponents(
     if (SubAction.Equals(TEXT("add_text_input"), ESearchCase::IgnoreCase))
     {
         const FText HintText = FText::FromString(GetJsonStringField(Payload, TEXT("hintText"), TEXT("")));
-        const bool bMultiLine = GetJsonBoolField(Payload, TEXT("multiLine"), false);
+        const bool bMultiLine = GetJsonStringField(Payload, TEXT("inputType"), TEXT("single")).Equals(TEXT("multi"), ESearchCase::IgnoreCase);
         UClass* Class = bMultiLine ? UMultiLineEditableTextBox::StaticClass() : UEditableTextBox::StaticClass();
         return Add(Class, TEXT("TextInput"), TEXT("text input"), [&](UWidget* Widget)
         {

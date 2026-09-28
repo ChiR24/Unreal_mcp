@@ -33,4 +33,5 @@ bool HandleWidgetAuthoringManipulation(UMcpAutomationBridgeSubsystem& Subsystem,
 bool HandleWidgetAuthoringAdvancedStyling(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
 bool HandleWidgetAuthoringAnimationQueries(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
 bool HandleWidgetAuthoringLocalization(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
+bool HandleWidgetAuthoringPropertyBindings(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, TSharedPtr<FJsonObject> ResultJson);
 }
