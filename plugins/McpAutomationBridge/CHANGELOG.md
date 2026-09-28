@@ -47,6 +47,8 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Folder moves** — `McpAssetRename::HandleMoveFolder` (`Rename/AssetFolderMove.cpp`) builds one `FAssetRenameData` per asset under the folder, parks the editor on `NewMap` when the open level is inside it, runs the guarded rename, fixes up redirectors (`FixupRedirectorsIn`, now shared with `fixup_redirectors`), deletes the emptied folder and reloads the level.
 - **Blueprint refresh** — `HandleRefreshBlueprints` (`Rename/AssetRefreshBlueprints.cpp`) runs `FBlueprintEditorUtils::RefreshAllNodes`, `McpCompileBlueprintWithDiagnostics` and a save for each Blueprint in the selection.
 - **Component rename** — `rename_variable` falls back to `USimpleConstructionScript::FindSCSNode` and `FBlueprintEditorUtils::RenameComponentMemberVariable`, after an `FKismetNameValidator` check.
+- **Coplanar faces** — `McpCoplanar::FindCoplanarFaces` (`ControlActor/Placement/CoplanarFaces.cpp`) measures how much of each bounds face a mesh's LOD0 triangles fill, builds world faces for every visible static mesh component and sweeps them along X; `audit_placement` merges them per actor (`ReportCoplanarFaces`) and filters by `kinds`. The tilt check moved to `Placement/PlacementTilt.cpp`.
+- **Coplanar fix** — `HandleFixCoplanar` (`Placement/CoplanarFix.cpp`) plans a shift per face (forward when the face lies inside the other, back otherwise), resizes a `StaticMeshActor` whose two faces on one axis move, and repeats up to four passes inside one `FScopedTransaction`.
 
 ### Changed
 - **Game mode class setters stop moving the project default**: `SetGameModeClass` (`GameFrameworkHandlersClassConfig.cpp`) no longer calls `PersistEffectiveGameFramework`, which wrote `GlobalDefaultGameMode` into `GEngineIni` (the user's Saved layer) and the editor world's `AWorldSettings::DefaultGameMode` on every call. With `makeDefault` it calls `UGameMapsSettings::SetGlobalDefaultGameMode`, `SaveConfig` and `TryUpdateDefaultConfigFile` (DefaultEngine.ini) and fails with `CONFIG_WRITE_FAILED` when that write fails. Every reply reports `ResolveWorldGameMode` (now shared from `GameFrameworkHandlersInfo.cpp`) as `openLevelGameMode` and `effectiveInOpenLevel`.
@@ -223,6 +225,10 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Play start** — `HandleControlEditorPlay` replies from a ticker once `GEditor->PlayWorld` has begun play (20 s limit, `PIE_START_TIMEOUT`).
 - **Settings lookup** — `ResolveSettingsClass` falls back to `McpFindTypeQuiet` on the class name; `get_project_settings` with `key` leaves out `settings`.
 - **find_text** — `FMcpFindTextScan::Properties` skips `NetDriverName`, `BodyInstance`, `SpriteInfo` and `FolderPath`.
+- **Redirector fixup** — `FixupRedirectorsIn` (`Rename/AssetRedirectorFixup.cpp`) loads each redirector's referencers, runs `RenameReferencingSoftObjectPaths`, saves them through `McpSafeAssetSave`, rescans them and deletes the redirectors with `ObjectTools::DeleteObjects`, instead of `IAssetTools::FixupReferencers`, whose `SFixupRedirectorsReport` modal asserted unattended. `bulk_delete` calls it too.
+- **MapsToCook follow** — `RenameWithSettingsFollow` also follows `FFilePath` values that name a renamed package.
+- **Short class names** — `AddClassFilter` falls back to `ResolveUClass`.
+- **SCS propagation** — `SetSCSComponentTransform` and `SetSCSComponentProperty` push the change to placed instances through `McpScsPropagate::FDefaults`, before and after the recompile.
 
 ## [0.6.0-beta-b] - 2026-09-25
 

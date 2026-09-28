@@ -58,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`maintain_content` refreshes Blueprints.** `refresh_blueprints` refreshes every node of the Blueprints under `folderPath` (or `assetPaths`), then compiles and saves each and lists the ones that do not compile. After a class rename, casts kept their old output pin ("AsBP Mario Save"), which compiled into the bytecode under that name.
 - **`rename_variable` renames components.** A component name renames the Simple Construction Script node and every graph getter, and a name the Blueprint already uses is refused (`NAME_CONFLICT`); it answered `NOT_FOUND` for components although `newName` promised them.
 - **`exists` checks several paths.** `assetPaths` answers `existsByPath` in one call.
+- **`audit_placement` finds z-fighting.** Two mesh faces in one plane that point the same way flicker between the two surfaces; the sweep reports them under `coplanarFaces` (kind `coplanar`), reading each mesh's own triangles so only faces a mesh really fills count. `kinds` narrows the report, e.g. `["coplanar"]` in a platformer full of platforms that float on purpose.
+- **`fix_coplanar` fixes z-fighting in one call.** Every actor with a coplanar face moves a unit: a piece lying inside the other face (a door on a wall) comes forward, a piece sunk into it (a ramp in the floor) goes back, and a mesh whose two faces on one axis both flicker is resized. It repeats until nothing is left to move (at most four passes), previews with `dryRun`, undoes in one step, and lists pairs inside one Blueprint under `skipped`.
 
 </details>
 
@@ -282,6 +284,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`play` answers when the game is running.** The session starts on a later editor tick, so the next call (`set_game_speed`, `simulate_input`) met no play world; the reply now waits until the play world has begun and names it (`pieWorld`).
 - **`get_project_settings`** has a `packaging` category, finds a settings class that moved modules by its name (`/Script/UnrealEd.ProjectPackagingSettings`), and a keyed read answers only that key instead of the whole section.
 - **`find_text` skips engine plumbing.** A one-letter search in a level returned 2,435 net-driver, collision-profile, sprite and folder hits; those properties are no longer searched.
+- **Folder moves no longer crash the editor.** The redirector fixup went through the engine's `FixupReferencers`, whose report dialog asserts in an unattended editor; it now runs without UI, and `bulk_delete`'s redirector pass shares it.
+- **Moves keep `MapsToCook`.** Its entries are plain package names, so a moved map silently dropped out of every packaged build; they now follow the rename.
+- **`search_assets` takes any short class name** (`ObjectRedirector`, `InputMappingContext`), not only thirty listed ones.
+- **Component template edits reach placed actors.** `edit_scs` `set_transform` and `set_property` changed only the Blueprint while placed actors kept the old value; every placed actor that still had the old value now takes the new one (`instancesUpdated`), as in the Blueprint editor.
+- **Tool descriptions.** `move` and `rename` say they take folders, `edit_scs` documents its batch `transform` object, and `classNames` names both accepted forms.
 
 </details>
 
