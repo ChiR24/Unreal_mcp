@@ -20,17 +20,58 @@ bool HandleRenderingSettingsAction(const FPerformanceActionContext& Context)
 {
     if (Context.Lower == TEXT("set_scalability"))
     {
-        int32 Level = 3;
-        Context.Payload->TryGetNumberField(TEXT("level"), Level);
+        double RequestedLevel = 0.0;
+        if (!Context.Payload->TryGetNumberField(TEXT("level"), RequestedLevel))
+        {
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                TEXT("level (0 low to 4 cinematic) is required"), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        const int32 Level = FMath::Clamp(FMath::RoundToInt(RequestedLevel), 0, 4);
+        FString Category;
+        Context.Payload->TryGetStringField(TEXT("category"), Category);
+        Category.TrimStartAndEndInline();
 
-        Scalability::FQualityLevels Quals;
-        Quals.SetFromSingleQualityLevel(Level);
+        // category used to be ignored, so a per-group request moved every group.
+        Scalability::FQualityLevels Quals = Scalability::GetQualityLevels();
+        if (Category.IsEmpty() || Category.Equals(TEXT("Overall"), ESearchCase::IgnoreCase))
+        {
+            Quals.SetFromSingleQualityLevel(Level);
+        }
+        else
+        {
+            const TPair<const TCHAR*, int32*> Groups[] = {
+                {TEXT("ViewDistance"), &Quals.ViewDistanceQuality}, {TEXT("AntiAliasing"), &Quals.AntiAliasingQuality},
+                {TEXT("Shadow"), &Quals.ShadowQuality}, {TEXT("GlobalIllumination"), &Quals.GlobalIlluminationQuality},
+                {TEXT("Reflection"), &Quals.ReflectionQuality}, {TEXT("PostProcess"), &Quals.PostProcessQuality},
+                {TEXT("Texture"), &Quals.TextureQuality}, {TEXT("Effects"), &Quals.EffectsQuality},
+                {TEXT("Foliage"), &Quals.FoliageQuality}, {TEXT("Shading"), &Quals.ShadingQuality}};
+            int32* Target = nullptr;
+            for (const TPair<const TCHAR*, int32*>& Group : Groups)
+            {
+                if (Category.Equals(Group.Key, ESearchCase::IgnoreCase))
+                {
+                    Target = Group.Value;
+                }
+            }
+            if (!Target)
+            {
+                Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                    FString::Printf(TEXT("Unknown scalability category '%s'; use Overall, ViewDistance, AntiAliasing, Shadow, GlobalIllumination, Reflection, PostProcess, Texture, Effects, Foliage or Shading"), *Category),
+                    TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+            *Target = Level;
+        }
         Scalability::SetQualityLevels(Quals);
         Scalability::SaveState(GEditorIni);
 
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetStringField(TEXT("category"), Category.IsEmpty() ? TEXT("Overall") : Category);
+        Resp->SetNumberField(TEXT("level"), Level);
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Scalability set"), nullptr);
+            FString::Printf(TEXT("Scalability %s set to %d"), Category.IsEmpty() ? TEXT("Overall") : *Category, Level), Resp);
         return true;
     }
 

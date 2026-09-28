@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "51622af92f0345c8",
+  "catalogRevision": "667749c0c990401c",
   "recordCount": 382,
   "records": [
     {
@@ -80370,11 +80370,11 @@
             },
             "category": {
               "type": "string",
-              "description": "Scalability category (default ViewDistance)."
+              "description": "Scalability group: ViewDistance, AntiAliasing, Shadow, GlobalIllumination, Reflection, PostProcess, Texture, Effects, Foliage or Shading. Omit (or Overall) to set every group."
             },
             "level": {
               "type": "number",
-              "description": "Level 0-4 (clamped)."
+              "description": "Level 0 (low) to 4 (cinematic), clamped. Required."
             },
             "maxFPS": {
               "type": "number",
@@ -80396,6 +80396,14 @@
               "type": "number",
               "description": "Additional LOD bias."
             },
+            "slop": {
+              "type": "number",
+              "description": "Occlusion query bounds padding in world units (r.OcclusionSlop)."
+            },
+            "minScreenRadius": {
+              "type": "number",
+              "description": "Smallest screen radius an object needs to be occlusion tested (r.OcclusionCullMinScreenRadius)."
+            },
             "poolSize": {
               "type": "number",
               "description": "Streaming pool size in MB."
@@ -80414,11 +80422,11 @@
             },
             "enableBatching": {
               "type": "boolean",
-              "description": "Enable batching."
+              "description": "Same as enabled; enabled wins when both are given."
             },
             "enableInstancing": {
               "type": "boolean",
-              "description": "Enable instancing."
+              "description": "Dynamic instancing of mesh draw commands (r.MeshDrawCommands.DynamicInstancing)."
             },
             "mode": {
               "type": "string",
@@ -80565,6 +80573,12 @@
             "lodBias": [
               "lod"
             ],
+            "slop": [
+              "occlusion_culling"
+            ],
+            "minScreenRadius": [
+              "occlusion_culling"
+            ],
             "poolSize": [
               "texture_streaming"
             ],
@@ -80597,8 +80611,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8cdd70f6bf6fe1d7ea090d21c83f0983d472b7823c0c45189b3843efea413202",
-        "content": "6f098966103a47619ba21d406e49250d4ecf3674bf81e50ac78bdd88efcfa134"
+        "schema": "2dcd8535745c0025281e9251cbd80675ac21838c8a2d2373edaecfda4f995425",
+        "content": "2c93df1bbe4e91f76e82e38d717e6c39bb8d4398ca33a82d3097d806525efc27"
       }
     },
     {
@@ -80769,9 +80783,11 @@
         "whenToUse": [
           "A new UMG widget asset must be created.",
           "A child component must be added to an existing widget.",
-          "An existing widget must be displayed or a notification shown."
+          "A short message must be shown to the person at the editor."
         ],
-        "whenNotToUse": []
+        "whenNotToUse": [
+          "A widget Blueprint must be displayed in game (add it to the viewport from Blueprint logic)."
+        ]
       },
       "schemas": {
         "input": {
@@ -80788,15 +80804,15 @@
             },
             "widgetPath": {
               "type": "string",
-              "description": "Full widget path; name and savePath are derived when name is absent."
+              "description": "Full widget asset path such as /Game/UI/WBP_Menu; supplies name and savePath when they are omitted."
             },
             "widgetType": {
               "type": "string",
-              "description": "Widget type."
+              "description": "Parent class: UserWidget (default) or another UserWidget subclass by name or path; anything else is refused."
             },
             "savePath": {
               "type": "string",
-              "description": "Destination /Game folder."
+              "description": "Destination /Game folder (default /Game/UI/Widgets)."
             },
             "childClass": {
               "type": "string",
@@ -80812,7 +80828,7 @@
             },
             "widgetId": {
               "type": "string",
-              "description": "Widget id; \"notification\" renders a notification."
+              "description": "Only \"notification\" (the default); any other value is refused."
             },
             "message": {
               "type": "string",
@@ -80820,7 +80836,7 @@
             },
             "duration": {
               "type": "number",
-              "description": "Notification duration."
+              "description": "Seconds the notification stays up (default 4, 0.5 to 60)."
             },
             "widgetOp": {
               "type": "string",
@@ -80908,6 +80924,10 @@
             "show": "show_widget"
           },
           "declaredBy": {
+            "widgetPath": [
+              "create",
+              "add_child"
+            ],
             "widgetType": [
               "create"
             ],
@@ -80937,8 +80957,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cf0b111507efb52a20262aa33ffb2936a9a87f8a0d45970ff99a94bab9ef8e14",
-        "content": "916877218d230af968fa50b1050907609bcb4450edb70679cf3e92d806199653"
+        "schema": "433ee38013615666a1857965fe167a99bed270543bf9bc4f63565abecd19fb06",
+        "content": "a4b18ea566ee9aa6a4672c577245531da869a6947d7fbf695c659c6aa903335d"
       }
     },
     {
@@ -82351,14 +82371,6 @@
               },
               "description": "Actor names to merge (>=2 required)."
             },
-            "mergeActors": {
-              "type": "boolean",
-              "description": "Whether to merge source actors; forced true by the merge_actors action."
-            },
-            "enableInstancing": {
-              "type": "boolean",
-              "description": "Enable instancing on the merged mesh."
-            },
             "replaceSourceActors": {
               "type": "boolean",
               "description": "Replace source actors in the level."
@@ -82445,8 +82457,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ed7f635027dee30924647d0cc242082ce11f342a24c0e01c10faa037d7e4b5bf",
-        "content": "9ed2cb078bc62dd25a643e6e5ff95f49d2fde2d7869500749d3a6d353679caa8"
+        "schema": "6947cc983929ab26797429a45a05d8f568b8b74a11f1548aedbd306f44c894f8",
+        "content": "0448e46384e57bd9b5391b282f83d0b8429b60a3ec02adc59708db77dab50e22"
       }
     },
     {
@@ -82851,7 +82863,7 @@
             },
             "soundPath": {
               "type": "string",
-              "description": "Sound asset path."
+              "description": "Sound asset path (default the editor CompileSuccess cue)."
             },
             "volume": {
               "type": "number",
@@ -82860,6 +82872,10 @@
             "pitch": {
               "type": "number",
               "description": "Pitch multiplier."
+            },
+            "startTime": {
+              "type": "number",
+              "description": "Seconds into the sound to start playing from (default 0)."
             }
           },
           "required": [
@@ -82931,8 +82947,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5bf0433c2b271b2a27893e12f8479dec61488e016a735a8625d4fcf248123b66",
-        "content": "1637282955ae6a980e68c1330670987bc9e9dd43a71c9a8c1d8bc9df09add08d"
+        "schema": "80572e46ad1d3716f43c94b747738814d686b923788a614bb01d0abd94224083",
+        "content": "29e4e34a8e3ad22c9597fa81ca4a04a4297f8284bc92d9ebef3221f686d9742f"
       }
     },
     {
@@ -83018,13 +83034,13 @@
               "type": "string",
               "description": "The action to execute on the parent tool."
             },
-            "type": {
-              "type": "string",
-              "description": "Profiling domain to capture."
-            },
             "duration": {
               "type": "number",
-              "description": "Optional capture duration in seconds."
+              "description": "Seconds after which the capture stops by itself (default: runs until stop_profiling)."
+            },
+            "type": {
+              "type": "string",
+              "description": "Optional benchmark type."
             },
             "detailed": {
               "type": "boolean",
@@ -83036,7 +83052,7 @@
             },
             "enabled": {
               "type": "boolean",
-              "description": "Show (true) or hide (false) the overlay."
+              "description": "Show (true, default) or hide (false) the overlay."
             },
             "control": {
               "type": "string",
@@ -83093,7 +83109,6 @@
           "title": "Profile performance: start or stop profiling, run a benchmark, generate a memory report, show stats.",
           "input": {
             "action": "profile_performance",
-            "type": "CPU",
             "duration": 10,
             "control": "start"
           },
@@ -83136,13 +83151,11 @@
             "show_stats": "show_stats"
           },
           "declaredBy": {
-            "type": [
-              "start",
-              "benchmark",
-              "show_stats"
-            ],
             "duration": [
               "start",
+              "benchmark"
+            ],
+            "type": [
               "benchmark"
             ],
             "detailed": [
@@ -83159,8 +83172,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c89609da00d9b3bec5a96d247e1eaef161125b23b8d210115ccee34ed248f460",
-        "content": "3bfc9831254b7b0547798f52310325866900dbb7d1b46613237f8e8fb873c3b9"
+        "schema": "6151889906909554a91a7beb95faf7b8e2c01e15c38c5530d819af017153c011",
+        "content": "c30e9876ae469c9e5f0a03e058d356c05efb58fd790682b104b28d3565954a31"
       }
     },
     {
@@ -83205,7 +83218,7 @@
             },
             "category": {
               "type": "string",
-              "description": "Only lines of this log category, e.g. LogBlueprintUserMessages."
+              "description": "Only lines of this log category, e.g. LogBlueprintUserMessages. Editor source only; refused with the other sources."
             },
             "minVerbosity": {
               "type": "string",
@@ -83216,7 +83229,7 @@
                 "log",
                 "verbose"
               ],
-              "description": "Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything."
+              "description": "Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything. Editor source only; refused with the other sources."
             },
             "source": {
               "type": "string",
@@ -83327,8 +83340,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4988a05d74ccd61bcac62686c74e933f2c6590bb283b9cc547b5df29bb59f6b7",
-        "content": "5de569f6c804b7e3e2d4129feafde3f02102e1d4fd60958f77bc31cb437660f9"
+        "schema": "3c48a327260ec1f2462b2adb66c27682b96ab9d4f4a1a93b43b8d79f28351a71",
+        "content": "a133299e1c3f51d3eec55e7d1c97c3a5b5d773f1a679704414da73b93364c3ed"
       }
     },
     {
@@ -83575,6 +83588,14 @@
               "type": "number",
               "description": "Height in pixels."
             },
+            "keepFile": {
+              "type": "boolean",
+              "description": "false: hand the image back (needs returnBase64: true) without leaving a file in Saved/Screenshots. Default true. Files already written are listed by list_output_files and removed by delete_output_file."
+            },
+            "path": {
+              "type": "string",
+              "description": "game_viewport mode only: project-relative folder to write the PNG into (default Saved/Screenshots/WindowsEditor)."
+            },
             "returnBase64": {
               "type": "boolean",
               "description": "Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
@@ -83659,8 +83680,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d937d9d832f7b93cf6c481a652f23dca7f1f2f1b53810849877a01d511e3d847",
-        "content": "ed4107f0f2b1835df30152df4ac54d1971fc83650209577a4b615e51a024461a"
+        "schema": "f5ee313f74519eaaeb15a1317944335f3389fe18959d5ee0856448ab9b229592",
+        "content": "52b94582adccfaa2a96892023f21619231c90461fbda342794001c6916057b6e"
       }
     },
     {
@@ -83905,23 +83926,19 @@
             },
             "traceFile": {
               "type": "string",
-              "description": "Output trace file path."
-            },
-            "tracePath": {
-              "type": "string",
-              "description": "Output trace directory path."
+              "description": "File mode: .utrace file name, resolved inside Saved/Profiling (default a generated McpInsights_<time>.utrace)."
             },
             "overwrite": {
               "type": "boolean",
-              "description": "Overwrite existing trace files."
-            },
-            "snapshotPath": {
-              "type": "string",
-              "description": "Output snapshot path."
+              "description": "Replace an existing trace file of that name (default false: an existing file is refused)."
             },
             "launchViewer": {
               "type": "boolean",
               "description": "Also open the Unreal Insights application on the new trace (default false)."
+            },
+            "snapshotPath": {
+              "type": "string",
+              "description": "Snapshot .utrace file name, resolved inside Saved/Profiling (default a generated name)."
             },
             "control": {
               "type": "string",
@@ -84025,42 +84042,49 @@
           "declaredBy": {
             "channels": [
               "start",
-              "capture_trace"
+              "capture_trace",
+              "launch_viewer"
             ],
             "connectionType": [
               "start",
-              "capture_trace"
+              "launch_viewer"
             ],
             "host": [
-              "start"
+              "start",
+              "send_snapshot",
+              "launch_viewer"
             ],
             "port": [
-              "start"
+              "start",
+              "send_snapshot",
+              "launch_viewer"
             ],
             "traceFile": [
-              "capture_trace"
-            ],
-            "tracePath": [
-              "capture_trace"
+              "start",
+              "capture_trace",
+              "launch_viewer"
             ],
             "overwrite": [
+              "start",
               "capture_trace",
               "write_snapshot",
               "launch_viewer"
             ],
+            "launchViewer": [
+              "start",
+              "capture_trace",
+              "launch_viewer"
+            ],
             "snapshotPath": [
               "write_snapshot"
-            ],
-            "launchViewer": [
-              "launch_viewer"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5055f4388ce27348cc40ac85ab0d01061596a32413bdd01946feaa96849716c8",
-        "content": "30a8805955dc92e3e36db3164ad63abc7fc62c66e6dd620b6c9fde3895958b0c"
+        "schema": "a59b5b98f185668a39d50e7315a508b5e14509bb1efd0d493d44683895181c01",
+        "content": "131184cc82990a4e3bbbd9d11589c7e70bf8e11dfc882579ff09a2c1a02de7d0"
       }
     },
     {
@@ -84098,11 +84122,11 @@
           "subscribe logs",
           "log category"
         ],
-        "summary": "Log streaming: subscribe to or unsubscribe from log channels, or spawn a log category.",
+        "summary": "Stream the editor log to this connection (subscribe, unsubscribe), or turn a Gameplay Debugger category on or off.",
         "whenToUse": [
-          "A live log channel must be subscribed for streaming output.",
-          "A previously subscribed log channel must be unsubscribed.",
-          "A new debug log category must be registered at runtime."
+          "New editor log lines must be streamed as they arrive.",
+          "A log subscription made with subscribe must end.",
+          "A Gameplay Debugger category (AI, BehaviorTree, EQS, Perception, ...) must show or hide in the in-game debugger."
         ],
         "whenNotToUse": [
           "A one-shot historical log read is needed.",
@@ -84118,17 +84142,17 @@
               "type": "string",
               "description": "The action to execute on the parent tool."
             },
-            "channels": {
-              "type": "string",
-              "description": "Log channel(s) to subscribe to."
-            },
             "categoryName": {
               "type": "string",
               "description": "Category name (letters, digits, underscore, hyphen only)."
             },
             "category": {
               "type": "string",
-              "description": "Alternate category name field."
+              "description": "Same as categoryName; categoryName wins when both are given."
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Show (true, default) or hide (false) the category in game."
             },
             "control": {
               "type": "string",
@@ -84172,10 +84196,9 @@
       },
       "examples": [
         {
-          "title": "Log streaming: subscribe to or unsubscribe from log channels, or spawn a log category.",
+          "title": "Stream the editor log to this connection (subscribe, unsubscribe), or turn a Gameplay Debugger category on or off.",
           "input": {
             "action": "subscribe",
-            "channels": "LogCore",
             "control": "subscribe"
           },
           "output": {
@@ -84215,14 +84238,13 @@
             "spawn_category": "spawn_category"
           },
           "declaredBy": {
-            "channels": [
-              "subscribe",
-              "unsubscribe"
-            ],
             "categoryName": [
               "spawn_category"
             ],
             "category": [
+              "spawn_category"
+            ],
+            "enabled": [
               "spawn_category"
             ]
           }
@@ -84230,8 +84252,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e0521cb6931e34dfab74d82063f550efe00756394c705f44c83621cce7e97c49",
-        "content": "60cb9af510d4238e86d3f686b2b9e6c996f447d3af3e1ebf56de1ea46f919e4b"
+        "schema": "090d1709163a1df521d2265ffcbb6eeac50749a4944b08854693122482b92d5c",
+        "content": "f180fbae967883cc5fb65fe505e6e692600df75516290c42545cd9d78e63c242"
       }
     },
     {
@@ -84249,7 +84271,7 @@
         "topics": [
           "validate_assets"
         ],
-        "summary": "Validate one or more assets by path via the local system_control wrapper with a manage_asset exists fallback.",
+        "summary": "Check that assets load: each asset path is loaded, and a folder path loads every asset in it (recursive by default); results[] reports each path.",
         "whenToUse": [
           "Asset references must be validated before use."
         ],
@@ -84279,11 +84301,11 @@
             },
             "path": {
               "type": "string",
-              "description": "Alternate single asset path field."
+              "description": "Another single asset or folder path; validated alongside assetPath when both are given."
             },
             "recursive": {
               "type": "boolean",
-              "description": "Validate recursively."
+              "description": "For a folder path, include its subfolders (default true)."
             }
           },
           "required": [
@@ -84317,7 +84339,7 @@
       },
       "examples": [
         {
-          "title": "Validate one or more assets by path via the local system_control wrapper with a manage_asset exists fallback.",
+          "title": "Check that assets load: each asset path is loaded, and a folder path loads every asset in it (recursive by default); results[] reports each path.",
           "input": {
             "action": "validate_assets",
             "paths": [
@@ -84356,8 +84378,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b318f75d775c301102003173632b79967982ce8738a4137d60dc77f13d290e9d",
-        "content": "05bcfa1eebac4cbe03955fb02de89fed004b721cfbeb96426858dae53339a295"
+        "schema": "4eff181b46982e5ab1e50ca1616f8a9b99cd6314549b8ab32de422209407008f",
+        "content": "b977b0ca6556a0eb8c5422f875597e2ad6e0cd05ac261cb1bb10e43f040c2edd"
       }
     },
     {

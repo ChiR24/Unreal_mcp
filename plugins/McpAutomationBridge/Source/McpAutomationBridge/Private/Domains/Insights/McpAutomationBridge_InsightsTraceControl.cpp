@@ -24,6 +24,17 @@ FString BuildNetworkTarget(const FString& Host, int32 Port)
     return Port > 0 ? FString::Printf(TEXT("%s:%d"), *Host, Port) : Host;
 }
 
+// Opens the Unreal Insights application, on the trace file when there is one.
+bool LaunchInsightsViewer(const FString& TraceFile, TSharedPtr<FJsonObject>& Result)
+{
+    const FString ViewerPath = FPlatformProcess::GenerateApplicationPath(TEXT("UnrealInsights"), EBuildConfiguration::Development);
+    const FString ViewerArgs = TraceFile.IsEmpty() ? FString() : FString::Printf(TEXT("-OpenTraceFile=\"%s\""), *TraceFile);
+    FProcHandle ViewerHandle = FPlatformProcess::CreateProc(*ViewerPath, *ViewerArgs, true, false, false, nullptr, 0, nullptr, nullptr);
+    Result->SetBoolField(TEXT("viewerLaunched"), ViewerHandle.IsValid());
+    Result->SetStringField(TEXT("viewerPath"), ViewerPath);
+    return ViewerHandle.IsValid();
+}
+
 void AddStartFields(
     const FTraceStartRequest& Request,
     TSharedPtr<FJsonObject>& Result)
@@ -53,7 +64,14 @@ bool TryBuildStartRequest(
     Payload->TryGetStringField(TEXT("connectionType"), Mode);
     Mode.TrimStartAndEndInline();
     Mode.ToLowerInline();
-    if (bForceFileMode || Mode.IsEmpty() || Mode == TEXT("file"))
+    // capture_insights_trace only writes a file; a network request used to be silently turned into one.
+    if (bForceFileMode && !Mode.IsEmpty() && Mode != TEXT("file"))
+    {
+        OutError = TEXT("capture_insights_trace always writes a trace file; use start_session for a network trace.");
+        OutErrorCode = TEXT("INVALID_CONNECTION_TYPE");
+        return false;
+    }
+    if (Mode.IsEmpty() || Mode == TEXT("file"))
     {
         OutRequest.Mode = ETraceStartMode::File;
     }
@@ -113,6 +131,11 @@ bool HandleStartSession(
         Bridge->SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
         return true;
     }
+    // start_unreal_insights is the viewer launch: it opens Insights unless told not to. It used to open
+    // it only with launchViewer: true, and never when a trace was already running.
+    bool bLaunchViewer = McpGetFirstStringField(Payload, {TEXT("subAction"), TEXT("action")})
+        .Equals(TEXT("start_unreal_insights"), ESearchCase::IgnoreCase);
+    Payload->TryGetBoolField(TEXT("launchViewer"), bLaunchViewer);
 
     if (HasActiveTrace())
     {
@@ -121,8 +144,10 @@ bool HandleStartSession(
         Result->SetStringField(TEXT("status"), TEXT("already_started"));
         AddStartFields(Request, Result);
         AddTraceStatus(Result);
-        Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
-            TEXT("Trace session already active."), Result);
+        const bool bViewerFailed = bLaunchViewer && !LaunchInsightsViewer(FString(), Result);
+        Bridge->SendAutomationResponse(RequestingSocket, RequestId, !bViewerFailed,
+            bViewerFailed ? TEXT("Trace session already active, but Unreal Insights could not be started.") : TEXT("Trace session already active."),
+            Result, bViewerFailed ? TEXT("VIEWER_LAUNCH_FAILED") : TEXT(""));
         return true;
     }
 
@@ -157,22 +182,15 @@ bool HandleStartSession(
     AddStartFields(Request, Result);
     AddTraceStatus(Result);
     // Optionally open the Unreal Insights viewer on the new trace (dogfood #173).
-    bool bLaunchViewer = false;
-    Payload->TryGetBoolField(TEXT("launchViewer"), bLaunchViewer);
-    if (bLaunchViewer)
-    {
-        const FString ViewerPath = FPlatformProcess::GenerateApplicationPath(TEXT("UnrealInsights"), EBuildConfiguration::Development);
-        const FString ViewerArgs = (Request.Mode == ETraceStartMode::Network || Target.IsEmpty()) ? FString() : FString::Printf(TEXT("-OpenTraceFile=\"%s\""), *Target);
-        FProcHandle ViewerHandle = FPlatformProcess::CreateProc(*ViewerPath, *ViewerArgs, true, false, false, nullptr, 0, nullptr, nullptr);
-        Result->SetBoolField(TEXT("viewerLaunched"), ViewerHandle.IsValid());
-        Result->SetStringField(TEXT("viewerPath"), ViewerPath);
-    }
-    else
+    const bool bViewerFailed = bLaunchViewer &&
+        !LaunchInsightsViewer(Request.Mode == ETraceStartMode::Network ? FString() : Target, Result);
+    if (!bLaunchViewer)
     {
         Result->SetStringField(TEXT("hint"), TEXT("Pass launchViewer:true to open Unreal Insights on this trace"));
     }
-    Bridge->SendAutomationResponse(RequestingSocket, RequestId, true,
-        TEXT("Trace session started."), Result);
+    Bridge->SendAutomationResponse(RequestingSocket, RequestId, !bViewerFailed,
+        bViewerFailed ? TEXT("Trace session started, but Unreal Insights could not be started.") : TEXT("Trace session started."),
+        Result, bViewerFailed ? TEXT("VIEWER_LAUNCH_FAILED") : TEXT(""));
     return true;
 }
 

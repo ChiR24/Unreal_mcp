@@ -47,10 +47,11 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
             Context.Payload->TryGetBoolField(TEXT("enableBatching"), bEnabled);
         }
 
+        // enableInstancing is the declared name, so it wins over the older instancing spelling.
         bool bInstancing = true;
-        if (!Context.Payload->TryGetBoolField(TEXT("instancing"), bInstancing))
+        if (!Context.Payload->TryGetBoolField(TEXT("enableInstancing"), bInstancing))
         {
-            Context.Payload->TryGetBoolField(TEXT("enableInstancing"), bInstancing);
+            Context.Payload->TryGetBoolField(TEXT("instancing"), bInstancing);
         }
 
         SetCVarIfExists(
@@ -168,13 +169,14 @@ bool HandleAdvancedOptimizationAction(const FPerformanceActionContext& Context)
     const bool bHasCellSize =
         Context.Payload->TryGetNumberField(TEXT("cellSize"), CellSize);
 
+    // streamingDistance is the declared name, so it wins over the older loadingRange spelling.
     double LoadingRange = 0.0;
     bool bHasLoadingRange =
-        Context.Payload->TryGetNumberField(TEXT("loadingRange"), LoadingRange);
+        Context.Payload->TryGetNumberField(TEXT("streamingDistance"), LoadingRange);
     if (!bHasLoadingRange)
     {
         bHasLoadingRange =
-            Context.Payload->TryGetNumberField(TEXT("streamingDistance"), LoadingRange);
+            Context.Payload->TryGetNumberField(TEXT("loadingRange"), LoadingRange);
     }
 
     // These CVars only mean something on a partitioned world (dogfood #175).

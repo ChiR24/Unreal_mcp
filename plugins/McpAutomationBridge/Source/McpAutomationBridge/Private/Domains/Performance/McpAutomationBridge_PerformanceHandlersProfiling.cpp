@@ -33,6 +33,32 @@ bool RequireEditor(
     return false;
 }
 
+// 'stat X' only toggles, so enabled:false used to switch an overlay ON when it was off. Read the
+// viewport's state (engine stats and stat groups both report through IsStatEnabled) and exec only
+// when it differs, which gives set semantics.
+bool SetStatOverlay(const FPerformanceActionContext& Context, const FString& Stat, bool bEnabled)
+{
+    FViewport* ActiveViewport = GEditor->GetActiveViewport();
+    FViewportClient* ViewportClient = ActiveViewport ? ActiveViewport->GetClient() : nullptr;
+    if (!ViewportClient)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("No active editor viewport; the stat overlay state cannot be read or set. Focus a level viewport and retry."),
+            TEXT("NO_VIEWPORT"));
+        return true;
+    }
+    const bool bWasEnabled = ViewportClient->IsStatEnabled(Stat);
+    if (bWasEnabled != bEnabled)
+    {
+        GEngine->Exec(GEditor->GetEditorWorldContext().World(), *FString::Printf(TEXT("stat %s"), *Stat));
+    }
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("enabled"), bEnabled);
+    Resp->SetBoolField(TEXT("changed"), bWasEnabled != bEnabled);
+    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,
+        FString::Printf(TEXT("Stat '%s' %s"), *Stat, bEnabled ? TEXT("shown") : TEXT("hidden")), Resp);
+    return true;
+}
 bool IsValidStatCategory(const FString& Category)
 {
     for (int32 Index = 0; Index < Category.Len(); ++Index)
@@ -60,11 +86,24 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
         {
             return true;
         }
-
+        double Duration = 0.0;
+        Context.Payload->TryGetNumberField(TEXT("duration"), Duration);
         GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat startfile"));
+        if (Duration > 0.0)
+        {
+            // duration used to be ignored; stop the capture after it instead of leaving it running.
+            FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([](float)
+            {
+                if (GEngine && GEditor && GEditor->GetEditorWorldContext().World())
+                {
+                    GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat stopfile"));
+                }
+                return false;
+            }), static_cast<float>(Duration));
+        }
         Context.Bridge.SendAutomationResponse(
             Context.RequestingSocket, Context.RequestId, true,
-            TEXT("Profiling started"), nullptr);
+            Duration > 0.0 ? FString::Printf(TEXT("Profiling started; it stops after %.0fs"), Duration) : FString(TEXT("Profiling started; stop it with stop_profiling")), nullptr);
         return true;
     }
 
@@ -86,40 +125,7 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
     {
         bool bEnabled = true;
         Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
-
-        if (!RequireEditor(Context))
-        {
-            return true;
-        }
-
-        // 'stat fps' only toggles, so enabled:false used to switch the overlay
-        // ON when it was off. Read the viewport's current state and exec only
-        // when it differs, which gives the contract's set semantics.
-        FViewport* ActiveViewport = GEditor->GetActiveViewport();
-        FViewportClient* ViewportClient = ActiveViewport ? ActiveViewport->GetClient() : nullptr;
-        if (!ViewportClient)
-        {
-            Context.Bridge.SendAutomationError(
-                Context.RequestingSocket, Context.RequestId,
-                TEXT("No active editor viewport; the FPS overlay state cannot be read or set. Focus a level viewport and retry."),
-                TEXT("NO_VIEWPORT"));
-            return true;
-        }
-
-        const bool bWasEnabled = ViewportClient->IsStatEnabled(TEXT("FPS"));
-        if (bWasEnabled != bEnabled)
-        {
-            GEngine->Exec(GEditor->GetEditorWorldContext().World(), TEXT("stat fps"));
-        }
-
-        TSharedPtr<FJsonObject> FpsResp = McpHandlerUtils::CreateResultObject();
-        FpsResp->SetBoolField(TEXT("enabled"), bEnabled);
-        FpsResp->SetBoolField(TEXT("changed"), bWasEnabled != bEnabled);
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            bEnabled ? TEXT("FPS display enabled") : TEXT("FPS display disabled"),
-            FpsResp);
-        return true;
+        return !RequireEditor(Context) || SetStatOverlay(Context, TEXT("FPS"), bEnabled);
     }
 
     if (Context.Lower == TEXT("show_stats"))
@@ -151,14 +157,10 @@ bool HandleProfilingAction(const FPerformanceActionContext& Context)
             return true;
         }
 
-        GEngine->Exec(GEditor->GetEditorWorldContext().World(),
-                      *FString::Printf(TEXT("stat %s"), *Category));
-        Context.Bridge.SendAutomationResponse(
-            Context.RequestingSocket, Context.RequestId, true,
-            FString::Printf(TEXT("Stat '%s' toggled"), *Category), nullptr);
-        return true;
+        bool bEnabled = true;
+        Context.Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+        return SetStatOverlay(Context, Category, bEnabled);
     }
-
     if (Context.Lower == TEXT("run_benchmark"))
     {
         double Duration = 60.0;

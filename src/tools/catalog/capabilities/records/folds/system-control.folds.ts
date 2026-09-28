@@ -54,7 +54,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'subscribe', selector: 'control',
-    summary: 'Log streaming: subscribe to or unsubscribe from log channels, or spawn a log category.',
+    summary: 'Stream the editor log to this connection (subscribe, unsubscribe), or turn a Gameplay Debugger category on or off.',
     topics: ['log channels', 'subscribe logs', 'log category'],
     members: { subscribe: 'subscribe', unsubscribe: 'unsubscribe', spawn_category: 'spawn_category' },
   },

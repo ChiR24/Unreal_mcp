@@ -52,7 +52,8 @@ bool TryResolveTracePath(
     bool bAllowGeneratedDefault,
     FString& OutPath,
     FString& OutError,
-    FString& OutErrorCode);
+    FString& OutErrorCode,
+    const TCHAR* PreferredField = TEXT("traceFile"));
 bool TryReadHostAndPort(
     const TSharedPtr<FJsonObject>& Payload,
     bool bRequireHost,

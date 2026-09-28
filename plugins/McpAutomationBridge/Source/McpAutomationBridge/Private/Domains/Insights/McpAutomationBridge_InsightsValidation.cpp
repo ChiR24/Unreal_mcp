@@ -80,9 +80,10 @@ bool HasUnsafePathText(const FString& Path)
         Path.Contains(TEXT("\"")) || Path.Contains(TEXT("'"));
 }
 
-FString PickPathField(const TSharedPtr<FJsonObject>& Payload)
+// The action's own declared name is read first, so an alias sent alongside it cannot override it.
+FString PickPathField(const TSharedPtr<FJsonObject>& Payload, const TCHAR* PreferredField)
 {
-    return McpGetFirstStringField(Payload, {TEXT("traceFile"), TEXT("tracePath"), TEXT("snapshotPath")}).TrimStartAndEnd();
+    return McpGetFirstStringField(Payload, {PreferredField, TEXT("traceFile"), TEXT("tracePath"), TEXT("snapshotPath")}).TrimStartAndEnd();
 }
 
 FString DefaultTracePath()
@@ -155,9 +156,10 @@ bool TryResolveTracePath(
     bool bAllowGeneratedDefault,
     FString& OutPath,
     FString& OutError,
-    FString& OutErrorCode)
+    FString& OutErrorCode,
+    const TCHAR* PreferredField)
 {
-    FString Path = PickPathField(Payload);
+    FString Path = PickPathField(Payload, PreferredField);
     if (Path.IsEmpty())
     {
         if (!bAllowGeneratedDefault)

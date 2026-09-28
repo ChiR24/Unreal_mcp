@@ -143,7 +143,7 @@ export const CONSOLE_RECORDS: readonly CapabilityRecordSource[] = [
       width: { type: 'number', description: 'Width in pixels.' },
       height: { type: 'number', description: 'Height in pixels.' },
       enabled: { type: 'boolean', description: 'Fullscreen (true) or windowed (false).' },
-      windowed: { type: 'boolean', description: 'Force windowed (true) or fullscreen (false).' },
+      windowed: { type: 'boolean', description: 'The inverse of enabled: true for windowed. Refused when it contradicts enabled.' },
     },
     required: [],
     effect: 'write',

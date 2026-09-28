@@ -18035,7 +18035,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "category": {
           "type": "string",
-          "description": "Alternate category name field."
+          "description": "Alternate section selector."
         },
         "categoryName": {
           "type": "string",
@@ -18047,7 +18047,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "channels": {
           "type": "string",
-          "description": "Log channel(s) to subscribe to."
+          "description": "Trace channels (validated: letters, digits, underscore, comma, space, hyphen)."
         },
         "childClass": {
           "type": "string",
@@ -18104,15 +18104,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "duration": {
           "type": "number",
-          "description": "Notification duration."
+          "description": "Seconds after which the capture stops by itself (default: runs until stop_profiling)."
         },
         "enableBatching": {
           "type": "boolean",
-          "description": "Enable batching."
+          "description": "Same as enabled; enabled wins when both are given."
         },
         "enableInstancing": {
           "type": "boolean",
-          "description": "Enable instancing on the merged mesh."
+          "description": "Dynamic instancing of mesh draw commands (r.MeshDrawCommands.DynamicInstancing)."
         },
         "enabled": {
           "type": "boolean",
@@ -18172,6 +18172,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The jobId package_project or launch_build returned. Omit to list the jobIds this editor session knows."
         },
+        "keepFile": {
+          "type": "boolean",
+          "description": "false: hand the image back (needs returnBase64: true) without leaving a file in Saved/Screenshots. Default true. Files already written are listed by list_output_files and removed by delete_output_file."
+        },
         "key": {
           "type": "string",
           "description": "Alternate CVar name field."
@@ -18190,7 +18194,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "level": {
           "type": "number",
-          "description": "Level 0-4 (clamped)."
+          "description": "Level 0 (low) to 4 (cinematic), clamped. Required."
         },
         "limit": {
           "type": "integer",
@@ -18218,10 +18222,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Maximum frames per second."
         },
-        "mergeActors": {
-          "type": "boolean",
-          "description": "Whether to merge source actors; forced true by the merge_actors action."
-        },
         "message": {
           "type": "string",
           "description": "Notification message text."
@@ -18232,6 +18232,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "minScreenRadius": {
+          "type": "number",
+          "description": "Smallest screen radius an object needs to be occlusion tested (r.OcclusionCullMinScreenRadius)."
+        },
         "minVerbosity": {
           "type": "string",
           "enum": [
@@ -18241,7 +18245,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "log",
             "verbose"
           ],
-          "description": "Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything."
+          "description": "Least severe level to include (default log): error returns errors only, warning adds warnings, verbose returns everything. Editor source only; refused with the other sources."
         },
         "mode": {
           "type": "string",
@@ -18262,7 +18266,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "overwrite": {
           "type": "boolean",
-          "description": "Overwrite existing trace files."
+          "description": "Replace an existing trace file of that name (default false: an existing file is refused)."
         },
         "packageName": {
           "type": "string",
@@ -18278,7 +18282,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "Alternate single asset path field."
+          "description": "Another single asset or folder path; validated alongside assetPath when both are given."
         },
         "paths": {
           "oneOf": [
@@ -18347,7 +18351,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "recursive": {
           "type": "boolean",
-          "description": "Validate recursively."
+          "description": "For a folder path, include its subfolders (default true)."
         },
         "replaceSourceActors": {
           "type": "boolean",
@@ -18377,7 +18381,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "savePath": {
           "type": "string",
-          "description": "Destination /Game folder."
+          "description": "Destination /Game folder (default /Game/UI/Widgets)."
         },
         "scale": {
           "type": "number",
@@ -18416,13 +18420,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which configure display variant to run."
         },
+        "slop": {
+          "type": "number",
+          "description": "Occlusion query bounds padding in world units (r.OcclusionSlop)."
+        },
         "snapshotPath": {
           "type": "string",
-          "description": "Output snapshot path."
+          "description": "Snapshot .utrace file name, resolved inside Saved/Profiling (default a generated name)."
         },
         "soundPath": {
           "type": "string",
-          "description": "Sound asset path."
+          "description": "Sound asset path (default the editor CompileSuccess cue)."
         },
         "source": {
           "type": "string",
@@ -18433,6 +18441,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "previous"
           ],
           "description": "editor (default): the editor log. build: the UnrealBuildTool log of the last compile, where the compiler errors behind \"Live coding failed\" go. livecoding: the Live Coding console log (patching and linking). previous: the log of the editor's previous run, e.g. why an editor that went away exited. Only filter and lines apply to build, livecoding and previous."
+        },
+        "startTime": {
+          "type": "number",
+          "description": "Seconds into the sound to start playing from (default 0)."
         },
         "streamingDistance": {
           "type": "number",
@@ -18448,15 +18460,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "traceFile": {
           "type": "string",
-          "description": "Output trace file path."
-        },
-        "tracePath": {
-          "type": "string",
-          "description": "Output trace directory path."
+          "description": "File mode: .utrace file name, resolved inside Saved/Profiling (default a generated McpInsights_<time>.utrace)."
         },
         "type": {
           "type": "string",
-          "description": "Profiling domain to capture."
+          "description": "Optional benchmark type."
         },
         "value": {
           "type": "string",
@@ -18468,7 +18476,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetId": {
           "type": "string",
-          "description": "Widget id; \"notification\" renders a notification."
+          "description": "Only \"notification\" (the default); any other value is refused."
         },
         "widgetOp": {
           "type": "string",
@@ -18482,11 +18490,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetPath": {
           "type": "string",
-          "description": "Full widget path; name and savePath are derived when name is absent."
+          "description": "Full widget asset path such as /Game/UI/WBP_Menu; supplies name and savePath when they are omitted."
         },
         "widgetType": {
           "type": "string",
-          "description": "Widget type."
+          "description": "Parent class: UserWidget (default) or another UserWidget subclass by name or path; anything else is refused."
         },
         "width": {
           "type": "number",

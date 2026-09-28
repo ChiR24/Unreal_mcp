@@ -18,7 +18,7 @@ bool HandleWriteSnapshot(
     FString Path;
     FString Error;
     FString ErrorCode;
-    if (!TryResolveTracePath(Payload, false, true, true, Path, Error, ErrorCode))
+    if (!TryResolveTracePath(Payload, false, true, true, Path, Error, ErrorCode, TEXT("snapshotPath")))
     {
         Bridge->SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
         return true;

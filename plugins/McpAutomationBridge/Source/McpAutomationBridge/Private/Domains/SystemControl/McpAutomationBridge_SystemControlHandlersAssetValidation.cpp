@@ -29,12 +29,14 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
     }
   }
 
-  FString SinglePath;
-  if (Payload->TryGetStringField(TEXT("assetPath"), SinglePath) ||
-      Payload->TryGetStringField(TEXT("path"), SinglePath)) {
-    SinglePath.TrimStartAndEndInline();
-    if (!SinglePath.IsEmpty()) {
-      PathsToValidate.AddUnique(SinglePath);
+  // assetPath and path are both validated when both are given; path used to be dropped.
+  for (const TCHAR* Field : {TEXT("assetPath"), TEXT("path")}) {
+    FString SinglePath;
+    if (Payload->TryGetStringField(Field, SinglePath)) {
+      SinglePath.TrimStartAndEndInline();
+      if (!SinglePath.IsEmpty()) {
+        PathsToValidate.AddUnique(SinglePath);
+      }
     }
   }
 
@@ -87,10 +89,23 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
     }
 
     if (UEditorAssetLibrary::DoesDirectoryExist(SafePath)) {
+      // A directory used to pass just for existing; every asset in it is now loaded like a single path.
+      // ponytail: loads every listed asset in one request; batch it if whole-project scans time out.
       TArray<FString> Assets =
           UEditorAssetLibrary::ListAssets(SafePath, bRecursive, false);
-      AddValidationResult(SafePath, true, TEXT("directory"),
-                          TEXT("Directory exists"), Assets.Num());
+      TArray<FString> Failed;
+      for (const FString& AssetPath : Assets) {
+        if (!UEditorAssetLibrary::LoadAsset(AssetPath)) {
+          Failed.Add(AssetPath);
+        }
+      }
+      TArray<FString> Shown(Failed.GetData(), FMath::Min(Failed.Num(), 20));
+      AddValidationResult(SafePath, Failed.Num() == 0, TEXT("directory"),
+                          Failed.Num() == 0
+                              ? FString::Printf(TEXT("All %d asset(s) loaded successfully"), Assets.Num())
+                              : FString::Printf(TEXT("%d of %d asset(s) failed to load: %s"), Failed.Num(),
+                                                Assets.Num(), *FString::Join(Shown, TEXT(", "))),
+                          Assets.Num());
       continue;
     }
 

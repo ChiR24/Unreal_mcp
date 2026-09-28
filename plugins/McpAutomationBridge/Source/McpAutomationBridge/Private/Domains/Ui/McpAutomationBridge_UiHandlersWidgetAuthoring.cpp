@@ -24,16 +24,33 @@ bool HandleWidgetAuthoringAction(
     FString &ErrorCode) {
   if (LowerSub == TEXT("create_widget")) {
     FString WidgetName;
-    if (!Payload->TryGetStringField(TEXT("name"), WidgetName) ||
-        WidgetName.IsEmpty()) {
-      Message = TEXT("name field required for create_widget");
+    FString SavePath;
+    Payload->TryGetStringField(TEXT("name"), WidgetName);
+    Payload->TryGetStringField(TEXT("savePath"), SavePath);
+    // widgetPath (/Game/UI/WBP_Menu) supplies whichever of name and savePath was left out.
+    FString WidgetPath;
+    Payload->TryGetStringField(TEXT("widgetPath"), WidgetPath);
+    WidgetPath.TrimStartAndEndInline();
+    if (!WidgetPath.IsEmpty()) {
+      FString PathFolder;
+      FString PathName;
+      if (!WidgetPath.Split(TEXT("/"), &PathFolder, &PathName, ESearchCase::IgnoreCase, ESearchDir::FromEnd) ||
+          PathFolder.IsEmpty() || PathName.IsEmpty()) {
+        Message = FString::Printf(TEXT("widgetPath '%s' must be a full asset path such as /Game/UI/WBP_Menu"), *WidgetPath);
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+        return true;
+      }
+      PathName.Split(TEXT("."), &PathName, nullptr);
+      WidgetName = WidgetName.IsEmpty() ? PathName : WidgetName;
+      SavePath = SavePath.IsEmpty() ? PathFolder : SavePath;
+    }
+    if (WidgetName.IsEmpty()) {
+      Message = TEXT("name (or widgetPath) is required for create_widget");
       ErrorCode = TEXT("INVALID_ARGUMENT");
       Resp->SetStringField(TEXT("error"), Message);
       return true;
     }
-
-    FString SavePath;
-    Payload->TryGetStringField(TEXT("savePath"), SavePath);
     if (SavePath.IsEmpty()) {
       SavePath = TEXT("/Game/UI/Widgets");
     }
@@ -45,6 +62,13 @@ bool HandleWidgetAuthoringAction(
     const FString TargetPath =
         FString::Printf(TEXT("%s/%s"), *NormalizedPath, *WidgetName);
     if (UEditorAssetLibrary::DoesAssetExist(TargetPath)) {
+      // An existing asset of another kind is not a widget that "already exists".
+      if (!Cast<UWidgetBlueprint>(UEditorAssetLibrary::LoadAsset(TargetPath))) {
+        Message = FString::Printf(TEXT("An asset that is not a Widget Blueprint already exists at %s"), *TargetPath);
+        ErrorCode = TEXT("ASSET_TYPE_MISMATCH");
+        Resp->SetStringField(TEXT("error"), Message);
+        return true;
+      }
       bSuccess = true;
       Message =
           FString::Printf(TEXT("Widget blueprint already exists at %s"),
@@ -74,22 +98,27 @@ bool HandleWidgetAuthoringAction(
       Resp->SetStringField(TEXT("error"), Message);
       return true;
     }
-    UPackage *Package = CreatePackage(*SafeTargetPath);
-    if (!Package) {
-      Message = FString::Printf(TEXT("Failed to create package %s"), *SafeTargetPath);
-      ErrorCode = TEXT("PACKAGE_CREATE_FAILED");
-      Resp->SetStringField(TEXT("error"), Message);
-      return true;
-    }
     UClass *ParentUClass = UUserWidget::StaticClass();
     if (!WidgetType.IsEmpty() && !WidgetType.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase)) {
       UClass *Requested = FindFirstObject<UClass>(*WidgetType, EFindFirstObjectOptions::None);
       if (!Requested) {
         Requested = LoadClass<UUserWidget>(nullptr, *WidgetType);
       }
-      if (Requested && Requested->IsChildOf(UUserWidget::StaticClass())) {
-        ParentUClass = Requested;
+      // An unknown widgetType used to fall back to UserWidget silently.
+      if (!Requested || !Requested->IsChildOf(UUserWidget::StaticClass())) {
+        Message = FString::Printf(TEXT("widgetType '%s' is not a UserWidget class; nothing was created"), *WidgetType);
+        ErrorCode = TEXT("INVALID_ARGUMENT");
+        Resp->SetStringField(TEXT("error"), Message);
+        return true;
       }
+      ParentUClass = Requested;
+    }
+    UPackage *Package = CreatePackage(*SafeTargetPath);
+    if (!Package) {
+      Message = FString::Printf(TEXT("Failed to create package %s"), *SafeTargetPath);
+      ErrorCode = TEXT("PACKAGE_CREATE_FAILED");
+      Resp->SetStringField(TEXT("error"), Message);
+      return true;
     }
     UWidgetBlueprint *WidgetBlueprint = Cast<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
         ParentUClass, Package, FName(*WidgetName), BPTYPE_Normal,

@@ -134,7 +134,16 @@ bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
   }
   if (LowerSub == TEXT("set_fullscreen")) {
     bool bEnabled = true;
-    Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    const bool bHasEnabled = Payload->TryGetBoolField(TEXT("enabled"), bEnabled);
+    // windowed is the inverse of enabled; both given and disagreeing is refused rather than guessed.
+    bool bWindowed = false;
+    if (Payload->TryGetBoolField(TEXT("windowed"), bWindowed)) {
+      if (bHasEnabled && bEnabled == bWindowed) {
+        Bridge.SendAutomationError(Socket, RequestId, TEXT("enabled and windowed disagree; pass one of them"), TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+      bEnabled = !bWindowed;
+    }
     const FString Resolution = ReadResolution(Payload);
     if (!Resolution.IsEmpty()) {
       return RunConsole(Bridge, RequestId, FString::Printf(TEXT("r.SetRes %s%s"), *Resolution, bEnabled ? TEXT("f") : TEXT("w")), Socket);
@@ -167,16 +176,19 @@ bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
     const FString Message = ReadFirstString(Payload, {TEXT("message"), TEXT("text")});
     if (!WidgetId.IsEmpty() && !WidgetId.Equals(TEXT("notification"), ESearchCase::IgnoreCase)) {
       Bridge.SendAutomationError(Socket, RequestId,
-          FString::Printf(TEXT("Unknown widgetId '%s'; only 'notification' is supported"), *WidgetId),
+          FString::Printf(TEXT("show_widget only shows an editor notification (widgetId 'notification'); '%s' cannot be shown"), *WidgetId),
           TEXT("INVALID_ARGUMENT"));
       return true;
     }
     FNotificationInfo Info(FText::FromString(Message.IsEmpty() ? TEXT("MCP notification") : Message));
-    Info.ExpireDuration = 4.0f;
+    double Duration = 4.0;
+    Payload->TryGetNumberField(TEXT("duration"), Duration);
+    Info.ExpireDuration = static_cast<float>(FMath::Clamp(Duration, 0.5, 60.0));
     FSlateNotificationManager::Get().AddNotification(Info);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("widgetId"), TEXT("notification"));
     Result->SetStringField(TEXT("message"), Message);
+    Result->SetNumberField(TEXT("duration"), Info.ExpireDuration);
     Bridge.SendAutomationResponse(Socket, RequestId, true, TEXT("Notification shown"), Result);
     return true;
   }

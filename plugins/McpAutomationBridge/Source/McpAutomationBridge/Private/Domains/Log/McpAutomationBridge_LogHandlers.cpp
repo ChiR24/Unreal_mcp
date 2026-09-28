@@ -259,6 +259,15 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
             : FApp::IsEngineInstalled()
             ? FPaths::Combine(FPlatformProcess::UserSettingsDir(), TEXT("UnrealBuildTool/Log.txt"))
             : FPaths::Combine(FPaths::EngineDir(), TEXT("Programs/UnrealBuildTool/Log.txt"));
+        // A log file has no parsed category or verbosity to filter on; they used to be dropped silently.
+        if (!Source.IsEmpty() && Source != TEXT("editor") &&
+            (!GetJsonStringField(Payload, TEXT("category")).IsEmpty() || !GetJsonStringField(Payload, TEXT("minVerbosity")).IsEmpty()))
+        {
+            SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("category and minVerbosity only filter the editor log; with source %s use filter (text, | for alternatives) instead."), *Source),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
         if (Source == TEXT("previous") && FilePath.IsEmpty())
         {
             // Falling through would answer with THIS run's log instead.

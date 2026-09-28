@@ -85,7 +85,8 @@ const testCases = [
   // === CONFIG ===
   { scenario: 'CONFIG: set_quality', toolName: 'system_control', arguments: { action: 'set_quality', category: 'ViewDistance', level: 1 }, expected: 'success' },
   // === ACTION ===
-  { scenario: 'ACTION: screenshot', toolName: 'system_control', arguments: { action: 'screenshot', filename: 'SystemControl_NullRHI', resolution: '640x360', mode: 'editor_viewport', returnBase64: false, includeMetadata: true, metadata: { source: 'system-control-suite' } }, expected: 'success' },
+  { scenario: 'ACTION: screenshot', toolName: 'system_control', arguments: { action: 'screenshot', filename: 'SystemControl_NullRHI', resolution: '640x360', mode: 'editor_viewport', returnBase64: false, keepFile: true, includeMetadata: true, metadata: { source: 'system-control-suite' } }, expected: 'success' },
+  { scenario: 'OPTIONAL: game_viewport screenshot into a chosen folder', toolName: 'system_control', arguments: { action: 'screenshot', filename: 'SystemControl_Game', mode: 'game_viewport', path: 'Saved/Screenshots', returnBase64: false }, expected: 'success|NO_VIEWPORT' },
   { scenario: 'OPTIONAL: screenshot of a named editor window', toolName: 'system_control', arguments: { action: 'screenshot', filename: 'SystemControl_Window', mode: 'full_editor_window', window: '0', resolution: '640x360' }, expected: 'success' },
   // === CONFIG ===
   { scenario: 'CONFIG: set_resolution', toolName: 'system_control', arguments: { action: 'set_resolution', width: 1280, height: 720, windowed: true }, expected: 'success' },
@@ -103,25 +104,26 @@ const testCases = [
   { scenario: 'READ: read_log warnings in one category', toolName: 'system_control', arguments: { action: 'read_log', lines: 50, minVerbosity: 'warning', category: 'LogTemp', filter: 'mcp' }, expected: 'success' },
   { scenario: 'READ: read_log the Live Coding console log', toolName: 'system_control', arguments: { action: 'read_log', source: 'livecoding', lines: 20, filter: 'error' }, expected: 'success' },
   { scenario: 'READ: read_log the last build log for compiler errors', toolName: 'system_control', arguments: { action: 'read_log', source: 'build', lines: 20, filter: 'error' }, expected: 'success' },
+  { scenario: 'READ: read_log refuses category on a log file source', toolName: 'system_control', arguments: { action: 'read_log', source: 'build', category: 'LogTemp' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'READ: read_log the previous editor run', toolName: 'system_control', arguments: { action: 'read_log', source: 'previous', lines: 20 }, expected: 'success|not found' },
   { scenario: 'READ: read_log two editor runs back', toolName: 'system_control', arguments: { action: 'read_log', source: 'previous', runsBack: 2, lines: 20 }, expected: 'success|not found' },
   // The suite's own screenshots are MCP output files: list them, then remove
   // them through the tool instead of leaving them in Saved/Screenshots.
   { scenario: 'READ: list_output_files', toolName: 'system_control', arguments: { action: 'list_output_files' }, expected: 'success' },
-  { scenario: 'CLEANUP: delete_output_file the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Saved/Screenshots/SystemControl_NullRHI.png' }, expected: 'success|not found' },
-  { scenario: 'CLEANUP: delete_output_file refuses a project file', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Config/DefaultGame.ini' }, expected: 'error|PATH_OUTSIDE_OUTPUT_ROOTS' },
   { scenario: 'READ: list_output_files one page of screenshots', toolName: 'system_control', arguments: { action: 'list_output_files', root: 'Saved/Screenshots', extension: 'png', limit: 5, offset: 0 }, expected: 'success', assertions: [{ path: 'structuredContent.result.returned', gte: 0 }] },
   { scenario: 'CLEANUP: delete_output_file paths the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', paths: ['Saved/Screenshots/SystemControl_NullRHI.png'] }, expected: 'success|PARTIAL_DELETE' },
-  // === CREATE ===
+  { scenario: 'CLEANUP: delete_output_file the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Saved/Screenshots/SystemControl_NullRHI.png' }, expected: 'success|not found' },
   { scenario: 'CLEANUP: delete_output_file reports each of several paths', toolName: 'system_control', arguments: { action: 'delete_output_file', paths: ['Saved/Screenshots/SystemControl_NullRHI.png', 'Config/DefaultGame.ini'] }, expected: 'error|PARTIAL_DELETE' },
-  { scenario: 'CREATE: spawn_category', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'AI' }, expected: 'success' },
+  { scenario: 'CLEANUP: delete_output_file refuses a project file', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Config/DefaultGame.ini' }, expected: 'error|PATH_OUTSIDE_OUTPUT_ROOTS' },
+  // === CREATE ===
+  { scenario: 'CREATE: spawn_category', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'AI', enabled: true }, expected: 'success' },
   // === ACTION ===
   { scenario: 'ACTION: start_session', toolName: 'system_control', arguments: { action: 'start_session', channels: 'cpu' }, expected: 'success' },
   { scenario: 'INFO: get_trace_status', toolName: 'system_control', arguments: { action: 'get_trace_status' }, expected: 'success' },
   { scenario: 'ACTION: pause_session', toolName: 'system_control', arguments: { action: 'pause_session' }, expected: { successPattern: 'paused', errorPattern: 'TRACE_PAUSE_FAILED' } },
   { scenario: 'ACTION: resume_session', toolName: 'system_control', arguments: { action: 'resume_session' }, expected: { successPattern: 'resumed', errorPattern: 'TRACE_RESUME_FAILED' } },
   { scenario: 'ACTION: write_snapshot', toolName: 'system_control', arguments: { action: 'write_snapshot', snapshotPath: TRACE_SNAPSHOT_FILE, overwrite: true }, expected: 'success' },
-  { scenario: 'ACTION: analyze_trace', toolName: 'system_control', arguments: { action: 'analyze_trace', tracePath: TRACE_SNAPSHOT_FILE }, expected: 'success' },
+  { scenario: 'ACTION: analyze_trace', toolName: 'system_control', arguments: { action: 'analyze_trace', traceFile: TRACE_SNAPSHOT_FILE }, expected: 'success' },
   { scenario: 'ACTION: send_snapshot', toolName: 'system_control', arguments: { action: 'send_snapshot', host: 'localhost', port: 1981 }, expected: { successPattern: 'snapshot', errorPattern: 'SNAPSHOT_SEND_FAILED' } },
   { scenario: 'ACTION: stop_session', toolName: 'system_control', arguments: { action: 'stop_session' }, expected: 'success' },
   { scenario: 'ACTION: capture_insights_trace', toolName: 'system_control', arguments: { action: 'capture_insights_trace', channels: 'cpu', traceFile: TRACE_CAPTURE_FILE, overwrite: true }, expected: 'success' },
@@ -131,9 +133,11 @@ const testCases = [
   { scenario: 'ACTION: lumen_update_scene', toolName: 'system_control', arguments: { action: 'lumen_update_scene' }, expected: 'success' },
   // === PLAYBACK ===
   { scenario: 'PLAYBACK: play_sound', toolName: 'system_control', arguments: { action: 'play_sound', volume: 0 }, expected: 'success' },
-  { scenario: 'OPTIONAL: play_sound with soundPath and pitch', toolName: 'system_control', arguments: { action: 'play_sound', soundPath: OPTIONAL_SOUND, pitch: 1.0, volume: 0 }, expected: 'success' },
+  { scenario: 'OPTIONAL: play_sound with soundPath and pitch', toolName: 'system_control', arguments: { action: 'play_sound', soundPath: OPTIONAL_SOUND, pitch: 1.0, volume: 0, startTime: 0 }, expected: 'success' },
   // === CREATE ===
   { scenario: 'CREATE: create_widget', toolName: 'system_control', arguments: { action: 'create_widget', name: WIDGET_NAME, savePath: TEST_FOLDER }, expected: 'success|already exists' },
+  { scenario: 'OPTIONAL: create_widget from a widgetPath', toolName: 'system_control', arguments: { action: 'create_widget', widgetPath: `${TEST_FOLDER}/${WIDGET_NAME}_FromPath` }, expected: 'success|already exists' },
+  { scenario: 'OPTIONAL: create_widget refuses an unknown widgetType', toolName: 'system_control', arguments: { action: 'create_widget', name: `${WIDGET_NAME}_BadType`, savePath: TEST_FOLDER, widgetType: 'NoSuchWidgetClass' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'OPTIONAL: create_widget with widgetType', toolName: 'system_control', arguments: { action: 'create_widget', name: `${WIDGET_NAME}_Typed`, savePath: TEST_FOLDER, widgetType: 'UserWidget' }, expected: 'success|already exists' },
   // === ACTION ===
   { scenario: 'ACTION: show_widget', toolName: 'system_control', arguments: { action: 'show_widget', widgetId: 'notification', message: 'System control smoke', duration: 0.1 }, expected: 'success' },
@@ -185,13 +189,13 @@ const testCases = [
     { scenario: 'Setup: spawn merge child actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: MERGE_CHILD_ACTOR, location: { x: 160, y: 300, z: 120 } }, expected: 'success|already exists' },
 
     // === ACTION ===
-    { scenario: 'ACTION: start_profiling', toolName: 'system_control', arguments: {"action": "start_profiling", "type": "CPU", "duration": 1}, expected: 'success' },
+    { scenario: 'ACTION: start_profiling', toolName: 'system_control', arguments: {"action": "start_profiling", "duration": 1}, expected: 'success' },
     // === PLAYBACK ===
     { scenario: 'PLAYBACK: stop_profiling', toolName: 'system_control', arguments: {"action": "stop_profiling"}, expected: 'success' },
     // === ACTION ===
     { scenario: 'ACTION: run_benchmark', toolName: 'system_control', arguments: {"action": "run_benchmark", "duration": 1, "type": "CPU"}, expected: 'success' },
     { scenario: 'ACTION: show_fps', toolName: 'system_control', arguments: {"action": "show_fps"}, expected: 'success' },
-    { scenario: 'ACTION: show_stats', toolName: 'system_control', arguments: {"action": "show_stats", "category": "Unit"}, expected: 'success' },
+    { scenario: 'ACTION: show_stats', toolName: 'system_control', arguments: {"action": "show_stats", "category": "Unit", "enabled": true}, expected: 'success' },
     { scenario: 'ACTION: generate_memory_report', toolName: 'system_control', arguments: {"action": "generate_memory_report", "detailed": true}, expected: 'success|already exists' },
     // === CONFIG ===
     { scenario: 'CONFIG: set_scalability', toolName: 'system_control', arguments: {"action": "set_scalability", "level": 1, "category": "ViewDistance"}, expected: 'success' },
@@ -207,10 +211,11 @@ const testCases = [
     { scenario: 'ACTION: apply_baseline_settings', toolName: 'system_control', arguments: {"action": "apply_baseline_settings"}, expected: 'success' },
     { scenario: 'OPTIONAL: apply_baseline_settings with profile', toolName: 'system_control', arguments: { action: 'apply_baseline_settings', profile: 'balanced' }, expected: 'success' },
     { scenario: 'ACTION: optimize_draw_calls', toolName: 'system_control', arguments: {"action": "optimize_draw_calls", "enableInstancing": false, "enableBatching": true}, expected: 'success' },
-    { scenario: 'ACTION: merge_actors', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "mergeActors": true, "outputPath": MERGED_ACTOR_ASSET}, expected: 'success' },
+    { scenario: 'ACTION: merge_actors', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "outputPath": MERGED_ACTOR_ASSET}, expected: 'success' },
     { scenario: 'ACTION: merge_actors via packageName', toolName: 'system_control', arguments: {"action": "merge_actors", "actors": [MERGE_PARENT_ACTOR, MERGE_CHILD_ACTOR], "replaceSourceActors": false, "packageName": MERGED_ACTOR_PACKAGE_ASSET}, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: configure_occlusion_culling', toolName: 'system_control', arguments: {"action": "configure_occlusion_culling"}, expected: 'success' },
+  { scenario: 'CONFIG: configure_occlusion_culling slop and min screen radius', toolName: 'system_control', arguments: { action: 'configure_occlusion_culling', enabled: true, slop: 1, minScreenRadius: 0.01 }, expected: 'success' },
     // === ACTION ===
     { scenario: 'ACTION: optimize_shaders', toolName: 'system_control', arguments: {"action": "optimize_shaders"}, expected: 'success' },
     { scenario: 'OPTIONAL: optimize_shaders without forced recompile', toolName: 'system_control', arguments: { action: 'optimize_shaders', forceRecompile: false }, expected: 'success' },
