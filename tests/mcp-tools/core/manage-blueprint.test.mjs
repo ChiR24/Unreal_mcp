@@ -106,6 +106,7 @@ const testCases = [
   // === ACTION: rename_variable (blueprintPath + oldName + newName) ===
   // Renames the variable added above (NOT deleted).
   { scenario: 'ACTION: rename_variable', toolName: 'manage_blueprint', arguments: { action: 'rename_variable', blueprintPath: BP_PATH, oldName: 'TestVariable', newName: 'RenamedVariable' }, expected: 'success' },
+  { scenario: 'ACTION: refresh_blueprints after the rename', toolName: 'manage_asset', arguments: { action: 'refresh_blueprints', assetPaths: [BP_PATH] }, expected: 'success' },
 
   // === CONFIG: set_variable_metadata (blueprintPath + variableName + metadata) ===
   // Operates on the RENAMED variable from the previous step.

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ba90e3efacee3012",
+  "catalogRevision": "b4f36543bd4526c0",
   "recordCount": 384,
   "records": [
     {
@@ -8416,6 +8416,7 @@
       "aliases": [
         "asset.bulk_rename",
         "asset.fixup_redirectors",
+        "asset.refresh_blueprints",
         "asset.migrate_assets"
       ],
       "legacyIds": [
@@ -8439,6 +8440,13 @@
         },
         {
           "tool": "manage_asset",
+          "action": "refresh_blueprints",
+          "folded": {
+            "maintenance": "refresh_blueprints"
+          }
+        },
+        {
+          "tool": "manage_asset",
           "action": "migrate_assets",
           "folded": {
             "maintenance": "migrate"
@@ -8453,9 +8461,11 @@
           "bulk rename",
           "fixup redirectors",
           "migrate assets",
-          "content maintenance"
+          "content maintenance",
+          "refresh all nodes",
+          "refresh blueprints"
         ],
-        "summary": "Content maintenance: bulk-rename assets, fix up redirectors, or migrate packages from another content source.",
+        "summary": "Content maintenance: bulk-rename assets, fix up redirectors, refresh the nodes of every Blueprint in a folder, or migrate packages from another content source.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -8546,6 +8556,7 @@
               "enum": [
                 "bulk_rename",
                 "fixup_redirectors",
+                "refresh_blueprints",
                 "migrate"
               ],
               "description": "Which maintain content variant to run."
@@ -8631,7 +8642,7 @@
       },
       "examples": [
         {
-          "title": "Content maintenance: bulk-rename assets, fix up redirectors, or migrate packages from another content source.",
+          "title": "Content maintenance: bulk-rename assets, fix up redirectors, refresh the nodes of every Blueprint in a folder, or migrate packages from another content source.",
           "input": {
             "folderPath": "/Game/Meshes",
             "searchText": "Mesh_",
@@ -8676,14 +8687,17 @@
           "actions": {
             "bulk_rename": "bulk_rename",
             "fixup_redirectors": "fixup_redirectors",
+            "refresh_blueprints": "refresh_blueprints",
             "migrate": "migrate_assets"
           },
           "declaredBy": {
             "folderPath": [
-              "bulk_rename"
+              "bulk_rename",
+              "refresh_blueprints"
             ],
             "assetPaths": [
-              "bulk_rename"
+              "bulk_rename",
+              "refresh_blueprints"
             ],
             "searchText": [
               "bulk_rename"
@@ -8739,8 +8753,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4297d4538175c1345e8c29fdf0627bd4ef49c7b2f4b967a99ec323d0969509fd",
-        "content": "35d5c41a6e0d71b96bdbc951180693a55d3af0832c89292c394dc20f6983f0de"
+        "schema": "a16cc695a76944e6749271e485cb731dae9a6d52c4bee8182d09d7f522a19c42",
+        "content": "f5a630d95393b6aeab6925d022bdfe03666593c2113a565efcdff076141e7f0a"
       }
     },
     {

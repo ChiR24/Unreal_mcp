@@ -119,6 +119,13 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Clean up redirectors left by a move', { directoryPath: '/Game/Meshes' }, { success: true })] }
   ),
 
+  r('refresh_blueprints', 'asset', 'Refresh every node of the Blueprints under a folder (or listed), then compile and save each; run it after renaming or moving classes so casts and node titles follow.',
+    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths.') }, [], ['assetPaths', 'folderPath']),
+    OK, { ...WRITE, longRunning: true }, WRITE_POLICY, MEDIUM,
+    { dispatchAction: 'refresh_blueprints',
+      examples: [ex('Refresh the Blueprints after a class rename', { folderPath: '/Game/Blueprints' }, { success: true })] }
+  ),
+
   r('find_by_tag', 'asset', 'Find /Game assets whose asset-registry tag matches (optionally a value).',
     schema({ tag: str('Tag name to search for.'), value: str('Optional tag value.') }, ['tag']),
     OK, READ, READ_POLICY, LOW,

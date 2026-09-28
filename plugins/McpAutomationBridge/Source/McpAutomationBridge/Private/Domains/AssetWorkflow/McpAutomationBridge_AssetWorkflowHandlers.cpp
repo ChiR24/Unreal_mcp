@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "MCP/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/AssetQuery/McpAutomationBridge_AssetQueryHandlersPrivate.h"
+#include "Domains/AssetWorkflow/Rename/McpAutomationBridge_AssetRenameGuard.h"
 
 // Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
 #include "Domains/AssetWorkflow/DataTables/Shared.h"
@@ -125,6 +126,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // Bulk Operations
   if (Lower == TEXT("fixup_redirectors"))
     return HandleFixupRedirectors(RequestId, Lower, Payload, RequestingSocket);
+  if (Lower == TEXT("refresh_blueprints"))
+    return McpAssetRename::HandleRefreshBlueprints(this, RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("bulk_rename"))
     return HandleBulkRenameAssets(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("bulk_delete"))

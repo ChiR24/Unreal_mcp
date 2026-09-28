@@ -7697,6 +7697,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "bulk_rename",
             "fixup_redirectors",
+            "refresh_blueprints",
             "migrate"
           ],
           "description": "Which maintain content variant to run."

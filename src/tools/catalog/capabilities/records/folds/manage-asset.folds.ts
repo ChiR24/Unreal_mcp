@@ -27,9 +27,9 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'maintain_content', selector: 'maintenance',
-    summary: 'Content maintenance: bulk-rename assets, fix up redirectors, or migrate packages from another content source.',
-    topics: ['bulk rename', 'fixup redirectors', 'migrate assets', 'content maintenance'],
-    members: { bulk_rename: 'bulk_rename', fixup_redirectors: 'fixup_redirectors', migrate: 'migrate_assets' },
+    summary: 'Content maintenance: bulk-rename assets, fix up redirectors, refresh the nodes of every Blueprint in a folder, or migrate packages from another content source.',
+    topics: ['bulk rename', 'fixup redirectors', 'migrate assets', 'content maintenance', 'refresh all nodes', 'refresh blueprints'],
+    members: { bulk_rename: 'bulk_rename', fixup_redirectors: 'fixup_redirectors', refresh_blueprints: 'refresh_blueprints', migrate: 'migrate_assets' },
   },
   {
     primary: 'edit_material_instance', selector: 'edit',

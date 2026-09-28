@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `ba90e3efacee3012`
+Catalog revision: `b4f36543bd4526c0`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -169,7 +169,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.import_marketplace_asset` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.import_marketplace_asset` `manage_asset.add_fab_asset_to_project` `manage_asset.download_fab_asset` `manage_asset.import_megascans_asset` |
 | `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` |
 | `asset.list` | `manage_asset` | `list` | read | read | none | `manage_asset.list` `manage_asset.list_content_sources` `manage_asset.list_instances` |
-| `asset.maintain_content` | `manage_asset` | `bulk_rename` | write | write | explicit | `manage_asset.maintain_content` `manage_asset.bulk_rename` `manage_asset.fixup_redirectors` `manage_asset.migrate_assets` |
+| `asset.maintain_content` | `manage_asset` | `bulk_rename` | write | write | explicit | `manage_asset.maintain_content` `manage_asset.bulk_rename` `manage_asset.fixup_redirectors` `manage_asset.refresh_blueprints` `manage_asset.migrate_assets` |
 | `asset.move` | `manage_asset` | `move` | write | write | explicit | `manage_asset.move` `manage_asset.move_asset` |
 | `asset.nanite_rebuild_mesh` | `manage_asset` | `manage_render` | write | write | explicit | `manage_asset.nanite_rebuild_mesh` |
 | `asset.process_asset` | `manage_asset` | `generate_thumbnail` | write | write | explicit | `manage_asset.process_asset` `manage_asset.create_thumbnail` `manage_asset.generate_lods` |

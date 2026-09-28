@@ -647,6 +647,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::read_struct": "interactive|medium",
   "manage_asset::rebuild_material": "instant|low",
   "manage_asset::recompile_struct": "long-running|high",
+  "manage_asset::refresh_blueprints": "long-running|high",
   "manage_asset::refresh_struct_dependencies": "long-running|high",
   "manage_asset::remove_enum_value": "instant|low",
   "manage_asset::remove_material_node": "instant|low",
@@ -1515,4 +1516,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1502;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1503;
