@@ -764,6 +764,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_audio::set_sound_attenuation": "interactive|low",
   "manage_audio::set_sound_mix_class_override": "interactive|low",
   "manage_audio::spawn_sound_at_location": "interactive|low",
+  "manage_audio::stop_sound": "interactive|low",
   "manage_blueprint::add_ammo_counter": "interactive|low",
   "manage_blueprint::add_animation_keyframe": "interactive|low",
   "manage_blueprint::add_animation_track": "interactive|low",
@@ -1518,4 +1519,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1505;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1506;

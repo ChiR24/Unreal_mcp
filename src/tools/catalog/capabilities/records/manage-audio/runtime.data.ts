@@ -24,5 +24,6 @@ export const AUDIO_RUNTIME_RECORDS: readonly CapabilityRecordSource[] = [
   r('push_sound_mix', 'Push a Sound Mix onto the runtime mix stack.', ['mixName'], ['mixName']),
   r('set_base_sound_mix', 'Set the runtime base Sound Mix.', ['mixName'], ['mixName']),
   r('set_sound_mix_class_override', 'Set a Sound Mix class override.', ['mixName', 'soundClassName', 'volume', 'pitch', 'fadeTime'], ['mixName', 'soundClassName']),
+  withTopics(r('stop_sound', 'Stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included.', ['soundPath', 'all'], [], ['stopped', 'allStopped']), ['stop sound', 'stop music', 'stop audio', 'silence']),
   r('spawn_sound_at_location', 'Spawn a transient sound at a world location.', ['soundPath', 'location', 'rotation', 'volume', 'pitch', 'name'], ['soundPath'], ['componentName']),
 ];

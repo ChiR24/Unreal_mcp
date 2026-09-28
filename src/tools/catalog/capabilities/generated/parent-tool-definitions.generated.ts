@@ -9346,6 +9346,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target actor label or name in the current level."
         },
+        "all": {
+          "type": "boolean",
+          "description": "Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started)."
+        },
         "applyEQ": {
           "type": "boolean",
           "description": "Whether the mix applies its EQ (default true)."
@@ -9862,6 +9866,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create_audio_actor",
             "fade_sound",
             "play_sound",
+            "stop_sound",
             "edit_sound_cue",
             "edit_metasound",
             "configure_sound_class",
@@ -9885,6 +9890,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "actorName": {
           "type": "string",
           "description": "Name of the actor that was spawned or acted upon."
+        },
+        "allStopped": {
+          "type": "boolean",
+          "description": "Whether every sound on the editor and game audio devices was stopped (all: true)."
         },
         "assetClass": {
           "type": "string",
@@ -10048,6 +10057,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "spatialize": {
           "type": "boolean",
           "description": "Whether the inspected Sound Attenuation spatializes its source."
+        },
+        "stopped": {
+          "type": "number",
+          "description": "Sounds play_sound had started that this call stopped."
         },
         "success": {
           "type": "boolean",

@@ -33,7 +33,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       !Lower.StartsWith(TEXT("clear_sound_")) &&
       !Lower.StartsWith(TEXT("set_base_sound_")) &&
       !Lower.StartsWith(TEXT("prime_")) &&
-      !Lower.StartsWith(TEXT("spawn_sound_")))
+      !Lower.StartsWith(TEXT("spawn_sound_")) &&
+      Lower != TEXT("stop_sound"))
   {
     return false;
   }

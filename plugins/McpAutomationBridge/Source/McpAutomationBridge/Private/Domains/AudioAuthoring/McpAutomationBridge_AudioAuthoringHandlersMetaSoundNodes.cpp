@@ -102,6 +102,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		}
 
 		TArray<FString> RegistryCandidates;
+		bool bInRegistry = true;
 #if MCP_HAS_METASOUND_SEARCH_ENGINE
 		// Every spelling is resolved against the live node registry before the add,
 		// case-insensitively: a bare or partial name ("Sine", "UE.Multiply") gets its
@@ -112,9 +113,10 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		{
 			const FString Requested = BuildMetaSoundClassName(ActualNamespace, ActualName, ActualVariant);
 			FMetasoundFrontendClassName Resolved;
-			if (ResolveMetaSoundNodeClassName(ActualNamespace, ActualName, ActualVariant, Resolved, RegistryCandidates) ||
+			bInRegistry = ResolveMetaSoundNodeClassName(ActualNamespace, ActualName, ActualVariant, Resolved, RegistryCandidates) ||
 				(!ActualNamespace.IsEmpty() &&
-					ResolveMetaSoundNodeClassName(FString(), ActualName, ActualVariant, Resolved, RegistryCandidates)))
+					ResolveMetaSoundNodeClassName(FString(), ActualName, ActualVariant, Resolved, RegistryCandidates));
+			if (bInRegistry)
 			{
 				ActualNamespace = Resolved.Namespace.ToString();
 				ActualName = Resolved.Name.ToString();
@@ -127,7 +129,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		}
 #endif
 		FMetasoundFrontendClassName ClassName = FMetasoundFrontendClassName(FName(*ActualNamespace), FName(*ActualName), FName(*ActualVariant));
-		const FMetasoundFrontendNode* NewNode = Builder.AddNodeByClassName(ClassName, 1, FGuid::NewGuid());
+		// A class the registry does not hold (or holds more than once) goes straight to the candidates reply:
+		// the builder logged each one as an engine error first, which the receipt then reported as a failure.
+		const FMetasoundFrontendNode* NewNode = bInRegistry ? Builder.AddNodeByClassName(ClassName, 1, FGuid::NewGuid()) : nullptr;
 		FString FullClassName = BuildMetaSoundClassName(ActualNamespace, ActualName, ActualVariant);
 
 		if (NewNode)

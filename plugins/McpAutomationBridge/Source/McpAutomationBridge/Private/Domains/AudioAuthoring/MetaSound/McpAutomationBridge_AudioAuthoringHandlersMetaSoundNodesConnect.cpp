@@ -242,14 +242,32 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>
 		else
 		{
 			Response->SetBoolField(TEXT("success"), false);
-			Response->SetStringField(TEXT("error"), TEXT("Failed to create edge connection - check pin names against availableNodes inputs/outputs"));
+			Response->SetStringField(TEXT("error"), TEXT("Failed to create edge connection - check the pin names"));
 			Response->SetStringField(TEXT("code"), TEXT("EDGE_FAILED"));
 #if MCP_HAS_METASOUND_FRONTEND_V2
-			TArray<TSharedPtr<FJsonValue>> NodeIdArray = BuildAvailableNodesArray();
-			if (NodeIdArray.Num() > 0)
+			// Name the wrong side and list only the two nodes' pins: the whole graph used to come back.
+			const FMcpNodeSnapshot* Src = GraphNodes.FindByPredicate([&SourceGuid](const FMcpNodeSnapshot& S) { return S.Id == SourceGuid; });
+			const FMcpNodeSnapshot* Dst = GraphNodes.FindByPredicate([&TargetGuid](const FMcpNodeSnapshot& S) { return S.Id == TargetGuid; });
+			auto FindPin = [](const TArray<FString>* Pins, const FString& Name) -> const FString*
 			{
-				Response->SetArrayField(TEXT("availableNodes"), NodeIdArray);
-			}
+				return Pins ? Pins->FindByPredicate([&Name](const FString& Pin) { return Pin.StartsWith(Name + TEXT(" (")); }) : nullptr;
+			};
+			const FString* OutPin = FindPin(Src ? &Src->Outputs : nullptr, SourceOutputName);
+			const FString* InPin = FindPin(Dst ? &Dst->Inputs : nullptr, TargetInputName);
+			const FString Why = !OutPin ? FString::Printf(TEXT("source node '%s' has no output '%s'"), Src ? *Src->Name : *SourceNodeId, *SourceOutputName)
+				: !InPin ? FString::Printf(TEXT("target node '%s' has no input '%s'"), Dst ? *Dst->Name : *TargetNodeId, *TargetInputName)
+				: OutPin->Mid(OutPin->Find(TEXT(" ("))) != InPin->Mid(InPin->Find(TEXT(" (")))
+					? FString::Printf(TEXT("the types differ: output %s, input %s (put a conversion node between them)"), **OutPin, **InPin)
+					: FString(TEXT("the builder refused the edge (it would close a loop)"));
+			Response->SetStringField(TEXT("error"), FString::Printf(TEXT("Failed to connect: %s"), *Why));
+			auto PinArray = [](const TArray<FString>& Pins)
+			{
+				TArray<TSharedPtr<FJsonValue>> Out;
+				for (const FString& Pin : Pins) { Out.Add(MakeShared<FJsonValueString>(Pin)); }
+				return Out;
+			};
+			if (Src) { Response->SetArrayField(TEXT("sourceOutputs"), PinArray(Src->Outputs)); }
+			if (Dst) { Response->SetArrayField(TEXT("targetInputs"), PinArray(Dst->Inputs)); }
 #endif
 		}
 

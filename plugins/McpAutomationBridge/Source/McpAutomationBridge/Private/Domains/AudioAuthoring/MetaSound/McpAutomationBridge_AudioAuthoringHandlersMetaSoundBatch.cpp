@@ -156,7 +156,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 		{
 			// Stop at the first failure; earlier steps are already saved.
 			TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
-			for (const TCHAR* Key : {TEXT("availableNodes"), TEXT("availableInputs"), TEXT("candidateNodeClasses")})
+			for (const TCHAR* Key : {TEXT("availableNodes"), TEXT("availableInputs"), TEXT("candidateNodeClasses"), TEXT("sourceOutputs"), TEXT("targetInputs")})
 			{
 				if (Reply.IsValid() && Reply->HasField(Key)) { Details->SetField(Key, Reply->TryGetField(Key)); }
 			}
@@ -185,6 +185,8 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 	}
 
 	Response->SetBoolField(TEXT("success"), true);
+	// Names the edited MetaSound, so the receipt carries its handle and changes[] (both were empty).
+	Response->SetStringField(TEXT("assetPath"), NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT(""))));
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Ran %d MetaSound operations"), Steps->Num()));
 	Response->SetArrayField(TEXT("results"), Results);
 	Response->SetObjectField(TEXT("nodeIds"), NodeIds);

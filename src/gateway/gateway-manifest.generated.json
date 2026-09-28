@@ -7405,6 +7405,7 @@
         "create_audio_actor",
         "fade_sound",
         "play_sound",
+        "stop_sound",
         "edit_sound_cue",
         "edit_metasound",
         "configure_sound_class",
@@ -7416,6 +7417,7 @@
       ],
       "parameterNames": [
         "actorName",
+        "all",
         "applyEQ",
         "applyToChildren",
         "assetPath",
@@ -7528,6 +7530,10 @@
           "actorName": {
             "type": "string",
             "description": "Target actor label or name in the current level."
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started)."
           },
           "applyEQ": {
             "type": "boolean",
@@ -8045,6 +8051,7 @@
               "create_audio_actor",
               "fade_sound",
               "play_sound",
+              "stop_sound",
               "edit_sound_cue",
               "edit_metasound",
               "configure_sound_class",

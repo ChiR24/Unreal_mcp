@@ -4,6 +4,13 @@
 
 namespace McpAudioHandlers
 {
+// The 2D sounds play_sound started, for stop_sound.
+TArray<TWeakObjectPtr<UAudioComponent>> &McpPreviewSounds()
+{
+  static TArray<TWeakObjectPtr<UAudioComponent>> Sounds;
+  return Sounds;
+}
+
 bool HandlePlaybackActions(
     UMcpAutomationBridgeSubsystem* Self,
     const FString& RequestId,
@@ -115,8 +122,12 @@ bool HandlePlaybackActions(
       return true;
     }
 
-    UGameplayStatics::PlaySound2D(World, Sound, (float)Volume, (float)Pitch,
-                                  (float)StartTime);
+    // A component, not a fire-and-forget PlaySound2D, so stop_sound can stop it:
+    // a looping preview (the stage music) could not be stopped at all.
+    if (UAudioComponent *Preview = UGameplayStatics::SpawnSound2D(
+            World, Sound, (float)Volume, (float)Pitch, (float)StartTime)) {
+      McpPreviewSounds().Add(Preview);
+    }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
@@ -128,6 +139,50 @@ bool HandlePlaybackActions(
     McpHandlerUtils::AddVerification(Resp, Sound);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played 2D"), Resp);
+    return true;
+  }
+
+  // Payload: { "soundPath"?: string, "all"?: bool }. Stops the 2D sounds
+  // play_sound started (only that sound's when soundPath is given); all also
+  // stops every sound the editor and a running game play, the game's own music too.
+  else if (Lower == TEXT("stop_sound")) {
+    FString SoundPath;
+    Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
+    bool bAll = false;
+    Payload->TryGetBoolField(TEXT("all"), bAll);
+    USoundBase *Only = SoundPath.IsEmpty() ? nullptr : ResolveSoundAsset(SoundPath);
+    if (!SoundPath.IsEmpty() && !Only) {
+      Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Sound asset not found"),
+                                TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+    int32 Stopped = 0;
+    for (const TWeakObjectPtr<UAudioComponent> &Weak : McpPreviewSounds()) {
+      UAudioComponent *Preview = Weak.Get();
+      if (Preview && Preview->IsPlaying() && (!Only || Preview->Sound == Only)) {
+        Preview->Stop();
+        ++Stopped;
+      }
+    }
+    McpPreviewSounds().RemoveAll([](const TWeakObjectPtr<UAudioComponent> &Weak) {
+      return !Weak.IsValid() || !Weak->IsPlaying();
+    });
+    int32 Devices = 0;
+    if (bAll && GEngine) {
+      for (const FWorldContext &Context : GEngine->GetWorldContexts()) {
+        FAudioDeviceHandle Device = Context.World() ? Context.World()->GetAudioDevice() : FAudioDeviceHandle();
+        if (Device.IsValid()) {
+          Device->StopAllSounds(true);
+          ++Devices;
+        }
+      }
+    }
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetNumberField(TEXT("stopped"), Stopped);
+    Resp->SetBoolField(TEXT("allStopped"), Devices > 0);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true,
+        bAll ? TEXT("Every sound stopped") : FString::Printf(TEXT("Stopped %d sound(s) play_sound started"), Stopped), Resp);
     return true;
   }
 

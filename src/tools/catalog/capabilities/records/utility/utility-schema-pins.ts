@@ -30,7 +30,7 @@ export const BOOLEAN_FIELDS = new Set([
   // TryGetBoolField (McpAutomationBridge_InputHandlersLegacyMappings.cpp), so
   // publishing them as strings made a schema-valid boolean unrepresentable.
   'shift', 'ctrl', 'alt', 'cmd',
-  'smoothing',
+  'smoothing', 'all',
 ]);
 
 /** Field names whose JSON-Schema type is `number` on the wire. */
@@ -152,6 +152,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   volumeAdjuster: 'Volume multiplier applied by the mix modifier.',
   wavePath: 'Canonical /Game SoundWave asset path.',
   windowSize: 'Analysis window size in samples.',
+  all: 'Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started).',
   applyEQ: 'Whether the mix applies its EQ (default true).',
   applyToChildren: 'Whether the modifier also applies to the child sound classes (default true).',
   bypass: 'Add the effect bypassed (default false).',

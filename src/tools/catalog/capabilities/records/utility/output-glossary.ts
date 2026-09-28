@@ -57,6 +57,8 @@ function reflected(description: string): JsonObject {
  */
 export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Object.freeze({
   actorName: str('Name of the actor that was spawned or acted upon.'),
+  stopped: num('Sounds play_sound had started that this call stopped.'),
+  allStopped: bool('Whether every sound on the editor and game audio devices was stopped (all: true).'),
   assetClass: str('Unreal class name of the asset that was inspected, such as SoundCue or InputAction.'),
   assetName: str('Object name of the asset that was inspected, without its package path.'),
   assetPath: str('Full /Game path of the asset that was created, modified or inspected.'),

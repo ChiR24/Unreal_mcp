@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "63432d58cb3572b5",
-  "recordCount": 386,
+  "catalogRevision": "9ed02d411d386678",
+  "recordCount": 387,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -47548,7 +47548,7 @@
           "attached sound",
           "prime sound"
         ],
-        "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback.",
+        "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound.",
         "whenToUse": [
           "Use when play a non-spatial sound.",
           "Use when play a sound at a world location.",
@@ -47676,7 +47676,7 @@
       },
       "examples": [
         {
-          "title": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback.",
+          "title": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound.",
           "input": {
             "action": "play_sound",
             "soundPath": "/Game/Audio/Waves/SW_FootstepConcrete",
@@ -47772,7 +47772,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3fb0b4fc7150dc2e5a252bd3725a1a860044b885cc157164303491b99629c900",
-        "content": "ba65331e5e8850875603d10427c27018210e308a12bb17bb86c7880bf6394edb"
+        "content": "9f317fece8eb7a90782a0601713babc25b91577c5dd9c31f7a72bffc3b31ffe3"
       }
     },
     {
@@ -47909,6 +47909,133 @@
         "algorithm": "sha256",
         "schema": "515cf23378c5a85b600ba7bbe18d52780e170475651c9a8b39db183b4d5b06ea",
         "content": "1f96b77475abf631b5ae4918217d1d34314e46e2be4408a62dcd20070f2bb111"
+      }
+    },
+    {
+      "id": "manage_audio.stop_sound",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_audio",
+          "action": "stop_sound"
+        }
+      ],
+      "discovery": {
+        "domain": "audio",
+        "family": "runtime",
+        "topics": [
+          "stop_sound",
+          "stop sound",
+          "stop music",
+          "stop audio",
+          "silence"
+        ],
+        "summary": "Stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included.",
+        "whenToUse": [
+          "Use when stop sounds: the 2d sounds play_sound started (only that sound with soundpath), or with all every sound the editor and a running game play, its music included."
+        ],
+        "whenNotToUse": [
+          "Do not use when the required Unreal capability or target is unavailable."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Action."
+            },
+            "soundPath": {
+              "type": "string",
+              "description": "Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound)."
+            },
+            "all": {
+              "type": "boolean",
+              "description": "Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started)."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "stopped": {
+              "type": "number",
+              "description": "Sounds play_sound had started that this call stopped."
+            },
+            "allStopped": {
+              "type": "boolean",
+              "description": "Whether every sound on the editor and game audio devices was stopped (all: true)."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included.",
+          "input": {
+            "action": "stop_sound"
+          },
+          "output": {
+            "success": true,
+            "message": "stop_sound completed successfully."
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_audio",
+        "dispatchAction": "manage_audio"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "9bbd813bb9e83acf24cb50f0636f5783cee5ed11e2839da797992eab3b47ab8b",
+        "content": "f7c2da9127bf954de3961b490a7118631092bc286510a48e5325cad26fb16db4"
       }
     },
     {
