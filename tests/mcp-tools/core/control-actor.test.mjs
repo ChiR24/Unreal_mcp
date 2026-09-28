@@ -108,6 +108,8 @@ const testCases = [
   { scenario: 'AUDIT: audit_placement sweeps the level', toolName: 'control_actor', arguments: { action: 'audit_placement' }, expected: 'success' },
   { scenario: 'AUDIT: audit_placement filtered and capped', toolName: 'control_actor', arguments: { action: 'audit_placement', nameFilter: 'MCP', limit: 5 }, expected: 'success' },
   { scenario: 'AUDIT: audit_placement drops findings below a severity floor', toolName: 'control_actor', arguments: { action: 'audit_placement', minSeverity: 50, limit: 5 }, expected: 'success' },
+  { scenario: 'FIX: fix_coplanar previews its moves', toolName: 'control_actor', arguments: { action: 'fix_coplanar', dryRun: true }, expected: 'success' },
+  { scenario: 'FIX: fix_coplanar limited by name with a distance', toolName: 'control_actor', arguments: { action: 'fix_coplanar', nameFilter: 'MCP', distance: 1, dryRun: true }, expected: 'success' },
   { scenario: 'AUDIT: audit_placement reports only the kinds asked for', toolName: 'control_actor', arguments: { action: 'audit_placement', kinds: ['coplanar'], limit: 5 }, expected: 'success' },
   { scenario: 'AUDIT: audit_placement reports actors leaning off vertical', toolName: 'control_actor', arguments: { action: 'audit_placement', maxTilt: 15, limit: 5 }, expected: 'success' },
   { scenario: 'INFO: get_components', toolName: 'control_actor', arguments: actorArgs('get_components'), expected: 'success' },

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "723369db69536a1e",
-  "recordCount": 384,
+  "catalogRevision": "aa60265a7e9e3ed0",
+  "recordCount": 385,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -28391,7 +28391,7 @@
           "A level was assembled programmatically and needs checking before anyone looks at it.",
           "Actors appear to clip through each other, stand in the ground, or lie on their side.",
           "A placement pass should be verified without flying the viewport around to eyeball it.",
-          "Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one."
+          "Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one; control_actor fix_coplanar fixes them all in one call."
         ],
         "whenNotToUse": [
           "One actor was just moved; spawn and set_transform already return placementWarning for it.",
@@ -28546,7 +28546,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5e403cd2e228d067d50b4be8b3cb0c0635e2bf8e7f2279d68bb399c5f9ef36a2",
-        "content": "cac69a3d15b90c6834880909bf8c1e98d8abeb3a53ffd340ae6bb331a6e747d9"
+        "content": "909cb86d4a28858ad009167baa04f63dcc7dbba42779f2069e7cdfe1d545cf5e"
       }
     },
     {
@@ -29844,6 +29844,170 @@
         "algorithm": "sha256",
         "schema": "a3085ec3aaad1aae6e026dc11eddbbd27dd89f19a96b5ca7067c5e1601e58326",
         "content": "df88c4701514d7120ac48c3744e573daf4445fd16d7e071c9a47ce046dfb6317"
+      }
+    },
+    {
+      "id": "control_actor.fix_coplanar",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "fix_coplanar"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "find",
+        "topics": [
+          "fix_coplanar",
+          "fix z-fighting",
+          "fix flickering",
+          "coplanar faces",
+          "texture flicker",
+          "overlapping faces"
+        ],
+        "summary": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.",
+        "whenToUse": [
+          "audit_placement reported coplanar faces, or surfaces flicker between two materials.",
+          "A level was built from boxes placed flush against each other and should be cleaned up before anyone looks at it."
+        ],
+        "whenNotToUse": [
+          "The two faces belong to parts of one Blueprint actor: they are listed under skipped; move one part with manage_blueprint edit_scs.",
+          "An actor must keep its exact position: tag it mcp.placement.ok and it is left alone."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "nameFilter": {
+              "type": "string",
+              "description": "Only fix pairs where either actor label contains this text. Omit for the whole level."
+            },
+            "distance": {
+              "type": "number",
+              "description": "How far each face moves, in world units (0.1-20, default 1): far enough for the depth buffer, too little to see."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "List the moves without making them (default false)."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "pairsFound": {
+              "type": "number",
+              "description": "Coplanar face pairs found before fixing."
+            },
+            "actorsMoved": {
+              "type": "number",
+              "description": "Actors moved (0 under dryRun)."
+            },
+            "remainingPairs": {
+              "type": "number",
+              "description": "Coplanar pairs still found afterwards; run audit_placement with kinds [\"coplanar\"] to see them."
+            },
+            "dryRun": {
+              "type": "boolean",
+              "description": "Whether nothing was changed."
+            },
+            "moved": {
+              "type": "array",
+              "description": "One entry per actor: actorName, offset {x, y, z} it moved by (a resized mesh also changed scale along that axis), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true
+            },
+            "skipped": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Pairs left alone, each with the reason and what to do instead."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.",
+          "input": {
+            "action": "fix_coplanar",
+            "dryRun": true
+          },
+          "output": {
+            "success": true,
+            "message": "Would move 3 actors for 4 coplanar pairs; 4 pairs remain",
+            "pairsFound": 4,
+            "actorsMoved": 0,
+            "remainingPairs": 4,
+            "dryRun": true,
+            "moved": [],
+            "skipped": []
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "fix_coplanar"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "d983188a30dbafe6ddee01ed41d670c37fc30b7e0af356f5ec16334d1401daba",
+        "content": "30a3de7a01bb3f49309979504772803618119aaf552aec9e5ce73fab0e0eb9e3"
       }
     },
     {

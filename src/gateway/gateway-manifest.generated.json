@@ -3206,6 +3206,7 @@
         "find_by_tag",
         "find",
         "audit_placement",
+        "fix_coplanar",
         "attach",
         "detach",
         "set_blueprint_variables",
@@ -3231,6 +3232,8 @@
         "componentType",
         "defaults",
         "deleteScope",
+        "distance",
+        "dryRun",
         "durationSeconds",
         "edit",
         "filter",
@@ -3466,6 +3469,14 @@
             ],
             "description": "Which delete variant to run; omit for 'actors'.",
             "default": "actors"
+          },
+          "distance": {
+            "type": "number",
+            "description": "How far each face moves, in world units (0.1-20, default 1): far enough for the depth buffer, too little to see."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "List the moves without making them (default false)."
           },
           "durationSeconds": {
             "type": "number",
@@ -3828,6 +3839,7 @@
               "find_by_tag",
               "find",
               "audit_placement",
+              "fix_coplanar",
               "attach",
               "detach",
               "set_blueprint_variables",

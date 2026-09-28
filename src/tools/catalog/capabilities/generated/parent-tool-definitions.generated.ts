@@ -3548,6 +3548,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which delete variant to run; omit for 'actors'.",
           "default": "actors"
         },
+        "distance": {
+          "type": "number",
+          "description": "How far each face moves, in world units (0.1-20, default 1): far enough for the depth buffer, too little to see."
+        },
+        "dryRun": {
+          "type": "boolean",
+          "description": "List the moves without making them (default false)."
+        },
         "durationSeconds": {
           "type": "number",
           "description": "Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play."
@@ -3909,6 +3917,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "find_by_tag",
             "find",
             "audit_placement",
+            "fix_coplanar",
             "attach",
             "detach",
             "set_blueprint_variables",
@@ -3957,6 +3966,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Matched actors."
+        },
+        "actorsMoved": {
+          "type": "number",
+          "description": "Actors moved (0 under dryRun)."
         },
         "byClass": {
           "type": "array",
@@ -4085,6 +4098,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "dryRun": {
+          "type": "boolean",
+          "description": "Whether nothing was changed."
+        },
         "end": {
           "type": "array",
           "items": {
@@ -4199,6 +4216,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "propertyNames the actor's class does not have."
         },
+        "moved": {
+          "type": "array",
+          "description": "One entry per actor: actorName, offset {x, y, z} it moved by (a resized mesh also changed scale along that axis), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true
+        },
         "movedActors": {
           "type": "number",
           "description": "actors: how many actors took their transform."
@@ -4220,6 +4247,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "World-space centre of the bounding box as [x, y, z]."
         },
+        "pairsFound": {
+          "type": "number",
+          "description": "Coplanar face pairs found before fixing."
+        },
         "problems": {
           "type": "array",
           "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor. Call get_actor_transform on one for its full detail.",
@@ -4233,6 +4264,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "realSeconds": {
           "type": "number",
           "description": "Wall-clock time the run took."
+        },
+        "remainingPairs": {
+          "type": "number",
+          "description": "Coplanar pairs still found afterwards; run audit_placement with kinds [\"coplanar\"] to see them."
         },
         "report": {
           "type": "string",
@@ -4320,6 +4355,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Scale as [x, y, z]."
+        },
+        "skipped": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Pairs left alone, each with the reason and what to do instead."
         },
         "spawned": {
           "type": "number",

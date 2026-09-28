@@ -8,10 +8,7 @@
 
 namespace McpCoplanar
 {
-namespace
-{
-// "+X" for a face that points along an axis, so it reads like the gizmo arrows.
-FString McpCoplanarDirection(const FVector& Normal)
+FString DescribeDirection(const FVector& Normal)
 {
     const TCHAR* Axes[] = {TEXT("X"), TEXT("Y"), TEXT("Z")};
     for (int32 Axis = 0; Axis < 3; ++Axis)
@@ -23,7 +20,6 @@ FString McpCoplanarDirection(const FVector& Normal)
     }
     return FString::Printf(TEXT("(%.2f, %.2f, %.2f)"), Normal.X, Normal.Y, Normal.Z);
 }
-} // namespace
 
 TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& NameFilter)
 {
@@ -34,7 +30,7 @@ TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& Nam
     {
         const int32* Existing = ByActor.Find(Hit.Actor);
         FMcpCoplanarReport& Report = Existing ? Reports[*Existing] : Reports.AddDefaulted_GetRef();
-        const FString Direction = McpCoplanarDirection(Hit.Normal);
+        const FString Direction = DescribeDirection(Hit.Normal);
         if (!Existing)
         {
             ByActor.Add(Hit.Actor, Reports.Num() - 1);

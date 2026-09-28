@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Domains/ControlActor/Placement/McpAutomationBridge_CoplanarFaces.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     const FString &RequestId, const FString &Action,
@@ -125,6 +126,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     return HandleControlActorGetComponentProperty(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("audit_placement"))
     return HandleControlActorAuditPlacement(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("fix_coplanar"))
+    return McpCoplanar::HandleFixCoplanar(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("set_property"))
     return HandleSetObjectProperty(RequestId, TEXT("set_object_property"), Payload, RequestingSocket);
   if (LowerSub == TEXT("get_property"))

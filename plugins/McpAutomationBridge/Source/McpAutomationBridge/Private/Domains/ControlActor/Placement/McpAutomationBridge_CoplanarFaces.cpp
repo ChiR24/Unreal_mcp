@@ -230,6 +230,8 @@ TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilt
                 continue;
             }
             FMcpCoplanarHit Best;
+            double AreaA = 0.0;
+            double AreaB = 0.0;
             for (const FMcpCoplanarFace& FaceA : A.Faces)
             {
                 for (const FMcpCoplanarFace& FaceB : B.Faces)
@@ -243,6 +245,8 @@ TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilt
                         Best.Gap = Gap;
                         Best.OverlapU = U;
                         Best.OverlapV = V;
+                        AreaA = 4.0 * FaceA.HalfU * FaceA.HalfV;
+                        AreaB = 4.0 * FaceB.HalfU * FaceB.HalfV;
                     }
                 }
             }
@@ -258,6 +262,7 @@ TArray<FMcpCoplanarHit> FindCoplanarFaces(UWorld* World, const FString& NameFilt
             Best.OtherActor = Other.Actor;
             Best.Component = Subject.Component->GetName();
             Best.OtherComponent = Other.Component->GetName();
+            Best.FaceArea = bASmaller ? AreaA : AreaB;
             Hits.Add(Best);
         }
     }

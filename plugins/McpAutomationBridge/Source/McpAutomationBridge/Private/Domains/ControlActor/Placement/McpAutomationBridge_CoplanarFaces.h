@@ -6,6 +6,9 @@
 #include "Dom/JsonValue.h"
 
 class AActor;
+class FJsonObject;
+class FMcpBridgeWebSocket;
+class UMcpAutomationBridgeSubsystem;
 class UWorld;
 
 namespace McpCoplanar
@@ -23,6 +26,7 @@ struct FMcpCoplanarHit
     double Gap = 0.0;                     // distance between the two planes
     double OverlapU = 0.0;
     double OverlapV = 0.0;
+    double FaceArea = 0.0; // the whole face of Actor that lies in the plane
 };
 
 // Every coplanar face pair among the visible static mesh components of World, largest overlap first. Only faces a
@@ -41,4 +45,11 @@ struct FMcpCoplanarReport
 
 // FindCoplanarFaces grouped by the actor to nudge, worst first.
 TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& NameFilter);
+
+// "+X" for a face that points along an axis, so it reads like the gizmo arrows.
+FString DescribeDirection(const FVector& Normal);
+
+// control_actor fix_coplanar: moves the actor of every coplanar pair a unit so one surface is clearly in front.
+bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
+                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 } // namespace McpCoplanar
