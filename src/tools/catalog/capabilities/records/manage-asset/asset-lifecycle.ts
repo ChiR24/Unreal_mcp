@@ -115,7 +115,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('search_assets', 'asset', 'Find or search assets by text, class, or package path with bounded pagination.',
     schema({
       searchText: str('Text to search for.'),
-      classNames: arr('Asset class names to filter.'),
+      classNames: arr('Asset classes to filter: a short class name (StaticMesh, Blueprint, ObjectRedirector, InputMappingContext) or a full class path (/Script/Engine.StaticMesh).'),
       packagePaths: arr('Package paths to search within.'),
       recursivePaths: bool('Recurse into subdirectories.'),
       recursiveClasses: bool('Recurse into child classes.'),

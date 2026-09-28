@@ -7226,7 +7226,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Asset class names to filter."
+          "description": "Asset classes to filter: a short class name (StaticMesh, Blueprint, ObjectRedirector, InputMappingContext) or a full class path (/Script/Engine.StaticMesh)."
         },
         "clearExisting": {
           "type": "boolean",

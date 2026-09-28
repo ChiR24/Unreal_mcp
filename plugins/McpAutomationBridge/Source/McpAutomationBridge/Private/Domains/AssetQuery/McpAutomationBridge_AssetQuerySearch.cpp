@@ -97,6 +97,16 @@ bool AddClassFilter(const FString& ClassName, FARFilter& Filter)
             return true;
         }
     }
+    // Any other loaded class by its short name: ObjectRedirector used to be refused although the class exists.
+    if (const UClass* Class = ResolveUClass(ClassName))
+    {
+#if ENGINE_MINOR_VERSION >= 1
+        Filter.ClassPaths.Add(Class->GetClassPathName());
+#else
+        Filter.ClassNames.Add(Class->GetFName());
+#endif
+        return true;
+    }
     return false;
 }
 }

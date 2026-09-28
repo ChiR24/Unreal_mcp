@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a513846c209cce8f",
+  "catalogRevision": "b81314201d85c864",
   "recordCount": 384,
   "records": [
     {
@@ -9266,7 +9266,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Asset class names to filter."
+              "description": "Asset classes to filter: a short class name (StaticMesh, Blueprint, ObjectRedirector, InputMappingContext) or a full class path (/Script/Engine.StaticMesh)."
             },
             "packagePaths": {
               "type": "array",
@@ -9606,8 +9606,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a3a63e4a2f9b8db03ff4c866146039814e33facb6ebee837229477606dc50807",
-        "content": "f68a85be7c6d5e9420814b41ab19258f7e3b557907c3c85858d55e90a9ece533"
+        "schema": "7424091fb091723441956dabe5efac0b4cdc8cc6e24b31e861a415c167a291d6",
+        "content": "1d732181f78333b65ec494ed18cefaf974b403dd7dca829b6324bd47ec5583d1"
       }
     },
     {
