@@ -22,7 +22,8 @@ bool ResolvePropertyTarget(UMcpAutomationBridgeSubsystem& Bridge, const FString&
   Payload->TryGetStringField(TEXT("blueprintPath"), Out.BlueprintPath);
   Out.BlueprintPath.TrimStartAndEndInline();
   if (Out.ObjectPath.IsEmpty() && Out.BlueprintPath.IsEmpty()) {
-    Bridge.SendAutomationError(Socket, RequestId, TEXT("Either objectPath or blueprintPath is required."),
+    Bridge.SendAutomationError(Socket, RequestId,
+                               TEXT("A target is required: objectPath, actorName, name or blueprintPath."),
                                TEXT("INVALID_OBJECT"));
     return false;
   }

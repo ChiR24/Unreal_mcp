@@ -4216,6 +4216,7 @@
       ],
       "parameterNames": [
         "actorName",
+        "actorNames",
         "blueprintPath",
         "className",
         "classPath",
@@ -4224,12 +4225,18 @@
         "detailed",
         "editorState",
         "filter",
+        "format",
         "info",
         "kind",
+        "limit",
         "lookup",
+        "markDirty",
         "name",
         "objectKind",
         "objectPath",
+        "offset",
+        "outputPath",
+        "properties",
         "propertyName",
         "propertyNames",
         "propertyPath",
@@ -4246,6 +4253,13 @@
           "actorName": {
             "type": "string",
             "description": "World actor name to inspect."
+          },
+          "actorNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several world actors to act on in one call, in place of actorName; names not found are listed back."
           },
           "blueprintPath": {
             "type": "string",
@@ -4308,6 +4322,10 @@
             "type": "string",
             "description": "Runtime report filter expression."
           },
+          "format": {
+            "type": "string",
+            "description": "Exporter format by file extension, default T3D (the text form of the object); fails with EXPORT_FAILED when no exporter for that format handles the object."
+          },
           "info": {
             "type": "string",
             "enum": [
@@ -4327,6 +4345,10 @@
             "description": "Which inspect class variant to run; omit for 'class'.",
             "default": "class"
           },
+          "limit": {
+            "type": "number",
+            "description": "Maximum objects to return (default 100)."
+          },
           "lookup": {
             "type": "string",
             "enum": [
@@ -4337,6 +4359,10 @@
               "export"
             ],
             "description": "Which query object variant to run."
+          },
+          "markDirty": {
+            "type": "boolean",
+            "description": "Default true: mark the package dirty and save an asset package. false leaves the package untouched and unsaved, so the change lives in memory only."
           },
           "name": {
             "type": "string",
@@ -4359,9 +4385,23 @@
             "type": "string",
             "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
           },
+          "offset": {
+            "type": "number",
+            "description": "Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow."
+          },
+          "outputPath": {
+            "type": "string",
+            "description": "File to also write the export to, inside the project (relative to it, or absolute under it), e.g. Saved/Exports/Actor.t3d. A path outside the project is refused with INVALID_PATH."
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Several component properties at once, name or dotted path to value, in place of propertyName and value."
+          },
           "propertyName": {
             "type": "string",
-            "description": "Property name to read or write."
+            "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
           },
           "propertyNames": {
             "type": "array",
@@ -4372,7 +4412,7 @@
           },
           "propertyPath": {
             "type": "string",
-            "description": "Property path (alias of propertyName)."
+            "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
           },
           "snapshotName": {
             "type": "string",

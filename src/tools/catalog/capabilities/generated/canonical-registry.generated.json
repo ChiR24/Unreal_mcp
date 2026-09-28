@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "275f438f2f5ae1e5",
+  "catalogRevision": "e7bc81e1f363c662",
   "recordCount": 382,
   "records": [
     {
@@ -36137,6 +36137,13 @@
               "type": "string",
               "description": "World actor name to inspect."
             },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several world actors to act on in one call, in place of actorName; names not found are listed back."
+            },
             "name": {
               "type": "string",
               "description": "Actor name identifier (alias of actorName)."
@@ -36216,8 +36223,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "93d2f24efd3b82e2b57141971f7246625ead9ebdc36b5181efe8e5fb645b484a",
-        "content": "b942da2b9600e0dc926c8acf16a3601c45df2ffc065634f77ab9ef0dacc16135"
+        "schema": "747a2f225b45a47b6cebfbc00b6946eb7702e7ca69742027f8ce08cf80d261fd",
+        "content": "600166552f5a96541ee111c731232418b9fd260d3c9619452cdd43782722f407"
       }
     },
     {
@@ -36410,6 +36417,13 @@
               "type": "string",
               "description": "World actor name to inspect."
             },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several world actors to act on in one call, in place of actorName; names not found are listed back."
+            },
             "name": {
               "type": "string",
               "description": "Actor name identifier (alias of actorName)."
@@ -36489,8 +36503,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7a10e63c95de7ee4e6592a1a77d41bee738b0a80334c7a4a3a24a10b5d337c7f",
-        "content": "13ee6dea1a3b68143a2795ca532cbe21fb72d53f7ccf499b7b8996f049c14033"
+        "schema": "dd1011039be7613c19ad1a55154a8b03708a24d87f68bb868f2de724ada562d0",
+        "content": "1fa25add7e937c562e132db9601d5f120a8ea8326e43aa6c31f5107423c09387"
       }
     },
     {
@@ -36535,10 +36549,13 @@
             }
           },
           "required": [
-            "action",
-            "className"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "className",
+            "classPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -36614,8 +36631,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ba82d9b89781f9d94976f3b5ca8a042f2fe636afa52fc79c1689ee21a1eab0bd",
-        "content": "ac1ee0a2cec3a092492f924c57719f3c1a47311d262b31a2b8c2071056999aea"
+        "schema": "3e4f28f6990d2587632d64d17e88dd490d529a95ab4c5cfc48946894b9058a8c",
+        "content": "83dfda886c57653ec990d625aa3a2e07f0aad34466e5ae51ae4cc277d62adae9"
       }
     },
     {
@@ -36793,13 +36810,20 @@
               "type": "string",
               "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
             },
+            "propertyNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Specific property names to include."
+            },
             "propertyName": {
               "type": "string",
-              "description": "Property name to read or write."
+              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
-              "description": "Property path (alias of propertyName)."
+              "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
             },
             "info": {
               "type": "string",
@@ -36895,6 +36919,9 @@
             "property": "get_component_property"
           },
           "declaredBy": {
+            "propertyNames": [
+              "details"
+            ],
             "propertyName": [
               "property"
             ],
@@ -36906,8 +36933,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "107d2e4adbba4eaa4392b6d98ba7ec94d645c34f7ec66179a5d1b5a57999b4cb",
-        "content": "1c1be845c62cf109af966c0e6ed09114b5d2f6ed3a6ccfa70f064cc3c3bf5b00"
+        "schema": "9c2e56bd2418f4d56c9f1b2688f8c90660c36e927c0760296f28e3533fc740d3",
+        "content": "e2d90b41bb480c20d4a1405696c17fab325d3f935b709d09b3d900f778aa0cb4"
       }
     },
     {
@@ -37448,23 +37475,20 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property name to read or write."
+              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
-              "description": "Property path (alias of propertyName)."
+              "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
             }
           },
           "required": [
-            "action",
-            "propertyName"
+            "action"
           ],
           "additionalProperties": false,
           "requiredOneOf": [
-            "objectPath",
-            "blueprintPath",
-            "actorName",
-            "name"
+            "propertyName",
+            "propertyPath"
           ]
         },
         "output": {
@@ -37536,8 +37560,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b8698093a0749c661268e2c5495ef2d112edca8ed6a98c47b0ab7fa0ee53f50d",
-        "content": "bdb9312d8f229fa9b97bfccaf49dbead1518ff661caa6b43be3f84d67b2ea8d4"
+        "schema": "177b82e58004b002aadb7264c9128557e1954fb2a9703f917017661cbc66035e",
+        "content": "cb19ee18e2be763cdf4122712c412283100307fdf079cfedea0b92896baa24bb"
       }
     },
     {
@@ -37911,10 +37935,6 @@
               "type": "string",
               "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
             },
-            "objectPath": {
-              "type": "string",
-              "description": "Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel)."
-            },
             "componentName": {
               "type": "string",
               "description": "Component name on the actor."
@@ -38092,9 +38112,6 @@
             "blueprintPath": [
               "cdo"
             ],
-            "objectPath": [
-              "cdo"
-            ],
             "componentName": [
               "cdo"
             ],
@@ -38112,8 +38129,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d57fe67f4ab15e65712b3ad40bdc254086ad3f83a924c788d1a430780f9ed26d",
-        "content": "87b07454f5ab54c8947eed37fdff2c078b31969533467fd410dd3a15f48290f3"
+        "schema": "cfb78dbb5292e63d545be8b3eb1c41bbfdea8285b3736421eee439ebe99d31ef",
+        "content": "40b429346770fec72422aa58da3d6a2c23adcc239128d9a5b2e5d9d96dba94c5"
       }
     },
     {
@@ -38430,15 +38447,44 @@
             "texture": "get_texture_details"
           },
           "declaredBy": {
-            "componentName": [
-              "object"
+            "objectPath": [
+              "object",
+              "actor",
+              "material",
+              "mesh",
+              "texture"
             ],
-            "detailed": [
+            "actorName": [
+              "object",
+              "actor",
+              "material",
+              "mesh",
+              "texture"
+            ],
+            "name": [
+              "object",
+              "actor",
+              "material",
+              "mesh",
+              "texture"
+            ],
+            "componentName": [
               "object",
               "actor"
             ],
+            "detailed": [
+              "object",
+              "actor",
+              "material",
+              "mesh",
+              "texture"
+            ],
             "propertyNames": [
-              "object"
+              "object",
+              "actor",
+              "material",
+              "mesh",
+              "texture"
             ]
           }
         }
@@ -38446,7 +38492,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-        "content": "9855ba802da0821fcca46d836238c220e4556955a315350b9d27b45f2fd92578"
+        "content": "9440f7ddf50af37cc09f2c6c363690b5354169eee0ad4fbbafd738dfaa880b57"
       }
     },
     {
@@ -38516,7 +38562,7 @@
           "All actors with a given tag must be enumerated.",
           "An actor's metadata must be inspected.",
           "An actor's bounds must be read.",
-          "An actor must be serialized to an external file."
+          "An actor must be serialized to text or to an external file."
         ],
         "whenNotToUse": [
           "Actors must be found by class; use find_by_class.",
@@ -38538,6 +38584,14 @@
               "type": "string",
               "description": "Runtime report filter expression."
             },
+            "limit": {
+              "type": "number",
+              "description": "Maximum objects to return (default 100)."
+            },
+            "offset": {
+              "type": "number",
+              "description": "Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow."
+            },
             "tag": {
               "type": "string",
               "description": "Actor tag to match."
@@ -38553,6 +38607,14 @@
             "name": {
               "type": "string",
               "description": "Actor name identifier (alias of actorName)."
+            },
+            "format": {
+              "type": "string",
+              "description": "Exporter format by file extension, default T3D (the text form of the object); fails with EXPORT_FAILED when no exporter for that format handles the object."
+            },
+            "outputPath": {
+              "type": "string",
+              "description": "File to also write the export to, inside the project (relative to it, or absolute under it), e.g. Saved/Exports/Actor.t3d. A path outside the project is refused with INVALID_PATH."
             },
             "lookup": {
               "type": "string",
@@ -38672,6 +38734,12 @@
             "filter": [
               "list"
             ],
+            "limit": [
+              "list"
+            ],
+            "offset": [
+              "list"
+            ],
             "tag": [
               "by_tag"
             ],
@@ -38689,14 +38757,20 @@
               "metadata",
               "bounding_box",
               "export"
+            ],
+            "format": [
+              "export"
+            ],
+            "outputPath": [
+              "export"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "36e3b2a659b75d909b94b51cb911b361cbaa2d02434af3250a9200ed7a8e1121",
-        "content": "81202d81da27b05a6d464475fa36d465fb1c92b11bd90655106e9d7e06c9df6c"
+        "schema": "9e63dc514540de6db766715471c0df8d311947b3a057e69c547bc58cce632b8f",
+        "content": "e26885764a1b9c74bc5ea9a214f248cc3461a80a395b209a9bd9019b6a35dc73"
       }
     },
     {
@@ -38764,11 +38838,11 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property name to read or write."
+              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
-              "description": "Property path (alias of propertyName)."
+              "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
             },
             "propertyNames": {
               "type": "array",
@@ -38903,8 +38977,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f325dfdf775d8a52b14d117270f8d7e4e2182ef16cf10728fc37d5c045e477e5",
-        "content": "d7722511a313828549020a27abb49c610cdd0e0c919e0eebbd6d6802bc55af98"
+        "schema": "de082c161cdb56f1839e834c630eecd7057afd2f088327f1c6a72022e3e045bc",
+        "content": "b2c30179d764f82c74db71c0d4c5ee9e729893643211b664c20b529c02102dab"
       }
     },
     {
@@ -38957,22 +39031,32 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property name to read or write."
+              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
-              "description": "Property path (alias of propertyName)."
+              "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
             },
             "value": {
               "description": "Property value to set (type depends on the target property)."
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Several component properties at once, name or dotted path to value, in place of propertyName and value."
             }
           },
           "required": [
             "action",
-            "componentName",
-            "propertyName"
+            "componentName"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "properties",
+            "propertyName",
+            "propertyPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -39040,8 +39124,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5722789b9257827abc0cdb4de3b3227225d80f4e9fa91c4fac0ad24e1cf46266",
-        "content": "266912eeae80397f0df0708a79d7afc55dec21b78f88052fbd033b529d0cf83b"
+        "schema": "3afd46699d03b66840a0502ac7d387ca8cd94314174b37328df7a53b09cb47a6",
+        "content": "39cdae8ecea42971079603e6f808cb572e59ac99f20d9a816afebd513280369c"
       }
     },
     {
@@ -39102,26 +39186,27 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property name to read or write."
+              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
-              "description": "Property path (alias of propertyName)."
+              "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
             },
             "value": {
               "description": "Property value to set (type depends on the target property)."
+            },
+            "markDirty": {
+              "type": "boolean",
+              "description": "Default true: mark the package dirty and save an asset package. false leaves the package untouched and unsaved, so the change lives in memory only."
             }
           },
           "required": [
-            "action",
-            "propertyName"
+            "action"
           ],
           "additionalProperties": false,
           "requiredOneOf": [
-            "objectPath",
-            "blueprintPath",
-            "actorName",
-            "name"
+            "propertyName",
+            "propertyPath"
           ]
         },
         "output": {
@@ -39193,8 +39278,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "82f881921f5736e9d30941e7ee16e923cd1f56977fe14b15424bdcbdb9be508b",
-        "content": "3da6c1f03f653472572316bc7e2ee03386db1d1c97f41ccd126dd71c0ee14f99"
+        "schema": "d4292cf5c019142d2cf23225b41cc768b01e95982741bb4747d0d7f92a87b6ac",
+        "content": "be005c60b88866476af5e0a1e9e8e9bf59c738ebf62ad275b5782eb551cae082"
       }
     },
     {

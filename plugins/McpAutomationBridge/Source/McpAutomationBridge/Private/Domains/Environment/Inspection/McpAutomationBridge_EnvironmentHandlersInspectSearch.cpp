@@ -81,6 +81,13 @@ bool HandleInspectSearchAction(
             {
                 Payload->TryGetStringField(TEXT("classPath"), ClassName);
             }
+            // No class used to skip the search and answer success with 0 objects.
+            if (ClassName.IsEmpty())
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                                           TEXT("className or classPath is required"), TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
             TArray<TSharedPtr<FJsonValue>> ObjectsArray;
 
             // The PIE world while a session runs, like list_objects: the editor

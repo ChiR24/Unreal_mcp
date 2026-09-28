@@ -15,7 +15,6 @@ const BP_PATH = `${TEST_FOLDER}/${BP_NAME}`;
 
 const TEST_MESH = '/Game/MCPTest/TestMesh';
 const TEST_MATERIAL = '/Game/MCPTest/TestMat';
-const TEST_LEVEL = '/Game/MCPTest/MainLevel';
 const ENGINE_DEFAULT_TEXTURE = '/Engine/EngineResources/DefaultTexture.DefaultTexture';
 
 const inspectActor = (action, extra = {}) => ({ action, actorName: ACTOR, ...extra });
@@ -35,17 +34,20 @@ const testCases = [
   { scenario: 'INFO: get_mesh_details', toolName: 'inspect', arguments: { action: 'get_mesh_details', objectPath: TEST_MESH }, expected: 'success' },
   { scenario: 'INFO: get_texture_details', toolName: 'inspect', arguments: { action: 'get_texture_details', objectPath: ENGINE_DEFAULT_TEXTURE }, expected: 'success' },
   { scenario: 'INFO: get_material_details', toolName: 'inspect', arguments: { action: 'get_material_details', objectPath: TEST_MATERIAL }, expected: 'success' },
-  { scenario: 'INFO: get_level_details', toolName: 'inspect', arguments: { action: 'get_level_details', objectPath: TEST_LEVEL }, expected: 'success' },
+  { scenario: 'INFO: get_level_details', toolName: 'inspect', arguments: { action: 'get_level_details' }, expected: 'success' },
+  { scenario: 'ERROR: get_mesh_details refuses a texture', toolName: 'inspect', arguments: { action: 'get_mesh_details', objectPath: ENGINE_DEFAULT_TEXTURE }, expected: 'error|TYPE_MISMATCH' },
   { scenario: 'INFO: get_component_details', toolName: 'inspect', arguments: { action: 'get_component_details', actorName: ACTOR, componentName: COMPONENT }, expected: 'success' },
 
   // === PROPERTIES / COMPONENTS ===
   { scenario: 'CONFIG: set_property', toolName: 'inspect', arguments: inspectActor('set_property', { propertyName: 'InitialLifeSpan', value: 0 }), expected: 'success' },
   { scenario: 'INFO: get_property', toolName: 'inspect', arguments: inspectActor('get_property', { propertyName: 'InitialLifeSpan' }), expected: 'success' },
+  { scenario: 'CONFIG: set_property with only propertyPath, left clean', toolName: 'inspect', arguments: inspectActor('set_property', { propertyPath: 'InitialLifeSpan', value: 0, markDirty: false }), expected: 'success' },
   { scenario: 'INFO: get_property via name/propertyPath aliases', toolName: 'inspect', arguments: { action: 'get_property', name: ACTOR, propertyPath: 'InitialLifeSpan' }, expected: 'success', assertions: [{ path: 'structuredContent.result.value', equals: 0, label: 'propertyPath alias reads property set through propertyName' }] },
   { scenario: 'INFO: get_components', toolName: 'inspect', arguments: inspectActor('get_components'), expected: 'success' },
   { scenario: 'INFO: get_components narrowed by componentNames', toolName: 'inspect', arguments: inspectActor('get_components', { componentNames: ['NoSuchComponent'] }), expected: 'success', assertions: [{ path: 'structuredContent.result.missingComponents.0', equals: 'NoSuchComponent', label: 'a name no component has is reported' }] },
   { scenario: 'INFO: get_component_property', toolName: 'inspect', arguments: { action: 'get_component_property', actorName: ACTOR, componentName: COMPONENT, propertyName: 'Intensity' }, expected: 'success' },
   { scenario: 'CONFIG: set_component_property', toolName: 'inspect', arguments: { action: 'set_component_property', actorName: ACTOR, componentName: COMPONENT, propertyName: 'Intensity', value: 1200 }, expected: 'success' },
+  { scenario: 'CONFIG: set_component_property properties bag', toolName: 'inspect', arguments: { action: 'set_component_property', actorName: ACTOR, componentName: COMPONENT, properties: { Intensity: 1300, 'LightmassSettings.ShadowExponent': 2 } }, expected: 'success' },
 
   // === CLASS / CDO / LISTING ===
   { scenario: 'INFO: inspect_class', toolName: 'inspect', arguments: { action: 'inspect_class', className: 'StaticMeshActor' }, expected: 'success' },
@@ -53,14 +55,17 @@ const testCases = [
   { scenario: 'INFO: inspect_cdo', toolName: 'inspect', arguments: { action: 'inspect_cdo', blueprintPath: BP_PATH, detailed: true }, expected: 'success' },
   { scenario: 'INFO: inspect_cdo narrowed by componentNames', toolName: 'inspect', arguments: { action: 'inspect_cdo', blueprintPath: BP_PATH, componentNames: ['NoSuchComponent'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.missingComponents.0', equals: 'NoSuchComponent', label: 'a name no component has is reported' }] },
   { scenario: 'INFO: list_objects', toolName: 'inspect', arguments: { action: 'list_objects' }, expected: 'success' },
+  { scenario: 'INFO: list_objects second page', toolName: 'inspect', arguments: { action: 'list_objects', limit: 5, offset: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.offset', equals: 5, label: 'offset is honoured' }] },
   { scenario: 'INFO: get_metadata', toolName: 'inspect', arguments: inspectActor('get_metadata'), expected: 'success' },
 
   // === TAGS / SNAPSHOTS / SEARCH ===
   { scenario: 'ADD: add_tag', toolName: 'inspect', arguments: inspectActor('add_tag', { tag: TAG }), expected: 'success|already exists' },
+  { scenario: 'ADD: add_tag on several actors', toolName: 'inspect', arguments: { action: 'add_tag', actorNames: [ACTOR, DELETE_ACTOR], tag: TAG }, expected: 'success|already exists' },
   { scenario: 'INFO: find_by_tag', toolName: 'inspect', arguments: { action: 'find_by_tag', tag: TAG }, expected: 'success' },
   { scenario: 'CREATE: create_snapshot', toolName: 'inspect', arguments: inspectActor('create_snapshot', { snapshotName: SNAPSHOT }), expected: 'success|already exists' },
   { scenario: 'ACTION: restore_snapshot', toolName: 'inspect', arguments: inspectActor('restore_snapshot', { snapshotName: SNAPSHOT }), expected: 'success' },
-  { scenario: 'ACTION: export', toolName: 'inspect', arguments: inspectActor('export'), expected: 'success' },
+  { scenario: 'ACTION: export', toolName: 'inspect', arguments: inspectActor('export', { format: 'T3D' }), expected: 'success' },
+  { scenario: 'ACTION: export to a project file', toolName: 'inspect', arguments: inspectActor('export', { outputPath: 'Saved/MCPTest/InspectExport.t3d' }), expected: 'success' },
   { scenario: 'INFO: find_by_class', toolName: 'inspect', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, expected: 'success' },
   { scenario: 'INFO: get_bounding_box', toolName: 'inspect', arguments: inspectActor('get_bounding_box'), expected: 'success' },
 
@@ -77,7 +82,7 @@ const testCases = [
   { scenario: 'INFO: pie_report', toolName: 'inspect', arguments: { action: 'pie_report', filter: ACTOR }, expected: 'success' },
 
   // === DESTRUCTIVE / CLEANUP ===
-  { scenario: 'DELETE: delete_object', toolName: 'inspect', arguments: { action: 'delete_object', actorName: DELETE_ACTOR }, expected: 'success|not found' },
+  { scenario: 'DELETE: delete_object', toolName: 'inspect', arguments: { action: 'delete_object', actorNames: [DELETE_ACTOR] }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete inspect actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: ACTOR }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete inspect blueprint', toolName: 'manage_asset', arguments: { action: 'delete_asset', assetPath: BP_PATH, force: true }, expected: 'success|not found' },
 ];

@@ -1,7 +1,34 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/Texture.h"
+#include "Materials/MaterialInterface.h"
 
 namespace McpEnvironmentHandlers {
+
+namespace {
+// get_material_details, get_mesh_details and get_texture_details answered any
+// object with the generic inspect_object view, so asking for a material's details
+// on a mesh "succeeded". Each now names the type it reads; empty = no check.
+FString McpInspectWrongTypeReason(const FString &Action, const UObject *Object)
+{
+    if (Action.Equals(TEXT("get_material_details"), ESearchCase::IgnoreCase) && !Object->IsA<UMaterialInterface>())
+    {
+        return TEXT("a material");
+    }
+    if (Action.Equals(TEXT("get_mesh_details"), ESearchCase::IgnoreCase) &&
+        !Object->IsA<UStaticMesh>() && !Object->IsA<USkeletalMesh>())
+    {
+        return TEXT("a static or skeletal mesh");
+    }
+    if (Action.Equals(TEXT("get_texture_details"), ESearchCase::IgnoreCase) && !Object->IsA<UTexture>())
+    {
+        return TEXT("a texture");
+    }
+    return FString();
+}
+} // namespace
 
 bool HandleInspectObjectAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
@@ -24,6 +51,18 @@ bool HandleInspectObjectAction(
     if (!ResolvedPath.IsEmpty())
     {
         ObjectPath = ResolvedPath;
+    }
+
+    FString Action;
+    Payload->TryGetStringField(TEXT("action"), Action);
+    const FString Wanted = McpInspectWrongTypeReason(Action, TargetObject);
+    if (!Wanted.IsEmpty())
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("%s is a %s, not %s; use inspect_object for any object"),
+                            *ObjectPath, *TargetObject->GetClass()->GetName(), *Wanted),
+            TEXT("TYPE_MISMATCH"));
+        return true;
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
