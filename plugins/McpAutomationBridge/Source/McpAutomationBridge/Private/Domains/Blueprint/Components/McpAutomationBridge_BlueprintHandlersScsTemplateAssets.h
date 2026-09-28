@@ -61,4 +61,18 @@ inline bool ApplyScsTemplateAssets(UActorComponent *Template,
   return bApplied;
 }
 
+// A mesh or material given to a hidden component never shows, and the batch said
+// nothing: the new look seemed to be ignored. Empty when the component draws.
+inline FString McpScsHiddenHint(const UActorComponent *Template,
+                                const FString &ComponentName) {
+  const USceneComponent *Scene = Cast<USceneComponent>(Template);
+  if (!Scene || (Scene->GetVisibleFlag() && !Scene->bHiddenInGame)) {
+    return FString();
+  }
+  return FString::Printf(
+      TEXT("'%s' is hidden (%s), so its new mesh or material will not show; add ")
+      TEXT("properties {\"bVisible\": true, \"bHiddenInGame\": false} if it should."),
+      *ComponentName, Scene->GetVisibleFlag() ? TEXT("bHiddenInGame true") : TEXT("bVisible false"));
+}
+
 } // namespace McpBlueprintHandlers

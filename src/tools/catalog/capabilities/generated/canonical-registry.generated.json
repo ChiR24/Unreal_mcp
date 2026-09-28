@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2127c1a4fa2b1d7a",
+  "catalogRevision": "63432d58cb3572b5",
   "recordCount": 386,
   "records": [
     {
@@ -14566,7 +14566,7 @@
             },
             "operations": {
               "type": "array",
-              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied.",
+              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -14795,8 +14795,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1cdea5ecf6a69224bbdf4b07886a9c86fad2f3d77165d414c2734294ae78a8a2",
-        "content": "fcf5c141d009270554d18e3f03b84e7f1afa07efc3f189c3bfedef62c2a2522a"
+        "schema": "a9921a5bce4f37496208883abf8c77641b7ad85f662bb4c52f6ce0d90e9b373d",
+        "content": "71c982df8bec6b3435db806c7d11ccdf8bcb59e93248ca4b382f0f7b8de10427"
       }
     },
     {

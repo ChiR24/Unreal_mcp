@@ -95,9 +95,11 @@ TSharedPtr<FJsonValue> MakeHandle(const TCHAR* Kind, const TCHAR* Field, const F
 	return MakeShared<FJsonValueObject>(Handle);
 }
 
+// blueprintPath is how every Blueprint and SCS handler names its asset; without
+// it an edit_scs batch published no handle at all.
 const TCHAR* const ASSET_FIELDS[] = {
 	TEXT("assetPath"), TEXT("createdAssetPath"), TEXT("savedAssetPath"), TEXT("destinationPath"),
-	TEXT("widgetPath"), TEXT("deletedPath")};
+	TEXT("widgetPath"), TEXT("deletedPath"), TEXT("blueprintPath")};
 // The caller-facing identities first: a receipt handle is what the client
 // passes back to a follow-up capability, and the engine's internal object path
 // (/Temp/...:PersistentLevel.Actor_UAID_...) is not a stable handle. The path

@@ -158,24 +158,29 @@ inline int32 RepropagatePending(TArray<FString> *OutFailed = nullptr)
   return Updated;
 }
 
-inline TArray<TSharedPtr<FJsonValue>> ToJsonStrings(const TArray<FString> &In)
+// The first Max entries only: instancesUpdated carries the count. Every placed path
+// for every operation made a 29-operation batch reply 60 KB.
+inline TArray<TSharedPtr<FJsonValue>> ToJsonStrings(const TArray<FString> &In, int32 Max = 3)
 {
   TArray<TSharedPtr<FJsonValue>> Out;
-  for (const FString &Text : In)
-    Out.Add(MakeShared<FJsonValueString>(Text));
+  for (int32 Index = 0; Index < In.Num() && Index < Max; ++Index)
+    Out.Add(MakeShared<FJsonValueString>(In[Index]));
   return Out;
 }
 
 // Push one operation's new defaults to the placed instances and record the ones
 // that took them. One that did not is retried, and named if it still did not,
-// after the batch's final compile (RepropagatePending).
+// after the batch's final compile (RepropagatePending). instancesUpdated is set
+// for every operation that changed a default, 0 included: leaving it out when
+// nothing moved read the same as an operation that never propagates.
 inline void PropagateAndReport(const FDefaults &Defaults, const TSharedPtr<FJsonObject> &OpSummary)
 {
+  if (Defaults.Old.Num() == 0)
+    return;
   TArray<FString> UpdatedPaths;
-  if (const int32 Updated = Defaults.Propagate(&UpdatedPaths))
-  {
-    OpSummary->SetNumberField(TEXT("instancesUpdated"), Updated);
+  const int32 Updated = Defaults.Propagate(&UpdatedPaths);
+  OpSummary->SetNumberField(TEXT("instancesUpdated"), Updated);
+  if (Updated > 0)
     OpSummary->SetArrayField(TEXT("updatedInstances"), ToJsonStrings(UpdatedPaths));
-  }
 }
 }

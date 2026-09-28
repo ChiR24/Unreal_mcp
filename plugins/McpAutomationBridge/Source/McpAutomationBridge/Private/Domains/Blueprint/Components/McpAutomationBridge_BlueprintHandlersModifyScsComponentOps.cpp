@@ -71,7 +71,10 @@ if (PropertiesObj.IsValid()) {
   }
 }
 for (const TCHAR *Path : {TEXT("StaticMesh"), TEXT("OverrideMaterials")}) Defaults.Capture(Path);
-bAnySuccess = ApplyScsTemplateAssets(Template, Op) || bAnySuccess;
+const bool bAssetsApplied = ApplyScsTemplateAssets(Template, Op);
+bAnySuccess = bAssetsApplied || bAnySuccess;
+const FString HiddenHint = bAssetsApplied ? McpScsHiddenHint(Template, ComponentName) : FString();
+if (!HiddenHint.IsEmpty()) { OpSummary->SetStringField(TEXT("hint"), HiddenHint); }
 McpScsPropagate::PropagateAndReport(Defaults, OpSummary);
 McpScsPropagate::Pending().Emplace(Template, Defaults);
 OpSummary->SetBoolField(TEXT("success"), bAnySuccess);

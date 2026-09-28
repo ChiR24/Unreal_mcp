@@ -52,6 +52,15 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
           *GetJsonStringField(*Op, TEXT("componentName")), *Entry->AsString()));
     }
   }
+  // An operation's hint (a new mesh on a hidden component) rides at the top as well.
+  for (const TSharedPtr<FJsonValue> &Summary : State.FinalSummaries) {
+    const TSharedPtr<FJsonObject> *Op = nullptr;
+    FString Hint;
+    if (Summary.IsValid() && Summary->TryGetObject(Op) && Op && (*Op)->TryGetStringField(TEXT("hint"), Hint)) {
+      State.LocalWarnings.Add(FString::Printf(TEXT("operation %d: %s"),
+          static_cast<int32>((*Op)->GetNumberField(TEXT("index"))), *Hint));
+    }
+  }
   State.bOk = State.FinalSummaries.Num() > Failed;
   State.CompletionResult->SetArrayField(TEXT("operations"), State.FinalSummaries);
   // `compiled` used to echo the REQUEST flag, so a batch that left the
@@ -109,6 +118,12 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
     ResultPayload->SetArrayField(TEXT("diagnostics"), *ScsDiagnostics);
   }
   ResultPayload->SetBoolField(TEXT("saved"), State.bSave && State.bSaveResult);
+  // The receipt's changes[] reads changedAssets: a batch that applied anything changed the Blueprint.
+  if (State.bOk) {
+    TArray<TSharedPtr<FJsonValue>> Changed;
+    Changed.Add(MakeShared<FJsonValueString>(State.NormalizedBlueprintPath));
+    ResultPayload->SetArrayField(TEXT("changedAssets"), Changed);
+  }
   if (Repropagated > 0) {
     ResultPayload->SetNumberField(TEXT("instancesRepropagated"), Repropagated);
   }

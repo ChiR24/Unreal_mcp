@@ -32,8 +32,9 @@ function makeReader(result: Record<string, unknown>): (key: string) => unknown {
 
 // widgetPath is the canonical asset path of a Widget Blueprint and is what the
 // WidgetAuthoring handlers already emit, so without it every widget mutation
-// produced a receipt with no asset handle at all.
-const ASSET_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'widgetPath', 'deletedPath'] as const;
+// produced a receipt with no asset handle at all. blueprintPath is the same for
+// every Blueprint and SCS handler (an edit_scs batch published no handle).
+const ASSET_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'widgetPath', 'deletedPath', 'blueprintPath'] as const;
 const ACTOR_FIELDS = ['actorName', 'actorLabel', 'actorPath'] as const;
 const CHANGE_ARRAY_FIELDS = ['changes', 'changedEntities', 'changedAssets', 'affectedActors', 'modifiedPaths', 'deleted'] as const;
 // widgetPath was listed for handles but not here, so create_game_screen and
