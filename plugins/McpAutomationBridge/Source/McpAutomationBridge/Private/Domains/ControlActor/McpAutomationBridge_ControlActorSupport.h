@@ -43,6 +43,18 @@ UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath,
 void McpAppendComponentDetailFields(UActorComponent *Component,
                                     TSharedPtr<FJsonObject> &Entry);
 
+// The component property bag add_component and set_component_properties share
+// (McpAutomationBridge_ControlActorComponentProperties.cpp): Mobility first, the
+// engine setters for physics, mesh and collision, then McpResolvePropertyPath.
+void McpApplyComponentProperties(UActorComponent *Component, const TSharedPtr<FJsonObject> &Properties,
+                                 TArray<FString> &OutApplied, TArray<FString> &OutWarnings);
+// Sends PROPERTY_CONVERSION_FAILED (nothing applied) or PARTIAL_FAILURE with the
+// warnings in Data and returns true; false (nothing sent) when all applied.
+bool McpSendComponentPropertyShortfall(UMcpAutomationBridgeSubsystem &Bridge,
+                                       TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &RequestId,
+                                       const TArray<FString> &Applied, const TArray<FString> &Warnings,
+                                       const TSharedPtr<FJsonObject> &Data, const FString &Prefix = FString());
+
 // An actor's outliner folder, "" at the root. FName spells NAME_None "None", so
 // ToString() alone counted the root as a folder named None in list's summary,
 // and the "(none)" filter, which looked for "", matched no actor at all.

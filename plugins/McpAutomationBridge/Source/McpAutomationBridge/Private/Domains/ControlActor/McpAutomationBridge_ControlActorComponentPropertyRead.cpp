@@ -67,35 +67,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponentProperty(
     }
   }
 
-  // BB-022/023: resolve through the shared nested-path boundary so dotted
-  // paths (e.g. BodyInstance.CollisionEnabled) resolve, not just single names.
+  // The resolver set_component_property writes through: dotted paths at any
+  // depth, and a bare name that lives in a struct (CollisionProfileName ->
+  // BodyInstance.CollisionProfileName) when exactly one member carries it.
   void* ContainerPtr = nullptr;
-  FString ResolveError;
-  FProperty* Property = ResolveNestedPropertyPath(Component, PropertyName, ContainerPtr, ResolveError);
-  // The write path takes CollisionProfileName bare, so reading the same word
-  // back failed and a caller could not confirm what it had just written. A
-  // bare name that lives one struct deep (BodyInstance.CollisionProfileName)
-  // resolves there when exactly one struct member carries it.
-  if (!Property && !PropertyName.Contains(TEXT("."))) {
-    FString Candidate;
-    int32 Matches = 0;
-    for (TFieldIterator<FStructProperty> It(Component->GetClass()); It; ++It) {
-      if (It->Struct && It->Struct->FindPropertyByName(FName(*PropertyName))) {
-        Candidate = It->GetName() + TEXT(".") + PropertyName;
-        ++Matches;
-      }
-    }
-    if (Matches == 1) {
-      Property = ResolveNestedPropertyPath(Component, Candidate, ContainerPtr, ResolveError);
-      PropertyName = Candidate;
-    }
-  }
+  FString ResolveError, ResolvedPath;
+  FProperty* Property = McpResolvePropertyPath(Component, PropertyName, ContainerPtr, ResolvedPath, ResolveError);
   if (!Property) {
     SendAutomationError(Socket, RequestId,
-        FString::Printf(TEXT("Property not found: %s on component: %s"), *PropertyName, *ComponentName),
+        FString::Printf(TEXT("Property not found: %s on component: %s (%s)"), *PropertyName, *ComponentName, *ResolveError),
         TEXT("PROPERTY_NOT_FOUND"));
     return true;
   }
+  PropertyName = ResolvedPath;
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   if (ActorName.IsEmpty()) {

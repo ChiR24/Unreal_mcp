@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d86157431797d736",
+  "catalogRevision": "583c23dda220d240",
   "recordCount": 382,
   "records": [
     {
@@ -28708,13 +28708,17 @@
             },
             "properties": {
               "type": "object",
-              "description": "Component property key-value pairs.",
+              "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works).",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
+            "meshPath": {
+              "type": "string",
+              "description": "Static mesh asset (/Game path) to show on the new component; only a StaticMeshComponent takes one. A mesh that does not load fails the call, naming the component that was still added."
+            },
             "propertyName": {
               "type": "string",
-              "description": "Component property name to read or write."
+              "description": "Component property to read or write: a name (Intensity), or a dotted path through structs at any depth (BodyInstance.CollisionEnabled, LightmassSettings.bShadowIndirectOnly). A bare name that is not on the component itself resolves to the one struct member carrying it (CollisionEnabled reads and writes BodyInstance.CollisionEnabled); a name several structs carry is refused with the full paths to choose from."
             },
             "value": {
               "description": "Property value (any type)."
@@ -28817,6 +28821,9 @@
               "set_property",
               "set_properties"
             ],
+            "meshPath": [
+              "add"
+            ],
             "propertyName": [
               "set_property",
               "set_properties"
@@ -28830,8 +28837,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c6e6a7120e61b8e93e33531cb407f39f45716bcb928355f46bb194fc2c9b5de9",
-        "content": "7875ede51bfebaa97fc94d774188c4443d46170e9055539b940fe0db804576b4"
+        "schema": "72207c12be52e975e72863ba37afdb4cf6a28537e006795855b30fad2abe5047",
+        "content": "07bed4fd0ab611c03375d37da7ef4a924d6918fd41d0de5a3502354435e9acec"
       }
     },
     {
@@ -29269,11 +29276,11 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Component property name to read or write."
+              "description": "Component property to read or write: a name (Intensity), or a dotted path through structs at any depth (BodyInstance.CollisionEnabled, LightmassSettings.bShadowIndirectOnly). A bare name that is not on the component itself resolves to the one struct member carrying it (CollisionEnabled reads and writes BodyInstance.CollisionEnabled); a name several structs carry is refused with the full paths to choose from."
             },
             "propertyPath": {
               "type": "string",
-              "description": "Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."
+              "description": "Same as propertyName (a name or a dotted path such as BodyInstance.CollisionEnabled); used when propertyName is absent."
             }
           },
           "required": [
@@ -29352,8 +29359,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4d2c20067245008245ce5e8e5ed31c6e0ed83951d9d5fb5c862749139b917913",
-        "content": "6335ddf1f0b49a681f3f5d0d7d8f03f6af14d22232dde03deea8dcc9451c03ed"
+        "schema": "e8b055825782d8d8401021dd8138522ba2deb0a71dab5f2459f69b0e7650c86f",
+        "content": "003f82b81e65cbcce6b1d60e033261b5d079e0cdf58426b08d00aa93b4d51a74"
       }
     },
     {

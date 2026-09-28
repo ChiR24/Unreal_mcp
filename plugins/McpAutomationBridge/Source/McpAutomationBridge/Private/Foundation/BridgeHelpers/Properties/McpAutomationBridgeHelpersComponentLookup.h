@@ -4,7 +4,9 @@
 
 #include "ComponentReregisterContext.h"
 #include "Components/ActorComponent.h"
+#include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
+#include "Dom/JsonValue.h"
 #include "GameFramework/Actor.h"
 
 static inline UActorComponent *
@@ -64,4 +66,42 @@ static inline void McpRefreshComponentAfterEdit(UActorComponent *Component) {
   if (USceneComponent *SceneComponent = Cast<USceneComponent>(Component)) {
     SceneComponent->UpdateComponentToWorld();
   }
+}
+
+/**
+ * Collision lives inside BodyInstance behind setters. Writing CollisionProfileName
+ * or CollisionEnabled raw skips the profile bookkeeping (a named profile
+ * re-applies on load and puts the old value back) and the physics refresh, so
+ * both the bare and the BodyInstance. spelling go through the component's own
+ * setters, on live components and templates alike.
+ */
+static inline bool McpIsCollisionSetterKey(const UActorComponent *Component, const FString &Name) {
+  auto Is = [&Name](const TCHAR *Field) {
+    return Name.Equals(Field, ESearchCase::IgnoreCase) ||
+           Name.Equals(FString(TEXT("BodyInstance.")) + Field, ESearchCase::IgnoreCase);
+  };
+  return Cast<UPrimitiveComponent>(Component) && (Is(TEXT("CollisionProfileName")) || Is(TEXT("CollisionEnabled")));
+}
+
+/** Applies a key McpIsCollisionSetterKey accepted; false with OutError on a bad value. */
+static inline bool McpApplyCollisionSetterKey(UActorComponent *Component, const FString &Name,
+                                              const TSharedPtr<FJsonValue> &Value, FString &OutError) {
+  UPrimitiveComponent *Primitive = Cast<UPrimitiveComponent>(Component);
+  if (!Primitive || !Value.IsValid() || Value->Type != EJson::String) {
+    OutError = TEXT("expects a string (a collision profile or ECollisionEnabled name)");
+    return false;
+  }
+  const FString Text = Value->AsString();
+  if (Name.EndsWith(TEXT("CollisionProfileName"), ESearchCase::IgnoreCase)) {
+    Primitive->SetCollisionProfileName(FName(*Text));
+    return true;
+  }
+  const int64 Enabled = StaticEnum<ECollisionEnabled::Type>()->GetValueByNameString(Text);
+  if (Enabled == INDEX_NONE) {
+    OutError = FString::Printf(TEXT("'%s' is not an ECollisionEnabled value (NoCollision, QueryOnly, "
+                                    "PhysicsOnly, QueryAndPhysics)"), *Text);
+    return false;
+  }
+  Primitive->SetCollisionEnabled(static_cast<ECollisionEnabled::Type>(Enabled));
+  return true;
 }

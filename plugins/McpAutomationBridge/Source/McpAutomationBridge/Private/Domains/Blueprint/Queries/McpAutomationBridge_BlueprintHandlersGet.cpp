@@ -91,8 +91,9 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
           Template = Holder->GetObjectPropertyValue_InContainer(CDO);
         }
         void *Container = nullptr;
-        FString PathError;
-        if (FProperty *Prop = Template ? ResolveNestedPropertyPath(Template, ComponentPath, Container, PathError) : nullptr) {
+        FString PathError, ResolvedPath;
+        // The shared resolver edit_scs set_property writes through.
+        if (FProperty *Prop = Template ? McpResolvePropertyPath(Template, ComponentPath, Container, ResolvedPath, PathError) : nullptr) {
           FString Text;
           Prop->ExportText_InContainer(0, Text, Container, nullptr, Template, PPF_None);
           PropertyValue = MakeShared<FJsonValueString>(Text);

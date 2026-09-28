@@ -3496,13 +3496,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "properties": {
           "type": "object",
-          "description": "Component property key-value pairs.",
+          "description": "Component property key-value pairs. Each key is a name or dotted path, as propertyName takes it (BodyInstance.CollisionEnabled works).",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
         "propertyName": {
           "type": "string",
-          "description": "Component property name to read or write."
+          "description": "Component property to read or write: a name (Intensity), or a dotted path through structs at any depth (BodyInstance.CollisionEnabled, LightmassSettings.bShadowIndirectOnly). A bare name that is not on the component itself resolves to the one struct member carrying it (CollisionEnabled reads and writes BodyInstance.CollisionEnabled); a name several structs carry is refused with the full paths to choose from."
         },
         "propertyNames": {
           "oneOf": [
@@ -3525,7 +3525,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "propertyPath": {
           "type": "string",
-          "description": "Dotted nested property path (e.g. BodyInstance.CollisionEnabled), accepted by the read handler in place of propertyName."
+          "description": "Same as propertyName (a name or a dotted path such as BodyInstance.CollisionEnabled); used when propertyName is absent."
         },
         "readMode": {
           "type": "string",

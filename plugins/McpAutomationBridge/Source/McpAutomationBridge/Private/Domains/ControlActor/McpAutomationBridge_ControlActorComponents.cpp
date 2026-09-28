@@ -71,42 +71,31 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
     }
   }
 
-  if (UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(NewComponent)) {
-    FString MeshPath;
-    if (Payload->TryGetStringField(TEXT("meshPath"), MeshPath) &&
-        !MeshPath.IsEmpty()) {
-      const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
-      if (!SafeMeshPath.IsEmpty()) {
-        if (UObject *LoadedMesh = UEditorAssetLibrary::LoadAsset(SafeMeshPath)) {
-          if (UStaticMesh *Mesh = Cast<UStaticMesh>(LoadedMesh)) {
-            SMC->SetStaticMesh(Mesh);
-          }
-        }
-      }
-    }
-  }
-
   TArray<FString> AppliedProperties;
   TArray<FString> PropertyWarnings;
+  // A mesh that failed to load, or a meshPath on a component that takes none,
+  // used to be dropped without a word.
+  FString MeshPath;
+  if (Payload->TryGetStringField(TEXT("meshPath"), MeshPath) && !MeshPath.IsEmpty()) {
+    UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(NewComponent);
+    const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
+    UStaticMesh *Mesh = (SMC && !SafeMeshPath.IsEmpty())
+                            ? Cast<UStaticMesh>(UEditorAssetLibrary::LoadAsset(SafeMeshPath))
+                            : nullptr;
+    if (Mesh) {
+      SMC->SetStaticMesh(Mesh);
+      AppliedProperties.Add(TEXT("meshPath"));
+    } else {
+      PropertyWarnings.Add(SMC ? FString::Printf(TEXT("Failed to set meshPath: no static mesh could be loaded from %s"), *MeshPath)
+                               : FString(TEXT("Failed to set meshPath: only a StaticMeshComponent takes a mesh")));
+    }
+  }
+  // The same property bag set_component_properties writes, so nested paths
+  // (BodyInstance.CollisionEnabled) and the engine setters work here too.
   const TSharedPtr<FJsonObject> *PropertiesPtr = nullptr;
   if (Payload->TryGetObjectField(TEXT("properties"), PropertiesPtr) &&
       PropertiesPtr && (*PropertiesPtr).IsValid()) {
-    for (const auto &Pair : (*PropertiesPtr)->Values) {
-      const FString PropertyName(*Pair.Key);
-      FProperty *Property = ComponentClass->FindPropertyByName(*PropertyName);
-      if (!Property) {
-        PropertyWarnings.Add(
-            FString::Printf(TEXT("Property not found: %s"), *PropertyName));
-        continue;
-      }
-      FString ApplyError;
-      if (ApplyJsonValueToProperty(NewComponent, Property, Pair.Value,
-                                   ApplyError))
-        AppliedProperties.Add(PropertyName);
-      else
-        PropertyWarnings.Add(FString::Printf(TEXT("Failed to set %s: %s"),
-                                             *PropertyName, *ApplyError));
-    }
+    McpApplyComponentProperties(NewComponent, *PropertiesPtr, AppliedProperties, PropertyWarnings);
   }
 
   NewComponent->RegisterComponent();
@@ -116,7 +105,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
   Found->MarkPackageDirty();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("componentName"), NewComponent->GetName());
   Resp->SetStringField(TEXT("componentPath"), NewComponent->GetPathName());
   Resp->SetStringField(TEXT("componentClass"), ComponentClass->GetPathName());
@@ -126,14 +114,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
       PropsArray.Add(MakeShared<FJsonValueString>(PropName));
     Resp->SetArrayField(TEXT("appliedProperties"), PropsArray);
   }
-  if (PropertyWarnings.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> WarnArray;
-    for (const FString &Warning : PropertyWarnings)
-      WarnArray.Add(MakeShared<FJsonValueString>(Warning));
-    Resp->SetArrayField(TEXT("warnings"), WarnArray);
-	}
-	SendAutomationResponse(Socket, RequestId, true, TEXT("Component added"), Resp,
-                         FString());
+  // Every requested property failing came back success:true with the failures
+  // in warnings; it now fails the way set_component_properties does, naming
+  // the component that was added.
+  if (McpSendComponentPropertyShortfall(*this, Socket, RequestId, AppliedProperties, PropertyWarnings, Resp,
+                                        FString::Printf(TEXT("Component %s was added. "), *NewComponent->GetName()))) {
+    return true;
+  }
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Component added"), Resp);
   return true;
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(

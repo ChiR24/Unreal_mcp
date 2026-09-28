@@ -80,15 +80,28 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
     return Result;
   }
 
-  if (PropertyValue.IsValid()) {
+  UActorComponent *TemplateComponent = Cast<UActorComponent>(ComponentTemplate);
+  if (PropertyValue.IsValid() && McpIsCollisionSetterKey(TemplateComponent, PropertyName)) {
+    // Collision goes through the setters, as control_actor and modify_scs do.
+    FString CollisionError;
+    if (!McpApplyCollisionSetterKey(TemplateComponent, PropertyName, PropertyValue, CollisionError)) {
+      Result->SetBoolField(TEXT("success"), false);
+      Result->SetStringField(TEXT("error"), CollisionError);
+      Result->SetStringField(TEXT("errorCode"), TEXT("SCS_PROPERTY_APPLY_FAILED"));
+      CreatedOverride.Rollback();
+      return Result;
+    }
+  } else if (PropertyValue.IsValid()) {
     void *ContainerPtr = nullptr;
     FString ResolveError;
+    FString ResolvedPath;
     FString FailureMessage;
     FString FailureCode;
     bool bAppliedValue = false;
-    FProperty *TargetProp =
-        ResolveNestedPropertyPath(ComponentTemplate,
-                                  PropertyName, ContainerPtr, ResolveError);
+    // The shared resolver: dotted struct paths at any depth, and a bare name
+    // that lives in exactly one struct member.
+    FProperty *TargetProp = McpResolvePropertyPath(
+        ComponentTemplate, PropertyName, ContainerPtr, ResolvedPath, ResolveError);
 
     if (!TargetProp || !ContainerPtr) {
       Result->SetBoolField(TEXT("success"), false);
@@ -159,8 +172,9 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
 
   void *VerifiedContainerPtr = nullptr;
   FString VerifiedResolveError;
-  FProperty *VerifiedProp = ResolveNestedPropertyPath(
-      VerifiedTemplate, PropertyName, VerifiedContainerPtr,
+  FString VerifiedPath;
+  FProperty *VerifiedProp = McpResolvePropertyPath(
+      VerifiedTemplate, PropertyName, VerifiedContainerPtr, VerifiedPath,
       VerifiedResolveError);
   if (!VerifiedProp || !VerifiedContainerPtr) {
     Result->SetBoolField(TEXT("success"), false);

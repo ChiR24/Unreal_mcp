@@ -21,6 +21,7 @@ const TAG = `MCPControlActorTag_${ts}`;
 const DELETE_TAG = `MCPDeleteTag_${ts}`;
 const BATCH_TAG = `MCPBatchTag_${ts}`;
 const COMPONENT_NAME = `MCPPointLight_${ts}`;
+const MESH_COMPONENT = `MCPConeMesh_${ts}`;
 const ENGINE_BASIC_MATERIAL = '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial';
 
 const cubeSpawn = (scenario, actorName, location) => ({
@@ -98,6 +99,12 @@ const testCases = [
   { scenario: 'CONFIG: set_component_property', toolName: 'control_actor', arguments: actorArgs('set_component_property', { componentName: COMPONENT_NAME, propertyName: 'Intensity', value: 950 }), expected: 'success' },
   { scenario: 'INFO: get_component_property', toolName: 'control_actor', arguments: actorArgs('get_component_property', { componentName: COMPONENT_NAME, propertyName: 'Intensity' }), expected: 'success' },
   { scenario: 'INFO: get_component_property nested propertyPath', toolName: 'control_actor', arguments: actorArgs('get_component_property', { componentName: COMPONENT_NAME, propertyPath: 'AttenuationRadius' }), expected: 'success' },
+  // One shared resolver for get and set: dotted struct paths at any depth, and a bare name that lives in one struct member.
+  { scenario: 'CONFIG: set_component_property through a struct path', toolName: 'control_actor', arguments: actorArgs('set_component_property', { componentName: 'StaticMeshComponent0', propertyName: 'BodyInstance.CollisionEnabled', value: 'QueryOnly' }), expected: 'success' },
+  { scenario: 'CONFIG: set_component_properties with a nested struct member', toolName: 'control_actor', arguments: actorArgs('set_component_properties', { componentName: 'StaticMeshComponent0', properties: { 'LightmassSettings.bShadowIndirectOnly': true, CollisionEnabled: 'QueryAndPhysics' } }), expected: 'success' },
+  { scenario: 'INFO: get_component_property reads a bare nested name', toolName: 'control_actor', arguments: actorArgs('get_component_property', { componentName: 'StaticMeshComponent0', propertyName: 'bShadowIndirectOnly' }), expected: 'success', assertions: [{ path: 'structuredContent.result.value', equals: true, label: 'the nested member written through its dotted path reads back by its bare name' }] },
+  { scenario: 'ADD: add_component with a mesh', toolName: 'control_actor', arguments: actorArgs('add_component', { componentType: '/Script/Engine.StaticMeshComponent', componentName: MESH_COMPONENT, meshPath: '/Engine/BasicShapes/Cone' }), expected: 'success|already exists' },
+  { scenario: 'DELETE: remove the mesh component', toolName: 'control_actor', arguments: actorArgs('remove_component', { componentName: MESH_COMPONENT }), expected: 'success|not found' },
   { scenario: 'AUDIT: audit_placement sweeps the level', toolName: 'control_actor', arguments: { action: 'audit_placement' }, expected: 'success' },
   { scenario: 'AUDIT: audit_placement filtered and capped', toolName: 'control_actor', arguments: { action: 'audit_placement', nameFilter: 'MCP', limit: 5 }, expected: 'success' },
   { scenario: 'AUDIT: audit_placement drops findings below a severity floor', toolName: 'control_actor', arguments: { action: 'audit_placement', minSeverity: 50, limit: 5 }, expected: 'success' },

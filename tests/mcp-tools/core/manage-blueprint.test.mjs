@@ -80,6 +80,11 @@ const testCases = [
   // === CONFIG: set_scs_property (blueprintPath + componentName + propertyName + propertyValue) ===
   // C++ ApplyJsonValueToProperty supports struct (FVector) via array format [x, y, z].
   { scenario: 'CONFIG: set_scs_property', toolName: 'manage_blueprint', arguments: { action: 'set_scs_property', blueprintPath: BP_PATH, componentName: 'TestModSCSComp', propertyName: 'RelativeLocation', propertyValue: [100, 0, 50] }, expected: 'success' },
+  // The same resolver as control_actor: a struct path, and a bare name living in one struct member.
+  { scenario: 'ADD: static mesh SCS component for nested property writes', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'StaticMeshComponent', componentName: 'TestNestedMesh', parentComponent: 'DefaultSceneRoot' }, expected: 'success|already exists' },
+  { scenario: 'CONFIG: set_scs_property through a struct path', toolName: 'manage_blueprint', arguments: { action: 'set_scs_property', blueprintPath: BP_PATH, componentName: 'TestNestedMesh', propertyName: 'LightmassSettings.bShadowIndirectOnly', propertyValue: true }, expected: 'success' },
+  { scenario: 'CONFIG: set_scs_property collision by its bare name', toolName: 'manage_blueprint', arguments: { action: 'set_scs_property', blueprintPath: BP_PATH, componentName: 'TestNestedMesh', propertyName: 'CollisionEnabled', propertyValue: 'QueryOnly' }, expected: 'success' },
+  { scenario: 'DELETE: remove the nested-property mesh component', toolName: 'manage_blueprint', arguments: { action: 'remove_scs_component', blueprintPath: BP_PATH, componentName: 'TestNestedMesh' }, expected: 'success|not found' },
 
   // === ACTION: ensure_exists (blueprintPath) ===
   // name + savePath outside /Game's root: the check looks where the create would land.
