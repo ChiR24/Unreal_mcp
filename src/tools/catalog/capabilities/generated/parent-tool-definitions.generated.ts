@@ -4434,7 +4434,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "window": {
           "type": "string",
-          "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one."
+          "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one."
         },
         "x": {
           "type": "number",
@@ -4706,6 +4706,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when only the CDO existed, which usually means the owning window has never been opened."
         },
+        "mainWindow": {
+          "type": "boolean",
+          "description": "full_editor_window: true when the captured window is the main editor frame."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
@@ -4716,7 +4720,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "mode": {
           "type": "string",
-          "description": "Editor mode id to activate: EM_Default, EM_Landscape, EM_Foliage, EM_MeshPaint or any registered mode id; a bare name (landscape) is tried as EM_<name>. The call fails when the mode is not active afterwards."
+          "description": "Screenshot source that was captured."
         },
         "opened": {
           "type": "boolean",

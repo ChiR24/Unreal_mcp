@@ -27,3 +27,14 @@ bool ResolveScreenshotResolutionForMcp(const TSharedPtr<FJsonObject> &Payload,
 /** Area-average resample of a BGRA bitmap. Alpha is forced opaque. */
 void ResampleBitmapForMcp(const TArray<FColor> &SrcBitmap, FIntPoint SrcSize,
                           TArray<FColor> &OutBitmap, FIntPoint DstSize);
+
+/**
+ * The directory a capture is saved in: the payload's "path" (a directory inside
+ * the project, relative to it or absolute) or DefaultDir when none was given.
+ * Every capture surface declares "path"; the editor ones used to ignore it and
+ * always wrote to Saved/Screenshots. False with OutError for a path that is
+ * absolute outside the project or climbs out of it.
+ */
+bool ResolveScreenshotDirectoryForMcp(const TSharedPtr<FJsonObject> &Payload,
+                                      const FString &DefaultDir, FString &OutDir,
+                                      FString &OutError);

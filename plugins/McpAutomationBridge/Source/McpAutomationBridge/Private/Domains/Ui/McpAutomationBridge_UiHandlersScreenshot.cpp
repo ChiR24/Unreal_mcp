@@ -57,54 +57,23 @@ bool HandleScreenshotAction(
     return true;
   }
 
-  FString RawScreenshotPath;
-  Payload->TryGetStringField(TEXT("path"), RawScreenshotPath);
-
   FString ScreenshotPath;
-  if (RawScreenshotPath.IsEmpty()) {
-    ScreenshotPath = FPaths::ProjectSavedDir() / TEXT("Screenshots/WindowsEditor");
-  } else {
-    const FString SafePath = SanitizeProjectFilePath(RawScreenshotPath);
-    if (SafePath.IsEmpty()) {
-      Message = FString::Printf(
-          TEXT("Invalid or unsafe screenshot path: %s. Path must be relative to project."),
-          *RawScreenshotPath);
-      ErrorCode = TEXT("SECURITY_VIOLATION");
-      Resp->SetStringField(TEXT("error"), Message);
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                    Message, Resp, ErrorCode);
-      bResponseSent = true;
-      return true;
-    }
-
-    ScreenshotPath = FPaths::ProjectDir() / SafePath;
-    ScreenshotPath = FPaths::ConvertRelativePathToFull(ScreenshotPath);
-    FPaths::NormalizeFilename(ScreenshotPath);
-
-    FString NormalizedProjectDir =
-        FPaths::ConvertRelativePathToFull(FPaths::ProjectDir());
-    FPaths::NormalizeDirectoryName(NormalizedProjectDir);
-    if (!NormalizedProjectDir.EndsWith(TEXT("/"))) {
-      NormalizedProjectDir += TEXT("/");
-    }
-
-    if (!ScreenshotPath.StartsWith(NormalizedProjectDir,
-                                   ESearchCase::IgnoreCase)) {
-      Message = FString::Printf(
-          TEXT("Invalid or unsafe screenshot path: %s. Path escapes project directory."),
-          *RawScreenshotPath);
-      ErrorCode = TEXT("SECURITY_VIOLATION");
-      Resp->SetStringField(TEXT("error"), Message);
-      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
-                                    Message, Resp, ErrorCode);
-      bResponseSent = true;
-      return true;
-    }
+  if (!ResolveScreenshotDirectoryForMcp(
+          Payload, FPaths::ProjectSavedDir() / TEXT("Screenshots/WindowsEditor"),
+          ScreenshotPath, Message)) {
+    ErrorCode = TEXT("SECURITY_VIOLATION");
+    Resp->SetStringField(TEXT("error"), Message);
+    Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                                  Message, Resp, ErrorCode);
+    bResponseSent = true;
+    return true;
   }
 
   const FString Filename = MakeSafeUiScreenshotFilenameForMcp(Payload);
 
-  bool bReturnBase64 = true;
+  // Opt-in, as the schema and the editor captures say: defaulting to true here
+  // made the same call return inline data on one mode and a path on the others.
+  bool bReturnBase64 = false;
   Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
 
   UGameViewportClient *ViewportClient = nullptr;

@@ -172,11 +172,9 @@ bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
     return true;
   }
 #endif
-  // Every other platform: fall back to Slate's own restore. It activates, which
-  // is worse than not capturing at all is.
-  Window->Restore();
-  FSlateApplication::Get().Tick();
-  return true;
+  // Every other platform: Slate's own Restore() activates the window, taking
+  // the user's focus, so it is left minimized and the caller reports that.
+  return false;
 }
 
 // restore_editor_window: a minimized editor runs PIE at about 3 fps however the

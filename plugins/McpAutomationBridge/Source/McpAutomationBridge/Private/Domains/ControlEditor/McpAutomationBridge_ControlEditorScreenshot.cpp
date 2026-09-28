@@ -36,7 +36,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
   const FString Filename = MakeSafeScreenshotFilenameForMcp(Payload);
 
-  const FString ScreenshotDir = FPaths::ProjectSavedDir() / TEXT("Screenshots");
+  // path was declared for every mode but honoured only by game_viewport.
+  FString ScreenshotDir;
+  FString PathError;
+  if (!ResolveScreenshotDirectoryForMcp(Payload, FPaths::ProjectSavedDir() / TEXT("Screenshots"),
+                                        ScreenshotDir, PathError)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SECURITY_VIOLATION"), PathError, nullptr);
+    return true;
+  }
   IFileManager::Get().MakeDirectory(*ScreenshotDir, true);
   const FString FullPath = ScreenshotDir / Filename;
 
@@ -64,9 +71,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
         return true;
       }
     } else {
-      EditorWindow = GetFullEditorSlateWindowForMcp();
-      if (!EditorWindow.IsValid()) {
-        EditorWindow = GetAnyVisibleEditorWindowForMcp();
+      // Always the main editor frame. Falling back to "whichever window is
+      // usable" photographed the Message Log while the main frame was minimized.
+      if (FSlateApplication::IsInitialized()) {
+        EditorWindow = FGlobalTabmanager::Get()->GetRootWindow();
       }
       if (EditorWindow.IsValid()) {
         ResolvedWindowTitle = EditorWindow->GetTitle().ToString();
@@ -75,14 +83,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     if (!EditorWindow.IsValid()) {
       SendStandardErrorResponse(this, Socket, RequestId,
                                 TEXT("EDITOR_WINDOW_NOT_AVAILABLE"),
-                                TEXT("No visible editor window available for full editor screenshot"),
+                                TEXT("The main editor window is not open, so there is no editor window to capture"),
                                 nullptr);
       return true;
     }
 
     // The editor minimizes itself on launch and after some PIE cycles; a
-    // minimized window sits at -32000,-32000 and photographs as nothing.
+    // minimized window sits off screen and photographs as nothing. It is put
+    // back WITHOUT activating it (no focus change, no cursor move); when that
+    // cannot be done the capture is refused rather than taken of another window.
     const bool bRestored = RestoreWindowForCaptureForMcp(EditorWindow.ToSharedRef());
+    if (EditorWindow->IsWindowMinimized()) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_WINDOW_MINIMIZED"),
+                                FString::Printf(TEXT("The editor window '%s' is minimized and could not be restored "
+                                                     "without taking focus; restore it and retry"),
+                                                *ResolvedWindowTitle),
+                                nullptr);
+      return true;
+    }
 
     TArray<uint8> PngData;
     FIntVector ImageSize(0, 0, 0);
@@ -102,6 +120,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     // Report which window was photographed and what else was open, so the next
     // call can address a different one without guessing at titles.
     Resp->SetStringField(TEXT("window"), ResolvedWindowTitle);
+    Resp->SetBoolField(TEXT("mainWindow"), EditorWindow == FGlobalTabmanager::Get()->GetRootWindow());
     Resp->SetBoolField(TEXT("windowRestored"), bRestored);
     AppendEditorWindowListForMcp(Resp);
     SendScreenshotReceiptForMcp(this, Socket, RequestId, Payload, Resp,

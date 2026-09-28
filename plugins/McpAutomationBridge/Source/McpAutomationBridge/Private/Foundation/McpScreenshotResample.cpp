@@ -1,5 +1,7 @@
 #include "Foundation/McpScreenshotResample.h"
 
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
+
 namespace {
 bool IsAllDigitsForMcp(const FString &Value) {
   if (Value.IsEmpty()) {
@@ -122,4 +124,21 @@ void ResampleBitmapForMcp(const TArray<FColor> &SrcBitmap, FIntPoint SrcSize,
                     : FColor(0, 0, 0, 255);
     }
   }
+}
+
+bool ResolveScreenshotDirectoryForMcp(const TSharedPtr<FJsonObject> &Payload,
+                                      const FString &DefaultDir, FString &OutDir,
+                                      FString &OutError) {
+  FString Raw;
+  if (Payload.IsValid()) {
+    Payload->TryGetStringField(TEXT("path"), Raw);
+  }
+  Raw.TrimStartAndEndInline();
+  if (Raw.IsEmpty()) {
+    OutDir = DefaultDir;
+    return true;
+  }
+  // The shared project-file resolver: containment, traversal and reserved
+  // device names are checked in one place for every file the plugin writes.
+  return McpResolveProjectFilePath(Raw, OutDir, OutError);
 }

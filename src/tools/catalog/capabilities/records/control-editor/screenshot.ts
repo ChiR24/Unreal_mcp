@@ -10,7 +10,7 @@ const D = 'editor';
 
 const SCREENSHOT_PROPS = {
   filename: P.filename,
-  path: P.path,
+  path: { type: 'string', description: 'Directory to save the PNG in, inside the project (relative to it, or absolute under it). Default Saved/Screenshots (game_viewport: Saved/Screenshots/WindowsEditor). A path outside the project is refused.' },
   // Not P.resolution: this is a resample of one already-rendered frame, not a
   // re-render, so WxH is a bounding box rather than an exact output size --
   // aspect ratio is preserved and a box larger than the frame changes nothing.
@@ -30,7 +30,7 @@ const SCREENSHOT_PROPS = {
   // window, so full_editor_window on the main frame alone could never show it.
   window: {
     type: 'string',
-    description: 'With mode full_editor_window, which window to capture: a list index ("2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame. Every response lists the open windows under windows[], so read that to pick one.'
+    description: 'With mode full_editor_window, which window to capture: a list index ("2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one.'
   },
   returnBase64: P.returnBase64,
   keepFile: {
@@ -50,8 +50,9 @@ const SCREENSHOT_OUTPUT = {
   viewportHeight: { type: 'number', description: 'Source viewport height in pixels. Present only when resolution forced a downscale.' },
   sizeBytes: { type: 'integer', description: 'Image size in bytes.' },
   screenshotPath: { type: 'string', description: 'Saved screenshot file path.' },
-  mode: P.mode,
+  mode: { type: 'string', description: 'Screenshot source that was captured.' },
   window: { type: 'string', description: 'Title of the editor window that was actually captured.' },
+  mainWindow: { type: 'boolean', description: 'full_editor_window: true when the captured window is the main editor frame.' },
   windows: {
     type: 'array',
     items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },

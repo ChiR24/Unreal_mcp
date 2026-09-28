@@ -36,11 +36,6 @@ bool BringLevelEditorTabToFrontForMcp();
 // Foundation/McpScreenshotResample.h so all three capture surfaces share one
 // implementation.
 
-TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp();
-// Last-resort window for full_editor_window when the root lookup comes back
-// unusable (notably while PIE holds focus).
-TSharedPtr<SWindow> GetAnyVisibleEditorWindowForMcp();
-
 // Every visible editor window, main frame and floating asset editors alike, in
 // the order the `window` selector indexes them. Minimized windows are included:
 // the editor minimizes itself on launch and after some PIE cycles, and leaving

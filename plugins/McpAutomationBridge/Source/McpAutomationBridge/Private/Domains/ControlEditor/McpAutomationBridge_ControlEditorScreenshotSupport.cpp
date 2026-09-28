@@ -2,12 +2,6 @@
 
 #include "Misc/FileHelper.h"
 
-namespace {
-bool IsUsableSlateWindowForMcp(const TSharedPtr<SWindow> &Window) {
-  return Window.IsValid() && Window->IsVisible() && !Window->IsWindowMinimized();
-}
-}  // namespace
-
 FString MakeSafeScreenshotFilenameForMcp(
     const TSharedPtr<FJsonObject> &Payload) {
   FString Filename;
@@ -123,39 +117,6 @@ void SendScreenshotReceiptForMcp(UMcpAutomationBridgeSubsystem *Subsystem,
       : FString::Printf(TEXT("%s captured."), What);
   Resp->SetStringField(TEXT("message"), Message);
   Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Resp, FString());
-}
-
-TSharedPtr<SWindow> GetFullEditorSlateWindowForMcp() {
-  if (!FSlateApplication::IsInitialized() ||
-      !FSlateApplication::Get().CanDisplayWindows()) {
-    return nullptr;
-  }
-
-  TSharedPtr<SWindow> RootWindow = FGlobalTabmanager::Get()->GetRootWindow();
-  if (IsUsableSlateWindowForMcp(RootWindow)) {
-    return RootWindow;
-  }
-
-  if (FModuleManager::Get().IsModuleLoaded(TEXT("LevelEditor"))) {
-    if (FLevelEditorModule *LevelEditorModule =
-            FModuleManager::GetModulePtr<FLevelEditorModule>(
-                TEXT("LevelEditor"))) {
-      TSharedPtr<IAssetViewport> ActiveViewport =
-          LevelEditorModule->GetFirstActiveViewport();
-      if (ActiveViewport.IsValid()) {
-        TSharedPtr<SWindow> ViewportWindow =
-            FSlateApplication::Get().FindWidgetWindow(
-                ActiveViewport->AsWidget());
-        if (IsUsableSlateWindowForMcp(ViewportWindow)) {
-          return ViewportWindow;
-        }
-      }
-    }
-  }
-
-  TSharedPtr<SWindow> ActiveWindow =
-      FSlateApplication::Get().GetActiveTopLevelWindow();
-  return IsUsableSlateWindowForMcp(ActiveWindow) ? ActiveWindow : nullptr;
 }
 
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
