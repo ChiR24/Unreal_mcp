@@ -209,7 +209,7 @@ export const P = {
   stretchDirection: { type: 'string', enum: ['Both', 'DownOnly', 'UpOnly'], description: 'Scale box stretch direction.' },
   userSpecifiedScale: N('User specified scale value.'),
   // Widget bindings
-  bindingSource: S('For bind_text, bind_color, bind_enabled and bind_visibility: the variable (a getter converting it is generated) or pure no-input function the property reads. For bind_on_clicked and bind_on_value_changed: the function the event calls, created with the event inputs when it does not exist.'),
+  bindingSource: S('For bind_text, bind_color, bind_enabled, bind_percent and bind_visibility: the variable (a getter converting it is generated) or pure no-input function the property reads. For bind_on_clicked and bind_on_value_changed: the function the event calls, created with the event inputs when it does not exist.'),
   onHoveredFunction: S('Function the Button calls when the pointer moves onto it; created when it does not exist.'),
   onUnhoveredFunction: S('Function the Button calls when the pointer leaves it; created when it does not exist.'),
   // Widget animation

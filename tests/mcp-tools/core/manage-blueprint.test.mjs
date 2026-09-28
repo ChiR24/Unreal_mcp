@@ -391,7 +391,10 @@ const testCases = [
     { scenario: 'Setup: bShowTitle variable to bind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CREATED_WIDGET_PATH, variableName: 'bShowTitle', variableType: 'Boolean' }, expected: 'success|already exists' },
     { scenario: 'Setup: LogoTint variable to bind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CREATED_WIDGET_PATH, variableName: 'LogoTint', variableType: 'LinearColor' }, expected: 'success|already exists' },
     { scenario: 'Setup: bCanPlay variable to bind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CREATED_WIDGET_PATH, variableName: 'bCanPlay', variableType: 'Boolean' }, expected: 'success|already exists' },
+    { scenario: 'Setup: HealthPct variable to bind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CREATED_WIDGET_PATH, variableName: 'HealthPct', variableType: 'Float' }, expected: 'success|already exists' },
     ...bindingCases,
+    { scenario: 'CONNECT: bind_percent drives a Progress Bar fill', toolName: 'manage_blueprint', arguments: widgetArgs('bind_percent', { slotName: 'LoadingProgress', bindingSource: 'HealthPct' }), expected: 'success', assertions: [{ path: 'structuredContent.result.property', equals: 'Percent', label: 'the Percent delegate is bound' }, { path: 'structuredContent.result.generatedGetter', equals: true, label: 'a getter reads the variable' }] },
+    { scenario: 'CONNECT: bind_percent on a text block (no Percent or Value) is refused', toolName: 'manage_blueprint', arguments: widgetArgs('bind_percent', { slotName: 'TitleText', bindingSource: 'HealthPct' }), expected: 'error|NOT_BINDABLE' },
     { scenario: 'CONNECT: bind_text to a missing source is refused', toolName: 'manage_blueprint', arguments: widgetArgs('bind_text', { slotName: 'TitleText', bindingSource: 'NoSuchVariable' }), expected: 'error|SOURCE_NOT_FOUND' },
 
     // === READY-MADE HUD PIECES (add_game_widget) ===

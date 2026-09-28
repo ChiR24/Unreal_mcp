@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8ee399f85fe81eaa",
+  "catalogRevision": "f9f6a0acbf9b6f43",
   "recordCount": 382,
   "records": [
     {
@@ -11818,6 +11818,7 @@
         "blueprint.bind_text",
         "blueprint.bind_color",
         "blueprint.bind_enabled",
+        "blueprint.bind_percent",
         "blueprint.bind_visibility",
         "blueprint.bind_on_clicked",
         "blueprint.bind_on_hovered",
@@ -11849,6 +11850,13 @@
           "action": "bind_enabled",
           "folded": {
             "bindingKind": "enabled"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "bind_percent",
+          "folded": {
+            "bindingKind": "percent"
           }
         },
         {
@@ -11901,6 +11909,7 @@
           "bind_widget",
           "bind text",
           "bind visibility",
+          "bind progress bar",
           "on clicked",
           "button click",
           "slider changed",
@@ -11908,14 +11917,14 @@
           "localized text",
           "localization key"
         ],
-        "summary": "Bind a widget property to a variable or pure function (text, color, enabled, visibility; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.",
+        "summary": "Bind a widget property to a variable or pure function (text, color, enabled, visibility, progress bar percent or slider value; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.",
         "whenToUse": [
           "A bind text must be created on a widget.",
           "A bind color must be created on a widget.",
           "A bind enabled must be created on a widget.",
+          "A bind percent must be created on a widget.",
           "A bind visibility must be created on a widget.",
-          "A bind on clicked must be created on a widget.",
-          "A button must react when the pointer moves onto or off it."
+          "A bind on clicked must be created on a widget."
         ],
         "whenNotToUse": [
           "The widget should be set directly rather than bound.",
@@ -11942,7 +11951,7 @@
             },
             "bindingSource": {
               "type": "string",
-              "description": "For bind_text, bind_color, bind_enabled and bind_visibility: the variable (a getter converting it is generated) or pure no-input function the property reads. For bind_on_clicked and bind_on_value_changed: the function the event calls, created with the event inputs when it does not exist."
+              "description": "For bind_text, bind_color, bind_enabled, bind_percent and bind_visibility: the variable (a getter converting it is generated) or pure no-input function the property reads. For bind_on_clicked and bind_on_value_changed: the function the event calls, created with the event inputs when it does not exist."
             },
             "onHoveredFunction": {
               "type": "string",
@@ -11974,6 +11983,7 @@
                 "text",
                 "color",
                 "enabled",
+                "percent",
                 "visibility",
                 "on_clicked",
                 "on_hovered",
@@ -12071,7 +12081,7 @@
       },
       "examples": [
         {
-          "title": "Bind a widget property to a variable or pure function (text, color, enabled, visibility; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.",
+          "title": "Bind a widget property to a variable or pure function (text, color, enabled, visibility, progress bar percent or slider value; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.",
           "input": {
             "action": "bind_widget",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -12118,6 +12128,7 @@
             "text": "bind_text",
             "color": "bind_color",
             "enabled": "bind_enabled",
+            "percent": "bind_percent",
             "visibility": "bind_visibility",
             "on_clicked": "bind_on_clicked",
             "on_hovered": "bind_on_hovered",
@@ -12130,6 +12141,7 @@
               "text",
               "color",
               "enabled",
+              "percent",
               "visibility",
               "on_clicked",
               "on_value_changed"
@@ -12157,8 +12169,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4bee3c47d247b39a27e0d9a211246f170202664f2e75629440892263697392c0",
-        "content": "1e18244c7dd1cf7bb928f47dfcb13499f5f67d7a6b6b6db9879df3ad44e7c14e"
+        "schema": "7022fed02084967d7cc4d952b90a6a2456e2a6a77413088c235916fa65193615",
+        "content": "ee7b1bd951d9b09d460243be61e111ae503f97f2e0c15997955b39b0f4003bde"
       }
     },
     {

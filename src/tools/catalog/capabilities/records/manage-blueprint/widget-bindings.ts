@@ -58,6 +58,7 @@ export const WIDGET_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
   binding('bind_visibility', 'blueprint.bind_visibility', 'Bind the Visibility of a widget to a Blueprint variable (a bool maps true to Visible, false to Collapsed) or pure function.'),
   binding('bind_color', 'blueprint.bind_color', 'Bind the tint of a widget (text or image color, progress fill, border brush) to a Blueprint variable or pure function.'),
   binding('bind_enabled', 'blueprint.bind_enabled', 'Bind whether a widget is enabled to a Blueprint bool variable or pure function.'),
+  binding('bind_percent', 'blueprint.bind_percent', 'Bind the fill Percent of a Progress Bar (or the Value of a Slider or SpinBox) to a Blueprint float variable or pure function, so a health or loading bar follows it at runtime.'),
   binding('bind_on_clicked', 'blueprint.bind_on_clicked', 'Wire the OnClicked event of a Button to a Blueprint function (bindingSource), creating the function when missing.'),
   buildRecord({
     id: 'blueprint.bind_on_hovered',

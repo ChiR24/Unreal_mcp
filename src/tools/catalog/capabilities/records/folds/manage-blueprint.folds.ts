@@ -99,10 +99,10 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'bind_widget', selector: 'bindingKind',
-    summary: 'Bind a widget property to a variable or pure function (text, color, enabled, visibility; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.',
-    topics: ['bind text', 'bind visibility', 'on clicked', 'button click', 'slider changed', 'property binding', 'localized text', 'localization key'],
+    summary: 'Bind a widget property to a variable or pure function (text, color, enabled, visibility, progress bar percent or slider value; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.',
+    topics: ['bind text', 'bind visibility', 'bind progress bar', 'on clicked', 'button click', 'slider changed', 'property binding', 'localized text', 'localization key'],
     members: {
-      ...byTarget('bind_', ['bind_text', 'bind_color', 'bind_enabled', 'bind_visibility', 'bind_on_clicked', 'bind_on_hovered', 'bind_on_value_changed', 'bind_localized_text']),
+      ...byTarget('bind_', ['bind_text', 'bind_color', 'bind_enabled', 'bind_percent', 'bind_visibility', 'bind_on_clicked', 'bind_on_hovered', 'bind_on_value_changed', 'bind_localized_text']),
       localization_key: 'set_localization_key',
     },
   },

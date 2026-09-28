@@ -22,7 +22,7 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("set_render_transform"), TEXT("set_visibility"),
 		TEXT("set_style"), TEXT("set_clipping"),
 		TEXT("bind_text"),
-		TEXT("bind_visibility"), TEXT("bind_color"), TEXT("bind_enabled"),
+		TEXT("bind_visibility"), TEXT("bind_color"), TEXT("bind_enabled"), TEXT("bind_percent"),
 		TEXT("bind_on_clicked"), TEXT("bind_on_hovered"),
 		TEXT("bind_on_value_changed"), TEXT("create_widget_animation"),
 		TEXT("add_animation_track"), TEXT("add_animation_keyframe"),

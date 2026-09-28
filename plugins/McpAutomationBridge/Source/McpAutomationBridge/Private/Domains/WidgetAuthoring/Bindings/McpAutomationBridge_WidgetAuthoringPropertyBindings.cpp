@@ -17,7 +17,7 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
 
-// bind_text, bind_visibility, bind_color, bind_enabled: a real UMG property binding, the
+// bind_text, bind_visibility, bind_color, bind_enabled, bind_percent: a real UMG property binding, the
 // same thing the Designer's "Bind" dropdown writes. These four were published with no
 // handler at all, so every call died as UNKNOWN_ACTION.
 namespace WidgetAuthoringHandlers
@@ -32,6 +32,8 @@ TArray<FName> BindableProperties(const FString& SubAction)
     if (SubAction.Equals(TEXT("bind_text"), ESearchCase::IgnoreCase)) { return { TEXT("Text") }; }
     if (SubAction.Equals(TEXT("bind_visibility"), ESearchCase::IgnoreCase)) { return { TEXT("Visibility") }; }
     if (SubAction.Equals(TEXT("bind_enabled"), ESearchCase::IgnoreCase)) { return { TEXT("bIsEnabled") }; }
+    // A Progress Bar fills by Percent; a Slider or SpinBox shows Value.
+    if (SubAction.Equals(TEXT("bind_percent"), ESearchCase::IgnoreCase)) { return { TEXT("Percent"), TEXT("Value") }; }
     if (SubAction.Equals(TEXT("bind_color"), ESearchCase::IgnoreCase))
     {
         return { TEXT("ColorAndOpacity"), TEXT("FillColorAndOpacity"), TEXT("BrushColor"), TEXT("ContentColorAndOpacity") };

@@ -9640,6 +9640,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "text",
             "color",
             "enabled",
+            "percent",
             "visibility",
             "on_clicked",
             "on_hovered",
@@ -9651,7 +9652,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bindingSource": {
           "type": "string",
-          "description": "For bind_text, bind_color, bind_enabled and bind_visibility: the variable (a getter converting it is generated) or pure no-input function the property reads. For bind_on_clicked and bind_on_value_changed: the function the event calls, created with the event inputs when it does not exist."
+          "description": "For bind_text, bind_color, bind_enabled, bind_percent and bind_visibility: the variable (a getter converting it is generated) or pure no-input function the property reads. For bind_on_clicked and bind_on_value_changed: the function the event calls, created with the event inputs when it does not exist."
         },
         "blueprintPath": {
           "type": "string",
