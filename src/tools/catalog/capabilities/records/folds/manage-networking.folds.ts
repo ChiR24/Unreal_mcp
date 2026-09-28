@@ -5,13 +5,13 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_replication', selector: 'setting',
-    summary: 'Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net serialization, net driver.',
+    summary: 'Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net driver.',
     topics: ['replicate variable', 'replication', 'rep notify', 'net dormancy', 'net role', 'relevancy', 'net update frequency', 'push model'],
     members: {
       property: 'set_property_replicated', condition: 'set_replication_condition', rep_notify: 'set_replicated_using', net_role: 'set_net_role', dormancy: 'set_net_dormancy',
       always_relevant: 'set_always_relevant', only_relevant_to_owner: 'set_only_relevant_to_owner', autonomous_proxy: 'set_autonomous_proxy', priority: 'configure_net_priority',
       update_frequency: 'configure_net_update_frequency', cull_distance: 'configure_net_cull_distance', push_model: 'configure_push_model',
-      replicated_movement: 'configure_replicated_movement', replication_graph: 'configure_replication_graph', serialization: 'configure_net_serialization', net_driver: 'configure_net_driver',
+      replicated_movement: 'configure_replicated_movement', replication_graph: 'configure_replication_graph', net_driver: 'configure_net_driver',
     },
   },
   {

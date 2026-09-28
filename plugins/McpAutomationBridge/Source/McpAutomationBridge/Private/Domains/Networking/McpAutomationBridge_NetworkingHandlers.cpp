@@ -49,7 +49,6 @@ bool UMcpAutomationBridgeSubsystem::HandleManageNetworkingAction(
         {TEXT("configure_net_cull_distance"), HandleConfigureNetCullDistance},
         {TEXT("set_always_relevant"), HandleSetAlwaysRelevant},
         {TEXT("set_only_relevant_to_owner"), HandleSetOnlyRelevantToOwner},
-        {TEXT("configure_net_serialization"), HandleConfigureNetSerialization},
         {TEXT("set_replicated_using"), HandleSetReplicatedUsing},
         {TEXT("configure_push_model"), HandleConfigurePushModel},
         {TEXT("configure_client_prediction"), HandleConfigureClientPrediction},

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2428b896360660d9",
+  "catalogRevision": "8ee399f85fe81eaa",
   "recordCount": 382,
   "records": [
     {
@@ -62516,7 +62516,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Whether to save the level after the operation."
+              "description": "Save the level after the edit (default false, because saving also writes every other unsaved change in that level); the reply says saved: false while it is only in memory."
             },
             "volumeLocation": {
               "type": "object",
@@ -62793,8 +62793,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9a148143a247e306212658ad5743aa448f6705b5bb034612daeeb146f4947d08",
-        "content": "7067c2e78d1b4fdfa95d670130406a8c43ad43abe16f12418a05de912667df71"
+        "schema": "a06970e4ff787f734f5726736dc2895b845ff81765ec0f71f02012b9e2555554",
+        "content": "9f78b67d6272433bcc2c7b8a79d82badd820854bdf61fe45a0b615676d2194d0"
       }
     },
     {
@@ -63614,7 +63614,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Whether to save the level after the operation."
+              "description": "Save the level after the edit (default false, because saving also writes every other unsaved change in that level); the reply says saved: false while it is only in memory."
             }
           },
           "required": [
@@ -63719,8 +63719,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "eb3b27c1c01ba5636c4718b1bb9a074fc1ed06d2ac0d503fba21d12e9af843b5",
-        "content": "ccfca6925ba705be61300230eb5ee69bbc06ab54f2ef272ef6cd4af8c8dd6944"
+        "schema": "2c5a64c137611f5cc67bdb14e0779cd8be0bc9c337e4a3e05d8711eac66257c9",
+        "content": "e420613d4836f7d1e0fde257b7bb6c0718fc32f42a13430e093d536f33f690f0"
       }
     },
     {
@@ -63822,7 +63822,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Whether to save the level after the operation."
+              "description": "Save the level after the edit (default false, because saving also writes every other unsaved change in that level); the reply says saved: false while it is only in memory."
             },
             "functionName": {
               "type": "string",
@@ -63980,8 +63980,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a0a63dd6fd2a6a6ba241cd5472d5f30ffa4fcdc6850e68d567c072fb1431901c",
-        "content": "0fda8ac0ec540b384d630ae6b62b86596c9b04ec29463648ff2a35af978b957d"
+        "schema": "b9d10ac3d13c2ea3c71cd06c108407400b86b03a005044d6174f5129e7fc5d9e",
+        "content": "fe35ddb4c3bf527f58b5b988f0c1e9a181bc8862b4dd3ebc2789e93acdb31638"
       }
     },
     {
@@ -64256,7 +64256,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Whether to save the level after the operation."
+              "description": "Save the level after the edit (default false, because saving also writes every other unsaved change in that level); the reply says saved: false while it is only in memory."
             }
           },
           "required": [
@@ -64328,8 +64328,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "23584a64b4853f80959f48b029a3ad54de950a6012dd7718d20e1e3a84bf8281",
-        "content": "324c7a1e631551c50b6211827ac0a091d8515eaf5141fe6acbe1c87844e401ea"
+        "schema": "c9e0cfda6bd3f8da49f7fbe92e6807fa326e1cdb438882af8f9de6fe88271a65",
+        "content": "c9fcc0284b050b600724d208f1b14725c5cbf96166b001dec86207380bcc592f"
       }
     },
     {
@@ -64432,7 +64432,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Whether to save the level after the operation."
+              "description": "Save the level after the edit (default false, because saving also writes every other unsaved change in that level); the reply says saved: false while it is only in memory."
             },
             "extent": {
               "type": "object",
@@ -64590,8 +64590,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "794e26509cc50f2ccde19833b6611fdc06f2230f2d4fd87ac5fbab5516ac3541",
-        "content": "13b91bdb9a07498f94ac9c6a70b4617a82a426161030b543d91a2774e307e810"
+        "schema": "81b1546c0e137873908a54e7ff4224f37075f6f9311aa37bb4d4a5d9c57d1bbc",
+        "content": "5434e2a8437b2339cd09fbff4629666979fef3edb1457340016019b8d2c6f78a"
       }
     },
     {
@@ -65166,11 +65166,11 @@
         ],
         "summary": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating, player start.",
         "whenToUse": [
-          "Use when set a gamemode default pawn class. the game mode also becomes the project default game mode and the open level's game mode override.",
-          "Use when set a gamemode playercontroller class. the game mode also becomes the project default game mode and the open level's game mode override.",
-          "Use when set a gamemode gamestate class. the game mode also becomes the project default game mode and the open level's game mode override.",
-          "Use when set a gamemode playerstate class. the game mode also becomes the project default game mode and the open level's game mode override.",
-          "Use when set a gamemode hud class. the game mode also becomes the project default game mode and the open level's game mode override.",
+          "Use when set a gamemode default pawn class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
+          "Use when set a gamemode playercontroller class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
+          "Use when set a gamemode gamestate class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
+          "Use when set a gamemode playerstate class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
+          "Use when set a gamemode hud class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
           "Use when set a gamemode's bdelayedstart match rule; only gamemode (agamemode) children have it, a gamemodebase child is refused with not_supported."
         ],
         "whenNotToUse": [
@@ -65201,6 +65201,10 @@
             "defaultPawnClass": {
               "type": "string",
               "description": "Default pawn class."
+            },
+            "makeDefault": {
+              "type": "boolean",
+              "description": "Also make this game mode the project default game mode (DefaultEngine.ini); default false changes only the class on this game mode."
             },
             "save": {
               "type": "boolean",
@@ -65272,6 +65276,18 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "madeDefault": {
+              "type": "boolean",
+              "description": "Whether this game mode was made the project default game mode (makeDefault)."
+            },
+            "effectiveInOpenLevel": {
+              "type": "boolean",
+              "description": "Whether the open level runs this game mode in play: its World Settings override names it, or it has none and this is the project default."
+            },
+            "openLevelGameMode": {
+              "type": "string",
+              "description": "Class path of the game mode the open level runs in play: its World Settings override, else the project default."
             }
           },
           "required": [
@@ -65338,6 +65354,13 @@
             "defaultPawnClass": [
               "default_pawn_class"
             ],
+            "makeDefault": [
+              "default_pawn_class",
+              "player_controller_class",
+              "game_state_class",
+              "player_state_class",
+              "hud_class"
+            ],
             "playerControllerClass": [
               "player_controller_class"
             ],
@@ -65364,8 +65387,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "02265eb851c170e4299cef62793219cef5e0a0bb7ec4cc20d96c5fd6cf670652",
-        "content": "9acb4ae549ddbe23502a23d84d12b2dc7350040b075c595b19cd5a5e7be157f2"
+        "schema": "ab349f5200da8ed5b92947cc37e4fd2892821f5964930501cf7057dfc352bc0d",
+        "content": "ee9263a7206716ff4f746b2a2a55ccc36969caed04b8d57aec142107ce593171"
       }
     },
     {
@@ -65873,7 +65896,6 @@
         "manage_networking.configure_push_model",
         "manage_networking.configure_replicated_movement",
         "manage_networking.configure_replication_graph",
-        "manage_networking.configure_net_serialization",
         "manage_networking.configure_net_driver"
       ],
       "legacyIds": [
@@ -65981,13 +66003,6 @@
         },
         {
           "tool": "manage_networking",
-          "action": "configure_net_serialization",
-          "folded": {
-            "setting": "serialization"
-          }
-        },
-        {
-          "tool": "manage_networking",
           "action": "configure_net_driver",
           "folded": {
             "setting": "net_driver"
@@ -66008,7 +66023,7 @@
           "net update frequency",
           "push model"
         ],
-        "summary": "Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net serialization, net driver.",
+        "summary": "Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net driver.",
         "whenToUse": [
           "Use when turn replication of a blueprint variable on or off, optionally with its replication condition.",
           "Use when set a blueprint property replication condition.",
@@ -66106,14 +66121,6 @@
               "type": "boolean",
               "description": "Load the placed actor on clients with the map (AActor bNetLoadOnClient)."
             },
-            "structName": {
-              "type": "string",
-              "description": "Struct name."
-            },
-            "customSerialization": {
-              "type": "string",
-              "description": "Custom serialization."
-            },
             "maxClientRate": {
               "type": "number",
               "description": "Game net driver MaxClientRate (bytes per second per LAN client)."
@@ -66143,7 +66150,6 @@
                 "push_model",
                 "replicated_movement",
                 "replication_graph",
-                "serialization",
                 "net_driver"
               ],
               "description": "Which configure replication variant to run."
@@ -66181,7 +66187,7 @@
       },
       "examples": [
         {
-          "title": "Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net serialization, net driver.",
+          "title": "Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net driver.",
           "input": {
             "action": "configure_replication",
             "blueprintPath": "/Game/Blueprints/BP_PlayerCharacter",
@@ -66235,7 +66241,6 @@
             "push_model": "configure_push_model",
             "replicated_movement": "configure_replicated_movement",
             "replication_graph": "configure_replication_graph",
-            "serialization": "configure_net_serialization",
             "net_driver": "configure_net_driver"
           },
           "declaredBy": {
@@ -66253,8 +66258,7 @@
               "cull_distance",
               "push_model",
               "replicated_movement",
-              "replication_graph",
-              "serialization"
+              "replication_graph"
             ],
             "propertyName": [
               "property",
@@ -66313,12 +66317,6 @@
             "netLoadOnClient": [
               "replication_graph"
             ],
-            "structName": [
-              "serialization"
-            ],
-            "customSerialization": [
-              "serialization"
-            ],
             "maxClientRate": [
               "net_driver"
             ],
@@ -66333,8 +66331,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "07c4127942b43064d01735751ea6e3a266b4b91a2938f0d238f10427f8de499f",
-        "content": "fab34e89bbb18148f648375bcb6ceafe74224ff2a6653816d299f8e6aca18d9b"
+        "schema": "76d7f7ec91e303fd8f8d1299126361c78a718cdc85f65bcf3d53ddd4a2bc5535",
+        "content": "bb140336dbac3db51e4e5053d6afc5ca8eac08b6008bebaaba462dbc45c1630b"
       }
     },
     {

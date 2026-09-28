@@ -15501,7 +15501,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "save": {
           "type": "boolean",
-          "description": "Whether to save the level after the operation."
+          "description": "Save the level after the edit (default false, because saving also writes every other unsaved change in that level); the reply says saved: false while it is only in memory."
         },
         "setting": {
           "type": "string",
@@ -15769,10 +15769,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Ctrl modifier must be held."
         },
-        "customSerialization": {
-          "type": "string",
-          "description": "Custom serialization."
-        },
         "defaultPawnClass": {
           "type": "string",
           "description": "Default pawn class."
@@ -15832,6 +15828,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "localPlayerNum": {
           "type": "number",
           "description": "Local player num."
+        },
+        "makeDefault": {
+          "type": "boolean",
+          "description": "Also make this game mode the project default game mode (DefaultEngine.ini); default false changes only the class on this game mode."
         },
         "mapName": {
           "type": "string",
@@ -16025,7 +16025,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "push_model",
             "replicated_movement",
             "replication_graph",
-            "serialization",
             "net_driver"
           ],
           "description": "Which configure game mode variant to run."
@@ -16049,10 +16048,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "splitScreenType": {
           "type": "string",
           "description": "Split screen type."
-        },
-        "structName": {
-          "type": "string",
-          "description": "Struct name."
         },
         "systemWide": {
           "type": "boolean",
@@ -16146,6 +16141,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "effectiveInOpenLevel": {
+          "type": "boolean",
+          "description": "Whether the open level runs this game mode in play: its World Settings override names it, or it has none and this is the project default."
+        },
         "existsAfter": {
           "type": "boolean",
           "description": "Whether the asset still resolved after the action completed."
@@ -16172,6 +16171,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the actor is controlled by the local player."
         },
+        "madeDefault": {
+          "type": "boolean",
+          "description": "Whether this game mode was made the project default game mode (makeDefault)."
+        },
         "mapPath": {
           "type": "string",
           "description": "Resolved package path of the map the LAN server travels to."
@@ -16189,6 +16192,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Replication, relevancy and network role state read from the Blueprint or actor.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "openLevelGameMode": {
+          "type": "string",
+          "description": "Class path of the game mode the open level runs in play: its World Settings override, else the project default."
         },
         "playerIndex": {
           "type": "number",

@@ -82,6 +82,8 @@ UClass* LoadClassFromPath(const FString& ClassPath);
 bool SetClassProperty(UBlueprint* Blueprint, const FName& PropertyName, UClass* ClassToSet, FString& OutError);
 void FinishBlueprintMutation(UBlueprint* Blueprint, bool bSave);
 TSharedPtr<FJsonObject> MakeBlueprintResponse(const FString& Message, UBlueprint* Blueprint);
+// The game mode the open level runs in play: live, else its World Settings override, else the project default; sets InfoObj.source.
+UClass* ResolveWorldGameMode(UWorld* World, TSharedPtr<FJsonObject>& InfoObj);
 bool HandleCoreClassAction(FActionContext& Context);
 bool HandleGameModeConfigAction(FActionContext& Context);
 bool HandlePlayerFlowAction(FActionContext& Context);

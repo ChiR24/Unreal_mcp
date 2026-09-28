@@ -41,7 +41,7 @@ static bool AddBlueprintInfo(FActionContext& Context, TSharedPtr<FJsonObject>& I
     return true;
 }
 
-static UClass* ResolveWorldGameMode(UWorld* World, TSharedPtr<FJsonObject>& InfoObj)
+UClass* ResolveWorldGameMode(UWorld* World, TSharedPtr<FJsonObject>& InfoObj)
 {
     AGameModeBase* GameMode = World ? World->GetAuthGameMode() : nullptr;
     if (GameMode)

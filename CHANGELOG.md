@@ -54,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔄 Changed</b></summary>
 
+- **Setting a game mode class no longer changes the project's game mode.** `set_default_pawn_class`, `set_player_controller_class`, `set_game_state_class`, `set_player_state_class` and `set_hud_class` used to make that game mode the project default on every call (written to the per-user Saved config, not DefaultEngine.ini), set it as the open level's GameMode Override and mark the level dirty. They now change only the class on the game mode you name. `makeDefault: true` makes it the project default in DefaultEngine.ini, as Project Settings does. Every reply reports `madeDefault`, `openLevelGameMode` (what the open level runs in play) and `effectiveInOpenLevel`, and the message says when the open level runs a different game mode.
+- **Level edits say when they are not saved.** Level-structure and volume edits (streaming, World Partition, data layers, level blueprint nodes, volumes) still leave the level unsaved unless `save: true` is passed, because saving a level also writes every other unsaved change in it. The reply now carries `saved: false` and says the level is not saved yet, where it used to say nothing.
 - **The stdio server runs every capability the way the native door does.** `execute` forwards `{action, ...params}` to the record's parent tool and the plugin's parent routing picks the handler; the TypeScript per-domain action layer is gone. Both doors now accept exactly the parameters a record declares: a spelling only that layer converted (`path` for `blueprint.create`'s `savePath`, a `Game/…` path without its leading slash) is refused with the declared name, while the aliases a record declares (`type` on `add_material_node`, `targetPath` on `import_level`/`duplicate_level`, `sourceNode`/`sourcePin`/`targetNode`/`targetPin` on `connect_metasound_nodes`, `emitter` on Niagara module actions, `actorName` on `set_niagara_parameter`) are read by the plugin.
 - **One dispatch table in the plugin.** The fallback chain that retried every handler for an unmatched action is gone; each parent tool routes its sub-actions explicitly, `system_control`'s widget, screenshot, project-settings, sound and display actions included.
 - **Scalar property writes are strict.** Integer properties refuse non-integral and out-of-range values instead of truncating them, and enums refuse hidden and `_MAX` entries (display names are accepted).
@@ -77,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🗑️ Removed</b></summary>
 
-- **116 actions that only echoed their input, faked success or answered `NOT_SUPPORTED`** (the catalog goes from 389 to 382 records; 1,453 `{tool, action}` pairs stay callable):
+- **117 actions that only echoed their input, faked success or answered `NOT_SUPPORTED`** (the catalog goes from 389 to 382 records; 1,453 `{tool, action}` pairs stay callable):
   - `animation_physics` (7): `copy_weights`, `create_pose_library`, `import_morph_targets`, `mirror_weights`, `normalize_weights`, `prune_weights`, `set_retarget_chain_mapping`
   - `manage_asset` (1): `create_ao_from_mesh`
   - `manage_audio` (2): `enable_audio_analysis`, `set_doppler_effect`
@@ -90,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `manage_interaction` (11): `add_destruction_component`, `add_interaction_events`, `configure_destruction`, `configure_destruction_damage`, `configure_destruction_effects`, `configure_destruction_levels`, `configure_interaction_widget`, `configure_trigger_events`, `configure_trigger_filter`, `configure_trigger_response`, `setup_destructible_mesh`
   - `manage_inventory` (20): `add_crafting_component`, `add_equipment_functions`, `add_inventory_functions`, `configure_equipment`, `configure_equipment_effects`, `configure_equipment_visuals`, `configure_inventory`, `configure_inventory_events`, `configure_inventory_slots`, `configure_inventory_weight`, `configure_loot_drop`, `configure_pickup`, `configure_pickup_effects`, `configure_pickup_interaction`, `configure_pickup_respawn`, `configure_station_recipes`, `create_equipment_component`, `create_inventory_component`, `create_pickup_actor`, `define_equipment_slots`
   - `manage_level_structure` (3): `configure_level_bounds`, `create_level_instance`, `create_packed_level_actor`
-  - `manage_networking` (18): `add_network_prediction_data`, `configure_lan_play`, `configure_local_session_settings`, `configure_player_start`, `configure_push_to_talk`, `configure_round_system`, `configure_scoring_system`, `configure_session`, `configure_session_interface`, `configure_spawn_system`, `configure_team_system`, `configure_voice_settings`, `disable_input_action`, `join_lan_server`, `set_split_screen_type`, `set_voice_attenuation`, `set_voice_channel`, `setup_match_states`
+  - `manage_networking` (19): `add_network_prediction_data`, `configure_lan_play`, `configure_local_session_settings`, `configure_net_serialization`, `configure_player_start`, `configure_push_to_talk`, `configure_round_system`, `configure_scoring_system`, `configure_session`, `configure_session_interface`, `configure_spawn_system`, `configure_team_system`, `configure_voice_settings`, `disable_input_action`, `join_lan_server`, `set_split_screen_type`, `set_voice_attenuation`, `set_voice_channel`, `setup_match_states`
 - **Settings and endpoints nothing read:** the environment variables `MCP_AUTOMATION_WS_PORTS`, `MCP_AUTOMATION_SERVER_LEGACY`, `MCP_AUTOMATION_CLIENT_MODE`, `MCP_AUTOMATION_MAX_AUTOMATION_REQUESTS_PER_MINUTE`, `MCP_ROUTE_STDOUT_LOGS` and `MCP_DEFAULT_CATEGORIES`; the `MCP_METRICS_PORT` Prometheus endpoint; the Project Settings `LogVerbosity`, `bApplyLogVerbosityToAll`, `bEnableSocketTelemetry` and `HeartbeatIntervalMs`; the plugin's WebSocket client mode; and the raw-socket bare action names, which neither MCP door used.
 
 </details>
@@ -264,6 +266,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>⚠️ Migration</b></summary>
 
+- `set_*_class` on `manage_networking`: pass `makeDefault: true` to keep making the game mode the project default. These actions never change the open level's GameMode Override any more; set it in the level's World Settings.
+- `configure_net_serialization` is removed. It refused every call: custom net serialization is a C++ `NetSerialize` on a USTRUCT, which no Blueprint setting reaches.
 - `control_actor.list` with `summary: true`: `byClass`, `byTag` and `byFolder` are arrays of `{name, count}` rows sorted by name, no longer `{name: count}` objects.
 - Send the parameter names `describe` lists: a stdio call that relied on the removed TypeScript conversions is refused with the declared name in its message.
 - A removed action answers `UNKNOWN_ACTION` with a suggestion; set a `PlayerStart`'s tag with `control_actor` `set_property` (`PlayerStartTag`), and build HUD and menu widgets with `manage_blueprint` widget authoring.

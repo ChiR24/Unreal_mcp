@@ -123,17 +123,6 @@ const testCases = [
   { scenario: 'CONFIG: configure_net_cull_distance', toolName: 'manage_networking', arguments: { action: 'configure_net_cull_distance', blueprintPath: ACTOR_BP_PATH, netCullDistanceSquared: 640000, useOwnerNetRelevancy: true }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_net_cull_distance') },
   { scenario: 'CONFIG: set_always_relevant', toolName: 'manage_networking', arguments: { action: 'set_always_relevant', blueprintPath: ACTOR_BP_PATH, alwaysRelevant: true }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_always_relevant') },
   { scenario: 'CONFIG: set_only_relevant_to_owner', toolName: 'manage_networking', arguments: { action: 'set_only_relevant_to_owner', blueprintPath: ACTOR_BP_PATH, onlyRelevantToOwner: false }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_only_relevant_to_owner') },
-  {
-    scenario: 'CONFIG: configure_net_serialization',
-    toolName: 'manage_networking',
-    arguments: { action: 'configure_net_serialization', blueprintPath: ACTOR_BP_PATH, structName: 'MCPNetPayload', customSerialization: true },
-    expected: 'success',
-    assertions: [
-      ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_net_serialization'),
-      { path: 'structuredContent.result.customSerialization', equals: true, label: 'custom serialization flag returned' },
-      { path: 'structuredContent.result.structName', equals: 'MCPNetPayload', label: 'net serialization struct returned' }
-    ]
-  },
   { scenario: 'CONFIG: set_replicated_using', toolName: 'manage_networking', arguments: { action: 'set_replicated_using', blueprintPath: ACTOR_BP_PATH, propertyName: 'RepNotifyValue', repNotifyFunc: REP_NOTIFY_FUNCTION }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_replicated_using') },
   {
     scenario: 'CONFIG: configure_push_model',
@@ -438,7 +427,7 @@ const testCases = [
     { scenario: 'CREATE: create_game_mode on GameModeBase', toolName: 'manage_networking', arguments: { action: 'create_game_mode', name: BASE_GAME_MODE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameModeBase' }, expected: 'success' },
     { scenario: 'CREATE: create_game_state refuses an unloadable parentClass', toolName: 'manage_networking', arguments: { action: 'create_game_state', name: `GS_Missing_${ts}`, path: TEST_FOLDER, parentClass: '/Script/Engine.NoSuchGameState' }, expected: 'error|NOT_FOUND' },
 
-    { scenario: 'CONFIG: set_default_pawn_class', toolName: 'manage_networking', arguments: { action: 'set_default_pawn_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, pawnClass: DEFAULT_PAWN_CLASS }, expected: 'success', assertions: gameModePathAssertion('default pawn class') },
+    { scenario: 'CONFIG: set_default_pawn_class', toolName: 'manage_networking', arguments: { action: 'set_default_pawn_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, pawnClass: DEFAULT_PAWN_CLASS, makeDefault: false }, expected: 'success', assertions: [...gameModePathAssertion('default pawn class'), { path: 'structuredContent.result.madeDefault', equals: false, label: 'project default left alone without makeDefault' }] },
     { scenario: 'CONFIG: set_hud_class', toolName: 'manage_networking', arguments: { action: 'set_hud_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, hudClass: HUD_OBJECT_PATH, save: true }, expected: 'success', assertions: gameModePathAssertion('hud class') },
     { scenario: 'INFO: read back default pawn class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.defaultPawnClass', equals: DEFAULT_PAWN_CLASS, label: 'default pawn class read back from CDO' }] },
     { scenario: 'CONFIG: set_player_controller_class', toolName: 'manage_networking', arguments: { action: 'set_player_controller_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, playerControllerClass: PLAYER_CONTROLLER_CLASS }, expected: 'success', assertions: gameModePathAssertion('player controller class') },

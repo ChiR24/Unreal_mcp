@@ -18,11 +18,12 @@ const create = (action: string, label: string, extra: readonly string[] = []): C
   action, `Create a ${label} Blueprint asset and return its path; an unloadable parentClass, or one that is not a ${label}, is refused.`,
   ['name', 'path', 'parentClass', 'save', ...extra], ['name', 'path'], ['assetPath'], ['assetPath'],
 );
-// Setting a class also makes this game mode the project default (GameMapsSettings
-// GlobalDefaultGameMode) and the open level's game mode override, so the class is what runs in PIE.
-const EFFECTIVE = ' The game mode also becomes the project default game mode and the open level\'s game mode override.';
+// Setting a class changes only this game mode. makeDefault opts in to making it the project default
+// (DefaultEngine.ini), and the reply always says which game mode the open level runs in play.
+const EFFECTIVE = ' Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).';
 const setClass = (action: string, label: string, field: string, alias: readonly string[] = []): CapabilityRecordSource => f(
-  action, `Set a GameMode ${label} class.${EFFECTIVE}`, ['gameModeBlueprint', 'blueprintPath', field, ...alias, 'save'], ['gameModeBlueprint', field],
+  action, `Set a GameMode ${label} class.${EFFECTIVE}`, ['gameModeBlueprint', 'blueprintPath', field, ...alias, 'makeDefault', 'save'], ['gameModeBlueprint', field],
+  ['madeDefault', 'effectiveInOpenLevel', 'openLevelGameMode'],
 );
 
 export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [

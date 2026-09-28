@@ -1227,7 +1227,6 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_networking::configure_net_cull_distance": "interactive|low",
   "manage_networking::configure_net_driver": "interactive|low",
   "manage_networking::configure_net_priority": "interactive|low",
-  "manage_networking::configure_net_serialization": "interactive|low",
   "manage_networking::configure_net_update_frequency": "interactive|low",
   "manage_networking::configure_prediction": "interactive|low",
   "manage_networking::configure_push_model": "interactive|low",
@@ -1491,4 +1490,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1478;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1477;

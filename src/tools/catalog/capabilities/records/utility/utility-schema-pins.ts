@@ -24,7 +24,7 @@ export const BOOLEAN_FIELDS = new Set([
   'autoPlay', 'looping', 'save', 'muted', 'voiceEnabled', 'pushToTalkEnabled',
   'bIsLANMatch', 'bAllowJoinInProgress', 'bAllowInvites', 'bUsesPresence',
   'bUseLobbiesIfAvailable', 'bShouldAdvertise', 'executeTravel', 'forceRespawn',
-  'canRespawn', 'systemWide',
+  'canRespawn', 'systemWide', 'makeDefault',
   'indefinite', 'bypass', 'applyToChildren', 'applyEQ', 'spatialize', 'replace',
   // Legacy input-mapping modifier flags. The native handler reads these with
   // TryGetBoolField (McpAutomationBridge_InputHandlersLegacyMappings.cpp), so
@@ -237,8 +237,6 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   useOwnerNetRelevancy: 'Use owner net relevancy.',
   alwaysRelevant: 'Always relevant.',
   onlyRelevantToOwner: 'Only relevant to owner.',
-  structName: 'Struct name.',
-  customSerialization: 'Custom serialization.',
   repNotifyFunc: 'Rep notify func.',
   usePushModel: 'Use push model.',
   enablePrediction: 'Whether prediction applies.',
@@ -269,6 +267,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   gameModeBlueprint: 'Game mode blueprint.',
   pawnClass: 'Pawn class.',
   bDelayedStart: 'Whether delayed start applies.',
+  makeDefault: 'Also make this game mode the project default game mode (DefaultEngine.ini); default false changes only the class on this game mode.',
   states: 'States.',
   numRounds: 'Num rounds.',
   roundTime: 'Round time.',

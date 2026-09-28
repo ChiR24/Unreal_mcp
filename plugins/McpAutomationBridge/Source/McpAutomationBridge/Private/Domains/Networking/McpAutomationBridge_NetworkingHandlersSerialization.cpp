@@ -2,37 +2,6 @@
 
 namespace McpNetworkingHandlers
 {
-bool HandleConfigureNetSerialization(FNetworkingActionContext& Context)
-{
-    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    FString StructName = GetJsonStringField(Payload, TEXT("structName"));
-    bool bCustomSerialization = GetJsonBoolField(Payload, TEXT("customSerialization"), false);
-
-    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
-    if (!Blueprint)
-    {
-        return true;
-    }
-
-    // Nothing here is settable from a Blueprint CDO: custom NetSerialize lives
-    // on a USTRUCT in C++, and bReplicateUsingRegisteredSubObjectList is
-    // protected. The handler used to log that, dirty and SAVE the blueprint
-    // anyway, and answer "Net serialization configured" -- a write receipt for
-    // a call that changed nothing and still bumped the asset's revision.
-    // Refuse instead, and leave the asset untouched.
-    Context.Bridge.SendAutomationResponse(
-        Context.RequestingSocket, Context.RequestId, false,
-        FString::Printf(
-            TEXT("Net serialization cannot be configured from a Blueprint%s: custom NetSerialize is declared on a C++ USTRUCT, and bReplicateUsingRegisteredSubObjectList is protected. Nothing was changed on '%s'."),
-            StructName.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" for struct '%s'"), *StructName),
-            *BlueprintPath),
-        ResultJson, TEXT("NOT_SUPPORTED"));
-    (void)bCustomSerialization;
-    return true;
-}
-
 bool HandleSetReplicatedUsing(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;

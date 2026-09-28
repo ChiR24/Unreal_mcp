@@ -49,7 +49,6 @@ export const NETWORKING_REPLICATION_RECORDS: readonly CapabilityRecordSource[] =
   r('configure_net_cull_distance', 'Configure network relevancy cull distance.', ['blueprintPath', 'netCullDistanceSquared', 'useOwnerNetRelevancy'], ['blueprintPath']),
   r('set_always_relevant', 'Set always-relevant replication behavior.', ['blueprintPath', 'alwaysRelevant'], ['blueprintPath']),
   r('set_only_relevant_to_owner', 'Set owner-only relevancy behavior.', ['blueprintPath', 'onlyRelevantToOwner'], ['blueprintPath']),
-  r('configure_net_serialization', 'Configure custom network serialization.', ['blueprintPath', 'structName', 'customSerialization'], ['blueprintPath']),
   r('set_replicated_using', 'Assign a RepNotify function to a property.', ['blueprintPath', 'propertyName', 'repNotifyFunc'], ['blueprintPath', 'propertyName', 'repNotifyFunc']),
   r('configure_push_model', 'Turn push-model replication on or off for every replicated variable of a Blueprint; fails when it has none.', ['blueprintPath', 'usePushModel'], ['blueprintPath']),
   r('configure_client_prediction', 'Set whether a Character Blueprint always replicates its movement transform timestamp (CharacterMovement bNetworkAlwaysReplicateTransformUpdateTimestamp); other Blueprints are refused.', ['blueprintPath', 'enablePrediction'], ['blueprintPath', 'enablePrediction']),

@@ -155,8 +155,14 @@ void SendLevelEditResult(
             return;
         }
         Result->SetBoolField(TEXT("saved"), true);
+        Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Result);
+        return;
     }
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Result);
+    // Not saving is the default on purpose: saving a level also writes every other unsaved change
+    // the user has in it. The reply says the edit is still only in memory instead of implying it stuck.
+    Result->SetBoolField(TEXT("saved"), false);
+    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        Message + TEXT(" The level is not saved yet; pass save: true, or save it with manage_level save."), Result);
 }
 
 ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName)

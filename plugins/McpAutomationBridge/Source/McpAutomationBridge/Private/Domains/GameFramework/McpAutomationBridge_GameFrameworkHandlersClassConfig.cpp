@@ -6,25 +6,28 @@
 
 namespace McpGameFrameworkHandlers
 {
-static void PersistEffectiveGameFramework(FActionContext& Context, UBlueprint* GameModeBlueprint)
+// Opt-in (makeDefault): setting a class never moves the project's game mode by itself. When asked,
+// the game mode becomes the project default in DefaultEngine.ini, the file Project Settings writes.
+// It used to happen on every call, in the per-user Saved config, and also rewrote the open level's
+// World Settings override.
+static bool MakeProjectDefaultGameMode(UBlueprint* GameModeBlueprint)
 {
-    if (!GameModeBlueprint || !GameModeBlueprint->GeneratedClass) return;
-    UClass* GameModeClass = GameModeBlueprint->GeneratedClass;
-    if (UGameMapsSettings* GameMapsSettings = UGameMapsSettings::GetGameMapsSettings())
-    {
-        GConfig->SetString(TEXT("/Script/EngineSettings.GameMapsSettings"), TEXT("GlobalDefaultGameMode"),
-            *GameModeClass->GetPathName(), GEngineIni);
-        GConfig->Flush(false, GEngineIni);
-        GameMapsSettings->ReloadConfig();
-    }
-    if (GEditor && GEditor->GetEditorWorldContext().World())
-    {
-        if (AWorldSettings* WorldSettings = GEditor->GetEditorWorldContext().World()->GetWorldSettings())
-        {
-            WorldSettings->DefaultGameMode = GameModeClass;
-            WorldSettings->MarkPackageDirty();
-        }
-    }
+    UGameMapsSettings* Settings = UGameMapsSettings::GetGameMapsSettings();
+    if (!Settings || !GameModeBlueprint || !GameModeBlueprint->GeneratedClass) return false;
+    UGameMapsSettings::SetGlobalDefaultGameMode(GameModeBlueprint->GeneratedClass->GetPathName());
+    Settings->SaveConfig();
+    return Settings->TryUpdateDefaultConfigFile();
+}
+
+// Which game mode the open level runs in play (its World Settings override, else the project
+// default), so the reply says whether the class just set is the one PIE will use.
+static void ReportEffectiveGameMode(const TSharedPtr<FJsonObject>& Response, UBlueprint* GameModeBlueprint)
+{
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    TSharedPtr<FJsonObject> Info = MakeShared<FJsonObject>();
+    UClass* Running = ResolveWorldGameMode(World, Info);
+    Response->SetStringField(TEXT("openLevelGameMode"), Running ? Running->GetPathName() : FString());
+    Response->SetBoolField(TEXT("effectiveInOpenLevel"), Running && Running == GameModeBlueprint->GeneratedClass);
 }
 
 static int32 SetOptionalClassCounted(UBlueprint* Blueprint, const FActionContext& Context, const FString& FieldName, const FName& PropertyName, FString& Error)
@@ -92,17 +95,29 @@ static bool SetGameModeClass(
     }
 
     McpSafeCompileBlueprint(Blueprint);
-    // The class only matters in play when this game mode is the one that runs (BB-034), so it
-    // becomes the project and open-level default; the reply says so instead of doing it silently.
-    PersistEffectiveGameFramework(Context, Blueprint);
     if (Context.bSave)
     {
         McpSafeAssetSave(Blueprint);
     }
+    const bool bMakeDefault = GetBoolField(Context.Payload, TEXT("makeDefault"), false);
+    if (bMakeDefault && !MakeProjectDefaultGameMode(Blueprint))
+    {
+        Context.SendError(FString::Printf(
+            TEXT("Set %s to %s, but %s could not be written to DefaultEngine.ini as the project default game mode (is the file read-only?)."),
+            *SuccessLabel, *ClassPath, *Blueprint->GetName()), TEXT("CONFIG_WRITE_FAILED"));
+        return true;
+    }
 
-    Context.SendSuccess(MakeBlueprintResponse(FString::Printf(
-        TEXT("Set %s to %s; %s is now the project default game mode and the open level's game mode override"),
-        *SuccessLabel, *ClassPath, *Blueprint->GetName()), Blueprint));
+    TSharedPtr<FJsonObject> Response = MakeBlueprintResponse(FString(), Blueprint);
+    Response->SetBoolField(TEXT("madeDefault"), bMakeDefault);
+    ReportEffectiveGameMode(Response, Blueprint);
+    const bool bEffective = Response->GetBoolField(TEXT("effectiveInOpenLevel"));
+    Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Set %s to %s on %s.%s"), *SuccessLabel, *ClassPath,
+        *Blueprint->GetName(),
+        bMakeDefault ? TEXT(" It is now the project default game mode.")
+        : bEffective ? TEXT("")
+                     : TEXT(" The open level runs another game mode (openLevelGameMode); pass makeDefault: true, or set the level's GameMode Override, to play with it.")));
+    Context.SendSuccess(Response);
     return true;
 }
 

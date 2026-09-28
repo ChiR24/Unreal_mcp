@@ -99,6 +99,8 @@ export const P = {
   targetNodeName: str('Target node name for connection.'),
   targetPinName: str('Target pin name.'),
   save: bool('Whether to save the level after the operation.'),
+  // Level edits do not save by default: saving a level also writes every other unsaved change in it.
+  levelEditSave: bool('Save the level after the edit (default false, because saving also writes every other unsaved change in that level); the reply says saved: false while it is only in memory.'),
   // geometry
   dimensions: vec3('Primitive dimensions {x, y, z}.'),
   radius: num('Primitive radius.'),

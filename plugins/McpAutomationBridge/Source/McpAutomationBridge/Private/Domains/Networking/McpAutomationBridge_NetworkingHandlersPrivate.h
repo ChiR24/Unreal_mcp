@@ -95,7 +95,6 @@ bool HandleCheckIsLocallyControlled(FNetworkingActionContext& Context);
 bool HandleConfigureNetCullDistance(FNetworkingActionContext& Context);
 bool HandleSetAlwaysRelevant(FNetworkingActionContext& Context);
 bool HandleSetOnlyRelevantToOwner(FNetworkingActionContext& Context);
-bool HandleConfigureNetSerialization(FNetworkingActionContext& Context);
 bool HandleSetReplicatedUsing(FNetworkingActionContext& Context);
 bool HandleConfigurePushModel(FNetworkingActionContext& Context);
 bool HandleConfigureClientPrediction(FNetworkingActionContext& Context);
