@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0c4ea156c21b5c06",
+  "catalogRevision": "ed33e1d1dd94811d",
   "recordCount": 382,
   "records": [
     {
@@ -58465,6 +58465,7 @@
               "door"
             ],
             "locked": [
+              "door",
               "chest"
             ],
             "switchType": [
@@ -58488,7 +58489,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4992c4887a2ead1e11b980caa80da0cc22456e92602a9b5b9be7208785ad304d",
-        "content": "c8f3b7affe92037c57cb31e44871b36c20fe131e04cc93bb3e6738bd9446eb59"
+        "content": "981d6f6bf19890398e4247a1054947c4f6be399c8d2ec1bea1c889287db1b487"
       }
     },
     {

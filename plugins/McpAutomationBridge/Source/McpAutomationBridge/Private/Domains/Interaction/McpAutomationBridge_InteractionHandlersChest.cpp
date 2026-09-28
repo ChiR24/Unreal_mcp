@@ -49,17 +49,18 @@ bool HandleChestAction(
     const double OpenAngle = GetJsonNumberField(Payload, TEXT("openAngle"), 90.0);
     const double OpenTime = GetJsonNumberField(Payload, TEXT("openTime"), 0.5);
     const FString LootTablePath = GetJsonStringField(Payload, TEXT("lootTablePath"));
+    // Only the fields the caller passed are written; defaulting the rest used to reset them.
     const int32 NotApplied = ApplyInteractionVars(Blueprint, {
-        {TEXT("bIsLocked"), EType::Bool, MakeShared<FJsonValueBoolean>(Locked)},
+        {TEXT("bIsLocked"), EType::Bool, Payload->TryGetField(TEXT("locked"))},
         {TEXT("bIsOpen"), EType::Bool, nullptr},
-        {TEXT("LidOpenAngle"), EType::Float, MakeShared<FJsonValueNumber>(OpenAngle)},
-        {TEXT("OpenTime"), EType::Float, MakeShared<FJsonValueNumber>(OpenTime)},
+        {TEXT("LidOpenAngle"), EType::Float, Payload->TryGetField(TEXT("openAngle"))},
+        {TEXT("OpenTime"), EType::Float, Payload->TryGetField(TEXT("openTime"))},
         {TEXT("LootTable"), EType::SoftObject,
          LootTablePath.IsEmpty() ? TSharedPtr<FJsonValue>() : MakeShared<FJsonValueString>(LootTablePath)}});
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetBoolField(TEXT("locked"), Locked);
-    Result->SetNumberField(TEXT("openAngle"), OpenAngle);
-    Result->SetNumberField(TEXT("openTime"), OpenTime);
+    if (Payload->HasField(TEXT("locked"))) { Result->SetBoolField(TEXT("locked"), Locked); }
+    if (Payload->HasField(TEXT("openAngle"))) { Result->SetNumberField(TEXT("openAngle"), OpenAngle); }
+    if (Payload->HasField(TEXT("openTime"))) { Result->SetNumberField(TEXT("openTime"), OpenTime); }
     if (!LootTablePath.IsEmpty())
     {
         Result->SetStringField(TEXT("lootTablePath"), LootTablePath);

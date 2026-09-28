@@ -79,15 +79,17 @@ bool HandleDoorAction(
     {
         return true;
     }
+    // Only the fields the caller passed are written (a null Value only ensures the variable): defaulting
+    // the rest used to reset them, so changing openAngle alone unlocked a locked door.
     const int32 NotApplied = ApplyInteractionVars(Blueprint, {
-        {TEXT("OpenAngle"), EType::Float, MakeShared<FJsonValueNumber>(OpenAngle)},
-        {TEXT("OpenTime"), EType::Float, MakeShared<FJsonValueNumber>(OpenTime)},
-        {TEXT("bIsLocked"), EType::Bool, MakeShared<FJsonValueBoolean>(Locked)},
+        {TEXT("OpenAngle"), EType::Float, Payload->TryGetField(TEXT("openAngle"))},
+        {TEXT("OpenTime"), EType::Float, Payload->TryGetField(TEXT("openTime"))},
+        {TEXT("bIsLocked"), EType::Bool, Payload->TryGetField(TEXT("locked"))},
         {TEXT("bIsOpen"), EType::Bool, nullptr}});
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetNumberField(TEXT("openAngle"), OpenAngle);
-    Result->SetNumberField(TEXT("openTime"), OpenTime);
-    Result->SetBoolField(TEXT("locked"), Locked);
+    if (Payload->HasField(TEXT("openAngle"))) { Result->SetNumberField(TEXT("openAngle"), OpenAngle); }
+    if (Payload->HasField(TEXT("openTime"))) { Result->SetNumberField(TEXT("openTime"), OpenTime); }
+    if (Payload->HasField(TEXT("locked"))) { Result->SetBoolField(TEXT("locked"), Locked); }
     Result->SetBoolField(TEXT("configured"), true);
     Result->SetBoolField(TEXT("propertiesApplied"), NotApplied == 0);
     Result->SetStringField(TEXT("doorPath"), GetJsonStringField(Payload, TEXT("doorPath")));

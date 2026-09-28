@@ -54,12 +54,13 @@ const testCases = [
   {
     scenario: 'CREATE: create_door_actor',
     toolName: 'manage_interaction',
-    arguments: { action: 'create_door_actor', name: DOOR_NAME, folder: TEST_FOLDER, openAngle: 110, openTime: 0.75, autoClose: true, autoCloseDelay: 2.5, requiresKey: true },
+    arguments: { action: 'create_door_actor', name: DOOR_NAME, folder: TEST_FOLDER, openAngle: 110, openTime: 0.75, autoClose: true, autoCloseDelay: 2.5, requiresKey: true, locked: true },
     expected: 'success',
     captureResult: { key: 'doorPath', fromField: 'result.assetPath' },
     assertions: [{ path: 'structuredContent.result.openAngle', equals: 110, label: 'door open angle set at creation' }, { path: 'structuredContent.result.openTime', equals: 0.75, label: 'door open time set at creation' }, { path: 'structuredContent.result.autoClose', equals: true, label: 'door auto-close set at creation' }, { path: 'structuredContent.result.requiresKey', equals: true, label: 'door key requirement set at creation' }, { path: 'structuredContent.result.assetPath', equals: EXPECTED_DOOR_PATH, label: 'door asset path returned' }]
   },
   { scenario: 'CONFIG: configure_door_properties', toolName: 'manage_interaction', arguments: { action: 'configure_door_properties', doorPath, openAngle: 95, openTime: 1.25, locked: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.doorPath', equals: EXPECTED_DOOR_PATH, label: 'door config target returned' }, { path: 'structuredContent.result.openAngle', equals: 95, label: 'door config open angle applied' }, { path: 'structuredContent.result.openTime', equals: 1.25, label: 'door config open time applied' }, { path: 'structuredContent.result.locked', equals: true, label: 'door locked flag applied' }] },
+  { scenario: 'CONFIG: configure_door_properties changes only what it is given', toolName: 'manage_interaction', arguments: { action: 'configure_door_properties', doorPath, openAngle: 100 }, expected: 'success', assertions: [{ path: 'structuredContent.result.openAngle', equals: 100, label: 'door angle changed' }] },
   {
     scenario: 'CREATE: create_switch_actor',
     toolName: 'manage_interaction',

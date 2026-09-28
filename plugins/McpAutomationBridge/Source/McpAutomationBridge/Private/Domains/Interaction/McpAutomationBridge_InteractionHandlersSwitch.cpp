@@ -20,10 +20,14 @@ bool HandleSwitchAction(
         {
             return true;
         }
+        // create_switch_actor used to echo switchType and store it nowhere.
+        const int32 NotApplied = ApplyInteractionVars(SwitchBP, {
+            {TEXT("SwitchType"), EInteractionVarType::Name, MakeShared<FJsonValueString>(SwitchType)}});
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("switchPath"), SwitchBP->GetPathName());
         Result->SetStringField(TEXT("blueprintPath"), SwitchBP->GetPathName());
         Result->SetStringField(TEXT("switchType"), SwitchType);
+        Result->SetBoolField(TEXT("propertiesApplied"), NotApplied == 0);
         SendInteractableResult(Subsystem, RequestId, RequestingSocket, SwitchBP, Result,
                                {TEXT("created switch blueprint")}, TEXT("Switch actor created"));
         return true;
@@ -42,15 +46,16 @@ bool HandleSwitchAction(
     const bool CanToggle = GetJsonBoolField(Payload, TEXT("canToggle"), true);
     const double ResetTime = GetJsonNumberField(Payload, TEXT("resetTime"), 0.0);
     using EType = EInteractionVarType;
+    // Only the fields the caller passed are written; defaulting the rest used to reset them.
     const int32 NotApplied = ApplyInteractionVars(Blueprint, {
-        {TEXT("SwitchType"), EType::Name, MakeShared<FJsonValueString>(SwitchType)},
-        {TEXT("bCanToggle"), EType::Bool, MakeShared<FJsonValueBoolean>(CanToggle)},
+        {TEXT("SwitchType"), EType::Name, Payload->TryGetField(TEXT("switchType"))},
+        {TEXT("bCanToggle"), EType::Bool, Payload->TryGetField(TEXT("canToggle"))},
         {TEXT("bIsActivated"), EType::Bool, nullptr},
-        {TEXT("ResetTime"), EType::Float, MakeShared<FJsonValueNumber>(ResetTime)}});
+        {TEXT("ResetTime"), EType::Float, Payload->TryGetField(TEXT("resetTime"))}});
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("switchType"), SwitchType);
-    Result->SetBoolField(TEXT("canToggle"), CanToggle);
-    Result->SetNumberField(TEXT("resetTime"), ResetTime);
+    if (Payload->HasField(TEXT("switchType"))) { Result->SetStringField(TEXT("switchType"), SwitchType); }
+    if (Payload->HasField(TEXT("canToggle"))) { Result->SetBoolField(TEXT("canToggle"), CanToggle); }
+    if (Payload->HasField(TEXT("resetTime"))) { Result->SetNumberField(TEXT("resetTime"), ResetTime); }
     Result->SetBoolField(TEXT("configured"), true);
     Result->SetBoolField(TEXT("propertiesApplied"), NotApplied == 0);
     Result->SetStringField(TEXT("switchPath"), GetJsonStringField(Payload, TEXT("switchPath")));

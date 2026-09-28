@@ -105,6 +105,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
       autoClose: NP.autoClose,
       autoCloseDelay: NP.autoCloseDelay,
       requiresKey: NP.requiresKey,
+      locked: NP.locked,
     },
     required: ['name'],
     exampleInput: {
