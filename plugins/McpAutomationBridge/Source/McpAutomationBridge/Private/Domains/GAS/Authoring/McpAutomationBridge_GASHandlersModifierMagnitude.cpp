@@ -37,10 +37,10 @@ bool HandleGASModifierMagnitude(const FGASRequestContext& Context, const FString
         }
 
         int32 ModifierIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("modifierIndex"), 0));
-        float Value = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("value"), TEXT("modifierMagnitude"), 0.0));
-        FString MagnitudeType = GetGASStringFieldWithFallback(Payload, TEXT("magnitudeType"), TEXT("magnitudeCalculationType"), TEXT("ScalableFloat"));
+        float Value = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("modifierMagnitude"), TEXT("value"), 0.0));
+        FString MagnitudeType = GetGASStringFieldWithFallback(Payload, TEXT("magnitudeCalculationType"), TEXT("magnitudeType"), TEXT("ScalableFloat"));
 
-        if (ModifierIndex >= EffectCDO->Modifiers.Num())
+        if (ModifierIndex < 0 || ModifierIndex >= EffectCDO->Modifiers.Num())
         {
             Bridge->SendAutomationError(RequestingSocket, RequestId, TEXT("Modifier index out of range"), TEXT("INVALID_INDEX"));
             return true;

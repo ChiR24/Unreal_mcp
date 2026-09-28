@@ -53,6 +53,13 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
             return true;
         }
         const FString EffectPath = GetJsonStringField(Payload, PathKey);
+        // An empty path used to answer success with nothing assigned.
+        if (EffectPath.IsEmpty())
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Missing %s: pass the GameplayEffect Blueprint to use."), PathKey), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
 
         UBlueprint* Blueprint = nullptr;
         UGameplayAbility* AbilityCDO = LoadGASBlueprintCDO<UGameplayAbility>(Context, Blueprint, TEXT("GameplayAbility"));
@@ -61,23 +68,27 @@ bool HandleGASAbilityBasics(const FGASRequestContext& Context, const FString& Su
             return true;
         }
 
-        bool bAssigned = false;
-        if (!EffectPath.IsEmpty())
+        UClass* EffectClass = ResolveGameplayEffectClassFromPath(EffectPath);
+        if (!EffectClass)
         {
-            UClass* EffectClass = ResolveGameplayEffectClassFromPath(EffectPath);
-            if (!EffectClass)
-            {
-                Bridge->SendAutomationError(RequestingSocket, RequestId,
-                    FString::Printf(TEXT("%s GameplayEffect not found or invalid: %s"), Noun, *EffectPath), TEXT("ASSET_NOT_FOUND"));
-                return true;
-            }
-            // The properties are protected, so they are set by name through reflection.
-            bAssigned = SetAbilityPropertyValue(AbilityCDO,
-                FName(bCost ? TEXT("CostGameplayEffectClass") : TEXT("CooldownGameplayEffectClass")),
-                TSubclassOf<UGameplayEffect>(EffectClass));
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s GameplayEffect not found or invalid: %s"), Noun, *EffectPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
         }
-
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        // The properties are protected, so they are set by name through reflection.
+        const bool bAssigned = SetAbilityPropertyValue(AbilityCDO,
+            FName(bCost ? TEXT("CostGameplayEffectClass") : TEXT("CooldownGameplayEffectClass")),
+            TSubclassOf<UGameplayEffect>(EffectClass));
+        if (!bAssigned)
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s GameplayEffect class property could not be written on this ability."), Noun), TEXT("PROPERTY_NOT_FOUND"));
+            return true;
+        }
+        if (!CommitGASBlueprintEdit(Context, Blueprint, bCost ? TEXT("Ability cost") : TEXT("Ability cooldown")))
+        {
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);

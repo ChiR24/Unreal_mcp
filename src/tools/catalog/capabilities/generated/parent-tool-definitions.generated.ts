@@ -12874,12 +12874,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "activationPolicy": {
           "type": "string",
           "enum": [
-            "OnInputPressed",
-            "WhileInputActive",
-            "OnSpawn",
-            "OnGiven"
+            "LocalOnly",
+            "LocalPredicted",
+            "ServerOnly",
+            "ServerInitiated"
           ],
-          "description": "When the ability activates."
+          "description": "Net execution policy: where the ability activates."
         },
         "activationRequiredTags": {
           "type": "array",
@@ -12906,23 +12906,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "attributeSetPath": {
           "type": "string",
           "description": "Canonical /Game attribute set asset path."
-        },
-        "attributeType": {
-          "type": "string",
-          "enum": [
-            "Health",
-            "MaxHealth",
-            "Mana",
-            "MaxMana",
-            "Stamina",
-            "MaxStamina",
-            "Damage",
-            "Armor",
-            "AttackPower",
-            "MoveSpeed",
-            "Custom"
-          ],
-          "description": "Predefined attribute type or Custom."
         },
         "baseValue": {
           "type": "number",
@@ -12976,7 +12959,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "duration": {
           "type": "number",
-          "description": "Duration in seconds."
+          "description": "Duration in seconds for a HasDuration effect (ignored for Instant)."
         },
         "durationType": {
           "type": "string",
@@ -13063,7 +13046,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "period": {
           "type": "number",
-          "description": "Period in seconds for periodic effects."
+          "description": "Period in seconds for a periodic non-Instant effect."
         },
         "removalTags": {
           "type": "array",

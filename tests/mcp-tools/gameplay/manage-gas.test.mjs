@@ -39,7 +39,7 @@ const testCases = [
     expected: 'success',
     captureResult: { key: 'attributeSetPath', fromField: 'result.assetPath' }
   },
-  { scenario: 'ADD: add_attribute', toolName: 'manage_gas', arguments: { action: 'add_attribute', attributeSetPath: '${captured:attributeSetPath}', attributeName, attributeType: 'Custom', defaultValue: 100 }, expected: 'success' },
+  { scenario: 'ADD: add_attribute', toolName: 'manage_gas', arguments: { action: 'add_attribute', attributeSetPath: '${captured:attributeSetPath}', attributeName, defaultValue: 100 }, expected: 'success' },
   { scenario: 'CONFIG: set_attribute_base_value', toolName: 'manage_gas', arguments: { action: 'set_attribute_base_value', attributeSetPath: '${captured:attributeSetPath}', attributeName, baseValue: 125 }, expected: 'success' },
 
   // === GAMEPLAY ABILITY ===
@@ -56,7 +56,7 @@ const testCases = [
   // are Date.now()-suffixed, so they are never registered) -- the old expectation was asserting the
   // silent-failure bug. This case now asserts the refusal contract instead.
   { scenario: 'CONFIG: set_ability_tags refuses unregistered tags before writing', toolName: 'manage_gas', arguments: { action: 'set_ability_tags', abilityPath: '${captured:abilityPath}', abilityTags: [abilityTag], cancelAbilitiesWithTag: [`Ability.Cancel.${ts}`], blockAbilitiesWithTag: [`Ability.Block.${ts}`], activationRequiredTags: [`Ability.Required.${ts}`], activationBlockedTags: [`Ability.Blocked.${ts}`] }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'GAMEPLAY_TAG_NOT_REGISTERED', label: 'unregistered tags refused, nothing written' }] },
-  { scenario: 'CONFIG: set_activation_policy', toolName: 'manage_gas', arguments: { action: 'set_activation_policy', abilityPath: '${captured:abilityPath}', activationPolicy: 'OnInputPressed' }, expected: 'success' },
+  { scenario: 'CONFIG: set_activation_policy', toolName: 'manage_gas', arguments: { action: 'set_activation_policy', abilityPath: '${captured:abilityPath}', activationPolicy: 'ServerOnly' }, expected: 'success' },
   { scenario: 'CONFIG: set_instancing_policy', toolName: 'manage_gas', arguments: { action: 'set_instancing_policy', abilityPath: '${captured:abilityPath}', instancingPolicy: 'InstancedPerExecution' }, expected: 'success' },
 
   // === GAMEPLAY EFFECT ===
@@ -68,15 +68,18 @@ const testCases = [
     captureResult: { key: 'effectPath', fromField: 'result.assetPath' },
     assertions: [{ path: 'structuredContent.result.durationType', equals: 'Instant', label: 'effect duration type preserved at creation' }]
   },
+  { scenario: 'CREATE: create_gameplay_effect with a duration and period', toolName: 'manage_gas', arguments: { action: 'create_gameplay_effect', name: `BP_TestTimedEffect_${ts}`, path: TEST_FOLDER, durationType: 'HasDuration', duration: 5, period: 1 }, expected: 'success' },
   { scenario: 'CONFIG: set_ability_costs', toolName: 'manage_gas', arguments: { action: 'set_ability_costs', abilityPath: '${captured:abilityPath}', costEffectPath: '${captured:effectPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.costEffectAssigned', equals: true, label: 'cost effect class assigned' }] },
   { scenario: 'CONFIG: set_ability_cooldown', toolName: 'manage_gas', arguments: { action: 'set_ability_cooldown', abilityPath: '${captured:abilityPath}', cooldownEffectPath: '${captured:effectPath}' }, expected: 'success', assertions: [{ path: 'structuredContent.result.cooldownEffectAssigned', equals: true, label: 'cooldown effect class assigned' }] },
   { scenario: 'CONFIG: set_effect_duration', toolName: 'manage_gas', arguments: { action: 'set_effect_duration', effectPath: '${captured:effectPath}', durationType: 'HasDuration', duration: 5, period: 1 }, expected: 'success' },
   { scenario: 'ADD: add_effect_modifier', toolName: 'manage_gas', arguments: { action: 'add_effect_modifier', effectPath: '${captured:effectPath}', attributeName, modifierOperation: 'Add', modifierMagnitude: 25, targetAttribute: attributeName }, expected: 'success' },
   { scenario: 'CONFIG: set_modifier_magnitude', toolName: 'manage_gas', arguments: { action: 'set_modifier_magnitude', effectPath: '${captured:effectPath}', modifierIndex: 0, magnitudeCalculationType: 'SetByCaller', modifierMagnitude: 50, setByCallerTag: `Data.Damage.${ts}` }, expected: 'success' },
   { scenario: 'ADD: add_effect_execution_calculation', toolName: 'manage_gas', arguments: { action: 'add_effect_execution_calculation', effectPath: '${captured:effectPath}', calculationClass: '/Script/GameplayAbilities.GameplayEffectExecutionCalculation' }, expected: 'success' },
-  { scenario: 'ADD: add_effect_cue', toolName: 'manage_gas', arguments: { action: 'add_effect_cue', effectPath: '${captured:effectPath}', cueTag }, expected: 'success' },
+  // cueTag is Date.now()-suffixed and never registered: the cue is refused instead of the old silent no-op success.
+  { scenario: 'ADD: add_effect_cue refuses an unregistered cue tag', toolName: 'manage_gas', arguments: { action: 'add_effect_cue', effectPath: '${captured:effectPath}', cueTag }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'GAMEPLAY_TAG_NOT_REGISTERED', label: 'unregistered cue tag refused, nothing written' }] },
   { scenario: 'CONFIG: set_effect_stacking', toolName: 'manage_gas', arguments: { action: 'set_effect_stacking', effectPath: '${captured:effectPath}', stackingType: 'AggregateByTarget', stackLimitCount: 3, stackDurationRefreshPolicy: 'RefreshOnSuccessfulApplication', stackPeriodResetPolicy: 'ResetOnSuccessfulApplication', stackExpirationPolicy: 'RemoveSingleStackAndRefreshDuration' }, expected: 'success' },
-  { scenario: 'CONFIG: set_effect_tags', toolName: 'manage_gas', arguments: { action: 'set_effect_tags', effectPath: '${captured:effectPath}', grantedTags: [effectTag], applicationRequiredTags: [`Effect.Required.${ts}`], removalTags: [`Effect.Remove.${ts}`], immunityTags: [`Effect.Immune.${ts}`] }, expected: 'success' },
+  // The tags are Date.now()-suffixed and never registered, so the call is refused before anything is written.
+  { scenario: 'CONFIG: set_effect_tags refuses unregistered tags before writing', toolName: 'manage_gas', arguments: { action: 'set_effect_tags', effectPath: '${captured:effectPath}', grantedTags: [effectTag], applicationRequiredTags: [`Effect.Required.${ts}`], removalTags: [`Effect.Remove.${ts}`], immunityTags: [`Effect.Immune.${ts}`] }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'GAMEPLAY_TAG_NOT_REGISTERED', label: 'unregistered effect tags refused, nothing written' }] },
 
   // === GAMEPLAY CUES / UTILITY ===
   {

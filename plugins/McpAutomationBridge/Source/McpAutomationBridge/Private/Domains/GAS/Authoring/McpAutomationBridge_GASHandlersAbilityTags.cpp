@@ -90,8 +90,9 @@ bool HandleGASAbilityTags(const FGASRequestContext& Context, const FString& SubA
     };
 
     ResolveArray(TEXT("abilityTags"), nullptr, NAME_None);
-    ResolveArray(TEXT("cancelAbilitiesWithTags"), TEXT("cancelAbilitiesWithTag"), FName(TEXT("CancelAbilitiesWithTag")));
-    ResolveArray(TEXT("blockAbilitiesWithTags"), TEXT("blockAbilitiesWithTag"), FName(TEXT("BlockAbilitiesWithTag")));
+    // The declared singular spellings win; the plural is only a legacy fallback.
+    ResolveArray(TEXT("cancelAbilitiesWithTag"), TEXT("cancelAbilitiesWithTags"), FName(TEXT("CancelAbilitiesWithTag")));
+    ResolveArray(TEXT("blockAbilitiesWithTag"), TEXT("blockAbilitiesWithTags"), FName(TEXT("BlockAbilitiesWithTag")));
     ResolveArray(TEXT("activationRequiredTags"), nullptr, FName(TEXT("ActivationRequiredTags")));
     ResolveArray(TEXT("activationBlockedTags"), nullptr, FName(TEXT("ActivationBlockedTags")));
 

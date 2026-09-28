@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "Engine/Blueprint.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Safety/McpSafeOperations.h"
 
@@ -62,6 +64,28 @@ inline bool SaveVerifiedGASBlueprint(const FGASRequestContext& Context, UBluepri
     }
     Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
         FString::Printf(TEXT("%s verified on the compiled class but the asset could NOT be written to disk (file may be read-only or held by source control). The change exists only in this editor session."), What),
+        TEXT("SAVE_FAILED"));
+    return false;
+}
+
+// A CDO or component-template edit is lost on editor restart unless the Blueprint is compiled and saved.
+// Replies COMPILE_FAILED or SAVE_FAILED and returns false when either step fails.
+inline bool CommitGASBlueprintEdit(const FGASRequestContext& Context, UBlueprint* Blueprint, const TCHAR* What)
+{
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    if (!McpSafeCompileBlueprint(Blueprint))
+    {
+        Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("%s applied, but the Blueprint failed to compile (it may have unrelated graph errors), so the asset was NOT saved."), What),
+            TEXT("COMPILE_FAILED"));
+        return false;
+    }
+    if (McpSafeOperations::McpSafeAssetSave(Blueprint))
+    {
+        return true;
+    }
+    Context.Subsystem->SendAutomationError(Context.RequestingSocket, Context.RequestId,
+        FString::Printf(TEXT("%s applied, but the asset could NOT be written to disk (file may be read-only or held by source control). The change exists only in this editor session."), What),
         TEXT("SAVE_FAILED"));
     return false;
 }

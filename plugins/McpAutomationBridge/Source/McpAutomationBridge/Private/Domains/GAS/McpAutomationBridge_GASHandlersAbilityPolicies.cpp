@@ -16,10 +16,7 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
     const FString& RequestId = Context.RequestId;
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket = Context.RequestingSocket;
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    const FString& Name = Context.Name;
-    const FString& Path = Context.Path;
     const FString& BlueprintPath = Context.BlueprintPath;
-    const FString& AssetPath = Context.AssetPath;
 
     if (SubAction == TEXT("set_activation_policy"))
     {
@@ -29,9 +26,19 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        FString ActivationPolicy = GetJsonStringField(Payload, TEXT("activationPolicy"));
-        const FString PolicyDefault = ActivationPolicy.IsEmpty() ? FString(TEXT("local_predicted")) : ActivationPolicy;
-        FString Policy = GetJsonStringField(Payload, TEXT("policy"), PolicyDefault);
+        // The declared activationPolicy wins; `policy` is only a legacy fallback.
+        const FString Policy = GetGASStringFieldWithFallback(Payload, TEXT("activationPolicy"), TEXT("policy"), TEXT("LocalPredicted"));
+
+        // LocalOnly / LocalPredicted / ServerOnly / ServerInitiated. An unknown value used to become
+        // LocalPredicted while the caller's value was echoed back as applied.
+        EGameplayAbilityNetExecutionPolicy::Type NetPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+        if (!TryParseGASEnum(Policy, NetPolicy))
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Unknown activationPolicy '%s'; use LocalOnly, LocalPredicted, ServerOnly or ServerInitiated."), *Policy),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
 
         UBlueprint* Blueprint = nullptr;
         UGameplayAbility* AbilityCDO = LoadGASBlueprintCDO<UGameplayAbility>(Context, Blueprint, TEXT("GameplayAbility"));
@@ -40,21 +47,16 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        // LocalOnly / LocalPredicted (default) / ServerOnly / ServerInitiated. The property is protected,
-        // so it is set by name through reflection.
-        EGameplayAbilityNetExecutionPolicy::Type NetPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
-        TryParseGASEnum(Policy, NetPolicy);
+        // The property is protected, so it is set by name through reflection.
         SetAbilityPropertyValue(AbilityCDO, FName(TEXT("NetExecutionPolicy")), TEnumAsByte<EGameplayAbilityNetExecutionPolicy::Type>(NetPolicy));
-
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Activation policy")))
+        {
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("policy"), Policy);
-        if (!ActivationPolicy.IsEmpty())
-        {
-            Result->SetStringField(TEXT("activationPolicy"), ActivationPolicy);
-        }
+        Result->SetStringField(TEXT("activationPolicy"), GASEnumName(NetPolicy));
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Activation policy set"), Result);
         return true;
     }
@@ -67,7 +69,19 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        FString Policy = GetGASStringFieldWithFallback(Payload, TEXT("policy"), TEXT("instancingPolicy"), TEXT("instanced_per_actor"));
+        // The declared instancingPolicy wins; `policy` is only a legacy fallback.
+        const FString Policy = GetGASStringFieldWithFallback(Payload, TEXT("instancingPolicy"), TEXT("policy"), TEXT("InstancedPerActor"));
+
+        // NonInstanced (deprecated on newer engines) / InstancedPerActor / InstancedPerExecution,
+        // matched by name so the deprecated enumerator is never named in code.
+        EGameplayAbilityInstancingPolicy::Type InstPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+        if (!TryParseGASEnum(Policy, InstPolicy))
+        {
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Unknown instancingPolicy '%s'; use NonInstanced, InstancedPerActor or InstancedPerExecution."), *Policy),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
 
         UBlueprint* Blueprint = nullptr;
         UGameplayAbility* AbilityCDO = LoadGASBlueprintCDO<UGameplayAbility>(Context, Blueprint, TEXT("GameplayAbility"));
@@ -76,17 +90,15 @@ bool HandleGASAbilityPolicies(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        // NonInstanced (deprecated on newer engines) / InstancedPerActor (default) / InstancedPerExecution,
-        // matched by name so the deprecated enumerator is never named in code.
-        EGameplayAbilityInstancingPolicy::Type InstPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-        TryParseGASEnum(Policy, InstPolicy);
         SetAbilityPropertyValue(AbilityCDO, FName(TEXT("InstancingPolicy")), TEnumAsByte<EGameplayAbilityInstancingPolicy::Type>(InstPolicy));
-
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Instancing policy")))
+        {
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
-        Result->SetStringField(TEXT("policy"), Policy);
+        Result->SetStringField(TEXT("policy"), GASEnumName(InstPolicy));
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Instancing policy set"), Result);
         return true;
     }

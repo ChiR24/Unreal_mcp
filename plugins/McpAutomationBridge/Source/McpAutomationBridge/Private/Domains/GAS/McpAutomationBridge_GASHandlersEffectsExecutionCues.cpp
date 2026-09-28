@@ -108,20 +108,29 @@ bool HandleGASEffectsExecutionCues(const FGASRequestContext& Context, const FStr
             return true;
         }
 
+        // An unregistered tag used to add nothing while the call answered "Cue added".
         FGameplayTag Tag = GetOrRequestTag(CueTag);
-        if (Tag.IsValid())
+        if (!Tag.IsValid())
         {
-            FGameplayEffectCue Cue;
-            Cue.GameplayCueTags.AddTag(Tag);
-            EffectCDO->GameplayCues.Add(Cue);
+            Bridge->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Gameplay tag not registered in this project: %s. Register it in the project's GameplayTags settings first, then retry. Nothing was changed."), *CueTag),
+                TEXT("GAMEPLAY_TAG_NOT_REGISTERED"));
+            return true;
         }
+        FGameplayEffectCue Cue;
+        Cue.GameplayCueTags.AddTag(Tag);
+        EffectCDO->GameplayCues.Add(Cue);
+        const int32 CueCount = EffectCDO->GameplayCues.Num();
 
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+        if (!CommitGASBlueprintEdit(Context, Blueprint, TEXT("Cue")))
+        {
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
         Result->SetStringField(TEXT("cueTag"), CueTag);
-        Result->SetNumberField(TEXT("cueCount"), EffectCDO->GameplayCues.Num());
+        Result->SetNumberField(TEXT("cueCount"), CueCount);
         Bridge->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Cue added"), Result);
         return true;
     }

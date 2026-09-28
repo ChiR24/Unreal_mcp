@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "95caf66ad36047d2",
+  "catalogRevision": "0c4ea156c21b5c06",
   "recordCount": 382,
   "records": [
     {
@@ -52485,13 +52485,13 @@
           "Ability tags must change.",
           "Ability needs cooldown.",
           "Ability has a cost.",
-          "Activation trigger must change.",
+          "An ability must run on the server or be predicted by the client.",
           "Instancing must change.",
           "An ability must join a set that already exists."
         ],
         "whenNotToUse": [
           "Use create_gameplay_ability.",
-          "Default policy.",
+          "The default LocalPredicted policy is wanted.",
           "The ability is granted directly to an actor; use grant_ability."
         ]
       },
@@ -52550,12 +52550,12 @@
             "activationPolicy": {
               "type": "string",
               "enum": [
-                "OnInputPressed",
-                "WhileInputActive",
-                "OnSpawn",
-                "OnGiven"
+                "LocalOnly",
+                "LocalPredicted",
+                "ServerOnly",
+                "ServerInitiated"
               ],
-              "description": "When the ability activates."
+              "description": "Net execution policy: where the ability activates."
             },
             "instancingPolicy": {
               "type": "string",
@@ -52723,8 +52723,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "605a520bec226bb662da851884f58d0affba0b46b7bf550489bf0d980097a1c4",
-        "content": "5bf9d2105d3fe8fd9b4efdc732aa084bc82440139e2ebd4b475505a86b5d4974"
+        "schema": "2bc4edbf45b240afa176e8f85b380c05ecc0b9c069c59f577da9dfe593b0cca3",
+        "content": "6381bba5097b72df949bbf64b9626e71c31f792b952cb0d870ed75fc0c6dd077"
       }
     },
     {
@@ -52938,23 +52938,6 @@
               "type": "string",
               "description": "Target attribute name."
             },
-            "attributeType": {
-              "type": "string",
-              "enum": [
-                "Health",
-                "MaxHealth",
-                "Mana",
-                "MaxMana",
-                "Stamina",
-                "MaxStamina",
-                "Damage",
-                "Armor",
-                "AttackPower",
-                "MoveSpeed",
-                "Custom"
-              ],
-              "description": "Predefined attribute type or Custom."
-            },
             "defaultValue": {
               "type": "number",
               "description": "Initial value for the added attribute."
@@ -53010,7 +52993,6 @@
             "action": "configure_attribute_set",
             "attributeSetPath": "/Game/AS_Char",
             "attributeName": "Health",
-            "attributeType": "Health",
             "defaultValue": 100,
             "setting": "add_attribute"
           },
@@ -53052,9 +53034,6 @@
             "base_value": "set_attribute_base_value"
           },
           "declaredBy": {
-            "attributeType": [
-              "add_attribute"
-            ],
             "defaultValue": [
               "add_attribute"
             ],
@@ -53066,8 +53045,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4e7d6543b79f9a6e85f11d8479455e2210b5debae7b50504c68d2ab74066edcb",
-        "content": "29553cec885769b24647cda9076170cb70079075480712214f539e68cc02a5b3"
+        "schema": "3a12a58f68e17801ad8f4c6af64159cf8314b34326ed1bad512e52614a93f3bb",
+        "content": "2e4ed2465b69b77c957f3a476b2d1eb768723d7187d71f5755f3b15a01ea1a9e"
       }
     },
     {
@@ -53569,6 +53548,14 @@
               ],
               "description": "Effect duration type."
             },
+            "duration": {
+              "type": "number",
+              "description": "Duration in seconds for a HasDuration effect (ignored for Instant)."
+            },
+            "period": {
+              "type": "number",
+              "description": "Period in seconds for a periodic non-Instant effect."
+            },
             "cueType": {
               "type": "string",
               "description": "String parameter."
@@ -53693,6 +53680,12 @@
             "durationType": [
               "gameplay_effect"
             ],
+            "duration": [
+              "gameplay_effect"
+            ],
+            "period": [
+              "gameplay_effect"
+            ],
             "cueType": [
               "gameplay_cue_notify"
             ],
@@ -53704,8 +53697,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "06b21c5de7ee06f4cc08af06701f9f6cc143700aaa1da27ef3c35395d1761440",
-        "content": "1ff9123baf5e10a5f79a8a65ac5b332a966702697c2dce431c2bfa18624f86c3"
+        "schema": "337ebf0eb6f943ca9093c7695eeb251fb74e3ef443c5f041fa63740f5a72d40f",
+        "content": "433717c8bd0c711a21cb27f2de16363c3605689c275ee5d682eb2dc119836a46"
       }
     },
     {

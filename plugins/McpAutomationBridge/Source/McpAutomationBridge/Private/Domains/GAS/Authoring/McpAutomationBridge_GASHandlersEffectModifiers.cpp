@@ -37,8 +37,8 @@ bool HandleGASEffectModifiers(const FGASRequestContext& Context, const FString& 
             return true;
         }
 
-        FString Operation = GetGASStringFieldWithFallback(Payload, TEXT("operation"), TEXT("modifierOperation"), TEXT("Add"));
-        float Magnitude = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("magnitude"), TEXT("modifierMagnitude"), 0.0));
+        FString Operation = GetGASStringFieldWithFallback(Payload, TEXT("modifierOperation"), TEXT("operation"), TEXT("Add"));
+        float Magnitude = static_cast<float>(GetGASNumberFieldWithFallback(Payload, TEXT("modifierMagnitude"), TEXT("magnitude"), 0.0));
 
         FGameplayModifierInfo Modifier;
 

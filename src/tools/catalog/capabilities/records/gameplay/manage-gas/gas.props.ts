@@ -20,10 +20,6 @@ export const GAS_P: PropertyMap = {
   componentName: str('AbilitySystemComponent name (defaults to AbilitySystemComponent).'),
   replicationMode: choice('ASC replication mode.', ['Full', 'Minimal', 'Mixed']),
 
-  attributeType: choice('Predefined attribute type or Custom.', [
-    'Health', 'MaxHealth', 'Mana', 'MaxMana', 'Stamina', 'MaxStamina',
-    'Damage', 'Armor', 'AttackPower', 'MoveSpeed', 'Custom',
-  ]),
   defaultValue: num('Initial value for the added attribute.'),
   baseValue: num('Base value for the attribute.'),
 
@@ -34,8 +30,8 @@ export const GAS_P: PropertyMap = {
   activationBlockedTags: tags('Tags that block activation of this ability.'),
   costEffectPath: str('Canonical /Game path to the cost Gameplay Effect.'),
   cooldownEffectPath: str('Canonical /Game path to the cooldown Gameplay Effect.'),
-  activationPolicy: choice('When the ability activates.', [
-    'OnInputPressed', 'WhileInputActive', 'OnSpawn', 'OnGiven',
+  activationPolicy: choice('Net execution policy: where the ability activates.', [
+    'LocalOnly', 'LocalPredicted', 'ServerOnly', 'ServerInitiated',
   ]),
   instancingPolicy: choice('How the ability is instanced.', [
     'NonInstanced', 'InstancedPerActor', 'InstancedPerExecution',
