@@ -54,16 +54,7 @@ bool HandleCreateSplineActor(
     if (PointsArray)
     {
         SplineComp->ClearSplinePoints(false);
-        for (int32 i = 0; i < PointsArray->Num(); i++)
-        {
-            const TSharedPtr<FJsonObject>* PointObj;
-            if ((*PointsArray)[i]->TryGetObject(PointObj))
-            {
-                FVector PointLocation = ExtractVectorField(*PointObj, TEXT("location"), FVector::ZeroVector);
-                SplineComp->AddSplinePoint(PointLocation, ESplineCoordinateSpace::Local, true);
-                SplineComp->SetSplinePointType(i, PointType, false);
-            }
-        }
+        AddSplinePointsFromJson(SplineComp, *PointsArray, PointType);
         SplineComp->UpdateSpline();
     }
 

@@ -21,13 +21,13 @@ static bool HandleCreateTemplateSpline(
     const FString& TemplateName,
     const FString& DefaultMeshPath)
 {
-    // `name` is the spelling create_road_spline and its sibling templates publish; `actorName`
-    // is the legacy one. Reading only `actorName` meant a caller following the schema always
-    // got the default label instead of the name they asked for.
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    // `name` is the spelling create_road_spline and its sibling templates publish, and it
+    // wins over the legacy `actorName`: reading only `actorName` once meant a caller following
+    // the schema always got the default label instead of the name they asked for.
+    FString ActorName = McpGetFirstStringField(Payload, {TEXT("name"), TEXT("actorName")});
     if (ActorName.IsEmpty())
     {
-        ActorName = GetJsonStringField(Payload, TEXT("name"), TemplateName + TEXT("_Spline"));
+        ActorName = TemplateName + TEXT("_Spline");
     }
     FVector Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
     double Width = GetJsonNumberField(Payload, TEXT("width"), 400.0);
@@ -58,16 +58,7 @@ static bool HandleCreateTemplateSpline(
     const TArray<TSharedPtr<FJsonValue>>* PointsArray = nullptr;
     if (Payload->TryGetArrayField(TEXT("points"), PointsArray) && PointsArray && PointsArray->Num() >= 2)
     {
-        for (const TSharedPtr<FJsonValue>& PointValue : *PointsArray)
-        {
-            const TSharedPtr<FJsonObject>* PointObj = nullptr;
-            if (!PointValue.IsValid() || !PointValue->TryGetObject(PointObj) || !PointObj)
-            {
-                continue;
-            }
-            SplineComp->AddSplinePoint(ExtractVectorField(*PointObj, TEXT("position"), FVector::ZeroVector),
-                ESplineCoordinateSpace::Local, false);
-        }
+        AddSplinePointsFromJson(SplineComp, *PointsArray);
     }
     else
     {

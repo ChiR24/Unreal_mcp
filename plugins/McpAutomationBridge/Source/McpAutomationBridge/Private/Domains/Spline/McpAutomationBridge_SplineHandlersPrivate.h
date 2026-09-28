@@ -29,6 +29,51 @@ FString RequireSplineProjectPath(UMcpAutomationBridgeSubsystem* Self, const FStr
 USplineMeshComponent* FindSplineMeshComponent(AActor* Actor, const FString& ComponentName = TEXT(""));
 ESplineMeshAxis::Type ParseSplineMeshAxis(const FString& ForwardAxis);
 ESplinePointType::Type ParseSplinePointType(const FString& TypeStr);
+// Sets the point's arriveTangent and leaveTangent (local space) from the payload: a lone
+// arriveTangent sets both, a lone leaveTangent keeps the current arrive. False when neither is given.
+inline bool ApplySplinePointTangents(USplineComponent* Spline, int32 Index, const TSharedPtr<FJsonObject>& Payload)
+{
+    const bool bArrive = Payload->HasField(TEXT("arriveTangent"));
+    const bool bLeave = Payload->HasField(TEXT("leaveTangent"));
+    if (!bArrive && !bLeave)
+    {
+        return false;
+    }
+    const FVector Arrive = bArrive ? ExtractVectorField(Payload, TEXT("arriveTangent"), FVector::ZeroVector)
+                                   : Spline->GetArriveTangentAtSplinePoint(Index, ESplineCoordinateSpace::Local);
+    const FVector Leave = bLeave ? ExtractVectorField(Payload, TEXT("leaveTangent"), FVector::ZeroVector)
+                                 : (bArrive ? Arrive : Spline->GetLeaveTangentAtSplinePoint(Index, ESplineCoordinateSpace::Local));
+    Spline->SetTangentsAtSplinePoint(Index, Arrive, Leave, ESplineCoordinateSpace::Local, true);
+    return true;
+}
+// Appends each points[] entry {position (or location), arriveTangent, leaveTangent, rotation,
+// scale} as a local-space point of PointType. Only `location` was read before, so points sent
+// with the declared `position` all landed at the origin.
+inline void AddSplinePointsFromJson(USplineComponent* Spline, const TArray<TSharedPtr<FJsonValue>>& Points,
+                                    ESplinePointType::Type PointType = ESplinePointType::Curve)
+{
+    for (const TSharedPtr<FJsonValue>& Value : Points)
+    {
+        const TSharedPtr<FJsonObject>* Point = nullptr;
+        if (!Value.IsValid() || !Value->TryGetObject(Point) || !Point)
+        {
+            continue;
+        }
+        const TCHAR* LocationKey = (*Point)->HasField(TEXT("position")) ? TEXT("position") : TEXT("location");
+        Spline->AddSplinePoint(ExtractVectorField(*Point, LocationKey, FVector::ZeroVector), ESplineCoordinateSpace::Local, false);
+        const int32 Index = Spline->GetNumberOfSplinePoints() - 1;
+        Spline->SetSplinePointType(Index, PointType, false);
+        if ((*Point)->HasField(TEXT("rotation")))
+        {
+            Spline->SetRotationAtSplinePoint(Index, ExtractRotatorField(*Point, TEXT("rotation"), FRotator::ZeroRotator), ESplineCoordinateSpace::Local, false);
+        }
+        if ((*Point)->HasField(TEXT("scale")))
+        {
+            Spline->SetScaleAtSplinePoint(Index, ExtractVectorField(*Point, TEXT("scale"), FVector::OneVector), false);
+        }
+        ApplySplinePointTangents(Spline, Index, *Point);
+    }
+}
 FString SplinePointTypeToString(ESplinePointType::Type Type);
 
 void SetSplineConfigValue(AActor* Target, const FString& Key, const FString& Value);

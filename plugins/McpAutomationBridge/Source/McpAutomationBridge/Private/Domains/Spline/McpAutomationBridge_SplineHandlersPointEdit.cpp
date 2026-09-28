@@ -38,6 +38,8 @@ bool HandleAddSplinePoint(
     }
 
     SplineComp->SetSplinePointType(Index, ParseSplinePointType(PointType), true);
+    // The declared tangents were never read, so every added point took automatic ones.
+    ApplySplinePointTangents(SplineComp, Index, Payload);
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
 

@@ -1335,6 +1335,7 @@
         "heightScale",
         "heightmapPath",
         "hour",
+        "index",
         "indirectLightingIntensity",
         "infiniteUnbound",
         "initialPoints",
@@ -1949,6 +1950,10 @@
           "hour": {
             "type": "number",
             "description": "Hour of day (0-23)."
+          },
+          "index": {
+            "type": "integer",
+            "description": "Insert the point before this index; appended when omitted or out of range."
           },
           "indirectLightingIntensity": {
             "type": "number",
@@ -2908,7 +2913,7 @@
           },
           "splineType": {
             "type": "string",
-            "description": "Spline point type."
+            "description": "Point type for every point: Linear, Curve (default), Constant, CurveClamped or CurveCustomTangent."
           },
           "staticMesh": {
             "type": "string",

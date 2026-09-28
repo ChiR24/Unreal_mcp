@@ -1924,6 +1924,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Hour of day (0-23)."
         },
+        "index": {
+          "type": "integer",
+          "description": "Insert the point before this index; appended when omitted or out of range."
+        },
         "indirectLightingIntensity": {
           "type": "number",
           "description": "Indirect lighting intensity, written with its override on the level's post-process volume (spawned when missing)."
@@ -2882,7 +2886,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "splineType": {
           "type": "string",
-          "description": "Spline point type."
+          "description": "Point type for every point: Linear, Curve (default), Constant, CurveClamped or CurveCustomTangent."
         },
         "staticMesh": {
           "type": "string",

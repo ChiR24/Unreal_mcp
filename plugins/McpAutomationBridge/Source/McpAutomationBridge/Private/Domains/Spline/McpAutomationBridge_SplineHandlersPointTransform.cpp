@@ -63,16 +63,14 @@ bool HandleSetSplinePointTangents(
         return true;
     }
 
-    FVector ArriveTangent = ExtractVectorField(Payload, TEXT("arriveTangent"), FVector::ZeroVector);
-    FVector LeaveTangent = ExtractVectorField(Payload, TEXT("leaveTangent"), FVector::ZeroVector);
-    if (!LeaveTangent.IsZero() && LeaveTangent != ArriveTangent)
+    // A distinct leaveTangent used to be logged and dropped on the claim that a point has one
+    // tangent; SetTangentsAtSplinePoint takes both.
+    if (!ApplySplinePointTangents(SplineComp, PointIndex, Payload))
     {
-        UE_LOG(LogMcpSplineHandlers, Warning,
-            TEXT("leaveTangent ignored for point %d - UE splines use a single tangent per point. Use arriveTangent only."),
-            PointIndex);
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("arriveTangent or leaveTangent is required"), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
     }
-
-    SplineComp->SetTangentAtSplinePoint(PointIndex, ArriveTangent, ESplineCoordinateSpace::Local, true);
     SplineComp->UpdateSpline();
     Actor->MarkPackageDirty();
 

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b82f3b3286a629a8",
+  "catalogRevision": "d86157431797d736",
   "recordCount": 382,
   "records": [
     {
@@ -20682,7 +20682,7 @@
             },
             "actorPath": {
               "type": "string",
-              "description": "Actor path in the level."
+              "description": "Object path of the spline actor; used when actorName is omitted."
             },
             "componentName": {
               "type": "string",
@@ -20708,6 +20708,10 @@
               "type": "boolean",
               "description": "Apply a random offset to scattered meshes."
             },
+            "randomOffsetRange": {
+              "type": "number",
+              "description": "Random offset range."
+            },
             "spacing": {
               "type": "number",
               "description": "Mesh spacing along the spline."
@@ -20724,9 +20728,13 @@
               "type": "boolean",
               "description": "Randomize mesh scale."
             },
-            "randomOffsetRange": {
+            "minScale": {
               "type": "number",
-              "description": "Random offset range."
+              "description": "Minimum foliage scale."
+            },
+            "maxScale": {
+              "type": "number",
+              "description": "Maximum foliage scale."
             },
             "alignToSpline": {
               "type": "boolean",
@@ -20843,14 +20851,20 @@
               "axis"
             ],
             "useRandomOffset": [
-              "spacing"
+              "spacing",
+              "scatter"
+            ],
+            "randomOffsetRange": [
+              "spacing",
+              "scatter"
             ],
             "spacing": [
               "spacing",
               "scatter"
             ],
             "rotationRange": [
-              "randomization"
+              "randomization",
+              "scatter"
             ],
             "randomizeRotation": [
               "randomization",
@@ -20860,8 +20874,13 @@
               "randomization",
               "scatter"
             ],
-            "randomOffsetRange": [
-              "randomization"
+            "minScale": [
+              "randomization",
+              "scatter"
+            ],
+            "maxScale": [
+              "randomization",
+              "scatter"
             ],
             "alignToSpline": [
               "scatter"
@@ -20871,8 +20890,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f56ac79f2e4bf43a086ba41efa42eba79dd2e82bea7f2158e645886962541520",
-        "content": "aa95f2e49f0703de7b036039c2cb822f7b4ce51e73ee855a2957d13f5ee3b7f0"
+        "schema": "ede689c24d45e49c1f01535c6687d4497ccc45889d2cc48b8a9c52e0cec1dcaf",
+        "content": "ac5c87fcffb1236803251a582745c9e63b3847a2be7aee40bc13a3917a458bc0"
       }
     },
     {
@@ -23843,6 +23862,10 @@
               "type": "boolean",
               "description": "Whether the spline is a closed loop."
             },
+            "splineType": {
+              "type": "string",
+              "description": "Point type for every point: Linear, Curve (default), Constant, CurveClamped or CurveCustomTangent."
+            },
             "blueprintPath": {
               "type": "string",
               "description": "Canonical /Game blueprint path."
@@ -23857,7 +23880,7 @@
             },
             "actorPath": {
               "type": "string",
-              "description": "Actor path in the level."
+              "description": "Object path of the spline actor; used when actorName is omitted."
             },
             "componentName": {
               "type": "string",
@@ -23877,15 +23900,11 @@
             },
             "width": {
               "type": "number",
-              "description": "Spline width."
+              "description": "Width of the deformed mesh ribbon in world units (default 400)."
             },
             "closedLoop": {
               "type": "boolean",
               "description": "Close the spline into a loop, joining the last point back to the first."
-            },
-            "spacing": {
-              "type": "number",
-              "description": "Mesh spacing along the spline."
             },
             "kind": {
               "type": "string",
@@ -24023,6 +24042,9 @@
             "bClosedLoop": [
               "actor"
             ],
+            "splineType": [
+              "actor"
+            ],
             "blueprintPath": [
               "mesh_component"
             ],
@@ -24051,27 +24073,36 @@
               "mesh_component"
             ],
             "materialPath": [
-              "road"
+              "road",
+              "wall",
+              "fence",
+              "pipe",
+              "cable",
+              "river"
             ],
             "width": [
               "road",
               "wall",
+              "fence",
               "pipe",
+              "cable",
               "river"
             ],
             "closedLoop": [
-              "road"
-            ],
-            "spacing": [
-              "fence"
+              "road",
+              "wall",
+              "fence",
+              "pipe",
+              "cable",
+              "river"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f0aad3b043b0c18887bfaed96cb1b4ae410f054679a561c6a14ba63c0e324b5e",
-        "content": "26117c2915eccbb2658f52c079b2afd602bf585a622d856b6366ec4cb48c6973"
+        "schema": "7c7590927815cea8b4fa13ee9401819e217b96caa62283fd4f1c3525e63238c4",
+        "content": "f860746c841eb53ffc82ecd6cb2797e4c18360cc213df22b9e9c6628d02beb16"
       }
     },
     {
@@ -25228,7 +25259,7 @@
             },
             "actorPath": {
               "type": "string",
-              "description": "Actor path in the level."
+              "description": "Object path of the spline actor; used when actorName is omitted."
             },
             "position": {
               "type": "object",
@@ -25248,6 +25279,10 @@
                 }
               },
               "additionalProperties": false
+            },
+            "index": {
+              "type": "integer",
+              "description": "Insert the point before this index; appended when omitted or out of range."
             },
             "arriveTangent": {
               "type": "object",
@@ -25437,6 +25472,9 @@
               "add_point",
               "set_point_position"
             ],
+            "index": [
+              "add_point"
+            ],
             "arriveTangent": [
               "add_point",
               "set_point_tangents"
@@ -25469,8 +25507,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cd082301bac5087b649219ed656439146c2e8396a087f61b27adeb3e157a15ef",
-        "content": "8bfc164c220337f5f1fb2903c368e8999d3ed3d5e52c557bc011e0d6b51a4ad2"
+        "schema": "56a9cf97d438c893dfffaa7281688931346a3d81bd789241cfbfaeee073d4f30",
+        "content": "63abc86455642b03d8c88341907f73915f2608b2545c20543e337dd3ce16318d"
       }
     },
     {
@@ -26752,7 +26790,7 @@
             },
             "actorPath": {
               "type": "string",
-              "description": "Actor path in the level."
+              "description": "Object path of the spline actor; used when actorName is omitted."
             },
             "pointIndex": {
               "type": "integer",
@@ -26828,8 +26866,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7259a86c64331b558a9753dd6b2bc3e5325305ad1f5fe9e6c9a8047889eac4a5",
-        "content": "5197abcf20b5f9a372da61b7b5c0a4e3d5c94a64d64b2b6c3979926553a9de8e"
+        "schema": "8ad2f4bc4f2609d9677a240403986598edc0fbd736f34519c5ba7fc7d8498ef8",
+        "content": "fcc94def2721dad71214a872ec20dd02d524142a19895a02edf0972a79e45030"
       }
     },
     {
