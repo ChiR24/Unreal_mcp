@@ -72,9 +72,10 @@ static bool ConfigureSpectating(FActionContext& Context)
     return true;
 }
 
-// Tags one PlayerStart in the open editor level. The engine's FindPlayerStart picks a start whose
-// PlayerStartTag equals the travel URL's Portal, and team spawning matches TeamN, so the tag is the
-// level half of team spawns. An undoable level edit, not saved: the level stays modified.
+// Tags one PlayerStart in the open editor level. Stock AGameModeBase::FindPlayerStart picks a start
+// whose PlayerStartTag equals the travel URL's Portal option (?Portal=<tag>); nothing in the engine
+// chooses a start by team, so a TeamN tag only matters to a game mode whose own ChoosePlayerStart or
+// FindPlayerStart reads it. An undoable level edit, not saved: the level stays modified.
 static bool ConfigurePlayerStart(FActionContext& Context)
 {
     const FString StartName = GetStringField(Context.Payload, TEXT("playerStartName")).TrimStartAndEnd();
@@ -145,8 +146,8 @@ static bool ConfigurePlayerStart(FActionContext& Context)
     Response->SetStringField(TEXT("playerStartTag"), Tag);
     Response->SetStringField(TEXT("previousTag"), PreviousTag.ToString());
     Response->SetStringField(TEXT("message"), FString::Printf(
-        TEXT("PlayerStart '%s' tag set to '%s' (was '%s') in level %s. The level is modified but not saved: save it to keep the tag. Undo reverts it."),
-        *Target->GetActorLabel(), *Tag, *PreviousTag.ToString(), *World->GetMapName()));
+        TEXT("PlayerStart '%s' tag set to '%s' (was '%s') in level %s. The tag steers spawning only through a ?Portal=%s travel option or a game mode whose own ChoosePlayerStart reads it; the engine picks no start by team. The level is modified but not saved: save it to keep the tag. Undo reverts it."),
+        *Target->GetActorLabel(), *Tag, *PreviousTag.ToString(), *World->GetMapName(), *Tag));
     Context.SendSuccess(Response);
     return true;
 }

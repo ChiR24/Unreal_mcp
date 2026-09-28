@@ -16213,7 +16213,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "interfaceType": {
           "type": "string",
-          "description": "Online subsystem name: Null (LAN and local play), Steam, EOS, ... Its OnlineSubsystem<Name> plugin must be enabled; LAN is refused (use Null)."
+          "description": "Online subsystem name: Null (LAN and local play), Steam, EOS, ... Its OnlineSubsystem<Name> plugin must be enabled; LAN (use Null) and Utils (a helper module) are refused."
         },
         "isAutonomousProxy": {
           "type": "boolean",
@@ -16515,7 +16515,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "teamIndex": {
           "type": "number",
-          "description": "1-based team number; sets the PlayerStart tag TeamN. Give it or playerStartTag."
+          "description": "1-based team number; sets the PlayerStart tag TeamN (the engine picks no start by team; a game mode must read the tag). Give it or playerStartTag."
         },
         "travelOptions": {
           "type": "string",

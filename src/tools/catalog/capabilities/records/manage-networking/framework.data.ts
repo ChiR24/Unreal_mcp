@@ -48,7 +48,7 @@ export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
   // A level edit, not a Blueprint one: undoable and left unsaved, so it takes no save flag.
   withTopics(utilityRecord({
     tool: T, action: 'configure_player_start', family: 'gameFramework',
-    summary: 'Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N (team spawns match it). Undoable; the level is left modified, not saved.',
+    summary: 'Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N. The engine only matches the tag against a ?Portal=<tag> travel option; team spawning needs a game mode that reads it. Undoable; the level is left modified, not saved.',
     params: ['playerStartName', 'playerStartTag', 'teamIndex'], requiredOneOf: ['playerStartTag', 'teamIndex'],
     outputs: ['playerStart', 'playerStartTag', 'previousTag'], outputRequired: ['playerStart', 'playerStartTag', 'previousTag'],
     dispatchAction: 'manage_game_framework',

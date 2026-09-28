@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7f80d98267585840",
+  "catalogRevision": "511ee6c0ea91ff89",
   "recordCount": 383,
   "records": [
     {
@@ -66370,9 +66370,9 @@
           "team spawn point",
           "spawn point tag"
         ],
-        "summary": "Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N (team spawns match it). Undoable; the level is left modified, not saved.",
+        "summary": "Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N. The engine only matches the tag against a ?Portal=<tag> travel option; team spawning needs a game mode that reads it. Undoable; the level is left modified, not saved.",
         "whenToUse": [
-          "Use when set the playerstarttag of a playerstart in the open level: an explicit tag, or teamn for teamindex n (team spawns match it). undoable; the level is left modified, not saved."
+          "Use when set the playerstarttag of a playerstart in the open level: an explicit tag, or teamn for teamindex n. the engine only matches the tag against a ?portal=<tag> travel option; team spawning needs a game mode that reads it. undoable; the level is left modified, not saved."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -66397,7 +66397,7 @@
             },
             "teamIndex": {
               "type": "number",
-              "description": "1-based team number; sets the PlayerStart tag TeamN. Give it or playerStartTag."
+              "description": "1-based team number; sets the PlayerStart tag TeamN (the engine picks no start by team; a game mode must read the tag). Give it or playerStartTag."
             }
           },
           "required": [
@@ -66450,7 +66450,7 @@
       },
       "examples": [
         {
-          "title": "Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N (team spawns match it). Undoable; the level is left modified, not saved.",
+          "title": "Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N. The engine only matches the tag against a ?Portal=<tag> travel option; team spawning needs a game mode that reads it. Undoable; the level is left modified, not saved.",
           "input": {
             "action": "configure_player_start",
             "playerStartTag": "Team1"
@@ -66491,8 +66491,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9fdddd77a6f2b033f184eeb1259788fdf914791ae93b5a9250cb43bf720a9c90",
-        "content": "b259afe9ea089d324fff2550392347cc3c2050a4d96dc94c9f20e8866133c75e"
+        "schema": "0944b6ddf7de293f887bfded50c802f6a033ddb557795699e4194d09abaeb494",
+        "content": "57d10c145b66f1ea3f2818dd2b1d8a7d8d2f47df42d20acaf4893f23611ddfba"
       }
     },
     {
@@ -66554,7 +66554,7 @@
           "Use when set whether a character blueprint always replicates its movement transform timestamp (charactermovement bnetworkalwaysreplicatetransformupdatetimestamp); other blueprints are refused.",
           "Use when set a character blueprint's movement network smoothing mode and smoothing distances; only the fields sent are written, other blueprints are refused.",
           "Use when set how long a character blueprint's simulated proxies smooth server corrections; other blueprints are refused.",
-          "Use when add a blueprint variable, or convert an existing one of the same type, that replicates only to the owning client (cond_autonomousonly) for client-side prediction state; the reply says whether the blueprint itself replicates."
+          "Use when add a blueprint variable, or convert an existing one of the same type, that replicates only to the owning client (cond_autonomousonly) for client-side prediction state. pawn, character, controller and actorcomponent blueprints only (no other actor is an autonomous proxy); the reply says whether the blueprint itself replicates."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -66746,7 +66746,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4a9064debc6c032cf3ea057ab744fc380298c23b5650c6c5bc99ee81197a5979",
-        "content": "c3cd6e766fe410e06f2872ae03781930424e5eecb85f2fbcd36742b091583d10"
+        "content": "2d282985e8ed26ecc221c0b38024870213788ed6eb3acedd2f0b26ab3de0893b"
       }
     },
     {
@@ -67462,7 +67462,7 @@
         "summary": "Configure multiplayer for the project: the default game port for LAN hosting and joining, the online subsystem (Null, Steam, EOS...), and the local split-screen layout. Written to DefaultEngine.ini.",
         "whenToUse": [
           "Use when set the project default game port ([url] port in defaultengine.ini) that listen servers bind and joins without a port connect to; packaged games use it from their next launch and the running editor at once.",
-          "Use when choose the online subsystem the project uses ([onlinesubsystem] defaultplatformservice in defaultengine.ini): null for lan and local play, steam, eos and others whose onlinesubsystem plugin is enabled. takes effect on the next launch.",
+          "Use when choose the online subsystem the project uses ([onlinesubsystem] defaultplatformservice in defaultengine.ini): null for lan and local play, steam, eos and others whose onlinesubsystem plugin is enabled; also turns on [onlinesubsystem<name>] benabled when the engine config has it off. takes effect on the next launch (steam only in standalone and packaged games).",
           "Use when turn local split screen on or off and pick a layout by name: none (off), twoplayer_horizontal, twoplayer_vertical, threeplayer_favortop, threeplayer_favorbottom, threeplayer_vertical, threeplayer_horizontal, fourplayer_grid, fourplayer_vertical or fourplayer_horizontal. only the layout for that player count changes; written to defaultengine.ini and live in pie."
         ],
         "whenNotToUse": [
@@ -67484,7 +67484,7 @@
             },
             "interfaceType": {
               "type": "string",
-              "description": "Online subsystem name: Null (LAN and local play), Steam, EOS, ... Its OnlineSubsystem<Name> plugin must be enabled; LAN is refused (use Null)."
+              "description": "Online subsystem name: Null (LAN and local play), Steam, EOS, ... Its OnlineSubsystem<Name> plugin must be enabled; LAN (use Null) and Utils (a helper module) are refused."
             },
             "enabled": {
               "type": "boolean",
@@ -67550,6 +67550,13 @@
             "previous": {
               "type": "string",
               "description": "DefaultPlatformService this editor session started with (empty for the engine default)."
+            },
+            "written": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every [Section] Key=Value entry written to the config file, in order."
             },
             "requiresRestart": {
               "type": "boolean",
@@ -67649,8 +67656,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "284e135d7c139e9582f263de5d57adea30ada2debfb041576bdef745240d61d2",
-        "content": "4745ab0959adfce399e597b6ae889ab568a1a2ed330d5d268beda5290ce72635"
+        "schema": "efb3447cae3af875aba78261273685cd2546484595c8330b99f6d089c473761e",
+        "content": "a9530bfaf36d646736df29077677a8ddb3d37e7effffdaeefeb94a3f62ea8638"
       }
     },
     {

@@ -160,7 +160,7 @@ const testCases = [
   {
     scenario: 'CREATE: add_network_prediction_data adds an owner-only variable',
     toolName: 'manage_networking',
-    arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' },
+    arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' },
     expected: 'success',
     assertions: [
       { path: 'structuredContent.result.variableName', equals: 'PredictedLocation', label: 'prediction variable named' },
@@ -171,16 +171,28 @@ const testCases = [
   {
     scenario: 'CONFIG: configure_prediction add_data on the same variable changes nothing',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_prediction', setting: 'add_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' },
+    arguments: { action: 'configure_prediction', setting: 'add_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' },
     expected: 'success',
     assertions: [
       { path: 'structuredContent.result.created', equals: false, label: 'no second variable' },
       { path: 'structuredContent.result.updated', equals: false, label: 'already owner-only, nothing converted' }
     ]
   },
-  { scenario: 'CREATE: add_network_prediction_data default name', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Rotator' }, expected: 'success', assertions: [{ path: 'structuredContent.result.variableName', equals: 'PredictionData_Rotator', label: 'default prediction variable name' }] },
-  { scenario: 'CREATE: add_network_prediction_data refuses a type clash', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Vector', variableName: 'ReplicatedFlag' }, expected: 'error|VARIABLE_TYPE_CONFLICT' },
-  { scenario: 'CREATE: add_network_prediction_data refuses an unknown type', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'NoSuchType' }, expected: 'error|TYPE_RESOLUTION_FAILED' },
+  { scenario: 'CREATE: add_network_prediction_data default name', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Rotator' }, expected: 'success', assertions: [{ path: 'structuredContent.result.variableName', equals: 'PredictionData_Rotator', label: 'default prediction variable name' }] },
+  { scenario: 'Setup: add a double-precision speed variable', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: CHARACTER_BP_PATH, variableName: 'PredictedSpeed', variableType: 'Double' }, expected: 'success|already exists' },
+  {
+    scenario: 'CONFIG: add_network_prediction_data Float converts a double variable',
+    toolName: 'manage_networking',
+    arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Float', variableName: 'PredictedSpeed' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.created', equals: false, label: 'existing real variable reused' },
+      { path: 'structuredContent.result.updated', equals: true, label: 'real variable converted despite float or double precision' }
+    ]
+  },
+  { scenario: 'CREATE: add_network_prediction_data refuses a type clash', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'Rotator', variableName: 'PredictedLocation' }, expected: 'error|VARIABLE_TYPE_CONFLICT' },
+  { scenario: 'CREATE: add_network_prediction_data refuses a plain Actor Blueprint', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' }, expected: 'error|NOT_SUPPORTED' },
+  { scenario: 'CREATE: add_network_prediction_data refuses an unknown type', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: CHARACTER_BP_PATH, dataType: 'NoSuchType' }, expected: 'error|TYPE_RESOLUTION_FAILED' },
 
   // === CONNECTION / ROLE / INFO ===
   {
@@ -308,10 +320,12 @@ const testCases = [
       expected: 'success',
       assertions: [
         { path: 'structuredContent.result.interfaceType', equals: 'Null', label: 'DefaultPlatformService written' },
+        { path: 'structuredContent.result.written.0', equals: '[OnlineSubsystem] DefaultPlatformService=Null', label: 'only the choice written: Null is enabled by config' },
         { path: 'structuredContent.result.requiresRestart', equals: true, label: 'subsystem choice applies on next launch' }
       ]
     },
     { scenario: 'CONFIG: configure_session_interface refuses LAN', toolName: 'manage_networking', arguments: { action: 'configure_session_interface', interfaceType: 'LAN' }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'CONFIG: configure_session_interface refuses Utils, which is no subsystem', toolName: 'manage_networking', arguments: { action: 'configure_session_interface', interfaceType: 'Utils' }, expected: 'error|INVALID_ARGUMENT' },
     { scenario: 'CONFIG: configure_session_interface refuses a subsystem whose plugin is off', toolName: 'manage_networking', arguments: { action: 'configure_session_interface', interfaceType: 'Tencent' }, expected: 'error|PLUGIN_NOT_ENABLED' },
     {
       scenario: 'CONFIG: configure_voice settings writes the voice console variables',

@@ -34,8 +34,10 @@ bool HandleConfigureSessionInterface(
 
     // DefaultPlatformService names a plugin OnlineSubsystem<Type>; a disabled one makes the engine
     // fall back silently at startup, so it is refused here with the subsystems that would work.
+    // OnlineSubsystemUtils is an enabled plugin too, but a helper module that registers no subsystem.
+    const bool bUtils = Type.Equals(TEXT("Utils"), ESearchCase::IgnoreCase);
     TSharedPtr<IPlugin> Plugin;
-    if (!Type.IsEmpty())
+    if (!Type.IsEmpty() && !bUtils)
     {
         Plugin = IPluginManager::Get().FindPlugin(Prefix + Type);
     }
@@ -50,36 +52,54 @@ bool HandleConfigureSessionInterface(
                 Enabled.Add(Name.Mid(Prefix.Len()));
             }
         }
+        const FString Problem = Type.IsEmpty() ? FString(TEXT("interfaceType is required, e.g. Null, Steam or EOS"))
+            : bUtils ? FString(TEXT("OnlineSubsystemUtils is a helper module, not an online subsystem"))
+            : FString::Printf(TEXT("OnlineSubsystem%s is %s"), *Type, Plugin.IsValid() ? TEXT("installed but not enabled") : TEXT("not an installed plugin"));
         Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("%s; nothing was changed. Enabled online subsystems: %s. Enable the plugin OnlineSubsystem<Name> and restart the editor to use another."),
-                Type.IsEmpty() ? TEXT("interfaceType is required, e.g. Null, Steam or EOS")
-                    : *FString::Printf(TEXT("OnlineSubsystem%s is %s"), *Type, Plugin.IsValid() ? TEXT("installed but not enabled") : TEXT("not an installed plugin")),
-                Enabled.Num() > 0 ? *FString::Join(Enabled, TEXT(", ")) : TEXT("none")),
-            Type.IsEmpty() ? TEXT("INVALID_ARGUMENT") : TEXT("PLUGIN_NOT_ENABLED"));
+                *Problem, Enabled.Num() > 0 ? *FString::Join(Enabled, TEXT(", ")) : TEXT("none")),
+            (Type.IsEmpty() || bUtils) ? TEXT("INVALID_ARGUMENT") : TEXT("PLUGIN_NOT_ENABLED"));
         return true;
     }
     Type = Plugin->GetName().Mid(Prefix.Len());
 
+    // IOnlineSubsystem::IsEnabled also reads [OnlineSubsystem<Type>] bEnabled, which BaseEngine.ini
+    // sets false for Steam, Amazon, Google, Facebook and Apple: a chosen subsystem left that way is
+    // never created, so the switch is written with the choice.
+    TArray<McpHandlerUtils::FProjectConfigEntry> Entries;
+    bool bConfigEnabled = true;
+    if (GConfig->GetBool(*(Prefix + Type), TEXT("bEnabled"), bConfigEnabled, GEngineIni) && !bConfigEnabled)
+    {
+        Entries.Add({Prefix + Type, TEXT("bEnabled"), TEXT("True")});
+    }
+    Entries.Add({TEXT("OnlineSubsystem"), TEXT("DefaultPlatformService"), Type});
     FString Previous;
     GConfig->GetString(TEXT("OnlineSubsystem"), TEXT("DefaultPlatformService"), Previous, GEngineIni);
     FString ConfigFile;
+    TArray<FString> Written;
     FString Error;
-    if (!McpHandlerUtils::WriteProjectConfigValue(TEXT("OnlineSubsystem"), TEXT("DefaultPlatformService"), Type, TEXT("Engine"), ConfigFile, Error))
+    if (!McpHandlerUtils::WriteProjectConfigValues(Entries, TEXT("Engine"), ConfigFile, Written, Error))
     {
         Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("PERSIST_FAILED"));
         return true;
     }
 
+    // OnlineSubsystemSteam turns itself off in any editor process (UE_EDITOR) unless it runs as -game.
+    const bool bSteam = Type == TEXT("Steam");
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("success"), true);
     ResponseJson->SetStringField(TEXT("interfaceType"), Type);
     ResponseJson->SetStringField(TEXT("previous"), Previous);
     ResponseJson->SetStringField(TEXT("configFile"), ConfigFile);
+    ResponseJson->SetArrayField(TEXT("written"), McpHandlerUtils::ToJsonStringArray(Written));
     ResponseJson->SetBoolField(TEXT("persisted"), true);
     ResponseJson->SetBoolField(TEXT("requiresRestart"), true);
     const FString Message = FString::Printf(
-        TEXT("[OnlineSubsystem] DefaultPlatformService=%s written to %s. The online subsystem is chosen when its module starts, so the editor and packaged games use %s from their next launch; this session keeps %s."),
-        *Type, *ConfigFile, *Type, Previous.IsEmpty() ? TEXT("the engine default") : *Previous);
+        TEXT("Wrote %s to %s. The online subsystem is chosen when its module starts, so %s use %s from their next launch; this session keeps %s.%s"),
+        *FString::Join(Written, TEXT(", ")), *ConfigFile,
+        bSteam ? TEXT("standalone (-game) and packaged games") : TEXT("the editor and packaged games"), *Type,
+        Previous.IsEmpty() ? TEXT("the engine default") : *Previous,
+        bSteam ? TEXT(" Steam never starts in the editor or PIE, and it also needs [OnlineSubsystemSteam] SteamDevAppId and a SteamNetDriver entry in the GameEngine NetDriverDefinitions.") : TEXT(""));
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }
@@ -90,14 +110,9 @@ bool HandleConfigureVoiceSettings(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    struct FVoiceWrite
-    {
-        FString Section;
-        FString Key;
-        FString Value;
-        bool bConsoleVariable;
-    };
-    TArray<FVoiceWrite> Writes;
+    // [SystemSettings] entries are the voice.* console variables; the rest are read at startup only.
+    static const FString ConsoleVariableSection = TEXT("SystemSettings");
+    TArray<McpHandlerUtils::FProjectConfigEntry> Writes;
     bool bRestartOnly = false;
 
     // Every field is checked before anything is written, so a bad value changes nothing.
@@ -120,7 +135,7 @@ bool HandleConfigureVoiceSettings(
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        Writes.Add({TEXT("SystemSettings"), Knob.ConsoleVariable, FString::SanitizeFloat(Value), true});
+        Writes.Add({ConsoleVariableSection, Knob.ConsoleVariable, FString::SanitizeFloat(Value)});
     }
     if (Payload.IsValid() && Payload->HasField(TEXT("sampleRate")))
     {
@@ -133,14 +148,14 @@ bool HandleConfigureVoiceSettings(
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        Writes.Add({TEXT("/Script/Engine.AudioSettings"), TEXT("VoiPSampleRate"), Rate == 16000.0 ? TEXT("Low16000Hz") : TEXT("Normal24000Hz"), false});
+        Writes.Add({TEXT("/Script/Engine.AudioSettings"), TEXT("VoiPSampleRate"), Rate == 16000.0 ? TEXT("Low16000Hz") : TEXT("Normal24000Hz")});
         bRestartOnly = true;
     }
     if (Payload.IsValid() && Payload->HasField(TEXT("voiceEnabled")))
     {
         const FString Flag = GetJsonBoolField(Payload, TEXT("voiceEnabled"), true) ? TEXT("True") : TEXT("False");
-        Writes.Add({TEXT("Voice"), TEXT("bEnabled"), Flag, false});
-        Writes.Add({TEXT("OnlineSubsystem"), TEXT("bHasVoiceEnabled"), Flag, false});
+        Writes.Add({TEXT("Voice"), TEXT("bEnabled"), Flag});
+        Writes.Add({TEXT("OnlineSubsystem"), TEXT("bHasVoiceEnabled"), Flag});
         bRestartOnly = true;
     }
     if (Writes.Num() == 0)
@@ -151,23 +166,20 @@ bool HandleConfigureVoiceSettings(
         return true;
     }
 
-    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    TArray<TSharedPtr<FJsonValue>> Written;
-    TArray<TSharedPtr<FJsonValue>> LiveApplied;
+    // Persist everything first (all or nothing: a failed write puts the earlier ones back), and only
+    // then touch the running editor, so a failure leaves both the file and the editor as they were.
     FString ConfigFile;
-    for (const FVoiceWrite& Write : Writes)
+    TArray<FString> Written;
+    FString Error;
+    if (!McpHandlerUtils::WriteProjectConfigValues(Writes, TEXT("Engine"), ConfigFile, Written, Error))
     {
-        FString Error;
-        if (!McpHandlerUtils::WriteProjectConfigValue(Write.Section, Write.Key, Write.Value, TEXT("Engine"), ConfigFile, Error))
-        {
-            // ponytail: entries written before a failed flush stay written and are listed; rolling the
-            // ini back would need a second write to the file that just refused one.
-            ResponseJson->SetArrayField(TEXT("written"), Written);
-            Subsystem->SendAutomationResponse(Socket, RequestId, false, Error, ResponseJson, TEXT("PERSIST_FAILED"));
-            return true;
-        }
-        Written.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("[%s] %s=%s"), *Write.Section, *Write.Key, *Write.Value)));
-        IConsoleVariable* ConsoleVariable = Write.bConsoleVariable ? IConsoleManager::Get().FindConsoleVariable(*Write.Key) : nullptr;
+        Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("PERSIST_FAILED"));
+        return true;
+    }
+    TArray<FString> LiveApplied;
+    for (const McpHandlerUtils::FProjectConfigEntry& Write : Writes)
+    {
+        IConsoleVariable* ConsoleVariable = Write.Section == ConsoleVariableSection ? IConsoleManager::Get().FindConsoleVariable(*Write.Key) : nullptr;
         if (ConsoleVariable)
         {
             // Same priority the engine applies [SystemSettings] with at startup; a value set from the
@@ -175,7 +187,7 @@ bool HandleConfigureVoiceSettings(
             ConsoleVariable->Set(*Write.Value, ECVF_SetBySystemSettingsIni);
             if (FMath::IsNearlyEqual(ConsoleVariable->GetFloat(), FCString::Atof(*Write.Value)))
             {
-                LiveApplied.Add(MakeShared<FJsonValueString>(Write.Key));
+                LiveApplied.Add(Write.Key);
             }
         }
     }
@@ -185,10 +197,11 @@ bool HandleConfigureVoiceSettings(
             Payload->GetNumberField(TEXT("sampleRate")) == 16000.0 ? EVoiceSampleRate::Low16000Hz : EVoiceSampleRate::Normal24000Hz;
     }
 
+    TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetBoolField(TEXT("success"), true);
-    ResponseJson->SetArrayField(TEXT("written"), Written);
+    ResponseJson->SetArrayField(TEXT("written"), McpHandlerUtils::ToJsonStringArray(Written));
     ResponseJson->SetStringField(TEXT("configFile"), ConfigFile);
-    ResponseJson->SetArrayField(TEXT("liveApplied"), LiveApplied);
+    ResponseJson->SetArrayField(TEXT("liveApplied"), McpHandlerUtils::ToJsonStringArray(LiveApplied));
     ResponseJson->SetBoolField(TEXT("requiresRestart"), bRestartOnly);
     const FString Message = FString::Printf(
         TEXT("Wrote %d voice settings to %s; packaged games read them at startup. %d console variables apply in this editor now%s."),
