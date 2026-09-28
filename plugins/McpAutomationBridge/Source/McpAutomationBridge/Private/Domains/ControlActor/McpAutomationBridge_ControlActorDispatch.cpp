@@ -84,6 +84,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
                                            RequestingSocket);
   if (LowerSub == TEXT("duplicate"))
     return HandleControlActorDuplicate(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("rename"))
+    return HandleControlActorRename(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("attach") || LowerSub == TEXT("attach_actor"))
     return HandleControlActorAttach(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("detach") || LowerSub == TEXT("detach_actor"))

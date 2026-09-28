@@ -4,7 +4,7 @@
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
-import { num } from '../shared/schema-props.js';
+import { bool, num, str } from '../shared/schema-props.js';
 import { DOMAIN, P } from './properties.js';
 
 const FAMILY_SPAWN = 'spawn';
@@ -189,6 +189,39 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       newName: 'Cube2',
       offset: [100, 0, 0],
     },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_actor',
+    action: 'rename',
+    domain: DOMAIN,
+    family: FAMILY_LIFECYCLE,
+    topics: ['rename actor', 'actor label', 'relabel actor', 'outliner name', 'actor object name'],
+    summary: 'Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships.',
+    whenToUse: [
+      'An actor should go by a different name.',
+      'A Blueprint class was renamed and its placed actors still carry the old class in their object names (BP_OldName_C_3): rename each with renameObject, then save the level.',
+    ],
+    whenNotToUse: ['A copy under a new name is wanted (use duplicate with newName).'],
+    inputProps: {
+      actorName: P.actorName,
+      newName: str('The new label; letters, digits, spaces and underscores are safe.'),
+      renameObject: bool('Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note.'),
+    },
+    required: ['actorName', 'newName'],
+    outputProps: {
+      actorName: str('The actor as later calls should name it.'),
+      label: str('The label now.'),
+      oldLabel: str('The label before.'),
+      objectName: str('The object name now.'),
+      oldObjectName: str('The object name before.'),
+      actorPath: str('Full object path of the actor.'),
+      note: str('Why the object name was kept, when renameObject could not rename it.'),
+    },
+    outputRequired: [],
+    effect: 'write',
+    costLatency: 'instant',
+    exampleInput: { action: 'rename', actorName: 'BP_OldEnemy_C_6', newName: 'Enemy_01', renameObject: true },
+    exampleOutput: { success: true, message: 'Actor renamed', actorName: 'Enemy_01', label: 'Enemy_01', oldLabel: 'Enemy_01', objectName: 'Enemy_01', oldObjectName: 'BP_OldEnemy_C_6' },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',

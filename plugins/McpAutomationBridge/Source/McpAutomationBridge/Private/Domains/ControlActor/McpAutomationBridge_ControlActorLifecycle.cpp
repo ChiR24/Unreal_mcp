@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Foundation/McpScopedEditorTransaction.h"
+#include "ObjectTools.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -144,6 +145,65 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
 
 	SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor duplicated"),
                               Data);
+  return true;
+}
+// The label is editor-only data; the object name is what a cooked level ships,
+// and renaming a class leaves its placed actors named after the old one
+// (BP_OldEnemy_C_6 labelled Enemy_01). renameObject renames that object too.
+bool UMcpAutomationBridgeSubsystem::HandleControlActorRename(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString TargetName;
+  FString NewName;
+  Payload->TryGetStringField(TEXT("actorName"), TargetName);
+  Payload->TryGetStringField(TEXT("newName"), NewName);
+  NewName.TrimStartAndEndInline();
+  AActor *Found = TargetName.IsEmpty() ? nullptr : FindActorByName(TargetName, true);
+  if (NewName.IsEmpty() || !Found) {
+    SendStandardErrorResponse(this, Socket, RequestId,
+                              NewName.IsEmpty() ? TEXT("INVALID_ARGUMENT") : TEXT("ACTOR_NOT_FOUND"),
+                              NewName.IsEmpty() ? TEXT("actorName and newName required")
+                                                : FString::Printf(TEXT("No actor is labelled or named %s"), *TargetName),
+                              nullptr);
+    return true;
+  }
+  bool bRenameObject = false;
+  Payload->TryGetBoolField(TEXT("renameObject"), bRenameObject);
+  const FString OldLabel = Found->GetActorLabel();
+  const FString OldObjectName = Found->GetName();
+  FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Rename Actor")),
+                                          EMcpMutationDurability::EditorStateOnly, {Found});
+  Found->SetActorLabel(NewName);
+  if (Found->GetActorLabel() != NewName) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_NAME"),
+                              FString::Printf(TEXT("The editor refused the label '%s': a label cannot hold some characters"), *NewName),
+                              nullptr);
+    return true;
+  }
+  FString Note;
+  FName Wanted(*ObjectTools::SanitizeObjectName(NewName));
+  if (bRenameObject && Wanted != Found->GetFName()) {
+    if (StaticFindObjectFast(nullptr, Found->GetOuter(), Wanted))
+      Wanted = MakeUniqueObjectName(Found->GetOuter(), Found->GetClass(), Wanted);
+    if (Found->IsPackageExternal())
+      Note = TEXT("Object name kept: this actor is saved in its own package (World Partition or one file per actor), where object names stay fixed.");
+    else if (!Found->Rename(*Wanted.ToString(), nullptr, REN_Test | REN_DontCreateRedirectors | REN_NonTransactional))
+      Note = TEXT("Object name kept: the engine refused the rename.");
+    else
+      Found->Rename(*Wanted.ToString(), nullptr, REN_DontCreateRedirectors);
+  }
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
+  Data->SetStringField(TEXT("oldLabel"), OldLabel);
+  Data->SetStringField(TEXT("label"), Found->GetActorLabel());
+  Data->SetStringField(TEXT("oldObjectName"), OldObjectName);
+  Data->SetStringField(TEXT("objectName"), Found->GetName());
+  Data->SetStringField(TEXT("actorPath"), Found->GetPathName());
+  if (!Note.IsEmpty())
+    Data->SetStringField(TEXT("note"), Note);
+  McpHandlerUtils::AddVerification(Data, Found);
+  Transaction.DescribeInto(Data);
+  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actor renamed"), Data);
   return true;
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDeleteByTag(

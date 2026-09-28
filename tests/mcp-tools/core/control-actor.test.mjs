@@ -11,6 +11,7 @@ const DESTROY_ACTOR = `MCP_DestroyActor_${ts}`;
 const TAG_DELETE_ACTOR = `MCP_TagDeleteActor_${ts}`;
 const DUPLICATE_ACTOR = `MCP_DuplicateActor_${ts}`;
 const DUPLICATE_COPY = `MCP_DuplicateActorCopy_${ts}`;
+const RENAMED_COPY = `MCP_RenamedCopy_${ts}`;
 const MESH_ACTOR = `MCP_MeshActor_${ts}`;
 const PARENT_ACTOR = `MCP_ParentActor_${ts}`;
 const CHILD_ACTOR = `MCP_ChildActor_${ts}`;
@@ -66,6 +67,8 @@ const testCases = [
 
   // === TRANSFORM / PHYSICS ===
   { scenario: 'ACTION: duplicate', toolName: 'control_actor', arguments: { action: 'duplicate', actorName: DUPLICATE_ACTOR, newName: DUPLICATE_COPY, offset: { x: 50, y: 0, z: 0 } }, expected: 'success|already exists' },
+  { scenario: 'ACTION: rename relabels an actor and renames its object', toolName: 'control_actor', arguments: { action: 'rename', actorName: DUPLICATE_COPY, newName: RENAMED_COPY, renameObject: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.objectName', equals: RENAMED_COPY, label: 'the object name followed the label' }] },
+  { scenario: 'ACTION: rename back, label only', toolName: 'control_actor', arguments: { action: 'rename', actorName: RENAMED_COPY, newName: DUPLICATE_COPY }, expected: 'success', assertions: [{ path: 'structuredContent.result.label', equals: DUPLICATE_COPY, label: 'the label changed back' }] },
   { scenario: 'CONFIG: set_transform', toolName: 'control_actor', arguments: actorArgs('set_transform', { location: { x: 10, y: 20, z: 130 }, rotation: { x: 0, y: 0, z: 15 }, scale: { x: 1.1, y: 1.1, z: 1.1 } }), expected: 'success' },
   { scenario: 'QUERY: list summary counts the level instead of listing it', toolName: 'control_actor', arguments: { action: 'list', summary: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'no per-actor rows in a summary' }] },
   { scenario: 'CONFIG: set_transform on many actors, each its own transform', toolName: 'control_actor', arguments: { action: 'set_transform', actors: [{ actorName: MAIN_ACTOR, location: { x: 10, y: 20, z: 130 } }, { actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.movedActors', equals: 2, label: 'both actors moved' }, { path: 'structuredContent.result.results.1.location.2', approximately: 120, tolerance: 1, label: 'each item reports its read-back location' }] },

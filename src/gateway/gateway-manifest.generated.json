@@ -3192,6 +3192,7 @@
       "actions": [
         "spawn",
         "duplicate",
+        "rename",
         "delete",
         "set_transform",
         "get_transform",
@@ -3264,6 +3265,7 @@
         "propertyNames",
         "propertyPath",
         "readMode",
+        "renameObject",
         "report",
         "rotation",
         "scale",
@@ -3700,6 +3702,10 @@
             "description": "Which get transform variant to run; omit for 'transform'.",
             "default": "transform"
           },
+          "renameObject": {
+            "type": "boolean",
+            "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note."
+          },
           "report": {
             "type": "string",
             "enum": [
@@ -3825,6 +3831,7 @@
             "enum": [
               "spawn",
               "duplicate",
+              "rename",
               "delete",
               "set_transform",
               "get_transform",

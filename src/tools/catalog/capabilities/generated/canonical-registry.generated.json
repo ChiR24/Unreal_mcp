@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "d1124116db307deb",
-  "recordCount": 385,
+  "catalogRevision": "2127c1a4fa2b1d7a",
+  "recordCount": 386,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -31055,6 +31055,167 @@
         "algorithm": "sha256",
         "schema": "9ccae9965e26e399d6e749ffaea2c8ed57cd29ac6f745394a801ec8b8a79c227",
         "content": "ddb6dbd1925894885df051c9c77cd131938bedf5332820bb4a487f102f31a147"
+      }
+    },
+    {
+      "id": "control_actor.rename",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "control_actor",
+          "action": "rename"
+        }
+      ],
+      "discovery": {
+        "domain": "actor",
+        "family": "lifecycle",
+        "topics": [
+          "rename",
+          "rename actor",
+          "actor label",
+          "relabel actor",
+          "outliner name",
+          "actor object name"
+        ],
+        "summary": "Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships.",
+        "whenToUse": [
+          "An actor should go by a different name.",
+          "A Blueprint class was renamed and its placed actors still carry the old class in their object names (BP_OldName_C_3): rename each with renameObject, then save the level."
+        ],
+        "whenNotToUse": [
+          "A copy under a new name is wanted (use duplicate with newName)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Target actor name in the current level."
+            },
+            "newName": {
+              "type": "string",
+              "description": "The new label; letters, digits, spaces and underscores are safe."
+            },
+            "renameObject": {
+              "type": "boolean",
+              "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note."
+            }
+          },
+          "required": [
+            "action",
+            "actorName",
+            "newName"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "The actor as later calls should name it."
+            },
+            "label": {
+              "type": "string",
+              "description": "The label now."
+            },
+            "oldLabel": {
+              "type": "string",
+              "description": "The label before."
+            },
+            "objectName": {
+              "type": "string",
+              "description": "The object name now."
+            },
+            "oldObjectName": {
+              "type": "string",
+              "description": "The object name before."
+            },
+            "actorPath": {
+              "type": "string",
+              "description": "Full object path of the actor."
+            },
+            "note": {
+              "type": "string",
+              "description": "Why the object name was kept, when renameObject could not rename it."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships.",
+          "input": {
+            "action": "rename",
+            "actorName": "BP_OldEnemy_C_6",
+            "newName": "Enemy_01",
+            "renameObject": true
+          },
+          "output": {
+            "success": true,
+            "message": "Actor renamed",
+            "actorName": "Enemy_01",
+            "label": "Enemy_01",
+            "oldLabel": "Enemy_01",
+            "objectName": "Enemy_01",
+            "oldObjectName": "BP_OldEnemy_C_6"
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "control_actor",
+        "dispatchAction": "rename"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "56283eb9b03b7a6236f304b828d86f22cacd06c02b71a1a061b3cff5ea54cb3f",
+        "content": "3dbb0b83145b88a3367958253d020f53b7d13daad169a51a2fcaf714aa56f4b2"
       }
     },
     {

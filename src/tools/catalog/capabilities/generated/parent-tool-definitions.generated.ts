@@ -3778,6 +3778,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which get transform variant to run; omit for 'transform'.",
           "default": "transform"
         },
+        "renameObject": {
+          "type": "boolean",
+          "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note."
+        },
         "report": {
           "type": "string",
           "enum": [
@@ -3903,6 +3907,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "spawn",
             "duplicate",
+            "rename",
             "delete",
             "set_transform",
             "get_transform",
@@ -3939,6 +3944,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "actorName": {
           "type": "string",
           "description": "Label of the actor whose transform was written."
+        },
+        "actorPath": {
+          "type": "string",
+          "description": "Full object path of the actor."
         },
         "actors": {
           "type": "array",
@@ -4163,6 +4172,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the list was produced while a Play-In-Editor (PIE) session is active."
         },
+        "label": {
+          "type": "string",
+          "description": "The label now."
+        },
         "location": {
           "oneOf": [
             {
@@ -4237,6 +4250,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "nextOffset": {
           "type": "number",
           "description": "The offset of the next page; present only when hasMore."
+        },
+        "note": {
+          "type": "string",
+          "description": "Why the object name was kept, when renameObject could not rename it."
+        },
+        "objectName": {
+          "type": "string",
+          "description": "The object name now."
+        },
+        "oldLabel": {
+          "type": "string",
+          "description": "The label before."
+        },
+        "oldObjectName": {
+          "type": "string",
+          "description": "The object name before."
         },
         "origin": {
           "type": "array",

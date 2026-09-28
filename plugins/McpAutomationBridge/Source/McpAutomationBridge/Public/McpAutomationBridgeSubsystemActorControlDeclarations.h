@@ -14,6 +14,7 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetComponentProperties); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorSetMaterial); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorGetComponents); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorDuplicate); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorRename); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorAttach); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorDetach); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleControlActorFindByTag); \
