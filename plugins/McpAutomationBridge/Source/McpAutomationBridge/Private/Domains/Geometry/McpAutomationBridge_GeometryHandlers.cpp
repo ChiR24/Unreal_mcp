@@ -160,6 +160,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("edge_split")) return HandleEdgeSplit(this, RequestId, Payload, RequestingSocket);
 
     // Topology Operations
+    if (SubAction == TEXT("poke")) return HandlePoke(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("quadrangulate")) return HandleQuadrangulate(this, RequestId, Payload, RequestingSocket);
 
     // Remesh Operations
     if (SubAction == TEXT("remesh_voxel")) return HandleRemeshUniform(this, RequestId, Payload, RequestingSocket, true);

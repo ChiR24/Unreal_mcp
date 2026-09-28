@@ -13612,6 +13612,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "shell",
             "loop_cut",
             "edge_split",
+            "poke",
+            "quadrangulate",
             "extrude_along_spline",
             "duplicate_along_spline"
           ],
@@ -13747,6 +13749,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "reductionPercent": {
           "type": "number",
           "description": "Percent of triangles to reduce."
+        },
+        "respectHardNormals": {
+          "type": "boolean",
+          "description": "Never pair two triangles across a hard edge (default false)."
+        },
+        "respectUVSeams": {
+          "type": "boolean",
+          "description": "Never pair two triangles across a UV seam (default true)."
         },
         "rotation": {
           "oneOf": [
@@ -14102,6 +14112,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Green channel, 0-1."
         },
+        "largerGroups": {
+          "type": "number",
+          "description": "Groups of more than two triangles."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
@@ -14129,9 +14143,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
+        "quadsFormed": {
+          "type": "number",
+          "description": "Triangle pairs grouped as quads."
+        },
         "r": {
           "type": "number",
           "description": "Red channel, 0-1."
+        },
+        "singleTriangleGroups": {
+          "type": "number",
+          "description": "Triangles left in a group of their own."
+        },
+        "skipped": {
+          "type": "number",
+          "description": "Degenerate or missing triangles that were left alone."
         },
         "splitAngle": {
           "type": "number",
@@ -14171,6 +14197,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Index of the triangle the operation targets."
         },
+        "trianglesAfter": {
+          "type": "number",
+          "description": "Triangle count after (before + 2 per poked triangle)."
+        },
+        "trianglesBefore": {
+          "type": "number",
+          "description": "Triangle count before."
+        },
+        "trianglesPoked": {
+          "type": "number",
+          "description": "Triangles that were poked."
+        },
         "u": {
           "type": "number",
           "description": "U coordinate."
@@ -14205,6 +14243,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "vertexIndex2": {
           "type": "integer",
           "description": "Index of the third appended corner."
+        },
+        "verticesAdded": {
+          "type": "number",
+          "description": "New centre vertices."
         },
         "verticesModified": {
           "type": "integer",

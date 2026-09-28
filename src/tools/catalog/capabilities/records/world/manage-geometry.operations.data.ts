@@ -137,4 +137,40 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { actorName: P.actorName, targetActor: P.targetActor, edges: P.edges }, required: ['edges'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'edge_split', targetActor: 'DM_A', edges: [0, 1] },
   }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'poke', plugins: PLUGIN,
+    family: F, summary: 'Poke faces of a dynamic mesh: add a centre vertex to each triangle (optionally pushed out along its normal) and fan it into three triangles.',
+    whenToUse: ['Faces must be split from their centre, or pushed out into pyramids or spikes.'], whenNotToUse: ['The whole mesh should be refined evenly; use subdivide.'],
+    inputProps: {
+      actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices,
+      distance: { type: 'number', description: 'Distance in cm to push each new centre vertex along its face normal (default 0; negative pushes inward).' },
+    },
+    required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: {
+      trianglesPoked: { type: 'number', description: 'Triangles that were poked.' },
+      trianglesBefore: { type: 'number', description: 'Triangle count before.' },
+      trianglesAfter: { type: 'number', description: 'Triangle count after (before + 2 per poked triangle).' },
+      verticesAdded: { type: 'number', description: 'New centre vertices.' },
+      skipped: { type: 'number', description: 'Degenerate or missing triangles that were left alone.' },
+    },
+    exampleInput: { action: 'poke', targetActor: 'DM_A', distance: 10 },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'quadrangulate', plugins: PLUGIN,
+    family: F, summary: 'Group pairs of adjacent triangles of a dynamic mesh into quad PolyGroups, so PolyGroup edits (extrude, inset, bevel by group) act on quads. The mesh itself stays triangles.',
+    whenToUse: ['A triangulated mesh must be edited as quads.'], whenNotToUse: ['Real quad topology is needed in an exported asset; meshes in Unreal are always triangles.'],
+    inputProps: {
+      actorName: P.actorName, targetActor: P.targetActor,
+      respectUVSeams: { type: 'boolean', description: 'Never pair two triangles across a UV seam (default true).' },
+      respectHardNormals: { type: 'boolean', description: 'Never pair two triangles across a hard edge (default false).' },
+    },
+    required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: {
+      quadsFormed: { type: 'number', description: 'Triangle pairs grouped as quads.' },
+      singleTriangleGroups: { type: 'number', description: 'Triangles left in a group of their own.' },
+      largerGroups: { type: 'number', description: 'Groups of more than two triangles.' },
+      triangleCount: { type: 'number', description: 'Triangles in the mesh (unchanged).' },
+    },
+    exampleInput: { action: 'quadrangulate', targetActor: 'DM_A' },
+  }),
 ];

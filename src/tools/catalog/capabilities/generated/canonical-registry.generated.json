@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fa45d870c8756c6b",
+  "catalogRevision": "14d7fb2bc96432f7",
   "recordCount": 382,
   "records": [
     {
@@ -57314,6 +57314,8 @@
         "manage_geometry.shell",
         "manage_geometry.loop_cut",
         "manage_geometry.edge_split",
+        "manage_geometry.poke",
+        "manage_geometry.quadrangulate",
         "manage_geometry.extrude_along_spline",
         "manage_geometry.duplicate_along_spline"
       ],
@@ -57415,6 +57417,20 @@
         },
         {
           "tool": "manage_geometry",
+          "action": "poke",
+          "folded": {
+            "modeling": "poke"
+          }
+        },
+        {
+          "tool": "manage_geometry",
+          "action": "quadrangulate",
+          "folded": {
+            "modeling": "quadrangulate"
+          }
+        },
+        {
+          "tool": "manage_geometry",
           "action": "extrude_along_spline",
           "folded": {
             "modeling": "extrude_along_spline"
@@ -57440,9 +57456,11 @@
           "bridge",
           "loft",
           "sweep",
-          "revolve"
+          "revolve",
+          "poke faces",
+          "triangles to quads"
         ],
-        "summary": "Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, or extrude/duplicate along a spline.",
+        "summary": "Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Dynamic meshes are always triangles.",
         "whenToUse": [
           "Faces must be extruded along a direction.",
           "Faces must be inset.",
@@ -57451,7 +57469,10 @@
           "Edges must be beveled.",
           "Edges must be chamfered."
         ],
-        "whenNotToUse": []
+        "whenNotToUse": [
+          "The whole mesh should be refined evenly; use subdivide.",
+          "Real quad topology is needed in an exported asset; meshes in Unreal are always triangles."
+        ]
       },
       "schemas": {
         "input": {
@@ -57539,6 +57560,14 @@
               },
               "description": "Edge ids to split at their midpoints."
             },
+            "respectUVSeams": {
+              "type": "boolean",
+              "description": "Never pair two triangles across a UV seam (default true)."
+            },
+            "respectHardNormals": {
+              "type": "boolean",
+              "description": "Never pair two triangles across a hard edge (default false)."
+            },
             "count": {
               "type": "integer",
               "description": "Count of repeated elements."
@@ -57559,6 +57588,8 @@
                 "shell",
                 "loop_cut",
                 "edge_split",
+                "poke",
+                "quadrangulate",
                 "extrude_along_spline",
                 "duplicate_along_spline"
               ],
@@ -57587,6 +57618,42 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "trianglesPoked": {
+              "type": "number",
+              "description": "Triangles that were poked."
+            },
+            "trianglesBefore": {
+              "type": "number",
+              "description": "Triangle count before."
+            },
+            "trianglesAfter": {
+              "type": "number",
+              "description": "Triangle count after (before + 2 per poked triangle)."
+            },
+            "verticesAdded": {
+              "type": "number",
+              "description": "New centre vertices."
+            },
+            "skipped": {
+              "type": "number",
+              "description": "Degenerate or missing triangles that were left alone."
+            },
+            "quadsFormed": {
+              "type": "number",
+              "description": "Triangle pairs grouped as quads."
+            },
+            "singleTriangleGroups": {
+              "type": "number",
+              "description": "Triangles left in a group of their own."
+            },
+            "largerGroups": {
+              "type": "number",
+              "description": "Groups of more than two triangles."
+            },
+            "triangleCount": {
+              "type": "number",
+              "description": "Triangles in the mesh (unchanged)."
             }
           },
           "required": [
@@ -57597,7 +57664,7 @@
       },
       "examples": [
         {
-          "title": "Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, or extrude/duplicate along a spline.",
+          "title": "Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Dynamic meshes are always triangles.",
           "input": {
             "action": "model_mesh",
             "targetActor": "DM_A",
@@ -57655,6 +57722,8 @@
             "shell": "shell",
             "loop_cut": "loop_cut",
             "edge_split": "edge_split",
+            "poke": "poke",
+            "quadrangulate": "quadrangulate",
             "extrude_along_spline": "extrude_along_spline",
             "duplicate_along_spline": "duplicate_along_spline"
           },
@@ -57672,6 +57741,8 @@
               "shell",
               "loop_cut",
               "edge_split",
+              "poke",
+              "quadrangulate",
               "extrude_along_spline",
               "duplicate_along_spline"
             ],
@@ -57691,6 +57762,8 @@
               "shell",
               "loop_cut",
               "edge_split",
+              "poke",
+              "quadrangulate",
               "extrude_along_spline",
               "duplicate_along_spline"
             ],
@@ -57703,14 +57776,16 @@
               "outset",
               "offset_faces",
               "bevel",
-              "chamfer"
+              "chamfer",
+              "poke"
             ],
             "distance": [
               "inset",
               "outset",
               "offset_faces",
               "bevel",
-              "chamfer"
+              "chamfer",
+              "poke"
             ],
             "segments": [
               "bevel",
@@ -57745,6 +57820,12 @@
             "edges": [
               "edge_split"
             ],
+            "respectUVSeams": [
+              "quadrangulate"
+            ],
+            "respectHardNormals": [
+              "quadrangulate"
+            ],
             "count": [
               "duplicate_along_spline"
             ]
@@ -57753,8 +57834,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "605cc25f88c7dbe8e24c2578a84a1dbbd551310c8580559a80b88e587d67e7ed",
-        "content": "6b17f277a7b1f87fa655a4f1a652fd407bc71bbe88c4c96cf47a091ef12a851b"
+        "schema": "816fc9ac3f08e8dfba056ff56d90233a1a3f2c7edc0a2439ac999143baffac49",
+        "content": "a5677976c230f5385ea8584f6fd12578cec26f0572371a5fe3615ca6c24b895b"
       }
     },
     {

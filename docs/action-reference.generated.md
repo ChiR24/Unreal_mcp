@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `fa45d870c8756c6b`
+Catalog revision: `14d7fb2bc96432f7`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -383,7 +383,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.get_mesh_info` | `manage_geometry` | `get_mesh_info` | read | read | none | `manage_geometry.get_mesh_info` |
 | `manage_geometry.get_vertex_position` | `manage_geometry` | `get_vertex_position` | read | read | none | `manage_geometry.get_vertex_position` |
 | `manage_geometry.mirror` | `manage_geometry` | `mirror` | write | write | none | `manage_geometry.mirror` |
-| `manage_geometry.model_mesh` | `manage_geometry` | `extrude` | write | write | none | `manage_geometry.model_mesh` `manage_geometry.extrude` `manage_geometry.inset` `manage_geometry.outset` `manage_geometry.offset_faces` `manage_geometry.bevel` `manage_geometry.chamfer` `manage_geometry.bridge` `manage_geometry.loft` `manage_geometry.sweep` `manage_geometry.revolve` `manage_geometry.shell` `manage_geometry.loop_cut` `manage_geometry.edge_split` `manage_geometry.extrude_along_spline` `manage_geometry.duplicate_along_spline` |
+| `manage_geometry.model_mesh` | `manage_geometry` | `extrude` | write | write | none | `manage_geometry.model_mesh` `manage_geometry.extrude` `manage_geometry.inset` `manage_geometry.outset` `manage_geometry.offset_faces` `manage_geometry.bevel` `manage_geometry.chamfer` `manage_geometry.bridge` `manage_geometry.loft` `manage_geometry.sweep` `manage_geometry.revolve` `manage_geometry.shell` `manage_geometry.loop_cut` `manage_geometry.edge_split` `manage_geometry.poke` `manage_geometry.quadrangulate` `manage_geometry.extrude_along_spline` `manage_geometry.duplicate_along_spline` |
 | `manage_geometry.optimize_mesh` | `manage_geometry` | `simplify_mesh` | write | write | none | `manage_geometry.optimize_mesh` `manage_geometry.simplify_mesh` `manage_geometry.remesh_uniform` `manage_geometry.remesh_voxel` `manage_geometry.subdivide` `manage_geometry.merge_vertices` `manage_geometry.weld_vertices` `manage_geometry.remove_degenerates` `manage_geometry.fill_holes` `manage_geometry.flip_normals` `manage_geometry.recalculate_normals` `manage_geometry.recompute_tangents` |
 | `manage_interaction.configure_interactable` | `manage_interaction` | `configure_door_properties` | write | write | none | `manage_interaction.configure_interactable` `manage_interaction.configure_door_properties` `manage_interaction.configure_chest_properties` `manage_interaction.configure_switch_properties` `manage_interaction.configure_interaction_trace` |
 | `manage_interaction.create_interactable` | `manage_interaction` | `create_door_actor` | write | write | none | `manage_interaction.create_interactable` `manage_interaction.create_door_actor` `manage_interaction.create_chest_actor` `manage_interaction.create_switch_actor` `manage_interaction.create_lever_actor` `manage_interaction.create_trigger_actor` `manage_interaction.create_interactable_interface` `manage_interaction.create_interaction_component` |

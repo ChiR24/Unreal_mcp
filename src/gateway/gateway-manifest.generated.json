@@ -10924,6 +10924,8 @@
         "recomputeNormals",
         "recomputeTangents",
         "reductionPercent",
+        "respectHardNormals",
+        "respectUVSeams",
         "rotation",
         "scale",
         "screenSizes",
@@ -11259,6 +11261,8 @@
               "shell",
               "loop_cut",
               "edge_split",
+              "poke",
+              "quadrangulate",
               "extrude_along_spline",
               "duplicate_along_spline"
             ],
@@ -11394,6 +11398,14 @@
           "reductionPercent": {
             "type": "number",
             "description": "Percent of triangles to reduce."
+          },
+          "respectHardNormals": {
+            "type": "boolean",
+            "description": "Never pair two triangles across a hard edge (default false)."
+          },
+          "respectUVSeams": {
+            "type": "boolean",
+            "description": "Never pair two triangles across a UV seam (default true)."
           },
           "rotation": {
             "oneOf": [

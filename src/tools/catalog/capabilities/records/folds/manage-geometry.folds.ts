@@ -18,10 +18,10 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'model_mesh', selector: 'modeling',
-    summary: 'Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, or extrude/duplicate along a spline.',
-    topics: ['extrude', 'inset', 'bevel', 'chamfer', 'bridge', 'loft', 'sweep', 'revolve'],
+    summary: 'Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Dynamic meshes are always triangles.',
+    topics: ['extrude', 'inset', 'bevel', 'chamfer', 'bridge', 'loft', 'sweep', 'revolve', 'poke faces', 'triangles to quads'],
     members: byName(['extrude', 'inset', 'outset', 'offset_faces', 'bevel', 'chamfer', 'bridge', 'loft', 'sweep', 'revolve', 'shell', 'loop_cut',
-      'edge_split', 'extrude_along_spline', 'duplicate_along_spline']),
+      'edge_split', 'poke', 'quadrangulate', 'extrude_along_spline', 'duplicate_along_spline']),
   },
   {
     primary: 'deform_mesh', selector: 'deform',

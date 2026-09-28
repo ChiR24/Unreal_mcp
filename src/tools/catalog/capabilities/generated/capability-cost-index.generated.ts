@@ -1074,7 +1074,9 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_geometry::optimize_mesh": "long-running|high",
   "manage_geometry::outset": "interactive|medium",
   "manage_geometry::pack_uv_islands": "interactive|low",
+  "manage_geometry::poke": "interactive|medium",
   "manage_geometry::project_uv": "interactive|low",
+  "manage_geometry::quadrangulate": "interactive|medium",
   "manage_geometry::recalculate_normals": "long-running|high",
   "manage_geometry::recompute_tangents": "long-running|high",
   "manage_geometry::relax": "interactive|medium",
@@ -1494,4 +1496,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1481;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1483;

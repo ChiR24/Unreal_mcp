@@ -70,7 +70,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("manage_combat"), Detail::MCP_CAP_SHARD_MANAGE_COMBAT_CHUNKS, 5, 5 },
 		{ TEXT("manage_effect"), Detail::MCP_CAP_SHARD_MANAGE_EFFECT_CHUNKS, 13, 13 },
 		{ TEXT("manage_gas"), Detail::MCP_CAP_SHARD_MANAGE_GAS_CHUNKS, 7, 6 },
-		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 17, 15 },
+		{ TEXT("manage_geometry"), Detail::MCP_CAP_SHARD_MANAGE_GEOMETRY_CHUNKS, 18, 15 },
 		{ TEXT("manage_interaction"), Detail::MCP_CAP_SHARD_MANAGE_INTERACTION_CHUNKS, 4, 3 },
 		{ TEXT("manage_inventory"), Detail::MCP_CAP_SHARD_MANAGE_INVENTORY_CHUNKS, 6, 6 },
 		{ TEXT("manage_level"), Detail::MCP_CAP_SHARD_MANAGE_LEVEL_CHUNKS, 12, 17 },
@@ -87,5 +87,5 @@ inline const FMcpCapabilityShard& At(int32 Index)
 
 inline int32 TotalRecordCount() { return 382; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("fa45d870c8756c6b"); }
+inline const TCHAR* CatalogRevision() { return TEXT("14d7fb2bc96432f7"); }
 }
