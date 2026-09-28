@@ -157,6 +157,30 @@ const testCases = [
     ]
   },
   { scenario: 'CONFIG: configure_movement_prediction', toolName: 'manage_networking', arguments: { action: 'configure_movement_prediction', blueprintPath: CHARACTER_BP_PATH, networkSmoothingMode: 'Exponential', networkMaxSmoothUpdateDistance: 512, networkNoSmoothUpdateDistance: 768 }, expected: 'success', assertions: blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'configure_movement_prediction') },
+  {
+    scenario: 'CREATE: add_network_prediction_data adds an owner-only variable',
+    toolName: 'manage_networking',
+    arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.variableName', equals: 'PredictedLocation', label: 'prediction variable named' },
+      { path: 'structuredContent.result.created', equals: true, label: 'prediction variable created' },
+      { path: 'structuredContent.result.saved', equals: true, label: 'blueprint saved with the variable' }
+    ]
+  },
+  {
+    scenario: 'CONFIG: configure_prediction add_data on the same variable changes nothing',
+    toolName: 'manage_networking',
+    arguments: { action: 'configure_prediction', setting: 'add_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Vector', variableName: 'PredictedLocation' },
+    expected: 'success',
+    assertions: [
+      { path: 'structuredContent.result.created', equals: false, label: 'no second variable' },
+      { path: 'structuredContent.result.updated', equals: false, label: 'already owner-only, nothing converted' }
+    ]
+  },
+  { scenario: 'CREATE: add_network_prediction_data default name', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Rotator' }, expected: 'success', assertions: [{ path: 'structuredContent.result.variableName', equals: 'PredictionData_Rotator', label: 'default prediction variable name' }] },
+  { scenario: 'CREATE: add_network_prediction_data refuses a type clash', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'Vector', variableName: 'ReplicatedFlag' }, expected: 'error|VARIABLE_TYPE_CONFLICT' },
+  { scenario: 'CREATE: add_network_prediction_data refuses an unknown type', toolName: 'manage_networking', arguments: { action: 'add_network_prediction_data', blueprintPath: ACTOR_BP_PATH, dataType: 'NoSuchType' }, expected: 'error|TYPE_RESOLUTION_FAILED' },
 
   // === CONNECTION / ROLE / INFO ===
   {
@@ -248,10 +272,61 @@ const testCases = [
       assertions: [
         { path: 'structuredContent.result.enabled', equals: true, label: 'split-screen enabled flag applied' },
         { path: 'structuredContent.result.splitScreenType', equals: 'TwoPlayer_Vertical', label: 'split-screen type applied' },
-        { path: 'structuredContent.result.verticalSplit', equals: true, label: 'vertical split detected' },
+        { path: 'structuredContent.result.layoutsWritten', equals: 'TwoPlayerSplitscreenLayout', label: 'only the two-player layout written' },
         { path: 'structuredContent.result.success', equals: true, label: 'split-screen native configuration succeeded' }
       ]
     },
+    {
+      scenario: 'CONFIG: set_split_screen_type writes only the three-player layout',
+      toolName: 'manage_networking',
+      arguments: { action: 'set_split_screen_type', splitScreenType: 'ThreePlayer_FavorBottom', enabled: true },
+      expected: 'success',
+      assertions: [
+        { path: 'structuredContent.result.splitScreenType', equals: 'ThreePlayer_FavorBottom', label: 'three-player layout applied' },
+        { path: 'structuredContent.result.layoutsWritten', equals: 'ThreePlayerSplitscreenLayout', label: 'only the three-player layout written' },
+        { path: 'structuredContent.result.settingsSaved', equals: true, label: 'GameMapsSettings saved' }
+      ]
+    },
+    { scenario: 'CONFIG: configure_session split_screen refuses an unknown layout', toolName: 'manage_networking', arguments: { action: 'configure_session', setting: 'split_screen', splitScreenType: 'Diagonal' }, expected: 'error|INVALID_ARGUMENT' },
+
+    // === PROJECT NETWORK CONFIG (DefaultEngine.ini, read back from disk) ===
+    {
+      scenario: 'CONFIG: configure_session lan_play writes the default game port',
+      toolName: 'manage_networking',
+      arguments: { action: 'configure_session', setting: 'lan_play', serverPort: 7777 },
+      expected: 'success',
+      assertions: [
+        { path: 'structuredContent.result.serverPort', equals: 7777, label: 'default game port applied' },
+        { path: 'structuredContent.result.persisted', equals: true, label: 'port read back from DefaultEngine.ini' }
+      ]
+    },
+    { scenario: 'CONFIG: configure_lan_play refuses a privileged port', toolName: 'manage_networking', arguments: { action: 'configure_lan_play', serverPort: 80 }, expected: 'error|INVALID_ARGUMENT' },
+    {
+      scenario: 'CONFIG: configure_session interface selects the Null subsystem',
+      toolName: 'manage_networking',
+      arguments: { action: 'configure_session', setting: 'interface', interfaceType: 'Null' },
+      expected: 'success',
+      assertions: [
+        { path: 'structuredContent.result.interfaceType', equals: 'Null', label: 'DefaultPlatformService written' },
+        { path: 'structuredContent.result.requiresRestart', equals: true, label: 'subsystem choice applies on next launch' }
+      ]
+    },
+    { scenario: 'CONFIG: configure_session_interface refuses LAN', toolName: 'manage_networking', arguments: { action: 'configure_session_interface', interfaceType: 'LAN' }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'CONFIG: configure_session_interface refuses a subsystem whose plugin is off', toolName: 'manage_networking', arguments: { action: 'configure_session_interface', interfaceType: 'Tencent' }, expected: 'error|PLUGIN_NOT_ENABLED' },
+    {
+      scenario: 'CONFIG: configure_voice settings writes the voice console variables',
+      toolName: 'manage_networking',
+      arguments: { action: 'configure_voice', setting: 'settings', micInputGain: 1, noiseGateThreshold: 0.08, silenceDetectionThreshold: 0.08, sampleRate: 16000 },
+      expected: 'success',
+      assertions: [
+        { path: 'structuredContent.result.written.3', equals: '[/Script/Engine.AudioSettings] VoiPSampleRate=Low16000Hz', label: 'sample rate entry written last' },
+        { path: 'structuredContent.result.liveApplied.2', equals: 'voice.SilenceDetectionThreshold', label: 'all three voice console variables live' },
+        { path: 'structuredContent.result.requiresRestart', equals: true, label: 'sample rate applies on next launch' }
+      ]
+    },
+    { scenario: 'CONFIG: configure_voice_settings refuses an unsupported sample rate', toolName: 'manage_networking', arguments: { action: 'configure_voice_settings', voiceEnabled: true, sampleRate: 44100 }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'ACTION: join_lan_server outside PIE is refused', toolName: 'manage_networking', arguments: { action: 'host_lan_server', serverOp: 'join', serverAddress: '127.0.0.1', serverPort: 7777, travelOptions: 'Name=McpJoin' }, expected: 'error|PIE_NOT_RUNNING' },
+    { scenario: 'ACTION: join_lan_server refuses an address carrying a port', toolName: 'manage_networking', arguments: { action: 'join_lan_server', serverAddress: '127.0.0.1:7777' }, expected: 'error|INVALID_ARGUMENT' },
 
     // === PIE-ONLY LOCAL MULTIPLAYER ===
     { scenario: 'PLAYBACK: start PIE for local players', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success' },
@@ -379,6 +454,7 @@ const testCases = [
   const PLAYER_STATE_NAME = `BP_FrameworkPlayerState_${ts}`;
   const GAME_INSTANCE_NAME = `BP_FrameworkGameInstance_${ts}`;
   const HUD_NAME = `BP_FrameworkHUD_${ts}`;
+  const PLAYER_START_NAME = `MCP_PlayerStart_${ts}`;
 
   const GAME_MODE_ASSET_PATH = `${TEST_FOLDER}/${GAME_MODE_NAME}`;
   const GAME_MODE_OBJECT_PATH = `${GAME_MODE_ASSET_PATH}.${GAME_MODE_NAME}`;
@@ -443,6 +519,12 @@ const testCases = [
 
     { scenario: 'CONFIG: set_respawn_rules', toolName: 'manage_networking', arguments: { action: 'set_respawn_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, respawnDelay: 9.25 }, expected: 'success', assertions: [...gameModePathAssertion('respawn rules'), { path: 'structuredContent.result.configuration.respawnDelay', equals: 9.25, label: 'respawn delay configured' }] },
     { scenario: 'CONFIG: configure_spectating', toolName: 'manage_networking', arguments: { action: 'configure_spectating', gameModeBlueprint: GAME_MODE_OBJECT_PATH, spectatorClass: SPECTATOR_CLASS, save: true }, expected: 'success', assertions: gameModePathAssertion('spectating') },
+    { scenario: 'Setup: spawn a PlayerStart', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Script/Engine.PlayerStart', actorName: PLAYER_START_NAME, location: { x: 0, y: 400, z: 120 } }, expected: 'success' },
+    { scenario: 'CONFIG: configure_player_start teamIndex sets TeamN', toolName: 'manage_networking', arguments: { action: 'configure_player_start', playerStartName: PLAYER_START_NAME, teamIndex: 1 }, expected: 'success', assertions: [{ path: 'structuredContent.result.playerStartTag', equals: 'Team1', label: 'team tag set' }] },
+    { scenario: 'CONFIG: configure_player_start explicit tag reports the previous one', toolName: 'manage_networking', arguments: { action: 'configure_player_start', playerStartName: PLAYER_START_NAME, playerStartTag: 'RedBase' }, expected: 'success', assertions: [{ path: 'structuredContent.result.playerStartTag', equals: 'RedBase', label: 'explicit tag set' }, { path: 'structuredContent.result.previousTag', equals: 'Team1', label: 'previous tag reported' }] },
+    { scenario: 'CONFIG: configure_player_start refuses teamIndex 0', toolName: 'manage_networking', arguments: { action: 'configure_player_start', playerStartName: PLAYER_START_NAME, teamIndex: 0 }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'CONFIG: configure_player_start refuses an unknown PlayerStart', toolName: 'manage_networking', arguments: { action: 'configure_player_start', playerStartName: `NoSuchStart_${ts}`, playerStartTag: 'RedBase' }, expected: 'error|NOT_FOUND' },
+    { scenario: 'Cleanup: delete the PlayerStart', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [PLAYER_START_NAME] }, expected: 'success|not found' },
 
     { scenario: 'INFO: get_game_framework_info final readback', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'game framework info native success flag' }, { path: 'structuredContent.result.gameFrameworkInfo.gameModeClass', equals: `${GAME_MODE_OBJECT_PATH}_C`, label: 'game mode generated class read back' }, { path: 'structuredContent.result.gameFrameworkInfo.defaultPawnClass', equals: DEFAULT_PAWN_CLASS, label: 'final default pawn readback' }, { path: 'structuredContent.result.gameFrameworkInfo.playerControllerClass', equals: PLAYER_CONTROLLER_CLASS, label: 'final player controller readback' }, { path: 'structuredContent.result.gameFrameworkInfo.gameStateClass', equals: GAME_STATE_CLASS, label: 'final game state readback' }, { path: 'structuredContent.result.gameFrameworkInfo.playerStateClass', equals: PLAYER_STATE_CLASS, label: 'final player state readback' }, { path: 'structuredContent.result.gameFrameworkInfo.hudClass', equals: `${HUD_OBJECT_PATH}_C`, label: 'final HUD class readback' }] },
 

@@ -13171,14 +13171,15 @@
         "add_legacy_mapping",
         "add_local_player",
         "configure_input",
-        "check_authority",
         "configure_prediction",
+        "check_authority",
         "configure_game_mode",
+        "configure_session",
         "configure_replication",
+        "configure_player_start",
         "configure_rpc",
-        "configure_split_screen",
-        "create_framework_class",
         "configure_voice",
+        "create_framework_class",
         "get_game_framework_info",
         "get_input_info",
         "get_networking_info",
@@ -13205,6 +13206,7 @@
         "contextPath",
         "controllerId",
         "ctrl",
+        "dataType",
         "defaultPawnClass",
         "dormancy",
         "enablePrediction",
@@ -13214,6 +13216,7 @@
         "gameModeBlueprint",
         "gameStateClass",
         "hudClass",
+        "interfaceType",
         "isAutonomousProxy",
         "key",
         "kind",
@@ -13224,6 +13227,7 @@
         "maxClientRate",
         "maxInternetClientRate",
         "maxPlayers",
+        "micInputGain",
         "minNetUpdateFrequency",
         "modifierType",
         "muted",
@@ -13236,6 +13240,7 @@
         "networkMaxSmoothUpdateDistance",
         "networkNoSmoothUpdateDistance",
         "networkSmoothingMode",
+        "noiseGateThreshold",
         "onlyRelevantToOwner",
         "ownerActorName",
         "parentClass",
@@ -13244,6 +13249,8 @@
         "playerControllerClass",
         "playerIndex",
         "playerName",
+        "playerStartName",
+        "playerStartTag",
         "playerStateClass",
         "priority",
         "propertyName",
@@ -13254,21 +13261,28 @@
         "respawnDelay",
         "role",
         "rpcType",
+        "sampleRate",
         "save",
         "scale",
+        "serverAddress",
+        "serverOp",
+        "serverPort",
         "setting",
         "shift",
+        "silenceDetectionThreshold",
         "smoothingRate",
         "spatiallyLoaded",
         "spectatorClass",
         "splitScreenType",
         "systemWide",
         "targetPlayerId",
+        "teamIndex",
         "travelOptions",
         "triggerType",
         "useOwnerNetRelevancy",
         "usePushModel",
         "valueType",
+        "variableName",
         "voiceEnabled",
         "withValidation"
       ],
@@ -13339,6 +13353,10 @@
             "type": "boolean",
             "description": "Whether the Ctrl modifier must be held."
           },
+          "dataType": {
+            "type": "string",
+            "description": "Variable type in the add_variable grammar: Vector, Rotator, Transform, Float, Int, Bool, Name, Struct:/Game/Path/S_Name.S_Name, Array:Vector and so on."
+          },
           "defaultPawnClass": {
             "type": "string",
             "description": "Default pawn class."
@@ -13374,6 +13392,10 @@
           "hudClass": {
             "type": "string",
             "description": "Hud class."
+          },
+          "interfaceType": {
+            "type": "string",
+            "description": "Online subsystem name: Null (LAN and local play), Steam, EOS, ... Its OnlineSubsystem<Name> plugin must be enabled; LAN is refused (use Null)."
           },
           "isAutonomousProxy": {
             "type": "boolean",
@@ -13427,6 +13449,10 @@
             "type": "number",
             "description": "Max players."
           },
+          "micInputGain": {
+            "type": "number",
+            "description": "Microphone input gain as a linear multiplier, 0 to 10 (console variable voice.MicInputGain, default 1)."
+          },
           "minNetUpdateFrequency": {
             "type": "number",
             "description": "Min net update frequency."
@@ -13475,6 +13501,10 @@
             "type": "string",
             "description": "CharacterMovement NetworkSmoothingMode: Disabled, Linear, Exponential or Replay."
           },
+          "noiseGateThreshold": {
+            "type": "number",
+            "description": "Noise gate threshold in linear amplitude, 0 to 1: quieter input is sent as silence (voice.MicNoiseGateThreshold)."
+          },
           "onlyRelevantToOwner": {
             "type": "boolean",
             "description": "Only relevant to owner."
@@ -13506,6 +13536,14 @@
           "playerName": {
             "type": "string",
             "description": "Player name."
+          },
+          "playerStartName": {
+            "type": "string",
+            "description": "Label or name of the PlayerStart in the open level; optional only when the level has exactly one."
+          },
+          "playerStartTag": {
+            "type": "string",
+            "description": "Tag to set on the PlayerStart (PlayerStartTag); give it or teamIndex."
           },
           "playerStateClass": {
             "type": "string",
@@ -13547,6 +13585,10 @@
             "type": "string",
             "description": "Server, Client or NetMulticast (Multicast is accepted too); anything else is refused."
           },
+          "sampleRate": {
+            "type": "number",
+            "description": "VoIP sample rate in Hz, 16000 or 24000 (Audio settings VoiPSampleRate)."
+          },
           "save": {
             "type": "boolean",
             "description": "Save the Blueprint asset to disk after the change (default true)."
@@ -13555,12 +13597,30 @@
             "type": "number",
             "description": "Axis scale value."
           },
+          "serverAddress": {
+            "type": "string",
+            "description": "Host name or IP of the server to join, such as 127.0.0.1 (no port, which goes in serverPort)."
+          },
+          "serverOp": {
+            "type": "string",
+            "enum": [
+              "host",
+              "join"
+            ],
+            "description": "Which host lan server variant to run; omit for 'host'.",
+            "default": "host"
+          },
+          "serverPort": {
+            "type": "number",
+            "description": "Game port, a whole number (engine default 7777). configure_lan_play takes 1024 to 65535; a join without it uses the project default port."
+          },
           "setting": {
             "type": "string",
             "enum": [
               "client",
               "movement",
               "server_correction",
+              "add_data",
               "create",
               "validation",
               "reliability",
@@ -13580,7 +13640,11 @@
               "respawn",
               "spectating",
               "enable",
+              "settings",
               "mute_player",
+              "lan_play",
+              "interface",
+              "split_screen",
               "property",
               "condition",
               "rep_notify",
@@ -13603,6 +13667,10 @@
             "type": "boolean",
             "description": "Whether the Shift modifier must be held."
           },
+          "silenceDetectionThreshold": {
+            "type": "number",
+            "description": "Silence detection threshold in linear amplitude, 0 to 1: below it no voice packet is sent (voice.SilenceDetectionThreshold)."
+          },
           "smoothingRate": {
             "type": "number",
             "description": "Seconds simulated proxies take to smooth a server correction (location and rotation, dedicated and listen server)."
@@ -13617,7 +13685,7 @@
           },
           "splitScreenType": {
             "type": "string",
-            "description": "Split screen type."
+            "description": "Split-screen layout name: None (off), TwoPlayer_Horizontal, TwoPlayer_Vertical, ThreePlayer_FavorTop, ThreePlayer_FavorBottom, ThreePlayer_Vertical, ThreePlayer_Horizontal, FourPlayer_Grid, FourPlayer_Vertical or FourPlayer_Horizontal."
           },
           "systemWide": {
             "type": "boolean",
@@ -13627,9 +13695,13 @@
             "type": "string",
             "description": "Target player id."
           },
+          "teamIndex": {
+            "type": "number",
+            "description": "1-based team number; sets the PlayerStart tag TeamN. Give it or playerStartTag."
+          },
           "travelOptions": {
             "type": "string",
-            "description": "Travel options."
+            "description": "Extra URL options appended to the travel URL, such as Name=Player1 or ?Team=2."
           },
           "triggerType": {
             "type": "string",
@@ -13647,9 +13719,13 @@
             "type": "string",
             "description": "Value type."
           },
+          "variableName": {
+            "type": "string",
+            "description": "Variable to add or convert; default PredictionData_<dataType> (required when dataType is not a plain type name)."
+          },
           "voiceEnabled": {
             "type": "boolean",
-            "description": "Voice enabled."
+            "description": "Whether voice chat is on. enable starts or stops the voice chat service now; settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled."
           },
           "withValidation": {
             "type": "boolean",
@@ -13661,14 +13737,15 @@
               "add_legacy_mapping",
               "add_local_player",
               "configure_input",
-              "check_authority",
               "configure_prediction",
+              "check_authority",
               "configure_game_mode",
+              "configure_session",
               "configure_replication",
+              "configure_player_start",
               "configure_rpc",
-              "configure_split_screen",
-              "create_framework_class",
               "configure_voice",
+              "create_framework_class",
               "get_game_framework_info",
               "get_input_info",
               "get_networking_info",

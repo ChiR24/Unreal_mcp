@@ -1,5 +1,5 @@
 import type { CapabilityRecordSource, JsonObject } from '../../model.js';
-import { utilityRecord, withInputProps } from '../utility/utility-record-builders.js';
+import { utilityRecord, withInputProps, withTopics } from '../utility/utility-record-builders.js';
 
 const T = 'manage_networking' as const;
 // Every Game Framework action authors a Blueprint asset, and an unsaved edit is lost on the next
@@ -45,5 +45,13 @@ export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
   f('configure_spectating', 'Set the GameMode spectator pawn class (SpectatorClass).', ['gameModeBlueprint', 'blueprintPath', 'spectatorClass', 'save'], ['gameModeBlueprint', 'spectatorClass'], [], [], false, {
     spectatorClass: { type: 'string', description: 'SpectatorPawn class path, e.g. /Script/Engine.SpectatorPawn or a Blueprint path.' },
   }),
+  // A level edit, not a Blueprint one: undoable and left unsaved, so it takes no save flag.
+  withTopics(utilityRecord({
+    tool: T, action: 'configure_player_start', family: 'gameFramework',
+    summary: 'Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N (team spawns match it). Undoable; the level is left modified, not saved.',
+    params: ['playerStartName', 'playerStartTag', 'teamIndex'], requiredOneOf: ['playerStartTag', 'teamIndex'],
+    outputs: ['playerStart', 'playerStartTag', 'previousTag'], outputRequired: ['playerStart', 'playerStartTag', 'previousTag'],
+    dispatchAction: 'manage_game_framework',
+  }), ['player start', 'player start tag', 'team spawn point', 'spawn point tag']),
   f('get_game_framework_info', 'Read Game Framework class and rule state.', ['gameModeBlueprint', 'blueprintPath'], [], ['gameFrameworkInfo'], ['gameFrameworkInfo'], true),
 ];

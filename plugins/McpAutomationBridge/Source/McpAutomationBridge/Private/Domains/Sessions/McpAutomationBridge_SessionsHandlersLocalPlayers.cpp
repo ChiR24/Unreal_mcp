@@ -10,7 +10,28 @@
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
-#include "GameFramework/GameUserSettings.h"
+
+namespace
+{
+// Every named layout the engine has, keyed by player count: each name writes only its own count's field.
+struct FMcpSplitScreenLayout
+{
+    const TCHAR* Name;
+    int32 Players;
+    uint8 Value;
+};
+const FMcpSplitScreenLayout GMcpSplitScreenLayouts[] = {
+    {TEXT("TwoPlayer_Horizontal"), 2, ETwoPlayerSplitScreenType::Horizontal},
+    {TEXT("TwoPlayer_Vertical"), 2, ETwoPlayerSplitScreenType::Vertical},
+    {TEXT("ThreePlayer_FavorTop"), 3, EThreePlayerSplitScreenType::FavorTop},
+    {TEXT("ThreePlayer_FavorBottom"), 3, EThreePlayerSplitScreenType::FavorBottom},
+    {TEXT("ThreePlayer_Vertical"), 3, EThreePlayerSplitScreenType::Vertical},
+    {TEXT("ThreePlayer_Horizontal"), 3, EThreePlayerSplitScreenType::Horizontal},
+    {TEXT("FourPlayer_Grid"), 4, static_cast<uint8>(EFourPlayerSplitScreenType::Grid)},
+    {TEXT("FourPlayer_Vertical"), 4, static_cast<uint8>(EFourPlayerSplitScreenType::Vertical)},
+    {TEXT("FourPlayer_Horizontal"), 4, static_cast<uint8>(EFourPlayerSplitScreenType::Horizontal)},
+};
+}
 
 bool HandleConfigureSplitScreen(
     UMcpAutomationBridgeSubsystem* Subsystem,
@@ -18,45 +39,92 @@ bool HandleConfigureSplitScreen(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    using namespace SessionsHelpers;
-
-    if (!Payload.IsValid() || (!Payload->HasField(TEXT("enabled")) && !Payload->HasField(TEXT("splitScreenType"))))
+    const bool bHasEnabled = Payload.IsValid() && Payload->HasField(TEXT("enabled"));
+    const bool bHasType = Payload.IsValid() && Payload->HasField(TEXT("splitScreenType"));
+    if (!bHasEnabled && !bHasType)
     {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("At least one split screen parameter is required (enabled or splitScreenType)"), nullptr);
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("Pass enabled (turn split screen on or off) or splitScreenType (a layout name, or None)."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
-    bool bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
-    FString SplitScreenType = GetJsonStringField(Payload, TEXT("splitScreenType"), TEXT("TwoPlayer_Horizontal"));
-    bool bVerticalSplit = SplitScreenType.Contains(TEXT("Vertical"));
-    // Split screen lives on UGameMapsSettings, not UGameUserSettings (dogfood #178: the old code
-    // saved the user settings untouched and get_sessions_info never saw the change).
-    UGameMapsSettings* MapsSettings = GetMutableDefault<UGameMapsSettings>();
-    MapsSettings->bUseSplitscreen = bEnabled;
-    MapsSettings->TwoPlayerSplitscreenLayout = bVerticalSplit ? ETwoPlayerSplitScreenType::Vertical : ETwoPlayerSplitScreenType::Horizontal;
-    MapsSettings->ThreePlayerSplitscreenLayout = bVerticalSplit ? EThreePlayerSplitScreenType::Vertical : EThreePlayerSplitScreenType::FavorTop;
-    MapsSettings->TryUpdateDefaultConfigFile();
-    UE_LOG(LogMcpSessionsHandlers, Log, TEXT("Split-screen configured: Enabled=%s, Type=%s"),
-        bEnabled ? TEXT("true") : TEXT("false"), *SplitScreenType);
+    const FString TypeName = GetJsonStringField(Payload, TEXT("splitScreenType"), TEXT("")).TrimStartAndEnd();
+    const bool bNone = bHasType && TypeName.Equals(TEXT("None"), ESearchCase::IgnoreCase);
+    const FMcpSplitScreenLayout* Layout = nullptr;
+    FString ValidNames = TEXT("None");
+    for (const FMcpSplitScreenLayout& Candidate : GMcpSplitScreenLayouts)
+    {
+        ValidNames += FString(TEXT(", ")) + Candidate.Name;
+        if (TypeName.Equals(Candidate.Name, ESearchCase::IgnoreCase))
+        {
+            Layout = &Candidate;
+        }
+    }
+    if (bHasType && !bNone && !Layout)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown splitScreenType '%s'; nothing was changed. Use one of: %s."), *TypeName, *ValidNames),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    if (bNone && GetJsonBoolField(Payload, TEXT("enabled"), false))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("splitScreenType None turns split screen off, which contradicts enabled true; pick a layout name instead."),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    const bool bEnabled = !bNone && GetJsonBoolField(Payload, TEXT("enabled"), true);
 
-    UGameInstance* GameInstance = GetGameInstance();
-    const FString StatusMessage = GameInstance
-        ? FString::Printf(TEXT("Split-screen %s with %d local players"),
-            bEnabled ? TEXT("configured") : TEXT("disabled"), GameInstance->GetLocalPlayers().Num())
-        : FString(TEXT("Split screen settings written to GameMapsSettings (DefaultEngine.ini)"));
+    // Split screen lives on UGameMapsSettings (DefaultEngine.ini), which the game viewport reads every
+    // frame, so the change is live in PIE and ships with the game.
+    UGameMapsSettings* MapsSettings = GetMutableDefault<UGameMapsSettings>();
+    const bool bPreviousEnabled = MapsSettings->bUseSplitscreen;
+    const TEnumAsByte<ETwoPlayerSplitScreenType::Type> PreviousTwo = MapsSettings->TwoPlayerSplitscreenLayout;
+    const TEnumAsByte<EThreePlayerSplitScreenType::Type> PreviousThree = MapsSettings->ThreePlayerSplitscreenLayout;
+    const EFourPlayerSplitScreenType PreviousFour = MapsSettings->FourPlayerSplitscreenLayout;
+
+    MapsSettings->bUseSplitscreen = bEnabled;
+    FString LayoutWritten;
+    if (Layout && Layout->Players == 2)
+    {
+        MapsSettings->TwoPlayerSplitscreenLayout = static_cast<ETwoPlayerSplitScreenType::Type>(Layout->Value);
+        LayoutWritten = TEXT("TwoPlayerSplitscreenLayout");
+    }
+    else if (Layout && Layout->Players == 3)
+    {
+        MapsSettings->ThreePlayerSplitscreenLayout = static_cast<EThreePlayerSplitScreenType::Type>(Layout->Value);
+        LayoutWritten = TEXT("ThreePlayerSplitscreenLayout");
+    }
+    else if (Layout)
+    {
+        MapsSettings->FourPlayerSplitscreenLayout = static_cast<EFourPlayerSplitScreenType>(Layout->Value);
+        LayoutWritten = TEXT("FourPlayerSplitscreenLayout");
+    }
+    if (!MapsSettings->TryUpdateDefaultConfigFile())
+    {
+        MapsSettings->bUseSplitscreen = bPreviousEnabled;
+        MapsSettings->TwoPlayerSplitscreenLayout = PreviousTwo;
+        MapsSettings->ThreePlayerSplitscreenLayout = PreviousThree;
+        MapsSettings->FourPlayerSplitscreenLayout = PreviousFour;
+        Subsystem->SendAutomationError(Socket, RequestId,
+            TEXT("DefaultEngine.ini could not be written (read-only, or under source control without a checkout); the split-screen settings were restored."),
+            TEXT("PERSIST_FAILED"));
+        return true;
+    }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
-    ResponseJson->SetStringField(TEXT("splitScreenType"), SplitScreenType);
-    ResponseJson->SetBoolField(TEXT("verticalSplit"), bVerticalSplit);
     ResponseJson->SetBoolField(TEXT("success"), true);
-    ResponseJson->SetStringField(TEXT("status"), StatusMessage);
+    ResponseJson->SetBoolField(TEXT("enabled"), bEnabled);
+    ResponseJson->SetStringField(TEXT("splitScreenType"), Layout ? FString(Layout->Name) : (bNone ? FString(TEXT("None")) : FString()));
+    ResponseJson->SetStringField(TEXT("layoutsWritten"), LayoutWritten);
     ResponseJson->SetBoolField(TEXT("settingsSaved"), true);
-
-    FString Message = FString::Printf(TEXT("Split-screen %s with type: %s - %s"),
-        bEnabled ? TEXT("enabled") : TEXT("disabled"), *SplitScreenType, *StatusMessage);
-
+    const FString LayoutNote = Layout
+        ? FString::Printf(TEXT(", %s = %s (other player counts unchanged)"), *LayoutWritten, Layout->Name)
+        : FString();
+    const FString Message = FString::Printf(
+        TEXT("Split screen %s%s: written to DefaultEngine.ini (GameMapsSettings) and applied to the running editor and PIE at once."),
+        bEnabled ? TEXT("on") : TEXT("off"), *LayoutNote);
     Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
     return true;
 }

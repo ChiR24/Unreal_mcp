@@ -1229,6 +1229,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_networking::add_legacy_mapping": "interactive|low",
   "manage_networking::add_local_player": "interactive|low",
   "manage_networking::add_mapping": "interactive|low",
+  "manage_networking::add_network_prediction_data": "interactive|low",
   "manage_networking::check_authority": "interactive|low",
   "manage_networking::check_has_authority": "interactive|low",
   "manage_networking::check_is_locally_controlled": "interactive|low",
@@ -1236,11 +1237,13 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_networking::configure_game_mode": "interactive|low",
   "manage_networking::configure_game_rules": "interactive|low",
   "manage_networking::configure_input": "interactive|low",
+  "manage_networking::configure_lan_play": "interactive|low",
   "manage_networking::configure_movement_prediction": "interactive|low",
   "manage_networking::configure_net_cull_distance": "interactive|low",
   "manage_networking::configure_net_driver": "interactive|low",
   "manage_networking::configure_net_priority": "interactive|low",
   "manage_networking::configure_net_update_frequency": "interactive|low",
+  "manage_networking::configure_player_start": "interactive|low",
   "manage_networking::configure_prediction": "interactive|low",
   "manage_networking::configure_push_model": "interactive|low",
   "manage_networking::configure_replicated_movement": "interactive|low",
@@ -1249,9 +1252,12 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_networking::configure_rpc": "interactive|low",
   "manage_networking::configure_rpc_validation": "interactive|low",
   "manage_networking::configure_server_correction": "interactive|low",
+  "manage_networking::configure_session": "interactive|low",
+  "manage_networking::configure_session_interface": "interactive|low",
   "manage_networking::configure_spectating": "interactive|low",
   "manage_networking::configure_split_screen": "interactive|low",
   "manage_networking::configure_voice": "interactive|low",
+  "manage_networking::configure_voice_settings": "interactive|low",
   "manage_networking::create_framework_class": "interactive|low",
   "manage_networking::create_game_instance": "interactive|low",
   "manage_networking::create_game_mode": "interactive|low",
@@ -1269,6 +1275,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_networking::get_networking_info": "interactive|low",
   "manage_networking::get_sessions_info": "interactive|low",
   "manage_networking::host_lan_server": "interactive|low",
+  "manage_networking::join_lan_server": "interactive|low",
   "manage_networking::manage_game_framework": "interactive|low",
   "manage_networking::manage_input": "interactive|low",
   "manage_networking::manage_networking": "interactive|low",
@@ -1298,6 +1305,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_networking::set_replication_condition": "interactive|low",
   "manage_networking::set_respawn_rules": "interactive|low",
   "manage_networking::set_rpc_reliability": "interactive|low",
+  "manage_networking::set_split_screen_type": "interactive|low",
   "manage_pcg::add_actor_data_node": "interactive|low",
   "manage_pcg::add_actor_spawner": "interactive|low",
   "manage_pcg::add_bounds_filter": "interactive|low",
@@ -1503,4 +1511,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1490;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1498;

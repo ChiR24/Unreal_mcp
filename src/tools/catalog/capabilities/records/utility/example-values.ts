@@ -9,7 +9,7 @@
  * gateway runs against real calls (`gateway-execute-validate.ts`).
  *
  * Values below are real Unreal vocabulary, not filler: enum members come from
- * the plugin's own enums (e.g. session `interfaceType: 'Default' | 'LAN' | 'Null'`),
+ * the plugin's own enums (e.g. session `interfaceType: 'Null' | 'Steam' | 'EOS'`),
  * and reflection-boundary
  * objects are populated from fields the plugin genuinely writes.
  *
@@ -40,7 +40,7 @@ const FIELD_EXAMPLES: Readonly<Record<string, JsonValue>> = {
   condition: 'COND_OwnerOnly',
   contextPath: '/Game/Input/IMC_Default',
   controllerId: 0,
-  dataType: 'FVector',
+  dataType: 'Vector',
   dormancy: 'DORM_DormantAll',
   effectType: 'SourceEffectFilter',
   enablePrediction: true,
@@ -53,7 +53,27 @@ const FIELD_EXAMPLES: Readonly<Record<string, JsonValue>> = {
   hasAuthority: true,
   inputName: 'Frequency',
   inputType: 'Float',
-  interfaceType: 'LAN',
+  interfaceType: 'Null',
+  configFile: 'C:/Projects/Arena/Config/DefaultEngine.ini',
+  connectionURL: '127.0.0.1:7777',
+  liveApplied: ['voice.MicNoiseGateThreshold'],
+  persisted: true,
+  pieWorld: 'Arena (PIE instance 1)',
+  playerStart: 'PlayerStart_Team1',
+  playerStartTag: 'Team1',
+  previousPort: 7777,
+  previousTag: 'None',
+  requiresRestart: false,
+  serverPort: 7777,
+  settingsSaved: true,
+  travelStarted: true,
+  written: ['[SystemSettings] voice.MicNoiseGateThreshold=0.05'],
+  created: true,
+  updated: false,
+  actorReplicates: true,
+  compiled: true,
+  saved: true,
+  variableName: 'PredictionData_Vector',
   isLocalController: true,
   isLocallyControlled: true,
   key: 'SpaceBar',
@@ -92,6 +112,7 @@ const FIELD_EXAMPLES: Readonly<Record<string, JsonValue>> = {
   targetNodeId: 'Node_1',
   triggerType: 'Pressed',
   voiceEnabled: true,
+  micInputGain: 1.5,
   // Exactly the fields declared by `VoiceSettings` in handler-session-types.ts.
   voiceSettings: { volume: 0.8, noiseSuppression: true, echoCancellation: true, sampleRate: 48000 },
 };

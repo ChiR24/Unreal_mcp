@@ -16,9 +16,9 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_prediction', selector: 'setting',
-    summary: 'Configure client-side prediction: client, movement, or server correction.',
-    topics: ['client prediction', 'movement prediction', 'server correction'],
-    members: { client: 'configure_client_prediction', movement: 'configure_movement_prediction', server_correction: 'configure_server_correction' },
+    summary: 'Configure client-side prediction: client, movement, server correction, or add prediction data (a variable replicated only to the owning client).',
+    topics: ['client prediction', 'movement prediction', 'server correction', 'network prediction', 'prediction data', 'owner only variable'],
+    members: { client: 'configure_client_prediction', movement: 'configure_movement_prediction', server_correction: 'configure_server_correction', add_data: 'add_network_prediction_data' },
   },
   {
     primary: 'configure_rpc', selector: 'setting',
@@ -39,8 +39,8 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_game_mode', selector: 'setting',
-    summary: 'Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating, player start.',
-    topics: ['default pawn', 'game rules', 'respawn', 'spectating', 'player start'],
+    summary: 'Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.',
+    topics: ['default pawn', 'game rules', 'respawn', 'spectating'],
     members: {
       default_pawn_class: 'set_default_pawn_class', player_controller_class: 'set_player_controller_class', game_state_class: 'set_game_state_class', player_state_class: 'set_player_state_class',
       hud_class: 'set_hud_class', rules: 'configure_game_rules', respawn: 'set_respawn_rules', spectating: 'configure_spectating',
@@ -48,9 +48,22 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'configure_voice', selector: 'setting',
-    summary: 'Enable voice chat or mute a player.',
-    topics: ['voice chat', 'mute player'],
-    members: { enable: 'enable_voice_chat', mute_player: 'mute_player' },
+    summary: 'Voice chat: start or stop it now, set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player.',
+    topics: ['voice chat', 'voip settings', 'mic gain', 'noise gate', 'mute player'],
+    members: { enable: 'enable_voice_chat', settings: 'configure_voice_settings', mute_player: 'mute_player' },
+  },
+  {
+    primary: 'configure_session', selector: 'setting',
+    summary: 'Configure multiplayer for the project: the default game port for LAN hosting and joining, the online subsystem (Null, Steam, EOS...), and the local split-screen layout. Written to DefaultEngine.ini.',
+    topics: ['lan play', 'game port', 'server port', 'online subsystem', 'session interface', 'split screen', 'split screen layout'],
+    members: { lan_play: 'configure_lan_play', interface: 'configure_session_interface', split_screen: 'configure_split_screen' },
+    aliasMembers: { split_screen: 'set_split_screen_type' },
+  },
+  {
+    primary: 'host_lan_server', selector: 'serverOp',
+    summary: 'Host a LAN listen server (build the travel URL, optionally travel to it), or make a running Play-In-Editor instance join one.',
+    topics: ['host server', 'join server', 'lan server', 'listen server', 'connect to server'],
+    members: { host: 'host_lan_server', join: 'join_lan_server' },
   },
   {
     primary: 'configure_input', selector: 'setting',

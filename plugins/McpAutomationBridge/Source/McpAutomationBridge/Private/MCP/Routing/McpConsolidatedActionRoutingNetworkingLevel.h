@@ -28,7 +28,8 @@ inline const TArray<FString>& GameFramework()
 		TEXT("set_game_state_class"), TEXT("set_player_state_class"), TEXT("set_hud_class"),
 		TEXT("configure_game_rules"),
 		TEXT("set_respawn_rules"),
-		TEXT("configure_spectating"), TEXT("get_game_framework_info")
+		TEXT("configure_spectating"), TEXT("configure_player_start"),
+		TEXT("get_game_framework_info")
 	};
 	return Actions;
 }
@@ -36,8 +37,11 @@ inline const TArray<FString>& GameFramework()
 inline const TArray<FString>& Sessions()
 {
 	static const TArray<FString> Actions = {
-		TEXT("configure_split_screen"), TEXT("add_local_player"),
-		TEXT("remove_local_player"), TEXT("host_lan_server"),
+		TEXT("configure_split_screen"), TEXT("set_split_screen_type"),
+		TEXT("add_local_player"), TEXT("remove_local_player"),
+		TEXT("host_lan_server"), TEXT("join_lan_server"),
+		TEXT("configure_lan_play"), TEXT("configure_session_interface"),
+		TEXT("configure_voice_settings"),
 		TEXT("enable_voice_chat"), TEXT("mute_player"),
 		TEXT("get_sessions_info")
 	};

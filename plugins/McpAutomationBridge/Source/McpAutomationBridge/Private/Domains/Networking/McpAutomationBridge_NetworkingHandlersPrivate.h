@@ -103,5 +103,6 @@ bool HandleConfigureMovementPrediction(FNetworkingActionContext& Context);
 bool HandleConfigureNetDriver(FNetworkingActionContext& Context);
 bool HandleSetNetRole(FNetworkingActionContext& Context);
 bool HandleConfigureReplicatedMovement(FNetworkingActionContext& Context);
+bool HandleAddNetworkPredictionData(FNetworkingActionContext& Context);
 bool HandleGetNetworkingInfo(FNetworkingActionContext& Context);
 }

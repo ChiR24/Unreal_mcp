@@ -16171,6 +16171,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Ctrl modifier must be held."
         },
+        "dataType": {
+          "type": "string",
+          "description": "Variable type in the add_variable grammar: Vector, Rotator, Transform, Float, Int, Bool, Name, Struct:/Game/Path/S_Name.S_Name, Array:Vector and so on."
+        },
         "defaultPawnClass": {
           "type": "string",
           "description": "Default pawn class."
@@ -16206,6 +16210,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hudClass": {
           "type": "string",
           "description": "Hud class."
+        },
+        "interfaceType": {
+          "type": "string",
+          "description": "Online subsystem name: Null (LAN and local play), Steam, EOS, ... Its OnlineSubsystem<Name> plugin must be enabled; LAN is refused (use Null)."
         },
         "isAutonomousProxy": {
           "type": "boolean",
@@ -16259,6 +16267,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Max players."
         },
+        "micInputGain": {
+          "type": "number",
+          "description": "Microphone input gain as a linear multiplier, 0 to 10 (console variable voice.MicInputGain, default 1)."
+        },
         "minNetUpdateFrequency": {
           "type": "number",
           "description": "Min net update frequency."
@@ -16307,6 +16319,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "CharacterMovement NetworkSmoothingMode: Disabled, Linear, Exponential or Replay."
         },
+        "noiseGateThreshold": {
+          "type": "number",
+          "description": "Noise gate threshold in linear amplitude, 0 to 1: quieter input is sent as silence (voice.MicNoiseGateThreshold)."
+        },
         "onlyRelevantToOwner": {
           "type": "boolean",
           "description": "Only relevant to owner."
@@ -16338,6 +16354,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playerName": {
           "type": "string",
           "description": "Player name."
+        },
+        "playerStartName": {
+          "type": "string",
+          "description": "Label or name of the PlayerStart in the open level; optional only when the level has exactly one."
+        },
+        "playerStartTag": {
+          "type": "string",
+          "description": "Tag to set on the PlayerStart (PlayerStartTag); give it or teamIndex."
         },
         "playerStateClass": {
           "type": "string",
@@ -16379,6 +16403,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Server, Client or NetMulticast (Multicast is accepted too); anything else is refused."
         },
+        "sampleRate": {
+          "type": "number",
+          "description": "VoIP sample rate in Hz, 16000 or 24000 (Audio settings VoiPSampleRate)."
+        },
         "save": {
           "type": "boolean",
           "description": "Save the Blueprint asset to disk after the change (default true)."
@@ -16387,12 +16415,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Axis scale value."
         },
+        "serverAddress": {
+          "type": "string",
+          "description": "Host name or IP of the server to join, such as 127.0.0.1 (no port, which goes in serverPort)."
+        },
+        "serverOp": {
+          "type": "string",
+          "enum": [
+            "host",
+            "join"
+          ],
+          "description": "Which host lan server variant to run; omit for 'host'.",
+          "default": "host"
+        },
+        "serverPort": {
+          "type": "number",
+          "description": "Game port, a whole number (engine default 7777). configure_lan_play takes 1024 to 65535; a join without it uses the project default port."
+        },
         "setting": {
           "type": "string",
           "enum": [
             "client",
             "movement",
             "server_correction",
+            "add_data",
             "create",
             "validation",
             "reliability",
@@ -16412,7 +16458,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "respawn",
             "spectating",
             "enable",
+            "settings",
             "mute_player",
+            "lan_play",
+            "interface",
+            "split_screen",
             "property",
             "condition",
             "rep_notify",
@@ -16435,6 +16485,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Shift modifier must be held."
         },
+        "silenceDetectionThreshold": {
+          "type": "number",
+          "description": "Silence detection threshold in linear amplitude, 0 to 1: below it no voice packet is sent (voice.SilenceDetectionThreshold)."
+        },
         "smoothingRate": {
           "type": "number",
           "description": "Seconds simulated proxies take to smooth a server correction (location and rotation, dedicated and listen server)."
@@ -16449,7 +16503,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "splitScreenType": {
           "type": "string",
-          "description": "Split screen type."
+          "description": "Split-screen layout name: None (off), TwoPlayer_Horizontal, TwoPlayer_Vertical, ThreePlayer_FavorTop, ThreePlayer_FavorBottom, ThreePlayer_Vertical, ThreePlayer_Horizontal, FourPlayer_Grid, FourPlayer_Vertical or FourPlayer_Horizontal."
         },
         "systemWide": {
           "type": "boolean",
@@ -16459,9 +16513,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target player id."
         },
+        "teamIndex": {
+          "type": "number",
+          "description": "1-based team number; sets the PlayerStart tag TeamN. Give it or playerStartTag."
+        },
         "travelOptions": {
           "type": "string",
-          "description": "Travel options."
+          "description": "Extra URL options appended to the travel URL, such as Name=Player1 or ?Team=2."
         },
         "triggerType": {
           "type": "string",
@@ -16479,9 +16537,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Value type."
         },
+        "variableName": {
+          "type": "string",
+          "description": "Variable to add or convert; default PredictionData_<dataType> (required when dataType is not a plain type name)."
+        },
         "voiceEnabled": {
           "type": "boolean",
-          "description": "Voice enabled."
+          "description": "Whether voice chat is on. enable starts or stops the voice chat service now; settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled."
         },
         "withValidation": {
           "type": "boolean",
@@ -16493,14 +16555,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_legacy_mapping",
             "add_local_player",
             "configure_input",
-            "check_authority",
             "configure_prediction",
+            "check_authority",
             "configure_game_mode",
+            "configure_session",
             "configure_replication",
+            "configure_player_start",
             "configure_rpc",
-            "configure_split_screen",
-            "create_framework_class",
             "configure_voice",
+            "create_framework_class",
             "get_game_framework_info",
             "get_input_info",
             "get_networking_info",
@@ -16522,6 +16585,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "actorReplicates": {
+          "type": "boolean",
+          "description": "Whether the Blueprint itself replicates; a COND_AutonomousOnly variable reaches no client until it does."
+        },
         "assetClass": {
           "type": "string",
           "description": "Unreal class name of the asset that was inspected, such as SoundCue or InputAction."
@@ -16534,9 +16601,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Full /Game path of the asset that was created, modified or inspected."
         },
+        "compiled": {
+          "type": "boolean",
+          "description": "Whether the Blueprint compiled cleanly after the change."
+        },
+        "configFile": {
+          "type": "string",
+          "description": "Absolute path of the project config file that was written and read back."
+        },
+        "connectionURL": {
+          "type": "string",
+          "description": "The address:port URL, with options, the PIE instance travels to."
+        },
         "consumeInput": {
           "type": "boolean",
           "description": "Whether the Input Action consumes the input it handles."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "Whether a new variable was added (false when an existing one was converted)."
+        },
+        "dataType": {
+          "type": "string",
+          "description": "Resolved variable type in the add_variable grammar."
         },
         "details": {
           "type": "object",
@@ -16546,6 +16633,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "effectiveInOpenLevel": {
           "type": "boolean",
           "description": "Whether the open level runs this game mode in play: its World Settings override names it, or it has none and this is the project default."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether split screen is on after the change."
         },
         "existsAfter": {
           "type": "boolean",
@@ -16565,6 +16656,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the actor currently holds network authority."
         },
+        "interfaceType": {
+          "type": "string",
+          "description": "Online subsystem name written as DefaultPlatformService."
+        },
         "isLocalController": {
           "type": "boolean",
           "description": "Whether the controller possessing this actor is the local controller."
@@ -16572,6 +16667,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isLocallyControlled": {
           "type": "boolean",
           "description": "Whether the actor is controlled by the local player."
+        },
+        "layoutsWritten": {
+          "type": "string",
+          "description": "The GameMapsSettings layout field that changed (TwoPlayerSplitscreenLayout, ThreePlayerSplitscreenLayout or FourPlayerSplitscreenLayout); empty when only enabled changed."
+        },
+        "liveApplied": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Voice console variables applied to the running editor now."
         },
         "madeDefault": {
           "type": "boolean",
@@ -16599,13 +16705,53 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Class path of the game mode the open level runs in play: its World Settings override, else the project default."
         },
+        "persisted": {
+          "type": "boolean",
+          "description": "Whether the value was read back from the config file on disk."
+        },
+        "pieWorld": {
+          "type": "string",
+          "description": "The PIE world and instance that started travelling."
+        },
         "playerIndex": {
           "type": "number",
           "description": "Index assigned to the local player that was added."
         },
+        "playerStart": {
+          "type": "string",
+          "description": "Label of the PlayerStart that was tagged."
+        },
+        "playerStartTag": {
+          "type": "string",
+          "description": "PlayerStartTag after the change."
+        },
+        "previous": {
+          "type": "string",
+          "description": "DefaultPlatformService this editor session started with (empty for the engine default)."
+        },
+        "previousPort": {
+          "type": "number",
+          "description": "Default game port before the change."
+        },
+        "previousTag": {
+          "type": "string",
+          "description": "PlayerStartTag before the change (None when it had none)."
+        },
+        "requiresRestart": {
+          "type": "boolean",
+          "description": "Whether a written setting is only read at startup, so the running editor keeps the old value until it restarts."
+        },
         "role": {
           "type": "string",
           "description": "Network role of the actor, such as ROLE_Authority."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the asset was saved to disk."
+        },
+        "serverPort": {
+          "type": "number",
+          "description": "Default game port after the change."
         },
         "sessionsInfo": {
           "type": "object",
@@ -16613,9 +16759,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "settingsSaved": {
+          "type": "boolean",
+          "description": "Whether GameMapsSettings was written to DefaultEngine.ini."
+        },
+        "splitScreenType": {
+          "type": "string",
+          "description": "Layout name that was applied, None when split screen was turned off, empty when only enabled changed."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "travelStarted": {
+          "type": "boolean",
+          "description": "Whether ClientTravel was issued; the connection itself completes asynchronously."
         },
         "travelURL": {
           "type": "string",
@@ -16625,9 +16783,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Kind of asset the bridge resolved, such as SoundCue, SoundWave or InputAction."
         },
+        "updated": {
+          "type": "boolean",
+          "description": "Whether an existing variable was converted to owner-only replication."
+        },
         "valueType": {
           "type": "string",
           "description": "Enhanced Input value type of the Input Action, reported as its numeric enum index."
+        },
+        "variableName": {
+          "type": "string",
+          "description": "Name of the prediction data variable."
+        },
+        "written": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every [Section] Key=Value entry written to the config file, in order."
         }
       },
       "additionalProperties": true

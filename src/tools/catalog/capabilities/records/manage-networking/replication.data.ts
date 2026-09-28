@@ -25,6 +25,8 @@ const NET_PROPS: Readonly<Record<string, JsonObject>> = {
   maxClientRate: num('Game net driver MaxClientRate (bytes per second per LAN client).'),
   maxInternetClientRate: num('Game net driver MaxInternetClientRate (bytes per second per internet client).'),
   netServerMaxTickRate: num('Game net driver NetServerMaxTickRate (server ticks per second).'),
+  dataType: str('Variable type in the add_variable grammar: Vector, Rotator, Transform, Float, Int, Bool, Name, Struct:/Game/Path/S_Name.S_Name, Array:Vector and so on.'),
+  variableName: str('Variable to add or convert; default PredictionData_<dataType> (required when dataType is not a plain type name).'),
 };
 const r = (action: string, summary: string, params: readonly string[] = [], required: readonly string[] = [], outputs: readonly string[] = [], outputRequired: readonly string[] = [], read = false, runtime = false): CapabilityRecordSource => withInputProps(utilityRecord({
   tool: T, action, family: 'replication', summary, params, required, outputs, outputRequired,
@@ -53,6 +55,7 @@ export const NETWORKING_REPLICATION_RECORDS: readonly CapabilityRecordSource[] =
   r('configure_push_model', 'Turn push-model replication on or off for every replicated variable of a Blueprint; fails when it has none.', ['blueprintPath', 'usePushModel'], ['blueprintPath']),
   r('configure_client_prediction', 'Set whether a Character Blueprint always replicates its movement transform timestamp (CharacterMovement bNetworkAlwaysReplicateTransformUpdateTimestamp); other Blueprints are refused.', ['blueprintPath', 'enablePrediction'], ['blueprintPath', 'enablePrediction']),
   r('configure_server_correction', 'Set how long a Character Blueprint\'s simulated proxies smooth server corrections; other Blueprints are refused.', ['blueprintPath', 'smoothingRate'], ['blueprintPath', 'smoothingRate']),
+  r('add_network_prediction_data', 'Add a Blueprint variable, or convert an existing one of the same type, that replicates only to the owning client (COND_AutonomousOnly) for client-side prediction state; the reply says whether the Blueprint itself replicates.', ['blueprintPath', 'dataType', 'variableName'], ['blueprintPath', 'dataType'], ['variableName', 'dataType', 'created', 'updated', 'actorReplicates', 'compiled', 'saved'], ['variableName', 'created', 'updated', 'actorReplicates', 'compiled', 'saved']),
   r('configure_movement_prediction', 'Set a Character Blueprint\'s movement network smoothing mode and smoothing distances; only the fields sent are written, other Blueprints are refused.', ['blueprintPath', 'networkSmoothingMode', 'networkMaxSmoothUpdateDistance', 'networkNoSmoothUpdateDistance'], ['blueprintPath']),
   r('configure_net_driver', 'Write the game net driver\'s rate limits to its class defaults and DefaultEngine.ini, and to the running net driver when there is one; only the fields sent are written.', ['maxClientRate', 'maxInternetClientRate', 'netServerMaxTickRate']),
   r('set_net_role', 'Choose how clients see an Actor Blueprint\'s actors: ROLE_None turns replication off, ROLE_SimulatedProxy or ROLE_AutonomousProxy turn it on.', ['blueprintPath', 'role'], ['blueprintPath', 'role']),

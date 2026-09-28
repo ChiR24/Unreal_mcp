@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `04be411f10c66646`
+Catalog revision: `7f80d98267585840`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 382 capabilities across
+The catalog declares 383 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -54,7 +54,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_inventory` | 6 | 1 | 5 | 0 | manage inventory |
 | `manage_level` | 17 | 4 | 12 | 1 | level |
 | `manage_level_structure` | 8 | 2 | 5 | 1 | world |
-| `manage_networking` | 20 | 5 | 12 | 3 | networking |
+| `manage_networking` | 21 | 5 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 8 | 3 | 5 | 0 | tools |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-62 of 382 capabilities require consent.
+62 of 383 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -424,17 +424,18 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_networking.check_authority` | `manage_networking` | `manage_networking` | read | read | none | `manage_networking.check_authority` `manage_networking.check_has_authority` `manage_networking.check_is_locally_controlled` |
 | `manage_networking.configure_game_mode` | `manage_networking` | `manage_game_framework` | write | write | none | `manage_networking.configure_game_mode` `manage_networking.set_default_pawn_class` `manage_networking.set_player_controller_class` `manage_networking.set_game_state_class` `manage_networking.set_player_state_class` `manage_networking.set_hud_class` `manage_networking.configure_game_rules` `manage_networking.set_respawn_rules` `manage_networking.configure_spectating` |
 | `manage_networking.configure_input` | `manage_networking` | `manage_input` | write | write | none | `manage_networking.configure_input` `manage_networking.create_input_action` `manage_networking.create_input_mapping_context` `manage_networking.add_mapping` `manage_networking.map_input_action` `manage_networking.set_input_trigger` `manage_networking.set_input_modifier` `manage_networking.enable_input_mapping` |
-| `manage_networking.configure_prediction` | `manage_networking` | `manage_networking` | write | write | none | `manage_networking.configure_prediction` `manage_networking.configure_client_prediction` `manage_networking.configure_movement_prediction` `manage_networking.configure_server_correction` |
+| `manage_networking.configure_player_start` | `manage_networking` | `manage_game_framework` | write | write | none | `manage_networking.configure_player_start` |
+| `manage_networking.configure_prediction` | `manage_networking` | `manage_networking` | write | write | none | `manage_networking.configure_prediction` `manage_networking.configure_client_prediction` `manage_networking.configure_movement_prediction` `manage_networking.configure_server_correction` `manage_networking.add_network_prediction_data` |
 | `manage_networking.configure_replication` | `manage_networking` | `manage_networking` | write | write | none | `manage_networking.configure_replication` `manage_networking.set_property_replicated` `manage_networking.set_replication_condition` `manage_networking.set_replicated_using` `manage_networking.set_net_role` `manage_networking.set_net_dormancy` `manage_networking.set_always_relevant` `manage_networking.set_only_relevant_to_owner` `manage_networking.set_autonomous_proxy` `manage_networking.configure_net_priority` `manage_networking.configure_net_update_frequency` `manage_networking.configure_net_cull_distance` `manage_networking.configure_push_model` `manage_networking.configure_replicated_movement` `manage_networking.configure_replication_graph` `manage_networking.configure_net_driver` |
 | `manage_networking.configure_rpc` | `manage_networking` | `manage_networking` | write | write | none | `manage_networking.configure_rpc` `manage_networking.create_rpc_function` `manage_networking.configure_rpc_validation` `manage_networking.set_rpc_reliability` |
-| `manage_networking.configure_split_screen` | `manage_networking` | `manage_sessions` | write | write | none | `manage_networking.configure_split_screen` |
-| `manage_networking.configure_voice` | `manage_networking` | `manage_sessions` | write | write | none | `manage_networking.configure_voice` `manage_networking.enable_voice_chat` `manage_networking.mute_player` |
+| `manage_networking.configure_session` | `manage_networking` | `manage_sessions` | write | write | none | `manage_networking.configure_session` `manage_networking.configure_lan_play` `manage_networking.configure_session_interface` `manage_networking.configure_split_screen` `manage_networking.set_split_screen_type` |
+| `manage_networking.configure_voice` | `manage_networking` | `manage_sessions` | write | write | none | `manage_networking.configure_voice` `manage_networking.enable_voice_chat` `manage_networking.configure_voice_settings` `manage_networking.mute_player` |
 | `manage_networking.create_framework_class` | `manage_networking` | `manage_game_framework` | write | write | none | `manage_networking.create_framework_class` `manage_networking.create_game_mode` `manage_networking.create_game_state` `manage_networking.create_game_instance` `manage_networking.create_player_controller` `manage_networking.create_player_state` `manage_networking.create_hud_class` |
 | `manage_networking.get_game_framework_info` | `manage_networking` | `manage_game_framework` | read | read | none | `manage_networking.get_game_framework_info` |
 | `manage_networking.get_input_info` | `manage_networking` | `manage_input` | read | read | none | `manage_networking.get_input_info` |
 | `manage_networking.get_networking_info` | `manage_networking` | `manage_networking` | read | read | none | `manage_networking.get_networking_info` |
 | `manage_networking.get_sessions_info` | `manage_networking` | `manage_sessions` | read | read | none | `manage_networking.get_sessions_info` |
-| `manage_networking.host_lan_server` | `manage_networking` | `manage_sessions` | write | write | none | `manage_networking.host_lan_server` |
+| `manage_networking.host_lan_server` | `manage_networking` | `manage_sessions` | write | write | none | `manage_networking.host_lan_server` `manage_networking.join_lan_server` |
 | `manage_networking.remove_legacy_mapping` | `manage_networking` | `manage_input` | destructive | destructive | explicit | `manage_networking.remove_legacy_mapping` `manage_networking.remove_legacy_action_mapping` `manage_networking.remove_legacy_axis_mapping` |
 | `manage_networking.remove_local_player` | `manage_networking` | `manage_sessions` | destructive | destructive | explicit | `manage_networking.remove_local_player` |
 | `manage_networking.remove_mapping` | `manage_networking` | `manage_input` | destructive | destructive | explicit | `manage_networking.remove_mapping` |

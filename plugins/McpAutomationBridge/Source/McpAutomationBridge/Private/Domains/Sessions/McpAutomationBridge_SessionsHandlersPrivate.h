@@ -69,3 +69,23 @@ bool HandleGetSessionsInfo(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleConfigureLanPlay(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleJoinLanServer(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleConfigureSessionInterface(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleConfigureVoiceSettings(
+    UMcpAutomationBridgeSubsystem* Subsystem,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);

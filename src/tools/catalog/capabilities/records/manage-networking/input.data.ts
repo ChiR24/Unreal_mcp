@@ -14,7 +14,8 @@ export const NETWORKING_INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   // A mapping context asset has no priority of its own; the priority is given when it is enabled.
   withTopics(i('create_input_mapping_context', 'Create an Enhanced Input Mapping Context asset; its priority is chosen when it is enabled (enable_input_mapping).', ['name', 'path'], ['name', 'path'], ['assetPath'], ['assetPath']), ['input mapping', 'mapping context', 'imc', 'key mapping', 'enhanced input mapping']),
   i('add_mapping', 'Add an Enhanced Input mapping with optional trigger and modifier types.', ['contextPath', 'actionPath', 'key', 'triggerType', 'modifierType'], ['contextPath', 'actionPath', 'key']),
-  i('remove_mapping', 'Remove an Enhanced Input mapping.', ['contextPath', 'actionPath', 'key'], ['contextPath', 'actionPath'], [], [], true, 'destructive'),
+  // Enhanced Input has no per-action enable flag, so unbinding the action's keys is how an action is disabled.
+  withTopics(i('remove_mapping', 'Remove an Enhanced Input mapping; removing an action\'s keys is how an input action is disabled.', ['contextPath', 'actionPath', 'key'], ['contextPath', 'actionPath'], [], [], true, 'destructive'), ['disable input action', 'unbind key']),
   i('add_legacy_action_mapping', 'Add a legacy action mapping.', ['name', 'actionName', 'key', 'shift', 'ctrl', 'alt', 'cmd'], ['key'], [], [], false),
   i('remove_legacy_action_mapping', 'Remove a legacy action mapping.', ['name', 'actionName', 'key', 'shift', 'ctrl', 'alt', 'cmd'], ['key'], [], [], false, 'destructive'),
   i('add_legacy_axis_mapping', 'Add a legacy axis mapping.', ['name', 'axisName', 'key', 'scale'], ['key'], [], [], false),

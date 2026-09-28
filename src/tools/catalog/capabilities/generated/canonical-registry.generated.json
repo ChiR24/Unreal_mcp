@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "04be411f10c66646",
-  "recordCount": 382,
+  "catalogRevision": "7f80d98267585840",
+  "recordCount": 383,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -65834,10 +65834,9 @@
           "default pawn",
           "game rules",
           "respawn",
-          "spectating",
-          "player start"
+          "spectating"
         ],
-        "summary": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating, player start.",
+        "summary": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.",
         "whenToUse": [
           "Use when set a gamemode default pawn class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
           "Use when set a gamemode playercontroller class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
@@ -65971,7 +65970,7 @@
       },
       "examples": [
         {
-          "title": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating, player start.",
+          "title": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.",
           "input": {
             "action": "configure_game_mode",
             "gameModeBlueprint": "/Game/Blueprints/Framework/BP_ArenaGameMode",
@@ -66061,7 +66060,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ab349f5200da8ed5b92947cc37e4fd2892821f5964930501cf7057dfc352bc0d",
-        "content": "ee9263a7206716ff4f746b2a2a55ccc36969caed04b8d57aec142107ce593171"
+        "content": "f6aacc71bbb9533da95c1df4d9e8a2550ba152ebda9c7e3bf2307c47f084e216"
       }
     },
     {
@@ -66353,11 +66352,156 @@
       }
     },
     {
+      "id": "manage_networking.configure_player_start",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_networking",
+          "action": "configure_player_start"
+        }
+      ],
+      "discovery": {
+        "domain": "networking",
+        "family": "gameFramework",
+        "topics": [
+          "configure_player_start",
+          "player start",
+          "player start tag",
+          "team spawn point",
+          "spawn point tag"
+        ],
+        "summary": "Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N (team spawns match it). Undoable; the level is left modified, not saved.",
+        "whenToUse": [
+          "Use when set the playerstarttag of a playerstart in the open level: an explicit tag, or teamn for teamindex n (team spawns match it). undoable; the level is left modified, not saved."
+        ],
+        "whenNotToUse": [
+          "Do not use when the required Unreal capability or target is unavailable."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Action."
+            },
+            "playerStartName": {
+              "type": "string",
+              "description": "Label or name of the PlayerStart in the open level; optional only when the level has exactly one."
+            },
+            "playerStartTag": {
+              "type": "string",
+              "description": "Tag to set on the PlayerStart (PlayerStartTag); give it or teamIndex."
+            },
+            "teamIndex": {
+              "type": "number",
+              "description": "1-based team number; sets the PlayerStart tag TeamN. Give it or playerStartTag."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "playerStartTag",
+            "teamIndex"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "playerStart": {
+              "type": "string",
+              "description": "Label of the PlayerStart that was tagged."
+            },
+            "playerStartTag": {
+              "type": "string",
+              "description": "PlayerStartTag after the change."
+            },
+            "previousTag": {
+              "type": "string",
+              "description": "PlayerStartTag before the change (None when it had none)."
+            }
+          },
+          "required": [
+            "success",
+            "playerStart",
+            "playerStartTag",
+            "previousTag"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N (team spawns match it). Undoable; the level is left modified, not saved.",
+          "input": {
+            "action": "configure_player_start",
+            "playerStartTag": "Team1"
+          },
+          "output": {
+            "success": true,
+            "message": "configure_player_start completed successfully.",
+            "playerStart": "PlayerStart_Team1",
+            "playerStartTag": "Team1",
+            "previousTag": "None"
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_networking",
+        "dispatchAction": "manage_game_framework"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "9fdddd77a6f2b033f184eeb1259788fdf914791ae93b5a9250cb43bf720a9c90",
+        "content": "b259afe9ea089d324fff2550392347cc3c2050a4d96dc94c9f20e8866133c75e"
+      }
+    },
+    {
       "id": "manage_networking.configure_prediction",
       "aliases": [
         "manage_networking.configure_client_prediction",
         "manage_networking.configure_movement_prediction",
-        "manage_networking.configure_server_correction"
+        "manage_networking.configure_server_correction",
+        "manage_networking.add_network_prediction_data"
       ],
       "legacyIds": [
         {
@@ -66384,6 +66528,13 @@
           "folded": {
             "setting": "server_correction"
           }
+        },
+        {
+          "tool": "manage_networking",
+          "action": "add_network_prediction_data",
+          "folded": {
+            "setting": "add_data"
+          }
         }
       ],
       "discovery": {
@@ -66393,13 +66544,17 @@
           "configure_prediction",
           "client prediction",
           "movement prediction",
-          "server correction"
+          "server correction",
+          "network prediction",
+          "prediction data",
+          "owner only variable"
         ],
-        "summary": "Configure client-side prediction: client, movement, or server correction.",
+        "summary": "Configure client-side prediction: client, movement, server correction, or add prediction data (a variable replicated only to the owning client).",
         "whenToUse": [
           "Use when set whether a character blueprint always replicates its movement transform timestamp (charactermovement bnetworkalwaysreplicatetransformupdatetimestamp); other blueprints are refused.",
           "Use when set a character blueprint's movement network smoothing mode and smoothing distances; only the fields sent are written, other blueprints are refused.",
-          "Use when set how long a character blueprint's simulated proxies smooth server corrections; other blueprints are refused."
+          "Use when set how long a character blueprint's simulated proxies smooth server corrections; other blueprints are refused.",
+          "Use when add a blueprint variable, or convert an existing one of the same type, that replicates only to the owning client (cond_autonomousonly) for client-side prediction state; the reply says whether the blueprint itself replicates."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -66438,12 +66593,21 @@
               "type": "number",
               "description": "Seconds simulated proxies take to smooth a server correction (location and rotation, dedicated and listen server)."
             },
+            "dataType": {
+              "type": "string",
+              "description": "Variable type in the add_variable grammar: Vector, Rotator, Transform, Float, Int, Bool, Name, Struct:/Game/Path/S_Name.S_Name, Array:Vector and so on."
+            },
+            "variableName": {
+              "type": "string",
+              "description": "Variable to add or convert; default PredictionData_<dataType> (required when dataType is not a plain type name)."
+            },
             "setting": {
               "type": "string",
               "enum": [
                 "client",
                 "movement",
-                "server_correction"
+                "server_correction",
+                "add_data"
               ],
               "description": "Which configure prediction variant to run."
             }
@@ -66471,6 +66635,34 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "variableName": {
+              "type": "string",
+              "description": "Name of the prediction data variable."
+            },
+            "dataType": {
+              "type": "string",
+              "description": "Resolved variable type in the add_variable grammar."
+            },
+            "created": {
+              "type": "boolean",
+              "description": "Whether a new variable was added (false when an existing one was converted)."
+            },
+            "updated": {
+              "type": "boolean",
+              "description": "Whether an existing variable was converted to owner-only replication."
+            },
+            "actorReplicates": {
+              "type": "boolean",
+              "description": "Whether the Blueprint itself replicates; a COND_AutonomousOnly variable reaches no client until it does."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the Blueprint compiled cleanly after the change."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the asset was saved to disk."
             }
           },
           "required": [
@@ -66481,7 +66673,7 @@
       },
       "examples": [
         {
-          "title": "Configure client-side prediction: client, movement, or server correction.",
+          "title": "Configure client-side prediction: client, movement, server correction, or add prediction data (a variable replicated only to the owning client).",
           "input": {
             "action": "configure_prediction",
             "blueprintPath": "/Game/Blueprints/BP_PlayerCharacter",
@@ -66523,7 +66715,8 @@
           "actions": {
             "client": "configure_client_prediction",
             "movement": "configure_movement_prediction",
-            "server_correction": "configure_server_correction"
+            "server_correction": "configure_server_correction",
+            "add_data": "add_network_prediction_data"
           },
           "declaredBy": {
             "enablePrediction": [
@@ -66540,14 +66733,20 @@
             ],
             "smoothingRate": [
               "server_correction"
+            ],
+            "dataType": [
+              "add_data"
+            ],
+            "variableName": [
+              "add_data"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "73618f94a85cbf6fb2e72cd7a33c9be0c6122c834a91647c11b5f0a0f5de0ea2",
-        "content": "9d1a09b4ebc6353a4dad1465e0acabf90cf5a1afb4351f9f8a12c427e0c6f088"
+        "schema": "4a9064debc6c032cf3ea057ab744fc380298c23b5650c6c5bc99ee81197a5979",
+        "content": "c3cd6e766fe410e06f2872ae03781930424e5eecb85f2fbcd36742b091583d10"
       }
     },
     {
@@ -67206,23 +67405,65 @@
       }
     },
     {
-      "id": "manage_networking.configure_split_screen",
-      "aliases": [],
+      "id": "manage_networking.configure_session",
+      "aliases": [
+        "manage_networking.configure_lan_play",
+        "manage_networking.configure_session_interface",
+        "manage_networking.configure_split_screen",
+        "manage_networking.set_split_screen_type"
+      ],
       "legacyIds": [
         {
           "tool": "manage_networking",
-          "action": "configure_split_screen"
+          "action": "configure_session"
+        },
+        {
+          "tool": "manage_networking",
+          "action": "configure_lan_play",
+          "folded": {
+            "setting": "lan_play"
+          }
+        },
+        {
+          "tool": "manage_networking",
+          "action": "configure_session_interface",
+          "folded": {
+            "setting": "interface"
+          }
+        },
+        {
+          "tool": "manage_networking",
+          "action": "configure_split_screen",
+          "folded": {
+            "setting": "split_screen"
+          }
+        },
+        {
+          "tool": "manage_networking",
+          "action": "set_split_screen_type",
+          "folded": {
+            "setting": "split_screen"
+          }
         }
       ],
       "discovery": {
         "domain": "networking",
         "family": "session",
         "topics": [
-          "configure_split_screen"
+          "configure_session",
+          "lan play",
+          "game port",
+          "server port",
+          "online subsystem",
+          "session interface",
+          "split screen",
+          "split screen layout"
         ],
-        "summary": "Enable or disable local split-screen and set its layout.",
+        "summary": "Configure multiplayer for the project: the default game port for LAN hosting and joining, the online subsystem (Null, Steam, EOS...), and the local split-screen layout. Written to DefaultEngine.ini.",
         "whenToUse": [
-          "Use when enable or disable local split-screen and set its layout."
+          "Use when set the project default game port ([url] port in defaultengine.ini) that listen servers bind and joins without a port connect to; packaged games use it from their next launch and the running editor at once.",
+          "Use when choose the online subsystem the project uses ([onlinesubsystem] defaultplatformservice in defaultengine.ini): null for lan and local play, steam, eos and others whose onlinesubsystem plugin is enabled. takes effect on the next launch.",
+          "Use when turn local split screen on or off and pick a layout by name: none (off), twoplayer_horizontal, twoplayer_vertical, threeplayer_favortop, threeplayer_favorbottom, threeplayer_vertical, threeplayer_horizontal, fourplayer_grid, fourplayer_vertical or fourplayer_horizontal. only the layout for that player count changes; written to defaultengine.ini and live in pie."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -67235,7 +67476,15 @@
           "properties": {
             "action": {
               "type": "string",
-              "description": "Action."
+              "description": "The action to execute on the parent tool."
+            },
+            "serverPort": {
+              "type": "number",
+              "description": "Game port, a whole number (engine default 7777). configure_lan_play takes 1024 to 65535; a join without it uses the project default port."
+            },
+            "interfaceType": {
+              "type": "string",
+              "description": "Online subsystem name: Null (LAN and local play), Steam, EOS, ... Its OnlineSubsystem<Name> plugin must be enabled; LAN is refused (use Null)."
             },
             "enabled": {
               "type": "boolean",
@@ -67243,17 +67492,23 @@
             },
             "splitScreenType": {
               "type": "string",
-              "description": "Split screen type."
+              "description": "Split-screen layout name: None (off), TwoPlayer_Horizontal, TwoPlayer_Vertical, ThreePlayer_FavorTop, ThreePlayer_FavorBottom, ThreePlayer_Vertical, ThreePlayer_Horizontal, FourPlayer_Grid, FourPlayer_Vertical or FourPlayer_Horizontal."
+            },
+            "setting": {
+              "type": "string",
+              "enum": [
+                "lan_play",
+                "interface",
+                "split_screen"
+              ],
+              "description": "Which configure session variant to run."
             }
           },
           "required": [
-            "action"
+            "action",
+            "setting"
           ],
-          "additionalProperties": false,
-          "requiredOneOf": [
-            "enabled",
-            "splitScreenType"
-          ]
+          "additionalProperties": false
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -67271,6 +67526,50 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "serverPort": {
+              "type": "number",
+              "description": "Default game port after the change."
+            },
+            "previousPort": {
+              "type": "number",
+              "description": "Default game port before the change."
+            },
+            "configFile": {
+              "type": "string",
+              "description": "Absolute path of the project config file that was written and read back."
+            },
+            "persisted": {
+              "type": "boolean",
+              "description": "Whether the value was read back from the config file on disk."
+            },
+            "interfaceType": {
+              "type": "string",
+              "description": "Online subsystem name written as DefaultPlatformService."
+            },
+            "previous": {
+              "type": "string",
+              "description": "DefaultPlatformService this editor session started with (empty for the engine default)."
+            },
+            "requiresRestart": {
+              "type": "boolean",
+              "description": "Whether a written setting is only read at startup, so the running editor keeps the old value until it restarts."
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether split screen is on after the change."
+            },
+            "splitScreenType": {
+              "type": "string",
+              "description": "Layout name that was applied, None when split screen was turned off, empty when only enabled changed."
+            },
+            "layoutsWritten": {
+              "type": "string",
+              "description": "The GameMapsSettings layout field that changed (TwoPlayerSplitscreenLayout, ThreePlayerSplitscreenLayout or FourPlayerSplitscreenLayout); empty when only enabled changed."
+            },
+            "settingsSaved": {
+              "type": "boolean",
+              "description": "Whether GameMapsSettings was written to DefaultEngine.ini."
             }
           },
           "required": [
@@ -67281,14 +67580,19 @@
       },
       "examples": [
         {
-          "title": "Enable or disable local split-screen and set its layout.",
+          "title": "Configure multiplayer for the project: the default game port for LAN hosting and joining, the online subsystem (Null, Steam, EOS...), and the local split-screen layout. Written to DefaultEngine.ini.",
           "input": {
-            "action": "configure_split_screen",
-            "enabled": true
+            "action": "configure_session",
+            "serverPort": 7777,
+            "setting": "lan_play"
           },
           "output": {
             "success": true,
-            "message": "configure_split_screen completed successfully."
+            "message": "configure_lan_play completed successfully.",
+            "serverPort": 7777,
+            "previousPort": 7777,
+            "configFile": "C:/Projects/Arena/Config/DefaultEngine.ini",
+            "persisted": true
           }
         }
       ],
@@ -67319,18 +67623,41 @@
       },
       "routing": {
         "parentTool": "manage_networking",
-        "dispatchAction": "manage_sessions"
+        "dispatchAction": "manage_sessions",
+        "dispatchBy": {
+          "param": "setting",
+          "actions": {
+            "lan_play": "configure_lan_play",
+            "interface": "configure_session_interface",
+            "split_screen": "configure_split_screen"
+          },
+          "declaredBy": {
+            "serverPort": [
+              "lan_play"
+            ],
+            "interfaceType": [
+              "interface"
+            ],
+            "enabled": [
+              "split_screen"
+            ],
+            "splitScreenType": [
+              "split_screen"
+            ]
+          }
+        }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "04e9a987708711795891a886289cee5caede3e6794fb76e7c03a742eeb3b1365",
-        "content": "f5d187aa906946a2b9c4dd9cd0f1ca95e29cd57aec5c0eba4d023f0ac3378512"
+        "schema": "284e135d7c139e9582f263de5d57adea30ada2debfb041576bdef745240d61d2",
+        "content": "4745ab0959adfce399e597b6ae889ab568a1a2ed330d5d268beda5290ce72635"
       }
     },
     {
       "id": "manage_networking.configure_voice",
       "aliases": [
         "manage_networking.enable_voice_chat",
+        "manage_networking.configure_voice_settings",
         "manage_networking.mute_player"
       ],
       "legacyIds": [
@@ -67347,6 +67674,13 @@
         },
         {
           "tool": "manage_networking",
+          "action": "configure_voice_settings",
+          "folded": {
+            "setting": "settings"
+          }
+        },
+        {
+          "tool": "manage_networking",
           "action": "mute_player",
           "folded": {
             "setting": "mute_player"
@@ -67359,11 +67693,15 @@
         "topics": [
           "configure_voice",
           "voice chat",
+          "voip settings",
+          "mic gain",
+          "noise gate",
           "mute player"
         ],
-        "summary": "Enable voice chat or mute a player.",
+        "summary": "Voice chat: start or stop it now, set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player.",
         "whenToUse": [
           "Use when enable or disable online voice chat.",
+          "Use when configure project voip: turn online voice on or off, microphone gain, noise gate and silence detection thresholds, and the voip sample rate. written to defaultengine.ini for packaged games; the voice console variables also apply to the running editor.",
           "Use when mute or unmute an online player through the voice chat or online voice interface; fails with not_supported when neither applies it."
         ],
         "whenNotToUse": [
@@ -67381,7 +67719,23 @@
             },
             "voiceEnabled": {
               "type": "boolean",
-              "description": "Voice enabled."
+              "description": "Whether voice chat is on. enable starts or stops the voice chat service now; settings writes the startup switches [Voice] bEnabled and [OnlineSubsystem] bHasVoiceEnabled."
+            },
+            "micInputGain": {
+              "type": "number",
+              "description": "Microphone input gain as a linear multiplier, 0 to 10 (console variable voice.MicInputGain, default 1)."
+            },
+            "noiseGateThreshold": {
+              "type": "number",
+              "description": "Noise gate threshold in linear amplitude, 0 to 1: quieter input is sent as silence (voice.MicNoiseGateThreshold)."
+            },
+            "silenceDetectionThreshold": {
+              "type": "number",
+              "description": "Silence detection threshold in linear amplitude, 0 to 1: below it no voice packet is sent (voice.SilenceDetectionThreshold)."
+            },
+            "sampleRate": {
+              "type": "number",
+              "description": "VoIP sample rate in Hz, 16000 or 24000 (Audio settings VoiPSampleRate)."
             },
             "playerName": {
               "type": "string",
@@ -67407,6 +67761,7 @@
               "type": "string",
               "enum": [
                 "enable",
+                "settings",
                 "mute_player"
               ],
               "description": "Which configure voice variant to run."
@@ -67434,6 +67789,28 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "written": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every [Section] Key=Value entry written to the config file, in order."
+            },
+            "configFile": {
+              "type": "string",
+              "description": "Absolute path of the project config file that was written and read back."
+            },
+            "liveApplied": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Voice console variables applied to the running editor now."
+            },
+            "requiresRestart": {
+              "type": "boolean",
+              "description": "Whether a written setting is only read at startup, so the running editor keeps the old value until it restarts."
             }
           },
           "required": [
@@ -67444,7 +67821,7 @@
       },
       "examples": [
         {
-          "title": "Enable voice chat or mute a player.",
+          "title": "Voice chat: start or stop it now, set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player.",
           "input": {
             "action": "configure_voice",
             "voiceEnabled": true,
@@ -67488,11 +67865,25 @@
           "param": "setting",
           "actions": {
             "enable": "enable_voice_chat",
+            "settings": "configure_voice_settings",
             "mute_player": "mute_player"
           },
           "declaredBy": {
             "voiceEnabled": [
-              "enable"
+              "enable",
+              "settings"
+            ],
+            "micInputGain": [
+              "settings"
+            ],
+            "noiseGateThreshold": [
+              "settings"
+            ],
+            "silenceDetectionThreshold": [
+              "settings"
+            ],
+            "sampleRate": [
+              "settings"
             ],
             "playerName": [
               "mute_player"
@@ -67514,8 +67905,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b7cb503d2b728ef747fb0bd2156494d74776ad037846dfdcda1c9a127d9f7fe3",
-        "content": "1c32f91578d735dcfc03152d1b76aed55ac90bcc374da0b33af09ceef89e09d2"
+        "schema": "8fbc0e0352a0a452ba685853b25c4348c2051ef99a2558ba7127d28850f513c9",
+        "content": "1e81b75b00d8d7259dde4bd8b9886c764e15ba791f03a96d02fd377bc5c9cb4d"
       }
     },
     {
@@ -68307,22 +68698,37 @@
     },
     {
       "id": "manage_networking.host_lan_server",
-      "aliases": [],
+      "aliases": [
+        "manage_networking.join_lan_server"
+      ],
       "legacyIds": [
         {
           "tool": "manage_networking",
           "action": "host_lan_server"
+        },
+        {
+          "tool": "manage_networking",
+          "action": "join_lan_server",
+          "folded": {
+            "serverOp": "join"
+          }
         }
       ],
       "discovery": {
         "domain": "networking",
         "family": "session",
         "topics": [
-          "host_lan_server"
+          "host_lan_server",
+          "host server",
+          "join server",
+          "lan server",
+          "listen server",
+          "connect to server"
         ],
-        "summary": "Build the LAN listen-server travel URL for a map; nothing is hosted unless executeTravel is true, which travels the running world to it.",
+        "summary": "Host a LAN listen server (build the travel URL, optionally travel to it), or make a running Play-In-Editor instance join one.",
         "whenToUse": [
-          "Use when build the lan listen-server travel url for a map; nothing is hosted unless executetravel is true, which travels the running world to it."
+          "Use when build the lan listen-server travel url for a map; nothing is hosted unless executetravel is true, which travels the running world to it.",
+          "Use when make a running play-in-editor instance join a server at serveraddress:serverport (clienttravel); the connection completes asynchronously. refused when pie is not running or every instance is hosting."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -68335,7 +68741,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "description": "Action."
+              "description": "The action to execute on the parent tool."
             },
             "mapName": {
               "type": "string",
@@ -68347,16 +68753,32 @@
             },
             "travelOptions": {
               "type": "string",
-              "description": "Travel options."
+              "description": "Extra URL options appended to the travel URL, such as Name=Player1 or ?Team=2."
             },
             "executeTravel": {
               "type": "boolean",
               "description": "Execute travel."
+            },
+            "serverAddress": {
+              "type": "string",
+              "description": "Host name or IP of the server to join, such as 127.0.0.1 (no port, which goes in serverPort)."
+            },
+            "serverPort": {
+              "type": "number",
+              "description": "Game port, a whole number (engine default 7777). configure_lan_play takes 1024 to 65535; a join without it uses the project default port."
+            },
+            "serverOp": {
+              "type": "string",
+              "enum": [
+                "host",
+                "join"
+              ],
+              "description": "Which host lan server variant to run; omit for 'host'.",
+              "default": "host"
             }
           },
           "required": [
-            "action",
-            "mapName"
+            "action"
           ],
           "additionalProperties": false
         },
@@ -68384,21 +68806,33 @@
             "travelURL": {
               "type": "string",
               "description": "Listen-server travel URL built for the map and options."
+            },
+            "connectionURL": {
+              "type": "string",
+              "description": "The address:port URL, with options, the PIE instance travels to."
+            },
+            "pieWorld": {
+              "type": "string",
+              "description": "The PIE world and instance that started travelling."
+            },
+            "travelStarted": {
+              "type": "boolean",
+              "description": "Whether ClientTravel was issued; the connection itself completes asynchronously."
             }
           },
           "required": [
-            "success",
-            "travelURL"
+            "success"
           ],
           "additionalProperties": false
         }
       },
       "examples": [
         {
-          "title": "Build the LAN listen-server travel URL for a map; nothing is hosted unless executeTravel is true, which travels the running world to it.",
+          "title": "Host a LAN listen server (build the travel URL, optionally travel to it), or make a running Play-In-Editor instance join one.",
           "input": {
             "action": "host_lan_server",
-            "mapName": "/Game/Maps/Arena"
+            "mapName": "/Game/Maps/Arena",
+            "serverOp": "host"
           },
           "output": {
             "success": true,
@@ -68434,12 +68868,36 @@
       },
       "routing": {
         "parentTool": "manage_networking",
-        "dispatchAction": "manage_sessions"
+        "dispatchAction": "manage_sessions",
+        "dispatchBy": {
+          "param": "serverOp",
+          "actions": {
+            "host": "host_lan_server",
+            "join": "join_lan_server"
+          },
+          "declaredBy": {
+            "mapName": [
+              "host"
+            ],
+            "maxPlayers": [
+              "host"
+            ],
+            "executeTravel": [
+              "host"
+            ],
+            "serverAddress": [
+              "join"
+            ],
+            "serverPort": [
+              "join"
+            ]
+          }
+        }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "16b7c4184b68e000607482e74347076a9d74162d895dabd97f7feccddbeabbe2",
-        "content": "49f3f639e42b5684f27783a1ff2e4e628873cb30f1f8cf815f8341f565dbc04f"
+        "schema": "9c94012d0f5288fa052141c2f048368fe2a494bc67787cf4c9508fcd1eb25fcd",
+        "content": "90c7ce0dd64944f456a360ab448733352009a9d706ddd3eb68d247122a848dda"
       }
     },
     {
@@ -68770,11 +69228,13 @@
         "domain": "networking",
         "family": "input",
         "topics": [
-          "remove_mapping"
+          "remove_mapping",
+          "disable input action",
+          "unbind key"
         ],
-        "summary": "Remove an Enhanced Input mapping.",
+        "summary": "Remove an Enhanced Input mapping; removing an action's keys is how an input action is disabled.",
         "whenToUse": [
-          "Use when remove an enhanced input mapping."
+          "Use when remove an enhanced input mapping; removing an action's keys is how an input action is disabled."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -68835,7 +69295,7 @@
       },
       "examples": [
         {
-          "title": "Remove an Enhanced Input mapping.",
+          "title": "Remove an Enhanced Input mapping; removing an action's keys is how an input action is disabled.",
           "input": {
             "action": "remove_mapping",
             "contextPath": "/Game/Input/IMC_Default",
@@ -68877,7 +69337,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2a6134884a718d676243af5d47a6ab99f33c149f40a849312c6a003faeb2481d",
-        "content": "33eb71fba47c9c05e2f92be90777c7ce026efbc5902d1f3c24b4c4360115cc14"
+        "content": "f803006817f822ec32518e807c4f68b2a0fd744cce174d3ff5e79c0fd6c2b662"
       }
     },
     {
