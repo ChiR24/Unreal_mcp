@@ -166,9 +166,12 @@ Top level (anything else is `INVALID_RECIPE`):
 - `defaultValue`: a JSON scalar is the value's export text (`30`, `true`, `"Idle"`); a JSON array
   sets an array. A map or set default is its export text as a string, the form get_property
   returns, e.g. `"((Potion, 0.5),(Sword, 3.0))"` for `Map:Name,Float`. A default the property
-  cannot import is `DEFAULT_NOT_APPLIED` and rolls back.
+  cannot import, on a new variable (checked by add_variable itself, which then adds nothing) or an
+  existing one, is `DEFAULT_NOT_APPLIED` and rolls back. The compiler alone would only warn and
+  keep the zero value.
 - `instanceEditable` (Instance Editable), `exposeOnSpawn` (Expose on Spawn; turns Instance Editable
-  on, so SpawnActor nodes grow the pin), `category`, `isReplicated`.
+  on, so SpawnActor nodes grow the pin), `category`, `isReplicated` (false also clears RepNotify).
+  These apply to an existing variable too, whenever the recipe gives them.
 
 `dispatchers[]`: `{name, parameters: [{name, type}]}`. What the editor's "+ Event Dispatcher" makes
 (member variable plus signature graph, `FBlueprintEditor::OnAddNewDelegate`). An existing dispatcher
@@ -271,7 +274,8 @@ What a hook does:
   implements it (a parent Blueprint's graph, a BlueprintNativeEvent's C++), a `Parent:` call is made
   and runs first, as the editor's default events do (report `hooks[].parentCallAdded`).
 - Created events, hubs and parent calls are shared: never removed by a replace.
-- Wiring from `"$hook_event.then"` (the event's own exec pin) is refused; wire from `"$hook.then"`.
+- Wiring from `"$hook_event.then"` (the event's own exec pin) is refused, as `from` or as
+  `fromNodeId` `"$hook_event"` with `fromPinName` `"then"`; wire from `"$hook.then"`.
 - All hooked events of one recipe must be on one event graph page (`HOOK_EVENTS_ON_DIFFERENT_PAGES`);
   that page is where eventGraph steps run. Without hooks: the first event graph page (`NO_EVENT_GRAPH`
   when the Blueprint has none and the recipe needs one).
@@ -311,8 +315,9 @@ The node: `create_node K2Node_EnhancedInputAction` with the section's id. Exec p
 Registration (no key fires without it, and nothing warns): unless the Blueprint already has an
 AddMappingContext for this context, the recipe file `Behaviour/InputRegistrationPawn`
 (On Controller Changed -> Cast to PlayerController -> Enhanced Input Local Player Subsystem ->
-AddMappingContext(context, 0)) or `Behaviour/InputRegistrationController` (BeginPlay -> Self -> ...)
-is added through a hook. Its nodes carry `MCP input context`, are shared and never removed.
+Branch on IsValid -> AddMappingContext(context, 0)) or `Behaviour/InputRegistrationController`
+(BeginPlay -> Self -> ...) is added through a hook. The IsValid branch skips a PlayerController with
+no LocalPlayer (the server's copy of a remote player's), which has no subsystem. Its nodes carry `MCP input context`, are shared and never removed.
 
 Key mapping, last: a pair already in the context is left alone (`input.keyAlreadyMapped`; add_mapping
 would reset its triggers and modifiers); else it is added through the Input domain's add_mapping
@@ -354,15 +359,20 @@ now, the key mapping) restores it: new graphs, nodes, hub pins, variables and SC
 links, defaults, node states and variables are put back, the Blueprint is recompiled
 (`report.afterRollback`, `rolledBack: true`) and saved when its package was clean before, so the disk
 matches the pre-call state. Rollback does not use editor undo (compiles can clear the undo buffer).
+Exception: after a replace removed the previous version (`previousRemoved` > 0) nothing is saved,
+because the disk copy is then the only one that still has that version.
 
 Your own edits (add an SCS component, then hook its overlap): check PIE yourself
 (`GEditor->IsPlaySessionInProgress()`), `FSnapshot Before = McpBlueprintBehaviour::TakeSnapshot(BP);`
 BEFORE your edits, then `Author(..., Recipe, &Before)`. A failure anywhere, planning included, then
-undoes your edits too. Author compiles a dirty Blueprint first so its checks see your edits.
+undoes your edits too. Author compiles a dirty Blueprint first so its checks see your edits. It
+cannot undo them when it cannot load the Blueprint (PIE started, or the load failed); the message
+then says your edits were NOT undone and `rolledBack` is false.
 
 Not covered:
-- A replace that fails after removing the previous version cannot bring it back: the Blueprint is
-  left without either, and the message says so (`previousRemoved` > 0). Re-run to rebuild.
+- A replace that fails after removing the previous version cannot bring it back in memory: the
+  Blueprint is left without either, unsaved, and the message says so (`previousRemoved` > 0).
+  Revert the asset (reload it without saving) to get the disk copy back, or re-run to rebuild.
 - Input assets the resolver created stay (listed in `input.createdAssets`).
 - Property changes on SCS components that existed before (template properties) are not snapshotted.
 - A Blueprint that did not compile before may keep not compiling (`preExistingErrors: true`).
@@ -381,7 +391,8 @@ Not covered:
 6. Variable flags and re-defaults; compile; a Blueprint that compiled before and does not now fails
    with `BEHAVIOUR_BREAKS_COMPILE` and the compiler's first error.
 7. New nodes tagged (owner or shared); key mapping.
-8. One save. On any failure from step 3 on: Restore, then save the restored state.
+8. One save. On any failure from step 3 on: Restore, then save the restored state (not after a
+   replace removed the previous version; see Not covered).
 
 Each member step compiles once (variables, dispatchers, functions), plus the final compile.
 
@@ -419,7 +430,7 @@ Each member step compiles once (variables, dispatchers, functions), plus the fin
 | `BEHAVIOUR_IN_USE` | OWNERSHIP AND REPLACE |
 | `ENHANCEDINPUT_PLUGIN_NOT_ENABLED`, `ENHANCED_INPUT_NOT_DEFAULT`, `INPUT_NOT_SUPPORTED`, `INVALID_ARGUMENT`, `ASSET_NOT_FOUND`, `INPUT_ASSET_FAILED` | INPUT |
 | the failing step's code (`FUNCTION_NOT_FOUND`, `VARIABLE_NOT_FOUND`, `DISPATCHER_NOT_FOUND`, `PIN_DEFAULT_FAILED`, `LATENT_NODE_IN_FUNCTION`, ...), else `STEP_FAILED` | A build_graph step failed; `failedStep` names it |
-| `DEFAULT_NOT_APPLIED` | An existing variable's new default does not import |
+| `DEFAULT_NOT_APPLIED` | A variable's default (new or existing) does not import |
 | `BEHAVIOUR_BREAKS_COMPILE` | The Blueprint compiled before and would not with the behaviour |
 | `KEY_MAPPING_FAILED` | The key mapping could not be added |
 

@@ -164,8 +164,10 @@ FAuthorResult Author(UMcpAutomationBridgeSubsystem& Bridge, const FString& Reque
     if (!(GEditor && GEditor->IsPlaySessionInProgress()))
     {
         Code = Recipe.IsValid() ? TEXT("BLUEPRINT_NOT_FOUND") : TEXT("INVALID_RECIPE");
-        Error = TEXT("No recipe was given.");
-        Blueprint = Recipe.IsValid() ? LoadBlueprintAsset(BlueprintPath, Normalized, Error) : nullptr;
+        FString LoadError;
+        // Loaded without a recipe too when the caller's own edits (Before) must be put back.
+        Blueprint = Recipe.IsValid() || Before ? LoadBlueprintAsset(BlueprintPath, Normalized, LoadError) : nullptr;
+        Error = Recipe.IsValid() ? LoadError : FString(TEXT("No recipe was given."));
     }
     Report->SetStringField(TEXT("blueprintPath"), Blueprint ? Blueprint->GetOutermost()->GetName() : BlueprintPath);
     FSnapshot Own;
@@ -179,7 +181,7 @@ FAuthorResult Author(UMcpAutomationBridgeSubsystem& Bridge, const FString& Reque
         McpSafeCompileBlueprint(Blueprint); // the caller's own edits (Before) must be on the class the checks read
     }
     Detail::FPlan Plan;
-    bool bApplied = Blueprint && Detail::BuildPlan(Bridge, RequestId, Blueprint, Recipe, Plan, Report, Error, Code);
+    bool bApplied = Blueprint && Recipe.IsValid() && Detail::BuildPlan(Bridge, RequestId, Blueprint, Recipe, Plan, Report, Error, Code);
     bool bChanged = Before != nullptr;
     if (bApplied)
     {
@@ -190,24 +192,32 @@ FAuthorResult Author(UMcpAutomationBridgeSubsystem& Bridge, const FString& Reque
     Report->SetBoolField(TEXT("rolledBack"), false);
     if (!bApplied)
     {
-        if (Blueprint && bChanged)
+        const bool bRestored = Blueprint && bChanged;
+        const int32 PreviousRemoved = static_cast<int32>(GetJsonNumberField(Report, TEXT("previousRemoved")));
+        if (bRestored)
         {
             Detail::Restore(Blueprint, Snapshot, Report);
             // Put the disk back too, whatever a step may have written; a package that was
-            // already dirty keeps the caller's unsaved work unsaved.
-            Report->SetBoolField(TEXT("saved"), !Snapshot.bPackageDirty && SaveLoadedAssetThrottled(Blueprint, true));
+            // already dirty keeps the caller's unsaved work unsaved. After a replace removed
+            // the previous version, the disk copy is the only one that still has it: no save.
+            Report->SetBoolField(TEXT("saved"), !Snapshot.bPackageDirty && PreviousRemoved == 0 &&
+                                                    SaveLoadedAssetThrottled(Blueprint, true));
         }
         const FString FailedStep = GetJsonStringField(Report, TEXT("failedStep"));
-        const int32 PreviousRemoved = static_cast<int32>(GetJsonNumberField(Report, TEXT("previousRemoved")));
         R.ErrorCode = Code;
         R.Message = FString::Printf(TEXT("Behaviour '%s' was not applied: "), *Plan.Tag);
         R.Message += FailedStep.IsEmpty() ? Error : FailedStep + TEXT(" failed: ") + Error;
-        R.Message += !bChanged ? TEXT(" The Blueprint was not changed.") : TEXT(" The Blueprint was put back as it was");
-        // ponytail: a replace removes the previous version before the rebuild and cannot bring it back.
-        R.Message += !bChanged ? FString()
+        R.Message += !bChanged    ? TEXT(" The Blueprint was not changed.")
+                     : !bRestored ? TEXT(" The edits made before this call were NOT undone: the Blueprint could not be "
+                                         "loaded (Play In Editor is running, or the load failed).")
+                                  : TEXT(" The Blueprint was put back as it was");
+        // ponytail: a replace removes the previous version before the rebuild; only the disk copy keeps it.
+        R.Message += !bRestored ? FString()
                      : PreviousRemoved > 0
                          ? FString::Printf(TEXT(", except the %d nodes of this behaviour's previous version, which were "
-                                                "removed first; run the action again to rebuild it."), PreviousRemoved)
+                                                "removed first. It was NOT saved, so the copy on disk still has that "
+                                                "version: revert the asset (reload it without saving) to get it back, "
+                                                "or run the action again to rebuild it."), PreviousRemoved)
                          : FString(TEXT("."));
         return R;
     }

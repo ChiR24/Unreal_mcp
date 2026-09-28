@@ -58,31 +58,6 @@ TSharedPtr<FJsonObject> MemberStep(const TCHAR* Edit, const TSharedPtr<FJsonObje
     }
     return Step;
 }
-
-// A scalar default is the variable's export text, checked by importing it into the
-// class default object the way the compiler will; arrays and objects go through
-// the converter set_default uses.
-bool RedefaultVariable(UBlueprint* Blueprint, FName Name, const TSharedPtr<FJsonValue>& Value, FString& OutError)
-{
-    FString Text;
-    if (!McpJsonScalarToString(Value, Text))
-    {
-        return McpBlueprintHandlers::McpApplyVariableObjectDefault(Blueprint, Name, Value, OutError);
-    }
-    UClass* Generated = Blueprint->GeneratedClass;
-    UObject* Defaults = Generated ? Generated->GetDefaultObject() : nullptr;
-    const FProperty* Property = Defaults ? Generated->FindPropertyByName(Name) : nullptr;
-    const int32 Index = FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, Name);
-    if (!Property || Index == INDEX_NONE ||
-        !FBlueprintEditorUtils::PropertyValueFromString(Property, Text, reinterpret_cast<uint8*>(Defaults)))
-    {
-        OutError = FString::Printf(TEXT("'%s' is not a valid default for variable %s (%s)."), *Text, *Name.ToString(),
-                                   Property ? *Property->GetCPPType() : TEXT("not compiled"));
-        return false;
-    }
-    Blueprint->NewVariables[Index].DefaultValue = Text;
-    return true;
-}
 } // namespace
 
 bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, FPlan& Plan, FString& OutError,
@@ -255,10 +230,21 @@ bool CommitVariables(UBlueprint* Blueprint, const FPlan& Plan, const FSnapshot& 
         {
             Desc.RemoveMetaData(FBlueprintMetadata::MD_ExposeOnSpawn);
         }
+        // add_variable leaves a variable that already exists as it is; the recipe's flags still hold.
+        if (Var->TryGetBoolField(TEXT("isReplicated"), bFlag))
+        {
+            Desc.PropertyFlags = bFlag ? (Desc.PropertyFlags | CPF_Net) : (Desc.PropertyFlags & ~(CPF_Net | CPF_RepNotify));
+            Desc.RepNotifyFunc = bFlag ? Desc.RepNotifyFunc : NAME_None;
+        }
+        FString Category;
+        if (Var->TryGetStringField(TEXT("category"), Category))
+        {
+            Desc.Category = FText::FromString(Category);
+        }
         const TSharedPtr<FJsonValue> Default = Var->TryGetField(TEXT("defaultValue"));
         const bool bRedefault = bExisted && !GetJsonBoolField(Var, TEXT("keepExisting")) && Default.IsValid() &&
                                 Default->Type != EJson::Null;
-        if (bRedefault && !RedefaultVariable(Blueprint, Name, Default, OutError))
+        if (bRedefault && !McpBlueprintHandlers::McpApplyVariableDefault(Blueprint, Name, Default, OutError))
         {
             return false;
         }

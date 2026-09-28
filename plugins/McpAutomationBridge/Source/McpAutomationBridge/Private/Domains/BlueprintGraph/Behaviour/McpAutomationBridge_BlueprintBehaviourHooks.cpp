@@ -120,12 +120,18 @@ bool CheckHooks(UBlueprint* Blueprint, FPlan& Plan, FString& OutError, FString& 
         return false;
     }
     // An event's own exec pin belongs to its hub: wiring from it would unhook everyone else.
+    // Both spellings: from "$x.then", and fromNodeId "$x" with fromPinName "then" (the
+    // batch expands `from` over them, so `from` wins when a step has both).
     OutCode = TEXT("INVALID_RECIPE");
     for (int32 Index = 0; Index < Plan.Ops.Num(); ++Index)
     {
-        FString From;
-        if (Plan.Ops[Index]->AsObject()->TryGetStringField(TEXT("from"), From) && From.StartsWith(TEXT("$")) &&
-            From.EndsWith(TEXT(".then")) && SharedIds.Contains(From.Mid(1, From.Len() - 6)))
+        const TSharedPtr<FJsonObject> Step = Plan.Ops[Index]->AsObject();
+        FString From = GetJsonStringField(Step, TEXT("from"));
+        const FString FromNode = GetJsonStringField(Step, TEXT("fromNodeId"));
+        From = !From.IsEmpty() || FromNode.IsEmpty() ? From
+                                                     : FromNode + TEXT(".") + GetJsonStringField(Step, TEXT("fromPinName"));
+        if (From.StartsWith(TEXT("$")) && From.EndsWith(TEXT(".then"), ESearchCase::IgnoreCase) &&
+            SharedIds.Contains(From.Mid(1, From.Len() - 6)))
         {
             OutError = FString::Printf(TEXT("%s wires from %s, the exec pin of a shared event. Hook the event and wire "
                                             "from the hook's \"$id.then\" instead."), *Plan.Labels[Index], *From);

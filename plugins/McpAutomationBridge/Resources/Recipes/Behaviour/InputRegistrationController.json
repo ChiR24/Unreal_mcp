@@ -1,5 +1,5 @@
 {
-  "description": "Registers an Enhanced Input mapping context on a PlayerController at BeginPlay. McpBlueprintBehaviour adds this to a recipe whose input section needs a context this Blueprint does not register yet; its nodes are shared (comment 'MCP input context') and never removed.",
+  "description": "Registers an Enhanced Input mapping context on a PlayerController at BeginPlay. BeginPlay also runs on the server for every remote player's PlayerController, which has no LocalPlayer and so no subsystem: a Branch on IsValid skips those. McpBlueprintBehaviour adds this to a recipe whose input section needs a context this Blueprint does not register yet; its nodes are shared (comment 'MCP input context') and never removed.",
   "tag": "MCP input context",
   "placeholders": {
     "MappingContext": "Object path of the Input Mapping Context to register, e.g. /Game/Input/IMC_MCP.IMC_MCP."
@@ -10,9 +10,14 @@
   "eventGraph": [
     { "edit": "create_node", "id": "__imcSelf", "nodeType": "Self" },
     { "edit": "create_node", "id": "__imcSub", "nodeType": "K2Node_GetSubsystemFromPC", "targetClass": "/Script/EnhancedInput.EnhancedInputLocalPlayerSubsystem" },
+    { "edit": "create_node", "id": "__imcValid", "nodeType": "CallFunction", "memberName": "IsValid", "memberClass": "/Script/Engine.KismetSystemLibrary" },
+    { "edit": "create_node", "id": "__imcLocal", "nodeType": "Branch" },
     { "edit": "create_node", "id": "__imcAdd", "nodeType": "CallFunction", "memberName": "AddMappingContext", "memberClass": "/Script/EnhancedInput.EnhancedInputLocalPlayerSubsystem", "pinDefaults": { "MappingContext": "{{MappingContext}}", "Priority": 0 } },
     { "edit": "connect_pins", "from": "$__imcSelf.self", "to": "$__imcSub.PlayerController" },
+    { "edit": "connect_pins", "from": "$__imcSub.ReturnValue", "to": "$__imcValid.Object" },
+    { "edit": "connect_pins", "from": "$__imcValid.ReturnValue", "to": "$__imcLocal.Condition" },
     { "edit": "connect_pins", "from": "$__imcSub.ReturnValue", "to": "$__imcAdd.self" },
-    { "edit": "connect_pins", "from": "$__imc.then", "to": "$__imcAdd.execute" }
+    { "edit": "connect_pins", "from": "$__imc.then", "to": "$__imcLocal.execute" },
+    { "edit": "connect_pins", "from": "$__imcLocal.then", "to": "$__imcAdd.execute" }
   ]
 }
