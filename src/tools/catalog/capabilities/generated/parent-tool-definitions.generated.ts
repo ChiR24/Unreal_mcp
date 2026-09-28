@@ -3980,6 +3980,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Actors moved (0 under dryRun)."
         },
+        "blueprintsFixed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Pairs inside one Blueprint actor, fixed in the Blueprint: which part moved off which, and where it now sits in every placed copy (the Blueprint is compiled and saved)."
+        },
         "byClass": {
           "type": "array",
           "items": {

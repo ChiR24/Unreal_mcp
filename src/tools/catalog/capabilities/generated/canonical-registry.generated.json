@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a3facf71b616dd06",
+  "catalogRevision": "83a40492d77f5160",
   "recordCount": 388,
   "records": [
     {
@@ -30093,13 +30093,12 @@
           "texture flicker",
           "overlapping faces"
         ],
-        "summary": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.",
+        "summary": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows. Two parts of one Blueprint actor are parted in the Blueprint itself, so every placed copy is fixed at once.",
         "whenToUse": [
           "audit_placement reported coplanar faces, or surfaces flicker between two materials.",
           "A level was built from boxes placed flush against each other and should be cleaned up before anyone looks at it."
         ],
         "whenNotToUse": [
-          "The two faces belong to parts of one Blueprint actor: they are listed under skipped; move one part with manage_blueprint edit_scs.",
           "Only some actors may move: limit the call with nameFilter. A tag of mcp.placement.ok does not exempt an actor, because no two faces flicker on purpose."
         ]
       },
@@ -30177,6 +30176,13 @@
               },
               "x-unreal-reflection-boundary": true
             },
+            "blueprintsFixed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Pairs inside one Blueprint actor, fixed in the Blueprint: which part moved off which, and where it now sits in every placed copy (the Blueprint is compiled and saved)."
+            },
             "skipped": {
               "type": "array",
               "items": {
@@ -30193,19 +30199,20 @@
       },
       "examples": [
         {
-          "title": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.",
+          "title": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows. Two parts of one Blueprint actor are parted in the Blueprint itself, so every placed copy is fixed at once.",
           "input": {
             "action": "fix_coplanar",
             "dryRun": true
           },
           "output": {
             "success": true,
-            "message": "Would move 3 actors for 4 coplanar pairs; 4 pairs remain",
+            "message": "Would move 3 actors and 1 Blueprint parts in 1 passes for 4 coplanar pairs; 4 pairs remain",
             "pairsFound": 4,
             "actorsMoved": 0,
             "remainingPairs": 4,
             "dryRun": true,
             "moved": [],
+            "blueprintsFixed": [],
             "skipped": []
           }
         }
@@ -30237,8 +30244,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7f8a74a167d5dd480a37da303d09aa96096317808eb1757937db75e940bfe292",
-        "content": "1ecc6124678630936fc9bec9b2d73caf77c9aecee4f3dec5129a0de432682112"
+        "schema": "43fec18db289bcfef863f2cbca3beff58072867167db44cfc1cc6304909286ef",
+        "content": "d88c0df56508e2d57715301e55a68fc85b5116abd752488b70e67a8818810b1e"
       }
     },
     {

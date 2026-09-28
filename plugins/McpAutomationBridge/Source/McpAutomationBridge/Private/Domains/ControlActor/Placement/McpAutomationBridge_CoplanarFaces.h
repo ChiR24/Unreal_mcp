@@ -52,4 +52,11 @@ FString DescribeDirection(const FVector& Normal);
 // control_actor fix_coplanar: moves the actor of every coplanar pair a unit so one surface is clearly in front.
 bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+// One pass over the pairs inside Blueprint actors: the smaller part moves a unit in its Blueprint's component
+// template, so every placed copy takes it (propagated, compiled, saved), once however many copies are placed. Fixed
+// carries the pairs already fixed across passes; true when a Blueprint changed (or would, in a dry run).
+bool FixCoplanarInsideBlueprints(const TArray<FMcpCoplanarHit>& Inside, double Distance, bool bDryRun,
+                                 TSet<FString>& Fixed, TArray<TSharedPtr<FJsonValue>>& OutDone,
+                                 TArray<FString>& OutSkipped);
 } // namespace McpCoplanar

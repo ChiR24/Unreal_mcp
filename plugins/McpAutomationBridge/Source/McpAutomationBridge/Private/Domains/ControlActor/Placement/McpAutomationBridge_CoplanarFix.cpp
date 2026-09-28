@@ -110,9 +110,9 @@ void McpCoplanarSkip(TArray<TSharedPtr<FJsonValue>>& Skipped, TSet<FString>& See
     }
 }
 
-// One pass: where each actor's faces go. A pair inside one actor is left for its Blueprint.
+// One pass: where each actor's faces go. A pair inside one actor goes to Inside, to be fixed in its Blueprint.
 TMap<AActor*, FMcpCoplanarPlan> McpCoplanarPlanPass(const TArray<FMcpCoplanarHit>& Hits, double Distance,
-                                                    TArray<TSharedPtr<FJsonValue>>& Skipped, TSet<FString>& SkippedSeen)
+                                                    TArray<FMcpCoplanarHit>& Inside)
 {
     TMap<AActor*, FMcpCoplanarPlan> Plans;
     for (const FMcpCoplanarHit& Hit : Hits)
@@ -121,9 +121,7 @@ TMap<AActor*, FMcpCoplanarPlan> McpCoplanarPlanPass(const TArray<FMcpCoplanarHit
         // An actor tagged mcp.placement.ok overlaps on purpose, but no two faces flicker on purpose: it is fixed too.
         if (Hit.Actor == Hit.OtherActor)
         {
-            McpCoplanarSkip(Skipped, SkippedSeen, FString::Printf(
-                TEXT("'%s': its own %s and %s point %s in one plane; move one of them in its Blueprint (edit_scs)"),
-                *McpActorRef(Hit.Actor), *Hit.Component, *Hit.OtherComponent, *Direction));
+            Inside.Add(Hit);
             continue;
         }
         const bool bApplied = Hit.FaceArea > 0.0 && Hit.OverlapU * Hit.OverlapV >= 0.95 * Hit.FaceArea;
@@ -182,22 +180,26 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     }
 
     // Moving one actor can line it up with a neighbour that moved the same way, so the fix repeats until a pass
-    // finds nothing left to move (at most four passes).
+    // finds nothing left to move (at most four passes). Moved actors are kept by name: fixing a Blueprint compiles
+    // it, which replaces its placed actors.
     const FScopedTransaction Transaction(NSLOCTEXT("McpCoplanar", "FixCoplanar", "Fix Coplanar Faces"), !bDryRun);
     TArray<TSharedPtr<FJsonValue>> Skipped;
     TSet<FString> SkippedSeen;
-    TArray<AActor*> Order;
-    TMap<AActor*, FVector> Offsets;
-    TMap<AActor*, FString> Resizes;
-    TMap<AActor*, TArray<TSharedPtr<FJsonValue>>> Pairs;
+    TArray<FString> Order;
+    TMap<FString, FVector> Offsets;
+    TMap<FString, FString> Resizes;
+    TMap<FString, TArray<TSharedPtr<FJsonValue>>> Pairs;
+    TSet<FString> BlueprintPairsFixed;
+    TArray<TSharedPtr<FJsonValue>> BlueprintsFixed;
     int32 PairsFound = INDEX_NONE;
     int32 Passes = 0;
     while (Passes < (bDryRun ? 1 : 4))
     {
         const TArray<FMcpCoplanarHit> Hits = FindCoplanarFaces(World, NameFilter);
         PairsFound = PairsFound == INDEX_NONE ? Hits.Num() : PairsFound;
-        const TMap<AActor*, FMcpCoplanarPlan> Plans = McpCoplanarPlanPass(Hits, Distance, Skipped, SkippedSeen);
-        if (Plans.Num() == 0)
+        TArray<FMcpCoplanarHit> Inside;
+        const TMap<AActor*, FMcpCoplanarPlan> Plans = McpCoplanarPlanPass(Hits, Distance, Inside);
+        if (Plans.Num() == 0 && Inside.Num() == 0)
         {
             break;
         }
@@ -208,27 +210,36 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
             FVector Offset = FVector::ZeroVector;
             FString Resize;
             FString Why;
+            const FString Ref = McpActorRef(Entry.Key);
             if (!McpCoplanarApply(Entry.Key, Entry.Value, bDryRun, Offset, Resize, Why))
             {
-                McpCoplanarSkip(Skipped, SkippedSeen, FString::Printf(TEXT("'%s': %s"), *McpActorRef(Entry.Key), *Why));
+                McpCoplanarSkip(Skipped, SkippedSeen, FString::Printf(TEXT("'%s': %s"), *Ref, *Why));
                 continue;
             }
             bMovedAny = true;
-            if (FVector* Existing = Offsets.Find(Entry.Key))
+            if (FVector* Existing = Offsets.Find(Ref))
             {
                 *Existing += Offset;
             }
             else
             {
-                Order.Add(Entry.Key);
-                Offsets.Add(Entry.Key, Offset);
+                Order.Add(Ref);
+                Offsets.Add(Ref, Offset);
             }
             if (!Resize.IsEmpty())
             {
-                FString& All = Resizes.FindOrAdd(Entry.Key);
+                FString& All = Resizes.FindOrAdd(Ref);
                 All += All.IsEmpty() ? Resize : TEXT(", ") + Resize;
             }
-            Pairs.FindOrAdd(Entry.Key).Append(Entry.Value.Pairs);
+            Pairs.FindOrAdd(Ref).Append(Entry.Value.Pairs);
+        }
+        // After the actor moves: from here on, the actors of every Blueprint that changes are new ones.
+        TArray<FString> BlueprintSkips;
+        bMovedAny |= FixCoplanarInsideBlueprints(Inside, Distance, bDryRun, BlueprintPairsFixed, BlueprintsFixed,
+                                                 BlueprintSkips);
+        for (const FString& Line : BlueprintSkips)
+        {
+            McpCoplanarSkip(Skipped, SkippedSeen, Line);
         }
         if (!bMovedAny)
         {
@@ -236,16 +247,16 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
         }
     }
     TArray<TSharedPtr<FJsonValue>> Moved;
-    for (AActor* Actor : Order)
+    for (const FString& Ref : Order)
     {
         TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
-        Item->SetStringField(TEXT("actorName"), McpActorRef(Actor));
-        Item->SetObjectField(TEXT("offset"), McpHandlerUtils::VectorToJson(Offsets[Actor]));
-        if (const FString* Resize = Resizes.Find(Actor))
+        Item->SetStringField(TEXT("actorName"), Ref);
+        Item->SetObjectField(TEXT("offset"), McpHandlerUtils::VectorToJson(Offsets[Ref]));
+        if (const FString* Resize = Resizes.Find(Ref))
         {
             Item->SetStringField(TEXT("resized"), *Resize);
         }
-        Item->SetArrayField(TEXT("pairs"), Pairs.FindOrAdd(Actor));
+        Item->SetArrayField(TEXT("pairs"), Pairs.FindOrAdd(Ref));
         Moved.Add(MakeShared<FJsonValueObject>(Item));
     }
     PairsFound = FMath::Max(PairsFound, 0);
@@ -258,12 +269,13 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     Data->SetNumberField(TEXT("passes"), Passes);
     Data->SetBoolField(TEXT("dryRun"), bDryRun);
     Data->SetArrayField(TEXT("moved"), Moved);
+    Data->SetArrayField(TEXT("blueprintsFixed"), BlueprintsFixed);
     Data->SetArrayField(TEXT("skipped"), Skipped);
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("%s %d actors in %d passes for %d coplanar pairs; %d pairs remain%s"),
-                        bDryRun ? TEXT("Would move") : TEXT("Moved"), Moved.Num(), Passes, PairsFound, Remaining,
-                        Skipped.Num() > 0 ? TEXT(" (see skipped)") : TEXT("")),
+        FString::Printf(TEXT("%s %d actors and %d Blueprint parts in %d passes for %d coplanar pairs; %d pairs remain%s"),
+                        bDryRun ? TEXT("Would move") : TEXT("Moved"), Moved.Num(), BlueprintsFixed.Num(), Passes,
+                        PairsFound, Remaining, Skipped.Num() > 0 ? TEXT(" (see skipped)") : TEXT("")),
         Data, FString());
     return true;
 }

@@ -208,13 +208,12 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_FIND,
     topics: ['fix z-fighting', 'fix flickering', 'coplanar faces', 'texture flicker', 'overlapping faces'],
-    summary: 'Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.',
+    summary: 'Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows. Two parts of one Blueprint actor are parted in the Blueprint itself, so every placed copy is fixed at once.',
     whenToUse: [
       'audit_placement reported coplanar faces, or surfaces flicker between two materials.',
       'A level was built from boxes placed flush against each other and should be cleaned up before anyone looks at it.',
     ],
     whenNotToUse: [
-      'The two faces belong to parts of one Blueprint actor: they are listed under skipped; move one part with manage_blueprint edit_scs.',
       'Only some actors may move: limit the call with nameFilter. A tag of mcp.placement.ok does not exempt an actor, because no two faces flicker on purpose.',
     ],
     inputProps: {
@@ -230,6 +229,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
       passes: { type: 'number', description: 'Passes made: a move can line an actor up with a neighbour that moved the same way, so the fix repeats (at most four passes; one under dryRun).' },
       dryRun: { type: 'boolean', description: 'Whether nothing was changed.' },
       moved: { type: 'array', description: 'One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example "grew 2.0 units along X"), and pairs, each face with the other actor and whether it was brought forward or pulled back.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true },
+      blueprintsFixed: { type: 'array', items: { type: 'string' }, description: 'Pairs inside one Blueprint actor, fixed in the Blueprint: which part moved off which, and where it now sits in every placed copy (the Blueprint is compiled and saved).' },
       skipped: { type: 'array', items: { type: 'string' }, description: 'Pairs left alone, each with the reason and what to do instead.' },
     },
     outputRequired: [],
@@ -237,6 +237,6 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     costLatency: 'interactive',
     costResources: 'medium',
     exampleInput: { action: 'fix_coplanar', dryRun: true },
-    exampleOutput: { success: true, message: 'Would move 3 actors for 4 coplanar pairs; 4 pairs remain', pairsFound: 4, actorsMoved: 0, remainingPairs: 4, dryRun: true, moved: [], skipped: [] },
+    exampleOutput: { success: true, message: 'Would move 3 actors and 1 Blueprint parts in 1 passes for 4 coplanar pairs; 4 pairs remain', pairsFound: 4, actorsMoved: 0, remainingPairs: 4, dryRun: true, moved: [], blueprintsFixed: [], skipped: [] },
   }),
 ];
