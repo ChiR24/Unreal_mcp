@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "aa60265a7e9e3ed0",
+  "catalogRevision": "4af14e9ca38d2c20",
   "recordCount": 385,
   "records": [
     {
@@ -29873,7 +29873,7 @@
         ],
         "whenNotToUse": [
           "The two faces belong to parts of one Blueprint actor: they are listed under skipped; move one part with manage_blueprint edit_scs.",
-          "An actor must keep its exact position: tag it mcp.placement.ok and it is left alone."
+          "Only some actors may move: limit the call with nameFilter. A tag of mcp.placement.ok does not exempt an actor, because no two faces flicker on purpose."
         ]
       },
       "schemas": {
@@ -29938,7 +29938,7 @@
             },
             "moved": {
               "type": "array",
-              "description": "One entry per actor: actorName, offset {x, y, z} it moved by (a resized mesh also changed scale along that axis), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
+              "description": "One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example \"grew 2.0 units along X\"), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -30006,8 +30006,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d983188a30dbafe6ddee01ed41d670c37fc30b7e0af356f5ec16334d1401daba",
-        "content": "30a3de7a01bb3f49309979504772803618119aaf552aec9e5ce73fab0e0eb9e3"
+        "schema": "d7a0837289e707bb78ce3887b206d9bdc88942f819c68cccf696b21f5981d79a",
+        "content": "f98e1832eae42737dcf28ecd95e16c0cfa44b996f9f6f58791a1156def271beb"
       }
     },
     {

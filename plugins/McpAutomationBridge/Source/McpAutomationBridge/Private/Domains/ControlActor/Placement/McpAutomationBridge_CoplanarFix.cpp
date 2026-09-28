@@ -42,7 +42,8 @@ int32 McpCoplanarLocalAxis(const AActor* Actor, int32 Axis)
 }
 
 // Moves (and, when both of its faces on one axis must move, resizes) one actor. False with a reason when it cannot.
-bool McpCoplanarApply(AActor* Actor, const FMcpCoplanarPlan& Plan, bool bDryRun, FVector& OutOffset, FString& OutWhy)
+bool McpCoplanarApply(AActor* Actor, const FMcpCoplanarPlan& Plan, bool bDryRun, FVector& OutOffset, FString& OutResize,
+                      FString& OutWhy)
 {
     FVector Origin;
     FVector Extent;
@@ -70,6 +71,8 @@ bool McpCoplanarApply(AActor* Actor, const FMcpCoplanarPlan& Plan, bool bDryRun,
         }
         Scale[Local] *= (2.0 * Extent[Axis] + Grow) / (2.0 * Extent[Axis]);
         bResize = true;
+        OutResize += FString::Printf(TEXT("%s%s %.1f units along %c"), OutResize.IsEmpty() ? TEXT("") : TEXT(", "),
+                                     Grow > 0.0 ? TEXT("grew") : TEXT("shrank"), FMath::Abs(Grow), TEXT("XYZ")[Axis]);
     }
     OutOffset = Center - Origin;
     if (bDryRun)
@@ -126,20 +129,12 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     for (const FMcpCoplanarHit& Hit : Hits)
     {
         const FString Direction = DescribeDirection(Hit.Normal);
-        if (Hit.Actor == Hit.OtherActor || McpPlacement::McpPlacementAccepted(Hit.Actor))
+        // An actor tagged mcp.placement.ok overlaps on purpose, but no two faces flicker on purpose: it is fixed too.
+        if (Hit.Actor == Hit.OtherActor)
         {
-            if (Hit.Actor == Hit.OtherActor)
-            {
-                Skipped.Add(McpCoplanarText(FString::Printf(
-                    TEXT("'%s': its own %s and %s point %s in one plane; move one of them in its Blueprint (edit_scs)"),
-                    *McpActorRef(Hit.Actor), *Hit.Component, *Hit.OtherComponent, *Direction)));
-            }
-            else
-            {
-                Skipped.Add(McpCoplanarText(FString::Printf(
-                    TEXT("'%s' (%s face with '%s') is tagged mcp.placement.ok, so it was left alone"),
-                    *McpActorRef(Hit.Actor), *Direction, *McpActorRef(Hit.OtherActor))));
-            }
+            Skipped.Add(McpCoplanarText(FString::Printf(
+                TEXT("'%s': its own %s and %s point %s in one plane; move one of them in its Blueprint (edit_scs)"),
+                *McpActorRef(Hit.Actor), *Hit.Component, *Hit.OtherComponent, *Direction)));
             continue;
         }
         const bool bApplied = Hit.FaceArea > 0.0 && Hit.OverlapU * Hit.OverlapV >= 0.95 * Hit.FaceArea;
@@ -175,8 +170,9 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     for (const TPair<AActor*, FMcpCoplanarPlan>& Entry : Plans)
     {
         FVector Offset = FVector::ZeroVector;
+        FString Resize;
         FString Why;
-        if (!McpCoplanarApply(Entry.Key, Entry.Value, bDryRun, Offset, Why))
+        if (!McpCoplanarApply(Entry.Key, Entry.Value, bDryRun, Offset, Resize, Why))
         {
             Skipped.Add(McpCoplanarText(FString::Printf(TEXT("'%s': %s"), *McpActorRef(Entry.Key), *Why)));
             continue;
@@ -184,6 +180,10 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
         TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
         Item->SetStringField(TEXT("actorName"), McpActorRef(Entry.Key));
         Item->SetObjectField(TEXT("offset"), McpHandlerUtils::VectorToJson(Offset));
+        if (!Resize.IsEmpty())
+        {
+            Item->SetStringField(TEXT("resized"), Resize);
+        }
         Item->SetArrayField(TEXT("pairs"), Entry.Value.Pairs);
         Moved.Add(MakeShared<FJsonValueObject>(Item));
     }

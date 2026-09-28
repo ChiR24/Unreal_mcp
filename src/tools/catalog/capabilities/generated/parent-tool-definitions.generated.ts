@@ -4218,7 +4218,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "moved": {
           "type": "array",
-          "description": "One entry per actor: actorName, offset {x, y, z} it moved by (a resized mesh also changed scale along that axis), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
+          "description": "One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example \"grew 2.0 units along X\"), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
           "items": {
             "type": "object",
             "additionalProperties": true,

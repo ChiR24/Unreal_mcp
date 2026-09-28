@@ -215,7 +215,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     ],
     whenNotToUse: [
       'The two faces belong to parts of one Blueprint actor: they are listed under skipped; move one part with manage_blueprint edit_scs.',
-      'An actor must keep its exact position: tag it mcp.placement.ok and it is left alone.',
+      'Only some actors may move: limit the call with nameFilter. A tag of mcp.placement.ok does not exempt an actor, because no two faces flicker on purpose.',
     ],
     inputProps: {
       nameFilter: { type: 'string', description: 'Only fix pairs where either actor label contains this text. Omit for the whole level.' },
@@ -228,7 +228,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
       actorsMoved: { type: 'number', description: 'Actors moved (0 under dryRun).' },
       remainingPairs: { type: 'number', description: 'Coplanar pairs still found afterwards; run audit_placement with kinds ["coplanar"] to see them.' },
       dryRun: { type: 'boolean', description: 'Whether nothing was changed.' },
-      moved: { type: 'array', description: 'One entry per actor: actorName, offset {x, y, z} it moved by (a resized mesh also changed scale along that axis), and pairs, each face with the other actor and whether it was brought forward or pulled back.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true },
+      moved: { type: 'array', description: 'One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example "grew 2.0 units along X"), and pairs, each face with the other actor and whether it was brought forward or pulled back.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true },
       skipped: { type: 'array', items: { type: 'string' }, description: 'Pairs left alone, each with the reason and what to do instead.' },
     },
     outputRequired: [],
