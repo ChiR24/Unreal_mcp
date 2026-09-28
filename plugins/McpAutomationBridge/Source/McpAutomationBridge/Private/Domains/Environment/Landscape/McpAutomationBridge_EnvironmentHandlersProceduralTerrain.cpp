@@ -52,21 +52,17 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     double Spacing = 100.0;
     double HeightScale = 500.0;
     int32 Subdivisions = 50;
-    FString ActorName = TEXT("ProceduralTerrain");
 
     Payload->TryGetNumberField(TEXT("sizeX"), SizeX);
     Payload->TryGetNumberField(TEXT("sizeY"), SizeY);
     Payload->TryGetNumberField(TEXT("spacing"), Spacing);
     Payload->TryGetNumberField(TEXT("heightScale"), HeightScale);
     Payload->TryGetNumberField(TEXT("subdivisions"), Subdivisions);
-    Payload->TryGetStringField(TEXT("actorName"), ActorName);
-
+    // name is the declared label; it used to be ignored in favour of actorName alone.
+    FString ActorName = McpGetFirstStringField(Payload, {TEXT("name"), TEXT("actorName")});
     if (ActorName.IsEmpty())
     {
-        SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("actorName parameter is required for create_procedural_terrain"),
-                            TEXT("INVALID_ARGUMENT"));
-        return true;
+        ActorName = TEXT("ProceduralTerrain");
     }
 
     if (ActorName.Contains(TEXT("/")) || ActorName.Contains(TEXT("\\")) ||
@@ -229,10 +225,16 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralTerrain(
     if (Payload->TryGetStringField(TEXT("material"), MaterialPath) && !MaterialPath.IsEmpty())
     {
         UMaterialInterface *Material = LoadObject<UMaterialInterface>(nullptr, *MaterialPath);
-        if (Material)
+        if (!Material)
         {
-            ProcMesh->SetMaterial(0, Material);
+            // A material that did not load was skipped behind a success.
+            TerrainActor->Destroy();
+            SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("Material not found: %s"), *MaterialPath),
+                                TEXT("ASSET_NOT_FOUND"));
+            return true;
         }
+        ProcMesh->SetMaterial(0, Material);
     }
 
     TerrainActor->MarkPackageDirty();

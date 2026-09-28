@@ -32,17 +32,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSculptLandscape(
     return true;
   }
 
-  FString ToolMode = TEXT("Raise");
-  if (!Payload->TryGetStringField(TEXT("toolMode"), ToolMode)) {
-    Payload->TryGetStringField(TEXT("tool"), ToolMode);
+  // The declared tool, radius and falloff win over their older spellings.
+  FString ToolMode = McpGetFirstStringField(Payload, {TEXT("tool"), TEXT("toolMode")});
+  ToolMode = ToolMode.IsEmpty() ? FString(TEXT("Raise")) : ToolMode;
+  // Any other tool (Smooth, Noise) left every vertex untouched and still reported success.
+  if (!ToolMode.Equals(TEXT("Raise"), ESearchCase::IgnoreCase) && !ToolMode.Equals(TEXT("Lower"), ESearchCase::IgnoreCase) &&
+      !ToolMode.Equals(TEXT("Flatten"), ESearchCase::IgnoreCase)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Unsupported sculpt tool '%s': use Raise, Lower or Flatten"), *ToolMode),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
   }
   double BrushRadius = 1000.0;
-  if (!Payload->TryGetNumberField(TEXT("brushRadius"), BrushRadius)) {
-    Payload->TryGetNumberField(TEXT("radius"), BrushRadius);
+  if (!Payload->TryGetNumberField(TEXT("radius"), BrushRadius)) {
+    Payload->TryGetNumberField(TEXT("brushRadius"), BrushRadius);
   }
   double BrushFalloff = 0.5;
-  if (!Payload->TryGetNumberField(TEXT("brushFalloff"), BrushFalloff)) {
-    Payload->TryGetNumberField(TEXT("falloff"), BrushFalloff);
+  if (!Payload->TryGetNumberField(TEXT("falloff"), BrushFalloff)) {
+    Payload->TryGetNumberField(TEXT("brushFalloff"), BrushFalloff);
   }
   double Strength = 0.1;
   Payload->TryGetNumberField(TEXT("strength"), Strength);

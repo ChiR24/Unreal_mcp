@@ -14,18 +14,25 @@ bool ConfigureLandscapeActor(const FString &LowerSub, FEnvironmentBuildContext &
         return true;
     }
 
+    // Only configure_landscape_lod lands here (configure_landscape_material goes to
+    // HandleSetLandscapeMaterial). It used to report success with nothing applied or with
+    // configurationErrors listed.
     Landscape->Modify();
-    int32 AppliedMaterialSlots = 0;
-    if (LowerSub == TEXT("configure_landscape_material"))
-    {
-        AppliedMaterialSlots = McpSetMaterialOnActor(Landscape, Context.Payload, Context.Resp);
-    }
-    McpApplyEnvironmentSettings(Landscape, Context.Payload, Context.Resp);
-    Landscape->MarkPackageDirty();
-
+    const int32 AppliedCount = McpApplyEnvironmentSettings(Landscape, Context.Payload, Context.Resp);
+    const TArray<TSharedPtr<FJsonValue>> *Errors = nullptr;
+    const bool bErrors = Context.Resp->TryGetArrayField(TEXT("configurationErrors"), Errors) && Errors && Errors->Num() > 0;
     Context.Resp->SetStringField(TEXT("landscapeName"), Landscape->GetActorLabel());
     Context.Resp->SetStringField(TEXT("actorPath"), Landscape->GetPathName());
-    Context.Resp->SetNumberField(TEXT("materialSlotsUpdated"), AppliedMaterialSlots);
+    if (bErrors || AppliedCount == 0)
+    {
+        Context.bSuccess = false;
+        Context.Message = bErrors
+            ? FString(TEXT("Some landscape settings could not be applied; see configurationErrors"))
+            : FString(TEXT("No landscape setting applied: pass settings keyed by landscape property name, e.g. {\"LODDistributionSetting\": 1.5}"));
+        Context.ErrorCode = bErrors ? TEXT("CONFIGURATION_FAILED") : TEXT("NO_SETTING_SUPPLIED");
+        return true;
+    }
+    Landscape->MarkPackageDirty();
     McpHandlerUtils::AddVerification(Context.Resp, Landscape);
     Context.bSuccess = true;
     Context.Message = FString::Printf(TEXT("Landscape action completed: %s"), *LowerSub);
@@ -70,7 +77,7 @@ bool HandleBuildLandscapeAndFoliageAction(const FString &LowerSub, FEnvironmentB
         MarkActorConfigurationResult(Context, bResult, Message, ErrorCode);
         return true;
     }
-    if (LowerSub == TEXT("configure_landscape_material") || LowerSub == TEXT("configure_landscape_lod"))
+    if (LowerSub == TEXT("configure_landscape_lod"))
     {
         return ConfigureLandscapeActor(LowerSub, Context);
     }

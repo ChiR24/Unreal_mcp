@@ -9,14 +9,17 @@
 
 namespace McpLandscapeHandlers {
 static ALandscape *FindLandscapeForEdit(const FString &LandscapePath,
-                                        const FString &LandscapeName) {
+                                        const FString &LandscapeName,
+                                        const FString &ActorPath) {
   if (UWorld *World = McpHandlerUtils::GetEditorWorld()) {
     for (TActorIterator<ALandscape> It(World); It; ++It) {
       if ((!LandscapeName.IsEmpty() &&
            It->GetActorLabel().Equals(LandscapeName, ESearchCase::IgnoreCase)) ||
           (!LandscapePath.IsEmpty() &&
            It->GetPackage()->GetPathName().Equals(LandscapePath,
-                                                  ESearchCase::IgnoreCase))) {
+                                                  ESearchCase::IgnoreCase)) ||
+          (!ActorPath.IsEmpty() &&
+           It->GetPathName().Equals(ActorPath, ESearchCase::IgnoreCase))) {
         return *It;
       }
     }
@@ -34,6 +37,9 @@ ALandscape *ResolveLandscapeOrReply(UMcpAutomationBridgeSubsystem &Bridge,
                                     ULandscapeInfo **OutInfo) {
   FString LandscapePath = GetJsonStringField(Payload, TEXT("landscapePath"));
   const FString LandscapeName = GetJsonStringField(Payload, TEXT("landscapeName"));
+  // The actor's object path (what create_landscape and the spline actions return); declared
+  // by the landscape edit actions but never read, so a call naming only it found nothing.
+  const FString ActorPath = GetJsonStringField(Payload, TEXT("landscapeActorPath"));
   if (!LandscapePath.IsEmpty()) {
     const FString SafePath = SanitizeProjectRelativePath(LandscapePath);
     if (SafePath.IsEmpty()) {
@@ -45,12 +51,12 @@ ALandscape *ResolveLandscapeOrReply(UMcpAutomationBridgeSubsystem &Bridge,
     }
     LandscapePath = SafePath;
   }
-  ALandscape *Landscape = FindLandscapeForEdit(LandscapePath, LandscapeName);
+  ALandscape *Landscape = FindLandscapeForEdit(LandscapePath, LandscapeName, ActorPath);
   if (!Landscape) {
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,
         LandscapeName.IsEmpty()
-            ? FString::Printf(TEXT("Landscape not found at path: %s"), *LandscapePath)
+            ? FString::Printf(TEXT("Landscape not found at path: %s"), *(LandscapePath.IsEmpty() ? ActorPath : LandscapePath))
             : FString::Printf(TEXT("Landscape '%s' not found (path: %s)"), *LandscapeName, *LandscapePath),
         TEXT("LANDSCAPE_NOT_FOUND"));
     return nullptr;

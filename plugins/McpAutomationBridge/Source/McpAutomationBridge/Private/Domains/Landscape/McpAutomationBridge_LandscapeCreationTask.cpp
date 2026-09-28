@@ -46,8 +46,9 @@ void CreateLandscapeOnGameThread(
                                                  Request.ComponentsY)
                                : Request.Name);
   Landscape->ComponentSizeQuads = Request.QuadsPerComponent;
-  Landscape->SubsectionSizeQuads =
-      Request.QuadsPerComponent / Request.SectionsPerComponent;
+  // HandleCreateLandscape guarantees 1 or 2 sections, so this never divides by zero.
+  const int32 QuadsPerSection = Request.QuadsPerComponent / Request.SectionsPerComponent;
+  Landscape->SubsectionSizeQuads = QuadsPerSection;
   Landscape->NumSubsections = Request.SectionsPerComponent;
 
   if (!Request.MaterialPath.IsEmpty()) {
@@ -103,16 +104,17 @@ void CreateLandscapeOnGameThread(
     // vertex-space region, quads PER SUBSECTION, and an empty edit-layer view
     // so Import creates the default layer itself once the components exist.
     Landscape->Import(FGuid::NewGuid(), InMinX, InMinY, InMaxX, InMaxY,
-                      Request.SectionsPerComponent,
-                      Request.QuadsPerComponent / FMath::Max(1, Request.SectionsPerComponent),
+                      Request.SectionsPerComponent, QuadsPerSection,
                       ImportHeightData, nullptr, ImportLayerInfos,
                       ELandscapeImportAlphamapType::Layered,
                       TArrayView<const FLandscapeLayer>());
 #else
     PRAGMA_DISABLE_DEPRECATION_WARNINGS
-    Landscape->Import(FGuid::NewGuid(), 0, 0, Request.ComponentsX - 1,
-                      Request.ComponentsY - 1, Request.SectionsPerComponent,
-                      Request.QuadsPerComponent, ImportHeightData, nullptr,
+    // The same vertex-space region and quads per section as 5.5+: component
+    // indices and quads per component disagreed with the height data's size.
+    Landscape->Import(FGuid::NewGuid(), InMinX, InMinY, InMaxX, InMaxY,
+                      Request.SectionsPerComponent, QuadsPerSection,
+                      ImportHeightData, nullptr,
                       ImportLayerInfos, ELandscapeImportAlphamapType::Layered,
                       nullptr);
     PRAGMA_ENABLE_DEPRECATION_WARNINGS

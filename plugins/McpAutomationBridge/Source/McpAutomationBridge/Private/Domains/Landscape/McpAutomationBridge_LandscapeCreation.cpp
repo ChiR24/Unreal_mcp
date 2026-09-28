@@ -14,12 +14,22 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   McpLandscapeCreation::FLandscapeCreationRequest Request;
   Request.Location = ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector);
-  if (!Payload->TryGetNumberField(TEXT("quadsPerSection"), Request.QuadsPerComponent)) {
-    Payload->TryGetNumberField(TEXT("sectionSize"), Request.QuadsPerComponent);
+  // quadsPerSection is quads per SECTION; a component holds sectionsPerComponent x
+  // sectionsPerComponent of them. Storing it as quads per component built 2-section
+  // components that disagreed with the imported layout, and 0 sections divided by zero.
+  int32 QuadsPerSection = 63;
+  if (!Payload->TryGetNumberField(TEXT("quadsPerSection"), QuadsPerSection)) {
+    Payload->TryGetNumberField(TEXT("sectionSize"), QuadsPerSection);
   }
-  if (Request.QuadsPerComponent <= 0) {
-    Request.QuadsPerComponent = 63;
+  Payload->TryGetNumberField(TEXT("sectionsPerComponent"), Request.SectionsPerComponent);
+  if (QuadsPerSection < 7 || QuadsPerSection > 255 || !FMath::IsPowerOfTwo(QuadsPerSection + 1) ||
+      (Request.SectionsPerComponent != 1 && Request.SectionsPerComponent != 2)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("quadsPerSection must be 7, 15, 31, 63, 127 or 255 and sectionsPerComponent 1 or 2"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
   }
+  Request.QuadsPerComponent = QuadsPerSection * Request.SectionsPerComponent;
 
   // componentCount {x, y} wins; otherwise sizeX/sizeY are sizes in quads, so the count is quads / quadsPerComponent.
   const TSharedPtr<FJsonObject> *ComponentCount = nullptr;
@@ -34,7 +44,6 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscape(
   };
   Components(TEXT("x"), TEXT("sizeX"), Request.ComponentsX);
   Components(TEXT("y"), TEXT("sizeY"), Request.ComponentsY);
-  Payload->TryGetNumberField(TEXT("sectionsPerComponent"), Request.SectionsPerComponent);
 
   Request.MaterialPath = GetJsonStringField(Payload, TEXT("materialPath"));
   if (Request.MaterialPath.IsEmpty()) {

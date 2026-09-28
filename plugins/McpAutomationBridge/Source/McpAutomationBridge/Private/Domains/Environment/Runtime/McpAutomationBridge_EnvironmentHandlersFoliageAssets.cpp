@@ -120,6 +120,14 @@ bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TShared
     {
         return false;
     }
+    // A physical material that does not load fails the call; it used to be dropped behind a success.
+    const FString PhysicalMaterialPath = GetJsonStringField(Payload, TEXT("physicalMaterialPath"));
+    UPhysicalMaterial *PhysicalMaterial = PhysicalMaterialPath.IsEmpty() ? nullptr : LoadObject<UPhysicalMaterial>(nullptr, *PhysicalMaterialPath);
+    if (!PhysicalMaterialPath.IsEmpty() && !PhysicalMaterial)
+    {
+        return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+            FString::Printf(TEXT("Physical material not found: %s"), *PhysicalMaterialPath), TEXT("ASSET_NOT_FOUND"));
+    }
 
     UPackage *Package = CreatePackage(*PackagePath);
     if (!Package)
@@ -150,15 +158,11 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
-    FString PhysicalMaterialPath;
-    if (Payload->TryGetStringField(TEXT("physicalMaterialPath"), PhysicalMaterialPath) && !PhysicalMaterialPath.IsEmpty())
+    if (PhysicalMaterial)
     {
-        if (UPhysicalMaterial *PhysicalMaterial = LoadObject<UPhysicalMaterial>(nullptr, *PhysicalMaterialPath))
-        {
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
-            LayerInfo->PhysMaterial = PhysicalMaterial;
+        LayerInfo->PhysMaterial = PhysicalMaterial;
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
-        }
     }
 
     bool bNoWeightBlend = false;
