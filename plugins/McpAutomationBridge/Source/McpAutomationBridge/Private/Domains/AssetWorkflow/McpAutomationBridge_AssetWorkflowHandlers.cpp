@@ -165,6 +165,28 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
       Lower == TEXT("list_structs") || Lower == TEXT("export_struct") || Lower == TEXT("import_struct"))
     return HandleStructAction(RequestId, Lower, Payload, RequestingSocket);
 
+  // The struct-ecosystem handlers (DataTable, Enum, FInstancedStruct) report a
+  // failure inside Result: an `error` field, or `success: false`. Lift it to the
+  // envelope with its message and machine code. Enums and instanced structs
+  // used to answer every call with success=true, so "Enum not found" and a
+  // refused delete both read as successes.
+  auto SendInBandResult = [&](const TSharedPtr<FJsonObject>& Result, const TCHAR* DoneMessage)
+  {
+    FString Err, ErrCode, Message;
+    bool bInnerSuccess = true;
+    const bool bOk = !(Result.IsValid() &&
+                       ((Result->TryGetBoolField(TEXT("success"), bInnerSuccess) && !bInnerSuccess) ||
+                        (Result->TryGetStringField(TEXT("error"), Err) && !Err.IsEmpty())));
+    if (!bOk)
+    {
+      Result->TryGetStringField(TEXT("errorCode"), ErrCode);
+      Result->TryGetStringField(TEXT("message"), Message);
+      if (ErrCode.IsEmpty()) { ErrCode = Err; }
+      if (Message.IsEmpty()) { Message = Err.IsEmpty() ? ErrCode : Err; }
+    }
+    SendAutomationResponse(RequestingSocket, RequestId, bOk, bOk ? FString(DoneMessage) : Message, Result, ErrCode);
+  };
+
   // Struct ecosystem — DataTable (issue #struct-ecosystem)
   if (Lower == TEXT("create_data_table") || Lower == TEXT("set_data_table_row_struct") ||
       Lower == TEXT("create_row_struct") || Lower == TEXT("get_row_struct") ||
@@ -176,23 +198,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     TSharedPtr<FJsonObject> Result;
     if (HandleDataTableAction(Lower, Payload, Result))
     {
-      // A DataTable action that fails validation still returns true (it fills
-      // Result with an error object via McpDataTableMakeError). Propagate that
-      // failure to the caller instead of claiming success (issue
-      // #struct-ecosystem [22]). An error result only carries the "error" /
-      // "errorCode" fields and never a populated success payload, so keying the
-      // success flag off the presence of an "error" field is reliable.
-      FString Err;
-      const bool bOk = !(Result.IsValid() &&
-                         Result->TryGetStringField(TEXT("error"), Err) &&
-                         !Err.IsEmpty());
-      // The handler already says exactly what went wrong in Result.error and
-      // carries a machine code in Result.errorCode; both were dropped in favour
-      // of a contentless "DataTable action failed".
-      FString ErrCode;
-      if (!bOk) { Result->TryGetStringField(TEXT("errorCode"), ErrCode); }
-      SendAutomationResponse(RequestingSocket, RequestId, bOk,
-          bOk ? TEXT("DataTable action completed") : Err, Result, ErrCode);
+      SendInBandResult(Result, TEXT("DataTable action completed"));
       return true;
     }
     return false;
@@ -208,7 +214,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     TSharedPtr<FJsonObject> Result;
     if (HandleEnumAction(Lower, Payload, Result))
     {
-      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Enum action completed"), Result);
+      SendInBandResult(Result, TEXT("Enum action completed"));
       return true;
     }
     return false;
@@ -220,7 +226,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     TSharedPtr<FJsonObject> Result;
     if (McpStructProperty::HandleStructPropertyAction(Lower, Payload, Result))
     {
-      SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("FInstancedStruct property action completed"), Result);
+      SendInBandResult(Result, TEXT("FInstancedStruct property action completed"));
       return true;
     }
     return false;

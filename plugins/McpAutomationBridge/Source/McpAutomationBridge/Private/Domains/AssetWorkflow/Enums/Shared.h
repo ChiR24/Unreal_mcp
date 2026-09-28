@@ -52,12 +52,19 @@ inline UUserDefinedEnum* ResolveUserDefinedEnum(const TSharedPtr<FJsonObject>& P
 }
 
 // Fill OutResult with a minimal success/error envelope used by the
-// OutResult-style handlers (mirrors HandleDataTableAction behavior).
-inline void SetEnumResultFields(TSharedPtr<FJsonObject>& OutResult, bool bSuccess, const FString& Message)
+// OutResult-style handlers. A failure also carries error + errorCode, which the
+// manage_asset dispatcher turns into a failed response (it used to answer every
+// enum action with success=true, so "Enum not found" read as a success).
+inline void SetEnumResultFields(TSharedPtr<FJsonObject>& OutResult, bool bSuccess, const FString& Message, const TCHAR* ErrorCode = TEXT("ENUM_ACTION_FAILED"))
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetBoolField(TEXT("success"), bSuccess);
     Result->SetStringField(TEXT("message"), Message);
+    if (!bSuccess)
+    {
+        Result->SetStringField(TEXT("error"), Message);
+        Result->SetStringField(TEXT("errorCode"), ErrorCode);
+    }
     OutResult = Result;
 }
 
@@ -81,7 +88,7 @@ inline UUserDefinedEnum* RequireEnum(const TSharedPtr<FJsonObject>& Params, TSha
     UUserDefinedEnum* Enum = ResolveUserDefinedEnum(Params);
     if (!Enum)
     {
-        SetEnumResultFields(OutResult, false, TEXT("Enum not found"));
+        SetEnumResultFields(OutResult, false, FString::Printf(TEXT("No user-defined enum at enumPath '%s'."), *GetJsonStringField(Params, TEXT("enumPath"))), TEXT("ASSET_NOT_FOUND"));
         bHandled = true;
     }
     return Enum;

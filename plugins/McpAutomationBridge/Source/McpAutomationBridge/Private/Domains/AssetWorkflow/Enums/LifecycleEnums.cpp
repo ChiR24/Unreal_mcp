@@ -41,7 +41,7 @@ bool HandleEnumLifecycleActions(
         {
             if (LoadObject<UUserDefinedEnum>(nullptr, *EnumPath))
             {
-                SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum already exists: %s"), *EnumPath));
+                SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum already exists: %s"), *EnumPath), TEXT("ASSET_ALREADY_EXISTS"));
                 return true;
             }
             if (!EnumPath.Split(TEXT("/"), &Path, &Name, ESearchCase::CaseSensitive, ESearchDir::FromEnd)) { Name = EnumPath; }
@@ -49,7 +49,7 @@ bool HandleEnumLifecycleActions(
 
         if (Name.IsEmpty())
         {
-            SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: name or enumPath"));
+            SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: name or enumPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
@@ -129,12 +129,9 @@ bool HandleEnumLifecycleActions(
 
     if (Action == TEXT("get_enum"))
     {
-        UUserDefinedEnum* Enum = ResolveUserDefinedEnum(Params);
-        if (!Enum)
-        {
-            SetEnumResultFields(OutResult, false, TEXT("Enum not found"));
-            return true;
-        }
+        bool bHandled = false;
+        UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
+        if (bHandled) { return true; }
 
         TArray<TPair<FName, int64>> Names;
         const int32 NumEnumEntries = Enum->NumEnums();
@@ -164,12 +161,9 @@ bool HandleEnumLifecycleActions(
 
     if (Action == TEXT("delete_enum"))
     {
-        UUserDefinedEnum* Enum = ResolveUserDefinedEnum(Params);
-        if (!Enum)
-        {
-            SetEnumResultFields(OutResult, false, TEXT("Enum not found"));
-            return true;
-        }
+        bool bHandled = false;
+        UUserDefinedEnum* Enum = RequireEnum(Params, OutResult, bHandled);
+        if (bHandled) { return true; }
 
         // Editor-tracked delete via ObjectTools::DeleteObjects (issue
         // #struct-ecosystem [27]). The previous implementation unloaded the
@@ -189,10 +183,9 @@ bool HandleEnumLifecycleActions(
 
         if (DeletedCount == 0)
         {
-            TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-            Result->SetStringField(TEXT("enumPath"), EnumPath);
-            Result->SetBoolField(TEXT("deleted"), false);
-            OutResult = Result;
+            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum %s was not deleted; the delete was refused or cancelled (check what still references it)."), *EnumPath), TEXT("DELETE_FAILED"));
+            OutResult->SetStringField(TEXT("enumPath"), EnumPath);
+            OutResult->SetBoolField(TEXT("deleted"), false);
             return true;
         }
 

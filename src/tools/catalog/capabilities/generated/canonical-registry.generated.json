@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ddceed01366fe486",
+  "catalogRevision": "2a5603aea2587589",
   "recordCount": 382,
   "records": [
     {
@@ -35190,7 +35190,7 @@
             },
             "index": {
               "type": "number",
-              "description": "Split index."
+              "description": "Split position: every value from this zero-based index on is copied into the new enum. Pass this or values."
             },
             "edit": {
               "type": "string",
@@ -35325,8 +35325,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d54d553923cd1f0cb975b95e8621527c0687f76027ea77d25213426cef8f60c0",
-        "content": "6fd98c5d410077ad793862e9b2c99123f9fbcc9dc10dd9653a403611ff01a12d"
+        "schema": "1642a88e601c2a78d57ea7e7b14cbe1e8e9974c06bb91a44996b818a3e134c94",
+        "content": "70e2898dc884c09733523ae2c822466dcd33a62060c73b34ddf31252448b818c"
       }
     },
     {

@@ -42,7 +42,7 @@ bool HandleEnumValueActions(
         if (bHandled) { return true; }
 
         FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
-        if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName")); return true; }
+        if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName"), TEXT("MISSING_PARAMETER")); return true; }
 
         Enum->Modify();
         TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
@@ -67,7 +67,7 @@ bool HandleEnumValueActions(
         if (bHandled) { return true; }
 
         FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
-        if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName")); return true; }
+        if (ValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName"), TEXT("MISSING_PARAMETER")); return true; }
 
         Enum->Modify();
         TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
@@ -77,7 +77,7 @@ bool HandleEnumValueActions(
         });
         if (Removed == 0)
         {
-            SetEnumResultFields(OutResult, false, TEXT("Enum value not found"));
+            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' not found."), *ValueName), TEXT("NOT_FOUND"));
             return true;
         }
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
@@ -100,7 +100,7 @@ bool HandleEnumValueActions(
 
         FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
         FString NewValueName = GetJsonStringField(Params, TEXT("newValueName"));
-        if (ValueName.IsEmpty() || NewValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or newValueName")); return true; }
+        if (ValueName.IsEmpty() || NewValueName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or newValueName"), TEXT("MISSING_PARAMETER")); return true; }
 
         Enum->Modify();
         TArray<TPair<FName, int64>> Names = GetEnumDisplayNamePairs(Enum);
@@ -117,7 +117,7 @@ bool HandleEnumValueActions(
         }
         if (!bFound)
         {
-            SetEnumResultFields(OutResult, false, TEXT("Enum value not found"));
+            SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' not found."), *ValueName), TEXT("NOT_FOUND"));
             return true;
         }
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
@@ -137,7 +137,7 @@ bool HandleEnumValueActions(
         if (bHandled) { return true; }
 
         const TArray<TSharedPtr<FJsonValue>>* OrderArr = nullptr;
-        if (!Params->TryGetArrayField(TEXT("order"), OrderArr) || !OrderArr) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: order")); return true; }
+        if (!Params->TryGetArrayField(TEXT("order"), OrderArr) || !OrderArr) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: order"), TEXT("MISSING_PARAMETER")); return true; }
 
         TArray<FString> RequestedOrder;
         for (const TSharedPtr<FJsonValue>& V : *OrderArr) { RequestedOrder.Add(V->AsString()); }
@@ -156,7 +156,7 @@ bool HandleEnumValueActions(
             }
             if (!bMatched)
             {
-                SetEnumResultFields(OutResult, true, TEXT("reorder no-op: requested value not present"));
+                SetEnumResultFields(OutResult, false, FString::Printf(TEXT("Enum value '%s' in order is not a value of this enum; nothing was reordered."), *Req), TEXT("NOT_FOUND"));
                 return true;
             }
         }
@@ -201,7 +201,7 @@ bool HandleEnumValueActions(
         FString ValueName = GetJsonStringField(Params, TEXT("valueName"));
         FString Key = GetJsonStringField(Params, TEXT("key"));
         FString Value = GetJsonStringField(Params, TEXT("value"));
-        if (ValueName.IsEmpty() || Key.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or key")); return true; }
+        if (ValueName.IsEmpty() || Key.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: valueName or key"), TEXT("MISSING_PARAMETER")); return true; }
 
         const FString MetaKey = FString::Printf(TEXT("Value_%s_%s"), *ValueName, *Key);
         Enum->SetMetaData(*MetaKey, *Value);
@@ -221,19 +221,28 @@ bool HandleEnumValueActions(
         if (bHandled) { return true; }
 
         FString NewName = GetJsonStringField(Params, TEXT("newEnumName"));
-        if (NewName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: newEnumName")); return true; }
+        if (NewName.IsEmpty()) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: newEnumName"), TEXT("MISSING_PARAMETER")); return true; }
 
+        // The new enum takes either the named `values` or every value from
+        // position `index` on (the declared index used to be ignored).
         const TArray<TSharedPtr<FJsonValue>>* ValuesArr = nullptr;
-        if (!Params->TryGetArrayField(TEXT("values"), ValuesArr) || !ValuesArr) { SetEnumResultFields(OutResult, false, TEXT("Missing required parameter: values")); return true; }
+        const bool bHasValues = Params->TryGetArrayField(TEXT("values"), ValuesArr) && ValuesArr;
+        const bool bHasIndex = Params->HasField(TEXT("index"));
+        const int32 SplitIndex = static_cast<int32>(GetJsonNumberField(Params, TEXT("index"), 0.0));
+        if (bHasValues == bHasIndex)
+        {
+            SetEnumResultFields(OutResult, false, TEXT("Pass values (names to copy) or index (copy every value from that position on), not both."), bHasValues ? TEXT("INVALID_ARGUMENT") : TEXT("MISSING_PARAMETER"));
+            return true;
+        }
         TArray<FString> KeepNames;
-        for (const TSharedPtr<FJsonValue>& V : *ValuesArr) { KeepNames.Add(V->AsString()); }
+        if (bHasValues) { for (const TSharedPtr<FJsonValue>& V : *ValuesArr) { KeepNames.Add(V->AsString()); } }
 
         TArray<TPair<FName, int64>> Current = GetEnumDisplayNamePairs(Enum);
         TArray<FString> KeepShortNames;
-        for (const TPair<FName, int64>& Pair : Current)
+        for (int32 i = 0; i < Current.Num(); ++i)
         {
-            FString Short = ExtractEnumShortName(Pair.Key);
-            if (KeepNames.Contains(Short)) { KeepShortNames.Add(Short); }
+            FString Short = ExtractEnumShortName(Current[i].Key);
+            if (bHasValues ? KeepNames.Contains(Short) : i >= SplitIndex) { KeepShortNames.Add(Short); }
         }
         if (KeepShortNames.Num() == 0) { SetEnumResultFields(OutResult, false, TEXT("No matching values to split")); return true; }
 

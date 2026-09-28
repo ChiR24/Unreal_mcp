@@ -6879,7 +6879,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "index": {
           "type": "number",
-          "description": "Split index."
+          "description": "Split position: every value from this zero-based index on is copied into the new enum. Pass this or values."
         },
         "info": {
           "type": "string",

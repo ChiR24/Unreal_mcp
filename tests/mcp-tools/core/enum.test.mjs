@@ -164,14 +164,13 @@ const testCases = [
       action: 'split_enum',
       enumPath: '${captured:enumPath}',
       newEnumName: `E_MCP_EnumSplitIdx_${ts}`,
-      values: ['Green'],
       index: 1,
       path: TEST_FOLDER,
       save: false,
     },
     expected: 'success',
     assertions: [
-      { path: 'structuredContent.result.valueCount', equals: 1, label: 'split enum carries the selected value' },
+      { path: 'structuredContent.result.valueCount', equals: 1, label: 'every value from index 1 on (Crimson) moves' },
     ],
   },
 
@@ -209,7 +208,7 @@ const testCases = [
     },
     expected: 'error',
     assertions: [
-      { path: 'structuredContent.error', includes: 'Enum not found', label: 'missing enum reported' },
+      { path: 'structuredContent.error', includes: 'ASSET_NOT_FOUND', label: 'missing enum reported as a failure' },
     ],
   },
 
