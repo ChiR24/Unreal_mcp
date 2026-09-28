@@ -190,7 +190,9 @@ void ApplyNodeMetadata(UPCGNode* Node, const TSharedPtr<FJsonObject>& Payload)
         return;
     }
 
-    const FString Title = McpGetFirstStringField(Payload, {TEXT("nodeName"), TEXT("title"), TEXT("name")});
+    // An explicit title wins: set_pcg_node_settings may LOCATE the node by nodeName, and reading nodeName
+    // first re-titled the node with its own locator while the requested title was ignored.
+    const FString Title = McpGetFirstStringField(Payload, {TEXT("title"), TEXT("nodeName"), TEXT("name")});
     if (!Title.IsEmpty())
     {
         Node->NodeTitle = FName(*Title);

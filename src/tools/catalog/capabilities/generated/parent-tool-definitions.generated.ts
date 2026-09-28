@@ -16334,7 +16334,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "save": {
           "type": "boolean",
-          "description": "Whether to save the level after the operation."
+          "description": "Save the PCG graph asset after the edit (default true)."
         },
         "scope": {
           "type": "string",

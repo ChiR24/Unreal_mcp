@@ -67,6 +67,7 @@ const basicNodeActionCases = basicNodeActions.map((action, index) => ({
     nodeName: `${action}_${ts}`,
     x: 240 + (index % 6) * 160,
     y: 160 + Math.floor(index / 6) * 120,
+    settings: {},
     save: false
   },
   expected: pcgOptionalExpected
@@ -81,7 +82,7 @@ const basicCoverageCases = [
   { scenario: 'CREATE: add_pcg_node', toolName: 'manage_pcg', arguments: { action: 'add_pcg_node', graphPath: BASIC_GRAPH_PATH, settingsClass: 'PCGRerouteSettings', nodeName: BASIC_REROUTE_NODE, x: 120, y: 80, save: false }, expected: pcgOptionalExpected },
   ...basicNodeActionCases,
   { scenario: 'ACTION: connect_pcg_pins', toolName: 'manage_pcg', arguments: { action: 'connect_pcg_pins', graphPath: BASIC_GRAPH_PATH, sourceNodeId: 'input', targetNodeId: 'output', save: false }, expected: pcgOptionalExpected },
-  { scenario: 'CONFIG: set_pcg_node_settings', toolName: 'manage_pcg', arguments: { action: 'set_pcg_node_settings', graphPath: BASIC_GRAPH_PATH, nodeId: BASIC_REROUTE_NODE, title: BASIC_UPDATED_REROUTE_NODE, save: false }, expected: pcgOptionalExpected },
+  { scenario: 'CONFIG: set_pcg_node_settings', toolName: 'manage_pcg', arguments: { action: 'set_pcg_node_settings', graphPath: BASIC_GRAPH_PATH, nodeId: BASIC_REROUTE_NODE, title: BASIC_UPDATED_REROUTE_NODE, x: 140, y: 90, save: false }, expected: pcgOptionalExpected },
   { scenario: 'EXECUTE: execute_pcg_graph', toolName: 'manage_pcg', arguments: { action: 'execute_pcg_graph', graphPath: BASIC_GRAPH_PATH, actorName: BASIC_PCG_ACTOR, componentName: `PCGComponent_${ts}`, createComponent: true, force: true, save: false }, expected: pcgOptionalExpected },
   { scenario: 'CONFIG: set_pcg_partition_grid_size', toolName: 'manage_pcg', arguments: { action: 'set_pcg_partition_grid_size', gridSize: 3200, scope: 'world', save: false }, expected: pcgOptionalExpected },
   { scenario: 'Cleanup: delete PCG execution actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: BASIC_PCG_ACTOR }, expected: 'success|not found' },
@@ -238,6 +239,12 @@ const realWorldCoverageCases = [
       { path: 'structuredContent.result.nodeType', equals: 'PCGPointFromMeshSettings', label: 'meshPath mutation targets mesh sampler' },
       { path: 'structuredContent.result.settingsApplied', equals: 1, label: 'top-level meshPath applied during settings mutation' }
     ]
+  },
+  {
+    scenario: 'CONFIG: update actor spawner through top-level actorClass',
+    toolName: 'manage_pcg',
+    arguments: { action: 'set_pcg_node_settings', graphPath: REAL_GRAPH_PATH, nodeId: ACTOR_SPAWNER_NODE, actorClass: '/Script/Engine.StaticMeshActor', save: false },
+    expected: pcgExpected
   },
   {
     scenario: 'CONFIG: update actor spawner through top-level classPath',
