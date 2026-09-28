@@ -27,18 +27,23 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     {
         return McpFailEnvironmentAction(OutMessage, OutErrorCode, TEXT("Foliage type asset not found"), TEXT("ASSET_NOT_FOUND"));
     }
+    FoliageType->Modify();
 
-    if (UFoliageType_InstancedStaticMesh *Instanced = Cast<UFoliageType_InstancedStaticMesh>(FoliageType))
+    // A mesh that did not load used to be skipped, keeping the old mesh behind a success.
+    const FString MeshPath = McpGetFirstStringField(Payload, {TEXT("meshPath"), TEXT("staticMesh")});
+    if (!MeshPath.IsEmpty())
     {
-        FString MeshPath = McpGetFirstStringField(Payload, {TEXT("meshPath"), TEXT("staticMesh")});
-        if (!MeshPath.IsEmpty())
+        UFoliageType_InstancedStaticMesh *Instanced = Cast<UFoliageType_InstancedStaticMesh>(FoliageType);
+        UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+        if (!Instanced || !Mesh)
         {
-            if (UStaticMesh *Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath))
-            {
-                Instanced->SetStaticMesh(Mesh);
-                Resp->SetStringField(TEXT("meshPath"), MeshPath);
-            }
+            return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+                Instanced ? FString::Printf(TEXT("Static mesh not found: %s"), *MeshPath)
+                          : FString(TEXT("This foliage type does not take a static mesh")),
+                Instanced ? TEXT("ASSET_NOT_FOUND") : TEXT("INVALID_ARGUMENT"));
         }
+        Instanced->SetStaticMesh(Mesh);
+        Resp->SetStringField(TEXT("meshPath"), MeshPath);
     }
 
     double NumberValue = 0.0;
@@ -47,17 +52,19 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
         FoliageType->Density = static_cast<float>(NumberValue);
     }
 
+    // Both bounds are read: a || here once skipped maxScale whenever minScale was given.
     double MinScale = 0.0;
     double MaxScale = 0.0;
-    if (Payload->TryGetNumberField(TEXT("minScale"), MinScale) || Payload->TryGetNumberField(TEXT("maxScale"), MaxScale))
+    const bool bHasMin = Payload->TryGetNumberField(TEXT("minScale"), MinScale);
+    const bool bHasMax = Payload->TryGetNumberField(TEXT("maxScale"), MaxScale);
+    if (bHasMin || bHasMax)
     {
-        if (MinScale <= 0.0)
+        MinScale = bHasMin ? MinScale : FoliageType->ScaleX.Min;
+        MaxScale = bHasMax ? MaxScale : FoliageType->ScaleX.Max;
+        if (MinScale <= 0.0 || MaxScale < MinScale)
         {
-            MinScale = FoliageType->ScaleX.Min;
-        }
-        if (MaxScale <= 0.0)
-        {
-            MaxScale = FoliageType->ScaleX.Max;
+            return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+                TEXT("minScale must be positive and no greater than maxScale"), TEXT("INVALID_ARGUMENT"));
         }
         FoliageType->Scaling = EFoliageScaling::Uniform;
         FoliageType->ScaleX = FFloatInterval(static_cast<float>(MinScale), static_cast<float>(MaxScale));
@@ -74,16 +81,39 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     {
         FoliageType->RandomYaw = BoolValue;
     }
+    // UFoliageType has no CollisionEnabled property; placed instances take BodyInstance's.
+    if (Payload->TryGetBoolField(TEXT("collisionEnabled"), BoolValue))
+    {
+        FoliageType->BodyInstance.SetCollisionEnabled(BoolValue ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
+        Resp->SetBoolField(TEXT("collisionEnabled"), BoolValue);
+    }
 
+    // The cull distance; the fade start (Min) only moves when it would pass it.
     int32 CullDistance = 0;
     if (Payload->TryGetNumberField(TEXT("cullDistance"), CullDistance))
     {
-        FoliageType->CullDistance.Max = CullDistance;
+        FoliageType->CullDistance.Max = FMath::Max(CullDistance, 0);
+        FoliageType->CullDistance.Min = FMath::Min(FoliageType->CullDistance.Min, FoliageType->CullDistance.Max);
+        Resp->SetNumberField(TEXT("cullDistance"), FoliageType->CullDistance.Max);
     }
 
+    // The keys handled above stay out of the reflection pass, which failed
+    // writing the cullDistance number into the CullDistance interval.
+    TSharedPtr<FJsonObject> ReflectPayload = MakeShared<FJsonObject>(*Payload);
+    for (const TCHAR *Handled : {TEXT("density"), TEXT("minScale"), TEXT("maxScale"), TEXT("alignToNormal"),
+                                 TEXT("randomYaw"), TEXT("collisionEnabled"), TEXT("cullDistance")})
+    {
+        ReflectPayload->RemoveField(Handled);
+    }
     TArray<FString> Applied;
     TArray<FString> Failed;
-    const int32 ReflectedCount = McpApplyPayloadSettings(FoliageType, Payload, Applied, Failed);
+    const int32 ReflectedCount = McpApplyPayloadSettings(FoliageType, ReflectPayload, Applied, Failed);
+    if (Failed.Num() > 0)
+    {
+        return McpFailEnvironmentAction(OutMessage, OutErrorCode,
+            FString::Printf(TEXT("Could not apply: %s"), *FString::Join(Failed, TEXT("; "))), TEXT("CONFIGURATION_FAILED"));
+    }
+    FoliageType->PostEditChange();
     FoliageType->MarkPackageDirty();
     if (!McpSafeAssetSave(FoliageType))
     {
@@ -94,7 +124,6 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     Resp->SetStringField(TEXT("foliageTypePath"), FoliagePath);
     Resp->SetNumberField(TEXT("configuredPropertyCount"), ReflectedCount);
     McpAddStringArrayField(Resp, TEXT("configuredProperties"), Applied);
-    McpAddStringArrayField(Resp, TEXT("configurationErrors"), Failed);
     McpHandlerUtils::AddVerification(Resp, FoliageType);
     OutMessage = TEXT("Foliage type configured");
     return true;

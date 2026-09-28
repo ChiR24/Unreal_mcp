@@ -12,6 +12,21 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
 
   bool bRemoveAll = false;
   Payload->TryGetBoolField(TEXT("removeAll"), bRemoveAll);
+  const bool bHasArea = Payload->HasField(TEXT("area")) || Payload->HasField(TEXT("areas"));
+  // With nothing to remove named, or a type that does not exist, this used to
+  // remove nothing and still report success.
+  if (FoliageTypePath.IsEmpty() && !bRemoveAll && !bHasArea) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        TEXT("Name what to remove: foliageType (or foliageTypePath), area, areas, or removeAll true"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  if (!FoliageTypePath.IsEmpty() && !LoadObject<UFoliageType>(nullptr, *FoliageTypePath, nullptr, LOAD_NoWarn)) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Foliage type not found: %s"), *FoliageTypePath),
+                        TEXT("FOLIAGE_TYPE_NOT_FOUND"));
+    return true;
+  }
 
   if (!GEditor || !GEditor->GetEditorWorldContext().World()) {
     SendAutomationError(RequestingSocket, RequestId,
@@ -59,12 +74,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   if (Boxes.Num() > 0) {
     UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
         ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
-    if (!FoliageTypePath.IsEmpty() && !OnlyType) {
-      SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Foliage type not found: %s"), *FoliageTypePath),
-                          TEXT("FOLIAGE_TYPE_NOT_FOUND"));
-      return true;
-    }
     IFA->Modify();
     IFA->ForEachFoliageInfo([&](UFoliageType *Type, FFoliageInfo &Info) {
       TArray<int32> Inside;
@@ -92,7 +101,11 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
       return true;
     });
     IFA->RemoveFoliageType(Types.GetData(), Types.Num());
-  } else if (!FoliageTypePath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
+  } else if (FoliageTypePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Each area needs both min and max"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
+  } else {
     UFoliageType *FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
     if (FFoliageInfo *Info = FoliageType ? IFA->FindInfo(FoliageType) : nullptr) {
       IFA->Modify();

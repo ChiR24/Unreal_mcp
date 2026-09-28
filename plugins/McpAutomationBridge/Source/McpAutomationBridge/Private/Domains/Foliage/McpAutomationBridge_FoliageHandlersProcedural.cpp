@@ -5,8 +5,9 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
     const FString &RequestId, const FString &Action,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
-  FString Name;
-  if (!Payload->TryGetStringField(TEXT("name"), Name) || Name.IsEmpty()) {
+  // volumeName labels the volume (name is the older spelling); it used to be ignored.
+  FString Name = McpGetFirstStringField(Payload, {TEXT("volumeName"), TEXT("name")});
+  if (Name.IsEmpty()) {
     Name = FString::Printf(TEXT("ProceduralFoliage_%lld"), FDateTime::UtcNow().GetTicks());
   }
 
@@ -31,7 +32,17 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
     return true;
   }
 
-  FString PackagePath = TEXT("/Game/ProceduralFoliage");
+  // The spawner and its foliage types go in `path`; it was hard-coded to /Game/ProceduralFoliage.
+  const FString RequestedPath = GetJsonStringField(Payload, TEXT("path"));
+  FString PackagePath = RequestedPath.IsEmpty() ? FString(TEXT("/Game/ProceduralFoliage"))
+                                                : SanitizeProjectRelativePath(RequestedPath);
+  if (PackagePath.IsEmpty()) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Invalid or unsafe path: %s"), *RequestedPath),
+                        TEXT("INVALID_PATH"));
+    return true;
+  }
+  PackagePath.RemoveFromEnd(TEXT("/"));
   FString AssetName = Name + TEXT("_Spawner");
   FString FullPackagePath =
       FString::Printf(TEXT("%s/%s"), *PackagePath, *AssetName);
@@ -149,7 +160,10 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
   McpHandlerUtils::AddVerification(Resp, Volume);
   McpHandlerUtils::AddVerification(Resp, Spawner);
 
-  SendAutomationResponse(RequestingSocket, RequestId, true,
-                         TEXT("Procedural foliage created"), Resp, FString());
+  // A simulation that failed placed nothing; it used to be reported as a success.
+  SendAutomationResponse(RequestingSocket, RequestId, bResimulated,
+                         bResimulated ? FString(TEXT("Procedural foliage created"))
+                                      : FString(TEXT("The volume and spawner were created but the simulation placed nothing: check foliageTypes meshes and bounds")),
+                         Resp, bResimulated ? FString() : FString(TEXT("RESIMULATION_FAILED")));
   return true;
 }

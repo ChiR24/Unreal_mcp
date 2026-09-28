@@ -36,12 +36,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
 
     if (LowerSub == TEXT("add_foliage_instances"))
     {
-        FString FoliageTypePath;
-        if (!Payload->TryGetStringField(TEXT("foliageTypePath"), FoliageTypePath) ||
-            FoliageTypePath.IsEmpty())
-        {
-            Payload->TryGetStringField(TEXT("foliageType"), FoliageTypePath);
-        }
+        // A StaticMesh path in meshPath resolves to its auto foliage type, like foliageType does;
+        // rebuilding the payload used to drop it.
+        const FString FoliageTypePath = McpGetFirstStringField(Payload, {TEXT("foliageTypePath"), TEXT("foliageType"), TEXT("meshPath")});
 
         TSharedPtr<FJsonObject> FoliagePayload = McpHandlerUtils::CreateResultObject();
         if (!FoliageTypePath.IsEmpty())
@@ -115,13 +112,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         {
             FoliagePayload->SetArrayField(TEXT("areas"), *AreaList);
         }
-        if (LowerSub == TEXT("remove_foliage_instances") && FoliageTypePath.IsEmpty() && !bRemoveAll && !bHasArea)
-        {
-            SendAutomationResponse(RequestingSocket, RequestId, false,
-                                   TEXT("remove_foliage_instances requires foliageTypePath/foliageType, area or removeAll=true"),
-                                   FoliagePayload, TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
         FoliagePayload->SetBoolField(TEXT("removeAll"), bRemoveAll);
         return HandleRemoveFoliage(RequestId, TEXT("remove_foliage"),
                                    FoliagePayload, RequestingSocket);
@@ -142,6 +132,20 @@ bool UMcpAutomationBridgeSubsystem::HandleBuildEnvironmentAction(
         return HandleCreateProceduralTerrain(RequestId,
                                              TEXT("create_procedural_terrain"),
                                              Payload, RequestingSocket);
+    }
+    else if (LowerSub == TEXT("add_foliage") &&
+             (Payload->HasField(TEXT("foliageType")) || Payload->HasField(TEXT("foliageTypePath")) ||
+              Payload->HasField(TEXT("locations")) || Payload->HasField(TEXT("location")) ||
+              Payload->HasField(TEXT("position")) || Payload->HasField(TEXT("count")) || Payload->HasField(TEXT("radius"))))
+    {
+        // A type or a placement input means scatter instances; meshPath alone makes the type.
+        // Every add_foliage used to build only the type asset and report success.
+        TSharedPtr<FJsonObject> PaintPayload = MakeShared<FJsonObject>(*Payload);
+        if (!PaintPayload->HasField(TEXT("foliageType")) && !PaintPayload->HasField(TEXT("foliageTypePath")))
+        {
+            PaintPayload->SetStringField(TEXT("foliageType"), GetJsonStringField(Payload, TEXT("meshPath")));
+        }
+        return HandlePaintFoliage(RequestId, TEXT("paint_foliage"), PaintPayload, RequestingSocket);
     }
     else if (LowerSub == TEXT("add_foliage_type") || LowerSub == TEXT("add_foliage") || LowerSub == TEXT("create_foliage_type"))
     {
