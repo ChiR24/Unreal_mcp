@@ -40,6 +40,13 @@ bool HandleGenerateCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
         Method = EGeometryScriptCollisionGenerationMethod::ConvexHulls;
         MaxHulls = FMath::Clamp(GetJsonIntField(Payload, TEXT("maxHullCount"), GetJsonIntField(Payload, TEXT("hullCount"), 8)), 1, 64);
     }
+    else
+    {
+        // An unknown type used to fall back to MinVolumeShapes while being echoed back as applied.
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown collisionType '%s'; use box, sphere, capsule, convex or convex_decomposition."), *CollisionType), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     const int32 ShapeCount = ApplyMeshCollision(Target->Mesh, Target->Component, Method, MaxHulls);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -69,15 +76,19 @@ bool HandleSimplifyCollision(UMcpAutomationBridgeSubsystem* Self, const FString&
     FGeometryScriptSimplifyMeshOptions SimplifyOptions;
     SimplifyOptions.Method = EGeometryScriptRemoveMeshSimplificationType::StandardQEM;
     SimplifyOptions.bAllowSeamCollapse = true;
+    // Simplify a COPY: decimating the component mesh itself used to wreck the render geometry too.
     const int32 CurrentTris = Mesh->GetTriangleCount();
+    UDynamicMesh* CollisionSource = NewObject<UDynamicMesh>(GetTransientPackage());
+    CollisionSource->SetMesh(Mesh->GetMeshRef());
     UGeometryScriptLibrary_MeshSimplifyFunctions::ApplySimplifyToTriangleCount(
-        Mesh, FMath::Max(4, static_cast<int32>(CurrentTris * SimplificationFactor)), SimplifyOptions, nullptr);
-    const int32 ShapeCount = ApplyMeshCollision(Mesh, DMC, EGeometryScriptCollisionGenerationMethod::ConvexHulls, FMath::Clamp(TargetHullCount, 1, 16));
+        CollisionSource, FMath::Max(4, static_cast<int32>(CurrentTris * SimplificationFactor)), SimplifyOptions, nullptr);
+    const int32 ShapeCount = ApplyMeshCollision(CollisionSource, DMC, EGeometryScriptCollisionGenerationMethod::ConvexHulls, FMath::Clamp(TargetHullCount, 1, 16));
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("trianglesBefore"), CurrentTris);
-    Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());
+    Result->SetNumberField(TEXT("collisionSourceTriangles"), CollisionSource->GetTriangleCount());
+    Result->SetNumberField(TEXT("renderTriangles"), Mesh->GetTriangleCount());
     Result->SetNumberField(TEXT("shapeCount"), ShapeCount);
     McpHandlerUtils::AddVerification(Result, TargetActor);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Collision simplified"), Result);

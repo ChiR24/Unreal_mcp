@@ -41,7 +41,7 @@ bool HandleCreatePlane(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
 
     FTransform Transform = ReadTransformFromPayload(Payload);
     double Width = ClampDimension(GetJsonNumberField(Payload, TEXT("width"), 100.0));
-    double Height = ClampDimension(GetJsonNumberField(Payload, TEXT("height"), GetJsonNumberField(Payload, TEXT("depth"), 100.0)));
+    double Height = ClampDimension(GetJsonNumberField(Payload, TEXT("depth"), GetJsonNumberField(Payload, TEXT("height"), 100.0)));
     int32 WidthSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("widthSegments"), 1));
     int32 HeightSubdivisions = ClampSegments(GetJsonIntField(Payload, TEXT("heightSegments"), 1));
 
@@ -82,7 +82,9 @@ bool HandleCreateDisc(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
     if (Name.IsEmpty()) Name = bRing ? TEXT("GeneratedRing") : TEXT("GeneratedDisc");
 
     FTransform Transform = ReadTransformFromPayload(Payload);
-    const double Radius = GetJsonNumberField(Payload, TEXT("outerRadius"), GetJsonNumberField(Payload, TEXT("radius"), 50.0));
+    // The declared name wins: outerRadius for a ring, radius for a disc.
+    const TCHAR* const RadiusField = bRing ? TEXT("outerRadius") : TEXT("radius");
+    const double Radius = GetJsonNumberField(Payload, RadiusField, GetJsonNumberField(Payload, bRing ? TEXT("radius") : TEXT("outerRadius"), 50.0));
     const double HoleRadius = GetJsonNumberField(Payload, TEXT("innerRadius"), bRing ? 25.0 : 0.0);
     const int32 Segments = DeclaredSegments(Payload, {TEXT("numSides"), TEXT("radialSegments")}, bRing ? 32 : 16);
 

@@ -19,6 +19,9 @@ import { P } from './properties.js';
 
 const F = 'optimize';
 const PLUGIN = ['GeometryScripting'] as const;
+// remesh targets a triangle count when no targetEdgeLength is given.
+const REMESH_TRIS = { type: 'number', description: 'Triangle budget when targetEdgeLength is omitted (default 5000, voxel remesh: half the current count).' };
+const COLLISION_TYPE = { type: 'string', enum: ['box', 'sphere', 'capsule', 'convex', 'convex_decomposition'], description: 'Collision shapes to generate (default convex).' };
 
 export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -54,19 +57,19 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'remesh_uniform', plugins: PLUGIN,
     family: F, summary: 'Uniformly remesh a dynamic mesh to a target edge length.', whenToUse: ['A uniform remesh is needed.'], whenNotToUse: ['A voxel remesh is needed; use remesh_voxel.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, targetEdgeLength: P.targetEdgeLength }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, targetEdgeLength: P.targetEdgeLength, targetTriangleCount: REMESH_TRIS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'remesh_uniform', targetActor: 'DM_A', targetEdgeLength: 10 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'merge_vertices', plugins: PLUGIN,
     family: F, summary: 'Merge coincident vertices of a dynamic mesh.', whenToUse: ['Duplicate vertices must be welded/merged.'], whenNotToUse: ['A precise weld is needed; use weld_vertices.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, weldDistance: P.weldDistance }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'merge_vertices', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'remesh_voxel', plugins: PLUGIN,
     family: F, summary: 'Voxel-remesh a dynamic mesh to a watertight form.', whenToUse: ['A watertight voxel remesh is needed.'], whenNotToUse: ['A uniform remesh is needed; use remesh_uniform.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, targetEdgeLength: P.targetEdgeLength }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { longRunning: true }, costLatency: 'long-running', costResources: 'high',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, targetEdgeLength: P.targetEdgeLength, targetTriangleCount: REMESH_TRIS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { longRunning: true }, costLatency: 'long-running', costResources: 'high',
     exampleInput: { action: 'remesh_voxel', targetActor: 'DM_A', targetEdgeLength: 8 },
   }),
   buildWorldRecord({
@@ -138,8 +141,8 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'generate_collision', plugins: PLUGIN,
     family: F, summary: 'Generate simple collision for a dynamic mesh.', whenToUse: ['Simple collision must be generated.'], whenNotToUse: ['Complex collision is needed; use generate_complex_collision.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, collisionType: P.collisionType }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'generate_collision', targetActor: 'DM_A', collisionType: 'Default' },
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, collisionType: COLLISION_TYPE, maxHullCount: { type: 'integer', description: 'Hull budget (1 to 64, default 8) when collisionType is convex_decomposition.' } }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    exampleInput: { action: 'generate_collision', targetActor: 'DM_A', collisionType: 'convex' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'generate_complex_collision', plugins: PLUGIN,

@@ -12,6 +12,9 @@ import { P } from './properties.js';
 
 const F = 'operations';
 const PLUGIN = ['GeometryScripting'] as const;
+const BEVEL_DISTANCE = { type: 'number', description: 'Bevel width in world units (default 5).' };
+const BEVEL_SEGMENTS = { type: 'integer', description: 'Subdivisions for a rounded bevel (UE 5.4 or later); omit or 0 for a flat bevel.' };
+const SWEEP_STEPS = { type: 'integer', description: 'Path steps along the sweep (default 16); the profile uses half as many sides.' };
 
 export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -59,13 +62,13 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'outset', plugins: PLUGIN,
     family: F, summary: 'Outset selected faces of a dynamic mesh.', whenToUse: ['Faces must be outset.'], whenNotToUse: ['Faces must be inset; use inset.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { actorName: P.actorName, distance: P.distance, targetActor: P.targetActor, triangleIndices: P.triangleIndices }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'outset', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'bevel', plugins: PLUGIN,
     family: F, summary: 'Bevel selected edges of a dynamic mesh.', whenToUse: ['Edges must be beveled.'], whenNotToUse: ['Edges must be split; use edge_split.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, distance: BEVEL_DISTANCE, segments: BEVEL_SEGMENTS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'bevel', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
@@ -89,7 +92,7 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'chamfer', plugins: PLUGIN,
     family: F, summary: 'Chamfer selected edges of a dynamic mesh.', whenToUse: ['Edges must be chamfered.'], whenNotToUse: ['Edges must be beveled; use bevel.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, distance: BEVEL_DISTANCE, segments: BEVEL_SEGMENTS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'chamfer', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
@@ -107,13 +110,13 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'loft', plugins: PLUGIN,
     family: F, summary: 'Loft between two or more profile curves.', whenToUse: ['A lofted surface between profiles must be created.'], whenNotToUse: ['A sweep along a spline is needed; use sweep.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, splineActorName: P.splineActorName, segments: SWEEP_STEPS, cap: P.cap }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'loft', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'sweep', plugins: PLUGIN,
     family: F, summary: 'Sweep a profile along a path of a dynamic mesh.', whenToUse: ['A swept solid must be created.'], whenNotToUse: ['A revolve is needed; use revolve.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, splineActorName: P.splineActorName }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, splineActorName: P.splineActorName, steps: SWEEP_STEPS, cap: P.cap }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'sweep', targetActor: 'DM_A' },
   }),
   buildWorldRecord({

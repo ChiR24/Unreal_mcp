@@ -9,7 +9,9 @@ bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
 {
     FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const FVector Offset = ExtractVectorField(Payload, TEXT("offset"), FVector::ZeroVector);
-    const double Distance = Offset.IsNearlyZero() ? FaceOpDistance(Payload, 10.0) : Offset.Size();
+    // extrude declares amount, so it wins over the distance spelling the other face operators use.
+    const double Distance = Offset.IsNearlyZero()
+        ? GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("distance"), 10.0)) : Offset.Size();
     const FVector Direction = Offset.IsNearlyZero() ? FVector::UpVector : Offset.GetSafeNormal();
 
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
@@ -76,6 +78,13 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     double BevelDistance = FaceOpDistance(Payload, 5.0);
     // No segments = a single flat chamfer (the chamfer action routes here).
     int32 Subdivisions = GetJsonIntField(Payload, TEXT("segments"), 0);
+#if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4)
+    if (Subdivisions > 0)
+    {
+        Self->SendAutomationError(Socket, RequestId, TEXT("segments (rounded bevel subdivisions) needs UE 5.4 or later; omit it for a flat bevel."), TEXT("UNSUPPORTED_VERSION"));
+        return true;
+    }
+#endif
 
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
@@ -95,6 +104,9 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     {
         FGeometryScriptMeshBevelSelectionOptions SelectionOptions;
         SelectionOptions.BevelDistance = BevelOptions.BevelDistance;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 4
+        SelectionOptions.Subdivisions = Subdivisions;
+#endif
         UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshBevelSelection(
             Mesh, BevelSelection, EGeometryScriptMeshBevelSelectionMode::TriangleArea, SelectionOptions, nullptr);
     }

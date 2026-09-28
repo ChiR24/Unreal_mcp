@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ed33e1d1dd94811d",
+  "catalogRevision": "56b29dd1e8663881",
   "recordCount": 382,
   "records": [
     {
@@ -54378,15 +54378,22 @@
             },
             "collisionType": {
               "type": "string",
-              "description": "Collision complexity type."
+              "enum": [
+                "box",
+                "sphere",
+                "capsule",
+                "convex",
+                "convex_decomposition"
+              ],
+              "description": "Collision shapes to generate (default convex)."
+            },
+            "maxHullCount": {
+              "type": "integer",
+              "description": "Hull budget (1 to 64, default 8) when collisionType is convex_decomposition."
             },
             "hullCount": {
               "type": "integer",
               "description": "Number of convex hulls for decomposition."
-            },
-            "maxHullCount": {
-              "type": "integer",
-              "description": "Maximum hull count for complex collision generation."
             },
             "simplificationFactor": {
               "type": "number",
@@ -54446,7 +54453,7 @@
           "input": {
             "action": "configure_mesh_collision",
             "targetActor": "DM_A",
-            "collisionType": "Default",
+            "collisionType": "convex",
             "collisionOp": "generate"
           },
           "output": {
@@ -54491,10 +54498,11 @@
             "collisionType": [
               "generate"
             ],
-            "hullCount": [
+            "maxHullCount": [
+              "generate",
               "generate_complex"
             ],
-            "maxHullCount": [
+            "hullCount": [
               "generate_complex"
             ],
             "simplificationFactor": [
@@ -54508,8 +54516,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8186243f31dfa5216c45ae983a7e8b00a33de8277440bbfb91245e4b12045759",
-        "content": "fdb970b61768be0cfacf541ae9b6f39bafd7b66c95aa967b30a8eda6b3196942"
+        "schema": "a7ec49e692447d12745cdaec1d4ca997a4e7bab62f0afe997a05191562a56712",
+        "content": "5793d95552cda68309d1d197b6360510bd39be4b375f6713d31333498e76b046"
       }
     },
     {
@@ -55281,7 +55289,7 @@
             },
             "innerRadius": {
               "type": "number",
-              "description": "Inner radius (torus minor radius, ring/pipe inner wall)."
+              "description": "Radius of a centred hole (default 0, a solid disc)."
             },
             "outerRadius": {
               "type": "number",
@@ -55289,7 +55297,7 @@
             },
             "angle": {
               "type": "number",
-              "description": "Angle in degrees."
+              "description": "Sweep angle in degrees (default 360, a full torus; less makes an open segment)."
             },
             "steps": {
               "type": "integer",
@@ -55508,6 +55516,7 @@
               "ramp"
             ],
             "innerRadius": [
+              "disc",
               "ring",
               "torus",
               "pipe",
@@ -55519,6 +55528,7 @@
               "pipe"
             ],
             "angle": [
+              "torus",
               "arch"
             ],
             "steps": [
@@ -55552,8 +55562,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "778114196353806702dfb5eed4f6577d31ea1d59d0811d4450b7c052d9458570",
-        "content": "ba8d6f8d05fe5ab93ec6600b5b89f0e0292f91580e045ff94051d09e342a1610"
+        "schema": "28bb87445a219f3f83084414deb4cf39b35a53eb693fed38dd5e313fe083df73",
+        "content": "ba58d373e56f5a4d7d12a8ddf8f0685a29752093989305e49d0fc7b20b7416e8"
       }
     },
     {
@@ -55864,7 +55874,10 @@
               "bend",
               "twist",
               "taper",
-              "stretch"
+              "stretch",
+              "cylindrify",
+              "lattice_deform",
+              "displace_by_texture"
             ],
             "strength": [
               "bend",
@@ -55873,6 +55886,8 @@
               "stretch",
               "spherify",
               "cylindrify",
+              "smooth",
+              "relax",
               "noise_deform"
             ],
             "iterations": [
@@ -55906,7 +55921,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "79db5c89d50290cca5383ee4077f9d045ba6f9f6301cdfcfeca32d3ec5553c0b",
-        "content": "600d43de05afa24282469a0c19aaf66fa53e9dc06bd7c6939d6c8b4d591db492"
+        "content": "692f11b768ddf192576106e874cb392b0265cb4a4f7547fe07c8e81d9a93fb85"
       }
     },
     {
@@ -57378,13 +57393,21 @@
               "type": "number",
               "description": "Distance for offset-style operations."
             },
+            "segments": {
+              "type": "integer",
+              "description": "Subdivisions for a rounded bevel (UE 5.4 or later); omit or 0 for a flat bevel."
+            },
             "splineActorName": {
               "type": "string",
               "description": "Spline actor name for extrude/sweep along spline."
             },
+            "cap": {
+              "type": "boolean",
+              "description": "Cap open ends of tubes."
+            },
             "steps": {
               "type": "integer",
-              "description": "Number of steps."
+              "description": "Path steps along the sweep (default 16); the profile uses half as many sides."
             },
             "thickness": {
               "type": "number",
@@ -57404,14 +57427,6 @@
                 "type": "integer"
               },
               "description": "Edge ids to split at their midpoints."
-            },
-            "cap": {
-              "type": "boolean",
-              "description": "Cap open ends of tubes."
-            },
-            "segments": {
-              "type": "integer",
-              "description": "Number of segments for the operation."
             },
             "count": {
               "type": "integer",
@@ -57581,14 +57596,30 @@
             ],
             "distance": [
               "inset",
-              "offset_faces"
+              "outset",
+              "offset_faces",
+              "bevel",
+              "chamfer"
+            ],
+            "segments": [
+              "bevel",
+              "chamfer",
+              "loft",
+              "extrude_along_spline"
             ],
             "splineActorName": [
+              "loft",
               "sweep",
               "extrude_along_spline",
               "duplicate_along_spline"
             ],
+            "cap": [
+              "loft",
+              "sweep",
+              "extrude_along_spline"
+            ],
             "steps": [
+              "sweep",
               "revolve"
             ],
             "thickness": [
@@ -57603,12 +57634,6 @@
             "edges": [
               "edge_split"
             ],
-            "cap": [
-              "extrude_along_spline"
-            ],
-            "segments": [
-              "extrude_along_spline"
-            ],
             "count": [
               "duplicate_along_spline"
             ]
@@ -57617,8 +57642,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "be6bd8772bf9cc9a78f12cfee07a105841e124f071d0a084050e7ff22e8758fa",
-        "content": "5d63b8ee6d8f1d616377543f82f7dcf5815cad770a378b7b46d65103db77aa54"
+        "schema": "605cc25f88c7dbe8e24c2578a84a1dbbd551310c8580559a80b88e587d67e7ed",
+        "content": "6b17f277a7b1f87fa655a4f1a652fd407bc71bbe88c4c96cf47a091ef12a851b"
       }
     },
     {
@@ -57901,7 +57926,9 @@
               "simplify_mesh"
             ],
             "targetTriangleCount": [
-              "simplify_mesh"
+              "simplify_mesh",
+              "remesh_uniform",
+              "remesh_voxel"
             ],
             "targetEdgeLength": [
               "remesh_uniform",
@@ -57911,6 +57938,7 @@
               "subdivide"
             ],
             "weldDistance": [
+              "merge_vertices",
               "weld_vertices"
             ],
             "hardEdgeAngle": [
@@ -57925,7 +57953,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-        "content": "421880e9d2b44e3f32d5beb98d346f07649ca190075fd154332544a747236d25"
+        "content": "6de1eca9fe55aef2950f993a93ff4f70c73623828d0a0523b5d71268472d14c0"
       }
     },
     {

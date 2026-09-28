@@ -82,9 +82,10 @@ bool HandleSweep(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 bool HandleSegmentedSweep(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // loft and extrude_along_spline are sweeps that name their path step count segments.
+    // loft and extrude_along_spline are sweeps that name their path step count segments; the declared
+    // segments wins over the steps spelling sweep uses.
     const TSharedPtr<FJsonObject> SweepPayload = MakeShared<FJsonObject>(*Payload);
-    if (Payload->HasField(TEXT("segments")) && !Payload->HasField(TEXT("steps")))
+    if (Payload->HasField(TEXT("segments")))
     {
         SweepPayload->SetNumberField(TEXT("steps"), GetJsonIntField(Payload, TEXT("segments"), 16));
     }

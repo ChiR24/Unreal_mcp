@@ -52,7 +52,7 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_torus', plugins: PLUGIN,
     family: F, summary: 'Create a torus dynamic mesh actor.', whenToUse: ['A torus primitive must be created.'], whenNotToUse: ['A ring is needed; use create_ring.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: P.innerRadius, numSides: P.numSides, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: P.innerRadius, angle: { type: 'number', description: 'Sweep angle in degrees (default 360, a full torus; less makes an open segment).' }, numSides: P.numSides, radialSegments: P.radialSegments, numRings: P.numRings }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_torus', radius: 100, innerRadius: 20 },
   }),
   buildWorldRecord({
@@ -64,7 +64,7 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_disc', plugins: PLUGIN,
     family: F, summary: 'Create a disc dynamic mesh actor.', whenToUse: ['A circular disc primitive must be created.'], whenNotToUse: ['A plane is needed; use create_plane.'],
-    inputProps: { ...IDENT, ...XFORM, radius: P.radius, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    inputProps: { ...IDENT, ...XFORM, radius: P.radius, innerRadius: { type: 'number', description: 'Radius of a centred hole (default 0, a solid disc).' }, numSides: P.numSides }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_disc', radius: 100 },
   }),
   buildWorldRecord({

@@ -13334,7 +13334,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "collisionType": {
           "type": "string",
-          "description": "Collision complexity type."
+          "enum": [
+            "box",
+            "sphere",
+            "capsule",
+            "convex",
+            "convex_decomposition"
+          ],
+          "description": "Collision shapes to generate (default convex)."
         },
         "computeWeightedNormals": {
           "type": "boolean",
@@ -13456,7 +13463,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "innerRadius": {
           "type": "number",
-          "description": "Inner radius (torus minor radius, ring/pipe inner wall)."
+          "description": "Radius of a centred hole (default 0, a solid disc)."
         },
         "iterations": {
           "type": "integer",
@@ -13516,7 +13523,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "maxHullCount": {
           "type": "integer",
-          "description": "Maximum hull count for complex collision generation."
+          "description": "Hull budget (1 to 64, default 8) when collisionType is convex_decomposition."
         },
         "midpoint": {
           "type": "number",
@@ -13731,7 +13738,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "segments": {
           "type": "integer",
-          "description": "Number of segments for the operation."
+          "description": "Subdivisions for a rounded bevel (UE 5.4 or later); omit or 0 for a flat bevel."
         },
         "setAll": {
           "type": "boolean",
