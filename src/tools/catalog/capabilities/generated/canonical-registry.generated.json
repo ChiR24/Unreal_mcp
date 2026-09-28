@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d038bfb7793e38ae",
+  "catalogRevision": "d1124116db307deb",
   "recordCount": 385,
   "records": [
     {
@@ -33931,7 +33931,7 @@
           "eject",
           "possess"
         ],
-        "summary": "Control Play In Editor: start, pause, resume, stop, eject from or possess a pawn.",
+        "summary": "Control Play In Editor with control: play (starts it), pause, resume, stop, eject (leave the pawn) or possess (take it back).",
         "whenToUse": [
           "A PIE session must be started to test gameplay.",
           "PIE must be paused without stopping.",
@@ -34007,7 +34007,7 @@
       },
       "examples": [
         {
-          "title": "Control Play In Editor: start, pause, resume, stop, eject from or possess a pawn.",
+          "title": "Control Play In Editor with control: play (starts it), pause, resume, stop, eject (leave the pawn) or possess (take it back).",
           "input": {
             "action": "play",
             "control": "play"
@@ -34061,7 +34061,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
-        "content": "d91e2df1163b30245cf3019f03b46f2e33ca51389fd343a1099b4e947ef14b07"
+        "content": "0b854df3b95d065cbea4650d67c60916ac24ae0a4621ce30d97cf92184e53965"
       }
     },
     {
