@@ -41,6 +41,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::configure_physics_body": "interactive|medium",
   "animation_physics::configure_socket": "interactive|low",
   "animation_physics::configure_vehicle": "interactive|medium",
+  "animation_physics::copy_weights": "long-running|high",
   "animation_physics::create_aim_offset": "interactive|low",
   "animation_physics::create_anim_blueprint": "interactive|medium",
   "animation_physics::create_animation_asset": "interactive|low",
@@ -77,16 +78,19 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "animation_physics::get_bone_transform": "instant|low",
   "animation_physics::get_physics_asset_info": "instant|low",
   "animation_physics::get_skeleton_info": "instant|low",
+  "animation_physics::import_morph_targets": "long-running|high",
   "animation_physics::link_sections": "interactive|low",
   "animation_physics::list_bones": "instant|low",
   "animation_physics::list_morph_targets": "instant|low",
   "animation_physics::list_physics_bodies": "instant|low",
   "animation_physics::list_sockets": "instant|low",
   "animation_physics::list_virtual_bones": "instant|low",
+  "animation_physics::mirror_weights": "long-running|high",
   "animation_physics::modify_physics_body": "interactive|medium",
   "animation_physics::modify_socket": "interactive|low",
   "animation_physics::play_anim_montage": "interactive|low",
   "animation_physics::play_montage": "interactive|low",
+  "animation_physics::prune_weights": "long-running|high",
   "animation_physics::remove_bone": "interactive|low",
   "animation_physics::remove_physics_body": "interactive|low",
   "animation_physics::remove_skeleton_element": "interactive|low",
@@ -1499,4 +1503,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1486;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1490;

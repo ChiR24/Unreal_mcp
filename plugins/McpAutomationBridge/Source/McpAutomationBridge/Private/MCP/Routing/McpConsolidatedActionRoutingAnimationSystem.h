@@ -41,6 +41,8 @@ inline const TArray<FString>& Skeleton()
 		TEXT("set_bone_parent"), TEXT("create_virtual_bone"),
 		TEXT("create_socket"), TEXT("configure_socket"),
 		TEXT("auto_skin_weights"), TEXT("set_vertex_weights"),
+		TEXT("copy_weights"), TEXT("mirror_weights"), TEXT("prune_weights"),
+		TEXT("import_morph_targets"),
 		TEXT("create_physics_asset"),
 		TEXT("add_physics_body"), TEXT("configure_physics_body"),
 		TEXT("add_physics_constraint"), TEXT("configure_constraint_limits"),

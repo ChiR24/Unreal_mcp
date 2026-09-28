@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `d0bbceaca1e5e4ef`
+Catalog revision: `8b5ebf48d9f3705f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -146,10 +146,10 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.edit_animation` | `animation_physics` | `add_bone_track` | write | write | none | `animation_physics.edit_animation` `animation_physics.add_bone_track` `animation_physics.set_bone_key` `animation_physics.set_curve_key` `animation_physics.add_notify` `animation_physics.add_notify_state` `animation_physics.add_sync_marker` `animation_physics.set_additive_settings` `animation_physics.set_root_motion_settings` `animation_physics.set_sequence_length` `animation_physics.add_aim_offset_sample` |
 | `animation_physics.edit_blend_space` | `animation_physics` | `add_blend_sample` | write | write | none | `animation_physics.edit_blend_space` `animation_physics.add_blend_sample` `animation_physics.set_axis_settings` `animation_physics.set_interpolation_settings` `animation_physics.force_rebuild_blend_space` |
 | `animation_physics.edit_montage` | `animation_physics` | `add_montage_notify` | write | write | none | `animation_physics.edit_montage` `animation_physics.add_montage_notify` `animation_physics.add_montage_section` `animation_physics.add_montage_slot` `animation_physics.link_sections` `animation_physics.set_blend_in` `animation_physics.set_blend_out` `animation_physics.set_section_timing` |
-| `animation_physics.edit_morph_target` | `animation_physics` | `create_morph_target` | write | write | none | `animation_physics.edit_morph_target` `animation_physics.create_morph_target` `animation_physics.set_morph_target_deltas` `animation_physics.set_morph_target_value` |
+| `animation_physics.edit_morph_target` | `animation_physics` | `create_morph_target` | write | write | none | `animation_physics.edit_morph_target` `animation_physics.create_morph_target` `animation_physics.set_morph_target_deltas` `animation_physics.import_morph_targets` `animation_physics.set_morph_target_value` |
 | `animation_physics.edit_physics_asset` | `animation_physics` | `create_physics_asset` | write | write | none | `animation_physics.edit_physics_asset` `animation_physics.create_physics_asset` `animation_physics.add_physics_body` `animation_physics.configure_physics_body` `animation_physics.modify_physics_body` `animation_physics.add_physics_constraint` `animation_physics.set_physics_constraint` `animation_physics.configure_constraint_limits` `animation_physics.set_physics_asset` |
 | `animation_physics.edit_skeleton` | `animation_physics` | `add_bone` | write | write | none | `animation_physics.edit_skeleton` `animation_physics.add_bone` `animation_physics.rename_bone` `animation_physics.set_bone_parent` `animation_physics.set_bone_transform` `animation_physics.create_virtual_bone` |
-| `animation_physics.edit_skin_weights` | `animation_physics` | `auto_skin_weights` | write | write | none | `animation_physics.edit_skin_weights` `animation_physics.auto_skin_weights` `animation_physics.set_vertex_weights` |
+| `animation_physics.edit_skin_weights` | `animation_physics` | `auto_skin_weights` | write | write | none | `animation_physics.edit_skin_weights` `animation_physics.auto_skin_weights` `animation_physics.set_vertex_weights` `animation_physics.copy_weights` `animation_physics.mirror_weights` `animation_physics.prune_weights` |
 | `animation_physics.get_animation_info` | `animation_physics` | `get_animation_info` | read | read | none | `animation_physics.get_animation_info` |
 | `animation_physics.get_skeleton_info` | `animation_physics` | `get_skeleton_info` | read | read | none | `animation_physics.get_skeleton_info` `animation_physics.list_bones` `animation_physics.list_sockets` `animation_physics.list_virtual_bones` `animation_physics.get_bone_transform` `animation_physics.list_morph_targets` `animation_physics.get_physics_asset_info` `animation_physics.list_physics_bodies` |
 | `animation_physics.play_montage` | `animation_physics` | `play_montage` | write | write | none | `animation_physics.play_montage` `animation_physics.play_anim_montage` |

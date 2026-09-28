@@ -257,6 +257,7 @@ const testCases = [
   const SOCKET_NAME = `McpSocket_${ts}`;
   const MORPH_TARGET_NAME = `McpMorph_${ts}`;
   const PROFILE_NAME = `McpWeights_${ts}`;
+  const WEIGHT_MESH_PATH = `${TEST_FOLDER}/SK_WeightEdit_${ts}`;
 
   testCases.push(
     // === SETUP ===
@@ -304,6 +305,18 @@ const testCases = [
     { scenario: 'CONNECT: assign cloth asset to mesh', toolName: 'animation_physics', arguments: { action: 'assign_cloth_asset_to_mesh', skeletalMeshPath: SKELETAL_MESH_PATH, save: false }, expected: 'error|manual intervention|required' },
     { scenario: 'CREATE: create morph target', toolName: 'animation_physics', arguments: { action: 'create_morph_target', skeletalMeshPath: SKELETAL_MESH_PATH, morphTargetName: MORPH_TARGET_NAME, deltas: [{ vertexIndex: 0, positionDelta: { x: 0, y: 0, z: 1 } }], save: false }, expected: 'success|already exists' },
     { scenario: 'CONFIG: set morph target deltas', toolName: 'animation_physics', arguments: { action: 'set_morph_target_deltas', skeletalMeshPath: SKELETAL_MESH_PATH, morphTargetName: MORPH_TARGET_NAME, deltas: [{ vertexIndex: 0, positionDelta: { x: 0, y: 0, z: 2 } }], save: false }, expected: 'success' },
+
+    // === SOURCE-DATA SKIN WEIGHTS AND MORPHS (edited on a copy, never on the engine mesh) ===
+    { scenario: 'Setup: copy the skeletal cube to edit its weights', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: SKELETAL_MESH_PATH, destinationPath: WEIGHT_MESH_PATH }, expected: 'success|already exists' },
+    { scenario: 'ACTION: copy_weights from the cube onto its copy', toolName: 'animation_physics', arguments: { action: 'copy_weights', sourceMeshPath: SKELETAL_MESH_PATH, targetMeshPath: WEIGHT_MESH_PATH, lodIndex: 0, save: false }, expected: 'success', timeoutMs: 60000, assertions: [{ path: 'structuredContent.result.verticesWritten', gte: 1, label: 'every vertex took weights' }, { path: 'structuredContent.result.verticesFarFromSource', equals: 0, label: 'same shape: every vertex had a partner' }] },
+    { scenario: 'ACTION: copy_weights onto the same mesh is refused', toolName: 'animation_physics', arguments: { action: 'copy_weights', sourceMeshPath: WEIGHT_MESH_PATH, targetMeshPath: WEIGHT_MESH_PATH }, expected: 'error|SAME_MESH' },
+    { scenario: 'ACTION: mirror_weights on a mesh with no left and right bones is refused', toolName: 'animation_physics', arguments: { action: 'mirror_weights', skeletalMeshPath: WEIGHT_MESH_PATH, axis: 'X', direction: 'positive_to_negative', lodIndex: 0, save: false }, expected: 'error|NO_SIDE_BONES' },
+    { scenario: 'ACTION: mirror_weights with an unknown axis is refused', toolName: 'animation_physics', arguments: { action: 'mirror_weights', skeletalMeshPath: WEIGHT_MESH_PATH, axis: 'W' }, expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'ACTION: prune_weights removes small influences', toolName: 'animation_physics', arguments: { action: 'prune_weights', skeletalMeshPath: WEIGHT_MESH_PATH, threshold: 0.2, lodIndex: 0, save: false }, expected: 'success', timeoutMs: 60000 },
+    { scenario: 'ACTION: prune_weights again finds nothing left to remove', toolName: 'animation_physics', arguments: { action: 'prune_weights', skeletalMeshPath: WEIGHT_MESH_PATH, threshold: 0.2, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.influencesRemoved', equals: 0, label: 'idempotent' }] },
+    { scenario: 'ACTION: prune_weights with a threshold of 0.5 or more is refused', toolName: 'animation_physics', arguments: { action: 'prune_weights', skeletalMeshPath: WEIGHT_MESH_PATH, threshold: 0.7 }, expected: 'error|INVALID_ARGUMENT' },
+    // The morph made above lives in render data only, so it cannot be transferred and the refusal names it.
+    { scenario: 'ACTION: import_morph_targets of a render-only morph is refused', toolName: 'animation_physics', arguments: { action: 'import_morph_targets', skeletalMeshPath: WEIGHT_MESH_PATH, sourceMeshPath: SKELETAL_MESH_PATH, morphTargets: [MORPH_TARGET_NAME], lodIndex: 0, save: false }, expected: 'error|NO_MORPH_TARGETS' },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

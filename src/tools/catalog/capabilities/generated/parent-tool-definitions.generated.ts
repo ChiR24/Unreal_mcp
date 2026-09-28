@@ -273,6 +273,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Box extent along Y (default 10)."
         },
+        "direction": {
+          "type": "string",
+          "description": "positive_to_negative (default: the positive side is copied onto the negative side) or negative_to_positive."
+        },
         "dragCoefficient": {
           "type": "number",
           "description": "Drag coefficient."
@@ -320,6 +324,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "rebuild",
             "auto",
             "set",
+            "copy",
+            "mirror",
+            "prune",
             "create",
             "add_body",
             "configure_body",
@@ -328,7 +335,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_constraint",
             "configure_constraint_limits",
             "assign",
-            "set_deltas"
+            "set_deltas",
+            "import"
           ],
           "description": "Which configure anim graph node variant to run."
         },
@@ -567,6 +575,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "morphTargetName": {
           "type": "string",
           "description": "Morph target name."
+        },
+        "morphTargets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names to import (default all the source mesh has in its source data)."
         },
         "name": {
           "type": "string",
@@ -825,6 +840,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "SkeletalMesh giving the source proportions. Defaults to the skeleton preview mesh, then any mesh in the project built on it."
         },
+        "sourceMeshPath": {
+          "type": "string",
+          "description": "Skeletal mesh that owns the morph targets (its LOD 0 source data)."
+        },
         "sourceSkeletalMesh": {
           "type": "string",
           "description": "An already-skinned mesh on the same skeleton to copy weights from, such as the body the garment is worn over. Beats computing weights fresh wherever the garment hugs the body. Falls back to smooth binding when omitted."
@@ -889,6 +908,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "SkeletalMesh to retarget onto. Defaults the same way as sourceMesh."
         },
+        "targetMeshPath": {
+          "type": "string",
+          "description": "Skeletal mesh whose weights are replaced in place."
+        },
         "targetSkeleton": {
           "type": "string",
           "description": "Canonical /Game Skeleton asset path."
@@ -896,6 +919,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetWeightInterpolationSpeed": {
           "type": "number",
           "description": "Sample weight speed per second (0 turns weight smoothing off)."
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Influences below this weight are removed, above 0 and below 0.5 (default 0.01)."
         },
         "time": {
           "type": "number",
@@ -1154,6 +1181,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target bone name."
         },
+        "bonePairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Bone."
+              },
+              "to": {
+                "type": "string",
+                "description": "Its opposite-side bone."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Left and right bone pairs that were swapped."
+        },
+        "boneVertexCounts": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "before and after: bone name to the number of vertices it influences, read back from the source data."
+        },
         "bones": {
           "type": "array",
           "description": "One entry per bone in reference-skeleton order.",
@@ -1196,6 +1247,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "parentIndex"
             ]
           }
+        },
+        "builtMorphTargets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Imported names that exist as morph targets after the rebuild."
         },
         "changed": {
           "type": "boolean",
@@ -1256,6 +1314,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Boolean parameter."
         },
+        "imported": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Morph target."
+              },
+              "verticesAffected": {
+                "type": "number",
+                "description": "Vertices it moves on this mesh."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Each imported morph target."
+        },
+        "influencesRemoved": {
+          "type": "number",
+          "description": "Influences removed."
+        },
         "length": {
           "type": "number",
           "description": "Numeric parameter."
@@ -1298,6 +1378,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Every target chain with the source chain now driving it (None when unmapped)."
         },
+        "maxInfluencesAfter": {
+          "type": "number",
+          "description": "Most influences on one vertex after."
+        },
+        "maxInfluencesBefore": {
+          "type": "number",
+          "description": "Most influences on one vertex before."
+        },
         "meshPath": {
           "type": "string",
           "description": "Canonical /Game mesh asset path."
@@ -1325,6 +1413,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               }
             }
           }
+        },
+        "morphTargetsDropped": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Render-only morph targets (made by set_morph_target_deltas) the rebuild removed; import_morph_targets writes morphs that survive."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Render-only morph targets the rebuild removed."
+            }
+          ],
+          "description": "Render-only morph targets (made by set_morph_target_deltas) the rebuild removed; import_morph_targets writes morphs that survive."
         },
         "numBodies": {
           "type": "number",
@@ -1381,6 +1488,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Number of sockets left on the asset after the call."
         },
+        "replaced": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Morph targets the mesh already had and were replaced."
+        },
         "rotation": {
           "type": "object",
           "additionalProperties": false,
@@ -1399,7 +1513,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the pose asset was saved."
+          "description": "Whether the mesh was saved."
         },
         "scale": {
           "type": "object",
@@ -1454,9 +1568,36 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the action succeeded."
         },
+        "unmappedBones": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Source bones the target lacks; their weight went to the nearest parent bone it has."
+        },
+        "unmatchedVertices": {
+          "type": "number",
+          "description": "Destination-side vertices with no mirror partner; they kept their weights."
+        },
         "value": {
           "type": "number",
           "description": "Weight applied to the morph target."
+        },
+        "verticesChanged": {
+          "type": "number",
+          "description": "Vertices that lost an influence."
+        },
+        "verticesFarFromSource": {
+          "type": "number",
+          "description": "Target vertices farther than 2% of the source size from any source vertex; check those areas."
+        },
+        "verticesMirrored": {
+          "type": "number",
+          "description": "Vertices that took the mirrored weights."
+        },
+        "verticesWritten": {
+          "type": "number",
+          "description": "Target vertices that took new weights."
         },
         "virtualBoneCount": {
           "type": "number",

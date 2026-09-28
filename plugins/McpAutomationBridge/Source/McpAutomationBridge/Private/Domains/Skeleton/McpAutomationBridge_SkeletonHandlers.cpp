@@ -39,6 +39,10 @@ static bool TryHandleFreeRoute(
         {TEXT("set_bone_parent"), &HandleSetBoneParentAction},
         {TEXT("set_vertex_weights"), &HandleSetVertexWeightsAction},
         {TEXT("auto_skin_weights"), &HandleAutoSkinWeightsAction},
+        {TEXT("copy_weights"), &HandleCopyWeightsAction},
+        {TEXT("mirror_weights"), &HandleMirrorWeightsAction},
+        {TEXT("prune_weights"), &HandlePruneWeightsAction},
+        {TEXT("import_morph_targets"), &HandleImportMorphTargetsAction},
     };
 
     for (const FSkeletonFreeRoute& Route : Routes)

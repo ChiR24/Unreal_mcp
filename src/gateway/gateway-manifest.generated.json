@@ -88,6 +88,7 @@
         "curveName",
         "deltas",
         "depth",
+        "direction",
         "dragCoefficient",
         "edit",
         "element",
@@ -127,6 +128,7 @@
         "modularRig",
         "montagePath",
         "morphTargetName",
+        "morphTargets",
         "name",
         "newBoneName",
         "nodeName",
@@ -176,6 +178,7 @@
         "sourceChain",
         "sourceIKRigPath",
         "sourceMesh",
+        "sourceMeshPath",
         "sourceSkeletalMesh",
         "sourceSkeleton",
         "startFrame",
@@ -189,8 +192,10 @@
         "targetChain",
         "targetIKRigPath",
         "targetMesh",
+        "targetMeshPath",
         "targetSkeleton",
         "targetWeightInterpolationSpeed",
+        "threshold",
         "time",
         "toSection",
         "toState",
@@ -467,6 +472,10 @@
             "type": "number",
             "description": "Box extent along Y (default 10)."
           },
+          "direction": {
+            "type": "string",
+            "description": "positive_to_negative (default: the positive side is copied onto the negative side) or negative_to_positive."
+          },
           "dragCoefficient": {
             "type": "number",
             "description": "Drag coefficient."
@@ -514,6 +523,9 @@
               "rebuild",
               "auto",
               "set",
+              "copy",
+              "mirror",
+              "prune",
               "create",
               "add_body",
               "configure_body",
@@ -522,7 +534,8 @@
               "set_constraint",
               "configure_constraint_limits",
               "assign",
-              "set_deltas"
+              "set_deltas",
+              "import"
             ],
             "description": "Which configure anim graph node variant to run."
           },
@@ -761,6 +774,13 @@
           "morphTargetName": {
             "type": "string",
             "description": "Morph target name."
+          },
+          "morphTargets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names to import (default all the source mesh has in its source data)."
           },
           "name": {
             "type": "string",
@@ -1019,6 +1039,10 @@
             "type": "string",
             "description": "SkeletalMesh giving the source proportions. Defaults to the skeleton preview mesh, then any mesh in the project built on it."
           },
+          "sourceMeshPath": {
+            "type": "string",
+            "description": "Skeletal mesh that owns the morph targets (its LOD 0 source data)."
+          },
           "sourceSkeletalMesh": {
             "type": "string",
             "description": "An already-skinned mesh on the same skeleton to copy weights from, such as the body the garment is worn over. Beats computing weights fresh wherever the garment hugs the body. Falls back to smooth binding when omitted."
@@ -1083,6 +1107,10 @@
             "type": "string",
             "description": "SkeletalMesh to retarget onto. Defaults the same way as sourceMesh."
           },
+          "targetMeshPath": {
+            "type": "string",
+            "description": "Skeletal mesh whose weights are replaced in place."
+          },
           "targetSkeleton": {
             "type": "string",
             "description": "Canonical /Game Skeleton asset path."
@@ -1090,6 +1118,10 @@
           "targetWeightInterpolationSpeed": {
             "type": "number",
             "description": "Sample weight speed per second (0 turns weight smoothing off)."
+          },
+          "threshold": {
+            "type": "number",
+            "description": "Influences below this weight are removed, above 0 and below 0.5 (default 0.01)."
           },
           "time": {
             "type": "number",

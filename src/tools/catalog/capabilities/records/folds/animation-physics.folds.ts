@@ -75,15 +75,15 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_skin_weights', selector: 'edit',
-    summary: 'Edit skeletal-mesh skin weights: auto-skin or set vertex weights.',
-    topics: ['skin weights', 'vertex weights', 'auto skin'],
-    members: { auto: 'auto_skin_weights', set: 'set_vertex_weights' },
+    summary: 'Edit skeletal-mesh skin weights: auto-skin, set vertex weights, copy them from another skinned mesh, mirror one side onto the other, or prune tiny influences. Weights are always normalized on write.',
+    topics: ['skin weights', 'vertex weights', 'auto skin', 'copy weights', 'mirror weights', 'prune weights'],
+    members: { auto: 'auto_skin_weights', set: 'set_vertex_weights', copy: 'copy_weights', mirror: 'mirror_weights', prune: 'prune_weights' },
   },
   {
     primary: 'edit_morph_target', selector: 'edit',
-    summary: 'Create a morph target, set its deltas, or set a morph target value on an actor.',
-    topics: ['morph target', 'morph target deltas', 'morph target value'],
-    members: { create: 'create_morph_target', set_deltas: 'set_morph_target_deltas', set_value: 'set_morph_target_value' },
+    summary: 'Create a morph target, set its deltas, import morph targets from another mesh, or set a morph target value on an actor.',
+    topics: ['morph target', 'morph target deltas', 'import morph targets', 'morph target value'],
+    members: { create: 'create_morph_target', set_deltas: 'set_morph_target_deltas', import: 'import_morph_targets', set_value: 'set_morph_target_value' },
   },
   {
     primary: 'bind_cloth_to_skeletal_mesh', selector: 'clothOp',

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d0bbceaca1e5e4ef",
+  "catalogRevision": "8b5ebf48d9f3705f",
   "recordCount": 382,
   "records": [
     {
@@ -3354,6 +3354,7 @@
       "aliases": [
         "animation_physics.create_morph_target",
         "animation_physics.set_morph_target_deltas",
+        "animation_physics.import_morph_targets",
         "animation_physics.set_morph_target_value"
       ],
       "legacyIds": [
@@ -3377,6 +3378,13 @@
         },
         {
           "tool": "animation_physics",
+          "action": "import_morph_targets",
+          "folded": {
+            "edit": "import"
+          }
+        },
+        {
+          "tool": "animation_physics",
           "action": "set_morph_target_value",
           "folded": {
             "edit": "set_value"
@@ -3390,16 +3398,19 @@
           "edit_morph_target",
           "morph target",
           "morph target deltas",
+          "import morph targets",
           "morph target value"
         ],
-        "summary": "Create a morph target, set its deltas, or set a morph target value on an actor.",
+        "summary": "Create a morph target, set its deltas, import morph targets from another mesh, or set a morph target value on an actor.",
         "whenToUse": [
           "Facial/shape blending needed.",
           "Morph shape must be authored.",
+          "A mesh must get the blend shapes of a sculpted or imported variant.",
           "A morph target weight must be previewed on a placed actor."
         ],
         "whenNotToUse": [
-          "No morph targets."
+          "No morph targets.",
+          "The morph is authored by hand on this mesh (edit create or set_deltas)."
         ]
       },
       "schemas": {
@@ -3432,6 +3443,17 @@
               "type": "boolean",
               "description": "Save the asset to disk after the change (default true). With false the change stays in memory only and is lost when the editor restarts."
             },
+            "sourceMeshPath": {
+              "type": "string",
+              "description": "Skeletal mesh that owns the morph targets (its LOD 0 source data)."
+            },
+            "morphTargets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Names to import (default all the source mesh has in its source data)."
+            },
             "actorName": {
               "type": "string",
               "description": "Target actor name in the current level."
@@ -3448,14 +3470,14 @@
               "enum": [
                 "create",
                 "set_deltas",
+                "import",
                 "set_value"
               ],
               "description": "Which edit morph target variant to run."
             }
           },
           "required": [
-            "edit",
-            "morphTargetName"
+            "edit"
           ],
           "additionalProperties": false
         },
@@ -3475,6 +3497,53 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "imported": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Morph target."
+                  },
+                  "verticesAffected": {
+                    "type": "number",
+                    "description": "Vertices it moves on this mesh."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Each imported morph target."
+            },
+            "replaced": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Morph targets the mesh already had and were replaced."
+            },
+            "builtMorphTargets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Imported names that exist as morph targets after the rebuild."
+            },
+            "unmatchedVertices": {
+              "type": "number",
+              "description": "Vertices farther than 2% of the source size from any source vertex."
+            },
+            "morphTargetsDropped": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Render-only morph targets the rebuild removed."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the mesh was saved."
             },
             "actorName": {
               "type": "string",
@@ -3513,7 +3582,7 @@
       },
       "examples": [
         {
-          "title": "Create a morph target, set its deltas, or set a morph target value on an actor.",
+          "title": "Create a morph target, set its deltas, import morph targets from another mesh, or set a morph target value on an actor.",
           "input": {
             "action": "edit_morph_target",
             "skeletalMeshPath": "/Game/SM_Char",
@@ -3567,12 +3636,19 @@
           "actions": {
             "create": "create_morph_target",
             "set_deltas": "set_morph_target_deltas",
+            "import": "import_morph_targets",
             "set_value": "set_morph_target_value"
           },
           "declaredBy": {
             "skeletalMeshPath": [
               "create",
-              "set_deltas"
+              "set_deltas",
+              "import"
+            ],
+            "morphTargetName": [
+              "create",
+              "set_deltas",
+              "set_value"
             ],
             "deltas": [
               "create",
@@ -3580,11 +3656,19 @@
             ],
             "lodIndex": [
               "create",
-              "set_deltas"
+              "set_deltas",
+              "import"
             ],
             "save": [
               "create",
-              "set_deltas"
+              "set_deltas",
+              "import"
+            ],
+            "sourceMeshPath": [
+              "import"
+            ],
+            "morphTargets": [
+              "import"
             ],
             "actorName": [
               "set_value"
@@ -3600,8 +3684,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a362c527b76771b07c20d24f2c0e87dae789e80767fc969621c2cb816106760c",
-        "content": "5833064f5d260309a3273af62a86384ad6f692217b9c2ac866f7b4a01639a981"
+        "schema": "458ddbe8ecbf41cfa86f46330346f941c247c791b7eb5812e6e45e042658482b",
+        "content": "5b61bb50583845df99ded943e9f868bf99eb93fbe482eac4357fd9eb54a0a9b1"
       }
     },
     {
@@ -4393,7 +4477,10 @@
       "id": "animation_physics.edit_skin_weights",
       "aliases": [
         "animation_physics.auto_skin_weights",
-        "animation_physics.set_vertex_weights"
+        "animation_physics.set_vertex_weights",
+        "animation_physics.copy_weights",
+        "animation_physics.mirror_weights",
+        "animation_physics.prune_weights"
       ],
       "legacyIds": [
         {
@@ -4413,6 +4500,27 @@
           "folded": {
             "edit": "set"
           }
+        },
+        {
+          "tool": "animation_physics",
+          "action": "copy_weights",
+          "folded": {
+            "edit": "copy"
+          }
+        },
+        {
+          "tool": "animation_physics",
+          "action": "mirror_weights",
+          "folded": {
+            "edit": "mirror"
+          }
+        },
+        {
+          "tool": "animation_physics",
+          "action": "prune_weights",
+          "folded": {
+            "edit": "prune"
+          }
         }
       ],
       "discovery": {
@@ -4422,17 +4530,26 @@
           "edit_skin_weights",
           "skin weights",
           "vertex weights",
-          "auto skin"
+          "auto skin",
+          "copy weights",
+          "mirror weights",
+          "prune weights"
         ],
-        "summary": "Edit skeletal-mesh skin weights: auto-skin or set vertex weights.",
+        "summary": "Edit skeletal-mesh skin weights: auto-skin, set vertex weights, copy them from another skinned mesh, mirror one side onto the other, or prune tiny influences. Weights are always normalized on write.",
         "whenToUse": [
           "A mesh needs skinning.",
-          "Manual weight painting is required."
+          "Manual weight painting is required.",
+          "A new or re-modelled mesh must deform like an already skinned one.",
+          "One side of a symmetric character is weighted and the other must match.",
+          "Auto-skinning or a transfer left tiny noisy influences."
         ],
         "whenNotToUse": [
           "Weights already exist.",
           "The weights should be copied from a dressed body mesh (use skin_mesh_to_skeleton).",
-          "Auto-skin suffices."
+          "Auto-skin suffices.",
+          "The mesh has no weights and no skinned mesh to copy from (edit auto).",
+          "The mesh is not symmetric or has no left and right bones.",
+          "Joints should stay soft; a high threshold stiffens them."
         ]
       },
       "schemas": {
@@ -4465,18 +4582,40 @@
               },
               "description": "Per-vertex skin weight descriptors with bone influences."
             },
+            "sourceMeshPath": {
+              "type": "string",
+              "description": "Skinned mesh to copy the weights FROM (its LOD 0)."
+            },
+            "targetMeshPath": {
+              "type": "string",
+              "description": "Skeletal mesh whose weights are replaced in place."
+            },
+            "axis": {
+              "type": "string",
+              "description": "Symmetry axis in mesh space: X (default), Y or Z."
+            },
+            "direction": {
+              "type": "string",
+              "description": "positive_to_negative (default: the positive side is copied onto the negative side) or negative_to_positive."
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Influences below this weight are removed, above 0 and below 0.5 (default 0.01)."
+            },
             "edit": {
               "type": "string",
               "enum": [
                 "auto",
-                "set"
+                "set",
+                "copy",
+                "mirror",
+                "prune"
               ],
               "description": "Which edit skin weights variant to run."
             }
           },
           "required": [
-            "edit",
-            "skeletalMeshPath"
+            "edit"
           ],
           "additionalProperties": false
         },
@@ -4496,6 +4635,80 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "boneVertexCounts": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "before and after: bone name to the number of vertices it influences, read back from the source data."
+            },
+            "morphTargetsDropped": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Render-only morph targets (made by set_morph_target_deltas) the rebuild removed; import_morph_targets writes morphs that survive."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the mesh was saved."
+            },
+            "verticesWritten": {
+              "type": "number",
+              "description": "Target vertices that took new weights."
+            },
+            "verticesFarFromSource": {
+              "type": "number",
+              "description": "Target vertices farther than 2% of the source size from any source vertex; check those areas."
+            },
+            "unmappedBones": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Source bones the target lacks; their weight went to the nearest parent bone it has."
+            },
+            "verticesMirrored": {
+              "type": "number",
+              "description": "Vertices that took the mirrored weights."
+            },
+            "unmatchedVertices": {
+              "type": "number",
+              "description": "Destination-side vertices with no mirror partner; they kept their weights."
+            },
+            "bonePairs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "description": "Bone."
+                  },
+                  "to": {
+                    "type": "string",
+                    "description": "Its opposite-side bone."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Left and right bone pairs that were swapped."
+            },
+            "influencesRemoved": {
+              "type": "number",
+              "description": "Influences removed."
+            },
+            "verticesChanged": {
+              "type": "number",
+              "description": "Vertices that lost an influence."
+            },
+            "maxInfluencesBefore": {
+              "type": "number",
+              "description": "Most influences on one vertex before."
+            },
+            "maxInfluencesAfter": {
+              "type": "number",
+              "description": "Most influences on one vertex after."
             }
           },
           "required": [
@@ -4506,7 +4719,7 @@
       },
       "examples": [
         {
-          "title": "Edit skeletal-mesh skin weights: auto-skin or set vertex weights.",
+          "title": "Edit skeletal-mesh skin weights: auto-skin, set vertex weights, copy them from another skinned mesh, mirror one side onto the other, or prune tiny influences. Weights are always normalized on write.",
           "input": {
             "action": "edit_skin_weights",
             "skeletalMeshPath": "/Game/SM_Char",
@@ -4548,25 +4761,52 @@
           "param": "edit",
           "actions": {
             "auto": "auto_skin_weights",
-            "set": "set_vertex_weights"
+            "set": "set_vertex_weights",
+            "copy": "copy_weights",
+            "mirror": "mirror_weights",
+            "prune": "prune_weights"
           },
           "declaredBy": {
+            "skeletalMeshPath": [
+              "auto",
+              "set",
+              "mirror",
+              "prune"
+            ],
             "profileName": [
               "set"
             ],
             "lodIndex": [
-              "set"
+              "set",
+              "copy",
+              "mirror",
+              "prune"
             ],
             "weights": [
               "set"
+            ],
+            "sourceMeshPath": [
+              "copy"
+            ],
+            "targetMeshPath": [
+              "copy"
+            ],
+            "axis": [
+              "mirror"
+            ],
+            "direction": [
+              "mirror"
+            ],
+            "threshold": [
+              "prune"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f311e0e8642228428a452fdbf6f227c1a7b9231914c761aae1b804b0fb3a6953",
-        "content": "5165869fb237befdba89f4aa6849fa93ce7126fbae0b67463becc2c56821d83d"
+        "schema": "60a5df3b4a5f29cf1bdf4dda862ef10e6e590cec5cbecde3f652ba82fcf02c9b",
+        "content": "9906f122a144a9f1e8f4d72c07e9cf10cb773b71947eaa3a9a1bb0bffc3b0bfb"
       }
     },
     {
