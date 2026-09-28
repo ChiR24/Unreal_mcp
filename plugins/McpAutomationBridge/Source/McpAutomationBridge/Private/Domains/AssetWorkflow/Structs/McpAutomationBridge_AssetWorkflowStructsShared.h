@@ -41,6 +41,20 @@ inline UUserDefinedStruct* CreateUnseededUserStruct(UPackage* Package, const FSt
     return Struct;
 }
 
+// Apply `tooltip` and `metadata` {key: value} from Payload to one member.
+// Shared by add_struct_member (which declared both and dropped them) and
+// set_struct_member_metadata.
+inline void ApplyStructMemberTooltipAndMetadata(UUserDefinedStruct* S, const FGuid& G, const TSharedPtr<FJsonObject>& Payload)
+{
+    const TSharedPtr<FJsonObject>* MetaObj = nullptr;
+    if (Payload->TryGetObjectField(TEXT("metadata"), MetaObj) && MetaObj && (*MetaObj).IsValid())
+    {
+        for (const auto& Pair : (*MetaObj)->Values) { FStructureEditorUtils::SetMetaData(S, G, *Pair.Key, Pair.Value->AsString()); }
+    }
+    const FString Tooltip = GetJsonStringField(Payload, TEXT("tooltip"));
+    if (!Tooltip.IsEmpty()) { FStructureEditorUtils::ChangeVariableTooltip(S, G, Tooltip); }
+}
+
 // structPath empty -> MISSING_PARAMETER, not loadable -> ASSET_NOT_FOUND; both
 // replies are sent here and nullptr comes back.
 UUserDefinedStruct* LoadStructOrReply(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,

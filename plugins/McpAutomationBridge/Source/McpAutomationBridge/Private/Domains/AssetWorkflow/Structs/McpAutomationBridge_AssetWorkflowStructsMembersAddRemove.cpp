@@ -60,7 +60,7 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
         FString MemberType = GetJsonStringField(Payload, TEXT("memberType"));
         FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
-        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
         if (StructPath.IsEmpty() || MemberType.IsEmpty() || MemberName.IsEmpty())
         {
@@ -110,6 +110,7 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         {
             FStructureEditorUtils::ChangeVariableDefaultValue(S, G, DefaultValue);
         }
+        ApplyStructMemberTooltipAndMetadata(S, G, Payload);
 
         FStructureEditorUtils::CompileStructure(S);
         S->GetOutermost()->MarkPackageDirty();
@@ -136,7 +137,7 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
         FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
         FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
-        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
         UUserDefinedStruct* S = LoadStructOrReply(Bridge, RequestId, RequestingSocket, StructPath);
         if (!S)
@@ -179,7 +180,7 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
         FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
         FString NewMemberName = GetJsonStringField(Payload, TEXT("newMemberName"));
-        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
         if (StructPath.IsEmpty() || NewMemberName.IsEmpty())
         {
@@ -232,7 +233,7 @@ bool HandleStructMemberAddRemoveActions(UMcpAutomationBridgeSubsystem& Bridge, c
         FString VarGuidStr = GetJsonStringField(Payload, TEXT("varGuid"));
         FString MemberName = GetJsonStringField(Payload, TEXT("memberName"));
         FString MemberType = GetJsonStringField(Payload, TEXT("memberType"));
-        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
         if (StructPath.IsEmpty() || MemberType.IsEmpty())
         {

@@ -1,6 +1,10 @@
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
 #include "Editor.h"
 #include "ScopedTransaction.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
+#include "Misc/FileHelper.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 
 bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -12,13 +16,41 @@ bool HandleStructImportActions(UMcpAutomationBridgeSubsystem& Bridge, const FStr
         FString Name = GetJsonStringField(Payload, TEXT("name"));
         FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Structs"));
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
-        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
         const TArray<TSharedPtr<FJsonValue>>* MembersArr = nullptr;
-        if (!Payload->TryGetArrayField(TEXT("members"), MembersArr) || !MembersArr)
+        // sourcePath: a JSON file inside the project holding the member list,
+        // either a bare array or an object with a members array (the shape
+        // export_struct returns). It was declared and never read.
+        TArray<TSharedPtr<FJsonValue>> FileMembers;
+        const FString SourcePath = GetJsonStringField(Payload, TEXT("sourcePath"));
+        if (!Payload->TryGetArrayField(TEXT("members"), MembersArr) && !SourcePath.IsEmpty())
+        {
+            FString ResolvedPath, PathError, Text;
+            if (!McpResolveProjectFilePath(SourcePath, ResolvedPath, PathError))
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("SECURITY_VIOLATION"));
+                return true;
+            }
+            TSharedPtr<FJsonValue> Parsed;
+            const bool bRead = FFileHelper::LoadFileToString(Text, *ResolvedPath);
+            const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Text);
+            if (!bRead || !FJsonSerializer::Deserialize(Reader, Parsed) || !Parsed.IsValid())
+            {
+                Bridge.SendAutomationError(RequestingSocket, RequestId,
+                    FString::Printf(TEXT("sourcePath '%s' is not a readable JSON file."), *SourcePath), TEXT("INVALID_SOURCE"));
+                return true;
+            }
+            const TSharedPtr<FJsonObject>* FileObj = nullptr;
+            const TArray<TSharedPtr<FJsonValue>>* Nested = nullptr;
+            if (Parsed->Type == EJson::Array) { FileMembers = Parsed->AsArray(); }
+            else if (Parsed->TryGetObject(FileObj) && (*FileObj)->TryGetArrayField(TEXT("members"), Nested) && Nested) { FileMembers = *Nested; }
+            MembersArr = &FileMembers;
+        }
+        if (!MembersArr || MembersArr->Num() == 0)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Missing required parameter: members (array)"), TEXT("MISSING_PARAMETER"));
+                TEXT("Missing required parameter: members (array), or sourcePath naming a JSON file that holds one"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 

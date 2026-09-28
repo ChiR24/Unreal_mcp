@@ -237,13 +237,11 @@ bool HandleStructPropertyAction(
             Inst->InitializeAs(TargetStruct);
         }
 
-        // Optional persistence opt-out. Default true to preserve the historical
-        // always-save contract; accepted as `bSave` (priority) or `save`.
+        // Optional persistence opt-out, default true. The read used to sit
+        // behind `if (!bSave)` on a bSave that was always true, so save=false
+        // never took effect.
         bool bSave = true;
-        if (!bSave)
-        {
-            Params->TryGetBoolField(TEXT("save"), bSave);
-        }
+        Params->TryGetBoolField(TEXT("save"), bSave);
 
         // Persist only through the safe wrapper; never the raw package save API.
         // Skip the save (without erroring) when the opt-out is requested.

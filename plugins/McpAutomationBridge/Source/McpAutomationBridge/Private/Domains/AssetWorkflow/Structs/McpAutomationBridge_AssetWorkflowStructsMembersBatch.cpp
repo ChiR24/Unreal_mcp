@@ -43,7 +43,7 @@ bool AddStructMembersFromArray(
     const int32 Applied = ApplyParsedStructMembers(S, Parsed, Failures);
     FStructureEditorUtils::CompileStructure(S);
     S->GetOutermost()->MarkPackageDirty();
-    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), false);
+    const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true);
     if (bSaved)
     {
         McpSafeAssetSave(S);

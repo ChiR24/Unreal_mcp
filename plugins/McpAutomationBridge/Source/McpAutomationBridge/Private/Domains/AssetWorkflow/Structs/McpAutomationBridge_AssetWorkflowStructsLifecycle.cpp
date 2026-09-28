@@ -11,7 +11,7 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
         FString Name = GetJsonStringField(Payload, TEXT("name"));
         FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Structs"));
-        bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
+        bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
         // Accept the documented structPath (used by every other struct action)
         // and derive name + parent path from it when name is not given.

@@ -6695,6 +6695,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Where the pack lands. Defaults to the Fab library cache directory, which list_fab_downloads and the fabLibrary source root both read."
         },
+        "destinationFolder": {
+          "type": "string",
+          "description": "Folder to move the renamed struct into, e.g. /Game/Data."
+        },
         "destinationName": {
           "type": "string",
           "description": "New asset name."
@@ -6822,7 +6826,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "force": {
           "type": "boolean",
-          "description": "Force deletion even when the asset is still referenced (bridge delete path)."
+          "description": "Delete even when other assets still reference the struct (their references break). Default false, which refuses and lists the referencers."
         },
         "format": {
           "type": "string",
@@ -7092,12 +7096,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Unreal property type: Bool, Int, Float, String, Name, Text, Vector, Rotator, Transform, Object, SoftObject, Class, SoftClass, Enum:<Name>, Struct:<Path>, or with container prefix Array:..., Set:..., Map:<K>,<V>:"
         },
         "members": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "Member definitions."
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Member definitions, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Member definitions."
+            }
+          ],
+          "description": "Member definitions, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata."
         },
         "metadata": {
           "oneOf": [
@@ -7141,6 +7158,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "newName": {
           "type": "string",
           "description": "New asset name."
+        },
+        "newStructPath": {
+          "type": "string",
+          "description": "Full new object path, e.g. /Game/Data/S_WeaponStats.S_WeaponStats; alternative to newName."
         },
         "newValueName": {
           "type": "string",
@@ -7340,7 +7361,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
-              "description": "Package path to search."
+              "description": "Package path (default /Game/Structs)."
+            },
+            {
+              "type": "string",
+              "description": "Package path to search (default /Game/Structs), recursive."
             },
             {
               "type": "string",
@@ -7457,7 +7482,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "relativeTo": {
           "type": "string",
-          "description": "Target member GUID/name."
+          "description": "Target member GUID or name."
         },
         "replaceText": {
           "type": "string",
@@ -7560,7 +7585,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourcePath": {
           "type": "string",
-          "description": "Source /Game asset path."
+          "description": "Project-relative JSON file holding the members: a bare array, or an object with a members array as export_struct returns. Used when members is omitted."
         },
         "sourcePin": {
           "type": "string",

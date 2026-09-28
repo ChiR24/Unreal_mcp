@@ -64,7 +64,7 @@ bool HandleStructAnalysisRecompile(UMcpAutomationBridgeSubsystem& Bridge, const 
 
     FStructureEditorUtils::CompileStructure(S);
     S->GetOutermost()->MarkPackageDirty();
-    bool bSave = GetJsonBoolField(Payload, TEXT("save"), false);
+    bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
     TArray<TSharedPtr<FJsonValue>> IssuesArr;
     int32 ErrorCount = 0;

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2a5603aea2587589",
+  "catalogRevision": "4eed0f1160e7cc68",
   "recordCount": 382,
   "records": [
     {
@@ -78280,6 +78280,10 @@
               "type": "string",
               "description": "Asset path of the Blueprint Struct (e.g. /Game/Structs/S_MyStruct)."
             },
+            "force": {
+              "type": "boolean",
+              "description": "Delete even when other assets still reference the struct (their references break). Default false, which refuses and lists the referencers."
+            },
             "memberName": {
               "type": "string",
               "description": "Member (variable) name."
@@ -78287,6 +78291,10 @@
             "varGuid": {
               "type": "string",
               "description": "Stable member GUID."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Persist the struct to disk. Defaults to true; pass false to keep the change in memory only."
             },
             "deleteScope": {
               "type": "string",
@@ -78369,10 +78377,16 @@
             "member": "remove_struct_member"
           },
           "declaredBy": {
+            "force": [
+              "struct"
+            ],
             "memberName": [
               "member"
             ],
             "varGuid": [
+              "member"
+            ],
+            "save": [
               "member"
             ]
           }
@@ -78380,8 +78394,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "84405cee9a490ea53329ae3564ab8dd6d3bf6c5d1aa2b492ed7ac065eedb59e1",
-        "content": "7a4e57cf9f48cddbd04d684d0e50aa8858988d3084171260fa618f3ea80fceb3"
+        "schema": "7005c671bbe943338f489f20ec4cb44425302327688b58c443d250917fc11e83",
+        "content": "b908125b380c4df81c56ceb06cb661f8a3d5b1cbf1336e51d353cad346ced919"
       }
     },
     {
@@ -78524,23 +78538,23 @@
             },
             "path": {
               "type": "string",
-              "description": "Package path."
-            },
-            "members": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "x-unreal-reflection-boundary": true
-              },
-              "description": "Member definitions."
-            },
-            "save": {
-              "type": "boolean",
-              "description": "Persist the created struct to disk. Defaults to false, which leaves the asset in memory only."
+              "description": "Package path (default /Game/Structs)."
             },
             "structPath": {
               "type": "string",
-              "description": "Asset path of the Blueprint Struct (e.g. /Game/Structs/S_MyStruct)."
+              "description": "Full asset path of the new struct, e.g. /Game/Structs/S_WeaponRow; alternative to name and path."
+            },
+            "members": {
+              "type": "array",
+              "description": "Member definitions, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              }
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Persist the struct to disk. Defaults to true; pass false to keep the change in memory only."
             },
             "memberName": {
               "type": "string",
@@ -78583,11 +78597,19 @@
             },
             "relativeTo": {
               "type": "string",
-              "description": "Target member GUID/name."
+              "description": "Target member GUID or name."
             },
             "newName": {
               "type": "string",
-              "description": "New struct name."
+              "description": "New struct name; the struct stays in its folder unless destinationFolder is given."
+            },
+            "destinationFolder": {
+              "type": "string",
+              "description": "Folder to move the renamed struct into, e.g. /Game/Data."
+            },
+            "newStructPath": {
+              "type": "string",
+              "description": "Full new object path, e.g. /Game/Data/S_WeaponStats.S_WeaponStats; alternative to newName."
             },
             "destinationPath": {
               "type": "string",
@@ -78599,7 +78621,7 @@
             },
             "sourcePath": {
               "type": "string",
-              "description": "Source file path."
+              "description": "Project-relative JSON file holding the members: a bare array, or an object with a members array as export_struct returns. Used when members is omitted."
             },
             "assetPath": {
               "type": "string",
@@ -78728,19 +78750,15 @@
           },
           "declaredBy": {
             "name": [
-              "create_struct"
-            ],
-            "path": [
-              "create_struct"
-            ],
-            "members": [
               "create_struct",
               "import_struct"
             ],
-            "save": [
-              "create_struct"
+            "path": [
+              "create_struct",
+              "import_struct"
             ],
             "structPath": [
+              "create_struct",
               "add_struct_member",
               "rename_struct_member",
               "reorder_struct_members",
@@ -78753,9 +78771,27 @@
               "recompile_struct",
               "refresh_struct_dependencies"
             ],
+            "members": [
+              "create_struct",
+              "add_struct_member",
+              "import_struct"
+            ],
+            "save": [
+              "create_struct",
+              "add_struct_member",
+              "rename_struct_member",
+              "reorder_struct_members",
+              "set_struct_member_default",
+              "set_struct_member_metadata",
+              "set_struct_member_type",
+              "import_struct",
+              "recompile_struct",
+              "set_instanced_struct_property"
+            ],
             "memberName": [
               "add_struct_member",
               "rename_struct_member",
+              "reorder_struct_members",
               "set_struct_member_default",
               "set_struct_member_metadata",
               "set_struct_member_type"
@@ -78795,6 +78831,12 @@
             "newName": [
               "rename_struct"
             ],
+            "destinationFolder": [
+              "rename_struct"
+            ],
+            "newStructPath": [
+              "rename_struct"
+            ],
             "destinationPath": [
               "duplicate_struct"
             ],
@@ -78821,8 +78863,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0d5c0c71995327b25f13a34911c0bdbc9a66854631ac51e7d86e20edf6a62d7c",
-        "content": "80479c31abba348261705e58c988077af9c13a265ce999062b84287546f02427"
+        "schema": "f952d9c08af78730bfc5951b162bf6aabc77d538887923111965fae2c6db13f0",
+        "content": "7626f2f18ae25c87f9881351b15946746ff3b873a5c54feb5161de72c4fe5240"
       }
     },
     {
@@ -78917,7 +78959,7 @@
             },
             "path": {
               "type": "string",
-              "description": "Package path to search."
+              "description": "Package path to search (default /Game/Structs), recursive."
             },
             "searchScope": {
               "type": "string",
@@ -79038,7 +79080,6 @@
               "list"
             ],
             "searchScope": [
-              "list",
               "usage"
             ],
             "otherStructPath": [
@@ -79055,8 +79096,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8a41479831d083af45d5b79102aa33e591355743bf0a0af3018d0c3f0842c038",
-        "content": "77dc57cd7582f06029bd0b22a782e6b1a5dad2a0decf5456eef76e38dfed7003"
+        "schema": "0fdd4e06e7138904bb3f40e63152b0b8c9c1bbe5918da9fa152065f696015df5",
+        "content": "50598bfcd4b7cf1bfb6324b3ee967549405041cdd6749b94c820edc95e283303"
       }
     },
     {
