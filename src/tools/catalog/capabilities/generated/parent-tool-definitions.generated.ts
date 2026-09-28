@@ -6529,6 +6529,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Desaturation amount (0-1)."
         },
+        "angle": {
+          "type": "number",
+          "description": "Linear gradient direction in degrees (default 0)."
+        },
         "assetId": {
           "type": "string",
           "description": "Fab asset id, used as the cache key."
@@ -6587,6 +6591,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "blueTexture": {
           "type": "string",
           "description": "Blue channel source."
+        },
+        "brickRatio": {
+          "type": "number",
+          "description": "Brick width to height ratio (default 2)."
+        },
+        "centerX": {
+          "type": "number",
+          "description": "Radial or angular centre X, 0-1 (default 0.5)."
+        },
+        "centerY": {
+          "type": "number",
+          "description": "Radial or angular centre Y, 0-1 (default 0.5)."
         },
         "channel": {
           "type": "string",
@@ -6783,6 +6799,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which edit data table variant to run."
         },
+        "endColor": {
+          "description": "End colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+        },
         "endPin": {
           "type": "string",
           "description": "Terminal pin name to stop the chain walk at."
@@ -6847,7 +6866,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "gradientType": {
           "type": "string",
-          "description": "Gradient type."
+          "description": "Linear (default), Radial or Angular."
         },
         "greenTexture": {
           "type": "string",
@@ -6979,6 +6998,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which create material variant to run; omit for 'material'."
         },
+        "lacunarity": {
+          "type": "number",
+          "description": "Frequency gain per octave (default 2)."
+        },
         "layerName": {
           "type": "string",
           "description": "Layer name."
@@ -7012,6 +7035,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Maximum rows to return, clamped plugin-side."
+        },
+        "lineWidth": {
+          "type": "number",
+          "description": "Grid line width as a fraction of a tile (default 0.02)."
         },
         "listingId": {
           "type": "string",
@@ -7241,15 +7268,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "noiseType": {
           "type": "string",
-          "description": "Noise type."
+          "description": "Perlin (default), FBM (same as Perlin), Ridged or Billow."
         },
         "octaves": {
           "type": "number",
-          "description": "Noise octaves."
+          "description": "Noise octaves, 1-16 (default 4)."
         },
         "offset": {
           "type": "number",
-          "description": "Zero-based offset into the full result set."
+          "description": "Brick row offset, 0-1 (default 0.5)."
         },
         "opacity": {
           "type": "number",
@@ -7286,7 +7313,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "outputPath": {
           "type": "string",
-          "description": "Output file path."
+          "description": "Full output asset path, e.g. /Game/Textures/T_Noise; replaces name and path."
         },
         "outputType": {
           "type": "string",
@@ -7427,12 +7454,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "patternType": {
           "type": "string",
-          "description": "Pattern type."
+          "description": "Checker (default), Grid, Brick, Stripes or Dots."
         },
         "payload": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "A complete Bridge export envelope: { exportPayload: [ { assetId, assetType, exportMode, exportType, folderName, name, assetPaths[] } ] }. Use this to pass through exactly what Bridge would have sent."
+        },
+        "persistence": {
+          "type": "number",
+          "description": "Amplitude kept per octave (default 0.5)."
         },
         "physicalMaterialPath": {
           "type": "string",
@@ -7463,6 +7494,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "prefix": {
           "type": "string",
           "description": "Name prefix."
+        },
+        "primaryColor": {
+          "description": "Main colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
         },
         "process": {
           "type": "string",
@@ -7555,7 +7589,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "scale": {
           "type": "number",
-          "description": "Noise scale."
+          "description": "Noise scale (default 1)."
+        },
+        "seamless": {
+          "type": "boolean",
+          "description": "Tile seamlessly (default false)."
         },
         "searchScope": {
           "type": "string",
@@ -7564,6 +7602,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "searchText": {
           "type": "string",
           "description": "Search pattern."
+        },
+        "secondaryColor": {
+          "description": "Second colour (default black) as {r, g, b, a} or [r, g, b, a] in 0-1."
         },
         "seed": {
           "type": "number",
@@ -7639,13 +7680,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Pan speed along V."
         },
+        "startColor": {
+          "description": "Start colour (default black) as {r, g, b, a} or [r, g, b, a] in 0-1."
+        },
         "startNodeId": {
           "type": "string",
           "description": "Starting node ID accepted by the handler in place of nodeId."
-        },
-        "streamingPriority": {
-          "type": "number",
-          "description": "Texture streaming priority (default 0)."
         },
         "strength": {
           "type": "number",
@@ -7698,6 +7738,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "texturePath": {
           "type": "string",
           "description": "Texture /Game asset path."
+        },
+        "tilesX": {
+          "type": "number",
+          "description": "Pattern repeats across, 1-1024 (default 8)."
+        },
+        "tilesY": {
+          "type": "number",
+          "description": "Pattern repeats down, 1-1024 (default 8)."
         },
         "tooltip": {
           "type": "string",

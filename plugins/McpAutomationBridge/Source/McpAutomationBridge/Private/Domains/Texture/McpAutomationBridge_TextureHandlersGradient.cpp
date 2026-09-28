@@ -33,12 +33,13 @@ TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject
         TEXTURE_ERROR_RESPONSE(TEXT("radius must be greater than zero"));
     }
 
-    const bool bHDR = GetJsonBoolField(Params, TEXT("hdr"), false);
     const FLinearColor StartColor = ExtractLinearColorField(Params, TEXT("startColor"), FLinearColor(0, 0, 0, 1));
     const FLinearColor EndColor = ExtractLinearColorField(Params, TEXT("endColor"), FLinearColor(1, 1, 1, 1));
 
 
-    UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, bHDR);
+    // Always 8-bit: the pixel writer fills BGRA8 source data, so an hdr request
+    // produced an 8-bit texture labelled HDR. hdr is not read for that reason.
+    UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, false);
     if (!NewTexture)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create texture"));

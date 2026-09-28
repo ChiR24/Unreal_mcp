@@ -114,8 +114,6 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
     if (SubAction == TEXT("configure_virtual_texture"))
     {
         const bool bVirtualTextureStreaming = GetJsonBoolField(Params, TEXT("virtualTextureStreaming"), false);
-        const int32 TileSize = GetJsonNumberField(Params, TEXT("tileSize"), 128);
-        const int32 TileBorderSize = GetJsonNumberField(Params, TEXT("tileBorderSize"), 4);
         Texture->PreEditChange(nullptr);
         Texture->VirtualTextureStreaming = bVirtualTextureStreaming;
         Texture->PostEditChange();
@@ -126,8 +124,6 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
         Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Virtual texture streaming %s"), bVirtualTextureStreaming ? TEXT("enabled") : TEXT("disabled")));
         Response->SetStringField(TEXT("assetPath"), AssetPath);
         Response->SetBoolField(TEXT("virtualTextureStreaming"), bVirtualTextureStreaming);
-        Response->SetNumberField(TEXT("tileSize"), TileSize);
-        Response->SetNumberField(TEXT("tileBorderSize"), TileBorderSize);
         return Response;
     }
 
@@ -141,7 +137,11 @@ TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, co
         Texture->MarkPackageDirty();
         if (bSave) McpSafeAssetSave(Texture);
         Response->SetBoolField(TEXT("success"), true);
-        Response->SetStringField(TEXT("message"), TEXT("Streaming priority configured"));
+        // Only neverStream is applied: UTexture has no per-texture streaming
+        // priority across 5.0-5.8, so the reply no longer claims one was set.
+        Response->SetStringField(TEXT("message"), FString::Printf(TEXT("NeverStream set to %s"), bNeverStream ? TEXT("true") : TEXT("false")));
+        Response->SetBoolField(TEXT("neverStream"), bNeverStream);
+        McpHandlerUtils::AddVerification(Response, Texture);
         return Response;
     }
 

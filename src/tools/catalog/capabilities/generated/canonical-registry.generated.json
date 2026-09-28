@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "92080ff8c6000626",
+  "catalogRevision": "de1521afe11e5eb5",
   "recordCount": 382,
   "records": [
     {
@@ -83927,10 +83927,6 @@
               "type": "number",
               "description": "LOD bias value."
             },
-            "streamingPriority": {
-              "type": "number",
-              "description": "Texture streaming priority (default 0)."
-            },
             "neverStream": {
               "type": "boolean",
               "description": "Never stream this texture."
@@ -84038,9 +84034,6 @@
             "lodBias": [
               "lod_bias"
             ],
-            "streamingPriority": [
-              "streaming_priority"
-            ],
             "neverStream": [
               "streaming_priority"
             ],
@@ -84055,8 +84048,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6862f937611ce70fa6490b5524c1f86e01c9e6c7ec62a511cd120554ae0be3b7",
-        "content": "c37905f9109a7acb17dd3371c292c0aa9f8950a949d400e16b5cc4965c6c6281"
+        "schema": "d32c5e45e536acff5310e75333b1ecc717b74e3cb42c647e59454b58bf8f1ea5",
+        "content": "62954fa1551f25bba2ad6a0cf062fe25db07124acd0b7c42f886e93153ec0c11"
       }
     },
     {
@@ -84163,9 +84156,13 @@
               "type": "string",
               "description": "Package path."
             },
+            "outputPath": {
+              "type": "string",
+              "description": "Full output asset path, e.g. /Game/Textures/T_Noise; replaces name and path."
+            },
             "gradientType": {
               "type": "string",
-              "description": "Gradient type."
+              "description": "Linear (default), Radial or Angular."
             },
             "width": {
               "type": "number",
@@ -84175,9 +84172,31 @@
               "type": "number",
               "description": "Texture height in pixels (default 1024)."
             },
+            "angle": {
+              "type": "number",
+              "description": "Linear gradient direction in degrees (default 0)."
+            },
+            "centerX": {
+              "type": "number",
+              "description": "Radial or angular centre X, 0-1 (default 0.5)."
+            },
+            "centerY": {
+              "type": "number",
+              "description": "Radial or angular centre Y, 0-1 (default 0.5)."
+            },
+            "radius": {
+              "type": "number",
+              "description": "Radial gradient radius, 0-1 (default 0.5)."
+            },
+            "startColor": {
+              "description": "Start colour (default black) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            },
+            "endColor": {
+              "description": "End colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            },
             "noiseType": {
               "type": "string",
-              "description": "Noise type."
+              "description": "Perlin (default), FBM (same as Perlin), Ridged or Billow."
             },
             "seed": {
               "type": "number",
@@ -84185,15 +84204,53 @@
             },
             "octaves": {
               "type": "number",
-              "description": "Noise octaves."
+              "description": "Noise octaves, 1-16 (default 4)."
             },
             "scale": {
               "type": "number",
-              "description": "Noise scale."
+              "description": "Noise scale (default 1)."
+            },
+            "persistence": {
+              "type": "number",
+              "description": "Amplitude kept per octave (default 0.5)."
+            },
+            "lacunarity": {
+              "type": "number",
+              "description": "Frequency gain per octave (default 2)."
+            },
+            "seamless": {
+              "type": "boolean",
+              "description": "Tile seamlessly (default false)."
             },
             "patternType": {
               "type": "string",
-              "description": "Pattern type."
+              "description": "Checker (default), Grid, Brick, Stripes or Dots."
+            },
+            "tilesX": {
+              "type": "number",
+              "description": "Pattern repeats across, 1-1024 (default 8)."
+            },
+            "tilesY": {
+              "type": "number",
+              "description": "Pattern repeats down, 1-1024 (default 8)."
+            },
+            "lineWidth": {
+              "type": "number",
+              "description": "Grid line width as a fraction of a tile (default 0.02)."
+            },
+            "brickRatio": {
+              "type": "number",
+              "description": "Brick width to height ratio (default 2)."
+            },
+            "offset": {
+              "type": "number",
+              "description": "Brick row offset, 0-1 (default 0.5)."
+            },
+            "primaryColor": {
+              "description": "Main colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            },
+            "secondaryColor": {
+              "description": "Second colour (default black) as {r, g, b, a} or [r, g, b, a] in 0-1."
             },
             "sourceTexture": {
               "type": "string",
@@ -84234,10 +84291,6 @@
             "alphaTexture": {
               "type": "string",
               "description": "Alpha channel source."
-            },
-            "outputPath": {
-              "type": "string",
-              "description": "Output texture path."
             },
             "assetPath": {
               "type": "string",
@@ -84359,20 +84412,6 @@
             "combined": "combine_textures"
           },
           "declaredBy": {
-            "name": [
-              "gradient",
-              "noise",
-              "pattern",
-              "normal_from_height",
-              "resized"
-            ],
-            "path": [
-              "gradient",
-              "noise",
-              "pattern",
-              "normal_from_height",
-              "resized"
-            ],
             "gradientType": [
               "gradient"
             ],
@@ -84386,6 +84425,24 @@
               "noise",
               "pattern"
             ],
+            "angle": [
+              "gradient"
+            ],
+            "centerX": [
+              "gradient"
+            ],
+            "centerY": [
+              "gradient"
+            ],
+            "radius": [
+              "gradient"
+            ],
+            "startColor": [
+              "gradient"
+            ],
+            "endColor": [
+              "gradient"
+            ],
             "noiseType": [
               "noise"
             ],
@@ -84398,7 +84455,37 @@
             "scale": [
               "noise"
             ],
+            "persistence": [
+              "noise"
+            ],
+            "lacunarity": [
+              "noise"
+            ],
+            "seamless": [
+              "noise"
+            ],
             "patternType": [
+              "pattern"
+            ],
+            "tilesX": [
+              "pattern"
+            ],
+            "tilesY": [
+              "pattern"
+            ],
+            "lineWidth": [
+              "pattern"
+            ],
+            "brickRatio": [
+              "pattern"
+            ],
+            "offset": [
+              "pattern"
+            ],
+            "primaryColor": [
+              "pattern"
+            ],
+            "secondaryColor": [
               "pattern"
             ],
             "sourceTexture": [
@@ -84431,11 +84518,6 @@
             "alphaTexture": [
               "channel_pack"
             ],
-            "outputPath": [
-              "channel_pack",
-              "channel_extract",
-              "combined"
-            ],
             "assetPath": [
               "channel_extract"
             ],
@@ -84459,8 +84541,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "647125850bf90dd379ae8740b1fdad8ce9bc6845243326e59e6dcdcfcc365d52",
-        "content": "b6e22f14d1300041aa96a08b031b97ccdc4d8e6e8f8758be3f8f5131df4dc73d"
+        "schema": "41472de03320b30cbb4eeee8564a7761d702bb400be8d02da1442bad9e479d9c",
+        "content": "4726913e288fb667605a861680510d34f4114f9270a6b2c260e700639f6c7932"
       }
     },
     {

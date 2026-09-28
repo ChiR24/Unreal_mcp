@@ -35,10 +35,19 @@ TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& 
     const float Lacunarity = static_cast<float>(GetJsonNumberField(Params, TEXT("lacunarity"), 2.0));
     const int32 Seed = static_cast<int32>(GetJsonNumberField(Params, TEXT("seed"), 0));
     const bool bSeamless = GetJsonBoolField(Params, TEXT("seamless"), false);
-    const bool bHDR = GetJsonBoolField(Params, TEXT("hdr"), false);
+    // noiseType was declared and never read (one algorithm always ran). Perlin
+    // (fractal Brownian motion) stays the default; ridged and billow fold it.
+    const FString NoiseType = GetJsonStringField(Params, TEXT("noiseType"), TEXT("Perlin"));
+    const bool bRidged = NoiseType.Equals(TEXT("Ridged"), ESearchCase::IgnoreCase);
+    const bool bBillow = NoiseType.Equals(TEXT("Billow"), ESearchCase::IgnoreCase);
+    if (!bRidged && !bBillow && !NoiseType.Equals(TEXT("Perlin"), ESearchCase::IgnoreCase) && !NoiseType.Equals(TEXT("FBM"), ESearchCase::IgnoreCase))
+    {
+        TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("Unknown noiseType '%s'. Valid values: Perlin, FBM, Ridged, Billow."), *NoiseType));
+    }
 
-
-    UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, bHDR);
+    // Always 8-bit: the pixel writer fills BGRA8 source data, so an hdr request
+    // produced an 8-bit texture labelled HDR. hdr is not read for that reason.
+    UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, Width, Height, false);
     if (!NewTexture)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create texture"));
@@ -66,6 +75,8 @@ TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& 
                 NoiseValue = FBMNoise(NX, NY, Octaves, Persistence, Lacunarity, Seed);
             }
 
+            if (bRidged) { NoiseValue = 1.0f - 2.0f * FMath::Abs(NoiseValue); }
+            else if (bBillow) { NoiseValue = 2.0f * FMath::Abs(NoiseValue) - 1.0f; }
             NoiseValue = FMath::Clamp((NoiseValue + 1.0f) * 0.5f, 0.0f, 1.0f);
             const int32 PixelIndex = (Y * Width + X) * 4;
             const uint8 ByteValue = static_cast<uint8>(NoiseValue * 255.0f);
