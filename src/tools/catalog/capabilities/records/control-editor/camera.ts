@@ -38,7 +38,7 @@ export const CAMERA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set the editor viewport camera position and rotation.',
     whenToUse: ['The viewport camera must be moved to a specific position and orientation.'],
     whenNotToUse: ['The camera should follow an actor (use set_view_target).'],
-    inputProps: { location: P.location, rotation: P.rotation, actorName: P.actorName },
+    inputProps: { location: P.location, rotation: P.rotation },
     required: ['location', 'rotation'],
     effect: 'read',
    

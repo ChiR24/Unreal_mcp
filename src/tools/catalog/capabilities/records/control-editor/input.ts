@@ -32,6 +32,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
       holdSeconds: P.holdSeconds,
       x: P.x,
       y: P.y,
+      z: P.z,
       button: P.button,
       widget: P.widget,
     },

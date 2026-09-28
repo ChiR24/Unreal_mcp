@@ -2,6 +2,7 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
 #include "UObject/UnrealType.h"
+#include "EditorModeManager.h"
 
 namespace {
 // Editor Preferences and Project Settings live on config-backed UObject CDOs
@@ -195,14 +196,30 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetEditorMode(
     return true;
   }
 
-  FString Command = FString::Printf(TEXT("mode %s"), *Mode);
-  GEditor->Exec(GEditor->GetEditorWorldContext().World(), *Command);
+  // The "mode <X>" console command only sets grid and snap options; it never
+  // switched editor modes, yet this reported "Editor mode set" for any token.
+  // Activate the mode by its id and check that it is active. EM_Placement is
+  // the builtin symbol whose id is PLACEMENT; a bare name such as landscape is
+  // tried as EM_Landscape too.
+  FEditorModeID ModeId(Mode.Equals(TEXT("EM_Placement"), ESearchCase::IgnoreCase) ? TEXT("PLACEMENT") : *Mode);
+  FEditorModeTools &ModeTools = GLevelEditorModeTools();
+  ModeTools.ActivateMode(ModeId);
+  if (!ModeTools.IsModeActive(ModeId) && !Mode.StartsWith(TEXT("EM_"), ESearchCase::IgnoreCase)) {
+    ModeId = FEditorModeID(*(TEXT("EM_") + Mode));
+    ModeTools.ActivateMode(ModeId);
+  }
+  if (!ModeTools.IsModeActive(ModeId)) {
+    SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("Editor mode '%s' is not active after activation; it is not a registered mode id "
+                             "(for example EM_Default, EM_Landscape, EM_Foliage, EM_MeshPaint)"), *Mode),
+        TEXT("MODE_NOT_ACTIVATED"));
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetStringField(TEXT("mode"), Mode);
+  Resp->SetStringField(TEXT("mode"), ModeId.ToString());
   SendAutomationResponse(Socket, RequestId, true,
-                         FString::Printf(TEXT("Editor mode set to %s"), *Mode), Resp, FString());
+                         FString::Printf(TEXT("Editor mode set to %s"), *ModeId.ToString()), Resp, FString());
   return true;
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetFixedDeltaTime(

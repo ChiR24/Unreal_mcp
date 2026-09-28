@@ -4163,10 +4163,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Blend time in seconds for set_view_target."
         },
-        "bookmarkName": {
-          "type": "string",
-          "description": "Bookmark name identifier."
-        },
         "button": {
           "type": "string",
           "description": "Mouse button for simulate_input."
@@ -4221,17 +4217,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Seconds every frame advances the running game, however long the frame really took (deterministic runs); 0 turns fixed stepping off. It also ends when PIE stops."
         },
-        "description": {
-          "type": "string",
-          "description": "Bookmark description."
-        },
         "discardUnsaved": {
           "type": "boolean",
           "description": "Restart even though packages have unsaved changes, discarding them. Omitted, a restart with unsaved work is refused."
         },
         "durationSeconds": {
           "type": "number",
-          "description": "Recording duration in seconds."
+          "description": "Stop the recording by itself after this many seconds of game time."
         },
         "enabled": {
           "type": "boolean",
@@ -4251,7 +4243,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "frameRate": {
           "type": "number",
-          "description": "Recording frame rate."
+          "description": "Replay frames recorded per second, 1 to 120 (sets demo.RecordHz; the engine default is 8)."
         },
         "functionName": {
           "type": "string",
@@ -4275,8 +4267,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Keep injecting inputAction, or keep a raw key_down/key_tap key pressed, for this many seconds of GAME time so the pawn actually travels (default 0: an action lasts one frame, a key_down stays down until key_up, a key_tap lets go after 0.1s). Game time, not wall time: under set_game_speed 0.05 a 2s hold still delivers 2s of in-game input, which takes 40s of real time. A key_up for the same action or key stops the hold early."
         },
         "id": {
-          "type": "string",
-          "description": "Bookmark identifier."
+          "type": "integer",
+          "description": "Bookmark slot number, 0 to 9 on a default level (the slots Ctrl+0..9 set). Unreal bookmarks are numbered slots, not names; a number outside the level's range is refused."
         },
         "includeMetadata": {
           "type": "boolean",
@@ -4329,7 +4321,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "mode": {
           "type": "string",
-          "description": "Editor mode for set_editor_mode, or screenshot source."
+          "description": "Editor mode id to activate: EM_Default, EM_Landscape, EM_Foliage, EM_MeshPaint or any registered mode id; a bare name (landscape) is tried as EM_<name>. The call fails when the mode is not active afterwards."
         },
         "name": {
           "type": "string",
@@ -4402,7 +4394,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "stat": {
           "type": "string",
-          "description": "Stat name to show or hide."
+          "description": "One stat to show or hide (FPS, Unit, Game, SceneRendering...). show_stats without it shows FPS and Unit; hide_stats without it hides every stat. A stat already in the wanted state is left alone, so repeating a call never toggles it back."
         },
         "steps": {
           "type": "integer",
@@ -4446,11 +4438,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "x": {
           "type": "number",
-          "description": "Mouse X coordinate for simulate_input."
+          "description": "Mouse X coordinate for simulate_input, or the X value of an Axis2D or Axis3D inputAction."
         },
         "y": {
           "type": "number",
-          "description": "Mouse Y coordinate for simulate_input."
+          "description": "Mouse Y coordinate for simulate_input, or the Y value of an Axis2D or Axis3D inputAction."
+        },
+        "z": {
+          "type": "number",
+          "description": "Z value of an Axis3D inputAction (x and y give the other two)."
         },
         "action": {
           "type": "string",
@@ -4720,7 +4716,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "mode": {
           "type": "string",
-          "description": "Editor mode for set_editor_mode, or screenshot source."
+          "description": "Editor mode id to activate: EM_Default, EM_Landscape, EM_Foliage, EM_MeshPaint or any registered mode id; a bare name (landscape) is tried as EM_<name>. The call fails when the mode is not active afterwards."
         },
         "opened": {
           "type": "boolean",

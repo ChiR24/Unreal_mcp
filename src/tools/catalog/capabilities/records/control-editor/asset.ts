@@ -70,7 +70,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Open an asset in the appropriate editor by asset path.',
     whenToUse: ['An asset must be opened for editing or inspection.'],
     whenNotToUse: ['The asset is already open.'],
-    inputProps: { assetPath: P.assetPath, path: P.path },
+    inputProps: { assetPath: P.assetPath },
     required: ['assetPath'],
     effect: 'read',
     costLatency: 'interactive',
@@ -78,10 +78,10 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'close_asset', domain: D, family: F,
-    summary: 'Close an open asset editor by asset path.',
+    summary: 'Close every editor open on an asset, by asset path. Fails with EDITOR_NOT_OPEN when none is open; the asset is never loaded to do this.',
     whenToUse: ['An open asset editor must be closed.'],
     whenNotToUse: ['The asset is not open.'],
-    inputProps: { assetPath: P.assetPath, path: P.path },
+    inputProps: { assetPath: P.assetPath },
     required: ['assetPath'],
     effect: 'write',
    

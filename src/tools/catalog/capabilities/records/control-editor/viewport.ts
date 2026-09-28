@@ -49,7 +49,7 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_editor_mode', domain: D, family: F,
-    summary: 'Set the active editor mode (e.g. landscape, foliage, modeling).',
+    summary: 'Activate an editor mode by id (EM_Landscape, EM_Foliage, EM_MeshPaint, EM_Default) and confirm it is active.',
     whenToUse: ['A specific editor mode must be activated.'],
     whenNotToUse: ['The default mode is acceptable.'],
     inputProps: { mode: P.mode },
@@ -60,7 +60,7 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_immersive_mode', domain: D, family: F,
-    summary: 'Toggle immersive viewport mode.',
+    summary: 'Turn immersive viewport mode on or off (fails with NO_VIEWPORT when no level viewport is open).',
     whenToUse: ['The viewport must enter or exit immersive fullscreen.'],
     whenNotToUse: ['The current immersive state is acceptable.'],
     inputProps: { enabled: P.enabled },
@@ -82,7 +82,7 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'show_stats', domain: D, family: F,
-    summary: 'Show a specific stat overlay in the viewport.',
+    summary: 'Show a stat overlay in the viewport (FPS and Unit when no stat is named); a stat already shown stays shown.',
     whenToUse: ['A debug stat must be displayed.'],
     whenNotToUse: ['The stat is already shown.'],
     inputProps: { stat: P.stat },
@@ -93,7 +93,7 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'hide_stats', domain: D, family: F,
-    summary: 'Hide a specific stat overlay in the viewport.',
+    summary: 'Hide one stat overlay, or every stat when none is named; a stat already hidden stays hidden.',
     whenToUse: ['A debug stat must be hidden.'],
     whenNotToUse: ['The stat is already hidden.'],
     inputProps: { stat: P.stat },

@@ -11,10 +11,10 @@ const D = 'editor';
 export const RECORDING_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'start_recording', domain: D, family: F,
-    summary: 'Start a demo recording session. Falls back to DemoRec console command if bridge call fails.',
+    summary: 'Start a replay (demo) recording of the running game; Play In Editor must be running. Fails when no recorder started.',
     whenToUse: ['A demo recording must be started for replay capture.'],
     whenNotToUse: ['A recording is already in progress.'],
-    inputProps: { filename: P.filename, name: P.name, frameRate: P.frameRate, durationSeconds: P.durationSeconds, metadata: P.metadata },
+    inputProps: { filename: P.filename, name: P.name, frameRate: P.frameRate, durationSeconds: P.durationSeconds },
     required: [],
     effect: 'write',
     costLatency: 'interactive',

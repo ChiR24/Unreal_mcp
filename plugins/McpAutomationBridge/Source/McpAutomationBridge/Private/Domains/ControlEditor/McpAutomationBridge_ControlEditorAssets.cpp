@@ -102,31 +102,36 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
     return true;
   }
 
-  UObject* Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
-  if (!Asset) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("LOAD_FAILED"),
-                              TEXT("Failed to load asset"), nullptr);
-    return true;
-  }
-
+  // Headless runs open no editor windows (open_asset skips them the same way).
   if (FParse::Param(FCommandLine::Get(), TEXT("NullRHI"))) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), AssetPath);
-    Resp->SetBoolField(TEXT("loaded"), true);
     Resp->SetBoolField(TEXT("editorClosed"), false);
     Resp->SetBoolField(TEXT("headlessSafe"), true);
     SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Asset verified; editor close skipped under NullRHI"), Resp,
-                           FString());
+                           TEXT("No editor windows exist under NullRHI; nothing to close"), Resp, FString());
     return true;
   }
 
-  AssetEditorSS->CloseAllEditorsForAsset(Asset);
+  // Only an asset already in memory can have an editor open, so it is found,
+  // never loaded: loading it just to close it cost a full load for nothing.
+  const FString ObjectPath = AssetPath.Contains(TEXT("."))
+                                 ? AssetPath
+                                 : AssetPath + TEXT(".") + FPackageName::GetShortName(AssetPath);
+  UObject* Asset = FindObject<UObject>(nullptr, *ObjectPath);
+  // CloseAllEditorsForAsset returns how many it closed; "Asset editor closed"
+  // used to come back whether or not one was open.
+  const int32 Closed = Asset ? AssetEditorSS->CloseAllEditorsForAsset(Asset) : 0;
+  if (Closed == 0) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_OPEN"),
+                              FString::Printf(TEXT("No editor is open for %s; nothing was closed"), *AssetPath),
+                              nullptr);
+    return true;
+  }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("assetPath"), AssetPath);
+  Resp->SetNumberField(TEXT("editorsClosed"), Closed);
   SendAutomationResponse(Socket, RequestId, true, TEXT("Asset editor closed"), Resp, FString());
   return true;
 }

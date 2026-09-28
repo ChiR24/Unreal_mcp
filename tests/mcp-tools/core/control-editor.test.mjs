@@ -26,6 +26,11 @@ const testCases = [
   { scenario: 'ACTION: set_game_view_target objectPath', toolName: 'control_editor', arguments: { action: 'set_game_view_target', objectPath: FOCUS_ACTOR, blendTime: 0.1 }, expected: 'success' },
   { scenario: 'ACTION: possess', toolName: 'control_editor', arguments: { action: 'possess', actorName: PIE_PAWN }, expected: 'success|NOT_IN_PIE' },
   { scenario: 'ACTION: eject', toolName: 'control_editor', arguments: { action: 'eject' }, expected: 'success|NO_ACTIVE_SESSION|not active' },
+  // Replays record the running game, so they are exercised while PIE runs.
+  { scenario: 'ACTION: start_recording', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_${ts}` }, expected: 'success' },
+  { scenario: 'PLAYBACK: stop_recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
+  { scenario: 'OPTIONAL: start_recording with durationSeconds and frameRate', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_Opt_${ts}`, durationSeconds: 1, frameRate: 30 }, expected: 'success' },
+  { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
   { scenario: 'PLAYBACK: pause', toolName: 'control_editor', arguments: { action: 'pause' }, expected: 'success' },
   { scenario: 'PLAYBACK: resume', toolName: 'control_editor', arguments: { action: 'resume' }, expected: 'success' },
   { scenario: 'CONFIG: set_game_speed', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 0.5 }, expected: 'success' },
@@ -51,22 +56,23 @@ const testCases = [
   { scenario: 'ACTION: execute_command', toolName: 'control_editor', arguments: { action: 'execute_command', command: 'stat unit' }, expected: 'success' },
   { scenario: 'ACTION: screenshot', toolName: 'control_editor', arguments: { action: 'screenshot', filename: SCREENSHOT_NAME, resolution: '640x360', mode: 'editor_viewport', returnBase64: false, includeMetadata: true, metadata: { source: 'control-editor-suite' } }, expected: 'success' },
   { scenario: 'ACTION: take_screenshot', toolName: 'control_editor', arguments: { action: 'take_screenshot', filename: `${SCREENSHOT_NAME}_Alias`, resolution: '640x360' }, expected: 'success' },
+  { scenario: 'OPTIONAL: screenshot into a chosen project directory', toolName: 'control_editor', arguments: { action: 'screenshot', filename: `${SCREENSHOT_NAME}_Path`, path: 'Saved/Screenshots/MCPTest', resolution: '320x180' }, expected: 'success' },
   { scenario: 'OPTIONAL: screenshot of a named editor window', toolName: 'control_editor', arguments: { action: 'screenshot', filename: `${SCREENSHOT_NAME}_Window`, mode: 'full_editor_window', window: '0', resolution: '640x360' }, expected: 'success' },
   { scenario: 'OPTIONAL: screenshot that leaves no file behind', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'full_editor_window', resolution: '320x180', returnBase64: true, keepFile: false }, expected: 'success' },
   { scenario: 'OPTIONAL: keepFile false without returnBase64 is refused', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', keepFile: false }, expected: 'error|INVALID_ARGUMENT' },
-  { scenario: 'ACTION: start_recording', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_${ts}` }, expected: 'success' },
-  { scenario: 'PLAYBACK: stop_recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
-  { scenario: 'OPTIONAL: start_recording with durationSeconds and frameRate', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_Opt_${ts}`, durationSeconds: 1, frameRate: 30 }, expected: 'success' },
-  { scenario: 'PLAYBACK: stop_recording after optional capture', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
+  // A replay records the running game, so outside PIE there is nothing to record.
+  { scenario: 'ERROR: start_recording outside PIE', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_NoPie_${ts}` }, expected: 'error|NO_ACTIVE_SESSION' },
 
   // === BOOKMARKS / PREFERENCES / ASSETS ===
-  { scenario: 'CREATE: create_bookmark', toolName: 'control_editor', arguments: { action: 'create_bookmark', id: 0, bookmarkName: '0' }, expected: 'success|already exists' },
-  { scenario: 'OPTIONAL: create_bookmark with description', toolName: 'control_editor', arguments: { action: 'create_bookmark', id: 1, bookmarkName: '1', description: `Optional coverage bookmark ${ts}` }, expected: 'success|already exists' },
-  { scenario: 'ACTION: jump_to_bookmark', toolName: 'control_editor', arguments: { action: 'jump_to_bookmark', id: 0, bookmarkName: '0' }, expected: 'success' },
+  { scenario: 'CREATE: create_bookmark', toolName: 'control_editor', arguments: { action: 'create_bookmark', id: 0 }, expected: 'success' },
+  { scenario: 'CREATE: create_bookmark slot 1', toolName: 'control_editor', arguments: { action: 'create_bookmark', id: 1 }, expected: 'success' },
+  { scenario: 'ACTION: jump_to_bookmark', toolName: 'control_editor', arguments: { action: 'jump_to_bookmark', id: 0 }, expected: 'success' },
+  { scenario: 'ERROR: jump_to_bookmark out of range', toolName: 'control_editor', arguments: { action: 'jump_to_bookmark', id: 99 }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: set_preferences', toolName: 'control_editor', arguments: { action: 'set_preferences', category: 'LevelEditor', preferences: { RealtimeAudio: false } }, expected: 'success' },
   { scenario: 'CONFIG: restore_editor_window without taking focus', toolName: 'control_editor', arguments: { action: 'restore_editor_window', unthrottle: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.throttleOff', equals: true, label: 'background throttling is off' }] },
   { scenario: 'ACTION: open_asset', toolName: 'control_editor', arguments: { action: 'open_asset', assetPath: BP_PATH }, expected: 'success' },
   { scenario: 'ACTION: close_asset', toolName: 'control_editor', arguments: { action: 'close_asset', assetPath: BP_PATH }, expected: 'success' },
+  { scenario: 'ERROR: close_asset with no editor open', toolName: 'control_editor', arguments: { action: 'close_asset', assetPath: BP_PATH }, expected: 'error|EDITOR_NOT_OPEN' },
 
   // === INPUT / LEVEL / ACTOR FOCUS ===
   { scenario: 'ACTION: simulate_input', toolName: 'control_editor', arguments: { action: 'simulate_input', inputAction: 'pressed', key: 'K' }, expected: 'success' },
@@ -75,6 +81,7 @@ const testCases = [
   // Enhanced Input: a raw key never reaches an InputAction, so an action path
   // is injected instead. Without PIE running there is nothing to inject into.
   { scenario: 'ACTION: simulate_input enhanced input action', toolName: 'control_editor', arguments: { action: 'simulate_input', inputAction: '/Game/Input/IA_Jump', value: 1, holdSeconds: 0.1 }, expected: 'success|not found|NO_PIE' },
+  { scenario: 'ACTION: simulate_input Axis3D action value', toolName: 'control_editor', arguments: { action: 'simulate_input', inputAction: '/Game/Input/IA_Move', x: 1, y: 0, z: 0.5 }, expected: 'success|not found|NO_PIE' },
   // Live UMG is driven by reflection, not the cursor; outside PIE nothing is on screen.
   { scenario: 'ACTION: simulate_input widget click', toolName: 'control_editor', arguments: { action: 'simulate_input', type: 'widget_click', widget: 'PlayButton' }, expected: 'success|No live widget' },
   { scenario: 'ACTION: focus_actor', toolName: 'control_editor', arguments: { action: 'focus_actor', actorName: FOCUS_ACTOR }, expected: 'success' },
@@ -84,8 +91,10 @@ const testCases = [
   // write Time Dilation into the level's own World Settings.
   { scenario: 'ERROR: set_game_speed outside PIE', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 1 }, expected: 'error|NO_ACTIVE_SESSION|EDITOR_STATE_MISMATCH' },
   { scenario: 'ACTION: show_stats', toolName: 'control_editor', arguments: { action: 'show_stats', stat: 'fps' }, expected: 'success' },
+  { scenario: 'ACTION: show_stats again leaves it shown', toolName: 'control_editor', arguments: { action: 'show_stats', stat: 'fps' }, expected: 'success', assertions: [{ path: 'structuredContent.result.alreadyShown.0', equals: 'fps', label: 'a second show does not toggle the stat off' }] },
   { scenario: 'ACTION: hide_stats', toolName: 'control_editor', arguments: { action: 'hide_stats', stat: 'fps' }, expected: 'success' },
-  { scenario: 'CONFIG: set_editor_mode', toolName: 'control_editor', arguments: { action: 'set_editor_mode', mode: 'EM_Placement' }, expected: 'success' },
+  { scenario: 'CONFIG: set_editor_mode', toolName: 'control_editor', arguments: { action: 'set_editor_mode', mode: 'EM_Default' }, expected: 'success' },
+  { scenario: 'ERROR: set_editor_mode unknown mode', toolName: 'control_editor', arguments: { action: 'set_editor_mode', mode: 'NoSuchMode' }, expected: 'error|MODE_NOT_ACTIVATED' },
   { scenario: 'CONFIG: set_immersive_mode', toolName: 'control_editor', arguments: { action: 'set_immersive_mode', enabled: false }, expected: 'success' },
   { scenario: 'CONFIG: set_game_view', toolName: 'control_editor', arguments: { action: 'set_game_view', enabled: false }, expected: 'success' },
   { scenario: 'ACTION: undo', toolName: 'control_editor', arguments: { action: 'undo' }, expected: 'success' },

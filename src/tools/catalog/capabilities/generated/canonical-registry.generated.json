@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "583c23dda220d240",
+  "catalogRevision": "b9f1e0608003441c",
   "recordCount": 382,
   "records": [
     {
@@ -31495,7 +31495,7 @@
         "topics": [
           "close_asset"
         ],
-        "summary": "Close an open asset editor by asset path.",
+        "summary": "Close every editor open on an asset, by asset path. Fails with EDITOR_NOT_OPEN when none is open; the asset is never loaded to do this.",
         "whenToUse": [
           "An open asset editor must be closed."
         ],
@@ -31515,10 +31515,6 @@
             "assetPath": {
               "type": "string",
               "description": "Asset path (e.g. /Game/Path/Asset)."
-            },
-            "path": {
-              "type": "string",
-              "description": "Directory or file path."
             }
           },
           "required": [
@@ -31553,7 +31549,7 @@
       },
       "examples": [
         {
-          "title": "Close an open asset editor by asset path.",
+          "title": "Close every editor open on an asset, by asset path. Fails with EDITOR_NOT_OPEN when none is open; the asset is never loaded to do this.",
           "input": {
             "action": "close_asset",
             "assetPath": "/Game/Materials/M_Base"
@@ -31590,8 +31586,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c04498d14830e014837d1e08ee53f9c342b737611891af828caab46be6f3cf27",
-        "content": "3e10134cf6876ccf9dcc4abac7df24a8055025b375c28c3cffdd731a0ac3bb39"
+        "schema": "34aba8ae7de2a9142900e274781de5e7a335678b7322804a69856b571585e7bc",
+        "content": "b73468edaea229b1cf5107665674891d2ad69ce0264e85a0d9d1b42b878a29ab"
       }
     },
     {
@@ -31920,7 +31916,7 @@
             },
             "mode": {
               "type": "string",
-              "description": "Editor mode for set_editor_mode, or screenshot source."
+              "description": "Editor mode id to activate: EM_Default, EM_Landscape, EM_Foliage, EM_MeshPaint or any registered mode id; a bare name (landscape) is tried as EM_<name>. The call fails when the mode is not active afterwards."
             },
             "enabled": {
               "type": "boolean",
@@ -31932,7 +31928,7 @@
             },
             "stat": {
               "type": "string",
-              "description": "Stat name to show or hide."
+              "description": "One stat to show or hide (FPS, Unit, Game, SceneRendering...). show_stats without it shows FPS and Unit; hide_stats without it hides every stat. A stat already in the wanted state is left alone, so repeating a call never toggles it back."
             },
             "setting": {
               "type": "string",
@@ -32050,8 +32046,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c753a2a320ca495493b0edb621ee7ed92334bc6f20d0f8db257b8fdfdd2a70e3",
-        "content": "60d264029ce451236e7d180ff7e6f3485d55149ca996c31a62a06bf4d131f128"
+        "schema": "60a97085918a840db26b8580e532b49bf142c40a1a65c99f1aac3672b78d4620",
+        "content": "9996b2f48bfca66729ee62ba91cef722e1c8c8f86dd9d10e68a005d567b1bb3e"
       }
     },
     {
@@ -32191,7 +32187,7 @@
         "topics": [
           "create_bookmark"
         ],
-        "summary": "Create a viewport bookmark at the current camera position.",
+        "summary": "Store the level viewport camera in a numbered bookmark slot (id).",
         "whenToUse": [
           "The current viewport camera state must be saved for later recall."
         ],
@@ -32209,20 +32205,13 @@
               "description": "The action to execute on the parent tool."
             },
             "id": {
-              "type": "string",
-              "description": "Bookmark identifier."
-            },
-            "description": {
-              "type": "string",
-              "description": "Bookmark description."
-            },
-            "bookmarkName": {
-              "type": "string",
-              "description": "Bookmark name identifier."
+              "type": "integer",
+              "description": "Bookmark slot number, 0 to 9 on a default level (the slots Ctrl+0..9 set). Unreal bookmarks are numbered slots, not names; a number outside the level's range is refused."
             }
           },
           "required": [
-            "action"
+            "action",
+            "id"
           ],
           "additionalProperties": false
         },
@@ -32252,10 +32241,10 @@
       },
       "examples": [
         {
-          "title": "Create a viewport bookmark at the current camera position.",
+          "title": "Store the level viewport camera in a numbered bookmark slot (id).",
           "input": {
             "action": "create_bookmark",
-            "bookmarkName": "Overview"
+            "id": 1
           },
           "output": {
             "success": true
@@ -32289,8 +32278,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1921228cbc7105e4bfbdda0160e4d20ab8a76b3b1945b9d00c074cc377a74b6d",
-        "content": "ea6fdfdbf99853dc6fe69fd735e0d3b4d216e4d380789612b0a4fd311c1638e3"
+        "schema": "155f447344e1c502fb78a924723420328736bbfb35c7bda4037eebbb76aaee72",
+        "content": "22ce441a18da7956ded4ac7a1ba08525fe31eac9ca1d80fb1544c125d042f0e9"
       }
     },
     {
@@ -32756,7 +32745,7 @@
         "topics": [
           "jump_to_bookmark"
         ],
-        "summary": "Jump the viewport camera to a previously created bookmark.",
+        "summary": "Move the level viewport camera to a bookmark slot (id); fails with BOOKMARK_NOT_FOUND when that slot is empty.",
         "whenToUse": [
           "The viewport must navigate to a saved bookmark position."
         ],
@@ -32774,16 +32763,13 @@
               "description": "The action to execute on the parent tool."
             },
             "id": {
-              "type": "string",
-              "description": "Bookmark identifier."
-            },
-            "bookmarkName": {
-              "type": "string",
-              "description": "Bookmark name identifier."
+              "type": "integer",
+              "description": "Bookmark slot number, 0 to 9 on a default level (the slots Ctrl+0..9 set). Unreal bookmarks are numbered slots, not names; a number outside the level's range is refused."
             }
           },
           "required": [
-            "action"
+            "action",
+            "id"
           ],
           "additionalProperties": false
         },
@@ -32813,10 +32799,10 @@
       },
       "examples": [
         {
-          "title": "Jump the viewport camera to a previously created bookmark.",
+          "title": "Move the level viewport camera to a bookmark slot (id); fails with BOOKMARK_NOT_FOUND when that slot is empty.",
           "input": {
             "action": "jump_to_bookmark",
-            "bookmarkName": "Overview"
+            "id": 1
           },
           "output": {
             "success": true
@@ -32850,8 +32836,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7cf23bbabb89c8b702d04a037035dd0f349ea35a793b20684e02fc1bc5cc664c",
-        "content": "60e7d21b0b21092e72292e3fdce7fe025cf57804e8f615bd570b175c98e64f23"
+        "schema": "155f447344e1c502fb78a924723420328736bbfb35c7bda4037eebbb76aaee72",
+        "content": "273cbc5aade2bbc1dbd785d837fe72b53d16def3212f853152a8b248daf166e6"
       }
     },
     {
@@ -32889,10 +32875,6 @@
             "assetPath": {
               "type": "string",
               "description": "Asset path (e.g. /Game/Path/Asset)."
-            },
-            "path": {
-              "type": "string",
-              "description": "Directory or file path."
             }
           },
           "required": [
@@ -32969,8 +32951,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c04498d14830e014837d1e08ee53f9c342b737611891af828caab46be6f3cf27",
-        "content": "267917a1dbe49a92cecd3ca28666b0062cc1c94991c1ca83e4fb86e0a38ed1fa"
+        "schema": "34aba8ae7de2a9142900e274781de5e7a335678b7322804a69856b571585e7bc",
+        "content": "71cea4a48d089e6b6f969ce5a117c851244986c71ec2a79aae65c34919fee71e"
       }
     },
     {
@@ -33870,7 +33852,7 @@
             },
             "mode": {
               "type": "string",
-              "description": "Editor mode for set_editor_mode, or screenshot source."
+              "description": "Editor mode id to activate: EM_Default, EM_Landscape, EM_Foliage, EM_MeshPaint or any registered mode id; a bare name (landscape) is tried as EM_<name>. The call fails when the mode is not active afterwards."
             },
             "window": {
               "type": "string",
@@ -33938,8 +33920,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c2e979b83dca14a4245fc7f5bd0cebca5606408918e14b6b5ee671d9132ee97e",
-        "content": "db0a3f050ffd50821899d8befcc121288407b4c7583af6977440edf27367f667"
+        "schema": "f110b82dbe8a8ba4833d673c8d67289257b4f6478d85b97c56de2f72e63a0962",
+        "content": "585d3a79c7a879c5a084872027d9f35db8bab8b96458ba0c5491d5b862cd08a5"
       }
     },
     {
@@ -34061,13 +34043,13 @@
               "description": "3D rotation (pitch, yaw, roll).",
               "additionalProperties": false
             },
-            "actorName": {
-              "type": "string",
-              "description": "Name of the actor to target."
-            },
             "fov": {
               "type": "number",
               "description": "Camera field of view in degrees."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Name of the actor to target."
             },
             "name": {
               "type": "string",
@@ -34183,12 +34165,11 @@
               "transform",
               "view_target"
             ],
-            "actorName": [
-              "transform",
-              "view_target"
-            ],
             "fov": [
               "fov"
+            ],
+            "actorName": [
+              "view_target"
             ],
             "name": [
               "view_target"
@@ -34205,7 +34186,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "639dfb83ac1dd70ab1bce79071f9bc8ca8b3b2d10e7c34fb7b284644dacc3666",
-        "content": "9f1f60ff76f9bbc7bedab676a75ff9f3bf9beae74c49f596ee25c60216fe7aeb"
+        "content": "5d55236cb9742316c978cacb9b318b56b345138b3c234bb4e5125e115b825ba5"
       }
     },
     {
@@ -34593,11 +34574,15 @@
             },
             "x": {
               "type": "number",
-              "description": "Mouse X coordinate for simulate_input."
+              "description": "Mouse X coordinate for simulate_input, or the X value of an Axis2D or Axis3D inputAction."
             },
             "y": {
               "type": "number",
-              "description": "Mouse Y coordinate for simulate_input."
+              "description": "Mouse Y coordinate for simulate_input, or the Y value of an Axis2D or Axis3D inputAction."
+            },
+            "z": {
+              "type": "number",
+              "description": "Z value of an Axis3D inputAction (x and y give the other two)."
             },
             "button": {
               "type": "string",
@@ -34714,8 +34699,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f69974a7ffedb2f00df585076fc66bc835482cc856cb66b690a914cf30f83bc0",
-        "content": "5ea007e15103d02e72b6dab4703260463d59bc9f0e017d44017632687d7782f0"
+        "schema": "cab41a14b392ca38f743e7d3bc1b3ea1f596f7fda3b2c0c4dae944829f9860a5",
+        "content": "b46675208720fa10b18fd48c0f378f351c513e020eb7991b0a76b09a5c65acf0"
       }
     },
     {
@@ -34771,17 +34756,11 @@
             },
             "frameRate": {
               "type": "number",
-              "description": "Recording frame rate."
+              "description": "Replay frames recorded per second, 1 to 120 (sets demo.RecordHz; the engine default is 8)."
             },
             "durationSeconds": {
               "type": "number",
-              "description": "Recording duration in seconds."
-            },
-            "metadata": {
-              "type": "object",
-              "description": "Caller-provided metadata.",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true
+              "description": "Stop the recording by itself after this many seconds of game time."
             },
             "control": {
               "type": "string",
@@ -34888,17 +34867,14 @@
             ],
             "durationSeconds": [
               "start"
-            ],
-            "metadata": [
-              "start"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fce28929d7a9985f4243ed9f0056f48333d57ea343af69a634e5ddb03e39070e",
-        "content": "886d8bfabe82c39353c6c2e6de223e327cdb6e8fe9a1c0a896deea5c017301e5"
+        "schema": "3ff0579598dab72811add84ae15b3cb007559f636e3d08831d07c5bed98600db",
+        "content": "9315d67482d4ea949bd9a7e969bd7420e1347ede047f626da2404af1a8b0f343"
       }
     },
     {
