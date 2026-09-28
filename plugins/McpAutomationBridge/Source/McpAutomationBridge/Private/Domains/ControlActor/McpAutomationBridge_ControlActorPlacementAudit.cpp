@@ -2,6 +2,7 @@
 
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Domains/ControlActor/Placement/McpAutomationBridge_CoplanarFaces.h"
+#include "Domains/ControlActor/Placement/McpAutomationBridge_PlacementTilt.h"
 
 // Per-call warnings only help the actor you just touched. A level assembled by
 // a script accumulates bad placements nobody ever calls back into, so this
@@ -48,56 +49,6 @@ FString McpPlacementKind(const FString &Warning) {
     return TEXT("unsupported");
   }
   return TEXT("overlapping");
-}
-
-/**
- * How far an actor leans off vertical, and how far that displaces its top.
- *
- * Overlap and ground checks both pass for a building lying on its face: it is
- * not inside anything and its (now horizontal) bounds still rest on the floor.
- * That is how eighteen shop houses in one level stood on their gable ends with
- * the sweep reporting nothing -- the +-90 meant to turn them to face the street
- * had been written into pitch instead of yaw.
- *
- * Lean is measured as the angle between the actor's up vector and world up, so
- * yaw -- the rotation that is almost always deliberate -- contributes nothing,
- * and a fully inverted actor reads 180 rather than wrapping back to 0.
- *
- * A rotation is not wrong on its own: a leaning post, a banner, a spotlight all
- * want one. What distinguishes a mistake is how much geometry the angle moves,
- * so severity is the distance the actor's top travelled from upright,
- * 2 * halfHeight * sin(lean/2). That keeps tilt in the same world units as the
- * rest of the sweep -- a toppled house outranks a tipped pebble instead of
- * tying with it at "90" -- and it rises monotonically all the way to inverted.
- */
-bool McpTiltOffVertical(AActor *Actor, double &OutDegrees, double &OutUnits) {
-  if (!Actor) {
-    return false;
-  }
-  // Rotation carries meaning for anything that AIMS -- lights, cameras, decals,
-  // audio cones. Only solid geometry can be "tipped over", so judge just the
-  // actors that actually render a mesh.
-  TArray<UStaticMeshComponent *> Meshes;
-  Actor->GetComponents<UStaticMeshComponent>(Meshes);
-  bool bHasMesh = false;
-  for (const UStaticMeshComponent *Mesh : Meshes) {
-    if (Mesh != nullptr && Mesh->GetStaticMesh() != nullptr) {
-      bHasMesh = true;
-      break;
-    }
-  }
-  if (!bHasMesh) {
-    return false;
-  }
-  const double CosLean = FMath::Clamp(
-      FVector::DotProduct(Actor->GetActorUpVector(), FVector::UpVector), -1.0, 1.0);
-  OutDegrees = FMath::RadiansToDegrees(FMath::Acos(CosLean));
-  FVector Origin = FVector::ZeroVector;
-  FVector Extent = FVector::ZeroVector;
-  Actor->GetActorBounds(true, Origin, Extent);
-  OutUnits = 2.0 * Extent.Z *
-             FMath::Sin(FMath::DegreesToRadians(OutDegrees) * 0.5);
-  return true;
 }
 
 struct FMcpPlacementFinding {
@@ -159,7 +110,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
   // Well under a right angle, so a building on its face is caught, while the
   // few degrees of lean that make a prop look hand-placed are not.
   double MaxTilt = 30.0;
+  // A platformer is full of platforms that float on purpose; kinds narrows the
+  // report to what the caller is hunting, such as ["coplanar"] for z-fighting.
+  TSet<FString> WantedKinds;
   if (Payload.IsValid()) {
+    const TArray<TSharedPtr<FJsonValue>> *KindValues = nullptr;
+    if (Payload->TryGetArrayField(TEXT("kinds"), KindValues) && KindValues) {
+      for (const TSharedPtr<FJsonValue> &Value : *KindValues) {
+        WantedKinds.Add(Value->AsString().ToLower());
+      }
+    }
     Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
     Payload->TryGetNumberField(TEXT("minSeverity"), MinSeverity);
     if (Payload->TryGetNumberField(TEXT("maxTilt"), MaxTilt)) {
@@ -190,7 +150,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
     double TiltUnits = 0.0;
     const bool bTilted =
         !McpPlacement::McpPlacementAccepted(Actor) &&
-        McpTiltOffVertical(Actor, TiltDegrees, TiltUnits) && TiltDegrees > MaxTilt;
+        McpPlacementTilt::OffVertical(Actor, TiltDegrees, TiltUnits) && TiltDegrees > MaxTilt;
 
     TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
     McpPlacement::DescribePlacement(Actor, Entry);
@@ -232,8 +192,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
 
   // Count only what survives minSeverity, so byKind and flagged describe the
   // same set rather than two different ones.
-  Findings.RemoveAll([MinSeverity](const FMcpPlacementFinding &Finding) {
-    return Finding.Severity < MinSeverity;
+  // An actor whose worst problem is another kind still counts for coplanar when
+  // it has coplanar faces.
+  Findings.RemoveAll([MinSeverity, &WantedKinds](const FMcpPlacementFinding &Finding) {
+    const bool bKindWanted =
+        WantedKinds.Num() == 0 || WantedKinds.Contains(Finding.Kind) ||
+        (WantedKinds.Contains(TEXT("coplanar")) && Finding.CoplanarFaces.Num() > 0);
+    return !bKindWanted || Finding.Severity < MinSeverity;
   });
   TMap<FString, int32> KindCounts;
   for (const FMcpPlacementFinding &Finding : Findings) {

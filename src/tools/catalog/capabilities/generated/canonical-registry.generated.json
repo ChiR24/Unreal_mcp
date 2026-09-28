@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "36b9c55119896b9a",
+  "catalogRevision": "723369db69536a1e",
   "recordCount": 384,
   "records": [
     {
@@ -28419,6 +28419,21 @@
               "type": "number",
               "description": "Drop findings whose severity (worst penetration, ground error, tilt displacement, or the side of the largest z-fighting patch, in world units) is below this. Use it to skip cosmetic grazes on a large level."
             },
+            "kinds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "sunk",
+                  "floating",
+                  "overlapping",
+                  "unsupported",
+                  "tilted",
+                  "coplanar"
+                ]
+              },
+              "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. Omit for every kind."
+            },
             "maxTilt": {
               "type": "number",
               "description": "Degrees off vertical an actor may lean before it is reported as tilted (1-90, default 30). Lean is the angle between the up vector of the actor and world up, so yaw never counts and a fully inverted actor reads 180. Raise it for a level whose props are deliberately strewn about; lower it to catch subtler leans."
@@ -28530,8 +28545,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2d856e15fc839adccdb2704295e8ac0c4f37a0d6df38ff66efcaeb8bfcea8651",
-        "content": "e606c7c6b779101c82a47dcc936ed0cbb9d2fdbc0ff1e4b3b14e6772c709e3ff"
+        "schema": "5e403cd2e228d067d50b4be8b3cb0c0635e2bf8e7f2279d68bb399c5f9ef36a2",
+        "content": "cac69a3d15b90c6834880909bf8c1e98d8abeb3a53ffd340ae6bb331a6e747d9"
       }
     },
     {

@@ -3629,6 +3629,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game seconds between samples (default 0.05; 0 samples every frame). At most 400 samples are kept."
         },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "sunk",
+              "floating",
+              "overlapping",
+              "unsupported",
+              "tilted",
+              "coplanar"
+            ]
+          },
+          "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. Omit for every kind."
+        },
         "limit": {
           "type": "number",
           "description": "Maximum number of actors to return in a list."
