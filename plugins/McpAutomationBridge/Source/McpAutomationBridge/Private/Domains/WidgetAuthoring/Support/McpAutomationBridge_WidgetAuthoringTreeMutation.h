@@ -15,6 +15,9 @@ FString ResolveParentSlotName(const TSharedPtr<FJsonObject>& Payload);
 // Applies positionX/positionY/sizeX/sizeY to a widget already seated in a canvas slot.
 void ApplyCanvasSlotGeometry(const TSharedPtr<FJsonObject>& Payload, UWidget* Widget);
 
+// Copies the layout fields From shares with To by name and type (padding, alignment, a canvas layout).
+void CarrySlotLayout(const UPanelSlot* From, UPanelSlot* To);
+
 // Passing Payload lets the one funnel every add path shares apply that geometry,
 // so a caller never has to follow an add with a separate layout call.
 bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBlueprint, UWidget* NewWidget, const FString& ParentSlot,

@@ -199,6 +199,7 @@ bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
     }
     return bDetached;
 }
+}
 
 // Copies every layout field the old slot shares with the new one by name and type: padding,
 // alignment and size of a box slot, a canvas slot's layout, auto-size and z-order. Only a canvas
@@ -223,7 +224,6 @@ void CarrySlotLayout(const UPanelSlot* From, UPanelSlot* To)
         }
     }
     To->SynchronizeProperties();
-}
 }
 
 bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FString& ParentSlot,

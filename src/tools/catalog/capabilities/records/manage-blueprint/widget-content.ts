@@ -60,8 +60,8 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       widgetPath: P.widgetPath,
       componentType: P.componentType,
-      componentName: P.componentName,
-      parentName: P.parentName,
+      slotName: P.slotName,
+      parentSlot: P.parentSlot,
       positionX: P.positionX,
       positionY: P.positionY,
       sizeX: P.sizeX,
@@ -80,7 +80,7 @@ export const WIDGET_CONTENT_RECORDS: readonly CapabilityRecordSource[] = [
     latency: 'interactive',
     resources: 'low',
     plugins: WIDGET_PLUGINS,
-    exampleInput: { action: 'add_widget_component', widgetPath: '/Game/UI/WBP_MainUI', componentType: 'TextBlock', componentName: 'Caption', text: 'Ready' },
+    exampleInput: { action: 'add_widget_component', widgetPath: '/Game/UI/WBP_MainUI', componentType: 'TextBlock', slotName: 'Caption', text: 'Ready' },
     exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', componentName: 'Caption', componentType: 'TextBlock', parentName: 'CanvasPanel_0' },
   }),
   buildRecord({

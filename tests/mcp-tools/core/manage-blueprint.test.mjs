@@ -394,6 +394,8 @@ const testCases = [
     // undeclared long enough to look like missing features.
     ['CONFIG: set_style text', 'set_style', { text: 'Title', fontSize: 24, renderOpacity: 1 }],
     ['CONFIG: set_style justification', 'set_style', { justification: 'center' }],
+    ['CONFIG: set_style font face and spacing', 'set_style', { fontFamily: '/Engine/EngineFonts/Roboto', typeface: 'Bold', letterSpacing: 50 }],
+    ['CONFIG: set_style copies a text block look', 'set_style', { copyStyleFrom: 'TitleText' }],
     ['CONFIG: set_style rounding', 'set_style', { cornerRadius: 18, outlineColor: { r: 1, g: 1, b: 1, a: 0.25 }, outlineWidth: 2 }],
     ['CONFIG: set_clipping', 'set_clipping', { clipping: 'Inherit' }],
     // Button sounds live in the button's style; an empty path clears them, so
@@ -508,6 +510,7 @@ const testCases = [
     { scenario: 'INFO: get_widget_info', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_info'), expected: 'success' },
     { scenario: 'INFO: get_widget_info by name + folder', toolName: 'manage_blueprint', arguments: { action: 'get_widget_info', name: WIDGET_NAME, folder: TEST_FOLDER }, expected: 'success' },
     { scenario: 'ACTION: preview_widget', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget'), expected: 'success' },
+    { scenario: 'ACTION: preview_widget drawn for a small screen, editor opened', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { resolution: '640x360', openEditor: true }), expected: 'success', assertions: [{ path: 'structuredContent.result.width', equals: 640, label: 'drawn at the asked width' }] },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

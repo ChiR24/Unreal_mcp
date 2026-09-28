@@ -32,7 +32,7 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("bind_localized_text"),
 		TEXT("delete_animation"), TEXT("get_widget_slot_info"),
 		TEXT("remove_widget"), TEXT("rename_widget"),
-		TEXT("reparent_widget"), TEXT("set_font"),
+		TEXT("reparent_widget"), TEXT("duplicate_widget"), TEXT("set_font"),
 		TEXT("set_localization_key"), TEXT("set_margin"),
 		TEXT("add_health_bar"), TEXT("add_ammo_counter"), TEXT("add_crosshair"),
 		TEXT("add_minimap"), TEXT("add_compass"), TEXT("add_damage_indicator"),

@@ -10245,6 +10245,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Tint (0-1 values) a border applies to its content."
         },
+        "copyStyleFrom": {
+          "type": "string",
+          "description": "Name of another TextBlock in the same Widget Blueprint whose font, colour and shadow this one takes; the other fields in the call then apply on top."
+        },
         "cornerRadius": {
           "type": "number",
           "description": "Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners."
@@ -10394,6 +10398,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Font asset path. Omitted keeps the current font; fontSize alone resizes it."
         },
+        "fontFamily": {
+          "type": "string",
+          "description": "Font asset for a TextBlock, e.g. /Engine/EngineFonts/Roboto or a project font."
+        },
         "fontSize": {
           "type": "number",
           "description": "Font size."
@@ -10435,9 +10443,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Whether the loading screen has a progress bar (default true)."
         },
         "index": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Position among the children of the new parent after the move (0 = first). Without it the widget goes last."
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Position among the children of that panel (0 = first). Default: right after the original, or last under another panel."
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Position among the children of the new parent after the move (0 = first). Without it the widget goes last."
+            }
+          ],
+          "description": "Position among the children of that panel (0 = first). Default: right after the original, or last under another panel."
         },
         "info": {
           "type": "string",
@@ -10570,6 +10588,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Left margin in slate units."
         },
+        "letterSpacing": {
+          "type": "number",
+          "description": "Extra space between the letters of a TextBlock, in thousandths of an em (0 normal, 100 airy, negative tighter)."
+        },
         "limit": {
           "type": "number",
           "description": "Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph."
@@ -10652,7 +10674,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "newName": {
           "type": "string",
-          "description": "New name for a renamed variable, function, or component."
+          "description": "Name of the copy (default the original name with _Copy). Widgets under it keep their names, made unique with a number."
         },
         "newParent": {
           "type": "string",
@@ -10698,6 +10720,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "onUnhoveredFunction": {
           "type": "string",
           "description": "Function the Button calls when the pointer leaves it; created when it does not exist."
+        },
+        "openEditor": {
+          "type": "boolean",
+          "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
         },
         "operations": {
           "oneOf": [
@@ -10799,10 +10825,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Parent SCS node name for reparenting."
         },
-        "parentName": {
-          "type": "string",
-          "description": "Optional parent panel name to add the widget under."
-        },
         "parentSlot": {
           "type": "string",
           "description": "Parent slot to add the widget to."
@@ -10877,6 +10899,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "renderOpacity": {
           "type": "number",
           "description": "Render opacity (0-1) applied to the widget and everything under it."
+        },
+        "resolution": {
+          "type": "string",
+          "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
         },
         "responseCount": {
           "type": "number",
@@ -11110,6 +11136,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Render translation offset."
         },
+        "typeface": {
+          "type": "string",
+          "description": "Face of the TextBlock font: Regular, Bold, Italic, Light... A face the font lacks is refused with the list it has."
+        },
         "userSpecifiedScale": {
           "type": "number",
           "description": "User specified scale value."
@@ -11229,6 +11259,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "probe_handle",
             "edit_widget_blueprint",
             "remove_widget",
+            "duplicate_widget",
             "add_panel_widget",
             "add_content_widget",
             "set_font",
@@ -11434,6 +11465,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the two pins are linked after the call, read back from the graph rather than inferred from the schema call."
         },
+        "copiedWidgets": {
+          "type": "array",
+          "description": "Every widget copied, as {source, copy} name pairs: the copy of the original comes last.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          }
+        },
         "count": {
           "type": "number",
           "description": "Total number of node types listed."
@@ -11479,6 +11519,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Compile messages: { severity, message }.",
           "x-unreal-reflection-boundary": true
+        },
+        "editorOpened": {
+          "type": "boolean",
+          "description": "Whether the Widget Blueprint editor was opened (openEditor)."
         },
         "estimatedHeight": {
           "type": "number",
@@ -11568,9 +11612,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "More matching nodes lie past this page."
         },
+        "height": {
+          "type": "number",
+          "description": "Image height in pixels."
+        },
+        "imageBase64": {
+          "type": "string",
+          "description": "The drawn widget as PNG, base64; returned as an image."
+        },
         "index": {
           "type": "integer",
-          "description": "Where the widget now sits among the children of the new parent (0 = first)."
+          "description": "Where the copy sits among the children of that panel (0 = first)."
         },
         "inheritedComponentCount": {
           "type": "number",
@@ -11620,6 +11672,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Blueprint metadata recorded by the bridge."
+        },
+        "mimeType": {
+          "type": "string",
+          "description": "image/png."
         },
         "name": {
           "type": "string",
@@ -11840,6 +11896,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "sizeBytes": {
+          "type": "number",
+          "description": "PNG size in bytes."
+        },
         "sizeX": {
           "type": "number",
           "description": "Slot width in slate units."
@@ -11854,7 +11914,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "slotName": {
           "type": "string",
-          "description": "Slot name for a child widget inside its parent."
+          "description": "Name of the copy, for later calls."
         },
         "sourcePinName": {
           "type": "string",
@@ -12043,6 +12103,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Every widget created, root first; bind or restyle them by these names."
+        },
+        "width": {
+          "type": "number",
+          "description": "Image width in pixels."
         }
       },
       "additionalProperties": true

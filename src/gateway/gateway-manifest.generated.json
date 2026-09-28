@@ -8092,6 +8092,7 @@
         "probe_handle",
         "edit_widget_blueprint",
         "remove_widget",
+        "duplicate_widget",
         "add_panel_widget",
         "add_content_widget",
         "set_font",
@@ -8134,6 +8135,7 @@
         "componentNames",
         "componentType",
         "contentColorAndOpacity",
+        "copyStyleFrom",
         "cornerRadius",
         "createIfMissing",
         "createMode",
@@ -8153,6 +8155,7 @@
         "filter",
         "folder",
         "font",
+        "fontFamily",
         "fontSize",
         "fromNodeId",
         "fromPinName",
@@ -8185,6 +8188,7 @@
         "kind",
         "layoutProperty",
         "left",
+        "letterSpacing",
         "limit",
         "location",
         "mapSize",
@@ -8215,6 +8219,7 @@
         "oldName",
         "onHoveredFunction",
         "onUnhoveredFunction",
+        "openEditor",
         "operations",
         "options",
         "orientation",
@@ -8225,7 +8230,6 @@
         "parameters",
         "parentClass",
         "parentComponent",
-        "parentName",
         "parentSlot",
         "path",
         "percent",
@@ -8242,6 +8246,7 @@
         "propertyValue",
         "pure",
         "renderOpacity",
+        "resolution",
         "responseCount",
         "right",
         "rotation",
@@ -8284,6 +8289,7 @@
         "top",
         "trackType",
         "translation",
+        "typeface",
         "userSpecifiedScale",
         "value",
         "variableName",
@@ -8459,6 +8465,10 @@
             "x-unreal-reflection-boundary": true,
             "description": "Tint (0-1 values) a border applies to its content."
           },
+          "copyStyleFrom": {
+            "type": "string",
+            "description": "Name of another TextBlock in the same Widget Blueprint whose font, colour and shadow this one takes; the other fields in the call then apply on top."
+          },
           "cornerRadius": {
             "type": "number",
             "description": "Corner radius in pixels for a widget that draws a brush (Image, Button, Border). Switches the brush to a RoundedBox; 0 restores square corners."
@@ -8608,6 +8618,10 @@
             "type": "string",
             "description": "Font asset path. Omitted keeps the current font; fontSize alone resizes it."
           },
+          "fontFamily": {
+            "type": "string",
+            "description": "Font asset for a TextBlock, e.g. /Engine/EngineFonts/Roboto or a project font."
+          },
           "fontSize": {
             "type": "number",
             "description": "Font size."
@@ -8649,9 +8663,19 @@
             "description": "Whether the loading screen has a progress bar (default true)."
           },
           "index": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Position among the children of the new parent after the move (0 = first). Without it the widget goes last."
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Position among the children of that panel (0 = first). Default: right after the original, or last under another panel."
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Position among the children of the new parent after the move (0 = first). Without it the widget goes last."
+              }
+            ],
+            "description": "Position among the children of that panel (0 = first). Default: right after the original, or last under another panel."
           },
           "info": {
             "type": "string",
@@ -8784,6 +8808,10 @@
             "type": "number",
             "description": "Left margin in slate units."
           },
+          "letterSpacing": {
+            "type": "number",
+            "description": "Extra space between the letters of a TextBlock, in thousandths of an em (0 normal, 100 airy, negative tighter)."
+          },
           "limit": {
             "type": "number",
             "description": "Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph."
@@ -8866,7 +8894,7 @@
           },
           "newName": {
             "type": "string",
-            "description": "New name for a renamed variable, function, or component."
+            "description": "Name of the copy (default the original name with _Copy). Widgets under it keep their names, made unique with a number."
           },
           "newParent": {
             "type": "string",
@@ -8912,6 +8940,10 @@
           "onUnhoveredFunction": {
             "type": "string",
             "description": "Function the Button calls when the pointer leaves it; created when it does not exist."
+          },
+          "openEditor": {
+            "type": "boolean",
+            "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
           },
           "operations": {
             "oneOf": [
@@ -9013,10 +9045,6 @@
             "type": "string",
             "description": "Parent SCS node name for reparenting."
           },
-          "parentName": {
-            "type": "string",
-            "description": "Optional parent panel name to add the widget under."
-          },
           "parentSlot": {
             "type": "string",
             "description": "Parent slot to add the widget to."
@@ -9091,6 +9119,10 @@
           "renderOpacity": {
             "type": "number",
             "description": "Render opacity (0-1) applied to the widget and everything under it."
+          },
+          "resolution": {
+            "type": "string",
+            "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
           },
           "responseCount": {
             "type": "number",
@@ -9324,6 +9356,10 @@
             "x-unreal-reflection-boundary": true,
             "description": "Render translation offset."
           },
+          "typeface": {
+            "type": "string",
+            "description": "Face of the TextBlock font: Regular, Bold, Italic, Light... A face the font lacks is refused with the list it has."
+          },
           "userSpecifiedScale": {
             "type": "number",
             "description": "User specified scale value."
@@ -9443,6 +9479,7 @@
               "probe_handle",
               "edit_widget_blueprint",
               "remove_widget",
+              "duplicate_widget",
               "add_panel_widget",
               "add_content_widget",
               "set_font",

@@ -81,6 +81,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         HandleWidgetAuthoringPreview,
         HandleWidgetAuthoringGenericComponent,
         HandleWidgetAuthoringManipulation,
+        HandleWidgetAuthoringDuplicate,
         HandleWidgetAuthoringAdvancedStyling,
         HandleWidgetAuthoringAnimationQueries,
         HandleWidgetAuthoringLocalization,

@@ -43,7 +43,9 @@ bool HandleWidgetAuthoringGenericComponent(
             return true;
         }
 
-        FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"));
+        // slotName and parentSlot, the names every other add_content_widget kind takes; the folded family
+        // advertised parentSlot and parentName side by side. componentName/parentName still read as before.
+        FString ComponentName = GetJsonStringField(Payload, TEXT("slotName"), GetJsonStringField(Payload, TEXT("componentName")));
         if (ComponentName.IsEmpty())
         {
             ComponentName = ComponentType + TEXT("_") + FGuid::NewGuid().ToString().Left(8);
@@ -59,14 +61,14 @@ bool HandleWidgetAuthoringGenericComponent(
         // parentName must name a panel; without it the root takes the widget (SafeAddWidgetToTree
         // makes a canvas root when there is none). A name that missed used to seat it at the root.
         FString ParentSlot;
-        const FString ParentName = GetJsonStringField(Payload, TEXT("parentName"));
+        const FString ParentName = ResolveParentSlotName(Payload);
         if (!ParentName.IsEmpty())
         {
             const UPanelWidget* Parent = Cast<UPanelWidget>(FindWidgetByName(WidgetBP->WidgetTree, ParentName));
             if (!Parent)
             {
                 Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
-                    TEXT("parentName '%s' is not a panel in '%s' (get_widget_info lists the tree)."), *ParentName, *WidgetPath),
+                    TEXT("parentSlot '%s' is not a panel in '%s' (get_widget_info lists the tree)."), *ParentName, *WidgetPath),
                     TEXT("PARENT_NOT_FOUND"));
                 return true;
             }
@@ -96,7 +98,7 @@ bool HandleWidgetAuthoringGenericComponent(
         if (!NameConflict.IsEmpty())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
-                TEXT("Nothing was added: %s. Pick another componentName, e.g. '%s'."), *NameConflict, *McpFreeWidgetName(WidgetBP, FName(*ComponentName), WidgetClass)),
+                TEXT("Nothing was added: %s. Pick another slotName, e.g. '%s'."), *NameConflict, *McpFreeWidgetName(WidgetBP, FName(*ComponentName), WidgetClass)),
                 TEXT("NAME_CONFLICT"));
             return true;
         }

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "9ed02d411d386678",
-  "recordCount": 387,
+  "catalogRevision": "db32f83a04a24271",
+  "recordCount": 388,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -10758,14 +10758,6 @@
               "type": "string",
               "description": "Component class name to add."
             },
-            "componentName": {
-              "type": "string",
-              "description": "Name for the SCS component node."
-            },
-            "parentName": {
-              "type": "string",
-              "description": "Optional parent panel name to add the widget under."
-            },
             "widgetKind": {
               "type": "string",
               "enum": [
@@ -10897,34 +10889,6 @@
             "component": "add_widget_component"
           },
           "declaredBy": {
-            "slotName": [
-              "text_block",
-              "rich_text_block",
-              "image",
-              "button",
-              "check_box",
-              "combo_box",
-              "slider",
-              "spin_box",
-              "progress_bar",
-              "text_input",
-              "list_view",
-              "tree_view"
-            ],
-            "parentSlot": [
-              "text_block",
-              "rich_text_block",
-              "image",
-              "button",
-              "check_box",
-              "combo_box",
-              "slider",
-              "spin_box",
-              "progress_bar",
-              "text_input",
-              "list_view",
-              "tree_view"
-            ],
             "text": [
               "text_block",
               "rich_text_block",
@@ -11011,20 +10975,14 @@
             ],
             "componentType": [
               "component"
-            ],
-            "componentName": [
-              "component"
-            ],
-            "parentName": [
-              "component"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "58d43e466888a64d1a7c31b8610f3f5d5a7a65cd9b414b3ca9b488efa5245cd4",
-        "content": "bdb5073a8532e7ae66a19ce26d18cd57eb5c38bd2252f224f3fe05ff4ae03f10"
+        "schema": "0f827e182691a366f3a28bebb505f1f9527a00165d97222b1d45438576fcd0a4",
+        "content": "360698dc5fd75c822df392f23482d37bbf0238e7408a3baa5912548475cfd901"
       }
     },
     {
@@ -13738,6 +13696,177 @@
       }
     },
     {
+      "id": "blueprint.duplicate_widget",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "duplicate_widget"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "widget-lifecycle",
+        "topics": [
+          "duplicate_widget",
+          "duplicate widget",
+          "copy widget",
+          "clone widget",
+          "repeat row"
+        ],
+        "summary": "Copy a widget and everything under it (a list row with its label, icon and button) inside a Widget Blueprint: same properties, slot layout and children, placed right after the original or under another panel.",
+        "whenToUse": [
+          "A widget or a whole panel subtree is needed again, e.g. the next row of a list or a second button like the first."
+        ],
+        "whenNotToUse": [
+          "The widget should move rather than be copied (use reparent_widget)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "Widget to copy; everything under it is copied too."
+            },
+            "newName": {
+              "type": "string",
+              "description": "Name of the copy (default the original name with _Copy). Widgets under it keep their names, made unique with a number."
+            },
+            "newParent": {
+              "type": "string",
+              "description": "Panel the copy goes under (default the parent of the original)."
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Position among the children of that panel (0 = first). Default: right after the original, or last under another panel."
+            }
+          },
+          "required": [
+            "action",
+            "widgetPath",
+            "slotName"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "Name of the copy, for later calls."
+            },
+            "newParent": {
+              "type": "string",
+              "description": "Panel the copy sits under."
+            },
+            "index": {
+              "type": "integer",
+              "description": "Where the copy sits among the children of that panel (0 = first)."
+            },
+            "copiedWidgets": {
+              "type": "array",
+              "description": "Every widget copied, as {source, copy} name pairs: the copy of the original comes last.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              }
+            }
+          },
+          "required": [
+            "success",
+            "widgetPath",
+            "slotName",
+            "newParent",
+            "index"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Copy a widget and everything under it (a list row with its label, icon and button) inside a Widget Blueprint: same properties, slot layout and children, placed right after the original or under another panel.",
+          "input": {
+            "action": "duplicate_widget",
+            "widgetPath": "/Game/UI/WBP_Shop",
+            "slotName": "Row_1",
+            "newName": "Row_2"
+          },
+          "output": {
+            "success": true,
+            "widgetPath": "/Game/UI/WBP_Shop",
+            "slotName": "Row_2",
+            "newParent": "RowList",
+            "index": 1,
+            "copiedWidgets": []
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "duplicate_widget"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "8ce8b15cf856f0e51a0b68092e14fec205391b6261240674dd020b2998b91e95",
+        "content": "72693606b677693a470d53a3367f10160b23351356e5b7026bace1f1e3584164"
+      }
+    },
+    {
       "id": "blueprint.edit_graph",
       "aliases": [
         "blueprint.add_node",
@@ -15452,13 +15581,15 @@
           "preview widget",
           "rename widget",
           "reparent widget",
-          "widget parent class"
+          "widget parent class",
+          "render widget",
+          "see widget"
         ],
-        "summary": "Create a Widget Blueprint, set its parent class, preview it, or rename/reparent a widget in its tree.",
+        "summary": "Create a Widget Blueprint, set its parent class, preview it (drawn offscreen and returned as an image), or rename/reparent a widget in its tree.",
         "whenToUse": [
           "A new UMG Widget Blueprint must be created.",
           "A Widget Blueprint must inherit from a specific UserWidget subclass.",
-          "A Widget Blueprint must be visually previewed without running PIE.",
+          "A Widget Blueprint must be seen after an edit (layout, colours, fonts) without running PIE.",
           "A widget name must change so bindings and lookups can address it.",
           "An existing widget must move into another panel without being recreated.",
           "Children of a panel must be reordered (same newParent, with index)."
@@ -15466,7 +15597,7 @@
         "whenNotToUse": [
           "A non-widget Blueprint is needed (use create or create_blueprint).",
           "The Widget Blueprint already has the correct parent.",
-          "Full PIE testing is needed.",
+          "What the running game shows is needed, runtime texts included (play, then control_editor screenshot mode full_editor_window).",
           "The Widget Blueprint asset itself should be renamed (use manage_asset).",
           "The widget is being added for the first time (use the matching add action)."
         ]
@@ -15499,6 +15630,14 @@
             "widgetPath": {
               "type": "string",
               "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "resolution": {
+              "type": "string",
+              "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
+            },
+            "openEditor": {
+              "type": "boolean",
+              "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
             },
             "slotName": {
               "type": "string",
@@ -15556,6 +15695,30 @@
               "type": "string",
               "description": "Canonical /Game Widget Blueprint asset path."
             },
+            "imageBase64": {
+              "type": "string",
+              "description": "The drawn widget as PNG, base64; returned as an image."
+            },
+            "mimeType": {
+              "type": "string",
+              "description": "image/png."
+            },
+            "width": {
+              "type": "number",
+              "description": "Image width in pixels."
+            },
+            "height": {
+              "type": "number",
+              "description": "Image height in pixels."
+            },
+            "sizeBytes": {
+              "type": "number",
+              "description": "PNG size in bytes."
+            },
+            "editorOpened": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint editor was opened (openEditor)."
+            },
             "oldName": {
               "type": "string",
               "description": "Current variable name before renaming."
@@ -15595,7 +15758,7 @@
       },
       "examples": [
         {
-          "title": "Create a Widget Blueprint, set its parent class, preview it, or rename/reparent a widget in its tree.",
+          "title": "Create a Widget Blueprint, set its parent class, preview it (drawn offscreen and returned as an image), or rename/reparent a widget in its tree.",
           "input": {
             "action": "edit_widget_blueprint",
             "name": "WBP_MainUI",
@@ -15665,6 +15828,12 @@
               "rename_widget",
               "reparent_widget"
             ],
+            "resolution": [
+              "preview"
+            ],
+            "openEditor": [
+              "preview"
+            ],
             "slotName": [
               "rename_widget",
               "reparent_widget"
@@ -15683,8 +15852,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ee0a0daae1b75f04bba5a610447949fb9562e73818ca3fcca85ba124208ec2b1",
-        "content": "3a92e2e10dab456f3e8556e438070fe703d0003183bcfe07f67cc04eef6e6e46"
+        "schema": "6e132ff86314df13c197a3de248a13d1dce173e796ae710b82c29a607bd1d99f",
+        "content": "eef73de4bad5ffdc55ec20ae4c4a5303b4dc9bb9c78ec344c71582b10719cdf9"
       }
     },
     {
@@ -17792,9 +17961,13 @@
           "click sound",
           "hover sound",
           "center text",
-          "text alignment"
+          "text alignment",
+          "bold text",
+          "font face",
+          "letter spacing",
+          "copy text style"
         ],
-        "summary": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, image texture, opacity, rounded corners, button hover/press sounds.",
+        "summary": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.",
         "whenToUse": [
           "The set anchor of a widget must be updated.",
           "The set position of a widget must be updated.",
@@ -17967,6 +18140,22 @@
               "type": "string",
               "description": "Text justification of a TextBlock or RichTextBlock: left, center or right. To centre the widget itself in its slot use set_alignment."
             },
+            "fontFamily": {
+              "type": "string",
+              "description": "Font asset for a TextBlock, e.g. /Engine/EngineFonts/Roboto or a project font."
+            },
+            "typeface": {
+              "type": "string",
+              "description": "Face of the TextBlock font: Regular, Bold, Italic, Light... A face the font lacks is refused with the list it has."
+            },
+            "letterSpacing": {
+              "type": "number",
+              "description": "Extra space between the letters of a TextBlock, in thousandths of an em (0 normal, 100 airy, negative tighter)."
+            },
+            "copyStyleFrom": {
+              "type": "string",
+              "description": "Name of another TextBlock in the same Widget Blueprint whose font, colour and shadow this one takes; the other fields in the call then apply on top."
+            },
             "layoutProperty": {
               "type": "string",
               "enum": [
@@ -18039,7 +18228,7 @@
       },
       "examples": [
         {
-          "title": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, image texture, opacity, rounded corners, button hover/press sounds.",
+          "title": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.",
           "input": {
             "action": "set_widget_layout",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -18175,14 +18364,26 @@
             ],
             "justification": [
               "style"
+            ],
+            "fontFamily": [
+              "style"
+            ],
+            "typeface": [
+              "style"
+            ],
+            "letterSpacing": [
+              "style"
+            ],
+            "copyStyleFrom": [
+              "style"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "92e4b289e99680c8d042e119ece9929e60e252f5b02980831fb8ec36e4ab771a",
-        "content": "eb4236f9a3d92f56078e8de1d020878c181db45544c6a994bdc6f5dd84f92f5c"
+        "schema": "9478f84200df0378fa09e092a93952a90d78d2f6d0f3d535e0e5fa4882e92985",
+        "content": "53228822f8584eaa6e2bd0b18a7659edee559588f0e4243ac651976a107f1815"
       }
     },
     {

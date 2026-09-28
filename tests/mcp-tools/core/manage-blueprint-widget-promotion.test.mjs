@@ -47,13 +47,13 @@ const testCases = [
   { scenario: 'PANEL: add_widget_switcher with active index', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_switcher', { slotName: 'PageSwitcher', parentSlot: 'RootCanvas', activeIndex: 0 }), expected: 'success' },
 
   // === COMPONENTS ===
-  { scenario: 'COMPONENT: add_widget_component placed on the canvas', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'TextBlock', componentName: 'ScoreLabel', parentName: 'RootCanvas', positionX: 32, positionY: 64, sizeX: 200, sizeY: 40, text: 'Score' }), expected: 'success' },
+  { scenario: 'COMPONENT: add_widget_component placed on the canvas', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'TextBlock', slotName: 'ScoreLabel', parentSlot: 'RootCanvas', positionX: 32, positionY: 64, sizeX: 200, sizeY: 40, text: 'Score' }), expected: 'success' },
   { scenario: 'COMPONENT: add_widget_component names itself when unnamed', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'Button' }), expected: 'success' },
 
   // === NAMES: a widget compiles to a member, so a taken name is refused before anything is built ===
   { scenario: 'NAME: add_text_block named like an inherited property is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'DisplayLabel', parentSlot: 'RootCanvas', text: 'Label' }), expected: 'error|NAME_CONFLICT' },
   { scenario: 'NAME: add_image under a text block name is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_image', { slotName: 'TitleText', parentSlot: 'RootCanvas' }), expected: 'error|NAME_CONFLICT' },
-  { scenario: 'NAME: add_widget_component under a text block name is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'Image', componentName: 'TitleText' }), expected: 'error|NAME_CONFLICT' },
+  { scenario: 'NAME: add_widget_component under a text block name is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'Image', slotName: 'TitleText' }), expected: 'error|NAME_CONFLICT' },
   { scenario: 'NAME: a second unnamed add gets a free name', toolName: 'manage_blueprint', arguments: widgetArgs('add_spacer', { parentSlot: 'RootCanvas' }), expected: 'success', assertions: [{ path: 'structuredContent.result.slotName', includes: 'Spacer_', label: 'the first Spacer is left alone' }] },
 
   // === STYLING ===
@@ -78,6 +78,9 @@ const testCases = [
   { scenario: 'Setup: pad the second child', toolName: 'manage_blueprint', arguments: widgetArgs('set_margin', { slotName: 'OrderMe', top: 34 }), expected: 'success' },
   { scenario: 'ACTION: reparent_widget reorders within its parent and keeps the padding', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'OrderMe', newParent: 'MenuColumn', index: 0 }), expected: 'success', assertions: [{ path: 'structuredContent.result.index', equals: 0, label: 'moved to the front' }, { path: 'structuredContent.result.applied.padding.top', equals: 34, label: 'padding kept' }] },
   { scenario: 'ACTION: reparent_widget into its own subtree is refused', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RootCanvas', newParent: 'MenuColumn' }), expected: 'error|INVALID_PARENT' },
+  // duplicate_widget copies a panel with its children, named and placed on request.
+  { scenario: 'ACTION: duplicate_widget copies a subtree beside the original', toolName: 'manage_blueprint', arguments: widgetArgs('duplicate_widget', { slotName: 'MenuColumn', newName: 'MenuColumnCopy' }), expected: 'success', assertions: [{ path: 'structuredContent.result.slotName', equals: 'MenuColumnCopy', label: 'the copy takes newName' }] },
+  { scenario: 'ACTION: duplicate_widget into another panel at an index', toolName: 'manage_blueprint', arguments: widgetArgs('duplicate_widget', { slotName: 'OrderMe', newParent: 'MenuColumnCopy', index: 0 }), expected: 'success', assertions: [{ path: 'structuredContent.result.index', equals: 0, label: 'placed first' }] },
   { scenario: 'ACTION: rename_widget', toolName: 'manage_blueprint', arguments: widgetArgs('rename_widget', { slotName: 'RenameMe', newName: 'RenamedText' }), expected: 'success' },
   { scenario: 'ACTION: remove_widget', toolName: 'manage_blueprint', arguments: widgetArgs('remove_widget', { slotName: 'RemoveMe' }), expected: 'success' },
   { scenario: 'ACTION: delete_animation', toolName: 'manage_blueprint', arguments: widgetArgs('delete_animation', { animationName: 'Anim_Doomed' }), expected: 'success|not found' },

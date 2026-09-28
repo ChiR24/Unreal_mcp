@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `9ed02d411d386678`
+Catalog revision: `db32f83a04a24271`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 387 capabilities across
+The catalog declares 388 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -44,7 +44,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 13 | 2 | 11 | 0 | audio |
-| `manage_blueprint` | 26 | 5 | 15 | 6 | blueprint, widget |
+| `manage_blueprint` | 27 | 5 | 16 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 10 | 1 | manage effect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-62 of 387 capabilities require consent.
+62 of 388 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -188,6 +188,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.create_widget_template` | `manage_blueprint` | `create_main_menu` | write | write | none | `manage_blueprint.create_widget_template` `manage_blueprint.create_main_menu` `manage_blueprint.create_pause_menu` `manage_blueprint.create_settings_menu` `manage_blueprint.create_loading_screen` `manage_blueprint.create_hud_widget` `manage_blueprint.create_dialog_widget` `manage_blueprint.create_inventory_ui` `manage_blueprint.create_radial_menu` `manage_blueprint.create_credits_screen` `manage_blueprint.create_shop_ui` |
 | `blueprint.delete_animation` | `manage_blueprint` | `delete_animation` | destructive | destructive | explicit | `manage_blueprint.delete_animation` |
 | `blueprint.delete_node` | `manage_blueprint` | `delete_node` | destructive | destructive | explicit | `manage_blueprint.delete_node` `manage_blueprint.break_pin_links` |
+| `blueprint.duplicate_widget` | `manage_blueprint` | `duplicate_widget` | write | write | none | `manage_blueprint.duplicate_widget` |
 | `blueprint.edit_graph` | `manage_blueprint` | `add_node` | write | write | none | `manage_blueprint.edit_graph` `manage_blueprint.add_node` `manage_blueprint.create_node` `manage_blueprint.create_reroute_node` `manage_blueprint.create_struct_make_break_nodes` `manage_blueprint.connect_pins` `manage_blueprint.set_node_property` `manage_blueprint.set_pin_default_value` `manage_blueprint.add_construction_script` `manage_blueprint.build_graph` |
 | `blueprint.edit_scs` | `manage_blueprint` | `add_scs_component` | write | write | none | `manage_blueprint.edit_scs` `manage_blueprint.add_scs_component` `manage_blueprint.add_component` `manage_blueprint.modify_scs` `manage_blueprint.reparent_scs_component` `manage_blueprint.set_scs_property` `manage_blueprint.set_scs_transform` |
 | `blueprint.edit_variable` | `manage_blueprint` | `add_variable` | write | write | none | `manage_blueprint.edit_variable` `manage_blueprint.add_variable` `manage_blueprint.rename_variable` `manage_blueprint.set_variable_metadata` `manage_blueprint.set_metadata` `manage_blueprint.set_default` |
