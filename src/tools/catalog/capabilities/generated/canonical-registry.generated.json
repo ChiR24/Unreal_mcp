@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a3417320604b3f2f",
+  "catalogRevision": "ddceed01366fe486",
   "recordCount": 382,
   "records": [
     {
@@ -34383,6 +34383,10 @@
               "type": "string",
               "description": "Name of the row."
             },
+            "save": {
+              "type": "boolean",
+              "description": "Persist the asset to disk. Defaults to true; pass false to keep the change in memory only."
+            },
             "deleteScope": {
               "type": "string",
               "enum": [
@@ -34473,8 +34477,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4b86ea96b1da48e474061b4cff5d4710baaa515ced3fc78db2b29de9bc7854a4",
-        "content": "70e92cb5f74ec83e686b0db57ebe8a901def6b6a10bbe80d63e0e744d5413292"
+        "schema": "f7eec703239bb22a0905f29081c159c4d459ed28d7a49d8ad1459a0871a78e79",
+        "content": "7930df7fe9efdd4326bc3daf419695d194516c841cfa30a7147421ed50fce5d7"
       }
     },
     {
@@ -34568,7 +34572,11 @@
             },
             "path": {
               "type": "string",
-              "description": "Package path."
+              "description": "Package path (default /Game/DataTables)."
+            },
+            "dataTablePath": {
+              "type": "string",
+              "description": "Full asset path of the new table, e.g. /Game/DataTables/DT_Weapons; alternative to name and path."
             },
             "rowStructPath": {
               "type": "string",
@@ -34576,7 +34584,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the asset to disk. Defaults to false, which leaves it in memory only."
+              "description": "Persist the asset to disk. Defaults to true; pass false to keep the change in memory only."
             },
             "members": {
               "type": "array",
@@ -34585,10 +34593,6 @@
                 "x-unreal-reflection-boundary": true
               },
               "description": "Member definitions."
-            },
-            "dataTablePath": {
-              "type": "string",
-              "description": "Asset path of the DataTable (e.g. /Game/DataTables/DT_MyTable)."
             },
             "rowName": {
               "type": "string",
@@ -34609,7 +34613,11 @@
             },
             "clearExisting": {
               "type": "boolean",
-              "description": "Clear existing rows before import."
+              "description": "Drop every existing row first (default false): before an import, or instead of migrating rows to a new row struct."
+            },
+            "migrateExistingRows": {
+              "type": "boolean",
+              "description": "Re-import the existing rows under the new struct (default true); rows that do not fit are reported in invalidRows."
             },
             "edit": {
               "type": "string",
@@ -34711,12 +34719,15 @@
               "create",
               "create_row_struct"
             ],
-            "rowStructPath": [
+            "dataTablePath": [
               "create",
+              "add_row",
+              "update_row",
+              "import_rows",
               "set_row_struct",
               "set_struct_as_row_struct"
             ],
-            "save": [
+            "rowStructPath": [
               "create",
               "create_row_struct",
               "set_row_struct",
@@ -34724,13 +34735,6 @@
             ],
             "members": [
               "create_row_struct"
-            ],
-            "dataTablePath": [
-              "add_row",
-              "update_row",
-              "import_rows",
-              "set_row_struct",
-              "set_struct_as_row_struct"
             ],
             "rowName": [
               "add_row",
@@ -34744,15 +34748,21 @@
               "import_rows"
             ],
             "clearExisting": [
-              "import_rows"
+              "import_rows",
+              "set_row_struct",
+              "set_struct_as_row_struct"
+            ],
+            "migrateExistingRows": [
+              "set_row_struct",
+              "set_struct_as_row_struct"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1c209c9a10a3350ce4f1fd6c7f6b95dac6671316dab876c85796cefe20511466",
-        "content": "3cbb4babd48b8de42499d07eb1eb76c94125f7efe4842cff70d5d8b36ff569d0"
+        "schema": "58d62bc784f48329c1fbd19cf5fd0d84f555251114193c3642645f5c1926b6ea",
+        "content": "9411b38b78dff9594dad3277b87069bf4f0b04a135664b2fad4d21bf31ee1b85"
       }
     },
     {

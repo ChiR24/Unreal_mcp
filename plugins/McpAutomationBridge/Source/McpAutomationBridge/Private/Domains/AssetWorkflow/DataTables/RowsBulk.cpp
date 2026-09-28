@@ -43,7 +43,6 @@ bool HandleDataTableBulkRowActions(
         Params->TryGetArrayField(TEXT("rows"), RowsArrPtr);
         if (RowsArrPtr) { RowsArr = *RowsArrPtr; }
         bool bClearExisting = GetJsonBoolField(Params, TEXT("clearExisting"), false);
-        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
         if (RowsArr.Num() == 0)
         {
             // "MISSING_PARAMETER" as the whole message named neither the field
@@ -52,7 +51,7 @@ bool HandleDataTableBulkRowActions(
                 TEXT("'rows' must be a non-empty array of {\"rowName\": \"<name>\", \"rowData\": { <field>: <value>, ... }} objects. Field names are the row struct's own, e.g. {\"rowName\":\"ArcRifle\",\"rowData\":{\"DisplayName\":\"Arc Rifle\",\"Damage\":42}}."));
             return true;
         }
-        if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
+        if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), TEXT("This data table has no row struct; bind one with set_row_struct first.")); return true; }
 
         TArray<FPendingRow> Pending;
         TArray<TSharedPtr<FJsonValue>> InvalidRows;
@@ -143,10 +142,11 @@ bool HandleDataTableBulkRowActions(
             McpFreeDataTableRow(Table->RowStruct, P.Mem);
             ++Imported;
         }
-        if (bSave) { McpSafeAssetSave(Table); }
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetNumberField(TEXT("imported"), Imported);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
         OutResult->SetNumberField(TEXT("skipped"), InvalidRows.Num());
         OutResult->SetArrayField(TEXT("invalidRows"), InvalidRows);
         if (WorstOmitted > 0)
@@ -172,11 +172,14 @@ bool HandleDataTableBulkRowActions(
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
 
+        const int32 Cleared = Table->GetRowNames().Num();
         for (const FName& N : Table->GetRowNames()) { Table->RemoveRow(N); }
-        if (GetJsonBoolField(Params, TEXT("save"), false)) { McpSafeAssetSave(Table); }
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("cleared"), true);
+        OutResult->SetNumberField(TEXT("rowsCleared"), Cleared);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
         McpHandlerUtils::AddVerification(OutResult, Table);
         return true;
     }

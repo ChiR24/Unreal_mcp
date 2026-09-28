@@ -67,10 +67,18 @@ inline TSharedPtr<FJsonObject> McpDataTableMakeError(const TCHAR* Code, const TC
 inline UDataTable* ResolveDataTable(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult)
 {
     FString Path = GetJsonStringField(Params, TEXT("dataTablePath"));
-    if (Path.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return nullptr; }
+    if (Path.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("dataTablePath is required (e.g. /Game/DataTables/DT_Weapons).")); return nullptr; }
     UDataTable* Table = LoadObject<UDataTable>(nullptr, *Path);
-    if (!Table) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), nullptr); return nullptr; }
+    if (!Table) { OutResult = McpDataTableMakeError(TEXT("ASSET_NOT_FOUND"), *FString::Printf(TEXT("No data table at '%s'."), *Path)); return nullptr; }
     return Table;
+}
+
+// Every DataTable write persists unless the caller passes save=false: an edit
+// that lived only in memory was silently lost on the next editor restart.
+// Returns whether the asset is now on disk.
+inline bool McpDataTableSaveIfRequested(const TSharedPtr<FJsonObject>& Params, UObject* Asset)
+{
+    return GetJsonBoolField(Params, TEXT("save"), true) && McpSafeAssetSave(Asset);
 }
 
 // Build a row from JSON against RowStruct. Returns false (and sets OutError)

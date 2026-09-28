@@ -18,9 +18,8 @@ bool HandleDataTableRowActions(
         const TSharedPtr<FJsonObject>* RowDataPtr = nullptr;
         Params->TryGetObjectField(TEXT("rowData"), RowDataPtr);
         TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
-        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
-        if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
-        if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
+        if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName and a rowData object are required.")); return true; }
+        if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), TEXT("This data table has no row struct; bind one with set_row_struct first.")); return true; }
 
         uint8* RowMem = nullptr;
         FString Err;
@@ -31,10 +30,11 @@ bool HandleDataTableRowActions(
         }
         Table->AddRow(FName(*RowName), RowMem, Table->RowStruct);
         McpFreeDataTableRow(Table->RowStruct, RowMem);
-        if (bSave) { McpSafeAssetSave(Table); }
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("added"), true);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
         OutResult->SetStringField(TEXT("rowName"), RowName);
         McpHandlerUtils::AddVerification(OutResult, Table);
         return true;
@@ -47,7 +47,7 @@ bool HandleDataTableRowActions(
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
         FString RowName = GetJsonStringField(Params, TEXT("rowName"));
-        if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
+        if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName is required.")); return true; }
 
         const void* Row = Table->FindRowUnchecked(FName(*RowName));
         OutResult = McpHandlerUtils::CreateResultObject();
@@ -82,9 +82,8 @@ bool HandleDataTableRowActions(
         const TSharedPtr<FJsonObject>* RowDataPtr = nullptr;
         Params->TryGetObjectField(TEXT("rowData"), RowDataPtr);
         TSharedPtr<FJsonObject> RowData = RowDataPtr ? *RowDataPtr : nullptr;
-        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
-        if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
-        if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), nullptr); return true; }
+        if (RowName.IsEmpty() || !RowData.IsValid()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName and a rowData object are required.")); return true; }
+        if (!Table->RowStruct) { OutResult = McpDataTableMakeError(TEXT("INVALID_OPERATION"), TEXT("This data table has no row struct; bind one with set_row_struct first.")); return true; }
 
         const void* Existing = Table->FindRowUnchecked(FName(*RowName));
         if (!Existing)
@@ -111,10 +110,11 @@ bool HandleDataTableRowActions(
         Table->RemoveRow(FName(*RowName));
         Table->AddRow(FName(*RowName), RowMem, Table->RowStruct);
         McpFreeDataTableRow(Table->RowStruct, RowMem);
-        if (bSave) { McpSafeAssetSave(Table); }
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("updated"), true);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
         OutResult->SetStringField(TEXT("rowName"), RowName);
         // Say so out loud: a caller who expected replace semantics can see that
         // the columns it did not name were carried over, not reset.
@@ -131,13 +131,19 @@ bool HandleDataTableRowActions(
         UDataTable* Table = ResolveDataTable(Params, R);
         if (!Table) { OutResult = R; return true; }
         FString RowName = GetJsonStringField(Params, TEXT("rowName"));
-        if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), nullptr); return true; }
+        if (RowName.IsEmpty()) { OutResult = McpDataTableMakeError(TEXT("MISSING_PARAMETER"), TEXT("rowName is required.")); return true; }
+        if (!Table->FindRowUnchecked(FName(*RowName)))
+        {
+            OutResult = McpDataTableMakeError(TEXT("ROW_NOT_FOUND"), *FString::Printf(TEXT("No row named '%s' to delete."), *RowName));
+            return true;
+        }
 
         Table->RemoveRow(FName(*RowName));
-        if (GetJsonBoolField(Params, TEXT("save"), false)) { McpSafeAssetSave(Table); }
+        const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
         OutResult = McpHandlerUtils::CreateResultObject();
         OutResult->SetBoolField(TEXT("removed"), true);
+        OutResult->SetBoolField(TEXT("saved"), bSaved);
         OutResult->SetStringField(TEXT("rowName"), RowName);
         McpHandlerUtils::AddVerification(OutResult, Table);
         return true;

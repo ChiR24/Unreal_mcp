@@ -6605,7 +6605,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "clearExisting": {
           "type": "boolean",
-          "description": "Clear existing rows before import."
+          "description": "Drop every existing row first (default false): before an import, or instead of migrating rows to a new row struct."
         },
         "code": {
           "type": "string",
@@ -7114,6 +7114,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Metadata key-value pairs."
         },
+        "migrateExistingRows": {
+          "type": "boolean",
+          "description": "Re-import the existing rows under the new struct (default true); rows that do not fit are reported in invalidRows."
+        },
         "name": {
           "type": "string",
           "description": "DataTable name."
@@ -7332,6 +7336,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
+              "description": "Package path (default /Game/DataTables)."
+            },
+            {
+              "type": "string",
               "description": "Package path to search."
             },
             {
@@ -7486,7 +7494,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "save": {
           "type": "boolean",
-          "description": "Persist the asset to disk. Defaults to false, which leaves it in memory only."
+          "description": "Persist the asset to disk. Defaults to true; pass false to keep the change in memory only."
         },
         "savePath": {
           "type": "string",
