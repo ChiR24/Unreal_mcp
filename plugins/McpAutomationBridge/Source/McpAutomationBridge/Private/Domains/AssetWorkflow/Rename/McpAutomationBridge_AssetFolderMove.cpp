@@ -10,50 +10,17 @@
 #include "Safety/McpSafeOperationsDeleteCompilation.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Containers/Ticker.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
 
 namespace McpAssetRename
 {
-bool HandleMoveFolder(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SourceFolder,
-                      const FString& DestinationFolder, TSharedPtr<FMcpBridgeWebSocket> Socket)
+namespace
 {
-    if (GEditor && GEditor->PlayWorld)
-    {
-        Bridge->SendAutomationError(Socket, RequestId,
-                                    TEXT("Stop Play In Editor before moving a folder (control_editor play, control: stop)."),
-                                    TEXT("PIE_ACTIVE"));
-        return true;
-    }
-    if (DestinationFolder.Equals(SourceFolder, ESearchCase::IgnoreCase) ||
-        DestinationFolder.StartsWith(SourceFolder + TEXT("/"), ESearchCase::IgnoreCase))
-    {
-        Bridge->SendAutomationError(Socket, RequestId,
-                                    FString::Printf(TEXT("Cannot move %s into itself (%s)"), *SourceFolder, *DestinationFolder),
-                                    TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    // The editor cannot rename the level it has open: it waits on a blank map and comes back afterwards.
-    FString OpenLevel;
-    if (UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr)
-    {
-        const FString Current = World->GetOutermost()->GetName();
-        if (Current.StartsWith(SourceFolder + TEXT("/"), ESearchCase::IgnoreCase))
-        {
-            if (World->GetOutermost()->IsDirty())
-            {
-                Bridge->SendAutomationError(Socket, RequestId,
-                                            FString::Printf(TEXT("%s is open with unsaved changes; save it first (control_editor save_all)."), *Current),
-                                            TEXT("UNSAVED_CHANGES"));
-                return true;
-            }
-            OpenLevel = Current;
-            GEditor->NewMap(false);
-            McpSafeOperations::McpSafePostDeleteGC();
-        }
-    }
-
+void MoveFolderContents(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SourceFolder,
+                        const FString& DestinationFolder, const FString& OpenLevel, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
     // Redirectors from earlier renames are not assets to move; settle them first.
     int32 RedirectorsBefore = 0;
     int32 FixedBefore = 0;
@@ -106,7 +73,7 @@ bool HandleMoveFolder(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
     {
         Bridge->SendAutomationResponse(Socket, RequestId, false, FString::Printf(TEXT("No assets under %s"), *SourceFolder),
                                        Result, TEXT("ASSET_NOT_FOUND"));
-        return true;
+        return;
     }
     Result->SetBoolField(TEXT("success"), bMoved);
     Bridge->SendAutomationResponse(
@@ -114,6 +81,62 @@ bool HandleMoveFolder(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
         bMoved ? FString::Printf(TEXT("Moved %d assets from %s to %s"), RenameData.Num(), *SourceFolder, *DestinationFolder)
                : Failure,
         Result, bMoved ? FString() : TEXT("RENAME_FAILED"));
+}
+} // namespace
+
+bool HandleMoveFolder(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SourceFolder,
+                      const FString& DestinationFolder, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    if (GEditor && GEditor->PlayWorld)
+    {
+        Bridge->SendAutomationError(Socket, RequestId,
+                                    TEXT("Stop Play In Editor before moving a folder (control_editor play, control: stop)."),
+                                    TEXT("PIE_ACTIVE"));
+        return true;
+    }
+    if (DestinationFolder.Equals(SourceFolder, ESearchCase::IgnoreCase) ||
+        DestinationFolder.StartsWith(SourceFolder + TEXT("/"), ESearchCase::IgnoreCase))
+    {
+        Bridge->SendAutomationError(Socket, RequestId,
+                                    FString::Printf(TEXT("Cannot move %s into itself (%s)"), *SourceFolder, *DestinationFolder),
+                                    TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
+    // The editor cannot rename the level it has open: it waits on a blank map and comes back afterwards.
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    const FString Current = World ? World->GetOutermost()->GetName() : FString();
+    if (!Current.StartsWith(SourceFolder + TEXT("/"), ESearchCase::IgnoreCase))
+    {
+        MoveFolderContents(Bridge, RequestId, SourceFolder, DestinationFolder, FString(), Socket);
+        return true;
+    }
+    if (World->GetOutermost()->IsDirty())
+    {
+        Bridge->SendAutomationError(Socket, RequestId,
+                                    FString::Printf(TEXT("%s is open with unsaved changes; save it first (control_editor save_all)."), *Current),
+                                    TEXT("UNSAVED_CHANGES"));
+        return true;
+    }
+    GEditor->NewMap(false);
+    McpSafeOperations::McpSafePostDeleteGC();
+    // The level editor rebuilds its viewports over the next frames. Saving and renaming in the same
+    // frame as NewMap took the editor down in Slate (an unset TOptional), so the move waits a few frames.
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakBridge(Bridge);
+    int32 FramesToWait = 5;
+    FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+        [WeakBridge, RequestId, SourceFolder, DestinationFolder, Current, Socket, FramesToWait](float) mutable
+        {
+            if (FramesToWait-- > 0)
+            {
+                return true;
+            }
+            if (WeakBridge.IsValid())
+            {
+                MoveFolderContents(WeakBridge.Get(), RequestId, SourceFolder, DestinationFolder, Current, Socket);
+            }
+            return false;
+        }), 0.0f);
     return true;
 }
 } // namespace McpAssetRename

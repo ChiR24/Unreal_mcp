@@ -22,6 +22,12 @@ void FixupRedirectorsIn(const FString& Folder, int32& OutFound, int32& OutFixed,
     Filter.PackagePaths.Add(FName(*Folder));
     Filter.bRecursivePaths = true;
     IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+    // While the registry is still discovering assets, FixupReferencers opens a Slate dialog and runs
+    // later from its callback instead of now.
+    if (Registry.IsLoadingAssets())
+    {
+        Registry.WaitForCompletion();
+    }
     TArray<FAssetData> Found;
     Registry.GetAssets(Filter, Found);
     OutFound = Found.Num();
@@ -48,8 +54,11 @@ void FixupRedirectorsIn(const FString& Folder, int32& OutFound, int32& OutFixed,
         SourceControlHelpers::CheckOutFiles(PackageNames, true);
     }
     // FixupReferencers deletes every redirector it could fix; whatever it left is deleted now that
-    // nothing points at it any more.
-    FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools")).Get().FixupReferencers(Redirectors);
+    // nothing points at it any more. It opens a progress window and message boxes for a user; its
+    // progress window crashed the editor in Slate (unset TOptional) during a folder move.
+    TGuardValue<bool> NoSlowTaskWindows(GIsSilent, true);
+    TGuardValue<bool> NoModals(GIsRunningUnattendedScript, true);
+    FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools")).Get().FixupReferencers(Redirectors, false);
     TArray<FAssetData> Left;
     Registry.GetAssets(Filter, Left);
     TArray<UObject*> ToDelete;

@@ -2,6 +2,7 @@
 
 #include "Domains/AssetWorkflow/Rename/McpAutomationBridge_AssetRenameGuard.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "UObject/SoftObjectPtr.h"
 #include "UObject/UObjectIterator.h"
@@ -201,6 +202,16 @@ bool RenameWithSettingsFollow(const TArray<FAssetRenameData>& RenameData, const 
         }
     }
 
+    // Nobody can answer a modal or watch a progress window during an MCP call; the progress window
+    // is also what took the editor down in Slate right after a map switch.
+    TGuardValue<bool> NoSlowTaskWindows(GIsSilent, true);
+    TGuardValue<bool> NoModals(GIsRunningUnattendedScript, true);
+    // RenameAssets refuses outright while the registry is still discovering assets (just after startup).
+    IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+    if (Registry.IsLoadingAssets())
+    {
+        Registry.WaitForCompletion();
+    }
     const bool bRenamed = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools")).Get().RenameAssets(RenameData);
     for (int32 Index = Follow.Swaps.Num() - 1; Index >= 0 && !bRenamed; --Index)
     {
