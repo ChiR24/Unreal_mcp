@@ -224,16 +224,20 @@ function createRenderingHappyCases(ctx) {
       settings: { StaticLightingLevelScale: 0.5, NumIndirectLightingBounces: 2 }
     }),
     createNamedActionCase('Lightmass: build lighting quality', 'build_lighting_quality', {
-      quality: 'Preview',
-      settings: { buildReflectionCaptures: true }
+      quality: 'Preview'
     }, { timeoutMs: 120000 }),
     createNamedActionCase('Lightmass: configure indirect lighting cache', 'configure_indirect_lighting_cache', {
-      targetActor: ctx.targetActor,
+      actorName: ctx.targetActor,
       settings: { IndirectLightingCacheQuality: 'ILCQ_Volume' }
     }),
+    createNamedActionCase('Lightmass: switch the indirect lighting cache off', 'configure_indirect_lighting_cache', {
+      actorName: ctx.targetActor,
+      enabled: false
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'IndirectLightingCacheQuality', label: 'enabled drives the cache quality' }] }),
     createNamedActionCase('Lightmass: create lightmass volume through build environment', 'create_lightmass_volume', {
       name: ctx.lightingLightmassVolume,
-      location: { x: -500, y: 0, z: 250 }
+      location: { x: -500, y: 0, z: 250 },
+      size: { x: 2000, y: 2000, z: 800 }
     }, {
       expected: successExpected('already exists'),
       assertions: [{
@@ -262,9 +266,13 @@ function createRenderingHappyCases(ctx) {
       }]
     },
 
+    // `name` is the label every create_capture_actor variant declares; the reflection
+    // captures used to refuse it and demand actorName.
     createNamedActionCase('Reflections: create sphere reflection capture', 'create_sphere_reflection_capture', {
-      actorName: ctx.sphereCapture,
-      location: { x: 150, y: 0, z: 150 }
+      name: ctx.sphereCapture,
+      location: { x: 150, y: 0, z: 150 },
+      rotation: { pitch: 0, yaw: 0, roll: 0 },
+      settings: { Brightness: 1.2 }
     }, {
       expected: successExpected('already exists'),
       captureResult: { key: 'renderingSphereCapturePath', fromField: 'result.actorPath' },
@@ -325,7 +333,8 @@ function createRenderingHappyCases(ctx) {
     createNamedActionCase('Post Process: configure PP blend', 'configure_pp_blend', {
       actorName: ctx.postProcessVolume,
       infiniteUnbound: true,
-      blendWeight: 0.9
+      blendWeight: 0.9,
+      enabled: true
     }, { assertions: [{ path: 'structuredContent.result.subAction', equals: 'configure_pp_blend', label: 'PP blend response names subAction' }] }),
     createNamedActionCase('Post Process: set white balance', 'set_pp_white_balance', {
       actorName: ctx.postProcessVolume,
@@ -352,16 +361,17 @@ function createRenderingHappyCases(ctx) {
     }),
     createNamedActionCase('Post Process: configure bloom', 'configure_bloom', {
       actorName: ctx.postProcessVolume,
-      settings: { BloomIntensity: 1.25, BloomThreshold: 0.15 }
+      settings: { BloomSizeScale: 4 },
+      amount: 1.25,
+      threshold: 0.15
     }),
     createNamedActionCase('Post Process: set bloom intensity', 'set_bloom_intensity', {
       actorName: ctx.postProcessVolume,
-      intensity: 1.5
+      amount: 1.5
     }),
     createNamedActionCase('Post Process: set bloom threshold', 'set_bloom_threshold', {
       actorName: ctx.postProcessVolume,
-      threshold: 0.2,
-      settings: { BloomThreshold: 0.2 }
+      threshold: 0.2
     }),
     createNamedActionCase('Post Process: configure lens flare', 'configure_lens_flare', {
       actorName: ctx.postProcessVolume,
@@ -379,13 +389,11 @@ function createRenderingHappyCases(ctx) {
     }),
     createNamedActionCase('Post Process: set focal distance', 'set_focal_distance', {
       actorName: ctx.postProcessVolume,
-      distance: 650,
-      settings: { DepthOfFieldFocalDistance: 650 }
+      distance: 650
     }),
     createNamedActionCase('Post Process: set aperture', 'set_aperture', {
       actorName: ctx.postProcessVolume,
-      aperture: 4,
-      settings: { DepthOfFieldFstop: 4 }
+      aperture: 4
     }),
     createNamedActionCase('Post Process: configure bokeh', 'configure_bokeh', {
       actorName: ctx.postProcessVolume,
@@ -398,18 +406,19 @@ function createRenderingHappyCases(ctx) {
     }),
     createNamedActionCase('Post Process: set motion blur amount', 'set_motion_blur_amount', {
       actorName: ctx.postProcessVolume,
-      amount: 0.35,
-      settings: { MotionBlurAmount: 0.35 }
+      amount: 0.35
     }),
     createNamedActionCase('Post Process: set motion blur max', 'set_motion_blur_max', {
       actorName: ctx.postProcessVolume,
-      amount: 8,
-      settings: { MotionBlurMax: 8 }
+      amount: 8
     }),
     createNamedActionCase('Post Process: configure exposure', 'configure_exposure', {
       actorName: ctx.postProcessVolume,
-      enabled: true,
-      settings: { AutoExposureMinBrightness: 0.75, AutoExposureMaxBrightness: 1.25, AutoExposureBias: 0.1 }
+      settings: { AutoExposureSpeedUp: 3 },
+      method: 'Manual',
+      minBrightness: 0.75,
+      maxBrightness: 1.25,
+      compensationValue: 0.1
     }),
     createNamedActionCase('Post Process: set exposure method', 'set_exposure_method', {
       actorName: ctx.postProcessVolume,
@@ -424,10 +433,13 @@ function createRenderingHappyCases(ctx) {
       minBrightness: 0.85,
       maxBrightness: 1.15
     }),
+    createNamedActionCase('Post Process: set only the exposure max keeps the min', 'set_exposure_min_max', {
+      actorName: ctx.postProcessVolume,
+      maxBrightness: 1.3
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', notIncludes: 'AutoExposureMinBrightness', label: 'an omitted bound is left alone' }] }),
     createNamedActionCase('Post Process: configure SSAO', 'configure_ssao', {
       actorName: ctx.postProcessVolume,
-      enabled: true,
-      intensity: 0.75,
+      amount: 0.75,
       settings: { AmbientOcclusionRadius: 150, AmbientOcclusionPower: 1.0 }
     }),
     createNamedActionCase('Post Process: configure GTAO', 'configure_gtao', {
@@ -437,20 +449,18 @@ function createRenderingHappyCases(ctx) {
     }),
     createNamedActionCase('Post Process: configure vignette', 'configure_vignette', {
       actorName: ctx.postProcessVolume,
-      intensity: 0.35
+      amount: 0.35
     }),
     createNamedActionCase('Post Process: configure chromatic aberration', 'configure_chromatic_aberration', {
       actorName: ctx.postProcessVolume,
-      intensity: 0.2,
+      amount: 0.2,
       settings: { SceneFringeSaturation: 1.0 }
     }),
-    createNamedActionCase('Post Process: configure grain', 'configure_grain', {
+    createNamedActionCase('Post Process: configure grain from settings alone', 'configure_grain', {
       actorName: ctx.postProcessVolume,
-      intensity: 0.25,
-      settings: { GrainJitter: 0.5 }
-    }),
+      settings: { FilmGrainIntensity: 0.25 }
+    }, { assertions: [{ path: 'structuredContent.result.appliedSettings', includes: 'FilmGrainIntensity', label: 'settings grain is not reset by an omitted amount' }] }),
     createNamedActionCase('Post Process: configure screen percentage', 'configure_screen_percentage', {
-      actorName: ctx.postProcessVolume,
       screenPercentage: 90
     }, { expected: successExpected('unsupported', 'not available') }),
 
@@ -463,8 +473,9 @@ function createRenderingHappyCases(ctx) {
       assertions: [{ path: 'structuredContent.result.actorName', includes: ctx.sceneCapture2d, label: 'scene capture 2D actor name matches request' }]
     }),
     createNamedActionCase('Scene Capture: create scene capture cube', 'create_scene_capture_cube', {
-      actorName: ctx.sceneCaptureCube,
-      location: { x: 950, y: 0, z: 200 }
+      name: ctx.sceneCaptureCube,
+      location: { x: 950, y: 0, z: 200 },
+      rotation: { pitch: 0, yaw: 90, roll: 0 }
     }, {
       expected: successExpected('already exists'),
       captureResult: { key: 'renderingSceneCaptureCubePath', fromField: 'result.actorPath' },
@@ -640,6 +651,12 @@ function createRenderingAdversarialCases(ctx) {
       actorName: ctx.sceneCapture2d,
       captureSource: 'DefinitelyNotACaptureSource'
     }, { expected: errorExpected('invalid') }),
+    createNamedActionCase('Adversarial: reject a capture source call with no source', 'configure_capture_source', {
+      actorName: ctx.sceneCapture2d
+    }, { expected: errorExpected('invalid') }),
+    createNamedActionCase('Adversarial: reject a post-process call that sets nothing', 'set_bloom_threshold', {
+      actorName: ctx.postProcessVolume
+    }, { expected: errorExpected('no_setting_supplied') }),
     createNamedActionCase('Adversarial: reject oversized reflection capture resolution', 'configure_reflection_capture_resolution', {
       actorName: ctx.sphereCapture,
       resolution: 100000
