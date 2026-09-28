@@ -4,6 +4,7 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
+#include "Domains/AssetWorkflow/Rename/McpAutomationBridge_AssetRenameFollowSupport.h"
 #include "UObject/SoftObjectPtr.h"
 #include "UObject/UObjectIterator.h"
 #include "UObject/UnrealType.h"
@@ -17,27 +18,6 @@ struct FMcpRenameTarget
     FString OldAssetName;
     FString NewObjectPrefix; // "/Game/New/Folder/Name.Name"
 };
-
-// Re-keys one entry of a soft-path-keyed map, keeping its value.
-void RekeySoftMapEntry(const FMapProperty* Map, void* Data, const FSoftObjectPath& From, const FSoftObjectPath& To)
-{
-    FScriptMapHelper Helper(Map, Data);
-    FSoftObjectPtr FromKey(From);
-    const int32 Index = Helper.FindMapIndexWithKey(&FromKey);
-    if (Index == INDEX_NONE)
-    {
-        return;
-    }
-    const FProperty* ValueProp = Map->ValueProp;
-    void* Value = FMemory::Malloc(ValueProp->GetSize(), ValueProp->GetMinAlignment());
-    ValueProp->InitializeValue(Value);
-    ValueProp->CopyCompleteValue(Value, Helper.GetValuePtr(Index));
-    Helper.RemoveAt(Index);
-    FSoftObjectPtr ToKey(To);
-    Helper.AddPair(&ToKey, Value);
-    ValueProp->DestroyValue(Value);
-    FMemory::Free(Value);
-}
 
 struct FMcpSettingsFollow
 {
@@ -63,6 +43,31 @@ struct FMcpSettingsFollow
         }
         OutNew = FSoftObjectPath(NewPath);
         return true;
+    }
+
+    bool RemapFile(const FString& Package, FString& OutNew) const
+    {
+        const FMcpRenameTarget* Target = Package.Len() < NAME_SIZE ? ByPackage.Find(FName(*Package)) : nullptr;
+        return Target && Target->NewObjectPrefix.Split(TEXT("."), &OutNew, nullptr);
+    }
+
+    // A folder follows only a whole-folder move: every package under it renamed, keeping the layout below it.
+    bool RemapFolder(const FString& Folder, FString& OutNew) const
+    {
+        TArray<FAssetData> Assets;
+        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().GetAssetsByPath(FName(*Folder), Assets, true);
+        for (const FAssetData& Asset : Assets)
+        {
+            FString NewPackage;
+            const FString Tail = Asset.PackageName.ToString().Mid(Folder.Len());
+            if (!RemapFile(Asset.PackageName.ToString(), NewPackage) || !NewPackage.EndsWith(Tail) ||
+                (!OutNew.IsEmpty() && OutNew != NewPackage.LeftChop(Tail.Len())))
+            {
+                return false;
+            }
+            OutNew = NewPackage.LeftChop(Tail.Len());
+        }
+        return !OutNew.IsEmpty() && OutNew != Folder;
     }
 
     void Note(UObject* Owner, const FString& Label, TFunction<void(bool)> Swap)
@@ -122,16 +127,15 @@ struct FMcpSettingsFollow
                 }
                 return;
             }
-            // FFilePath holds a long package name as plain text (ProjectPackagingSettings.MapsToCook): a moved map
-            // left there would silently drop out of every packaged build.
-            if (Struct->Struct->GetFName() == TEXT("FilePath"))
+            // FFilePath and FDirectoryPath hold long package names as plain text (ProjectPackagingSettings.MapsToCook,
+            // DirectoriesToAlwaysCook): a moved map or folder left there would silently drop out of every packaged build.
+            const bool bFile = Struct->Struct->GetFName() == TEXT("FilePath");
+            if (bFile || Struct->Struct->GetFName() == TEXT("DirectoryPath"))
             {
-                const FStrProperty* Text = FindFProperty<FStrProperty>(Struct->Struct, TEXT("FilePath"));
+                const FStrProperty* Text = FindFProperty<FStrProperty>(Struct->Struct, bFile ? TEXT("FilePath") : TEXT("Path"));
                 FString* Value = Text ? Text->ContainerPtrToValuePtr<FString>(Data) : nullptr;
-                const FMcpRenameTarget* Target = Value && Value->StartsWith(TEXT("/")) && Value->Len() < NAME_SIZE
-                    ? ByPackage.Find(FName(**Value)) : nullptr;
                 FString NewValue;
-                if (Target && Target->NewObjectPrefix.Split(TEXT("."), &NewValue, nullptr))
+                if (Value && Value->StartsWith(TEXT("/")) && (bFile ? RemapFile(*Value, NewValue) : RemapFolder(*Value, NewValue)))
                 {
                     const FString OldValue = *Value;
                     Note(Owner, Label, [Value, OldValue, NewValue](bool bNew) { *Value = bNew ? NewValue : OldValue; });
@@ -179,15 +183,6 @@ struct FMcpSettingsFollow
     }
 };
 
-void SetStrings(const TSharedPtr<FJsonObject>& Report, const TCHAR* Field, const TArray<FString>& Values)
-{
-    TArray<TSharedPtr<FJsonValue>> Array;
-    for (const FString& Value : Values)
-    {
-        Array.Add(MakeShared<FJsonValueString>(Value));
-    }
-    Report->SetArrayField(Field, Array);
-}
 } // namespace
 
 bool RenameWithSettingsFollow(const TArray<FAssetRenameData>& RenameData, const TSharedPtr<FJsonObject>& Report,
@@ -248,10 +243,10 @@ bool RenameWithSettingsFollow(const TArray<FAssetRenameData>& RenameData, const 
             Defaults->SaveConfig();
         }
     }
-    SetStrings(Report, TEXT("settingsUpdated"), bRenamed ? Follow.Moved : TArray<FString>());
+    SetRenameReportStrings(Report, TEXT("settingsUpdated"), bRenamed ? Follow.Moved : TArray<FString>());
     if (Follow.Blocking.Num() > 0)
     {
-        SetStrings(Report, TEXT("blockingReferences"), Follow.Blocking);
+        SetRenameReportStrings(Report, TEXT("blockingReferences"), Follow.Blocking);
     }
     if (!bRenamed)
     {
