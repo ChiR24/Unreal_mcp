@@ -43,19 +43,39 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
   bool bCheckoutFiles = false;
   Payload->TryGetBoolField(TEXT("checkoutFiles"), bCheckoutFiles);
 
+  // renames: [{sourcePath, newName}], unrelated names under one consent. Each rename used to need
+  // its own describe for a fresh consent grant; a pattern could not express them.
+  TArray<FAssetRenameData> RenameData;
+  TArray<FString> MissingAssets;
+  const TArray<TSharedPtr<FJsonValue>> *Renames = nullptr;
+  if (Payload->TryGetArrayField(TEXT("renames"), Renames) && Renames->Num() > 0) {
+    for (const TSharedPtr<FJsonValue> &Entry : *Renames) {
+      const TSharedPtr<FJsonObject> *Item = nullptr;
+      const FString Source = Entry.IsValid() && Entry->TryGetObject(Item) ? GetJsonStringField(*Item, TEXT("sourcePath")) : FString();
+      const FString NewName = Item ? GetJsonStringField(*Item, TEXT("newName")).TrimStartAndEnd() : FString();
+      const FString Resolved = Source.IsEmpty() ? FString() : ResolveAssetPath(Source);
+      const FString Safe = SanitizeProjectRelativePath(Resolved.IsEmpty() ? Source : Resolved);
+      UObject *Asset = Safe.IsEmpty() || NewName.IsEmpty() || !UEditorAssetLibrary::DoesAssetExist(Safe) ? nullptr : UEditorAssetLibrary::LoadAsset(Safe);
+      const FString Folder = Asset ? FPackageName::GetLongPackagePath(Asset->GetOutermost()->GetName()) : FString();
+      if (!Asset || UEditorAssetLibrary::DoesAssetExist(Folder / NewName)) {
+        MissingAssets.Add(Asset ? FString::Printf(TEXT("%s (%s is taken)"), *Source, *NewName)
+                                : Source.IsEmpty() ? FString(TEXT("(entry without sourcePath)")) : Source);
+        continue;
+      }
+      RenameData.Emplace(Asset, Folder, NewName);
+    }
+  }
   TArray<FString> AssetPaths;
-  if (!McpCollectBulkAssetPaths(*this, RequestId, RequestingSocket, Payload, AssetPaths)) {
+  if (RenameData.Num() == 0 && MissingAssets.Num() == 0 &&
+      !McpCollectBulkAssetPaths(*this, RequestId, RequestingSocket, Payload, AssetPaths)) {
     return true;
   }
-  if (AssetPaths.Num() == 0) {
+  if (RenameData.Num() == 0 && MissingAssets.Num() == 0 && AssetPaths.Num() == 0) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetNumberField(TEXT("renamed"), 0);
     SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No assets found"), Result, FString());
     return true;
   }
-
-  TArray<FAssetRenameData> RenameData;
-  TArray<FString> MissingAssets;
 
   for (const FString &InputPath : AssetPaths) {
     FString AssetPath = ResolveAssetPath(InputPath);
@@ -144,6 +164,14 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
   Result->SetBoolField(TEXT("success"), bSuccess);
   Result->SetNumberField(TEXT("renamed"), bSuccess ? RenameData.Num() : 0);
   Result->SetArrayField(bSuccess ? TEXT("assets") : TEXT("notRenamed"), RenamedAssets);
+  // An entry that matched nothing (or wanted a taken name) is named, not dropped.
+  if (MissingAssets.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> Skipped;
+    for (const FString &Missing : MissingAssets) {
+      Skipped.Add(MakeShared<FJsonValueString>(Missing));
+    }
+    Result->SetArrayField(TEXT("skipped"), Skipped);
+  }
 
   SendAutomationResponse(
       RequestingSocket, RequestId, bSuccess,

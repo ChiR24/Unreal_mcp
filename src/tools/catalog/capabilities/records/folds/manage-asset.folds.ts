@@ -75,8 +75,8 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'rename',
-    summary: 'Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along.',
-    topics: ['rename folder'],
+    summary: 'Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along. Several unrelated assets in one call: maintain_content bulk_rename with renames.',
+    topics: ['rename folder', 'rename several assets'],
     members: ['rename_asset'],
   },
   {

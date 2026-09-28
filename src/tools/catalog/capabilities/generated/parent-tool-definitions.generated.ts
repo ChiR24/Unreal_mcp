@@ -8324,6 +8324,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target member GUID or name."
         },
+        "renames": {
+          "type": "array",
+          "description": "Explicit renames, each asset to its own new name in its own folder, all in this one call: [{sourcePath, newName}]. An entry whose asset is missing, or whose newName is taken, is skipped and named under skipped. Replaces the pattern fields.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourcePath": {
+                "type": "string",
+                "description": "Asset to rename."
+              },
+              "newName": {
+                "type": "string",
+                "description": "New asset name (no folder)."
+              }
+            },
+            "required": [
+              "sourcePath",
+              "newName"
+            ],
+            "additionalProperties": false
+          }
+        },
         "renderTargetPath": {
           "type": "string",
           "description": "Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath."

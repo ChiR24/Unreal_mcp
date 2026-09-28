@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d2269f0f501a3908",
+  "catalogRevision": "2be4cb762398487c",
   "recordCount": 388,
   "records": [
     {
@@ -8513,6 +8513,28 @@
               "type": "boolean",
               "description": "Check out files in source control."
             },
+            "renames": {
+              "type": "array",
+              "description": "Explicit renames, each asset to its own new name in its own folder, all in this one call: [{sourcePath, newName}]. An entry whose asset is missing, or whose newName is taken, is skipped and named under skipped. Replaces the pattern fields.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "sourcePath": {
+                    "type": "string",
+                    "description": "Asset to rename."
+                  },
+                  "newName": {
+                    "type": "string",
+                    "description": "New asset name (no folder)."
+                  }
+                },
+                "required": [
+                  "sourcePath",
+                  "newName"
+                ],
+                "additionalProperties": false
+              }
+            },
             "directoryPath": {
               "type": "string",
               "description": "Directory path to fix up."
@@ -8721,6 +8743,9 @@
               "bulk_rename",
               "fixup_redirectors"
             ],
+            "renames": [
+              "bulk_rename"
+            ],
             "directoryPath": [
               "fixup_redirectors"
             ],
@@ -8753,8 +8778,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a16cc695a76944e6749271e485cb731dae9a6d52c4bee8182d09d7f522a19c42",
-        "content": "f5a630d95393b6aeab6925d022bdfe03666593c2113a565efcdff076141e7f0a"
+        "schema": "490c047e3d1ed249206d54c879a25421e944b101f7839a7f3ee04bee8699a66d",
+        "content": "6c24a67abf9cad9e75c4d952ddfb8803b5245de8a72a504fedae7277f886c4f0"
       }
     },
     {
@@ -10008,9 +10033,10 @@
         "family": "lifecycle",
         "topics": [
           "rename",
-          "rename folder"
+          "rename folder",
+          "rename several assets"
         ],
-        "summary": "Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along.",
+        "summary": "Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along. Several unrelated assets in one call: maintain_content bulk_rename with renames.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -10059,7 +10085,7 @@
       },
       "examples": [
         {
-          "title": "Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along.",
+          "title": "Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along. Several unrelated assets in one call: maintain_content bulk_rename with renames.",
           "input": {
             "sourcePath": "/Game/Meshes/SM_Crate",
             "newName": "SM_Crate_Large",
@@ -10100,7 +10126,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4f0612ab59ebf8b8e59d76cb797971c321143558f3555c89bb92d44f512de920",
-        "content": "aaa78a422c5b43980096e8d403d49ea718a93e19c8c5d95ee0ee5e7389cc1c9a"
+        "content": "a51589fb7df43d465be54d2b7f37dc7b4fd9abfefd090e6a816287560caecf63"
       }
     },
     {

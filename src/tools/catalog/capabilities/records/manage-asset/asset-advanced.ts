@@ -54,8 +54,15 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
     { dispatchAction: 'manage_render',
       examples: [ex('Rebuild Nanite data after a mesh edit', { assetPath: '/Game/Meshes/SM_Rock' }, { success: true })] }
   ),
-  r('bulk_rename', 'asset', 'Rename multiple assets by pattern or explicit paths.',
-    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths.'), searchText: str('Search pattern.'), pattern: str('Search pattern (used when searchText is absent).'), replaceText: str('Replacement text.'), replacement: str('Replacement text (used when replaceText is absent).'), prefix: str('Name prefix.'), suffix: str('Name suffix.'), checkoutFiles: bool('Check out files in source control.') }, [], ['assetPaths', 'folderPath']),
+  r('bulk_rename', 'asset', 'Rename multiple assets in one call: by a pattern (search/replace, prefix, suffix) over a folder or a list, or to explicit new names with renames.',
+    schema({
+      folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths.'), searchText: str('Search pattern.'), pattern: str('Search pattern (used when searchText is absent).'), replaceText: str('Replacement text.'), replacement: str('Replacement text (used when replaceText is absent).'), prefix: str('Name prefix.'), suffix: str('Name suffix.'), checkoutFiles: bool('Check out files in source control.'),
+      renames: {
+        type: 'array',
+        description: 'Explicit renames, each asset to its own new name in its own folder, all in this one call: [{sourcePath, newName}]. An entry whose asset is missing, or whose newName is taken, is skipped and named under skipped. Replaces the pattern fields.',
+        items: { type: 'object', properties: { sourcePath: str('Asset to rename.'), newName: str('New asset name (no folder).') }, required: ['sourcePath', 'newName'], additionalProperties: false },
+      },
+    }, [], ['assetPaths', 'folderPath', 'renames']),
     OK, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'bulk_rename',
       examples: [ex('Re-prefix every mesh in a folder', { folderPath: '/Game/Meshes', searchText: 'Mesh_', replaceText: 'SM_', checkoutFiles: true }, { success: true })] }
