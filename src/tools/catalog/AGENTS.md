@@ -6,7 +6,7 @@ Contract records are hand-authored here. Everything downstream is generated. A h
 ```
 capabilities/
 |-- records/                      # HAND-EDIT ZONE
-|   |-- aggregate.ts              # ALL_CAPABILITY_RECORDS (folded); asserts ALL_CAPABILITY_RECORD_COUNT = 380
+|   |-- aggregate.ts              # ALL_CAPABILITY_RECORDS (folded); asserts ALL_CAPABILITY_RECORD_COUNT = 382
 |   |-- unfolded.ts               # every authored source before folding (tests read it)
 |   |-- parent-metadata.ts        # parent tool metadata
 |   |-- compensation.ts           # behavior.compensation (inverse capability or cleanup note)
@@ -35,7 +35,7 @@ Generators: `scripts/generate-canonical-registry.ts` (+ `scripts/canonical-regis
 Declare exactly what the C++ handler reads and emits. The gateway validates strictly (undeclared param → `UNDECLARED_PARAMETER`), and `npm run test:params` (strict) fails on a case param no schema declares or an optional param no case covers.
 
 ## FOLDED FAMILIES (read before adding an action)
-380 records fold 1,278 authored sources; 212 are families, and 1,432 `{tool, action}` pairs stay callable. `records/folds/<parent>.folds.ts` lists, per family, the primary action, a selector parameter (`kind`, `edit`, `setting`, ...) and the member each selector value dispatches to; `routing.dispatchBy` maps selector → bridge action, and each former name is a `legacyIds[]` entry carrying `folded: { <selector>: <value> }` pins that both gateways inject before validation. A family whose primary is one of its members keeps the selector optional with that member as default. Members must share effect, policy, availability, family and id namespace (`applyFolds` throws otherwise).
+382 records fold 1,274 authored sources; 236 are families, and 1,453 `{tool, action}` pairs stay callable. `records/folds/<parent>.folds.ts` lists, per family, the primary action, a selector parameter (`kind`, `edit`, `setting`, ...) and the member each selector value dispatches to; `routing.dispatchBy` maps selector → bridge action, and each former name is a `legacyIds[]` entry carrying `folded: { <selector>: <value> }` pins that both gateways inject before validation. A family whose primary is one of its members keeps the selector optional with that member as default. Members must share effect, policy, availability, family and id namespace (`applyFolds` throws otherwise).
 
 To add an action to an existing family, author its record in `<parent>/` and add it to the family spec (a new selector value, or an `aliasMembers` entry). A brand-new operation is a new record, left unfolded.
 

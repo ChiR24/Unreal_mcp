@@ -33,7 +33,16 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("delete_animation"), TEXT("get_widget_slot_info"),
 		TEXT("remove_widget"), TEXT("rename_widget"),
 		TEXT("reparent_widget"), TEXT("set_font"),
-		TEXT("set_localization_key"), TEXT("set_margin")
+		TEXT("set_localization_key"), TEXT("set_margin"),
+		TEXT("add_health_bar"), TEXT("add_ammo_counter"), TEXT("add_crosshair"),
+		TEXT("add_minimap"), TEXT("add_compass"), TEXT("add_damage_indicator"),
+		TEXT("add_interaction_prompt"), TEXT("add_objective_tracker"),
+		TEXT("add_quest_tracker"), TEXT("create_main_menu"),
+		TEXT("create_pause_menu"), TEXT("create_settings_menu"),
+		TEXT("create_loading_screen"), TEXT("create_hud_widget"),
+		TEXT("create_dialog_widget"), TEXT("create_inventory_ui"),
+		TEXT("create_radial_menu"), TEXT("create_credits_screen"),
+		TEXT("create_shop_ui")
 	};
 	return Actions;
 }

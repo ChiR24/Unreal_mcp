@@ -12,10 +12,12 @@ import { VARIABLES_METADATA_RECORDS } from './variables-metadata.js';
 import { WIDGET_ANIMATION_RECORDS } from './widget-animation.js';
 import { WIDGET_BINDINGS_RECORDS } from './widget-bindings.js';
 import { WIDGET_CONTENT_RECORDS } from './widget-content.js';
+import { WIDGET_GAME_UI_RECORDS } from './widget-game-ui.js';
 import { WIDGET_INFO_RECORDS } from './widget-info.js';
 import { WIDGET_LAYOUT_RECORDS } from './widget-layout.js';
 import { WIDGET_LIFECYCLE_RECORDS } from './widget-lifecycle.js';
 import { WIDGET_PANELS_RECORDS } from './widget-panels.js';
+import { WIDGET_TEMPLATES_RECORDS } from './widget-templates.js';
 import { applyFolds } from '../shared/fold.js';
 import { MANAGE_BLUEPRINT_FOLDS } from '../folds/manage-blueprint.folds.js';
 
@@ -36,6 +38,8 @@ export const MANAGE_BLUEPRINT_UNFOLDED_SOURCES: readonly CapabilityRecordSource[
   ...WIDGET_BINDINGS_RECORDS,
   ...WIDGET_ANIMATION_RECORDS,
   ...WIDGET_INFO_RECORDS,
+  ...WIDGET_GAME_UI_RECORDS,
+  ...WIDGET_TEMPLATES_RECORDS,
 ];
 
 export const MANAGE_BLUEPRINT_SOURCES: readonly CapabilityRecordSource[] = applyFolds(MANAGE_BLUEPRINT_UNFOLDED_SOURCES, MANAGE_BLUEPRINT_FOLDS, 'manage_blueprint');

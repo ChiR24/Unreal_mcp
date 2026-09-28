@@ -232,6 +232,32 @@ export const P = {
   top: N('Top margin in slate units.'),
   right: N('Right margin in slate units.'),
   bottom: N('Bottom margin in slate units.'),
+  // Ready-made HUD pieces (add_game_widget) and screens (create_widget_template)
+  title: S('Title text: the heading of a menu, credits screen or tracker.'),
+  keyLabel: S('Key shown in the interaction prompt badge, such as E.'),
+  items: { type: 'array', items: S('Row text.'), description: 'Rows the objective or quest tracker lists, top to bottom.' },
+  maxVisibleObjectives: N('Rows the objective tracker shows (1-12, default 3); longer items lists are cut to this.'),
+  mapSize: N('Minimap width and height in pixels (default 220).'),
+  fadeTime: N('Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none).'),
+  buttons: { type: 'array', items: S('Button label.'), description: 'Menu button labels, top to bottom; each becomes <Label>Button.' },
+  settingsType: { type: 'string', enum: ['all', 'graphics', 'audio', 'controls'], description: 'Which settings sections the menu holds (default all).' },
+  includeProgressBar: B('Whether the loading screen has a progress bar (default true).'),
+  elements: {
+    type: 'array',
+    items: { type: 'string', enum: ['health_bar', 'ammo_counter', 'crosshair', 'minimap', 'compass', 'damage_indicator', 'interaction_prompt', 'objective_tracker', 'quest_tracker'] },
+    description: 'HUD pieces the new HUD starts with (default health_bar, crosshair, ammo_counter; [] for an empty canvas).',
+  },
+  showSpeakerName: B('Whether the dialog shows the speaker name line (default true).'),
+  responseCount: N('Response buttons under the dialog line (0-6, default 3).'),
+  columns: N('Grid columns: inventory 1-12 (default 6), shop 1-8 (default 4).'),
+  rows: N('Inventory grid rows (1-12, default 4).'),
+  segmentCount: N('Radial menu segments (2-12, default 8).'),
+  itemCount: N('Shop item cards (1-48, default 8).'),
+  entries: {
+    type: 'array',
+    items: { type: 'object', properties: { title: S('Role or section, such as Music.'), name: S('Name credited.') }, required: ['title', 'name'], additionalProperties: false },
+    description: 'Credits entries in order; default is four placeholder sections.',
+  },
   // Common output
   success: B('Whether the action succeeded.'),
 } as const;

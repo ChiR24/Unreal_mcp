@@ -107,6 +107,23 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
     },
   },
   {
+    primary: 'add_game_widget', selector: 'widgetKind',
+    summary: 'Add a ready-made HUD piece to a Widget Blueprint: health bar, ammo counter, crosshair, minimap, compass, damage indicator, interaction prompt, objective or quest tracker.',
+    topics: ['health bar', 'ammo counter', 'crosshair', 'minimap', 'compass', 'damage indicator', 'interaction prompt', 'objective tracker', 'quest tracker', 'hud element'],
+    members: byTarget('add_', ['add_health_bar', 'add_ammo_counter', 'add_crosshair', 'add_minimap', 'add_compass', 'add_damage_indicator',
+      'add_interaction_prompt', 'add_objective_tracker', 'add_quest_tracker']),
+  },
+  {
+    primary: 'create_widget_template', selector: 'screen',
+    summary: 'Create a new Widget Blueprint holding a ready-made screen: main menu, pause menu, settings menu, loading screen, HUD, dialog box, inventory, radial menu, credits or shop.',
+    topics: ['main menu', 'pause menu', 'settings menu', 'loading screen', 'hud', 'dialog box', 'inventory ui', 'radial menu', 'credits screen', 'shop ui', 'title screen'],
+    members: {
+      main_menu: 'create_main_menu', pause_menu: 'create_pause_menu', settings_menu: 'create_settings_menu', loading_screen: 'create_loading_screen',
+      hud: 'create_hud_widget', dialog: 'create_dialog_widget', inventory: 'create_inventory_ui', radial_menu: 'create_radial_menu',
+      credits: 'create_credits_screen', shop: 'create_shop_ui',
+    },
+  },
+  {
     primary: 'edit_widget_animation', selector: 'edit',
     summary: 'Create a widget animation or add tracks and keyframes to it.',
     topics: ['widget animation', 'animation track', 'animation keyframe'],

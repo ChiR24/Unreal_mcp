@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "f381902beb891285",
-  "recordCount": 380,
+  "catalogRevision": "beae9b647e681970",
+  "recordCount": 382,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -10368,6 +10368,400 @@
       }
     },
     {
+      "id": "blueprint.add_game_widget",
+      "aliases": [
+        "blueprint.add_health_bar",
+        "blueprint.add_ammo_counter",
+        "blueprint.add_crosshair",
+        "blueprint.add_minimap",
+        "blueprint.add_compass",
+        "blueprint.add_damage_indicator",
+        "blueprint.add_interaction_prompt",
+        "blueprint.add_objective_tracker",
+        "blueprint.add_quest_tracker"
+      ],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "add_game_widget"
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_health_bar",
+          "folded": {
+            "widgetKind": "health_bar"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_ammo_counter",
+          "folded": {
+            "widgetKind": "ammo_counter"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_crosshair",
+          "folded": {
+            "widgetKind": "crosshair"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_minimap",
+          "folded": {
+            "widgetKind": "minimap"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_compass",
+          "folded": {
+            "widgetKind": "compass"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_damage_indicator",
+          "folded": {
+            "widgetKind": "damage_indicator"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_interaction_prompt",
+          "folded": {
+            "widgetKind": "interaction_prompt"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_objective_tracker",
+          "folded": {
+            "widgetKind": "objective_tracker"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_quest_tracker",
+          "folded": {
+            "widgetKind": "quest_tracker"
+          }
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "widget-game-ui",
+        "topics": [
+          "add_game_widget",
+          "health bar",
+          "ammo counter",
+          "crosshair",
+          "minimap",
+          "compass",
+          "damage indicator",
+          "interaction prompt",
+          "objective tracker",
+          "quest tracker",
+          "hud element"
+        ],
+        "summary": "Add a ready-made HUD piece to a Widget Blueprint: health bar, ammo counter, crosshair, minimap, compass, damage indicator, interaction prompt, objective or quest tracker.",
+        "whenToUse": [
+          "A HUD needs a health bar without assembling it widget by widget.",
+          "A HUD needs a ammo counter without assembling it widget by widget.",
+          "A HUD needs a crosshair without assembling it widget by widget.",
+          "A HUD needs a minimap without assembling it widget by widget.",
+          "A HUD needs a compass without assembling it widget by widget.",
+          "A HUD needs a damage indicator without assembling it widget by widget."
+        ],
+        "whenNotToUse": [
+          "A single plain widget is enough (add_content_widget).",
+          "The screen does not exist yet (create_widget_template hud builds one with pieces)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "Name of the root widget of the piece (default: the piece name, such as HealthBar); its parts are named <slotName>_<Part>."
+            },
+            "parentSlot": {
+              "type": "string",
+              "description": "Parent slot to add the widget to."
+            },
+            "positionX": {
+              "type": "number",
+              "description": "Canvas slot X position, applied only when the parent is a canvas panel."
+            },
+            "positionY": {
+              "type": "number",
+              "description": "Canvas slot Y position, applied only when the parent is a canvas panel."
+            },
+            "sizeX": {
+              "type": "number",
+              "description": "Slot width in slate units."
+            },
+            "sizeY": {
+              "type": "number",
+              "description": "Slot height in slate units."
+            },
+            "percent": {
+              "type": "number",
+              "description": "Progress bar percentage (0-1)."
+            },
+            "fillColorAndOpacity": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Fill color for progress bar."
+            },
+            "text": {
+              "type": "string",
+              "description": "Text the piece shows: health bar label (default HP), ammo counter (30 / 90), crosshair glyph (+), compass heading (N) or prompt action (Interact)."
+            },
+            "fontSize": {
+              "type": "number",
+              "description": "Font size."
+            },
+            "colorAndOpacity": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Color and opacity (0-1 values)."
+            },
+            "mapSize": {
+              "type": "number",
+              "description": "Minimap width and height in pixels (default 220)."
+            },
+            "texturePath": {
+              "type": "string",
+              "description": "Texture drawn as the minimap image or the compass strip; a path that does not load is refused."
+            },
+            "fadeTime": {
+              "type": "number",
+              "description": "Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none)."
+            },
+            "keyLabel": {
+              "type": "string",
+              "description": "Key shown in the interaction prompt badge, such as E."
+            },
+            "title": {
+              "type": "string",
+              "description": "Objective tracker heading (default OBJECTIVES) or the quest name (default Quest Name)."
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Row text."
+              },
+              "description": "Rows the objective or quest tracker lists, top to bottom."
+            },
+            "maxVisibleObjectives": {
+              "type": "number",
+              "description": "Rows the objective tracker shows (1-12, default 3); longer items lists are cut to this."
+            },
+            "widgetKind": {
+              "type": "string",
+              "enum": [
+                "health_bar",
+                "ammo_counter",
+                "crosshair",
+                "minimap",
+                "compass",
+                "damage_indicator",
+                "interaction_prompt",
+                "objective_tracker",
+                "quest_tracker"
+              ],
+              "description": "Which add game widget variant to run."
+            }
+          },
+          "required": [
+            "action",
+            "widgetKind",
+            "widgetPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "Slot name for a child widget inside its parent."
+            },
+            "widgets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every widget created, root first; bind or restyle them by these names."
+            },
+            "animationName": {
+              "type": "string",
+              "description": "Animation created with the piece (the damage indicator's <slot>_Flash); play it on a hit."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint was saved."
+            }
+          },
+          "required": [
+            "success",
+            "widgetPath",
+            "slotName",
+            "widgets"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Add a ready-made HUD piece to a Widget Blueprint: health bar, ammo counter, crosshair, minimap, compass, damage indicator, interaction prompt, objective or quest tracker.",
+          "input": {
+            "action": "add_game_widget",
+            "widgetPath": "/Game/UI/WBP_HUD",
+            "percent": 0.75,
+            "text": "HP",
+            "widgetKind": "health_bar"
+          },
+          "output": {
+            "success": true,
+            "widgetPath": "/Game/UI/WBP_HUD.WBP_HUD",
+            "slotName": "HealthBar",
+            "widgets": [
+              "HealthBar"
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "add_health_bar",
+        "dispatchBy": {
+          "param": "widgetKind",
+          "actions": {
+            "health_bar": "add_health_bar",
+            "ammo_counter": "add_ammo_counter",
+            "crosshair": "add_crosshair",
+            "minimap": "add_minimap",
+            "compass": "add_compass",
+            "damage_indicator": "add_damage_indicator",
+            "interaction_prompt": "add_interaction_prompt",
+            "objective_tracker": "add_objective_tracker",
+            "quest_tracker": "add_quest_tracker"
+          },
+          "declaredBy": {
+            "percent": [
+              "health_bar"
+            ],
+            "fillColorAndOpacity": [
+              "health_bar"
+            ],
+            "text": [
+              "health_bar",
+              "ammo_counter",
+              "crosshair",
+              "compass",
+              "interaction_prompt"
+            ],
+            "fontSize": [
+              "ammo_counter",
+              "crosshair"
+            ],
+            "colorAndOpacity": [
+              "ammo_counter",
+              "crosshair",
+              "damage_indicator"
+            ],
+            "mapSize": [
+              "minimap"
+            ],
+            "texturePath": [
+              "minimap",
+              "compass"
+            ],
+            "fadeTime": [
+              "damage_indicator"
+            ],
+            "keyLabel": [
+              "interaction_prompt"
+            ],
+            "title": [
+              "objective_tracker",
+              "quest_tracker"
+            ],
+            "items": [
+              "objective_tracker",
+              "quest_tracker"
+            ],
+            "maxVisibleObjectives": [
+              "objective_tracker"
+            ]
+          }
+        }
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "67db144d8e6d635f756a3bec8fc1850f6d58674739b0f12ca87cb7f12e0f0b54",
+        "content": "8273175d9bddd665cca8d3d3985a1bf965bb054443706d8d971bc4ce9746e26f"
+      }
+    },
+    {
       "id": "blueprint.add_panel_widget",
       "aliases": [
         "blueprint.add_canvas_panel",
@@ -11596,6 +11990,430 @@
         "algorithm": "sha256",
         "schema": "b386400149819296b4be2f5fc7ffc0b42a868b5180e7e7daaaa8e4ade2e0ff69",
         "content": "87f6c6a4f55522f58a5718d1fec57cbf3e425295cdf198c3dea9b9a04359bea0"
+      }
+    },
+    {
+      "id": "blueprint.create_widget_template",
+      "aliases": [
+        "blueprint.create_main_menu",
+        "blueprint.create_pause_menu",
+        "blueprint.create_settings_menu",
+        "blueprint.create_loading_screen",
+        "blueprint.create_hud_widget",
+        "blueprint.create_dialog_widget",
+        "blueprint.create_inventory_ui",
+        "blueprint.create_radial_menu",
+        "blueprint.create_credits_screen",
+        "blueprint.create_shop_ui"
+      ],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "create_widget_template"
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_main_menu",
+          "folded": {
+            "screen": "main_menu"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_pause_menu",
+          "folded": {
+            "screen": "pause_menu"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_settings_menu",
+          "folded": {
+            "screen": "settings_menu"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_loading_screen",
+          "folded": {
+            "screen": "loading_screen"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_hud_widget",
+          "folded": {
+            "screen": "hud"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_dialog_widget",
+          "folded": {
+            "screen": "dialog"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_inventory_ui",
+          "folded": {
+            "screen": "inventory"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_radial_menu",
+          "folded": {
+            "screen": "radial_menu"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_credits_screen",
+          "folded": {
+            "screen": "credits"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "create_shop_ui",
+          "folded": {
+            "screen": "shop"
+          }
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "widget-templates",
+        "topics": [
+          "create_widget_template",
+          "main menu",
+          "pause menu",
+          "settings menu",
+          "loading screen",
+          "hud",
+          "dialog box",
+          "inventory ui",
+          "radial menu",
+          "credits screen",
+          "shop ui",
+          "title screen"
+        ],
+        "summary": "Create a new Widget Blueprint holding a ready-made screen: main menu, pause menu, settings menu, loading screen, HUD, dialog box, inventory, radial menu, credits or shop.",
+        "whenToUse": [
+          "A game needs a main menu and none exists yet.",
+          "A game needs a pause menu and none exists yet.",
+          "A game needs a settings menu and none exists yet.",
+          "A game needs a loading screen and none exists yet.",
+          "A game needs a hud widget and none exists yet.",
+          "A game needs a dialog widget and none exists yet."
+        ],
+        "whenNotToUse": [
+          "The Widget Blueprint already exists (edit it with the add_* and set_* widget actions)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "name": {
+              "type": "string",
+              "description": "Name for the new Blueprint or asset."
+            },
+            "path": {
+              "type": "string",
+              "description": "Destination /Game folder for a new Widget Blueprint."
+            },
+            "title": {
+              "type": "string",
+              "description": "Title text: the heading of a menu, credits screen or tracker."
+            },
+            "buttons": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Button label."
+              },
+              "description": "Menu button labels, top to bottom; each becomes <Label>Button."
+            },
+            "settingsType": {
+              "type": "string",
+              "enum": [
+                "all",
+                "graphics",
+                "audio",
+                "controls"
+              ],
+              "description": "Which settings sections the menu holds (default all)."
+            },
+            "includeProgressBar": {
+              "type": "boolean",
+              "description": "Whether the loading screen has a progress bar (default true)."
+            },
+            "fadeTime": {
+              "type": "number",
+              "description": "Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none)."
+            },
+            "elements": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "health_bar",
+                  "ammo_counter",
+                  "crosshair",
+                  "minimap",
+                  "compass",
+                  "damage_indicator",
+                  "interaction_prompt",
+                  "objective_tracker",
+                  "quest_tracker"
+                ]
+              },
+              "description": "HUD pieces the new HUD starts with (default health_bar, crosshair, ammo_counter; [] for an empty canvas)."
+            },
+            "showSpeakerName": {
+              "type": "boolean",
+              "description": "Whether the dialog shows the speaker name line (default true)."
+            },
+            "responseCount": {
+              "type": "number",
+              "description": "Response buttons under the dialog line (0-6, default 3)."
+            },
+            "columns": {
+              "type": "number",
+              "description": "Grid columns: inventory 1-12 (default 6), shop 1-8 (default 4)."
+            },
+            "rows": {
+              "type": "number",
+              "description": "Inventory grid rows (1-12, default 4)."
+            },
+            "segmentCount": {
+              "type": "number",
+              "description": "Radial menu segments (2-12, default 8)."
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "description": "Role or section, such as Music."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name credited."
+                  }
+                },
+                "required": [
+                  "title",
+                  "name"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Credits entries in order; default is four placeholder sections."
+            },
+            "itemCount": {
+              "type": "number",
+              "description": "Shop item cards (1-48, default 8)."
+            },
+            "screen": {
+              "type": "string",
+              "enum": [
+                "main_menu",
+                "pause_menu",
+                "settings_menu",
+                "loading_screen",
+                "hud",
+                "dialog",
+                "inventory",
+                "radial_menu",
+                "credits",
+                "shop"
+              ],
+              "description": "Which create widget template variant to run."
+            }
+          },
+          "required": [
+            "action",
+            "screen",
+            "name"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "widgetCount": {
+              "type": "number",
+              "description": "Widgets in the new tree."
+            },
+            "buttons": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every Button created; wire them with bind_widget on_clicked."
+            },
+            "animationName": {
+              "type": "string",
+              "description": "Animation created with the screen (the loading screen FadeIn, the HUD damage flash)."
+            },
+            "compiled": {
+              "type": "boolean",
+              "description": "Whether the new Widget Blueprint compiled."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the new Widget Blueprint was saved."
+            }
+          },
+          "required": [
+            "success",
+            "widgetPath",
+            "widgetCount"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Create a new Widget Blueprint holding a ready-made screen: main menu, pause menu, settings menu, loading screen, HUD, dialog box, inventory, radial menu, credits or shop.",
+          "input": {
+            "action": "create_widget_template",
+            "name": "WBP_MainMenu",
+            "path": "/Game/UI",
+            "title": "My Game",
+            "buttons": [
+              "Play",
+              "Options",
+              "Quit"
+            ],
+            "screen": "main_menu"
+          },
+          "output": {
+            "success": true,
+            "widgetPath": "/Game/UI/WBP_MainMenu.WBP_MainMenu",
+            "widgetCount": 12
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "create_main_menu",
+        "dispatchBy": {
+          "param": "screen",
+          "actions": {
+            "main_menu": "create_main_menu",
+            "pause_menu": "create_pause_menu",
+            "settings_menu": "create_settings_menu",
+            "loading_screen": "create_loading_screen",
+            "hud": "create_hud_widget",
+            "dialog": "create_dialog_widget",
+            "inventory": "create_inventory_ui",
+            "radial_menu": "create_radial_menu",
+            "credits": "create_credits_screen",
+            "shop": "create_shop_ui"
+          },
+          "declaredBy": {
+            "title": [
+              "main_menu",
+              "pause_menu",
+              "credits"
+            ],
+            "buttons": [
+              "main_menu",
+              "pause_menu"
+            ],
+            "settingsType": [
+              "settings_menu"
+            ],
+            "includeProgressBar": [
+              "loading_screen"
+            ],
+            "fadeTime": [
+              "loading_screen"
+            ],
+            "elements": [
+              "hud"
+            ],
+            "showSpeakerName": [
+              "dialog"
+            ],
+            "responseCount": [
+              "dialog"
+            ],
+            "columns": [
+              "inventory",
+              "shop"
+            ],
+            "rows": [
+              "inventory"
+            ],
+            "segmentCount": [
+              "radial_menu"
+            ],
+            "entries": [
+              "credits"
+            ],
+            "itemCount": [
+              "shop"
+            ]
+          }
+        }
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "be3004b8e6e5b1eed58270b5f427da76875741c9118bc61cc6f89ffe26fa033c",
+        "content": "f56e6ab2d9f99a017293195c4de7694fac7d3a48c2b4642f758e41b16a044947"
       }
     },
     {

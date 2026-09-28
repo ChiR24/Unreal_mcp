@@ -1,5 +1,6 @@
 #include "Domains/WidgetAuthoring/McpAutomationBridge_WidgetAuthoringActions.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
+#include "Domains/WidgetAuthoring/Templates/McpAutomationBridge_WidgetAuthoringSpec.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Blueprint/UserWidget.h"
@@ -32,92 +33,42 @@ bool HandleWidgetAuthoringCreation(
     if (SubAction.Equals(TEXT("create_widget_blueprint"), ESearchCase::IgnoreCase) ||
         SubAction.Equals(TEXT("create_widget"), ESearchCase::IgnoreCase))
     {
-        FString Name = GetJsonStringField(Payload, TEXT("name"));
-        if (Name.IsEmpty())
+        if (GetJsonStringField(Payload, TEXT("name")).IsEmpty())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: name"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
-        // Accept both 'path' (preferred) and 'folder' for the destination directory
-        FString Folder = GetJsonStringField(Payload, TEXT("path"));
-        if (Folder.IsEmpty())
-        {
-            Folder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
-        }
-
-        // SECURITY: Validate folder path for traversal attacks
-        FString SanitizedFolder = SanitizeProjectRelativePath(Folder);
-        if (SanitizedFolder.IsEmpty() && !Folder.IsEmpty())
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Invalid folder path: path traversal or invalid characters detected"),
-                TEXT("SECURITY_VIOLATION"));
-            return true;
-        }
-        Folder = SanitizedFolder;
-
-        FString ParentClass = GetJsonStringField(Payload, TEXT("parentClass"), TEXT("UserWidget"));
-
-        FString FullPath = Folder / Name;
-        if (!FullPath.StartsWith(TEXT("/")))
-        {
-            FullPath = TEXT("/Game/") + FullPath;
-        }
-
-        // CRITICAL: Check if a widget blueprint with this name already exists
-        // This prevents the engine assertion crash in FKismetEditorUtilities::CreateBlueprint()
-        // which has: check(FindObject<UBlueprint>(Outer, *NewBPName.ToString()) == NULL)
-        FString NewBPObjectPath = FullPath + TEXT(".") + Name;
-        if (FindObject<UWidgetBlueprint>(nullptr, *NewBPObjectPath) != nullptr)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Widget blueprint '%s' already exists"), *Name),
-                TEXT("ALREADY_EXISTS"));
-            return true;
-        }
-
-        UPackage* Package = CreatePackage(*FullPath);
-        if (!Package)
-        {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create package"), TEXT("PACKAGE_ERROR"));
-            return true;
-        }
-
-        // Find parent class
+        // An unknown or non-widget parentClass used to fall back to UserWidget and report success.
+        const FString ParentClass = GetJsonStringField(Payload, TEXT("parentClass"), TEXT("UserWidget"));
         UClass* ParentUClass = UUserWidget::StaticClass();
         if (!ParentClass.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase))
         {
-            // Note: FindFirstObject was introduced in UE 5.1
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-            UClass* FoundClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
+            ParentUClass = FindFirstObject<UClass>(*ParentClass, EFindFirstObjectOptions::None);
 #else
-            UClass* FoundClass = ResolveClassByName(ParentClass);
+            ParentUClass = ResolveClassByName(ParentClass);
 #endif
-            if (FoundClass && FoundClass->IsChildOf(UUserWidget::StaticClass()))
+            if (!ParentUClass)
             {
-                ParentUClass = FoundClass;
+                ParentUClass = LoadClass<UUserWidget>(nullptr, *ParentClass);
+            }
+            if (!ParentUClass || !ParentUClass->IsChildOf(UUserWidget::StaticClass()))
+            {
+                Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                    TEXT("parentClass '%s' is not a UserWidget class (a native class name or a Widget Blueprint class path)."), *ParentClass),
+                    TEXT("INVALID_PARENT_CLASS"));
+                return true;
             }
         }
 
-        UWidgetBlueprint* WidgetBlueprint = Cast<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
-            ParentUClass,
-            Package,
-            FName(*Name),
-            BPTYPE_Normal,
-            UWidgetBlueprint::StaticClass(),
-            UWidgetBlueprintGeneratedClass::StaticClass()
-        ));
-
+        UWidgetBlueprint* WidgetBlueprint = McpCreateTemplateWidgetBlueprint(Subsystem, RequestId, RequestingSocket, Payload, TEXT(""), ParentUClass);
         if (!WidgetBlueprint)
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to create widget blueprint"), TEXT("CREATION_ERROR"));
             return true;
         }
+        const FString Name = WidgetBlueprint->GetName();
 
-        // Mark package dirty and notify asset registry
-        Package->MarkPackageDirty();
-        FAssetRegistryModule::AssetCreated(WidgetBlueprint);
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBlueprint);
         const bool bCompiled = McpSafeCompileBlueprint(WidgetBlueprint);
         const bool bSaved = McpSafeAssetSave(WidgetBlueprint);

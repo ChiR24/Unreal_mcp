@@ -8777,6 +8777,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Brush/image size."
         },
+        "buttons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Button label."
+          },
+          "description": "Menu button labels, top to bottom; each becomes <Label>Button."
+        },
         "category": {
           "type": "string",
           "description": "Category folder for the variable."
@@ -8801,6 +8809,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "columnCount": {
           "type": "number",
           "description": "Columns given an equal share of the width (0-64)."
+        },
+        "columns": {
+          "type": "number",
+          "description": "Grid columns: inventory 1-12 (default 6), shop 1-8 (default 4)."
         },
         "componentClass": {
           "type": "string",
@@ -8898,6 +8910,46 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which edit graph variant to run."
         },
+        "elements": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "health_bar",
+              "ammo_counter",
+              "crosshair",
+              "minimap",
+              "compass",
+              "damage_indicator",
+              "interaction_prompt",
+              "objective_tracker",
+              "quest_tracker"
+            ]
+          },
+          "description": "HUD pieces the new HUD starts with (default health_bar, crosshair, ammo_counter; [] for an empty canvas)."
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "description": "Role or section, such as Music."
+              },
+              "name": {
+                "type": "string",
+                "description": "Name credited."
+              }
+            },
+            "required": [
+              "title",
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Credits entries in order; default is four placeholder sections."
+        },
         "eventName": {
           "type": "string",
           "description": "Custom event name."
@@ -8909,6 +8961,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "explicitWrapWidth": {
           "type": "boolean",
           "description": "Use explicit wrap width."
+        },
+        "fadeTime": {
+          "type": "number",
+          "description": "Seconds of the fade: the damage flash (default 0.6) or the loading screen FadeIn animation (0 makes none)."
         },
         "fillColorAndOpacity": {
           "type": "object",
@@ -8963,6 +9019,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "includePins": {
           "type": "boolean",
           "description": "When true, graph details include per-node pins and links."
+        },
+        "includeProgressBar": {
+          "type": "boolean",
+          "description": "Whether the loading screen has a progress bar (default true)."
         },
         "info": {
           "type": "string",
@@ -9043,6 +9103,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the variable is replicated."
         },
+        "itemCount": {
+          "type": "number",
+          "description": "Shop item cards (1-48, default 8)."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Row text."
+          },
+          "description": "Rows the objective or quest tracker lists, top to bottom."
+        },
         "justification": {
           "type": "string",
           "description": "Text justification of a TextBlock or RichTextBlock: left, center or right. To centre the widget itself in its slot use set_alignment."
@@ -9050,6 +9122,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "key": {
           "type": "string",
           "description": "Localization key assigned to the text widget."
+        },
+        "keyLabel": {
+          "type": "string",
+          "description": "Key shown in the interaction prompt badge, such as E."
         },
         "kind": {
           "type": "string",
@@ -9093,6 +9169,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "mapSize": {
+          "type": "number",
+          "description": "Minimap width and height in pixels (default 220)."
+        },
         "materialPath": {
           "type": "string",
           "description": "Material asset path for a component."
@@ -9108,6 +9188,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "maxValue": {
           "type": "number",
           "description": "Maximum slider/spinbox value."
+        },
+        "maxVisibleObjectives": {
+          "type": "number",
+          "description": "Rows the objective tracker shows (1-12, default 3); longer items lists are cut to this."
         },
         "memberClass": {
           "type": "string",
@@ -9372,6 +9456,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Render opacity (0-1) applied to the widget and everything under it."
         },
+        "responseCount": {
+          "type": "number",
+          "description": "Response buttons under the dialog line (0-6, default 3)."
+        },
         "right": {
           "type": "number",
           "description": "Right margin in slate units."
@@ -9385,6 +9473,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "rowCount": {
           "type": "number",
           "description": "Rows given an equal share of the height (0-64)."
+        },
+        "rows": {
+          "type": "number",
+          "description": "Inventory grid rows (1-12, default 4)."
         },
         "saveAfterCompile": {
           "type": "boolean",
@@ -9400,6 +9492,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "screen": {
+          "type": "string",
+          "enum": [
+            "main_menu",
+            "pause_menu",
+            "settings_menu",
+            "loading_screen",
+            "hud",
+            "dialog",
+            "inventory",
+            "radial_menu",
+            "credits",
+            "shop"
+          ],
+          "description": "Which create widget template variant to run."
+        },
         "scrollBarVisibility": {
           "type": "string",
           "enum": [
@@ -9409,15 +9517,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Scroll bar visibility."
         },
+        "segmentCount": {
+          "type": "number",
+          "description": "Radial menu segments (2-12, default 8)."
+        },
         "selectedOption": {
           "type": "string",
           "description": "Selected combo box option."
+        },
+        "settingsType": {
+          "type": "string",
+          "enum": [
+            "all",
+            "graphics",
+            "audio",
+            "controls"
+          ],
+          "description": "Which settings sections the menu holds (default all)."
         },
         "shear": {
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
           "description": "Render shear."
+        },
+        "showSpeakerName": {
+          "type": "boolean",
+          "description": "Whether the dialog shows the speaker name line (default true)."
         },
         "size": {
           "type": "object",
@@ -9435,7 +9561,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "slotName": {
           "type": "string",
-          "description": "Slot name for a child widget inside its parent."
+          "description": "Name of the root widget of the piece (default: the piece name, such as HealthBar); its parts are named <slotName>_<Part>."
         },
         "slotPadding": {
           "type": "object",
@@ -9521,6 +9647,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "time": {
           "type": "number",
           "description": "Keyframe time."
+        },
+        "title": {
+          "type": "string",
+          "description": "Objective tracker heading (default OBJECTIVES) or the quest name (default Quest Name)."
         },
         "toNodeId": {
           "type": "string",
@@ -9613,6 +9743,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "spacer",
             "safe_zone",
             "widget_switcher",
+            "health_bar",
+            "ammo_counter",
+            "crosshair",
+            "minimap",
+            "compass",
+            "damage_indicator",
+            "interaction_prompt",
+            "objective_tracker",
+            "quest_tracker",
             "text_block",
             "rich_text_block",
             "image",
@@ -9671,7 +9810,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "bind_widget",
             "edit_widget_animation",
             "delete_animation",
-            "get_widget_info"
+            "get_widget_info",
+            "add_game_widget",
+            "create_widget_template"
           ],
           "description": "Action to invoke on manage_blueprint."
         }
@@ -9690,7 +9831,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "animationName": {
           "type": "string",
-          "description": "Widget animation name."
+          "description": "Animation created with the piece (the damage indicator's <slot>_Flash); play it on a hit."
         },
         "appliedValue": {
           "type": "string",
@@ -9723,6 +9864,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "bottom": {
           "type": "number",
           "description": "Bottom margin in slate units."
+        },
+        "buttons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every Button created; wire them with bind_widget on_clicked."
         },
         "canvasSlotInfo": {
           "type": "object",
@@ -10335,6 +10483,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Class name of the inspected widget."
         },
+        "widgetCount": {
+          "type": "number",
+          "description": "Widgets in the new tree."
+        },
         "widgetInfo": {
           "type": "object",
           "additionalProperties": false,
@@ -10414,6 +10566,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "widgetPath": {
           "type": "string",
           "description": "Canonical /Game Widget Blueprint asset path."
+        },
+        "widgets": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every widget created, root first; bind or restyle them by these names."
         }
       },
       "additionalProperties": true

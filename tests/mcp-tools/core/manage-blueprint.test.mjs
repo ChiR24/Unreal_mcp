@@ -313,6 +313,41 @@ const testCases = [
     expected: 'success',
   }));
 
+  const hudCases = [
+    ['HUD: add_health_bar', 'add_health_bar', { slotName: 'PlayerHealth', percent: 0.6, fillColorAndOpacity: { r: 0.1, g: 0.9, b: 0.3, a: 1 }, text: 'HP' }],
+    ['HUD: add_ammo_counter', 'add_ammo_counter', { text: '8 / 24', fontSize: 30, colorAndOpacity: { r: 1, g: 0.8, b: 0.2, a: 1 } }],
+    ['HUD: add_crosshair', 'add_crosshair', { text: 'o', fontSize: 28, colorAndOpacity: { r: 1, g: 1, b: 1, a: 0.8 } }],
+    ['HUD: add_minimap', 'add_minimap', { mapSize: 180, texturePath: ENGINE_DEFAULT_TEXTURE }],
+    ['HUD: add_compass', 'add_compass', { text: 'NE', positionX: 400, positionY: 12, sizeX: 360, sizeY: 36 }],
+    ['HUD: add_damage_indicator', 'add_damage_indicator', { colorAndOpacity: { r: 0.9, g: 0, b: 0, a: 0.5 }, fadeTime: 0.4 }],
+    ['HUD: add_interaction_prompt', 'add_interaction_prompt', { text: 'Open', keyLabel: 'F' }],
+    ['HUD: add_objective_tracker', 'add_objective_tracker', { title: 'GOALS', items: ['Find the key', 'Open the gate', 'Escape'], maxVisibleObjectives: 2 }],
+    ['HUD: add_quest_tracker', 'add_quest_tracker', { title: 'The Relic', items: ['Reach the temple'], parentSlot: 'RootCanvas' }],
+  ].map(([scenario, action, extra]) => ({
+    scenario,
+    toolName: 'manage_blueprint',
+    arguments: widgetArgs(action, extra),
+    expected: 'success',
+  }));
+
+  const screenCases = [
+    ['SCREEN: create_main_menu', 'create_main_menu', 'Main', { title: 'Test Game', buttons: ['Start', 'Options', 'Quit'] }],
+    ['SCREEN: create_pause_menu', 'create_pause_menu', 'Pause', { buttons: ['Resume', 'Quit'] }],
+    ['SCREEN: create_settings_menu', 'create_settings_menu', 'Settings', { settingsType: 'audio' }],
+    ['SCREEN: create_loading_screen', 'create_loading_screen', 'Loading', { includeProgressBar: true, fadeTime: 0.5 }],
+    ['SCREEN: create_hud_widget', 'create_hud_widget', 'Hud', { elements: ['health_bar', 'crosshair', 'damage_indicator'] }],
+    ['SCREEN: create_dialog_widget', 'create_dialog_widget', 'Dialog', { showSpeakerName: false, responseCount: 2 }],
+    ['SCREEN: create_inventory_ui', 'create_inventory_ui', 'Inventory', { columns: 5, rows: 3 }],
+    ['SCREEN: create_radial_menu', 'create_radial_menu', 'Radial', { segmentCount: 6 }],
+    ['SCREEN: create_credits_screen', 'create_credits_screen', 'Credits', { title: 'Thanks', entries: [{ title: 'Design', name: 'Ada' }, { title: 'Music', name: 'Grace' }] }],
+    ['SCREEN: create_shop_ui', 'create_shop_ui', 'Shop', { columns: 3, itemCount: 6 }],
+  ].map(([scenario, action, stem, extra]) => ({
+    scenario,
+    toolName: 'manage_blueprint',
+    arguments: { action, name: `WBP_Tpl${stem}_${ts}`, path: TEST_FOLDER, ...extra },
+    expected: 'success',
+  }));
+
   testCases.push(
     // === SETUP ===
     { scenario: 'Setup: clear stale widget test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|ASSET_NOT_FOUND|not found' },
@@ -342,6 +377,14 @@ const testCases = [
     ...bindingCases,
     { scenario: 'CONNECT: bind_text to a missing source is refused', toolName: 'manage_blueprint', arguments: widgetArgs('bind_text', { slotName: 'TitleText', bindingSource: 'NoSuchVariable' }), expected: 'error|SOURCE_NOT_FOUND' },
 
+    // === READY-MADE HUD PIECES (add_game_widget) ===
+    ...hudCases,
+    { scenario: 'HUD: a slotName already in the tree is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_health_bar', { slotName: 'PlayerHealth' }), expected: 'error|SLOT_EXISTS' },
+
+    // === READY-MADE SCREENS (create_widget_template) ===
+    ...screenCases,
+    { scenario: 'SCREEN: an existing asset is refused', toolName: 'manage_blueprint', arguments: { action: 'create_main_menu', name: `WBP_TplMain_${ts}`, path: TEST_FOLDER }, expected: 'error|ALREADY_EXISTS' },
+    { scenario: 'SCREEN: a bad knob is refused before the asset exists', toolName: 'manage_blueprint', arguments: { action: 'create_radial_menu', name: `WBP_TplBadRadial_${ts}`, path: TEST_FOLDER, segmentCount: 40 }, expected: 'error|INVALID_ARGUMENT' },
 
     // === ANIMATION ===
     { scenario: 'CREATE: create_widget_animation', toolName: 'manage_blueprint', arguments: widgetArgs('create_widget_animation', { animationName: ANIMATION_NAME, duration: 1.25 }), expected: 'success|already exists' },
