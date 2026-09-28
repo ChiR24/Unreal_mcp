@@ -3,6 +3,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/Widget.h"
 #include "Editor.h"
+#include "Kismet2/Kismet2NameValidators.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "WidgetBlueprint.h"
 
@@ -63,4 +64,32 @@ bool ValidateWidgetCreation(UWidgetBlueprint* WidgetBP, const FString& WidgetNam
     return true;
 }
 
+FString McpWidgetNameConflict(UWidgetBlueprint* WidgetBP, const FName Name, const UClass* WidgetClass)
+{
+    if (const UWidget* Existing = WidgetBP->WidgetTree->FindWidget(Name))
+    {
+        return Existing->GetClass() == WidgetClass ? FString()
+            : FString::Printf(TEXT("'%s' is already a %s in this widget tree"), *Name.ToString(), *Existing->GetClass()->GetName());
+    }
+    const FProperty* Bound = WidgetBP->ParentClass ? WidgetBP->ParentClass->FindPropertyByName(Name) : nullptr;
+    if (Bound && (Bound->HasMetaData(TEXT("BindWidget")) || Bound->HasMetaData(TEXT("BindWidgetOptional"))))
+    {
+        return FString();
+    }
+    const EValidatorResult Result = FKismetNameValidator(WidgetBP).IsValid(Name);
+    return Result == EValidatorResult::Ok ? FString() : INameValidatorInterface::GetErrorString(Name.ToString(), Result);
+}
+
+FString McpFreeWidgetName(UWidgetBlueprint* WidgetBP, const FName Name, const UClass* WidgetClass)
+{
+    for (int32 Suffix = 1; Suffix < 1000; ++Suffix)
+    {
+        const FString Candidate = FString::Printf(TEXT("%s_%d"), *Name.ToString(), Suffix);
+        if (!WidgetBP->WidgetTree->FindWidget(FName(*Candidate)) && McpWidgetNameConflict(WidgetBP, FName(*Candidate), WidgetClass).IsEmpty())
+        {
+            return Candidate;
+        }
+    }
+    return Name.ToString() + TEXT("_") + FGuid::NewGuid().ToString().Left(8);
+}
 }

@@ -10,6 +10,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord, WIDGET_PLUGINS } from './helpers.js';
 import { P } from './properties.js';
+import { LAYOUT_OUT } from './widget-layout.js';
 
 const FAMILY = 'widget-lifecycle';
 const DOMAIN = 'widget';
@@ -122,22 +123,28 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'reparent_widget',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Move a widget under a different parent widget inside a Widget Blueprint.',
-    whenToUse: ['An existing widget must move into another panel without being recreated.'],
+    summary: 'Move a widget under a different parent widget inside a Widget Blueprint, or to another position in its own parent, keeping its slot layout.',
+    whenToUse: ['An existing widget must move into another panel without being recreated.', 'Children of a panel must be reordered (same newParent, with index).'],
     whenNotToUse: ['The widget is being added for the first time (use the matching add action).'],
-    inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, newParent: P.newParent },
+    inputProps: {
+      widgetPath: P.widgetPath, slotName: P.slotName, newParent: P.newParent,
+      index: { type: 'integer', minimum: 0, description: 'Position among the children of the new parent after the move (0 = first). Without it the widget goes last.' },
+    },
     required: ['widgetPath', 'slotName', 'newParent'],
     outputProps: {
       widgetPath: P.widgetPath,
-      widget: { type: 'string', description: 'Name of the widget that was reparented.' },
+      slotName: LAYOUT_OUT.slotName,
       newParent: P.newParent,
+      index: { type: 'integer', description: 'Where the widget now sits among the children of the new parent (0 = first).' },
+      applied: LAYOUT_OUT.applied,
+      saved: LAYOUT_OUT.saved,
     },
-    outputRequired: ['widgetPath', 'widget', 'newParent'],
+    outputRequired: ['widgetPath', 'slotName', 'newParent', 'index', 'applied'],
     effect: 'write',
     latency: 'interactive',
     resources: 'low',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'reparent_widget', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', newParent: 'HeaderBox' },
-    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', widget: 'TitleText', newParent: 'HeaderBox' },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI.WBP_MainUI', slotName: 'TitleText', newParent: 'HeaderBox', index: 0 },
   }),
 ];

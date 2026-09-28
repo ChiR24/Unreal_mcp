@@ -10297,6 +10297,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the loading screen has a progress bar (default true)."
         },
+        "index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Position among the children of the new parent after the move (0 = first). Without it the widget goes last."
+        },
         "info": {
           "type": "string",
           "enum": [
@@ -11123,6 +11128,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "The widget as it is now: visibility, renderOpacity, renderTransform, slotClass, and the canvas anchors, alignment, position, size, zOrder and autoSize or the box padding and horizontal and vertical alignment."
         },
+        "appliedFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "set_style: the style fields that were written (text, fontSize, colorAndOpacity, cornerRadius...)."
+        },
         "appliedValue": {
           "type": "string",
           "description": "Literal actually stored on the pin (or the resolved object path for object/class pins)."
@@ -11418,6 +11430,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hasMore": {
           "type": "boolean",
           "description": "More matching nodes lie past this page."
+        },
+        "index": {
+          "type": "integer",
+          "description": "Where the widget now sits among the children of the new parent (0 = first)."
         },
         "inheritedComponentCount": {
           "type": "number",
@@ -11795,10 +11811,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "SelfHitTestInvisible"
           ],
           "description": "The widget's design-time Visibility, the same value set_visibility writes."
-        },
-        "widget": {
-          "type": "string",
-          "description": "Name of the widget that was reparented."
         },
         "widgetClass": {
           "type": "string",

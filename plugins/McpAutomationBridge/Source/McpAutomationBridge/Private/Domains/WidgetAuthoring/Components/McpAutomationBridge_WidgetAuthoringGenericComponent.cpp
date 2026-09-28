@@ -2,6 +2,7 @@
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringGuidRegistry.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
+#include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringValidation.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/PanelWidget.h"
@@ -91,6 +92,14 @@ bool HandleWidgetAuthoringGenericComponent(
             return true;
         }
 
+        const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*ComponentName), WidgetClass);
+        if (!NameConflict.IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                TEXT("Nothing was added: %s. Pick another componentName, e.g. '%s'."), *NameConflict, *McpFreeWidgetName(WidgetBP, FName(*ComponentName), WidgetClass)),
+                TEXT("NAME_CONFLICT"));
+            return true;
+        }
         const bool bExisted = WidgetBP->WidgetTree->FindWidget(FName(*ComponentName)) != nullptr;
         UWidget* NewWidget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(WidgetClass, *ComponentName);
         if (!NewWidget)

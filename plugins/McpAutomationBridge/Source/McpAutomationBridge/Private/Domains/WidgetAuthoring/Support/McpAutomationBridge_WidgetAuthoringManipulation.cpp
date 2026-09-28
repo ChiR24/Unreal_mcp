@@ -175,20 +175,23 @@ bool HandleWidgetAuthoringManipulation(
             return true;
         }
 
-        if (UPanelWidget* OldParent = TargetWidget->GetParent())
+        // The add funnel keeps the slot layout (padding and alignment used to reset to 0) and refuses a
+        // parent inside the widget's own subtree, a cycle UMG recursed through until the editor died.
+        if (!SafeAddWidgetToTree(WidgetBP, TargetWidget, NewParentWidget->GetName()))
         {
-            OldParent->RemoveChild(TargetWidget);
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                TEXT("'%s' cannot move under '%s', which sits inside it. Nothing was changed."), *SlotName, *NewParent), TEXT("INVALID_PARENT"));
+            return true;
         }
-        NewParentWidget->AddChild(TargetWidget);
-
-        WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
-
-        ResultJson->SetBoolField(TEXT("success"), true);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
-        ResultJson->SetStringField(TEXT("widget"), SlotName);
-        ResultJson->SetStringField(TEXT("newParent"), NewParent);
-
-        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Reparented widget"), ResultJson);
+        // index: where it lands among the new parent's children (0 = first); the same parent reorders.
+        if (Payload->HasField(TEXT("index")))
+        {
+            const int32 Index = static_cast<int32>(GetJsonNumberField(Payload, TEXT("index"), 0));
+            NewParentWidget->ShiftChild(FMath::Clamp(Index, 0, NewParentWidget->GetChildrenCount() - 1), TargetWidget);
+        }
+        ResultJson->SetStringField(TEXT("newParent"), NewParentWidget->GetName());
+        ResultJson->SetNumberField(TEXT("index"), NewParentWidget->GetChildIndex(TargetWidget));
+        ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, TargetWidget, TEXT("Reparented widget"));
         return true;
     }
 

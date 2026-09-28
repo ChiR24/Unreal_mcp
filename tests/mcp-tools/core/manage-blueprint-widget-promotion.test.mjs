@@ -50,6 +50,12 @@ const testCases = [
   { scenario: 'COMPONENT: add_widget_component placed on the canvas', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'TextBlock', componentName: 'ScoreLabel', parentName: 'RootCanvas', positionX: 32, positionY: 64, sizeX: 200, sizeY: 40, text: 'Score' }), expected: 'success' },
   { scenario: 'COMPONENT: add_widget_component names itself when unnamed', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'Button' }), expected: 'success' },
 
+  // === NAMES: a widget compiles to a member, so a taken name is refused before anything is built ===
+  { scenario: 'NAME: add_text_block named like an inherited property is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'DisplayLabel', parentSlot: 'RootCanvas', text: 'Label' }), expected: 'error|NAME_CONFLICT' },
+  { scenario: 'NAME: add_image under a text block name is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_image', { slotName: 'TitleText', parentSlot: 'RootCanvas' }), expected: 'error|NAME_CONFLICT' },
+  { scenario: 'NAME: add_widget_component under a text block name is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'Image', componentName: 'TitleText' }), expected: 'error|NAME_CONFLICT' },
+  { scenario: 'NAME: a second unnamed add gets a free name', toolName: 'manage_blueprint', arguments: widgetArgs('add_spacer', { parentSlot: 'RootCanvas' }), expected: 'success', assertions: [{ path: 'structuredContent.result.slotName', includes: 'Spacer_', label: 'the first Spacer is left alone' }] },
+
   // === STYLING ===
   { scenario: 'STYLE: set_font with an explicit face and size', toolName: 'manage_blueprint', arguments: widgetArgs('set_font', { slotName: 'TitleText', font: '/Engine/EngineFonts/Roboto.Roboto', fontSize: 32 }), expected: 'success' },
   { scenario: 'STYLE: set_font applies the default size', toolName: 'manage_blueprint', arguments: widgetArgs('set_font', { slotName: 'TitleText' }), expected: 'success' },
@@ -67,6 +73,11 @@ const testCases = [
 
   // === DESTRUCTIVE (last: these invalidate slots the cases above address) ===
   { scenario: 'ACTION: reparent_widget', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RenameMe', newParent: 'MenuColumn' }), expected: 'success' },
+  // reparent_widget keeps the slot layout and takes an index; the same parent reorders.
+  { scenario: 'Setup: second child of MenuColumn', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'OrderMe', parentSlot: 'MenuColumn', text: 'Order' }), expected: 'success' },
+  { scenario: 'Setup: pad the second child', toolName: 'manage_blueprint', arguments: widgetArgs('set_margin', { slotName: 'OrderMe', top: 34 }), expected: 'success' },
+  { scenario: 'ACTION: reparent_widget reorders within its parent and keeps the padding', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'OrderMe', newParent: 'MenuColumn', index: 0 }), expected: 'success', assertions: [{ path: 'structuredContent.result.index', equals: 0, label: 'moved to the front' }, { path: 'structuredContent.result.applied.padding.top', equals: 34, label: 'padding kept' }] },
+  { scenario: 'ACTION: reparent_widget into its own subtree is refused', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RootCanvas', newParent: 'MenuColumn' }), expected: 'error|INVALID_PARENT' },
   { scenario: 'ACTION: rename_widget', toolName: 'manage_blueprint', arguments: widgetArgs('rename_widget', { slotName: 'RenameMe', newName: 'RenamedText' }), expected: 'success' },
   { scenario: 'ACTION: remove_widget', toolName: 'manage_blueprint', arguments: widgetArgs('remove_widget', { slotName: 'RemoveMe' }), expected: 'success' },
   { scenario: 'ACTION: delete_animation', toolName: 'manage_blueprint', arguments: widgetArgs('delete_animation', { animationName: 'Anim_Doomed' }), expected: 'success|not found' },

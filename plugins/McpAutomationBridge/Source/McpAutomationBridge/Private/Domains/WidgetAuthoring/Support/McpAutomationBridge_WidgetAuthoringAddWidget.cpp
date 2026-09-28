@@ -31,11 +31,26 @@ bool AddConfiguredWidget(
         return true;
     }
 
-    const FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), DefaultSlotName);
+    FString SlotName = GetJsonStringField(Payload, TEXT("slotName"), DefaultSlotName);
     UWidgetBlueprint* WidgetBP = LoadWidgetBlueprint(WidgetPath);
     if (!WidgetBP || !WidgetBP->WidgetTree)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget blueprint not found"), TEXT("NOT_FOUND"));
+        return true;
+    }
+
+    // Unnamed, a second add is a second widget (it used to re-configure the first one); named, a
+    // taken name is refused before anything is built.
+    if (!Payload->HasField(TEXT("slotName")) && WidgetBP->WidgetTree->FindWidget(FName(*SlotName)))
+    {
+        SlotName = McpFreeWidgetName(WidgetBP, FName(*SlotName), WidgetClass);
+    }
+    const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*SlotName), WidgetClass);
+    if (!NameConflict.IsEmpty())
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+            TEXT("Nothing was added: %s. Pick another slotName, e.g. '%s'."), *NameConflict, *McpFreeWidgetName(WidgetBP, FName(*SlotName), WidgetClass)),
+            TEXT("NAME_CONFLICT"));
         return true;
     }
 
@@ -71,6 +86,14 @@ bool AddConfiguredWidget(
     FString ValidationError;
     if (!ValidateWidgetCreation(WidgetBP, SlotName, ValidationError))
     {
+        // A widget this call created comes back out, so a failed compile does not leave the Blueprint broken.
+        if (!bExisted)
+        {
+            UnregisterWidgetGuid(WidgetBP, Widget);
+            WidgetBP->WidgetTree->RemoveWidget(Widget);
+            MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+            ValidationError += TEXT(" The widget was removed again.");
+        }
         Subsystem.SendAutomationError(RequestingSocket, RequestId, ValidationError, TEXT("ENGINE_ERROR"));
         return true;
     }

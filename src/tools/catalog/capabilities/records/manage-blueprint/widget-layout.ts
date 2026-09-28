@@ -17,10 +17,11 @@ const FAMILY = 'widget-layout';
 const DOMAIN = 'widget';
 
 // Every layout setter replies with the widget's layout read back after the write.
-const LAYOUT_OUT = {
+export const LAYOUT_OUT = {
   slotName: P.slotName,
   applied: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'The widget as it is now: visibility, renderOpacity, renderTransform, slotClass, and the canvas anchors, alignment, position, size, zOrder and autoSize or the box padding and horizontal and vertical alignment.' },
   saved: { type: 'boolean', description: 'Whether the Widget Blueprint was saved.' },
+  appliedFields: { type: 'array', items: { type: 'string' }, description: 'set_style: the style fields that were written (text, fontSize, colorAndOpacity, cornerRadius...).' },
 };
 
 /**

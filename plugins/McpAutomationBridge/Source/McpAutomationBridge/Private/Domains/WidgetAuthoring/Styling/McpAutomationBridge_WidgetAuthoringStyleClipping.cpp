@@ -122,10 +122,16 @@ bool HandleWidgetAuthoringStyleClipping(
                     // Saved like set_clipping and the reflection path below: a
                     // convenience edit (text, colour, rounding, sounds) stayed dirty
                     // in memory, so an editor restart or a package build dropped it.
-                    ResultJson->SetBoolField(TEXT("saveSucceeded"), McpSafeAssetSave(WidgetBP));
+                    const bool bStyleSaved = McpSafeAssetSave(WidgetBP);
+                    ResultJson->SetBoolField(TEXT("saveSucceeded"), bStyleSaved);
+                    ResultJson->SetBoolField(TEXT("saved"), bStyleSaved);
                     ResultJson->SetStringField(TEXT("widgetName"), SlotName);
                     ResultJson->SetStringField(TEXT("widgetClass"), Widget->GetClass()->GetName());
-                    ResultJson->SetArrayField(TEXT("applied"), Applied);
+                    // `applied` is the layout object every layout setter declares; the list of style
+                    // fields written used to go there, so a successful write came back as an
+                    // OUTPUT_SCHEMA_VIOLATION error. The list now has its own field.
+                    ResultJson->SetArrayField(TEXT("appliedFields"), Applied);
+                    ResultJson->SetObjectField(TEXT("applied"), McpDescribeWidgetLayout(Widget));
                     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Style applied"), ResultJson);
                     return true;
                 }

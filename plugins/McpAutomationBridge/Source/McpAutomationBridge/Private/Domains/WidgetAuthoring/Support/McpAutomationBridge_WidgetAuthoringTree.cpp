@@ -1,7 +1,6 @@
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
 
 #include "Components/CanvasPanel.h"
-#include "Components/CanvasPanelSlot.h"
 #include "Components/PanelWidget.h"
 #include "Components/Widget.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -155,13 +154,16 @@ namespace
  *
  * The layout has to come with it. Re-adding produces a fresh slot at the panel's
  * default position, so editing a HUD label's text would silently move it to the
- * corner. Captured here and restored after the re-seat, the payload still wins
- * when the caller actually asked for new geometry.
+ * corner. The old slot is handed back so the re-seat can copy it; the payload
+ * still wins when the caller actually asked for new geometry. So are the old
+ * parent and index, to put the widget back if the re-seat is refused.
  */
 bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
-    FAnchorData& OutLayout, int32& OutZOrder, bool& bOutHadCanvasSlot)
+    UPanelSlot*& OutOldSlot, UPanelWidget*& OutOldParent, int32& OutOldIndex)
 {
-    bOutHadCanvasSlot = false;
+    OutOldSlot = nullptr;
+    OutOldParent = nullptr;
+    OutOldIndex = INDEX_NONE;
     if (!WidgetBP || !WidgetBP->WidgetTree || !NewWidget)
     {
         return false;
@@ -178,14 +180,11 @@ bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
         }
         while (Panel->GetChildIndex(NewWidget) != INDEX_NONE)
         {
-            if (!bOutHadCanvasSlot)
+            if (!OutOldSlot)
             {
-                if (const UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(NewWidget->Slot))
-                {
-                    OutLayout = CanvasSlot->GetLayout();
-                    OutZOrder = CanvasSlot->GetZOrder();
-                    bOutHadCanvasSlot = true;
-                }
+                OutOldIndex = Panel->GetChildIndex(NewWidget);
+                OutOldSlot = Panel->GetSlots()[OutOldIndex];
+                OutOldParent = Panel;
             }
             Panel->RemoveChild(NewWidget);
             bDetached = true;
@@ -200,28 +199,52 @@ bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
     }
     return bDetached;
 }
+
+// Copies every layout field the old slot shares with the new one by name and type: padding,
+// alignment and size of a box slot, a canvas slot's layout, auto-size and z-order. Only a canvas
+// layout used to survive, so a box child that was moved or re-added lost its padding silently.
+void CarrySlotLayout(const UPanelSlot* From, UPanelSlot* To)
+{
+    if (!From || !To || From == To)
+    {
+        return;
+    }
+    for (TFieldIterator<FProperty> It(To->GetClass()); It; ++It)
+    {
+        // Parent and Content, declared on UPanelSlot itself, are the slot's wiring, not its layout.
+        if (It->GetOwnerClass() == UPanelSlot::StaticClass() || It->HasAnyPropertyFlags(CPF_Transient | CPF_Deprecated))
+        {
+            continue;
+        }
+        const FProperty* Source = From->GetClass()->FindPropertyByName(It->GetFName());
+        if (Source && Source->SameType(*It))
+        {
+            It->CopyCompleteValue(It->ContainerPtrToValuePtr<void>(To), Source->ContainerPtrToValuePtr<void>(From));
+        }
+    }
+    To->SynchronizeProperties();
+}
 }
 
 bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FString& ParentSlot,
     const TSharedPtr<FJsonObject>& Payload)
 {
-    FAnchorData PreservedLayout;
-    int32 PreservedZOrder = 0;
-    bool bHadCanvasSlot = false;
-    DetachFromOwningPanel(WidgetBP, NewWidget, PreservedLayout, PreservedZOrder, bHadCanvasSlot);
+    UPanelSlot* OldSlot = nullptr;
+    UPanelWidget* OldParent = nullptr;
+    int32 OldIndex = INDEX_NONE;
+    DetachFromOwningPanel(WidgetBP, NewWidget, OldSlot, OldParent, OldIndex);
 
     if (!SeatWidgetInTree(WidgetBP, NewWidget, ParentSlot))
     {
+        // A widget that already sat somewhere goes back where it was instead of dropping out of the tree.
+        if (OldParent)
+        {
+            OldParent->InsertChildAt(OldIndex, NewWidget);
+            CarrySlotLayout(OldSlot, NewWidget->Slot);
+        }
         return false;
     }
-    if (bHadCanvasSlot)
-    {
-        if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(NewWidget->Slot))
-        {
-            CanvasSlot->SetLayout(PreservedLayout);
-            CanvasSlot->SetZOrder(PreservedZOrder);
-        }
-    }
+    CarrySlotLayout(OldSlot, NewWidget->Slot);
     // The slot only exists once the widget is seated, so geometry has to land here
     // rather than in each caller — every add path funnels through this function.
     ApplyCanvasSlotGeometry(Payload, NewWidget);

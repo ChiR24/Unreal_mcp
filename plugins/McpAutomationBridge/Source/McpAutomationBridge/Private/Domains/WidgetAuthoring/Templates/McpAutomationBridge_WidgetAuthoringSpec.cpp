@@ -3,6 +3,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/PanelWidget.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringGuidRegistry.h"
+#include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringValidation.h"
 #include "Engine/Texture2D.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Serialization/JsonReader.h"
@@ -35,7 +36,14 @@ UWidget* BuildNode(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& No
         OutError = FString::Printf(TEXT("widget spec names an unknown UMG type '%s'"), *Type);
         return nullptr;
     }
-    UWidget* Widget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(Class, FName(*SpecName(Node, SlotName)));
+    const FString Name = SpecName(Node, SlotName);
+    const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*Name), Class);
+    if (!NameConflict.IsEmpty())
+    {
+        OutError = NameConflict;
+        return nullptr;
+    }
+    UWidget* Widget = WidgetBP->WidgetTree->ConstructWidget<UWidget>(Class, FName(*Name));
     if (!Widget)
     {
         OutError = FString::Printf(TEXT("could not construct a %s"), *Type);

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "89313692b38638c1",
+  "catalogRevision": "d6e341ce1a740ef2",
   "recordCount": 384,
   "records": [
     {
@@ -15394,7 +15394,8 @@
           "A Widget Blueprint must inherit from a specific UserWidget subclass.",
           "A Widget Blueprint must be visually previewed without running PIE.",
           "A widget name must change so bindings and lookups can address it.",
-          "An existing widget must move into another panel without being recreated."
+          "An existing widget must move into another panel without being recreated.",
+          "Children of a panel must be reordered (same newParent, with index)."
         ],
         "whenNotToUse": [
           "A non-widget Blueprint is needed (use create or create_blueprint).",
@@ -15445,6 +15446,11 @@
               "type": "string",
               "description": "New parent SCS node name."
             },
+            "index": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Position among the children of the new parent after the move (0 = first). Without it the widget goes last."
+            },
             "edit": {
               "type": "string",
               "enum": [
@@ -15492,13 +15498,27 @@
               "type": "string",
               "description": "New name for a renamed variable, function, or component."
             },
-            "widget": {
+            "slotName": {
               "type": "string",
-              "description": "Name of the widget that was reparented."
+              "description": "Slot name for a child widget inside its parent."
             },
             "newParent": {
               "type": "string",
               "description": "New parent SCS node name."
+            },
+            "index": {
+              "type": "integer",
+              "description": "Where the widget now sits among the children of the new parent (0 = first)."
+            },
+            "applied": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The widget as it is now: visibility, renderOpacity, renderTransform, slotClass, and the canvas anchors, alignment, position, size, zOrder and autoSize or the box padding and horizontal and vertical alignment."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint was saved."
             }
           },
           "required": [
@@ -15588,14 +15608,17 @@
             ],
             "newParent": [
               "reparent_widget"
+            ],
+            "index": [
+              "reparent_widget"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0928a7163df801368f5bf9bded96fdcc8181ac9a1ee144c534d195ef6563eed8",
-        "content": "73a1a2eeea060c026ee509665c20ba87d1cc91c600a442354f175133879cba3a"
+        "schema": "ee0a0daae1b75f04bba5a610447949fb9562e73818ca3fcca85ba124208ec2b1",
+        "content": "3a92e2e10dab456f3e8556e438070fe703d0003183bcfe07f67cc04eef6e6e46"
       }
     },
     {
@@ -17933,6 +17956,13 @@
             "saved": {
               "type": "boolean",
               "description": "Whether the Widget Blueprint was saved."
+            },
+            "appliedFields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "set_style: the style fields that were written (text, fontSize, colorAndOpacity, cornerRadius...)."
             }
           },
           "required": [
@@ -18085,8 +18115,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "16fbd7f1f6ac96adcb971c774b008c6ae3fb466f559a103f42952de7639a6ab3",
-        "content": "ce833f9d2736de7fac45f67f1ebfc0bce47ad95be63dc3e870d44dcd639a2a9b"
+        "schema": "92e4b289e99680c8d042e119ece9929e60e252f5b02980831fb8ec36e4ab771a",
+        "content": "eb4236f9a3d92f56078e8de1d020878c181db45544c6a994bdc6f5dd84f92f5c"
       }
     },
     {

@@ -8104,6 +8104,7 @@
         "hoverSoundPath",
         "includePins",
         "includeProgressBar",
+        "index",
         "info",
         "innerSlotPadding",
         "inputActionAssetPath",
@@ -8587,6 +8588,11 @@
           "includeProgressBar": {
             "type": "boolean",
             "description": "Whether the loading screen has a progress bar (default true)."
+          },
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Position among the children of the new parent after the move (0 = first). Without it the widget goes last."
           },
           "info": {
             "type": "string",
