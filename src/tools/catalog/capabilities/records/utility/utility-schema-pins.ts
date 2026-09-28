@@ -135,6 +135,8 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   soundPath: 'Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound).',
   sourceNode: 'Source node id or name.',
   sourceNodeId: 'Source graph node id.',
+  nodeId: 'Graph node id (the id add_node returned, or one from get_metasound_graph).',
+  nodeIds: 'Several graph node ids, in place of nodeId.',
   sourceOutputName: 'Output pin name on the source node.',
   sourcePin: 'Output pin name on the source node.',
   spatialization: 'Spatialization algorithm: Default (the panner) or Binaural (HRTF). Left unchanged when omitted.',

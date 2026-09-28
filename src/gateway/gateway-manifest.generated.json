@@ -7357,6 +7357,7 @@
         "edit_metasound",
         "configure_sound_class",
         "configure_sound_attenuation",
+        "get_metasound_graph",
         "create_audio_asset",
         "get_audio_info",
         "set_dialogue_context"
@@ -7423,6 +7424,7 @@
         "name",
         "nodeClassName",
         "nodeId",
+        "nodeIds",
         "nodeType",
         "occlusionFilterScale",
         "occlusionInterpolationTime",
@@ -7573,6 +7575,8 @@
               "create",
               "add_input",
               "add_output",
+              "disconnect",
+              "remove_node",
               "set_default",
               "batch"
             ],
@@ -7759,7 +7763,16 @@
           },
           "nodeId": {
             "type": "string",
-            "description": "Set an input on this node (the nodeId add_metasound_node returned) instead of a graph input; inputName then names the node input."
+            "description": "Graph node id (the id add_node returned, or one from get_metasound_graph)."
+          },
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "Several node ids to remove in one call, in place of nodeId; every one must exist or nothing is removed."
           },
           "nodeType": {
             "type": "string",
@@ -7785,7 +7798,7 @@
               "x-unreal-reflection-boundary": true
             },
             "x-unreal-reflection-boundary": true,
-            "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+            "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
           },
           "outputName": {
             "type": "string",
@@ -7984,6 +7997,7 @@
               "edit_metasound",
               "configure_sound_class",
               "configure_sound_attenuation",
+              "get_metasound_graph",
               "create_audio_asset",
               "get_audio_info",
               "set_dialogue_context"

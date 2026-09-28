@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "c5fb91e7bb37ee5f",
-  "recordCount": 383,
+  "catalogRevision": "89313692b38638c1",
+  "recordCount": 384,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -45681,6 +45681,8 @@
         "manage_audio.add_metasound_output",
         "manage_audio.add_metasound_node",
         "manage_audio.connect_metasound_nodes",
+        "manage_audio.disconnect_metasound_nodes",
+        "manage_audio.remove_metasound_node",
         "manage_audio.set_metasound_default",
         "manage_audio.build_metasound"
       ],
@@ -45726,6 +45728,20 @@
         },
         {
           "tool": "manage_audio",
+          "action": "disconnect_metasound_nodes",
+          "folded": {
+            "edit": "disconnect"
+          }
+        },
+        {
+          "tool": "manage_audio",
+          "action": "remove_metasound_node",
+          "folded": {
+            "edit": "remove_node"
+          }
+        },
+        {
+          "tool": "manage_audio",
           "action": "set_metasound_default",
           "folded": {
             "edit": "set_default"
@@ -45751,14 +45767,14 @@
           "synth sound",
           "build metasound graph"
         ],
-        "summary": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect nodes, set input and node literals, or run many edits in one batch.",
+        "summary": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect or disconnect nodes, remove nodes, set input and node literals, or run many edits in one batch.",
         "whenToUse": [
           "Use when create a metasound asset and return its asset path.",
           "Use when add an input to a metasound graph.",
           "Use when add an output to a metasound graph.",
           "Use when add a node to a metasound graph.",
           "Use when connect two metasound graph pins.",
-          "Use when set the default of a metasound graph input, or with nodeid the literal on a node input (an oscillator frequency, an envelope time, a note array)."
+          "Use when remove a link from a metasound graph: the one into targetnodeid.targetinputname, or every link out of sourcenodeid.sourceoutputname; with both ends given, that exact link. refused when there is no such link."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -45834,7 +45850,16 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Set an input on this node (the nodeId add_metasound_node returned) instead of a graph input; inputName then names the node input."
+              "description": "Graph node id (the id add_node returned, or one from get_metasound_graph)."
+            },
+            "nodeIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 200,
+              "description": "Several node ids to remove in one call, in place of nodeId; every one must exist or nothing is removed."
             },
             "operations": {
               "type": "array",
@@ -45844,7 +45869,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+              "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
             },
             "edit": {
               "type": "string",
@@ -45854,6 +45879,8 @@
                 "add_output",
                 "add_node",
                 "connect_nodes",
+                "disconnect",
+                "remove_node",
                 "set_default",
                 "batch"
               ],
@@ -45891,6 +45918,25 @@
               "type": "string",
               "description": "Identifier of the graph node that was added."
             },
+            "edgesRemoved": {
+              "type": "number",
+              "description": "How many MetaSound links were removed."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the asset was saved to disk."
+            },
+            "removed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Ids of the nodes that were removed."
+            },
+            "removedCount": {
+              "type": "number",
+              "description": "How many nodes were removed."
+            },
             "nodeIds": {
               "type": "object",
               "description": "Batch step id -> node id for every node the batch created.",
@@ -45915,7 +45961,7 @@
       },
       "examples": [
         {
-          "title": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect nodes, set input and node literals, or run many edits in one batch.",
+          "title": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect or disconnect nodes, remove nodes, set input and node literals, or run many edits in one batch.",
           "input": {
             "action": "edit_metasound",
             "name": "MS_EngineTone",
@@ -45962,6 +46008,8 @@
             "add_output": "add_metasound_output",
             "add_node": "add_metasound_node",
             "connect_nodes": "connect_metasound_nodes",
+            "disconnect": "disconnect_metasound_nodes",
+            "remove_node": "remove_metasound_node",
             "set_default": "set_metasound_default",
             "batch": "build_metasound"
           },
@@ -45977,6 +46025,8 @@
               "add_output",
               "add_node",
               "connect_nodes",
+              "disconnect",
+              "remove_node",
               "set_default",
               "batch"
             ],
@@ -46004,19 +46054,27 @@
               "add_node"
             ],
             "sourceNodeId": [
-              "connect_nodes"
+              "connect_nodes",
+              "disconnect"
             ],
             "sourceOutputName": [
-              "connect_nodes"
+              "connect_nodes",
+              "disconnect"
             ],
             "targetNodeId": [
-              "connect_nodes"
+              "connect_nodes",
+              "disconnect"
             ],
             "targetInputName": [
-              "connect_nodes"
+              "connect_nodes",
+              "disconnect"
             ],
             "nodeId": [
+              "remove_node",
               "set_default"
+            ],
+            "nodeIds": [
+              "remove_node"
             ],
             "operations": [
               "batch"
@@ -46026,8 +46084,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "01d80585d3364d6d2d7f206e8f074d5325517e3aa2875e48ec477cccaa0ab241",
-        "content": "9c98f4dd354cddc29905872623acb985fb9669aa6a2bed092a12c28fb66bb7a8"
+        "schema": "84b3f7039cdcc2fb99d2a81f4b2e8cfbe52308e058762174972c081464f0720e",
+        "content": "a49722b3905fde24f79285e9d8285932e65afc75c2b56eb738e8003beec70c64"
       }
     },
     {
@@ -46652,7 +46710,7 @@
             },
             "nodeCount": {
               "type": "number",
-              "description": "Number of nodes in the inspected Sound Cue graph."
+              "description": "Number of nodes in the inspected Sound Cue or MetaSound graph."
             },
             "attenuationPath": {
               "type": "string",
@@ -46743,8 +46801,230 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "21ef7de02edce99476b362b4488b0f75d88c7a461ef1134effd3994603a935f2",
-        "content": "d01ef517c495b28378f2b37bca929ec8a8905480334987868dee62848b990c04"
+        "schema": "d7721e39f18730041b1432aef3272c497b5ea3faf98ef2a76ab23b9203737e9e",
+        "content": "a6fe1984119eab179b68bbe515fe30f2e868731d85c9fc4f1f2f99458c02e9f9"
+      }
+    },
+    {
+      "id": "manage_audio.get_metasound_graph",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_audio",
+          "action": "get_metasound_graph"
+        }
+      ],
+      "discovery": {
+        "domain": "audio",
+        "family": "metasound",
+        "topics": [
+          "get_metasound_graph",
+          "read metasound graph",
+          "metasound nodes",
+          "list metasound nodes",
+          "inspect metasound",
+          "metasound links"
+        ],
+        "summary": "Read a MetaSound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs.",
+        "whenToUse": [
+          "Use when read a metasound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs."
+        ],
+        "whenNotToUse": [
+          "Do not use when the required Unreal capability or target is unavailable."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "Action."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "Canonical /Game asset path."
+            }
+          },
+          "required": [
+            "action",
+            "assetPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "Full /Game path of the asset that was created, modified or inspected."
+            },
+            "nodeCount": {
+              "type": "number",
+              "description": "Number of nodes in the inspected Sound Cue or MetaSound graph."
+            },
+            "edgeCount": {
+              "type": "number",
+              "description": "Number of links in the inspected MetaSound graph."
+            },
+            "nodes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Every node: nodeId, name, className, kind (Node, GraphInput, GraphOutput, Literal, Variable...), inputs [{name, type, literal}] and outputs [{name, type}]."
+            },
+            "edges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Every link: fromNodeId, fromNode, fromPin, toNodeId, toNode, toPin."
+            },
+            "graphInputs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Inputs of the MetaSound itself: name, type and the nodeId that carries each."
+            },
+            "graphOutputs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Outputs of the MetaSound itself: name, type and the nodeId that carries each."
+            }
+          },
+          "required": [
+            "success",
+            "nodes",
+            "edges"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read a one-oscillator MetaSound",
+          "input": {
+            "action": "get_metasound_graph",
+            "assetPath": "/Game/Audio/MS_Beep"
+          },
+          "output": {
+            "success": true,
+            "assetPath": "/Game/Audio/MS_Beep.MS_Beep",
+            "nodeCount": 2,
+            "edgeCount": 1,
+            "nodes": [
+              {
+                "nodeId": "5E1F0C2A4B7D4E8F9A0B1C2D3E4F5A6B",
+                "name": "Sine",
+                "className": "UE.Sine.Audio",
+                "kind": "Node",
+                "inputs": [
+                  {
+                    "name": "Frequency",
+                    "type": "Float",
+                    "literal": "880.000000"
+                  }
+                ],
+                "outputs": [
+                  {
+                    "name": "Audio",
+                    "type": "Audio"
+                  }
+                ]
+              },
+              {
+                "nodeId": "0A1B2C3D4E5F60718293A4B5C6D7E8F9",
+                "name": "Out Mono",
+                "className": "Out Mono",
+                "kind": "GraphOutput",
+                "inputs": [
+                  {
+                    "name": "Out Mono",
+                    "type": "Audio"
+                  }
+                ],
+                "outputs": []
+              }
+            ],
+            "edges": [
+              {
+                "fromNodeId": "5E1F0C2A4B7D4E8F9A0B1C2D3E4F5A6B",
+                "fromNode": "Sine",
+                "fromPin": "Audio",
+                "toNodeId": "0A1B2C3D4E5F60718293A4B5C6D7E8F9",
+                "toNode": "Out Mono",
+                "toPin": "Out Mono"
+              }
+            ],
+            "graphInputs": [],
+            "graphOutputs": [
+              {
+                "name": "Out Mono",
+                "type": "Audio",
+                "nodeId": "0A1B2C3D4E5F60718293A4B5C6D7E8F9"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "MetaSound"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_audio",
+        "dispatchAction": "manage_audio"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "d5cf63fc9280b7fb3702b8053401d81414abc199289b2f8e8604720018423a66",
+        "content": "5adec55df7bcef9c56099732d44b6958fdd460cca3668712611ba6629319f62e"
       }
     },
     {

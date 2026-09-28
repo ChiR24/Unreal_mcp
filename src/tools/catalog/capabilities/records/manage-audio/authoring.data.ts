@@ -19,6 +19,20 @@ const BUILD_METASOUND_EXAMPLE: { readonly input: JsonObject; readonly output: Js
   },
   output: { success: true, message: 'Ran 2 MetaSound operations', nodeIds: { osc: '5E1F0C2A4B7D4E8F9A0B1C2D3E4F5A6B' } },
 };
+const SINE_ID = '5E1F0C2A4B7D4E8F9A0B1C2D3E4F5A6B';
+const OUT_ID = '0A1B2C3D4E5F60718293A4B5C6D7E8F9';
+const GET_METASOUND_GRAPH_EXAMPLE: { readonly input: JsonObject; readonly output: JsonObject } = {
+  input: { action: 'get_metasound_graph', assetPath: '/Game/Audio/MS_Beep' },
+  output: {
+    success: true, assetPath: '/Game/Audio/MS_Beep.MS_Beep', nodeCount: 2, edgeCount: 1,
+    nodes: [
+      { nodeId: SINE_ID, name: 'Sine', className: 'UE.Sine.Audio', kind: 'Node', inputs: [{ name: 'Frequency', type: 'Float', literal: '880.000000' }], outputs: [{ name: 'Audio', type: 'Audio' }] },
+      { nodeId: OUT_ID, name: 'Out Mono', className: 'Out Mono', kind: 'GraphOutput', inputs: [{ name: 'Out Mono', type: 'Audio' }], outputs: [] },
+    ],
+    edges: [{ fromNodeId: SINE_ID, fromNode: 'Sine', fromPin: 'Audio', toNodeId: OUT_ID, toNode: 'Out Mono', toPin: 'Out Mono' }],
+    graphInputs: [], graphOutputs: [{ name: 'Out Mono', type: 'Audio', nodeId: OUT_ID }],
+  },
+};
 // Every audio asset edit saves unless told not to; manage_networking shares the bare `save` pin with the opposite default.
 const SAVE = { type: 'boolean', description: 'Persist the asset to disk (default true); false leaves the change in memory only.' } as const;
 const PARENT_CLASS = { type: 'string', description: 'Canonical /Game SoundClass asset path of the parent class.' } as const;
@@ -49,9 +63,9 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     operations: {
       type: 'array', items: OBJ_ITEM, 'x-unreal-reflection-boundary': true,
       description: 'Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is '
-        + 'add_node, connect, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, '
-        + 'set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node '
-        + 'it creates; later steps use "$id" in nodeId/sourceNodeId/targetNodeId), from/to ("$id.PinName" shorthand for '
+        + 'add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, '
+        + 'disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node '
+        + 'it creates; later steps use "$id" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to ("$id.PinName" shorthand for '
         + 'connect; interface nodes such as the On Play input are named with the explicit fields).',
     },
     save: { type: 'boolean', description: 'Save the MetaSound after each step (default true); false leaves every edit in memory only.' },
@@ -63,6 +77,15 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   a('configure_reverb_send', 'Configure an audio reverb send.', ['assetPath', 'enableReverbSend', 'reverbDistanceMin', 'reverbDistanceMax', 'reverbWetLevelMin', 'reverbWetLevelMax', 'save'], ['assetPath']),
   a('configure_spatialization', 'Configure audio spatialization.', ['assetPath', 'spatialize', 'spatialization', 'save'], ['assetPath']),
   a('connect_cue_nodes', 'Connect two Sound Cue graph nodes.', ['assetPath', 'sourceNodeId', 'targetNodeId', 'childIndex', 'save'], ['assetPath', 'sourceNodeId', 'targetNodeId']),
+  withInputProps(a('remove_metasound_node', 'Remove one node, or several with nodeIds, and every link on them from a MetaSound graph; graph inputs and outputs (On Play, Out Mono) are refused. All or nothing.', ['assetPath', 'nodeId', 'nodeIds', 'save'], ['assetPath'], ['removed', 'removedCount', 'saved'], ['removed'], META, ['nodeId', 'nodeIds']), {
+    nodeIds: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 200, description: 'Several node ids to remove in one call, in place of nodeId; every one must exist or nothing is removed.' },
+  }),
+  a('disconnect_metasound_nodes', 'Remove a link from a MetaSound graph: the one into targetNodeId.targetInputName, or every link out of sourceNodeId.sourceOutputName; with both ends given, that exact link. Refused when there is no such link.', ['assetPath', 'sourceNodeId', 'sourceOutputName', 'targetNodeId', 'targetInputName', 'save'], ['assetPath'], ['edgesRemoved', 'saved'], ['edgesRemoved'], META, ['targetNodeId', 'sourceNodeId']),
+  { ...withTopics(utilityRecord({
+    tool: T, action: 'get_metasound_graph', family: 'metasound', summary: 'Read a MetaSound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs.',
+    params: ['assetPath'], required: ['assetPath'], effect: 'read', plugins: META,
+    outputs: ['assetPath', 'nodeCount', 'edgeCount', 'nodes', 'edges', 'graphInputs', 'graphOutputs'], outputRequired: ['nodes', 'edges'],
+  }), ['read metasound graph', 'metasound nodes', 'list metasound nodes', 'inspect metasound', 'metasound links']), examples: [{ title: 'Read a one-oscillator MetaSound', ...GET_METASOUND_GRAPH_EXAMPLE }] },
   a('connect_metasound_nodes', 'Connect two MetaSound graph pins.', ['assetPath', 'sourceNodeId', 'sourceOutputName', 'targetNodeId', 'targetInputName', 'save'], ['assetPath', 'sourceNodeId', 'sourceOutputName', 'targetNodeId', 'targetInputName'], [], [], META),
   a('create_attenuation_settings', 'Create attenuation settings and return the asset path.', ['name', 'path', 'innerRadius', 'falloffDistance', 'save'], ['name'], ['assetPath'], ['assetPath']),
   a('create_dialogue_voice', 'Create a Dialogue Voice asset and return its path.', ['name', 'path', 'gender', 'plurality', 'save'], ['name'], ['assetPath'], ['assetPath']),

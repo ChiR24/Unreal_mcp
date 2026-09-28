@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `c5fb91e7bb37ee5f`
+Catalog revision: `89313692b38638c1`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 383 capabilities across
+The catalog declares 384 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -43,7 +43,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect` | 16 | 11 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
-| `manage_audio` | 11 | 1 | 10 | 0 | audio |
+| `manage_audio` | 12 | 2 | 10 | 0 | audio |
 | `manage_blueprint` | 26 | 5 | 15 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-62 of 383 capabilities require consent.
+62 of 384 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -330,10 +330,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.control_sound_mix` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.control_sound_mix` `manage_audio.push_sound_mix` `manage_audio.pop_sound_mix` `manage_audio.set_base_sound_mix` `manage_audio.set_sound_mix_class_override` `manage_audio.clear_sound_mix_class_override` |
 | `manage_audio.create_audio_actor` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.create_audio_actor` `manage_audio.create_ambient_sound` `manage_audio.create_audio_component` `manage_audio.create_reverb_zone` |
 | `manage_audio.create_audio_asset` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.create_audio_asset` `manage_audio.create_sound_cue` `manage_audio.create_sound_class` `manage_audio.create_sound_mix` `manage_audio.create_attenuation_settings` `manage_audio.create_reverb_effect` `manage_audio.create_dialogue_voice` `manage_audio.create_dialogue_wave` `manage_audio.create_source_effect_chain` `manage_audio.create_submix_effect` |
-| `manage_audio.edit_metasound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_metasound` `manage_audio.create_metasound` `manage_audio.add_metasound_input` `manage_audio.add_metasound_output` `manage_audio.add_metasound_node` `manage_audio.connect_metasound_nodes` `manage_audio.set_metasound_default` `manage_audio.build_metasound` |
+| `manage_audio.edit_metasound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_metasound` `manage_audio.create_metasound` `manage_audio.add_metasound_input` `manage_audio.add_metasound_output` `manage_audio.add_metasound_node` `manage_audio.connect_metasound_nodes` `manage_audio.disconnect_metasound_nodes` `manage_audio.remove_metasound_node` `manage_audio.set_metasound_default` `manage_audio.build_metasound` |
 | `manage_audio.edit_sound_cue` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_sound_cue` `manage_audio.add_cue_node` `manage_audio.connect_cue_nodes` `manage_audio.set_cue_attenuation` `manage_audio.set_cue_concurrency` `manage_audio.set_doppler_effect` `manage_audio.add_source_effect` |
 | `manage_audio.fade_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.fade_sound` `manage_audio.fade_sound_in` `manage_audio.fade_sound_out` |
 | `manage_audio.get_audio_info` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_audio_info` |
+| `manage_audio.get_metasound_graph` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_metasound_graph` |
 | `manage_audio.play_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.play_sound` `manage_audio.play_sound_2d` `manage_audio.play_sound_at_location` `manage_audio.spawn_sound_at_location` `manage_audio.play_sound_attached` `manage_audio.prime_sound` |
 | `manage_audio.set_dialogue_context` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_dialogue_context` |
 | `manage_character.build_metahuman` | `manage_character` | `build_metahuman` | write | write | none | `manage_character.build_metahuman` |

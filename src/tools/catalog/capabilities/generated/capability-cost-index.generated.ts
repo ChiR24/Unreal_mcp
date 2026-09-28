@@ -731,12 +731,14 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_audio::create_sound_mix": "interactive|low",
   "manage_audio::create_source_effect_chain": "interactive|low",
   "manage_audio::create_submix_effect": "interactive|low",
+  "manage_audio::disconnect_metasound_nodes": "interactive|low",
   "manage_audio::edit_metasound": "interactive|low",
   "manage_audio::edit_sound_cue": "interactive|low",
   "manage_audio::fade_sound": "interactive|low",
   "manage_audio::fade_sound_in": "interactive|low",
   "manage_audio::fade_sound_out": "interactive|low",
   "manage_audio::get_audio_info": "interactive|low",
+  "manage_audio::get_metasound_graph": "interactive|low",
   "manage_audio::manage_audio": "interactive|low",
   "manage_audio::play_sound": "interactive|low",
   "manage_audio::play_sound_2d": "interactive|low",
@@ -745,6 +747,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_audio::pop_sound_mix": "interactive|low",
   "manage_audio::prime_sound": "interactive|low",
   "manage_audio::push_sound_mix": "interactive|low",
+  "manage_audio::remove_metasound_node": "interactive|low",
   "manage_audio::set_audio_occlusion": "interactive|low",
   "manage_audio::set_base_sound_mix": "interactive|low",
   "manage_audio::set_class_parent": "interactive|low",
@@ -1511,4 +1514,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1498;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1501;

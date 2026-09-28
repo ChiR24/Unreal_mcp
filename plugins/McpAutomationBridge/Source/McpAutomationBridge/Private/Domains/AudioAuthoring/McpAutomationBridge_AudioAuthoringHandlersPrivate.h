@@ -160,6 +160,9 @@ TSharedPtr<FJsonObject> HandleSoundCueDopplerAction(const FString& SubAction, co
 TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleMetaSoundNodeConnect(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+// remove_metasound_node, disconnect_metasound_nodes (MetaSound/...MetaSoundGraphEdit.cpp) and get_metasound_graph (...GraphRead.cpp).
+TSharedPtr<FJsonObject> HandleMetaSoundGraphEditActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+TSharedPtr<FJsonObject> HandleMetaSoundGraphReadAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 #if MCP_HAS_METASOUND_SEARCH_ENGINE
 bool ResolveMetaSoundNodeClassName(
 	const FString& Namespace,

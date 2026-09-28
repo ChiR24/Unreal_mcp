@@ -1,9 +1,9 @@
 // build_metasound: many MetaSound graph edits in one call. Each step is an
-// ordinary add_node / connect / set_default / add_input / add_output run by the
-// same single-call handler, so a synth voice no longer costs a round trip per
-// node, link and literal. Steps name what they create with `id`; later steps
-// refer to it as "$id" (nodeId / sourceNodeId / targetNodeId, or "$id.Pin" in
-// from/to).
+// ordinary add_node / connect / disconnect / remove_node / set_default /
+// add_input / add_output run by the same single-call handler, so a synth voice
+// no longer costs a round trip per node, link and literal. Steps name what they
+// create with `id`; later steps refer to it as "$id" (nodeId / nodeIds /
+// sourceNodeId / targetNodeId, or "$id.Pin" in from/to).
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
@@ -18,7 +18,8 @@ FString MetaSoundStepSubAction(const FString& Edit)
 	static const TMap<FString, FString> Short = {
 		{TEXT("add_node"), TEXT("add_metasound_node")}, {TEXT("connect"), TEXT("connect_metasound_nodes")},
 		{TEXT("set_default"), TEXT("set_metasound_default")}, {TEXT("add_input"), TEXT("add_metasound_input")},
-		{TEXT("add_output"), TEXT("add_metasound_output")}};
+		{TEXT("add_output"), TEXT("add_metasound_output")}, {TEXT("remove_node"), TEXT("remove_metasound_node")},
+		{TEXT("disconnect"), TEXT("disconnect_metasound_nodes")}};
 	if (const FString* Mapped = Short.Find(Edit)) { return *Mapped; }
 	for (const TPair<FString, FString>& Pair : Short)
 	{
@@ -43,13 +44,9 @@ void ExpandMetaSoundEndpoint(const TSharedPtr<FJsonObject>& Step, const TCHAR* K
 
 bool ResolveMetaSoundAliases(const TMap<FString, FString>& Aliases, const TSharedPtr<FJsonObject>& Step, FString& OutError)
 {
-	for (const TCHAR* Field : {TEXT("nodeId"), TEXT("sourceNodeId"), TEXT("targetNodeId")})
+	auto Resolve = [&Aliases, &OutError](const TCHAR* Field, FString& Ref)
 	{
-		FString Ref;
-		if (!Step->TryGetStringField(Field, Ref) || !Ref.StartsWith(TEXT("$")))
-		{
-			continue;
-		}
+		if (!Ref.StartsWith(TEXT("$"))) { return true; }
 		const FString* NodeId = Aliases.Find(Ref.RightChop(1));
 		if (!NodeId)
 		{
@@ -59,7 +56,29 @@ bool ResolveMetaSoundAliases(const TMap<FString, FString>& Aliases, const TShare
 				Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("<none>"));
 			return false;
 		}
-		Step->SetStringField(Field, *NodeId);
+		Ref = *NodeId;
+		return true;
+	};
+	for (const TCHAR* Field : {TEXT("nodeId"), TEXT("sourceNodeId"), TEXT("targetNodeId")})
+	{
+		FString Ref;
+		if (!Step->TryGetStringField(Field, Ref)) { continue; }
+		if (!Resolve(Field, Ref)) { return false; }
+		Step->SetStringField(Field, Ref);
+	}
+	// remove_node takes several nodes at once.
+	const TArray<TSharedPtr<FJsonValue>>* Refs = nullptr;
+	if (Step->TryGetArrayField(TEXT("nodeIds"), Refs) && Refs)
+	{
+		TArray<TSharedPtr<FJsonValue>> Resolved;
+		for (const TSharedPtr<FJsonValue>& Value : *Refs)
+		{
+			FString Ref;
+			if (!Value.IsValid() || !Value->TryGetString(Ref)) { Resolved.Add(Value); continue; }
+			if (!Resolve(TEXT("nodeIds"), Ref)) { return false; }
+			Resolved.Add(MakeShared<FJsonValueString>(Ref));
+		}
+		Step->SetArrayField(TEXT("nodeIds"), Resolved);
 	}
 	return true;
 }
@@ -75,7 +94,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 	if (!Params->TryGetArrayField(TEXT("operations"), Steps) || Steps->Num() == 0 || Steps->Num() > MaxMetaSoundBatchSteps)
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(
-			TEXT("build_metasound needs `operations`: 1-%d steps, each {edit: add_node|connect|set_default|add_input|add_output, ...that edit's params}"),
+			TEXT("build_metasound needs `operations`: 1-%d steps, each {edit: add_node, connect, disconnect, remove_node, set_default, add_input or add_output, ...that edit's params}"),
 			MaxMetaSoundBatchSteps));
 	}
 
@@ -96,7 +115,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 		}
 		else if (MetaSoundStepSubAction(Edit).IsEmpty())
 		{
-			Reason = FString::Printf(TEXT("edit '%s' is not add_node, connect, set_default, add_input or add_output"), *Edit);
+			Reason = FString::Printf(TEXT("edit '%s' is not add_node, connect, disconnect, remove_node, set_default, add_input or add_output"), *Edit);
 		}
 		else
 		{
@@ -120,6 +139,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 			{
 				Reply = HandleMetaSoundNodeActions(StepSubAction, Step, McpHandlerUtils::CreateResultObject());
 				if (!Reply.IsValid()) { Reply = HandleMetaSoundInterfaceActions(StepSubAction, Step, McpHandlerUtils::CreateResultObject()); }
+				if (!Reply.IsValid()) { Reply = HandleMetaSoundGraphEditActions(StepSubAction, Step, McpHandlerUtils::CreateResultObject()); }
 				if (!Reply.IsValid() || !Reply->HasField(TEXT("success")) || !Reply->GetBoolField(TEXT("success")))
 				{
 					Reason = Reply.IsValid() && Reply->HasField(TEXT("error")) ? Reply->GetStringField(TEXT("error")) : TEXT("step failed");

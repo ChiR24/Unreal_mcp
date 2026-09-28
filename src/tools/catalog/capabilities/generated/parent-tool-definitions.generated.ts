@@ -9320,6 +9320,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "add_input",
             "add_output",
+            "disconnect",
+            "remove_node",
             "set_default",
             "batch"
           ],
@@ -9506,7 +9508,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "Set an input on this node (the nodeId add_metasound_node returned) instead of a graph input; inputName then names the node input."
+          "description": "Graph node id (the id add_node returned, or one from get_metasound_graph)."
+        },
+        "nodeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 200,
+          "description": "Several node ids to remove in one call, in place of nodeId; every one must exist or nothing is removed."
         },
         "nodeType": {
           "type": "string",
@@ -9532,7 +9543,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+          "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
         },
         "outputName": {
           "type": "string",
@@ -9731,6 +9742,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "edit_metasound",
             "configure_sound_class",
             "configure_sound_attenuation",
+            "get_metasound_graph",
             "create_audio_asset",
             "get_audio_info",
             "set_dialogue_context"
@@ -9783,9 +9795,44 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Length of the inspected sound in seconds."
         },
+        "edgeCount": {
+          "type": "number",
+          "description": "Number of links in the inspected MetaSound graph."
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every link: fromNodeId, fromNode, fromPin, toNodeId, toNode, toPin."
+        },
+        "edgesRemoved": {
+          "type": "number",
+          "description": "How many MetaSound links were removed."
+        },
         "falloffDistance": {
           "type": "number",
           "description": "Distance in centimetres over which the attenuation falls off."
+        },
+        "graphInputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Inputs of the MetaSound itself: name, type and the nodeId that carries each."
+        },
+        "graphOutputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Outputs of the MetaSound itself: name, type and the nodeId that carries each."
         },
         "inserted": {
           "type": "boolean",
@@ -9801,7 +9848,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeCount": {
           "type": "number",
-          "description": "Number of nodes in the inspected Sound Cue graph."
+          "description": "Number of nodes in the inspected Sound Cue or MetaSound graph."
         },
         "nodeId": {
           "type": "string",
@@ -9817,6 +9864,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the graph node that was added or updated."
         },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every node: nodeId, name, className, kind (Node, GraphInput, GraphOutput, Literal, Variable...), inputs [{name, type, literal}] and outputs [{name, type}]."
+        },
         "numChannels": {
           "type": "number",
           "description": "Number of audio channels in the inspected Sound Wave."
@@ -9828,6 +9884,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "pitch": {
           "type": "number",
           "description": "Pitch multiplier declared by the inspected Sound Class."
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of the nodes that were removed."
+        },
+        "removedCount": {
+          "type": "number",
+          "description": "How many nodes were removed."
         },
         "results": {
           "type": "array",

@@ -14,6 +14,8 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundBatchAction(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundNodeActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundInterfaceActions(SubAction, Params, Response)) { return Result; }
+	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundGraphEditActions(SubAction, Params, Response)) { return Result; }
+	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundGraphReadAction(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleSoundClassActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleSoundMixActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleSoundMixEqActions(SubAction, Params, Response)) { return Result; }
