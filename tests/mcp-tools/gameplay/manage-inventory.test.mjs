@@ -67,6 +67,12 @@ const testCases = [
   { scenario: 'CONNECT: assign_item_category', toolName: 'manage_inventory', arguments: { action: 'assign_item_category', itemPath, categoryPath, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.itemPath', equals: EXPECTED_ITEM_PATH, label: 'category assignment item target returned' }, { path: 'structuredContent.result.categoryPath', equals: EXPECTED_CATEGORY_PATH, label: 'category assignment category target returned' }] },
 
   // === INVENTORY COMPONENT ===
+  // set_inventory_replication marks these four variables; it refuses a Blueprint that has none of them.
+  { scenario: 'Setup: add inventory variable InventorySlots', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath, variableName: 'InventorySlots', variableType: 'Integer' }, expected: 'success|already exists' },
+  { scenario: 'Setup: add inventory variable MaxSlots', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath, variableName: 'MaxSlots', variableType: 'Integer' }, expected: 'success|already exists' },
+  { scenario: 'Setup: add inventory variable CurrentWeight', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath, variableName: 'CurrentWeight', variableType: 'Float' }, expected: 'success|already exists' },
+  { scenario: 'Setup: add inventory variable MaxWeight', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath, variableName: 'MaxWeight', variableType: 'Float' }, expected: 'success|already exists' },
+  { scenario: 'CONFIG: set_inventory_replication refuses an unknown condition', toolName: 'manage_inventory', arguments: { action: 'set_inventory_replication', blueprintPath, replicated: true, replicationCondition: 'NotACondition' }, expected: 'error' },
   { scenario: 'CONFIG: set_inventory_replication', toolName: 'manage_inventory', arguments: { action: 'set_inventory_replication', blueprintPath, replicated: true, replicationCondition: 'OwnerOnly' }, expected: 'success', assertions: [{ path: 'structuredContent.result.replicated', equals: true, label: 'inventory replication enabled' }, { path: 'structuredContent.result.replicationCondition', equals: 'OwnerOnly', label: 'inventory replication condition applied' }, { path: 'structuredContent.result.modifiedVariables', length: 4, label: 'inventory variables marked for replication' }] },
 
   // === PICKUPS ===

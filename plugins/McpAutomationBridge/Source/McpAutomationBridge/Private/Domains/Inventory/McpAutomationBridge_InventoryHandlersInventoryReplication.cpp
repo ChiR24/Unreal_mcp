@@ -14,6 +14,17 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
       return true;
     }
 
+    // Resolve the condition up front: an unknown name used to replicate unconditionally (COND_None)
+    // while the caller's value was echoed back as applied. "OwnerOnly" or "COND_OwnerOnly" both name it.
+    const FString ConditionName = ReplicationCondition.StartsWith(TEXT("COND_")) ? ReplicationCondition : TEXT("COND_") + ReplicationCondition;
+    const int64 Condition = StaticEnum<ELifetimeCondition>()->GetValueByNameString(ConditionName);
+    if (Condition == INDEX_NONE) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("Unknown replicationCondition '%s'; use an ELifetimeCondition name such as None, OwnerOnly, SkipOwner, SimulatedOnly or InitialOnly."), *ReplicationCondition),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
     TArray<FString> ReplicatedVariables;
 
     TArray<FName> InventoryVarNames = {
@@ -37,15 +48,21 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
           Var.PropertyFlags |= CPF_Net;
           Var.RepNotifyFunc = NAME_None; // Can be set to a custom function name
 
-          // "OwnerOnly" names COND_OwnerOnly; anything unknown replicates unconditionally.
-          const int64 Condition = StaticEnum<ELifetimeCondition>()->GetValueByNameString(TEXT("COND_") + ReplicationCondition);
-          Var.ReplicationCondition = Condition == INDEX_NONE ? COND_None : static_cast<ELifetimeCondition>(Condition);
+          Var.ReplicationCondition = static_cast<ELifetimeCondition>(Condition);
         } else {
           Var.PropertyFlags &= ~CPF_Net;
           Var.ReplicationCondition = COND_None;
         }
         ReplicatedVariables.Add(Var.VarName.ToString());
       }
+    }
+
+    // Nothing to change used to answer success with modifiedVariables:[].
+    if (ReplicatedVariables.Num() == 0) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          TEXT("The Blueprint has none of the inventory variables this action replicates (InventorySlots, MaxSlots, CurrentWeight, MaxWeight); add them first with manage_blueprint add_variable."),
+          TEXT("NOT_FOUND"));
+      return true;
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
