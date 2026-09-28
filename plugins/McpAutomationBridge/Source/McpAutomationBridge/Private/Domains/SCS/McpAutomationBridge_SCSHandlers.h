@@ -24,6 +24,10 @@ public:
                      const FString &ComponentName);
 
   static TSharedPtr<FJsonObject>
+  RemoveSCSComponents(const FString &BlueprintPath,
+                      const TArray<FString> &ComponentNames);
+
+  static TSharedPtr<FJsonObject>
   ReparentSCSComponent(const FString &BlueprintPath,
                        const FString &ComponentName,
                        const FString &NewParentName);
