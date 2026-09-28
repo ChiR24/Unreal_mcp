@@ -11071,6 +11071,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Keys on the last channel written after this call."
         },
+        "layout": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "The widget layout for any slot kind: visibility, renderOpacity, renderTransform, slotClass, then canvas anchors, alignment, position, size, zOrder and autoSize, or box padding, horizontal and vertical alignment and the sizeRule (Auto or Fill) with its fillValue."
+        },
         "left": {
           "type": "number",
           "description": "Left margin in slate units."

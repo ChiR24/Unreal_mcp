@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b30866f74f7c3799",
+  "catalogRevision": "2428b896360660d9",
   "recordCount": 382,
   "records": [
     {
@@ -15748,6 +15748,12 @@
               "type": "string",
               "description": "Class name of the slot holding the widget (omitted when the widget occupies no slot)."
             },
+            "layout": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The widget layout for any slot kind: visibility, renderOpacity, renderTransform, slotClass, then canvas anchors, alignment, position, size, zOrder and autoSize, or box padding, horizontal and vertical alignment and the sizeRule (Auto or Fill) with its fillValue."
+            },
             "canvasSlotInfo": {
               "type": "object",
               "additionalProperties": false,
@@ -15907,8 +15913,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c389a1e087b07e281ee7efb46f9352d068f4d0034645dd6e37b2a198508a4e47",
-        "content": "be0fa897ffaa07b2301ce23794183e15cfd2983a9c3cbc5d947f408d06a3818c"
+        "schema": "b9aa334dfde18107695d6157528909655eec8b061466888a0145a924d7922a46",
+        "content": "5308a57db53bb3d49f7e12bf7329d8eefdd811d7af84a8ae0813c9c8a565963c"
       }
     },
     {

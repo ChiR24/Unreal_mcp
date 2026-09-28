@@ -270,6 +270,10 @@ bool HandleWidgetAuthoringManipulation(
             }
         }
 
+        // Every slot kind read back the same way the layout setters report it; canvasSlotInfo
+        // alone left box, overlay and border children with no padding, alignment or size rule.
+        ResultJson->SetObjectField(TEXT("layout"), McpDescribeWidgetLayout(TargetWidget));
+
         if (UPanelWidget* Parent = TargetWidget->GetParent())
         {
             ResultJson->SetStringField(TEXT("parentName"), Parent->GetName());

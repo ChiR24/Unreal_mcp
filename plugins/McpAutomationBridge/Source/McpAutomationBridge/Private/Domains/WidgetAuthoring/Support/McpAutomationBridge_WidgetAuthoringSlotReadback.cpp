@@ -3,6 +3,7 @@
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
 #include "Components/PanelSlot.h"
+#include "Components/SlateWrapperTypes.h"
 #include "Components/Widget.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -114,6 +115,14 @@ TSharedPtr<FJsonObject> McpDescribeWidgetLayout(const UWidget* Widget)
             PaddingJson->SetNumberField(TEXT("bottom"), Margin.Bottom);
             Out->SetObjectField(TEXT("padding"), PaddingJson);
         }
+    }
+    // Horizontal and vertical box children share the row by an Auto or Fill size rule.
+    const FStructProperty* SizeRule = FindFProperty<FStructProperty>(Slot->GetClass(), TEXT("Size"));
+    if (SizeRule && SizeRule->Struct == FSlateChildSize::StaticStruct())
+    {
+        const FSlateChildSize& ChildSize = *SizeRule->ContainerPtrToValuePtr<FSlateChildSize>(Slot);
+        Out->SetStringField(TEXT("sizeRule"), ChildSize.SizeRule == ESlateSizeRule::Fill ? TEXT("Fill") : TEXT("Auto"));
+        Out->SetNumberField(TEXT("fillValue"), ChildSize.Value);
     }
     if (const FByteProperty* HAlign = FindFProperty<FByteProperty>(Slot->GetClass(), TEXT("HorizontalAlignment")))
     {

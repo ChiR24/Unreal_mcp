@@ -91,6 +91,7 @@ export const WIDGET_INFO_RECORDS: readonly CapabilityRecordSource[] = [
       isVisible: { type: 'boolean', description: 'Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden).' },
       visibility: { type: 'string', enum: ['Visible', 'Collapsed', 'Hidden', 'HitTestInvisible', 'SelfHitTestInvisible'], description: 'The widget\'s design-time Visibility, the same value set_visibility writes.' },
       slotClass: { type: 'string', description: 'Class name of the slot holding the widget (omitted when the widget occupies no slot).' },
+      layout: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'The widget layout for any slot kind: visibility, renderOpacity, renderTransform, slotClass, then canvas anchors, alignment, position, size, zOrder and autoSize, or box padding, horizontal and vertical alignment and the sizeRule (Auto or Fill) with its fillValue.' },
       canvasSlotInfo: {
         type: 'object',
         additionalProperties: false,
