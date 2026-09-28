@@ -127,9 +127,12 @@ AActor *McpFindOrSpawnActor(UClass *ActorClass, const FString &ActorName, const 
                                    const FRotator &Rotation, bool *bOutSpawned = nullptr);
 UActorComponent *McpFindComponentByClass(AActor *Actor, UClass *ComponentClass);
 UActorComponent *McpFindOrAddComponent(AActor *Actor, UClass *ComponentClass, const FString &ComponentName);
+// Finds the actor named by targetActor, actorName, waterBodyName or name (else DefaultActorName, or with
+// bFirstOfClassWhenUnnamed the level's first actor of the class), spawning it when missing, then configures it.
 bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const FString &ActorClassPath,
                                           const FString &DefaultActorName, const FString &ComponentClassPath,
-                                          TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode);
+                                          TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode,
+                                          bool bFirstOfClassWhenUnnamed = false, AActor **OutActor = nullptr);
 ALandscape *McpFindLandscape(const TSharedPtr<FJsonObject> &Payload);
 bool McpResolveProjectFilePath(const FString &InputPath, FString &OutAbsolutePath, FString &OutSafePath, FString &OutError);
 bool McpGetLandscapeExtentForEnvironmentAction(ALandscape *Landscape, int32 &OutMinX, int32 &OutMinY, int32 &OutMaxX, int32 &OutMaxY);
@@ -150,7 +153,8 @@ bool McpCreateLandscapeLayerInfo(const TSharedPtr<FJsonObject> &Payload, TShared
 bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FString &DefaultName,
                                       TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode);
 ALandscape *McpFindLandscapeForEnvironmentAction(const TSharedPtr<FJsonObject> &Payload);
-AActor *McpFindOrSpawnEnvironmentActor(const TSharedPtr<FJsonObject> &Payload, UClass *ActorClass, const FString &DefaultActorName);
+AActor *McpFindOrSpawnEnvironmentActor(const TSharedPtr<FJsonObject> &Payload, UClass *ActorClass, const FString &DefaultActorName,
+                                        bool bFirstOfClassWhenUnnamed = false);
 // Applies payload settings onto Target and reports them on Resp; returns how many applied.
 int32 McpApplyEnvironmentSettings(UObject *Target, const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp);
 AActor *McpFindActorFromEnvironmentPayload(const TSharedPtr<FJsonObject> &Payload);
@@ -206,7 +210,8 @@ void MarkActorConfigurationResult(FEnvironmentBuildContext &Context, bool bResul
                                           const FString &Message, const FString &ErrorCode);
 bool ConfigureEnvironmentActor(FEnvironmentBuildContext &Context, const FString &ActorClassPath,
                                       const FString &DefaultActorName,
-                                      const FString &ComponentClassPath = FString());
+                                      const FString &ComponentClassPath = FString(),
+                                      bool bFirstOfClassWhenUnnamed = false);
 bool HandleBuildSnapshotAndDeletionAction(const FString &LowerSub, FEnvironmentBuildContext &Context);
 bool HandleBuildSnapshotAction(const FString &LowerSub, FEnvironmentBuildContext &Context);
 bool HandleBuildLandscapeAndFoliageAction(const FString &LowerSub, FEnvironmentBuildContext &Context);

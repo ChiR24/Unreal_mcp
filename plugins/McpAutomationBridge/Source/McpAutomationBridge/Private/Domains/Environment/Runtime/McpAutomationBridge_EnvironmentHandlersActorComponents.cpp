@@ -118,7 +118,8 @@ UActorComponent *McpFindOrAddComponent(AActor *Actor, UClass *ComponentClass, co
 }
 bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const FString &ActorClassPath,
                                           const FString &DefaultActorName, const FString &ComponentClassPath,
-                                          TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode)
+                                          TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode,
+                                          bool bFirstOfClassWhenUnnamed, AActor **OutActor)
 {
     UClass *ActorClass = LoadClass<AActor>(nullptr, *ActorClassPath);
     if (!ActorClass)
@@ -134,8 +135,15 @@ bool McpConfigureActorAndComponent(const TSharedPtr<FJsonObject> &Payload, const
     const FRotator Rotation = ExtractRotatorField(Payload, TEXT("rotation"), FRotator::ZeroRotator);
     const FString EffectiveActorName = ActorName.IsEmpty() ? DefaultActorName : ActorName;
     bool bSpawned = false;
-    AActor *Actor = McpFindOrSpawnActor(ActorClass, EffectiveActorName, Location, Rotation, &bSpawned);
+    // Unnamed, a configure targets the level's actor of this kind; the default label only names a
+    // new one. Matching that label exactly spawned a second actor beside one labelled otherwise.
+    AActor *Actor = ActorName.IsEmpty() && bFirstOfClassWhenUnnamed ? McpFindActorByNameOrClass(ActorClass, FString()) : nullptr;
+    Actor = Actor ? Actor : McpFindOrSpawnActor(ActorClass, EffectiveActorName, Location, Rotation, &bSpawned);
     const bool bExistedBefore = !bSpawned;
+    if (OutActor)
+    {
+        *OutActor = Actor;
+    }
     if (!Actor)
     {
         OutMessage = FString::Printf(TEXT("Failed to create or find actor for class: %s"), *ActorClassPath);

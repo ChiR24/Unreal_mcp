@@ -13,13 +13,25 @@ import { P } from './properties.js';
 
 const F = 'water';
 const WU = ['A water body or water simulation must be created or configured.'];
+// A create finds the body by waterBodyName (or name) and spawns it when missing; material
+// and collision go on that body.
+const BODY = {
+  name: P.name, waterBodyName: P.waterBodyName, location: P.location,
+  rotation: { ...P.rotation, description: 'Water body rotation, applied on every call.' },
+  materialPath: P.materialPath, materialIndex: P.materialIndex,
+  collisionEnabled: { ...P.collisionEnabled, description: 'Collision on the body\'s primitive components: true = query and physics, false = none.' },
+  settings: P.actorSettings,
+};
+// The configure variants target the body named by waterBodyName, else the first ocean,
+// lake, river or custom body in the level.
+const TARGET = { waterBodyName: { ...P.waterBodyName, description: 'Water body to configure; the first ocean, lake, river or custom body when omitted.' } };
 
 export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.create_water_body_ocean', action: 'create_water_body_ocean', family: F,
     summary: 'Create an ocean water body actor.',
     whenToUse: WU, whenNotToUse: ['A lake or river water body is needed.'],
-    inputProps: { name: P.name, waterBodyName: P.waterBodyName, location: P.location, materialPath: P.materialPath },
+    inputProps: BODY,
     required: [], effect: 'write', latency: 'interactive', resources: 'medium',
     exampleInput: { action: 'create_water_body_ocean', name: 'Ocean_1', location: { x: 0, y: 0, z: 0 } },
   }),
@@ -27,7 +39,7 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.create_water_body_lake', action: 'create_water_body_lake', family: F,
     summary: 'Create a lake water body actor.',
     whenToUse: WU, whenNotToUse: ['An ocean or river water body is needed.'],
-    inputProps: { name: P.name, waterBodyName: P.waterBodyName, location: P.location, materialPath: P.materialPath },
+    inputProps: BODY,
     required: [], effect: 'write', latency: 'interactive', resources: 'medium',
     exampleInput: { action: 'create_water_body_lake', name: 'Lake_1', location: { x: 0, y: 0, z: 100 } },
   }),
@@ -35,7 +47,7 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.create_water_body_river', action: 'create_water_body_river', family: F,
     summary: 'Create a river water body actor.',
     whenToUse: WU, whenNotToUse: ['An ocean or lake water body is needed.'],
-    inputProps: { name: P.name, waterBodyName: P.waterBodyName, location: P.location, materialPath: P.materialPath },
+    inputProps: BODY,
     required: [], effect: 'write', latency: 'interactive', resources: 'medium',
     exampleInput: { action: 'create_water_body_river', name: 'River_1', location: { x: 0, y: 0, z: 50 } },
   }),
@@ -43,7 +55,7 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.create_water_body_custom', action: 'create_water_body_custom', family: F,
     summary: 'Create a custom water body actor.',
     whenToUse: WU, whenNotToUse: ['A standard ocean/lake/river body is sufficient.'],
-    inputProps: { name: P.name, waterBodyName: P.waterBodyName, location: P.location, materialPath: P.materialPath },
+    inputProps: BODY,
     required: [], effect: 'write', latency: 'interactive', resources: 'medium',
     exampleInput: { action: 'create_water_body_custom', name: 'CustomWater_1' },
   }),
@@ -52,15 +64,15 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Configure water wave settings (height, length, amplitude).',
     whenToUse: WU, whenNotToUse: ['Default waves are sufficient.'],
     inputProps: { waveHeight: P.waveHeight, waveLength: P.waveLength,
-      amplitude: P.amplitude, steepness: P.steepness, speed: P.speed, direction: P.direction },
+      amplitude: P.amplitude, steepness: P.steepness, direction: P.direction, ...TARGET },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'configure_water_waves', waveHeight: 1.0, waveLength: 10, speed: 1.0 },
+    exampleInput: { action: 'configure_water_waves', waveHeight: 1.0, waveLength: 10 },
   }),
   buildRecord({
     id: 'build_environment.configure_water_material', action: 'configure_water_material', family: F,
     summary: 'Configure the material applied to a water body.',
     whenToUse: WU, whenNotToUse: ['Default water material is sufficient.'],
-    inputProps: { materialPath: P.materialPath, settings: P.settings },
+    inputProps: { materialPath: P.materialPath, materialIndex: P.materialIndex, settings: P.settings, ...TARGET },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_water_material', materialPath: '/Game/Materials/M_Water' },
   }),
@@ -68,7 +80,7 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'build_environment.configure_water_collision', action: 'configure_water_collision', family: F,
     summary: 'Configure water collision settings.',
     whenToUse: WU, whenNotToUse: ['Default collision is sufficient.'],
-    inputProps: { collisionEnabled: P.collisionEnabled, settings: P.settings },
+    inputProps: { collisionEnabled: P.collisionEnabled, settings: P.settings, ...TARGET },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_water_collision', collisionEnabled: true },
   }),

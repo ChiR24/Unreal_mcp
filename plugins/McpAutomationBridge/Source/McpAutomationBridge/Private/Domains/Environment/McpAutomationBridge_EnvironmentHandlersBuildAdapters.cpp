@@ -13,7 +13,8 @@ bool ConfigureEnvironmentActor(
     FEnvironmentBuildContext &Context,
     const FString &ActorClassPath,
     const FString &DefaultActorName,
-    const FString &ComponentClassPath)
+    const FString &ComponentClassPath,
+    bool bFirstOfClassWhenUnnamed)
 {
     FString Message;
     FString ErrorCode;
@@ -24,7 +25,8 @@ bool ConfigureEnvironmentActor(
         ComponentClassPath,
         Context.Resp,
         Message,
-        ErrorCode);
+        ErrorCode,
+        bFirstOfClassWhenUnnamed);
     if (bResult && !ComponentClassPath.IsEmpty())
     {
         FString ComponentPath;

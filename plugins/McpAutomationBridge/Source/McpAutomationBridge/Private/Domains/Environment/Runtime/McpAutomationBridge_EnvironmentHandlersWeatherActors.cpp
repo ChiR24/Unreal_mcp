@@ -70,7 +70,9 @@ bool McpConfigureParticleEmitter(const TSharedPtr<FJsonObject> &Payload, const F
 bool McpConfigureSunPosition(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                     FString &OutMessage, FString &OutErrorCode)
 {
-    AActor *SunActor = McpFindOrSpawnEnvironmentActor(Payload, ADirectionalLight::StaticClass(), TEXT("SunLight"));
+    // Unnamed, the level's existing sun is moved; exact-matching "SunLight" spawned a second one
+    // beside a sun labelled DirectionalLight.
+    AActor *SunActor = McpFindOrSpawnEnvironmentActor(Payload, ADirectionalLight::StaticClass(), TEXT("SunLight"), true);
     if (!SunActor)
     {
         OutMessage = TEXT("Failed to create or find directional light");
@@ -104,19 +106,35 @@ bool McpConfigureSunPosition(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     OutMessage = TEXT("Sun position configured");
     return true;
 }
+namespace {
+// A setting or material the body could not take fails the call instead of hiding in the reply.
+bool McpWaterBodyEditFailed(const TSharedPtr<FJsonObject> &Resp, FString &OutMessage, FString &OutErrorCode)
+{
+    const TArray<TSharedPtr<FJsonValue>> *Errors = nullptr;
+    const bool bSettingErrors = Resp->TryGetArrayField(TEXT("configurationErrors"), Errors) && Errors && Errors->Num() > 0;
+    if (!bSettingErrors && !Resp->HasField(TEXT("materialError")))
+    {
+        return false;
+    }
+    OutMessage = TEXT("The water body exists but not every setting applied; see configurationErrors and materialError");
+    OutErrorCode = TEXT("CONFIGURATION_FAILED");
+    return true;
+}
+}
 bool McpConfigureWaterBody(const TSharedPtr<FJsonObject> &Payload, const FString &ClassPath, const FString &DefaultName,
                                   TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode)
 {
-    const bool bCreatedOrFound = McpConfigureActorAndComponent(Payload, ClassPath, DefaultName, FString(), Resp, OutMessage, OutErrorCode);
-    if (bCreatedOrFound)
+    // Material and collision go on the body this call made or found; a fresh lookup by name
+    // returned the level's first ocean for an unnamed lake.
+    AActor *WaterActor = nullptr;
+    const bool bCreatedOrFound = McpConfigureActorAndComponent(Payload, ClassPath, DefaultName, FString(), Resp, OutMessage, OutErrorCode,
+                                                               false, &WaterActor);
+    if (bCreatedOrFound && WaterActor)
     {
-        if (AActor *WaterActor = McpFindWaterBodyActor(Payload))
-        {
-            McpSetMaterialOnActor(WaterActor, Payload, Resp);
-            McpSetCollisionOnActor(WaterActor, Payload, Resp);
-        }
+        McpSetMaterialOnActor(WaterActor, Payload, Resp);
+        McpSetCollisionOnActor(WaterActor, Payload, Resp);
     }
-    return bCreatedOrFound;
+    return bCreatedOrFound && !McpWaterBodyEditFailed(Resp, OutMessage, OutErrorCode);
 }
 bool McpConfigureWaterBodyActor(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                        FString &OutMessage, FString &OutErrorCode)
@@ -136,6 +154,10 @@ bool McpConfigureWaterBodyActor(const TSharedPtr<FJsonObject> &Payload, TSharedP
     WaterActor->MarkPackageDirty();
     Resp->SetStringField(TEXT("waterBodyName"), WaterActor->GetActorLabel());
     Resp->SetStringField(TEXT("actorPath"), WaterActor->GetPathName());
+    if (McpWaterBodyEditFailed(Resp, OutMessage, OutErrorCode))
+    {
+        return false;
+    }
     McpHandlerUtils::AddVerification(Resp, WaterActor);
     OutMessage = TEXT("Water body configured");
     return true;

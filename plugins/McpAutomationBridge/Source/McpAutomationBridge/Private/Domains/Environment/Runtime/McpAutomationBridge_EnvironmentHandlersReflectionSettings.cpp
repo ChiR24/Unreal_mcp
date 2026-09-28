@@ -1,4 +1,5 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
+#include "Engine/TextureCube.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -128,6 +129,24 @@ int32 McpApplyPayloadSettings(UObject *Target, const TSharedPtr<FJsonObject> &Pa
             SkyComp->MarkPackageDirty();
             AppliedProperties.Add(TEXT("Intensity"));
             SkyApplied = 1;
+        }
+        // cubemapPath names no property (it is Cubemap, and it needs SourceType set too), so it
+        // was never applied. Handled on the component pass only, not again for its actor.
+        FString CubemapPath;
+        if (SkyComp == Target && Payload->TryGetStringField(TEXT("cubemapPath"), CubemapPath) && !CubemapPath.IsEmpty())
+        {
+            if (UTextureCube *Cubemap = LoadObject<UTextureCube>(nullptr, *CubemapPath))
+            {
+                SkyComp->Modify();
+                SkyComp->SourceType = ESkyLightSourceType::SLS_SpecifiedCubemap;
+                SkyComp->SetCubemap(Cubemap);
+                AppliedProperties.Add(TEXT("Cubemap"));
+                ++SkyApplied;
+            }
+            else
+            {
+                FailedProperties.Add(FString::Printf(TEXT("cubemapPath: no cube texture at %s"), *CubemapPath));
+            }
         }
     }
 

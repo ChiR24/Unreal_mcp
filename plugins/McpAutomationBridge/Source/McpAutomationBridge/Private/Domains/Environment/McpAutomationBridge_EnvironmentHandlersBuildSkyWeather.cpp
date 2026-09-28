@@ -11,6 +11,10 @@ TSharedPtr<FJsonObject> MakeSkyRigPayload(
     RigPayload->RemoveField(TEXT("targetActor"));
     RigPayload->RemoveField(TEXT("waterBodyName"));
     RigPayload->RemoveField(TEXT("name"));
+    // One rotation or settings object cannot fit the atmosphere, sun and sky light at once:
+    // settings keys one of them lacks failed the whole rig.
+    RigPayload->RemoveField(TEXT("rotation"));
+    RigPayload->RemoveField(TEXT("settings"));
     RigPayload->SetStringField(TEXT("actorName"), ActorName);
     return RigPayload;
 }
@@ -143,27 +147,28 @@ bool HandleBuildSkyWeatherAction(const FString &LowerSub, FEnvironmentBuildConte
     if (LowerSub == TEXT("configure_sky_atmosphere"))
     {
         return ConfigureEnvironmentActor(Context, TEXT("/Script/Engine.SkyAtmosphere"),
-            TEXT("SkyAtmosphere"), TEXT("/Script/Engine.SkyAtmosphereComponent"));
+            TEXT("SkyAtmosphere"), TEXT("/Script/Engine.SkyAtmosphereComponent"), true);
     }
     if (LowerSub == TEXT("configure_sky_light"))
     {
         return ConfigureEnvironmentActor(Context, TEXT("/Script/Engine.SkyLight"),
-            TEXT("SkyLight"), TEXT("/Script/Engine.SkyLightComponent"));
+            TEXT("SkyLight"), TEXT("/Script/Engine.SkyLightComponent"), true);
     }
     if (LowerSub == TEXT("configure_directional_light_atmosphere"))
     {
         return ConfigureEnvironmentActor(Context, TEXT("/Script/Engine.DirectionalLight"),
-            TEXT("DirectionalLight"), TEXT("/Script/Engine.DirectionalLightComponent"));
+            TEXT("DirectionalLight"), TEXT("/Script/Engine.DirectionalLightComponent"), true);
     }
     if (LowerSub == TEXT("create_fog_volume") || LowerSub == TEXT("configure_exponential_height_fog"))
     {
         return ConfigureEnvironmentActor(Context, TEXT("/Script/Engine.ExponentialHeightFog"),
-            TEXT("ExponentialHeightFog"), TEXT("/Script/Engine.ExponentialHeightFogComponent"));
+            TEXT("ExponentialHeightFog"), TEXT("/Script/Engine.ExponentialHeightFogComponent"),
+            LowerSub == TEXT("configure_exponential_height_fog"));
     }
     if (LowerSub == TEXT("configure_volumetric_cloud"))
     {
         return ConfigureEnvironmentActor(Context, TEXT("/Script/Engine.VolumetricCloud"),
-            TEXT("VolumetricCloud"), TEXT("/Script/Engine.VolumetricCloudComponent"));
+            TEXT("VolumetricCloud"), TEXT("/Script/Engine.VolumetricCloudComponent"), true);
     }
     if (LowerSub == TEXT("create_weather_system") || LowerSub == TEXT("configure_rain_particles"))
     {
@@ -189,7 +194,7 @@ bool HandleBuildSkyWeatherAction(const FString &LowerSub, FEnvironmentBuildConte
     if (LowerSub == TEXT("configure_wind"))
     {
         return ConfigureEnvironmentActor(Context, TEXT("/Script/Engine.WindDirectionalSource"),
-            TEXT("WindDirectionalSource"), TEXT("/Script/Engine.WindDirectionalSourceComponent"));
+            TEXT("WindDirectionalSource"), TEXT("/Script/Engine.WindDirectionalSourceComponent"), true);
     }
     if (LowerSub == TEXT("create_time_of_day_system"))
     {
