@@ -72,7 +72,7 @@ export const SKELETON_PHYSICS_MORPH_RECORDS: readonly CapabilityRecordSource[] =
       skeletalMeshPath: P.skeletalMeshPath,
       sourceMeshPath: { type: 'string', description: 'Skeletal mesh that owns the morph targets (its LOD 0 source data).' },
       morphTargets: { type: 'array', items: { type: 'string' }, description: 'Names to import (default all the source mesh has in its source data).' },
-      lodIndex: A.lodIndex, save: A.save,
+      lodIndex: A.lodIndex, dropRenderOnlyMorphs: A.dropRenderOnlyMorphs, save: A.save,
     },
     required: ['skeletalMeshPath', 'sourceMeshPath'], effect: 'write', behavior: { longRunning: true }, latency: 'long-running', resources: 'high', plugins: ESU,
     outputProps: {
@@ -80,7 +80,7 @@ export const SKELETON_PHYSICS_MORPH_RECORDS: readonly CapabilityRecordSource[] =
       replaced: { type: 'array', items: { type: 'string' }, description: 'Morph targets the mesh already had and were replaced.' },
       builtMorphTargets: { type: 'array', items: { type: 'string' }, description: 'Imported names that exist as morph targets after the rebuild.' },
       unmatchedVertices: { type: 'number', description: 'Vertices farther than 2% of the source size from any source vertex.' },
-      morphTargetsDropped: { type: 'array', items: { type: 'string' }, description: 'Render-only morph targets the rebuild removed.' },
+      morphTargetsDropped: { type: 'array', items: { type: 'string' }, description: 'Render-only morph targets the rebuild removed, only with dropRenderOnlyMorphs true.' },
       saved: { type: 'boolean', description: 'Whether the mesh was saved.' },
     },
     exampleInput: { action: 'import_morph_targets', skeletalMeshPath: '/Game/Characters/SK_Head', sourceMeshPath: '/Game/Characters/SK_Head_Sculpt', morphTargets: ['Smile'] } }),

@@ -75,7 +75,13 @@ bool CommitTransferredWeights(UMcpAutomationBridgeSubsystem* Subsystem, const FS
 {
     FString Error;
     FString Code;
-    Result->SetArrayField(TEXT("morphTargetsDropped"), McpSkinSource::RenderOnlyMorphs(Mesh, Before));
+    TArray<TSharedPtr<FJsonValue>> Dropped;
+    if (!McpSkinSource::CheckRenderOnlyMorphs(Mesh, Before, GetJsonBoolField(Payload, TEXT("dropRenderOnlyMorphs"), false), Dropped, Error))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("RENDER_ONLY_MORPHS"));
+        return true;
+    }
+    Result->SetArrayField(TEXT("morphTargetsDropped"), Dropped);
     McpSkinSource::FSourceMesh Written;
     if (!McpSkinSource::Write(Mesh, LOD, After, true, {}, Error) || !McpSkinSource::Read(Mesh, LOD, false, Written, Code, Error))
     {

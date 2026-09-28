@@ -281,6 +281,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Drag coefficient."
         },
+        "dropRenderOnlyMorphs": {
+          "type": "boolean",
+          "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+        },
         "edit": {
           "type": "string",
           "enum": [
@@ -1421,17 +1425,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Render-only morph targets (made by set_morph_target_deltas) the rebuild removed; import_morph_targets writes morphs that survive."
+              "description": "Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive."
             },
             {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Render-only morph targets the rebuild removed."
+              "description": "Render-only morph targets the rebuild removed, only with dropRenderOnlyMorphs true."
             }
           ],
-          "description": "Render-only morph targets (made by set_morph_target_deltas) the rebuild removed; import_morph_targets writes morphs that survive."
+          "description": "Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive."
         },
         "numBodies": {
           "type": "number",

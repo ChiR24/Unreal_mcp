@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8b5ebf48d9f3705f",
+  "catalogRevision": "04be411f10c66646",
   "recordCount": 382,
   "records": [
     {
@@ -3454,6 +3454,10 @@
               },
               "description": "Names to import (default all the source mesh has in its source data)."
             },
+            "dropRenderOnlyMorphs": {
+              "type": "boolean",
+              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+            },
             "actorName": {
               "type": "string",
               "description": "Target actor name in the current level."
@@ -3539,7 +3543,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Render-only morph targets the rebuild removed."
+              "description": "Render-only morph targets the rebuild removed, only with dropRenderOnlyMorphs true."
             },
             "saved": {
               "type": "boolean",
@@ -3670,6 +3674,9 @@
             "morphTargets": [
               "import"
             ],
+            "dropRenderOnlyMorphs": [
+              "import"
+            ],
             "actorName": [
               "set_value"
             ],
@@ -3684,8 +3691,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "458ddbe8ecbf41cfa86f46330346f941c247c791b7eb5812e6e45e042658482b",
-        "content": "5b61bb50583845df99ded943e9f868bf99eb93fbe482eac4357fd9eb54a0a9b1"
+        "schema": "07610052e16d1cb24beb51dc71dcabd89df89a4002cf0d97a66407113fde21f3",
+        "content": "3f4f4c25172d58bd3cc8c162277f9508402a4d1394bec8da8e7ec50e3636e325"
       }
     },
     {
@@ -4590,6 +4597,10 @@
               "type": "string",
               "description": "Skeletal mesh whose weights are replaced in place."
             },
+            "dropRenderOnlyMorphs": {
+              "type": "boolean",
+              "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
+            },
             "axis": {
               "type": "string",
               "description": "Symmetry axis in mesh space: X (default), Y or Z."
@@ -4647,7 +4658,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Render-only morph targets (made by set_morph_target_deltas) the rebuild removed; import_morph_targets writes morphs that survive."
+              "description": "Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive."
             },
             "saved": {
               "type": "boolean",
@@ -4791,6 +4802,11 @@
             "targetMeshPath": [
               "copy"
             ],
+            "dropRenderOnlyMorphs": [
+              "copy",
+              "mirror",
+              "prune"
+            ],
             "axis": [
               "mirror"
             ],
@@ -4805,8 +4821,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "60a5df3b4a5f29cf1bdf4dda862ef10e6e590cec5cbecde3f652ba82fcf02c9b",
-        "content": "9906f122a144a9f1e8f4d72c07e9cf10cb773b71947eaa3a9a1bb0bffc3b0bfb"
+        "schema": "8c17667891218dcaa20349a480258dd1bd3c310ae43d61160ebd77bb60983e9a",
+        "content": "da2a8fd468ed3a07964161b07d2cc4593230722274a62436d202f77117e7964c"
       }
     },
     {

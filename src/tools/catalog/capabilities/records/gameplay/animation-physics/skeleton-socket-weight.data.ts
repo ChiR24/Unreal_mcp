@@ -16,7 +16,7 @@ const MESH_REQUIRED = ['skeletalMeshPath'];
 // What every source-data weight edit reports: per-bone influenced-vertex counts, morphs a rebuild dropped, the save.
 const TRANSFER_OUT = {
   boneVertexCounts: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'before and after: bone name to the number of vertices it influences, read back from the source data.' },
-  morphTargetsDropped: { type: 'array', items: { type: 'string' }, description: 'Render-only morph targets (made by set_morph_target_deltas) the rebuild removed; import_morph_targets writes morphs that survive.' },
+  morphTargetsDropped: { type: 'array', items: { type: 'string' }, description: 'Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive.' },
   saved: { type: 'boolean', description: 'Whether the mesh was saved.' },
 };
 
@@ -53,7 +53,7 @@ export const SKELETON_SOCKET_WEIGHT_RECORDS: readonly CapabilityRecordSource[] =
     inputProps: {
       sourceMeshPath: str('Skinned mesh to copy the weights FROM (its LOD 0).'),
       targetMeshPath: str('Skeletal mesh whose weights are replaced in place.'),
-      lodIndex: A.lodIndex, save: A.save,
+      lodIndex: A.lodIndex, dropRenderOnlyMorphs: A.dropRenderOnlyMorphs, save: A.save,
     },
     required: ['sourceMeshPath', 'targetMeshPath'], effect: 'write', behavior: { longRunning: true }, latency: 'long-running', resources: 'high', plugins: ESU,
     outputProps: { ...TRANSFER_OUT, verticesWritten: num('Target vertices that took new weights.'), verticesFarFromSource: num('Target vertices farther than 2% of the source size from any source vertex; check those areas.'), unmappedBones: { type: 'array', items: { type: 'string' }, description: 'Source bones the target lacks; their weight went to the nearest parent bone it has.' } },
@@ -66,7 +66,7 @@ export const SKELETON_SOCKET_WEIGHT_RECORDS: readonly CapabilityRecordSource[] =
       skeletalMeshPath: P.skeletalMeshPath,
       axis: str('Symmetry axis in mesh space: X (default), Y or Z.'),
       direction: str('positive_to_negative (default: the positive side is copied onto the negative side) or negative_to_positive.'),
-      lodIndex: A.lodIndex, save: A.save,
+      lodIndex: A.lodIndex, dropRenderOnlyMorphs: A.dropRenderOnlyMorphs, save: A.save,
     },
     required: MESH_REQUIRED, effect: 'write', behavior: { longRunning: true }, latency: 'long-running', resources: 'high', plugins: ESU,
     outputProps: { ...TRANSFER_OUT, verticesMirrored: num('Vertices that took the mirrored weights.'), unmatchedVertices: num('Destination-side vertices with no mirror partner; they kept their weights.'), bonePairs: { type: 'array', items: { type: 'object', properties: { from: { type: 'string', description: 'Bone.' }, to: { type: 'string', description: 'Its opposite-side bone.' } }, additionalProperties: false }, description: 'Left and right bone pairs that were swapped.' } },
@@ -75,7 +75,7 @@ export const SKELETON_SOCKET_WEIGHT_RECORDS: readonly CapabilityRecordSource[] =
     topics: ['prune weights', 'remove small influences', 'clean skin weights'],
     summary: 'Remove skin influences below a weight threshold (each vertex keeps its strongest bone) and renormalize; a mesh with nothing below it is left untouched.',
     whenToUse: ['Auto-skinning or a transfer left tiny noisy influences.'], whenNotToUse: ['Joints should stay soft; a high threshold stiffens them.'],
-    inputProps: { skeletalMeshPath: P.skeletalMeshPath, threshold: num('Influences below this weight are removed, above 0 and below 0.5 (default 0.01).'), lodIndex: A.lodIndex, save: A.save },
+    inputProps: { skeletalMeshPath: P.skeletalMeshPath, threshold: num('Influences below this weight are removed, above 0 and below 0.5 (default 0.01).'), lodIndex: A.lodIndex, dropRenderOnlyMorphs: A.dropRenderOnlyMorphs, save: A.save },
     required: MESH_REQUIRED, effect: 'write', behavior: { idempotency: 'idempotent', longRunning: true }, latency: 'long-running', resources: 'high', plugins: ESU,
     outputProps: { influencesRemoved: num('Influences removed.'), verticesChanged: num('Vertices that lost an influence.'), maxInfluencesBefore: num('Most influences on one vertex before.'), maxInfluencesAfter: num('Most influences on one vertex after.'), morphTargetsDropped: TRANSFER_OUT.morphTargetsDropped, saved: TRANSFER_OUT.saved },
     exampleInput: { action: 'prune_weights', skeletalMeshPath: '/Game/Characters/SK_Hero', threshold: 0.02 } }),

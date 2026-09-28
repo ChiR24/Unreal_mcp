@@ -90,6 +90,7 @@
         "depth",
         "direction",
         "dragCoefficient",
+        "dropRenderOnlyMorphs",
         "edit",
         "element",
         "enableRootMotion",
@@ -479,6 +480,10 @@
           "dragCoefficient": {
             "type": "number",
             "description": "Drag coefficient."
+          },
+          "dropRenderOnlyMorphs": {
+            "type": "boolean",
+            "description": "The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false)."
           },
           "edit": {
             "type": "string",

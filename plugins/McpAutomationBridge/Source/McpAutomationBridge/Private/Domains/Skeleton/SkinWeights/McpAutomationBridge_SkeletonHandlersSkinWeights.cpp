@@ -45,17 +45,24 @@ TSharedPtr<FJsonObject> BoneVertexCounts(const FSourceMesh& Mesh)
     return Json;
 }
 
-TArray<TSharedPtr<FJsonValue>> RenderOnlyMorphs(USkeletalMesh* Mesh, const FSourceMesh& Source)
+bool CheckRenderOnlyMorphs(USkeletalMesh* Mesh, const FSourceMesh& Source, bool bAllowDrop, TArray<TSharedPtr<FJsonValue>>& OutDropped, FString& OutError)
 {
-    TArray<TSharedPtr<FJsonValue>> Names;
+    TArray<FString> Names;
     for (const UMorphTarget* Morph : Mesh->GetMorphTargets())
     {
         if (Morph && !Source.Morphs.Contains(Morph->GetFName()))
         {
-            Names.Add(MakeShared<FJsonValueString>(Morph->GetName()));
+            Names.Add(Morph->GetName());
+            OutDropped.Add(MakeShared<FJsonValueString>(Morph->GetName()));
         }
     }
-    return Names;
+    if (bAllowDrop || Names.Num() == 0)
+    {
+        return true;
+    }
+    OutError = FString::Printf(TEXT("%s has morph targets that exist only in its render data (%s). This edit rebuilds the mesh from its source data, which deletes them, so nothing was changed. Pass dropRenderOnlyMorphs true to accept losing them."),
+        *Mesh->GetName(), *FString::Join(Names, TEXT(", ")));
+    return false;
 }
 
 float BoundsDiagonal(const TArray<FVector3f>& Positions)
@@ -122,7 +129,13 @@ bool HandlePruneWeightsAction(UMcpAutomationBridgeSubsystem* Subsystem, const FS
     // Nothing under the threshold: no rebuild and no save, so a repeat call is free.
     if (Removed > 0)
     {
-        Result->SetArrayField(TEXT("morphTargetsDropped"), McpSkinSource::RenderOnlyMorphs(Mesh, Source));
+        TArray<TSharedPtr<FJsonValue>> Dropped;
+        if (!McpSkinSource::CheckRenderOnlyMorphs(Mesh, Source, GetJsonBoolField(Payload, TEXT("dropRenderOnlyMorphs"), false), Dropped, Error))
+        {
+            Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("RENDER_ONLY_MORPHS"));
+            return true;
+        }
+        Result->SetArrayField(TEXT("morphTargetsDropped"), Dropped);
         if (!McpSkinSource::Write(Mesh, LOD, Source, true, {}, Error))
         {
             Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("WRITE_FAILED"));

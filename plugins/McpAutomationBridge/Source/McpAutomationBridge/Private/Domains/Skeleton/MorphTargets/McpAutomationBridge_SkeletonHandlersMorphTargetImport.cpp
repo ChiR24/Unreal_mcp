@@ -81,6 +81,7 @@ bool HandleImportMorphTargetsAction(UMcpAutomationBridgeSubsystem* Subsystem, co
     }
     TArray<TSharedPtr<FJsonValue>> Imported;
     TArray<TSharedPtr<FJsonValue>> Replaced;
+    TArray<FString> Empty;
     for (const FName& Name : Wanted)
     {
         const TArray<FVector3f>& SourceDeltas = Source.Morphs[Name];
@@ -97,19 +98,39 @@ bool HandleImportMorphTargetsAction(UMcpAutomationBridgeSubsystem* Subsystem, co
         Entry->SetStringField(TEXT("name"), Name.ToString());
         Entry->SetNumberField(TEXT("verticesAffected"), Affected);
         Imported.Add(MakeShared<FJsonValueObject>(Entry));
+        if (Affected == 0) Empty.Add(Name.ToString());
+    }
+    // A morph that moves no vertex here would build nothing; refused before anything is written.
+    if (Empty.Num() > 0)
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("%s would move no vertex of %s: the nearest vertices of %s do not move in them. Nothing was changed; leave them out of morphTargets or use a source mesh shaped like this one."),
+            *FString::Join(Empty, TEXT(", ")), *TargetMesh->GetName(), *SourceMesh->GetName()), TEXT("MORPH_NOT_BUILT"));
+        return true;
+    }
+    TArray<TSharedPtr<FJsonValue>> Dropped;
+    if (!McpSkinSource::CheckRenderOnlyMorphs(TargetMesh, Target, GetJsonBoolField(Payload, TEXT("dropRenderOnlyMorphs"), false), Dropped, Error))
+    {
+        Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("RENDER_ONLY_MORPHS"));
+        return true;
     }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetArrayField(TEXT("morphTargetsDropped"), McpSkinSource::RenderOnlyMorphs(TargetMesh, Target));
+    Result->SetArrayField(TEXT("morphTargetsDropped"), Dropped);
     if (!McpSkinSource::Write(TargetMesh, LOD, Target, false, Wanted, Error))
     {
         Subsystem->SendAutomationError(Socket, RequestId, Error, TEXT("WRITE_FAILED"));
         return true;
     }
-    // The rebuild turns the source-data morphs into UMorphTarget objects; read them back.
+    // The rebuild turns the source-data morphs into UMorphTarget objects; read them back. A morph whose deltas all
+    // came out zero on this mesh builds nothing, so the import is only a success when every wanted morph exists.
     TArray<TSharedPtr<FJsonValue>> Built;
-    for (const UMorphTarget* Morph : TargetMesh->GetMorphTargets())
+    TArray<FString> NotBuilt;
+    for (const FName& Name : Wanted)
     {
-        if (Morph && Wanted.Contains(Morph->GetFName())) Built.Add(MakeShared<FJsonValueString>(Morph->GetName()));
+        bool bBuilt = false;
+        for (const UMorphTarget* Morph : TargetMesh->GetMorphTargets()) bBuilt |= Morph && Morph->GetFName() == Name;
+        if (bBuilt) Built.Add(MakeShared<FJsonValueString>(Name.ToString()));
+        else NotBuilt.Add(Name.ToString());
     }
     Result->SetArrayField(TEXT("imported"), Imported);
     Result->SetArrayField(TEXT("replaced"), Replaced);
@@ -118,6 +139,13 @@ bool HandleImportMorphTargetsAction(UMcpAutomationBridgeSubsystem* Subsystem, co
     Result->SetStringField(TEXT("skeletalMeshPath"), TargetMesh->GetPathName());
     Result->SetBoolField(TEXT("saved"), GetJsonBoolField(Payload, TEXT("save"), true) && SaveIfRequested(TargetMesh, Payload));
     McpHandlerUtils::AddVerification(Result, TargetMesh);
+    if (NotBuilt.Num() > 0)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+            TEXT("The rebuild of %s produced no morph target for %s although their deltas were written; check the mesh's morph target import settings. The other morphs were imported."),
+            *TargetMesh->GetName(), *FString::Join(NotBuilt, TEXT(", "))), Result, TEXT("MORPH_NOT_BUILT"));
+        return true;
+    }
     Subsystem->SendAutomationResponse(Socket, RequestId, true, FString::Printf(
         TEXT("Imported %d morph targets from %s into %s (%d built)"), Wanted.Num(), *SourceMesh->GetName(), *TargetMesh->GetName(), Built.Num()), Result);
     return true;

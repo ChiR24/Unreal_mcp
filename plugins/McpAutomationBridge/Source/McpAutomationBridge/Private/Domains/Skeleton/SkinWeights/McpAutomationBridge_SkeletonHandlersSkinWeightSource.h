@@ -39,7 +39,8 @@ FName MapBone(const FReferenceSkeleton& SourceRef, const TArray<FName>& TargetBo
 // Bone name -> number of vertices it influences.
 TSharedPtr<FJsonObject> BoneVertexCounts(const FSourceMesh& Mesh);
 // Morph targets the mesh renders that its source data lacks (Source read with morphs): a rebuild drops them.
-TArray<TSharedPtr<FJsonValue>> RenderOnlyMorphs(USkeletalMesh* Mesh, const FSourceMesh& Source);
+// Call before any Write: false, with OutError naming them, when there are some and bAllowDrop is false.
+bool CheckRenderOnlyMorphs(USkeletalMesh* Mesh, const FSourceMesh& Source, bool bAllowDrop, TArray<TSharedPtr<FJsonValue>>& OutDropped, FString& OutError);
 // Length of the diagonal of the bounds of Positions.
 float BoundsDiagonal(const TArray<FVector3f>& Positions);
 

@@ -17,6 +17,10 @@ const TEST_ANIM_SEQUENCE_PATH = `${TEST_FOLDER}/Testanimation_sequence`;
 // The bare test skeleton carries no preview mesh, so retargeting and skinning
 // are pointed at an engine skeletal mesh instead of inferring one.
 const TEST_SKELETAL_MESH_PATH = '/Engine/EngineMeshes/SkeletalCube';
+// The engine's tutorial mannequin: a humanoid whose IK Rig auto-characterizes into retarget chains.
+const TEST_HUMANOID_MESH_PATH = '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP';
+const TEST_CHAIN_IK_RIG_PATH = `${TEST_FOLDER}/Testik_rig_humanoid`;
+const TEST_CHAIN_RETARGETER_PATH = `${TEST_FOLDER}/Testik_retargeter_humanoid`;
 
 const testCases = [
 // === SETUP ===
@@ -93,8 +97,14 @@ const testCases = [
 { scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
 { scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'success|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
 // The test IK Rig carries no retarget chains, so auto-mapping succeeds with what exists and a named chain is refused.
-{ scenario: 'CONFIG: set_retarget_chain_mapping auto-maps the chains', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_IK_RETARGETER_PATH, autoMap: true, save: true }, expected: 'success|RIGS_NOT_SET|ASSET_NOT_FOUND', assertions: [{ path: 'structuredContent.result.mapping', minLength: 0, label: 'mapping read back' }] },
-{ scenario: 'CONFIG: set_retarget_chain_mapping to a chain the rig lacks is refused', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_IK_RETARGETER_PATH, targetChain: 'NoSuchChain', sourceChain: 'None' }, expected: 'error|CHAIN_NOT_FOUND|RIGS_NOT_SET|ASSET_NOT_FOUND' },
+// The rig above is built on a bare skeleton and has no retarget chains, so auto-mapping has nothing to map.
+{ scenario: 'CONFIG: set_retarget_chain_mapping on rigs without chains is refused', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_IK_RETARGETER_PATH, autoMap: true }, expected: 'error|NO_RETARGET_CHAINS' },
+{ scenario: 'SETUP: IK Rig with retarget chains from a humanoid mesh', toolName: 'animation_physics', arguments: { action: 'create_ik_rig', name: 'Testik_rig_humanoid', path: TEST_FOLDER, skeletalMeshPath: TEST_HUMANOID_MESH_PATH, save: true }, expected: 'success|already exists' },
+{ scenario: 'SETUP: retargeter between the humanoid rigs', toolName: 'animation_physics', arguments: { action: 'create_ik_retargeter', name: 'Testik_retargeter_humanoid', path: TEST_FOLDER, sourceIKRigPath: TEST_CHAIN_IK_RIG_PATH, targetIKRigPath: TEST_CHAIN_IK_RIG_PATH, save: true }, expected: 'success|already exists' },
+{ scenario: 'CONFIG: set_retarget_chain_mapping auto-maps the chains', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_CHAIN_RETARGETER_PATH, autoMap: true, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.mapping', includesObject: { targetChain: 'LeftArm', sourceChain: 'LeftArm' }, label: 'same-named chain mapped and read back' }] },
+{ scenario: 'CONFIG: set_retarget_chain_mapping maps one chain', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_CHAIN_RETARGETER_PATH, targetChain: 'LeftArm', sourceChain: 'RightArm', save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.mapping', includesObject: { targetChain: 'LeftArm', sourceChain: 'RightArm' }, label: 'mapping reads back the set source chain' }] },
+{ scenario: 'CONFIG: set_retarget_chain_mapping clears one chain', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_CHAIN_RETARGETER_PATH, targetChain: 'LeftArm', sourceChain: 'None', save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.mapping', includesObject: { targetChain: 'LeftArm', sourceChain: 'None' }, label: 'chain reads back unmapped' }] },
+{ scenario: 'CONFIG: set_retarget_chain_mapping to a chain the rig lacks is refused', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_CHAIN_RETARGETER_PATH, targetChain: 'NoSuchChain', sourceChain: 'None' }, expected: 'error|CHAIN_NOT_FOUND' },
 // Retargeting through an explicit retargeter, with both proportion meshes named
 // rather than inferred from the skeletons' preview meshes.
 { scenario: 'ACTION: setup_retargeting', toolName: 'animation_physics', arguments: {"action": "setup_retargeting", "sourceSkeleton": TEST_SKELETON_PATH, "targetSkeleton": TEST_SKELETON_PATH, "assets": [TEST_ANIM_SEQUENCE_PATH], "savePath": TEST_FOLDER, "suffix": "_Retargeted", "overwrite": true, "sourceMesh": TEST_SKELETAL_MESH_PATH, "targetMesh": TEST_SKELETAL_MESH_PATH, "retargeterPath": TEST_IK_RETARGETER_PATH}, expected: 'success|NOT_SUPPORTED|ASSET_NOT_FOUND|not found' },
@@ -256,6 +266,9 @@ const testCases = [
   const RENAMED_VIRTUAL_BONE = `VB_McpRenamed_${ts}`;
   const SOCKET_NAME = `McpSocket_${ts}`;
   const MORPH_TARGET_NAME = `McpMorph_${ts}`;
+  const RENDER_ONLY_MORPH = `McpRenderOnly_${ts}`;
+  const HUMANOID_MESH_PATH = '/Engine/Tutorial/SubEditors/TutorialAssets/Character/TutorialTPP';
+  const MIRROR_MESH_PATH = `${TEST_FOLDER}/SK_MirrorEdit_${ts}`;
   const PROFILE_NAME = `McpWeights_${ts}`;
   const WEIGHT_MESH_PATH = `${TEST_FOLDER}/SK_WeightEdit_${ts}`;
 
@@ -263,6 +276,8 @@ const testCases = [
     // === SETUP ===
     { scenario: 'Setup: create test folder', toolName: 'manage_asset', arguments: { action: 'create_folder', path: TEST_FOLDER }, expected: 'success|already exists' },
     { scenario: 'Setup: create test skeleton', toolName: 'animation_physics', arguments: { action: 'create_skeleton', path: SKELETON_PATH, rootBoneName: ROOT_BONE, save: true }, expected: 'success|already exists' },
+    // Copied before the cases below edit the engine cube in memory, so the copy starts with no render-only morphs.
+    { scenario: 'Setup: copy the skeletal cube to edit its weights', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: SKELETAL_MESH_PATH, destinationPath: WEIGHT_MESH_PATH }, expected: 'success|already exists' },
 
     // === SKELETON STRUCTURE ===
     { scenario: 'ADD: add child bone', toolName: 'animation_physics', arguments: { action: 'add_bone', skeletonPath: SKELETON_PATH, boneName: CHILD_BONE, parentBoneName: ROOT_BONE, location: [10, 0, 0], rotation: [0, 0, 0], scale: 1, save: true }, expected: 'success|already exists' },
@@ -307,16 +322,21 @@ const testCases = [
     { scenario: 'CONFIG: set morph target deltas', toolName: 'animation_physics', arguments: { action: 'set_morph_target_deltas', skeletalMeshPath: SKELETAL_MESH_PATH, morphTargetName: MORPH_TARGET_NAME, deltas: [{ vertexIndex: 0, positionDelta: { x: 0, y: 0, z: 2 } }], save: false }, expected: 'success' },
 
     // === SOURCE-DATA SKIN WEIGHTS AND MORPHS (edited on a copy, never on the engine mesh) ===
-    { scenario: 'Setup: copy the skeletal cube to edit its weights', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: SKELETAL_MESH_PATH, destinationPath: WEIGHT_MESH_PATH }, expected: 'success|already exists' },
-    { scenario: 'ACTION: copy_weights from the cube onto its copy', toolName: 'animation_physics', arguments: { action: 'copy_weights', sourceMeshPath: SKELETAL_MESH_PATH, targetMeshPath: WEIGHT_MESH_PATH, lodIndex: 0, save: false }, expected: 'success', timeoutMs: 60000, assertions: [{ path: 'structuredContent.result.verticesWritten', gte: 1, label: 'every vertex took weights' }, { path: 'structuredContent.result.verticesFarFromSource', equals: 0, label: 'same shape: every vertex had a partner' }] },
+    { scenario: 'ACTION: copy_weights from the cube onto its copy', toolName: 'animation_physics', arguments: { action: 'copy_weights', sourceMeshPath: SKELETAL_MESH_PATH, targetMeshPath: WEIGHT_MESH_PATH, lodIndex: 0, save: false }, expected: 'success', timeoutMs: 60000, assertions: [{ path: 'structuredContent.result.verticesWritten', gte: 1, label: 'every vertex took weights' }, { path: 'structuredContent.result.verticesFarFromSource', equals: 0, label: 'same shape: every vertex had a partner' }, { path: 'structuredContent.result.morphTargetsDropped', length: 0, label: 'nothing to drop' }] },
     { scenario: 'ACTION: copy_weights onto the same mesh is refused', toolName: 'animation_physics', arguments: { action: 'copy_weights', sourceMeshPath: WEIGHT_MESH_PATH, targetMeshPath: WEIGHT_MESH_PATH }, expected: 'error|SAME_MESH' },
-    { scenario: 'ACTION: mirror_weights on a mesh with no left and right bones is refused', toolName: 'animation_physics', arguments: { action: 'mirror_weights', skeletalMeshPath: WEIGHT_MESH_PATH, axis: 'X', direction: 'positive_to_negative', lodIndex: 0, save: false }, expected: 'error|NO_SIDE_BONES' },
+    // A render-only morph on the copy would be deleted by the rebuild: refused unless the caller accepts the loss.
+    { scenario: 'Setup: render-only morph on the weight copy', toolName: 'animation_physics', arguments: { action: 'create_morph_target', skeletalMeshPath: WEIGHT_MESH_PATH, morphTargetName: RENDER_ONLY_MORPH, deltas: [{ vertexIndex: 0, positionDelta: { x: 0, y: 0, z: 1 } }], save: false }, expected: 'success' },
+    { scenario: 'ACTION: copy_weights onto a mesh with render-only morphs is refused', toolName: 'animation_physics', arguments: { action: 'copy_weights', sourceMeshPath: SKELETAL_MESH_PATH, targetMeshPath: WEIGHT_MESH_PATH, dropRenderOnlyMorphs: false, save: false }, expected: 'error|RENDER_ONLY_MORPHS' },
+    { scenario: 'ACTION: copy_weights from a humanoid maps its bones onto the cube bones', toolName: 'animation_physics', arguments: { action: 'copy_weights', sourceMeshPath: HUMANOID_MESH_PATH, targetMeshPath: WEIGHT_MESH_PATH, dropRenderOnlyMorphs: true, save: false }, expected: 'success', timeoutMs: 120000, assertions: [{ path: 'structuredContent.result.unmappedBones', minLength: 1, label: 'humanoid bones the cube lacks were remapped' }, { path: 'structuredContent.result.morphTargetsDropped', minLength: 1, label: 'the accepted render-only morph is reported' }] },
+    { scenario: 'ACTION: mirror_weights on a mesh with no left and right bones is refused', toolName: 'animation_physics', arguments: { action: 'mirror_weights', skeletalMeshPath: WEIGHT_MESH_PATH, axis: 'X', direction: 'positive_to_negative', lodIndex: 0, dropRenderOnlyMorphs: false, save: false }, expected: 'error|NO_SIDE_BONES' },
     { scenario: 'ACTION: mirror_weights with an unknown axis is refused', toolName: 'animation_physics', arguments: { action: 'mirror_weights', skeletalMeshPath: WEIGHT_MESH_PATH, axis: 'W' }, expected: 'error|INVALID_ARGUMENT' },
-    { scenario: 'ACTION: prune_weights removes small influences', toolName: 'animation_physics', arguments: { action: 'prune_weights', skeletalMeshPath: WEIGHT_MESH_PATH, threshold: 0.2, lodIndex: 0, save: false }, expected: 'success', timeoutMs: 60000 },
+    { scenario: 'Setup: copy the humanoid to mirror its weights', toolName: 'manage_asset', arguments: { action: 'duplicate', sourcePath: HUMANOID_MESH_PATH, destinationPath: MIRROR_MESH_PATH }, expected: 'success|already exists' },
+    { scenario: 'ACTION: mirror_weights mirrors a humanoid across X', toolName: 'animation_physics', arguments: { action: 'mirror_weights', skeletalMeshPath: MIRROR_MESH_PATH, axis: 'X', direction: 'positive_to_negative', save: false }, expected: 'success', timeoutMs: 120000, assertions: [{ path: 'structuredContent.result.verticesMirrored', gte: 1, label: 'vertices took mirrored weights' }, { path: 'structuredContent.result.bonePairs', includesObject: { from: 'thigh_l', to: 'thigh_r' }, label: 'left and right bones paired' }] },
+    { scenario: 'ACTION: prune_weights removes small influences', toolName: 'animation_physics', arguments: { action: 'prune_weights', skeletalMeshPath: WEIGHT_MESH_PATH, threshold: 0.2, lodIndex: 0, dropRenderOnlyMorphs: true, save: false }, expected: 'success', timeoutMs: 60000 },
     { scenario: 'ACTION: prune_weights again finds nothing left to remove', toolName: 'animation_physics', arguments: { action: 'prune_weights', skeletalMeshPath: WEIGHT_MESH_PATH, threshold: 0.2, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.influencesRemoved', equals: 0, label: 'idempotent' }] },
     { scenario: 'ACTION: prune_weights with a threshold of 0.5 or more is refused', toolName: 'animation_physics', arguments: { action: 'prune_weights', skeletalMeshPath: WEIGHT_MESH_PATH, threshold: 0.7 }, expected: 'error|INVALID_ARGUMENT' },
     // The morph made above lives in render data only, so it cannot be transferred and the refusal names it.
-    { scenario: 'ACTION: import_morph_targets of a render-only morph is refused', toolName: 'animation_physics', arguments: { action: 'import_morph_targets', skeletalMeshPath: WEIGHT_MESH_PATH, sourceMeshPath: SKELETAL_MESH_PATH, morphTargets: [MORPH_TARGET_NAME], lodIndex: 0, save: false }, expected: 'error|NO_MORPH_TARGETS' },
+    { scenario: 'ACTION: import_morph_targets of a render-only morph is refused', toolName: 'animation_physics', arguments: { action: 'import_morph_targets', skeletalMeshPath: WEIGHT_MESH_PATH, sourceMeshPath: SKELETAL_MESH_PATH, morphTargets: [MORPH_TARGET_NAME], lodIndex: 0, dropRenderOnlyMorphs: false, save: false }, expected: 'error|NO_MORPH_TARGETS' },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

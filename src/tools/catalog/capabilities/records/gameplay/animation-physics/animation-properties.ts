@@ -64,6 +64,7 @@ export const A: PropertyMap = {
   axis: str('Mirror or blend axis (X, Y, Z).'),
   profileName: str('Skin weight profile name.'),
   lodIndex: num('Skeletal mesh LOD index (default 0).'),
+  dropRenderOnlyMorphs: bool('The edit rebuilds the mesh from its source data, which deletes morph targets that exist only in render data (made by create_morph_target or set_morph_target_deltas). Without true, a mesh that has any is refused with RENDER_ONLY_MORPHS naming them and nothing changes (default false).'),
   limits: {
     type: 'object',
     additionalProperties: false,
