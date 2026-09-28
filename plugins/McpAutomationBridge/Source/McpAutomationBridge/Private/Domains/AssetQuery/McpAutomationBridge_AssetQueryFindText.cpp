@@ -57,9 +57,12 @@ struct FMcpFindTextScan
     void Properties(const UStruct* Struct, const void* Container, const FString& Asset, const FString& Where,
                     const FString& Prefix, int32 Depth = 0)
     {
+        // Engine plumbing every actor carries: a search for "a" in one level returned 2,435 hits of
+        // GameNetDriver, BlockAll and sprite categories.
+        static const TSet<FName> Plumbing = {TEXT("NetDriverName"), TEXT("BodyInstance"), TEXT("SpriteInfo"), TEXT("FolderPath")};
         for (TFieldIterator<FProperty> It(Struct); It && Depth < 8; ++It)
         {
-            for (int32 Index = 0; Index < It->ArrayDim; ++Index)
+            for (int32 Index = 0; Index < It->ArrayDim && !Plumbing.Contains(It->GetFName()); ++Index)
             {
                 Value(*It, It->ContainerPtrToValuePtr<void>(Container, Index), Asset, Where, Prefix + It->GetName(), Depth);
             }
