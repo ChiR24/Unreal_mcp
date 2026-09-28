@@ -5,7 +5,10 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/Kismet2NameValidators.h"
 
 namespace McpBlueprintHandlers {
 bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context) {
@@ -139,18 +142,33 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
         break;
       }
     }
+    // A component is a member variable too (the My Blueprint panel renames both); its graph
+    // getters follow the rename.
+    USCS_Node *Component = (!bFound && Blueprint->SimpleConstructionScript)
+                               ? Blueprint->SimpleConstructionScript->FindSCSNode(OldVarName)
+                               : nullptr;
 
-    if (!bFound) {
+    if (!bFound && !Component) {
       Bridge.SendAutomationResponse(
           RequestingSocket, RequestId, false,
-          FString::Printf(TEXT("Variable '%s' not found in blueprint."),
+          FString::Printf(TEXT("Neither a variable nor a component named '%s' in this blueprint."),
                           *OldName),
           nullptr, TEXT("NOT_FOUND"));
       return true;
     }
+    const EValidatorResult NameCheck = FKismetNameValidator(Blueprint, OldVarName).IsValid(FName(*NewName));
+    if (NameCheck != EValidatorResult::Ok) {
+      Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
+                                    INameValidatorInterface::GetErrorString(NewName, NameCheck),
+                                    nullptr, TEXT("NAME_CONFLICT"));
+      return true;
+    }
 
-    FBlueprintEditorUtils::RenameMemberVariable(Blueprint, OldVarName,
-                                                FName(*NewName));
+    if (Component) {
+      FBlueprintEditorUtils::RenameComponentMemberVariable(Blueprint, Component, FName(*NewName));
+    } else {
+      FBlueprintEditorUtils::RenameMemberVariable(Blueprint, OldVarName, FName(*NewName));
+    }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
@@ -163,6 +181,7 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("oldName"), OldName);
     Result->SetStringField(TEXT("newName"), NewName);
+    Result->SetStringField(TEXT("kind"), Component ? TEXT("component") : TEXT("variable"));
     Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
     // Add verification data for the blueprint asset
     McpHandlerUtils::AddVerification(Result, Blueprint);

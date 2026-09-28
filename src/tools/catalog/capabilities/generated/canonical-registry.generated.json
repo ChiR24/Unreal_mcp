@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7efc9b8849738eac",
+  "catalogRevision": "5386f74b4ca668ce",
   "recordCount": 384,
   "records": [
     {
@@ -14866,6 +14866,7 @@
         "whenToUse": [
           "A Blueprint needs a new member variable with a type and default.",
           "A member variable needs a new name.",
+          "A component (Simple Construction Script node) needs a new name.",
           "Variable metadata such as tooltip or category must be updated.",
           "Freeform metadata must be attached to a Blueprint or its members.",
           "A default property must be set on the CDO; if the property denotes a component, the component CDO is targeted."
@@ -14914,7 +14915,7 @@
             },
             "oldName": {
               "type": "string",
-              "description": "Current variable name before renaming."
+              "description": "Current name of the variable or component."
             },
             "newName": {
               "type": "string",
@@ -15097,8 +15098,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "defd181f01e1da350f1be98e1c984dc91d742625894d142e6bf21f6d67eb7636",
-        "content": "8571dcb78d3efa65cc3936428fd756192502cb5330109fbe655f732c601ffe9d"
+        "schema": "100de750952ef4e8be978fb564446c79a734f3f8fc568d4faccfe783b54adedc",
+        "content": "4681c2cbb7939704ca26a82b08703c9bacad5c40afe69a56eb4fa5c9e097f766"
       }
     },
     {

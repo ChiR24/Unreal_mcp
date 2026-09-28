@@ -10586,7 +10586,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "oldName": {
           "type": "string",
-          "description": "Current variable name before renaming."
+          "description": "Current name of the variable or component."
         },
         "onHoveredFunction": {
           "type": "string",
