@@ -547,6 +547,7 @@ describe('receipt redaction — compounds whose head is a carrier, not a secret 
     'secretsFound', 'secretStatus', 'secretName', 'secretVersion',
     'authorizationRequired', 'authorizationScheme', 'credentialType',
     'passwordPolicy', 'passwordMinLength', 'accessKeyCount',
+    'TokensSaved', 'tokensSpent', 'tokenBalance', 'tokensEarned', 'tokenCost',
   ] as const;
 
   for (const key of MEASUREMENT_KEYS) {

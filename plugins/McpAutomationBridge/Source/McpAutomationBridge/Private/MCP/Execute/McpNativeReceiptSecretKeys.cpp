@@ -50,7 +50,10 @@ const TSet<FString>& MeasurementHeads()
 		TEXT("status"), TEXT("state"), TEXT("mode"), TEXT("policy"), TEXT("rule"),
 		TEXT("scheme"), TEXT("algorithm"), TEXT("format"), TEXT("source"),
 		TEXT("reason"), TEXT("message"), TEXT("error"), TEXT("version"),
-		TEXT("timestamp"), TEXT("time"), TEXT("date"), TEXT("duration"), TEXT("at")};
+		TEXT("timestamp"), TEXT("time"), TEXT("date"), TEXT("duration"), TEXT("at"),
+		// Quantities of LLM tokens are counts, not credentials (TokensSaved read back as [REDACTED]).
+		TEXT("saved"), TEXT("spent"), TEXT("earned"), TEXT("collected"), TEXT("consumed"),
+		TEXT("generated"), TEXT("processed"), TEXT("balance"), TEXT("rate"), TEXT("cost"), TEXT("left")};
 	return Words;
 }
 

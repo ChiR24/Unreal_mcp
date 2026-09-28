@@ -73,6 +73,10 @@ export const MEASUREMENT_HEADS = new Set([
   'name', 'id', 'type', 'kind', 'label', 'status', 'state', 'mode', 'policy',
   'rule', 'scheme', 'algorithm', 'format', 'source', 'reason', 'message',
   'error', 'version', 'timestamp', 'time', 'date', 'duration', 'at',
+  // Quantities of LLM tokens are counts, not credentials: a game variable
+  // TokensSaved (an int) used to read back as [REDACTED].
+  'saved', 'spent', 'earned', 'collected', 'consumed', 'generated', 'processed',
+  'balance', 'rate', 'cost', 'left',
 ]);
 
 // Qualifiers that precede a credential noun. They name no secret alone, so they
