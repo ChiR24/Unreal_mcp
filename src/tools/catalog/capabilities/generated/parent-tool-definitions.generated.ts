@@ -29,6 +29,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether to add the morph target when the component does not already carry it."
         },
+        "additive": {
+          "type": "boolean",
+          "description": "Make the poses additive against pose 0, as facial and corrective poses are (default false)."
+        },
         "additiveAnimType": {
           "type": "string",
           "description": "String parameter."
@@ -85,6 +89,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "attachBoneName": {
           "type": "string",
           "description": "Bone the socket attaches to."
+        },
+        "autoMap": {
+          "type": "boolean",
+          "description": "Map every unmapped chain: exact name matches first, then the closest names (default false)."
         },
         "automaticRule": {
           "type": "boolean",
@@ -446,10 +454,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "blend_space_1d",
             "blend_space_2d",
             "aim_offset",
+            "pose_library",
             "procedural",
             "setup",
             "rig",
-            "retargeter"
+            "retargeter",
+            "chain_mapping"
           ],
           "description": "Which create animation asset variant to run; omit for 'asset'."
         },
@@ -617,6 +627,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playRate": {
           "type": "number",
           "description": "Playback rate."
+        },
+        "poseNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Distinct names for the poses in frame order; frames without a name keep the engine default name."
         },
         "positionX": {
           "type": "number",
@@ -788,9 +805,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which configure socket variant to run; omit for 'configure'.",
           "default": "configure"
         },
+        "sourceAnimationPath": {
+          "type": "string",
+          "description": "AnimSequence whose key frames become the poses; its skeleton is used."
+        },
         "sourceBoneName": {
           "type": "string",
           "description": "Source bone name."
+        },
+        "sourceChain": {
+          "type": "string",
+          "description": "Source IK Rig chain that drives it; empty or None clears the mapping."
         },
         "sourceIKRigPath": {
           "type": "string",
@@ -851,6 +876,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "targetBoneName": {
           "type": "string",
           "description": "Target bone name."
+        },
+        "targetChain": {
+          "type": "string",
+          "description": "Target IK Rig chain to map; required unless autoMap."
         },
         "targetIKRigPath": {
           "type": "string",
@@ -1065,6 +1094,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target actor name in the current level."
         },
+        "additive": {
+          "type": "boolean",
+          "description": "Whether the poses are additive."
+        },
         "animationsApplied": {
           "type": "array",
           "items": {
@@ -1164,6 +1197,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ]
           }
         },
+        "changed": {
+          "type": "boolean",
+          "description": "Whether any mapping changed."
+        },
         "compiledAnimBlueprints": {
           "type": "array",
           "items": {
@@ -1243,6 +1280,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "State machine name."
         },
+        "mapping": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "targetChain": {
+                "type": "string",
+                "description": "Target IK Rig chain."
+              },
+              "sourceChain": {
+                "type": "string",
+                "description": "Source chain driving it, or None."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Every target chain with the source chain now driving it (None when unmapped)."
+        },
         "meshPath": {
           "type": "string",
           "description": "Canonical /Game mesh asset path."
@@ -1295,6 +1350,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game PhysicsAsset path."
         },
+        "poseCount": {
+          "type": "number",
+          "description": "Poses in the asset."
+        },
+        "poseNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Pose names read back from the asset."
+        },
         "ragdollActive": {
           "type": "boolean",
           "description": "Boolean parameter."
@@ -1331,6 +1397,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           }
         },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the pose asset was saved."
+        },
         "scale": {
           "type": "object",
           "additionalProperties": false,
@@ -1354,6 +1424,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "skeletonPath": {
           "type": "string",
           "description": "Canonical /Game Skeleton asset path."
+        },
+        "skeletonSaved": {
+          "type": "boolean",
+          "description": "UE 5.0 to 5.2: whether the skeleton, which holds the pose curve names there, was saved."
         },
         "socketCount": {
           "type": "number",

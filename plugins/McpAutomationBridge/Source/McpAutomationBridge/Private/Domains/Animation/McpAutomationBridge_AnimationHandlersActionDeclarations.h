@@ -21,6 +21,8 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationCreateAnimationAssetAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
+bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context,
+               const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
                const TSharedPtr<FJsonObject> &Payload);
 bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,

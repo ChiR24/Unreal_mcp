@@ -92,6 +92,9 @@ const testCases = [
 // === CREATE (IK Rig - explicit retargeter dependency; unavailable on some engine builds) ===
 { scenario: 'SETUP: create IK Rig for retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_rig", "name": "Testik_rig", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH}, expected: 'success|IKRIG_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
 { scenario: 'CREATE: create_ik_retargeter', toolName: 'animation_physics', arguments: {"action": "create_ik_retargeter", "name": "Testik_retargeter", "path": TEST_FOLDER, "sourceIKRigPath": TEST_IK_RIG_PATH, "targetIKRigPath": TEST_IK_RIG_PATH, "save": true}, expected: 'success|IKRETARGET_FACTORY_UNAVAILABLE|NOT_SUPPORTED|already exists' },
+// The test IK Rig carries no retarget chains, so auto-mapping succeeds with what exists and a named chain is refused.
+{ scenario: 'CONFIG: set_retarget_chain_mapping auto-maps the chains', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_IK_RETARGETER_PATH, autoMap: true, save: true }, expected: 'success|RIGS_NOT_SET|ASSET_NOT_FOUND', assertions: [{ path: 'structuredContent.result.mapping', minLength: 0, label: 'mapping read back' }] },
+{ scenario: 'CONFIG: set_retarget_chain_mapping to a chain the rig lacks is refused', toolName: 'animation_physics', arguments: { action: 'set_retarget_chain_mapping', assetPath: TEST_IK_RETARGETER_PATH, targetChain: 'NoSuchChain', sourceChain: 'None' }, expected: 'error|CHAIN_NOT_FOUND|RIGS_NOT_SET|ASSET_NOT_FOUND' },
 // Retargeting through an explicit retargeter, with both proportion meshes named
 // rather than inferred from the skeletons' preview meshes.
 { scenario: 'ACTION: setup_retargeting', toolName: 'animation_physics', arguments: {"action": "setup_retargeting", "sourceSkeleton": TEST_SKELETON_PATH, "targetSkeleton": TEST_SKELETON_PATH, "assets": [TEST_ANIM_SEQUENCE_PATH], "savePath": TEST_FOLDER, "suffix": "_Retargeted", "overwrite": true, "sourceMesh": TEST_SKELETAL_MESH_PATH, "targetMesh": TEST_SKELETAL_MESH_PATH, "retargeterPath": TEST_IK_RETARGETER_PATH}, expected: 'success|NOT_SUPPORTED|ASSET_NOT_FOUND|not found' },
@@ -125,6 +128,9 @@ const testCases = [
 { scenario: 'CONFIG: set_curve_key', toolName: 'animation_physics', arguments: {"action": "set_curve_key", "assetPath": `${TEST_FOLDER}/Testanimation_sequence`, "curveName": "TestCurve", "frame": 0, "value": 1.0, "createIfMissing": true, "save": true}, expected: 'success' },
 
 // === CREATE (Montage - needs skeletonPath) ===
+// A pose asset takes one pose per key frame of the keyed sequence above; the first two get names.
+{ scenario: 'CREATE: create_pose_library from the keyed sequence', toolName: 'animation_physics', arguments: { action: 'create_pose_library', name: `TestPoseLibrary_${ts}`, path: TEST_FOLDER, sourceAnimationPath: TEST_ANIM_SEQUENCE_PATH, poseNames: ['Neutral', 'Raised'], additive: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.poseCount', gte: 2, label: 'one pose per key frame' }, { path: 'structuredContent.result.poseNames', includes: 'Raised', label: 'pose names applied' }, { path: 'structuredContent.result.saved', equals: true, label: 'pose asset saved' }] },
+{ scenario: 'CREATE: create_pose_library from a missing sequence is refused', toolName: 'animation_physics', arguments: { action: 'create_pose_library', name: `TestPoseLibraryBad_${ts}`, path: TEST_FOLDER, sourceAnimationPath: `${TEST_FOLDER}/NoSuchSequence_${ts}` }, expected: 'error|ANIMATION_NOT_FOUND' },
 { scenario: 'CREATE: create_montage', toolName: 'animation_physics', arguments: {"action": "create_montage", "name": "Testmontage", "path": TEST_FOLDER, "skeletonPath": TEST_SKELETON_PATH, "animationPath": `${TEST_FOLDER}/Testanimation_sequence`, "slotName": "DefaultSlot", "save": true}, expected: 'success|already exists' },
 
 // === ADD (Montage Section - needs assetPath) ===

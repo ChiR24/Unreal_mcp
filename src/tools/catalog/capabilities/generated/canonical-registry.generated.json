@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "07061fbed328430e",
+  "catalogRevision": "d0bbceaca1e5e4ef",
   "recordCount": 382,
   "records": [
     {
@@ -913,6 +913,7 @@
         "animation_physics.create_blend_space_1d",
         "animation_physics.create_blend_space_2d",
         "animation_physics.create_aim_offset",
+        "animation_physics.create_pose_library",
         "animation_physics.create_procedural_anim"
       ],
       "legacyIds": [
@@ -964,6 +965,13 @@
         },
         {
           "tool": "animation_physics",
+          "action": "create_pose_library",
+          "folded": {
+            "kind": "pose_library"
+          }
+        },
+        {
+          "tool": "animation_physics",
           "action": "create_procedural_anim",
           "folded": {
             "kind": "procedural"
@@ -979,9 +987,10 @@
           "create montage",
           "create blend space",
           "create aim offset",
+          "pose asset",
           "procedural animation"
         ],
-        "summary": "Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset or procedural animation.",
+        "summary": "Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset, pose asset from a sequence, or procedural animation.",
         "whenToUse": [
           "An animation asset or graph must be authored.",
           "A keyframed clip is needed.",
@@ -992,6 +1001,7 @@
         ],
         "whenNotToUse": [
           "Use a blend space.",
+          "A playable clip is needed; use kind sequence or montage.",
           "Use a static sequence."
         ]
       },
@@ -1076,6 +1086,21 @@
               "type": "number",
               "description": "Axis maximum (default 600)."
             },
+            "sourceAnimationPath": {
+              "type": "string",
+              "description": "AnimSequence whose key frames become the poses; its skeleton is used."
+            },
+            "poseNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Distinct names for the poses in frame order; frames without a name keep the engine default name."
+            },
+            "additive": {
+              "type": "boolean",
+              "description": "Make the poses additive against pose 0, as facial and corrective poses are (default false)."
+            },
             "boneTracks": {
               "type": "array",
               "items": {
@@ -1095,6 +1120,7 @@
                 "blend_space_1d",
                 "blend_space_2d",
                 "aim_offset",
+                "pose_library",
                 "procedural"
               ],
               "description": "Which create animation asset variant to run; omit for 'asset'.",
@@ -1126,6 +1152,33 @@
             "assetPath": {
               "type": "string",
               "description": "Canonical /Game asset path."
+            },
+            "skeletonPath": {
+              "type": "string",
+              "description": "Skeleton the pose asset uses."
+            },
+            "poseCount": {
+              "type": "number",
+              "description": "Poses in the asset."
+            },
+            "poseNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Pose names read back from the asset."
+            },
+            "additive": {
+              "type": "boolean",
+              "description": "Whether the poses are additive."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the pose asset was saved."
+            },
+            "skeletonSaved": {
+              "type": "boolean",
+              "description": "UE 5.0 to 5.2: whether the skeleton, which holds the pose curve names there, was saved."
             }
           },
           "required": [
@@ -1136,7 +1189,7 @@
       },
       "examples": [
         {
-          "title": "Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset or procedural animation.",
+          "title": "Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset, pose asset from a sequence, or procedural animation.",
           "input": {
             "action": "create_animation_asset",
             "name": "A_Run",
@@ -1184,9 +1237,20 @@
             "blend_space_1d": "create_blend_space_1d",
             "blend_space_2d": "create_blend_space_2d",
             "aim_offset": "create_aim_offset",
+            "pose_library": "create_pose_library",
             "procedural": "create_procedural_anim"
           },
           "declaredBy": {
+            "skeletonPath": [
+              "asset",
+              "sequence",
+              "montage",
+              "blend_space",
+              "blend_space_1d",
+              "blend_space_2d",
+              "aim_offset",
+              "procedural"
+            ],
             "assetType": [
               "asset"
             ],
@@ -1246,6 +1310,15 @@
             "axisMax": [
               "blend_space_1d"
             ],
+            "sourceAnimationPath": [
+              "pose_library"
+            ],
+            "poseNames": [
+              "pose_library"
+            ],
+            "additive": [
+              "pose_library"
+            ],
             "boneTracks": [
               "procedural"
             ]
@@ -1254,8 +1327,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "45d513a17a1a510af17a711a6e02aeded3e893a111c2df3c93e8800c1072f1c9",
-        "content": "a0461180ea2e7d3b4cf21de40a4d446cebb3025d14000ed32d246ce1c7877c04"
+        "schema": "33593de8f9238751ef65b2d7e1c81c5a18f6b3fa10db6d43db144121dcecffd8",
+        "content": "f234d77818480ca40d95fd2da8741fcc826288e8e43a09eb53342c09273b2f7c"
       }
     },
     {
@@ -5444,7 +5517,8 @@
       "id": "animation_physics.setup_ik",
       "aliases": [
         "animation_physics.create_ik_rig",
-        "animation_physics.create_ik_retargeter"
+        "animation_physics.create_ik_retargeter",
+        "animation_physics.set_retarget_chain_mapping"
       ],
       "legacyIds": [
         {
@@ -5464,6 +5538,13 @@
           "folded": {
             "kind": "retargeter"
           }
+        },
+        {
+          "tool": "animation_physics",
+          "action": "set_retarget_chain_mapping",
+          "folded": {
+            "kind": "chain_mapping"
+          }
         }
       ],
       "discovery": {
@@ -5473,18 +5554,21 @@
           "setup_ik",
           "ik rig",
           "ik retargeter",
-          "inverse kinematics"
+          "inverse kinematics",
+          "retarget chain mapping"
         ],
-        "summary": "Set up IK: create an IK rig or IK retargeter, or a Control Rig for IK solvers.",
+        "summary": "Set up IK: create an IK rig or IK retargeter, a Control Rig for IK solvers, or set which source chain drives each target chain of a retargeter.",
         "whenToUse": [
           "IK chains must be authored in a Control Rig.",
           "IK retargeting source needed.",
-          "Retarget between two skeletons."
+          "Retarget between two skeletons.",
+          "A limb retargets from the wrong source chain after setup_retargeting or create_ik_retargeter."
         ],
         "whenNotToUse": [
           "An IK Rig asset is needed (kind rig).",
           "Use create_control_rig.",
-          "Single skeleton."
+          "Single skeleton.",
+          "The retargeter does not exist yet (kind retargeter)."
         ]
       },
       "schemas": {
@@ -5520,20 +5604,35 @@
               "type": "string",
               "description": "Canonical /Game asset path."
             },
+            "assetPath": {
+              "type": "string",
+              "description": "IK Retargeter asset to edit."
+            },
+            "targetChain": {
+              "type": "string",
+              "description": "Target IK Rig chain to map; required unless autoMap."
+            },
+            "sourceChain": {
+              "type": "string",
+              "description": "Source IK Rig chain that drives it; empty or None clears the mapping."
+            },
+            "autoMap": {
+              "type": "boolean",
+              "description": "Map every unmapped chain: exact name matches first, then the closest names (default false)."
+            },
             "kind": {
               "type": "string",
               "enum": [
                 "setup",
                 "rig",
-                "retargeter"
+                "retargeter",
+                "chain_mapping"
               ],
               "description": "Which setup ik variant to run; omit for 'setup'.",
               "default": "setup"
             }
           },
-          "required": [
-            "name"
-          ],
+          "required": [],
           "additionalProperties": false
         },
         "output": {
@@ -5552,6 +5651,32 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "mapping": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "targetChain": {
+                    "type": "string",
+                    "description": "Target IK Rig chain."
+                  },
+                  "sourceChain": {
+                    "type": "string",
+                    "description": "Source chain driving it, or None."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Every target chain with the source chain now driving it (None when unmapped)."
+            },
+            "changed": {
+              "type": "boolean",
+              "description": "Whether any mapping changed."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the retargeter was saved."
             }
           },
           "required": [
@@ -5562,7 +5687,7 @@
       },
       "examples": [
         {
-          "title": "Set up IK: create an IK rig or IK retargeter, or a Control Rig for IK solvers.",
+          "title": "Set up IK: create an IK rig or IK retargeter, a Control Rig for IK solvers, or set which source chain drives each target chain of a retargeter.",
           "input": {
             "action": "setup_ik",
             "name": "TestIK",
@@ -5607,9 +5732,20 @@
           "actions": {
             "setup": "setup_ik",
             "rig": "create_ik_rig",
-            "retargeter": "create_ik_retargeter"
+            "retargeter": "create_ik_retargeter",
+            "chain_mapping": "set_retarget_chain_mapping"
           },
           "declaredBy": {
+            "name": [
+              "setup",
+              "rig",
+              "retargeter"
+            ],
+            "path": [
+              "setup",
+              "rig",
+              "retargeter"
+            ],
             "skeletonPath": [
               "setup",
               "rig"
@@ -5619,21 +5755,34 @@
             ],
             "save": [
               "rig",
-              "retargeter"
+              "retargeter",
+              "chain_mapping"
             ],
             "sourceIKRigPath": [
               "retargeter"
             ],
             "targetIKRigPath": [
               "retargeter"
+            ],
+            "assetPath": [
+              "chain_mapping"
+            ],
+            "targetChain": [
+              "chain_mapping"
+            ],
+            "sourceChain": [
+              "chain_mapping"
+            ],
+            "autoMap": [
+              "chain_mapping"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "39d858d92ed2fdf232b999dbd2fa9fc94978f3a1ef07a41766fb9a094cc9c0b0",
-        "content": "5963135485d224b6b3b396fc2e6bfbd09c50f82d9f3519399ec03da5d05da275"
+        "schema": "30cab5c53492a4cd94f7ba226aa424ccdc232e492948a408831866e66a01159c",
+        "content": "02692fec32aab26a021545c673b7deda5f59fb2dbc68e61d731b1b04952d7ec8"
       }
     },
     {

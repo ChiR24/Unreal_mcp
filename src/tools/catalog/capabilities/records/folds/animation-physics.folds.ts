@@ -11,12 +11,12 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_animation_asset', selector: 'kind',
-    summary: 'Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset or procedural animation.',
-    topics: ['create animation', 'create montage', 'create blend space', 'create aim offset', 'procedural animation'],
+    summary: 'Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset, pose asset from a sequence, or procedural animation.',
+    topics: ['create animation', 'create montage', 'create blend space', 'create aim offset', 'pose asset', 'procedural animation'],
     members: {
       asset: 'create_animation_asset', sequence: 'create_animation_sequence', montage: 'create_montage',
       blend_space: 'create_blend_space', blend_space_1d: 'create_blend_space_1d', blend_space_2d: 'create_blend_space_2d',
-      aim_offset: 'create_aim_offset', procedural: 'create_procedural_anim',
+      aim_offset: 'create_aim_offset', pose_library: 'create_pose_library', procedural: 'create_procedural_anim',
     },
   },
   {
@@ -93,9 +93,9 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   { primary: 'create_animation_blueprint', summary: 'Create an Animation Blueprint for a skeleton.', members: ['create_anim_blueprint', 'create_animation_bp'] },
   {
     primary: 'setup_ik', selector: 'kind',
-    summary: 'Set up IK: create an IK rig or IK retargeter, or a Control Rig for IK solvers.',
-    topics: ['ik rig', 'ik retargeter', 'inverse kinematics'],
-    members: { setup: 'setup_ik', rig: 'create_ik_rig', retargeter: 'create_ik_retargeter' },
+    summary: 'Set up IK: create an IK rig or IK retargeter, a Control Rig for IK solvers, or set which source chain drives each target chain of a retargeter.',
+    topics: ['ik rig', 'ik retargeter', 'inverse kinematics', 'retarget chain mapping'],
+    members: { setup: 'setup_ik', rig: 'create_ik_rig', retargeter: 'create_ik_retargeter', chain_mapping: 'set_retarget_chain_mapping' },
   },
   {
     primary: 'get_skeleton_info', selector: 'info',

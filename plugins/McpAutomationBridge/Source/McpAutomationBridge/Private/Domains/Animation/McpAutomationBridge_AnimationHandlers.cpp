@@ -72,6 +72,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAnimationPhysicsAction(
       {TEXT("configure_vehicle"), McpAnimationHandlers::HandleAnimationConfigureVehicleAction},
       {TEXT("setup_physics_simulation"), McpAnimationHandlers::HandleAnimationSetupPhysicsSimulationAction},
       {TEXT("create_animation_asset"), McpAnimationHandlers::HandleAnimationCreateAnimationAssetAction},
+      {TEXT("create_pose_library"), McpAnimationHandlers::HandleAnimationCreatePoseLibraryAction},
       {TEXT("setup_retargeting"), McpAnimationHandlers::HandleAnimationSetupRetargetingAction},
       {TEXT("skin_mesh_to_skeleton"), McpAnimationHandlers::HandleAnimationSkinMeshToSkeletonAction},
   };

@@ -27,7 +27,7 @@ inline const TArray<FString>& AnimationAuthoring()
 		TEXT("add_cached_pose"), TEXT("add_slot_node"),
 		TEXT("add_layered_blend_per_bone"),
 		TEXT("set_anim_graph_node_value"), TEXT("create_control_rig"),
-		TEXT("create_ik_rig"), TEXT("create_ik_retargeter"),
+		TEXT("create_ik_rig"), TEXT("create_ik_retargeter"), TEXT("set_retarget_chain_mapping"),
 		TEXT("get_animation_info")
 	};
 	return Actions;

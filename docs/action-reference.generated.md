@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `07061fbed328430e`
+Catalog revision: `d0bbceaca1e5e4ef`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -138,7 +138,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.configure_anim_graph_node` | `animation_physics` | `add_layered_blend_per_bone` | write | write | none | `animation_physics.configure_anim_graph_node` `animation_physics.add_layered_blend_per_bone` `animation_physics.set_anim_graph_node_value` |
 | `animation_physics.configure_socket` | `animation_physics` | `configure_socket` | write | write | none | `animation_physics.configure_socket` `animation_physics.add_socket` `animation_physics.create_socket` `animation_physics.modify_socket` |
 | `animation_physics.configure_vehicle` | `animation_physics` | `configure_vehicle` | write | write | none | `animation_physics.configure_vehicle` |
-| `animation_physics.create_animation_asset` | `animation_physics` | `create_animation_asset` | write | write | none | `animation_physics.create_animation_asset` `animation_physics.create_animation_sequence` `animation_physics.create_montage` `animation_physics.create_blend_space` `animation_physics.create_blend_space_1d` `animation_physics.create_blend_space_2d` `animation_physics.create_aim_offset` `animation_physics.create_procedural_anim` |
+| `animation_physics.create_animation_asset` | `animation_physics` | `create_animation_asset` | write | write | none | `animation_physics.create_animation_asset` `animation_physics.create_animation_sequence` `animation_physics.create_montage` `animation_physics.create_blend_space` `animation_physics.create_blend_space_1d` `animation_physics.create_blend_space_2d` `animation_physics.create_aim_offset` `animation_physics.create_pose_library` `animation_physics.create_procedural_anim` |
 | `animation_physics.create_animation_blueprint` | `animation_physics` | `create_animation_blueprint` | write | write | none | `animation_physics.create_animation_blueprint` `animation_physics.create_anim_blueprint` `animation_physics.create_animation_bp` |
 | `animation_physics.create_control_rig` | `animation_physics` | `create_control_rig` | write | write | none | `animation_physics.create_control_rig` |
 | `animation_physics.create_skeleton` | `animation_physics` | `create_skeleton` | write | write | none | `animation_physics.create_skeleton` |
@@ -154,7 +154,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics.get_skeleton_info` | `animation_physics` | `get_skeleton_info` | read | read | none | `animation_physics.get_skeleton_info` `animation_physics.list_bones` `animation_physics.list_sockets` `animation_physics.list_virtual_bones` `animation_physics.get_bone_transform` `animation_physics.list_morph_targets` `animation_physics.get_physics_asset_info` `animation_physics.list_physics_bodies` |
 | `animation_physics.play_montage` | `animation_physics` | `play_montage` | write | write | none | `animation_physics.play_montage` `animation_physics.play_anim_montage` |
 | `animation_physics.remove_skeleton_element` | `animation_physics` | `remove_bone` | destructive | destructive | explicit | `animation_physics.remove_skeleton_element` `animation_physics.remove_bone` `animation_physics.remove_socket` `animation_physics.remove_physics_body` |
-| `animation_physics.setup_ik` | `animation_physics` | `setup_ik` | write | write | none | `animation_physics.setup_ik` `animation_physics.create_ik_rig` `animation_physics.create_ik_retargeter` |
+| `animation_physics.setup_ik` | `animation_physics` | `setup_ik` | write | write | none | `animation_physics.setup_ik` `animation_physics.create_ik_rig` `animation_physics.create_ik_retargeter` `animation_physics.set_retarget_chain_mapping` |
 | `animation_physics.setup_physics_simulation` | `animation_physics` | `setup_physics_simulation` | write | write | none | `animation_physics.setup_physics_simulation` |
 | `animation_physics.setup_ragdoll` | `animation_physics` | `setup_ragdoll` | write | write | none | `animation_physics.setup_ragdoll` `animation_physics.activate_ragdoll` |
 | `animation_physics.setup_retargeting` | `animation_physics` | `setup_retargeting` | write | write | none | `animation_physics.setup_retargeting` |

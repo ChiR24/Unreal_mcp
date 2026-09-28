@@ -3,6 +3,10 @@
 
 namespace McpAnimationAuthoring {
 
+#if MCP_HAS_IKRETARGETER && MCP_HAS_IKRETARGETER_CONTROLLER
+TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+#endif
+
 TSharedPtr<FJsonObject> HandleIKRetargetActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
     if (SubAction == TEXT("create_ik_retargeter"))
@@ -102,8 +106,153 @@ Retargeter->TargetIKRigAsset = TargetRig;
 #endif
     }
 
+    if (SubAction == TEXT("set_retarget_chain_mapping"))
+    {
+#if MCP_HAS_IKRETARGETER && MCP_HAS_IKRETARGETER_CONTROLLER
+        return HandleSetRetargetChainMapping(Params, Response);
+#else
+        ANIM_ERROR_RESPONSE(TEXT("IK Retargeter editing is not available in this build"), TEXT("NOT_SUPPORTED"));
+#endif
+    }
+
     // ===== Utility =====
     return nullptr;
 }
+
+#if MCP_HAS_IKRETARGETER && MCP_HAS_IKRETARGETER_CONTROLLER
+namespace
+{
+TArray<FName> RetargetRigChainNames(const UIKRigDefinition* Rig)
+{
+    TArray<FName> Names;
+    if (Rig)
+    {
+        for (const FBoneChain& Chain : Rig->GetRetargetChains())
+        {
+            Names.Add(Chain.ChainName);
+        }
+    }
+    return Names;
+}
+
+FString JoinRetargetChainNames(const TArray<FName>& Names)
+{
+    TArray<FString> Strings;
+    for (const FName& Name : Names)
+    {
+        Strings.Add(Name.ToString());
+    }
+    return Strings.Num() > 0 ? FString::Join(Strings, TEXT(", ")) : FString(TEXT("none"));
+}
+
+// The source chain driving TargetChain; NAME_None when it is unmapped.
+FName RetargetSourceChainFor(UIKRetargeterController* Controller, FName TargetChain)
+{
+#if ENGINE_MINOR_VERSION >= 2
+    return Controller->GetSourceChain(TargetChain);
+#else
+    for (const TObjectPtr<URetargetChainSettings>& Settings : Controller->GetChainMappings())
+    {
+        if (Settings && Settings->TargetChain == TargetChain)
+        {
+            return Settings->SourceChain;
+        }
+    }
+    return NAME_None;
+#endif
+}
+
+bool SetRetargetSourceChain(UIKRetargeterController* Controller, FName SourceChain, FName TargetChain)
+{
+#if ENGINE_MINOR_VERSION >= 2
+    return Controller->SetSourceChain(SourceChain, TargetChain);
+#else
+    for (const TObjectPtr<URetargetChainSettings>& Settings : Controller->GetChainMappings())
+    {
+        if (Settings && Settings->TargetChain == TargetChain)
+        {
+            Controller->SetSourceChainForTargetChain(Settings, SourceChain);
+            return true;
+        }
+    }
+    return false;
+#endif
+}
+}
+
+// set_retarget_chain_mapping: which source chain drives a target chain, or exact-then-fuzzy auto-mapping.
+TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
+{
+    const FString AssetPath = NormalizeAnimPath(GetJsonStringField(Params, TEXT("assetPath")));
+    const FString TargetText = GetJsonStringField(Params, TEXT("targetChain"));
+    const FString SourceText = GetJsonStringField(Params, TEXT("sourceChain"));
+    const bool bAutoMap = GetJsonBoolField(Params, TEXT("autoMap"), false);
+    UIKRetargeter* Retargeter = AssetPath.IsEmpty() ? nullptr : LoadObject<UIKRetargeter>(nullptr, *AssetPath);
+    UIKRetargeterController* Controller = Retargeter ? UIKRetargeterController::GetController(Retargeter) : nullptr;
+    if (!Controller)
+    {
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("No IK Retargeter at '%s'."), *AssetPath), TEXT("ASSET_NOT_FOUND"));
+    }
+#if ENGINE_MINOR_VERSION >= 1
+    const UIKRigDefinition* SourceRig = Controller->GetIKRig(ERetargetSourceOrTarget::Source);
+    const UIKRigDefinition* TargetRig = Controller->GetIKRig(ERetargetSourceOrTarget::Target);
+#else
+    const UIKRigDefinition* SourceRig = Retargeter->GetSourceIKRig();
+    const UIKRigDefinition* TargetRig = Retargeter->GetTargetIKRig();
+#endif
+    if (!SourceRig || !TargetRig)
+    {
+        ANIM_ERROR_RESPONSE(TEXT("The retargeter needs both a source and a target IK Rig before chains can be mapped (create_ik_retargeter sourceIKRigPath, targetIKRigPath)."), TEXT("RIGS_NOT_SET"));
+    }
+    const TArray<FName> SourceChains = RetargetRigChainNames(SourceRig);
+    const TArray<FName> TargetChains = RetargetRigChainNames(TargetRig);
+    const FName Target(*TargetText);
+    const FName Source = SourceText.IsEmpty() || SourceText.Equals(TEXT("None"), ESearchCase::IgnoreCase) ? NAME_None : FName(*SourceText);
+    if (!bAutoMap && (TargetText.IsEmpty() || !TargetChains.Contains(Target) || (!Source.IsNone() && !SourceChains.Contains(Source))))
+    {
+        Response->SetStringField(TEXT("sourceChains"), JoinRetargetChainNames(SourceChains));
+        Response->SetStringField(TEXT("targetChains"), JoinRetargetChainNames(TargetChains));
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Chain not found. targetChain must be one of: %s. sourceChain must be one of: %s (or None to clear)."),
+            *JoinRetargetChainNames(TargetChains), *JoinRetargetChainNames(SourceChains)), TEXT("CHAIN_NOT_FOUND"));
+    }
+    bool bChanged = false;
+    if (bAutoMap)
+    {
+        TMap<FName, FName> Before;
+        for (const FName& Chain : TargetChains) { Before.Add(Chain, RetargetSourceChainFor(Controller, Chain)); }
+#if ENGINE_MINOR_VERSION >= 2
+        Controller->AutoMapChains(EAutoMapChainType::Exact, false);
+        Controller->AutoMapChains(EAutoMapChainType::Fuzzy, false);
+#else
+        Controller->AutoMapChains();
+#endif
+        for (const FName& Chain : TargetChains) { bChanged |= Before[Chain] != RetargetSourceChainFor(Controller, Chain); }
+    }
+    else
+    {
+        bChanged = RetargetSourceChainFor(Controller, Target) != Source;
+        if (!SetRetargetSourceChain(Controller, Source, Target) || RetargetSourceChainFor(Controller, Target) != Source)
+        {
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("The retargeter did not accept %s -> %s."), *Source.ToString(), *Target.ToString()), TEXT("MAPPING_FAILED"));
+        }
+    }
+    TArray<TSharedPtr<FJsonValue>> Mapping;
+    for (const FName& Chain : TargetChains)
+    {
+        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+        Entry->SetStringField(TEXT("targetChain"), Chain.ToString());
+        Entry->SetStringField(TEXT("sourceChain"), RetargetSourceChainFor(Controller, Chain).ToString());
+        Mapping.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+    const bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
+    const bool bSaved = bSave && SaveAnimAsset(Retargeter, true);
+    Response->SetArrayField(TEXT("mapping"), Mapping);
+    Response->SetBoolField(TEXT("changed"), bChanged);
+    Response->SetBoolField(TEXT("saved"), bSaved);
+    Response->SetStringField(TEXT("assetPath"), Retargeter->GetPathName());
+    ANIM_SUCCESS_RESPONSE(bAutoMap ? FString(TEXT("Auto-mapped the retarget chains")) : FString::Printf(TEXT("%s now drives %s"), *Source.ToString(), *Target.ToString()));
+    return Response;
+}
+#endif
 
 } // namespace McpAnimationAuthoring
