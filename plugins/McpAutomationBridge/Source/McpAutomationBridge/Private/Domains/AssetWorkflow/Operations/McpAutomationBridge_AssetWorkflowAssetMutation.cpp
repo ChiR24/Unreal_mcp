@@ -225,10 +225,15 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       const TArray<FString> Referencers = bForce ? TArray<FString>() : OutsideReferencers(FPackageName::ObjectPathToPackageName(SafePath));
       if (Referencers.Num() > 0) {
         ReferencedPaths.Add(FString::Printf(TEXT("%s (referenced by %s)"), *SafePath, *FString::Join(Referencers, TEXT(", "))));
-      } else if (McpSafeOperations::McpDeleteAssetAndFile(SafePath)) {
+      } else if (McpSafeOperations::McpDeleteAssetAndFile(SafePath) ||
+                 (!UEditorAssetLibrary::DoesAssetExist(SafePath) &&
+                  !FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(SafePath)))) {
+        // The file fallback can answer false after the asset is already gone (a level did): what is left decides.
         DeletedCount++;
       } else {
-        FailedToDeletePaths.Add(SafePath);
+        // Say what is left: a file kept on disk under a still-loaded package returns on the next editor start.
+        FailedToDeletePaths.Add(UEditorAssetLibrary::DoesAssetExist(SafePath) ? SafePath
+            : SafePath + TEXT(" (gone from the Content Browser, but its file is still on disk because the package is still loaded; delete it again after an editor restart)"));
       }
     } else {
       // Asset/directory does not exist
