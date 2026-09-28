@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fc042651f6510f79",
+  "catalogRevision": "43fda91f9dcac078",
   "recordCount": 384,
   "records": [
     {
@@ -28380,17 +28380,22 @@
           "tilted actors",
           "upside down actors",
           "level audit",
-          "intersecting geometry"
+          "intersecting geometry",
+          "z-fighting",
+          "flickering surfaces",
+          "coplanar faces",
+          "texture flicker"
         ],
-        "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, or lean off vertical.",
+        "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker).",
         "whenToUse": [
           "A level was assembled programmatically and needs checking before anyone looks at it.",
           "Actors appear to clip through each other, stand in the ground, or lie on their side.",
-          "A placement pass should be verified without flying the viewport around to eyeball it."
+          "A placement pass should be verified without flying the viewport around to eyeball it.",
+          "Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one."
         ],
         "whenNotToUse": [
           "One actor was just moved; spawn and set_transform already return placementWarning for it.",
-          "A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air, a signpost leaning by design): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out of the sweep entirely -- as tilt subject, and as both subject and target for overlap -- rather than being re-reported every time."
+          "A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air, a signpost leaning by design): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out of the sweep entirely -- as tilt subject, and as both subject and target for overlap -- rather than being re-reported every time. Coplanar faces are still reported for tagged actors, because they flicker whatever the intent."
         ]
       },
       "schemas": {
@@ -28412,7 +28417,7 @@
             },
             "minSeverity": {
               "type": "number",
-              "description": "Drop findings whose severity (worst penetration, ground error or tilt displacement, in world units) is below this. Use it to skip cosmetic grazes on a large level."
+              "description": "Drop findings whose severity (worst penetration, ground error, tilt displacement, or the side of the largest z-fighting patch, in world units) is below this. Use it to skip cosmetic grazes on a large level."
             },
             "maxTilt": {
               "type": "number",
@@ -28455,13 +28460,13 @@
             },
             "byKind": {
               "type": "object",
-              "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted.",
+              "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted, coplanar.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
             "problems": {
               "type": "array",
-              "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, and suggestedZ when a resting height can be computed. Call get_actor_transform on one for its full detail.",
+              "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Move the actor about 2 units along direction, or scale it up slightly, to fix a pair. Call get_actor_transform on one for its full detail.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -28482,7 +28487,7 @@
       },
       "examples": [
         {
-          "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, or lean off vertical.",
+          "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker).",
           "input": {
             "action": "audit_placement",
             "nameFilter": "HubNPC_"
@@ -28525,8 +28530,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ce708d522e7be9423f42ad09fbc3290fddc2f421ad66ed8eaac8bda8ecab931f",
-        "content": "bd5d4558e6cccd4f1c2ea5a00cfadb0475fab10940c8308bea281c85293aebbd"
+        "schema": "ef86230e29b4d30cf8ae7230794928a3d21622d1982f51ed8ff767311b680f8f",
+        "content": "4a168d153c4c5c1e16b1043590b16dcf4839d3ef2b5d89ba41e34c71b8798c08"
       }
     },
     {

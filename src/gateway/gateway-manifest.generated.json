@@ -3586,7 +3586,7 @@
           },
           "minSeverity": {
             "type": "number",
-            "description": "Drop findings whose severity (worst penetration, ground error or tilt displacement, in world units) is below this. Use it to skip cosmetic grazes on a large level."
+            "description": "Drop findings whose severity (worst penetration, ground error, tilt displacement, or the side of the largest z-fighting patch, in world units) is below this. Use it to skip cosmetic grazes on a large level."
           },
           "name": {
             "type": "string",

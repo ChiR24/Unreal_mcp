@@ -1,6 +1,7 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Domains/ControlActor/Placement/McpAutomationBridge_CoplanarFaces.h"
 
 // Per-call warnings only help the actor you just touched. A level assembled by
 // a script accumulates bad placements nobody ever calls back into, so this
@@ -106,7 +107,39 @@ struct FMcpPlacementFinding {
   double Severity = 0.0;
   bool bHasSuggestedZ = false;
   double SuggestedZ = 0.0;
+  TArray<TSharedPtr<FJsonValue>> CoplanarFaces;
 };
+
+/**
+ * Folds each actor's coplanar faces into its finding. Two faces in one plane
+ * flicker however deliberately the pieces were placed, so actors tagged
+ * mcp.placement.ok are judged too.
+ */
+void McpMergeCoplanar(UWorld *World, const FString &NameFilter,
+                      TArray<FMcpPlacementFinding> &Findings,
+                      const TMap<const AActor *, int32> &FindingIndex) {
+  for (McpCoplanar::FMcpCoplanarReport &Report :
+       McpCoplanar::ReportCoplanarFaces(World, NameFilter)) {
+    const int32 *Existing = FindingIndex.Find(Report.Actor);
+    FMcpPlacementFinding &Finding =
+        Existing ? Findings[*Existing] : Findings.AddDefaulted_GetRef();
+    if (!Existing) {
+      Finding.ActorName = McpActorRef(Report.Actor);
+    }
+    Finding.CoplanarFaces = MoveTemp(Report.Faces);
+    if (!Finding.Kind.IsEmpty() && Report.Severity <= Finding.Severity) {
+      Finding.Issue += TEXT(" Some of its faces also z-fight with a coplanar "
+                            "surface: see coplanarFaces.");
+      continue;
+    }
+    Finding.Issue = Finding.Issue.IsEmpty()
+                        ? Report.Issue
+                        : Report.Issue + TEXT(" It also has another placement problem: ") +
+                              Finding.Issue;
+    Finding.Kind = TEXT("coplanar");
+    Finding.Severity = Report.Severity;
+  }
+}
 
 } // namespace
 
@@ -139,7 +172,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
   }
 
   TArray<FMcpPlacementFinding> Findings;
-  TMap<FString, int32> KindCounts;
+  TMap<const AActor *, int32> FindingIndex;
   int32 Examined = 0;
 
   for (TActorIterator<AActor> It(World); It; ++It) {
@@ -193,12 +226,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
           bHasWarning ? TEXT(" (it also has a placement problem)") : TEXT(""));
     }
 
-    // Count only what survives minSeverity, so byKind and flagged describe the
-    // same set rather than two different ones.
-    if (Finding.Severity >= MinSeverity) {
-      KindCounts.FindOrAdd(Finding.Kind) += 1;
-      Findings.Add(MoveTemp(Finding));
-    }
+    FindingIndex.Add(Actor, Findings.Add(MoveTemp(Finding)));
+  }
+  McpMergeCoplanar(World, NameFilter, Findings, FindingIndex);
+
+  // Count only what survives minSeverity, so byKind and flagged describe the
+  // same set rather than two different ones.
+  Findings.RemoveAll([MinSeverity](const FMcpPlacementFinding &Finding) {
+    return Finding.Severity < MinSeverity;
+  });
+  TMap<FString, int32> KindCounts;
+  for (const FMcpPlacementFinding &Finding : Findings) {
+    KindCounts.FindOrAdd(Finding.Kind) += 1;
   }
 
   // Worst first: a caller reading only the head of the list still sees the
@@ -218,6 +257,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
     Object->SetStringField(TEXT("issue"), Finding.Issue);
     if (Finding.bHasSuggestedZ) {
       Object->SetNumberField(TEXT("suggestedZ"), FMath::RoundToDouble(Finding.SuggestedZ));
+    }
+    if (Finding.CoplanarFaces.Num() > 0) {
+      Object->SetArrayField(TEXT("coplanarFaces"), Finding.CoplanarFaces);
     }
     Problems.Add(MakeShared<FJsonValueObject>(Object));
   }

@@ -3668,7 +3668,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "minSeverity": {
           "type": "number",
-          "description": "Drop findings whose severity (worst penetration, ground error or tilt displacement, in world units) is below this. Use it to skip cosmetic grazes on a large level."
+          "description": "Drop findings whose severity (worst penetration, ground error, tilt displacement, or the side of the largest z-fighting patch, in world units) is below this. Use it to skip cosmetic grazes on a large level."
         },
         "name": {
           "type": "string",
@@ -3989,7 +3989,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "byKind": {
           "type": "object",
-          "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted.",
+          "description": "Count of flagged actors per problem kind: sunk, floating, overlapping, unsupported, tilted, coplanar.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -4207,7 +4207,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "problems": {
           "type": "array",
-          "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, and suggestedZ when a resting height can be computed. Call get_actor_transform on one for its full detail.",
+          "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Move the actor about 2 units along direction, or scale it up slightly, to fix a pair. Call get_actor_transform on one for its full detail.",
           "items": {
             "type": "object",
             "additionalProperties": true,
