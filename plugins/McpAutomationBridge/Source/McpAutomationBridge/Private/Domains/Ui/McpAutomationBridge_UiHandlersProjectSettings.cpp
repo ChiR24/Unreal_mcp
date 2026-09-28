@@ -251,7 +251,10 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
         void *ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
         if (Property->ImportText_Direct(*Value, ValuePtr, CDO, PPF_None)) {
           bAppliedToObject = true;
-          bPersisted = CDO->TryUpdateDefaultConfigFile(FString(), false);
+          // A per-user class (EditorPerProjectUserSettings) is saved to the user's config, as the settings
+          // editor saves it; only a defaultconfig class belongs in the project's Default<Config>.ini.
+          if (!Class->HasAnyClassFlags(CLASS_DefaultConfig)) { CDO->SaveConfig(); ConfigFile = FPaths::ConvertRelativePathToFull(Class->GetConfigName()); }
+          bPersisted = !Class->HasAnyClassFlags(CLASS_DefaultConfig) || CDO->TryUpdateDefaultConfigFile(FString(), false);
         } else {
           Message = FString::Printf(TEXT("Value '%s' could not be parsed for %s.%s (%s)"), *Value, *Class->GetName(), *Key, *Property->GetCPPType());
           ErrorCode = TEXT("INVALID_VALUE");

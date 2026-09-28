@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2be4cb762398487c",
+  "catalogRevision": "a3facf71b616dd06",
   "recordCount": 388,
   "records": [
     {
@@ -86268,7 +86268,7 @@
         "topics": [
           "set_project_setting"
         ],
-        "summary": "Set a project setting value for a section and key via the system_control fallback dispatch.",
+        "summary": "Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.",
         "whenToUse": [
           "A single project setting value must be written."
         ],
@@ -86287,7 +86287,7 @@
             },
             "section": {
               "type": "string",
-              "description": "Settings section."
+              "description": "Settings section: a settings class path such as /Script/EngineSettings.GeneralProjectSettings, or its short name."
             },
             "key": {
               "type": "string",
@@ -86331,7 +86331,7 @@
       },
       "examples": [
         {
-          "title": "Set a project setting value for a section and key via the system_control fallback dispatch.",
+          "title": "Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.",
           "input": {
             "action": "set_project_setting",
             "section": "/Script/EngineSettings.GeneralProjectSettings",
@@ -86370,8 +86370,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5440d0962444c8828f2e8febc7da19d6a2e89be53d7a398442bd033fc3e9c8b6",
-        "content": "079fec014a4a601454d384c3c3fa8b87ee54cd0d35b60275e402949ded9a7422"
+        "schema": "f6329b5b74fac84fa0934153013f464c419dd7dc50fce3d3d1641a9abd114d4f",
+        "content": "5c44eeaebc110f1b40991ad67095899bf27f0cca670b05b6c52ce3d6ddb334cf"
       }
     },
     {

@@ -354,11 +354,11 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_project_setting',
     domain: 'project',
     family: 'project',
-    summary: 'Set a project setting value for a section and key via the system_control fallback dispatch.',
+    summary: 'Set one setting (section and key): applied to the live settings object and saved where the editor itself saves that class, the project Default<Config>.ini for a project setting, the user Saved config for a per-user one (EditorPerProjectUserSettings). configFile names the file written.',
     whenToUse: ['A single project setting value must be written.'],
     whenNotToUse: ['The full settings document must be read (use get_project_settings).'],
     inputProps: {
-      section: { type: 'string', description: 'Settings section.' },
+      section: { type: 'string', description: 'Settings section: a settings class path such as /Script/EngineSettings.GeneralProjectSettings, or its short name.' },
       key: { type: 'string', description: 'Setting key.' },
       value: { type: 'string', description: 'Setting value.' },
     },
