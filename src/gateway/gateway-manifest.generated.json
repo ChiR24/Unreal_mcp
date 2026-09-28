@@ -15073,6 +15073,7 @@
         "enableInstancing",
         "enabled",
         "enabledOnly",
+        "extension",
         "file",
         "filename",
         "filter",
@@ -15087,6 +15088,7 @@
         "kind",
         "launchViewer",
         "level",
+        "limit",
         "lines",
         "lodBias",
         "maps",
@@ -15097,6 +15099,7 @@
         "minVerbosity",
         "mode",
         "name",
+        "offset",
         "outputPath",
         "overwrite",
         "packageName",
@@ -15116,6 +15119,7 @@
         "replaceSourceActors",
         "resolution",
         "returnBase64",
+        "root",
         "runsBack",
         "savePath",
         "scale",
@@ -15260,6 +15264,10 @@
             "type": "boolean",
             "description": "Return only plugins currently enabled for this project."
           },
+          "extension": {
+            "type": "string",
+            "description": "Only files with this extension, e.g. png or json (a leading dot is ignored, case-insensitive)."
+          },
           "file": {
             "type": "string",
             "description": "Path to a .py file to execute.",
@@ -15326,6 +15334,12 @@
             "type": "number",
             "description": "Level 0-4 (clamped)."
           },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 500,
+            "description": "How many files to return (default 100, max 500)."
+          },
           "lines": {
             "type": "number",
             "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
@@ -15379,6 +15393,11 @@
             "type": "string",
             "description": "CVar name (alternatively cvar, key, or command)."
           },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "How many of the newest matching files to skip (default 0); pass the previous reply's nextOffset to read the next page."
+          },
           "outputPath": {
             "type": "string",
             "description": "Output /Game folder for the merged asset."
@@ -15404,10 +15423,23 @@
             "description": "Alternate single asset path field."
           },
           "paths": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Asset paths to validate."
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                },
+                "description": "Several project-relative file paths to delete in one call; each gets its own entry in results. Takes precedence over path."
+              }
+            ],
             "description": "Asset paths to validate."
           },
           "pitch": {
@@ -15470,6 +15502,16 @@
           "returnBase64": {
             "type": "boolean",
             "description": "Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
+          },
+          "root": {
+            "type": "string",
+            "enum": [
+              "Saved/Screenshots",
+              "Saved/unreal-mcp",
+              "tmp/unreal-mcp",
+              "temp/unreal-mcp"
+            ],
+            "description": "Search only this output folder (default all four)."
           },
           "runsBack": {
             "type": "number",

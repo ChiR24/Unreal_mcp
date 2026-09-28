@@ -18150,6 +18150,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Return only plugins currently enabled for this project."
         },
+        "extension": {
+          "type": "string",
+          "description": "Only files with this extension, e.g. png or json (a leading dot is ignored, case-insensitive)."
+        },
         "file": {
           "type": "string",
           "description": "Path to a .py file to execute.",
@@ -18216,6 +18220,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Level 0-4 (clamped)."
         },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500,
+          "description": "How many files to return (default 100, max 500)."
+        },
         "lines": {
           "type": "number",
           "description": "How many of the newest matching lines to return, oldest first (default 100, max 1000)."
@@ -18269,6 +18279,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "CVar name (alternatively cvar, key, or command)."
         },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many of the newest matching files to skip (default 0); pass the previous reply's nextOffset to read the next page."
+        },
         "outputPath": {
           "type": "string",
           "description": "Output /Game folder for the merged asset."
@@ -18294,10 +18309,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Alternate single asset path field."
         },
         "paths": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Asset paths to validate."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Several project-relative file paths to delete in one call; each gets its own entry in results. Takes precedence over path."
+            }
+          ],
           "description": "Asset paths to validate."
         },
         "pitch": {
@@ -18360,6 +18388,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "returnBase64": {
           "type": "boolean",
           "description": "Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
+        },
+        "root": {
+          "type": "string",
+          "enum": [
+            "Saved/Screenshots",
+            "Saved/unreal-mcp",
+            "tmp/unreal-mcp",
+            "temp/unreal-mcp"
+          ],
+          "description": "Search only this output folder (default all four)."
         },
         "runsBack": {
           "type": "number",
@@ -18570,13 +18608,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Connection type: none, file, network, relay, or secure_network."
         },
-        "count": {
-          "type": "number",
-          "description": "How many files exist, including any past the 500 listed."
-        },
         "deleted": {
           "type": "boolean",
-          "description": "True when the file is gone."
+          "description": "With path: true when the file is gone."
+        },
+        "deletedCount": {
+          "type": "number",
+          "description": "With paths: how many files were deleted."
         },
         "destination": {
           "type": "string",
@@ -18613,11 +18651,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "existsAfter": {
           "type": "boolean",
-          "description": "Whether the file still exists after the call."
+          "description": "With path: whether the file still exists after the call."
         },
         "exitCode": {
           "type": "number",
           "description": "launch_build only: the exit code of a game that quit before its run ended."
+        },
+        "failedCount": {
+          "type": "number",
+          "description": "With paths: how many paths were not deleted."
         },
         "files": {
           "type": "array",
@@ -18626,11 +18668,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Each file: path (project-relative, what delete_output_file takes), sizeBytes, modified (ISO 8601). Sorted by path, at most 500."
+          "description": "Each file: path (project-relative, what delete_output_file takes), sizeBytes, modified (ISO 8601). Newest first."
         },
         "gameLogPath": {
           "type": "string",
           "description": "Where the game writes its log."
+        },
+        "hasMore": {
+          "type": "boolean",
+          "description": "True when more matching files follow this page."
         },
         "hint": {
           "type": "string",
@@ -18689,6 +18735,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Human-readable result message."
         },
+        "nextOffset": {
+          "type": "number",
+          "description": "The offset of the next page; present only when hasMore is true."
+        },
+        "offset": {
+          "type": "number",
+          "description": "The offset this page starts at."
+        },
         "output": {
           "oneOf": [
             {
@@ -18705,7 +18759,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "The file that was deleted."
+          "description": "With path: the file that was deleted."
         },
         "paused": {
           "type": "boolean",
@@ -18773,9 +18827,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True whenever the project file changed; modules and content mount only at startup."
         },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With paths: one entry per path (path, deleted, and errorCode plus error when it was not deleted). The call fails with PARTIAL_DELETE when any path was not deleted."
+        },
         "returned": {
           "type": "number",
-          "description": "How many lines were returned."
+          "description": "How many files this page lists."
         },
         "roots": {
           "type": "string",
@@ -18814,6 +18877,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the action succeeded."
         },
+        "total": {
+          "type": "number",
+          "description": "How many files match the root and extension filters, across all pages."
+        },
         "traceGuid": {
           "type": "string",
           "description": "Trace guid (when connected)."
@@ -18821,10 +18888,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "traceSystemStatus": {
           "type": "string",
           "description": "Trace system status (e.g. available, tracing_to_file)."
-        },
-        "truncated": {
-          "type": "boolean",
-          "description": "True when more files exist than were listed."
         },
         "uatResult": {
           "type": "string",

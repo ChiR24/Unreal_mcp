@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e7bc81e1f363c662",
+  "catalogRevision": "63bea1e5c1c1e3c0",
   "recordCount": 382,
   "records": [
     {
@@ -80999,7 +80999,7 @@
           "delete snapshot file",
           "clean up output files"
         ],
-        "summary": "Delete one file the MCP wrote (a screenshot or environment snapshot); nothing outside Saved/Screenshots, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
+        "summary": "Delete files the MCP wrote (screenshots or environment snapshots), one path or a list of paths; nothing outside Saved/Screenshots, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
         "whenToUse": [
           "A screenshot or snapshot the task created is no longer needed."
         ],
@@ -81020,13 +81020,24 @@
             "path": {
               "type": "string",
               "description": "Project-relative file path exactly as list_output_files shows it, e.g. Saved/Screenshots/check.png."
+            },
+            "paths": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              },
+              "description": "Several project-relative file paths to delete in one call; each gets its own entry in results. Takes precedence over path."
             }
           },
           "required": [
-            "action",
-            "path"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "path",
+            "paths"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -81047,15 +81058,32 @@
             },
             "path": {
               "type": "string",
-              "description": "The file that was deleted."
+              "description": "With path: the file that was deleted."
             },
             "deleted": {
               "type": "boolean",
-              "description": "True when the file is gone."
+              "description": "With path: true when the file is gone."
             },
             "existsAfter": {
               "type": "boolean",
-              "description": "Whether the file still exists after the call."
+              "description": "With path: whether the file still exists after the call."
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With paths: one entry per path (path, deleted, and errorCode plus error when it was not deleted). The call fails with PARTIAL_DELETE when any path was not deleted."
+            },
+            "deletedCount": {
+              "type": "number",
+              "description": "With paths: how many files were deleted."
+            },
+            "failedCount": {
+              "type": "number",
+              "description": "With paths: how many paths were not deleted."
             }
           },
           "required": [
@@ -81066,7 +81094,7 @@
       },
       "examples": [
         {
-          "title": "Delete one file the MCP wrote (a screenshot or environment snapshot); nothing outside Saved/Screenshots, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
+          "title": "Delete files the MCP wrote (screenshots or environment snapshots), one path or a list of paths; nothing outside Saved/Screenshots, Saved/unreal-mcp, tmp/unreal-mcp or temp/unreal-mcp can be reached.",
           "input": {
             "action": "delete_output_file",
             "path": "Saved/Screenshots/check.png"
@@ -81107,8 +81135,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0043a5c0ae0053977de3b24f99cead62f7bbe18880df61945bce57746e90f282",
-        "content": "1cf126e10297d50c8c2ce80224ec69b5f44c621fb206047df5ead145377fb663"
+        "schema": "cfdea18a30719ec00fa5da8e372eb8e5402c5633e8885f65c8e27c9ce445717d",
+        "content": "0dcc5b291b719f689d8bc6c26585d1883669f499e9114d53ea8767e89a1d8086"
       }
     },
     {
@@ -81915,6 +81943,31 @@
             "action": {
               "type": "string",
               "description": "The action to execute on the parent tool."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "How many files to return (default 100, max 500)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "How many of the newest matching files to skip (default 0); pass the previous reply's nextOffset to read the next page."
+            },
+            "root": {
+              "type": "string",
+              "enum": [
+                "Saved/Screenshots",
+                "Saved/unreal-mcp",
+                "tmp/unreal-mcp",
+                "temp/unreal-mcp"
+              ],
+              "description": "Search only this output folder (default all four)."
+            },
+            "extension": {
+              "type": "string",
+              "description": "Only files with this extension, e.g. png or json (a leading dot is ignored, case-insensitive)."
             }
           },
           "required": [
@@ -81946,15 +81999,27 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Each file: path (project-relative, what delete_output_file takes), sizeBytes, modified (ISO 8601). Sorted by path, at most 500."
+              "description": "Each file: path (project-relative, what delete_output_file takes), sizeBytes, modified (ISO 8601). Newest first."
             },
-            "count": {
+            "total": {
               "type": "number",
-              "description": "How many files exist, including any past the 500 listed."
+              "description": "How many files match the root and extension filters, across all pages."
             },
-            "truncated": {
+            "returned": {
+              "type": "number",
+              "description": "How many files this page lists."
+            },
+            "offset": {
+              "type": "number",
+              "description": "The offset this page starts at."
+            },
+            "hasMore": {
               "type": "boolean",
-              "description": "True when more files exist than were listed."
+              "description": "True when more matching files follow this page."
+            },
+            "nextOffset": {
+              "type": "number",
+              "description": "The offset of the next page; present only when hasMore is true."
             },
             "roots": {
               "type": "string",
@@ -81971,11 +82036,14 @@
         {
           "title": "List the files the MCP itself wrote: screenshots (Saved/Screenshots) and environment snapshots (Saved/unreal-mcp, tmp/unreal-mcp, temp/unreal-mcp).",
           "input": {
-            "action": "list_output_files"
+            "action": "list_output_files",
+            "root": "Saved/Screenshots",
+            "extension": "png",
+            "limit": 20
           },
           "output": {
             "success": true,
-            "message": "1 MCP output file(s)",
+            "message": "1 of 1 MCP output file(s), newest first",
             "files": [
               {
                 "path": "Saved/Screenshots/check.png",
@@ -81983,8 +82051,11 @@
                 "modified": "2026-09-27T21:11:05.000Z"
               }
             ],
-            "count": 1,
-            "truncated": false
+            "total": 1,
+            "returned": 1,
+            "offset": 0,
+            "hasMore": false,
+            "roots": "Saved/Screenshots"
           }
         }
       ],
@@ -82015,8 +82086,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b897b2948d702caa8d4897a5b0714f4e06ea22cfba5ab83599557d7fdda11ede",
-        "content": "fe8381a918f56d012fe47d76fa3a9b830c517d5b0335b59d467223a1926b3e2b"
+        "schema": "418c94107d0dabae1e6f894d92039bd1679d665bc5aecaf007cf96c04ecb8cdb",
+        "content": "73e23d78d49615fa2f49278a351aa41f7a47384dd098ca180f8cb170cb6371e7"
       }
     },
     {

@@ -110,7 +110,10 @@ const testCases = [
   { scenario: 'READ: list_output_files', toolName: 'system_control', arguments: { action: 'list_output_files' }, expected: 'success' },
   { scenario: 'CLEANUP: delete_output_file the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Saved/Screenshots/SystemControl_NullRHI.png' }, expected: 'success|not found' },
   { scenario: 'CLEANUP: delete_output_file refuses a project file', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Config/DefaultGame.ini' }, expected: 'error|PATH_OUTSIDE_OUTPUT_ROOTS' },
+  { scenario: 'READ: list_output_files one page of screenshots', toolName: 'system_control', arguments: { action: 'list_output_files', root: 'Saved/Screenshots', extension: 'png', limit: 5, offset: 0 }, expected: 'success', assertions: [{ path: 'structuredContent.result.returned', gte: 0 }] },
+  { scenario: 'CLEANUP: delete_output_file paths the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', paths: ['Saved/Screenshots/SystemControl_NullRHI.png'] }, expected: 'success|PARTIAL_DELETE' },
   // === CREATE ===
+  { scenario: 'CLEANUP: delete_output_file reports each of several paths', toolName: 'system_control', arguments: { action: 'delete_output_file', paths: ['Saved/Screenshots/SystemControl_NullRHI.png', 'Config/DefaultGame.ini'] }, expected: 'error|PARTIAL_DELETE' },
   { scenario: 'CREATE: spawn_category', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'AI' }, expected: 'success' },
   // === ACTION ===
   { scenario: 'ACTION: start_session', toolName: 'system_control', arguments: { action: 'start_session', channels: 'cpu' }, expected: 'success' },
