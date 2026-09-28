@@ -12955,7 +12955,6 @@
         "actionName",
         "actionPath",
         "actorName",
-        "allowSpectating",
         "alt",
         "alwaysRelevant",
         "assetPath",
@@ -13019,13 +13018,11 @@
         "rpcType",
         "save",
         "scale",
-        "serverName",
         "setting",
         "shift",
         "smoothingRate",
         "spatiallyLoaded",
         "spectatorClass",
-        "spectatorViewMode",
         "splitScreenType",
         "structName",
         "systemWide",
@@ -13053,10 +13050,6 @@
             "type": "string",
             "description": "Target actor label or name in the current level."
           },
-          "allowSpectating": {
-            "type": "string",
-            "description": "Allow spectating."
-          },
           "alt": {
             "type": "boolean",
             "description": "Whether the Alt modifier must be held."
@@ -13074,8 +13067,8 @@
             "description": "Legacy input axis name. Overrides name when both are supplied."
           },
           "bDelayedStart": {
-            "type": "string",
-            "description": "Whether delayed start applies."
+            "type": "boolean",
+            "description": "Hold the match in WaitingToStart until StartMatch is called (AGameMode::bDelayedStart)."
           },
           "blueprintPath": {
             "type": "string",
@@ -13319,15 +13312,11 @@
           },
           "save": {
             "type": "boolean",
-            "description": "Persist the created or modified asset to disk."
+            "description": "Save the Blueprint asset to disk after the change (default true)."
           },
           "scale": {
             "type": "number",
             "description": "Axis scale value."
-          },
-          "serverName": {
-            "type": "string",
-            "description": "Server name."
           },
           "setting": {
             "type": "string",
@@ -13388,11 +13377,7 @@
           },
           "spectatorClass": {
             "type": "string",
-            "description": "Spectator class."
-          },
-          "spectatorViewMode": {
-            "type": "string",
-            "description": "Spectator view mode."
+            "description": "SpectatorPawn class path, e.g. /Script/Engine.SpectatorPawn or a Blueprint path."
           },
           "splitScreenType": {
             "type": "string",

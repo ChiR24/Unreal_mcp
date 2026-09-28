@@ -15602,10 +15602,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target actor label or name in the current level."
         },
-        "allowSpectating": {
-          "type": "string",
-          "description": "Allow spectating."
-        },
         "alt": {
           "type": "boolean",
           "description": "Whether the Alt modifier must be held."
@@ -15623,8 +15619,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Legacy input axis name. Overrides name when both are supplied."
         },
         "bDelayedStart": {
-          "type": "string",
-          "description": "Whether delayed start applies."
+          "type": "boolean",
+          "description": "Hold the match in WaitingToStart until StartMatch is called (AGameMode::bDelayedStart)."
         },
         "blueprintPath": {
           "type": "string",
@@ -15868,15 +15864,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "save": {
           "type": "boolean",
-          "description": "Persist the created or modified asset to disk."
+          "description": "Save the Blueprint asset to disk after the change (default true)."
         },
         "scale": {
           "type": "number",
           "description": "Axis scale value."
-        },
-        "serverName": {
-          "type": "string",
-          "description": "Server name."
         },
         "setting": {
           "type": "string",
@@ -15937,11 +15929,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "spectatorClass": {
           "type": "string",
-          "description": "Spectator class."
-        },
-        "spectatorViewMode": {
-          "type": "string",
-          "description": "Spectator view mode."
+          "description": "SpectatorPawn class path, e.g. /Script/Engine.SpectatorPawn or a Blueprint path."
         },
         "splitScreenType": {
           "type": "string",
@@ -16094,10 +16082,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "role": {
           "type": "string",
           "description": "Network role of the actor, such as ROLE_Authority."
-        },
-        "serverName": {
-          "type": "string",
-          "description": "Display name of the hosted LAN server."
         },
         "sessionsInfo": {
           "type": "object",

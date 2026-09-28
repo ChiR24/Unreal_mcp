@@ -15,7 +15,6 @@ bool HandleHostLanServer(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    FString ServerName = GetJsonStringField(Payload, TEXT("serverName"), TEXT("LAN Server"));
     FString MapName = GetJsonStringField(Payload, TEXT("mapName"), TEXT(""));
     int32 MaxPlayers = static_cast<int32>(GetJsonNumberField(Payload, TEXT("maxPlayers"), 4));
     FString TravelOptions = GetJsonStringField(Payload, TEXT("travelOptions"), TEXT(""));
@@ -31,7 +30,8 @@ bool HandleHostLanServer(
     FString FullTravelOptions = FString::Printf(TEXT("?listen?bIsLanMatch=1?MaxPlayers=%d"), MaxPlayers);
     if (!TravelOptions.IsEmpty())
     {
-        FullTravelOptions += TravelOptions;
+        // Each URL option is introduced by '?'; a bare "Foo=1" used to be glued onto MaxPlayers.
+        FullTravelOptions += TravelOptions.StartsWith(TEXT("?")) ? TravelOptions : TEXT("?") + TravelOptions;
     }
 
     FString FullMapPath = MapName;
@@ -42,7 +42,7 @@ bool HandleHostLanServer(
 
     FString TravelURL = FullMapPath + FullTravelOptions;
     bool bSuccess = true;
-    FString StatusMessage = TEXT("configured");
+    FString StatusMessage = TEXT("URL built; nothing was hosted (pass executeTravel: true to travel to it)");
 
     if (bExecuteTravel)
     {
@@ -71,7 +71,6 @@ bool HandleHostLanServer(
     }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
-    ResponseJson->SetStringField(TEXT("serverName"), ServerName);
     ResponseJson->SetStringField(TEXT("mapName"), MapName);
     ResponseJson->SetStringField(TEXT("mapPath"), FullMapPath);
     ResponseJson->SetNumberField(TEXT("maxPlayers"), MaxPlayers);
@@ -79,8 +78,7 @@ bool HandleHostLanServer(
     ResponseJson->SetStringField(TEXT("status"), StatusMessage);
     ResponseJson->SetBoolField(TEXT("travelExecuted"), bExecuteTravel && bSuccess);
 
-    FString Message = FString::Printf(TEXT("LAN server '%s' %s for map '%s' (max %d players)"),
-        *ServerName, *StatusMessage, *MapName, MaxPlayers);
+    FString Message = FString::Printf(TEXT("LAN listen URL %s: %s"), *TravelURL, *StatusMessage);
     Subsystem->SendAutomationResponse(Socket, RequestId, bSuccess, Message, ResponseJson);
     return true;
 }

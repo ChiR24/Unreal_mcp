@@ -64,17 +64,26 @@ bool HandleSetInputTrigger(
         return true;
     }
 
-    InAction->Modify();
-    InAction->Triggers.Add(NewObject<UInputTrigger>(InAction, TriggerClass));
-    SaveLoadedAssetThrottled(InAction, true);
+    // "Set" is idempotent: a trigger of this class already on the action is kept, not stacked again.
+    const bool bAlreadyPresent = InAction->Triggers.ContainsByPredicate(
+        [TriggerClass](const auto& Trigger) { return Trigger && Trigger->GetClass() == TriggerClass; });
+    if (!bAlreadyPresent)
+    {
+        InAction->Modify();
+        InAction->Triggers.Add(NewObject<UInputTrigger>(InAction, TriggerClass));
+        SaveLoadedAssetThrottled(InAction, true);
+    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
     Result->SetStringField(TEXT("triggerType"), TriggerType);
     Result->SetBoolField(TEXT("triggerSet"), true);
+    Result->SetBoolField(TEXT("alreadyPresent"), bAlreadyPresent);
+    Result->SetNumberField(TEXT("triggerCount"), InAction->Triggers.Num());
     McpHandlerUtils::AddVerification(Result, InAction);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-        FString::Printf(TEXT("Trigger '%s' configured on action."), *TriggerType), Result);
+        bAlreadyPresent ? FString::Printf(TEXT("Trigger '%s' was already on the action; nothing added."), *TriggerType)
+                        : FString::Printf(TEXT("Trigger '%s' configured on action."), *TriggerType), Result);
     return true;
 }
 
@@ -156,25 +165,24 @@ bool HandleSetInputModifier(
             TEXT("INVALID_MODIFIER_TYPE"));
         return true;
     }
-    UInputModifier* NewModifier = NewObject<UInputModifier>(ModifierOuter, ModifierClass);
-
-    if (TargetMapping)
+    // "Set" is idempotent: a second Negate on the same target would cancel the first, so a
+    // modifier of this class already there is kept rather than stacked.
+    auto& Modifiers = TargetMapping ? TargetMapping->Modifiers : InAction->Modifiers;
+    const bool bAlreadyPresent = Modifiers.ContainsByPredicate(
+        [ModifierClass](const auto& Modifier) { return Modifier && Modifier->GetClass() == ModifierClass; });
+    if (!bAlreadyPresent)
     {
-        Context->Modify();
-        TargetMapping->Modifiers.Add(NewModifier);
-        SaveLoadedAssetThrottled(Context, true);
-    }
-    else
-    {
-        InAction->Modify();
-        InAction->Modifiers.Add(NewModifier);
-        SaveLoadedAssetThrottled(InAction, true);
+        UObject* ModifiedAsset = TargetMapping ? static_cast<UObject*>(Context) : static_cast<UObject*>(InAction);
+        ModifiedAsset->Modify();
+        Modifiers.Add(NewObject<UInputModifier>(ModifierOuter, ModifierClass));
+        SaveLoadedAssetThrottled(ModifiedAsset, true);
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actionPath"), SanitizedActionPath);
     Result->SetStringField(TEXT("modifierType"), ModifierType);
     Result->SetBoolField(TEXT("modifierSet"), true);
+    Result->SetBoolField(TEXT("alreadyPresent"), bAlreadyPresent);
     Result->SetStringField(TEXT("target"), TargetMapping ? TEXT("mapping") : TEXT("action"));
     if (TargetMapping)
     {

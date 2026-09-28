@@ -50,7 +50,9 @@ bool ValidateCommonFields(FActionContext& Context)
 
     Context.Name = GetStringField(Context.Payload, TEXT("name"));
     Context.Path = GetStringField(Context.Payload, TEXT("path"), TEXT("/Game"));
-    Context.bSave = GetBoolField(Context.Payload, TEXT("save"), false);
+    // Every Game Framework action authors a Blueprint asset; an edit that is not saved is lost
+    // on the next editor restart, so saving is the default.
+    Context.bSave = GetBoolField(Context.Payload, TEXT("save"), true);
 
     FString SanitizedPath = SanitizeProjectRelativePath(Context.Path);
     if (SanitizedPath.IsEmpty() && !Context.Path.IsEmpty())

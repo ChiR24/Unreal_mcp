@@ -238,12 +238,11 @@ const testCases = [
   const TEST_FOLDER = '/Game/MCPTest/GameplayAssets';
   const ts = Date.now();
 
-  const SERVER_NAME = `MCP_LAN_${ts}`;
   const PLAYER_NAME = `MCP_Player_${ts}`;
   const TARGET_PLAYER_ID = `MCP_TargetId_${ts}`;
   const MAP_PATH = '/Game/MCPTest/MainLevel';
-  const HOST_OPTIONS = '?MCPTest=1';
-  const HOST_TRAVEL_URL = `${MAP_PATH}?listen?bIsLanMatch=1?MaxPlayers=4${HOST_OPTIONS}`;
+  const HOST_OPTIONS = 'MCPTest=1';
+  const HOST_TRAVEL_URL = `${MAP_PATH}?listen?bIsLanMatch=1?MaxPlayers=4?${HOST_OPTIONS}`;
 
   testCases.push(
     // === SETUP ===
@@ -325,10 +324,9 @@ const testCases = [
     {
       scenario: 'ACTION: host_lan_server',
       toolName: 'manage_networking',
-      arguments: { action: 'host_lan_server', serverName: SERVER_NAME, mapName: MAP_PATH, maxPlayers: 4, travelOptions: HOST_OPTIONS, executeTravel: false },
+      arguments: { action: 'host_lan_server', mapName: MAP_PATH, maxPlayers: 4, travelOptions: HOST_OPTIONS, executeTravel: false },
       expected: 'success',
       assertions: [
-        { path: 'structuredContent.result.serverName', equals: SERVER_NAME, label: 'LAN server name returned' },
         { path: 'structuredContent.result.mapPath', equals: MAP_PATH, label: 'LAN host map path returned' },
         { path: 'structuredContent.result.travelURL', equals: HOST_TRAVEL_URL, label: 'LAN host travel URL constructed' },
         { path: 'structuredContent.result.travelExecuted', equals: false, label: 'LAN host test avoids disruptive travel' }
@@ -350,24 +348,23 @@ const testCases = [
       scenario: 'ACTION: mute_player',
       toolName: 'manage_networking',
       arguments: { action: 'mute_player', playerName: PLAYER_NAME, muted: true, localPlayerNum: 0, systemWide: false },
-      expected: 'success',
+      // Without a voice chat or online voice interface the mute cannot be applied and is refused.
+      expected: 'success|NOT_SUPPORTED',
       assertions: [
         { path: 'structuredContent.result.target', equals: PLAYER_NAME, label: 'mute player target returned' },
-        { path: 'structuredContent.result.muted', equals: true, label: 'mute state returned' },
-        { path: 'structuredContent.result.success', equals: true, label: 'mute request completed' }
+        { path: 'structuredContent.result.muted', equals: true, label: 'mute state returned' }
       ]
     },
     {
       scenario: 'ACTION: mute_player via targetPlayerId',
       toolName: 'manage_networking',
       arguments: { action: 'mute_player', targetPlayerId: TARGET_PLAYER_ID, muted: false, localPlayerNum: 0, systemWide: true },
-      expected: 'success',
+      expected: 'success|NOT_SUPPORTED',
       assertions: [
         { path: 'structuredContent.result.target', equals: TARGET_PLAYER_ID, label: 'target player id returned' },
         { path: 'structuredContent.result.muted', equals: false, label: 'unmute state returned' },
         { path: 'structuredContent.result.localPlayerNum', equals: 0, label: 'local player number returned' },
-        { path: 'structuredContent.result.systemWide', equals: true, label: 'system-wide mute flag returned' },
-        { path: 'structuredContent.result.success', equals: true, label: 'target id mute request completed' }
+        { path: 'structuredContent.result.systemWide', equals: true, label: 'system-wide mute flag returned' }
       ]
     },
 
@@ -396,6 +393,8 @@ const testCases = [
 
   const GAME_MODE_ASSET_PATH = `${TEST_FOLDER}/${GAME_MODE_NAME}`;
   const GAME_MODE_OBJECT_PATH = `${GAME_MODE_ASSET_PATH}.${GAME_MODE_NAME}`;
+  const BASE_GAME_MODE_NAME = `GM_Base_${ts}`;
+  const BASE_GAME_MODE_OBJECT_PATH = `${TEST_FOLDER}/${BASE_GAME_MODE_NAME}.${BASE_GAME_MODE_NAME}`;
   const GAME_STATE_ASSET_PATH = `${TEST_FOLDER}/${GAME_STATE_NAME}`;
   const GAME_STATE_OBJECT_PATH = `${GAME_STATE_ASSET_PATH}.${GAME_STATE_NAME}`;
   const PLAYER_CONTROLLER_ASSET_PATH = `${TEST_FOLDER}/${PLAYER_CONTROLLER_NAME}`;
@@ -436,9 +435,11 @@ const testCases = [
     { scenario: 'CREATE: create_player_controller', toolName: 'manage_networking', arguments: { action: 'create_player_controller', name: PLAYER_CONTROLLER_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.PlayerController' }, expected: 'success', assertions: createBlueprintAssertions(PLAYER_CONTROLLER_ASSET_PATH, PLAYER_CONTROLLER_OBJECT_PATH, PLAYER_CONTROLLER_NAME, 'player controller blueprint') },
     { scenario: 'CREATE: create_player_state', toolName: 'manage_networking', arguments: { action: 'create_player_state', name: PLAYER_STATE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.PlayerState' }, expected: 'success', assertions: createBlueprintAssertions(PLAYER_STATE_ASSET_PATH, PLAYER_STATE_OBJECT_PATH, PLAYER_STATE_NAME, 'player state blueprint') },
     { scenario: 'CREATE: create_game_instance', toolName: 'manage_networking', arguments: { action: 'create_game_instance', name: GAME_INSTANCE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameInstance' }, expected: 'success', assertions: createBlueprintAssertions(GAME_INSTANCE_ASSET_PATH, GAME_INSTANCE_OBJECT_PATH, GAME_INSTANCE_NAME, 'game instance blueprint') },
+    { scenario: 'CREATE: create_game_mode on GameModeBase', toolName: 'manage_networking', arguments: { action: 'create_game_mode', name: BASE_GAME_MODE_NAME, path: TEST_FOLDER, parentClass: '/Script/Engine.GameModeBase' }, expected: 'success' },
+    { scenario: 'CREATE: create_game_state refuses an unloadable parentClass', toolName: 'manage_networking', arguments: { action: 'create_game_state', name: `GS_Missing_${ts}`, path: TEST_FOLDER, parentClass: '/Script/Engine.NoSuchGameState' }, expected: 'error|NOT_FOUND' },
 
     { scenario: 'CONFIG: set_default_pawn_class', toolName: 'manage_networking', arguments: { action: 'set_default_pawn_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, pawnClass: DEFAULT_PAWN_CLASS }, expected: 'success', assertions: gameModePathAssertion('default pawn class') },
-    { scenario: 'CONFIG: set_hud_class', toolName: 'manage_networking', arguments: { action: 'set_hud_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, hudClass: HUD_OBJECT_PATH }, expected: 'success', assertions: gameModePathAssertion('hud class') },
+    { scenario: 'CONFIG: set_hud_class', toolName: 'manage_networking', arguments: { action: 'set_hud_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, hudClass: HUD_OBJECT_PATH, save: true }, expected: 'success', assertions: gameModePathAssertion('hud class') },
     { scenario: 'INFO: read back default pawn class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.defaultPawnClass', equals: DEFAULT_PAWN_CLASS, label: 'default pawn class read back from CDO' }] },
     { scenario: 'CONFIG: set_player_controller_class', toolName: 'manage_networking', arguments: { action: 'set_player_controller_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, playerControllerClass: PLAYER_CONTROLLER_CLASS }, expected: 'success', assertions: gameModePathAssertion('player controller class') },
     { scenario: 'INFO: read back player controller class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.playerControllerClass', equals: PLAYER_CONTROLLER_CLASS, label: 'player controller class read back from CDO' }] },
@@ -446,11 +447,13 @@ const testCases = [
     { scenario: 'INFO: read back game state class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.gameStateClass', equals: GAME_STATE_CLASS, label: 'game state class read back from CDO' }] },
     { scenario: 'CONFIG: set_player_state_class', toolName: 'manage_networking', arguments: { action: 'set_player_state_class', gameModeBlueprint: GAME_MODE_OBJECT_PATH, playerStateClass: PLAYER_STATE_CLASS }, expected: 'success', assertions: gameModePathAssertion('player state class') },
     { scenario: 'INFO: read back player state class', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameFrameworkInfo.playerStateClass', equals: PLAYER_STATE_CLASS, label: 'player state class read back from CDO' }] },
-    { scenario: 'CONFIG: configure_game_rules', toolName: 'manage_networking', arguments: { action: 'configure_game_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, bDelayedStart: true }, expected: 'success', assertions: gameModePathAssertion('game rules') },
+    { scenario: 'CONFIG: configure_game_rules', toolName: 'manage_networking', arguments: { action: 'configure_game_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, bDelayedStart: true, save: true }, expected: 'success', assertions: gameModePathAssertion('game rules') },
+    { scenario: 'CONFIG: configure_game_rules refuses a GameModeBase child', toolName: 'manage_networking', arguments: { action: 'configure_game_rules', gameModeBlueprint: BASE_GAME_MODE_OBJECT_PATH, bDelayedStart: true }, expected: 'error|NOT_SUPPORTED' },
+    { scenario: 'CONFIG: set_respawn_rules refuses a GameModeBase child', toolName: 'manage_networking', arguments: { action: 'set_respawn_rules', gameModeBlueprint: BASE_GAME_MODE_OBJECT_PATH, respawnDelay: 3 }, expected: 'error|NOT_SUPPORTED' },
 
 
     { scenario: 'CONFIG: set_respawn_rules', toolName: 'manage_networking', arguments: { action: 'set_respawn_rules', gameModeBlueprint: GAME_MODE_OBJECT_PATH, respawnDelay: 9.25 }, expected: 'success', assertions: [...gameModePathAssertion('respawn rules'), { path: 'structuredContent.result.configuration.respawnDelay', equals: 9.25, label: 'respawn delay configured' }] },
-    { scenario: 'CONFIG: configure_spectating', toolName: 'manage_networking', arguments: { action: 'configure_spectating', gameModeBlueprint: GAME_MODE_OBJECT_PATH, spectatorClass: SPECTATOR_CLASS, allowSpectating: true, spectatorViewMode: 'FreeCam' }, expected: 'success', assertions: gameModePathAssertion('spectating') },
+    { scenario: 'CONFIG: configure_spectating', toolName: 'manage_networking', arguments: { action: 'configure_spectating', gameModeBlueprint: GAME_MODE_OBJECT_PATH, spectatorClass: SPECTATOR_CLASS, save: true }, expected: 'success', assertions: gameModePathAssertion('spectating') },
 
     { scenario: 'INFO: get_game_framework_info final readback', toolName: 'manage_networking', arguments: { action: 'get_game_framework_info', gameModeBlueprint: GAME_MODE_OBJECT_PATH }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'game framework info native success flag' }, { path: 'structuredContent.result.gameFrameworkInfo.gameModeClass', equals: `${GAME_MODE_OBJECT_PATH}_C`, label: 'game mode generated class read back' }, { path: 'structuredContent.result.gameFrameworkInfo.defaultPawnClass', equals: DEFAULT_PAWN_CLASS, label: 'final default pawn readback' }, { path: 'structuredContent.result.gameFrameworkInfo.playerControllerClass', equals: PLAYER_CONTROLLER_CLASS, label: 'final player controller readback' }, { path: 'structuredContent.result.gameFrameworkInfo.gameStateClass', equals: GAME_STATE_CLASS, label: 'final game state readback' }, { path: 'structuredContent.result.gameFrameworkInfo.playerStateClass', equals: PLAYER_STATE_CLASS, label: 'final player state readback' }, { path: 'structuredContent.result.gameFrameworkInfo.hudClass', equals: `${HUD_OBJECT_PATH}_C`, label: 'final HUD class readback' }] },
 
@@ -486,13 +489,19 @@ const testCases = [
     { scenario: 'ADD: add_mapping', toolName: 'manage_networking', arguments: { action: 'add_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar' }, expected: 'success|already exists' },
     // === ACTION ===
     { scenario: 'ACTION: map_input_action', toolName: 'manage_networking', arguments: { action: 'map_input_action', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'LeftMouseButton' }, expected: 'success' },
+    { scenario: 'ACTION: map_input_action with a trigger and modifier', toolName: 'manage_networking', arguments: { action: 'map_input_action', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'RightMouseButton', triggerType: 'Released', modifierType: 'Negate' }, expected: 'success' },
     // === CONFIG ===
     { scenario: 'CONFIG: set_input_trigger', toolName: 'manage_networking', arguments: { action: 'set_input_trigger', actionPath: INPUT_ACTION, triggerType: 'Pressed' }, expected: 'success' },
+    { scenario: 'CONFIG: set_input_trigger again keeps one trigger', toolName: 'manage_networking', arguments: { action: 'set_input_trigger', actionPath: INPUT_ACTION, triggerType: 'Pressed' }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'repeated set_input_trigger succeeds without stacking' }] },
     { scenario: 'CONFIG: set_input_modifier', toolName: 'manage_networking', arguments: { action: 'set_input_modifier', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar', modifierType: 'Negate' }, expected: 'success' },
     // === DELETE ===
     { scenario: 'DELETE: remove_mapping', toolName: 'manage_networking', arguments: { action: 'remove_mapping', contextPath: INPUT_CONTEXT, actionPath: INPUT_ACTION, key: 'SpaceBar' }, expected: 'success|not found' },
     // === TOGGLE ===
-    { scenario: 'TOGGLE: enable_input_mapping', toolName: 'manage_networking', arguments: { action: 'enable_input_mapping', contextPath: INPUT_CONTEXT, priority: 1 }, expected: 'success' },
+    // A context is enabled on a running local player, so outside PIE the call is refused.
+    { scenario: 'TOGGLE: enable_input_mapping outside PIE is refused', toolName: 'manage_networking', arguments: { action: 'enable_input_mapping', contextPath: INPUT_CONTEXT }, expected: 'error|PIE_NOT_RUNNING' },
+    { scenario: 'PLAYBACK: start PIE for enable_input_mapping', toolName: 'control_editor', arguments: { action: 'play' }, expected: 'success' },
+    { scenario: 'TOGGLE: enable_input_mapping', toolName: 'manage_networking', arguments: { action: 'enable_input_mapping', contextPath: INPUT_CONTEXT, priority: 1 }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'context enabled on the PIE local player' }] },
+    { scenario: 'PLAYBACK: stop PIE after enable_input_mapping', toolName: 'control_editor', arguments: { action: 'stop_pie' }, expected: 'success' },
     // === INFO ===
     { scenario: 'INFO: get_input_info', toolName: 'manage_networking', arguments: { action: 'get_input_info', assetPath: INPUT_CONTEXT }, expected: 'success' },
     { scenario: 'ADD: add_legacy_action_mapping', toolName: 'manage_networking', arguments: { action: 'add_legacy_action_mapping', actionName: LEGACY_ACTION_NAME, key: 'F', shift: true, ctrl: false, alt: false, cmd: false }, expected: 'success' },

@@ -1,14 +1,28 @@
-import type { CapabilityRecordSource } from '../../model.js';
-import { utilityRecord } from '../utility/utility-record-builders.js';
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
+import { utilityRecord, withInputProps } from '../utility/utility-record-builders.js';
 
 const T = 'manage_networking' as const;
-const f = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], read = false): CapabilityRecordSource => utilityRecord({
-  tool: T, action, family: 'gameFramework', summary, params, required, outputs, outputRequired,
-  effect: read ? 'read' : 'write', safeToRetry: read, dispatchAction: 'manage_game_framework',
-});
+// Every Game Framework action authors a Blueprint asset, and an unsaved edit is lost on the next
+// editor restart, so the handler saves unless told not to.
+const SAVE: Readonly<Record<string, JsonObject>> = {
+  save: { type: 'boolean', description: 'Save the Blueprint asset to disk after the change (default true).' },
+};
+const f = (action: string, summary: string, params: readonly string[], required: readonly string[], outputs: readonly string[] = [], outputRequired: readonly string[] = [], read = false, props: Readonly<Record<string, JsonObject>> = {}): CapabilityRecordSource => {
+  const record = utilityRecord({
+    tool: T, action, family: 'gameFramework', summary, params, required, outputs, outputRequired,
+    effect: read ? 'read' : 'write', safeToRetry: read, dispatchAction: 'manage_game_framework',
+  });
+  return withInputProps(record, read ? props : { ...SAVE, ...props });
+};
 const create = (action: string, label: string, extra: readonly string[] = []): CapabilityRecordSource => f(
-  action, `Create a ${label} Blueprint asset and return its path.`,
+  action, `Create a ${label} Blueprint asset and return its path; an unloadable parentClass, or one that is not a ${label}, is refused.`,
   ['name', 'path', 'parentClass', 'save', ...extra], ['name', 'path'], ['assetPath'], ['assetPath'],
+);
+// Setting a class also makes this game mode the project default (GameMapsSettings
+// GlobalDefaultGameMode) and the open level's game mode override, so the class is what runs in PIE.
+const EFFECTIVE = ' The game mode also becomes the project default game mode and the open level\'s game mode override.';
+const setClass = (action: string, label: string, field: string, alias: readonly string[] = []): CapabilityRecordSource => f(
+  action, `Set a GameMode ${label} class.${EFFECTIVE}`, ['gameModeBlueprint', 'blueprintPath', field, ...alias, 'save'], ['gameModeBlueprint', field],
 );
 
 export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
@@ -18,13 +32,17 @@ export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
   create('create_player_state', 'PlayerState'),
   create('create_game_instance', 'GameInstance'),
   create('create_hud_class', 'HUD'),
-  f('set_default_pawn_class', 'Set a GameMode default pawn class.', ['gameModeBlueprint', 'blueprintPath', 'pawnClass', 'defaultPawnClass'], ['gameModeBlueprint', 'pawnClass']),
-  f('set_player_controller_class', 'Set a GameMode PlayerController class.', ['gameModeBlueprint', 'blueprintPath', 'playerControllerClass'], ['gameModeBlueprint', 'playerControllerClass']),
-  f('set_game_state_class', 'Set a GameMode GameState class.', ['gameModeBlueprint', 'blueprintPath', 'gameStateClass'], ['gameModeBlueprint', 'gameStateClass']),
-  f('set_player_state_class', 'Set a GameMode PlayerState class.', ['gameModeBlueprint', 'blueprintPath', 'playerStateClass'], ['gameModeBlueprint', 'playerStateClass']),
-  f('set_hud_class', 'Set a GameMode HUD class.', ['gameModeBlueprint', 'blueprintPath', 'hudClass'], ['gameModeBlueprint', 'hudClass']),
-  f('configure_game_rules', 'Configure GameMode rule flags.', ['gameModeBlueprint', 'blueprintPath', 'bDelayedStart'], ['gameModeBlueprint']),
-  f('set_respawn_rules', 'Set the game mode\'s minimum respawn delay (AGameMode::MinRespawnDelay).', ['gameModeBlueprint', 'blueprintPath', 'respawnDelay'], ['gameModeBlueprint']),
-  f('configure_spectating', 'Configure spectator behavior.', ['gameModeBlueprint', 'blueprintPath', 'allowSpectating', 'spectatorClass', 'spectatorViewMode'], ['gameModeBlueprint']),
+  setClass('set_default_pawn_class', 'default pawn', 'pawnClass', ['defaultPawnClass']),
+  setClass('set_player_controller_class', 'PlayerController', 'playerControllerClass'),
+  setClass('set_game_state_class', 'GameState', 'gameStateClass'),
+  setClass('set_player_state_class', 'PlayerState', 'playerStateClass'),
+  setClass('set_hud_class', 'HUD', 'hudClass'),
+  f('configure_game_rules', 'Set a GameMode\'s bDelayedStart match rule; only GameMode (AGameMode) children have it, a GameModeBase child is refused with NOT_SUPPORTED.', ['gameModeBlueprint', 'blueprintPath', 'bDelayedStart', 'save'], ['gameModeBlueprint', 'bDelayedStart'], [], [], false, {
+    bDelayedStart: { type: 'boolean', description: 'Hold the match in WaitingToStart until StartMatch is called (AGameMode::bDelayedStart).' },
+  }),
+  f('set_respawn_rules', 'Set the game mode\'s minimum respawn delay (AGameMode::MinRespawnDelay); a GameModeBase child is refused with NOT_SUPPORTED.', ['gameModeBlueprint', 'blueprintPath', 'respawnDelay', 'save'], ['gameModeBlueprint', 'respawnDelay']),
+  f('configure_spectating', 'Set the GameMode spectator pawn class (SpectatorClass).', ['gameModeBlueprint', 'blueprintPath', 'spectatorClass', 'save'], ['gameModeBlueprint', 'spectatorClass'], [], [], false, {
+    spectatorClass: { type: 'string', description: 'SpectatorPawn class path, e.g. /Script/Engine.SpectatorPawn or a Blueprint path.' },
+  }),
   f('get_game_framework_info', 'Read Game Framework class and rule state.', ['gameModeBlueprint', 'blueprintPath'], [], ['gameFrameworkInfo'], ['gameFrameworkInfo'], true),
 ];

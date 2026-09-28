@@ -36,14 +36,21 @@ bool HandleEnableInputMapping(
         return true;
     }
 
+    // A mapping context is enabled on a running local player; outside PIE there is none, and the
+    // old success reply (enabled: true) described a context nothing had enabled.
+    if (!GEditor || !GEditor->PlayWorld)
+    {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            TEXT("No PIE session is running, so there is no local player to enable the context on. Start PIE (control_editor play) first; for the packaged game, add the context from the player controller's BeginPlay with an Add Mapping Context node."),
+            TEXT("PIE_NOT_RUNNING"));
+        return true;
+    }
+
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
     Result->SetNumberField(TEXT("priority"), Priority);
-    Result->SetBoolField(TEXT("enabled"), true);
-    Result->SetBoolField(TEXT("runtimeApplied"), false);
     McpHandlerUtils::AddVerification(Result, Context);
 
-    if (GEditor && GEditor->PlayWorld)
     {
         UWorld* PlayWorld = GEditor->PlayWorld.Get();
         APlayerController* PlayerController = PlayWorld ? PlayWorld->GetFirstPlayerController() : nullptr;
@@ -72,14 +79,20 @@ bool HandleEnableInputMapping(
         }
 
         InputSubsystem->AddMappingContext(Context, Priority);
-        Result->SetBoolField(TEXT("runtimeApplied"), true);
+        const bool bEnabled = InputSubsystem->HasMappingContext(Context);
+        Result->SetBoolField(TEXT("enabled"), bEnabled);
+        Result->SetBoolField(TEXT("runtimeApplied"), bEnabled);
+        if (!bEnabled)
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("The local player's Enhanced Input subsystem did not keep the mapping context."),
+                TEXT("ENABLE_FAILED"));
+            return true;
+        }
     }
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
-        Result->GetBoolField(TEXT("runtimeApplied")) ?
-            TEXT("Input mapping context enabled in PIE.") :
-            TEXT("Input mapping context verified; start PIE to apply it at runtime."),
-        Result);
+        TEXT("Input mapping context enabled in PIE."), Result);
     return true;
 }
 

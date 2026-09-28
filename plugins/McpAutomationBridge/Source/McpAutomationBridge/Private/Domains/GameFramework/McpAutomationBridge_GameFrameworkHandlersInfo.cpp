@@ -23,10 +23,10 @@ static void AddGameModeDefaults(const AGameModeBase* CDO, TSharedPtr<FJsonObject
     if (CDO->HUDClass) InfoObj->SetStringField(TEXT("hudClass"), CDO->HUDClass->GetPathName());
 }
 
-static void AddBlueprintInfo(FActionContext& Context, TSharedPtr<FJsonObject>& InfoObj)
+static bool AddBlueprintInfo(FActionContext& Context, TSharedPtr<FJsonObject>& InfoObj)
 {
     UBlueprint* Blueprint = LoadBlueprintFromPath(Context.GameModeBlueprint);
-    if (!Blueprint || !Blueprint->GeneratedClass) return;
+    if (!Blueprint || !Blueprint->GeneratedClass) return false;
 
     UObject* CDO = Blueprint->GeneratedClass->GetDefaultObject();
     if (CDO)
@@ -38,6 +38,7 @@ static void AddBlueprintInfo(FActionContext& Context, TSharedPtr<FJsonObject>& I
         AddGeneratedClassProperty(Blueprint->GeneratedClass, CDO, TEXT("HUDClass"), TEXT("hudClass"), InfoObj);
     }
     InfoObj->SetStringField(TEXT("gameModeClass"), Blueprint->GeneratedClass->GetPathName());
+    return true;
 }
 
 static UClass* ResolveWorldGameMode(UWorld* World, TSharedPtr<FJsonObject>& InfoObj)
@@ -87,7 +88,13 @@ bool HandleInfoAction(FActionContext& Context)
     TSharedPtr<FJsonObject> InfoObj = McpHandlerUtils::CreateResultObject();
     if (!Context.GameModeBlueprint.IsEmpty())
     {
-        AddBlueprintInfo(Context, InfoObj);
+        if (!AddBlueprintInfo(Context, InfoObj))
+        {
+            Context.SendError(
+                FString::Printf(TEXT("No GameMode Blueprint at %s."), *Context.GameModeBlueprint),
+                TEXT("NOT_FOUND"));
+            return true;
+        }
     }
     else
     {

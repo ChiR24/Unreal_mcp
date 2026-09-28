@@ -30,7 +30,6 @@ bool HandleMutePlayer(
     FString TargetIdentifier = !TargetPlayerId.IsEmpty() ? TargetPlayerId : PlayerName;
     bool bSuccess = false;
     bool bAppliedToVoiceInterface = false;
-    bool bAppliedToFallbackState = false;
     FString StatusMessage;
 
 #if MCP_HAS_VOICECHAT
@@ -138,26 +137,13 @@ bool HandleMutePlayer(
     }
 #endif
 
-    if (!bSuccess)
-    {
-        SessionsHelpers::StoreLocalVoiceMute(
-            TargetIdentifier,
-            LocalPlayerNum,
-            bSystemWide,
-            bMuted);
-        bSuccess = true;
-        bAppliedToFallbackState = true;
-        StatusMessage = FString::Printf(
-            TEXT("Native voice interface absent; stored %s in local editor-session mute state"),
-            bMuted ? TEXT("mute") : TEXT("unmute"));
-    }
-
+    // No voice system applied the mute: say so. It used to be written to a set nothing read and reported
+    // as success, so the NOT_SUPPORTED reply below never fired.
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("target"), TargetIdentifier);
     ResponseJson->SetBoolField(TEXT("muted"), bMuted);
     ResponseJson->SetBoolField(TEXT("success"), bSuccess);
     ResponseJson->SetBoolField(TEXT("appliedToVoiceInterface"), bAppliedToVoiceInterface);
-    ResponseJson->SetBoolField(TEXT("appliedToFallbackState"), bAppliedToFallbackState);
     ResponseJson->SetNumberField(TEXT("localPlayerNum"), LocalPlayerNum);
     ResponseJson->SetBoolField(TEXT("systemWide"), bSystemWide);
     ResponseJson->SetStringField(TEXT("status"), StatusMessage);

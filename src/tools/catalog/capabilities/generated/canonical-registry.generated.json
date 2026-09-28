@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "31e011b04e3258c5",
+  "catalogRevision": "51622af92f0345c8",
   "recordCount": 382,
   "records": [
     {
@@ -64937,12 +64937,12 @@
         ],
         "summary": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating, player start.",
         "whenToUse": [
-          "Use when set a gamemode default pawn class.",
-          "Use when set a gamemode playercontroller class.",
-          "Use when set a gamemode gamestate class.",
-          "Use when set a gamemode playerstate class.",
-          "Use when set a gamemode hud class.",
-          "Use when configure gamemode rule flags."
+          "Use when set a gamemode default pawn class. the game mode also becomes the project default game mode and the open level's game mode override.",
+          "Use when set a gamemode playercontroller class. the game mode also becomes the project default game mode and the open level's game mode override.",
+          "Use when set a gamemode gamestate class. the game mode also becomes the project default game mode and the open level's game mode override.",
+          "Use when set a gamemode playerstate class. the game mode also becomes the project default game mode and the open level's game mode override.",
+          "Use when set a gamemode hud class. the game mode also becomes the project default game mode and the open level's game mode override.",
+          "Use when set a gamemode's bdelayedstart match rule; only gamemode (agamemode) children have it, a gamemodebase child is refused with not_supported."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -64973,6 +64973,10 @@
               "type": "string",
               "description": "Default pawn class."
             },
+            "save": {
+              "type": "boolean",
+              "description": "Save the Blueprint asset to disk after the change (default true)."
+            },
             "playerControllerClass": {
               "type": "string",
               "description": "Player controller class."
@@ -64990,24 +64994,16 @@
               "description": "Hud class."
             },
             "bDelayedStart": {
-              "type": "string",
-              "description": "Whether delayed start applies."
+              "type": "boolean",
+              "description": "Hold the match in WaitingToStart until StartMatch is called (AGameMode::bDelayedStart)."
             },
             "respawnDelay": {
               "type": "number",
               "description": "Respawn delay."
             },
-            "allowSpectating": {
-              "type": "string",
-              "description": "Allow spectating."
-            },
             "spectatorClass": {
               "type": "string",
-              "description": "Spectator class."
-            },
-            "spectatorViewMode": {
-              "type": "string",
-              "description": "Spectator view mode."
+              "description": "SpectatorPawn class path, e.g. /Script/Engine.SpectatorPawn or a Blueprint path."
             },
             "setting": {
               "type": "string",
@@ -65131,13 +65127,7 @@
             "respawnDelay": [
               "respawn"
             ],
-            "allowSpectating": [
-              "spectating"
-            ],
             "spectatorClass": [
-              "spectating"
-            ],
-            "spectatorViewMode": [
               "spectating"
             ]
           }
@@ -65145,8 +65135,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e946d1074549f23325750e04c6dd8b92a07addf6213b644473bdfaaa68acb125",
-        "content": "20f40324a9bacb712fd3248023eb49b2c707994893545f27172a8fe43176ee35"
+        "schema": "02265eb851c170e4299cef62793219cef5e0a0bb7ec4cc20d96c5fd6cf670652",
+        "content": "9acb4ae549ddbe23502a23d84d12b2dc7350040b075c595b19cd5a5e7be157f2"
       }
     },
     {
@@ -65230,11 +65220,11 @@
         "summary": "Enhanced Input: create an input action or mapping context, add or map keys, set triggers and modifiers, enable a context.",
         "whenToUse": [
           "Use when create an enhanced input action asset (valuetype: digital, axis1d, axis2d, or axis3d — movement/look actions need axes).",
-          "Use when create an enhanced input mapping context asset.",
+          "Use when create an enhanced input mapping context asset; its priority is chosen when it is enabled (enable_input_mapping).",
           "Use when add an enhanced input mapping with optional trigger and modifier types.",
-          "Use when map an enhanced input action in a context (key only — no trigger/modifier support; use add_mapping for those).",
-          "Use when set an enhanced input trigger.",
-          "Use when set an enhanced input modifier."
+          "Use when map an enhanced input action to a key in a context, with an optional trigger and modifier on that mapping; mapping the same action and key again redefines it.",
+          "Use when add a trigger to an enhanced input action; a trigger of that class already on the action is kept, not stacked.",
+          "Use when add a modifier to an enhanced input action, or to one mapping when contextpath and key are given; a modifier of that class already there is kept, not stacked."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -65261,10 +65251,6 @@
               "type": "string",
               "description": "Value type."
             },
-            "priority": {
-              "type": "number",
-              "description": "Priority."
-            },
             "contextPath": {
               "type": "string",
               "description": "Context path (canonical /Game asset path)."
@@ -65284,6 +65270,10 @@
             "modifierType": {
               "type": "string",
               "description": "Modifier type."
+            },
+            "priority": {
+              "type": "number",
+              "description": "Priority."
             },
             "setting": {
               "type": "string",
@@ -65398,10 +65388,6 @@
             "valueType": [
               "create_action"
             ],
-            "priority": [
-              "create_mapping_context",
-              "enable_mapping"
-            ],
             "contextPath": [
               "add_mapping",
               "map_action",
@@ -65421,11 +65407,16 @@
             ],
             "triggerType": [
               "add_mapping",
+              "map_action",
               "set_trigger"
             ],
             "modifierType": [
               "add_mapping",
+              "map_action",
               "set_modifier"
+            ],
+            "priority": [
+              "enable_mapping"
             ]
           }
         }
@@ -65433,7 +65424,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "27f1ead38de13c5bb962f46d3fa2cfb5b4836fa1c5e2b6195331c4a74c6923a3",
-        "content": "7006587969cd9e8cebc73879e8aa45b62160475fa92da3be0e550a2b5d352a69"
+        "content": "eb822bc04d0e325f1a4027e1357a563737da990ee951ce5dab5aa9dd860d92db"
       }
     },
     {
@@ -66473,7 +66464,7 @@
         "summary": "Enable voice chat or mute a player.",
         "whenToUse": [
           "Use when enable or disable online voice chat.",
-          "Use when set mute state for an online player."
+          "Use when mute or unmute an online player through the voice chat or online voice interface; fails with not_supported when neither applies it."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -66624,7 +66615,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b7cb503d2b728ef747fb0bd2156494d74776ad037846dfdcda1c9a127d9f7fe3",
-        "content": "7cbff19273e97c0db94fb55c9b21b3ea5accb80525e17184ca55a2301d3a10e5"
+        "content": "1c32f91578d735dcfc03152d1b76aed55ac90bcc374da0b33af09ceef89e09d2"
       }
     },
     {
@@ -66699,12 +66690,12 @@
         ],
         "summary": "Create a game framework Blueprint: game mode, game state, game instance, player controller, player state, HUD.",
         "whenToUse": [
-          "Use when create a gamemode blueprint asset and return its path.",
-          "Use when create a gamestate blueprint asset and return its path.",
-          "Use when create a gameinstance blueprint asset and return its path.",
-          "Use when create a playercontroller blueprint asset and return its path.",
-          "Use when create a playerstate blueprint asset and return its path.",
-          "Use when create a hud blueprint asset and return its path."
+          "Use when create a gamemode blueprint asset and return its path; an unloadable parentclass, or one that is not a gamemode, is refused.",
+          "Use when create a gamestate blueprint asset and return its path; an unloadable parentclass, or one that is not a gamestate, is refused.",
+          "Use when create a gameinstance blueprint asset and return its path; an unloadable parentclass, or one that is not a gameinstance, is refused.",
+          "Use when create a playercontroller blueprint asset and return its path; an unloadable parentclass, or one that is not a playercontroller, is refused.",
+          "Use when create a playerstate blueprint asset and return its path; an unloadable parentclass, or one that is not a playerstate, is refused.",
+          "Use when create a hud blueprint asset and return its path; an unloadable parentclass, or one that is not a hud, is refused."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -66733,7 +66724,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created or modified asset to disk."
+              "description": "Save the Blueprint asset to disk after the change (default true)."
             },
             "defaultPawnClass": {
               "type": "string",
@@ -66876,8 +66867,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "612f655a0aaa92a3a7925dfb3907a91e9dd192dd1232ae76048fec415a6123c0",
-        "content": "e217be05e95587b166a43424249b75fed6554cbe1383a98e977474fe56e65b78"
+        "schema": "8328e701741baced0429b8023749085be2bbe7abc1baa044d7a4ac1ef9712438",
+        "content": "bd288fc3445c38a42547d366bc992ccc4e512159f14e24f3cd53836a6e0a74aa"
       }
     },
     {
@@ -67429,9 +67420,9 @@
         "topics": [
           "host_lan_server"
         ],
-        "summary": "Build the listen-server travel URL for a map and optionally travel to it.",
+        "summary": "Build the LAN listen-server travel URL for a map; nothing is hosted unless executeTravel is true, which travels the running world to it.",
         "whenToUse": [
-          "Use when build the listen-server travel url for a map and optionally travel to it."
+          "Use when build the lan listen-server travel url for a map; nothing is hosted unless executetravel is true, which travels the running world to it."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -67449,10 +67440,6 @@
             "mapName": {
               "type": "string",
               "description": "Map name."
-            },
-            "serverName": {
-              "type": "string",
-              "description": "Server name."
             },
             "maxPlayers": {
               "type": "number",
@@ -67490,10 +67477,6 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
-            "serverName": {
-              "type": "string",
-              "description": "Display name of the hosted LAN server."
-            },
             "mapPath": {
               "type": "string",
               "description": "Resolved package path of the map the LAN server travels to."
@@ -67505,7 +67488,6 @@
           },
           "required": [
             "success",
-            "serverName",
             "travelURL"
           ],
           "additionalProperties": false
@@ -67513,7 +67495,7 @@
       },
       "examples": [
         {
-          "title": "Build the listen-server travel URL for a map and optionally travel to it.",
+          "title": "Build the LAN listen-server travel URL for a map; nothing is hosted unless executeTravel is true, which travels the running world to it.",
           "input": {
             "action": "host_lan_server",
             "mapName": "/Game/Maps/Arena"
@@ -67521,7 +67503,6 @@
           "output": {
             "success": true,
             "message": "host_lan_server completed successfully.",
-            "serverName": "ExampleServerName",
             "travelURL": "ExampleTravelURL"
           }
         }
@@ -67557,8 +67538,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "44b86cb5f97d3e1a1fb693d340546fbd1402c9a0a96e921b89619a5f583dabe5",
-        "content": "96c43c826cb67f4abc0acd519c7ec62196bcbd64db4d4a7de967e621fca388e8"
+        "schema": "16b7c4184b68e000607482e74347076a9d74162d895dabd97f7feccddbeabbe2",
+        "content": "49f3f639e42b5684f27783a1ff2e4e628873cb30f1f8cf815f8341f565dbc04f"
       }
     },
     {

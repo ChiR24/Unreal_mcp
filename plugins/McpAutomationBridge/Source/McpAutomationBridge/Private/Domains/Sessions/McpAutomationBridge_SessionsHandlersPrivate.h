@@ -32,11 +32,6 @@ namespace SessionsHelpers
 UGameInstance* GetGameInstance();
 ULocalPlayer* GetLocalPlayerByIndex(int32 PlayerIndex);
 int32 GetLocalPlayerCount();
-void StoreLocalVoiceMute(
-    const FString& TargetIdentifier,
-    int32 LocalPlayerNum,
-    bool bSystemWide,
-    bool bMuted);
 }
 
 bool HandleConfigureSplitScreen(

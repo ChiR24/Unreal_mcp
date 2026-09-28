@@ -52,6 +52,18 @@ bool SetClassProperty(UBlueprint* Blueprint, const FName& PropertyName, UClass* 
         return false;
     }
 
+    // A TSubclassOf only holds its meta class: writing an unrelated class (an Actor as the HUD)
+    // is accepted by reflection and breaks the game mode at spawn time.
+    UClass* MetaClass = nullptr;
+    if (const FClassProperty* MetaProp = CastField<FClassProperty>(Prop)) MetaClass = MetaProp->MetaClass;
+    if (const FSoftClassProperty* MetaSoftProp = CastField<FSoftClassProperty>(Prop)) MetaClass = MetaSoftProp->MetaClass;
+    if (ClassToSet && MetaClass && !ClassToSet->IsChildOf(MetaClass))
+    {
+        OutError = FString::Printf(TEXT("%s is not a %s, which %s requires"),
+            *ClassToSet->GetPathName(), *MetaClass->GetName(), *PropertyName.ToString());
+        return false;
+    }
+
     if (FClassProperty* ClassProp = CastField<FClassProperty>(Prop))
     {
         ClassProp->SetPropertyValue_InContainer(CDO, ClassToSet);

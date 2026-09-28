@@ -92,13 +92,17 @@ static bool SetGameModeClass(
     }
 
     McpSafeCompileBlueprint(Blueprint);
+    // The class only matters in play when this game mode is the one that runs (BB-034), so it
+    // becomes the project and open-level default; the reply says so instead of doing it silently.
     PersistEffectiveGameFramework(Context, Blueprint);
     if (Context.bSave)
     {
         McpSafeAssetSave(Blueprint);
     }
 
-    Context.SendSuccess(MakeBlueprintResponse(FString::Printf(TEXT("Set %s to %s"), *SuccessLabel, *ClassPath), Blueprint));
+    Context.SendSuccess(MakeBlueprintResponse(FString::Printf(
+        TEXT("Set %s to %s; %s is now the project default game mode and the open level's game mode override"),
+        *SuccessLabel, *ClassPath, *Blueprint->GetName()), Blueprint));
     return true;
 }
 
@@ -123,28 +127,36 @@ static bool ConfigureGameRules(FActionContext& Context)
         return true;
     }
 
-    bool bModified = false;
-    if (Context.Payload->HasField(TEXT("bDelayedStart")))
+    if (!Context.Payload->HasField(TEXT("bDelayedStart")))
     {
-        FBoolProperty* Prop = CastField<FBoolProperty>(Blueprint->GeneratedClass->FindPropertyByName(TEXT("bDelayedStart")));
-        if (Prop)
-        {
-            Prop->SetPropertyValue_InContainer(CDO, GetBoolField(Context.Payload, TEXT("bDelayedStart")));
-            bModified = true;
-        }
+        Context.SendError(TEXT("Nothing to configure: pass bDelayedStart."), TEXT("INVALID_ARGUMENT"));
+        return true;
     }
+    // bDelayedStart is an AGameMode (match-state) property; AGameModeBase has no such rule, so a
+    // GameModeBase child used to answer success with nothing written.
+    FBoolProperty* Prop = CastField<FBoolProperty>(Blueprint->GeneratedClass->FindPropertyByName(TEXT("bDelayedStart")));
+    if (!Prop)
+    {
+        Context.SendError(
+            FString::Printf(TEXT("%s derives from %s, which has no bDelayedStart; only GameMode (AGameMode) children have match-state rules. Create the game mode with parentClass /Script/Engine.GameMode to use them."),
+                *Blueprint->GetName(), Blueprint->ParentClass ? *Blueprint->ParentClass->GetName() : TEXT("an unknown class")),
+            TEXT("NOT_SUPPORTED"));
+        return true;
+    }
+    const bool bDelayedStart = GetBoolField(Context.Payload, TEXT("bDelayedStart"));
+    Prop->SetPropertyValue_InContainer(CDO, bDelayedStart);
+    CDO->MarkPackageDirty();
+    FinishBlueprintMutation(Blueprint, Context.bSave);
 
-    if (bModified)
+    UObject* CompiledCDO = Blueprint->GeneratedClass ? Blueprint->GeneratedClass->GetDefaultObject() : nullptr;
+    FBoolProperty* CompiledProp = CompiledCDO ? CastField<FBoolProperty>(Blueprint->GeneratedClass->FindPropertyByName(TEXT("bDelayedStart"))) : nullptr;
+    if (!CompiledProp || CompiledProp->GetPropertyValue_InContainer(CompiledCDO) != bDelayedStart)
     {
-        CDO->MarkPackageDirty();
-        McpSafeCompileBlueprint(Blueprint);
+        Context.SendError(TEXT("bDelayedStart did not hold after the Blueprint compiled."), TEXT("SET_PROPERTY_FAILED"));
+        return true;
     }
-    if (Context.bSave)
-    {
-        McpSafeAssetSave(Blueprint);
-    }
-
-    Context.SendSuccess(MakeBlueprintResponse(TEXT("Configured game rules"), Blueprint));
+    Context.SendSuccess(MakeBlueprintResponse(
+        FString::Printf(TEXT("Set bDelayedStart=%s"), bDelayedStart ? TEXT("true") : TEXT("false")), Blueprint));
     return true;
 }
 
