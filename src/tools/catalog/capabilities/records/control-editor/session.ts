@@ -14,7 +14,7 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_editor', action: 'play', domain: D, family: F,
     topics: ['play in editor', 'pie', 'start pie', 'start game', 'run game', 'press play', 'simulate'],
     aliases: ['control_editor.start_pie'],
-    summary: 'Start Play-In-Editor (PIE) session.',
+    summary: 'Start Play-In-Editor (PIE) session; answers once the play world has begun play.',
     whenToUse: ['A PIE session must be started to test gameplay.'],
     whenNotToUse: ['PIE is already running.'],
     inputProps: {},

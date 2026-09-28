@@ -26,10 +26,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
   }
 
   GEditor->RequestPlaySession(PlayParams);
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Play in Editor started"), Resp, FString());
+  // The session only starts on a later editor tick, so answering here let the very next call
+  // (set_game_speed, simulate_input) find no play world. Reply once it has begun play.
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+  const double Deadline = FPlatformTime::Seconds() + 20.0;
+  FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([WeakThis, Socket, RequestId, Deadline](float) {
+    UWorld *World = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+    const bool bStarted = World && World->HasBegunPlay();
+    if (!WeakThis.IsValid() || (!bStarted && FPlatformTime::Seconds() < Deadline)) {
+      return WeakThis.IsValid();
+    }
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), bStarted);
+    if (World) { Resp->SetStringField(TEXT("pieWorld"), World->GetOutermost()->GetName()); }
+    WeakThis->SendAutomationResponse(Socket, RequestId, bStarted,
+        bStarted ? TEXT("Play in Editor started") : TEXT("Play in Editor was requested but no play world began within 20 s"),
+        Resp, bStarted ? FString() : TEXT("PIE_START_TIMEOUT"));
+    return false;
+  }), 0.0f);
   return true;
 }
 
