@@ -46,8 +46,9 @@ TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& Nam
             Report.Issue = FString::Printf(
                 TEXT("'%s' (%s) has a face pointing %s in the same plane as %s, overlapping %.0f x %.0f units: the "
                      "depth test cannot tell which is in front, so that patch flickers between the two (z-fighting). "
-                     "Push the face about 2 units out along %s, by moving the actor or scaling it up slightly, so one "
-                     "surface is clearly in front. coplanarFaces lists every such pair."),
+                     "Move the face about 2 units along %s (out, so this piece shows) or against it (in, so the other one "
+                     "shows: right for a piece sunk into it), by moving or scaling the actor. coplanarFaces lists "
+                     "every such pair."),
                 *McpActorRef(Hit.Actor), *Hit.Component, *Direction, *Other, Hit.OverlapU, Hit.OverlapV, *Direction);
         }
         TSharedPtr<FJsonObject> Face = MakeShared<FJsonObject>();
