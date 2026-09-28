@@ -32,6 +32,9 @@ const SCREENSHOT_PROPS = {
     type: 'string',
     description: 'With mode full_editor_window, which window to capture: a list index ("2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one.'
   },
+  // Camera and capture in one call: set_camera followed by a screenshot could return a frame drawn before the move.
+  location: { ...P.location, description: 'editor_viewport: put the level viewport camera here first, in the same call ({x, y, z}); it stays there. Ignored while Play In Editor runs (the game camera is captured).' },
+  rotation: { ...P.rotation, description: 'editor_viewport: turn the level viewport camera to this first ({pitch, yaw, roll}), in the same call.' },
   returnBase64: P.returnBase64,
   keepFile: {
     type: 'boolean',
@@ -59,6 +62,8 @@ const SCREENSHOT_OUTPUT = {
     description: 'Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input.'
   },
   windowCount: { type: 'number', description: 'Number of visible editor windows.' },
+  cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport: where the camera was for this picture.' },
+  cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport: how the camera was turned for this picture.' },
 };
 
 export const SCREENSHOT_RECORDS: readonly CapabilityRecordSource[] = [

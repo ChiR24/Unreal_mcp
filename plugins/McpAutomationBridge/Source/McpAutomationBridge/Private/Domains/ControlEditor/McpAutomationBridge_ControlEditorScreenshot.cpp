@@ -157,6 +157,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     // that gets moved is provably the viewport that gets photographed.
     CaptureClient = GetActiveEditorViewportClientForMcp();
     if (CaptureClient) {
+      // location/rotation place the camera and take the picture in one call; set_camera and then a
+      // screenshot could photograph a frame drawn before the move.
+      CaptureClient->SetViewLocation(ExtractVectorField(Payload, TEXT("location"), CaptureClient->GetViewLocation()));
+      CaptureClient->SetViewRotation(ExtractRotatorField(Payload, TEXT("rotation"), CaptureClient->GetViewRotation()));
       Viewport = CaptureClient->Viewport;
       CaptureClient->Invalidate();
     }
@@ -250,6 +254,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   // the level editor where it showed something else.
   if (Payload->HasField(TEXT("_levelEditorFronted"))) {
     Resp->SetBoolField(TEXT("levelEditorBroughtToFront"), true);
+  }
+  if (!CaptureClient && (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")))) {
+    Resp->SetStringField(TEXT("cameraNote"), TEXT("Play In Editor is running, so this is the game camera; location and rotation move the level viewport camera."));
   }
   SendScreenshotReceiptForMcp(this, Socket, RequestId, Payload, Resp,
                               PngData.GetData(), PngData.Num(), FullPath,

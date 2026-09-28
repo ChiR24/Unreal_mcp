@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "db32f83a04a24271",
+  "catalogRevision": "d2269f0f501a3908",
   "recordCount": 388,
   "records": [
     {
@@ -34895,9 +34895,11 @@
           "screen capture",
           "viewport image",
           "snapshot",
-          "take picture"
+          "take picture",
+          "look from here",
+          "camera screenshot"
         ],
-        "summary": "Capture a viewport screenshot.",
+        "summary": "Capture a viewport screenshot, optionally from a camera location and rotation given in the same call.",
         "whenToUse": [
           "A visual snapshot of the editor or game viewport is needed."
         ],
@@ -34938,6 +34940,44 @@
             "window": {
               "type": "string",
               "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one."
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "x"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "z"
+                }
+              },
+              "description": "editor_viewport: put the level viewport camera here first, in the same call ({x, y, z}); it stays there. Ignored while Play In Editor runs (the game camera is captured).",
+              "additionalProperties": false
+            },
+            "rotation": {
+              "type": "object",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "roll"
+                }
+              },
+              "description": "editor_viewport: turn the level viewport camera to this first ({pitch, yaw, roll}), in the same call.",
+              "additionalProperties": false
             },
             "returnBase64": {
               "type": "boolean",
@@ -35036,6 +35076,18 @@
             "windowCount": {
               "type": "number",
               "description": "Number of visible editor windows."
+            },
+            "cameraLocation": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "editor_viewport: where the camera was for this picture."
+            },
+            "cameraRotation": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "editor_viewport: how the camera was turned for this picture."
             }
           },
           "required": [
@@ -35046,7 +35098,7 @@
       },
       "examples": [
         {
-          "title": "Capture a viewport screenshot.",
+          "title": "Capture a viewport screenshot, optionally from a camera location and rotation given in the same call.",
           "input": {
             "action": "screenshot",
             "mode": "editor_viewport",
@@ -35086,8 +35138,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0fa1456f47ec7a6f1c3de70f9885e363fb80a4af3ae45a333151f081104da4a5",
-        "content": "d427843634ed15d67bd461c547f2aff17fd54da62b1c16e9b8e860db411fa4c7"
+        "schema": "7057513c0e17ea6ce678e9695c7da5ac7d82669af7e68e2b5895b512a3c3e0b8",
+        "content": "f4b2a75399eef36c6fc393d0ca32ba8d50768070589194262d5735a2c0cfb25a"
       }
     },
     {

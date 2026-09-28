@@ -42,8 +42,8 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
     members: { open_tab: 'open_editor_tab', preferences: 'set_preferences', window: 'restore_editor_window' },
   },
   {
-    primary: 'screenshot', summary: 'Capture a viewport screenshot.', members: ['take_screenshot'],
-    topics: ['capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture'],
+    primary: 'screenshot', summary: 'Capture a viewport screenshot, optionally from a camera location and rotation given in the same call.', members: ['take_screenshot'],
+    topics: ['capture viewport', 'screen capture', 'viewport image', 'snapshot', 'take picture', 'look from here', 'camera screenshot'],
   },
   {
     primary: 'undo', selector: 'history',

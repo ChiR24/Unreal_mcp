@@ -4604,23 +4604,47 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Level asset path."
         },
         "location": {
-          "type": "object",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "x"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "x"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "z"
+                }
+              },
+              "description": "3D location (x, y, z).",
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number",
-              "description": "y"
-            },
-            "z": {
-              "type": "number",
-              "description": "z"
+            {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "x"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "z"
+                }
+              },
+              "description": "editor_viewport: put the level viewport camera here first, in the same call ({x, y, z}); it stays there. Ignored while Play In Editor runs (the game camera is captured).",
+              "additionalProperties": false
             }
-          },
-          "description": "3D location (x, y, z).",
-          "additionalProperties": false
+          ],
+          "description": "3D location (x, y, z)."
         },
         "metadata": {
           "type": "object",
@@ -4667,23 +4691,47 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Return PNG image data as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
         },
         "rotation": {
-          "type": "object",
-          "properties": {
-            "pitch": {
-              "type": "number",
-              "description": "pitch"
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "roll"
+                }
+              },
+              "description": "3D rotation (pitch, yaw, roll).",
+              "additionalProperties": false
             },
-            "yaw": {
-              "type": "number",
-              "description": "yaw"
-            },
-            "roll": {
-              "type": "number",
-              "description": "roll"
+            {
+              "type": "object",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "roll"
+                }
+              },
+              "description": "editor_viewport: turn the level viewport camera to this first ({pitch, yaw, roll}), in the same call.",
+              "additionalProperties": false
             }
-          },
-          "description": "3D rotation (pitch, yaw, roll).",
-          "additionalProperties": false
+          ],
+          "description": "3D rotation (pitch, yaw, roll)."
         },
         "setting": {
           "type": "string",
@@ -4797,6 +4845,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "cameraLocation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "editor_viewport: where the camera was for this picture."
+        },
+        "cameraRotation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "editor_viewport: how the camera was turned for this picture."
+        },
         "className": {
           "type": "string",
           "description": "Class acted on."
