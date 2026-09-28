@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/Subsystem/McpAutomationBridgeSubsystemContentPaths.h"
 #include "MCP/Execute/McpNativeReceiptRedaction.h"
 
 namespace McpAutomationBridgeSubsystemResponse
@@ -174,21 +175,18 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input)
 
         if (bUnixPath || bWindowsPath || bUncPath)
         {
-            Output += TEXT("[path redacted]");
-            if (bUnixPath)
+            // A drive or UNC root is unambiguous from its first character, so its
+            // run consumes spaces/parentheses as well ("Program Files (x86)").
+            int32 End = bUnixPath ? UnixEnd : Index;
+            while (!bUnixPath && End < Input.Len() && IsPathContinuationChar(Input[End]))
             {
-                Index = UnixEnd;
+                ++End;
             }
-            else
-            {
-                // A drive or UNC root is unambiguous from its first character,
-                // so its run consumes spaces/parentheses as well ("Program
-                // Files (x86)").
-                while (Index < Input.Len() && IsPathContinuationChar(Input[Index]))
-                {
-                    ++Index;
-                }
-            }
+            // A package file under mounted content is named by its package path instead.
+            FString Package, Rest;
+            Output += MapContentPathForResponse(Input.Mid(Index, End - Index), Package, Rest)
+                ? Package + RedactFilesystemPathsForResponse(Rest) : FString(TEXT("[path redacted]"));
+            Index = End;
             continue;
         }
 
