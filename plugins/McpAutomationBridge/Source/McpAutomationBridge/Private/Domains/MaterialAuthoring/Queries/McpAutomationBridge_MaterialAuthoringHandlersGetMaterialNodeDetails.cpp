@@ -14,8 +14,12 @@ bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const F
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'materialPath' (or 'assetPath')."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    if (!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) {
-      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId'."), TEXT("INVALID_ARGUMENT"));
+    // A node is named by nodeId, or by its position in the expression list
+    // (expressionIndex, which was declared and never read).
+    double ExpressionIndex = -1.0;
+    const bool bHasIndex = Payload->TryGetNumberField(TEXT("expressionIndex"), ExpressionIndex);
+    if ((!Payload->TryGetStringField(TEXT("nodeId"), NodeId) || NodeId.IsEmpty()) && !bHasIndex) {
+      Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'nodeId' (or 'expressionIndex')."), TEXT("INVALID_ARGUMENT"));
       return true;
     }
 
@@ -39,9 +43,14 @@ bool HandleGetMaterialNodeDetails(UMcpAutomationBridgeSubsystem* Bridge, const F
       return true;
     }
 
-    UMaterialExpression *Expr = Material
-        ? FindExpressionByIdOrName(Material, NodeId)
-        : FindExpressionByIdOrNameInFunction(Function, NodeId);
+    UMaterialExpression *Expr = nullptr;
+    if (!NodeId.IsEmpty()) {
+      Expr = Material ? FindExpressionByIdOrName(Material, NodeId) : FindExpressionByIdOrNameInFunction(Function, NodeId);
+    } else {
+      const auto& Exprs = Material ? MCP_GET_MATERIAL_EXPRESSIONS(Material) : MCP_GET_FUNCTION_EXPRESSIONS(Function);
+      const int32 Index = static_cast<int32>(ExpressionIndex);
+      if (Exprs.IsValidIndex(Index)) { Expr = Exprs[Index]; }
+    }
     if (!Expr) {
       Bridge->SendAutomationError(Socket, RequestId, TEXT("Node not found."), TEXT("NOT_FOUND"));
       return true;

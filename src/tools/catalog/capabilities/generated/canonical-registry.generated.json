@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4eed0f1160e7cc68",
+  "catalogRevision": "92080ff8c6000626",
   "recordCount": 382,
   "records": [
     {
@@ -69872,6 +69872,13 @@
               "type": "string",
               "description": "Node type (alias of nodeType)."
             },
+            "name": {
+              "type": "string",
+              "description": "Parameter name, when the node type is a parameter."
+            },
+            "defaultValue": {
+              "description": "Initial value for a Constant (number) or Constant3Vector (rgb array or {r,g,b}) node."
+            },
             "posX": {
               "type": "number",
               "description": "Node X position."
@@ -69922,31 +69929,27 @@
             },
             "constA": {
               "type": "number",
-              "description": "Constant A."
+              "description": "Value used while input A is unwired (Add, Subtract, Multiply, Divide, Lerp)."
             },
             "constB": {
               "type": "number",
-              "description": "Constant B."
+              "description": "Value used while input B is unwired (Add, Subtract, Multiply, Divide, Lerp)."
             },
             "scale": {
               "type": "number",
               "description": "Noise scale."
             },
-            "octaves": {
-              "type": "number",
-              "description": "Noise octaves."
-            },
             "levels": {
               "type": "number",
-              "description": "Noise level count."
+              "description": "Number of noise octaves (levels) combined."
             },
             "speedX": {
               "type": "number",
-              "description": "Pan speed X."
+              "description": "Pan speed along U."
             },
             "speedY": {
               "type": "number",
-              "description": "Pan speed Y."
+              "description": "Pan speed along V."
             },
             "speed": {
               "type": "number",
@@ -69956,16 +69959,9 @@
               "type": "string",
               "description": "Parameter name."
             },
-            "defaultValue": {
-              "description": "Default RGBA value."
-            },
             "group": {
               "type": "string",
               "description": "Parameter group."
-            },
-            "value": {
-              "type": "boolean",
-              "description": "Default switch value."
             },
             "coordinateIndex": {
               "type": "number",
@@ -69990,6 +69986,26 @@
             "layerName": {
               "type": "string",
               "description": "Layer name."
+            },
+            "path": {
+              "type": "string",
+              "description": "Folder for the layer info asset, e.g. /Game/Landscape/Layers (overrides the material folder)."
+            },
+            "hardness": {
+              "type": "number",
+              "description": "Layer hardness, 0-1 (default 0.5)."
+            },
+            "physicalMaterialPath": {
+              "type": "string",
+              "description": "Physical material the layer applies, e.g. /Game/Physics/PM_Grass."
+            },
+            "noWeightBlend": {
+              "type": "boolean",
+              "description": "Exclude the layer from weight blending (default false)."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset afterwards. Defaults to true; pass false to keep the change in memory only."
             },
             "operations": {
               "type": "array",
@@ -70200,6 +70216,15 @@
             "type": [
               "node"
             ],
+            "name": [
+              "node"
+            ],
+            "defaultValue": [
+              "node",
+              "scalar_parameter",
+              "static_switch_parameter",
+              "vector_parameter"
+            ],
             "posX": [
               "node",
               "custom_expression",
@@ -70314,9 +70339,6 @@
               "noise",
               "voronoi"
             ],
-            "octaves": [
-              "noise"
-            ],
             "levels": [
               "noise"
             ],
@@ -70332,17 +70354,13 @@
             "parameterName": [
               "scalar_parameter",
               "static_switch_parameter",
-              "vector_parameter"
-            ],
-            "defaultValue": [
-              "scalar_parameter",
+              "texture_sample",
               "vector_parameter"
             ],
             "group": [
-              "scalar_parameter"
-            ],
-            "value": [
-              "static_switch_parameter"
+              "scalar_parameter",
+              "static_switch_parameter",
+              "vector_parameter"
             ],
             "coordinateIndex": [
               "texture_coordinate"
@@ -70362,6 +70380,21 @@
             "layerName": [
               "landscape_layer"
             ],
+            "path": [
+              "landscape_layer"
+            ],
+            "hardness": [
+              "landscape_layer"
+            ],
+            "physicalMaterialPath": [
+              "landscape_layer"
+            ],
+            "noWeightBlend": [
+              "landscape_layer"
+            ],
+            "save": [
+              "landscape_layer"
+            ],
             "operations": [
               "batch"
             ]
@@ -70370,8 +70403,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "67d6eac254009460670aac79f4d5dc88960d285ddae2347ea13b235b1e167e2e",
-        "content": "716e3c0a976ca0e461cd30a4b097047b86ae45c1cb9a21d01caacd18bf5154ba"
+        "schema": "3d2bd26bb14011b013238389d522be4376566eac76e8f90569c0a66d8d39c42a",
+        "content": "93c089bc50fe286176575e7d3fa5a301b11ef197165f962916024377bbbb8684"
       }
     },
     {
@@ -70410,6 +70443,10 @@
             "assetPath": {
               "type": "string",
               "description": "Material /Game asset path."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset afterwards. Defaults to true; pass false to keep the change in memory only."
             },
             "materialPath": {
               "type": "string",
@@ -70528,8 +70565,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7b0e2e627e468d42bde5d505d4831290dca477fcdb34d143c0e71e6e99044ab2",
-        "content": "0399d2257be8c7418464a2ba066c9dc127371d70821e85e4e405ad0a83163edb"
+        "schema": "dc844aaaf8ec8633e552ab04d9b221af9cba2e0e9a3ef855a43b388fd79da4e4",
+        "content": "c04dd3ded8e286eb7856502516a03a779cb4411854e2ce94f546b5cb74e61f1b"
       }
     },
     {
@@ -70571,6 +70608,18 @@
             "blendType": {
               "type": "string",
               "description": "Blend type."
+            },
+            "x": {
+              "type": "number",
+              "description": "Node X position of the layer blend node."
+            },
+            "y": {
+              "type": "number",
+              "description": "Node Y position of the layer blend node."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset afterwards. Defaults to true; pass false to keep the change in memory only."
             }
           },
           "required": [
@@ -70639,8 +70688,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "087aae5aa028fbfb4f53d76612a3f0deb3865dc03bdac353229095c0288b4ef0",
-        "content": "c74d7166d1b13926402a839171c4e4cb66651712757f4ae9ca7a5c93e70c89fb"
+        "schema": "2307970b1d42e0f25c4b799327a32805647f2d4eae026b0da9563ac005cd719e",
+        "content": "dda97ebe51c5188707b16de432869e16d42d31212c02b43f9958d4d2b814c7cf"
       }
     },
     {
@@ -70870,7 +70919,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Save after creation."
+              "description": "Save the asset afterwards. Defaults to true; pass false to keep it in memory only."
             },
             "description": {
               "type": "string",
@@ -70974,20 +71023,28 @@
           },
           "declaredBy": {
             "materialDomain": [
-              "material"
+              "material",
+              "decal",
+              "landscape",
+              "post_process"
             ],
             "blendMode": [
-              "material"
+              "material",
+              "decal",
+              "landscape",
+              "post_process"
             ],
             "shadingModel": [
-              "material"
+              "material",
+              "decal",
+              "landscape",
+              "post_process"
             ],
             "twoSided": [
-              "material"
-            ],
-            "save": [
               "material",
-              "function"
+              "decal",
+              "landscape",
+              "post_process"
             ],
             "description": [
               "function"
@@ -71000,8 +71057,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "11e6c806cd7956fa731db713e4a7dfc7298502d470661c0e5a2d140c403aeb7a",
-        "content": "cb12eab8271e4570bb58f55fa6c17d3596ac5e31d60f5f8b9b81a4dcc2ac2d2d"
+        "schema": "30698f5719dec15483c5b572099121e71fe78aa7079abc34a3cc3f7d0253c52e",
+        "content": "3bb42926a8345440022cad00e44b1b636199b26d6c1163affbf93bd6d393b3a0"
       }
     },
     {
@@ -71053,6 +71110,10 @@
               },
               "x-unreal-reflection-boundary": true,
               "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset afterwards. Defaults to true; pass false to keep it in memory only."
             }
           },
           "required": [
@@ -71123,8 +71184,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ff15cc9061726e5c807b32dbceea56e8ed7e1f469dd596c2be4b9650d282e9a3",
-        "content": "384b18e35c0f574b791f76ee00fac691cda38d4e38265a3c6851477356abb148"
+        "schema": "3bfe7e9a2e6ddaa8ded40abc2fa9853e43c0dac7935932c1059b287801f6ce79",
+        "content": "c36b3ae20eb03eaa94fa32f933588dd3a3379471e6d832640540067826660230"
       }
     },
     {
@@ -71168,17 +71229,20 @@
             },
             "nodeIds": {
               "type": "array",
+              "description": "Node IDs to delete in one batch, in place of nodeId.",
               "items": {
                 "type": "string"
-              },
-              "description": "Node IDs to delete in one batch, in place of nodeId."
+              }
             }
           },
           "required": [
-            "materialPath",
-            "nodeId"
+            "materialPath"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "nodeId",
+            "nodeIds"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -71242,8 +71306,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9f0015fcd9bb5a76ea44c211d2901870730e60ecb56e821b05b2d77052ed1941",
-        "content": "5a9ce2238b02679db7a3dba1864684cb51015fdaf6e17f9ae1f186e3be61d738"
+        "schema": "bb13873d5f1d625fec972533041cc7c4212c2b709970c50ad9b91df90ce060bd",
+        "content": "edacb177ee30fb826f1eef21427bd711e409458817e3e373e7448930bee9c757"
       }
     },
     {
@@ -71457,6 +71521,21 @@
               "type": "string",
               "description": "Material /Game asset path."
             },
+            "filter": {
+              "type": "string",
+              "description": "Which sections to return: parameters, expressions, connections, or all (default)."
+            },
+            "nodeId": {
+              "type": "string",
+              "description": "Only report connections touching this node."
+            },
+            "nodeIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Only report connections touching these nodes."
+            },
             "materialPath": {
               "type": "string",
               "description": "Material /Game asset path."
@@ -71467,15 +71546,11 @@
             },
             "nodeName": {
               "type": "string",
-              "description": "Node name to find."
-            },
-            "nodeId": {
-              "type": "string",
-              "description": "Node ID."
+              "description": "Name to find: a node id, parameter name, function input or output name, or custom node title (substring match)."
             },
             "expressionIndex": {
               "type": "number",
-              "description": "Expression index."
+              "description": "Zero-based position in the expression list; picks the node when nodeId is omitted."
             },
             "direction": {
               "type": "string",
@@ -71728,6 +71803,23 @@
               "find_node",
               "node_details"
             ],
+            "filter": [
+              "material",
+              "function"
+            ],
+            "nodeId": [
+              "material",
+              "function",
+              "node_details",
+              "node_properties",
+              "node_connections",
+              "node_chain",
+              "subgraph"
+            ],
+            "nodeIds": [
+              "material",
+              "function"
+            ],
             "materialPath": [
               "find_node",
               "node_details",
@@ -71741,13 +71833,6 @@
             ],
             "nodeName": [
               "find_node"
-            ],
-            "nodeId": [
-              "node_details",
-              "node_properties",
-              "node_connections",
-              "node_chain",
-              "subgraph"
             ],
             "expressionIndex": [
               "node_details"
@@ -71778,8 +71863,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0c3a92de96364812ed7cb4fc726330b8111e83287052eb22826e6cae673fc461",
-        "content": "f65add7ccb617f06f98d301bbc34f109cd1710e8be02f9281d1fab558272564d"
+        "schema": "c76ef6b0f275aa51142b8a3da742e9595dbd85d660f5a39c1b159058aeaf0752",
+        "content": "3600ae249c53d6480c4e7613e9a8aeafa4ec11ca946b87b97e4a2b1a345ca3f2"
       }
     },
     {
@@ -71859,6 +71944,10 @@
             "value": {
               "description": "Parameter value."
             },
+            "texturePath": {
+              "type": "string",
+              "description": "Texture /Game path, for parameterType texture."
+            },
             "parameters": {
               "type": "array",
               "items": {
@@ -71869,9 +71958,9 @@
               "x-unreal-reflection-boundary": true,
               "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
             },
-            "texturePath": {
-              "type": "string",
-              "description": "Texture /Game path."
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset afterwards. Defaults to true; pass false to keep the change in memory only."
             },
             "parameterKind": {
               "type": "string",
@@ -71971,19 +72060,20 @@
               "vector",
               "static_switch"
             ],
+            "texturePath": [
+              "parameter",
+              "texture"
+            ],
             "parameters": [
               "parameter"
-            ],
-            "texturePath": [
-              "texture"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "35084489a88e195b96e3396f378ca5594b41b716244800ce1b3143f23919b852",
-        "content": "ba68119203fee6b8cb838a16b86ca53be326a2e1b6eb35f00cfcc21af1a929e1"
+        "schema": "c2ec4d93cd66f01f6ff2f5f08acc2a686c1d0430598c91486485c1ee8ecbfcd0",
+        "content": "795f67cd13844c9c4a96665e56cb39a1af56fa9b857c8621f616e8ebf92fe7ed"
       }
     },
     {
@@ -72055,6 +72145,10 @@
               "type": "string",
               "description": "Blend mode."
             },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset afterwards. Defaults to true; pass false to keep the change in memory only."
+            },
             "materialDomain": {
               "type": "string",
               "description": "Material domain."
@@ -72065,7 +72159,7 @@
             },
             "value": {
               "type": "boolean",
-              "description": "Two-sided value."
+              "description": "Two-sided value: true renders both faces, false only the front."
             },
             "materialProperty": {
               "type": "string",
@@ -72170,8 +72264,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7532a9e89374695e180a3c254f3965bb32dd4c6f64d107b74b8aec6afafb006c",
-        "content": "2db06c766401878fe079f04a427f6716937460e7c6c777036d6c4f0c3028e9d5"
+        "schema": "f5f906dff97488fd478574861c0183db1258be7414469b3f5609d13ad20873c0",
+        "content": "abeca678dc00fb73ec6312416adbf967b53cde9240b7c128aafe3a65bf7cd315"
       }
     },
     {

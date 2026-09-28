@@ -9,11 +9,15 @@ bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Reques
 
     FString SearchType, SearchName;
     Payload->TryGetStringField(TEXT("nodeType"), SearchType);
-    Payload->TryGetStringField(TEXT("name"), SearchName);
+    // The contract declares nodeName; this read only `name`, which the gateway
+    // refuses, so a find by name was impossible. `name` stays as a fallback.
+    if (!Payload->TryGetStringField(TEXT("nodeName"), SearchName) || SearchName.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("name"), SearchName);
+    }
 
     if (SearchType.IsEmpty() && SearchName.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId,
-                          TEXT("Provide at least 'nodeType' or 'name' to search."),
+                          TEXT("Provide at least 'nodeType' or 'nodeName' to search."),
                           TEXT("INVALID_ARGUMENT"));
       return true;
     }
@@ -57,7 +61,10 @@ bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Reques
         } else if (UMaterialExpressionCustom *CE = Cast<UMaterialExpressionCustom>(Expr)) {
           bNameMatch = CE->Description.Contains(SearchName) || CE->Code.Contains(SearchName);
         }
-        if (!bNameMatch && SearchType.IsEmpty()) continue;
+        // The node id (object name) matches too, so a name from an earlier reply finds its node.
+        bNameMatch = bNameMatch || MCP_NODE_ID(Expr).Contains(SearchName);
+        // Both filters must hold; a type match used to override a name miss.
+        if (!bNameMatch) continue;
       }
 
       SeenIds.Add(Expr->MaterialExpressionGuid);

@@ -30,10 +30,10 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
         ? MCP_GET_MATERIAL_EXPRESSIONS(Material)
         : MCP_GET_FUNCTION_EXPRESSIONS(Function);
 
-    TArray<FString> Removed;
+    TArray<FString> Removed, NotFound;
     for (const FString &NId : NodeIds) {
       UMaterialExpression *Expr = FIND_EXPR_IN_HOST(NId);
-      if (!Expr) continue;
+      if (!Expr) { NotFound.Add(NId); continue; }
 
       // Auto-disconnect: clear all references to this node from other expressions
       for (UMaterialExpression *Other : AllExpr) {
@@ -54,6 +54,14 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
       Removed.Add(NId);
     }
 
+    // An id that matched nothing used to vanish from the reply, so deleting a
+    // misspelled node answered "Deleted 0 node(s)" as a success.
+    if (Removed.Num() == 0) {
+      Bridge->SendAutomationError(Socket, RequestId,
+          FString::Printf(TEXT("No node matched: %s. Read the ids with get_material_info or find_node."), *FString::Join(NotFound, TEXT(", "))),
+          TEXT("NOT_FOUND"));
+      return true;
+    }
     FINALIZE_HOST();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -63,6 +71,9 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
     }
     Result->SetArrayField(TEXT("removed"), RemovedArr);
     Result->SetNumberField(TEXT("removedCount"), Removed.Num());
+    TArray<TSharedPtr<FJsonValue>> NotFoundArr;
+    for (const FString &Missing : NotFound) { NotFoundArr.Add(MakeShared<FJsonValueString>(Missing)); }
+    Result->SetArrayField(TEXT("notFound"), NotFoundArr);
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Deleted %d node(s)."), Removed.Num()),
                            Result);

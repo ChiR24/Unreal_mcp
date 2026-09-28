@@ -11,15 +11,25 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
       return true;
     }
 
-    // The folder: assetPath, materialPath or path, else /Game/Landscape/Layers.
-    FString Path = TEXT("/Game/Landscape/Layers");
-    for (const TCHAR* Field : {TEXT("assetPath"), TEXT("materialPath"), TEXT("path")}) {
-      FString Candidate;
-      if (Payload->TryGetStringField(Field, Candidate) && !Candidate.IsEmpty()) {
-        Path = Candidate;
-        break;
-      }
+    // The layer info asset goes in `path` when given, else beside the material.
+    // materialPath names the material, not a folder: it used to be taken as the
+    // folder, so a material path grew a fake folder named after the material.
+    FString Path, MaterialRef;
+    Payload->TryGetStringField(TEXT("path"), Path);
+    if (!Payload->TryGetStringField(TEXT("materialPath"), MaterialRef) || MaterialRef.IsEmpty()) {
+      Payload->TryGetStringField(TEXT("assetPath"), MaterialRef);
     }
+    if (Path.IsEmpty() && !MaterialRef.IsEmpty()) {
+      const FString SafeMaterial = SanitizeProjectRelativePath(MaterialRef);
+      if (SafeMaterial.IsEmpty() || !LoadObject<UMaterialInterface>(nullptr, *SafeMaterial)) {
+        Bridge->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("materialPath '%s' is not a material; pass path to choose the layer info folder instead."), *MaterialRef),
+            TEXT("ASSET_NOT_FOUND"));
+        return true;
+      }
+      Path = FPackageName::GetLongPackagePath(FPackageName::ObjectPathToPackageName(SafeMaterial));
+    }
+    if (Path.IsEmpty()) { Path = TEXT("/Game/Landscape/Layers"); }
 
     // Validate path security - reject traversal and invalid paths
     FString ValidatedPath = SanitizeProjectRelativePath(Path);
@@ -37,6 +47,27 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
                           FString::Printf(TEXT("Invalid package path: %s"), *PackagePath),
                           TEXT("INVALID_PATH"));
       return true;
+    }
+
+    // Resolve the physical material before creating anything, so a bad path
+    // leaves no half-made layer info behind (it used to be skipped silently).
+    UPhysicalMaterial* PhysMat = nullptr;
+    FString PhysMaterialPath;
+    if (Payload->TryGetStringField(TEXT("physicalMaterialPath"), PhysMaterialPath) && !PhysMaterialPath.IsEmpty()) {
+      // SECURITY: Validate physicalMaterialPath before loading
+      FString ValidatedPhysMatPath = SanitizeProjectRelativePath(PhysMaterialPath);
+      if (ValidatedPhysMatPath.IsEmpty()) {
+        Bridge->SendAutomationError(Socket, RequestId,
+                            FString::Printf(TEXT("Invalid physicalMaterialPath '%s': contains traversal sequences or invalid root"), *PhysMaterialPath),
+                            TEXT("INVALID_PATH"));
+        return true;
+      }
+      PhysMat = LoadObject<UPhysicalMaterial>(nullptr, *ValidatedPhysMatPath);
+      if (!PhysMat) {
+        Bridge->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("physicalMaterialPath '%s' is not a physical material."), *ValidatedPhysMatPath), TEXT("ASSET_NOT_FOUND"));
+        return true;
+      }
     }
 
     UPackage* Package = CreatePackage(*PackagePath);
@@ -64,24 +95,10 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
     }
 
-    FString PhysMaterialPath;
-    if (Payload->TryGetStringField(TEXT("physicalMaterialPath"), PhysMaterialPath) && !PhysMaterialPath.IsEmpty()) {
-      // SECURITY: Validate physicalMaterialPath before loading
-      FString ValidatedPhysMatPath = SanitizeProjectRelativePath(PhysMaterialPath);
-      if (ValidatedPhysMatPath.IsEmpty()) {
-        Bridge->SendAutomationError(Socket, RequestId,
-                            FString::Printf(TEXT("Invalid physicalMaterialPath '%s': contains traversal sequences or invalid root"), *PhysMaterialPath),
-                            TEXT("INVALID_PATH"));
-        return true;
-      }
-      PhysMaterialPath = ValidatedPhysMatPath;
-
-      UPhysicalMaterial* PhysMat = LoadObject<UPhysicalMaterial>(nullptr, *PhysMaterialPath);
-      if (PhysMat) {
+    if (PhysMat) {
 PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        LayerInfo->PhysMaterial = PhysMat;
+      LayerInfo->PhysMaterial = PhysMat;
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
-      }
     }
 
     // Set blend method if specified (replaces bNoWeightBlend)
@@ -100,13 +117,13 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);
-    if (bSave) {
-      McpSafeAssetSave(LayerInfo);
-    }
+    const bool bSaved = bSave && McpSafeAssetSave(LayerInfo);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(Result, LayerInfo);
     Result->SetStringField(TEXT("layerName"), LayerName);
+    Result->SetStringField(TEXT("layerInfoPath"), LayerInfo->GetPathName());
+    Result->SetBoolField(TEXT("saved"), bSaved);
 
     Bridge->SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Landscape layer '%s' created."), *LayerName),

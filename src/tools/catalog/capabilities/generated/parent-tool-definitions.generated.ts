@@ -6633,11 +6633,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "constA": {
           "type": "number",
-          "description": "Constant A."
+          "description": "Value used while input A is unwired (Add, Subtract, Multiply, Divide, Lerp)."
         },
         "constB": {
           "type": "number",
-          "description": "Constant B."
+          "description": "Value used while input B is unwired (Add, Subtract, Multiply, Divide, Lerp)."
         },
         "coordinateIndex": {
           "type": "number",
@@ -6662,14 +6662,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "defaultValue": {
           "oneOf": [
             {
-              "description": "Default RGBA value."
+              "description": "Initial value for a Constant (number) or Constant3Vector (rgb array or {r,g,b}) node."
             },
             {
               "type": "string",
               "description": "Default value as string."
             }
           ],
-          "description": "Default RGBA value."
+          "description": "Default value as string."
         },
         "deleteScope": {
           "type": "string",
@@ -6802,7 +6802,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "expressionIndex": {
           "type": "number",
-          "description": "Expression index."
+          "description": "Zero-based position in the expression list; picks the node when nodeId is omitted."
         },
         "filter": {
           "type": "string",
@@ -6856,6 +6856,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "group": {
           "type": "string",
           "description": "Parameter group."
+        },
+        "hardness": {
+          "type": "number",
+          "description": "Layer hardness, 0-1 (default 0.5)."
         },
         "height": {
           "type": "number",
@@ -6989,7 +6993,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "levels": {
           "type": "number",
-          "description": "Noise level count."
+          "description": "Number of noise octaves (levels) combined."
         },
         "limit": {
           "oneOf": [
@@ -7171,15 +7175,31 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "New width."
         },
+        "noWeightBlend": {
+          "type": "boolean",
+          "description": "Exclude the layer from weight blending (default false)."
+        },
         "nodeId": {
           "type": "string",
           "description": "Node ID to delete."
         },
         "nodeIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Node IDs to delete in one batch, in place of nodeId.",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Only report connections touching these nodes."
+            }
+          ],
           "description": "Node IDs to delete in one batch, in place of nodeId."
         },
         "nodeKind": {
@@ -7213,7 +7233,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeName": {
           "type": "string",
-          "description": "Node name to find."
+          "description": "Name to find: a node id, parameter name, function input or output name, or custom node title (substring match)."
         },
         "nodeType": {
           "type": "string",
@@ -7353,6 +7373,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
+              "description": "Folder for the layer info asset, e.g. /Game/Landscape/Layers (overrides the material folder)."
+            },
+            {
+              "type": "string",
               "description": "Folder path (must start with /)."
             },
             {
@@ -7409,6 +7433,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "A complete Bridge export envelope: { exportPayload: [ { assetId, assetType, exportMode, exportType, folderName, name, assetPaths[] } ] }. Use this to pass through exactly what Bridge would have sent."
+        },
+        "physicalMaterialPath": {
+          "type": "string",
+          "description": "Physical material the layer applies, e.g. /Game/Physics/PM_Grass."
         },
         "pinName": {
           "type": "string",
@@ -7605,11 +7633,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "speedX": {
           "type": "number",
-          "description": "Pan speed X."
+          "description": "Pan speed along U."
         },
         "speedY": {
           "type": "number",
-          "description": "Pan speed Y."
+          "description": "Pan speed along V."
         },
         "startNodeId": {
           "type": "string",
@@ -7713,18 +7741,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "boolean",
-              "description": "Default switch value."
-            },
-            {
-              "type": "boolean",
-              "description": "Two-sided value."
+              "description": "Two-sided value: true renders both faces, false only the front."
             },
             {
               "type": "string",
               "description": "Optional tag value."
             }
           ],
-          "description": "Default switch value."
+          "description": "Metadata value."
         },
         "valueName": {
           "type": "string",

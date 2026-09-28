@@ -38,6 +38,56 @@ struct FNodeKind
   const TCHAR* Name;
   UClass* Class;
 };
+
+// A numeric payload knob and the expression UPROPERTY it sets (speedX -> SpeedX).
+struct FClassNodeNumberField
+{
+  const TCHAR* Field;
+  const TCHAR* Property;
+};
+
+// Calls Apply for each knob the payload carries. Returns false, naming the field
+// in OutMissing, when Class has no numeric property for it: a knob the node
+// lacks is refused, not dropped (constA/constB, speed, scale... used to be
+// declared and silently ignored).
+bool ForEachClassNodeNumber(UClass* Class, const TSharedPtr<FJsonObject>& Payload, TArrayView<const FClassNodeNumberField> Fields,
+                            FString& OutMissing, TFunctionRef<void(FNumericProperty*, double)> Apply)
+{
+  for (const FClassNodeNumberField& Entry : Fields) {
+    double Value = 0.0;
+    if (!Payload->TryGetNumberField(Entry.Field, Value)) { continue; }
+    FNumericProperty* Prop = Class ? CastField<FNumericProperty>(Class->FindPropertyByName(Entry.Property)) : nullptr;
+    if (!Prop) { OutMissing = Entry.Field; return false; }
+    Apply(Prop, Value);
+  }
+  return true;
+}
+
+void SetClassNodeNumber(UMaterialExpression* Expr, FNumericProperty* Prop, double Value)
+{
+  void* Ptr = Prop->ContainerPtrToValuePtr<void>(Expr);
+  if (Prop->IsFloatingPoint()) { Prop->SetFloatingPointPropertyValue(Ptr, Value); }
+  else { Prop->SetIntPropertyValue(Ptr, static_cast<int64>(Value)); }
+}
+
+// Validates the knobs against Class, then creates the node with them applied.
+bool AddConfiguredNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                       TSharedPtr<FMcpBridgeWebSocket> Socket, UClass* Class, const FString& Message,
+                       TArrayView<const FClassNodeNumberField> Fields, bool bVoronoi)
+{
+  FString Missing;
+  if (!ForEachClassNodeNumber(Class, Payload, Fields, Missing, [](FNumericProperty*, double) {})) {
+    Bridge->SendAutomationError(Socket, RequestId,
+        FString::Printf(TEXT("'%s' does not apply to this node (%s); wire an input pin instead."), *Missing, *Message),
+        TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  return AddPlacedExpression(Bridge, RequestId, Payload, Socket, Class, Message, [&](UMaterialExpression* Expr) {
+    // Voronoi is Noise with the Voronoi function.
+    if (bVoronoi) { CastChecked<UMaterialExpressionNoise>(Expr)->NoiseFunction = ENoiseFunction::NOISEFUNCTION_VoronoiALU; }
+    ForEachClassNodeNumber(Class, Payload, Fields, Missing, [Expr](FNumericProperty* Prop, double Value) { SetClassNodeNumber(Expr, Prop, Value); });
+  });
+}
 }
 
 bool HandleAddClassNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -58,15 +108,18 @@ bool HandleAddClassNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       // add_switch authors a real StaticSwitch (dogfood #204: it used to create an If node).
       {TEXT("add_switch"), {TEXT("StaticSwitch"), UMaterialExpressionStaticSwitch::StaticClass()}},
   };
+  static const FClassNodeNumberField PannerFields[] = {{TEXT("speedX"), TEXT("SpeedX")}, {TEXT("speedY"), TEXT("SpeedY")}};
+  static const FClassNodeNumberField RotatorFields[] = {{TEXT("speed"), TEXT("Speed")}};
+  static const FClassNodeNumberField NoiseFields[] = {{TEXT("scale"), TEXT("Scale")}, {TEXT("levels"), TEXT("Levels")}};
+  static const FClassNodeNumberField MathFields[] = {{TEXT("constA"), TEXT("ConstA")}, {TEXT("constB"), TEXT("ConstB")}};
   if (const FNodeKind* Kind = Kinds.Find(SubAction)) {
-    const bool bVoronoi = SubAction == TEXT("add_voronoi");
-    return AddPlacedExpression(Bridge, RequestId, Payload, Socket, Kind->Class,
-        FString::Printf(TEXT("%s node added."), Kind->Name), [bVoronoi](UMaterialExpression* Expr) {
-          if (bVoronoi) {
-            // Voronoi is Noise with the Voronoi function.
-            CastChecked<UMaterialExpressionNoise>(Expr)->NoiseFunction = ENoiseFunction::NOISEFUNCTION_VoronoiALU;
-          }
-        });
+    TArrayView<const FClassNodeNumberField> Fields;
+    if (SubAction == TEXT("add_panner")) { Fields = MakeArrayView(PannerFields); }
+    else if (SubAction == TEXT("add_rotator")) { Fields = MakeArrayView(RotatorFields); }
+    else if (SubAction == TEXT("add_noise")) { Fields = MakeArrayView(NoiseFields); }
+    else if (SubAction == TEXT("add_voronoi")) { Fields = MakeArrayView(NoiseFields, 1); }
+    return AddConfiguredNode(Bridge, RequestId, Payload, Socket, Kind->Class,
+        FString::Printf(TEXT("%s node added."), Kind->Name), Fields, SubAction == TEXT("add_voronoi"));
   }
 
   if (SubAction == TEXT("add_math_node")) {
@@ -93,8 +146,8 @@ bool HandleAddClassNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
           FString::Printf(TEXT("Unknown operation: %s"), *Operation), TEXT("UNKNOWN_OPERATION"));
       return true;
     }
-    return AddPlacedExpression(Bridge, RequestId, Payload, Socket, *OperationClass,
-        FString::Printf(TEXT("Math node '%s' added."), *Operation), [](UMaterialExpression*) {});
+    return AddConfiguredNode(Bridge, RequestId, Payload, Socket, *OperationClass,
+        FString::Printf(TEXT("Math node '%s' added."), *Operation), MakeArrayView(MathFields), false);
   }
   return false;
 }
