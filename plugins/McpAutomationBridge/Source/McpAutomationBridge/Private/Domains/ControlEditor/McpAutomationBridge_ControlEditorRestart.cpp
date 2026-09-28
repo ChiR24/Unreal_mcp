@@ -21,6 +21,9 @@
 // tears down the WebSocket, so a caller that restarted first would never
 // learn whether its own call was even accepted -- it would look identical to
 // a crash. The delay gives the socket time to flush the receipt.
+//
+// relaunch false closes the editor instead, under the same unsaved-package
+// gate: an idle editor can be shut down without a window click.
 
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
@@ -54,6 +57,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestart(
     }
   }
 
+  const bool bRelaunch = GetJsonBoolField(Payload, TEXT("relaunch"), true);
   const bool bDiscardUnsaved =
       GetJsonBoolField(Payload, TEXT("discardUnsaved"), false);
   const bool bBlockedByUnsaved = DirtyNames.Num() > 0 && !bDiscardUnsaved;
@@ -83,8 +87,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestart(
     SendAutomationResponse(
         Socket, RequestId, true,
         bBlockedByUnsaved
-            ? TEXT("Restart would be refused: unsaved packages would be lost.")
-            : TEXT("Restart would proceed."),
+            ? (bRelaunch ? TEXT("Restart would be refused: unsaved packages would be lost.") : TEXT("Closing the editor would be refused: unsaved packages would be lost."))
+            : (bRelaunch ? TEXT("Restart would proceed.") : TEXT("Closing the editor would proceed.")),
         Preview, FString());
     return true;
   }
@@ -96,23 +100,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestart(
     SendStandardErrorResponse(
         this, Socket, RequestId, TEXT("UNSAVED_CHANGES"),
         FString::Printf(
-            TEXT("%d package(s) have unsaved changes that a restart would "
+            TEXT("%d package(s) have unsaved changes that %s would "
                  "discard. Save them with control_editor.save_all, or pass "
-                 "discardUnsaved to restart anyway."),
-            DirtyNames.Num()),
+                 "discardUnsaved to go ahead anyway."),
+            DirtyNames.Num(), bRelaunch ? TEXT("a restart") : TEXT("closing the editor")),
         Details);
     return true;
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("restarting"), true);
+  Resp->SetBoolField(TEXT("restarting"), bRelaunch);
+  Resp->SetBoolField(TEXT("closing"), !bRelaunch);
   Resp->SetNumberField(TEXT("delaySeconds"), DelaySeconds);
   Resp->SetNumberField(TEXT("discardedPackageCount"), DirtyNames.Num());
   Resp->SetStringField(TEXT("projectPath"), FPaths::GetProjectFilePath());
   SendAutomationResponse(
       Socket, RequestId, true,
-      TEXT("Editor restart requested; the bridge will drop and come back on "
-           "the same port once the editor has relaunched."),
+      bRelaunch
+          ? TEXT("Editor restart requested; the bridge will drop and come back on "
+                 "the same port once the editor has relaunched.")
+          : TEXT("Editor close requested; the bridge will drop and stay down."),
       Resp, FString());
 
   // Requested off a ticker rather than inline so the receipt above reaches the
@@ -120,8 +127,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestart(
   // already made that decision explicitly -- leaving it true would raise a
   // modal dialog that no remote caller can answer.
   FTSTicker::GetCoreTicker().AddTicker(
-      FTickerDelegate::CreateLambda([](float) {
-        FUnrealEdMisc::Get().RestartEditor(/*bWarn=*/false);
+      FTickerDelegate::CreateLambda([bRelaunch](float) {
+        if (bRelaunch) {
+          FUnrealEdMisc::Get().RestartEditor(/*bWarn=*/false);
+        } else if (GEditor) {
+          GEditor->CloseEditor(); // ends PIE first, then requests engine exit
+        }
         return false;
       }),
       static_cast<float>(DelaySeconds));

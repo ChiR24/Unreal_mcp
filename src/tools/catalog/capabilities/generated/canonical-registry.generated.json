@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2d7c5164695304e1",
+  "catalogRevision": "5b46b6b0eb73bc58",
   "recordCount": 384,
   "records": [
     {
@@ -33876,13 +33876,20 @@
           "restart editor",
           "reload editor",
           "apply plugin change",
-          "relaunch editor"
+          "relaunch editor",
+          "quit editor",
+          "close editor",
+          "exit editor",
+          "unsaved packages",
+          "list unsaved changes"
         ],
-        "summary": "Restart the editor process, relaunching the same project.",
+        "summary": "Restart the editor process, relaunching the same project, or close it (relaunch false). validateOnly lists the unsaved packages without doing either.",
         "whenToUse": [
           "A plugin was enabled or disabled and the change needs a restart to take effect.",
           "A pipeline needs to know whether a restart is safe right now; pass validateOnly.",
-          "A project setting that only applies at startup must be picked up."
+          "A project setting that only applies at startup must be picked up.",
+          "The editor is no longer needed and should close (relaunch false).",
+          "Which packages have unsaved changes must be known (validateOnly)."
         ],
         "whenNotToUse": [
           "Only a level needs reloading; use open_level.",
@@ -33909,6 +33916,10 @@
             "delaySeconds": {
               "type": "number",
               "description": "Seconds to wait before restarting, so the response reaches the caller first. Clamped to 0.1-30."
+            },
+            "relaunch": {
+              "type": "boolean",
+              "description": "false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way."
             }
           },
           "required": [
@@ -33935,7 +33946,11 @@
             },
             "restarting": {
               "type": "boolean",
-              "description": "True once the restart has been scheduled; false under validateOnly."
+              "description": "True once the restart has been scheduled; false under validateOnly or when closing."
+            },
+            "closing": {
+              "type": "boolean",
+              "description": "True once closing the editor (relaunch false) has been scheduled."
             },
             "validateOnly": {
               "type": "boolean",
@@ -33979,7 +33994,7 @@
       },
       "examples": [
         {
-          "title": "Restart the editor process, relaunching the same project.",
+          "title": "Restart the editor process, relaunching the same project, or close it (relaunch false). validateOnly lists the unsaved packages without doing either.",
           "input": {
             "action": "restart_editor",
             "validateOnly": true
@@ -34022,8 +34037,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b79e16f074bb87c2a6c82016d939d0de0540fc9b0e17b6f0a6c3db73f3e6043a",
-        "content": "12f08f94e52efa5a98931fc652f9071a6a53fe4858e15eae10f9c875d86ab8a3"
+        "schema": "86e93b77400f13ec76559419d592f30ee502196699f3d988013baf52f87f22cf",
+        "content": "eb4f6a11503ee6bdf0e5b4a8066780b8a835906285b5fdb136c75d51a1fe9cfb"
       }
     },
     {

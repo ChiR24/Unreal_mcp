@@ -3897,6 +3897,7 @@
         "path",
         "preferences",
         "realtime",
+        "relaunch",
         "resolution",
         "returnBase64",
         "rotation",
@@ -4125,6 +4126,10 @@
           "realtime": {
             "type": "boolean",
             "description": "Whether realtime rendering is enabled."
+          },
+          "relaunch": {
+            "type": "boolean",
+            "description": "false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way."
           },
           "resolution": {
             "type": "string",

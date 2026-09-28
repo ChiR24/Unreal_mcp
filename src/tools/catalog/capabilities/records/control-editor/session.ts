@@ -93,22 +93,28 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'restart_editor', domain: D, family: F,
-    topics: ['restart editor', 'reload editor', 'apply plugin change', 'relaunch editor'],
-    summary: 'Restart the editor process, relaunching the same project.',
+    topics: ['restart editor', 'reload editor', 'apply plugin change', 'relaunch editor', 'quit editor', 'close editor', 'exit editor', 'unsaved packages', 'list unsaved changes'],
+    summary: 'Restart the editor process, relaunching the same project, or close it (relaunch false). validateOnly lists the unsaved packages without doing either.',
     // enable_plugin and several project settings answer "restart the editor
     // for it to take effect", and nothing could: an automated pipeline hit a
     // wall there that only a human could clear.
     whenToUse: ['A plugin was enabled or disabled and the change needs a restart to take effect.',
       'A pipeline needs to know whether a restart is safe right now; pass validateOnly.',
-      'A project setting that only applies at startup must be picked up.'],
+      'A project setting that only applies at startup must be picked up.',
+      'The editor is no longer needed and should close (relaunch false).',
+      'Which packages have unsaved changes must be known (validateOnly).'],
     whenNotToUse: ['Only a level needs reloading; use open_level.',
       'A PIE session should end; use stop.'],
-    inputProps: { validateOnly: P.validateOnly, discardUnsaved: P.discardUnsaved, delaySeconds: P.delaySeconds },
+    inputProps: {
+      validateOnly: P.validateOnly, discardUnsaved: P.discardUnsaved, delaySeconds: P.delaySeconds,
+      relaunch: { type: 'boolean', description: 'false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way.' },
+    },
     // Unsaved packages are refused rather than silently discarded, because
     // "the editor restarted" reads the same either way. The receipt is sent
     // before the restart fires, so a caller can tell acceptance from a crash.
     outputProps: {
-      restarting: { type: 'boolean', description: 'True once the restart has been scheduled; false under validateOnly.' },
+      restarting: { type: 'boolean', description: 'True once the restart has been scheduled; false under validateOnly or when closing.' },
+      closing: { type: 'boolean', description: 'True once closing the editor (relaunch false) has been scheduled.' },
       validateOnly: { type: 'boolean', description: 'True when this call only reported what a restart would do.' },
       wouldRestart: { type: 'boolean', description: 'Under validateOnly, whether a real restart would proceed.' },
       unsavedPackages: { type: 'array', items: { type: 'string', description: 'Package path.' }, description: 'Packages with unsaved changes a restart would discard.' },

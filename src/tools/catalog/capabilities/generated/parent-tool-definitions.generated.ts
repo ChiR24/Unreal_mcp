@@ -4564,6 +4564,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether realtime rendering is enabled."
         },
+        "relaunch": {
+          "type": "boolean",
+          "description": "false closes the editor instead of relaunching it (default true). Unsaved packages are refused the same way."
+        },
         "resolution": {
           "type": "string",
           "description": "Maximum WxH for the returned PNG (e.g. \"1280x720\"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit."
@@ -4706,6 +4710,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "className": {
           "type": "string",
           "description": "Class acted on."
+        },
+        "closing": {
+          "type": "boolean",
+          "description": "True once closing the editor (relaunch false) has been scheduled."
         },
         "compensation": {
           "type": "object",
@@ -4960,7 +4968,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "restarting": {
           "type": "boolean",
-          "description": "True once the restart has been scheduled; false under validateOnly."
+          "description": "True once the restart has been scheduled; false under validateOnly or when closing."
         },
         "restored": {
           "type": "boolean",
