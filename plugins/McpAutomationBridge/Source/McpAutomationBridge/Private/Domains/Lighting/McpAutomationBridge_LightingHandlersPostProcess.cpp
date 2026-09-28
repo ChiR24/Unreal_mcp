@@ -46,26 +46,60 @@ bool HandleSetExposure(
         return true;
     }
 
-    double MinB = 0.0;
-    double MaxB = 0.0;
-    if (Payload->TryGetNumberField(TEXT("minBrightness"), MinB))
+    // Each value sets its bOverride_ flag: without it the volume overrides nothing and the
+    // written value never takes effect. method was declared and never read.
+    static const TMap<FString, EAutoExposureMethod> Methods = {
+        {TEXT("Manual"), AEM_Manual}, {TEXT("AutoExposureHistogram"), AEM_Histogram}, {TEXT("AutoExposureBasic"), AEM_Basic}};
+    const FString Method = GetJsonStringField(Payload, TEXT("method"));
+    const EAutoExposureMethod* MethodValue = Methods.Find(Method);
+    if (!Method.IsEmpty() && !MethodValue)
     {
-        PPV->Settings.AutoExposureMinBrightness = static_cast<float>(MinB);
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid exposure method: %s. Valid values: Manual, AutoExposureHistogram, AutoExposureBasic"), *Method),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
     }
-    if (Payload->TryGetNumberField(TEXT("maxBrightness"), MaxB))
+    PPV->Modify();
+    TArray<FString> Applied;
+    if (MethodValue)
     {
-        PPV->Settings.AutoExposureMaxBrightness = static_cast<float>(MaxB);
+        PPV->Settings.bOverride_AutoExposureMethod = true;
+        PPV->Settings.AutoExposureMethod = *MethodValue;
+        Applied.Add(TEXT("AutoExposureMethod"));
     }
-
-    double Comp = 0.0;
-    if (Payload->TryGetNumberField(TEXT("compensationValue"), Comp))
+    double Value = 0.0;
+    if (Payload->TryGetNumberField(TEXT("minBrightness"), Value))
     {
-        PPV->Settings.AutoExposureBias = static_cast<float>(Comp);
+        PPV->Settings.bOverride_AutoExposureMinBrightness = true;
+        PPV->Settings.AutoExposureMinBrightness = static_cast<float>(Value);
+        Applied.Add(TEXT("AutoExposureMinBrightness"));
     }
+    if (Payload->TryGetNumberField(TEXT("maxBrightness"), Value))
+    {
+        PPV->Settings.bOverride_AutoExposureMaxBrightness = true;
+        PPV->Settings.AutoExposureMaxBrightness = static_cast<float>(Value);
+        Applied.Add(TEXT("AutoExposureMaxBrightness"));
+    }
+    if (Payload->TryGetNumberField(TEXT("compensationValue"), Value))
+    {
+        PPV->Settings.bOverride_AutoExposureBias = true;
+        PPV->Settings.AutoExposureBias = static_cast<float>(Value);
+        Applied.Add(TEXT("AutoExposureBias"));
+    }
+    if (Applied.Num() == 0)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            TEXT("No exposure value supplied: pass method, minBrightness, maxBrightness or compensationValue"),
+            TEXT("NO_SETTING_SUPPLIED"));
+        return true;
+    }
+    PPV->MarkPackageDirty();
+    PPV->MarkComponentsRenderStateDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(PPV));
+    Resp->SetArrayField(TEXT("appliedSettings"), McpHandlerUtils::ToJsonStringArray(Applied));
     McpHandlerUtils::AddVerification(Resp, PPV);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Exposure settings applied"), Resp);
     return true;
@@ -81,6 +115,24 @@ bool HandleSetAmbientOcclusion(
     if (!PPV)
     {
         return true;
+    }
+
+    // quality was declared and never read; the volume's AO quality runs 0 to 100.
+    static const TMap<FString, float> QualityLevels = {{TEXT("Low"), 25.0f}, {TEXT("Medium"), 50.0f}, {TEXT("High"), 100.0f}};
+    const FString Quality = GetJsonStringField(Payload, TEXT("quality"));
+    const float* QualityLevel = QualityLevels.Find(Quality);
+    if (!Quality.IsEmpty() && !QualityLevel)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("Invalid ambient occlusion quality: %s. Valid values: Low, Medium, High"), *Quality),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    PPV->Modify();
+    if (QualityLevel)
+    {
+        PPV->Settings.bOverride_AmbientOcclusionQuality = true;
+        PPV->Settings.AmbientOcclusionQuality = *QualityLevel;
     }
 
     bool bEnabled = true;
@@ -103,6 +155,7 @@ bool HandleSetAmbientOcclusion(
         PPV->Settings.bOverride_AmbientOcclusionRadius = true;
         PPV->Settings.AmbientOcclusionRadius = static_cast<float>(Radius);
     }
+    PPV->MarkPackageDirty();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);

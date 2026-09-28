@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4d95645686aa9d24",
+  "catalogRevision": "3b19dd50f238fd93",
   "recordCount": 382,
   "records": [
     {
@@ -17665,9 +17665,13 @@
               "type": "string",
               "description": "Canonical /Game static mesh asset path."
             },
+            "path": {
+              "type": "string",
+              "description": "Folder the new foliage type asset goes in (type creation only; default /Game/Foliage)."
+            },
             "density": {
               "type": "number",
-              "description": "Foliage density."
+              "description": "Type creation: instances per 1000x1000 units. Scatter: brush fill 0-1 (count overrides it)."
             },
             "minScale": {
               "type": "number",
@@ -17822,10 +17826,6 @@
               },
               "description": "Instance transforms."
             },
-            "strength": {
-              "type": "number",
-              "description": "Brush strength (0-1)."
-            },
             "area": {
               "type": "object",
               "description": "A box min..max. Painting: instances spread evenly over min..max in X and Y, and each drops onto the ground found between 500 above max.z and 1000 below min.z. Removing: only the instances whose location lies inside min..max on all three axes (a pit or a path), every type unless foliageType names one.",
@@ -17976,6 +17976,9 @@
               "scatter",
               "instances"
             ],
+            "path": [
+              "scatter"
+            ],
             "density": [
               "scatter",
               "paint"
@@ -18002,9 +18005,6 @@
             "transforms": [
               "instances"
             ],
-            "strength": [
-              "paint"
-            ],
             "area": [
               "paint"
             ],
@@ -18016,8 +18016,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3193ed979db2f0d78bc05399591114d71e7a9b4026192bd3b549ae981f981230",
-        "content": "7bd4a06c22edcff7b42447a39bf285c817c10d2fa7bc29eb98e42393309757ff"
+        "schema": "bbb3f897cc067df978254d1885ecda9fcc25e37d33fb1a0e76b87ff1a1203092",
+        "content": "cbd7cb1525585a84f7de4f06a7278e2f36dba3668ecb9e6a089fcda7c7a41ad4"
       }
     },
     {
@@ -18362,13 +18362,51 @@
             },
             "settings": {
               "type": "object",
+              "description": "Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): {\"Intensity\": 2, \"LightColor\": {\"R\": 0.6, \"G\": 0.7, \"B\": 1}} for a light, {\"FogDensity\": 0.02} for fog. A key neither declares is named in configurationErrors and fails the call.",
               "additionalProperties": true,
-              "x-unreal-reflection-boundary": true,
-              "description": "Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): {\"Intensity\": 2, \"LightColor\": {\"R\": 0.6, \"G\": 0.7, \"B\": 1}} for a light, {\"FogDensity\": 0.02} for fog. A key neither declares is named in configurationErrors and fails the call."
+              "x-unreal-reflection-boundary": true
             },
-            "intensity": {
-              "type": "number",
-              "description": "Light intensity."
+            "actorName": {
+              "type": "string",
+              "description": "Label of the actor to configure; the first one of its kind in the level when omitted. One is spawned with this label when none exists."
+            },
+            "location": {
+              "type": "object",
+              "description": "Where the actor is spawned when the level has none; an existing actor is not moved.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "rotation": {
+              "type": "object",
+              "description": "Actor rotation, applied on every call.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             },
             "skyLightIntensity": {
               "type": "number",
@@ -18376,7 +18414,7 @@
             },
             "cubemapPath": {
               "type": "string",
-              "description": "Canonical /Game cubemap asset path."
+              "description": "Cube texture the sky light uses (switches its source to a specified cubemap); a path that does not load fails the call."
             },
             "azimuth": {
               "type": "number",
@@ -18386,18 +18424,6 @@
               "type": "number",
               "description": "Sun elevation: degrees above the horizon (90 = overhead, negative = below it)."
             },
-            "actorName": {
-              "type": "string",
-              "description": "Actor name in the current level."
-            },
-            "density": {
-              "type": "number",
-              "description": "Foliage density."
-            },
-            "propertyValue": {
-              "type": "number",
-              "description": "Numeric property value."
-            },
             "time": {
               "type": "number",
               "description": "Time of day in hours (0-24)."
@@ -18406,9 +18432,60 @@
               "type": "number",
               "description": "Hour of day (0-23)."
             },
+            "intensity": {
+              "type": "number",
+              "description": "Light intensity."
+            },
+            "density": {
+              "type": "number",
+              "description": "Foliage density."
+            },
             "curvePath": {
               "type": "string",
-              "description": "Canonical /Game curve asset path."
+              "description": "The curve asset to edit, created there when missing (default /Game/Environment/Curves/MCP_SkyColorCurve or MCP_LightColorCurve)."
+            },
+            "keys": {
+              "type": "array",
+              "minItems": 1,
+              "description": "Color keys that replace the curve's keys; required to change an existing curve. A new curve without keys is flat white.",
+              "items": {
+                "type": "object",
+                "description": "One key.",
+                "properties": {
+                  "time": {
+                    "type": "number",
+                    "description": "Key time, e.g. the hour of day."
+                  },
+                  "color": {
+                    "type": "object",
+                    "description": "Color {r, g, b, a}; a defaults to 1.",
+                    "properties": {
+                      "r": {
+                        "type": "number",
+                        "description": "Red."
+                      },
+                      "g": {
+                        "type": "number",
+                        "description": "Green."
+                      },
+                      "b": {
+                        "type": "number",
+                        "description": "Blue."
+                      },
+                      "a": {
+                        "type": "number",
+                        "description": "Alpha."
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "time",
+                  "color"
+                ],
+                "additionalProperties": false
+              }
             },
             "setting": {
               "type": "string",
@@ -18461,7 +18538,9 @@
           "title": "Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.",
           "input": {
             "action": "configure_atmosphere",
-            "intensity": 1,
+            "settings": {
+              "MieScatteringScale": 0.1
+            },
             "setting": "sky_atmosphere"
           },
           "output": {
@@ -18510,15 +18589,35 @@
             "settings": [
               "sky_atmosphere",
               "sky_light",
+              "sun_position",
               "directional_light",
               "height_fog",
               "volumetric_cloud",
-              "sky_color_curve",
-              "light_color_curve"
+              "time_of_day"
             ],
-            "intensity": [
+            "actorName": [
               "sky_atmosphere",
-              "directional_light"
+              "sky_light",
+              "sun_position",
+              "directional_light",
+              "height_fog",
+              "volumetric_cloud",
+              "time_of_day"
+            ],
+            "location": [
+              "sky_atmosphere",
+              "sky_light",
+              "sun_position",
+              "directional_light",
+              "height_fog",
+              "volumetric_cloud",
+              "time_of_day"
+            ],
+            "rotation": [
+              "sky_atmosphere",
+              "sky_light",
+              "height_fog",
+              "volumetric_cloud"
             ],
             "skyLightIntensity": [
               "sky_light"
@@ -18528,29 +18627,33 @@
             ],
             "azimuth": [
               "sun_position",
-              "directional_light"
+              "directional_light",
+              "time_of_day"
             ],
             "elevation": [
               "sun_position",
-              "directional_light"
-            ],
-            "actorName": [
-              "directional_light"
-            ],
-            "density": [
-              "height_fog",
-              "volumetric_cloud"
-            ],
-            "propertyValue": [
+              "directional_light",
               "time_of_day"
             ],
             "time": [
+              "sun_position",
               "time_of_day"
             ],
             "hour": [
+              "sun_position",
               "time_of_day"
             ],
+            "intensity": [
+              "directional_light"
+            ],
+            "density": [
+              "height_fog"
+            ],
             "curvePath": [
+              "sky_color_curve",
+              "light_color_curve"
+            ],
+            "keys": [
               "sky_color_curve",
               "light_color_curve"
             ]
@@ -18559,8 +18662,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "877c3719955379ffc2c3df54526e87bc2206da3f0f5ebcde19606ee88c852f1e",
-        "content": "d00f1f8cb0e01c67991d8c2b80ea4e61f19ae0b70642ff8847d069e91b68dfd1"
+        "schema": "363ac1b43986a751de1a8c48ea0cd84726b8da0491d2fbcddcf61747427bd14a",
+        "content": "2803136a0887688516c6e78f78fc4b26e968f584899fb2e479c7b11a08802f7b"
       }
     },
     {
@@ -18687,11 +18790,11 @@
             },
             "collisionEnabled": {
               "type": "boolean",
-              "description": "Whether collision is enabled."
+              "description": "Collision of placed instances: true = query and physics, false = none."
             },
             "cullDistance": {
               "type": "number",
-              "description": "Cull distance in world units."
+              "description": "Distance at which instances are culled (CullDistance max); the fade start is lowered to it if it was further."
             },
             "settings": {
               "type": "object",
@@ -18824,8 +18927,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6ed981aebdc64ebadc2308a40b34ccb78bbdab2e2de9b1d9cee6334b1c735dbd",
-        "content": "2436971f51c13a6c58dfd9cf9b696f2e65ec41b4e5b17c727379d86993b1456f"
+        "schema": "4798c2e38392b9e195268aaff674b1813a8053e93b1511b9cd2b94acc6384125",
+        "content": "04958cfe87215213cca36078706ae05ce48c3bb2f6fadc86bd0600ab1bab4221"
       }
     },
     {
@@ -18917,37 +19020,49 @@
             },
             "settings": {
               "type": "object",
-              "description": "Action-specific settings key-value pairs.",
+              "description": "The same shadow keys as the top level, nested; a value here wins.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
             "actorName": {
               "type": "string",
-              "description": "Actor name in the current level."
+              "description": "Light whose own shadow settings (castShadows, shadowBias, shadowSlopeBias, shadowResolutionScale) change."
             },
             "shadowQuality": {
               "type": "string",
-              "description": "Shadow quality (Low, Medium, High, Epic)."
-            },
-            "cascadedShadows": {
-              "type": "boolean",
-              "description": "Whether cascaded shadow maps are used."
+              "description": "Shadow quality scalability level (sg.ShadowQuality): Low, Medium, High, Epic or Cinematic."
             },
             "shadowDistance": {
               "type": "number",
-              "description": "Shadow draw distance scale."
+              "description": "Shadow draw distance scale (r.Shadow.DistanceScale)."
             },
             "contactShadows": {
               "type": "boolean",
-              "description": "Whether contact shadows are enabled."
+              "description": "Whether contact shadows render (r.ContactShadows)."
             },
             "rayTracedShadows": {
               "type": "boolean",
-              "description": "Whether ray-traced shadows are enabled. Distinct from virtualShadowMaps."
+              "description": "Whether ray-traced shadows are enabled (r.RayTracing.Shadows). Distinct from virtualShadowMaps."
             },
             "virtualShadowMaps": {
               "type": "boolean",
               "description": "Whether virtual shadow maps are enabled. Distinct from rayTracedShadows."
+            },
+            "castShadows": {
+              "type": "boolean",
+              "description": "Whether the light (actorName) casts shadows."
+            },
+            "shadowBias": {
+              "type": "number",
+              "description": "Shadow depth bias of the light (actorName)."
+            },
+            "shadowSlopeBias": {
+              "type": "number",
+              "description": "Shadow slope bias of the light (actorName)."
+            },
+            "shadowResolutionScale": {
+              "type": "number",
+              "description": "Shadow resolution scale of the light (actorName)."
             },
             "enabled": {
               "type": "boolean",
@@ -18963,7 +19078,7 @@
             },
             "quality": {
               "type": "string",
-              "description": "Ambient occlusion quality, applied when the handler falls back to console variables.",
+              "description": "Ambient occlusion quality on the post-process volume (25, 50 or 100 of 100).",
               "enum": [
                 "Low",
                 "Medium",
@@ -18973,7 +19088,7 @@
             },
             "method": {
               "type": "string",
-              "description": "Exposure method, applied when the handler falls back to console variables.",
+              "description": "Auto-exposure method written on the post-process volume.",
               "enum": [
                 "Manual",
                 "AutoExposureHistogram",
@@ -18999,11 +19114,11 @@
             },
             "indirectLightingIntensity": {
               "type": "number",
-              "description": "Indirect lighting intensity multiplier."
+              "description": "Indirect lighting intensity, written with its override on the level's post-process volume (spawned when missing)."
             },
             "bounces": {
               "type": "integer",
-              "description": "Maximum indirect lighting bounces."
+              "description": "Lightmass indirect lighting bounces (World Settings), used by baked lighting."
             },
             "viewDistance": {
               "type": "number",
@@ -19110,9 +19225,6 @@
             "shadowQuality": [
               "shadows"
             ],
-            "cascadedShadows": [
-              "shadows"
-            ],
             "shadowDistance": [
               "shadows"
             ],
@@ -19123,6 +19235,18 @@
               "shadows"
             ],
             "virtualShadowMaps": [
+              "shadows"
+            ],
+            "castShadows": [
+              "shadows"
+            ],
+            "shadowBias": [
+              "shadows"
+            ],
+            "shadowSlopeBias": [
+              "shadows"
+            ],
+            "shadowResolutionScale": [
               "shadows"
             ],
             "enabled": [
@@ -19166,8 +19290,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b5009313a8229e488918420080c90b7d1b82b1e5c29edbbfeb07c0912380a5fe",
-        "content": "ddbb01780a91a0b79db8d64110111d1d021596378b3323d668fcb2646a5a7fc2"
+        "schema": "1a07d7857fe583d5fbb8cb4fdaf06d8edd114d21f2c25a8f0485e99697deded4",
+        "content": "af4aee822b79106330732f4e7ad1269d64d6e2ca3354f177a0ca1213ed0a836c"
       }
     },
     {
@@ -20713,10 +20837,6 @@
               "type": "number",
               "description": "Wave steepness."
             },
-            "speed": {
-              "type": "number",
-              "description": "Animation or wave speed."
-            },
             "direction": {
               "type": "object",
               "description": "Direction rotation.",
@@ -20736,9 +20856,17 @@
               },
               "additionalProperties": false
             },
+            "waterBodyName": {
+              "type": "string",
+              "description": "Water body to configure; the first ocean, lake, river or custom body when omitted."
+            },
             "materialPath": {
               "type": "string",
               "description": "Canonical /Game material asset path."
+            },
+            "materialIndex": {
+              "type": "integer",
+              "description": "Material index."
             },
             "settings": {
               "type": "object",
@@ -20797,7 +20925,6 @@
             "action": "configure_water",
             "waveHeight": 1,
             "waveLength": 10,
-            "speed": 1,
             "setting": "waves"
           },
           "output": {
@@ -20849,13 +20976,13 @@
             "steepness": [
               "waves"
             ],
-            "speed": [
-              "waves"
-            ],
             "direction": [
               "waves"
             ],
             "materialPath": [
+              "material"
+            ],
+            "materialIndex": [
               "material"
             ],
             "settings": [
@@ -20870,8 +20997,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c3dc118d6cb09874d57979c4bc78bc3269b3ef71bb50d2cca5c5c54881115a51",
-        "content": "d0931967134e7b78da16f53257e95698895352e0e932f81ba8805c5e3259437f"
+        "schema": "d4b3626e16e3835d56a588c63d8a99229106b7ffdf9f7dde1fbf08164a0b3179",
+        "content": "71360c92e2b2fc2b8accb062d137ea3d1e205e8c373c3d70df8eb1c34210d2c6"
       }
     },
     {
@@ -20951,15 +21078,53 @@
               "type": "string",
               "description": "Canonical /Game particle system asset path."
             },
-            "density": {
-              "type": "number",
-              "description": "Foliage density."
-            },
             "settings": {
               "type": "object",
               "description": "Action-specific settings key-value pairs.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
+            },
+            "rotation": {
+              "type": "object",
+              "description": "Actor rotation, applied on every call.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Label of the weather actor to configure; spawned with this label when the level has none."
+            },
+            "location": {
+              "type": "object",
+              "description": "Where the actor is spawned when it does not exist yet; an existing actor is not moved.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
             "speed": {
               "type": "number",
@@ -21030,7 +21195,7 @@
           "title": "Configure weather effects: rain, snow, lightning, wind.",
           "input": {
             "action": "configure_weather",
-            "density": 0.8,
+            "particleSystemPath": "/Game/Weather/P_Rain",
             "setting": "rain"
           },
           "output": {
@@ -21076,9 +21241,10 @@
               "snow",
               "lightning"
             ],
-            "density": [
+            "rotation": [
               "rain",
-              "snow"
+              "snow",
+              "lightning"
             ],
             "speed": [
               "wind"
@@ -21091,8 +21257,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "13dcc15a267a2b7c5192a56a19561381a9d2352d3fe7b210fb787c2f365ff71e",
-        "content": "bb2ac034908d6ff3870498a714f0229ebd21c0d107b4396e81ac341a8c883ab9"
+        "schema": "70144df29b59f864013625bec87b580227e4a1fa257903ecc4f965a69c70d59f",
+        "content": "24968938554b95dd8a32003dba47fe01de9c9ab5e5e77722df54341ad0f1475a"
       }
     },
     {
@@ -21161,10 +21327,6 @@
               "type": "string",
               "description": "Name for the new actor, asset, or volume."
             },
-            "path": {
-              "type": "string",
-              "description": "Canonical /Game asset or directory path."
-            },
             "location": {
               "type": "object",
               "description": "World-space location {x, y, z}.",
@@ -21184,9 +21346,34 @@
               },
               "additionalProperties": false
             },
+            "rotation": {
+              "type": "object",
+              "description": "Rotation {pitch, yaw, roll}.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
+            },
             "density": {
               "type": "number",
               "description": "Foliage density."
+            },
+            "settings": {
+              "type": "object",
+              "description": "Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): {\"Intensity\": 2, \"LightColor\": {\"R\": 0.6, \"G\": 0.7, \"B\": 1}} for a light, {\"FogDensity\": 0.02} for fog. A key neither declares is named in configurationErrors and fails the call.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
             },
             "kind": {
               "type": "string",
@@ -21273,11 +21460,13 @@
             "time_of_day_system": "create_time_of_day_system"
           },
           "declaredBy": {
-            "path": [
-              "sky_sphere",
+            "rotation": [
               "fog_volume"
             ],
             "density": [
+              "fog_volume"
+            ],
+            "settings": [
               "fog_volume"
             ]
           }
@@ -21285,8 +21474,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5af430da526589aaed8ad41832518c3a9c3320252daf8069f05042d2c157ac6b",
-        "content": "0be2a62499fac78dcc822c1f9156b51e6f773bfb23578d4ffe8db83f78d97eb7"
+        "schema": "4608903429a51e385390fae94226462e5b41b720b23327f9767df53f25373657",
+        "content": "b9b8106745ec59921d2819cc37bc6e47cb55c77ea08c3bba6fcf8a52f8d1194c"
       }
     },
     {
@@ -21689,15 +21878,7 @@
               "type": "string",
               "description": "Name for the new actor, asset, or volume."
             },
-            "foliageType": {
-              "type": "string",
-              "description": "Foliage type name or path."
-            },
             "meshPath": {
-              "type": "string",
-              "description": "Canonical /Game static mesh asset path."
-            },
-            "staticMesh": {
               "type": "string",
               "description": "Canonical /Game static mesh asset path."
             },
@@ -21717,9 +21898,21 @@
               "type": "number",
               "description": "Maximum foliage scale."
             },
+            "alignToNormal": {
+              "type": "boolean",
+              "description": "Align instance to surface normal."
+            },
+            "randomYaw": {
+              "type": "boolean",
+              "description": "Apply random yaw rotation."
+            },
+            "cullDistance": {
+              "type": "number",
+              "description": "Cull distance in world units."
+            },
             "volumeName": {
               "type": "string",
-              "description": "Volume actor name."
+              "description": "Label of the procedural foliage volume (name is accepted too)."
             },
             "foliageTypes": {
               "type": "array",
@@ -21877,16 +22070,7 @@
             "procedural": "create_procedural_foliage"
           },
           "declaredBy": {
-            "foliageType": [
-              "type"
-            ],
             "meshPath": [
-              "type"
-            ],
-            "staticMesh": [
-              "type"
-            ],
-            "path": [
               "type"
             ],
             "density": [
@@ -21896,6 +22080,15 @@
               "type"
             ],
             "maxScale": [
+              "type"
+            ],
+            "alignToNormal": [
+              "type"
+            ],
+            "randomYaw": [
+              "type"
+            ],
+            "cullDistance": [
               "type"
             ],
             "volumeName": [
@@ -21918,8 +22111,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c615c987b3c35ff9e0b392d2fecc9d0f16df0efb6581bc02f927807a10e951e4",
-        "content": "769227f7506cfd0ec2f98a2ab4cbb27baa1d14596a5074a6346cba9bb850de40"
+        "schema": "5664f7469158bc16a7bf9865016451fbd858d043e709fe2451e54c6531e54038",
+        "content": "ee11615c17557644f2d6567f65f330050d738ff8fe604484c75c591992e32db6"
       }
     },
     {
@@ -22006,15 +22199,15 @@
             },
             "quadsPerSection": {
               "type": "number",
-              "description": "Quads per section."
+              "description": "Quads per section: 7, 15, 31, 63 (default), 127 or 255. A component spans sectionsPerComponent sections."
             },
             "sectionSize": {
               "type": "number",
-              "description": "Section size in quads."
+              "description": "Quads per section (same as quadsPerSection): 7, 15, 31, 63 (default), 127 or 255."
             },
             "sectionsPerComponent": {
               "type": "number",
-              "description": "Sections per component."
+              "description": "Sections per component side: 1 (default) or 2, for 2x2 sections per component."
             },
             "componentCount": {
               "type": "object",
@@ -22182,8 +22375,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "882a6ad8e88a73326a642365c29492d842d077d00dc3e1320ea6ae24753a6aae",
-        "content": "376a6b53f118ffc43ddb89f4a4a1b85e0e6eb80154778fabcfdf10b431eda92c"
+        "schema": "b7018f018fa2b27b651061c1ec11863c92725d64d99dba9b1a1b914234bd251d",
+        "content": "b7d24e6641d32a3a94467acd19036d3e3d4ce1952ae329577079414bd46fdbf6"
       }
     },
     {
@@ -22268,6 +22461,52 @@
             "landscapePath": {
               "type": "string",
               "description": "Canonical /Game landscape asset path."
+            },
+            "landscapeActorPath": {
+              "type": "string",
+              "description": "Landscape actor path in the level."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Label of the proxy (found and reused when it exists; default LandscapeStreamingProxy)."
+            },
+            "location": {
+              "type": "object",
+              "description": "Proxy location (default the landscape's).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "rotation": {
+              "type": "object",
+              "description": "Proxy rotation (default the landscape's).",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             },
             "kind": {
               "type": "string",
@@ -22376,14 +22615,26 @@
             ],
             "landscapePath": [
               "streaming_proxy"
+            ],
+            "landscapeActorPath": [
+              "streaming_proxy"
+            ],
+            "actorName": [
+              "streaming_proxy"
+            ],
+            "location": [
+              "streaming_proxy"
+            ],
+            "rotation": [
+              "streaming_proxy"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "21f72eba96de53fbea6c33646e134f022f56f16d846007c1f06124129f39367f",
-        "content": "42191d98c170647c19e2c1f68490fb74354dc6446fe992f34603b7e58a0c5537"
+        "schema": "832fd4a627bf2e39c3943fa5b919742040e81f71930c36216ca5a27938a4d2c2",
+        "content": "db1580f67c63574f561b091c2666f7b12891b86d8d4e7b2a53356fb3a1e50f67"
       }
     },
     {
@@ -22485,6 +22736,35 @@
             "intensity": {
               "type": "number",
               "description": "Light intensity."
+            },
+            "color": {
+              "type": "object",
+              "description": "Light color {r, g, b, a} in 0-1 (a missing channel reads 0, alpha 1).",
+              "properties": {
+                "r": {
+                  "type": "number",
+                  "description": "Red."
+                },
+                "g": {
+                  "type": "number",
+                  "description": "Green."
+                },
+                "b": {
+                  "type": "number",
+                  "description": "Blue."
+                },
+                "a": {
+                  "type": "number",
+                  "description": "Alpha."
+                }
+              },
+              "additionalProperties": false
+            },
+            "properties": {
+              "type": "object",
+              "description": "Light component values for point, spot, rect and directional lights: intensity, color, attenuationRadius, castShadows and the like; a properties.color wins over color.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
             }
           },
           "required": [
@@ -22560,8 +22840,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0e87ae3b4c5fc904cf686c7421cd35cc3c702204ebf6cfc639260e0e13d92d86",
-        "content": "148a8082286a3702c5f10d60c700086e828eb04b6249ee603437cd8975c35187"
+        "schema": "7c03d2a2a60294ce92d89a1f1c39a3af5e0fcf47f25bd6e6b5fcec879714f534",
+        "content": "63ab6f10c66743007718d5188a350ddc563e8264d2fa300dc277dd6c284e4f93"
       }
     },
     {
@@ -22630,6 +22910,25 @@
             "location": {
               "type": "object",
               "description": "World-space location {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "size": {
+              "type": "object",
+              "description": "Box size in world units {x, y, z} (default 1000 on each axis).",
               "properties": {
                 "x": {
                   "type": "number",
@@ -22737,14 +23036,17 @@
             ],
             "location": [
               "lightmass_volume"
+            ],
+            "size": [
+              "lightmass_volume"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3eaaeb2ffe9fd582f4a65eef4ab139d986e812f5eb62e3cf84f745e24a90abd4",
-        "content": "b861754c988e067d3417917aeda60d63c8d5b1beaecec5c482e0a9539dcb06b4"
+        "schema": "6d08ad6fedbdddcc94d8b6c7cb2ddc01121d05d47a8f4c6f346100b94902d6d0",
+        "content": "a2c5b79cfab1e63bfcfffecf103591959deba61a8b83c141e32552c2564a1b24"
       }
     },
     {
@@ -22781,7 +23083,7 @@
             },
             "name": {
               "type": "string",
-              "description": "Name for the new actor, asset, or volume."
+              "description": "Label of the terrain actor (default ProceduralTerrain; actorName is accepted too)."
             },
             "actorName": {
               "type": "string",
@@ -22822,6 +23124,10 @@
               "type": "integer",
               "description": "Mesh subdivision count."
             },
+            "spacing": {
+              "type": "number",
+              "description": "World units per sizeX and sizeY unit: the terrain spans sizeX*spacing by sizeY*spacing (default 100)."
+            },
             "rotation": {
               "type": "object",
               "description": "Rotation {pitch, yaw, roll}.",
@@ -22843,7 +23149,7 @@
             },
             "material": {
               "type": "string",
-              "description": "Canonical /Game material asset path."
+              "description": "Material for the terrain; a path that does not load fails the call."
             }
           },
           "required": [
@@ -22916,8 +23222,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "234d1c05c604f53ffa14cd27dbd563559ae1d0529db2d9941f2bb44517e71c52",
-        "content": "f28d112561919fe3625cbbdae540150c6f29f79f2ad050ff0e7e54c647433454"
+        "schema": "90c2cb83742b90570515d520853921110aa95c21bd7c62b219242ff42ebff9b7",
+        "content": "fa71e467d7da04479908c4d75e4acf7017da1950e1635ddde1fdcc86b3bb6ce4"
       }
     },
     {
@@ -22992,13 +23298,36 @@
               },
               "additionalProperties": false
             },
+            "rotation": {
+              "type": "object",
+              "description": "Rotation {pitch, yaw, roll}.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
+            },
             "intensity": {
               "type": "number",
               "description": "Light intensity."
             },
             "cubemapPath": {
               "type": "string",
-              "description": "Canonical /Game cubemap asset path."
+              "description": "Cube texture to light from (sets the specified-cubemap source); a path that does not load fails before anything spawns."
+            },
+            "recapture": {
+              "type": "boolean",
+              "description": "Recapture the sky light after the change."
             },
             "skyLightOp": {
               "type": "string",
@@ -23083,10 +23412,10 @@
             "ensure_single": "ensure_single_sky_light"
           },
           "declaredBy": {
-            "name": [
+            "location": [
               "create"
             ],
-            "location": [
+            "rotation": [
               "create"
             ],
             "intensity": [
@@ -23100,8 +23429,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0873e61cd37288a0465ae78d6f2dc572fdb324c061116e10a0c7a4587e0585d5",
-        "content": "ce2ad061c47ef6d74645f6313662048e1c818dee09bed3e1bcfdc27ddad174f9"
+        "schema": "b9dec27e0cbccf91708ec79033dd724fbb1bdb443c92f29df759a67c19b3ef83",
+        "content": "f4674d247b1d8b69c206e5736834793d17488189829d05705db58bf46b782073"
       }
     },
     {
@@ -23726,9 +24055,42 @@
               },
               "additionalProperties": false
             },
+            "rotation": {
+              "type": "object",
+              "description": "Water body rotation, applied on every call.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
+            },
             "materialPath": {
               "type": "string",
               "description": "Canonical /Game material asset path."
+            },
+            "materialIndex": {
+              "type": "integer",
+              "description": "Material index."
+            },
+            "collisionEnabled": {
+              "type": "boolean",
+              "description": "Collision on the body's primitive components: true = query and physics, false = none."
+            },
+            "settings": {
+              "type": "object",
+              "description": "Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): {\"Intensity\": 2, \"LightColor\": {\"R\": 0.6, \"G\": 0.7, \"B\": 1}} for a light, {\"FogDensity\": 0.02} for fog. A key neither declares is named in configurationErrors and fails the call.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
             },
             "kind": {
               "type": "string",
@@ -23825,8 +24187,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b815779b3972e6831fee8473d6c12efdf039631470738189acdc51778052db11",
-        "content": "6f2728826052af6b199e96a4ca7b9602e261a0c3ae66bfd823ff02d264b8fd63"
+        "schema": "84457489250fe6ad37b2bba5df12679045531bafc5fb27c343f1f9c9beb7b18a",
+        "content": "b13486830103c2b6fcf92dbb72f55c4e9f11d5c4dfca85ae0b58aa95c9b54fcc"
       }
     },
     {
@@ -23880,6 +24242,25 @@
                 "z": {
                   "type": "number",
                   "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "rotation": {
+              "type": "object",
+              "description": "Actor rotation, applied on every call.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
                 }
               },
               "additionalProperties": false
@@ -23957,8 +24338,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c6c4a4361991d853a92b9eb8a0ab5570452c251f35ecb2c2ad3b393c3761d790",
-        "content": "3aef8991b4d76fc61f2413e47e718971d10be06157e1bf5ab53dda6ef50c965c"
+        "schema": "66de386bbc002934958d2c85b5f28564c0f9594ac83a972d687fc070b8bdad6a",
+        "content": "7c5efd4dea41ff76f7493088c9d7970c705cf59180c169b7179d3cc10614a56b"
       }
     },
     {
@@ -24174,7 +24555,7 @@
           "A landscape must be created or modified in the current level.",
           "A heightmap file must be imported to create or update a landscape.",
           "Landscape LOD distance or screen-size must be tuned.",
-          "A landscape material needs layer blend configuration.",
+          "A landscape needs a different material assignment.",
           "Landscape splines need to be added or modified.",
           "LODs must be generated for one or more assets."
         ],
@@ -24183,8 +24564,8 @@
           "The landscape should be painted interactively.",
           "The heightmap should be generated procedurally.",
           "LODs should be generated rather than configured.",
-          "A simple material assignment is sufficient.",
-          "Standalone spline actors should be used instead."
+          "Standalone spline actors should be used instead.",
+          "LODs have already been generated."
         ]
       },
       "schemas": {
@@ -24204,13 +24585,17 @@
               "type": "string",
               "description": "Canonical /Game landscape asset path."
             },
+            "landscapeActorPath": {
+              "type": "string",
+              "description": "Landscape actor path in the level."
+            },
             "layerName": {
               "type": "string",
               "description": "Landscape layer name."
             },
             "location": {
               "type": "object",
-              "description": "World-space location {x, y, z}.",
+              "description": "Brush centre in world space; paints the disc of radius around it (radius required).",
               "properties": {
                 "x": {
                   "type": "number",
@@ -24229,31 +24614,54 @@
             },
             "radius": {
               "type": "number",
-              "description": "Brush radius in world units."
+              "description": "Brush radius in world units (with location)."
+            },
+            "region": {
+              "type": "object",
+              "description": "Rectangular region {minX, minY, maxX, maxY}.",
+              "properties": {
+                "minX": {
+                  "type": "number",
+                  "description": "Min X."
+                },
+                "minY": {
+                  "type": "number",
+                  "description": "Min Y."
+                },
+                "maxX": {
+                  "type": "number",
+                  "description": "Max X."
+                },
+                "maxY": {
+                  "type": "number",
+                  "description": "Max Y."
+                }
+              },
+              "additionalProperties": false
             },
             "strength": {
               "type": "number",
               "description": "Brush strength (0-1)."
             },
+            "skipFlush": {
+              "type": "boolean",
+              "description": "Skip flushing rendering after the operation."
+            },
             "layerInfoPath": {
               "type": "string",
-              "description": "Canonical /Game landscape layer info asset path."
-            },
-            "landscapeActorPath": {
-              "type": "string",
-              "description": "Landscape actor path in the level."
-            },
-            "path": {
-              "type": "string",
-              "description": "Canonical /Game asset or directory path."
+              "description": "Layer info asset to use when the landscape has no layer of that name yet (else one lives only inside the landscape)."
             },
             "heightmapPath": {
               "type": "string",
-              "description": "Heightmap file path."
+              "description": "Raw 16-bit heightmap file, project-relative."
+            },
+            "updateNormals": {
+              "type": "boolean",
+              "description": "Recompute normals after modification."
             },
             "settings": {
               "type": "object",
-              "description": "Action-specific settings key-value pairs.",
+              "description": "Landscape properties by name, e.g. {\"MaxLODLevel\": 2, \"LODDistributionSetting\": 1.5}.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -24367,6 +24775,26 @@
               },
               "description": "Spline points."
             },
+            "width": {
+              "type": "number",
+              "description": "Spline width in world units (default 256); side falloff is half of it."
+            },
+            "closedLoop": {
+              "type": "boolean",
+              "description": "Close the spline into a loop, joining the last point back to the first."
+            },
+            "raiseTerrain": {
+              "type": "boolean",
+              "description": "Whether the spline raises the terrain up to it (default true)."
+            },
+            "lowerTerrain": {
+              "type": "boolean",
+              "description": "Whether the spline lowers the terrain down to it (default true)."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "Canonical /Game static mesh path (one asset; assetPaths takes several)."
+            },
             "assetPaths": {
               "type": "array",
               "items": {
@@ -24443,6 +24871,7 @@
               "y": 0,
               "z": 0
             },
+            "radius": 500,
             "edit": "paint_landscape"
           },
           "output": {
@@ -24502,9 +24931,18 @@
               "configure_landscape_material",
               "configure_landscape_splines"
             ],
+            "landscapeActorPath": [
+              "paint_landscape",
+              "paint_landscape_layer",
+              "import_heightmap",
+              "configure_landscape_lod",
+              "configure_landscape_material",
+              "configure_landscape_splines"
+            ],
             "layerName": [
               "paint_landscape",
-              "paint_landscape_layer"
+              "paint_landscape_layer",
+              "configure_landscape_splines"
             ],
             "location": [
               "paint_landscape"
@@ -24512,24 +24950,27 @@
             "radius": [
               "paint_landscape"
             ],
+            "region": [
+              "paint_landscape",
+              "paint_landscape_layer",
+              "import_heightmap"
+            ],
             "strength": [
-              "paint_landscape"
+              "paint_landscape",
+              "paint_landscape_layer"
+            ],
+            "skipFlush": [
+              "paint_landscape",
+              "paint_landscape_layer",
+              "import_heightmap"
             ],
             "layerInfoPath": [
-              "paint_landscape_layer",
-              "configure_landscape_material"
-            ],
-            "landscapeActorPath": [
-              "import_heightmap",
-              "configure_landscape_material",
-              "configure_landscape_splines"
-            ],
-            "path": [
-              "import_heightmap",
-              "configure_landscape_lod",
-              "generate_lods"
+              "paint_landscape_layer"
             ],
             "heightmapPath": [
+              "import_heightmap"
+            ],
+            "updateNormals": [
               "import_heightmap"
             ],
             "settings": [
@@ -24540,6 +24981,21 @@
             ],
             "points": [
               "configure_landscape_splines"
+            ],
+            "width": [
+              "configure_landscape_splines"
+            ],
+            "closedLoop": [
+              "configure_landscape_splines"
+            ],
+            "raiseTerrain": [
+              "configure_landscape_splines"
+            ],
+            "lowerTerrain": [
+              "configure_landscape_splines"
+            ],
+            "assetPath": [
+              "generate_lods"
             ],
             "assetPaths": [
               "generate_lods"
@@ -24555,8 +25011,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b5256b86df46597581781e3fd12037ea33624e103ba908ee21c12a32dd92d407",
-        "content": "c1ec573678c486b74d6996b3629daf44d70acf10fa322ccd78b6aa3949a8f0a1"
+        "schema": "9c2ab17adf33ffe6b21ae53a93bc3d8bf3a9173eb549bb73d7391c1640443872",
+        "content": "e4ecd0b83063220659737b151f71d38cd1f9837d6ab571201ffbb4d0222f2e08"
       }
     },
     {
@@ -24950,6 +25406,29 @@
             "path": {
               "type": "string",
               "description": "Canonical /Game asset or directory path."
+            },
+            "region": {
+              "type": "object",
+              "description": "Rectangular region {minX, minY, maxX, maxY}.",
+              "properties": {
+                "minX": {
+                  "type": "number",
+                  "description": "Min X."
+                },
+                "minY": {
+                  "type": "number",
+                  "description": "Min Y."
+                },
+                "maxX": {
+                  "type": "number",
+                  "description": "Max X."
+                },
+                "maxY": {
+                  "type": "number",
+                  "description": "Max Y."
+                }
+              },
+              "additionalProperties": false
             }
           },
           "required": [
@@ -25021,8 +25500,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e858cd6d4d3c8f5999c9057967a122bb64656f7baa7eadbe029a805da12ed749",
-        "content": "47af116753eee67d10658b5502b9133b1dd99a613a95df473579044804aa4314"
+        "schema": "de768cc7715c03613e8bcf900187aabdb2ce37dc106cf09fbcba9aaa579b5939",
+        "content": "c6d137730c670ac4deee07f4e9c65a2e50b26d80bfb43f8ab7cb97501aefad09"
       }
     },
     {
@@ -26305,9 +26784,13 @@
               "type": "string",
               "description": "Canonical /Game landscape asset path."
             },
+            "landscapeActorPath": {
+              "type": "string",
+              "description": "Landscape actor path in the level."
+            },
             "tool": {
               "type": "string",
-              "description": "Sculpt tool name (e.g. Raise, Lower, Smooth)."
+              "description": "Sculpt tool: Raise (default), Lower or Flatten (towards the location's z). Any other name is refused."
             },
             "location": {
               "type": "object",
@@ -26545,8 +27028,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a0748022a41cc7c9a420b61e36d1c7df916dea75f850df73c4fe005f70a8f740",
-        "content": "9c8423d03f288d9d7826e8f581beb69e24f0a29dbf9cbb88d8ca7e66ee870534"
+        "schema": "3d476415b0378b2980cc57ab25e51d80b5f2acdca24cdd6a30ad53af91bd3b2a",
+        "content": "6b3d12a90526c550c1e26c9939ba56ca5b83813d9fff63bb143d824e3d9b471b"
       }
     },
     {

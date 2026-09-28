@@ -6,6 +6,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Components/LightComponent.h"
+#include "Components/SkyLightComponent.h"
 #include "Dom/JsonObject.h"
 #include "Editor.h"
 #include "Engine/DirectionalLight.h"
@@ -134,6 +135,19 @@ bool HandleSpawnLight(
         if (Payload->HasField(TEXT("color")))
         {
             BaseLightComp->SetLightColor(ExtractLinearColorField(Payload, TEXT("color"), FLinearColor(0.f, 0.f, 0.f, 1.f)));
+        }
+    }
+    // A sky light's component is no ULightComponent, so intensity and color were dropped for lightType sky.
+    else if (USkyLightComponent* SkyComp = NewLight->FindComponentByClass<USkyLightComponent>())
+    {
+        double TopLevelIntensity = 0.0;
+        if (Payload->TryGetNumberField(TEXT("intensity"), TopLevelIntensity))
+        {
+            SkyComp->SetIntensity(static_cast<float>(TopLevelIntensity));
+        }
+        if (Payload->HasField(TEXT("color")))
+        {
+            SkyComp->SetLightColor(ExtractLinearColorField(Payload, TEXT("color"), FLinearColor(0.f, 0.f, 0.f, 1.f)));
         }
     }
 

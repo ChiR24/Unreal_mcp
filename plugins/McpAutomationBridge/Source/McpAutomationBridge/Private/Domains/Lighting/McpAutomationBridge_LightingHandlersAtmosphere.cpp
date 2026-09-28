@@ -73,61 +73,6 @@ bool HandleSetupVolumetricFog(
     return true;
 }
 
-bool HandleSetupGlobalIllumination(
-    UMcpAutomationBridgeSubsystem& Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
-{
-    FString Method;
-    if (!Payload->TryGetStringField(TEXT("method"), Method) || Method.IsEmpty())
-    {
-        Subsystem.SendAutomationError(
-            RequestingSocket,
-            RequestId,
-            TEXT("method parameter is required. Valid values: LumenGI, ScreenSpace, None, RayTraced, Lightmass"),
-            TEXT("INVALID_ARGUMENT"));
-        return true;
-    }
-
-    // r.DynamicGlobalIlluminationMethod per method (Lightmass is baked: no dynamic GI).
-    static const TMap<FString, int32> GIMethods = {
-        {TEXT("None"), 0}, {TEXT("LumenGI"), 1}, {TEXT("ScreenSpace"), 2}, {TEXT("RayTraced"), 3}, {TEXT("Lightmass"), 0}};
-    const int32* GIMethod = GIMethods.Find(Method);
-    if (!GIMethod)
-    {
-        Subsystem.SendAutomationError(
-            RequestingSocket,
-            RequestId,
-            FString::Printf(
-                TEXT("Invalid GI method: %s. Valid values: LumenGI, ScreenSpace, None, RayTraced, Lightmass"),
-                *Method),
-            TEXT("INVALID_GI_METHOD"));
-        return true;
-    }
-    if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
-    {
-        CVar->Set(*GIMethod);
-    }
-    // Lumen GI pairs with Lumen reflections.
-    IConsoleVariable* CVarRefl = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ReflectionMethod"));
-    if (*GIMethod == 1 && CVarRefl)
-    {
-        CVarRefl->Set(1);
-    }
-
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-    Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("method"), Method);
-    Subsystem.SendAutomationResponse(
-        RequestingSocket,
-        RequestId,
-        true,
-        FString::Printf(TEXT("GI method configured: %s"), *Method),
-        Resp);
-    return true;
-}
-
 bool HandleConfigureShadows(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,
@@ -154,6 +99,47 @@ bool HandleConfigureShadows(
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     TArray<TSharedPtr<FJsonValue>> Applied;
+    // shadowQuality, shadowDistance, contactShadows and rayTracedShadows were declared and
+    // never applied (rayTracedShadows only returned a note). Each drives its engine-wide cvar.
+    auto SetCVar = [&Applied](const TCHAR* CVarName, const FString& Value, const TCHAR* Key)
+    {
+        if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(CVarName))
+        {
+            CVar->Set(*Value);
+            Applied.Add(MakeShared<FJsonValueString>(Key));
+        }
+    };
+    FString ShadowQuality;
+    if ((SettingsObj && (*SettingsObj)->TryGetStringField(TEXT("shadowQuality"), ShadowQuality)) ||
+        Payload->TryGetStringField(TEXT("shadowQuality"), ShadowQuality))
+    {
+        static const TMap<FString, int32> ShadowLevels = {
+            {TEXT("Low"), 0}, {TEXT("Medium"), 1}, {TEXT("High"), 2}, {TEXT("Epic"), 3}, {TEXT("Cinematic"), 4}};
+        const int32* Level = ShadowLevels.Find(ShadowQuality);
+        if (!Level)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Invalid shadowQuality: %s. Valid values: Low, Medium, High, Epic, Cinematic"), *ShadowQuality),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        SetCVar(TEXT("sg.ShadowQuality"), FString::FromInt(*Level), TEXT("shadowQuality"));
+    }
+    double ShadowDistance = 0.0;
+    if (ReadNumber(TEXT("shadowDistance"), ShadowDistance))
+    {
+        SetCVar(TEXT("r.Shadow.DistanceScale"), FString::SanitizeFloat(ShadowDistance), TEXT("shadowDistance"));
+    }
+    bool bContactShadows = false;
+    if (ReadBool(TEXT("contactShadows"), bContactShadows))
+    {
+        SetCVar(TEXT("r.ContactShadows"), bContactShadows ? TEXT("1") : TEXT("0"), TEXT("contactShadows"));
+    }
+    bool bRayTraced = false;
+    if (ReadBool(TEXT("rayTracedShadows"), bRayTraced))
+    {
+        SetCVar(TEXT("r.RayTracing.Shadows"), bRayTraced ? TEXT("1") : TEXT("0"), TEXT("rayTracedShadows"));
+    }
 
     bool bVirtual = false;
     if (ReadBool(TEXT("virtualShadowMaps"), bVirtual))
@@ -164,12 +150,6 @@ bool HandleConfigureShadows(
             Resp->SetBoolField(TEXT("virtualShadowMaps"), bVirtual);
             Applied.Add(MakeShared<FJsonValueString>(TEXT("virtualShadowMaps")));
         }
-    }
-    bool bRayTraced = false;
-    if (ReadBool(TEXT("rayTracedShadows"), bRayTraced))
-    {
-        Resp->SetStringField(TEXT("rayTracedShadowsNote"),
-            TEXT("rayTracedShadows is a different feature from virtual shadow maps and was NOT applied here; use configure_ray_tracing with feature='shadows'."));
     }
 
     FString ActorName;
@@ -215,7 +195,7 @@ bool HandleConfigureShadows(
     if (Applied.Num() == 0)
     {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
-            TEXT("No shadow settings supplied. Pass virtualShadowMaps, or actorName plus one of castShadows, shadowBias, shadowSlopeBias or shadowResolutionScale (top level or inside `settings`)."),
+            TEXT("No shadow settings supplied. Pass shadowQuality, shadowDistance, contactShadows, rayTracedShadows or virtualShadowMaps, or actorName plus one of castShadows, shadowBias, shadowSlopeBias or shadowResolutionScale (top level or inside `settings`)."),
             TEXT("INVALID_ARGUMENT"));
         return true;
     }

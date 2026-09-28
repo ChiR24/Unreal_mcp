@@ -1571,6 +1571,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
+        "assetPath": {
+          "type": "string",
+          "description": "Canonical /Game static mesh path (one asset; assetPaths takes several)."
+        },
         "assetPaths": {
           "type": "array",
           "items": {
@@ -1605,7 +1609,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bounces": {
           "type": "integer",
-          "description": "Maximum indirect lighting bounces."
+          "description": "Lightmass indirect lighting bounces (World Settings), used by baked lighting."
         },
         "bounds": {
           "type": "object",
@@ -1675,9 +1679,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Capture source string."
         },
-        "cascadedShadows": {
+        "castShadows": {
           "type": "boolean",
-          "description": "Whether cascaded shadow maps are used."
+          "description": "Whether the light (actorName) casts shadows."
         },
         "channel": {
           "type": "integer",
@@ -1706,7 +1710,30 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "collisionEnabled": {
           "type": "boolean",
-          "description": "Whether collision is enabled."
+          "description": "Collision of placed instances: true = query and physics, false = none."
+        },
+        "color": {
+          "type": "object",
+          "description": "Light color {r, g, b, a} in 0-1 (a missing channel reads 0, alpha 1).",
+          "properties": {
+            "r": {
+              "type": "number",
+              "description": "Red."
+            },
+            "g": {
+              "type": "number",
+              "description": "Green."
+            },
+            "b": {
+              "type": "number",
+              "description": "Blue."
+            },
+            "a": {
+              "type": "number",
+              "description": "Alpha."
+            }
+          },
+          "additionalProperties": false
         },
         "compensationValue": {
           "type": "number",
@@ -1737,7 +1764,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "contactShadows": {
           "type": "boolean",
-          "description": "Whether contact shadows are enabled."
+          "description": "Whether contact shadows render (r.ContactShadows)."
         },
         "count": {
           "type": "integer",
@@ -1745,7 +1772,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "cubemapPath": {
           "type": "string",
-          "description": "Canonical /Game cubemap asset path."
+          "description": "Cube texture the sky light uses (switches its source to a specified cubemap); a path that does not load fails the call."
         },
         "cullDistance": {
           "type": "number",
@@ -1753,7 +1780,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "curvePath": {
           "type": "string",
-          "description": "Canonical /Game curve asset path."
+          "description": "The curve asset to edit, created there when missing (default /Game/Environment/Curves/MCP_SkyColorCurve or MCP_LightColorCurve)."
         },
         "density": {
           "type": "number",
@@ -1891,7 +1918,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "heightmapPath": {
           "type": "string",
-          "description": "Heightmap file path."
+          "description": "Raw 16-bit heightmap file, project-relative."
         },
         "hour": {
           "type": "number",
@@ -1899,7 +1926,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "indirectLightingIntensity": {
           "type": "number",
-          "description": "Indirect lighting intensity multiplier."
+          "description": "Indirect lighting intensity, written with its override on the level's post-process volume (spawned when missing)."
         },
         "infiniteUnbound": {
           "type": "boolean",
@@ -1938,6 +1965,49 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "intensity": {
           "type": "number",
           "description": "Ambient occlusion intensity."
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Color keys that replace the curve's keys; required to change an existing curve. A new curve without keys is flat white.",
+          "items": {
+            "type": "object",
+            "description": "One key.",
+            "properties": {
+              "time": {
+                "type": "number",
+                "description": "Key time, e.g. the hour of day."
+              },
+              "color": {
+                "type": "object",
+                "description": "Color {r, g, b, a}; a defaults to 1.",
+                "properties": {
+                  "r": {
+                    "type": "number",
+                    "description": "Red."
+                  },
+                  "g": {
+                    "type": "number",
+                    "description": "Green."
+                  },
+                  "b": {
+                    "type": "number",
+                    "description": "Blue."
+                  },
+                  "a": {
+                    "type": "number",
+                    "description": "Alpha."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "time",
+              "color"
+            ],
+            "additionalProperties": false
+          }
         },
         "kind": {
           "type": "string",
@@ -1986,7 +2056,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "layerInfoPath": {
           "type": "string",
-          "description": "Canonical /Game landscape layer info asset path."
+          "description": "Layer info asset to use when the landscape has no layer of that name yet (else one lives only inside the landscape)."
         },
         "layerName": {
           "type": "string",
@@ -2029,23 +2099,104 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Return at most this many instances; truncated says when more exist (count stays the total)."
         },
         "location": {
-          "type": "object",
-          "description": "World-space location {x, y, z}.",
-          "properties": {
-            "x": {
-              "type": "number",
-              "description": "X"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Brush centre in world space; paints the disc of radius around it (radius required).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
-            "y": {
-              "type": "number",
-              "description": "Y"
+            {
+              "type": "object",
+              "description": "Proxy location (default the landscape's).",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             },
-            "z": {
-              "type": "number",
-              "description": "Z"
+            {
+              "type": "object",
+              "description": "Where the actor is spawned when it does not exist yet; an existing actor is not moved.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "description": "Where the actor is spawned when the level has none; an existing actor is not moved.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "description": "World-space location {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Brush centre in world space; paints the disc of radius around it (radius required)."
         },
         "locations": {
           "type": "array",
@@ -2070,13 +2221,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Instance locations."
         },
+        "lowerTerrain": {
+          "type": "boolean",
+          "description": "Whether the spline lowers the terrain down to it (default true)."
+        },
         "lutPath": {
           "type": "string",
           "description": "Canonical /Game LUT texture path."
         },
         "material": {
           "type": "string",
-          "description": "Canonical /Game material asset path."
+          "description": "Material for the terrain; a path that does not load fails the call."
         },
         "materialIndex": {
           "type": "integer",
@@ -2108,7 +2263,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "method": {
           "type": "string",
-          "description": "Exposure method, applied when the handler falls back to console variables."
+          "description": "Auto-exposure method written on the post-process volume."
         },
         "minBrightness": {
           "type": "number",
@@ -2128,7 +2283,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "name": {
           "type": "string",
-          "description": "Name for the new actor, asset, or volume."
+          "description": "Label of the terrain actor (default ProceduralTerrain; actorName is accepted too)."
         },
         "names": {
           "type": "array",
@@ -2337,21 +2492,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
-        "propertyValue": {
-          "type": "number",
-          "description": "Numeric property value."
+        "properties": {
+          "type": "object",
+          "description": "Light component values for point, spot, rect and directional lights: intensity, color, attenuationRadius, castShadows and the like; a properties.color wins over color.",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true
         },
         "quadsPerSection": {
           "type": "number",
-          "description": "Quads per section."
+          "description": "Quads per section: 7, 15, 31, 63 (default), 127 or 255. A component spans sectionsPerComponent sections."
         },
         "quality": {
           "type": "string",
-          "description": "Ambient occlusion quality, applied when the handler falls back to console variables."
+          "description": "Ambient occlusion quality on the post-process volume (25, 50 or 100 of 100)."
         },
         "radius": {
           "type": "number",
           "description": "Ambient occlusion radius in world units."
+        },
+        "raiseTerrain": {
+          "type": "boolean",
+          "description": "Whether the spline raises the terrain up to it (default true)."
         },
         "randomOffsetRange": {
           "type": "number",
@@ -2371,7 +2532,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "rayTracedShadows": {
           "type": "boolean",
-          "description": "Whether ray-traced shadows are enabled. Distinct from virtualShadowMaps."
+          "description": "Whether ray-traced shadows are enabled (r.RayTracing.Shadows). Distinct from virtualShadowMaps."
+        },
+        "recapture": {
+          "type": "boolean",
+          "description": "Recapture the sky light after the change."
         },
         "region": {
           "type": "object",
@@ -2409,23 +2574,85 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Capture resolution."
         },
         "rotation": {
-          "type": "object",
-          "description": "Rotation {pitch, yaw, roll}.",
-          "properties": {
-            "pitch": {
-              "type": "number",
-              "description": "Pitch"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Actor rotation, applied on every call.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             },
-            "yaw": {
-              "type": "number",
-              "description": "Yaw"
+            {
+              "type": "object",
+              "description": "Proxy rotation (default the landscape's).",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             },
-            "roll": {
-              "type": "number",
-              "description": "Roll"
+            {
+              "type": "object",
+              "description": "Rotation {pitch, yaw, roll}.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "description": "Water body rotation, applied on every call.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Actor rotation, applied on every call."
         },
         "rotationRange": {
           "type": "number",
@@ -2451,11 +2678,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sectionSize": {
           "type": "number",
-          "description": "Section size in quads."
+          "description": "Quads per section (same as quadsPerSection): 7, 15, 31, 63 (default), 127 or 255."
         },
         "sectionsPerComponent": {
           "type": "number",
-          "description": "Sections per component."
+          "description": "Sections per component side: 1 (default) or 2, for 2x2 sections per component."
         },
         "seed": {
           "type": "integer",
@@ -2542,26 +2769,69 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "object",
+              "description": "Action-specific settings key-value pairs.",
               "additionalProperties": true,
-              "x-unreal-reflection-boundary": true,
-              "description": "Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): {\"Intensity\": 2, \"LightColor\": {\"R\": 0.6, \"G\": 0.7, \"B\": 1}} for a light, {\"FogDensity\": 0.02} for fog. A key neither declares is named in configurationErrors and fails the call."
+              "x-unreal-reflection-boundary": true
             },
             {
               "type": "object",
-              "description": "Action-specific settings key-value pairs.",
+              "description": "Landscape properties by name, e.g. {\"MaxLODLevel\": 2, \"LODDistributionSetting\": 1.5}.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "object",
+              "description": "Property values for the actor or its component, keyed by the Unreal property name (case-insensitive): {\"Intensity\": 2, \"LightColor\": {\"R\": 0.6, \"G\": 0.7, \"B\": 1}} for a light, {\"FogDensity\": 0.02} for fog. A key neither declares is named in configurationErrors and fails the call.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "object",
+              "description": "The same shadow keys as the top level, nested; a value here wins.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             }
           ],
           "description": "Action-specific settings key-value pairs."
         },
+        "shadowBias": {
+          "type": "number",
+          "description": "Shadow depth bias of the light (actorName)."
+        },
         "shadowDistance": {
           "type": "number",
-          "description": "Shadow draw distance scale."
+          "description": "Shadow draw distance scale (r.Shadow.DistanceScale)."
         },
         "shadowQuality": {
           "type": "string",
-          "description": "Shadow quality (Low, Medium, High, Epic)."
+          "description": "Shadow quality scalability level (sg.ShadowQuality): Low, Medium, High, Epic or Cinematic."
+        },
+        "shadowResolutionScale": {
+          "type": "number",
+          "description": "Shadow resolution scale of the light (actorName)."
+        },
+        "shadowSlopeBias": {
+          "type": "number",
+          "description": "Shadow slope bias of the light (actorName)."
+        },
+        "size": {
+          "type": "object",
+          "description": "Box size in world units {x, y, z} (default 1000 on each axis).",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "X"
+            },
+            "y": {
+              "type": "number",
+              "description": "Y"
+            },
+            "z": {
+              "type": "number",
+              "description": "Z"
+            }
+          },
+          "additionalProperties": false
         },
         "sizeX": {
           "type": "number",
@@ -2646,7 +2916,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "tool": {
           "type": "string",
-          "description": "Sculpt tool name (e.g. Raise, Lower, Smooth)."
+          "description": "Sculpt tool: Raise (default), Lower or Flatten (towards the location's z). Any other name is refused."
         },
         "transforms": {
           "type": "array",
@@ -2734,7 +3004,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "volumeName": {
           "type": "string",
-          "description": "Volume actor name."
+          "description": "Label of the procedural foliage volume (name is accepted too)."
         },
         "waterBodyName": {
           "type": "string",
@@ -2750,7 +3020,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "width": {
           "type": "number",
-          "description": "Spline width."
+          "description": "Spline width in world units (default 256); side falloff is half of it."
         },
         "action": {
           "type": "string",

@@ -42,6 +42,23 @@ bool HandleSpawnSkyLight(
         Rotation.Roll = GetJsonNumberField((*RotPtr), TEXT("roll"));
     }
 
+    // cubemapPath alone selects the specified-cubemap source: it used to apply only under an
+    // undeclared sourceType, so a declared cubemap was never set. A bad path fails before spawning.
+    const FString CubemapPath = GetJsonStringField(Payload, TEXT("cubemapPath"));
+    UTextureCube* Cubemap = nullptr;
+    if (!CubemapPath.IsEmpty())
+    {
+        const FString SanitizedCubemapPath = SanitizeProjectRelativePath(CubemapPath);
+        Cubemap = SanitizedCubemapPath.IsEmpty() ? nullptr : Cast<UTextureCube>(
+            StaticLoadObject(UTextureCube::StaticClass(), nullptr, *SanitizedCubemapPath));
+        if (!Cubemap)
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("No cube texture at cubemapPath: %s"), *CubemapPath), TEXT("ASSET_NOT_FOUND"));
+            return true;
+        }
+    }
+
     AActor* SkyLight = SpawnActorInActiveWorld<AActor>(ASkyLight::StaticClass(), Location, Rotation);
     if (!SkyLight)
     {
@@ -58,31 +75,10 @@ bool HandleSpawnSkyLight(
     USkyLightComponent* SkyComp = SkyLight->FindComponentByClass<USkyLightComponent>();
     if (SkyComp)
     {
-        FString SourceType;
-        if (Payload->TryGetStringField(TEXT("sourceType"), SourceType))
+        if (Cubemap)
         {
-            if (SourceType == TEXT("SpecifiedCubemap"))
-            {
-                SkyComp->SourceType = ESkyLightSourceType::SLS_SpecifiedCubemap;
-                FString CubemapPath;
-                if (Payload->TryGetStringField(TEXT("cubemapPath"), CubemapPath) && !CubemapPath.IsEmpty())
-                {
-                    FString SanitizedCubemapPath = SanitizeProjectRelativePath(CubemapPath);
-                    if (SanitizedCubemapPath.IsEmpty())
-                    {
-                        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("spawn_sky_light: Invalid cubemapPath rejected: %s"), *CubemapPath);
-                    }
-                    else if (UTextureCube* Cubemap = Cast<UTextureCube>(
-                                 StaticLoadObject(UTextureCube::StaticClass(), nullptr, *SanitizedCubemapPath)))
-                    {
-                        SkyComp->Cubemap = Cubemap;
-                    }
-                }
-            }
-            else
-            {
-                SkyComp->SourceType = ESkyLightSourceType::SLS_CapturedScene;
-            }
+            SkyComp->SourceType = ESkyLightSourceType::SLS_SpecifiedCubemap;
+            SkyComp->SetCubemap(Cubemap);
         }
 
         double Intensity;
