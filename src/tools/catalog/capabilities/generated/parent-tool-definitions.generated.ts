@@ -12055,7 +12055,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "hitboxBoneName": {
           "type": "string",
-          "description": "Bone the hitbox is attached to."
+          "description": "Bone of the Blueprint skeletal mesh (an SCS SkeletalMeshComponent or an inherited one such as a Character mesh) the hitbox attaches to; fails when the Blueprint has no skeletal mesh."
         },
         "hitboxSize": {
           "type": "object",

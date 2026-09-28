@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1ed7e06444aff3aa",
+  "catalogRevision": "95caf66ad36047d2",
   "recordCount": 382,
   "records": [
     {
@@ -48592,7 +48592,7 @@
             },
             "hitboxBoneName": {
               "type": "string",
-              "description": "Bone the hitbox is attached to."
+              "description": "Bone of the Blueprint skeletal mesh (an SCS SkeletalMeshComponent or an inherited one such as a Character mesh) the hitbox attaches to; fails when the Blueprint has no skeletal mesh."
             },
             "hitboxSize": {
               "type": "object",
@@ -48776,8 +48776,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "352f05dbb41990e3ef2a1947f4aab8a9fb9a8d81dc9cdbcbd248cadf4bd38329",
-        "content": "7c40a4ad97cd54641b467bc95613e000749e1ddf788d37818516869ad19cbdff"
+        "schema": "edf5038758db53cb74869a5bcbe5269e899b548e0288be7e5b1faaa514484aa4",
+        "content": "9581dd1d17e8e6982abfa503c6deb71e8e8026e9a6635b0def14dcc8542544a8"
       }
     },
     {
@@ -49316,6 +49316,10 @@
               "type": "number",
               "description": "Base spread cone in degrees."
             },
+            "weaponMeshPath": {
+              "type": "string",
+              "description": "Static mesh assigned to the new WeaponMesh component; a path that does not load fails the call."
+            },
             "projectileSpeed": {
               "type": "number",
               "description": "Projectile launch/travel speed."
@@ -49458,6 +49462,9 @@
             "spread": [
               "weapon_blueprint"
             ],
+            "weaponMeshPath": [
+              "weapon_blueprint"
+            ],
             "projectileSpeed": [
               "projectile_blueprint"
             ],
@@ -49475,8 +49482,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2f6f54e9892a5b37aa3209413fad3e9b92ed2ac1b5cf062855e794e6418a3d0a",
-        "content": "3da5dc8d83b5db3d209bfd8d31154c4781d10d363d9a57dd44055f4d2e95601f"
+        "schema": "44f7382ba0dd09197ccc8a4eaa9fe592fa4930688d8687d19838169b6c4b3c6d",
+        "content": "35c501232a4c3cd0bd48ff4a9eaac56c497fa989d92ea865eade896c80bcf44c"
       }
     },
     {

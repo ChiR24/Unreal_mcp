@@ -13,6 +13,7 @@ const WEAPON_NAME = `BP_MCP_Weapon_${ts}`;
 const PROJECTILE_NAME = `BP_MCP_Projectile_${ts}`;
 const DAMAGE_TYPE_NAME = `BP_MCP_DamageType_${ts}`;
 const ALIAS_DAMAGE_TYPE_NAME = `BP_MCP_DamageAlias_${ts}`;
+const CHARACTER_NAME = `BP_MCP_HitboxCharacter_${ts}`;
 
 const weaponPath = '${captured:weaponPath}';
 const projectilePath = '${captured:projectilePath}';
@@ -25,7 +26,7 @@ const testCases = [
   {
     scenario: 'CREATE: create_weapon_blueprint',
     toolName: 'manage_combat',
-    arguments: { action: 'create_weapon_blueprint', name: WEAPON_NAME, path: TEST_FOLDER, baseDamage: 37, fireRate: 480, range: 9000, spread: 1.5 },
+    arguments: { action: 'create_weapon_blueprint', name: WEAPON_NAME, path: TEST_FOLDER, baseDamage: 37, fireRate: 480, range: 9000, spread: 1.5, weaponMeshPath: '/Engine/BasicShapes/Cube.Cube' },
     expected: 'success',
     captureResult: { key: 'weaponPath', fromField: 'result.blueprintPath' },
     assertions: [
@@ -54,7 +55,11 @@ const testCases = [
 
   // === DAMAGE SYSTEM ===
   { scenario: 'CREATE: create_damage_type', toolName: 'manage_combat', arguments: { action: 'create_damage_type', name: DAMAGE_TYPE_NAME, path: TEST_FOLDER }, expected: 'success', assertions: [{ path: 'structuredContent.result.existsAfter', equals: true, label: 'damage type asset exists after creation' }] },
-  { scenario: 'ACTION: setup_hitbox_component', toolName: 'manage_combat', arguments: { action: 'setup_hitbox_component', blueprintPath: weaponPath, hitboxType: 'Box', hitboxBoneName: 'spine_03', hitboxSize: { extent: { x: 12, y: 18, z: 22 } }, isDamageZoneHead: true, damageMultiplier: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.hitboxType', equals: 'Box', label: 'hitbox type applied' }, { path: 'structuredContent.result.hitboxSize.extent.x', equals: 12, label: 'hitbox extent x applied' }, { path: 'structuredContent.result.hitboxSize.extent.y', equals: 18, label: 'hitbox extent y applied' }, { path: 'structuredContent.result.hitboxSize.extent.z', equals: 22, label: 'hitbox extent z applied' }] },
+  { scenario: 'ACTION: setup_hitbox_component', toolName: 'manage_combat', arguments: { action: 'setup_hitbox_component', blueprintPath: weaponPath, hitboxType: 'Box', hitboxSize: { extent: { x: 12, y: 18, z: 22 } }, isDamageZoneHead: true, damageMultiplier: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.hitboxType', equals: 'Box', label: 'hitbox type applied' }, { path: 'structuredContent.result.hitboxSize.extent.x', equals: 12, label: 'hitbox extent x applied' }, { path: 'structuredContent.result.hitboxSize.extent.y', equals: 18, label: 'hitbox extent y applied' }, { path: 'structuredContent.result.hitboxSize.extent.z', equals: 22, label: 'hitbox extent z applied' }] },
+
+  { scenario: 'ACTION: setup_hitbox_component refuses a bone on a Blueprint with no skeletal mesh', toolName: 'manage_combat', arguments: { action: 'setup_hitbox_component', blueprintPath: weaponPath, hitboxType: 'Box', hitboxBoneName: 'spine_03' }, expected: 'error' },
+  { scenario: 'Setup: create a character blueprint for a bone-bound hitbox', toolName: 'manage_blueprint', arguments: { action: 'create', name: CHARACTER_NAME, path: TEST_FOLDER, parentClass: 'Character' }, expected: 'success', captureResult: { key: 'characterPath', fromField: 'result.assetPath' } },
+  { scenario: 'ACTION: setup_hitbox_component binds the hitbox to a bone of the character mesh', toolName: 'manage_combat', arguments: { action: 'setup_hitbox_component', blueprintPath: '${captured:characterPath}', hitboxType: 'Capsule', hitboxBoneName: 'head', hitboxSize: { radius: 12, halfHeight: 14 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachedToComponent', equals: 'CharacterMesh0', label: 'hitbox parented under the inherited character mesh' }] },
 
   // === WEAPON FEATURES ===
   { scenario: 'ACTION: setup_attachment_system', toolName: 'manage_combat', arguments: { action: 'setup_attachment_system', blueprintPath: weaponPath, attachmentSlots: [{ slotName: 'Optic', socketName: 'OpticSocket', allowedTypes: ['Scope'] }, { slotName: 'Magazine', socketName: 'MagazineSocket', allowedTypes: ['Magazine'] }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachmentSlots', length: 2, label: 'attachment slots registered' }, { path: 'structuredContent.result.componentsCreated', length: 2, label: 'attachment scene components created' }] },

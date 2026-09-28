@@ -14,6 +14,16 @@ bool FCombatActionContext::HandleWeaponCore() const
             return true;
         }
 
+        // Load the mesh before creating anything: a path that does not load used to be dropped
+        // while the weapon was still reported as created with it.
+        const FString MeshPath = GetJsonStringField(Payload, TEXT("weaponMeshPath"));
+        UStaticMesh* Mesh = MeshPath.IsEmpty() ? nullptr : LoadObject<UStaticMesh>(nullptr, *MeshPath);
+        if (!MeshPath.IsEmpty() && !Mesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("weaponMeshPath is not a static mesh: %s"), *MeshPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+
         FString Error;
         UBlueprint* Blueprint = CreateActorBlueprint(AActor::StaticClass(), Path, Name, Error);
         if (!Blueprint)
@@ -23,17 +33,9 @@ bool FCombatActionContext::HandleWeaponCore() const
         }
 
         UStaticMeshComponent* WeaponMesh = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("WeaponMesh"));
-        if (WeaponMesh)
+        if (WeaponMesh && Mesh)
         {
-            FString MeshPath = GetJsonStringField(Payload, TEXT("weaponMeshPath"));
-            if (!MeshPath.IsEmpty())
-            {
-                UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
-                if (Mesh)
-                {
-                    WeaponMesh->SetStaticMesh(Mesh);
-                }
-            }
+            WeaponMesh->SetStaticMesh(Mesh);
         }
 
         double BaseDamage = GetJsonNumberField(Payload, TEXT("baseDamage"), 25.0);
