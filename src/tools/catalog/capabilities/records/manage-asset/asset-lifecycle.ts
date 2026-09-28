@@ -124,5 +124,28 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Search materials by name',
         { searchText: 'M_Rock', classNames: ['Material'], packagePaths: ['/Game/Materials'], recursivePaths: true, limit: 25 },
         { success: true, assets: [{ name: 'M_Rock', path: '/Game/Materials/M_Rock.M_Rock', class: 'Material', packagePath: '/Game/Materials' }], folders: [], totalCount: 1, count: 1, limit: 25, offset: 0, hasMore: false, nextOffset: 1, cursor: null, nextCursor: null })] }
+  ),
+
+  // search_assets matches asset names only; this reads what the assets and the open level contain.
+  r('find_text', 'asset', 'Find where a piece of text appears: Blueprint graph literals and comments, variable and component defaults, widget texts, DataTable rows, String Table entries, and the actors of the open level.',
+    schema({
+      searchText: str('Text to search for.'),
+      packagePaths: arr('Package paths to search within.'),
+      caseSensitive: bool('Match letter case (default false).'),
+      includeLevel: bool('Also search the actors and components of the open level (default true).'),
+      limit: boundedLimit(500, 50)
+    }, ['searchText']),
+    schema({
+      success: bool('Operation succeeded.'),
+      matches: arrObj('Each match: asset, where (graph and node title, widget, row, string key or actor label), field, the full text, and nodeId for a graph literal.'),
+      matchCount: num('Every match found; more than the matches returned when truncated.'),
+      scannedAssets: num('Blueprints, DataTables and String Tables searched.'),
+      truncated: bool('True when limit cut the list; raise limit to see the rest.')
+    }, ['success', 'matches', 'matchCount']),
+    READ, READ_POLICY, MEDIUM,
+    { topics: ['find text', 'search text', 'find string', 'where is text used', 'text in widgets', 'text in blueprints', 'find literal'],
+      examples: [ex('Find a string in the UI and the open level',
+        { searchText: 'Game Over', packagePaths: ['/Game/UI'] },
+        { success: true, matches: [{ asset: '/Game/UI/WBP_HUD.WBP_HUD', where: 'GameOverText', field: 'Text', text: 'Game Over' }], matchCount: 1, scannedAssets: 12, truncated: false })] }
   )
 ];

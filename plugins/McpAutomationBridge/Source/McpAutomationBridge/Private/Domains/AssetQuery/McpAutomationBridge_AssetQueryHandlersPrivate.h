@@ -25,4 +25,10 @@ bool HandleSearchAssets(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket);
+
+bool HandleFindText(
+    UMcpAutomationBridgeSubsystem* Bridge,
+    const FString& RequestId,
+    const TSharedPtr<FJsonObject>& Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket);
 }

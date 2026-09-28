@@ -233,6 +233,10 @@ const testCases = [
     { edit: 'connect_pins', from: '$entry.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'the entry node resolved' }] },
 
+  // === QUERY: find_text reads what the assets contain (search_assets matches names only) ===
+  { scenario: 'QUERY: find_text finds a graph literal', toolName: 'manage_asset', arguments: { action: 'find_text', searchText: 'CONSTRUCTED', packagePaths: [TEST_FOLDER], includeLevel: false, limit: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.matches', includesObject: { field: 'InString', text: 'constructed' }, label: 'PrintString literal found' }] },
+  { scenario: 'QUERY: find_text honours caseSensitive', toolName: 'manage_asset', arguments: { action: 'find_text', searchText: 'CONSTRUCTED', packagePaths: [TEST_FOLDER], caseSensitive: true, includeLevel: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.matchCount', equals: 0, label: 'no upper-case literal' }] },
+
   // === BATCH: member steps. A function is declared, filled and called in one batch ===
   // "$fn" is the function's entry node and "$fn_return" its return node.
   { scenario: 'BATCH: build_graph declares a pure function, fills its body and calls it', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [

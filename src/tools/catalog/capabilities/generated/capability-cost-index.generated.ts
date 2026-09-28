@@ -593,6 +593,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::export_struct": "interactive|medium",
   "manage_asset::find_by_tag": "interactive|medium",
   "manage_asset::find_node": "instant|low",
+  "manage_asset::find_text": "interactive|medium",
   "manage_asset::fixup_redirectors": "long-running|high",
   "manage_asset::generate_lods": "long-running|high",
   "manage_asset::generate_report": "interactive|medium",
@@ -1514,4 +1515,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1501;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1502;

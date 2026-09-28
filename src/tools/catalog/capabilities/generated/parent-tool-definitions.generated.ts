@@ -7193,6 +7193,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Brick width to height ratio (default 2)."
         },
+        "caseSensitive": {
+          "type": "boolean",
+          "description": "Match letter case (default false)."
+        },
         "centerX": {
           "type": "number",
           "description": "Radial or angular centre X, 0-1 (default 0.5)."
@@ -7493,6 +7497,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Input white point."
         },
+        "includeLevel": {
+          "type": "boolean",
+          "description": "Also search the actors and components of the open level (default true)."
+        },
         "includeMetadata": {
           "type": "boolean",
           "description": "When true, include the file size and modification date of each asset."
@@ -7660,6 +7668,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "exists",
             "search",
             "by_tag",
+            "text",
             "graph",
             "material_stats",
             "source_control_state",
@@ -8876,6 +8885,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Matched listings: listingId, title, listingType, isFree (derived from price), rawIsFree (the listing flag, which disagrees), tags, and unresolvedPriceShape when price could not be read."
         },
+        "matchCount": {
+          "type": "number",
+          "description": "Every match found; more than the matches returned when truncated."
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each match: asset, where (graph and node title, widget, row, string key or actor label), field, the full text, and nodeId for a graph literal."
+        },
         "maxDepth": {
           "type": "number",
           "description": "Traversal depth actually used after clamping."
@@ -9072,6 +9093,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "DefaultValue, for scalar parameter expressions."
         },
+        "scannedAssets": {
+          "type": "number",
+          "description": "Blueprints, DataTables and String Tables searched."
+        },
         "seller": {
           "type": "string",
           "description": "Publisher name."
@@ -9166,7 +9191,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "truncated": {
           "type": "boolean",
-          "description": "True when the walk hit the depth or node ceiling and the graph is partial."
+          "description": "True when limit cut the list; raise limit to see the rest."
         },
         "twoSided": {
           "type": "boolean",

@@ -58,10 +58,10 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'query_asset', selector: 'lookup',
-    summary: 'Query assets: existence, search by text/class, find by tag, the node graph inside a material or Blueprint, material stats, source-control state.',
-    topics: ['find assets', 'search assets', 'asset exists', 'find by tag', 'find assets by tag', 'analyze graph', 'material stats', 'source control state'],
+    summary: 'Query assets: existence, search by name/class, find by tag, find where a text appears inside assets, the node graph inside a material or Blueprint, material stats, source-control state.',
+    topics: ['find assets', 'search assets', 'asset exists', 'find by tag', 'find assets by tag', 'find text', 'where is text used', 'analyze graph', 'material stats', 'source control state'],
     members: {
-      exists: 'exists', search: 'search_assets', by_tag: 'find_by_tag', graph: 'analyze_graph',
+      exists: 'exists', search: 'search_assets', by_tag: 'find_by_tag', text: 'find_text', graph: 'analyze_graph',
       material_stats: 'get_material_stats', source_control_state: 'get_source_control_state',
     },
   },

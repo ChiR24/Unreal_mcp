@@ -5694,6 +5694,7 @@
         "blendType",
         "blueTexture",
         "brickRatio",
+        "caseSensitive",
         "centerX",
         "centerY",
         "channel",
@@ -5750,6 +5751,7 @@
         "importAnimations",
         "inBlack",
         "inWhite",
+        "includeLevel",
         "includeMetadata",
         "includePackageCounts",
         "includeTags",
@@ -6021,6 +6023,10 @@
           "brickRatio": {
             "type": "number",
             "description": "Brick width to height ratio (default 2)."
+          },
+          "caseSensitive": {
+            "type": "boolean",
+            "description": "Match letter case (default false)."
           },
           "centerX": {
             "type": "number",
@@ -6322,6 +6328,10 @@
             "type": "number",
             "description": "Input white point."
           },
+          "includeLevel": {
+            "type": "boolean",
+            "description": "Also search the actors and components of the open level (default true)."
+          },
           "includeMetadata": {
             "type": "boolean",
             "description": "When true, include the file size and modification date of each asset."
@@ -6489,6 +6499,7 @@
               "exists",
               "search",
               "by_tag",
+              "text",
               "graph",
               "material_stats",
               "source_control_state",

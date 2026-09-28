@@ -119,6 +119,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
   // Asset registry queries
   if (Lower == TEXT("search_assets"))
     return McpAssetQueryHandlers::HandleSearchAssets(this, RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("find_text"))
+    return McpAssetQueryHandlers::HandleFindText(this, RequestId, Payload, RequestingSocket);
 
   // Bulk Operations
   if (Lower == TEXT("fixup_redirectors"))

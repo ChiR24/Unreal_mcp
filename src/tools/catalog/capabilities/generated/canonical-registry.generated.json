@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d6e341ce1a740ef2",
+  "catalogRevision": "2d7c5164695304e1",
   "recordCount": 384,
   "records": [
     {
@@ -9145,6 +9145,7 @@
         "asset.search_assets",
         "asset.find_assets",
         "asset.find_by_tag",
+        "asset.find_text",
         "asset.analyze_graph",
         "asset.get_material_stats",
         "asset.get_source_control_state"
@@ -9173,6 +9174,13 @@
           "action": "find_by_tag",
           "folded": {
             "lookup": "by_tag"
+          }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "find_text",
+          "folded": {
+            "lookup": "text"
           }
         },
         {
@@ -9207,11 +9215,13 @@
           "asset exists",
           "find by tag",
           "find assets by tag",
+          "find text",
+          "where is text used",
           "analyze graph",
           "material stats",
           "source control state"
         ],
-        "summary": "Query assets: existence, search by text/class, find by tag, the node graph inside a material or Blueprint, material stats, source-control state.",
+        "summary": "Query assets: existence, search by name/class, find by tag, find where a text appears inside assets, the node graph inside a material or Blueprint, material stats, source-control state.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -9269,6 +9279,14 @@
               "type": "string",
               "description": "Optional tag value."
             },
+            "caseSensitive": {
+              "type": "boolean",
+              "description": "Match letter case (default false)."
+            },
+            "includeLevel": {
+              "type": "boolean",
+              "description": "Also search the actors and components of the open level (default true)."
+            },
             "assetPaths": {
               "type": "array",
               "items": {
@@ -9286,6 +9304,7 @@
                 "exists",
                 "search",
                 "by_tag",
+                "text",
                 "graph",
                 "material_stats",
                 "source_control_state"
@@ -9363,6 +9382,26 @@
                 "null"
               ],
               "description": "Opaque cursor for the next page, or null on the last page."
+            },
+            "matches": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each match: asset, where (graph and node title, widget, row, string key or actor label), field, the full text, and nodeId for a graph literal."
+            },
+            "matchCount": {
+              "type": "number",
+              "description": "Every match found; more than the matches returned when truncated."
+            },
+            "scannedAssets": {
+              "type": "number",
+              "description": "Blueprints, DataTables and String Tables searched."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "True when limit cut the list; raise limit to see the rest."
             },
             "assetPath": {
               "type": "string",
@@ -9448,7 +9487,7 @@
       },
       "examples": [
         {
-          "title": "Query assets: existence, search by text/class, find by tag, the node graph inside a material or Blueprint, material stats, source-control state.",
+          "title": "Query assets: existence, search by name/class, find by tag, find where a text appears inside assets, the node graph inside a material or Blueprint, material stats, source-control state.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "action": "query_asset",
@@ -9491,6 +9530,7 @@
             "exists": "exists",
             "search": "search_assets",
             "by_tag": "find_by_tag",
+            "text": "find_text",
             "graph": "analyze_graph",
             "material_stats": "get_material_stats",
             "source_control_state": "get_source_control_state"
@@ -9503,13 +9543,15 @@
               "source_control_state"
             ],
             "searchText": [
-              "search"
+              "search",
+              "text"
             ],
             "classNames": [
               "search"
             ],
             "packagePaths": [
-              "search"
+              "search",
+              "text"
             ],
             "recursivePaths": [
               "search"
@@ -9518,7 +9560,8 @@
               "search"
             ],
             "limit": [
-              "search"
+              "search",
+              "text"
             ],
             "offset": [
               "search"
@@ -9528,6 +9571,12 @@
             ],
             "value": [
               "by_tag"
+            ],
+            "caseSensitive": [
+              "text"
+            ],
+            "includeLevel": [
+              "text"
             ],
             "assetPaths": [
               "source_control_state"
@@ -9540,8 +9589,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4df6228095e2f51faacd57258d896686dd8ae799cb6b6297fe56fa828292c35d",
-        "content": "c2ca2dbcbfd260caf5c085261c54319c6cfc9d4055b872b44c5223ea5cd0f3df"
+        "schema": "437f247025a2c71d4c2ff7885cc491d67f43f4f1d77fe4c33a3620122deaaf2c",
+        "content": "54a584e656006b15d75a8b1861e82de3eed3595fc56463288fb03568ae70c515"
       }
     },
     {
