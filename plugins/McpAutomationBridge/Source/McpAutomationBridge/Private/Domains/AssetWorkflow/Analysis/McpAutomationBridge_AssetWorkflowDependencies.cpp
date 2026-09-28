@@ -213,8 +213,27 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
   FString AssetPath;
   Payload->TryGetStringField(TEXT("assetPath"), AssetPath);
+  const TArray<TSharedPtr<FJsonValue>> *Paths = nullptr;
+  if (AssetPath.IsEmpty() && Payload->TryGetArrayField(TEXT("assetPaths"), Paths) && Paths->Num() > 0) {
+    TSharedPtr<FJsonObject> Each = MakeShared<FJsonObject>();
+    int32 Existing = 0;
+    for (const TSharedPtr<FJsonValue> &Value : *Paths) {
+      const FString Raw = Value.IsValid() ? Value->AsString() : FString();
+      const FString Path = SanitizeProjectRelativePath(Raw);
+      const bool bExists = !Path.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(Path);
+      Each->SetBoolField(Path.IsEmpty() ? Raw : Path, bExists);
+      Existing += bExists ? 1 : 0;
+    }
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetBoolField(TEXT("exists"), Existing == Paths->Num());
+    Resp->SetObjectField(TEXT("existsByPath"), Each);
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("%d of %d assets exist"), Existing, Paths->Num()), Resp, FString());
+    return true;
+  }
   if (AssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath required"),
+    SendAutomationResponse(Socket, RequestId, false, TEXT("assetPath or assetPaths required"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }

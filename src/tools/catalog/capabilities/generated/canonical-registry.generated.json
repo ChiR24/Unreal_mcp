@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b4f36543bd4526c0",
+  "catalogRevision": "7efc9b8849738eac",
   "recordCount": 384,
   "records": [
     {
@@ -9250,6 +9250,13 @@
               "type": "string",
               "description": "Canonical /Game asset path."
             },
+            "assetPaths": {
+              "type": "array",
+              "description": "Several asset paths checked in one call; the reply maps each to true or false under existsByPath.",
+              "items": {
+                "type": "string"
+              }
+            },
             "searchText": {
               "type": "string",
               "description": "Text to search for."
@@ -9302,13 +9309,6 @@
             "includeLevel": {
               "type": "boolean",
               "description": "Also search the actors and components of the open level (default true)."
-            },
-            "assetPaths": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Several asset paths to query in one call."
             },
             "recursive": {
               "type": "boolean",
@@ -9558,6 +9558,10 @@
               "material_stats",
               "source_control_state"
             ],
+            "assetPaths": [
+              "exists",
+              "source_control_state"
+            ],
             "searchText": [
               "search",
               "text"
@@ -9594,9 +9598,6 @@
             "includeLevel": [
               "text"
             ],
-            "assetPaths": [
-              "source_control_state"
-            ],
             "recursive": [
               "source_control_state"
             ]
@@ -9605,8 +9606,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "437f247025a2c71d4c2ff7885cc491d67f43f4f1d77fe4c33a3620122deaaf2c",
-        "content": "54a584e656006b15d75a8b1861e82de3eed3595fc56463288fb03568ae70c515"
+        "schema": "a3a63e4a2f9b8db03ff4c866146039814e33facb6ebee837229477606dc50807",
+        "content": "f68a85be7c6d5e9420814b41ab19258f7e3b557907c3c85858d55e90a9ece533"
       }
     },
     {

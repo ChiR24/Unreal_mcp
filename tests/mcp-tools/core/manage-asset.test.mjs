@@ -131,6 +131,7 @@ const testCases = [
   { scenario: 'INFO: list_instances', toolName: 'manage_asset', arguments: { action: 'list_instances', assetPath: BASE_MATERIAL }, expected: 'success' },
   { scenario: 'ACTION: reset_instance_parameters', toolName: 'manage_asset', arguments: { action: 'reset_instance_parameters', assetPath: INSTANCE }, expected: 'success' },
   { scenario: 'INFO: exists', toolName: 'manage_asset', arguments: { action: 'exists', assetPath: BASE_MATERIAL }, expected: 'success' },
+  { scenario: 'INFO: exists several assetPaths', toolName: 'manage_asset', arguments: { action: 'exists', assetPaths: [BASE_MATERIAL, `${TEST_FOLDER}/M_NotThere_${ts}`] }, expected: 'success' },
   { scenario: 'INFO: get_material_stats', toolName: 'manage_asset', arguments: { action: 'get_material_stats', assetPath: BASE_MATERIAL }, expected: 'success' },
   { scenario: 'ACTION: nanite_rebuild_mesh', toolName: 'manage_asset', arguments: { action: 'nanite_rebuild_mesh', assetPath: EXISTING_STATIC_MESH }, expected: 'success' },
   { scenario: 'OPTIONAL: nanite_rebuild_mesh keeps half the triangles', toolName: 'manage_asset', arguments: { action: 'nanite_rebuild_mesh', assetPath: EXISTING_STATIC_MESH, trianglePercent: 50 }, expected: 'success', assertions: [{ path: 'structuredContent.result.trianglePercent', equals: 50, label: 'trianglePercent applied' }] },

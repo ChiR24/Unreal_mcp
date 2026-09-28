@@ -7136,6 +7136,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "oneOf": [
             {
               "type": "array",
+              "description": "Several asset paths checked in one call; the reply maps each to true or false under existsByPath.",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "array",
               "items": {
                 "type": "string"
               },
@@ -7161,13 +7168,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Several asset paths to process in one call."
-            },
-            {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Several asset paths to query in one call."
             }
           ],
           "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."

@@ -37,8 +37,8 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
     OK, WRITE, WRITE_POLICY, LOW,
     { examples: [ex('Drop every override on an instance', { assetPath: '/Game/Materials/MI_Base_Rusty' }, { success: true })] }
   ),
-  r('exists', 'asset', 'Check whether an asset exists at a given path.',
-    schema({ assetPath: ASSET_PATH }, ['assetPath']),
+  r('exists', 'asset', 'Check whether an asset exists at a given path, or which of several do.',
+    schema({ assetPath: ASSET_PATH, assetPaths: arr('Several asset paths checked in one call; the reply maps each to true or false under existsByPath.') }, [], ['assetPath', 'assetPaths']),
     OK, READ, READ_POLICY, LOW,
     { topics: ['asset exists', 'does asset exist', 'check asset', 'path exists'], dispatchAction: 'exists',
       examples: [ex('Probe for an asset before creating it', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true })] }
