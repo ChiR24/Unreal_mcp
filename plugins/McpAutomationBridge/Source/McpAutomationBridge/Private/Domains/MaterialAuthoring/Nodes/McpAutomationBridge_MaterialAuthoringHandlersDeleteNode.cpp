@@ -63,8 +63,14 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
       return true;
     }
     FINALIZE_HOST();
+    // A delete used to leave the material dirty and unsaved, so an editor restart brought the
+    // node back. Saved by default, like the parameter edits.
+    bool bSave = true;
+    Payload->TryGetBoolField(TEXT("save"), bSave);
+    const bool bSaved = bSave && (Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetBoolField(TEXT("saved"), bSaved);
     TArray<TSharedPtr<FJsonValue>> RemovedArr;
     for (const FString &R : Removed) {
       RemovedArr.Add(MakeShared<FJsonValueString>(R));

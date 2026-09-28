@@ -13,9 +13,13 @@ bool AddParameterExpression(UMcpAutomationBridgeSubsystem* Bridge, const FString
 {
   LOAD_MATERIAL_OR_FUNCTION_OR_RETURN();
 
-  FString ParamName, Group;
-  if (!Payload->TryGetStringField(TEXT("parameterName"), ParamName) || ParamName.IsEmpty()) {
-    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'parameterName'."), TEXT("INVALID_ARGUMENT"));
+  // The add_material_node family documents `name` as "Parameter name, when the node type is a
+  // parameter", so a build_material_graph step {edit: add_scalar_parameter, name: ...} failed with
+  // "Missing 'parameterName'" although it followed the contract. Either spelling names it.
+  FString Group;
+  const FString ParamName = McpGetFirstStringField(Payload, {TEXT("parameterName"), TEXT("name")});
+  if (ParamName.IsEmpty()) {
+    Bridge->SendAutomationError(Socket, RequestId, TEXT("Missing 'parameterName' (or 'name')."), TEXT("INVALID_ARGUMENT"));
     return true;
   }
   Payload->TryGetStringField(TEXT("group"), Group);

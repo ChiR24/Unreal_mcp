@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c11583a462df553a",
+  "catalogRevision": "5d31f15446af3784",
   "recordCount": 383,
   "records": [
     {
@@ -73343,6 +73343,10 @@
               "items": {
                 "type": "string"
               }
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the asset afterwards. Defaults to true; pass false to keep the change in memory only."
             }
           },
           "required": [
@@ -73416,8 +73420,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bb13873d5f1d625fec972533041cc7c4212c2b709970c50ad9b91df90ce060bd",
-        "content": "edacb177ee30fb826f1eef21427bd711e409458817e3e373e7448930bee9c757"
+        "schema": "954c5f758d7c542cf2bcefc1b827bc7afc16dd9ad93245b249320827ea0d9b66",
+        "content": "6081a83180061a308ef8aa9851eb8196fbd9bbc164fc646d2a1045f4527a6252"
       }
     },
     {

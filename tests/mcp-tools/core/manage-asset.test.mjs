@@ -224,6 +224,7 @@ const testCases = [
     // === CONNECT ===
     { scenario: 'CONNECT: connect_nodes', toolName: 'manage_asset', arguments: { action: 'connect_nodes', assetPath: MATERIAL_PATH, sourceNodeId: 'RoughnessParam', targetNodeId: 'Main', inputName: 'Roughness' }, expected: 'success' },
     { scenario: 'BATCH: build_material_graph gradient', toolName: 'manage_asset', arguments: { action: 'build_material_graph', materialPath: MATERIAL_PATH, operations: [{ edit: 'add_texture_coordinate', id: 'uv' }, { edit: 'add_material_node', id: 'lerp', nodeType: 'Lerp' }, { edit: 'connect_nodes', from: '$uv.G', to: '$lerp.Alpha' }, { edit: 'connect_nodes', from: '$lerp', to: 'Main.EmissiveColor' }] }, expected: 'success' },
+    { scenario: 'BATCH: build_material_graph parameter step named with name', toolName: 'manage_asset', arguments: { action: 'build_material_graph', materialPath: MATERIAL_PATH, operations: [{ edit: 'add_scalar_parameter', id: 'gloss', name: 'GlossByName', defaultValue: 0.3 }] }, expected: 'success' },
     { scenario: 'BATCH: build_material_graph refuses a delete step', toolName: 'manage_asset', arguments: { action: 'build_material_graph', materialPath: MATERIAL_PATH, operations: [{ edit: 'delete_node', nodeId: 'RoughnessParam' }] }, expected: 'error|INVALID_OPERATION' },
     { scenario: 'INFO: get_node_connections downstream', toolName: 'manage_asset', arguments: { action: 'get_node_connections', materialPath: MATERIAL_PATH, nodeId: 'RoughnessParam', direction: 'outputs', depth: -1, downstream: true }, expected: 'success' },
     { scenario: 'INFO: get_node_connections upstream', toolName: 'manage_asset', arguments: { action: 'get_node_connections', materialPath: MATERIAL_PATH, nodeId: 'RoughnessParam', direction: 'inputs', upstream: true }, expected: 'success' },
@@ -260,7 +261,7 @@ const testCases = [
     { scenario: 'ACTION: compile_material', toolName: 'manage_asset', arguments: { action: 'compile_material', assetPath: MATERIAL_PATH, save: true }, expected: 'success' },
     { scenario: 'INFO: get_material_info', toolName: 'manage_asset', arguments: { action: 'get_material_info', assetPath: MATERIAL_PATH }, expected: 'success' },
     { scenario: 'INFO: get_material_info connections of one node', toolName: 'manage_asset', arguments: { action: 'get_material_info', assetPath: MATERIAL_PATH, filter: 'connections', nodeId: 'RoughnessParam', nodeIds: ['RoughnessParam'] }, expected: 'success' },
-    { scenario: 'DELETE: delete_node batch', toolName: 'manage_asset', arguments: { action: 'delete_node', materialPath: MATERIAL_PATH, nodeIds: ['${captured:customExpressionNodeId}'] }, expected: 'success' },
+    { scenario: 'DELETE: delete_node batch', toolName: 'manage_asset', arguments: { action: 'delete_node', materialPath: MATERIAL_PATH, nodeIds: ['${captured:customExpressionNodeId}'], save: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.saved', equals: true, label: 'material saved after the delete' }] },
 
     // === CLEANUP ===
     { scenario: 'DELETE: delete keeps a material its instance still references', toolName: 'manage_asset', arguments: { action: 'delete', path: MATERIAL_PATH }, expected: 'error', assertions: [{ path: 'structuredContent.error', includes: 'ASSET_REFERENCED', label: 'referenced asset kept without force' }] },
