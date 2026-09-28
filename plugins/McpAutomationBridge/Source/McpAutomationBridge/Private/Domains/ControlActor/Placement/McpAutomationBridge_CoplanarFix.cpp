@@ -98,43 +98,32 @@ TSharedPtr<FJsonValue> McpCoplanarText(const FString& Text)
 {
     return MakeShared<FJsonValueString>(Text);
 }
-} // namespace
 
-bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
-                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+// Records a skipped pair once, however many passes meet it.
+void McpCoplanarSkip(TArray<TSharedPtr<FJsonValue>>& Skipped, TSet<FString>& Seen, const FString& Line)
 {
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (!World || GEditor->PlayWorld)
+    bool bSeen = false;
+    Seen.Add(Line, &bSeen);
+    if (!bSeen)
     {
-        Bridge->SendAutomationError(Socket, RequestId, TEXT("Needs the editor world with Play In Editor stopped."),
-                                    TEXT("NO_WORLD"));
-        return true;
+        Skipped.Add(McpCoplanarText(Line));
     }
-    FString NameFilter;
-    double Distance = 1.0;
-    bool bDryRun = false;
-    if (Payload.IsValid())
-    {
-        Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
-        Payload->TryGetBoolField(TEXT("dryRun"), bDryRun);
-        if (Payload->TryGetNumberField(TEXT("distance"), Distance))
-        {
-            Distance = FMath::Clamp(Distance, 0.1, 20.0);
-        }
-    }
+}
 
-    const TArray<FMcpCoplanarHit> Hits = FindCoplanarFaces(World, NameFilter);
+// One pass: where each actor's faces go. A pair inside one actor is left for its Blueprint.
+TMap<AActor*, FMcpCoplanarPlan> McpCoplanarPlanPass(const TArray<FMcpCoplanarHit>& Hits, double Distance,
+                                                    TArray<TSharedPtr<FJsonValue>>& Skipped, TSet<FString>& SkippedSeen)
+{
     TMap<AActor*, FMcpCoplanarPlan> Plans;
-    TArray<TSharedPtr<FJsonValue>> Skipped;
     for (const FMcpCoplanarHit& Hit : Hits)
     {
         const FString Direction = DescribeDirection(Hit.Normal);
         // An actor tagged mcp.placement.ok overlaps on purpose, but no two faces flicker on purpose: it is fixed too.
         if (Hit.Actor == Hit.OtherActor)
         {
-            Skipped.Add(McpCoplanarText(FString::Printf(
+            McpCoplanarSkip(Skipped, SkippedSeen, FString::Printf(
                 TEXT("'%s': its own %s and %s point %s in one plane; move one of them in its Blueprint (edit_scs)"),
-                *McpActorRef(Hit.Actor), *Hit.Component, *Hit.OtherComponent, *Direction)));
+                *McpActorRef(Hit.Actor), *Hit.Component, *Hit.OtherComponent, *Direction));
             continue;
         }
         const bool bApplied = Hit.FaceArea > 0.0 && Hit.OverlapU * Hit.OverlapV >= 0.95 * Hit.FaceArea;
@@ -165,41 +154,115 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
                                                        bApplied ? TEXT("brought forward") : TEXT("pulled back"))));
     }
 
-    const FScopedTransaction Transaction(NSLOCTEXT("McpCoplanar", "FixCoplanar", "Fix Coplanar Faces"), !bDryRun);
-    TArray<TSharedPtr<FJsonValue>> Moved;
-    for (const TPair<AActor*, FMcpCoplanarPlan>& Entry : Plans)
+    return Plans;
+}
+} // namespace
+
+bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
+                       const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    if (!World || GEditor->PlayWorld)
     {
-        FVector Offset = FVector::ZeroVector;
-        FString Resize;
-        FString Why;
-        if (!McpCoplanarApply(Entry.Key, Entry.Value, bDryRun, Offset, Resize, Why))
+        Bridge->SendAutomationError(Socket, RequestId, TEXT("Needs the editor world with Play In Editor stopped."),
+                                    TEXT("NO_WORLD"));
+        return true;
+    }
+    FString NameFilter;
+    double Distance = 1.0;
+    bool bDryRun = false;
+    if (Payload.IsValid())
+    {
+        Payload->TryGetStringField(TEXT("nameFilter"), NameFilter);
+        Payload->TryGetBoolField(TEXT("dryRun"), bDryRun);
+        if (Payload->TryGetNumberField(TEXT("distance"), Distance))
         {
-            Skipped.Add(McpCoplanarText(FString::Printf(TEXT("'%s': %s"), *McpActorRef(Entry.Key), *Why)));
-            continue;
+            Distance = FMath::Clamp(Distance, 0.1, 20.0);
         }
+    }
+
+    // Moving one actor can line it up with a neighbour that moved the same way, so the fix repeats until a pass
+    // finds nothing left to move (at most four passes).
+    const FScopedTransaction Transaction(NSLOCTEXT("McpCoplanar", "FixCoplanar", "Fix Coplanar Faces"), !bDryRun);
+    TArray<TSharedPtr<FJsonValue>> Skipped;
+    TSet<FString> SkippedSeen;
+    TArray<AActor*> Order;
+    TMap<AActor*, FVector> Offsets;
+    TMap<AActor*, FString> Resizes;
+    TMap<AActor*, TArray<TSharedPtr<FJsonValue>>> Pairs;
+    int32 PairsFound = INDEX_NONE;
+    int32 Passes = 0;
+    while (Passes < (bDryRun ? 1 : 4))
+    {
+        const TArray<FMcpCoplanarHit> Hits = FindCoplanarFaces(World, NameFilter);
+        PairsFound = PairsFound == INDEX_NONE ? Hits.Num() : PairsFound;
+        const TMap<AActor*, FMcpCoplanarPlan> Plans = McpCoplanarPlanPass(Hits, Distance, Skipped, SkippedSeen);
+        if (Plans.Num() == 0)
+        {
+            break;
+        }
+        ++Passes;
+        bool bMovedAny = false;
+        for (const TPair<AActor*, FMcpCoplanarPlan>& Entry : Plans)
+        {
+            FVector Offset = FVector::ZeroVector;
+            FString Resize;
+            FString Why;
+            if (!McpCoplanarApply(Entry.Key, Entry.Value, bDryRun, Offset, Resize, Why))
+            {
+                McpCoplanarSkip(Skipped, SkippedSeen, FString::Printf(TEXT("'%s': %s"), *McpActorRef(Entry.Key), *Why));
+                continue;
+            }
+            bMovedAny = true;
+            if (FVector* Existing = Offsets.Find(Entry.Key))
+            {
+                *Existing += Offset;
+            }
+            else
+            {
+                Order.Add(Entry.Key);
+                Offsets.Add(Entry.Key, Offset);
+            }
+            if (!Resize.IsEmpty())
+            {
+                FString& All = Resizes.FindOrAdd(Entry.Key);
+                All += All.IsEmpty() ? Resize : TEXT(", ") + Resize;
+            }
+            Pairs.FindOrAdd(Entry.Key).Append(Entry.Value.Pairs);
+        }
+        if (!bMovedAny)
+        {
+            break;
+        }
+    }
+    TArray<TSharedPtr<FJsonValue>> Moved;
+    for (AActor* Actor : Order)
+    {
         TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
-        Item->SetStringField(TEXT("actorName"), McpActorRef(Entry.Key));
-        Item->SetObjectField(TEXT("offset"), McpHandlerUtils::VectorToJson(Offset));
-        if (!Resize.IsEmpty())
+        Item->SetStringField(TEXT("actorName"), McpActorRef(Actor));
+        Item->SetObjectField(TEXT("offset"), McpHandlerUtils::VectorToJson(Offsets[Actor]));
+        if (const FString* Resize = Resizes.Find(Actor))
         {
-            Item->SetStringField(TEXT("resized"), Resize);
+            Item->SetStringField(TEXT("resized"), *Resize);
         }
-        Item->SetArrayField(TEXT("pairs"), Entry.Value.Pairs);
+        Item->SetArrayField(TEXT("pairs"), Pairs.FindOrAdd(Actor));
         Moved.Add(MakeShared<FJsonValueObject>(Item));
     }
-    const int32 Remaining = bDryRun ? Hits.Num() : FindCoplanarFaces(World, NameFilter).Num();
+    PairsFound = FMath::Max(PairsFound, 0);
+    const int32 Remaining = bDryRun ? PairsFound : FindCoplanarFaces(World, NameFilter).Num();
 
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-    Data->SetNumberField(TEXT("pairsFound"), Hits.Num());
+    Data->SetNumberField(TEXT("pairsFound"), PairsFound);
     Data->SetNumberField(TEXT("actorsMoved"), bDryRun ? 0 : Moved.Num());
     Data->SetNumberField(TEXT("remainingPairs"), Remaining);
+    Data->SetNumberField(TEXT("passes"), Passes);
     Data->SetBoolField(TEXT("dryRun"), bDryRun);
     Data->SetArrayField(TEXT("moved"), Moved);
     Data->SetArrayField(TEXT("skipped"), Skipped);
     Bridge->SendAutomationResponse(
         Socket, RequestId, true,
-        FString::Printf(TEXT("%s %d actors for %d coplanar pairs; %d pairs remain%s"),
-                        bDryRun ? TEXT("Would move") : TEXT("Moved"), Moved.Num(), Hits.Num(), Remaining,
+        FString::Printf(TEXT("%s %d actors in %d passes for %d coplanar pairs; %d pairs remain%s"),
+                        bDryRun ? TEXT("Would move") : TEXT("Moved"), Moved.Num(), Passes, PairsFound, Remaining,
                         Skipped.Num() > 0 ? TEXT(" (see skipped)") : TEXT("")),
         Data, FString());
     return true;

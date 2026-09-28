@@ -208,7 +208,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_FIND,
     topics: ['fix z-fighting', 'fix flickering', 'coplanar faces', 'texture flicker', 'overlapping faces'],
-    summary: 'Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.',
+    summary: 'Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.',
     whenToUse: [
       'audit_placement reported coplanar faces, or surfaces flicker between two materials.',
       'A level was built from boxes placed flush against each other and should be cleaned up before anyone looks at it.',
@@ -227,6 +227,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
       pairsFound: { type: 'number', description: 'Coplanar face pairs found before fixing.' },
       actorsMoved: { type: 'number', description: 'Actors moved (0 under dryRun).' },
       remainingPairs: { type: 'number', description: 'Coplanar pairs still found afterwards; run audit_placement with kinds ["coplanar"] to see them.' },
+      passes: { type: 'number', description: 'Passes made: a move can line an actor up with a neighbour that moved the same way, so the fix repeats (at most four passes; one under dryRun).' },
       dryRun: { type: 'boolean', description: 'Whether nothing was changed.' },
       moved: { type: 'array', description: 'One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example "grew 2.0 units along X"), and pairs, each face with the other actor and whether it was brought forward or pulled back.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true },
       skipped: { type: 'array', items: { type: 'string' }, description: 'Pairs left alone, each with the reason and what to do instead.' },

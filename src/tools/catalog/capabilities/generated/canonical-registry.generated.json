@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4af14e9ca38d2c20",
+  "catalogRevision": "d038bfb7793e38ae",
   "recordCount": 385,
   "records": [
     {
@@ -29866,7 +29866,7 @@
           "texture flicker",
           "overlapping faces"
         ],
-        "summary": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.",
+        "summary": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.",
         "whenToUse": [
           "audit_placement reported coplanar faces, or surfaces flicker between two materials.",
           "A level was built from boxes placed flush against each other and should be cleaned up before anyone looks at it."
@@ -29932,6 +29932,10 @@
               "type": "number",
               "description": "Coplanar pairs still found afterwards; run audit_placement with kinds [\"coplanar\"] to see them."
             },
+            "passes": {
+              "type": "number",
+              "description": "Passes made: a move can line an actor up with a neighbour that moved the same way, so the fix repeats (at most four passes; one under dryRun)."
+            },
             "dryRun": {
               "type": "boolean",
               "description": "Whether nothing was changed."
@@ -29962,7 +29966,7 @@
       },
       "examples": [
         {
-          "title": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.",
+          "title": "Fix z-fighting in one call: every actor with a face in the same plane as another surface moves a unit, so one surface is clearly in front, repeating until nothing is left to move. A piece lying wholly inside the other face (a door on a wall) comes forward; one only partly inside (a ramp sunk into the floor) goes back so the other shows.",
           "input": {
             "action": "fix_coplanar",
             "dryRun": true
@@ -30006,8 +30010,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d7a0837289e707bb78ce3887b206d9bdc88942f819c68cccf696b21f5981d79a",
-        "content": "f98e1832eae42737dcf28ecd95e16c0cfa44b996f9f6f58791a1156def271beb"
+        "schema": "7f8a74a167d5dd480a37da303d09aa96096317808eb1757937db75e940bfe292",
+        "content": "1ecc6124678630936fc9bec9b2d73caf77c9aecee4f3dec5129a0de432682112"
       }
     },
     {
