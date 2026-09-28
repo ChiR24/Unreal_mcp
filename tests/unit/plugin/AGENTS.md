@@ -15,6 +15,7 @@ Vitest tests that read C++/C# **source text** and assert required or forbidden p
 | Response identity redaction | `response_identity_redaction_contracts.test.ts` | Identity keys are redacted before a reply leaves; console_command output and the launch_build log tail go through the per-line sanitizer |
 | Fab bridge | `fab_bridge_security_contracts.test.ts` | No arbitrary script reaches the page; credentials never reach a reply or a log |
 | Python diagnostics | `execute_python_diagnostics_contracts.test.ts` | Logs carry `codeSha256`, never the code |
+| Behaviour recipe files | `behaviour_recipes.test.ts` | Every `Resources/Recipes/<Domain>/<Name>.json` uses only the fields the plugin accepts, fills every placeholder it declares, calls no Blueprint-dependent function without `memberClass`, and ships (FilterPlugin.ini keeps `/Resources`) |
 
 ## CONVENTIONS
 - Use `countPureLines()` and `sliceBetween()` from `plugin-contract-fixtures.ts`; do not hand-roll them.

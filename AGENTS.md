@@ -183,6 +183,7 @@ npx vitest run tests/unit/<file>.test.ts
 - `AGENTS.md` — plugin scope, cross-surface rules, packaging.
 - `Source/McpAutomationBridge/Private/Core/AGENTS.md` — request queue, game-thread dispatch, the handler table.
 - `.../Private/Domains/AGENTS.md` — 55 domain implementations + dispatch contract.
+- `.../Private/Domains/BlueprintGraph/Behaviour/AGENTS.md` — `McpBlueprintBehaviour::Author`: gameplay logic written into Blueprint assets from recipe files.
 - `.../Private/Foundation/AGENTS.md` — reflection, handler utils, shared primitives.
 - `.../Private/Safety/AGENTS.md` — safe wrappers for hazardous editor operations.
 - `.../Private/Transport/AGENTS.md` — sockets, TLS, capability-token auth, loopback gate.

@@ -1,0 +1,20 @@
+{
+  "description": "Registers an Enhanced Input mapping context on a Pawn when a PlayerController possesses it. McpBlueprintBehaviour adds this to a recipe whose input section needs a context this Blueprint does not register yet; its nodes are shared (comment 'MCP input context') and never removed.",
+  "tag": "MCP input context",
+  "placeholders": {
+    "MappingContext": "Object path of the Input Mapping Context to register, e.g. /Game/Input/IMC_MCP.IMC_MCP."
+  },
+  "hooks": [
+    { "id": "__imc", "event": "ReceiveControllerChanged" }
+  ],
+  "eventGraph": [
+    { "edit": "create_node", "id": "__imcCast", "nodeType": "Cast", "targetClass": "PlayerController" },
+    { "edit": "create_node", "id": "__imcSub", "nodeType": "K2Node_GetSubsystemFromPC", "targetClass": "/Script/EnhancedInput.EnhancedInputLocalPlayerSubsystem" },
+    { "edit": "create_node", "id": "__imcAdd", "nodeType": "CallFunction", "memberName": "AddMappingContext", "memberClass": "/Script/EnhancedInput.EnhancedInputLocalPlayerSubsystem", "pinDefaults": { "MappingContext": "{{MappingContext}}", "Priority": 0 } },
+    { "edit": "connect_pins", "from": "$__imc_event.NewController", "to": "$__imcCast.Object" },
+    { "edit": "connect_pins", "from": "$__imcCast.AsPlayer Controller", "to": "$__imcSub.PlayerController" },
+    { "edit": "connect_pins", "from": "$__imcSub.ReturnValue", "to": "$__imcAdd.self" },
+    { "edit": "connect_pins", "from": "$__imc.then", "to": "$__imcCast.execute" },
+    { "edit": "connect_pins", "from": "$__imcCast.then", "to": "$__imcAdd.execute" }
+  ]
+}

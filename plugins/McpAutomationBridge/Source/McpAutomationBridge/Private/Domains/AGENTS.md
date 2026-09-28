@@ -68,6 +68,7 @@ Enforced by Vitest source-contract tests that read C++ text and fail CI (`tests/
 - Reuse `../Foundation/` for reflection, path, Blueprint, JSON, response, and object-resolution helpers. Do not grow domain-local copies.
 - Editor work runs on the game thread via the Core queue. Never call editor APIs from a socket thread.
 - Optional engine features must compile away or fail clearly when their module is missing, via the `MCP_HAS_*` defines emitted by `McpAutomationBridge.Build.cs` (e.g. `MCP_HAS_PCG`, `MCP_HAS_MOVIE_RENDER_PIPELINE`, `MCP_HAS_TAKE_RECORDER`, `MCP_HAS_MEDIA_ASSETS`). A missing module must never break the build.
+- An action that promises gameplay behaviour (movement modes, ammo, inventory functions, input bindings, trigger events) writes it into the Blueprint with `McpBlueprintBehaviour::Author` and a recipe file under `Resources/Recipes/<Domain>/`. Read `BlueprintGraph/Behaviour/AGENTS.md` first; never hand-roll graph edits or report "configured" for logic that was not authored.
 
 ## ANTI-PATTERNS (forbidden -> alternative)
 
