@@ -64,8 +64,8 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Duplicate via the long-form alias', { sourcePath: '/Game/Materials/M_Base', destinationPath: '/Game/Materials', newName: 'M_Base_Variant' }, { success: true })] }
   ),
 
-  r('rename', 'asset', 'Rename an existing asset in place.',
-    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
+  r('rename', 'asset', 'Rename an existing asset, or a whole folder, in place; settings that point at it follow.',
+    schema({ sourcePath: str('Source /Game asset path, or a folder: a folder is renamed with everything under it.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
     { topics: ['rename asset'], 
       examples: [ex('Rename a mesh in place', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
@@ -77,11 +77,14 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Rename via the long-form alias', { sourcePath: '/Game/Meshes/SM_Crate', newName: 'SM_Crate_Large' }, { success: true })] }
   ),
 
-  r('move', 'asset', 'Move an asset to a new package path.',
-    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('Rename in place instead: the asset keeps its folder and takes this name (used when destinationPath is omitted).') }, ['sourcePath']),
+  r('move', 'asset', 'Move an asset, or a whole folder, to a new path; references and settings that point at it follow.',
+    schema({ sourcePath: str('Source /Game asset path, or a folder: everything under it moves into destinationPath, keeping sub-folders, and the emptied folder is removed.'), destinationPath: DEST_PATH, newName: str('Rename in place instead: the asset keeps its folder and takes this name (used when destinationPath is omitted).') }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
-    { topics: ['move asset', 'relocate asset'], 
-      examples: [ex('Move a texture into a subfolder', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true })] }
+    { topics: ['move asset', 'relocate asset', 'move folder', 'rename folder'],
+      examples: [
+        ex('Move a texture into a subfolder', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true }),
+        ex('Move a whole game folder', { sourcePath: '/Game/OldGame', destinationPath: '/Game/NewGame' }, { success: true }),
+      ] }
   ),
 
   r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',

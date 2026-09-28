@@ -2,6 +2,7 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
+#include "Domains/AssetWorkflow/Rename/McpAutomationBridge_AssetRenameGuard.h"
 #include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -59,6 +60,16 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     return true;
   }
 
+  // A folder moves with everything under it: rename {sourcePath: "/Game/Old", newName: "New"}.
+  FString SourceFolder = SanitizeProjectRelativePath(SourcePath);
+  SourceFolder.RemoveFromEnd(TEXT("/"));
+  if (!SourceFolder.IsEmpty() && !UEditorAssetLibrary::DoesAssetExist(SourceFolder) &&
+      UEditorAssetLibrary::DoesDirectoryExist(SourceFolder)) {
+    FString DestinationFolder = DestinationPath;
+    DestinationFolder.RemoveFromEnd(TEXT("/"));
+    return McpAssetRename::HandleMoveFolder(this, RequestId, SourceFolder, DestinationFolder, Socket);
+  }
+
   // Resolve source path to ensure it matches a real asset
   FString ResolvedSourcePath = ResolveAssetPath(SourcePath);
   if (ResolvedSourcePath.IsEmpty()) {
@@ -82,27 +93,32 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     return true;
   }
 
-  // Use the resolved path for the rename operation
-  if (UEditorAssetLibrary::RenameAsset(ResolvedSourcePath, DestinationPath)) {
-    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  if (UEditorAssetLibrary::DoesAssetExist(DestinationPath)) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("'%s' already exists"), *DestinationPath),
+                           nullptr, TEXT("DESTINATION_EXISTS"));
+    return true;
+  }
+  // Settings that point at the asset (default map, game mode, input contexts) follow it; the plain
+  // engine rename refused silently whenever one did.
+  const FString DestinationPackage = FPackageName::ObjectPathToPackageName(DestinationPath);
+  TArray<FAssetRenameData> RenameData;
+  RenameData.Emplace(UEditorAssetLibrary::LoadAsset(ResolvedSourcePath),
+                     FPackageName::GetLongPackagePath(DestinationPackage),
+                     FPackageName::GetShortName(DestinationPackage));
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  FString Failure;
+  if (RenameData[0].Asset.IsValid() && McpAssetRename::RenameWithSettingsFollow(RenameData, Resp, Failure)) {
     Resp->SetBoolField(TEXT("success"), true);
-    Resp->SetStringField(TEXT("assetPath"), DestinationPath);
-
-    // Add verification data
-    UObject* RenamedAsset = UEditorAssetLibrary::LoadAsset(DestinationPath);
-    if (RenamedAsset) {
+    Resp->SetStringField(TEXT("assetPath"), DestinationPackage);
+    if (UObject* RenamedAsset = UEditorAssetLibrary::LoadAsset(DestinationPackage)) {
       McpHandlerUtils::AddVerification(Resp, RenamedAsset);
     }
-
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp,
-                           FString());
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp, FString());
   } else {
-    SendAutomationResponse(
-        Socket, RequestId, false,
-        FString::Printf(TEXT("Failed to rename asset. Check if destination "
-                             "'%s' already exists or source is locked."),
-                        *DestinationPath),
-        nullptr, TEXT("RENAME_FAILED"));
+    SendAutomationResponse(Socket, RequestId, false,
+                           Failure.IsEmpty() ? FString::Printf(TEXT("Could not load %s"), *ResolvedSourcePath) : Failure,
+                           Resp, TEXT("RENAME_FAILED"));
   }
   return true;
 }

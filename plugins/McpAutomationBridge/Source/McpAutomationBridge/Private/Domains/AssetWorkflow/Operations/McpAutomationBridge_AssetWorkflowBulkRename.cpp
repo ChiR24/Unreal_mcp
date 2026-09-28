@@ -1,6 +1,7 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
 #include "Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowBulkSelection.h"
+#include "Domains/AssetWorkflow/Rename/McpAutomationBridge_AssetRenameGuard.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -128,11 +129,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
     SourceControlHelpers::CheckOutFiles(PackageNames, true);
   }
 
-  IAssetTools &AssetTools =
-      FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"))
-          .Get();
-  bool bSuccess = AssetTools.RenameAssets(RenameData);
-
+  // The old paths are read before the rename: afterwards Asset->GetPathName() is the NEW path.
   TArray<TSharedPtr<FJsonValue>> RenamedAssets;
   for (const FAssetRenameData &Data : RenameData) {
     TSharedPtr<FJsonObject> AssetInfo = McpHandlerUtils::CreateResultObject();
@@ -142,14 +139,15 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
   }
 
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  FString Failure;
+  const bool bSuccess = McpAssetRename::RenameWithSettingsFollow(RenameData, Result, Failure);
   Result->SetBoolField(TEXT("success"), bSuccess);
-  Result->SetNumberField(TEXT("renamed"), RenameData.Num());
-  Result->SetArrayField(TEXT("assets"), RenamedAssets);
+  Result->SetNumberField(TEXT("renamed"), bSuccess ? RenameData.Num() : 0);
+  Result->SetArrayField(bSuccess ? TEXT("assets") : TEXT("notRenamed"), RenamedAssets);
 
   SendAutomationResponse(
       RequestingSocket, RequestId, bSuccess,
-      bSuccess ? FString::Printf(TEXT("Renamed %d assets"), RenameData.Num())
-               : TEXT("Bulk rename failed"),
+      bSuccess ? FString::Printf(TEXT("Renamed %d assets"), RenameData.Num()) : Failure,
       Result, bSuccess ? FString() : TEXT("BULK_RENAME_FAILED"));
   return true;
 }

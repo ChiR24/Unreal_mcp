@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5b46b6b0eb73bc58",
+  "catalogRevision": "ba90e3efacee3012",
   "recordCount": 384,
   "records": [
     {
@@ -8765,7 +8765,9 @@
         "topics": [
           "move",
           "move asset",
-          "relocate asset"
+          "relocate asset",
+          "move folder",
+          "rename folder"
         ],
         "summary": "Move an asset to a new path.",
         "whenToUse": [],
@@ -8778,7 +8780,7 @@
           "properties": {
             "sourcePath": {
               "type": "string",
-              "description": "Source /Game asset path."
+              "description": "Source /Game asset path, or a folder: everything under it moves into destinationPath, keeping sub-folders, and the emptied folder is removed."
             },
             "destinationPath": {
               "type": "string",
@@ -8856,8 +8858,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8daa18d42df6571fadb741aa2fe51a61aeec12bc7631fd62e9baa9370c8efcf9",
-        "content": "02c4c2441bceecf0c559c20f4d3be0cc8944eb910744d149553e81c9ce9e0f66"
+        "schema": "dea182528d5efb15af88c1e53505554fb2db2d6266bd7ecb217ec161bf69d8ea",
+        "content": "b374fbdd2ee23a192f7f5d04ce80c3fd0cb41e2e7f0a9d92c75dbd48e1db2fae"
       }
     },
     {
@@ -10005,7 +10007,7 @@
           "properties": {
             "sourcePath": {
               "type": "string",
-              "description": "Source /Game asset path."
+              "description": "Source /Game asset path, or a folder: a folder is renamed with everything under it."
             },
             "destinationPath": {
               "type": "string",
@@ -10083,8 +10085,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0d8e113eaa3623c033b7b1737df2ada70afa4db073171d36917c3b366690bbcc",
-        "content": "3f67cf1310e35257e47407f3bd70b0042e01e227b0efc37265799f0b07350210"
+        "schema": "4f0612ab59ebf8b8e59d76cb797971c321143558f3555c89bb92d44f512de920",
+        "content": "6ed991dcfca44aa93054d906c9eb4a42368b2ec57c6c47769a7c45386aca5a44"
       }
     },
     {
