@@ -19,44 +19,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByTag(
     return true;
   }
 
-  FString MatchType;
-  MatchType = MatchType.ToLower();
   FName TagName(*TagValue);
   TArray<TSharedPtr<FJsonValue>> Matches;
 
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-         TEXT("HandleControlActorFindByTag: Searching for tag '%s' (FName: %s)"),
-         *TagValue, *TagName.ToString());
-  UEditorActorSubsystem *ActorSS =
-      GEditor->GetEditorSubsystem<UEditorActorSubsystem>();
-  TArray<AActor *> AllActors = ActorSS->GetAllLevelActors();
-  UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-         TEXT("HandleControlActorFindByTag: Searching %d actors in level"), AllActors.Num());
-  for (AActor *Actor : AllActors) {
-    if (!Actor)
-      continue;
-    bool bMatches = false;
-    if (MatchType == TEXT("contains")) {
-      for (const FName &Existing : Actor->Tags) {
-        if (Existing.ToString().Contains(TagValue, ESearchCase::IgnoreCase)) {
-          bMatches = true;
-          break;
-        }
-      }
-    } else {
-      bMatches = Actor->ActorHasTag(TagName);
-    }
-
-    // Log actor tags for troubleshooting at verbose level
-    if (Actor->Tags.Num() > 0) {
-      FString TagList;
-      for (const FName& T : Actor->Tags) {
-        TagList += T.ToString() + TEXT(", ");
-      }
-      UE_LOG(LogMcpAutomationBridgeSubsystem, Verbose,
-             TEXT("HandleControlActorFindByTag: Actor '%s' has tags: [%s] - match=%d"),
-             *Actor->GetActorLabel(), *TagList, bMatches);
-    }
+  // The PIE world while a play session runs, as find_by_name and find_by_class
+  // do: UEditorActorSubsystem::GetAllLevelActors() refuses during PIE, so this
+  // answered "0 found" for tagged actors that were right there.
+  UWorld *QueryWorld = GEditor->PlayWorld ? GEditor->PlayWorld.Get()
+                                          : GEditor->GetEditorWorldContext().World();
+  if (!QueryWorld) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_WORLD"),
+                              TEXT("No editor or play world is loaded"), nullptr);
+    return true;
+  }
+  for (TActorIterator<AActor> It(QueryWorld); It; ++It) {
+    AActor *Actor = *It;
+    const bool bMatches = Actor && Actor->ActorHasTag(TagName);
     if (bMatches) {
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("name"), McpActorRef(Actor));

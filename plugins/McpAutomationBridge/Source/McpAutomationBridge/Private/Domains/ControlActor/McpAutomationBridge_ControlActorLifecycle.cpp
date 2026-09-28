@@ -61,7 +61,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   const bool bAllDeleted = Missing.Num() == 0;
   const bool bAnyDeleted = Deleted.Num() > 0;
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), bAllDeleted);
   Resp->SetNumberField(TEXT("deletedCount"), Deleted.Num());
 
   TArray<TSharedPtr<FJsonValue>> DeletedArray;
@@ -76,26 +75,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
     Resp->SetArrayField(TEXT("missing"), MissingArray);
   }
 
-  FString Message;
-  FString ErrorCode;
-  if (!bAnyDeleted && Missing.Num() > 0) {
-    Message = TEXT("Actors not found");
-    ErrorCode = TEXT("NOT_FOUND");
-  } else {
-    Message = bAllDeleted ? TEXT("Actors deleted")
-                          : TEXT("Some actors could not be deleted");
-    ErrorCode = bAllDeleted ? FString() : TEXT("DELETE_PARTIAL");
-  }
-
-  Resp->SetBoolField(TEXT("existsAfter"), false);
-  Resp->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
   Transaction.DescribeInto(Resp);
-
-  if (!bAllDeleted && Missing.Num() > 0 && !bAnyDeleted) {
-    SendStandardErrorResponse(this, Socket, RequestId, ErrorCode, Message);
-  } else {
-    SendStandardSuccessResponse(this, Socket, RequestId, Message, Resp);
+  if (bAllDeleted) {
+    Resp->SetBoolField(TEXT("existsAfter"), false);
+    Resp->SetStringField(TEXT("action"), TEXT("control_actor:deleted"));
+    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Actors deleted"), Resp);
+    return true;
   }
+  // A partial delete used to go out as a success envelope (only a nested
+  // success:false said otherwise), and a full miss dropped the missing list.
+  // The deleted and missing lists now ride in the error details.
+  SendStandardErrorResponse(
+      this, Socket, RequestId, bAnyDeleted ? TEXT("DELETE_PARTIAL") : TEXT("NOT_FOUND"),
+      FString::Printf(TEXT("%s: %s"),
+                      bAnyDeleted ? TEXT("The others were deleted; these were not found or could not be deleted")
+                                  : TEXT("No actor was deleted; not found or could not be deleted"),
+                      *FString::Join(Missing, TEXT(", "))),
+      Resp);
   return true;
 }
 bool UMcpAutomationBridgeSubsystem::HandleControlActorDuplicate(
