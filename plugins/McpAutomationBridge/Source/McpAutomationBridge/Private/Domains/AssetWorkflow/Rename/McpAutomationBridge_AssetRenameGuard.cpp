@@ -122,6 +122,22 @@ struct FMcpSettingsFollow
                 }
                 return;
             }
+            // FFilePath holds a long package name as plain text (ProjectPackagingSettings.MapsToCook): a moved map
+            // left there would silently drop out of every packaged build.
+            if (Struct->Struct->GetFName() == TEXT("FilePath"))
+            {
+                const FStrProperty* Text = FindFProperty<FStrProperty>(Struct->Struct, TEXT("FilePath"));
+                FString* Value = Text ? Text->ContainerPtrToValuePtr<FString>(Data) : nullptr;
+                const FMcpRenameTarget* Target = Value && Value->StartsWith(TEXT("/")) && Value->Len() < NAME_SIZE
+                    ? ByPackage.Find(FName(**Value)) : nullptr;
+                FString NewValue;
+                if (Target && Target->NewObjectPrefix.Split(TEXT("."), &NewValue, nullptr))
+                {
+                    const FString OldValue = *Value;
+                    Note(Owner, Label, [Value, OldValue, NewValue](bool bNew) { *Value = bNew ? NewValue : OldValue; });
+                }
+                return;
+            }
             for (TFieldIterator<FProperty> It(Struct->Struct); It; ++It)
             {
                 for (int32 Index = 0; Index < It->ArrayDim; ++Index)
