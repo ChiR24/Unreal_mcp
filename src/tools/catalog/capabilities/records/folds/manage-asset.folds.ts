@@ -67,8 +67,18 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   // lifecycle (tool-mode)
   { primary: 'duplicate', summary: 'Duplicate an asset to a new path or name.', members: ['duplicate_asset'] },
-  { primary: 'move', summary: 'Move an asset to a new path.', members: ['move_asset'] },
-  { primary: 'rename', summary: 'Rename an asset.', members: ['rename_asset'] },
+  {
+    primary: 'move',
+    summary: 'Move an asset to a new path, or a whole folder: every asset under it moves (sub-folders kept) and references, redirectors and project settings follow.',
+    topics: ['move folder', 'move content folder', 'relocate assets'],
+    members: ['move_asset'],
+  },
+  {
+    primary: 'rename',
+    summary: 'Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along.',
+    topics: ['rename folder'],
+    members: ['rename_asset'],
+  },
   {
     primary: 'delete', summary: 'Delete one or more assets.',
     topics: ['delete asset', 'delete assets', 'remove asset', 'delete asset permanently', 'delete imported asset'],

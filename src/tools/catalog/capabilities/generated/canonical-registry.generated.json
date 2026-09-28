@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b81314201d85c864",
+  "catalogRevision": "fc042651f6510f79",
   "recordCount": 384,
   "records": [
     {
@@ -8778,12 +8778,11 @@
         "family": "lifecycle",
         "topics": [
           "move",
-          "move asset",
-          "relocate asset",
           "move folder",
-          "rename folder"
+          "move content folder",
+          "relocate assets"
         ],
-        "summary": "Move an asset to a new path.",
+        "summary": "Move an asset to a new path, or a whole folder: every asset under it moves (sub-folders kept) and references, redirectors and project settings follow.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -8832,7 +8831,7 @@
       },
       "examples": [
         {
-          "title": "Move an asset to a new path.",
+          "title": "Move an asset to a new path, or a whole folder: every asset under it moves (sub-folders kept) and references, redirectors and project settings follow.",
           "input": {
             "sourcePath": "/Game/Textures/T_Rock",
             "destinationPath": "/Game/Textures/Terrain/T_Rock",
@@ -8873,7 +8872,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dea182528d5efb15af88c1e53505554fb2db2d6266bd7ecb217ec161bf69d8ea",
-        "content": "b374fbdd2ee23a192f7f5d04ce80c3fd0cb41e2e7f0a9d92c75dbd48e1db2fae"
+        "content": "4d3edf015804b2536f9da3efd45a2bd1081d8c68510334f92699747089756ad2"
       }
     },
     {
@@ -10009,9 +10008,9 @@
         "family": "lifecycle",
         "topics": [
           "rename",
-          "rename asset"
+          "rename folder"
         ],
-        "summary": "Rename an asset.",
+        "summary": "Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -10060,7 +10059,7 @@
       },
       "examples": [
         {
-          "title": "Rename an asset.",
+          "title": "Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along.",
           "input": {
             "sourcePath": "/Game/Meshes/SM_Crate",
             "newName": "SM_Crate_Large",
@@ -10101,7 +10100,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4f0612ab59ebf8b8e59d76cb797971c321143558f3555c89bb92d44f512de920",
-        "content": "6ed991dcfca44aa93054d906c9eb4a42368b2ec57c6c47769a7c45386aca5a44"
+        "content": "aaa78a422c5b43980096e8d403d49ea718a93e19c8c5d95ee0ee5e7389cc1c9a"
       }
     },
     {
