@@ -10743,6 +10743,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Animation created with the piece (the damage indicator's <slot>_Flash); play it on a hit."
         },
+        "applied": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "The widget as it is now: visibility, renderOpacity, renderTransform, slotClass, and the canvas anchors, alignment, position, size, zOrder and autoSize or the box padding and horizontal and vertical alignment."
+        },
         "appliedValue": {
           "type": "string",
           "description": "Literal actually stored on the pin (or the resolved object path for object/class pins)."
@@ -10762,6 +10768,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "bindingGuid": {
           "type": "string",
           "description": "MovieScene possessable GUID bound to the widget."
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Event binds: per event, its name, functionName, createdFunction, createdEvent, nodeId and callNodeId."
         },
         "blueprintPath": {
           "type": "string",
@@ -11014,6 +11029,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "description": "Function entry: name, parameters, nodeCount."
           }
         },
+        "generatedGetter": {
+          "type": "boolean",
+          "description": "Property binds: true when a converting getter was generated for a variable."
+        },
         "graphName": {
           "type": "string",
           "description": "Target graph name (Event Graph, Construction Script, etc.)."
@@ -11225,6 +11244,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "posY": {
           "type": "number",
           "description": "Y coordinate the node was placed at."
+        },
+        "property": {
+          "type": "string",
+          "description": "Property binds: the widget property now bound (Text, Visibility, ColorAndOpacity, bIsEnabled, ...)."
         },
         "propertyName": {
           "type": "string",

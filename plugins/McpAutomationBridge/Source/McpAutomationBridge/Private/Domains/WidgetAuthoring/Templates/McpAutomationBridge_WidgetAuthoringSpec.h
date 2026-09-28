@@ -17,7 +17,8 @@ class UWidgetBlueprint;
 // name:     widget name; "{slot}" becomes the caller's slotName.
 // props:    text, fontSize, color [r,g,b,a], justify (left|center|right), autoWrap,
 //           percent, visibility, opacity, padding (number or [l,t,r,b]), radius,
-//           imageSize [w,h], value, checked, width, height, options [strings].
+//           imageSize [w,h], value, checked, width, height, maxHeight, options [strings],
+//           selected, foreground [r,g,b,a] (combo text), slotPadding and minSlotSize [w,h] (grids).
 // slot:     canvas: anchors [4], alignment [2], position [2], size [2], offsets [4],
 //           autoSize, z; boxes: padding, hAlign, vAlign, fill; grids: row, column.
 namespace WidgetAuthoringHelpers
@@ -37,6 +38,9 @@ void McpCollectSpecNames(const TSharedPtr<FJsonObject>& Spec, const FString& Slo
 // OutCreated so a failure can be rolled back whole. Null with OutError on a bad node.
 UWidget* McpBuildWidgetSpec(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& Spec,
                             const FString& SlotName, TArray<UWidget*>& OutCreated, FString& OutError);
+
+// Applies a node's widget props (text, colour, sizes, values; see the list above) to Widget.
+void McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Node);
 
 // Applies a node's "slot" object to a widget that is already seated in a panel.
 void McpApplySpecSlot(UWidget* Widget, const TSharedPtr<FJsonObject>& SlotSpec);

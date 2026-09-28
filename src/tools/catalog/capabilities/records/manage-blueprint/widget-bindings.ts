@@ -13,6 +13,16 @@ import { P } from './properties.js';
 const FAMILY = 'widget-bindings';
 const DOMAIN = 'widget';
 
+// Property binds report the getter they bound; event binds report the node and call per event.
+const BINDING_OUT = {
+  slotName: { type: 'string', description: 'The widget that was bound.' },
+  property: { type: 'string', description: 'Property binds: the widget property now bound (Text, Visibility, ColorAndOpacity, bIsEnabled, ...).' },
+  functionName: { type: 'string', description: 'The function now bound or called: the generated Get_<Widget>_<Property> getter, or the event handler.' },
+  generatedGetter: { type: 'boolean', description: 'Property binds: true when a converting getter was generated for a variable.' },
+  bindings: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Event binds: per event, its name, functionName, createdFunction, createdEvent, nodeId and callNodeId.' },
+  saved: { type: 'boolean', description: 'Whether the Widget Blueprint was saved.' },
+};
+
 /** `required` and `example` share K, so a required binding argument absent from the example fails to compile. */
 interface BindingExtras<K extends string> {
   readonly props: Record<string, unknown>;
@@ -33,6 +43,7 @@ function binding<K extends string>(action: string, id: string, summary: string, 
     whenNotToUse: ['The widget should be set directly rather than bound.'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, bindingSource: P.bindingSource, ...extraProps },
     required: ['widgetPath', 'slotName', 'bindingSource', ...extraRequired],
+    outputProps: BINDING_OUT,
     effect: 'write',
     latency: 'interactive',
     resources: 'low',
@@ -58,6 +69,7 @@ export const WIDGET_BINDINGS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Only a hover sound is wanted (set_style hoverSoundPath).'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, onHoveredFunction: P.onHoveredFunction, onUnhoveredFunction: P.onUnhoveredFunction },
     required: ['widgetPath', 'slotName', 'onHoveredFunction'],
+    outputProps: BINDING_OUT,
     effect: 'write',
     latency: 'interactive',
     resources: 'low',

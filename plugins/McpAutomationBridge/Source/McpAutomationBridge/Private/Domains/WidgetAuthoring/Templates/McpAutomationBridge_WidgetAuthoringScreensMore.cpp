@@ -196,11 +196,10 @@ TSharedPtr<FJsonObject> BuildShop(const TSharedPtr<FJsonObject>& Payload, FStrin
     TSharedPtr<FJsonObject> Header = Append(Box, Node(TEXT("HorizontalBox"), TEXT("ShopHeader")));
     SetSlot(AddText(Header, TEXT("ShopTitle"), TEXT("Shop"), 32), TEXT(R"({"fill":1})"));
     SetSlot(Gold(AddText(Header, TEXT("CurrencyDisplay"), TEXT("Gold: 0"), 22)), TEXT(R"({"vAlign":"center"})"));
-    const int32 Rows = FMath::DivideAndRoundUp(Items, Columns);
     TSharedPtr<FJsonObject> Area = SetSlot(Append(Box, Node(TEXT("SizeBox"), TEXT("ItemsArea"))), TEXT(R"({"padding":[0,12,0,12]})"));
-    Area->SetNumberField(TEXT("height"), FMath::Min(Rows * 200, 480));
+    Area->SetNumberField(TEXT("maxHeight"), 480);
     TSharedPtr<FJsonObject> Grid = Append(Append(Area, Node(TEXT("ScrollBox"), TEXT("ItemsScroll"))), Node(TEXT("UniformGridPanel"), TEXT("ItemsGrid")));
-    Numbers(Grid, TEXT("slotPadding"), { 6, 6, 6, 6 });
+    Numbers(Numbers(Grid, TEXT("slotPadding"), { 6, 6, 6, 6 }), TEXT("minSlotSize"), { 150, 0 });
     for (int32 Index = 0; Index < Items; ++Index)
     {
         const FString Name = FString::Printf(TEXT("Item_%d"), Index + 1);

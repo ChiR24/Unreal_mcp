@@ -15,6 +15,7 @@
 #include "Components/TextBlock.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/TreeView.h"
+#include "Domains/WidgetAuthoring/Styling/McpAutomationBridge_WidgetAuthoringImageSize.h"
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringTreeMutation.h"
 #include "Styling/CoreStyle.h"
 #include "WidgetBlueprint.h"
@@ -119,7 +120,7 @@ bool HandleWidgetAuthoringTypedComponents(
             }
             if (const TSharedPtr<FJsonObject> Size = GetObjectField(Payload, TEXT("brushSize")))
             {
-                Image->SetDesiredSizeOverride(FVector2D(GetJsonNumberField(Size, TEXT("x"), 32.0), GetJsonNumberField(Size, TEXT("y"), 32.0)));
+                McpSetImageSize(Image, FVector2D(GetJsonNumberField(Size, TEXT("x"), 32.0), GetJsonNumberField(Size, TEXT("y"), 32.0)));
             }
             ReadColor(TEXT("colorAndOpacity"), FLinearColor::White, [Image](const FLinearColor& Color) { Image->SetColorAndOpacity(Color); });
         });

@@ -16,6 +16,13 @@ import { P } from './properties.js';
 const FAMILY = 'widget-layout';
 const DOMAIN = 'widget';
 
+// Every layout setter replies with the widget's layout read back after the write.
+const LAYOUT_OUT = {
+  slotName: P.slotName,
+  applied: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'The widget as it is now: visibility, renderOpacity, renderTransform, slotClass, and the canvas anchors, alignment, position, size, zOrder and autoSize or the box padding and horizontal and vertical alignment.' },
+  saved: { type: 'boolean', description: 'Whether the Widget Blueprint was saved.' },
+};
+
 /**
  * `required` and `example` share the key parameter K, so a property declared
  * required with no example value fails to compile. The example is what a client
@@ -38,6 +45,7 @@ function layout<K extends string>(action: string, id: string, summary: string, e
     whenNotToUse: ['The widget should be removed rather than restyled.'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, ...extras.props },
     required: ['widgetPath', 'slotName', ...extras.required],
+    outputProps: LAYOUT_OUT,
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',

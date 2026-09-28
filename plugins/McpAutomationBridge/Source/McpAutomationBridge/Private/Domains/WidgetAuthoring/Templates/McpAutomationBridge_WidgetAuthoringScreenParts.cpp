@@ -60,12 +60,14 @@ TSharedPtr<FJsonObject> Numbers(const TSharedPtr<FJsonObject>& Target, const TCH
 
 TSharedPtr<FJsonObject> Button(const FString& Name, const FString& Label, double FontSize)
 {
-    TSharedPtr<FJsonObject> Result = Numbers(Node(TEXT("Button"), Name), TEXT("color"), { 0.08, 0.08, 0.11, 0.92 });
+    // A slate-blue face reads on the near-black backdrops and on the dark panels alike.
+    TSharedPtr<FJsonObject> Result = Numbers(Node(TEXT("Button"), Name), TEXT("color"), { 0.24, 0.27, 0.36, 1.0 });
     Result->SetNumberField(TEXT("radius"), 8);
     SetSlot(Result, TEXT(R"({"padding":[0,6,0,6],"hAlign":"fill"})"));
     TSharedPtr<FJsonObject> Text = Append(Result, Node(TEXT("TextBlock"), Name + TEXT("_Text"), Label));
     Text->SetNumberField(TEXT("fontSize"), FontSize);
     Text->SetStringField(TEXT("justify"), TEXT("center"));
+    SetSlot(Text, TEXT(R"({"padding":[20,8,20,8],"hAlign":"center","vAlign":"center"})"));
     return Result;
 }
 

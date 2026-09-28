@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1497126017899a01",
+  "catalogRevision": "b30866f74f7c3799",
   "recordCount": 382,
   "records": [
     {
@@ -12009,13 +12009,38 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
+            "slotName": {
+              "type": "string",
+              "description": "The widget that was bound."
+            },
+            "property": {
+              "type": "string",
+              "description": "Property binds: the widget property now bound (Text, Visibility, ColorAndOpacity, bIsEnabled, ...)."
+            },
+            "functionName": {
+              "type": "string",
+              "description": "The function now bound or called: the generated Get_<Widget>_<Property> getter, or the event handler."
+            },
+            "generatedGetter": {
+              "type": "boolean",
+              "description": "Property binds: true when a converting getter was generated for a variable."
+            },
+            "bindings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Event binds: per event, its name, functionName, createdFunction, createdEvent, nodeId and callNodeId."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint was saved."
+            },
             "widgetPath": {
               "type": "string",
               "description": "Canonical /Game Widget Blueprint asset path."
-            },
-            "slotName": {
-              "type": "string",
-              "description": "Slot name for a child widget inside its parent."
             },
             "stringTableId": {
               "type": "string",
@@ -12132,8 +12157,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d421de393f82118d441b776d5cd65f47754ed9a49b18088992ba66ae21bdd396",
-        "content": "9895551a5959a1c9dac2de77387f21b4dfce9291d39053a02b798fa83dc43fca"
+        "schema": "4bee3c47d247b39a27e0d9a211246f170202664f2e75629440892263697392c0",
+        "content": "1e18244c7dd1cf7bb928f47dfcb13499f5f67d7a6b6b6db9879df3ad44e7c14e"
       }
     },
     {
@@ -17432,6 +17457,20 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "Slot name for a child widget inside its parent."
+            },
+            "applied": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The widget as it is now: visibility, renderOpacity, renderTransform, slotClass, and the canvas anchors, alignment, position, size, zOrder and autoSize or the box padding and horizontal and vertical alignment."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint was saved."
             }
           },
           "required": [
@@ -17584,8 +17623,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cad7f57a76ffa49b7857d358082e253012d01801fcfafeb9de90deea1fc0d222",
-        "content": "1946cc769db66c6a4bf7bc44b3d544de04796066eed2315aa98952336bcde191"
+        "schema": "16fbd7f1f6ac96adcb971c774b008c6ae3fb466f559a103f42952de7639a6ab3",
+        "content": "ce833f9d2736de7fac45f67f1ebfc0bce47ad95be63dc3e870d44dcd639a2a9b"
       }
     },
     {

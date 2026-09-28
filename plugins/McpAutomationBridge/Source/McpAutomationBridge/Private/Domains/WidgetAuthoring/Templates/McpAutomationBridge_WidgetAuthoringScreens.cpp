@@ -121,6 +121,7 @@ TSharedPtr<FJsonObject> BuildSettingsMenu(const TSharedPtr<FJsonObject>& Payload
         Quality->SetArrayField(TEXT("options"), { MakeShared<FJsonValueString>(TEXT("Low")), MakeShared<FJsonValueString>(TEXT("Medium")),
                                                    MakeShared<FJsonValueString>(TEXT("High")), MakeShared<FJsonValueString>(TEXT("Epic")) });
         Quality->SetStringField(TEXT("selected"), TEXT("High"));
+        Numbers(Quality, TEXT("foreground"), { 0.03, 0.03, 0.04, 1.0 });
         SettingRow(List, TEXT("Quality"), Quality);
         SettingRow(List, TEXT("Fullscreen"), Node(TEXT("CheckBox"), TEXT("FullscreenCheck")));
         TSharedPtr<FJsonObject> VSync = Node(TEXT("CheckBox"), TEXT("VSyncCheck"));
