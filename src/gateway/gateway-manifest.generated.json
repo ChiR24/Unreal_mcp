@@ -12443,6 +12443,7 @@
         "bWaterVolume",
         "blendRadius",
         "blendWeight",
+        "blueprintPath",
         "bounds",
         "boxExtent",
         "capsuleHalfHeight",
@@ -12467,7 +12468,9 @@
         "hlodLayerPath",
         "killZHeight",
         "kind",
+        "label",
         "layerType",
+        "levelAssetPath",
         "levelName",
         "levelPath",
         "loadAfterCreate",
@@ -12487,6 +12490,7 @@
         "setting",
         "sourceNodeName",
         "sourcePinName",
+        "spawn",
         "sphereRadius",
         "streamingDistance",
         "streamingMethod",
@@ -12582,6 +12586,10 @@
           "blendWeight": {
             "type": "number",
             "description": "Blend weight (0.0-1.0) for post process."
+          },
+          "blueprintPath": {
+            "type": "string",
+            "description": "Packed Level Blueprint to create or update (default <level folder>/BPP_<LevelName>)."
           },
           "bounds": {
             "type": "array",
@@ -12735,14 +12743,24 @@
             "enum": [
               "level",
               "sublevel",
+              "level_instance",
+              "packed_level_actor",
               "data_layer",
               "minimap_volume"
             ],
             "description": "Which create level structure variant to run."
           },
+          "label": {
+            "type": "string",
+            "description": "Actor label of the new instance (default LI_<LevelName>)."
+          },
           "layerType": {
             "type": "string",
             "description": "Layer type for runtime hash set grid."
+          },
+          "levelAssetPath": {
+            "type": "string",
+            "description": "Saved level asset to instance or pack, e.g. /Game/Maps/Room01 (not the open level)."
           },
           "levelName": {
             "type": "string",
@@ -12890,6 +12908,10 @@
           "sourcePinName": {
             "type": "string",
             "description": "Source pin name."
+          },
+          "spawn": {
+            "type": "boolean",
+            "description": "Place the Blueprint in the open level (default true)."
           },
           "sphereRadius": {
             "type": "number",

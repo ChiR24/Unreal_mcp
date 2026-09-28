@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "db5c9ac77a9917ac",
+  "catalogRevision": "fa45d870c8756c6b",
   "recordCount": 382,
   "records": [
     {
@@ -62868,6 +62868,8 @@
       "aliases": [
         "manage_level_structure.create_level",
         "manage_level_structure.create_sublevel",
+        "manage_level_structure.create_level_instance",
+        "manage_level_structure.create_packed_level_actor",
         "manage_level_structure.create_data_layer",
         "manage_level_structure.create_minimap_volume"
       ],
@@ -62892,6 +62894,20 @@
         },
         {
           "tool": "manage_level_structure",
+          "action": "create_level_instance",
+          "folded": {
+            "kind": "level_instance"
+          }
+        },
+        {
+          "tool": "manage_level_structure",
+          "action": "create_packed_level_actor",
+          "folded": {
+            "kind": "packed_level_actor"
+          }
+        },
+        {
+          "tool": "manage_level_structure",
           "action": "create_data_layer",
           "folded": {
             "kind": "data_layer"
@@ -62912,13 +62928,17 @@
           "create_level_structure",
           "create level",
           "create sublevel",
+          "level instance",
+          "packed level actor",
           "data layer",
           "minimap volume"
         ],
-        "summary": "Create level structure: a level, sublevel, data layer, or minimap volume.",
+        "summary": "Create level structure: a level, sublevel, level instance, packed level blueprint, data layer, or minimap volume.",
         "whenToUse": [
           "A brand-new level must be created and opened.",
           "A streaming child level must be created.",
+          "A saved level must appear inside the open level as one movable actor.",
+          "A level of repeated static meshes must become one cheap, reusable Blueprint actor.",
           "A Runtime or Editor data layer must be created.",
           "A minimap capture volume must be placed."
         ],
@@ -62980,6 +63000,60 @@
                 "AlwaysLoaded"
               ],
               "description": "Level streaming method: Blueprint (loaded on demand) or AlwaysLoaded."
+            },
+            "levelAssetPath": {
+              "type": "string",
+              "description": "Saved level asset to instance or pack, e.g. /Game/Maps/Room01 (not the open level)."
+            },
+            "location": {
+              "type": "object",
+              "description": "World location {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "rotation": {
+              "type": "object",
+              "description": "Rotation {pitch, yaw, roll}.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
+            },
+            "label": {
+              "type": "string",
+              "description": "Actor label of the new instance (default LI_<LevelName>)."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Packed Level Blueprint to create or update (default <level folder>/BPP_<LevelName>)."
+            },
+            "spawn": {
+              "type": "boolean",
+              "description": "Place the Blueprint in the open level (default true)."
             },
             "dataLayerName": {
               "type": "string",
@@ -63047,25 +63121,6 @@
               "type": "string",
               "description": "Volume actor name."
             },
-            "location": {
-              "type": "object",
-              "description": "World location {x, y, z}.",
-              "properties": {
-                "x": {
-                  "type": "number",
-                  "description": "X"
-                },
-                "y": {
-                  "type": "number",
-                  "description": "Y"
-                },
-                "z": {
-                  "type": "number",
-                  "description": "Z"
-                }
-              },
-              "additionalProperties": false
-            },
             "extent": {
               "type": "object",
               "description": "Extent (half-size) of the volume in each axis.",
@@ -63090,6 +63145,8 @@
               "enum": [
                 "level",
                 "sublevel",
+                "level_instance",
+                "packed_level_actor",
                 "data_layer",
                 "minimap_volume"
               ],
@@ -63118,6 +63175,50 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "actorName": {
+              "type": "string",
+              "description": "Object name of the placed Level Instance actor."
+            },
+            "actorLabel": {
+              "type": "string",
+              "description": "Its label in the outliner."
+            },
+            "worldAsset": {
+              "type": "string",
+              "description": "The level the instance loads."
+            },
+            "loaded": {
+              "type": "boolean",
+              "description": "Whether the instanced level is loaded in the editor now."
+            },
+            "childActorCount": {
+              "type": "number",
+              "description": "Actors in the loaded instance level."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the open level was saved."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "The Packed Level Blueprint that was created or updated."
+            },
+            "blueprintCreated": {
+              "type": "boolean",
+              "description": "True when the Blueprint was new."
+            },
+            "ismComponentCount": {
+              "type": "number",
+              "description": "Instanced static mesh components on the Blueprint."
+            },
+            "instanceCount": {
+              "type": "number",
+              "description": "Mesh instances across those components."
+            },
+            "blueprintSaved": {
+              "type": "boolean",
+              "description": "Whether the Blueprint was saved."
             }
           },
           "required": [
@@ -63128,7 +63229,7 @@
       },
       "examples": [
         {
-          "title": "Create level structure: a level, sublevel, data layer, or minimap volume.",
+          "title": "Create level structure: a level, sublevel, level instance, packed level blueprint, data layer, or minimap volume.",
           "input": {
             "action": "create_level_structure",
             "levelName": "NewMap",
@@ -63169,6 +63270,8 @@
           "actions": {
             "level": "create_level",
             "sublevel": "create_sublevel",
+            "level_instance": "create_level_instance",
+            "packed_level_actor": "create_packed_level_actor",
             "data_layer": "create_data_layer",
             "minimap_volume": "create_minimap_volume"
           },
@@ -63200,6 +63303,27 @@
             "streamingMethod": [
               "sublevel"
             ],
+            "levelAssetPath": [
+              "level_instance",
+              "packed_level_actor"
+            ],
+            "location": [
+              "level_instance",
+              "packed_level_actor",
+              "minimap_volume"
+            ],
+            "rotation": [
+              "level_instance"
+            ],
+            "label": [
+              "level_instance"
+            ],
+            "blueprintPath": [
+              "packed_level_actor"
+            ],
+            "spawn": [
+              "packed_level_actor"
+            ],
             "dataLayerName": [
               "data_layer"
             ],
@@ -63227,9 +63351,6 @@
             "volumeName": [
               "minimap_volume"
             ],
-            "location": [
-              "minimap_volume"
-            ],
             "extent": [
               "minimap_volume"
             ]
@@ -63238,8 +63359,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7b6ebaca26b5f73105fac408136ffb26ce6c0ed6affbaf42deaa73ec2280d2c5",
-        "content": "ac947d45a66ffa4f0407dee977de7831dda2b2b226d7d0fc7db5153c6908f437"
+        "schema": "c28841c75554fdb86e0c805fb39061463e869ea91a41949aa46f9f8933d02ed3",
+        "content": "1ede4cd34cf47feffae45685645ea1e2fdd3c7ffb52f8acdd4490fb81f8bc343"
       }
     },
     {

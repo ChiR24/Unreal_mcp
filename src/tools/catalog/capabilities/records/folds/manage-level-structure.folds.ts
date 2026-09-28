@@ -4,9 +4,9 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_LEVEL_STRUCTURE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_level_structure', selector: 'kind',
-    summary: 'Create level structure: a level, sublevel, data layer, or minimap volume.',
-    topics: ['create level', 'create sublevel', 'data layer', 'minimap volume'],
-    members: { level: 'create_level', sublevel: 'create_sublevel', data_layer: 'create_data_layer', minimap_volume: 'create_minimap_volume' },
+    summary: 'Create level structure: a level, sublevel, level instance, packed level blueprint, data layer, or minimap volume.',
+    topics: ['create level', 'create sublevel', 'level instance', 'packed level actor', 'data layer', 'minimap volume'],
+    members: { level: 'create_level', sublevel: 'create_sublevel', level_instance: 'create_level_instance', packed_level_actor: 'create_packed_level_actor', data_layer: 'create_data_layer', minimap_volume: 'create_minimap_volume' },
   },
   {
     primary: 'configure_level_streaming', selector: 'setting',

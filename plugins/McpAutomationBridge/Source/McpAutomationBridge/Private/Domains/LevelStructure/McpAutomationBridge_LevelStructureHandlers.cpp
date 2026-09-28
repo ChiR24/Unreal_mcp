@@ -96,6 +96,14 @@ bool UMcpAutomationBridgeSubsystem::HandleManageLevelStructureAction(
     {
         bHandled = HandleConfigureHlodLayer(this, RequestId, Payload, Socket);
     }
+    else if (SubAction == TEXT("create_level_instance"))
+    {
+        bHandled = HandleCreateLevelInstance(this, RequestId, Payload, Socket);
+    }
+    else if (SubAction == TEXT("create_packed_level_actor"))
+    {
+        bHandled = HandleCreatePackedLevelActor(this, RequestId, Payload, Socket);
+    }
     else if (SubAction == TEXT("create_minimap_volume"))
     {
         bHandled = HandleCreateMinimapVolume(this, RequestId, Payload, Socket);

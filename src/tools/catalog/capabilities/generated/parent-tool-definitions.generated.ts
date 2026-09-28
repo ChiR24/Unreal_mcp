@@ -15254,6 +15254,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Blend weight (0.0-1.0) for post process."
         },
+        "blueprintPath": {
+          "type": "string",
+          "description": "Packed Level Blueprint to create or update (default <level folder>/BPP_<LevelName>)."
+        },
         "bounds": {
           "type": "array",
           "description": "Volume bounds as a six-number array [minX, minY, minZ, maxX, maxY, maxZ].",
@@ -15406,14 +15410,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "level",
             "sublevel",
+            "level_instance",
+            "packed_level_actor",
             "data_layer",
             "minimap_volume"
           ],
           "description": "Which create level structure variant to run."
         },
+        "label": {
+          "type": "string",
+          "description": "Actor label of the new instance (default LI_<LevelName>)."
+        },
         "layerType": {
           "type": "string",
           "description": "Layer type for runtime hash set grid."
+        },
+        "levelAssetPath": {
+          "type": "string",
+          "description": "Saved level asset to instance or pack, e.g. /Game/Maps/Room01 (not the open level)."
         },
         "levelName": {
           "type": "string",
@@ -15562,6 +15576,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Source pin name."
         },
+        "spawn": {
+          "type": "boolean",
+          "description": "Place the Blueprint in the open level (default true)."
+        },
         "sphereRadius": {
           "type": "number",
           "description": "Radius for sphere trigger volumes."
@@ -15708,14 +15726,54 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "actorLabel": {
+          "type": "string",
+          "description": "Its label in the outliner."
+        },
+        "actorName": {
+          "type": "string",
+          "description": "Object name of the placed Level Instance actor."
+        },
+        "blueprintCreated": {
+          "type": "boolean",
+          "description": "True when the Blueprint was new."
+        },
+        "blueprintPath": {
+          "type": "string",
+          "description": "The Packed Level Blueprint that was created or updated."
+        },
+        "blueprintSaved": {
+          "type": "boolean",
+          "description": "Whether the Blueprint was saved."
+        },
+        "childActorCount": {
+          "type": "number",
+          "description": "Actors in the loaded instance level."
+        },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "instanceCount": {
+          "type": "number",
+          "description": "Mesh instances across those components."
+        },
+        "ismComponentCount": {
+          "type": "number",
+          "description": "Instanced static mesh components on the Blueprint."
+        },
+        "loaded": {
+          "type": "boolean",
+          "description": "Whether the instanced level is loaded in the editor now."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the open level was saved."
         },
         "success": {
           "type": "boolean",
@@ -15727,6 +15785,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Volume actor paths."
+        },
+        "worldAsset": {
+          "type": "string",
+          "description": "The level the instance loads."
         },
         "worldPartition": {
           "type": "boolean",

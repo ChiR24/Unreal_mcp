@@ -1186,11 +1186,13 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_level_structure::create_data_layer": "interactive|medium",
   "manage_level_structure::create_kill_z_volume": "interactive|low",
   "manage_level_structure::create_level": "interactive|medium",
+  "manage_level_structure::create_level_instance": "interactive|medium",
   "manage_level_structure::create_level_structure": "interactive|medium",
   "manage_level_structure::create_lightmass_importance_volume": "interactive|low",
   "manage_level_structure::create_minimap_volume": "interactive|medium",
   "manage_level_structure::create_nav_mesh_bounds_volume": "interactive|low",
   "manage_level_structure::create_nav_modifier_volume": "interactive|low",
+  "manage_level_structure::create_packed_level_actor": "interactive|medium",
   "manage_level_structure::create_pain_causing_volume": "interactive|low",
   "manage_level_structure::create_physics_volume": "interactive|low",
   "manage_level_structure::create_post_process_volume": "interactive|low",
@@ -1492,4 +1494,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1479;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1481;

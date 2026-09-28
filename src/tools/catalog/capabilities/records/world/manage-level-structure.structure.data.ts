@@ -15,6 +15,9 @@ import { P } from './properties.js';
 const F = 'structure';
 // The loaded level whose level blueprint an edit targets; omit for the persistent level.
 const BP_LEVEL = { type: 'string', description: 'Loaded level (persistent or streaming sublevel) whose level blueprint to edit; defaults to the persistent level.' };
+// A saved level asset another level instances; never the open level itself.
+const LEVEL_ASSET = { type: 'string', description: 'Saved level asset to instance or pack, e.g. /Game/Maps/Room01 (not the open level).' };
+const SAVE_LEVEL = { type: 'boolean', description: 'Save the open level (default true unless it was never saved).' };
 
 export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -97,6 +100,53 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { volumeLocation: P.volumeLocation, volumeExtent: P.volumeExtent, volumeName: P.volumeName, location: P.location, extent: P.extent, save: P.levelEditSave },
     required: ['location'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_minimap_volume', location: { x: 0, y: 0, z: 0 } },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_level_structure', action: 'create_level_instance', dispatchAction: 'create_level_instance',
+    topics: ['level instance', 'instance a level', 'place level in level', 'reuse room level'],
+    family: F, summary: 'Place a Level Instance actor that loads an existing level asset at a location, so one saved level (a room, a building) can be reused inside another.',
+    whenToUse: ['A saved level must appear inside the open level as one movable actor.'], whenNotToUse: ['The level should stream as a sublevel; use create_sublevel or configure_level_streaming.'],
+    inputProps: {
+      levelAssetPath: LEVEL_ASSET,
+      location: P.location,
+      rotation: P.rotation,
+      label: { type: 'string', description: 'Actor label of the new instance (default LI_<LevelName>).' },
+      save: SAVE_LEVEL,
+    },
+    required: ['levelAssetPath'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: {
+      actorName: { type: 'string', description: 'Object name of the placed Level Instance actor.' },
+      actorLabel: { type: 'string', description: 'Its label in the outliner.' },
+      worldAsset: { type: 'string', description: 'The level the instance loads.' },
+      loaded: { type: 'boolean', description: 'Whether the instanced level is loaded in the editor now.' },
+      childActorCount: { type: 'number', description: 'Actors in the loaded instance level.' },
+      saved: { type: 'boolean', description: 'Whether the open level was saved.' },
+    },
+    exampleInput: { action: 'create_level_instance', levelAssetPath: '/Game/Maps/Room01', location: { x: 1000, y: 0, z: 0 } },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_level_structure', action: 'create_packed_level_actor', dispatchAction: 'create_packed_level_actor',
+    topics: ['packed level actor', 'packed level blueprint', 'bake level into instanced meshes'],
+    family: F, summary: 'Bake the static meshes of a level into a Packed Level Blueprint (instanced static mesh components) and optionally place it (UE 5.3 or later).',
+    whenToUse: ['A level of repeated static meshes must become one cheap, reusable Blueprint actor.'], whenNotToUse: ['The level has gameplay actors that must stay live; use create_level_instance.'],
+    inputProps: {
+      levelAssetPath: LEVEL_ASSET,
+      blueprintPath: { type: 'string', description: 'Packed Level Blueprint to create or update (default <level folder>/BPP_<LevelName>).' },
+      spawn: { type: 'boolean', description: 'Place the Blueprint in the open level (default true).' },
+      location: P.location,
+      save: { type: 'boolean', description: 'Save the Blueprint (default true) and, when it is placed, the open level (default true unless the level was never saved).' },
+    },
+    required: ['levelAssetPath'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: {
+      blueprintPath: { type: 'string', description: 'The Packed Level Blueprint that was created or updated.' },
+      blueprintCreated: { type: 'boolean', description: 'True when the Blueprint was new.' },
+      ismComponentCount: { type: 'number', description: 'Instanced static mesh components on the Blueprint.' },
+      instanceCount: { type: 'number', description: 'Mesh instances across those components.' },
+      blueprintSaved: { type: 'boolean', description: 'Whether the Blueprint was saved.' },
+      actorName: { type: 'string', description: 'The placed actor, when spawn is true.' },
+      saved: { type: 'boolean', description: 'Whether the open level was saved.' },
+    },
+    exampleInput: { action: 'create_packed_level_actor', levelAssetPath: '/Game/Maps/Room01', location: { x: 0, y: 2000, z: 0 } },
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'open_level_blueprint', dispatchAction: 'open_level_blueprint',

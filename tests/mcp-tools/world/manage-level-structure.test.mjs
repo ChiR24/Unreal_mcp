@@ -22,6 +22,8 @@ const HLOD_FOLDER = `${TEST_FOLDER}/HLOD`;
 const MINIMAP_VOLUME = `StructMiniMap_${ts}`;
 const LEVEL_INSTANCE = `StructLevelInstance_${ts}`;
 const PACKED_LEVEL = `StructPackedLevel_${ts}`;
+const PACKED_BLUEPRINT = `${TEST_FOLDER}/${PACKED_LEVEL}`;
+const TEMPLATE_MAP = '/Engine/Maps/Templates/Template_Default';
 const SEQUENCE_NODE = `StructSequence_${ts}`;
 const SEQUENCE_TARGET_NODE = `StructSequenceTarget_${ts}`;
 const STREAMING_VOLUME = `StreamingVolume_${SUBLEVEL_PATH}`;
@@ -60,6 +62,11 @@ const testCases = [
   { scenario: 'CONNECT: connect_level_blueprint_nodes', toolName: 'manage_level_structure', arguments: { action: 'connect_level_blueprint_nodes', sourceNodeName: SEQUENCE_NODE, targetNodeName: SEQUENCE_TARGET_NODE, sourcePinName: 'then_0', targetPinName: 'execute' }, expected: 'success' },
 
   // === LEVEL INSTANCE / PACKED LEVEL ===
+  // The engine's default template map holds a floor mesh, so it can be both instanced and packed.
+  { scenario: 'CREATE: create_level_instance loads the level it names', toolName: 'manage_level_structure', arguments: { action: 'create_level_instance', levelAssetPath: TEMPLATE_MAP, label: LEVEL_INSTANCE, location: { x: 5000, y: 0, z: 0 }, rotation: { pitch: 0, yaw: 90, roll: 0 }, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.loaded', equals: true, label: 'instanced level loaded' }, { path: 'structuredContent.result.childActorCount', gte: 1, label: 'instance holds the level actors' }] },
+  { scenario: 'CREATE: create_level_instance of a missing level is refused', toolName: 'manage_level_structure', arguments: { action: 'create_level_instance', levelAssetPath: `${TEST_FOLDER}/NoSuchLevel_${ts}` }, expected: 'error|LEVEL_NOT_FOUND' },
+  { scenario: 'CREATE: create_packed_level_actor bakes the level meshes', toolName: 'manage_level_structure', arguments: { action: 'create_packed_level_actor', levelAssetPath: TEMPLATE_MAP, blueprintPath: PACKED_BLUEPRINT, spawn: true, location: { x: 0, y: 5000, z: 0 }, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.instanceCount', gte: 1, label: 'meshes packed as instances' }, { path: 'structuredContent.result.ismComponentCount', gte: 1, label: 'instanced mesh components on the Blueprint' }] },
+  { scenario: 'CREATE: create_packed_level_actor of a level with no meshes is refused', toolName: 'manage_level_structure', arguments: { action: 'create_packed_level_actor', levelAssetPath: LEVEL_PATH, blueprintPath: `${TEST_FOLDER}/BPP_Empty_${ts}`, spawn: false }, expected: 'error|NOTHING_TO_PACK' },
 
   // === INFO ===
   { scenario: 'INFO: get_level_structure_info', toolName: 'manage_level_structure', arguments: { action: 'get_level_structure_info' }, expected: 'success' },
@@ -68,6 +75,7 @@ const testCases = [
   // === CLEANUP ===
   { scenario: 'Cleanup: delete level instance', toolName: 'control_actor', arguments: { action: 'delete', actorName: LEVEL_INSTANCE }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete packed level actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: PACKED_LEVEL }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete packed level blueprint', toolName: 'manage_asset', arguments: { action: 'delete', path: PACKED_BLUEPRINT, force: true }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete minimap volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: MINIMAP_VOLUME }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete streaming volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: STREAMING_VOLUME }, expected: 'success|not found' },
   { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: TEST_ACTOR }, expected: 'success|not found' },
