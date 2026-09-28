@@ -15505,7 +15505,7 @@
           },
           "category": {
             "type": "string",
-            "description": "Alternate section selector."
+            "description": "A section by friendly name instead of section: general, maps, packaging, rendering, input, physics, collision, audio, engine, navigation."
           },
           "categoryName": {
             "type": "string",

@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Domains/Ui/McpAutomationBridge_UiHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsProjectConfig.h"
 
 #include "Engine/Engine.h"
@@ -21,6 +22,7 @@ const TCHAR *SectionForCategory(const FString &Category) {
       {TEXT("general"), TEXT("/Script/EngineSettings.GeneralProjectSettings")},
       {TEXT("project"), TEXT("/Script/EngineSettings.GeneralProjectSettings")},
       {TEXT("maps"), TEXT("/Script/EngineSettings.GameMapsSettings")},
+      {TEXT("packaging"), TEXT("/Script/DeveloperToolSettings.ProjectPackagingSettings")},
       {TEXT("game"), TEXT("/Script/EngineSettings.GameMapsSettings")},
       {TEXT("mapsandmodes"), TEXT("/Script/EngineSettings.GameMapsSettings")},
       {TEXT("rendering"), TEXT("/Script/Engine.RendererSettings")},
@@ -53,6 +55,11 @@ UClass *ResolveSettingsClass(const FString &Section) {
   UClass *Class = FindObject<UClass>(nullptr, *Path);
   if (!Class) {
     Class = LoadObject<UClass>(nullptr, *Path);
+  }
+  // Classes move between modules (UnrealEd.ProjectPackagingSettings is DeveloperToolSettings in UE5):
+  // the class name alone still finds it.
+  if (!Class) {
+    Class = McpFindTypeQuiet(FPackageName::ObjectPathToObjectName(Path));
   }
   return Class;
 }
@@ -94,7 +101,7 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
       const TCHAR *Mapped = SectionForCategory(Category);
       if (!Mapped) {
         Message = FString::Printf(
-            TEXT("Unknown settings category '%s'. Use a section path such as /Script/Engine.RendererSettings, or one of: general, maps, rendering, input, physics, collision, audio, engine, navigation"),
+            TEXT("Unknown settings category '%s'. Use a section path such as /Script/Engine.RendererSettings, or one of: general, maps, packaging, rendering, input, physics, collision, audio, engine, navigation"),
             *Category);
         ErrorCode = TEXT("NOT_FOUND");
         Resp->SetStringField(TEXT("error"), Message);
@@ -148,7 +155,10 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
       }
       Resp->SetStringField(TEXT("section"), Class->GetPathName());
       Resp->SetStringField(TEXT("configName"), Class->ClassConfigName.ToString());
-      Resp->SetObjectField(TEXT("settings"), Values);
+      // A keyed read answers that key only; the whole section (71 packaging properties) buried it.
+      if (Key.IsEmpty()) {
+        Resp->SetObjectField(TEXT("settings"), Values);
+      }
       Resp->SetNumberField(TEXT("settingCount"), Count);
       bSuccess = true;
       Message = FString::Printf(TEXT("Project settings retrieved (%d config properties)"), Count);

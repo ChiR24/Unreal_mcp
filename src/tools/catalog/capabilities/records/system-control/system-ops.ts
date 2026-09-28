@@ -379,7 +379,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       key: { type: 'string', description: 'Single config property to read from the section; the reply then carries key and value.' },
       section: { type: 'string', description: 'Settings section.' },
-      category: { type: 'string', description: 'Alternate section selector.' },
+      category: { type: 'string', description: 'A section by friendly name instead of section: general, maps, packaging, rendering, input, physics, collision, audio, engine, navigation.' },
     },
     required: [],
     // The local TS wrapper re-dispatches to system_control; the native Ui
@@ -389,7 +389,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
       settings: {
         type: 'object',
         'x-unreal-reflection-boundary': true,
-        description: 'Config properties of the requested section (every CPF_Config property of the settings class as text), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given.',
+        description: 'Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given.',
       },
       section: { type: 'string', description: 'Resolved settings class path.' },
       configName: { type: 'string', description: 'Config file family (Engine, Game, Input, ...).' },

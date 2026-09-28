@@ -18869,7 +18869,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "category": {
           "type": "string",
-          "description": "Alternate section selector."
+          "description": "A section by friendly name instead of section: general, maps, packaging, rendering, input, physics, collision, audio, engine, navigation."
         },
         "categoryName": {
           "type": "string",
@@ -19677,7 +19677,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "settings": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
-          "description": "Config properties of the requested section (every CPF_Config property of the settings class as text), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
+          "description": "Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
         },
         "status": {
           "type": "string",

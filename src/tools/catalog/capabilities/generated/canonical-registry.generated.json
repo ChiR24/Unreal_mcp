@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5386f74b4ca668ce",
+  "catalogRevision": "a513846c209cce8f",
   "recordCount": 384,
   "records": [
     {
@@ -83276,7 +83276,7 @@
             },
             "category": {
               "type": "string",
-              "description": "Alternate section selector."
+              "description": "A section by friendly name instead of section: general, maps, packaging, rendering, input, physics, collision, audio, engine, navigation."
             }
           },
           "required": [
@@ -83304,7 +83304,7 @@
             "settings": {
               "type": "object",
               "x-unreal-reflection-boundary": true,
-              "description": "Config properties of the requested section (every CPF_Config property of the settings class as text), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
+              "description": "Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
             },
             "section": {
               "type": "string",
@@ -83376,8 +83376,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "817a120bece7648c9c6dd7c7f983909b6b99f09b9209e50daab5bac42d6b333e",
-        "content": "cc3ef75acc7b062d3e6b373d9ce0cb1256a647f6051a9d797b5d11be6bf75bbf"
+        "schema": "20a00229886138c003f09ce674b9576bdf5b5e0a5f2f87ef37bcb48d1ee0576b",
+        "content": "fc794d163c4c44ff04ba708d757e7a7e5b6f3c4613d622b17ed3d81313c2639a"
       }
     },
     {
