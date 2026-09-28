@@ -48,9 +48,34 @@ UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath);
 UBlueprint* LoadBlueprintOrReply(FNetworkingActionContext& Context, const FString& BlueprintPath);
 // Mark the edited Blueprint modified, save it, and send the verified success reply.
 bool SaveBlueprintAndReply(FNetworkingActionContext& Context, UBlueprint* Blueprint, const FString& Detail, const TCHAR* Message);
-ELifetimeCondition GetReplicationCondition(const FString& ConditionStr);
-ENetDormancy GetNetDormancy(const FString& DormancyStr);
-ENetRole GetNetRole(const FString& RoleStr);
+// Parses Name as a value of TEnum ("COND_OwnerOnly", "DORM_Awake", "ROLE_Authority", "Exponential"; case
+// ignored). An unknown name used to fall back to a default (COND_None, DORM_Never, ROLE_None) while the reply
+// echoed the caller's string, so it now fails and OutValidNames lists the accepted spellings.
+template <typename TEnum>
+bool TryParseNetEnum(const FString& Name, TEnum& OutValue, FString& OutValidNames)
+{
+    const UEnum* Enum = StaticEnum<TEnum>();
+    const int64 Value = Name.IsEmpty() ? INDEX_NONE : Enum->GetValueByNameString(Name);
+    const FString Resolved = Value == INDEX_NONE ? FString() : Enum->GetNameStringByValue(Value);
+    if (Value != INDEX_NONE && !Resolved.EndsWith(TEXT("_MAX"), ESearchCase::IgnoreCase))
+    {
+        OutValue = static_cast<TEnum>(Value);
+        return true;
+    }
+    TArray<FString> Names;
+    for (int32 Index = 0; Index < Enum->NumEnums(); ++Index)
+    {
+        const FString EntryName = Enum->GetNameStringByIndex(Index);
+        if (!EntryName.EndsWith(TEXT("_MAX"), ESearchCase::IgnoreCase))
+        {
+            Names.Add(EntryName);
+        }
+    }
+    OutValidNames = FString::Join(Names, TEXT(", "));
+    return false;
+}
+// Sends INVALID_ARGUMENT naming the field, the rejected value and the accepted ones.
+void ReplyInvalidEnum(FNetworkingActionContext& Context, const TCHAR* Field, const FString& Value, const FString& ValidNames);
 FString NetRoleToString(ENetRole Role);
 FString NetDormancyToString(ENetDormancy Dormancy);
 

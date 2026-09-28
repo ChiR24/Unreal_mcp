@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "63bea1e5c1c1e3c0",
+  "catalogRevision": "31e011b04e3258c5",
   "recordCount": 382,
   "records": [
     {
@@ -65481,9 +65481,9 @@
         ],
         "summary": "Configure client-side prediction: client, movement, or server correction.",
         "whenToUse": [
-          "Use when configure client-side prediction.",
-          "Use when configure movement network prediction.",
-          "Use when configure server correction and smoothing."
+          "Use when set whether a character blueprint always replicates its movement transform timestamp (charactermovement bnetworkalwaysreplicatetransformupdatetimestamp); other blueprints are refused.",
+          "Use when set a character blueprint's movement network smoothing mode and smoothing distances; only the fields sent are written, other blueprints are refused.",
+          "Use when set how long a character blueprint's simulated proxies smooth server corrections; other blueprints are refused."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -65504,31 +65504,23 @@
             },
             "enablePrediction": {
               "type": "boolean",
-              "description": "Whether prediction applies."
-            },
-            "predictionThreshold": {
-              "type": "string",
-              "description": "Prediction threshold."
+              "description": "CharacterMovement bNetworkAlwaysReplicateTransformUpdateTimestamp: always replicate the transform timestamp simulated proxies smooth with."
             },
             "networkSmoothingMode": {
               "type": "string",
-              "description": "Network smoothing mode."
+              "description": "CharacterMovement NetworkSmoothingMode: Disabled, Linear, Exponential or Replay."
             },
             "networkMaxSmoothUpdateDistance": {
-              "type": "string",
-              "description": "Network max smooth update distance."
+              "type": "number",
+              "description": "CharacterMovement NetworkMaxSmoothUpdateDistance in cm: corrections farther than this snap after smoothing."
             },
             "networkNoSmoothUpdateDistance": {
-              "type": "string",
-              "description": "Network no smooth update distance."
-            },
-            "correctionThreshold": {
               "type": "number",
-              "description": "Correction threshold."
+              "description": "CharacterMovement NetworkNoSmoothUpdateDistance in cm: corrections farther than this snap without smoothing."
             },
             "smoothingRate": {
               "type": "number",
-              "description": "Smoothing rate."
+              "description": "Seconds simulated proxies take to smooth a server correction (location and rotation, dedicated and listen server)."
             },
             "setting": {
               "type": "string",
@@ -65577,6 +65569,7 @@
           "input": {
             "action": "configure_prediction",
             "blueprintPath": "/Game/Blueprints/BP_PlayerCharacter",
+            "enablePrediction": true,
             "setting": "client"
           },
           "output": {
@@ -65620,9 +65613,6 @@
             "enablePrediction": [
               "client"
             ],
-            "predictionThreshold": [
-              "client"
-            ],
             "networkSmoothingMode": [
               "movement"
             ],
@@ -65632,9 +65622,6 @@
             "networkNoSmoothUpdateDistance": [
               "movement"
             ],
-            "correctionThreshold": [
-              "server_correction"
-            ],
             "smoothingRate": [
               "server_correction"
             ]
@@ -65643,8 +65630,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "52ffd24b692cf885400b65a6a7a73dbd3e556615e5f35cd2fbbd4f30ccaaca99",
-        "content": "7aac7aaffead8fd43bca04c9e6e623d2127edf50eb2805c24e66d2995bdec3c5"
+        "schema": "73618f94a85cbf6fb2e72cd7a33c9be0c6122c834a91647c11b5f0a0f5de0ea2",
+        "content": "9d1a09b4ebc6353a4dad1465e0acabf90cf5a1afb4351f9f8a12c427e0c6f088"
       }
     },
     {
@@ -65803,11 +65790,11 @@
         ],
         "summary": "Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net serialization, net driver.",
         "whenToUse": [
-          "Use when set blueprint property replication.",
+          "Use when turn replication of a blueprint variable on or off, optionally with its replication condition.",
           "Use when set a blueprint property replication condition.",
           "Use when assign a repnotify function to a property.",
-          "Use when set the initial blueprint network role.",
-          "Use when set actor network dormancy.",
+          "Use when choose how clients see an actor blueprint's actors: role_none turns replication off, role_simulatedproxy or role_autonomousproxy turn it on.",
+          "Use when set an actor blueprint's default network dormancy.",
           "Use when set always-relevant replication behavior."
         ],
         "whenNotToUse": [
@@ -65837,7 +65824,7 @@
             },
             "condition": {
               "type": "string",
-              "description": "Condition."
+              "description": "Replication condition, a ELifetimeCondition name such as COND_OwnerOnly, COND_SkipOwner, COND_InitialOnly or COND_AutonomousOnly; an unknown name is refused."
             },
             "repNotifyFunc": {
               "type": "string",
@@ -65845,11 +65832,11 @@
             },
             "role": {
               "type": "string",
-              "description": "Role."
+              "description": "How clients see the actor: ROLE_None (not replicated), ROLE_SimulatedProxy or ROLE_AutonomousProxy (replicated). ROLE_Authority is refused: the server always has it."
             },
             "dormancy": {
               "type": "string",
-              "description": "Dormancy."
+              "description": "Net dormancy, a ENetDormancy name: DORM_Never, DORM_Awake, DORM_DormantAll, DORM_DormantPartial or DORM_Initial; an unknown name is refused."
             },
             "alwaysRelevant": {
               "type": "boolean",
@@ -65860,8 +65847,8 @@
               "description": "Only relevant to owner."
             },
             "isAutonomousProxy": {
-              "type": "string",
-              "description": "Whether autonomous proxy applies."
+              "type": "boolean",
+              "description": "true: every replicated variable replicates to the autonomous proxy only (COND_AutonomousOnly). false: variables using COND_AutonomousOnly go back to COND_None; other conditions stay."
             },
             "netPriority": {
               "type": "number",
@@ -65892,16 +65879,12 @@
               "description": "Replicate movement."
             },
             "spatiallyLoaded": {
-              "type": "string",
-              "description": "Spatially loaded."
+              "type": "boolean",
+              "description": "World Partition: stream the actor in by distance (AActor bIsSpatiallyLoaded)."
             },
             "netLoadOnClient": {
-              "type": "string",
-              "description": "Net load on client."
-            },
-            "replicationPolicy": {
-              "type": "string",
-              "description": "Replication policy."
+              "type": "boolean",
+              "description": "Load the placed actor on clients with the map (AActor bNetLoadOnClient)."
             },
             "structName": {
               "type": "string",
@@ -65912,16 +65895,16 @@
               "description": "Custom serialization."
             },
             "maxClientRate": {
-              "type": "string",
-              "description": "Max client rate."
+              "type": "number",
+              "description": "Game net driver MaxClientRate (bytes per second per LAN client)."
             },
             "maxInternetClientRate": {
-              "type": "string",
-              "description": "Max internet client rate."
+              "type": "number",
+              "description": "Game net driver MaxInternetClientRate (bytes per second per internet client)."
             },
             "netServerMaxTickRate": {
-              "type": "string",
-              "description": "Net server max tick rate."
+              "type": "number",
+              "description": "Game net driver NetServerMaxTickRate (server ticks per second)."
             },
             "setting": {
               "type": "string",
@@ -66110,9 +66093,6 @@
             "netLoadOnClient": [
               "replication_graph"
             ],
-            "replicationPolicy": [
-              "replication_graph"
-            ],
             "structName": [
               "serialization"
             ],
@@ -66133,8 +66113,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "121edf689fb2c6670ca03b629d3da598f382f65ebddbd6ba99822bec9335d8e9",
-        "content": "8a81f8b1478ac838a7819a86e5e83ab289270ff1cd71785dcd93e1e326e5ae5d"
+        "schema": "07c4127942b43064d01735751ea6e3a266b4b91a2938f0d238f10427f8de499f",
+        "content": "fab34e89bbb18148f648375bcb6ceafe74224ff2a6653816d299f8e6aca18d9b"
       }
     },
     {
@@ -66183,7 +66163,7 @@
         ],
         "summary": "Create an RPC function, or set its validation or reliability.",
         "whenToUse": [
-          "Use when create a blueprint rpc function.",
+          "Use when create a blueprint rpc function (server, client or netmulticast).",
           "Use when configure rpc validation.",
           "Use when set rpc reliability."
         ],
@@ -66210,7 +66190,7 @@
             },
             "rpcType": {
               "type": "string",
-              "description": "Rpc type."
+              "description": "Server, Client or NetMulticast (Multicast is accepted too); anything else is refused."
             },
             "reliable": {
               "type": "boolean",
@@ -66330,8 +66310,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "441436bb59d4d98b09974a727c52bc18c111b482ebb779a1c72322db9298206a",
-        "content": "5cc1990018325a73b3f987f414cb64f5dab7541586561c87535404f52916970b"
+        "schema": "e50307054c12c339f873c12fcc1f36172e6798bd924d668def6d75dbe5b75f79",
+        "content": "ec2a518d0e93a87b03a7e580764624e4f610e172701d9f439dd8e7b569e56ef3"
       }
     },
     {
@@ -68034,9 +68014,9 @@
         "topics": [
           "set_owner"
         ],
-        "summary": "Set runtime actor ownership.",
+        "summary": "Set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused.",
         "whenToUse": [
-          "Use when set runtime actor ownership."
+          "Use when set or clear (empty owneractorname) the owner of a runtime actor; an owner name that matches no actor is refused."
         ],
         "whenNotToUse": [
           "Do not use when the required Unreal capability or target is unavailable."
@@ -68092,7 +68072,7 @@
       },
       "examples": [
         {
-          "title": "Set runtime actor ownership.",
+          "title": "Set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused.",
           "input": {
             "action": "set_owner",
             "actorName": "BP_PlayerCharacter_C_0"
@@ -68132,7 +68112,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5205a3321a1ce821d1b145a0532a2b4a08b7108d36ac337ae5f6596cc9368667",
-        "content": "79f6b4b8e5753cf51c2068e7a50c74a874c8d6ce147624a9ad3d20cbc7351332"
+        "content": "a52b294f4747623d50c8cb23335d5daec66b163790297c32744d120ccf6f0589"
       }
     },
     {

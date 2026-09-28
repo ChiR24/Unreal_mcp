@@ -97,27 +97,33 @@ bool HandleConfigurePushModel(FNetworkingActionContext& Context)
         return true;
     }
 
-    bool bAnyModified = false;
+    int32 ReplicatedCount = 0;
     for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
     {
         if ((VarDesc.PropertyFlags & CPF_Net) != 0)
         {
             bUsePushModel ? VarDesc.SetMetaData(TEXT("PushModel"), TEXT("true")) : VarDesc.RemoveMetaData(TEXT("PushModel"));
-            bAnyModified = true;
+            ++ReplicatedCount;
         }
     }
-
-    if (bAnyModified)
+    // With no replicated variable there is nothing push model could apply to; the old reply
+    // claimed it was enabled "for all replicated properties" anyway.
+    if (ReplicatedCount == 0)
     {
-        Blueprint->Modify();
-        FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-        McpSafeCompileBlueprint(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("The Blueprint has no replicated variables for push model to apply to; replicate one first (set_property_replicated)."),
+            TEXT("NOT_FOUND"));
+        return true;
     }
+
+    Blueprint->Modify();
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+    McpSafeCompileBlueprint(Blueprint);
+    McpSafeAssetSave(Blueprint);
 
     ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetBoolField(TEXT("usePushModel"), bUsePushModel);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Push model replication %s for all replicated properties"), bUsePushModel ? TEXT("enabled") : TEXT("disabled")));
+    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Push model replication %s for %d replicated variable(s)"), bUsePushModel ? TEXT("enabled") : TEXT("disabled"), ReplicatedCount));
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Push model configured"), ResultJson);
     return true;

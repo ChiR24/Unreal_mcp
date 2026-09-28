@@ -35,6 +35,14 @@ bool HandleSetNetDormancy(FNetworkingActionContext& Context)
         return true;
     }
 
+    ENetDormancy NetDormancy = DORM_Never;
+    FString ValidDormancies;
+    if (!TryParseNetEnum(Dormancy, NetDormancy, ValidDormancies))
+    {
+        ReplyInvalidEnum(Context, TEXT("dormancy"), Dormancy, ValidDormancies);
+        return true;
+    }
+
     UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
     if (!Blueprint)
     {
@@ -42,14 +50,15 @@ bool HandleSetNetDormancy(FNetworkingActionContext& Context)
         return true;
     }
 
-    ENetDormancy NetDormancy = GetNetDormancy(Dormancy);
-    AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
-    if (CDO)
+    AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CDO)
     {
-        CDO->NetDormancy = NetDormancy;
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Net dormancy is an Actor setting; this Blueprint is not an Actor."), TEXT("NOT_SUPPORTED"));
+        return true;
     }
+    CDO->NetDormancy = NetDormancy;
 
-    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net dormancy set to %s"), *Dormancy), TEXT("Net dormancy configured"));
+    return SaveBlueprintAndReply(Context, Blueprint, FString::Printf(TEXT("Net dormancy set to %s"), *NetDormancyToString(NetDormancy)), TEXT("Net dormancy configured"));
 }
 
 bool HandleConfigureReplicationGraph(FNetworkingActionContext& Context)
@@ -57,9 +66,15 @@ bool HandleConfigureReplicationGraph(FNetworkingActionContext& Context)
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    bool bSpatiallyLoaded = GetJsonBoolField(Payload, TEXT("spatiallyLoaded"), false);
-    bool bNetLoadOnClient = GetJsonBoolField(Payload, TEXT("netLoadOnClient"), true);
-    FString ReplicationPolicy = GetJsonStringField(Payload, TEXT("replicationPolicy"), TEXT("Default"));
+    // Only the fields that were sent are written: netLoadOnClient used to be forced to true whenever
+    // it was left out, and spatiallyLoaded was only logged.
+    const bool bHasSpatiallyLoaded = Payload->HasField(TEXT("spatiallyLoaded"));
+    const bool bHasNetLoadOnClient = Payload->HasField(TEXT("netLoadOnClient"));
+    if (!bHasSpatiallyLoaded && !bHasNetLoadOnClient)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Nothing to configure: pass spatiallyLoaded, netLoadOnClient, or both."), TEXT("INVALID_PARAMS"));
+        return true;
+    }
 
     UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
     if (!Blueprint)
@@ -67,29 +82,32 @@ bool HandleConfigureReplicationGraph(FNetworkingActionContext& Context)
         return true;
     }
 
-    AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
-    if (CDO)
+    AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CDO)
     {
-        CDO->bNetLoadOnClient = bNetLoadOnClient;
-        if (bSpatiallyLoaded)
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("These are Actor settings; this Blueprint is not an Actor."), TEXT("NOT_SUPPORTED"));
+        return true;
+    }
+    if (bHasSpatiallyLoaded)
+    {
+        const bool bSpatiallyLoaded = GetJsonBoolField(Payload, TEXT("spatiallyLoaded"), false);
+        if (CDO->GetIsSpatiallyLoaded() != bSpatiallyLoaded && !CDO->CanChangeIsSpatiallyLoadedFlag())
         {
-            UE_LOG(LogMcpNetworkingHandlers, Log, TEXT("bReplicateUsingRegisteredSubObjectList is protected. Use Actor defaults in Blueprint instead."));
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(TEXT("%s does not allow changing its spatially loaded flag."), *CDO->GetClass()->GetName()), TEXT("NOT_SUPPORTED"));
+            return true;
         }
+        CDO->SetIsSpatiallyLoaded(bSpatiallyLoaded);
+    }
+    if (bHasNetLoadOnClient)
+    {
+        CDO->bNetLoadOnClient = GetJsonBoolField(Payload, TEXT("netLoadOnClient"), true);
     }
 
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetBoolField(TEXT("spatiallyLoaded"), bSpatiallyLoaded);
-    ResultJson->SetBoolField(TEXT("netLoadOnClient"), bNetLoadOnClient);
-    ResultJson->SetStringField(TEXT("replicationPolicy"), ReplicationPolicy);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Replication graph settings configured (netLoadOnClient=%s, spatiallyLoaded=%s)"),
-        bNetLoadOnClient ? TEXT("true") : TEXT("false"),
-        bSpatiallyLoaded ? TEXT("true") : TEXT("false")));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Replication graph configured"), ResultJson);
-    return true;
+    ResultJson->SetBoolField(TEXT("spatiallyLoaded"), CDO->GetIsSpatiallyLoaded());
+    ResultJson->SetBoolField(TEXT("netLoadOnClient"), CDO->bNetLoadOnClient);
+    return SaveBlueprintAndReply(Context, Blueprint,
+        FString::Printf(TEXT("netLoadOnClient=%s, spatiallyLoaded=%s"),
+            CDO->bNetLoadOnClient ? TEXT("true") : TEXT("false"), CDO->GetIsSpatiallyLoaded() ? TEXT("true") : TEXT("false")),
+        TEXT("Replication graph configured"));
 }
 }

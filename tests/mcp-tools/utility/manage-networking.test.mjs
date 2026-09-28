@@ -54,21 +54,22 @@ const testCases = [
   { scenario: 'CONFIG: set_replication_condition', toolName: 'manage_networking', arguments: { action: 'set_replication_condition', blueprintPath: ACTOR_BP_PATH, propertyName: 'ReplicatedFlag', condition: 'COND_OwnerOnly' }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_replication_condition') },
   { scenario: 'CONFIG: configure_net_update_frequency', toolName: 'manage_networking', arguments: { action: 'configure_net_update_frequency', blueprintPath: ACTOR_BP_PATH, netUpdateFrequency: 33, minNetUpdateFrequency: 7 }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_net_update_frequency') },
   { scenario: 'CONFIG: configure_net_priority', toolName: 'manage_networking', arguments: { action: 'configure_net_priority', blueprintPath: ACTOR_BP_PATH, netPriority: 2.75 }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_net_priority') },
+  { scenario: 'CONFIG: set_replication_condition refuses an unknown condition', toolName: 'manage_networking', arguments: { action: 'set_replication_condition', blueprintPath: ACTOR_BP_PATH, propertyName: 'ReplicatedFlag', condition: 'COND_NoSuchCondition' }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: set_net_dormancy', toolName: 'manage_networking', arguments: { action: 'set_net_dormancy', blueprintPath: ACTOR_BP_PATH, dormancy: 'DORM_Awake' }, expected: 'success', assertions: blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'set_net_dormancy') },
   {
     scenario: 'CONFIG: configure_replication_graph',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_replication_graph', blueprintPath: ACTOR_BP_PATH, spatiallyLoaded: true, netLoadOnClient: false, replicationPolicy: 'Spatial' },
+    arguments: { action: 'configure_replication_graph', blueprintPath: ACTOR_BP_PATH, spatiallyLoaded: true, netLoadOnClient: false },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_ACTOR_BP_ASSET_PATH, 'configure_replication_graph'),
       { path: 'structuredContent.result.spatiallyLoaded', equals: true, label: 'replication graph spatial flag returned' },
-      { path: 'structuredContent.result.netLoadOnClient', equals: false, label: 'replication graph client load flag returned' },
-      { path: 'structuredContent.result.replicationPolicy', equals: 'Spatial', label: 'replication policy returned' }
+      { path: 'structuredContent.result.netLoadOnClient', equals: false, label: 'replication graph client load flag returned' }
     ]
   },
 
   // === RPCS ===
+  { scenario: 'CREATE: create_rpc_function refuses an unknown rpcType', toolName: 'manage_networking', arguments: { action: 'create_rpc_function', blueprintPath: ACTOR_BP_PATH, functionName: `Bad_RPC_${ts}`, rpcType: 'Sideways' }, expected: 'error|INVALID_ARGUMENT' },
   {
     scenario: 'CREATE: create_rpc_function',
     toolName: 'manage_networking',
@@ -103,6 +104,7 @@ const testCases = [
   },
 
   // === AUTHORITY / OWNERSHIP ===
+  { scenario: 'CONFIG: set_owner refuses an unknown owner', toolName: 'manage_networking', arguments: { action: 'set_owner', actorName: TARGET_ACTOR, ownerActorName: `MCP_NoSuchOwner_${ts}` }, expected: 'error|NOT_FOUND' },
   { scenario: 'CONFIG: set_owner', toolName: 'manage_networking', arguments: { action: 'set_owner', actorName: TARGET_ACTOR, ownerActorName: OWNER_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.success', equals: true, label: 'set_owner native success flag' }, { path: 'structuredContent.result.actorName', equals: TARGET_ACTOR, label: 'set_owner target actor verified' }, { path: 'structuredContent.result.existsAfter', equals: true, label: 'set_owner target actor still exists' }] },
   {
     scenario: 'CONFIG: set_autonomous_proxy',
@@ -148,22 +150,20 @@ const testCases = [
   {
     scenario: 'CONFIG: configure_client_prediction',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_client_prediction', blueprintPath: CHARACTER_BP_PATH, enablePrediction: true, predictionThreshold: 0.25 },
+    arguments: { action: 'configure_client_prediction', blueprintPath: CHARACTER_BP_PATH, enablePrediction: true },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'configure_client_prediction'),
-      { path: 'structuredContent.result.enablePrediction', equals: true, label: 'client prediction flag returned' },
-      { path: 'structuredContent.result.predictionThreshold', equals: 0.25, label: 'client prediction threshold returned' }
+      { path: 'structuredContent.result.enablePrediction', equals: true, label: 'client prediction flag returned' }
     ]
   },
   {
     scenario: 'CONFIG: configure_server_correction',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_server_correction', blueprintPath: CHARACTER_BP_PATH, correctionThreshold: 1.5, smoothingRate: 0.35 },
+    arguments: { action: 'configure_server_correction', blueprintPath: CHARACTER_BP_PATH, smoothingRate: 0.35 },
     expected: 'success',
     assertions: [
       ...blueprintAssertion(EXPECTED_CHARACTER_BP_ASSET_PATH, 'configure_server_correction'),
-      { path: 'structuredContent.result.correctionThreshold', equals: 1.5, label: 'server correction threshold returned' },
       { path: 'structuredContent.result.smoothingRate', equals: 0.35, label: 'server correction smoothing rate returned' }
     ]
   },
@@ -173,13 +173,13 @@ const testCases = [
   {
     scenario: 'CONFIG: configure_net_driver',
     toolName: 'manage_networking',
-    arguments: { action: 'configure_net_driver', maxClientRate: 20000, maxInternetClientRate: 12000, netServerMaxTickRate: 45 },
+    arguments: { action: 'configure_net_driver', maxClientRate: 15000, maxInternetClientRate: 10000, netServerMaxTickRate: 30 },
     expected: 'success',
     assertions: [
       { path: 'structuredContent.result.success', equals: true, label: 'net driver native success flag' },
-      { path: 'structuredContent.result.maxClientRate', equals: 20000, label: 'net driver max client rate returned' },
-      { path: 'structuredContent.result.maxInternetClientRate', equals: 12000, label: 'net driver internet client rate returned' },
-      { path: 'structuredContent.result.netServerMaxTickRate', equals: 45, label: 'net driver max tick rate returned' }
+      { path: 'structuredContent.result.maxClientRate', equals: 15000, label: 'net driver max client rate returned' },
+      { path: 'structuredContent.result.maxInternetClientRate', equals: 10000, label: 'net driver internet client rate returned' },
+      { path: 'structuredContent.result.netServerMaxTickRate', equals: 30, label: 'net driver max tick rate returned' }
     ]
   },
   {

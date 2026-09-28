@@ -9,10 +9,25 @@ bool HandleSetPropertyReplicated(FNetworkingActionContext& Context)
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     FString PropertyName = GetJsonStringField(Payload, TEXT("propertyName"));
     bool bReplicated = GetJsonBoolField(Payload, TEXT("replicated"), true);
+    const FString Condition = GetJsonStringField(Payload, TEXT("condition"));
 
     if (BlueprintPath.IsEmpty() || PropertyName.IsEmpty())
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing blueprintPath or propertyName"), TEXT("INVALID_PARAMS"));
+        return true;
+    }
+    // condition is the replication condition to replicate under; it has no meaning on a variable
+    // that stops replicating, so that combination is refused rather than half applied.
+    ELifetimeCondition LifetimeCondition = COND_None;
+    FString ValidConditions;
+    if (!Condition.IsEmpty() && !TryParseNetEnum(Condition, LifetimeCondition, ValidConditions))
+    {
+        ReplyInvalidEnum(Context, TEXT("condition"), Condition, ValidConditions);
+        return true;
+    }
+    if (!Condition.IsEmpty() && !bReplicated)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("condition only applies with replicated: true."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -48,6 +63,10 @@ bool HandleSetPropertyReplicated(FNetworkingActionContext& Context)
     if (bReplicated)
     {
         VarDesc->PropertyFlags |= CPF_Net;
+        if (!Condition.IsEmpty())
+        {
+            VarDesc->ReplicationCondition = LifetimeCondition;
+        }
     }
     else
     {
@@ -87,7 +106,13 @@ bool HandleSetReplicationCondition(FNetworkingActionContext& Context)
         return true;
     }
 
-    ELifetimeCondition LifetimeCondition = GetReplicationCondition(Condition);
+    ELifetimeCondition LifetimeCondition = COND_None;
+    FString ValidConditions;
+    if (!TryParseNetEnum(Condition, LifetimeCondition, ValidConditions))
+    {
+        ReplyInvalidEnum(Context, TEXT("condition"), Condition, ValidConditions);
+        return true;
+    }
     bool bFound = false;
     for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
     {

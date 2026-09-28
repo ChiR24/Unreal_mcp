@@ -36,20 +36,13 @@ UBlueprint* LoadBlueprintFromPath(const FString& BlueprintPath)
     return LoadBlueprintAsset(BlueprintPath, Normalized, Error);
 }
 
-namespace
+void ReplyInvalidEnum(FNetworkingActionContext& Context, const TCHAR* Field, const FString& Value, const FString& ValidNames)
 {
-// The enum value spelled Name ("COND_OwnerOnly", "DORM_Awake", "ROLE_Authority"; case ignored), else Fallback.
-template <typename TEnum>
-TEnum EnumFromName(const FString& Name, TEnum Fallback)
-{
-    const int64 Value = StaticEnum<TEnum>()->GetValueByNameString(Name);
-    return Value == INDEX_NONE ? Fallback : static_cast<TEnum>(Value);
-}
+    Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+        FString::Printf(TEXT("Unknown %s '%s'; nothing was changed. Use one of: %s."), Field, *Value, *ValidNames),
+        TEXT("INVALID_ARGUMENT"));
 }
 
-ELifetimeCondition GetReplicationCondition(const FString& ConditionStr) { return EnumFromName(ConditionStr, COND_None); }
-ENetDormancy GetNetDormancy(const FString& DormancyStr) { return EnumFromName(DormancyStr, DORM_Never); }
-ENetRole GetNetRole(const FString& RoleStr) { return EnumFromName(RoleStr, ROLE_None); }
 FString NetRoleToString(ENetRole Role) { return StaticEnum<ENetRole>()->GetNameStringByValue(Role); }
 FString NetDormancyToString(ENetDormancy Dormancy) { return StaticEnum<ENetDormancy>()->GetNameStringByValue(Dormancy); }
 }

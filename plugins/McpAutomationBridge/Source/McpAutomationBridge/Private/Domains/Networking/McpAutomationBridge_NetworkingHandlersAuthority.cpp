@@ -29,7 +29,15 @@ bool HandleSetOwner(FNetworkingActionContext& Context)
         return true;
     }
 
+    // An empty ownerActorName clears the owner; a name that matches nothing is an error, not a clear.
     AActor* Owner = OwnerActorName.IsEmpty() ? nullptr : FindActorByNameInWorldForMcp(World, OwnerActorName, true);
+    if (!OwnerActorName.IsEmpty() && !Owner)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("Owner actor '%s' not found; the owner of %s was left unchanged."), *OwnerActorName, *ActorName),
+            TEXT("NOT_FOUND"));
+        return true;
+    }
     Actor->SetOwner(Owner);
 
     ResultJson->SetBoolField(TEXT("success"), true);
@@ -52,17 +60,34 @@ bool HandleSetAutonomousProxy(FNetworkingActionContext& Context)
         return true;
     }
 
-    bool bAnyModified = false;
+    // Enabling makes every replicated variable replicate to the autonomous proxy only; disabling undoes
+    // exactly that (COND_AutonomousOnly back to COND_None) and leaves every other condition alone.
+    int32 ReplicatedCount = 0;
+    int32 ChangedCount = 0;
     for (FBPVariableDescription& VarDesc : Blueprint->NewVariables)
     {
-        if ((VarDesc.PropertyFlags & CPF_Net) != 0)
+        if ((VarDesc.PropertyFlags & CPF_Net) == 0)
         {
-            VarDesc.ReplicationCondition = bIsAutonomousProxy ? COND_AutonomousOnly : COND_None;
-            bAnyModified = true;
+            continue;
+        }
+        ++ReplicatedCount;
+        const ELifetimeCondition Current = VarDesc.ReplicationCondition;
+        const ELifetimeCondition Wanted = bIsAutonomousProxy ? COND_AutonomousOnly : (Current == COND_AutonomousOnly ? COND_None : Current);
+        if (Current != Wanted)
+        {
+            VarDesc.ReplicationCondition = Wanted;
+            ++ChangedCount;
         }
     }
+    if (ReplicatedCount == 0)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("The Blueprint has no replicated variables to configure; replicate one first (set_property_replicated)."),
+            TEXT("NOT_FOUND"));
+        return true;
+    }
 
-    if (bAnyModified)
+    if (ChangedCount > 0)
     {
         Blueprint->Modify();
         FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
@@ -72,7 +97,8 @@ bool HandleSetAutonomousProxy(FNetworkingActionContext& Context)
 
     ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetBoolField(TEXT("isAutonomousProxy"), bIsAutonomousProxy);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Autonomous proxy configuration %s for replicated properties"), bIsAutonomousProxy ? TEXT("enabled") : TEXT("disabled")));
+    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("%d of %d replicated variable(s) changed; they %s"), ChangedCount, ReplicatedCount,
+        bIsAutonomousProxy ? TEXT("now replicate to the autonomous proxy only (COND_AutonomousOnly)") : TEXT("no longer use COND_AutonomousOnly")));
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Autonomous proxy configured"), ResultJson);
     return true;

@@ -16,6 +16,28 @@ bool HandleCreateRpcFunction(FNetworkingActionContext& Context)
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing required parameters"), TEXT("INVALID_PARAMS"));
         return true;
     }
+    // An unknown rpcType used to create a FUNC_Net function with no Server, Client or Multicast
+    // flag (not an RPC at all) and still reply "Created <rpcType> RPC".
+    int32 DirectionFlag = 0;
+    if (RpcType.Equals(TEXT("Server"), ESearchCase::IgnoreCase))
+    {
+        DirectionFlag = FUNC_NetServer;
+    }
+    else if (RpcType.Equals(TEXT("Client"), ESearchCase::IgnoreCase))
+    {
+        DirectionFlag = FUNC_NetClient;
+    }
+    else if (RpcType.Equals(TEXT("NetMulticast"), ESearchCase::IgnoreCase) || RpcType.Equals(TEXT("Multicast"), ESearchCase::IgnoreCase))
+    {
+        DirectionFlag = FUNC_NetMulticast;
+    }
+    else
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            FString::Printf(TEXT("Unknown rpcType '%s'; use Server, Client, or NetMulticast. Nothing was created."), *RpcType),
+            TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
     if (!Blueprint)
@@ -43,21 +65,10 @@ bool HandleCreateRpcFunction(FNetworkingActionContext& Context)
         if (UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node))
         {
             int32 NetFlags = FUNC_Net;
+            NetFlags |= DirectionFlag;
             if (bReliable)
             {
                 NetFlags |= FUNC_NetReliable;
-            }
-            if (RpcType.Equals(TEXT("Server"), ESearchCase::IgnoreCase))
-            {
-                NetFlags |= FUNC_NetServer;
-            }
-            else if (RpcType.Equals(TEXT("Client"), ESearchCase::IgnoreCase))
-            {
-                NetFlags |= FUNC_NetClient;
-            }
-            else if (RpcType.Equals(TEXT("NetMulticast"), ESearchCase::IgnoreCase) || RpcType.Equals(TEXT("Multicast"), ESearchCase::IgnoreCase))
-            {
-                NetFlags |= FUNC_NetMulticast;
             }
             EntryNode->AddExtraFlags(NetFlags);
             break;

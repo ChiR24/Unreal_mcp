@@ -15644,7 +15644,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "condition": {
           "type": "string",
-          "description": "Condition."
+          "description": "Replication condition, a ELifetimeCondition name such as COND_OwnerOnly, COND_SkipOwner, COND_InitialOnly or COND_AutonomousOnly; an unknown name is refused."
         },
         "contextPath": {
           "type": "string",
@@ -15653,10 +15653,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "controllerId": {
           "type": "number",
           "description": "Controller id."
-        },
-        "correctionThreshold": {
-          "type": "number",
-          "description": "Correction threshold."
         },
         "ctrl": {
           "type": "boolean",
@@ -15672,11 +15668,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "dormancy": {
           "type": "string",
-          "description": "Dormancy."
+          "description": "Net dormancy, a ENetDormancy name: DORM_Never, DORM_Awake, DORM_DormantAll, DORM_DormantPartial or DORM_Initial; an unknown name is refused."
         },
         "enablePrediction": {
           "type": "boolean",
-          "description": "Whether prediction applies."
+          "description": "CharacterMovement bNetworkAlwaysReplicateTransformUpdateTimestamp: always replicate the transform timestamp simulated proxies smooth with."
         },
         "enabled": {
           "type": "boolean",
@@ -15703,8 +15699,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Hud class."
         },
         "isAutonomousProxy": {
-          "type": "string",
-          "description": "Whether autonomous proxy applies."
+          "type": "boolean",
+          "description": "true: every replicated variable replicates to the autonomous proxy only (COND_AutonomousOnly). false: variables using COND_AutonomousOnly go back to COND_None; other conditions stay."
         },
         "key": {
           "type": "string",
@@ -15739,12 +15735,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which add legacy mapping variant to run."
         },
         "maxClientRate": {
-          "type": "string",
-          "description": "Max client rate."
+          "type": "number",
+          "description": "Game net driver MaxClientRate (bytes per second per LAN client)."
         },
         "maxInternetClientRate": {
-          "type": "string",
-          "description": "Max internet client rate."
+          "type": "number",
+          "description": "Game net driver MaxInternetClientRate (bytes per second per internet client)."
         },
         "maxPlayers": {
           "type": "number",
@@ -15771,32 +15767,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Net cull distance squared."
         },
         "netLoadOnClient": {
-          "type": "string",
-          "description": "Net load on client."
+          "type": "boolean",
+          "description": "Load the placed actor on clients with the map (AActor bNetLoadOnClient)."
         },
         "netPriority": {
           "type": "number",
           "description": "Net priority."
         },
         "netServerMaxTickRate": {
-          "type": "string",
-          "description": "Net server max tick rate."
+          "type": "number",
+          "description": "Game net driver NetServerMaxTickRate (server ticks per second)."
         },
         "netUpdateFrequency": {
           "type": "number",
           "description": "Net update frequency."
         },
         "networkMaxSmoothUpdateDistance": {
-          "type": "string",
-          "description": "Network max smooth update distance."
+          "type": "number",
+          "description": "CharacterMovement NetworkMaxSmoothUpdateDistance in cm: corrections farther than this snap after smoothing."
         },
         "networkNoSmoothUpdateDistance": {
-          "type": "string",
-          "description": "Network no smooth update distance."
+          "type": "number",
+          "description": "CharacterMovement NetworkNoSmoothUpdateDistance in cm: corrections farther than this snap without smoothing."
         },
         "networkSmoothingMode": {
           "type": "string",
-          "description": "Network smoothing mode."
+          "description": "CharacterMovement NetworkSmoothingMode: Disabled, Linear, Exponential or Replay."
         },
         "onlyRelevantToOwner": {
           "type": "boolean",
@@ -15834,10 +15830,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Player state class."
         },
-        "predictionThreshold": {
-          "type": "string",
-          "description": "Prediction threshold."
-        },
         "priority": {
           "type": "number",
           "description": "Priority."
@@ -15862,21 +15854,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Replicated."
         },
-        "replicationPolicy": {
-          "type": "string",
-          "description": "Replication policy."
-        },
         "respawnDelay": {
           "type": "number",
           "description": "Respawn delay."
         },
         "role": {
           "type": "string",
-          "description": "Role."
+          "description": "How clients see the actor: ROLE_None (not replicated), ROLE_SimulatedProxy or ROLE_AutonomousProxy (replicated). ROLE_Authority is refused: the server always has it."
         },
         "rpcType": {
           "type": "string",
-          "description": "Rpc type."
+          "description": "Server, Client or NetMulticast (Multicast is accepted too); anything else is refused."
         },
         "save": {
           "type": "boolean",
@@ -15941,11 +15929,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "smoothingRate": {
           "type": "number",
-          "description": "Smoothing rate."
+          "description": "Seconds simulated proxies take to smooth a server correction (location and rotation, dedicated and listen server)."
         },
         "spatiallyLoaded": {
-          "type": "string",
-          "description": "Spatially loaded."
+          "type": "boolean",
+          "description": "World Partition: stream the actor in by distance (AActor bIsSpatiallyLoaded)."
         },
         "spectatorClass": {
           "type": "string",

@@ -2,106 +2,120 @@
 
 namespace McpNetworkingHandlers
 {
+namespace
+{
+// Every prediction setting lives on a Character's CharacterMovementComponent. Any other Blueprint used
+// to be saved and answered with success while nothing changed, so it is refused here instead.
+UCharacterMovementComponent* LoadCharacterMovementOrReply(FNetworkingActionContext& Context, UBlueprint*& OutBlueprint)
+{
+    OutBlueprint = LoadBlueprintOrReply(Context, GetJsonStringField(Context.Payload, TEXT("blueprintPath")));
+    if (!OutBlueprint)
+    {
+        return nullptr;
+    }
+    ACharacter* CharacterCDO = OutBlueprint->GeneratedClass ? Cast<ACharacter>(OutBlueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    UCharacterMovementComponent* Movement = CharacterCDO ? CharacterCDO->GetCharacterMovement() : nullptr;
+    if (!Movement)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("Network prediction settings live on a Character's CharacterMovementComponent; this Blueprint is not a Character. Nothing was changed."),
+            TEXT("NOT_SUPPORTED"));
+    }
+    return Movement;
+}
+}
+
 bool HandleConfigureClientPrediction(FNetworkingActionContext& Context)
 {
-    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    bool bEnablePrediction = GetJsonBoolField(Payload, TEXT("enablePrediction"), true);
-    double PredictionThreshold = GetJsonNumberField(Payload, TEXT("predictionThreshold"), 0.1);
-
-    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
-    if (!Blueprint)
+    if (!Context.Payload->HasField(TEXT("enablePrediction")))
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing enablePrediction"), TEXT("INVALID_PARAMS"));
+        return true;
+    }
+    UBlueprint* Blueprint = nullptr;
+    UCharacterMovementComponent* CMC = LoadCharacterMovementOrReply(Context, Blueprint);
+    if (!CMC)
     {
         return true;
     }
+    const bool bEnablePrediction = GetJsonBoolField(Context.Payload, TEXT("enablePrediction"), true);
+    CMC->bNetworkAlwaysReplicateTransformUpdateTimestamp = bEnablePrediction;
 
-    ACharacter* CharacterCDO = Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject());
-    if (CharacterCDO && CharacterCDO->GetCharacterMovement())
-    {
-        UCharacterMovementComponent* CMC = CharacterCDO->GetCharacterMovement();
-        if (bEnablePrediction)
-        {
-            CMC->bNetworkAlwaysReplicateTransformUpdateTimestamp = true;
-            CMC->NetworkSimulatedSmoothLocationTime = static_cast<float>(PredictionThreshold);
-        }
-        else
-        {
-            CMC->bNetworkAlwaysReplicateTransformUpdateTimestamp = false;
-        }
-    }
-
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
-    ResultJson->SetNumberField(TEXT("predictionThreshold"), PredictionThreshold);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Client prediction %s"), bEnablePrediction ? TEXT("enabled") : TEXT("disabled")));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Client prediction configured"), ResultJson);
-    return true;
+    Context.ResultJson->SetBoolField(TEXT("enablePrediction"), bEnablePrediction);
+    return SaveBlueprintAndReply(Context, Blueprint,
+        FString::Printf(TEXT("bNetworkAlwaysReplicateTransformUpdateTimestamp set to %s"), bEnablePrediction ? TEXT("true") : TEXT("false")),
+        TEXT("Client prediction configured"));
 }
 
 bool HandleConfigureServerCorrection(FNetworkingActionContext& Context)
 {
-    const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    double CorrectionThreshold = GetJsonNumberField(Payload, TEXT("correctionThreshold"), 1.0);
-    double SmoothingRate = GetJsonNumberField(Payload, TEXT("smoothingRate"), 0.5);
-
-    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
-    if (!Blueprint)
+    if (!Context.Payload->HasField(TEXT("smoothingRate")))
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing smoothingRate"), TEXT("INVALID_PARAMS"));
+        return true;
+    }
+    UBlueprint* Blueprint = nullptr;
+    UCharacterMovementComponent* CMC = LoadCharacterMovementOrReply(Context, Blueprint);
+    if (!CMC)
     {
         return true;
     }
+    const float SmoothingRate = static_cast<float>(GetJsonNumberField(Context.Payload, TEXT("smoothingRate"), 0.5));
+    CMC->NetworkSimulatedSmoothLocationTime = SmoothingRate;
+    CMC->NetworkSimulatedSmoothRotationTime = SmoothingRate;
+    CMC->ListenServerNetworkSimulatedSmoothLocationTime = SmoothingRate;
+    CMC->ListenServerNetworkSimulatedSmoothRotationTime = SmoothingRate;
 
-    ACharacter* CharacterCDO = Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject());
-    if (CharacterCDO && CharacterCDO->GetCharacterMovement())
-    {
-        UCharacterMovementComponent* CMC = CharacterCDO->GetCharacterMovement();
-        CMC->NetworkSimulatedSmoothLocationTime = static_cast<float>(SmoothingRate);
-        CMC->NetworkSimulatedSmoothRotationTime = static_cast<float>(SmoothingRate);
-        CMC->ListenServerNetworkSimulatedSmoothLocationTime = static_cast<float>(SmoothingRate);
-        CMC->ListenServerNetworkSimulatedSmoothRotationTime = static_cast<float>(SmoothingRate);
-    }
-
-    Blueprint->Modify();
-    FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeAssetSave(Blueprint);
-
-    ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetNumberField(TEXT("correctionThreshold"), CorrectionThreshold);
-    ResultJson->SetNumberField(TEXT("smoothingRate"), SmoothingRate);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Server correction configured (threshold=%.2f, smoothing=%.2f)"), CorrectionThreshold, SmoothingRate));
-    McpHandlerUtils::AddVerification(ResultJson, Blueprint);
-    Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Server correction configured"), ResultJson);
-    return true;
+    Context.ResultJson->SetNumberField(TEXT("smoothingRate"), SmoothingRate);
+    return SaveBlueprintAndReply(Context, Blueprint,
+        FString::Printf(TEXT("Simulated proxy correction smoothing time set to %.2f s"), SmoothingRate),
+        TEXT("Server correction configured"));
 }
 
 bool HandleConfigureMovementPrediction(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
-    FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
-    double NetworkMaxSmoothUpdateDistance = GetJsonNumberField(Payload, TEXT("networkMaxSmoothUpdateDistance"), 256.0);
-    double NetworkNoSmoothUpdateDistance = GetJsonNumberField(Payload, TEXT("networkNoSmoothUpdateDistance"), 384.0);
-
-    UBlueprint* Blueprint = LoadBlueprintOrReply(Context, BlueprintPath);
-    if (!Blueprint)
+    const FString SmoothingModeName = GetJsonStringField(Payload, TEXT("networkSmoothingMode"));
+    const bool bHasMaxSmooth = Payload->HasField(TEXT("networkMaxSmoothUpdateDistance"));
+    const bool bHasNoSmooth = Payload->HasField(TEXT("networkNoSmoothUpdateDistance"));
+    if (SmoothingModeName.IsEmpty() && !bHasMaxSmooth && !bHasNoSmooth)
     {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+            TEXT("Nothing to configure: pass networkSmoothingMode, networkMaxSmoothUpdateDistance or networkNoSmoothUpdateDistance."),
+            TEXT("INVALID_PARAMS"));
+        return true;
+    }
+    ENetworkSmoothingMode SmoothingMode = ENetworkSmoothingMode::Exponential;
+    FString ValidModes;
+    if (!SmoothingModeName.IsEmpty() && !TryParseNetEnum(SmoothingModeName, SmoothingMode, ValidModes))
+    {
+        ReplyInvalidEnum(Context, TEXT("networkSmoothingMode"), SmoothingModeName, ValidModes);
         return true;
     }
 
-    ACharacter* CharacterCDO = Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject());
-    if (CharacterCDO && CharacterCDO->GetCharacterMovement())
+    UBlueprint* Blueprint = nullptr;
+    UCharacterMovementComponent* CMC = LoadCharacterMovementOrReply(Context, Blueprint);
+    if (!CMC)
     {
-        UCharacterMovementComponent* CMC = CharacterCDO->GetCharacterMovement();
-        CMC->NetworkMaxSmoothUpdateDistance = static_cast<float>(NetworkMaxSmoothUpdateDistance);
-        CMC->NetworkNoSmoothUpdateDistance = static_cast<float>(NetworkNoSmoothUpdateDistance);
+        return true;
+    }
+    if (!SmoothingModeName.IsEmpty())
+    {
+        CMC->NetworkSmoothingMode = SmoothingMode;
+    }
+    if (bHasMaxSmooth)
+    {
+        CMC->NetworkMaxSmoothUpdateDistance = static_cast<float>(GetJsonNumberField(Payload, TEXT("networkMaxSmoothUpdateDistance"), 256.0));
+    }
+    if (bHasNoSmooth)
+    {
+        CMC->NetworkNoSmoothUpdateDistance = static_cast<float>(GetJsonNumberField(Payload, TEXT("networkNoSmoothUpdateDistance"), 384.0));
     }
 
-    return SaveBlueprintAndReply(Context, Blueprint, TEXT("Movement prediction configured"), TEXT("Movement prediction configured"));
+    return SaveBlueprintAndReply(Context, Blueprint,
+        FString::Printf(TEXT("NetworkSmoothingMode=%s, NetworkMaxSmoothUpdateDistance=%.1f, NetworkNoSmoothUpdateDistance=%.1f"),
+            *StaticEnum<ENetworkSmoothingMode>()->GetNameStringByValue(static_cast<int64>(CMC->NetworkSmoothingMode)),
+            CMC->NetworkMaxSmoothUpdateDistance, CMC->NetworkNoSmoothUpdateDistance),
+        TEXT("Movement prediction configured"));
 }
 }

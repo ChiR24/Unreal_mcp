@@ -1,38 +1,86 @@
 #include "Domains/Networking/McpAutomationBridge_NetworkingHandlersPrivate.h"
 
+#include "Engine/Engine.h"
+#include "Misc/Paths.h"
+
 namespace McpNetworkingHandlers
 {
+namespace
+{
+// The class the engine instantiates for game traffic (NetDriverDefinitions, GameNetDriver entry).
+UClass* ResolveGameNetDriverClassForMcp()
+{
+    if (!GEngine) return nullptr;
+    for (const FNetDriverDefinition& Definition : GEngine->NetDriverDefinitions)
+    {
+        if (Definition.DefName == NAME_GameNetDriver)
+        {
+            return LoadClass<UNetDriver>(nullptr, *Definition.DriverClassName.ToString());
+        }
+    }
+    return nullptr;
+}
+}
+
 bool HandleConfigureNetDriver(FNetworkingActionContext& Context)
 {
     TSharedPtr<FJsonObject>& ResultJson = Context.ResultJson;
-    double MaxClientRate = GetJsonNumberField(Context.Payload, TEXT("maxClientRate"), 15000.0);
-    double MaxInternetClientRate = GetJsonNumberField(Context.Payload, TEXT("maxInternetClientRate"), 10000.0);
-    double NetServerMaxTickRate = GetJsonNumberField(Context.Payload, TEXT("netServerMaxTickRate"), 30.0);
-    UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    bool bConfigApplied = false;
-
-    if (World && World->GetNetDriver())
+    struct FNetDriverSetting { const TCHAR* Field; const TCHAR* Property; };
+    static const FNetDriverSetting Settings[] = {
+        {TEXT("maxClientRate"), TEXT("MaxClientRate")},
+        {TEXT("maxInternetClientRate"), TEXT("MaxInternetClientRate")},
+        {TEXT("netServerMaxTickRate"), TEXT("NetServerMaxTickRate")},
+    };
+    UClass* DriverClass = ResolveGameNetDriverClassForMcp();
+    UNetDriver* DriverCDO = DriverClass ? Cast<UNetDriver>(DriverClass->GetDefaultObject()) : nullptr;
+    if (!DriverCDO)
     {
-        UNetDriver* NetDriver = World->GetNetDriver();
-        NetDriver->MaxClientRate = static_cast<int32>(MaxClientRate);
-        NetDriver->MaxInternetClientRate = static_cast<int32>(MaxInternetClientRate);
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-        NetDriver->SetNetServerMaxTickRate(static_cast<int32>(NetServerMaxTickRate));
-#else
-        PRAGMA_DISABLE_DEPRECATION_WARNINGS
-        NetDriver->NetServerMaxTickRate = static_cast<int32>(NetServerMaxTickRate);
-        PRAGMA_ENABLE_DEPRECATION_WARNINGS
-#endif
-        bConfigApplied = true;
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Could not resolve the project's game net driver class (Engine NetDriverDefinitions)."), TEXT("NOT_FOUND"));
+        return true;
     }
 
+    // The editor world normally has no net driver, so the old reply ("Net driver configured") changed
+    // nothing there. The values are the driver class's config properties: write them to its defaults
+    // and the project's DefaultEngine.ini, and to a running driver when there is one.
+    UWorld* World = GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
+    UNetDriver* ActiveDriver = World ? World->GetNetDriver() : nullptr;
+    int32 Written = 0;
+    for (const FNetDriverSetting& Setting : Settings)
+    {
+        if (!Context.Payload->HasField(Setting.Field)) continue;
+        const int32 Value = static_cast<int32>(GetJsonNumberField(Context.Payload, Setting.Field, 0.0));
+        FIntProperty* Property = FindFProperty<FIntProperty>(DriverClass, Setting.Property);
+        if (!Property || Value <= 0)
+        {
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId,
+                Property ? FString::Printf(TEXT("%s must be a positive whole number."), Setting.Field)
+                         : FString::Printf(TEXT("%s has no %s config property."), *DriverClass->GetName(), Setting.Property),
+                TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        Property->SetPropertyValue_InContainer(DriverCDO, Value);
+        DriverCDO->UpdateSinglePropertyInConfigFile(Property, DriverCDO->GetDefaultConfigFilename());
+        if (ActiveDriver && ActiveDriver->IsA(DriverClass))
+        {
+            Property->SetPropertyValue_InContainer(ActiveDriver, Value);
+        }
+        ResultJson->SetNumberField(Setting.Field, Value);
+        ++Written;
+    }
+    if (Written == 0)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Nothing to configure: pass maxClientRate, maxInternetClientRate or netServerMaxTickRate."), TEXT("INVALID_PARAMS"));
+        return true;
+    }
+
+    const bool bAppliedToActive = ActiveDriver && ActiveDriver->IsA(DriverClass);
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetBoolField(TEXT("appliedToActiveDriver"), bConfigApplied);
-    ResultJson->SetNumberField(TEXT("maxClientRate"), MaxClientRate);
-    ResultJson->SetNumberField(TEXT("maxInternetClientRate"), MaxInternetClientRate);
-    ResultJson->SetNumberField(TEXT("netServerMaxTickRate"), NetServerMaxTickRate);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net driver configured (maxClientRate=%.0f, maxInternetClientRate=%.0f, tickRate=%.0f)"),
-        MaxClientRate, MaxInternetClientRate, NetServerMaxTickRate));
+    ResultJson->SetBoolField(TEXT("appliedToActiveDriver"), bAppliedToActive);
+    ResultJson->SetStringField(TEXT("driverClass"), DriverClass->GetPathName());
+    ResultJson->SetStringField(TEXT("configFile"), DriverCDO->GetDefaultConfigFilename());
+    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Wrote %d net driver setting(s) to %s for %s%s"), Written,
+        *FPaths::GetCleanFilename(DriverCDO->GetDefaultConfigFilename()), *DriverClass->GetName(),
+        bAppliedToActive ? TEXT(" and the running net driver") : TEXT("; they apply from the next session")));
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Net driver configured"), ResultJson);
     return true;
 }
@@ -49,6 +97,21 @@ bool HandleSetNetRole(FNetworkingActionContext& Context)
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Missing required parameters"), TEXT("INVALID_PARAMS"));
         return true;
     }
+    ENetRole NetRole = ROLE_None;
+    FString ValidRoles;
+    if (!TryParseNetEnum(Role, NetRole, ValidRoles))
+    {
+        ReplyInvalidEnum(Context, TEXT("role"), Role, ValidRoles);
+        return true;
+    }
+    // A Blueprint stores no role: the server always holds authority, and a spawned actor's remote
+    // role is derived from bReplicates (autonomous once a player controller possesses it). The one
+    // thing the choice sets is whether the actor replicates, so a role that implies nothing is refused.
+    if (NetRole == ROLE_Authority)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Every spawned actor has ROLE_Authority on the server; choose how clients see it instead: ROLE_None (not replicated), ROLE_SimulatedProxy, or ROLE_AutonomousProxy (replicated)."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UBlueprint* Blueprint = LoadBlueprintFromPath(BlueprintPath);
     if (!Blueprint)
@@ -56,27 +119,29 @@ bool HandleSetNetRole(FNetworkingActionContext& Context)
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Blueprint not found"), TEXT("NOT_FOUND"));
         return true;
     }
-
-    AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
-    ENetRole NetRole = GetNetRole(Role);
-    if (CDO)
+    AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CDO)
     {
-        CDO->SetReplicates(NetRole != ROLE_None);
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Network roles apply to Actors; this Blueprint is not an Actor."), TEXT("NOT_SUPPORTED"));
+        return true;
     }
+    CDO->SetReplicates(NetRole != ROLE_None);
 
     Blueprint->Modify();
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
     McpSafeAssetSave(Blueprint);
 
+    const bool bReplicates = CDO->GetIsReplicated();
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("role"), Role);
-    ResultJson->SetBoolField(TEXT("replicates"), CDO ? CDO->GetIsReplicated() : false);
-    ResultJson->SetStringField(TEXT("message"), FString::Printf(TEXT("Net role configured to %s (replicates=%s)"), *Role, CDO && CDO->GetIsReplicated() ? TEXT("true") : TEXT("false")));
+    ResultJson->SetStringField(TEXT("role"), NetRoleToString(NetRole));
+    ResultJson->SetBoolField(TEXT("replicates"), bReplicates);
+    ResultJson->SetStringField(TEXT("message"), NetRole == ROLE_None
+        ? FString(TEXT("Replication turned off: clients never receive this actor (ROLE_None)."))
+        : FString::Printf(TEXT("Replication turned on (replicates=%s): clients see it as ROLE_SimulatedProxy, and as ROLE_AutonomousProxy once a player controller possesses it."), bReplicates ? TEXT("true") : TEXT("false")));
     McpHandlerUtils::AddVerification(ResultJson, Blueprint);
     Context.Bridge.SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true, TEXT("Net role configured"), ResultJson);
     return true;
 }
-
 bool HandleConfigureReplicatedMovement(FNetworkingActionContext& Context)
 {
     const TSharedPtr<FJsonObject>& Payload = Context.Payload;
