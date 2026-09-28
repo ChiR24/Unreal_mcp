@@ -116,6 +116,10 @@ const testCases = [
   // === ADD: add_function (blueprintPath + functionName) ===
   { scenario: 'ADD: add_function', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, memberName: 'TestFunction', inputs: [{ name: 'InputValue', type: 'Float' }], outputs: [{ name: 'ReturnValue', type: 'Float' }], isPublic: true }, expected: 'success|already exists' },
   { scenario: 'ADD: add_function private', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, functionName: 'TestPrivateFunction', isPublic: false }, expected: 'success|already exists' },
+  // pure: its call nodes get no exec pins. Declared outputs make a return node, named by resultNodeGuid.
+  { scenario: 'ADD: add_function pure with a return node', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, functionName: 'TestPureFunction', inputs: [{ name: 'Value', type: 'Float' }], outputs: [{ name: 'Result', type: 'Float' }], pure: true }, expected: 'success', captureResult: { key: 'pureReturnId', fromField: 'result.resultNodeGuid' } },
+  { scenario: 'VERIFY: add_function resultNodeGuid names the return node', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:pureReturnId}', graphName: 'TestPureFunction' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'Result' }, label: 'the declared output is an input pin of the return node' }] },
+  { scenario: 'ERROR: add_function on a missing Blueprint', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: `${TEST_FOLDER}/BP_Missing_${ts}`, functionName: 'Nowhere', pure: true }, expected: 'error|BLUEPRINT_NOT_FOUND' },
 
   // === DELETE: remove_function (blueprintPath + functionName) ===
   // Removes the function added directly above; safe because no later case reuses TestFunction.
@@ -224,6 +228,57 @@ const testCases = [
     { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'constructed' } },
     { edit: 'connect_pins', from: '$entry.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'the entry node resolved' }] },
+
+  // === BATCH: member steps. A function is declared, filled and called in one batch ===
+  // "$fn" is the function's entry node and "$fn_return" its return node.
+  { scenario: 'BATCH: build_graph declares a pure function, fills its body and calls it', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_function', id: 'fn', functionName: 'BatchPassThrough', inputs: [{ name: 'Value', type: 'Float' }], outputs: [{ name: 'Result', type: 'Float' }], pure: true },
+    { edit: 'connect_pins', graphName: 'BatchPassThrough', from: '$fn.Value', to: '$fn_return.Result' },
+    { edit: 'create_node', id: 'call', nodeType: 'CallFunction', memberName: 'BatchPassThrough' },
+  ] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.succeeded', equals: 3, label: 'all three steps ran' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with the batch-built function' },
+    { path: 'structuredContent.result.results.2.pins', notIncludes: 'execute', label: 'a pure function is called without exec pins' },
+  ] },
+  { scenario: 'BATCH: build_graph declares an event dispatcher and calls it', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_event_dispatcher', dispatcherName: 'OnBatchPing', parameters: [{ name: 'Count', type: 'Int' }] },
+    { edit: 'create_node', id: 'ping', nodeType: 'CallDelegate', memberName: 'OnBatchPing' },
+  ] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with the new dispatcher' },
+    { path: 'structuredContent.result.results.1.pins', includes: 'Count', label: 'the call carries the dispatcher parameter' },
+  ] },
+  // A second return node mirrors the first one's outputs, and its pins take defaults.
+  { scenario: 'BATCH: build_graph gives a function a second return node', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_function', id: 'find', functionName: 'BatchFindSomething', outputs: [{ name: 'Found', type: 'Bool' }] },
+    { edit: 'create_node', id: 'fail', graphName: 'BatchFindSomething', nodeType: 'FunctionResult', pinDefaults: { Found: false } },
+    { edit: 'create_node', id: 'branch', graphName: 'BatchFindSomething', nodeType: 'Branch' },
+    { edit: 'connect_pins', graphName: 'BatchFindSomething', from: '$find.then', to: '$branch.execute' },
+    { edit: 'connect_pins', graphName: 'BatchFindSomething', from: '$branch.then', to: '$find_return.execute' },
+    { edit: 'connect_pins', graphName: 'BatchFindSomething', from: '$branch.else', to: '$fail.execute' },
+  ] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.succeeded', equals: 6, label: 'all six steps ran' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'a function with two return nodes compiles' },
+    { path: 'structuredContent.result.results.1.pins', includes: 'Found', label: 'the second return node has the declared output' },
+  ] },
+  { scenario: 'BATCH: build_graph places an async task node and an interface message', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'load', nodeType: 'AsyncTask', memberClass: 'AsyncActionHandleSaveGame', memberName: 'AsyncLoadGameFromSlot' },
+    { edit: 'create_node', id: 'tagged', nodeType: 'Message', memberClass: 'GameplayTagAssetInterface', memberName: 'HasMatchingGameplayTag' },
+  ] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.results.0.pins', includes: 'Completed', label: 'the async node has its delegate exec pin' },
+    { path: 'structuredContent.result.results.1.pins', includes: 'TagToCheck', label: 'the message node has the interface function parameter' },
+  ] },
+  { scenario: 'ERROR: build_graph refuses pinDefaults on a member step', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, operations: [
+    { edit: 'add_function', functionName: 'NeverMade', pinDefaults: { Value: 1 } },
+  ] }, expected: 'error|INVALID_OPERATION' },
+  { scenario: 'ERROR: build_graph refuses a dispatcher call nothing declares', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, operations: [
+    { edit: 'create_node', nodeType: 'CallDelegate', memberName: 'OnNoSuchDispatcher' },
+  ] }, expected: 'error|DISPATCHER_NOT_FOUND' },
+  // The failing step ran in a function graph; it must take its node with it there too.
+  { scenario: 'ERROR: build_graph whose last step fails in a function graph', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'BatchStopFlag', variableType: 'Bool' },
+    { edit: 'create_node', graphName: 'BatchPassThrough', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { NoSuchPin: 'x' } },
+  ] }, expected: 'error|PIN_DEFAULT_FAILED' },
+  { scenario: 'VERIFY: the failed step left no node behind', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'BatchPassThrough', filter: 'Print' }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 0, label: 'the PrintString node of the failed step is gone' }] },
 
   // === NODE: create_node CustomEvent with typed parameters ===
   { scenario: 'NODE: create_node custom event with parameters', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: BP_PATH, graphName: 'EventGraph', nodeType: 'CustomEvent', eventName: 'AddScore', parameters: [{ name: 'Points', type: 'int' }], posX: 2400, posY: 1200 }, expected: 'success' },

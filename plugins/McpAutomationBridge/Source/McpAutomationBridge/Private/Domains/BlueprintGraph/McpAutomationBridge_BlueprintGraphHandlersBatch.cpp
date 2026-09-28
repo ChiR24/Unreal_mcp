@@ -1,8 +1,11 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
+#include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
+#include "Domains/BlueprintGraph/Behaviour/McpAutomationBridge_BlueprintBehaviourNodes.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphCompatibility.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintDiagnostics.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 // build_graph: one call that runs a list of graph edits. Wiring one event chain
 // used to cost a round trip per node, per link and per pin default; a batch runs
@@ -18,6 +21,51 @@ bool IsCallFunctionType(const FString& NodeType)
 {
     return NodeType == TEXT("CallFunction") || NodeType == TEXT("K2Node_CallFunction") ||
            NodeType == TEXT("FunctionCall");
+}
+}
+
+namespace GraphBatch
+{
+// delete_node / break_pin_links stay single calls so each keeps its own consent
+// gate. The member steps let one batch declare what its own nodes use: a new
+// Blueprint used to cost a call per variable or function before the graph could be built.
+bool IsBatchableEdit(const FString& Edit)
+{
+    return Edit == TEXT("create_node") || Edit == TEXT("connect_pins") ||
+           Edit == TEXT("set_pin_default_value") || Edit == TEXT("set_node_property") ||
+           Edit == TEXT("create_reroute_node") || Edit == TEXT("add_variable") || Edit == TEXT("add_function") ||
+           Edit == TEXT("add_event") || Edit == TEXT("add_event_dispatcher");
+}
+
+bool RunBlueprintMemberStep(const FActionContext& Parent, const FString& Edit, const FString& StepId,
+                            const TSharedPtr<FJsonObject>& Payload)
+{
+    struct FBatchMemberStep
+    {
+        const TCHAR* Edit;
+        bool (*Handler)(const McpBlueprintHandlers::FBlueprintActionContext&);
+    };
+    static const FBatchMemberStep Members[] = {
+        {TEXT("add_variable"), &McpBlueprintHandlers::HandleBlueprintAddVariable},
+        {TEXT("add_function"), &McpBlueprintHandlers::HandleBlueprintAddFunction},
+        {TEXT("add_event"), &McpBlueprintHandlers::HandleBlueprintAddEvent},
+        {TEXT("add_event_dispatcher"), &McpBlueprintHandlers::HandleBlueprintAddEventDispatcher}};
+    for (const FBatchMemberStep& Member : Members)
+    {
+        if (Edit == Member.Edit)
+        {
+            Member.Handler(McpBlueprintHandlers::BuildBlueprintActionContext(*Parent.Subsystem, StepId, Edit, Payload,
+                                                                            Parent.RequestingSocket));
+            return true;
+        }
+    }
+    return false;
+}
+
+UEdGraphNode* FindBatchNode(UBlueprint* Blueprint, const FString& Guid)
+{
+    FGuid Parsed;
+    return Blueprint && FGuid::Parse(Guid, Parsed) ? FBlueprintEditorUtils::GetNodeByGUID(Blueprint, Parsed) : nullptr;
 }
 
 // Every function and variable a step names is resolved before any step runs. A
@@ -43,11 +91,20 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
         {
             (*Step)->TryGetStringField(TEXT("targetClass"), MemberClass);
         }
-        if (Edit == TEXT("add_variable"))
+        if (Edit == TEXT("add_variable") || Edit == TEXT("add_function") || Edit == TEXT("add_event") ||
+            Edit == TEXT("add_event_dispatcher"))
         {
-            FString Variable;
-            (*Step)->TryGetStringField(TEXT("variableName"), Variable);
-            Declared.Add(FName(*Variable));
+            if ((*Step)->HasField(TEXT("pinDefaults")))
+            {
+                OutIndex = Index;
+                OutCode = TEXT("INVALID_OPERATION");
+                return TEXT("pinDefaults applies to create_node steps; a member step (add_variable, add_function, "
+                            "add_event, add_event_dispatcher) makes no node to set pins on.");
+            }
+            // What a later step can name: the variable, function, custom event or dispatcher.
+            Declared.Add(FName(*McpGetFirstStringField(*Step, {TEXT("variableName"), TEXT("functionName"),
+                                                                TEXT("customEventName"), TEXT("eventName"),
+                                                                TEXT("dispatcherName")})));
             continue;
         }
         if (Edit != TEXT("create_node") || Member.IsEmpty())
@@ -56,7 +113,7 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
         }
         OutIndex = Index;
         UClass* ResolvedClass = nullptr;
-        if (IsCallFunctionType(NodeType) &&
+        if (IsCallFunctionType(NodeType) && !(MemberClass.IsEmpty() && Declared.Contains(FName(*Member))) &&
             !ResolveGraphCallFunction(Context.Blueprint, Member, MemberClass, ResolvedClass))
         {
             OutCode = TEXT("FUNCTION_NOT_FOUND");
@@ -73,27 +130,26 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
             return FString::Printf(TEXT("Variable '%s' not found in the Blueprint, its components or any parent "
                                         "class, and no earlier add_variable step declares it."), *Member);
         }
+        const FString Behaviour = PrecheckBehaviourNode(Context, NodeType, Member, MemberClass, Declared, OutCode);
+        if (!Behaviour.IsEmpty())
+        {
+            return Behaviour;
+        }
     }
     OutIndex = INDEX_NONE;
     return FString();
 }
-}
 
-bool HandleGraphBatchAction(FActionContext& Context)
+bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
 {
-    using namespace GraphBatch;
-    if (Context.SubAction != TEXT("build_graph"))
-    {
-        return false;
-    }
     const TArray<TSharedPtr<FJsonValue>>* Steps = nullptr;
     if (!Context.Payload->TryGetArrayField(TEXT("operations"), Steps) || Steps->Num() == 0 ||
-        Steps->Num() > MaxBatchSteps)
+        Steps->Num() > MaxSteps)
     {
         Context.SendError(FString::Printf(
             TEXT("build_graph needs `operations`: 1-%d steps, each {edit, ...that edit's params}, "
                  "optionally `id` to name a created node for later steps as \"$id\"."),
-            MaxBatchSteps), TEXT("INVALID_OPERATIONS"));
+            MaxSteps), TEXT("INVALID_OPERATIONS"));
         return true;
     }
 
@@ -165,17 +221,31 @@ bool HandleGraphBatchAction(FActionContext& Context)
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    FString FirstError;
-    const bool bCompiled = McpCompileBlueprintWithDiagnostics(Context.Blueprint, Result, FirstError, 12);
-    Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Context.Blueprint));
     Result->SetArrayField(TEXT("results"), Results);
     Result->SetObjectField(TEXT("nodeIds"), NodeIds);
     Result->SetNumberField(TEXT("succeeded"), Results.Num());
+    if (!bCompile)
+    {
+        // The caller compiles and saves once its own work is done.
+        Context.bDeferCompile = true;
+        Context.SendResponse(FString::Printf(TEXT("Ran %d graph operations."), Results.Num()), Result);
+        return true;
+    }
+    FString FirstError;
+    const bool bCompiled = McpCompileBlueprintWithDiagnostics(Context.Blueprint, Result, FirstError, 12);
+    Result->SetBoolField(TEXT("saved"), SaveLoadedAssetThrottled(Context.Blueprint));
     Context.SendResponse(bCompiled
         ? FString::Printf(TEXT("Ran %d graph operations; the blueprint compiles."), Results.Num())
         : FString::Printf(TEXT("Ran %d graph operations. WARNING: the blueprint does not compile: %s"),
                           Results.Num(), FirstError.IsEmpty() ? TEXT("no compiler message") : *FirstError),
         Result);
     return true;
+}
+} // namespace GraphBatch
+
+bool HandleGraphBatchAction(FActionContext& Context)
+{
+    return Context.SubAction == TEXT("build_graph") &&
+           GraphBatch::RunGraphBatch(Context, GraphBatch::MaxBatchSteps, /*bCompile=*/true);
 }
 }

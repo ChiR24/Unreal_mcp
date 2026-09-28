@@ -135,12 +135,15 @@ bool McpBlueprintAddEventStandard(
     const FBlueprintActionContext &Context, UBlueprint *BP, UEdGraph *EventGraph,
     int32 EventPosX, int32 EventPosY, const FString &RegistryKey,
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params);
+// EntryNodeGuid goes out as nodeGuid, ResultNodeGuid (when the function has a
+// return node) as resultNodeGuid: build_graph aliases them "$id" and "$id_return".
 void SendBlueprintAddFunctionResult(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *Blueprint,
     const FString &RegistryKey, const FString &FuncName, bool bIsPublic,
     const TArray<TSharedPtr<FJsonValue>> &Inputs,
-    const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved);
+    const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved,
+    const FString &EntryNodeGuid, const FString &ResultNodeGuid);
 
 bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context);
 bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context);
@@ -152,6 +155,8 @@ bool HandleBlueprintRemoveRenameVariable(const FBlueprintActionContext &Context)
 bool HandleBlueprintAddEvent(const FBlueprintActionContext &Context);
 bool HandleBlueprintRemoveEvent(const FBlueprintActionContext &Context);
 bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context);
+// build_graph member step only (no standalone action): {dispatcherName, parameters}.
+bool HandleBlueprintAddEventDispatcher(const FBlueprintActionContext &Context);
 bool HandleBlueprintRemoveFunction(const FBlueprintActionContext &Context);
 bool HandleBlueprintCompile(const FBlueprintActionContext &Context);
 bool HandleBlueprintCreateExists(const FBlueprintActionContext &Context);

@@ -23,16 +23,23 @@ export const FUNCTIONS_EVENTS_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       blueprintPath: P.blueprintPath, functionName: P.functionName, inputs: P.inputs, outputs: P.outputs,
       isPublic: { type: 'boolean', description: 'Access specifier: true public (the default), false private (callable only from this Blueprint).' },
+      pure: { type: 'boolean', description: 'Pure function (the Details panel\'s Pure checkbox): its call nodes have no exec pins. Default false.' },
     },
     required: ['blueprintPath', 'functionName'],
-    outputProps: { functionName: P.functionName },
+    // add_function is the first member of its fold, so nodeGuid's description
+    // speaks for add_event too.
+    outputProps: {
+      functionName: P.functionName,
+      nodeGuid: { type: 'string', description: 'Node guid: the function\'s entry node, or the event node. A built-in event that already exists in the graph may be bound without one.' },
+      resultNodeGuid: { type: 'string', description: 'The function\'s return node, present when the function has one (it is made when outputs are declared).' },
+    },
     outputRequired: ['functionName'],
     effect: 'write',
     latency: 'interactive',
     resources: 'low',
     plugins: BP_PLUGINS,
-    exampleInput: { action: 'add_function', blueprintPath: '/Game/Blueprints/BP_Test', functionName: 'CalculateDamage', inputs: [{ name: 'BaseDamage', type: 'Float' }], outputs: [{ name: 'Result', type: 'Float' }] },
-    exampleOutput: { success: true, functionName: 'CalculateDamage' },
+    exampleInput: { action: 'add_function', blueprintPath: '/Game/Blueprints/BP_Test', functionName: 'CalculateDamage', inputs: [{ name: 'BaseDamage', type: 'Float' }], outputs: [{ name: 'Result', type: 'Float' }], pure: true },
+    exampleOutput: { success: true, functionName: 'CalculateDamage', nodeGuid: '8C1D0E6A4F2B4C1D9E0F1A2B3C4D5E6F', resultNodeGuid: '1A2B3C4D5E6F40718293A4B5C6D7E8F9' },
   }),
   buildRecord({
     id: 'blueprint.remove_function',

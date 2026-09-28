@@ -5,6 +5,7 @@
 #include "EdGraph/EdGraphNode.h"
 #include "Engine/Blueprint.h"
 #include "K2Node_Event.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {
 namespace {
@@ -26,6 +27,16 @@ FString FindEventNodeGuid(UBlueprint *BP, const FName &EventName) {
   const FString Wanted = EventName.ToString();
   TArray<UEdGraph *> Graphs;
   BP->GetAllGraphs(Graphs);
+  // The event itself first: the title match below also hits a CallFunction node
+  // titled after the event (a call to OnDeath), which build_graph would then alias.
+  TArray<UK2Node_Event *> Events;
+  FBlueprintEditorUtils::GetAllNodesOfClass(BP, Events);
+  for (const UK2Node_Event *Event : Events) {
+    if (!EventName.IsNone() && (Event->CustomFunctionName == EventName ||
+                                (Event->bOverrideFunction && Event->EventReference.GetMemberName() == EventName))) {
+      return Event->NodeGuid.ToString();
+    }
+  }
   for (const UEdGraph *Graph : Graphs) {
     if (!Graph) {
       continue;

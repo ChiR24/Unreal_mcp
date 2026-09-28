@@ -64,6 +64,18 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     const bool bIsPublic = LocalPayload->HasField(TEXT("isPublic"))
                                ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
                                : true;
+    const bool bPure = GetJsonBoolField(LocalPayload, TEXT("pure"));
+    // Entry and return node guids: build_graph aliases a step's id to the entry
+    // node and "<id>_return" to the return node, so its body steps can wire them.
+    auto TerminatorGuid = [](const UEdGraph *Graph, bool bEntry) -> FString {
+      const UClass *Wanted = bEntry ? UK2Node_FunctionEntry::StaticClass() : UK2Node_FunctionResult::StaticClass();
+      for (const UEdGraphNode *Node : Graph->Nodes) {
+        if (Node && Node->IsA(Wanted)) {
+          return Node->NodeGuid.ToString();
+        }
+      }
+      return FString();
+    };
 
 
     FString Normalized;
@@ -100,6 +112,11 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
       Resp->SetStringField(TEXT("functionName"), ExistingGraph->GetName());
       Resp->SetStringField(TEXT("note"), TEXT("Function already exists"));
+      Resp->SetStringField(TEXT("nodeGuid"), TerminatorGuid(ExistingGraph, true));
+      const FString ExistingResult = TerminatorGuid(ExistingGraph, false);
+      if (!ExistingResult.IsEmpty()) {
+        Resp->SetStringField(TEXT("resultNodeGuid"), ExistingResult);
+      }
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Function already exists"), Resp, FString());
       return true;
@@ -272,14 +289,22 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       EntryNode->ClearExtraFlags(FUNC_AccessSpecifiers);
       EntryNode->AddExtraFlags(bIsPublic ? FUNC_Public : FUNC_Private);
     }
+    // The Details panel's Pure checkbox: call sites get no exec pins.
+    if (EntryNode && bPure) {
+      EntryNode->Modify();
+      EntryNode->AddExtraFlags(FUNC_BlueprintPure);
+    }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
-    const bool bSaved = McpSafeAssetSave(Blueprint);
+    // Throttled, so a build_graph batch's save deferral holds for this step too.
+    const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
 
     SendBlueprintAddFunctionResult(Bridge, RequestId, RequestingSocket,
                                    Blueprint, RegistryKey, FuncName, bIsPublic,
-                                   Inputs, Outputs, bSaved);
+                                   Inputs, Outputs, bSaved,
+                                   TerminatorGuid(NewGraph, true),
+                                   TerminatorGuid(NewGraph, false));
     return true;
   }
 

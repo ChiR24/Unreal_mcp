@@ -9,13 +9,18 @@ void SendBlueprintAddFunctionResult(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *Blueprint,
     const FString &RegistryKey, const FString &FuncName, bool bIsPublic,
     const TArray<TSharedPtr<FJsonValue>> &Inputs,
-    const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved) {
+    const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved,
+    const FString &EntryNodeGuid, const FString &ResultNodeGuid) {
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
   Resp->SetStringField(TEXT("functionName"), FuncName);
   Resp->SetBoolField(TEXT("public"), bIsPublic);
   Resp->SetBoolField(TEXT("saved"), bSaved);
+  Resp->SetStringField(TEXT("nodeGuid"), EntryNodeGuid);
+  if (!ResultNodeGuid.IsEmpty()) {
+    Resp->SetStringField(TEXT("resultNodeGuid"), ResultNodeGuid);
+  }
   if (Inputs.Num() > 0) {
     Resp->SetArrayField(TEXT("inputs"), Inputs);
   }

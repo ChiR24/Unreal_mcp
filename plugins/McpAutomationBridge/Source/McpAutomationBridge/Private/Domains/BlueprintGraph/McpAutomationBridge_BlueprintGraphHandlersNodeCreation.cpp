@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
+#include "Domains/BlueprintGraph/Behaviour/McpAutomationBridge_BlueprintBehaviourNodes.h"
 #include "K2Node_MacroInstance.h"
 #include "ScopedTransaction.h"
 
@@ -125,7 +126,8 @@ bool HandleNodeCreationAction(FActionContext& Context)
         TryCreateFunctionOrEventNode(Context, NodeType, X, Y) ||
         TryCreateCustomEventNode(Context, NodeType, X, Y) ||
         TryCreateMacroNode(Context, NodeType, X, Y) ||
-        TryCreateSpecialNode(Context, NodeType, X, Y))
+        TryCreateSpecialNode(Context, NodeType, X, Y) ||
+        TryCreateBehaviourNode(Context, NodeType, X, Y))
     {
         return true;
     }

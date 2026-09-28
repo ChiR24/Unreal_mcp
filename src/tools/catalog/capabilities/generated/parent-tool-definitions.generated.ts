@@ -10501,7 +10501,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. Every function and variable a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType, defaultValue, isPublic, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component delegate) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function graph). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed. Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind, in whichever graph it ran."
             }
           ],
           "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied."
@@ -11414,7 +11414,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeGuid": {
           "type": "string",
-          "description": "Event node identifier. Returned for custom events; the built-in-event path may bind an event that already exists in the graph and reports no new node."
+          "description": "Node guid: the function's entry node, or the event node. A built-in event that already exists in the graph may be bound without one."
         },
         "nodeId": {
           "type": "string",
@@ -11425,7 +11425,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Step id -> node guid for every node the batch created or reused."
+          "description": "Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds \"<id>_return\" for its return node."
         },
         "nodeName": {
           "type": "string",
@@ -11572,6 +11572,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the widget that was removed from the widget tree."
         },
+        "resultNodeGuid": {
+          "type": "string",
+          "description": "The function's return node, present when the function has one (it is made when outputs are declared)."
+        },
         "results": {
           "type": "array",
           "items": {
@@ -11580,7 +11584,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, pins (for created nodes), connected, appliedValue."
+          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue."
         },
         "right": {
           "type": "number",

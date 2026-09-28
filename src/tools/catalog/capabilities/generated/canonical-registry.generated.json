@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "511ee6c0ea91ff89",
+  "catalogRevision": "50992d9fb3ab2731",
   "recordCount": 383,
   "records": [
     {
@@ -11039,6 +11039,10 @@
               "type": "boolean",
               "description": "Access specifier: true public (the default), false private (callable only from this Blueprint)."
             },
+            "pure": {
+              "type": "boolean",
+              "description": "Pure function (the Details panel's Pure checkbox): its call nodes have no exec pins. Default false."
+            },
             "eventType": {
               "type": "string",
               "description": "Event type string for add_event."
@@ -11116,7 +11120,11 @@
             },
             "nodeGuid": {
               "type": "string",
-              "description": "Event node identifier. Returned for custom events; the built-in-event path may bind an event that already exists in the graph and reports no new node."
+              "description": "Node guid: the function's entry node, or the event node. A built-in event that already exists in the graph may be bound without one."
+            },
+            "resultNodeGuid": {
+              "type": "string",
+              "description": "The function's return node, present when the function has one (it is made when outputs are declared)."
             },
             "eventName": {
               "type": "string",
@@ -11148,11 +11156,14 @@
                 "type": "Float"
               }
             ],
+            "pure": true,
             "kind": "function"
           },
           "output": {
             "success": true,
-            "functionName": "CalculateDamage"
+            "functionName": "CalculateDamage",
+            "nodeGuid": "8C1D0E6A4F2B4C1D9E0F1A2B3C4D5E6F",
+            "resultNodeGuid": "1A2B3C4D5E6F40718293A4B5C6D7E8F9"
           }
         }
       ],
@@ -11201,6 +11212,9 @@
             "isPublic": [
               "function"
             ],
+            "pure": [
+              "function"
+            ],
             "eventType": [
               "event"
             ],
@@ -11230,8 +11244,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "991a5d12933ea6bf99ef98cde8b1e68b42b16a56acf9ee6eb600c1ff8874340a",
-        "content": "0edcfa7e2a9be409bd048f9b69ee233b5bab299557c984cc8131eae310aba4bd"
+        "schema": "c5597f01000ce3b05fdb051127df9e0d10110dae45fcc219938e63334cd4e1e4",
+        "content": "7e9663ff3641f06fbb93a6e77deb9a5a95f9b34f94120b68eb947b4f0bdedfba"
       }
     },
     {
@@ -13893,7 +13907,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}: edit is add_variable (variableName, variableType, defaultValue, isPublic, category; put it before the nodes that Get/Set it), create_node, connect_pins, set_pin_default_value, set_node_property or create_reroute_node. Optional per step: id (name the created node; later steps use \"$id\" in fromNodeId/toNodeId/nodeId), from/to (\"$id.PinName\" shorthand for connect_pins), pinDefaults ({PinName: value} applied to the created node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX/posY is auto-placed. Every function and variable a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType, defaultValue, isPublic, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component delegate) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function graph). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed. Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind, in whichever graph it ran."
             },
             "edit": {
               "type": "string",
@@ -14093,14 +14107,14 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, pins (for created nodes), connected, appliedValue."
+              "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue."
             },
             "nodeIds": {
               "type": "object",
               "additionalProperties": {
                 "type": "string"
               },
-              "description": "Step id -> node guid for every node the batch created or reused."
+              "description": "Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds \"<id>_return\" for its return node."
             },
             "succeeded": {
               "type": "number",
@@ -14299,8 +14313,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9cf783fefd09fd0494965e902a058f90d447f35d4f5aba7ec20282190a914542",
-        "content": "61338aa0c2f0e512471e91b5bc8e76ff584fc66b457aaa430aad276a0165012c"
+        "schema": "1d099e0b7fc5a71d5c09891ae256526afed9944fe9f50f66247eb87134d60a27",
+        "content": "ea637b05f37c7f17ee7e171a0a152f395ec1f02817982615a8128aabbc06dd9b"
       }
     },
     {

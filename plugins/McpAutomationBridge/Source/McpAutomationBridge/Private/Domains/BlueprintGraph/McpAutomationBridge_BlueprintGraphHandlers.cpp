@@ -60,8 +60,10 @@ UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& Member
         return Function;
     }
     // String and Text joined the stock libraries: Conv_IntToText and
-    // Concat_StrStr failed without a memberClass.
+    // Concat_StrStr failed without a memberClass. The skeleton class already has a
+    // function or custom event added earlier in the same batch, before any compile.
     UClass* Defaults[] = {Blueprint ? Blueprint->GeneratedClass.Get() : nullptr,
+        Blueprint ? Blueprint->SkeletonGeneratedClass.Get() : nullptr,
         UKismetSystemLibrary::StaticClass(), UGameplayStatics::StaticClass(),
         UKismetMathLibrary::StaticClass(), UKismetStringLibrary::StaticClass(),
         UKismetTextLibrary::StaticClass()};
