@@ -68,6 +68,11 @@ if (TargetRig)
 MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, TargetRig);
 }
 }
+#if ENGINE_MINOR_VERSION >= 6
+// From 5.6 a retargeter does nothing without its op stack (chains live on the FK Chains op), and the
+// factory makes an empty one; these are the ops the editor's own new-retargeter setup adds.
+Controller->AddDefaultOps();
+#endif
 }
 #else
 // Fallback for UE 5.0 where direct access was public
@@ -215,27 +220,51 @@ TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObje
         ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Chain not found. targetChain must be one of: %s. sourceChain must be one of: %s (or None to clear)."),
             *JoinRetargetChainNames(TargetChains), *JoinRetargetChainNames(SourceChains)), TEXT("CHAIN_NOT_FOUND"));
     }
-    bool bChanged = false;
+    if (bAutoMap && (SourceChains.Num() == 0 || TargetChains.Num() == 0))
+    {
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Nothing to map: the source rig has chains %s and the target rig has chains %s. Add retarget chains to both IK Rigs first."),
+            *JoinRetargetChainNames(SourceChains), *JoinRetargetChainNames(TargetChains)), TEXT("NO_RETARGET_CHAINS"));
+    }
+    TMap<FName, FName> Before;
+    for (const FName& Chain : TargetChains) { Before.Add(Chain, RetargetSourceChainFor(Controller, Chain)); }
+    // From 5.6 chain mappings live on retarget ops; an empty op stack maps nothing, so it gets the default ops,
+    // which are removed again if the mapping then fails.
+    bool bOpsAdded = false;
+#if ENGINE_MINOR_VERSION >= 6
+    if (Controller->GetNumRetargetOps() == 0)
+    {
+        Controller->AddDefaultOps();
+        bOpsAdded = true;
+    }
+#endif
+    int32 Mapped = 0;
     if (bAutoMap)
     {
-        TMap<FName, FName> Before;
-        for (const FName& Chain : TargetChains) { Before.Add(Chain, RetargetSourceChainFor(Controller, Chain)); }
 #if ENGINE_MINOR_VERSION >= 2
         Controller->AutoMapChains(EAutoMapChainType::Exact, false);
         Controller->AutoMapChains(EAutoMapChainType::Fuzzy, false);
 #else
         Controller->AutoMapChains();
 #endif
-        for (const FName& Chain : TargetChains) { bChanged |= Before[Chain] != RetargetSourceChainFor(Controller, Chain); }
-    }
-    else
-    {
-        bChanged = RetargetSourceChainFor(Controller, Target) != Source;
-        if (!SetRetargetSourceChain(Controller, Source, Target) || RetargetSourceChainFor(Controller, Target) != Source)
+        for (const FName& Chain : TargetChains) { Mapped += RetargetSourceChainFor(Controller, Chain).IsNone() ? 0 : 1; }
+        if (Mapped == 0)
         {
-            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("The retargeter did not accept %s -> %s."), *Source.ToString(), *Target.ToString()), TEXT("MAPPING_FAILED"));
+#if ENGINE_MINOR_VERSION >= 6
+            if (bOpsAdded) { Controller->RemoveAllOps(); }
+#endif
+            ANIM_ERROR_RESPONSE(FString::Printf(TEXT("Auto-mapping matched no chains (source: %s; target: %s). Map them one at a time with targetChain and sourceChain."),
+                *JoinRetargetChainNames(SourceChains), *JoinRetargetChainNames(TargetChains)), TEXT("NO_CHAINS_MAPPED"));
         }
     }
+    else if (!SetRetargetSourceChain(Controller, Source, Target) || RetargetSourceChainFor(Controller, Target) != Source)
+    {
+#if ENGINE_MINOR_VERSION >= 6
+        if (bOpsAdded) { Controller->RemoveAllOps(); }
+#endif
+        ANIM_ERROR_RESPONSE(FString::Printf(TEXT("The retargeter did not accept %s -> %s."), *Source.ToString(), *Target.ToString()), TEXT("MAPPING_FAILED"));
+    }
+    bool bChanged = bOpsAdded;
+    for (const FName& Chain : TargetChains) { bChanged |= Before[Chain] != RetargetSourceChainFor(Controller, Chain); }
     TArray<TSharedPtr<FJsonValue>> Mapping;
     for (const FName& Chain : TargetChains)
     {
@@ -248,9 +277,10 @@ TSharedPtr<FJsonObject> HandleSetRetargetChainMapping(const TSharedPtr<FJsonObje
     const bool bSaved = bSave && SaveAnimAsset(Retargeter, true);
     Response->SetArrayField(TEXT("mapping"), Mapping);
     Response->SetBoolField(TEXT("changed"), bChanged);
+    Response->SetBoolField(TEXT("opsAdded"), bOpsAdded);
     Response->SetBoolField(TEXT("saved"), bSaved);
     Response->SetStringField(TEXT("assetPath"), Retargeter->GetPathName());
-    ANIM_SUCCESS_RESPONSE(bAutoMap ? FString(TEXT("Auto-mapped the retarget chains")) : FString::Printf(TEXT("%s now drives %s"), *Source.ToString(), *Target.ToString()));
+    ANIM_SUCCESS_RESPONSE(bAutoMap ? FString::Printf(TEXT("Auto-mapped %d of %d target chains"), Mapped, TargetChains.Num()) : FString::Printf(TEXT("%s now drives %s"), *Source.ToString(), *Target.ToString()));
     return Response;
 }
 #endif
