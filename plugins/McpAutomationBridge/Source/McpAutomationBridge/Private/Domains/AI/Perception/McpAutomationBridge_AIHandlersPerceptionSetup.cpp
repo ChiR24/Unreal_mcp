@@ -9,6 +9,7 @@
 #include "Perception/AISense_Damage.h"
 #include "Perception/AISense_Hearing.h"
 #include "Perception/AISense_Sight.h"
+#include "Perception/AISense_Touch.h"
 #include "Perception/AISenseConfig_Damage.h"
 #include "Perception/AISenseConfig_Hearing.h"
 #include "Perception/AISenseConfig_Sight.h"
@@ -136,7 +137,10 @@ bool ConfigurePerception(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     static const TMap<FString, UClass*> Senses = {
         {TEXT("Sight"), UAISense_Sight::StaticClass()},
         {TEXT("Hearing"), UAISense_Hearing::StaticClass()},
-        {TEXT("Damage"), UAISense_Damage::StaticClass()}};
+        {TEXT("Damage"), UAISense_Damage::StaticClass()},
+        {TEXT("Touch"), UAISense_Touch::StaticClass()},
+        {TEXT("None"), nullptr}};
+    // Touch and None were advertised but fell through, echoed back as if applied.
     if (UClass* const* Sense = Senses.Find(DominantSense))
     {
         PerceptionComp->SetDominantSense(*Sense);

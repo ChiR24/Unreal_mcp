@@ -5632,6 +5632,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "activityTags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Registered gameplay tags added to the slot activity tags; an unregistered tag fails the call."
+        },
         "actorName": {
           "type": "string",
           "description": "Target actor name in the current level."
@@ -5664,6 +5671,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game asset path."
         },
+        "avoidanceWeight": {
+          "type": "number",
+          "description": "RVO avoidance weight (0 or more); left unchanged when omitted."
+        },
         "bCreateBoxObstacle": {
           "type": "boolean",
           "description": "Add a box obstacle during navigation generation."
@@ -5682,7 +5693,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintPath": {
           "type": "string",
-          "description": "Canonical /Game Blueprint asset path."
+          "description": "Blueprint that receives a NavModifier component; omit to place a NavModifierVolume in the editor level instead."
         },
         "brakingDeceleration": {
           "type": "number",
@@ -5886,6 +5897,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "End point of the navigation link (relative to the actor).",
           "additionalProperties": false
         },
+        "extent": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            }
+          },
+          "description": "Half-size of the placed NavModifierVolume (volume form only; default 200, 200, 100).",
+          "additionalProperties": false
+        },
         "failsafeExtent": {
           "type": "object",
           "properties": {
@@ -5905,6 +5932,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "failsafeToDefaultNavmesh": {
           "type": "boolean",
           "description": "Fall back to the default navmesh area when the modifier area class is unset."
+        },
+        "fixedAreaEnteringCost": {
+          "type": "number",
+          "description": "Flat cost added once when a path enters the area; left unchanged when omitted."
         },
         "focusActorName": {
           "type": "string",
@@ -6002,6 +6033,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Sync key across instances."
         },
+        "jumpZVelocity": {
+          "type": "number",
+          "description": "Initial upward jump velocity; left unchanged when omitted."
+        },
         "keyName": {
           "type": "string",
           "description": "Blackboard key name."
@@ -6049,6 +6084,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "location": {
           "type": "object",
+          "additionalProperties": false,
+          "description": "World location for the spawned link actor.",
           "properties": {
             "x": {
               "type": "number"
@@ -6059,9 +6096,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "z": {
               "type": "number"
             }
-          },
-          "description": "World location for the spawned link actor.",
-          "additionalProperties": false
+          }
         },
         "loseSightRadius": {
           "type": "number",
@@ -6070,6 +6105,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "maxAcceleration": {
           "type": "number",
           "description": "Maximum acceleration; left unchanged when omitted."
+        },
+        "maxFlySpeed": {
+          "type": "number",
+          "description": "Maximum flying speed; left unchanged when omitted."
         },
         "maxSimplificationError": {
           "type": "number",
@@ -6159,6 +6198,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Slot offset relative to the definition origin.",
           "additionalProperties": false
         },
+        "orientRotationToMovement": {
+          "type": "boolean",
+          "description": "Rotate the pawn toward its movement direction; left unchanged when omitted."
+        },
         "parentConfigPath": {
           "type": "string",
           "description": "Parent Mass entity config asset to inherit from."
@@ -6226,7 +6269,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "save": {
           "type": "boolean",
-          "description": "Persist the created/modified asset to disk."
+          "description": "Save the Blueprint asset after adding the component (Blueprint form only)."
         },
         "savePath": {
           "type": "string",
@@ -6470,6 +6513,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "triggerType": {
           "type": "string",
           "description": "Transition trigger kind."
+        },
+        "useAccelerationForPaths": {
+          "type": "boolean",
+          "description": "Path following uses acceleration instead of setting velocity directly; left unchanged when omitted."
+        },
+        "useRVOAvoidance": {
+          "type": "boolean",
+          "description": "Enable RVO avoidance; left unchanged when omitted."
         },
         "value": {
           "description": "Property value (any type)."

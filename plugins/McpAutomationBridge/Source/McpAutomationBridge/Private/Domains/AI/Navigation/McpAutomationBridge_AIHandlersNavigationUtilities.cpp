@@ -14,17 +14,89 @@
 #include "NavAreas/NavArea_Null.h"
 #include "NavAreas/NavArea_Obstacle.h"
 #include "NavModifierComponent.h"
+#include "NavModifierVolume.h"
+#include "Domains/Volume/McpAutomationBridge_VolumeGeometry.h"
+
+namespace
+{
+// A short name (Null, Obstacle, Default, or NavArea_*) or a class path; null when it names no NavArea.
+UClass* ResolveNavModifierAreaClass(const FString& Name)
+{
+    if (Name.Equals(TEXT("NavArea_Null"), ESearchCase::IgnoreCase) || Name.Equals(TEXT("Null"), ESearchCase::IgnoreCase))
+    {
+        return UNavArea_Null::StaticClass();
+    }
+    if (Name.Equals(TEXT("NavArea_Obstacle"), ESearchCase::IgnoreCase) || Name.Equals(TEXT("Obstacle"), ESearchCase::IgnoreCase))
+    {
+        return UNavArea_Obstacle::StaticClass();
+    }
+    if (Name.Equals(TEXT("NavArea_Default"), ESearchCase::IgnoreCase) || Name.Equals(TEXT("Default"), ESearchCase::IgnoreCase))
+    {
+        return UNavArea_Default::StaticClass();
+    }
+    return LoadClass<UNavArea>(nullptr, *Name);
+}
+
+// No blueprintPath: place a NavModifierVolume in the editor world instead of editing an asset.
+bool SpawnNavModifierVolume(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload,
+                            TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UClass* AreaClass)
+{
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
+    if (!World)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("No editor world available"), TEXT("NO_WORLD"));
+        return true;
+    }
+    const FVector Extent = ExtractVectorField(Payload, TEXT("extent"), FVector(200.0, 200.0, 100.0));
+    if (Extent.X <= 0.0 || Extent.Y <= 0.0 || Extent.Z <= 0.0)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("extent must be positive on every axis"), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    ANavModifierVolume* Volume = VolumeHelpers::SpawnVolumeActor<ANavModifierVolume>(World,
+        GetJsonStringField(Payload, TEXT("actorName")), ExtractVectorField(Payload, TEXT("location"), FVector::ZeroVector),
+        FRotator::ZeroRotator, Extent);
+    if (!Volume)
+    {
+        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Failed to spawn NavModifierVolume"), TEXT("CREATION_FAILED"));
+        return true;
+    }
+    Volume->SetAreaClass(AreaClass);
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("actorName"), Volume->GetActorLabel());
+    Result->SetStringField(TEXT("areaClass"), AreaClass->GetPathName());
+    McpHandlerUtils::AddVerification(Result, Volume);
+    Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("NavModifierVolume created"), Result);
+    return true;
+}
+}
 
 namespace McpAIHandlers
 {
 // Implements the "create_nav_modifier" action.
 bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
 {
+    // Resolve the area before touching anything: an unknown class used to be ignored and the
+    // default area reported as applied.
+    const bool bFailsafe = GetJsonBoolField(Payload, TEXT("failsafeToDefaultNavmesh"));
+    UClass* AppliedAreaClass = bFailsafe ? UNavArea_Default::StaticClass() : UNavArea_Obstacle::StaticClass();
+    const FString AreaClassName = GetJsonStringField(Payload, TEXT("areaClass"));
+    if (!AreaClassName.IsEmpty())
+    {
+        AppliedAreaClass = ResolveNavModifierAreaClass(AreaClassName);
+        if (!AppliedAreaClass)
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("areaClass not found or not a NavArea: %s"), *AreaClassName), TEXT("INVALID_AREA_CLASS"));
+            return true;
+        }
+    }
+
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
     if (BlueprintPath.IsEmpty())
     {
-        Self->SendAutomationError(RequestingSocket, RequestId, TEXT("Missing blueprintPath"), TEXT("INVALID_ARGUMENT"));
-        return true;
+        return SpawnNavModifierVolume(Self, RequestId, Payload, RequestingSocket, AppliedAreaClass);
     }
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
@@ -57,47 +129,9 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
     }
 
     Blueprint->SimpleConstructionScript->AddNode(NavModNode);
-    UNavModifierComponent* NavModComp = Cast<UNavModifierComponent>(NavModNode->ComponentTemplate);
-    UClass* AppliedAreaClass = nullptr;
-
-    if (NavModComp)
+    if (UNavModifierComponent* NavModComp = Cast<UNavModifierComponent>(NavModNode->ComponentTemplate))
     {
-        // Configure fail-safe defaults
-        bool bFailsafe = GetJsonBoolField(Payload, TEXT("failsafeToDefaultNavmesh"));
-        AppliedAreaClass = bFailsafe ? UNavArea_Default::StaticClass() : UNavArea_Obstacle::StaticClass();
         NavModComp->SetAreaClass(AppliedAreaClass);
-
-        // Set area class if specified
-        FString AreaClassName = GetJsonStringField(Payload, TEXT("areaClass"));
-        if (!AreaClassName.IsEmpty())
-        {
-            UClass* AreaClass = FindObject<UClass>(nullptr, *AreaClassName);
-            if (!AreaClass)
-            {
-                // Try common area classes
-                if (AreaClassName.Equals(TEXT("NavArea_Null"), ESearchCase::IgnoreCase) ||
-                    AreaClassName.Equals(TEXT("Null"), ESearchCase::IgnoreCase))
-                {
-                    AreaClass = UNavArea_Null::StaticClass();
-                }
-                else if (AreaClassName.Equals(TEXT("NavArea_Obstacle"), ESearchCase::IgnoreCase) ||
-                         AreaClassName.Equals(TEXT("Obstacle"), ESearchCase::IgnoreCase))
-                {
-                    AreaClass = UNavArea_Obstacle::StaticClass();
-                }
-                else if (AreaClassName.Equals(TEXT("NavArea_Default"), ESearchCase::IgnoreCase) ||
-                         AreaClassName.Equals(TEXT("Default"), ESearchCase::IgnoreCase))
-                {
-                    AreaClass = UNavArea_Default::StaticClass();
-                }
-            }
-
-            if (AreaClass && AreaClass->IsChildOf(UNavArea::StaticClass()))
-            {
-                NavModComp->SetAreaClass(AreaClass);
-                AppliedAreaClass = AreaClass;
-            }
-        }
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
@@ -106,11 +140,8 @@ bool HandleCreateNavModifier(UMcpAutomationBridgeSubsystem* Self, const FString&
     TSharedPtr<FJsonObject> NavModResult = McpHandlerUtils::CreateResultObject();
     NavModResult->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     NavModResult->SetStringField(TEXT("componentName"), ComponentName);
-    // UE 5.7: GetAreaClass() is not available on UNavModifierComponent
-    // The area class is determined by the NavArea class set on the component
     // Report the class actually applied (dogfood #61); UNavModifierComponent has no getter on 5.7.
-    FString AreaClassName = AppliedAreaClass ? AppliedAreaClass->GetPathName() : TEXT("/Script/NavigationSystem.NavArea_Obstacle");
-    NavModResult->SetStringField(TEXT("areaClass"), AreaClassName);
+    NavModResult->SetStringField(TEXT("areaClass"), AppliedAreaClass->GetPathName());
 
     Self->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Nav modifier component created"), NavModResult);
     return true;

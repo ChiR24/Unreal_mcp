@@ -1,13 +1,47 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
 
 #include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BTCompositeNode.h"
 #include "BehaviorTree/BTDecorator.h"
+#include "BehaviorTree/BTTaskNode.h"
 #include "BehaviorTree/BTService.h"
 #include "BehaviorTree/Decorators/BTDecorator_Blackboard.h"
 #include "BehaviorTree/Decorators/BTDecorator_Cooldown.h"
 #include "BehaviorTree/Decorators/BTDecorator_Loop.h"
 #include "BehaviorTree/Services/BTService_DefaultFocus.h"
 #include "Domains/BehaviorTree/McpAutomationBridge_BehaviorTreeHandlersPrivate.h"
+
+namespace
+{
+bool MatchesDecoratorTarget(const UBTNode* Node, const FString& Id)
+{
+    return Node && (Node->GetName().Equals(Id, ESearchCase::IgnoreCase) ||
+                    Node->GetPathName().Equals(Id, ESearchCase::IgnoreCase) ||
+                    Node->GetNodeName().Equals(Id, ESearchCase::IgnoreCase));
+}
+
+// The composite-child slot whose composite or task is Id: a decorator on a node lives in the
+// entry its parent keeps for it, not on the node itself.
+FBTCompositeChild* FindDecoratorSlot(UBTCompositeNode* Composite, const FString& Id)
+{
+    if (!Composite)
+    {
+        return nullptr;
+    }
+    for (FBTCompositeChild& Child : Composite->Children)
+    {
+        if (MatchesDecoratorTarget(Child.ChildComposite, Id) || MatchesDecoratorTarget(Child.ChildTask, Id))
+        {
+            return &Child;
+        }
+        if (FBTCompositeChild* Found = FindDecoratorSlot(Child.ChildComposite, Id))
+        {
+            return Found;
+        }
+    }
+    return nullptr;
+}
+}
 
 namespace McpAIHandlers
 {
@@ -16,18 +50,8 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString BTPath = GetJsonStringField(Payload, TEXT("behaviorTreePath"));
     FString DecoratorType = GetJsonStringField(Payload, TEXT("decoratorType"));
-
-    // add_decorator only ever attaches to the tree root. It used to accept parentNodeId
-    // and silently ignore it, reporting success while the decorator landed somewhere the
-    // caller did not ask for. Say so instead and point at the route that honours it.
+    // The node the decorator guards; empty or "root" means a root decorator.
     const FString ParentNodeId = GetJsonStringField(Payload, TEXT("parentNodeId"));
-    if (!ParentNodeId.IsEmpty())
-    {
-        Self->SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("add_decorator only attaches to the tree root; it cannot target '%s'. Drop parentNodeId to add a root decorator."), *ParentNodeId),
-                            TEXT("UNSUPPORTED_TARGET"));
-        return true;
-    }
 
     UBehaviorTree* BT = LoadObject<UBehaviorTree>(nullptr, *BTPath);
     if (!BT)
@@ -55,6 +79,17 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
     {
         NewDecorator = NewObject<UBTDecorator_Loop>(BT);
     }
+    else
+    {
+        // The rest of the advertised types (TimeLimit, ForceSuccess, ConeCheck...) are AIModule
+        // BTDecorator_<Type> classes; abstract bases such as BlackboardBase cannot be instanced.
+        UClass* DecoratorClass = FindObject<UClass>(nullptr,
+            *FString::Printf(TEXT("/Script/AIModule.BTDecorator_%s"), *DecoratorType));
+        if (DecoratorClass && DecoratorClass->IsChildOf(UBTDecorator::StaticClass()) && !DecoratorClass->HasAnyClassFlags(CLASS_Abstract))
+        {
+            NewDecorator = NewObject<UBTDecorator>(BT, DecoratorClass);
+        }
+    }
 
     if (NewDecorator)
     {
@@ -67,7 +102,25 @@ bool HandleAddDecorator(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
                                 TEXT("NO_ROOT"));
             return true;
         }
-        BT->RootDecorators.Add(NewDecorator);
+        const bool bRoot = ParentNodeId.IsEmpty() || ParentNodeId.Equals(TEXT("root"), ESearchCase::IgnoreCase) ||
+                           MatchesDecoratorTarget(BT->RootNode, ParentNodeId);
+        FBTCompositeChild* Slot = bRoot ? nullptr : FindDecoratorSlot(BT->RootNode, ParentNodeId);
+        if (!bRoot && !Slot)
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId,
+                                FString::Printf(TEXT("Behavior Tree node not found: %s (pass a composite or task id from add_composite or add_task, or omit parentNodeId for a root decorator)"), *ParentNodeId),
+                                TEXT("PARENT_NOT_FOUND"));
+            return true;
+        }
+        if (Slot)
+        {
+            Slot->Decorators.Add(NewDecorator);
+        }
+        else
+        {
+            BT->RootDecorators.Add(NewDecorator);
+        }
+        Result->SetStringField(TEXT("attachedTo"), bRoot ? TEXT("root") : ParentNodeId);
         BT->MarkPackageDirty();
         McpSafeAssetSave(BT);
         Result->SetStringField(TEXT("nodeId"), NewDecorator->GetName());

@@ -2,6 +2,8 @@
 
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BehaviorTreeTypes.h"
+#include "BehaviorTree/BlackboardData.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType.h"
 #include "BehaviorTree/BTCompositeNode.h"
 #include "BehaviorTree/BTDecorator.h"
 #include "BehaviorTree/BTNode.h"
@@ -176,6 +178,44 @@ bool HandleConfigureBehaviorTreeNode(UMcpAutomationBridgeSubsystem* Self, const 
             if (!Property || !Pair.Value.IsValid())
             {
                 SkippedReasons.Add(FString::Printf(TEXT("%s: no such property on %s"), *PropertyName, *TargetNode->GetClass()->GetName()));
+                continue;
+            }
+
+            // A Blackboard key selector is set by key name, the way the editor picks it; the generic
+            // struct import only knows JSON objects and export text, so a plain "TargetActor" failed.
+            FStructProperty* StructProp = CastField<FStructProperty>(Property);
+            if (StructProp && StructProp->Struct == FBlackboardKeySelector::StaticStruct() && Pair.Value->Type == EJson::String)
+            {
+                FBlackboardKeySelector* Selector = StructProp->ContainerPtrToValuePtr<FBlackboardKeySelector>(TargetNode);
+                const FName KeyName(*Pair.Value->AsString());
+                if (BT->BlackboardAsset)
+                {
+                    const FBlackboard::FKey KeyID = BT->BlackboardAsset->GetKeyID(KeyName);
+                    const FBlackboardEntry* Entry = BT->BlackboardAsset->GetKey(KeyID);
+                    if (!Entry || !Entry->KeyType)
+                    {
+                        SkippedReasons.Add(FString::Printf(TEXT("%s: key '%s' is not in Blackboard %s"), *PropertyName, *KeyName.ToString(), *BT->BlackboardAsset->GetPathName()));
+                        continue;
+                    }
+                    // The node's own filter (e.g. MoveTo takes only Object or Vector keys).
+                    bool bAllowed = Selector->AllowedTypes.Num() == 0;
+                    for (UBlackboardKeyType* Filter : Selector->AllowedTypes)
+                    {
+                        bAllowed |= Filter && Entry->KeyType->IsAllowedByFilter(Filter);
+                    }
+                    if (!bAllowed)
+                    {
+                        SkippedReasons.Add(FString::Printf(TEXT("%s: key '%s' is a %s, a type this selector does not accept"), *PropertyName, *KeyName.ToString(), *Entry->KeyType->GetClass()->GetName()));
+                        continue;
+                    }
+                }
+                Selector->SelectedKeyName = KeyName;
+                if (BT->BlackboardAsset)
+                {
+                    Selector->ResolveSelectedKey(*BT->BlackboardAsset);
+                }
+                ++ConfiguredPropertyCount;
+                ConfiguredProperties.Add(PropertyName);
                 continue;
             }
 

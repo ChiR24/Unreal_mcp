@@ -1,5 +1,46 @@
 #include "Domains/Navigation/McpAutomationBridge_NavigationHandlersPrivate.h"
 
+namespace
+{
+// create_nav_modifier_component without a Blueprint: an instance NavModifierComponent on a placed actor.
+bool AddNavModifierToPlacedActor(
+    UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const FString& ActorName, const FString& ComponentName, UClass* AreaClass, const FVector& FailsafeExtent)
+{
+    UWorld* World = McpHandlerUtils::GetEditorWorld();
+    AActor* Actor = World ? FindActorByNameInWorldForMcp(World, ActorName, true) : nullptr;
+    if (!Actor)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Actor not found in the editor world: %s"), *ActorName), nullptr, TEXT("NOT_FOUND"));
+        return true;
+    }
+    if (FindObject<UObject>(Actor, *ComponentName))
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Component '%s' already exists on %s"), *ComponentName, *ActorName), nullptr, TEXT("ALREADY_EXISTS"));
+        return true;
+    }
+    Actor->Modify();
+    UNavModifierComponent* ModComp = NewObject<UNavModifierComponent>(Actor, UNavModifierComponent::StaticClass(), FName(*ComponentName), RF_Transactional);
+    ModComp->FailsafeExtent = FailsafeExtent;
+    if (AreaClass)
+    {
+        ModComp->SetAreaClass(AreaClass);
+    }
+    Actor->AddInstanceComponent(ModComp);
+    ModComp->RegisterComponent();
+
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetStringField(TEXT("componentName"), ModComp->GetName());
+    Result->SetStringField(TEXT("actorName"), Actor->GetActorLabel());
+    McpHandlerUtils::AddVerification(Result, Actor);
+    Self->SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("NavModifierComponent '%s' added to actor %s"), *ComponentName, *Actor->GetActorLabel()), Result);
+    return true;
+}
+}
+
 namespace McpNavigationHandlers
 {
 bool HandleCreateNavModifierComponent(
@@ -9,16 +50,17 @@ bool HandleCreateNavModifierComponent(
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     FString BlueprintPath = GetJsonStringField(Payload, TEXT("blueprintPath"));
+    const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     FString ComponentName = GetJsonStringField(Payload, TEXT("componentName"), TEXT("NavModifier"));
     FString AreaClassPath = GetJsonStringField(Payload, TEXT("areaClass"));
     FVector FailsafeExtent = ExtractVectorField(Payload, TEXT("failsafeExtent"), FVector(100, 100, 100));
 
-    if (BlueprintPath.IsEmpty())
+    if (BlueprintPath.IsEmpty() && ActorName.IsEmpty())
     {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("blueprintPath is required"), nullptr, TEXT("MISSING_PARAM"));
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Pass blueprintPath (a Blueprint asset) or actorName (a placed actor)"), nullptr, TEXT("MISSING_PARAM"));
         return true;
     }
-    if (!IsValidNavigationPath(BlueprintPath))
+    if (!BlueprintPath.IsEmpty() && !IsValidNavigationPath(BlueprintPath))
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
             TEXT("Invalid blueprintPath: must not contain path traversal (..) or invalid format"), nullptr, TEXT("SECURITY_VIOLATION"));
@@ -42,6 +84,10 @@ bool HandleCreateNavModifierComponent(
                 FString::Printf(TEXT("areaClass not found or not a UNavArea subclass: %s"), *AreaClassPath), nullptr, TEXT("INVALID_AREA_CLASS"));
             return true;
         }
+    }
+    if (BlueprintPath.IsEmpty())
+    {
+        return AddNavModifierToPlacedActor(Self, RequestId, Socket, ActorName, ComponentName, ResolvedAreaClass, FailsafeExtent);
     }
 
     UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *BlueprintPath);
@@ -193,67 +239,16 @@ bool HandleSetNavAreaClass(
         return true;
     }
 
+    ModComp->Modify();
     ModComp->SetAreaClass(AreaClass);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetStringField(TEXT("componentName"), ModComp->GetName());
     Result->SetStringField(TEXT("areaClass"), AreaClassPath);
     McpHandlerUtils::AddVerification(Result, TargetActor);
 
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Nav area class set"), Result);
-    return true;
-}
-
-bool HandleConfigureNavAreaCost(
-    UMcpAutomationBridgeSubsystem* Self,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket)
-{
-    FString AreaClassPath = GetJsonStringField(Payload, TEXT("areaClass"));
-    double AreaCost = GetJsonNumberField(Payload, TEXT("areaCost"), 1.0);
-    if (AreaClassPath.IsEmpty())
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("areaClass is required"), nullptr, TEXT("MISSING_PARAM"));
-        return true;
-    }
-    if (!IsValidNavigationPath(AreaClassPath))
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("Invalid areaClass: must not contain path traversal (..), slashes, or drive letters"), nullptr, TEXT("SECURITY_VIOLATION"));
-        return true;
-    }
-
-    UClass* AreaClass = LoadClass<UNavArea>(nullptr, *AreaClassPath);
-    if (!AreaClass)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("NavArea class not found: %s"), *AreaClassPath), nullptr, TEXT("INVALID_CLASS"));
-        return true;
-    }
-
-    UNavArea* AreaCDO = AreaClass->GetDefaultObject<UNavArea>();
-    if (!AreaCDO)
-    {
-        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Could not get NavArea CDO"), nullptr, TEXT("CDO_FAILED"));
-        return true;
-    }
-
-    AreaCDO->DefaultCost = AreaCost;
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    Result->SetStringField(TEXT("areaClass"), AreaClassPath);
-    Result->SetNumberField(TEXT("areaCost"), AreaCost);
-    Result->SetNumberField(TEXT("fixedAreaEnteringCost"), AreaCDO->GetFixedAreaEnteringCost());
-
-    FString Message = TEXT("Nav area cost configured");
-    if (Payload->HasField(TEXT("fixedAreaEnteringCost")))
-    {
-        Message = TEXT("Nav area cost configured (note: fixedAreaEnteringCost is read-only and was not modified)");
-        Result->SetBoolField(TEXT("fixedAreaEnteringCostIgnored"), true);
-    }
-
-    Self->SendAutomationResponse(Socket, RequestId, true, Message, Result);
     return true;
 }
 }

@@ -40,7 +40,6 @@ bool HandleCreateStateTree(UMcpAutomationBridgeSubsystem* Self, const FString& R
 
     FString Name = GetJsonStringField(Payload, TEXT("name"));
     FString Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/StateTrees"));
-    FString SchemaType = GetJsonStringField(Payload, TEXT("schemaType"), TEXT("Component"));
 
     if (Name.IsEmpty())
     {

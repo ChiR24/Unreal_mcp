@@ -20,6 +20,7 @@ const massConfigName = `TestMassConfig_${ts}`;
 const blueprintName = `BP_TestAI_${ts}`;
 const navLinkName = `BP_TestNavLink_${ts}`;
 const blackboardKeyName = `TargetActor_${ts}`;
+const moveGoalKeyName = `MoveGoal_${ts}`;
 const childStateName = `Patrol_${ts}`;
 
 const testCases = [
@@ -61,6 +62,7 @@ const testCases = [
 
   // === BLACKBOARD ===
   { scenario: 'ADD: add_blackboard_key', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, keyType: 'Bool', isInstanceSynced: false }, expected: 'success' },
+  { scenario: 'ADD: add_blackboard_key vector goal', toolName: 'manage_ai', arguments: { action: 'add_blackboard_key', blackboardPath: '${captured:blackboardPath}', keyName: moveGoalKeyName, keyType: 'Vector' }, expected: 'success' },
   { scenario: 'CONFIG: set_key_instance_synced', toolName: 'manage_ai', arguments: { action: 'set_key_instance_synced', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, isInstanceSynced: true }, expected: 'success' },
   { scenario: 'CONFIG: set_blackboard_value', toolName: 'manage_ai', arguments: { action: 'set_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName, value: 'true' }, expected: 'success' },
   { scenario: 'INFO: get_blackboard_value', toolName: 'manage_ai', arguments: { action: 'get_blackboard_value', blackboardPath: '${captured:blackboardPath}', keyName: blackboardKeyName }, expected: 'success' },
@@ -70,6 +72,9 @@ const testCases = [
   { scenario: 'ADD: add_composite_node named', toolName: 'manage_ai', arguments: { action: 'add_composite_node', behaviorTreePath: '${captured:behaviorTreePath}', compositeType: 'Selector', nodeName: 'RootSelector' }, expected: 'success' },
   { scenario: 'ADD: add_task_node', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'Wait' }, expected: 'success' },
   { scenario: 'ADD: add_decorator', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Blackboard' }, expected: 'success' },
+  { scenario: 'ADD: add_decorator on a named node', toolName: 'manage_ai', arguments: { action: 'add_decorator', behaviorTreePath: '${captured:behaviorTreePath}', decoratorType: 'Cooldown', parentNodeId: 'RootSelector' }, expected: 'success', assertions: [{ path: 'structuredContent.result.attachedTo', equals: 'RootSelector' }] },
+  { scenario: 'ADD: add_task_node MoveTo', toolName: 'manage_ai', arguments: { action: 'add_task_node', behaviorTreePath: '${captured:behaviorTreePath}', taskType: 'MoveTo' }, expected: 'success', captureResult: { key: 'moveToNodeId', fromField: 'result.nodeId' } },
+  { scenario: 'CONFIG: configure_bt_node sets a key selector by key name', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: '${captured:moveToNodeId}', properties: { BlackboardKey: moveGoalKeyName } }, expected: 'success' },
   { scenario: 'ADD: add_service', toolName: 'manage_ai', arguments: { action: 'add_service', behaviorTreePath: '${captured:behaviorTreePath}', serviceType: 'DefaultFocus' }, expected: 'success' },
   { scenario: 'CONFIG: configure_bt_node', toolName: 'manage_ai', arguments: { action: 'configure_bt_node', behaviorTreePath: '${captured:behaviorTreePath}', nodeId: 'Root' }, expected: 'success' },
   { scenario: 'ACTION: run_behavior_tree', toolName: 'manage_ai', arguments: { action: 'run_behavior_tree', controllerPath: '${captured:controllerPath}', behaviorTreePath: '${captured:behaviorTreePath}' }, expected: 'success' },
@@ -119,6 +124,7 @@ const testCases = [
   },
   { scenario: 'ADD: add_smart_object_slot', toolName: 'manage_ai', arguments: { action: 'add_smart_object_slot', definitionPath: '${captured:definitionPath}', offset: { x: 100, y: 0, z: 0 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, enabled: true }, expected: 'success' },
   { scenario: 'CONFIG: configure_slot_behavior', toolName: 'manage_ai', arguments: { action: 'configure_slot_behavior', definitionPath: '${captured:definitionPath}', slotIndex: 0, enabled: true }, expected: 'success' },
+  { scenario: 'CONFIG: configure_slot_behavior refuses an unregistered activity tag', toolName: 'manage_ai', arguments: { action: 'configure_slot_behavior', definitionPath: '${captured:definitionPath}', slotIndex: 0, activityTags: ['MCP.Test.UnregisteredTag'] }, expected: 'error' },
   { scenario: 'ADD: add_smart_object_component', toolName: 'manage_ai', arguments: { action: 'add_smart_object_component', blueprintPath: '${captured:blueprintPath}' }, expected: 'success' },
 
   // === MASS AI ===
@@ -266,6 +272,7 @@ const testCases = [
   const NAV_LINK = `TestNavLinkProxy_${ts}`;
   const SMART_LINK = `TestSmartLink_${ts}`;
   const NAV_MODIFIER = `NavModifier_${ts}`;
+  const NAV_VOLUME = `NavModifierVolume_${ts}`;
   const OBSTACLE_AREA = '/Script/NavigationSystem.NavArea_Obstacle';
 
   testCases.push(
@@ -281,8 +288,10 @@ const testCases = [
     { scenario: 'CREATE: create_nav_modifier_component', toolName: 'manage_ai', arguments: {"action": "create_nav_modifier_component", "blueprintPath": "${captured:navBlueprintPath}", "componentName": NAV_MODIFIER, "areaClass": OBSTACLE_AREA, "failsafeExtent": {"x": 120, "y": 80, "z": 60}, "save": true}, expected: 'success' },
     { scenario: 'Setup: spawn nav test actor', toolName: 'control_actor', arguments: { action: 'spawn_blueprint', blueprintPath: '${captured:navBlueprintPath}', actorName: NAV_ACTOR, location: { x: 0, y: 0, z: 100 } }, expected: 'success' },
     // === CONFIG ===
-    { scenario: 'CONFIG: set_nav_area_class', toolName: 'manage_ai', arguments: {"action": "set_nav_area_class", "actorName": NAV_ACTOR, "areaClass": OBSTACLE_AREA}, expected: 'success' },
-    { scenario: 'CONFIG: configure_nav_area_cost', toolName: 'manage_ai', arguments: {"action": "configure_nav_area_cost", "areaClass": OBSTACLE_AREA, "areaCost": 1.0}, expected: 'success' },
+    { scenario: 'CONFIG: set_nav_area_class', toolName: 'manage_ai', arguments: {"action": "set_nav_area_class", "actorName": NAV_ACTOR, "areaClass": OBSTACLE_AREA, "componentName": NAV_MODIFIER}, expected: 'success' },
+    { scenario: 'CREATE: create_nav_modifier_component on a placed actor', toolName: 'manage_ai', arguments: { action: 'create_nav_modifier_component', actorName: NAV_ACTOR, componentName: `NavModifierInstance_${ts}`, areaClass: OBSTACLE_AREA }, expected: 'success' },
+    { scenario: 'CREATE: create_nav_modifier places a volume without a Blueprint', toolName: 'manage_ai', arguments: { action: 'create_nav_modifier', actorName: NAV_VOLUME, location: { x: 0, y: 400, z: 0 }, extent: { x: 150, y: 150, z: 100 }, areaClass: OBSTACLE_AREA }, expected: 'success' },
+    { scenario: 'CONFIG: configure_nav_area_cost', toolName: 'manage_ai', arguments: {"action": "configure_nav_area_cost", "areaClass": OBSTACLE_AREA, "areaCost": 1.0, "fixedAreaEnteringCost": 0}, expected: 'success' },
     // === CREATE ===
     { scenario: 'CREATE: create_nav_link_proxy', toolName: 'manage_ai', arguments: {"action": "create_nav_link_proxy", "actorName": NAV_LINK, "location": {"x": 0, "y": 0, "z": 100}, "startPoint": {"x": -100, "y": 0, "z": 0}, "endPoint": {"x": 100, "y": 0, "z": 0}, "direction": "BothWays"}, expected: 'success' },
     // === CONFIG ===
@@ -297,6 +306,7 @@ const testCases = [
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete nav test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: NAV_ACTOR }, expected: 'success|not found' },
+    { scenario: 'Cleanup: delete nav modifier volume', toolName: 'control_actor', arguments: { action: 'delete', actorName: NAV_VOLUME }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete nav link proxy', toolName: 'control_actor', arguments: { action: 'delete', actorName: NAV_LINK }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete smart link proxy', toolName: 'control_actor', arguments: { action: 'delete', actorName: SMART_LINK }, expected: 'success|not found' },
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

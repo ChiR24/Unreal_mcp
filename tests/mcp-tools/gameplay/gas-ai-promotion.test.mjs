@@ -41,11 +41,11 @@ const testCases = [
   { scenario: 'GAS: create_execution_calculation defaults the path to /Game', toolName: 'manage_gas', arguments: { action: 'create_execution_calculation', name: `EC_Default_${ts}` }, expected: 'success|already exists' },
 
   // === AI: set_ai_perception ===
-  { scenario: 'AI: set_ai_perception with both senses tuned', toolName: 'manage_ai', arguments: { action: 'set_ai_perception', controllerPath: CONTROLLER, enableSight: true, sightRadius: 2500, loseSightRadius: 3000, peripheralVisionAngle: 75, enableHearing: true }, expected: 'success' },
+  { scenario: 'AI: set_ai_perception with both senses tuned', toolName: 'manage_ai', arguments: { action: 'set_ai_perception', controllerPath: CONTROLLER, enableSight: true, sightRadius: 2500, loseSightRadius: 3000, peripheralVisionAngle: 75, enableHearing: true, hearingRange: 1800, enableDamage: true, dominantSense: 'Touch' }, expected: 'success' },
   { scenario: 'AI: set_ai_perception defaults every sense parameter', toolName: 'manage_ai', arguments: { action: 'set_ai_perception', controllerPath: CONTROLLER }, expected: 'success' },
 
   // === AI: set_ai_movement ===
-  { scenario: 'AI: set_ai_movement sets every movement limit', toolName: 'manage_ai', arguments: { action: 'set_ai_movement', blueprintPath: ACTOR_BP, maxWalkSpeed: 450, maxAcceleration: 1800, brakingDeceleration: 1200, rotationRate: 360 }, expected: 'success' },
+  { scenario: 'AI: set_ai_movement sets every movement limit', toolName: 'manage_ai', arguments: { action: 'set_ai_movement', blueprintPath: ACTOR_BP, maxWalkSpeed: 450, maxAcceleration: 1800, brakingDeceleration: 1200, rotationRate: 360, useAccelerationForPaths: true, orientRotationToMovement: true, useRVOAvoidance: true, avoidanceWeight: 0.5, maxFlySpeed: 800, jumpZVelocity: 600 }, expected: 'success' },
   { scenario: 'AI: set_ai_movement leaves every limit unchanged when omitted', toolName: 'manage_ai', arguments: { action: 'set_ai_movement', blueprintPath: ACTOR_BP }, expected: 'success' },
 
   // === AI: create_nav_modifier ===

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8038ab9f4f4be63d",
+  "catalogRevision": "1ed7e06444aff3aa",
   "recordCount": 382,
   "records": [
     {
@@ -39435,9 +39435,17 @@
               "type": "number",
               "description": "Pathfinding cost multiplier for the area (1.0 = normal)."
             },
+            "fixedAreaEnteringCost": {
+              "type": "number",
+              "description": "Flat cost added once when a path enters the area; left unchanged when omitted."
+            },
             "actorName": {
               "type": "string",
               "description": "Target actor name in the current level."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "NavModifierComponent to retarget when the actor carries several; defaults to the first one."
             },
             "startPoint": {
               "type": "object",
@@ -39691,11 +39699,17 @@
             "areaCost": [
               "area_cost"
             ],
+            "fixedAreaEnteringCost": [
+              "area_cost"
+            ],
             "actorName": [
               "area_class",
               "nav_link",
               "link_type",
               "smart_link_behavior"
+            ],
+            "componentName": [
+              "area_class"
             ],
             "startPoint": [
               "nav_link"
@@ -39744,8 +39758,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f682376402efefd77b56ed7c18ee2ce6883a2bc60bfa290805e3403257478e8a",
-        "content": "aa39f82c7065a1e9e588382fbb3e78fe4daa20225df61f80c4e0d3eeaf600236"
+        "schema": "efde91a9cabfb8569fb2d5a302d91bde215ffd6478ec2ac16aa9725ff3bc3521",
+        "content": "35c6a669f70c1098981ccb7471a092ffcf89ed8b92e1c4a71ba09ef4ff25ce61"
       }
     },
     {
@@ -40114,12 +40128,11 @@
         "whenToUse": [
           "A level needs an authored navigation link between two points.",
           "A level needs a navigation link that can toggle its area class.",
-          "An actor must mark the navmesh under it as a different area class.",
-          "A Blueprint should carve or alter navigation around itself."
+          "A region or an actor must mark the navmesh under it as a different area class.",
+          "A Blueprint or a placed actor should carve or alter navigation around itself."
         ],
         "whenNotToUse": [
-          "The navmesh area is a level volume rather than an actor; use create_nav_modifier_volume.",
-          "Use set_nav_area_class to change a placed actor area."
+          "Use set_nav_area_class to change the area of an existing component."
         ]
       },
       "schemas": {
@@ -40133,6 +40146,8 @@
             },
             "location": {
               "type": "object",
+              "additionalProperties": false,
+              "description": "World location for the spawned link actor.",
               "properties": {
                 "x": {
                   "type": "number"
@@ -40143,9 +40158,7 @@
                 "z": {
                   "type": "number"
                 }
-              },
-              "description": "World location for the spawned link actor.",
-              "additionalProperties": false
+              }
             },
             "rotation": {
               "type": "object",
@@ -40206,7 +40219,7 @@
             },
             "blueprintPath": {
               "type": "string",
-              "description": "Canonical /Game Blueprint asset path."
+              "description": "Blueprint that receives a NavModifier component; omit to place a NavModifierVolume in the editor level instead."
             },
             "componentName": {
               "type": "string",
@@ -40219,6 +40232,22 @@
             "failsafeToDefaultNavmesh": {
               "type": "boolean",
               "description": "Fall back to the default navmesh area when the modifier area class is unset."
+            },
+            "extent": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "z": {
+                  "type": "number"
+                }
+              },
+              "description": "Half-size of the placed NavModifierVolume (volume form only; default 200, 200, 100).",
+              "additionalProperties": false
             },
             "failsafeExtent": {
               "type": "object",
@@ -40238,7 +40267,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the Blueprint asset after adding the component (Blueprint form only)."
             },
             "kind": {
               "type": "string",
@@ -40348,13 +40377,10 @@
             "modifier_component": "create_nav_modifier_component"
           },
           "declaredBy": {
-            "actorName": [
-              "link_proxy",
-              "smart_link"
-            ],
             "location": [
               "link_proxy",
-              "smart_link"
+              "smart_link",
+              "modifier"
             ],
             "rotation": [
               "link_proxy",
@@ -40387,6 +40413,9 @@
             "failsafeToDefaultNavmesh": [
               "modifier"
             ],
+            "extent": [
+              "modifier"
+            ],
             "failsafeExtent": [
               "modifier_component"
             ],
@@ -40398,8 +40427,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5a242508e3ea7b73ceac209d9f91e5df3ce04cf4e223cc533424bf57da92e3a0",
-        "content": "964ef057d2bc0b61eb2386ad94275c387398e3c393b4a4660cf0f5fb8c958c9e"
+        "schema": "4541a58c55adffbd7ebe32769e69283d7c607011a2051a3a4e6d66093f3c7d1c",
+        "content": "a1472785fb7bc63e8e5c202d2f36aff3bbd1ee9802d285783562b2ef023af1d5"
       }
     },
     {
@@ -40786,6 +40815,7 @@
             "parentNodeId": [
               "add_composite",
               "add_task",
+              "add_decorator",
               "add_subnode",
               "connect"
             ],
@@ -40844,7 +40874,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-        "content": "c81bc615a39f13e26a94619bd629ec0879aedaa9bfee5300d171126525d5cb66"
+        "content": "37124bb637881eee85d9d54bce384d3065dbfd5d5db637b3ed12f6b3ff73447f"
       }
     },
     {
@@ -41735,6 +41765,13 @@
               "type": "number",
               "description": "Index of the slot to configure."
             },
+            "activityTags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Registered gameplay tags added to the slot activity tags; an unregistered tag fails the call."
+            },
             "blueprintPath": {
               "type": "string",
               "description": "Canonical /Game Blueprint asset path."
@@ -41865,6 +41902,9 @@
             "slotIndex": [
               "configure_slot"
             ],
+            "activityTags": [
+              "configure_slot"
+            ],
             "blueprintPath": [
               "add_component"
             ],
@@ -41876,8 +41916,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0b21a2d35c5b634440fe781338ab2f2ade0ca3f291f87cb4168d5738c21481ea",
-        "content": "f006022c9a973f0290183b0152e45eac471e224979a7af8f00da9bea3a49ad0b"
+        "schema": "591981debe5418ed3036f4f6336100efe5f0d9630d9202af4c20b69c6cda8d64",
+        "content": "040793a981bdbd3748b9561f749085e9849af30949292b6b5eaad9a262ef6ebe"
       }
     },
     {
@@ -42892,6 +42932,30 @@
             "rotationRate": {
               "type": "number",
               "description": "Yaw rotation rate in degrees per second; left unchanged when omitted."
+            },
+            "useAccelerationForPaths": {
+              "type": "boolean",
+              "description": "Path following uses acceleration instead of setting velocity directly; left unchanged when omitted."
+            },
+            "orientRotationToMovement": {
+              "type": "boolean",
+              "description": "Rotate the pawn toward its movement direction; left unchanged when omitted."
+            },
+            "useRVOAvoidance": {
+              "type": "boolean",
+              "description": "Enable RVO avoidance; left unchanged when omitted."
+            },
+            "avoidanceWeight": {
+              "type": "number",
+              "description": "RVO avoidance weight (0 or more); left unchanged when omitted."
+            },
+            "maxFlySpeed": {
+              "type": "number",
+              "description": "Maximum flying speed; left unchanged when omitted."
+            },
+            "jumpZVelocity": {
+              "type": "number",
+              "description": "Initial upward jump velocity; left unchanged when omitted."
             }
           },
           "required": [
@@ -43000,8 +43064,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ea4e27b3672c94b5fa5de52ec61d45dbada8c24701cc741e5d727b69d8705a84",
-        "content": "63b02022d15f9c25f384227a339dc325c54039c1b47e97973d51ca2ff2307323"
+        "schema": "1feebb40d2f6e744bedd54ba451d6b92827e0c59a4a85c84d21f14ae6403f029",
+        "content": "354183621643bbcd379a3000c6630b2e883d0901585900a9d8f52fe0c85bbe1f"
       }
     },
     {
@@ -43494,7 +43558,8 @@
               "controller"
             ],
             "enableDamage": [
-              "setup"
+              "setup",
+              "controller"
             ],
             "sightRadius": [
               "setup",
@@ -43513,10 +43578,12 @@
             ],
             "hearingRange": [
               "setup",
-              "hearing"
+              "hearing",
+              "controller"
             ],
             "dominantSense": [
-              "setup"
+              "setup",
+              "controller"
             ],
             "sightConfig": [
               "sight"
@@ -43539,7 +43606,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-        "content": "ed30f3e915275fe00398d3ca5892e80c08d893f422e9e65f117d4f9275a6d9c5"
+        "content": "0e00bd70d3554b0cf78d02f81cfa7e0092f9e937379c73728fdbd1c964bcbf54"
       }
     },
     {

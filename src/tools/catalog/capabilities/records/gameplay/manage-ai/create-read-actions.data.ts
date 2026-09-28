@@ -4,7 +4,7 @@
 import type { CapabilityRecordSource, JsonObject } from '../../../model.js';
 import { BT, EQS, MASS_AI, SMART_OBJECTS, STATE_TREE, aiRecord } from './builder.js';
 import { NAV } from './properties-navigation.js';
-import { AI } from './properties.js';
+import { AI, xyz } from './properties.js';
 
 const A = AI;
 const N = NAV;
@@ -89,15 +89,18 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'NavLinkProxy created',
   }),
   aiRecord({
-    action: 'create_nav_modifier_component', summary: 'Add a navigation modifier component to a Blueprint asset.',
-    use: 'A Blueprint should carve or alter navigation around itself.',
-    avoid: 'Use set_nav_area_class to change a placed actor area.',
+    action: 'create_nav_modifier_component', summary: 'Add a navigation modifier component to a Blueprint asset or to a placed actor.',
+    use: 'A Blueprint or a placed actor should carve or alter navigation around itself.',
+    avoid: 'Use set_nav_area_class to change the area of an existing component.',
     props: {
-      blueprintPath: A.blueprintPath, componentName: A.componentName,
-      areaClass: N.areaClass, failsafeExtent: N.failsafeExtent, save: A.save,
+      blueprintPath: A.blueprintPath,
+      actorName: { type: 'string', description: 'Placed actor that receives an instance component when no blueprintPath is given.' },
+      componentName: A.componentName,
+      areaClass: N.areaClass, failsafeExtent: N.failsafeExtent,
+      save: { type: 'boolean', description: 'Save the Blueprint asset after adding the component (Blueprint form only).' },
     },
-    required: ['blueprintPath'],
-    out: { blueprintPath: A.blueprintPath },
+    requiredOneOf: ['blueprintPath', 'actorName'],
+    out: { blueprintPath: A.blueprintPath, actorName: A.actorName },
     example: { blueprintPath: '/Game/AI/BP_Blocker', componentName: 'NavModifier' },
     result: 'Nav modifier component added',
   }),
@@ -223,15 +226,18 @@ export const AI_CREATE_READ_RECORDS: readonly CapabilityRecordSource[] = [
     }),
     aiRecord({
       action: 'create_nav_modifier',
-      summary: 'Add a NavModifier component to a Blueprint so the actor stamps a navigation area.',
-      use: 'An actor must mark the navmesh under it as a different area class.',
-      avoid: 'The navmesh area is a level volume rather than an actor; use create_nav_modifier_volume.',
+      summary: 'Stamp a navigation area: place a NavModifierVolume in the level, or with blueprintPath add a NavModifier component to a Blueprint.',
+      use: 'A region or an actor must mark the navmesh under it as a different area class.',
+      avoid: 'A placed actor needs the component itself; use create_nav_modifier_component with actorName.',
       props: {
-        blueprintPath: A.blueprintPath, componentName: A.componentName,
+        blueprintPath: { type: 'string', description: 'Blueprint that receives a NavModifier component; omit to place a NavModifierVolume in the editor level instead.' },
+        componentName: A.componentName,
         areaClass: N.areaClass, failsafeToDefaultNavmesh: A.failsafeToDefaultNavmesh,
+        actorName: { type: 'string', description: 'Label for the placed NavModifierVolume (volume form only).' },
+        location: xyz('World location of the placed NavModifierVolume (volume form only).'),
+        extent: xyz('Half-size of the placed NavModifierVolume (volume form only; default 200, 200, 100).'),
       },
-      required: ['blueprintPath'],
-      out: { blueprintPath: A.blueprintPath, componentName: A.componentName, areaClass: N.areaClass },
+      out: { blueprintPath: A.blueprintPath, componentName: A.componentName, areaClass: N.areaClass, actorName: A.actorName },
       example: { blueprintPath: '/Game/AI/BP_Obstacle', componentName: 'NavModifier', areaClass: 'NavArea_Obstacle' },
       result: 'Nav modifier component added',
     }),

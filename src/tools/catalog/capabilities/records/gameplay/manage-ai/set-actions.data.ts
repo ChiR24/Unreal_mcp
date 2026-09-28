@@ -98,7 +98,10 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_nav_area_class', summary: 'Set the navigation area class on a placed actor that already carries a NavModifierComponent (add one with create_nav_modifier first).',
     use: 'A placed actor should carve a specific navigation area.',
     avoid: 'Use configure_nav_area_cost to change the area cost itself.',
-    props: { actorName: A.actorName, areaClass: N.areaClass },
+    props: {
+      actorName: A.actorName, areaClass: N.areaClass,
+      componentName: { type: 'string', description: 'NavModifierComponent to retarget when the actor carries several; defaults to the first one.' },
+    },
     required: ['actorName', 'areaClass'],
     out: { actorName: A.actorName },
     example: { actorName: 'NavTestActor', areaClass: '/Script/NavigationSystem.NavArea_Obstacle' },
@@ -169,6 +172,7 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
         controllerPath: A.controllerPath,
         enableSight: A.enableSight, sightRadius: A.sightRadius, loseSightRadius: A.loseSightRadius,
         peripheralVisionAngle: A.peripheralVisionAngle, enableHearing: A.enableHearing,
+        hearingRange: A.hearingRange, enableDamage: A.enableDamage, dominantSense: A.dominantSense,
       },
       required: ['controllerPath'],
       out: {
@@ -189,6 +193,12 @@ export const AI_SET_RECORDS: readonly CapabilityRecordSource[] = [
         blueprintPath: A.blueprintPath,
         maxWalkSpeed: A.maxWalkSpeed, maxAcceleration: A.maxAcceleration,
         brakingDeceleration: A.brakingDeceleration, rotationRate: A.rotationRate,
+        useAccelerationForPaths: { type: 'boolean', description: 'Path following uses acceleration instead of setting velocity directly; left unchanged when omitted.' },
+        orientRotationToMovement: { type: 'boolean', description: 'Rotate the pawn toward its movement direction; left unchanged when omitted.' },
+        useRVOAvoidance: { type: 'boolean', description: 'Enable RVO avoidance; left unchanged when omitted.' },
+        avoidanceWeight: { type: 'number', description: 'RVO avoidance weight (0 or more); left unchanged when omitted.' },
+        maxFlySpeed: { type: 'number', description: 'Maximum flying speed; left unchanged when omitted.' },
+        jumpZVelocity: { type: 'number', description: 'Initial upward jump velocity; left unchanged when omitted.' },
       },
       required: ['blueprintPath'],
       out: {

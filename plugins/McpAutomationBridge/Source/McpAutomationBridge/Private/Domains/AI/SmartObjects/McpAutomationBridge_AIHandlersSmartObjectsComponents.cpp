@@ -15,7 +15,6 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString DefinitionPath = GetJsonStringField(Payload, TEXT("definitionPath"));
     int32 SlotIndex = static_cast<int32>(GetJsonNumberField(Payload, TEXT("slotIndex"), 0));
-    FString BehaviorType = GetJsonStringField(Payload, TEXT("behaviorType"), TEXT(""));
 
     if (DefinitionPath.IsEmpty())
     {
@@ -43,22 +42,27 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
     // Get the slot and configure it
     FSmartObjectSlotDefinition& Slot = Definition->GetMutableSlot(SlotIndex);
 
-    // Configure activity tags if provided
-    if (Payload->HasField(TEXT("activityTags")))
+    // Configure activity tags if provided. Resolve every tag first: an unregistered one used
+    // to be dropped while the call still reported success.
+    const TArray<TSharedPtr<FJsonValue>>* TagsArray = nullptr;
+    if (Payload->TryGetArrayField(TEXT("activityTags"), TagsArray) && TagsArray)
     {
-        const TArray<TSharedPtr<FJsonValue>>* TagsArray;
-        if (Payload->TryGetArrayField(TEXT("activityTags"), TagsArray))
+        FGameplayTagContainer NewTags;
+        TArray<FString> UnknownTags;
+        for (const auto& TagValue : *TagsArray)
         {
-            for (const auto& TagValue : *TagsArray)
-            {
-                FString TagStr = TagValue->AsString();
-                FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName(*TagStr), false);
-                if (Tag.IsValid())
-                {
-                    Slot.ActivityTags.AddTag(Tag);
-                }
-            }
+            const FString TagStr = TagValue.IsValid() ? TagValue->AsString() : FString();
+            const FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName(*TagStr), false);
+            if (Tag.IsValid()) { NewTags.AddTag(Tag); } else { UnknownTags.Add(TagStr); }
         }
+        if (UnknownTags.Num() > 0)
+        {
+            Self->SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("Gameplay tag(s) not registered in this project: %s. Register them in the project's GameplayTags settings first, then retry. Nothing was changed."), *FString::Join(UnknownTags, TEXT(", "))),
+                TEXT("GAMEPLAY_TAG_NOT_REGISTERED"));
+            return true;
+        }
+        Slot.ActivityTags.AppendTags(NewTags);
     }
 
     // Configure enabled state

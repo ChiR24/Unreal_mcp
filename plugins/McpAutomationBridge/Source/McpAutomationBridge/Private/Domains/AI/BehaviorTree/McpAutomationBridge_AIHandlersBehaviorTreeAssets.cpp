@@ -61,15 +61,11 @@ bool HandleCreateBehaviorTree(UMcpAutomationBridgeSubsystem* Self, const FString
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     FString Name = GetJsonStringField(Payload, TEXT("name"));
-    // Accept savePath as documented on the capability (the schema advertises
-    // "Directory path used when saving the created Behavior Tree"), and fall
-    // back to path for callers that used the shorter form. Previously only
-    // `path` was read, so a savePath-only call silently landed in the default
-    // /Game/AI/BehaviorTrees folder while reporting success.
-    FString Path = GetJsonStringField(Payload, TEXT("savePath"));
+    // path is the declared folder; savePath (the graph-route spelling) is only a fallback.
+    FString Path = GetJsonStringField(Payload, TEXT("path"));
     if (Path.IsEmpty())
     {
-        Path = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/AI/BehaviorTrees"));
+        Path = GetJsonStringField(Payload, TEXT("savePath"), TEXT("/Game/AI/BehaviorTrees"));
     }
 
     if (Name.IsEmpty())

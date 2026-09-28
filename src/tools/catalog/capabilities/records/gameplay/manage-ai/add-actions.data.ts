@@ -53,10 +53,13 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     result: 'Composite node added',
   }),
   aiRecord({
-    action: 'add_decorator', summary: 'Add a decorator to a Behavior Tree asset.',
+    action: 'add_decorator', summary: 'Add a decorator to a Behavior Tree node, or to the root when no node is named.',
     use: 'A Behavior Tree branch needs a conditional gate.',
     avoid: 'Use add_service for recurring background ticks.',
-    props: { behaviorTreePath: A.behaviorTreePath, decoratorType: A.decoratorType },
+    props: {
+      behaviorTreePath: A.behaviorTreePath, decoratorType: A.decoratorType,
+      parentNodeId: { type: 'string', description: "Composite or task node the decorator guards (a nodeId from add_composite or add_task); omit or pass 'root' for a root decorator." },
+    },
     required: ['behaviorTreePath', 'decoratorType'], plugins: BT,
     out: { assetPath: A.assetPath },
     example: { behaviorTreePath: '/Game/AI/BT_Enemy', decoratorType: 'Blackboard' },

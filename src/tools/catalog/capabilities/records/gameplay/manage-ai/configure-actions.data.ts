@@ -104,7 +104,10 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'configure_nav_area_cost', summary: 'Configure navigation area cost data.',
     use: 'A navigation area class needs a different traversal cost.',
     avoid: 'Use set_nav_area_class to apply an area to an actor.',
-    props: { areaClass: N.areaClass, areaCost: N.areaCost },
+    props: {
+      areaClass: N.areaClass, areaCost: N.areaCost,
+      fixedAreaEnteringCost: { type: 'number', description: 'Flat cost added once when a path enters the area; left unchanged when omitted.' },
+    },
     required: ['areaClass'],
     example: { areaClass: '/Script/NavigationSystem.NavArea_Obstacle', areaCost: 1 },
     result: 'Nav area cost configured',
@@ -153,6 +156,7 @@ export const AI_CONFIGURE_RECORDS: readonly CapabilityRecordSource[] = [
     props: {
       definitionPath: A.definitionPath,
       slotIndex: A.slotIndex, enabled: A.enabled,
+      activityTags: { type: 'array', items: { type: 'string' }, description: 'Registered gameplay tags added to the slot activity tags; an unregistered tag fails the call.' },
     },
     required: ['definitionPath'], plugins: SMART_OBJECTS,
     out: { definitionPath: A.definitionPath },
