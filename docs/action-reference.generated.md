@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `f9f6a0acbf9b6f43`
+Catalog revision: `db5c9ac77a9917ac`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -331,7 +331,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.create_audio_actor` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.create_audio_actor` `manage_audio.create_ambient_sound` `manage_audio.create_audio_component` `manage_audio.create_reverb_zone` |
 | `manage_audio.create_audio_asset` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.create_audio_asset` `manage_audio.create_sound_cue` `manage_audio.create_sound_class` `manage_audio.create_sound_mix` `manage_audio.create_attenuation_settings` `manage_audio.create_reverb_effect` `manage_audio.create_dialogue_voice` `manage_audio.create_dialogue_wave` `manage_audio.create_source_effect_chain` `manage_audio.create_submix_effect` |
 | `manage_audio.edit_metasound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_metasound` `manage_audio.create_metasound` `manage_audio.add_metasound_input` `manage_audio.add_metasound_output` `manage_audio.add_metasound_node` `manage_audio.connect_metasound_nodes` `manage_audio.set_metasound_default` `manage_audio.build_metasound` |
-| `manage_audio.edit_sound_cue` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_sound_cue` `manage_audio.add_cue_node` `manage_audio.connect_cue_nodes` `manage_audio.set_cue_attenuation` `manage_audio.set_cue_concurrency` `manage_audio.add_source_effect` |
+| `manage_audio.edit_sound_cue` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.edit_sound_cue` `manage_audio.add_cue_node` `manage_audio.connect_cue_nodes` `manage_audio.set_cue_attenuation` `manage_audio.set_cue_concurrency` `manage_audio.set_doppler_effect` `manage_audio.add_source_effect` |
 | `manage_audio.fade_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.fade_sound` `manage_audio.fade_sound_in` `manage_audio.fade_sound_out` |
 | `manage_audio.get_audio_info` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_audio_info` |
 | `manage_audio.play_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.play_sound` `manage_audio.play_sound_2d` `manage_audio.play_sound_at_location` `manage_audio.spawn_sound_at_location` `manage_audio.play_sound_attached` `manage_audio.prime_sound` |

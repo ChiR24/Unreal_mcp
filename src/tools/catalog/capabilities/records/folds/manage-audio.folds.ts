@@ -37,9 +37,9 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_sound_cue', selector: 'edit',
-    summary: 'Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a source effect.',
-    topics: ['sound cue node', 'cue attenuation', 'cue concurrency', 'source effect'],
-    members: { add_node: 'add_cue_node', connect_nodes: 'connect_cue_nodes', set_attenuation: 'set_cue_attenuation', set_concurrency: 'set_cue_concurrency', add_source_effect: 'add_source_effect' },
+    summary: 'Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.',
+    topics: ['sound cue node', 'cue attenuation', 'cue concurrency', 'doppler effect', 'source effect'],
+    members: { add_node: 'add_cue_node', connect_nodes: 'connect_cue_nodes', set_attenuation: 'set_cue_attenuation', set_concurrency: 'set_cue_concurrency', doppler: 'set_doppler_effect', add_source_effect: 'add_source_effect' },
   },
   {
     primary: 'configure_sound_attenuation', selector: 'setting',

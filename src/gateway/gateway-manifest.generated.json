@@ -7289,6 +7289,7 @@
         "density",
         "diffusion",
         "distanceAlgorithm",
+        "dopplerIntensity",
         "edit",
         "effectPresetPath",
         "effectType",
@@ -7352,6 +7353,7 @@
         "save",
         "setting",
         "size",
+        "smoothing",
         "soundClassName",
         "soundClassPath",
         "soundName",
@@ -7462,6 +7464,10 @@
             "type": "string",
             "description": "Distance falloff curve: Linear, Logarithmic, Inverse or NaturalSound. Left unchanged when omitted."
           },
+          "dopplerIntensity": {
+            "type": "number",
+            "description": "Doppler pitch-shift strength (default 1, the normal shift; 0 turns the shift off; negative is refused)."
+          },
           "edit": {
             "type": "string",
             "enum": [
@@ -7469,6 +7475,7 @@
               "connect_nodes",
               "set_attenuation",
               "set_concurrency",
+              "doppler",
               "add_source_effect",
               "create",
               "add_input",
@@ -7787,6 +7794,10 @@
             },
             "minItems": 3,
             "maxItems": 3
+          },
+          "smoothing": {
+            "type": "boolean",
+            "description": "Smooth the Doppler pitch change instead of applying it each frame (default false)."
           },
           "soundClassName": {
             "type": "string",

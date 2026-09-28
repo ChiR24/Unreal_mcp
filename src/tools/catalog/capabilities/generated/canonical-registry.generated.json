@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f9f6a0acbf9b6f43",
+  "catalogRevision": "db5c9ac77a9917ac",
   "recordCount": 382,
   "records": [
     {
@@ -45593,6 +45593,7 @@
         "manage_audio.connect_cue_nodes",
         "manage_audio.set_cue_attenuation",
         "manage_audio.set_cue_concurrency",
+        "manage_audio.set_doppler_effect",
         "manage_audio.add_source_effect"
       ],
       "legacyIds": [
@@ -45630,6 +45631,13 @@
         },
         {
           "tool": "manage_audio",
+          "action": "set_doppler_effect",
+          "folded": {
+            "edit": "doppler"
+          }
+        },
+        {
+          "tool": "manage_audio",
           "action": "add_source_effect",
           "folded": {
             "edit": "add_source_effect"
@@ -45644,14 +45652,16 @@
           "sound cue node",
           "cue attenuation",
           "cue concurrency",
+          "doppler effect",
           "source effect"
         ],
-        "summary": "Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a source effect.",
+        "summary": "Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.",
         "whenToUse": [
           "Use when add a node to a sound cue graph: wave_player (wavepath), mixer, random, modulator (volume, pitch), looping (indefinite, loopcount), attenuation (attenuationpath), concatenator, delay (delay), switch or branch.",
           "Use when connect two sound cue graph nodes.",
           "Use when assign attenuation settings to a sound cue; omit attenuationpath to clear them.",
           "Use when assign concurrency settings to a sound cue.",
+          "Use when add a doppler node at the root of a sound cue (or update the one already there) so the cue shifts pitch as its source moves toward or away from the listener. sound cues only; a soundwave or metasound is refused.",
           "Use when add an effect to a source effect chain: a new preset of effecttype, or an existing preset asset by effectpresetpath."
         ],
         "whenNotToUse": [
@@ -45723,6 +45733,14 @@
               "type": "string",
               "description": "Canonical /Game SoundConcurrency asset path."
             },
+            "dopplerIntensity": {
+              "type": "number",
+              "description": "Doppler pitch-shift strength (default 1, the normal shift; 0 turns the shift off; negative is refused)."
+            },
+            "smoothing": {
+              "type": "boolean",
+              "description": "Smooth the Doppler pitch change instead of applying it each frame (default false)."
+            },
             "effectType": {
               "type": "string",
               "description": "Source effect preset class or short name."
@@ -45742,6 +45760,7 @@
                 "connect_nodes",
                 "set_attenuation",
                 "set_concurrency",
+                "doppler",
                 "add_source_effect"
               ],
               "description": "Which edit sound cue variant to run."
@@ -45774,6 +45793,34 @@
             "nodeId": {
               "type": "string",
               "description": "Identifier of the graph node that was added."
+            },
+            "nodeName": {
+              "type": "string",
+              "description": "Name of the graph node that was added or updated."
+            },
+            "inserted": {
+              "type": "boolean",
+              "description": "True when the node was newly inserted; false when an existing one was updated."
+            },
+            "dopplerIntensity": {
+              "type": "number",
+              "description": "Doppler pitch-shift strength now set on the node."
+            },
+            "smoothing": {
+              "type": "boolean",
+              "description": "Whether the Doppler pitch change is smoothed."
+            },
+            "rootNodeClass": {
+              "type": "string",
+              "description": "Class of the node now at the root of the Sound Cue."
+            },
+            "drivesNode": {
+              "type": "string",
+              "description": "Name of the node the inserted node now plays."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the asset was saved to disk."
             }
           },
           "required": [
@@ -45784,7 +45831,7 @@
       },
       "examples": [
         {
-          "title": "Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a source effect.",
+          "title": "Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.",
           "input": {
             "action": "edit_sound_cue",
             "assetPath": "/Game/Audio/Cues/Cue_FootstepConcrete",
@@ -45829,6 +45876,7 @@
             "connect_nodes": "connect_cue_nodes",
             "set_attenuation": "set_cue_attenuation",
             "set_concurrency": "set_cue_concurrency",
+            "doppler": "set_doppler_effect",
             "add_source_effect": "add_source_effect"
           },
           "declaredBy": {
@@ -45869,6 +45917,12 @@
             "concurrencyPath": [
               "set_concurrency"
             ],
+            "dopplerIntensity": [
+              "doppler"
+            ],
+            "smoothing": [
+              "doppler"
+            ],
             "effectType": [
               "add_source_effect"
             ],
@@ -45883,8 +45937,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d240e66d0db9c0479d1c40c324c5cbe993cda8e7c8b5e5717f35b3337808d6ea",
-        "content": "4f9d7ec86d679cd0a02bed594a634218577f0e2a2d3e76194db2d6a8c15c96ed"
+        "schema": "77ab96f66cc7db6f5a4994361d48cf99ef9c775783f9502fc1d9e74cac288b7f",
+        "content": "fc6c05288b5156bae10337f7e593d950c7e2042367d83d46901db8678e030a74"
       }
     },
     {

@@ -30,6 +30,7 @@ export const BOOLEAN_FIELDS = new Set([
   // TryGetBoolField (McpAutomationBridge_InputHandlersLegacyMappings.cpp), so
   // publishing them as strings made a schema-valid boolean unrepresentable.
   'shift', 'ctrl', 'alt', 'cmd',
+  'smoothing',
 ]);
 
 /** Field names whose JSON-Schema type is `number` on the wire. */
@@ -89,7 +90,8 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   componentName: 'Name of the component to create or address.',
   concurrencyPath: 'Canonical /Game SoundConcurrency asset path.',
   defaultValue: 'Default value for the input.',
-  dopplerIntensity: 'Doppler effect intensity multiplier.',
+  dopplerIntensity: 'Doppler pitch-shift strength (default 1, the normal shift; 0 turns the shift off; negative is refused).',
+  smoothing: 'Smooth the Doppler pitch change instead of applying it each frame (default false).',
   effectType: 'Source effect preset class or short name.',
   enable: 'Whether the feature is enabled.',
   enableReverbSend: 'Whether the sound sends to reverb.',

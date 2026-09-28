@@ -9044,6 +9044,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Distance falloff curve: Linear, Logarithmic, Inverse or NaturalSound. Left unchanged when omitted."
         },
+        "dopplerIntensity": {
+          "type": "number",
+          "description": "Doppler pitch-shift strength (default 1, the normal shift; 0 turns the shift off; negative is refused)."
+        },
         "edit": {
           "type": "string",
           "enum": [
@@ -9051,6 +9055,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "connect_nodes",
             "set_attenuation",
             "set_concurrency",
+            "doppler",
             "add_source_effect",
             "create",
             "add_input",
@@ -9370,6 +9375,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "minItems": 3,
           "maxItems": 3
         },
+        "smoothing": {
+          "type": "boolean",
+          "description": "Smooth the Doppler pitch change instead of applying it each frame (default false)."
+        },
         "soundClassName": {
           "type": "string",
           "description": "Sound Class name."
@@ -9502,6 +9511,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "dopplerIntensity": {
+          "type": "number",
+          "description": "Doppler pitch-shift strength now set on the node."
+        },
+        "drivesNode": {
+          "type": "string",
+          "description": "Name of the node the inserted node now plays."
+        },
         "duration": {
           "type": "number",
           "description": "Length of the inspected sound in seconds."
@@ -9509,6 +9526,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "falloffDistance": {
           "type": "number",
           "description": "Distance in centimetres over which the attenuation falls off."
+        },
+        "inserted": {
+          "type": "boolean",
+          "description": "True when the node was newly inserted; false when an existing one was updated."
         },
         "message": {
           "type": "string",
@@ -9532,6 +9553,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "nodeName": {
+          "type": "string",
+          "description": "Name of the graph node that was added or updated."
+        },
         "numChannels": {
           "type": "number",
           "description": "Number of audio channels in the inspected Sound Wave."
@@ -9553,9 +9578,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Per-step outcome of a batch: index, edit, id, success, nodeId, appliedValue."
         },
+        "rootNodeClass": {
+          "type": "string",
+          "description": "Class of the node now at the root of the Sound Cue."
+        },
         "sampleRate": {
           "type": "number",
           "description": "Sample rate of the inspected Sound Wave for the current platform."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the asset was saved to disk."
+        },
+        "smoothing": {
+          "type": "boolean",
+          "description": "Whether the Doppler pitch change is smoothed."
         },
         "spatialize": {
           "type": "boolean",

@@ -9,6 +9,7 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 	using namespace McpAudioAuthoring;
 	if (TSharedPtr<FJsonObject> Result = HandleSoundCueAssetActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleSoundCueNodeActions(SubAction, Params, Response)) { return Result; }
+	if (TSharedPtr<FJsonObject> Result = HandleSoundCueDopplerAction(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundAssetActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundBatchAction(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundNodeActions(SubAction, Params, Response)) { return Result; }

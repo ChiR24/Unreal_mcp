@@ -67,6 +67,7 @@ inline const TArray<FString>& AudioAuthoring()
 		TEXT("create_sound_mix"),
 		TEXT("add_cue_node"), TEXT("connect_cue_nodes"),
 		TEXT("set_cue_attenuation"), TEXT("set_cue_concurrency"),
+		TEXT("set_doppler_effect"),
 		TEXT("create_metasound"), TEXT("add_metasound_node"),
 		TEXT("connect_metasound_nodes"), TEXT("add_metasound_input"),
 		TEXT("add_metasound_output"), TEXT("set_metasound_default"),
