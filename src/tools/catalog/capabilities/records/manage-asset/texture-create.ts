@@ -2,7 +2,7 @@
 // normal-from-height, and ambient-occlusion-from-mesh generation.
 
 import type { RecordSpec } from './builder.js';
-import { bool, ex, MEDIUM, num, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { bool, ex, HIGH, MEDIUM, num, r, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
@@ -21,4 +21,8 @@ export const TEXTURE_CREATE_RECORDS: readonly RecordSpec[] = [
     { examples: [ex('Generate a brick pattern', { name: 'T_Brick', path: TEXTURES, patternType: 'Brick', width: 1024, height: 1024 }, DONE)] }),
   r('create_normal_from_height', 'texture', 'Generate a normal map from a heightmap texture.', schema({ sourceTexture: str('Source heightmap texture path.'), name: str('Output texture name (default <source>_N).'), path: str('Package path (default the source folder).'), outputPath: OUTPUT_PATH, strength: num('Normal strength.') }, ['sourceTexture']), OK, WRITE, WRITE_POLICY, MEDIUM,
     { examples: [ex('Derive a normal map from a heightmap', { sourceTexture: `${TEXTURES}/T_Height`, name: 'T_Normal', path: TEXTURES, strength: 2 }, DONE)] }),
+  r('create_ao_from_mesh', 'texture', 'Bake a real ray-traced ambient occlusion texture of a static mesh in its own UV space (grayscale, linear): crevices come out dark, open surfaces white.', schema({ meshPath: str('Static mesh to bake, e.g. /Game/Meshes/SM_Rock.'), name: str('Output texture name.'), path: str('Package path (default /Game/Textures).'), outputPath: OUTPUT_PATH, width: num('Texture width in pixels (default 1024).'), height: num('Texture height in pixels (default 1024).'), samples: num('Occlusion rays per texel, 1-1024 (default 64); more is smoother and slower.'), rayDistance: num('Farthest occluder counted, in cm; 0 (default) means unlimited, negative is refused.'), uvChannel: num('UV channel to bake into (default 0, the one materials sample); a lightmap channel avoids overlapping UVs.') }, ['meshPath'], ['name', 'outputPath']),
+    schema({ success: bool('Operation succeeded.'), assetPath: str('The baked texture.'), width: num('Texture width.'), height: num('Texture height.'), minValue: num('Darkest texel, 0-1.'), meanValue: num('Average texel over the whole texture, 0-1 (unused texels count as 1).'), maxValue: num('Brightest texel, 0-1.'), convexMesh: bool('True when the bake is flat because the mesh is convex and cannot occlude itself.'), saved: bool('Whether the texture was saved.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']),
+    { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
+    { examples: [ex('Bake ambient occlusion of a mesh', { meshPath: '/Engine/EngineMeshes/SM_MatPreviewMesh_01', name: 'T_AO_Preview', path: TEXTURES, width: 256, height: 256, samples: 32 }, DONE)] }),
 ];

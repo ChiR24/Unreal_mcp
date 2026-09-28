@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "14d7fb2bc96432f7",
+  "catalogRevision": "07061fbed328430e",
   "recordCount": 382,
   "records": [
     {
@@ -85375,6 +85375,7 @@
         "texture.create_gradient_texture",
         "texture.create_noise_texture",
         "texture.create_pattern_texture",
+        "texture.create_ao_from_mesh",
         "texture.create_normal_from_height",
         "texture.resize_texture",
         "texture.channel_pack",
@@ -85405,6 +85406,13 @@
           "action": "create_pattern_texture",
           "folded": {
             "kind": "pattern"
+          }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "create_ao_from_mesh",
+          "folded": {
+            "kind": "ao_from_mesh"
           }
         },
         {
@@ -85452,11 +85460,12 @@
           "noise texture",
           "gradient texture",
           "normal map",
+          "bake ambient occlusion",
           "channel pack",
           "resize texture",
           "combine textures"
         ],
-        "summary": "Create a texture: gradient, noise, pattern, normal from height, resized copy, channel pack/extract, or a combination of two textures.",
+        "summary": "Create a texture: gradient, noise, pattern, normal from height, ambient occlusion baked from a mesh, resized copy, channel pack/extract, or a combination of two textures.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -85569,6 +85578,22 @@
             "secondaryColor": {
               "description": "Second colour (default black) as {r, g, b, a} or [r, g, b, a] in 0-1."
             },
+            "meshPath": {
+              "type": "string",
+              "description": "Static mesh to bake, e.g. /Game/Meshes/SM_Rock."
+            },
+            "samples": {
+              "type": "number",
+              "description": "Occlusion rays per texel, 1-1024 (default 64); more is smoother and slower."
+            },
+            "rayDistance": {
+              "type": "number",
+              "description": "Farthest occluder counted, in cm; 0 (default) means unlimited, negative is refused."
+            },
+            "uvChannel": {
+              "type": "number",
+              "description": "UV channel to bake into (default 0, the one materials sample); a lightmap channel avoids overlapping UVs."
+            },
             "sourceTexture": {
               "type": "string",
               "description": "Source heightmap texture path."
@@ -85639,6 +85664,7 @@
                 "gradient",
                 "noise",
                 "pattern",
+                "ao_from_mesh",
                 "normal_from_height",
                 "resized",
                 "channel_pack",
@@ -85665,6 +85691,38 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Operation details."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The baked texture."
+            },
+            "width": {
+              "type": "number",
+              "description": "Texture width."
+            },
+            "height": {
+              "type": "number",
+              "description": "Texture height."
+            },
+            "minValue": {
+              "type": "number",
+              "description": "Darkest texel, 0-1."
+            },
+            "meanValue": {
+              "type": "number",
+              "description": "Average texel over the whole texture, 0-1 (unused texels count as 1)."
+            },
+            "maxValue": {
+              "type": "number",
+              "description": "Brightest texel, 0-1."
+            },
+            "convexMesh": {
+              "type": "boolean",
+              "description": "True when the bake is flat because the mesh is convex and cannot occlude itself."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the texture was saved."
             }
           },
           "required": [
@@ -85675,7 +85733,7 @@
       },
       "examples": [
         {
-          "title": "Create a texture: gradient, noise, pattern, normal from height, resized copy, channel pack/extract, or a combination of two textures.",
+          "title": "Create a texture: gradient, noise, pattern, normal from height, ambient occlusion baked from a mesh, resized copy, channel pack/extract, or a combination of two textures.",
           "input": {
             "name": "T_Gradient",
             "path": "/Game/Textures",
@@ -85701,7 +85759,7 @@
       "behavior": {
         "effect": "write",
         "idempotency": "idempotent",
-        "longRunning": false,
+        "longRunning": true,
         "safeToRetry": true
       },
       "policy": {
@@ -85710,8 +85768,8 @@
         "dataAccess": "project-write"
       },
       "cost": {
-        "latency": "interactive",
-        "resources": "medium"
+        "latency": "long-running",
+        "resources": "high"
       },
       "routing": {
         "parentTool": "manage_asset",
@@ -85722,6 +85780,7 @@
             "gradient": "create_gradient_texture",
             "noise": "create_noise_texture",
             "pattern": "create_pattern_texture",
+            "ao_from_mesh": "create_ao_from_mesh",
             "normal_from_height": "create_normal_from_height",
             "resized": "resize_texture",
             "channel_pack": "channel_pack",
@@ -85735,12 +85794,14 @@
             "width": [
               "gradient",
               "noise",
-              "pattern"
+              "pattern",
+              "ao_from_mesh"
             ],
             "height": [
               "gradient",
               "noise",
-              "pattern"
+              "pattern",
+              "ao_from_mesh"
             ],
             "angle": [
               "gradient"
@@ -85805,6 +85866,18 @@
             "secondaryColor": [
               "pattern"
             ],
+            "meshPath": [
+              "ao_from_mesh"
+            ],
+            "samples": [
+              "ao_from_mesh"
+            ],
+            "rayDistance": [
+              "ao_from_mesh"
+            ],
+            "uvChannel": [
+              "ao_from_mesh"
+            ],
             "sourceTexture": [
               "normal_from_height"
             ],
@@ -85858,8 +85931,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "41472de03320b30cbb4eeee8564a7761d702bb400be8d02da1442bad9e479d9c",
-        "content": "4726913e288fb667605a861680510d34f4114f9270a6b2c260e700639f6c7932"
+        "schema": "10a88705b4fe4e1dbfc8e9a39383a3b1c26b0113ee749683ed0a63e0001c01c5",
+        "content": "84aac20a8a3208853975c080c9844fd10cfb6d933f4dfc5ed744cf888694bafb"
       }
     },
     {

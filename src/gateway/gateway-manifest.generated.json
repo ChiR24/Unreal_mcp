@@ -5709,6 +5709,7 @@
         "memberName",
         "memberType",
         "members",
+        "meshPath",
         "metadata",
         "migrateExistingRows",
         "name",
@@ -5764,6 +5765,7 @@
         "provider",
         "query",
         "radius",
+        "rayDistance",
         "recursive",
         "recursiveClasses",
         "recursivePaths",
@@ -5778,6 +5780,7 @@
         "rowName",
         "rowStructPath",
         "rows",
+        "samples",
         "save",
         "savePath",
         "scale",
@@ -5824,6 +5827,7 @@
         "upstream",
         "userEmail",
         "userName",
+        "uvChannel",
         "vTiling",
         "value",
         "valueName",
@@ -6337,6 +6341,7 @@
               "gradient",
               "noise",
               "pattern",
+              "ao_from_mesh",
               "normal_from_height",
               "resized",
               "channel_pack",
@@ -6500,6 +6505,10 @@
               }
             ],
             "description": "Member definitions, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata."
+          },
+          "meshPath": {
+            "type": "string",
+            "description": "Static mesh to bake, e.g. /Game/Meshes/SM_Rock."
           },
           "metadata": {
             "oneOf": [
@@ -6876,6 +6885,10 @@
             "type": "number",
             "description": "Blur radius."
           },
+          "rayDistance": {
+            "type": "number",
+            "description": "Farthest occluder counted, in cm; 0 (default) means unlimited, negative is refused."
+          },
           "recursive": {
             "type": "boolean",
             "description": "Also report every /Game package the assets depend on, transitively (up to 512)."
@@ -6936,6 +6949,10 @@
               "x-unreal-reflection-boundary": true
             },
             "description": "Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData."
+          },
+          "samples": {
+            "type": "number",
+            "description": "Occlusion rays per texel, 1-1024 (default 64); more is smoother and slower."
           },
           "save": {
             "type": "boolean",
@@ -7136,6 +7153,10 @@
           "userName": {
             "type": "string",
             "description": "Commit author name, written to the repository config only."
+          },
+          "uvChannel": {
+            "type": "number",
+            "description": "UV channel to bake into (default 0, the one materials sample); a lightmap channel avoids overlapping UVs."
           },
           "vTiling": {
             "type": "number",

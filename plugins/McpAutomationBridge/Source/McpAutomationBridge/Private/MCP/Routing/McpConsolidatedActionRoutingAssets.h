@@ -44,7 +44,7 @@ inline const TArray<FString>& Texture()
 	static const TArray<FString> Actions = {
 		TEXT("create_noise_texture"), TEXT("create_gradient_texture"),
 		TEXT("create_pattern_texture"), TEXT("create_normal_from_height"),
-		TEXT("resize_texture"),
+		TEXT("resize_texture"), TEXT("create_ao_from_mesh"),
 		TEXT("adjust_levels"), TEXT("adjust_curves"), TEXT("blur"),
 		TEXT("sharpen"), TEXT("invert"), TEXT("desaturate"),
 		TEXT("channel_pack"), TEXT("channel_extract"), TEXT("combine_textures"),

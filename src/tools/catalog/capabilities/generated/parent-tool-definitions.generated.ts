@@ -7365,6 +7365,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "gradient",
             "noise",
             "pattern",
+            "ao_from_mesh",
             "normal_from_height",
             "resized",
             "channel_pack",
@@ -7528,6 +7529,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Member definitions, each { name, type } (or memberName, memberType) with optional defaultValue, tooltip and metadata."
+        },
+        "meshPath": {
+          "type": "string",
+          "description": "Static mesh to bake, e.g. /Game/Meshes/SM_Rock."
         },
         "metadata": {
           "oneOf": [
@@ -7904,6 +7909,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Blur radius."
         },
+        "rayDistance": {
+          "type": "number",
+          "description": "Farthest occluder counted, in cm; 0 (default) means unlimited, negative is refused."
+        },
         "recursive": {
           "type": "boolean",
           "description": "Also report every /Game package the assets depend on, transitively (up to 512)."
@@ -7964,6 +7973,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Rows to import, each { rowName: <name>, rowData: { <field>: <value>, ... } }. The field names inside rowData are the row struct own property names, e.g. { rowName: ArcRifle, rowData: { DisplayName: Arc Rifle, Damage: 42 } }. A flat entry such as { rowName, Damage } is rejected as missing rowData."
+        },
+        "samples": {
+          "type": "number",
+          "description": "Occlusion rays per texel, 1-1024 (default 64); more is smoother and slower."
         },
         "save": {
           "type": "boolean",
@@ -8164,6 +8177,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "userName": {
           "type": "string",
           "description": "Commit author name, written to the repository config only."
+        },
+        "uvChannel": {
+          "type": "number",
+          "description": "UV channel to bake into (default 0, the one materials sample); a lightmap channel avoids overlapping UVs."
         },
         "vTiling": {
           "type": "number",
@@ -8395,6 +8412,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Edges found, each with sourceNodeId, sourceOutputIndex, targetNodeId, targetInput, hop and direction. A targetNodeId of \"Main\" is the material output node."
         },
+        "convexMesh": {
+          "type": "boolean",
+          "description": "True when the bake is flat because the mesh is convex and cannot occlude itself."
+        },
         "copiedCount": {
           "type": "number",
           "description": "Files copied (or that would be copied under dryRun)."
@@ -8552,6 +8573,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when the listing ships a packaged unreal-engine build, which Fab imports through its pack workflow."
         },
+        "height": {
+          "type": "number",
+          "description": "Texture height."
+        },
         "imageBase64": {
           "type": "string",
           "description": "Preview image bytes, base64. Promoted to an MCP image content block."
@@ -8636,6 +8661,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Traversal depth actually used after clamping."
         },
+        "maxValue": {
+          "type": "number",
+          "description": "Brightest texel, 0-1."
+        },
+        "meanValue": {
+          "type": "number",
+          "description": "Average texel over the whole texture, 0-1 (unused texels count as 1)."
+        },
         "message": {
           "type": "string",
           "description": "Explanation when the asset type carries no graph."
@@ -8648,6 +8681,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "mimeType": {
           "type": "string",
           "description": "Preview image MIME type."
+        },
+        "minValue": {
+          "type": "number",
+          "description": "Darkest texel, 0-1."
         },
         "missingRoots": {
           "type": "array",
@@ -8946,6 +8983,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Advisory messages, including the reference-integrity warning for a relocated destination."
+        },
+        "width": {
+          "type": "number",
+          "description": "Texture width."
         }
       },
       "additionalProperties": true

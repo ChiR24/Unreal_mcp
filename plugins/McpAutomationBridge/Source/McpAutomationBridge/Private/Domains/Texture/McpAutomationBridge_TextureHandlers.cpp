@@ -15,6 +15,10 @@ TSharedPtr<FJsonObject> UMcpAutomationBridgeSubsystem::HandleManageTextureAction
     {
         return McpTextureHandlers::HandleCreatePatternTexture(Params);
     }
+    if (SubAction == TEXT("create_ao_from_mesh"))
+    {
+        return McpTextureHandlers::HandleCreateAoFromMesh(Params);
+    }
     if (SubAction == TEXT("create_normal_from_height"))
     {
         return McpTextureHandlers::HandleCreateNormalFromHeight(Params);
