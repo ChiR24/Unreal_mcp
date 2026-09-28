@@ -50,7 +50,7 @@ bool HandleCreatePainCausingVolume(UMcpAutomationBridgeSubsystem* Subsystem, con
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("APainCausingVolume"));
     ResponseJson->SetBoolField(TEXT("bPainCausing"), bPainCausing);
     ResponseJson->SetNumberField(TEXT("damagePerSec"), DamagePerSec);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created PainCausingVolume: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
@@ -82,7 +82,7 @@ bool HandleCreatePhysicsVolume(UMcpAutomationBridgeSubsystem* Subsystem, const F
     ResponseJson->SetNumberField(TEXT("fluidFriction"), Volume->FluidFriction);
     ResponseJson->SetNumberField(TEXT("terminalVelocity"), Volume->TerminalVelocity);
     ResponseJson->SetNumberField(TEXT("priority"), Volume->Priority);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created PhysicsVolume: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }

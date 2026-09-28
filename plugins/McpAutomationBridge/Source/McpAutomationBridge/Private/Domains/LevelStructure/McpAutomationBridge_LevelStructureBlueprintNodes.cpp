@@ -219,7 +219,7 @@ bool HandleAddLevelBlueprintNode(
     ResponseJson->SetBoolField(TEXT("nodeCreated"), true);
 
     FString Message = FString::Printf(TEXT("Added node to Level Blueprint: %s"), *CreatedNodeName);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, CurrentLevel, Message, ResponseJson);
     return true;
 }
 

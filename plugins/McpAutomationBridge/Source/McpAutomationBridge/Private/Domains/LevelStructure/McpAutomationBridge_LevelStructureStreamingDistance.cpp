@@ -84,7 +84,7 @@ bool HandleSetStreamingDistance(
         ResponseJson->SetNumberField(TEXT("volumeCount"), VolumesArray.Num());
         ResponseJson->SetStringField(TEXT("note"), TEXT("Use createVolume=true to create a streaming volume for distance-based loading"));
 
-        Subsystem->SendAutomationResponse(Socket, RequestId, true,
+        SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel,
             FString::Printf(TEXT("Level '%s' has %d streaming volume(s)"), *LevelName, VolumesArray.Num()), ResponseJson);
         return true;
     }
@@ -142,7 +142,7 @@ bool HandleSetStreamingDistance(
 
     FString Message = FString::Printf(TEXT("Created streaming volume for level '%s' with distance %.0f at (%f, %f, %f)"),
         *LevelName, StreamingDistance, VolumeLocation.X, VolumeLocation.Y, VolumeLocation.Z);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 }
 

@@ -45,6 +45,7 @@ bool HandleConfigureRuntimeHashSetGrid(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const TSharedPtr<FJsonObject>& Payload,
     UWorld* World,
     UWorldPartitionRuntimeHashSet* HashSet,
     const FString& GridName,

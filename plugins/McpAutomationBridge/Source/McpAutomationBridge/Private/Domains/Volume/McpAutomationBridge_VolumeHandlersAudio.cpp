@@ -50,7 +50,7 @@ bool HandleCreateAudioVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FSt
     Volume->SetEnabled(bEnabled);
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("AAudioVolume"));
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created AudioVolume: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
@@ -77,7 +77,7 @@ bool HandleCreateReverbVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FS
     ResponseJson->SetBoolField(TEXT("bEnabled"), bEnabled);
     ResponseJson->SetNumberField(TEXT("reverbVolume"), ReverbVolumeLevel);
     ResponseJson->SetNumberField(TEXT("fadeTime"), FadeTime);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created ReverbVolume: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }

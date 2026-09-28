@@ -1,4 +1,5 @@
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureActions.h"
+#include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
 
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -17,6 +18,7 @@ bool HandleConfigureRuntimeHashSetGrid(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,
     TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const TSharedPtr<FJsonObject>& Payload,
     UWorld* World,
     UWorldPartitionRuntimeHashSet* HashSet,
     const FString& GridName,
@@ -137,7 +139,7 @@ bool HandleConfigureRuntimeHashSetGrid(
         ? FString::Printf(TEXT("Created new partition '%s' in RuntimeHashSet"), *TargetPartitionName.ToString())
         : FString::Printf(TEXT("Updated partition '%s' in RuntimeHashSet"), *TargetPartitionName.ToString());
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 }
 

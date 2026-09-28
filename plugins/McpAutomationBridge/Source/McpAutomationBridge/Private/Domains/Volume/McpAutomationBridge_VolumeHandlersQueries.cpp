@@ -52,13 +52,6 @@ static void AppendVolumeInfo(UWorld* World, const FString& Filter, const FString
 
 bool HandleGetVolumesInfo(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    const FString PathParam = GetJsonStringField(Payload, TEXT("path"), TEXT(""));
-    if (!PathParam.IsEmpty() && (PathParam.Contains(TEXT("..")) || PathParam.Contains(TEXT("\\"))))
-    {
-        Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("get_volumes_info does not accept path parameter with traversal characters"), nullptr, TEXT("SECURITY_VIOLATION"));
-        return true;
-    }
     UWorld* World = nullptr;
     if (!VolumeHelpers::ResolveEditorWorld(Subsystem, RequestId, Socket, World))
     {
@@ -104,13 +97,14 @@ bool HandleRemoveVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString&
     }
     const FString VolumeClass = VolumeActor->GetClass()->GetName();
     const FString VolumeLabel = VolumeActor->GetActorLabel();
+    ULevel* VolumeLevel = VolumeActor->GetLevel();
     World->DestroyActor(VolumeActor, true);
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeLabel);
     ResponseJson->SetStringField(TEXT("volumeClass"), VolumeClass);
     ResponseJson->SetBoolField(TEXT("existsAfter"), false);
     ResponseJson->SetStringField(TEXT("action"), TEXT("manage_volumes:deleted"));
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, VolumeLevel,
         FString::Printf(TEXT("Removed volume: %s"), *VolumeName), ResponseJson);
     return true;
 }

@@ -1,7 +1,9 @@
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureActions.h"
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
 
+#include "EditorLevelUtils.h"
 #include "Engine/LevelStreaming.h"
+#include "Engine/LevelStreamingAlwaysLoaded.h"
 #include "Engine/LevelStreamingDynamic.h"
 #include "Engine/World.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -61,18 +63,43 @@ bool HandleConfigureLevelStreaming(
         return true;
     }
 
-    FoundLevel->SetShouldBeVisible(bShouldBeVisible);
-    FoundLevel->bShouldBlockOnLoad = bShouldBlockOnLoad;
-    FoundLevel->bDisableDistanceStreaming = bDisableDistanceStreaming;
+    // streamingMethod used to be echoed back without ever changing the streaming class.
+    if (Payload->HasField(TEXT("streamingMethod")))
+    {
+        UClass* StreamingClass = ResolveLevelStreamingClass(StreamingMethod);
+        if (!StreamingClass)
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("Unknown streamingMethod '%s'; use Blueprint or AlwaysLoaded."), *StreamingMethod), nullptr, TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+        if (!FoundLevel->IsA(StreamingClass))
+        {
+            ULevelStreaming* Converted = UEditorLevelUtils::SetStreamingClassForLevel(FoundLevel, StreamingClass);
+            if (!Converted)
+            {
+                Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                    FString::Printf(TEXT("Could not switch %s to %s streaming"), *LevelName, *StreamingMethod), nullptr, TEXT("OPERATION_FAILED"));
+                return true;
+            }
+            FoundLevel = Converted;
+        }
+    }
+
+    // Only what was passed changes; an omitted flag keeps the level's current value.
+    FoundLevel->Modify();
+    if (Payload->HasField(TEXT("bShouldBeVisible"))) { FoundLevel->SetShouldBeVisible(bShouldBeVisible); }
+    if (Payload->HasField(TEXT("bShouldBlockOnLoad"))) { FoundLevel->bShouldBlockOnLoad = bShouldBlockOnLoad; }
+    if (Payload->HasField(TEXT("bDisableDistanceStreaming"))) { FoundLevel->bDisableDistanceStreaming = bDisableDistanceStreaming; }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     McpHandlerUtils::AddVerification(ResponseJson, FoundLevel);
     ResponseJson->SetStringField(TEXT("levelName"), LevelName);
-    ResponseJson->SetStringField(TEXT("streamingMethod"), StreamingMethod);
-    ResponseJson->SetBoolField(TEXT("shouldBeVisible"), bShouldBeVisible);
+    ResponseJson->SetStringField(TEXT("streamingMethod"), FoundLevel->IsA<ULevelStreamingAlwaysLoaded>() ? TEXT("AlwaysLoaded") : TEXT("Blueprint"));
+    ResponseJson->SetBoolField(TEXT("shouldBeVisible"), FoundLevel->GetShouldBeVisibleFlag());
 
     FString Message = FString::Printf(TEXT("Configured streaming for level: %s"), *LevelName);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 }
 

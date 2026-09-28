@@ -1,6 +1,7 @@
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureActions.h"
 #include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
 
+#include "Engine/Level.h"
 #include "Engine/World.h"
 #include "GameFramework/WorldSettings.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -52,10 +53,30 @@ bool HandleEnableWorldPartition(
         }
         WorldSettings->MarkPackageDirty();
         World->MarkPackageDirty();
+        // bUseExternalActors moves the level's actors into one-file-per-actor packages, the same conversion the
+        // World Settings "Use External Actors" toggle performs.
+        const bool bExternalize = GetJsonBoolField(Payload, TEXT("bUseExternalActors"), false);
+        if (bExternalize && World->PersistentLevel && !World->PersistentLevel->IsUsingExternalActors())
+        {
+            World->PersistentLevel->SetUseExternalActors(true);
+            World->PersistentLevel->ConvertAllActorsToPackaging(true);
+        }
         ResponseJson->SetBoolField(TEXT("worldPartitionEnabled"), true);
+        ResponseJson->SetBoolField(TEXT("usesExternalActors"), World->PersistentLevel && World->PersistentLevel->IsUsingExternalActors());
         ResponseJson->SetBoolField(TEXT("requiresSaveAndReload"), true);
-        ResponseJson->SetStringField(TEXT("note"), TEXT("World Partition object created on the world settings; save and reload the level. Existing actors were not converted to external actors (run the WorldPartitionConvertCommandlet for a full conversion)."));
-        Subsystem->SendAutomationResponse(Socket, RequestId, true, TEXT("World Partition enabled on the current level (save and reload required)"), ResponseJson);
+        ResponseJson->SetStringField(TEXT("note"), bExternalize
+            ? TEXT("World Partition object created and actors moved to external packages; save and reload the level.")
+            : TEXT("World Partition object created on the world settings; save and reload the level. Existing actors were not converted to external actors (pass bUseExternalActors true, or run the WorldPartitionConvertCommandlet)."));
+        SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, TEXT("World Partition enabled on the current level (save and reload required)"), ResponseJson);
+        return true;
+    }
+
+    // Turning World Partition off used to answer success while changing nothing.
+    if (!bEnable && WorldPartition)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("Disabling World Partition on a partitioned level is not supported; create a non-partitioned level with create_level (bCreateWorldPartition false) instead."),
+            ResponseJson, TEXT("NOT_SUPPORTED"));
         return true;
     }
 
@@ -63,13 +84,20 @@ bool HandleEnableWorldPartition(
     if (WorldPartition)
     {
         Message = TEXT("World Partition is enabled for this level");
+        if (GetJsonBoolField(Payload, TEXT("bUseExternalActors"), false) && World->PersistentLevel && !World->PersistentLevel->IsUsingExternalActors())
+        {
+            World->PersistentLevel->SetUseExternalActors(true);
+            World->PersistentLevel->ConvertAllActorsToPackaging(true);
+            Message = TEXT("World Partition is enabled for this level; actors moved to external packages");
+        }
+        ResponseJson->SetBoolField(TEXT("usesExternalActors"), World->PersistentLevel && World->PersistentLevel->IsUsingExternalActors());
     }
     else
     {
         Message = TEXT("World Partition is not enabled for this level");
     }
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 }
 

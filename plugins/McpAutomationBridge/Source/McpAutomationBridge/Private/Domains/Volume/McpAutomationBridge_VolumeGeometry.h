@@ -5,6 +5,7 @@
 #include "Engine/Brush.h"
 #include "Engine/World.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
 #include "Domains/Volume/McpAutomationBridge_VolumeRequestParsing.h"
 #include "Domains/Volume/McpAutomationBridge_VolumeResponses.h"
 #include "Domains/Volume/McpAutomationBridge_VolumeWorldResolution.h"
@@ -73,7 +74,7 @@ bool CreateBoxVolume(
         Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("Failed to spawn ") + ClassName, nullptr);
         return true;
     }
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created %s: %s"), *ClassName, *Args.VolumeName), CreateVolumeResponse(Volume, TEXT("A") + ClassName));
     return true;
 }

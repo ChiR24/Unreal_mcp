@@ -16,6 +16,7 @@ import { buildWorldRecord, type FoldedActionSpec } from './builder.js';
 import { P } from './properties.js';
 
 const F = 'volume';
+const VOLUME_PRIORITY = { type: 'number', description: 'Priority where volumes overlap (PhysicsVolume, PostProcessVolume).' };
 const T = 'manage_level_structure';
 
 /**
@@ -84,7 +85,7 @@ const ADVERTISED_ALIASES = FOLDED.filter((entry) => !SHAPE_NAMES.has(entry.actio
 const volumeClass: JsonObject = {
   type: 'string',
   enum: Object.keys(VOLUME_CLASS_ACTIONS),
-  description: 'Volume class to spawn.',
+  description: 'Volume class to spawn. Each class takes only its own parameters; one it would ignore is refused.',
 };
 
 const actorPath: JsonObject = {
@@ -117,6 +118,13 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
       bEnabled: P.bEnabled, reverbVolume: P.reverbVolume, fadeTime: P.fadeTime,
       cullDistances: P.cullDistances,
       bUnbound: P.bUnbound, blendRadius: P.blendRadius, blendWeight: P.blendWeight,
+      priority: VOLUME_PRIORITY,
+      killZHeight: { type: 'number', description: 'World Z of the kill plane (KillZVolume); sets the volume height.' },
+      postProcessSettings: {
+        type: 'object', additionalProperties: false,
+        description: 'PostProcessVolume overrides: bloomEnabled, exposureBias, vignetteIntensity, saturation, contrast, gamma.',
+        properties: { bloomEnabled: { type: 'boolean' }, exposureBias: { type: 'number' }, vignetteIntensity: { type: 'number' }, saturation: { type: 'number' }, contrast: { type: 'number' }, gamma: { type: 'number' } },
+      },
       save: P.save,
     },
     required: ['volumeClass', 'location'], effect: 'write', costLatency: 'interactive', costResources: 'low',
@@ -142,7 +150,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'manage_level_structure', action: 'set_volume_properties', dispatchAction: 'set_volume_properties',
     family: F, summary: 'Set generic properties (enabled, blend, priority) on an existing volume.',
     whenToUse: ['Volume properties must be updated without recreating it.'], whenNotToUse: ['The volume extent must change; use set_volume_extent.'],
-    inputProps: { volumeName: P.volumeName, bEnabled: P.bEnabled, priority: P.priority, blendWeight: P.blendWeight, bWaterVolume: P.bWaterVolume, fluidFriction: P.fluidFriction, terminalVelocity: P.terminalVelocity, save: P.save },
+    inputProps: { volumeName: P.volumeName, bEnabled: P.bEnabled, priority: VOLUME_PRIORITY, blendWeight: P.blendWeight, bWaterVolume: P.bWaterVolume, fluidFriction: P.fluidFriction, terminalVelocity: P.terminalVelocity, bPainCausing: P.bPainCausing, damagePerSec: P.damagePerSec, reverbVolume: P.reverbVolume, fadeTime: P.fadeTime, save: P.save },
     required: ['volumeName'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'set_volume_properties', volumeName: 'PP_01', bEnabled: true },
   }),

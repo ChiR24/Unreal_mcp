@@ -29,7 +29,7 @@ export const P = {
   sublevelPath: str('Sub-level asset path.'),
   bCreateWorldPartition: bool('Create with World Partition enabled.'),
   bUseExternalActors: bool('Enable One File Per Actor (OFPA) for Data Layer compatibility.'),
-  streamingMethod: str('Level streaming method: Blueprint, AlwaysLoaded, or Disabled.'),
+  streamingMethod: { type: 'string', enum: ['Blueprint', 'AlwaysLoaded'], description: 'Level streaming method: Blueprint (loaded on demand) or AlwaysLoaded.' },
   bShouldBeVisible: bool('Level should be visible when loaded.'),
   bShouldBlockOnLoad: bool('Block game until level is loaded.'),
   bDisableDistanceStreaming: bool('Disable distance-based streaming.'),

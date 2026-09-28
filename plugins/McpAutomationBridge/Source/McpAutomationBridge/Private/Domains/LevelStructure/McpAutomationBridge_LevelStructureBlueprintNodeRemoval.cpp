@@ -94,7 +94,7 @@ bool HandleRemoveLevelBlueprintNode(
     Result->SetArrayField(TEXT("removedNodes"), Removed);
     Result->SetBoolField(TEXT("unboundOnly"), bUnboundOnly);
     McpHandlerUtils::AddVerification(Result, LevelBP);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, CurrentLevel,
         FString::Printf(TEXT("Removed %d level blueprint node(s)"), ToRemove.Num()), Result);
     return true;
 }

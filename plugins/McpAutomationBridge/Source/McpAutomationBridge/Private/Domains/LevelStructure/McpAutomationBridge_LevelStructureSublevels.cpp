@@ -45,6 +45,15 @@ bool HandleCreateSublevel(
     FString SublevelPath = GetJsonStringField(Payload, TEXT("sublevelPath"), TEXT(""));
     FString ParentLevel = GetJsonStringField(Payload, TEXT("parentLevel"), TEXT(""));
     bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
+    // streamingMethod picks the streaming class; it used to be ignored and every sublevel streamed by Blueprint.
+    const FString StreamingMethod = GetJsonStringField(Payload, TEXT("streamingMethod"), TEXT("Blueprint"));
+    UClass* StreamingClass = ResolveLevelStreamingClass(StreamingMethod);
+    if (!StreamingClass)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Unknown streamingMethod '%s'; use Blueprint or AlwaysLoaded."), *StreamingMethod), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -181,7 +190,7 @@ bool HandleCreateSublevel(
         }
     }
 
-    ULevelStreamingDynamic* StreamingLevel = NewObject<ULevelStreamingDynamic>(World, ULevelStreamingDynamic::StaticClass());
+    ULevelStreaming* StreamingLevel = NewObject<ULevelStreaming>(World, StreamingClass);
     if (StreamingLevel)
     {
         StreamingLevel->SetWorldAssetByPackageName(FName(*SublevelPackageName));

@@ -20,7 +20,7 @@
 namespace McpVolumeHandlers
 {
 #if MCP_HAS_POSTPROCESS_VOLUME
-static void ApplyPostProcessSettings(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload)
+void ApplyPostProcessSettings(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload)
 {
     if (!Volume || !Payload->HasTypedField<EJson::Object>(TEXT("postProcessSettings")))
     {
@@ -83,7 +83,8 @@ bool HandleCreatePostProcessVolume(UMcpAutomationBridgeSubsystem* Subsystem, con
     Volume->Priority = GetJsonNumberField(Payload, TEXT("priority"), 0.0f);
     Volume->BlendRadius = GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0f);
     Volume->BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f);
-    Volume->bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
+    // bEnabled is the declared name; `enabled` is only a legacy fallback.
+    Volume->bEnabled = GetJsonBoolField(Payload, TEXT("bEnabled"), GetJsonBoolField(Payload, TEXT("enabled"), true));
     Volume->bUnbound = GetJsonBoolField(Payload, TEXT("bUnbound"), false);
     ApplyPostProcessSettings(Volume, Payload);
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("APostProcessVolume"));
@@ -92,7 +93,7 @@ bool HandleCreatePostProcessVolume(UMcpAutomationBridgeSubsystem* Subsystem, con
     ResponseJson->SetNumberField(TEXT("blendWeight"), Volume->BlendWeight);
     ResponseJson->SetBoolField(TEXT("enabled"), Volume->bEnabled);
     ResponseJson->SetBoolField(TEXT("unbound"), Volume->bUnbound);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created PostProcessVolume: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
@@ -117,7 +118,7 @@ bool HandleCreateCullDistanceVolume(UMcpAutomationBridgeSubsystem* Subsystem, co
         return true;
     }
     SetCullDistancesFromPayload(Volume, Payload);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created CullDistanceVolume: %s"), *Args.VolumeName), CreateVolumeResponse(Volume, TEXT("ACullDistanceVolume")));
     return true;
 }

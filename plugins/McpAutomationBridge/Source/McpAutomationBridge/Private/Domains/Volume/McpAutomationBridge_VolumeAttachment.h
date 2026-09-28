@@ -21,5 +21,5 @@ struct FVolumeAttachmentArgs
 
 bool ResolveAttachmentTarget(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, const FVector& DefaultExtent, FVolumeAttachmentArgs& OutArgs);
 bool AttachVolumeToTarget(AActor* VolumeActor, AActor* TargetActor);
-void SendAttachedVolumeResponse(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, AActor* TargetActor, AActor* VolumeActor, TSharedPtr<FJsonObject> ResponseJson, const FString& DisplayName, bool bAttachmentSucceeded);
+void SendAttachedVolumeResponse(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload, AActor* TargetActor, AActor* VolumeActor, TSharedPtr<FJsonObject> ResponseJson, const FString& DisplayName, bool bAttachmentSucceeded);
 }

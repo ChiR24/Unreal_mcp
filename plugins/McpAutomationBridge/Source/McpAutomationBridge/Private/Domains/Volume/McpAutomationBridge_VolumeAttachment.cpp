@@ -6,6 +6,7 @@
 #include "Engine/Brush.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
+#include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
 #include "Domains/Volume/McpAutomationBridge_VolumeRequestParsing.h"
 #include "Domains/Volume/McpAutomationBridge_VolumeWorldResolution.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -70,7 +71,7 @@ bool AttachVolumeToTarget(AActor* VolumeActor, AActor* TargetActor)
 #endif
 }
 
-void SendAttachedVolumeResponse(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, AActor* TargetActor, AActor* VolumeActor, TSharedPtr<FJsonObject> ResponseJson, const FString& DisplayName, bool bAttachmentSucceeded)
+void SendAttachedVolumeResponse(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, const TSharedPtr<FJsonObject>& Payload, AActor* TargetActor, AActor* VolumeActor, TSharedPtr<FJsonObject> ResponseJson, const FString& DisplayName, bool bAttachmentSucceeded)
 {
     ResponseJson->SetStringField(TEXT("attachedTo"), TargetActor->GetActorLabel());
     ResponseJson->SetBoolField(TEXT("attachmentSucceeded"), bAttachmentSucceeded);
@@ -78,7 +79,11 @@ void SendAttachedVolumeResponse(UMcpAutomationBridgeSubsystem* Subsystem, const 
     const FString ResponseMessage = bAttachmentSucceeded
         ? FString::Printf(TEXT("Added %s to actor: %s"), *DisplayName, *TargetActor->GetActorLabel())
         : FString::Printf(TEXT("%s created but attachment to '%s' failed (volume is static, target may be movable)"), *DisplayName, *TargetActor->GetActorLabel());
-    Subsystem->SendAutomationResponse(Socket, RequestId, bAttachmentSucceeded, ResponseMessage, ResponseJson,
-        bAttachmentSucceeded ? TEXT("") : TEXT("ATTACHMENT_FAILED"));
+    if (bAttachmentSucceeded)
+    {
+        LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, VolumeActor->GetLevel(), ResponseMessage, ResponseJson);
+        return;
+    }
+    Subsystem->SendAutomationResponse(Socket, RequestId, false, ResponseMessage, ResponseJson, TEXT("ATTACHMENT_FAILED"));
 }
 }

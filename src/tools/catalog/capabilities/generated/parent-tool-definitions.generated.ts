@@ -15106,6 +15106,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Data layer initially visible."
         },
+        "bIsPrivate": {
+          "type": "boolean",
+          "description": "Make the data layer private to this world (UE 5.3 or later)."
+        },
         "bIsSpatiallyLoaded": {
           "type": "boolean",
           "description": "HLOD is spatially loaded."
@@ -15128,7 +15132,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "bUseExternalActors": {
           "type": "boolean",
-          "description": "Enable One File Per Actor (OFPA) for Data Layer compatibility."
+          "description": "Also move the level actors into one-file-per-actor packages (default false)."
         },
         "bWaterVolume": {
           "type": "boolean",
@@ -15212,6 +15216,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Damage per second for pain volumes."
         },
+        "dataLayerAssetPath": {
+          "type": "string",
+          "description": "Folder for the new DataLayerAsset (default /Game/DataLayers)."
+        },
         "dataLayerName": {
           "type": "string",
           "description": "Data layer name."
@@ -15281,6 +15289,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game HLOD layer asset path."
         },
+        "killZHeight": {
+          "type": "number",
+          "description": "World Z of the kill plane (KillZVolume); sets the volume height."
+        },
         "kind": {
           "type": "string",
           "enum": [
@@ -15302,6 +15314,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "levelPath": {
           "type": "string",
           "description": "Canonical /Game level asset path."
+        },
+        "loadAfterCreate": {
+          "type": "boolean",
+          "description": "Open the new level in the editor after creating it (default false)."
         },
         "loadingDistance": {
           "type": "number",
@@ -15361,9 +15377,34 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Parent level asset path."
         },
+        "postProcessSettings": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "PostProcessVolume overrides: bloomEnabled, exposureBias, vignetteIntensity, saturation, contrast, gamma.",
+          "properties": {
+            "bloomEnabled": {
+              "type": "boolean"
+            },
+            "exposureBias": {
+              "type": "number"
+            },
+            "vignetteIntensity": {
+              "type": "number"
+            },
+            "saturation": {
+              "type": "number"
+            },
+            "contrast": {
+              "type": "number"
+            },
+            "gamma": {
+              "type": "number"
+            }
+          }
+        },
         "priority": {
           "type": "number",
-          "description": "Priority for audio volume."
+          "description": "Priority where volumes overlap (PhysicsVolume, PostProcessVolume)."
         },
         "reverbVolume": {
           "type": "number",
@@ -15423,7 +15464,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "streamingMethod": {
           "type": "string",
-          "description": "Level streaming method: Blueprint, AlwaysLoaded, or Disabled."
+          "enum": [
+            "Blueprint",
+            "AlwaysLoaded"
+          ],
+          "description": "Level streaming method: Blueprint (loaded on demand) or AlwaysLoaded."
         },
         "streamingUsage": {
           "type": "string",
@@ -15474,7 +15519,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "CameraBlockingVolume",
             "PostProcessVolume"
           ],
-          "description": "Volume class to spawn."
+          "description": "Volume class to spawn. Each class takes only its own parameters; one it would ignore is refused."
         },
         "volumeExtent": {
           "type": "object",

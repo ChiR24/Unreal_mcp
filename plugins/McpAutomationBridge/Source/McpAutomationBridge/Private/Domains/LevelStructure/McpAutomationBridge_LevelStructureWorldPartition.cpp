@@ -87,7 +87,7 @@ bool HandleConfigureGridSize(
     if (HashSet)
     {
         return HandleConfigureRuntimeHashSetGrid(
-            Subsystem, RequestId, Socket, World, HashSet, GridName,
+            Subsystem, RequestId, Socket, Payload, World, HashSet, GridName,
             GridCellSize, LoadingRange, bCreateIfMissing);
     }
 #endif // ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
@@ -217,7 +217,7 @@ bool HandleConfigureGridSize(
     FString Action = bCreated ? TEXT("Created") : TEXT("Configured");
     FString Message = FString::Printf(TEXT("%s grid '%s' with CellSize=%d, LoadingRange=%.0f"),
         *Action, GridName.IsEmpty() ? TEXT("(default)") : *GridName, GridCellSize, LoadingRange);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
     return true;
 
 }

@@ -2,7 +2,9 @@
 
 #include "CoreMinimal.h"
 #include "Misc/EngineVersionComparison.h"
+#include "Domains/LevelStructure/McpAutomationBridge_LevelStructureEditorWorld.h"
 
+class APostProcessVolume;
 class FJsonObject;
 class FMcpBridgeWebSocket;
 class UMcpAutomationBridgeSubsystem;
@@ -28,6 +30,8 @@ bool HandleCreateReverbVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FS
 #if MCP_HAS_POSTPROCESS_VOLUME
 bool HandleCreatePostProcessVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAddPostProcessVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+// The payload's postProcessSettings object onto Volume (Rendering.cpp); shared by the create and add routes.
+void ApplyPostProcessSettings(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& Payload);
 #endif
 bool HandleCreateCullDistanceVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleCreatePrecomputedVisibilityVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);

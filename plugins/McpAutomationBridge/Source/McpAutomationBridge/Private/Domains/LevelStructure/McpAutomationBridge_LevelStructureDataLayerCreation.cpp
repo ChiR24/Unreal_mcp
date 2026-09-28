@@ -88,6 +88,13 @@ bool HandleCreateDataLayer(
     bool bIsInitiallyLoaded = GetJsonBoolField(Payload, TEXT("bIsInitiallyLoaded"), true);
     FString DataLayerType = GetJsonStringField(Payload, TEXT("dataLayerType"), TEXT("Runtime"));
     bool bIsPrivate = GetJsonBoolField(Payload, TEXT("bIsPrivate"), false);
+#if !(ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
+    if (bIsPrivate)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, TEXT("bIsPrivate needs UE 5.3 or later; omit it on this engine."), nullptr, TEXT("UNSUPPORTED_VERSION"));
+        return true;
+    }
+#endif
 
     UWorld* World = nullptr;
     UDataLayerEditorSubsystem* DataLayerEditorSubsystem =
@@ -178,7 +185,7 @@ bool HandleCreateDataLayer(
 
     FString Message = FString::Printf(TEXT("Created data layer '%s' with asset at '%s'"),
         *DataLayerName, *FullAssetPath);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, World->PersistentLevel, Message, ResponseJson);
 #else
     // UE 5.0 does not support the new DataLayer API
     Subsystem->SendAutomationResponse(Socket, RequestId, false,

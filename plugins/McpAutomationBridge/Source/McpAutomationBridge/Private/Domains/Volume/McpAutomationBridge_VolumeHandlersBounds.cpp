@@ -85,7 +85,7 @@ bool HandleSetVolumeBounds(UMcpAutomationBridgeSubsystem* Subsystem, const FStri
     BoundsJson->SetArrayField(TEXT("max"), MaxArray);
     ResponseJson->SetObjectField(TEXT("bounds"), BoundsJson);
     ResponseJson->SetObjectField(TEXT("center"), CreateVectorObject(Center));
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, VolumeActor->GetLevel(),
         FString::Printf(TEXT("Set bounds for volume: %s"), *VolumeName), ResponseJson);
     return true;
 }

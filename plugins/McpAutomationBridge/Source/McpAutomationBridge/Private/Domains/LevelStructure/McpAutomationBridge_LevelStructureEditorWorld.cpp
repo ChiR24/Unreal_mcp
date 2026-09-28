@@ -2,6 +2,11 @@
 
 #include "Editor.h"
 #include "Engine/Level.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "McpAutomationBridgeSubsystem.h"
+#include "Safety/McpSafeOperations.h"
+#include "Transport/WebSocket/McpBridgeWebSocket.h"
+#include "Engine/LevelStreamingAlwaysLoaded.h"
 #include "Engine/LevelStreamingDynamic.h"
 #include "McpAutomationBridgeLog.h"
 #include "Misc/PackageName.h"
@@ -109,6 +114,49 @@ ULevel* ResolveTargetLevelForBlueprintRequest(
     }
 
     return Target;
+}
+
+UClass* ResolveLevelStreamingClass(const FString& StreamingMethod)
+{
+    if (StreamingMethod.Equals(TEXT("Blueprint"), ESearchCase::IgnoreCase))
+    {
+        return ULevelStreamingDynamic::StaticClass();
+    }
+    if (StreamingMethod.Equals(TEXT("AlwaysLoaded"), ESearchCase::IgnoreCase))
+    {
+        return ULevelStreamingAlwaysLoaded::StaticClass();
+    }
+    return nullptr;
+}
+
+void SendLevelEditResult(
+    UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const TSharedPtr<FJsonObject>& Payload, ULevel* Level, const FString& Message, TSharedPtr<FJsonObject> Result)
+{
+    if (!Result.IsValid())
+    {
+        Result = McpHandlerUtils::CreateResultObject();
+    }
+    if (GetJsonBoolField(Payload, TEXT("save"), false))
+    {
+        const FString PackageName = Level ? Level->GetOutermost()->GetName() : FString();
+        if (PackageName.IsEmpty() || PackageName.StartsWith(TEXT("/Temp/")))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                TEXT("The change was made, but save was requested on an unsaved level; save the level to a /Game path with manage_level first."),
+                Result, TEXT("SAVE_FAILED"));
+            return;
+        }
+        if (!McpSafeLevelSave(Level, PackageName))
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false,
+                FString::Printf(TEXT("The change was made, but saving level %s failed; it exists only in this editor session."), *PackageName),
+                Result, TEXT("SAVE_FAILED"));
+            return;
+        }
+        Result->SetBoolField(TEXT("saved"), true);
+    }
+    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Result);
 }
 
 ULevelStreaming* FindOrAddStreamingLevel(UWorld* World, const FString& LevelName)

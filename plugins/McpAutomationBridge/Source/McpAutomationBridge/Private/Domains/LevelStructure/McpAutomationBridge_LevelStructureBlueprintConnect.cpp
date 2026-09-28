@@ -162,7 +162,7 @@ bool HandleConnectLevelBlueprintNodes(
     ResponseJson->SetStringField(TEXT("targetPin"), TargetPinName);
     ResponseJson->SetBoolField(TEXT("connected"), bConnected);
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, CurrentLevel,
         FString::Printf(TEXT("Connected %s.%s -> %s.%s"), *SourceNodeName, *SourcePinName, *TargetNodeName, *TargetPinName),
         ResponseJson);
     return true;

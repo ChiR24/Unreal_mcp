@@ -37,7 +37,7 @@ bool HandleCreateTriggerVolume(UMcpAutomationBridgeSubsystem* Subsystem, const F
     }
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("ATriggerVolume"));
     ResponseJson->SetObjectField(TEXT("location"), CreateVectorObject(Volume->GetActorLocation()));
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created TriggerVolume: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
@@ -52,11 +52,9 @@ bool HandleCreateTriggerBox(UMcpAutomationBridgeSubsystem* Subsystem, const FStr
     {
         return true;
     }
-    FVector Extent = ExtractVectorField(Payload, TEXT("boxExtent"), FVector(100.0f, 100.0f, 100.0f));
-    if (Extent == FVector::ZeroVector)
-    {
-        Extent = ExtractVectorField(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f));
-    }
+    // boxExtent, else extent, else 100: the non-zero boxExtent default used to hide a caller's extent.
+    const FVector Extent = ExtractVectorField(Payload, TEXT("boxExtent"),
+        ExtractVectorField(Payload, TEXT("extent"), FVector(100.0f, 100.0f, 100.0f)));
     FString ValidationError;
     if (!ValidateExtent(Extent, ValidationError))
     {
@@ -71,7 +69,7 @@ bool HandleCreateTriggerBox(UMcpAutomationBridgeSubsystem* Subsystem, const FStr
     }
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("ATriggerBox"));
     ResponseJson->SetObjectField(TEXT("boxExtent"), CreateVectorObject(Extent));
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created TriggerBox: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
@@ -105,7 +103,7 @@ bool HandleCreateTriggerSphere(UMcpAutomationBridgeSubsystem* Subsystem, const F
     }
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("ATriggerSphere"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created TriggerSphere: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }
@@ -141,7 +139,7 @@ bool HandleCreateTriggerCapsule(UMcpAutomationBridgeSubsystem* Subsystem, const 
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, TEXT("ATriggerCapsule"));
     ResponseJson->SetNumberField(TEXT("radius"), Radius);
     ResponseJson->SetNumberField(TEXT("halfHeight"), HalfHeight);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, Volume->GetLevel(),
         FString::Printf(TEXT("Created TriggerCapsule: %s"), *Args.VolumeName), ResponseJson);
     return true;
 }

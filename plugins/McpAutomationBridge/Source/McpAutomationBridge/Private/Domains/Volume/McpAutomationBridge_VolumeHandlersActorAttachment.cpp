@@ -50,7 +50,7 @@ static bool AddVolumeToActor(
     TSharedPtr<FJsonObject> ResponseJson = CreateVolumeResponse(Volume, ClassText);
     Configure(Volume, ResponseJson);
     const bool bAttachmentSucceeded = AttachVolumeToTarget(Volume, Args.TargetActor);
-    SendAttachedVolumeResponse(Subsystem, RequestId, Socket, Args.TargetActor, Volume, ResponseJson, DisplayName, bAttachmentSucceeded);
+    SendAttachedVolumeResponse(Subsystem, RequestId, Socket, Payload, Args.TargetActor, Volume, ResponseJson, DisplayName, bAttachmentSucceeded);
     return true;
 }
 
@@ -94,6 +94,7 @@ bool HandleAddPhysicsVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FStr
     struct FPhysicsConfig
     {
         bool bWaterVolume;
+        int32 Priority;
         float FluidFriction;
         float TerminalVelocity;
         void operator()(VolumeHelpers::FVolumeAttachmentArgs&) const {}
@@ -102,13 +103,14 @@ bool HandleAddPhysicsVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FStr
             Volume->bWaterVolume = bWaterVolume;
             Volume->FluidFriction = FluidFriction;
             Volume->TerminalVelocity = TerminalVelocity;
+            Volume->Priority = Priority;
             ResponseJson->SetBoolField(TEXT("bWaterVolume"), bWaterVolume);
         }
     };
     return AddVolumeToActor<APhysicsVolume>(Subsystem, RequestId, Payload, Socket,
         FVector(300.0f, 300.0f, 300.0f), TEXT("_PhysicsVolume"), TEXT("APhysicsVolume"),
         TEXT("PhysicsVolume"), TEXT("Failed to spawn PhysicsVolume"),
-        FPhysicsConfig{GetJsonBoolField(Payload, TEXT("bWaterVolume"), false), static_cast<float>(GetJsonNumberField(Payload, TEXT("fluidFriction"), 0.3)), static_cast<float>(GetJsonNumberField(Payload, TEXT("terminalVelocity"), 4000.0))});
+        FPhysicsConfig{GetJsonBoolField(Payload, TEXT("bWaterVolume"), false), GetJsonIntField(Payload, TEXT("priority"), 0), static_cast<float>(GetJsonNumberField(Payload, TEXT("fluidFriction"), 0.3)), static_cast<float>(GetJsonNumberField(Payload, TEXT("terminalVelocity"), 4000.0))});
 }
 
 bool HandleAddCullDistanceVolume(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -134,6 +136,7 @@ bool HandleAddPostProcessVolume(UMcpAutomationBridgeSubsystem* Subsystem, const 
         float BlendWeight;
         bool bEnabled;
         bool bUnbound;
+        TSharedPtr<FJsonObject> Payload;
         void operator()(VolumeHelpers::FVolumeAttachmentArgs&) const {}
         void operator()(APostProcessVolume* Volume, const TSharedPtr<FJsonObject>& ResponseJson) const
         {
@@ -142,13 +145,14 @@ bool HandleAddPostProcessVolume(UMcpAutomationBridgeSubsystem* Subsystem, const 
             Volume->BlendWeight = BlendWeight;
             Volume->bEnabled = bEnabled;
             Volume->bUnbound = bUnbound;
+            ApplyPostProcessSettings(Volume, Payload);
             ResponseJson->SetNumberField(TEXT("priority"), Priority);
         }
     };
     return AddVolumeToActor<APostProcessVolume>(Subsystem, RequestId, Payload, Socket,
         FVector(500.0f, 500.0f, 500.0f), TEXT("_PostProcessVolume"), TEXT("APostProcessVolume"),
         TEXT("PostProcessVolume"), TEXT("Failed to spawn PostProcessVolume"),
-        FPostProcessConfig{static_cast<float>(GetJsonNumberField(Payload, TEXT("priority"), 0.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0)), GetJsonBoolField(Payload, TEXT("enabled"), true), GetJsonBoolField(Payload, TEXT("bUnbound"), false)});
+        FPostProcessConfig{static_cast<float>(GetJsonNumberField(Payload, TEXT("priority"), 0.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendRadius"), 100.0)), static_cast<float>(GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0)), GetJsonBoolField(Payload, TEXT("bEnabled"), GetJsonBoolField(Payload, TEXT("enabled"), true)), GetJsonBoolField(Payload, TEXT("bUnbound"), false), Payload});
 }
 #endif
 }

@@ -4,13 +4,27 @@
 #include "Dom/JsonObject.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
+class FMcpBridgeWebSocket;
+class UClass;
 class ULevel;
 class ULevelStreaming;
+class UMcpAutomationBridgeSubsystem;
 class UWorld;
 
 namespace LevelStructureHelpers
 {
 using McpHandlerUtils::GetEditorWorld;
+
+// Replies success with Message and Result, first saving Level when the payload's `save` is true (default false).
+// A save request on an unsaved /Temp/ level, or a failed save, replies SAVE_FAILED instead; the edit itself stays
+// in memory. Shared by the level-structure and volume edits, which all change the open level.
+void SendLevelEditResult(
+    UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+    const TSharedPtr<FJsonObject>& Payload, ULevel* Level, const FString& Message, TSharedPtr<FJsonObject> Result);
+
+// streamingMethod "Blueprint" names ULevelStreamingDynamic and "AlwaysLoaded" ULevelStreamingAlwaysLoaded
+// (case-insensitive); null for anything else.
+UClass* ResolveLevelStreamingClass(const FString& StreamingMethod);
 
 // The editor world's streaming level whose package (or its short name) is LevelName; when none is and the package
 // exists at LevelName, under the persistent level's folder, or under /Game, a ULevelStreamingDynamic is added for it.

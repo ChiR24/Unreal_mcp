@@ -99,7 +99,13 @@ bool HandleConfigureHlodLayer(
     AssetPackage->MarkPackageDirty();
     FAssetRegistryModule::AssetCreated(NewHLODLayer);
 
-    McpSafeAssetSave(NewHLODLayer);
+    // save (default true) persists the new layer asset; a failed save is reported, not hidden.
+    if (GetJsonBoolField(Payload, TEXT("save"), true) && !McpSafeAssetSave(NewHLODLayer))
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("HLOD layer created but saving %s failed; it exists only in this editor session."), *FullPath), nullptr, TEXT("SAVE_FAILED"));
+        return true;
+    }
 
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("hlodLayerName"), HlodLayerName);
@@ -129,8 +135,9 @@ bool HandleCreateMinimapVolume(
     using namespace LevelStructureHelpers;
 
     FString VolumeName = GetJsonStringField(Payload, TEXT("volumeName"), TEXT("MinimapVolume"));
-    FVector VolumeLocation = ExtractVectorField(Payload, TEXT("volumeLocation"), FVector::ZeroVector);
-    FVector VolumeExtent = ExtractVectorField(Payload, TEXT("volumeExtent"), FVector(10000.0));
+    // location and extent are the declared names; volumeLocation and volumeExtent are older spellings.
+    FVector VolumeLocation = ExtractVectorField(Payload, TEXT("location"), ExtractVectorField(Payload, TEXT("volumeLocation"), FVector::ZeroVector));
+    FVector VolumeExtent = ExtractVectorField(Payload, TEXT("extent"), ExtractVectorField(Payload, TEXT("volumeExtent"), FVector(10000.0)));
 
     UWorld* World = GetEditorWorld();
     if (!World)
@@ -190,7 +197,7 @@ bool HandleCreateMinimapVolume(
 
     FString Message = FString::Printf(TEXT("Created minimap volume '%s' at (%f, %f, %f)"),
         *VolumeName, VolumeLocation.X, VolumeLocation.Y, VolumeLocation.Z);
-    Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+    SendLevelEditResult(Subsystem, RequestId, Socket, Payload, MiniMapVolume->GetLevel(), Message, ResponseJson);
 #else
     Subsystem->SendAutomationResponse(Socket, RequestId, false,
         TEXT("Minimap volume requires Unreal Engine 5.1 or later."), nullptr);

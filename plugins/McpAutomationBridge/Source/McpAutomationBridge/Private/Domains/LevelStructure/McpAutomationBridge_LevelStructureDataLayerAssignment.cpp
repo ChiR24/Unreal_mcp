@@ -26,13 +26,14 @@ bool HandleAssignActorToDataLayer(
 #if ENGINE_MINOR_VERSION >= 1
     using namespace LevelStructureHelpers;
 
-    FString ActorName = GetJsonStringField(Payload, TEXT("actorName"), TEXT(""));
+    // actorName (label or name) or actorPath (the actor's object path); FindActorByNameInWorldForMcp takes either.
+    const FString ActorName = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("actorPath")});
     FString DataLayerName = GetJsonStringField(Payload, TEXT("dataLayerName"), TEXT(""));
 
     if (ActorName.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            TEXT("actorName is required"), nullptr, TEXT("INVALID_ARGUMENT"));
+            TEXT("actorName or actorPath is required"), nullptr, TEXT("INVALID_ARGUMENT"));
         return true;
     }
 
@@ -130,7 +131,7 @@ bool HandleAssignActorToDataLayer(
 
         FString Message = FString::Printf(TEXT("Actor '%s' is already in data layer '%s'"),
             *ActorName, *DataLayerName);
-        Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+        SendLevelEditResult(Subsystem, RequestId, Socket, Payload, FoundActor->GetLevel(), Message, ResponseJson);
         return true;
     }
 
@@ -147,7 +148,7 @@ bool HandleAssignActorToDataLayer(
     {
         FString Message = FString::Printf(TEXT("Assigned actor '%s' to data layer '%s'"),
             *ActorName, *DataLayerName);
-        Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, ResponseJson);
+        SendLevelEditResult(Subsystem, RequestId, Socket, Payload, FoundActor->GetLevel(), Message, ResponseJson);
     }
     else
     {

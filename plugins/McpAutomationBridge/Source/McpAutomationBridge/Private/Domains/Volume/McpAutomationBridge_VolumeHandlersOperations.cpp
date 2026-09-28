@@ -13,6 +13,9 @@
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Sound/AudioVolume.h"
+#if MCP_HAS_POSTPROCESS_VOLUME
+#include "Engine/PostProcessVolume.h"
+#endif
 
 namespace McpVolumeHandlers
 {
@@ -59,7 +62,7 @@ bool HandleSetVolumeExtent(UMcpAutomationBridgeSubsystem* Subsystem, const FStri
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
     ResponseJson->SetObjectField(TEXT("newExtent"), CreateVectorObject(NewExtent));
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, VolumeActor->GetLevel(),
         FString::Printf(TEXT("Set extent for volume: %s"), *VolumeName), ResponseJson);
     return true;
 }
@@ -94,6 +97,16 @@ bool HandleSetVolumeProperties(UMcpAutomationBridgeSubsystem* Subsystem, const F
         if (Payload->HasField(TEXT("fadeTime"))) { ReverbSettings.FadeTime = GetJsonNumberField(Payload, TEXT("fadeTime"), 0.5f); PropertiesSet.Add(TEXT("fadeTime")); bModifiedReverb = true; }
         if (bModifiedReverb) { AudioVol->SetReverbSettings(ReverbSettings); }
     }
+#if MCP_HAS_POSTPROCESS_VOLUME
+    // Post-process volumes had no branch, so the declared priority, blendWeight and bEnabled never applied.
+    if (APostProcessVolume* PostVol = Cast<APostProcessVolume>(VolumeActor))
+    {
+        PostVol->Modify();
+        if (Payload->HasField(TEXT("priority"))) { PostVol->Priority = GetJsonNumberField(Payload, TEXT("priority"), 0.0f); PropertiesSet.Add(TEXT("priority")); }
+        if (Payload->HasField(TEXT("blendWeight"))) { PostVol->BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), 1.0f); PropertiesSet.Add(TEXT("blendWeight")); }
+        if (Payload->HasField(TEXT("bEnabled"))) { PostVol->bEnabled = GetJsonBoolField(Payload, TEXT("bEnabled"), true); PropertiesSet.Add(TEXT("bEnabled")); }
+    }
+#endif
     TSharedPtr<FJsonObject> ResponseJson = McpHandlerUtils::CreateResultObject();
     ResponseJson->SetStringField(TEXT("volumeName"), VolumeName);
     McpHandlerUtils::AddVerification(ResponseJson, VolumeActor);
@@ -112,7 +125,7 @@ bool HandleSetVolumeProperties(UMcpAutomationBridgeSubsystem* Subsystem, const F
         for (const TPair<FString, TSharedPtr<FJsonValue>>& Entry : Payload->Values)
         {
             const bool bRoutingField = Entry.Key == TEXT("volumeName") || Entry.Key == TEXT("volumeProperty")
-                || Entry.Key == TEXT("action") || Entry.Key == TEXT("subAction");
+                || Entry.Key == TEXT("action") || Entry.Key == TEXT("subAction") || Entry.Key == TEXT("save");
             if (!bRoutingField && !PropertiesSet.Contains(Entry.Key))
             {
                 IgnoredArray.Add(MakeShared<FJsonValueString>(Entry.Key));
@@ -130,13 +143,13 @@ bool HandleSetVolumeProperties(UMcpAutomationBridgeSubsystem* Subsystem, const F
     if (PropertiesSet.Num() == 0)
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("No property was set on volume '%s' (class %s). This action supports PhysicsVolume{bWaterVolume,fluidFriction,terminalVelocity,priority}, PainCausingVolume{bPainCausing,damagePerSec} and AudioVolume{bEnabled,reverbVolume,fadeTime}; use the extent or bounds variant for geometry. Nothing was changed."),
+            FString::Printf(TEXT("No property was set on volume '%s' (class %s). This action supports PhysicsVolume{bWaterVolume,fluidFriction,terminalVelocity,priority}, PainCausingVolume{bPainCausing,damagePerSec} and AudioVolume{bEnabled,reverbVolume,fadeTime} and PostProcessVolume{priority,blendWeight,bEnabled}; use the extent or bounds variant for geometry. Nothing was changed."),
                 *VolumeName, *VolumeActor->GetClass()->GetName()),
             ResponseJson, TEXT("NO_PROPERTIES_APPLIED"));
         return true;
     }
 
-    Subsystem->SendAutomationResponse(Socket, RequestId, true,
+    LevelStructureHelpers::SendLevelEditResult(Subsystem, RequestId, Socket, Payload, VolumeActor->GetLevel(),
         FString::Printf(TEXT("Set %d properties for volume: %s"), PropertiesSet.Num(), *VolumeName), ResponseJson);
     return true;
 }
