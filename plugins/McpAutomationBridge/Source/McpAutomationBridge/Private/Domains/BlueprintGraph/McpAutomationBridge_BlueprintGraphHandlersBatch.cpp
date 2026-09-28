@@ -101,10 +101,13 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
                 return TEXT("pinDefaults applies to create_node steps; a member step (add_variable, add_function, "
                             "add_event, add_event_dispatcher) makes no node to set pins on.");
             }
-            // What a later step can name: the variable, function, custom event or dispatcher.
+            // What a later step can name: the variable, function, custom event or dispatcher,
+            // under every field the member handlers read (add_function and add_event_dispatcher
+            // also take name or memberName).
             Declared.Add(FName(*McpGetFirstStringField(*Step, {TEXT("variableName"), TEXT("functionName"),
                                                                 TEXT("customEventName"), TEXT("eventName"),
-                                                                TEXT("dispatcherName")})));
+                                                                TEXT("dispatcherName"), TEXT("name"),
+                                                                TEXT("memberName")})));
             continue;
         }
         if (Edit != TEXT("create_node") || Member.IsEmpty())

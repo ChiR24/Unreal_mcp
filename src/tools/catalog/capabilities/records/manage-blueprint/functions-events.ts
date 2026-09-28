@@ -17,7 +17,7 @@ export const FUNCTIONS_EVENTS_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['new function', 'custom function', 'function graph', 'define function'],
-    summary: 'Add a new function graph to a Blueprint with optional inputs and outputs.',
+    summary: 'Add a new function graph to a Blueprint with optional inputs and outputs; an existing function of that name is reused only when it matches the pure, inputs and outputs given.',
     whenToUse: ['A new callable function must be created on the Blueprint.'],
     whenNotToUse: ['An event handler is needed (use add_event).'],
     inputProps: {

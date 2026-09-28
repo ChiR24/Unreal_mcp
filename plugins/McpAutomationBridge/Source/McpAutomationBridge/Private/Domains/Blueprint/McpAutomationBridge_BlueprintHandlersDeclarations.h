@@ -144,6 +144,12 @@ void SendBlueprintAddFunctionResult(
     const TArray<TSharedPtr<FJsonValue>> &Inputs,
     const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved,
     const FString &EntryNodeGuid, const FString &ResultNodeGuid);
+// The guid of a function graph's entry (bEntry) or first return node; empty when none.
+FString FunctionTerminatorGuid(const UEdGraph *Graph, bool bEntry);
+// Why an existing function does not match the pure, inputs and outputs a request
+// gives (only those it gives); empty when it matches.
+FString DescribeFunctionSignatureMismatch(const UEdGraph *Graph,
+                                          const TSharedPtr<FJsonObject> &Payload);
 
 bool HandleBlueprintModifyScs(const FBlueprintActionContext &Context);
 bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context);

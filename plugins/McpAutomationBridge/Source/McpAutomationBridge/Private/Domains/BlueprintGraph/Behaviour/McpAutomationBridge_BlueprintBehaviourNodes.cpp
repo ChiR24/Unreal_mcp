@@ -49,6 +49,15 @@ UClass* ResolveBehaviourClass(const FString& Name)
     return Class ? Class : ResolveTargetClassFromString(Name);
 }
 
+// The function a Message step (an interface's) or an AsyncTask step (a static factory)
+// names. Node creation and the build_graph pre-check both ask here, so they agree.
+UFunction* FindBehaviourFunction(UClass* Owner, bool bAsync, const FString& Member)
+{
+    UFunction* Function = Owner && (bAsync || Owner->HasAnyClassFlags(CLASS_Interface))
+        ? Owner->FindFunctionByName(FName(*Member)) : nullptr;
+    return Function && (!bAsync || Function->HasAnyFunctionFlags(FUNC_Static)) ? Function : nullptr;
+}
+
 // A dispatcher on Owner, else this Blueprint's own (on the skeleton class, where a
 // dispatcher added earlier in the same batch already is).
 FMulticastDelegateProperty* FindBehaviourDispatcher(UBlueprint* Blueprint, const FString& Name, UClass* Owner)
@@ -94,8 +103,8 @@ bool CreateAsyncTaskNode(FActionContext& Context, float X, float Y)
     const FString Member = GetJsonStringField(Context.Payload, TEXT("memberName"));
     const FString MemberClass = McpGetFirstStringField(Context.Payload, {TEXT("memberClass"), TEXT("targetClass")});
     UClass* Owner = ResolveBehaviourClass(MemberClass);
-    UFunction* Factory = Owner ? Owner->FindFunctionByName(FName(*Member)) : nullptr;
-    if (!Factory || !Factory->HasAnyFunctionFlags(FUNC_Static))
+    UFunction* Factory = FindBehaviourFunction(Owner, /*bAsync=*/true, Member);
+    if (!Factory)
     {
         Context.SendError(FString::Printf(TEXT("AsyncTask needs memberClass (the task or async-action class, e.g. "
                                                "AbilityTask_WaitDelay) and memberName (its static factory, e.g. "
@@ -176,9 +185,7 @@ bool TryCreateBehaviourNode(FActionContext& Context, const FString& NodeType, fl
     {
         return false;
     }
-    UClass* Interface = ResolveBehaviourClass(MemberClass);
-    UFunction* Function = Interface && Interface->HasAnyClassFlags(CLASS_Interface)
-        ? Interface->FindFunctionByName(FName(*Member)) : nullptr;
+    UFunction* Function = FindBehaviourFunction(ResolveBehaviourClass(MemberClass), /*bAsync=*/false, Member);
     if (!Function)
     {
         Context.SendError(FString::Printf(TEXT("A Message node needs memberClass naming an interface (a Blueprint "
@@ -213,12 +220,14 @@ FString PrecheckBehaviourNode(const FActionContext& Context, const FString& Node
     {
         return FString();
     }
-    UClass* Owner = ResolveBehaviourClass(MemberClass);
-    if (Owner && Owner->FindFunctionByName(FName(*Member)))
+    const bool bAsync = IsAsyncTaskKind(NodeType);
+    if (FindBehaviourFunction(ResolveBehaviourClass(MemberClass), bAsync, Member))
     {
         return FString();
     }
     OutCode = TEXT("FUNCTION_NOT_FOUND");
-    return FString::Printf(TEXT("%s step: memberClass '%s' has no function '%s'."), *NodeType, *MemberClass, *Member);
+    return FString::Printf(TEXT("%s step: '%s' on '%s' is not %s."), *NodeType, *Member, *MemberClass,
+                           bAsync ? TEXT("a static factory function of a task or async-action class")
+                                  : TEXT("a function of an interface"));
 }
 } // namespace McpBlueprintGraphHandlers

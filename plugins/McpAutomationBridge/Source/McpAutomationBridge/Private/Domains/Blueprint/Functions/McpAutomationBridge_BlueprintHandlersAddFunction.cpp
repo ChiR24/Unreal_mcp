@@ -65,17 +65,8 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
                                ? GetJsonBoolField(LocalPayload, TEXT("isPublic"))
                                : true;
     const bool bPure = GetJsonBoolField(LocalPayload, TEXT("pure"));
-    // Entry and return node guids: build_graph aliases a step's id to the entry
-    // node and "<id>_return" to the return node, so its body steps can wire them.
-    auto TerminatorGuid = [](const UEdGraph *Graph, bool bEntry) -> FString {
-      const UClass *Wanted = bEntry ? UK2Node_FunctionEntry::StaticClass() : UK2Node_FunctionResult::StaticClass();
-      for (const UEdGraphNode *Node : Graph->Nodes) {
-        if (Node && Node->IsA(Wanted)) {
-          return Node->NodeGuid.ToString();
-        }
-      }
-      return FString();
-    };
+    // Entry and return node guids (FunctionTerminatorGuid): build_graph aliases a step's
+    // id to the entry node and "<id>_return" to the return node, so its body steps can wire them.
 
 
     FString Normalized;
@@ -106,14 +97,23 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       }
     }
 
+    // An existing function is reused only as it is: a pure, inputs or outputs it
+    // does not have would otherwise be reported as applied and silently missing.
+    const FString Mismatch = ExistingGraph ? DescribeFunctionSignatureMismatch(ExistingGraph, LocalPayload) : FString();
+    if (!Mismatch.IsEmpty()) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Function '%s' already exists and %s. "
+          "Remove it first (remove_function), or pick another functionName."), *ExistingGraph->GetName(), *Mismatch),
+          TEXT("FUNCTION_EXISTS"));
+      return true;
+    }
     if (ExistingGraph) {
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetBoolField(TEXT("success"), true);
       Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
       Resp->SetStringField(TEXT("functionName"), ExistingGraph->GetName());
       Resp->SetStringField(TEXT("note"), TEXT("Function already exists"));
-      Resp->SetStringField(TEXT("nodeGuid"), TerminatorGuid(ExistingGraph, true));
-      const FString ExistingResult = TerminatorGuid(ExistingGraph, false);
+      Resp->SetStringField(TEXT("nodeGuid"), FunctionTerminatorGuid(ExistingGraph, true));
+      const FString ExistingResult = FunctionTerminatorGuid(ExistingGraph, false);
       if (!ExistingResult.IsEmpty()) {
         Resp->SetStringField(TEXT("resultNodeGuid"), ExistingResult);
       }
@@ -226,6 +226,7 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     // Outputs were declared but the result node could not be created: fail loudly
     // instead of silently dropping the outputs (no silent no-op).
     if (Outputs.Num() > 0 && !ResultNode) {
+      FBlueprintEditorUtils::RemoveGraph(Blueprint, NewGraph, EGraphRemoveFlags::MarkTransient);
       Bridge.SendAutomationResponse(
           RequestingSocket, RequestId, false,
           TEXT("Failed to create function result node for declared outputs."),
@@ -303,8 +304,8 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
     SendBlueprintAddFunctionResult(Bridge, RequestId, RequestingSocket,
                                    Blueprint, RegistryKey, FuncName, bIsPublic,
                                    Inputs, Outputs, bSaved,
-                                   TerminatorGuid(NewGraph, true),
-                                   TerminatorGuid(NewGraph, false));
+                                   FunctionTerminatorGuid(NewGraph, true),
+                                   FunctionTerminatorGuid(NewGraph, false));
     return true;
   }
 

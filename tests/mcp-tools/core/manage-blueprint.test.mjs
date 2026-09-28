@@ -97,6 +97,9 @@ const testCases = [
   // This variable will be renamed in the next step — do NOT delete it before rename.
   { scenario: 'ADD: add_variable', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'TestVariable', variableType: 'Boolean', category: 'MCP', isReplicated: true, isPublic: true }, expected: 'success|already exists' },
   { scenario: 'ERROR: add_variable colliding with a parent-class property', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'bReplicates', variableType: 'Boolean' }, expected: 'error|VARIABLE_NAME_CONFLICT' },
+  // The compiler only warns on a default it cannot parse; add_variable refuses it and adds nothing.
+  { scenario: 'ERROR: add_variable with a default its type cannot take', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'BadDefaultVar', variableType: 'Int', defaultValue: 'NotANumberAtAll' }, expected: 'error|DEFAULT_NOT_APPLIED' },
+  { scenario: 'VERIFY: the refused add_variable left no variable behind', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'BadDefaultVar', variableType: 'Int', defaultValue: 7 }, expected: 'success', assertions: [{ path: 'structuredContent.result.replicated', equals: false, label: 'the variable is added anew, not found already existing' }] },
   { scenario: 'ADD: add_variable for member metadata', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'MetaVariable', variableType: 'Float' }, expected: 'success|already exists' },
   { scenario: 'CONFIG: set_metadata on a member variable', toolName: 'manage_blueprint', arguments: { action: 'set_metadata', blueprintPath: BP_PATH, propertyName: 'MetaVariable', metadata: { tooltip: 'Member metadata' } }, expected: 'success', assertions: [{ path: 'structuredContent.result.variableName', equals: 'MetaVariable', label: 'routed to the variable' }] },
 
@@ -119,6 +122,7 @@ const testCases = [
   // pure: its call nodes get no exec pins. Declared outputs make a return node, named by resultNodeGuid.
   { scenario: 'ADD: add_function pure with a return node', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, functionName: 'TestPureFunction', inputs: [{ name: 'Value', type: 'Float' }], outputs: [{ name: 'Result', type: 'Float' }], pure: true }, expected: 'success', captureResult: { key: 'pureReturnId', fromField: 'result.resultNodeGuid' } },
   { scenario: 'VERIFY: add_function resultNodeGuid names the return node', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:pureReturnId}', graphName: 'TestPureFunction' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'Result' }, label: 'the declared output is an input pin of the return node' }] },
+  { scenario: 'ERROR: add_function refuses an existing function with another signature', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: BP_PATH, functionName: 'TestPureFunction', pure: false }, expected: 'error|FUNCTION_EXISTS' },
   { scenario: 'ERROR: add_function on a missing Blueprint', toolName: 'manage_blueprint', arguments: { action: 'add_function', blueprintPath: `${TEST_FOLDER}/BP_Missing_${ts}`, functionName: 'Nowhere', pure: true }, expected: 'error|BLUEPRINT_NOT_FOUND' },
 
   // === DELETE: remove_function (blueprintPath + functionName) ===
@@ -266,7 +270,36 @@ const testCases = [
   ] }, expected: 'success', assertions: [
     { path: 'structuredContent.result.results.0.pins', includes: 'Completed', label: 'the async node has its delegate exec pin' },
     { path: 'structuredContent.result.results.1.pins', includes: 'TagToCheck', label: 'the message node has the interface function parameter' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with both nodes' },
   ] },
+  // "$ev" is the custom event node itself, not a call node with the same title.
+  { scenario: 'BATCH: build_graph declares a custom event and wires from it', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_event', id: 'ev', customEventName: 'BatchCustomEvent' },
+    { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'custom event' } },
+    { edit: 'connect_pins', from: '$ev.then', to: '$print.execute' },
+  ] }, expected: 'success', captureResult: { key: 'batchEventId', fromField: 'result.nodeIds.ev' }, assertions: [
+    { path: 'structuredContent.result.succeeded', equals: 3, label: 'all three steps ran' },
+    { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with the wired custom event' },
+  ] },
+  { scenario: 'VERIFY: the add_event step id names the custom event node', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:batchEventId}', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeName', includes: 'K2Node_CustomEvent', label: 'nodeIds.ev is a K2Node_CustomEvent' }] },
+  // add_function and add_event_dispatcher also take their name as memberName; a later step can call it.
+  { scenario: 'BATCH: build_graph declares a function under memberName and calls it', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_function', memberName: 'BatchAliasFunction' },
+    { edit: 'create_node', nodeType: 'CallFunction', memberName: 'BatchAliasFunction' },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'the pre-check saw the memberName declaration' }] },
+  { scenario: 'ERROR: build_graph refuses an async task in a function graph', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', graphName: 'BatchPassThrough', nodeType: 'AsyncTask', memberClass: 'AsyncActionHandleSaveGame', memberName: 'AsyncLoadGameFromSlot' },
+  ] }, expected: 'error|LATENT_NODE_IN_FUNCTION' },
+  // The pre-check holds these to the same rules as node creation, so nothing runs.
+  { scenario: 'ERROR: build_graph refuses a message on a class that is not an interface', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', nodeType: 'Message', memberClass: 'Actor', memberName: 'K2_DestroyActor' },
+  ] }, expected: 'error|FUNCTION_NOT_FOUND' },
+  { scenario: 'ERROR: build_graph refuses an async task whose factory is not static', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', nodeType: 'AsyncTask', memberClass: 'Actor', memberName: 'K2_DestroyActor' },
+  ] }, expected: 'error|FUNCTION_NOT_FOUND' },
+  { scenario: 'ERROR: build_graph add_variable with a default its type cannot take', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'add_variable', variableName: 'BatchBadDefault', variableType: 'Int', defaultValue: 'NotANumberAtAll' },
+  ] }, expected: 'error|DEFAULT_NOT_APPLIED' },
   { scenario: 'ERROR: build_graph refuses pinDefaults on a member step', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, operations: [
     { edit: 'add_function', functionName: 'NeverMade', pinDefaults: { Value: 1 } },
   ] }, expected: 'error|INVALID_OPERATION' },

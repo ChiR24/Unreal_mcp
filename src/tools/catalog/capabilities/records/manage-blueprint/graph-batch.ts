@@ -47,7 +47,7 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'the graph\'s own entry node (a Construction Script or function graph starts there: from "$entry.then"). A create '
           + 'step without posX and posY is auto-placed. Every function, variable, dispatcher and async factory a step names is '
           + 'checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops '
-          + 'the batch at that step, and that step leaves nothing behind, in whichever graph it ran.',
+          + 'the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran.',
       },
     },
     required: ['blueprintPath', 'operations'],

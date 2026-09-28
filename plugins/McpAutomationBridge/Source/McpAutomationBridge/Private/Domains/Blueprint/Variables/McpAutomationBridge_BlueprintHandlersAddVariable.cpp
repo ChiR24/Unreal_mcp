@@ -185,66 +185,43 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     if (LocalPayload->HasField(TEXT("isPublic")) && !bPublic) {
       NewVar.PropertyFlags |= CPF_DisableEditOnInstance;
     }
-    TSharedPtr<FJsonValue> ObjectDefault;
-
-    // Apply the requested default value. FBPVariableDescription stores the
-    // default as a string (the same form the editor's "Default Value" field
-    // serializes to); UE parses it back into the typed default on compile.
-    // Previously the payload's defaultValue was read but never applied, so
-    // every variable was created with a zero/empty default regardless of the
-    // value supplied (e.g. a float HealPct requested as 0.35 stayed 0).
-    if (DefaultVal.IsValid() && DefaultVal->Type != EJson::Null) {
-      FString DefaultStr;
-      if (!McpJsonScalarToString(DefaultVal, DefaultStr)) {
-        // An object or array ({x,y,z}, a color, a list) has no string form
-        // until the property exists, so it is written after the first compile.
-        ObjectDefault = DefaultVal;
-      }
-      NewVar.DefaultValue = DefaultStr;
-    }
+    // Every default is written, and checked, after the first compile: an object
+    // or array ({x,y,z}, a color, a list) has no string form until the property
+    // exists, and the compiler only warns on scalar text it cannot parse.
+    const bool bHasDefault = DefaultVal.IsValid() && DefaultVal->Type != EJson::Null;
+    McpJsonScalarToString(DefaultVal, NewVar.DefaultValue);
 
     Blueprint->NewVariables.Add(NewVar);
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
     McpSafeCompileBlueprint(Blueprint);
-    FString ObjectDefaultError;
-    if (ObjectDefault.IsValid() &&
-        !McpApplyVariableObjectDefault(Blueprint, NewVar.VarName, ObjectDefault,
-                                       ObjectDefaultError)) {
+
+    // Matched by guid: a name that collides with another member (a component, a
+    // function) is renamed by the compiler. All or nothing: a renamed variable,
+    // or one whose default does not fit, is removed again before the reply.
+    auto FindAdded = [&Blueprint, &NewVar]() {
+      return Blueprint->NewVariables.FindByPredicate(
+          [&NewVar](const FBPVariableDescription &Var) { return Var.VarGuid == NewVar.VarGuid; });
+    };
+    const FBPVariableDescription *Compiled = FindAdded();
+    const bool bRenamed = !Compiled || Compiled->VarName != NewVar.VarName;
+    FString DefaultError;
+    if (bRenamed || (bHasDefault && !McpApplyVariableDefault(Blueprint, NewVar.VarName, DefaultVal, DefaultError))) {
+      if (const FBPVariableDescription *Added = FindAdded()) {
+        const FName AddedName = Added->VarName;
+        FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, AddedName);
+        McpSafeCompileBlueprint(Blueprint);
+      }
       Bridge.SendAutomationError(
           RequestingSocket, RequestId,
-          FString::Printf(TEXT("Variable '%s' was added without its defaultValue: %s. Set it "
-                               "with edit_variable set_default."), *VarName, *ObjectDefaultError),
-          TEXT("DEFAULT_NOT_APPLIED"));
+          bRenamed ? FString::Printf(TEXT("'%s' collides with an existing member (a component, function or event), so "
+                                          "it was not added. Pick another variableName."), *VarName)
+                   : FString::Printf(TEXT("Variable '%s' was not added: %s. Give a defaultValue its type accepts, or "
+                                          "omit it."), *VarName, *DefaultError),
+          bRenamed ? TEXT("VARIABLE_NAME_CONFLICT") : TEXT("DEFAULT_NOT_APPLIED"));
       return true;
     }
     const bool bSaved = SaveLoadedAssetThrottled(Blueprint);
-
-    // Verify against the variable list (the compiled class may lag a compile);
-    // the entry found is also what the reply reports. It is matched by guid:
-    // a name that collides with another member (a component, a function) is
-    // renamed by the compiler, and the caller must hear what it became.
-    const FBPVariableDescription *AddedVar = nullptr;
-    for (const FBPVariableDescription &Var : Blueprint->NewVariables) {
-      if (Var.VarGuid == NewVar.VarGuid) {
-        AddedVar = &Var;
-      }
-    }
-
-    if (!AddedVar || AddedVar->VarName != NewVar.VarName) {
-      const FString Became = AddedVar ? AddedVar->VarName.ToString() : FString();
-      Bridge.SendAutomationError(
-          RequestingSocket, RequestId,
-          Became.IsEmpty()
-              ? FString::Printf(TEXT("Variable '%s' is not on the Blueprint after compiling: the name collides "
-                                     "with an existing member (a component, function or event). Pick another variableName."),
-                                *VarName)
-              : FString::Printf(TEXT("'%s' collides with an existing member (a component, function or event), so the "
-                                     "compiler renamed the new variable to '%s' and saved it. Rename it with "
-                                     "edit_variable rename_variable, or remove it and pick another variableName."),
-                                *VarName, *Became),
-          TEXT("VARIABLE_NAME_CONFLICT"));
-      return true;
-    }
+    const FBPVariableDescription *AddedVar = FindAdded();
 
     UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
            TEXT("HandleBlueprintAction: variable '%s' added to '%s' (saved=%s "
