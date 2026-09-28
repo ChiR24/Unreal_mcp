@@ -6,73 +6,8 @@
 
 namespace McpBlueprintGraphHandlers
 {
-static bool DeleteNode(FActionContext& Context)
-{
-    if (Context.SubAction != TEXT("delete_node"))
-    {
-        return false;
-    }
-
-    const FString NodeId = McpGetFirstStringField(Context.Payload, {TEXT("nodeId"), TEXT("nodeGuid")});
-    UEdGraphNode* TargetNode = Context.FindNode(NodeId);
-    if (!TargetNode)
-    {
-        Context.SendNodeNotFound(NodeId);
-        return true;
-    }
-
-    // `pinName` only means something to the break_pin_links fold, which the
-    // caller selects with deleteScope "pin_links". Sent without it, the request
-    // says "operate on this pin" and the default scope says "delete the whole
-    // node" -- and the node wins, silently. That cost a working Branch node and
-    // the death branch hanging off it. A destructive default must not resolve a
-    // contradiction in its own favour: refuse and name the scope that does what
-    // the pin was clearly meant to do.
-    FString ScopedPinName;
-    if (Context.Payload->TryGetStringField(TEXT("pinName"), ScopedPinName) &&
-        !ScopedPinName.IsEmpty())
-    {
-        Context.SendError(
-            FString::Printf(
-                TEXT("'pinName' ('%s') was sent with deleteScope 'node', which deletes "
-                     "the ENTIRE node and ignores the pin. Re-send with "
-                     "deleteScope: \"pin_links\" to break that pin's links instead, or "
-                     "drop 'pinName' to confirm you meant to delete the whole node."),
-                *ScopedPinName),
-            TEXT("CONTRADICTORY_SCOPE"));
-        return true;
-    }
-
-    // Honor the node's own deletability (the same gate the editor UI uses).
-    // Removing structural roots like K2Node_FunctionEntry leaves the function
-    // graph orphaned; a later compile then hits an engine check() and fatally
-    // crashes the editor (see ReplaceFunctionReferences, NAME_None assert).
-    if (!TargetNode->CanUserDeleteNode())
-    {
-        Context.SendError(
-            FString::Printf(
-                TEXT("Node '%s' (%s) is not user-deletable — removing it would corrupt "
-                     "the graph (function entry/result nodes are managed by the editor)."),
-                *TargetNode->GetName(), *TargetNode->GetClass()->GetName()),
-            TEXT("PROTECTED_NODE"));
-        return true;
-    }
-
-    const FScopedTransaction Transaction(
-        FText::FromString(TEXT("Delete Blueprint Node")));
-    Context.Blueprint->Modify();
-    Context.TargetGraph->Modify();
-    FBlueprintEditorUtils::RemoveNode(
-        Context.Blueprint,
-        TargetNode,
-        true);
-    SaveLoadedAssetThrottled(Context.Blueprint);
-
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-    McpHandlerUtils::AddVerification(Result, Context.Blueprint);
-    Context.SendResponse(TEXT("Node deleted."), Result);
-    return true;
-}
+// delete_node (one node or nodeIds) lives in ...BlueprintGraphHandlersDeleteNodes.cpp.
+bool DeleteNodes(FActionContext& Context);
 
 static bool CreateRerouteNode(FActionContext& Context)
 {
@@ -284,7 +219,7 @@ static bool SetNodeProperty(FActionContext& Context)
 
 bool HandleNodeMutationAction(FActionContext& Context)
 {
-    return DeleteNode(Context) ||
+    return DeleteNodes(Context) ||
            CreateRerouteNode(Context) ||
            SetNodeProperty(Context);
 }

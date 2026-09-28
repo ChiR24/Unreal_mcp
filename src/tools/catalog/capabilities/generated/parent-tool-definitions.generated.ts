@@ -10457,6 +10457,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Existing node identifier returned by create_node or get_graph_details."
         },
+        "nodeIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 500,
+          "description": "Several node ids or guids to delete in one call, in place of nodeId. Every id must resolve to a deletable node or nothing is deleted."
+        },
         "nodeName": {
           "type": "string",
           "description": "Human-readable node name."
@@ -11567,6 +11576,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "remainingAnimations": {
           "type": "number",
           "description": "Number of animations left on the Widget Blueprint."
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Guids of the nodes that were deleted."
+        },
+        "removedCount": {
+          "type": "number",
+          "description": "How many nodes were deleted."
         },
         "removedWidget": {
           "type": "string",

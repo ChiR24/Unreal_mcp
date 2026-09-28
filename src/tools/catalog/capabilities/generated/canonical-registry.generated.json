@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5d31f15446af3784",
+  "catalogRevision": "c5fb91e7bb37ee5f",
   "recordCount": 383,
   "records": [
     {
@@ -13507,6 +13507,7 @@
         "summary": "Delete a graph node, or break the links of one of its pins.",
         "whenToUse": [
           "A graph node must be permanently removed.",
+          "A whole dead chain of nodes must be removed in one call.",
           "All links from a specific pin must be removed."
         ],
         "whenNotToUse": [
@@ -13539,6 +13540,15 @@
               "type": "string",
               "description": "Node GUID accepted in place of nodeId."
             },
+            "nodeIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "Several node ids or guids to delete in one call, in place of nodeId. Every id must resolve to a deletable node or nothing is deleted."
+            },
             "pinName": {
               "type": "string",
               "description": "Pin name on a graph node."
@@ -13560,7 +13570,8 @@
           "additionalProperties": false,
           "requiredOneOf": [
             "nodeId",
-            "nodeGuid"
+            "nodeGuid",
+            "nodeIds"
           ]
         },
         "output": {
@@ -13579,6 +13590,17 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "removed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Guids of the nodes that were deleted."
+            },
+            "removedCount": {
+              "type": "number",
+              "description": "How many nodes were deleted."
             }
           },
           "required": [
@@ -13635,6 +13657,9 @@
             "pin_links": "break_pin_links"
           },
           "declaredBy": {
+            "nodeIds": [
+              "node"
+            ],
             "pinName": [
               "pin_links"
             ]
@@ -13643,8 +13668,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8100bc78b5b50c8a0db97bce9ce6c9c2c8fbdca389e12deaee5d9f625b1a7df9",
-        "content": "06821db565aedb1d072ed31cdd0c8da752220330a4d05c635e59eb964bb5b68e"
+        "schema": "cff9dee86a5fe462ffc902ac81a0314499b57a83b48fcfce80407ff11efc11b3",
+        "content": "0abaeec5c1960fee9f6cdbf2f465b3dc6230530e739d117701ecb2e78e8ab602"
       }
     },
     {

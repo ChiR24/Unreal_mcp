@@ -8134,6 +8134,7 @@
         "newParent",
         "nodeGuid",
         "nodeId",
+        "nodeIds",
         "nodeName",
         "nodeType",
         "offset",
@@ -8799,6 +8800,15 @@
           "nodeId": {
             "type": "string",
             "description": "Existing node identifier returned by create_node or get_graph_details."
+          },
+          "nodeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 500,
+            "description": "Several node ids or guids to delete in one call, in place of nodeId. Every id must resolve to a deletable node or nothing is deleted."
           },
           "nodeName": {
             "type": "string",
