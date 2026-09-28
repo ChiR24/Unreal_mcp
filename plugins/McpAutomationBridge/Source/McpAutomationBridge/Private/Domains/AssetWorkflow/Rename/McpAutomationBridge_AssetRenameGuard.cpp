@@ -202,8 +202,7 @@ bool RenameWithSettingsFollow(const TArray<FAssetRenameData>& RenameData, const 
         }
     }
 
-    // Nobody can answer a modal or watch a progress window during an MCP call; the progress window
-    // is also what took the editor down in Slate right after a map switch.
+    // Nobody can answer a modal or watch a progress window during an MCP call.
     TGuardValue<bool> NoSlowTaskWindows(GIsSilent, true);
     TGuardValue<bool> NoModals(GIsRunningUnattendedScript, true);
     // RenameAssets refuses outright while the registry is still discovering assets (just after startup).

@@ -10,7 +10,6 @@
 #include "Safety/McpSafeOperationsDeleteCompilation.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "Containers/Ticker.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
 
@@ -120,23 +119,7 @@ bool HandleMoveFolder(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
     }
     GEditor->NewMap(false);
     McpSafeOperations::McpSafePostDeleteGC();
-    // The level editor rebuilds its viewports over the next frames. Saving and renaming in the same
-    // frame as NewMap took the editor down in Slate (an unset TOptional), so the move waits a few frames.
-    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakBridge(Bridge);
-    int32 FramesToWait = 5;
-    FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
-        [WeakBridge, RequestId, SourceFolder, DestinationFolder, Current, Socket, FramesToWait](float) mutable
-        {
-            if (FramesToWait-- > 0)
-            {
-                return true;
-            }
-            if (WeakBridge.IsValid())
-            {
-                MoveFolderContents(WeakBridge.Get(), RequestId, SourceFolder, DestinationFolder, Current, Socket);
-            }
-            return false;
-        }), 0.0f);
+    MoveFolderContents(Bridge, RequestId, SourceFolder, DestinationFolder, Current, Socket);
     return true;
 }
 } // namespace McpAssetRename

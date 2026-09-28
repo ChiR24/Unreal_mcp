@@ -1,6 +1,7 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
 #include "Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowBulkSelection.h"
+#include "Domains/AssetWorkflow/Rename/McpAutomationBridge_AssetRenameGuard.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -9,12 +10,8 @@
 #include "Misc/EngineVersionComparison.h"
 #include "Misc/PackageName.h"
 
-#include "AssetRegistry/AssetRegistryModule.h"
-#include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
-#include "IAssetTools.h"
 #include "ObjectTools.h"
-#include "UObject/ObjectRedirector.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     const FString &RequestId, const FString &Action,
@@ -75,62 +72,22 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
   int32 DeletedCount =
       ObjectTools::DeleteObjects(ObjectsToDelete, bShowConfirmation);
 
+  // Scoped to the folders this call actually deleted from. Unscoped, the
+  // fixup matched EVERY redirector in the project, so deleting one folder
+  // dragged unrelated content through a referencer fixup -- slow, and far
+  // wider a mutation than the caller asked for.
   if (bFixupRedirectors && DeletedCount > 0) {
-    FAssetRegistryModule &AssetRegistryModule =
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
-            TEXT("AssetRegistry"));
-    IAssetRegistry &AssetRegistry = AssetRegistryModule.Get();
-
-    FARFilter Filter;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-    Filter.ClassPaths.Add(FTopLevelAssetPath(TEXT("/Script/CoreUObject"),
-                                             TEXT("ObjectRedirector")));
-#else
-    Filter.ClassNames.Add(FName(TEXT("ObjectRedirector")));
-#endif
-
-    // Scoped to the folders this call actually deleted from. Without any
-    // PackagePaths the filter matched EVERY redirector in the project, so
-    // deleting one folder dragged unrelated content through a referencer
-    // fixup -- slow, and far wider a mutation than the caller asked for.
+    TSet<FString> Folders;
     for (const FString &Path : ValidPaths) {
       const FString PackageName = FPackageName::ObjectPathToPackageName(Path);
       if (!PackageName.IsEmpty()) {
-        Filter.PackagePaths.AddUnique(
-            FName(*FPackageName::GetLongPackagePath(PackageName)));
+        Folders.Add(FPackageName::GetLongPackagePath(PackageName));
       }
     }
-    Filter.bRecursivePaths = true;
-
-    // Nothing to scope to means nothing to fix up. Returning here instead
-    // would skip the response below and leave the caller waiting.
-    TArray<FAssetData> RedirectorAssets;
-    if (Filter.PackagePaths.Num() > 0) {
-      AssetRegistry.GetAssets(Filter, RedirectorAssets);
-    }
-
-    if (RedirectorAssets.Num() > 0) {
-      TArray<UObjectRedirector *> Redirectors;
-      for (const FAssetData &Asset : RedirectorAssets) {
-        UObjectRedirector *Redirector =
-            Cast<UObjectRedirector>(Asset.GetAsset());
-        // A redirector whose destination is gone is exactly what this pass
-        // creates, and handing one to FixupReferencers asserts inside
-        // AssetTools on an unset TOptional -- which takes the whole editor
-        // down rather than failing the call. Skipping them is the difference
-        // between a tidy-up and a crash.
-        if (Redirector != nullptr && Redirector->DestinationObject != nullptr) {
-          Redirectors.Add(Redirector);
-        }
-      }
-
-      if (Redirectors.Num() > 0) {
-        IAssetTools &AssetTools =
-            FModuleManager::LoadModuleChecked<FAssetToolsModule>(
-                TEXT("AssetTools"))
-                .Get();
-        AssetTools.FixupReferencers(Redirectors);
-      }
+    for (const FString &Folder : Folders) {
+      int32 Found = 0;
+      int32 Fixed = 0;
+      McpAssetRename::FixupRedirectorsIn(Folder, Found, Fixed);
     }
   }
 
