@@ -54,6 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`query_asset` finds text inside assets.** `lookup: "text"` (`find_text`) searches Blueprint graph literals (with their node ids) and comments, variable and component defaults, widget texts, DataTable rows, String Table entries and the actors of the open level. `search_assets` only matches asset names.
 - **`reparent_widget` reorders.** `index` places the widget among the new parent's children (0 is first), so the same parent reorders its children, and the reply reads the slot layout back.
 - **`restart_editor` can close the editor.** `relaunch: false` closes it under the same unsaved-package gate (a running PIE session ends first); `validateOnly` lists the unsaved packages without doing either.
+- **`move` and `rename` take a folder.** A folder as `sourcePath` moves everything under it into `destinationPath`, keeping sub-folders; redirectors are fixed up, the emptied folder is removed, and a level open in the editor is reopened at its new path. Relocating a game folder of 207 assets took 207 calls.
+- **`maintain_content` refreshes Blueprints.** `refresh_blueprints` refreshes every node of the Blueprints under `folderPath` (or `assetPaths`), then compiles and saves each and lists the ones that do not compile. After a class rename, casts kept their old output pin ("AsBP Mario Save"), which compiled into the bytecode under that name.
+- **`rename_variable` renames components.** A component name renames the Simple Construction Script node and every graph getter, and a name the Blueprint already uses is refused (`NAME_CONFLICT`); it answered `NOT_FOUND` for components although `newName` promised them.
+- **`exists` checks several paths.** `assetPaths` answers `existsByPath` in one call.
 
 </details>
 
@@ -273,6 +277,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Quantities named after tokens are no longer redacted.** A `TokensSaved` variable read back as `[REDACTED]` in pin defaults and Blueprint defaults; a key ending in a quantity word (saved, spent, earned, balance, cost...) is a value, not a secret.
 - **Material batch parameter steps accept `name`.** `add_scalar_parameter` in `build_material_graph` refused the `name` that describe documents.
 - **Material `delete_node` saves.** It recompiled but left the material unsaved, so an editor restart brought the node back; it saves by default now (`save: false` skips it) and reports `saved`.
+- **Renames no longer cancel themselves.** The engine asks OkCancel before renaming an asset a native class default still points at, and an unattended editor answers Cancel: a default map, a game mode, an input mapping context, or any map ever opened (the level editor keeps a camera per map) made `rename`, `move` and `bulk_rename` fail. Those references now follow the asset to its new path and the changed config files are saved; hard references are named under `blockingReferences`.
+- **`bulk_rename` reports what happened.** A failed rename answered `renamed: 5` with the planned list, and `oldPath` showed the new path; it now answers 0 with the reason, and `rename` no longer blames "exists or locked" for every failure (`DESTINATION_EXISTS` when it is taken).
+- **`play` answers when the game is running.** The session starts on a later editor tick, so the next call (`set_game_speed`, `simulate_input`) met no play world; the reply now waits until the play world has begun and names it (`pieWorld`).
+- **`get_project_settings`** has a `packaging` category, finds a settings class that moved modules by its name (`/Script/UnrealEd.ProjectPackagingSettings`), and a keyed read answers only that key instead of the whole section.
+- **`find_text` skips engine plumbing.** A one-letter search in a level returned 2,435 net-driver, collision-profile, sprite and folder hits; those properties are no longer searched.
 
 </details>
 

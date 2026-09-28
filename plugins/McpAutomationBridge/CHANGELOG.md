@@ -44,6 +44,9 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Text search** — `HandleFindText` (`AssetQueryFindText.cpp`) loads the Blueprints, DataTables and String Tables under `packagePaths` and walks graph pins, SCS component templates, the class default object, widget trees, DataTable rows and String Table sources, plus the open level's actors and components, through a reflected string/text/name walker.
 - **Reparent index** — `reparent_widget` reads `index` and calls `UPanelWidget::ShiftChild` after seating; the reply comes from `ReplyWidgetLayout`.
 - **Closing the editor** — `HandleControlEditorRestart` reads `relaunch`; false schedules `GEditor->CloseEditor()` instead of `FUnrealEdMisc::RestartEditor` behind the same unsaved-package gate.
+- **Folder moves** — `McpAssetRename::HandleMoveFolder` (`Rename/AssetFolderMove.cpp`) builds one `FAssetRenameData` per asset under the folder, parks the editor on `NewMap` when the open level is inside it, runs the guarded rename, fixes up redirectors (`FixupRedirectorsIn`, now shared with `fixup_redirectors`), deletes the emptied folder and reloads the level.
+- **Blueprint refresh** — `HandleRefreshBlueprints` (`Rename/AssetRefreshBlueprints.cpp`) runs `FBlueprintEditorUtils::RefreshAllNodes`, `McpCompileBlueprintWithDiagnostics` and a save for each Blueprint in the selection.
+- **Component rename** — `rename_variable` falls back to `USimpleConstructionScript::FindSCSNode` and `FBlueprintEditorUtils::RenameComponentMemberVariable`, after an `FKismetNameValidator` check.
 
 ### Changed
 - **Game mode class setters stop moving the project default**: `SetGameModeClass` (`GameFrameworkHandlersClassConfig.cpp`) no longer calls `PersistEffectiveGameFramework`, which wrote `GlobalDefaultGameMode` into `GEngineIni` (the user's Saved layer) and the editor world's `AWorldSettings::DefaultGameMode` on every call. With `makeDefault` it calls `UGameMapsSettings::SetGlobalDefaultGameMode`, `SaveConfig` and `TryUpdateDefaultConfigFile` (DefaultEngine.ini) and fails with `CONFIG_WRITE_FAILED` when that write fails. Every reply reports `ResolveWorldGameMode` (now shared from `GameFrameworkHandlersInfo.cpp`) as `openLevelGameMode` and `effectiveInOpenLevel`.
@@ -216,6 +219,10 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Receipt redaction** — `MeasurementHeads` in `McpNativeReceiptSecretKeys.cpp` (mirrored in `receipt-redaction.ts`) adds saved, spent, earned, collected, consumed, generated, processed, balance, rate, cost and left.
 - **Material parameter name** — `HandleAddParameter` reads `parameterName` or `name` through `McpGetFirstStringField`.
 - **Material delete_node save** — `HandleDeleteNode` saves through `McpSafeAssetSave` after `FINALIZE_HOST` unless `save` is false, and reports `saved`.
+- **Rename guard** — `McpAssetRename::RenameWithSettingsFollow` (`Rename/AssetRenameGuard.cpp`) walks every native class default like `FAssetRenameManager::FindCDOReferences`, points soft paths (and soft-keyed map entries such as `EditorViews`) at the new paths before `IAssetTools::RenameAssets`, saves the touched config classes afterwards (`TryUpdateDefaultConfigFile` or `SaveConfig`) and restores them when the rename fails. `rename`, `move` and `bulk_rename` all go through it.
+- **Play start** — `HandleControlEditorPlay` replies from a ticker once `GEditor->PlayWorld` has begun play (20 s limit, `PIE_START_TIMEOUT`).
+- **Settings lookup** — `ResolveSettingsClass` falls back to `McpFindTypeQuiet` on the class name; `get_project_settings` with `key` leaves out `settings`.
+- **find_text** — `FMcpFindTextScan::Properties` skips `NetDriverName`, `BodyInstance`, `SpriteInfo` and `FolderPath`.
 
 ## [0.6.0-beta-b] - 2026-09-25
 
