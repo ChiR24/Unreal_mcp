@@ -12,9 +12,10 @@ function getStringArray(args: Record<string, unknown>, key: string): string[] {
     return [];
 }
 
+// `tools` is the declared name and the only one the native manage_tools handler reads; the gateway
+// refuses anything else, so no alias spelling is accepted here either.
 function getToolNames(args: Record<string, unknown>): string[] {
-    const tools = getStringArray(args, 'tools');
-    return tools.length > 0 ? tools : getStringArray(args, 'toolNames');
+    return getStringArray(args, 'tools');
 }
 
 export async function handleManageToolsCall(args: Record<string, unknown>): Promise<Record<string, unknown>> {
