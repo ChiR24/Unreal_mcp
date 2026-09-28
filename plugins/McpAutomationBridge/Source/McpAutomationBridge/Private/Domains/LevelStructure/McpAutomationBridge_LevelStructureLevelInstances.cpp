@@ -7,6 +7,7 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "LevelInstance/LevelInstanceActor.h"
+#include "LevelInstance/LevelInstanceSubsystem.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/PackageName.h"
 #include "Safety/McpSafeOperations.h"
@@ -64,6 +65,45 @@ void DefaultSaveToLevelState(const TSharedPtr<FJsonObject>& Payload, UWorld* Wor
         Payload->SetBoolField(TEXT("save"), World && !World->GetOutermost()->GetName().StartsWith(TEXT("/Temp/")));
     }
 }
+
+#if MCP_HAS_PACKED_LEVEL_BUILDER
+// Instances the packer wrote into the Blueprint's ISM component templates.
+int32 CountPackedBlueprintInstances(const UBlueprint* BP, int32& OutIsmComponents)
+{
+    int32 Instances = 0;
+    OutIsmComponents = 0;
+    if (BP && BP->SimpleConstructionScript)
+    {
+        for (const USCS_Node* Node : BP->SimpleConstructionScript->GetAllNodes())
+        {
+            if (const UInstancedStaticMeshComponent* Ism = Node ? Cast<UInstancedStaticMeshComponent>(Node->ComponentTemplate) : nullptr)
+            {
+                ++OutIsmComponents;
+                Instances += Ism->GetInstanceCount();
+            }
+        }
+    }
+    return Instances;
+}
+
+// Packs the level into a throwaway /Temp Blueprint and counts what it holds, so an existing Blueprint is only
+// rewritten when the pack will really fill it (the builder empties and saves the target before it knows).
+int32 ProbePackedInstanceCount(FPackedLevelActorBuilder& Builder, const TSoftObjectPtr<UWorld>& WorldAsset)
+{
+    const FString ProbeName = TEXT("McpPackProbe_") + FGuid::NewGuid().ToString(EGuidFormats::Digits);
+    const FString ProbePath = TEXT("/Temp/McpPackProbe/") + ProbeName + TEXT(".") + ProbeName;
+    const TSoftObjectPtr<UBlueprint> Probe{FSoftObjectPath(ProbePath)};
+    UBlueprint* ProbeBP = FPackedLevelActorBuilder::CreatePackedLevelActorBlueprint(Probe, WorldAsset, false);
+    int32 IsmComponents = 0;
+    const int32 Instances = ProbeBP && Builder.CreateOrUpdateBlueprint(WorldAsset, Probe, false, false)
+        ? CountPackedBlueprintInstances(ProbeBP, IsmComponents) : 0;
+    if (ProbeBP)
+    {
+        McpSafeOperations::McpDeleteAssetAndFile(ProbePath);
+    }
+    return Instances;
+}
+#endif
 }
 
 bool HandleCreateLevelInstance(UMcpAutomationBridgeSubsystem* Subsystem, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -102,7 +142,20 @@ bool HandleCreateLevelInstance(UMcpAutomationBridgeSubsystem* Subsystem, const F
         return true;
     }
     Instance->SetActorLabel(Label);
-    Instance->LoadLevelInstance();
+    // LoadLevelInstance only queues the load for a later tick; the block-load finishes it now so the reply
+    // reads the real level (5.0 takes ALevelInstance*, 5.1+ the ILevelInstanceInterface it implements).
+    if (ULevelInstanceSubsystem* LevelInstances = World->GetSubsystem<ULevelInstanceSubsystem>())
+    {
+        LevelInstances->BlockLoadLevelInstance(Instance);
+    }
+    if (!Instance->IsLoaded() || !Instance->GetLoadedLevel())
+    {
+        World->DestroyActor(Instance);
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+            TEXT("'%s' did not load as a Level Instance, so nothing was placed. Open the level on its own to check it loads, then retry."),
+            *Package), nullptr, TEXT("LEVEL_INSTANCE_NOT_LOADED"));
+        return true;
+    }
 
     int32 ChildActors = 0;
     if (const ULevel* Loaded = Instance->GetLoadedLevel())
@@ -152,12 +205,21 @@ bool HandleCreatePackedLevelActor(UMcpAutomationBridgeSubsystem* Subsystem, cons
     }
     const FString BPObjectPath = BPPackage + TEXT(".") + FPackageName::GetShortName(BPPackage);
     TSoftObjectPtr<UBlueprint> BPAsset{FSoftObjectPath(BPObjectPath)};
-    const bool bExisted = FPackageName::DoesPackageExist(BPPackage);
+    // An unsaved Blueprint counts too: creating over it would open the editor's modal overwrite dialog.
+    const bool bExisted = StaticFindObject(UObject::StaticClass(), nullptr, *BPObjectPath) != nullptr || FPackageName::DoesPackageExist(BPPackage);
     UBlueprint* BP = bExisted ? BPAsset.LoadSynchronous() : nullptr;
     if (bExisted && (!BP || !BP->GeneratedClass || !BP->GeneratedClass->IsChildOf(APackedLevelActor::StaticClass())))
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
             TEXT("'%s' exists and is not a Packed Level Blueprint; pass another blueprintPath."), *BPPackage), nullptr, TEXT("ASSET_EXISTS"));
+        return true;
+    }
+    const TSharedPtr<FPackedLevelActorBuilder> Builder = FPackedLevelActorBuilder::CreateDefaultBuilder();
+    if (bExisted && ProbePackedInstanceCount(*Builder, WorldAsset) == 0)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false, FString::Printf(
+            TEXT("%s has nothing to pack (no static meshes would reach the Blueprint), so the existing Blueprint '%s' was left unchanged."),
+            *Package, *BPPackage), nullptr, TEXT("NOTHING_TO_PACK"));
         return true;
     }
     // Created here so the builder never opens its save-as dialog for a missing Blueprint.
@@ -167,21 +229,10 @@ bool HandleCreatePackedLevelActor(UMcpAutomationBridgeSubsystem* Subsystem, cons
         return true;
     }
     const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
-    const bool bPacked = FPackedLevelActorBuilder::CreateDefaultBuilder()->CreateOrUpdateBlueprint(WorldAsset, BPAsset, bSave, false);
+    const bool bPacked = Builder->CreateOrUpdateBlueprint(WorldAsset, BPAsset, bSave, false);
     BP = BPAsset.LoadSynchronous();
     int32 IsmComponents = 0;
-    int32 Instances = 0;
-    if (BP && BP->SimpleConstructionScript)
-    {
-        for (const USCS_Node* Node : BP->SimpleConstructionScript->GetAllNodes())
-        {
-            if (const UInstancedStaticMeshComponent* Ism = Node ? Cast<UInstancedStaticMeshComponent>(Node->ComponentTemplate) : nullptr)
-            {
-                ++IsmComponents;
-                Instances += Ism->GetInstanceCount();
-            }
-        }
-    }
+    const int32 Instances = CountPackedBlueprintInstances(BP, IsmComponents);
     if (!bPacked || Instances == 0)
     {
         const bool bRemoved = !bExisted && McpSafeOperations::McpDeleteAssetAndFile(BPObjectPath);
