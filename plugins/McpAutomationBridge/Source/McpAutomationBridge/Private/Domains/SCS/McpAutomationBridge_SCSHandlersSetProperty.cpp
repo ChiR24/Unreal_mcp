@@ -2,6 +2,7 @@
 
 #include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
 #include "Domains/SCS/McpAutomationBridge_SCSHandlersSupport.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -81,6 +82,10 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   }
 
   UActorComponent *TemplateComponent = Cast<UActorComponent>(ComponentTemplate);
+  // Placed actors keep their old component values across the recompile unless the
+  // change is pushed to them (McpScsPropagate); one someone overrode keeps its own.
+  McpScsPropagate::FDefaults Defaults{ComponentTemplate, Blueprint, FName(*ComponentName)};
+  Defaults.Capture(PropertyName);
   if (PropertyValue.IsValid() && McpIsCollisionSetterKey(TemplateComponent, PropertyName)) {
     // Collision goes through the setters, as control_actor and modify_scs do.
     FString CollisionError;
@@ -144,9 +149,20 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   }
 
   FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
+  TArray<FString> UpdatedInstances;
+  Defaults.Propagate(&UpdatedInstances);
   bool bCompiled = false;
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
+  TArray<FString> UpdatedAgain;
+  Defaults.Propagate(&UpdatedAgain);
+  for (const FString &Path : UpdatedAgain) {
+    UpdatedInstances.AddUnique(Path);
+  }
+  if (UpdatedInstances.Num() > 0) {
+    Result->SetNumberField(TEXT("instancesUpdated"), UpdatedInstances.Num());
+    Result->SetArrayField(TEXT("updatedInstances"), McpScsPropagate::ToJsonStrings(UpdatedInstances));
+  }
 
   // Re-resolve through the same resolver: an inherited or native component has no SCS node on this
   // Blueprint, so looking one up here would fail verification for exactly the cases the fix above

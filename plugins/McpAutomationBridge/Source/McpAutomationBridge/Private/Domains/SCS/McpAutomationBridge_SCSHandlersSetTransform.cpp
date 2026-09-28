@@ -2,6 +2,7 @@
 
 #include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
 #include "Domains/SCS/McpAutomationBridge_SCSHandlersSupport.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -74,12 +75,33 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentTransform(
                                 FVector(Scale[0], Scale[1], Scale[2]));
 
   {
+    // Placed actors keep their old component values across the recompile unless
+    // the change is pushed to them the way the Blueprint editor does: a transform
+    // fix to BP_DeployTower reached the template and no tower in any level. An
+    // instance someone moved by hand keeps its own value.
+    McpScsPropagate::FDefaults Defaults{SceneComp, Blueprint, FName(*ComponentName)};
+    Defaults.Capture(TEXT("RelativeLocation"));
+    Defaults.Capture(TEXT("RelativeRotation"));
+    Defaults.Capture(TEXT("RelativeScale3D"));
     SceneComp->Modify();
     SceneComp->SetRelativeTransform(NewTransform);
+    TArray<FString> UpdatedInstances;
+    Defaults.Propagate(&UpdatedInstances);
 
     bool bCompiled = false;
     bool bSaved = false;
     FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
+    // The recompile re-creates the placed actors; one that still shows the old
+    // value takes the new one now.
+    TArray<FString> UpdatedAgain;
+    Defaults.Propagate(&UpdatedAgain);
+    for (const FString &Path : UpdatedAgain) {
+      UpdatedInstances.AddUnique(Path);
+    }
+    if (UpdatedInstances.Num() > 0) {
+      Result->SetNumberField(TEXT("instancesUpdated"), UpdatedInstances.Num());
+      Result->SetArrayField(TEXT("updatedInstances"), McpScsPropagate::ToJsonStrings(UpdatedInstances));
+    }
 
     // An inherited component has no SCS node of its own, so verifying only
     // through the node lookup would report failure for a write that landed. Read

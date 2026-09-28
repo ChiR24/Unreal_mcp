@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "43fda91f9dcac078",
+  "catalogRevision": "95ea68469ed3925b",
   "recordCount": 384,
   "records": [
     {
@@ -14566,7 +14566,7 @@
             },
             "operations": {
               "type": "array",
-              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied.",
+              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -14795,8 +14795,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "761f351d6de0f7f5a45d6edd1ac660a8027ab6d5479400bee831a233ea76fed9",
-        "content": "a2c8ec38aeedf69950ce5d59691935e86837c711faf9285ae622bd5c4254ee1a"
+        "schema": "1cdea5ecf6a69224bbdf4b07886a9c86fad2f3d77165d414c2734294ae78a8a2",
+        "content": "fcf5c141d009270554d18e3f03b84e7f1afa07efc3f189c3bfedef62c2a2522a"
       }
     },
     {
