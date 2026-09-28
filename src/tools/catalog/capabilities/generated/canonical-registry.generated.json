@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3b19dd50f238fd93",
+  "catalogRevision": "b82f3b3286a629a8",
   "recordCount": 382,
   "records": [
     {
@@ -19371,7 +19371,7 @@
             },
             "enabled": {
               "type": "boolean",
-              "description": "Whether the feature is enabled."
+              "description": "Indirect lighting cache on (point sampled) or off for each primitive."
             },
             "setting": {
               "type": "string",
@@ -19457,6 +19457,10 @@
             "indirect_lighting_cache": "configure_indirect_lighting_cache"
           },
           "declaredBy": {
+            "settings": [
+              "settings",
+              "indirect_lighting_cache"
+            ],
             "quality": [
               "build_quality"
             ],
@@ -19471,8 +19475,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7def521bfdae1ce9b8eae4fc205ebb7e77a3f37f694a7b7f797063477591b424",
-        "content": "de820727a6d00c4b6c67712455f94a00bde1f72835d852e8c112b13a64d6593c"
+        "schema": "8ac34aef13a24699b3f41d590ba8937028ee8e16cc396b3530fc51e7d2465cce",
+        "content": "bfb0ca9ad77cbe88bcc8b822be6a326357b7eb693cfb865dc80d2fc2d8b1468d"
       }
     },
     {
@@ -19762,6 +19766,14 @@
               "type": "string",
               "description": "Actor name in the current level."
             },
+            "blendWeight": {
+              "type": "number",
+              "description": "Blend weight (0-1)."
+            },
+            "infiniteUnbound": {
+              "type": "boolean",
+              "description": "Whether the volume is infinite and unbound."
+            },
             "settings": {
               "type": "object",
               "description": "Action-specific settings key-value pairs.",
@@ -19770,19 +19782,15 @@
             },
             "amount": {
               "type": "number",
-              "description": "Effect amount."
+              "description": "Bloom intensity."
             },
             "threshold": {
               "type": "number",
-              "description": "Effect threshold."
+              "description": "Bloom threshold (-1 = everything blooms)."
             },
             "compensationValue": {
               "type": "number",
               "description": "Exposure compensation value."
-            },
-            "method": {
-              "type": "string",
-              "description": "Method string."
             },
             "minBrightness": {
               "type": "number",
@@ -19791,6 +19799,10 @@
             "maxBrightness": {
               "type": "number",
               "description": "Maximum brightness."
+            },
+            "method": {
+              "type": "string",
+              "description": "Auto-exposure method: Manual, Histogram or Basic."
             },
             "distance": {
               "type": "number",
@@ -19804,17 +19816,13 @@
               "type": "string",
               "description": "Canonical /Game LUT texture path."
             },
+            "enabled": {
+              "type": "boolean",
+              "description": "false zeroes the lens flare intensity."
+            },
             "screenPercentage": {
               "type": "number",
               "description": "Screen percentage (0-100)."
-            },
-            "blendWeight": {
-              "type": "number",
-              "description": "Blend weight (0-1)."
-            },
-            "infiniteUnbound": {
-              "type": "boolean",
-              "description": "Whether the volume is infinite and unbound."
             },
             "setting": {
               "type": "string",
@@ -19954,6 +19962,99 @@
             "configure_pp_blend": "configure_pp_blend"
           },
           "declaredBy": {
+            "actorName": [
+              "configure_bloom",
+              "set_bloom_intensity",
+              "set_bloom_threshold",
+              "configure_exposure",
+              "set_exposure_compensation",
+              "set_exposure_method",
+              "set_exposure_min_max",
+              "configure_dof",
+              "set_dof_method",
+              "set_focal_distance",
+              "set_aperture",
+              "configure_bokeh",
+              "configure_motion_blur",
+              "set_motion_blur_amount",
+              "set_motion_blur_max",
+              "configure_tonemapper",
+              "set_tonemapper_type",
+              "set_pp_color_grading",
+              "set_pp_lut",
+              "set_pp_white_balance",
+              "configure_vignette",
+              "configure_grain",
+              "configure_chromatic_aberration",
+              "configure_lens_flare",
+              "configure_ssao",
+              "configure_gtao",
+              "configure_ssr_settings",
+              "configure_lumen_reflection_settings",
+              "configure_pp_blend"
+            ],
+            "blendWeight": [
+              "configure_bloom",
+              "set_bloom_intensity",
+              "set_bloom_threshold",
+              "configure_exposure",
+              "set_exposure_compensation",
+              "set_exposure_method",
+              "set_exposure_min_max",
+              "configure_dof",
+              "set_dof_method",
+              "set_focal_distance",
+              "set_aperture",
+              "configure_bokeh",
+              "configure_motion_blur",
+              "set_motion_blur_amount",
+              "set_motion_blur_max",
+              "configure_tonemapper",
+              "set_tonemapper_type",
+              "set_pp_color_grading",
+              "set_pp_lut",
+              "set_pp_white_balance",
+              "configure_vignette",
+              "configure_grain",
+              "configure_chromatic_aberration",
+              "configure_lens_flare",
+              "configure_ssao",
+              "configure_gtao",
+              "configure_ssr_settings",
+              "configure_lumen_reflection_settings",
+              "configure_pp_blend"
+            ],
+            "infiniteUnbound": [
+              "configure_bloom",
+              "set_bloom_intensity",
+              "set_bloom_threshold",
+              "configure_exposure",
+              "set_exposure_compensation",
+              "set_exposure_method",
+              "set_exposure_min_max",
+              "configure_dof",
+              "set_dof_method",
+              "set_focal_distance",
+              "set_aperture",
+              "configure_bokeh",
+              "configure_motion_blur",
+              "set_motion_blur_amount",
+              "set_motion_blur_max",
+              "configure_tonemapper",
+              "set_tonemapper_type",
+              "set_pp_color_grading",
+              "set_pp_lut",
+              "set_pp_white_balance",
+              "configure_vignette",
+              "configure_grain",
+              "configure_chromatic_aberration",
+              "configure_lens_flare",
+              "configure_ssao",
+              "configure_gtao",
+              "configure_ssr_settings",
+              "configure_lumen_reflection_settings",
+              "configure_pp_blend"
+            ],
             "settings": [
               "configure_bloom",
               "configure_exposure",
@@ -19963,6 +20064,8 @@
               "configure_tonemapper",
               "set_pp_color_grading",
               "set_pp_white_balance",
+              "configure_grain",
+              "configure_chromatic_aberration",
               "configure_lens_flare",
               "configure_ssao",
               "configure_gtao",
@@ -19970,30 +20073,36 @@
               "configure_lumen_reflection_settings"
             ],
             "amount": [
+              "configure_bloom",
               "set_bloom_intensity",
               "set_motion_blur_amount",
               "set_motion_blur_max",
               "configure_vignette",
               "configure_grain",
-              "configure_chromatic_aberration"
+              "configure_chromatic_aberration",
+              "configure_ssao"
             ],
             "threshold": [
+              "configure_bloom",
               "set_bloom_threshold"
             ],
             "compensationValue": [
               "configure_exposure",
               "set_exposure_compensation"
             ],
-            "method": [
-              "set_exposure_method",
-              "set_dof_method",
-              "set_tonemapper_type"
-            ],
             "minBrightness": [
+              "configure_exposure",
               "set_exposure_min_max"
             ],
             "maxBrightness": [
+              "configure_exposure",
               "set_exposure_min_max"
+            ],
+            "method": [
+              "configure_exposure",
+              "set_exposure_method",
+              "set_dof_method",
+              "set_tonemapper_type"
             ],
             "distance": [
               "set_focal_distance"
@@ -20004,22 +20113,20 @@
             "lutPath": [
               "set_pp_lut"
             ],
+            "enabled": [
+              "configure_lens_flare",
+              "configure_pp_blend"
+            ],
             "screenPercentage": [
               "configure_screen_percentage"
-            ],
-            "blendWeight": [
-              "configure_pp_blend"
-            ],
-            "infiniteUnbound": [
-              "configure_pp_blend"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bbd4b1e56c4e42580975c3df9856b14d4c383ecc4854538cd735c0b1bb6d9f2a",
-        "content": "647826a6bc83b1e70a34303179fa2293493d8ebed3c6748923a6e728b977ccb9"
+        "schema": "ab3cdce3549e4cd37ab9221e8438cdc2a03919c804bda5eb83e1cf7879611391",
+        "content": "d4a9819e2c702b03db15d1f27e933f649b5b2a87fa6ebba4a55a9bbb0bb2c3e2"
       }
     },
     {
@@ -20110,6 +20217,10 @@
               "type": "boolean",
               "description": "Whether the feature is enabled."
             },
+            "intensity": {
+              "type": "number",
+              "description": "Ray-traced ambient occlusion intensity (r.RayTracing.AmbientOcclusion.Intensity)."
+            },
             "feature": {
               "type": "string",
               "enum": [
@@ -20196,13 +20307,18 @@
             "reflections": "configure_ray_traced_reflections",
             "shadows": "configure_ray_traced_shadows",
             "path_tracing": "configure_path_tracing"
+          },
+          "declaredBy": {
+            "intensity": [
+              "ao"
+            ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "33d8a089e0e2a5ccf85a1108e671b06772cf057f66880bff5bbbee10a35d3e25",
-        "content": "f250868a5725f3fb5826661731e1f3b3ed73ee34ffa8aa69d6ea7fbadb0adb3f"
+        "schema": "1f659b8dfa6bdafa528415b2ddd8726f9da945e1d141916f9a62dbd876ef3dee",
+        "content": "26e38e5096784aebabf1c4073f8d8b883863711d9cb2b178b6b8eb3c5d54ea25"
       }
     },
     {
@@ -20319,7 +20435,7 @@
             },
             "captureSource": {
               "type": "string",
-              "description": "Capture source string."
+              "description": "What the capture renders: FinalColorLDR, SceneColorHDR, SceneDepth, BaseColor, Normal or an SCS_ value. Required."
             },
             "resolution": {
               "type": "integer",
@@ -20465,8 +20581,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2834ee4e24baebeebe67b7c72fc209f1c65cdc1ae601bd77e2a8d4f2adca08cb",
-        "content": "4da8331f41a5d19c228aaf0f4c88b7ba699dd49422713e4e8000263f45fe47b6"
+        "schema": "78ca749a039cf31b819741befd37c64134c7c23989d6ab109906dd72cf12fa1e",
+        "content": "63fd0527b0eb79071056365d6c42aab2dca4182f34a752a38abd9b0af16534b2"
       }
     },
     {
@@ -21726,6 +21842,12 @@
               },
               "additionalProperties": false
             },
+            "settings": {
+              "type": "object",
+              "description": "Reflection capture component properties by name, e.g. {\"Brightness\": 1.5}.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
             "kind": {
               "type": "string",
               "enum": [
@@ -21814,21 +21936,17 @@
             "planar_reflection": "create_planar_reflection"
           },
           "declaredBy": {
-            "name": [
-              "scene_capture_2d",
-              "scene_capture_cube"
-            ],
-            "rotation": [
-              "scene_capture_2d",
-              "planar_reflection"
+            "settings": [
+              "sphere_reflection",
+              "box_reflection"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "253210a8e32194b980a5073b65989c51fa0439a6977a13c8c02682d4dd1b06b6",
-        "content": "1ccba4cb4356d11b9ff118cc7cc696e42d7d14324ab93e21323aa0b948a35933"
+        "schema": "fe77fba6a4f30b30a70c29b5c3fdc24fa5243daf941ef5b2a7f04acadfe39ed2",
+        "content": "84eadd1673c67f11f975bcdbe4d9f53c9a45f4d059b2056d7f6b9b02fb71444e"
       }
     },
     {
@@ -27081,10 +27199,6 @@
               "type": "integer",
               "description": "Light channel index."
             },
-            "targetActor": {
-              "type": "string",
-              "description": "Target actor name for the operation."
-            },
             "channels": {
               "type": "array",
               "items": {
@@ -27092,6 +27206,14 @@
                 "description": "Lighting channel index."
               },
               "description": "Lighting channel indices (0, 1, or 2)."
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "Turn the channels on (default true) or off."
+            },
+            "targetActor": {
+              "type": "string",
+              "description": "Target actor name for the operation."
             },
             "channelTarget": {
               "type": "string",
@@ -27177,17 +27299,14 @@
           "declaredBy": {
             "targetActor": [
               "actor"
-            ],
-            "channels": [
-              "actor"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "efab8b9bc82e0607fd1c9760620b55eeeb1bcb516821c29bdb326fda115aa88a",
-        "content": "539f0b8ccf67e0dd251d2922d594967859a5b4b063d667c321d3b707f5f8768e"
+        "schema": "fc7d89ce125e4a209c47f52e765a1bd9acdbfbfd8dbfa8aab65c6e6bd07bb73d",
+        "content": "4cf04a39c0223fbf73c0c89323d2287156daae73b24275fc1432eb1716297611"
       }
     },
     {

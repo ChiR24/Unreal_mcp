@@ -165,8 +165,23 @@ bool HandleRenderLightingAction(
         TArray<FString> Applied;
         TArray<FString> Unsupported;
         FString Error;
+        // enabled was declared and never read: it switches each primitive's cache
+        // between point sampling and off.
+        const bool bHasEnabled = Payload->HasTypedField<EJson::Boolean>(TEXT("enabled"));
+        if (!bHasEnabled && !Settings.IsValid())
+        {
+            Subsystem->SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Pass enabled, or settings naming primitive component properties."), TEXT("NO_SETTING_SUPPLIED"));
+            return true;
+        }
         for (UPrimitiveComponent* Component : Components)
         {
+            if (bHasEnabled)
+            {
+                Component->Modify();
+                Component->IndirectLightingCacheQuality = Payload->GetBoolField(TEXT("enabled")) ? ILCQ_Point : ILCQ_Off;
+                Applied.AddUnique(TEXT("IndirectLightingCacheQuality"));
+            }
             if (!ApplyJsonSettings(
                     Component,
                     Component->GetClass(),

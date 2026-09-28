@@ -96,6 +96,16 @@ bool HandleRenderPostProcessLensAction(
         return true;
     }
 
+    // Each single-value variant writes its value only when the caller passed it. Defaulting a
+    // missing value reset the other exposure bound to 1.0, and SSAO, grain and chromatic
+    // aberration overwrote what `settings` had just set with their default.
+    const auto ApplyGiven = [&](const TCHAR* Key, const TCHAR* Field)
+    {
+        if (Payload->HasTypedField<EJson::Number>(Key))
+        {
+            ApplyPostProcessField(Volume, Field, MakeShared<FJsonValueNumber>(Payload->GetNumberField(Key)), Applied, Unsupported, Error);
+        }
+    };
     if (SubAction == TEXT("configure_lens_flare") &&
         Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")) &&
         !GetJsonBoolField(Payload, TEXT("enabled"), true))
@@ -115,19 +125,19 @@ bool HandleRenderPostProcessLensAction(
     }
     else if (SubAction == TEXT("set_focal_distance"))
     {
-        ApplyPostProcessField(Volume, TEXT("DepthOfFieldFocalDistance"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Settings, TEXT("DepthOfFieldFocalDistance"), GetJsonNumberField(Payload, TEXT("distance"), 0.0))), Applied, Unsupported, Error);
+        ApplyGiven(TEXT("distance"), TEXT("DepthOfFieldFocalDistance"));
     }
     else if (SubAction == TEXT("set_aperture"))
     {
-        ApplyPostProcessField(Volume, TEXT("DepthOfFieldFstop"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Settings, TEXT("DepthOfFieldFstop"), GetJsonNumberField(Payload, TEXT("aperture"), 4.0))), Applied, Unsupported, Error);
+        ApplyGiven(TEXT("aperture"), TEXT("DepthOfFieldFstop"));
     }
     else if (SubAction == TEXT("set_motion_blur_amount"))
     {
-        ApplyPostProcessField(Volume, TEXT("MotionBlurAmount"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Settings, TEXT("MotionBlurAmount"), GetJsonNumberField(Payload, TEXT("amount"), 0.0))), Applied, Unsupported, Error);
+        ApplyGiven(TEXT("amount"), TEXT("MotionBlurAmount"));
     }
     else if (SubAction == TEXT("set_motion_blur_max"))
     {
-        ApplyPostProcessField(Volume, TEXT("MotionBlurMax"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Settings, TEXT("MotionBlurMax"), GetJsonNumberField(Payload, TEXT("amount"), GetJsonNumberField(Payload, TEXT("max"), 0.0)))), Applied, Unsupported, Error);
+        ApplyGiven(TEXT("amount"), TEXT("MotionBlurMax"));
     }
     else if (SubAction == TEXT("set_exposure_method"))
     {
@@ -142,31 +152,24 @@ bool HandleRenderPostProcessLensAction(
     }
     else if (SubAction == TEXT("set_exposure_compensation"))
     {
-        ApplyPostProcessField(Volume, TEXT("AutoExposureBias"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("compensationValue"), 0.0)), Applied, Unsupported, Error);
+        ApplyGiven(TEXT("compensationValue"), TEXT("AutoExposureBias"));
     }
     else if (SubAction == TEXT("set_exposure_min_max"))
     {
-        ApplyPostProcessField(Volume, TEXT("AutoExposureMinBrightness"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("minBrightness"), 1.0)), Applied, Unsupported, Error);
-        ApplyPostProcessField(Volume, TEXT("AutoExposureMaxBrightness"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("maxBrightness"), 1.0)), Applied, Unsupported, Error);
+        ApplyGiven(TEXT("minBrightness"), TEXT("AutoExposureMinBrightness"));
+        ApplyGiven(TEXT("maxBrightness"), TEXT("AutoExposureMaxBrightness"));
     }
-    else if (SubAction == TEXT("configure_ssao"))
+    else if (SubAction == TEXT("configure_ssao") || SubAction == TEXT("configure_chromatic_aberration") ||
+             SubAction == TEXT("configure_grain"))
     {
         ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
-        ApplyPostProcessField(Volume, TEXT("AmbientOcclusionIntensity"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 0.5)), Applied, Unsupported, Error);
+        ApplyGiven(TEXT("amount"), SubAction == TEXT("configure_ssao") ? TEXT("AmbientOcclusionIntensity")
+                                   : SubAction == TEXT("configure_grain") ? TEXT("FilmGrainIntensity")
+                                                                           : TEXT("SceneFringeIntensity"));
     }
     else if (SubAction == TEXT("configure_vignette"))
     {
-        ApplyPostProcessField(Volume, TEXT("VignetteIntensity"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 0.4)), Applied, Unsupported, Error);
-    }
-    else if (SubAction == TEXT("configure_chromatic_aberration"))
-    {
-        ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
-        ApplyPostProcessField(Volume, TEXT("SceneFringeIntensity"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 0.0)), Applied, Unsupported, Error);
-    }
-    else if (SubAction == TEXT("configure_grain"))
-    {
-        ApplyPostProcessSettings(Volume, Settings, Applied, Unsupported, Error);
-        ApplyPostProcessField(Volume, TEXT("FilmGrainIntensity"), MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 0.0)), Applied, Unsupported, Error);
+        ApplyGiven(TEXT("amount"), TEXT("VignetteIntensity"));
     }
 
     if (!Error.IsEmpty())
@@ -174,17 +177,21 @@ bool HandleRenderPostProcessLensAction(
         Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
         return true;
     }
+    // Answering success over an untouched volume hid a call that changed nothing.
+    if (Applied.Num() == 0 && Unsupported.Num() == 0)
+    {
+        Subsystem->SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("%s changed nothing: pass this variant's own parameter, or `settings` naming "
+                                 "FPostProcessSettings fields."), *SubAction),
+            TEXT("NO_SETTING_SUPPLIED"));
+        return true;
+    }
     Volume->MarkComponentsRenderStateDirty();
     TSharedPtr<FJsonObject> Result = MakeRenderResult(SubAction);
     AddStringArray(Result, TEXT("appliedSettings"), Applied);
     AddStringArray(Result, TEXT("unsupportedSettings"), Unsupported);
     McpHandlerUtils::AddVerification(Result, Volume);
-    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true,
-        Applied.Num() > 0
-            ? FString(TEXT("Post-process lens settings applied."))
-            : FString(TEXT("No post-process setting was applied: pass `settings` (FPostProcessSettings "
-                           "field names) or this variant's own parameters.")),
-        Result);
+    Subsystem->SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Post-process lens settings applied."), Result);
     return true;
 }
 }

@@ -74,7 +74,13 @@ bool ApplyCaptureSource(
     const FString& Source,
     FString& OutError)
 {
-    if (!Component || Source.IsEmpty())
+    // An omitted captureSource used to change nothing and still report the source applied.
+    if (Source.IsEmpty())
+    {
+        OutError = TEXT("captureSource is required, e.g. FinalColorLDR, SceneColorHDR, SceneDepth, BaseColor or Normal.");
+        return false;
+    }
+    if (!Component)
     {
         return true;
     }

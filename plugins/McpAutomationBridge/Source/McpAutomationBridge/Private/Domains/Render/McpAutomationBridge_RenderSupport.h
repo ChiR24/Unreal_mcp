@@ -150,8 +150,6 @@ inline APostProcessVolume* RequirePostProcessVolume(
                 ResolveError.IsEmpty() ? FString(TEXT("PostProcessVolume not found.")) : ResolveError,
                 ResolveErrorCode.IsEmpty() ? FString(TEXT("ACTOR_NOT_FOUND")) : ResolveErrorCode);
         }
-        TArray<FString> BlendApplied;
-        ApplyVolumeBlendFields(Volume, Payload, BlendApplied);
         return Volume;
     }
     if (!Volume)
@@ -161,8 +159,8 @@ inline APostProcessVolume* RequirePostProcessVolume(
             FString::Printf(TEXT("PostProcessVolume not found: %s"), *Reference),
             TEXT("ACTOR_NOT_FOUND"));
     }
-    TArray<FString> BlendApplied;
-    ApplyVolumeBlendFields(Volume, Payload, BlendApplied);
+    // Callers apply ApplyVolumeBlendFields after Volume->Modify() into their own Applied list:
+    // applying it here wrote it before the undo snapshot and hid it from the reply.
     return Volume;
 }
 

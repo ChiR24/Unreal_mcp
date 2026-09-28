@@ -39,14 +39,18 @@ bool HandleRenderPostProcessColorAction(
     TArray<FString> Applied;
     TArray<FString> Unsupported;
     FString Error;
+    // Every color variant takes the volume's infiniteUnbound and blendWeight.
+    ApplyVolumeBlendFields(Volume, Payload, Applied);
 
     if (SubAction == TEXT("configure_pp_blend"))
     {
-        Volume->bUnbound = GetJsonBoolField(
-            Payload, TEXT("infiniteUnbound"), GetJsonBoolField(Payload, TEXT("bUnbound"), Volume->bUnbound));
-        Volume->BlendWeight = GetJsonNumberField(Payload, TEXT("blendWeight"), Volume->BlendWeight);
-        Volume->bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), Volume->bEnabled);
-        Applied = {TEXT("bUnbound"), TEXT("BlendWeight"), TEXT("bEnabled")};
+        // Only what was passed is written and reported: listing all three as applied
+        // on an empty call slipped past the NO_SETTING_SUPPLIED guard below.
+        if (Payload->HasTypedField<EJson::Boolean>(TEXT("enabled")))
+        {
+            Volume->bEnabled = Payload->GetBoolField(TEXT("enabled"));
+            Applied.Add(TEXT("bEnabled"));
+        }
     }
     else if (SubAction == TEXT("set_pp_lut"))
     {
@@ -74,9 +78,10 @@ bool HandleRenderPostProcessColorAction(
     else if (SubAction == TEXT("set_bloom_intensity"))
     {
         // amount is the declared name; this read the undeclared intensity, so bloom stayed at 1.0.
-        if (!ApplyPostProcessField(
+        if (Payload->HasTypedField<EJson::Number>(TEXT("amount")) &&
+            !ApplyPostProcessField(
                 Volume, TEXT("BloomIntensity"),
-                MakeShared<FJsonValueNumber>(GetJsonNumberField(Payload, TEXT("amount"), 1.0)),
+                MakeShared<FJsonValueNumber>(Payload->GetNumberField(TEXT("amount"))),
                 Applied, Unsupported, Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));
@@ -86,12 +91,10 @@ bool HandleRenderPostProcessColorAction(
     else if (SubAction == TEXT("configure_bloom"))
     {
         // configure_bloom used to have no branch at all, so it fell through to
-        // the generic settings path and ignored `amount` and `threshold` -- the
-        // two parameters its own contract declares. A caller who passed them got
-        // "Post-process color settings applied." and an unchanged volume. The
-        // sibling lens variants (vignette, grain, chromatic aberration) already
-        // read their top-level number, so read ours the same way and still fold
-        // in an explicit `settings` object for anything else on the struct.
+        // the generic settings path and ignored `amount` and `threshold`. A
+        // caller who passed them got "Post-process color settings applied." and
+        // an unchanged volume. Read them as the lens variants read their number,
+        // and still fold in `settings` for anything else on the struct.
         ApplyPostProcessSettings(Volume, GetSettingsObject(Payload), Applied, Unsupported, Error);
         if (Payload->HasField(TEXT("amount")))
         {
@@ -115,12 +118,10 @@ bool HandleRenderPostProcessColorAction(
     }
     else if (SubAction == TEXT("set_bloom_threshold"))
     {
-        const TSharedPtr<FJsonObject> Settings = GetSettingsObject(Payload);
-        const double Threshold = Settings.IsValid()
-            ? GetJsonNumberField(Settings, TEXT("BloomThreshold"), GetJsonNumberField(Payload, TEXT("threshold"), -1.0))
-            : GetJsonNumberField(Payload, TEXT("threshold"), -1.0);
-        if (!ApplyPostProcessField(
-                Volume, TEXT("BloomThreshold"), MakeShared<FJsonValueNumber>(Threshold),
+        // The declared threshold alone: a settings.BloomThreshold used to win over it.
+        if (Payload->HasTypedField<EJson::Number>(TEXT("threshold")) &&
+            !ApplyPostProcessField(
+                Volume, TEXT("BloomThreshold"), MakeShared<FJsonValueNumber>(Payload->GetNumberField(TEXT("threshold"))),
                 Applied, Unsupported, Error))
         {
             Subsystem->SendAutomationError(RequestingSocket, RequestId, Error, TEXT("INVALID_SETTING"));

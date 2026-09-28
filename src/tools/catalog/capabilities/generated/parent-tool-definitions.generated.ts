@@ -1440,7 +1440,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "amount": {
           "type": "number",
-          "description": "Effect amount."
+          "description": "Bloom intensity."
         },
         "amplitude": {
           "type": "number",
@@ -1677,7 +1677,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "captureSource": {
           "type": "string",
-          "description": "Capture source string."
+          "description": "What the capture renders: FinalColorLDR, SceneColorHDR, SceneDepth, BaseColor, Normal or an SCS_ value. Required."
         },
         "castShadows": {
           "type": "boolean",
@@ -1838,7 +1838,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "enabled": {
           "type": "boolean",
-          "description": "Whether the feature is enabled."
+          "description": "Indirect lighting cache on (point sampled) or off for each primitive."
         },
         "falloff": {
           "type": "number",
@@ -2787,6 +2787,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "object",
+              "description": "Reflection capture component properties by name, e.g. {\"Brightness\": 1.5}.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "object",
               "description": "The same shadow keys as the top level, nested; a value here wins.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
@@ -2904,7 +2910,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "threshold": {
           "type": "number",
-          "description": "Effect threshold."
+          "description": "Bloom threshold (-1 = everything blooms)."
         },
         "tileSize": {
           "type": "number",

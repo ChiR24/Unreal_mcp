@@ -24,10 +24,12 @@ bool CreateReflectionActor(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    const FString Name = GetJsonStringField(Payload, TEXT("actorName"));
+    // `name` labels the new actor across every create_capture_actor variant; reading only
+    // actorName refused a reflection capture created with the declared name.
+    const FString Name = McpGetFirstStringField(Payload, {TEXT("actorName"), TEXT("name")});
     if (Name.IsEmpty())
     {
-        Subsystem->SendAutomationError(Socket, RequestId, TEXT("actorName is required."), TEXT("INVALID_ARGUMENT"));
+        Subsystem->SendAutomationError(Socket, RequestId, TEXT("name (or actorName) is required."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     if (AActor* Existing = FindRenderActor(Name))
@@ -85,6 +87,7 @@ bool ApplyPostProcessReflectionSettings(
     // Modify() before the write, as the color/lens variants already do: called
     // after, it snapshots the changed struct and undo restores nothing.
     Volume->Modify();
+    ApplyVolumeBlendFields(Volume, Payload, Applied);
     if (!ApplyJsonSettings(
             &Volume->Settings, FPostProcessSettings::StaticStruct(), GetSettingsObject(Payload),
             true, Applied, Unsupported, Error))
