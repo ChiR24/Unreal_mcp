@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "de1521afe11e5eb5",
+  "catalogRevision": "4d95645686aa9d24",
   "recordCount": 382,
   "records": [
     {
@@ -6482,7 +6482,11 @@
             },
             "packagePath": {
               "type": "string",
-              "description": "Package path (default /Game)."
+              "description": "Package path (default /Game/Textures)."
+            },
+            "renderTargetPath": {
+              "type": "string",
+              "description": "Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath."
             },
             "width": {
               "type": "number",
@@ -6498,13 +6502,15 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Save after creation."
+              "description": "Save after creation. Defaults to true."
             }
           },
-          "required": [
-            "name"
-          ],
-          "additionalProperties": false
+          "required": [],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "name",
+            "renderTargetPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -6571,8 +6577,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "db0c183e59348125045a757b013ea6f8c96707a6e2c534212ae34065570439a8",
-        "content": "8eb0e1864bd49d4221fa7fcf26081023e678793d323a63c344ad00442f0d82b7"
+        "schema": "895ba07f1c97b6388f976c1a3df766d53308f4af27c04b55fbbb1e46e04fd34a",
+        "content": "92340734abccf4bc5837d8208e5b3fd7d8e2481a9c7e51083195b4e87e1d8b15"
       }
     },
     {
@@ -6634,7 +6640,7 @@
             },
             "force": {
               "type": "boolean",
-              "description": "Force deletion even when the asset is still referenced (bridge delete path)."
+              "description": "Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole."
             }
           },
           "required": [],
@@ -6703,8 +6709,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "daff894a48037c8719e163131d850cd2e46bdc9a6369dbe4422873a222a4fffc",
-        "content": "34215d04fced837b7de5d9150662ed769f1fd6710da2241cf9358a003a4c20f4"
+        "schema": "a83863754d93c784d2b59577d1ceba43a4ca2d086c736b14c2e0bfde855d708d",
+        "content": "3665d8fd219ccb3fa229c3177c20aaf70e359b658c80abd792289e5536561129"
       }
     },
     {
@@ -7037,7 +7043,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Save package after import."
+              "description": "Save the imported asset. Defaults to true; pass false to keep it in memory only."
             },
             "importAnimations": {
               "type": "boolean",
@@ -7127,8 +7133,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8e8a28d4a81cccdc81320e142fbe70225d66c4225515cf02a0667fbdd5b8428a",
-        "content": "0462c2021b1e7a71919fa7b52c4ba0656f44555a8e315bbe36a2e46b92cc46b0"
+        "schema": "5bfa2da7e50a8d27c44a880440ebf39a1ec458951fe418482023ec610ee68c80",
+        "content": "25c183440185d3fc8f9de3f77216aa923e46591e3fb924669b456505389e81ca"
       }
     },
     {
@@ -7768,6 +7774,10 @@
               "type": "boolean",
               "description": "When true, include asset tags in the listing response."
             },
+            "includeMetadata": {
+              "type": "boolean",
+              "description": "When true, include the file size and modification date of each asset."
+            },
             "filter": {
               "type": "string",
               "description": "Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category."
@@ -7971,6 +7981,9 @@
             "includeTags": [
               "assets"
             ],
+            "includeMetadata": [
+              "assets"
+            ],
             "filter": [
               "assets",
               "content_sources"
@@ -7989,8 +8002,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4340097e8f371c8ef21de127e7934a270a06b7a9f0540f87d08a53749192e1de",
-        "content": "0374175ad2f009b705de94a246008a4850571b84c7e5d6d19c5f1379f847930b"
+        "schema": "4b745ceba2c741c02e8ccc7679e4c2851cb9b90cd42bc2920b60ca3d8fcebb21",
+        "content": "4674849a0d8c6c7bddfbab51ee67c529e1982315cab405c13d131c56a7c65829"
       }
     },
     {
@@ -8286,7 +8299,8 @@
               "bulk_rename"
             ],
             "checkoutFiles": [
-              "bulk_rename"
+              "bulk_rename",
+              "fixup_redirectors"
             ],
             "directoryPath": [
               "fixup_redirectors"
@@ -8321,7 +8335,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4297d4538175c1345e8c29fdf0627bd4ef49c7b2f4b967a99ec323d0969509fd",
-        "content": "a5d160b5bc329279ddeb256eaab8b924dda7e94be7775cb359794e1b386b41e2"
+        "content": "35d5c41a6e0d71b96bdbc951180693a55d3af0832c89292c394dc20f6983f0de"
       }
     },
     {
@@ -8364,6 +8378,10 @@
             "destinationPath": {
               "type": "string",
               "description": "Destination /Game asset path."
+            },
+            "newName": {
+              "type": "string",
+              "description": "Rename in place instead: the asset keeps its folder and takes this name (used when destinationPath is omitted)."
             }
           },
           "required": [
@@ -8433,8 +8451,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4d9438752a060d8cadd3eb6e01754d693c96a8e1e18d75a3ffed4655fe803d5b",
-        "content": "b809382c57761de9cdd1d031cfd2eba05c348e23fd332af2cdc834813a3d2d03"
+        "schema": "8daa18d42df6571fadb741aa2fe51a61aeec12bc7631fd62e9baa9370c8efcf9",
+        "content": "02c4c2441bceecf0c559c20f4d3be0cc8944eb910744d149553e81c9ce9e0f66"
       }
     },
     {
@@ -8464,6 +8482,10 @@
             "assetPath": {
               "type": "string",
               "description": "Static mesh asset path."
+            },
+            "trianglePercent": {
+              "type": "number",
+              "description": "Percent of the source triangles Nanite keeps, 0-100 (default 100)."
             }
           },
           "required": [
@@ -8531,8 +8553,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "70ec53a5040634167f09ea8ccb0625b205efacbd365bdf4dfa55da2cb496c591",
-        "content": "fc986847f83ba9aea5f0575333001af033509666776dccca5db74a770b740747"
+        "schema": "7fa368fbf58e7741789722261b38dc71d5de82945cdcdbe975e85b513e3a7774",
+        "content": "2f57e2683920eed40e82696a003c35cce567282ad0771762dc0dd165019af8e7"
       }
     },
     {
@@ -8590,9 +8612,20 @@
               "type": "number",
               "description": "Thumbnail height."
             },
+            "outputPath": {
+              "type": "string",
+              "description": "Project-relative PNG file to write, e.g. Saved/Thumbnails/SM_Crate.png."
+            },
+            "assetPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several asset paths to process in one call."
+            },
             "lodCount": {
               "type": "number",
-              "description": "Number of LOD levels to generate."
+              "description": "Number of LOD levels to generate (1-50, default 4)."
             },
             "process": {
               "type": "string",
@@ -8604,8 +8637,7 @@
             }
           },
           "required": [
-            "process",
-            "assetPath"
+            "process"
           ],
           "additionalProperties": false
         },
@@ -8683,6 +8715,12 @@
             "height": [
               "thumbnail"
             ],
+            "outputPath": [
+              "thumbnail"
+            ],
+            "assetPaths": [
+              "lods"
+            ],
             "lodCount": [
               "lods"
             ]
@@ -8691,8 +8729,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b74ba5ab12f21ed0e065d13511ec385e389cd8de900a2633f362d37b79847026",
-        "content": "6e06da32e224c1a437dbb9423cb674ff2aa0005aa8173cb55eb64349fcc4c0d2"
+        "schema": "6c63660b6fd9ce40463aa93b0c3c8560b535ae79899bb368f73658b51bd5a7f0",
+        "content": "cec8d7d519d4a167178b429cf4c87c5c16bf4c1b1686111ccc5c9709104e76aa"
       }
     },
     {
@@ -8826,13 +8864,16 @@
               "type": "string",
               "description": "Optional tag value."
             },
-            "maxDepth": {
-              "type": "number",
-              "description": "Maximum traversal depth (clamped to 8)."
+            "assetPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several asset paths to query in one call."
             },
             "recursive": {
               "type": "boolean",
-              "description": "Recurse into dependencies."
+              "description": "Also report every /Game package the assets depend on, transitively (up to 512)."
             },
             "lookup": {
               "type": "string",
@@ -9083,8 +9124,8 @@
             "value": [
               "by_tag"
             ],
-            "maxDepth": [
-              "graph"
+            "assetPaths": [
+              "source_control_state"
             ],
             "recursive": [
               "source_control_state"
@@ -9094,8 +9135,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "74b3ae2dbb3bb5bc01e6c663f5eae3dedf4e0ecbaf98a048ea98454203a230c2",
-        "content": "9700dba6dde79a3455f43f587e1ec047820c1810750513c40177d83f31d0d74d"
+        "schema": "4df6228095e2f51faacd57258d896686dd8ae799cb6b6297fe56fa828292c35d",
+        "content": "c2ca2dbcbfd260caf5c085261c54319c6cfc9d4055b872b44c5223ea5cd0f3df"
       }
     },
     {
@@ -9947,10 +9988,12 @@
               "enable"
             ],
             "userName": [
-              "init"
+              "init",
+              "commit_all"
             ],
             "userEmail": [
-              "init"
+              "init",
+              "commit_all"
             ]
           }
         }
@@ -9958,7 +10001,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "15648921044528f7a056a0b40b148acebc5401b5808a141ab91f159fbfe9f34f",
-        "content": "7ce3de9a77f50f01e4defea0bf044d64d01b5e26a3026e4f80c319587025940a"
+        "content": "8d404d13d3acea7d7c6e9b71033a2d53b00745956f98111132d94b8d7f5d78cc"
       }
     },
     {

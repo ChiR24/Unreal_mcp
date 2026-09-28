@@ -6563,6 +6563,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Explicit asset paths."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several asset paths to process in one call."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several asset paths to query in one call."
             }
           ],
           "description": "Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted."
@@ -6845,7 +6859,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "force": {
           "type": "boolean",
-          "description": "Delete even when other assets still reference the struct (their references break). Default false, which refuses and lists the referencers."
+          "description": "Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole."
         },
         "format": {
           "type": "string",
@@ -6895,6 +6909,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "inWhite": {
           "type": "number",
           "description": "Input white point."
+        },
+        "includeMetadata": {
+          "type": "boolean",
+          "description": "When true, include the file size and modification date of each asset."
         },
         "includePackageCounts": {
           "type": "boolean",
@@ -7050,7 +7068,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lodCount": {
           "type": "number",
-          "description": "Number of LOD levels to generate."
+          "description": "Number of LOD levels to generate (1-50, default 4)."
         },
         "lookup": {
           "type": "string",
@@ -7325,7 +7343,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "packagePath": {
           "type": "string",
-          "description": "Package path (default /Game)."
+          "description": "Package path (default /Game/Textures)."
         },
         "packagePaths": {
           "type": "array",
@@ -7524,7 +7542,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "recursive": {
           "type": "boolean",
-          "description": "Recurse into dependencies."
+          "description": "Also report every /Game package the assets depend on, transitively (up to 512)."
         },
         "recursiveClasses": {
           "type": "boolean",
@@ -7545,6 +7563,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "relativeTo": {
           "type": "string",
           "description": "Target member GUID or name."
+        },
+        "renderTargetPath": {
+          "type": "string",
+          "description": "Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath."
         },
         "replaceText": {
           "type": "string",
@@ -7750,6 +7772,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "tooltip": {
           "type": "string",
           "description": "Member tooltip."
+        },
+        "trianglePercent": {
+          "type": "number",
+          "description": "Percent of the source triangles Nanite keeps, 0-100 (default 100)."
         },
         "twoSided": {
           "type": "boolean",

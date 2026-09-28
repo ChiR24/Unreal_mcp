@@ -12,13 +12,13 @@ const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'obj
 
 export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   r('create_render_target', 'asset', 'Create a render target texture asset.',
-    schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game).'), width: num('Width in pixels.'), height: num('Height in pixels.'), format: str('Pixel format.'), save: bool('Save after creation.') }, ['name']),
+    schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game/Textures).'), renderTargetPath: str('Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath.'), width: num('Width in pixels.'), height: num('Height in pixels.'), format: str('Pixel format.'), save: bool('Save after creation. Defaults to true.') }, [], ['name', 'renderTargetPath']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'manage_texture',
       examples: [ex('Create a 1024x1024 HDR render target', { name: 'RT_SceneCapture', packagePath: '/Game/RenderTargets', width: 1024, height: 1024, format: 'RTF_RGBA16f', save: true }, { success: true })] }
   ),
   r('generate_lods', 'asset', 'Generate LOD levels for a static mesh asset.',
-    schema({ assetPath: ASSET_PATH, lodCount: num('Number of LOD levels to generate.') }, ['assetPath', 'lodCount']),
+    schema({ assetPath: ASSET_PATH, assetPaths: arr('Several asset paths to process in one call.'), lodCount: num('Number of LOD levels to generate (1-50, default 4).') }, [], ['assetPath', 'assetPaths']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { examples: [ex('Generate four LODs for a prop', { assetPath: '/Game/Meshes/SM_Crate', lodCount: 4 }, { success: true })] }
   ),
@@ -49,7 +49,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
     { examples: [ex('Read instruction counts for a material', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
   ),
   r('nanite_rebuild_mesh', 'asset', 'Rebuild a Nanite mesh representation.',
-    schema({ assetPath: str('Static mesh asset path.') }, ['assetPath']),
+    schema({ assetPath: str('Static mesh asset path.'), trianglePercent: num('Percent of the source triangles Nanite keeps, 0-100 (default 100).') }, ['assetPath']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'manage_render',
       examples: [ex('Rebuild Nanite data after a mesh edit', { assetPath: '/Game/Meshes/SM_Rock' }, { success: true })] }
@@ -95,7 +95,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Put a fresh project under revision control', { description: 'Initial commit', userName: 'Dev', userEmail: 'dev@example.com' }, { success: true, committed: true })] }
   ),
   r('source_control_commit_all', 'asset', 'Stage every change in the project and commit it as a snapshot.',
-    schema({ description: str('Commit message.') }, ['description']),
+    schema({ description: str('Commit message.'), userName: str('Commit author name, written to the repository config only.'), userEmail: str('Commit author email, written to the repository config only.') }, ['description']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'source_control_commit_all',
       examples: [ex('Snapshot the project after a batch of edits', { description: 'Roster pass: 12 distinct brawler kits' }, { success: true, committed: true })] }

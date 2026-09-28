@@ -29,11 +29,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
     return true;
   }
 
-  const TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
+  // The contract declares `paths`; only assetPaths was read, so a multi-asset
+  // call through the gateway was impossible. assetPaths stays as the fallback.
+  const TArray<FString> AssetPaths = McpGetStringListField(
+      Payload, Payload->HasField(TEXT("paths")) ? TEXT("paths") : TEXT("assetPaths"), TEXT("assetPath"));
 
   if (AssetPaths.Num() == 0) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("assetPath (string) or assetPaths (array) required"),
+                        TEXT("assetPath (string) or paths (array) required"),
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }
@@ -106,11 +109,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
     return true;
   }
 
-  const TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
+  // The contract declares `paths`; only assetPaths was read, so a multi-asset
+  // call through the gateway was impossible. assetPaths stays as the fallback.
+  const TArray<FString> AssetPaths = McpGetStringListField(
+      Payload, Payload->HasField(TEXT("paths")) ? TEXT("paths") : TEXT("assetPaths"), TEXT("assetPath"));
 
   if (AssetPaths.Num() == 0) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("assetPath (string) or assetPaths (array) required"),
+                        TEXT("assetPath (string) or paths (array) required"),
                         TEXT("INVALID_ARGUMENT"));
     return true;
   }

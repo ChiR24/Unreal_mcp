@@ -60,6 +60,8 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
   const bool bImportAnimations = GetJsonBoolField(Payload, TEXT("importAnimations"), false);
   const FString SkeletonPath = GetJsonStringField(Payload, TEXT("skeletonPath"));
   const bool bOverwrite = GetJsonBoolField(Payload, TEXT("overwrite"), false);
+  // Declared and never read: an imported asset stayed an unsaved package.
+  const bool bSave = GetJsonBoolField(Payload, TEXT("save"), true);
 
   FString DestPath = FPaths::GetPath(SafeDestPath);
   FString DestName = FPaths::GetBaseFilename(SafeDestPath);
@@ -82,7 +84,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
     TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
     GEditor->GetTimerManager()->SetTimerForNextTick(
         [WeakThis, RequestId, ResolvedSourcePath, DestPath, DestName, Socket,
-         bImportAnimations, SkeletonPath, bOverwrite]() {
+         bImportAnimations, SkeletonPath, bOverwrite, bSave]() {
           UMcpAutomationBridgeSubsystem *StrongThis = WeakThis.Get();
           if (!StrongThis) {
             return;
@@ -154,6 +156,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
             if (ImportedAsset) {
               McpHandlerUtils::AddVerification(Resp, ImportedAsset);
             }
+            Resp->SetBoolField(TEXT("saved"), bSave && ImportedAsset && McpSafeAssetSave(ImportedAsset));
             StrongThis->SendAutomationResponse(
                 Socket, RequestId, true,
                 bRenameSucceeded ? TEXT("Asset imported")

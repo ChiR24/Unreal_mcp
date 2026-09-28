@@ -10,6 +10,7 @@
 #include "Dom/JsonObject.h"
 #include "Misc/Paths.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
@@ -152,6 +153,32 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   int32 DeletedCount = 0;
   TArray<FString> NotFoundPaths;
   TArray<FString> FailedToDeletePaths;
+  TArray<FString> ReferencedPaths;
+
+  // force was declared ("delete even when still referenced") and never read, so
+  // a referenced asset was deleted and its referencers broke silently. Without
+  // force, an asset something outside this delete references stays in place and
+  // is listed under referencedPaths. Folders are deleted whole either way.
+  const bool bForce = GetJsonBoolField(Payload, TEXT("force"), false);
+  TArray<FString> DeleteSet;
+  for (const FString &Path : PathsToDelete) {
+    const FString Safe = SanitizeProjectRelativePath(Path);
+    if (!Safe.IsEmpty()) { DeleteSet.Add(FPackageName::ObjectPathToPackageName(Safe)); }
+  }
+  const auto OutsideReferencers = [&DeleteSet](const FString &PackageName) {
+    TArray<FAssetIdentifier> Refs;
+    FAssetRegistryModule::GetRegistry().GetReferencers(FAssetIdentifier(FName(*PackageName)), Refs,
+                                                       UE::AssetRegistry::EDependencyCategory::Package);
+    TArray<FString> Outside;
+    for (const FAssetIdentifier &Ref : Refs) {
+      const FString RefPackage = Ref.PackageName.ToString();
+      const bool bDeletedToo = DeleteSet.ContainsByPredicate([&RefPackage](const FString &D) {
+        return RefPackage == D || RefPackage.StartsWith(D + TEXT("/"));
+      });
+      if (!RefPackage.IsEmpty() && !bDeletedToo) { Outside.AddUnique(RefPackage); }
+    }
+    return Outside;
+  };
 
   for (const FString &Path : PathsToDelete) {
     const FString SafePath = SanitizeProjectRelativePath(Path);
@@ -179,7 +206,10 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       // had already dropped it from the registry, so a retry answered "not
       // found" about an asset that came back on the next editor start.
       // And it counts as deleted only once that file is gone.
-      if (McpSafeOperations::McpDeleteAssetAndFile(SafePath)) {
+      const TArray<FString> Referencers = bForce ? TArray<FString>() : OutsideReferencers(FPackageName::ObjectPathToPackageName(SafePath));
+      if (Referencers.Num() > 0) {
+        ReferencedPaths.Add(FString::Printf(TEXT("%s (referenced by %s)"), *SafePath, *FString::Join(Referencers, TEXT(", "))));
+      } else if (McpSafeOperations::McpDeleteAssetAndFile(SafePath)) {
         DeletedCount++;
       } else {
         FailedToDeletePaths.Add(SafePath);
@@ -197,7 +227,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
   Resp->SetBoolField(TEXT("success"), bSuccess);
   Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
   // Was a hardcoded false, so even a failed delete claimed the asset was gone.
-  Resp->SetBoolField(TEXT("existsAfter"), FailedToDeletePaths.Num() > 0);
+  Resp->SetBoolField(TEXT("existsAfter"), FailedToDeletePaths.Num() > 0 || ReferencedPaths.Num() > 0);
 
   if (NotFoundPaths.Num() > 0) {
     TArray<TSharedPtr<FJsonValue>> NotFoundArray;
@@ -206,6 +236,15 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     }
     Resp->SetArrayField(TEXT("notFoundPaths"), NotFoundArray);
     Resp->SetNumberField(TEXT("notFoundCount"), NotFoundPaths.Num());
+  }
+
+  if (ReferencedPaths.Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> ReferencedArray;
+    for (const FString& P : ReferencedPaths) {
+      ReferencedArray.Add(MakeShared<FJsonValueString>(P));
+    }
+    Resp->SetArrayField(TEXT("referencedPaths"), ReferencedArray);
+    Resp->SetStringField(TEXT("referencedHint"), TEXT("Still-referenced assets were kept; pass force:true to delete them anyway (their referencers break)."));
   }
 
   if (FailedToDeletePaths.Num() > 0) {
@@ -224,7 +263,11 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     FString ErrorMessage;
     FString ErrorCode;
 
-    if (NotFoundPaths.Num() > 0 && FailedToDeletePaths.Num() == 0) {
+    if (ReferencedPaths.Num() > 0) {
+      ErrorMessage = FString::Printf(TEXT("No assets deleted. %d asset(s) are still referenced: %s. Pass force:true to delete anyway."),
+                                      ReferencedPaths.Num(), *FString::Join(ReferencedPaths, TEXT("; ")));
+      ErrorCode = TEXT("ASSET_REFERENCED");
+    } else if (NotFoundPaths.Num() > 0 && FailedToDeletePaths.Num() == 0) {
       // All paths were not found
       ErrorMessage = FString::Printf(TEXT("No assets deleted. %d path(s) not found."), NotFoundPaths.Num());
       ErrorCode = TEXT("ASSET_NOT_FOUND");

@@ -59,16 +59,16 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('get_source_control_state', 'asset', 'Retrieve source-control state for an asset.',
-    schema({ assetPath: ASSET_PATH, recursive: bool('Recurse into dependencies.') }, ['assetPath']),
+    schema({ assetPath: ASSET_PATH, assetPaths: arr('Several asset paths to query in one call.'), recursive: bool('Also report every /Game package the assets depend on, transitively (up to 512).') }, [], ['assetPath', 'assetPaths']),
     OK, READ, READ_POLICY, LOW,
     { examples: [ex('Check whether a mesh is checked out', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true })] }
   ),
 
   r('analyze_graph', 'asset', 'Analyze the node graph inside a material or Blueprint asset.',
-    schema({ assetPath: ASSET_PATH, maxDepth: num('Maximum traversal depth (clamped to 8).') }, ['assetPath']),
+    schema({ assetPath: ASSET_PATH }, ['assetPath']),
     ANALYZE_GRAPH_OK, READ, READ_POLICY, MEDIUM,
     { dispatchAction: 'get_asset_graph',
-      examples: [ex('Inspect a material\'s expression graph', { assetPath: '/Game/Materials/M_Base', maxDepth: 2 },
+      examples: [ex('Inspect a material\'s expression graph', { assetPath: '/Game/Materials/M_Base' },
         { success: true, graphType: 'Material', nodeCount: 4, parameterCount: 2, blendMode: 'BLEND_Opaque' })] }
   ),
 
@@ -79,7 +79,7 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('create_thumbnail', 'asset', 'Generate a thumbnail for an asset.',
-    schema({ assetPath: ASSET_PATH, width: num('Thumbnail width.'), height: num('Thumbnail height.') }, ['assetPath']),
+    schema({ assetPath: ASSET_PATH, width: num('Thumbnail width.'), height: num('Thumbnail height.'), outputPath: str('Project-relative PNG file to write, e.g. Saved/Thumbnails/SM_Crate.png.') }, ['assetPath']),
     OK, WRITE, WRITE_POLICY, LOW,
     { dispatchAction: 'generate_thumbnail',
       examples: [ex('Render a 256x256 thumbnail', { assetPath: '/Game/Meshes/SM_Crate', width: 256, height: 256 }, { success: true })] }
@@ -113,7 +113,7 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('fixup_redirectors', 'asset', 'Fix up redirector assets in a directory.',
-    schema({ directoryPath: str('Directory path to fix up.'), path: str('Alternative directory path.') }, [], ['directoryPath', 'path']),
+    schema({ directoryPath: str('Directory path to fix up.'), path: str('Alternative directory path.'), checkoutFiles: bool('Check the referencing packages out of source control before resaving them.') }, [], ['directoryPath', 'path']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'fixup_redirectors',
       examples: [ex('Clean up redirectors left by a move', { directoryPath: '/Game/Meshes' }, { success: true })] }

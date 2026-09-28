@@ -7,6 +7,7 @@
 #include "Dom/JsonObject.h"
 #include "Misc/PackageName.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "EditorAssetLibrary.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
@@ -27,13 +28,35 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
     return true;
   }
 
-  const TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
+  TArray<FString> AssetPaths = McpGetStringListField(Payload, TEXT("assetPaths"), TEXT("assetPath"));
 
   if (AssetPaths.Num() == 0) {
     SendAutomationError(Socket, RequestId,
                         TEXT("assetPath (string) or assetPaths (array) required"),
                         TEXT("INVALID_ARGUMENT"));
     return true;
+  }
+
+  // recursive (declared, never read): also report every /Game package the
+  // assets depend on, transitively.
+  // ponytail: capped at 512 packages; page it if a real project needs more.
+  if (GetJsonBoolField(Payload, TEXT("recursive"), false)) {
+    IAssetRegistry &Registry = FAssetRegistryModule::GetRegistry();
+    TSet<FString> Seen;
+    for (const FString &Path : AssetPaths) {
+      Seen.Add(FPackageName::ObjectPathToPackageName(SanitizeProjectRelativePath(Path)));
+    }
+    for (int32 Index = 0; Index < AssetPaths.Num() && AssetPaths.Num() < 512; ++Index) {
+      TArray<FName> Dependencies;
+      Registry.GetDependencies(FName(*FPackageName::ObjectPathToPackageName(SanitizeProjectRelativePath(AssetPaths[Index]))), Dependencies);
+      for (const FName &Dependency : Dependencies) {
+        const FString DependencyName = Dependency.ToString();
+        if (DependencyName.StartsWith(TEXT("/Game/")) && !Seen.Contains(DependencyName)) {
+          Seen.Add(DependencyName);
+          AssetPaths.Add(DependencyName);
+        }
+      }
+    }
   }
 
   if (!ISourceControlModule::Get().IsEnabled()) {

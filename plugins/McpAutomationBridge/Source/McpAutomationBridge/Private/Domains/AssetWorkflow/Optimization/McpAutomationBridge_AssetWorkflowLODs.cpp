@@ -40,10 +40,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     Payload->TryGetArrayField(TEXT("assets"), AssetPathsArray);
   }
 
-  // Support both lodCount and numLODs
+  // lodCount is the contract name; the legacy numLODs used to override it when
+  // both were sent, and now only fills in when lodCount is absent.
   int32 NumLODs = 4;
-  Payload->TryGetNumberField(TEXT("lodCount"), NumLODs);
-  Payload->TryGetNumberField(TEXT("numLODs"), NumLODs);
+  if (!Payload->TryGetNumberField(TEXT("lodCount"), NumLODs)) {
+    Payload->TryGetNumberField(TEXT("numLODs"), NumLODs);
+  }
   NumLODs = FMath::Clamp(NumLODs, 1, 50);
 
   // Build list of paths to process

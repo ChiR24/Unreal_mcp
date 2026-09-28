@@ -38,6 +38,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       recursive: bool('Recurse into subdirectories.'),
       depth: num('Maximum recursion depth.'),
       includeTags: bool('When true, include asset tags in the listing response.'),
+      includeMetadata: bool('When true, include the file size and modification date of each asset.'),
       filter: str('Substring filter. Listing assets: a case-insensitive match on the asset name. Listing content sources: a case-sensitive match on the source id and, for plugins, the category.')
     }, ['path']),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
@@ -45,7 +46,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('import', 'asset', 'Import an asset from a filesystem source into the project content hierarchy.',
-    schema({ sourcePath: SOURCE_PATH, destinationPath: DEST_PATH, overwrite: bool('Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings.'), save: bool('Save package after import.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations.') }, ['sourcePath', 'destinationPath']),
+    schema({ sourcePath: SOURCE_PATH, destinationPath: DEST_PATH, overwrite: bool('Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings.'), save: bool('Save the imported asset. Defaults to true; pass false to keep it in memory only.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations.') }, ['sourcePath', 'destinationPath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
     { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence'], examples: [ex('Import FBX', { sourcePath: '/tmp/mesh.fbx', destinationPath: '/Game/Imports/Mesh' }, { success: true }), ex('Import a mocap take onto an existing skeleton', { sourcePath: '/Game/../Imports/Mocap.fbx', destinationPath: '/Game/Anims/A_Mocap', importAnimations: true, skeletonPath: '/Game/Chars/SK_Hero_Skeleton' }, { success: true })] }
   ),
@@ -77,26 +78,26 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('move', 'asset', 'Move an asset to a new package path.',
-    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH }, ['sourcePath']),
+    schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('Rename in place instead: the asset keeps its folder and takes this name (used when destinationPath is omitted).') }, ['sourcePath']),
     OK_OUTPUT, NON_IDEMPOTENT, WRITE_POLICY, MEDIUM,
     { topics: ['move asset', 'relocate asset'], 
       examples: [ex('Move a texture into a subfolder', { sourcePath: '/Game/Textures/T_Rock', destinationPath: '/Game/Textures/Terrain/T_Rock' }, { success: true })] }
   ),
 
   r('delete', 'asset', 'Permanently delete one or more assets after explicit confirmation.',
-    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path (alternative to paths).'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path (alternative to paths).'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole.') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { topics: ['delete asset', 'remove asset', 'destroy asset'], 
       examples: [ex('Delete one asset', { paths: ['/Game/MCPTest/Disposable'] }, { success: true })] }
   ),
   r('delete_asset', 'asset', 'Long-form alias for delete.',
-    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole.') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { 
       examples: [ex('Delete a single asset by path', { path: '/Game/MCPTest/Disposable' }, { success: true })] }
   ),
   r('delete_assets', 'asset', 'Plural-form alias for delete.',
-    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Force deletion even when the asset is still referenced (bridge delete path).') }, []),
+    schema({ paths: arr('Asset paths to delete.'), path: str('Single asset path.'), assetPath: str('Alias for path (accepted for compatibility).'), force: bool('Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole.') }, []),
     OK_OUTPUT, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { 
       examples: [ex('Delete several assets in one call', { paths: ['/Game/MCPTest/DisposableA', '/Game/MCPTest/DisposableB'] }, { success: true })] }
