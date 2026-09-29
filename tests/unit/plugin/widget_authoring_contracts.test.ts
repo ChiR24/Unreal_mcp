@@ -8,6 +8,9 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
+
 const DOMAIN = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'WidgetAuthoring');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -86,5 +89,29 @@ describe('SafeAddWidgetToTree: only an add that re-uses a slotName warns that th
     const manipulation = read('Support', 'McpAutomationBridge_WidgetAuthoringManipulation.cpp');
     const reparent = manipulation.slice(manipulation.indexOf('reparent_widget'), manipulation.indexOf('get_widget_slot_info'));
     expect(reparent).toMatch(/SafeAddWidgetToTree\(WidgetBP, TargetWidget, NewParentWidget->GetName\(\),[^;{]*,\s*true\)/u);
+  });
+});
+
+describe('set_size sizes a box child by rule, and the record declares what the handler reads', () => {
+  const record = capabilityIndex().byId.get('blueprint.set_widget_layout');
+  const properties = isRecord(record?.schemas.input.properties) ? record.schemas.input.properties : {};
+
+  it('declares sizeRule and fillValue on the layout family, and infers the size variant from them', () => {
+    expect(Object.keys(properties)).toEqual(expect.arrayContaining(['size', 'sizeRule', 'fillValue']));
+    expect(record?.routing.dispatchBy?.declaredBy?.sizeRule).toEqual(['size']);
+    expect(record?.routing.dispatchBy?.declaredBy?.fillValue).toEqual(['size']);
+    expect(record?.schemas.input.required).not.toContain('size');
+  });
+
+  it('the handler reads both, through the property the layout readback reports', () => {
+    const geometry = read('Layout', 'McpAutomationBridge_WidgetAuthoringCanvasSlotGeometry.cpp');
+    const readback = read('Support', 'McpAutomationBridge_WidgetAuthoringSlotReadback.cpp');
+
+    expect(geometry).toContain('TEXT("sizeRule")');
+    expect(geometry).toContain('TEXT("fillValue")');
+    for (const source of [geometry, readback]) {
+      expect(source).toMatch(/FindFProperty<FStructProperty>\(\w+->GetClass\(\), TEXT\("Size"\)\)/u);
+      expect(source).toContain('FSlateChildSize::StaticStruct()');
+    }
   });
 });

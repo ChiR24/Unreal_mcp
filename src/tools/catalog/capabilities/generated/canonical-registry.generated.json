@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "92a5c1a8333e679a",
+  "catalogRevision": "78777c2bf40bb9f4",
   "recordCount": 389,
   "records": [
     {
@@ -18185,7 +18185,7 @@
           "letter spacing",
           "copy text style"
         ],
-        "summary": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.",
+        "summary": "Set a widget slot layout property (anchor, position, size (canvas {x,y}; box child sizeRule Auto/Fill and fillValue weight), alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.",
         "whenToUse": [
           "The set anchor of a widget must be updated.",
           "The set position of a widget must be updated.",
@@ -18241,7 +18241,16 @@
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "Widget size override {x,y}."
+              "description": "Size override {x,y} of a CanvasPanel child. A HorizontalBox or VerticalBox child is sized by sizeRule and fillValue instead."
+            },
+            "sizeRule": {
+              "type": "string",
+              "description": "A HorizontalBox or VerticalBox child: Auto sizes it to its content, Fill shares the free space between the Fill children by their fillValue weights (case-insensitive). Two buttons in a row that should share it evenly are both Fill with the same fillValue."
+            },
+            "fillValue": {
+              "type": "number",
+              "minimum": 0,
+              "description": "A HorizontalBox or VerticalBox child: the Fill weight, 0 or more (1 by default; a child of 2 gets twice the space of a child of 1). Given without sizeRule it makes the child Fill."
             },
             "alignment": {
               "type": "object",
@@ -18446,7 +18455,7 @@
       },
       "examples": [
         {
-          "title": "Set a widget slot layout property (anchor, position, size, alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.",
+          "title": "Set a widget slot layout property (anchor, position, size (canvas {x,y}; box child sizeRule Auto/Fill and fillValue weight), alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.",
           "input": {
             "action": "set_widget_layout",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -18515,6 +18524,12 @@
               "position"
             ],
             "size": [
+              "size"
+            ],
+            "sizeRule": [
+              "size"
+            ],
+            "fillValue": [
               "size"
             ],
             "alignment": [
@@ -18600,8 +18615,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9478f84200df0378fa09e092a93952a90d78d2f6d0f3d535e0e5fa4882e92985",
-        "content": "53228822f8584eaa6e2bd0b18a7659edee559588f0e4243ac651976a107f1815"
+        "schema": "38c16e20bd08eb430c3609cf4fb5711943b02f64ee9c5ad4e85864c0ff6a35e3",
+        "content": "99f3f2e8007cbfb599dce186f42256dcb1f31356b58f29207a628a6f5bcb02db"
       }
     },
     {

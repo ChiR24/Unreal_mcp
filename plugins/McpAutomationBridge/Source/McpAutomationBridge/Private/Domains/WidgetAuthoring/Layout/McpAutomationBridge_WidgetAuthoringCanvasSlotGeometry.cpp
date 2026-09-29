@@ -5,6 +5,8 @@
 #include "Algo/Find.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanelSlot.h"
+#include "Components/SlateWrapperTypes.h"
+#include "UObject/UnrealType.h"
 #include "Domains/WidgetAuthoring/Layout/McpAutomationBridge_WidgetAuthoringSlotAlignment.h"
 #include "Components/Widget.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
@@ -14,7 +16,8 @@
 
 // set_anchor, set_alignment, set_position, set_size. A canvas-only setting on a widget
 // that sits in a box or overlay is refused (set_anchor and set_position used to answer
-// success and write nothing), and every reply carries the slot read back.
+// success and write nothing), and every reply carries the slot read back. set_size also
+// sets a HorizontalBox or VerticalBox child's rule: sizeRule Auto or Fill, and fillValue.
 namespace WidgetAuthoringHandlers
 {
 using namespace WidgetAuthoringHelpers;
@@ -46,11 +49,64 @@ UCanvasPanelSlot* RequireCanvas(UMcpAutomationBridgeSubsystem& Subsystem, const 
     UCanvasPanelSlot* Canvas = Cast<UCanvasPanelSlot>(Widget->Slot);
     if (!Canvas)
     {
-        Subsystem.SendAutomationError(Socket, RequestId, FString::Printf(
-            TEXT("%s needs a CanvasPanel child; '%s' sits in a %s. Use set_alignment or set_padding for box and overlay slots."),
-            *SubAction, *Widget->GetName(), Widget->Slot ? *Widget->Slot->GetClass()->GetName() : TEXT("no slot")), TEXT("INVALID_SLOT"));
+        const FString SlotClass = Widget->Slot ? Widget->Slot->GetClass()->GetName() : FString(TEXT("no slot"));
+        Subsystem.SendAutomationError(Socket, RequestId, SubAction.Equals(TEXT("set_size"), ESearchCase::IgnoreCase)
+            ? FString::Printf(TEXT("set_size needs a CanvasPanel child (size {x,y}) or a HorizontalBox or VerticalBox child (sizeRule, fillValue); ")
+                                   TEXT("'%s' sits in a %s. Use set_alignment or set_padding for that slot."), *Widget->GetName(), *SlotClass)
+            : FString::Printf(TEXT("%s needs a CanvasPanel child; '%s' sits in a %s. Use set_alignment or set_padding for box and overlay slots."),
+                              *SubAction, *Widget->GetName(), *SlotClass), TEXT("INVALID_SLOT"));
     }
     return Canvas;
+}
+
+// A HorizontalBox or VerticalBox child sizes by a rule, not a canvas {x,y}: Auto fits its content, Fill
+// shares the free space by weight. Found the way McpDescribeWidgetLayout reports it, so whatever
+// get_widget_info shows as sizeRule and fillValue can be written back.
+FStructProperty* FindChildSizeProperty(UPanelSlot* Slot)
+{
+    FStructProperty* Property = Slot ? FindFProperty<FStructProperty>(Slot->GetClass(), TEXT("Size")) : nullptr;
+    return Property && Property->Struct == FSlateChildSize::StaticStruct() ? Property : nullptr;
+}
+
+// sizeRule (Auto or Fill, any case) and fillValue (the Fill weight). A fillValue alone means Fill: a weight
+// is meaningless for an Auto child. False, with the refusal sent, when nothing usable was asked.
+bool ApplyChildSize(UMcpAutomationBridgeSubsystem& Subsystem, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket,
+                    const TSharedPtr<FJsonObject>& Payload, UWidget* Widget, FStructProperty* Property)
+{
+    const FString Rule = GetJsonStringField(Payload, TEXT("sizeRule"));
+    double Weight = 0.0;
+    const bool bWeight = Payload->TryGetNumberField(TEXT("fillValue"), Weight);
+    const bool bAuto = Rule.Equals(TEXT("Auto"), ESearchCase::IgnoreCase);
+    const bool bFill = Rule.Equals(TEXT("Fill"), ESearchCase::IgnoreCase);
+    FString Error;
+    FString Code = TEXT("INVALID_ARGUMENT");
+    if (Rule.IsEmpty() && !bWeight)
+    {
+        Error = TEXT("set_size on a HorizontalBox or VerticalBox child needs sizeRule (Auto or Fill) and/or fillValue (the Fill weight); size {x,y} is for a CanvasPanel child.");
+        Code = TEXT("MISSING_PARAMETER");
+    }
+    else if (!Rule.IsEmpty() && !bAuto && !bFill)
+    {
+        Error = FString::Printf(TEXT("sizeRule '%s' is not Auto or Fill."), *Rule);
+    }
+    else if (bWeight && Weight < 0.0)
+    {
+        Error = TEXT("fillValue is the Fill weight and cannot be negative.");
+    }
+    if (!Error.IsEmpty())
+    {
+        Subsystem.SendAutomationError(Socket, RequestId, Error, Code);
+        return false;
+    }
+    FSlateChildSize& Size = *Property->ContainerPtrToValuePtr<FSlateChildSize>(Widget->Slot);
+    Widget->Slot->Modify();
+    Size.SizeRule = bAuto ? ESlateSizeRule::Automatic : ESlateSizeRule::Fill;
+    if (bWeight)
+    {
+        Size.Value = static_cast<float>(Weight);
+    }
+    Widget->Slot->SynchronizeProperties();
+    return true;
 }
 }
 
@@ -85,6 +141,25 @@ bool HandleWidgetAuthoringCanvasSlotGeometry(
         }
         ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Alignment set"));
         return true;
+    }
+    const bool bSize = !bAnchor && !bPosition;
+    if (bSize)
+    {
+        if (FStructProperty* ChildSize = FindChildSizeProperty(Widget->Slot))
+        {
+            if (ApplyChildSize(Subsystem, RequestId, RequestingSocket, Payload, Widget, ChildSize))
+            {
+                ReplyWidgetLayout(Subsystem, RequestId, RequestingSocket, ResultJson, WidgetBP, Widget, TEXT("Size rule set"));
+            }
+            return true;
+        }
+        if (Cast<UCanvasPanelSlot>(Widget->Slot) && (Payload->HasField(TEXT("sizeRule")) || Payload->HasField(TEXT("fillValue"))))
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+                TEXT("sizeRule and fillValue size a HorizontalBox or VerticalBox child; '%s' sits in a CanvasPanel, which takes size {x,y}."),
+                *Widget->GetName()), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
     }
     UCanvasPanelSlot* Canvas = RequireCanvas(Subsystem, RequestId, RequestingSocket, Widget, SubAction);
     if (!Canvas)

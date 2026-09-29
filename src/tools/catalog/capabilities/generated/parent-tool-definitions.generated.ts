@@ -10474,6 +10474,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Fill color for progress bar."
         },
+        "fillValue": {
+          "type": "number",
+          "minimum": 0,
+          "description": "A HorizontalBox or VerticalBox child: the Fill weight, 0 or more (1 by default; a child of 2 gets twice the space of a child of 1). Given without sizeRule it makes the child Fill."
+        },
         "filter": {
           "type": "string",
           "description": "Only nodes whose title or name contains this text (case-insensitive), e.g. \"IA_Move\" or \"Set bLocked\"."
@@ -11089,7 +11094,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
-          "description": "Widget size override {x,y}."
+          "description": "Size override {x,y} of a CanvasPanel child. A HorizontalBox or VerticalBox child is sized by sizeRule and fillValue instead."
+        },
+        "sizeRule": {
+          "type": "string",
+          "description": "A HorizontalBox or VerticalBox child: Auto sizes it to its content, Fill shares the free space between the Fill children by their fillValue weights (case-insensitive). Two buttons in a row that should share it evenly are both Fill with the same fillValue."
         },
         "sizeX": {
           "type": "number",
