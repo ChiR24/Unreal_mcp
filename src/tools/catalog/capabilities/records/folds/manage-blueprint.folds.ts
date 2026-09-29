@@ -32,7 +32,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_graph', selector: 'edit',
     summary: 'Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits, variables included, in one batch.',
-    topics: ['blueprint node', 'create node', 'connect pins in blueprint', 'pin default', 'node property', 'construction script', 'reroute node', 'batch graph edit'],
+    topics: ['blueprint node', 'create node', 'connect pins in blueprint', 'connect blueprint nodes', 'connect nodes', 'wire pins', 'print string', 'print to screen', 'pin default', 'node property', 'construction script', 'reroute node', 'batch graph edit'],
     members: {
       ...byName(['add_node', 'create_node', 'create_reroute_node', 'create_struct_make_break_nodes', 'connect_pins',
         'set_node_property', 'set_pin_default_value', 'add_construction_script']),
@@ -94,14 +94,14 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
     summary: 'Set a widget slot layout property (anchor, position, size (canvas {x,y}; box child sizeRule Auto/Fill and fillValue weight), alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.',
     topics: ['widget anchor', 'widget position', 'widget size', 'widget padding', 'widget visibility', 'z order', 'render transform', 'widget style',
       'change widget text', 'button label', 'widget image', 'widget color', 'button sound', 'click sound', 'hover sound', 'center text', 'text alignment',
-      'bold text', 'font face', 'letter spacing', 'copy text style'],
+      'bold text', 'make text bold', 'change button text', 'hide widget', 'show widget', 'font face', 'letter spacing', 'copy text style'],
     members: byTarget('set_', ['set_anchor', 'set_position', 'set_size', 'set_alignment', 'set_padding', 'set_z_order', 'set_visibility',
       'set_clipping', 'set_render_transform', 'set_style']),
   },
   {
     primary: 'bind_widget', selector: 'bindingKind',
     summary: 'Bind a widget property to a variable or pure function (text, color, enabled, visibility, progress bar percent or slider value; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.',
-    topics: ['bind text', 'bind visibility', 'bind progress bar', 'on clicked', 'button click', 'slider changed', 'property binding', 'localized text', 'localization key'],
+    topics: ['bind text', 'bind visibility', 'bind progress bar', 'on clicked', 'button click', 'button click event', 'click event', 'slider changed', 'property binding', 'localized text', 'localization key'],
     members: {
       ...byTarget('bind_', ['bind_text', 'bind_color', 'bind_enabled', 'bind_percent', 'bind_visibility', 'bind_on_clicked', 'bind_on_hovered', 'bind_on_value_changed', 'bind_localized_text']),
       localization_key: 'set_localization_key',
@@ -132,7 +132,8 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_widget_info', selector: 'info',
-    summary: 'Read a Widget Blueprint: its tree summary or one slot.',
+    summary: 'Read a Widget Blueprint: its tree summary, or one slot layout (padding, alignment, size rule).',
+    topics: ['read widget layout', 'widget layout', 'slot layout'],
     members: { widget: 'get_widget_info', slot: 'get_widget_slot_info' },
   },
 ];

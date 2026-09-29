@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "32a0c1492f0dbd10",
+  "catalogRevision": "957e1c3f962335e3",
   "recordCount": 389,
   "records": [
     {
@@ -8134,7 +8134,8 @@
           "content browser",
           "assets in folder",
           "directory listing",
-          "folder contents"
+          "folder contents",
+          "what is in this folder"
         ],
         "summary": "List the assets and subfolders in a folder (path), the registered content sources, or the instances of a material.",
         "whenToUse": [],
@@ -8425,7 +8426,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4b745ceba2c741c02e8ccc7679e4c2851cb9b90cd42bc2920b60ca3d8fcebb21",
-        "content": "c6a619096d7c17534e0a7f9725cb16df9aac78ce8e2c9bb5f1e8d66dbaab8eff"
+        "content": "ce6ce557eda2b4dae77a66da8358273e4f98e582ba974355ad78b8839910875f"
       }
     },
     {
@@ -12422,6 +12423,8 @@
           "bind progress bar",
           "on clicked",
           "button click",
+          "button click event",
+          "click event",
           "slider changed",
           "property binding",
           "localized text",
@@ -12680,7 +12683,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7022fed02084967d7cc4d952b90a6a2456e2a6a77413088c235916fa65193615",
-        "content": "5c6058f6b6f1788a7622dcff3f91ba58f145696616c062edea21224431382123"
+        "content": "6633b6468638190344cc2c81702087035840afb4d89ef1db66114486bf85c048"
       }
     },
     {
@@ -12700,7 +12703,9 @@
           "build blueprint",
           "recompile",
           "compile errors",
-          "compile blueprint"
+          "compile blueprint",
+          "compile widget blueprint",
+          "compile widget"
         ],
         "summary": "Compile a Blueprint asset, optionally saving after compile.",
         "whenToUse": [
@@ -12801,7 +12806,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d846e6fc91a664cc176984d8fba81751925910b43ad80d4ed7a7ca99d34f40fe",
-        "content": "7757f0defca081ef698a0e31876e82bbac6ad972a61b50e540edb6e66597e722"
+        "content": "ee9d875caca7d3fa8169a0e321fc05236aca590da9dafd5300080aaa59f39eaa"
       }
     },
     {
@@ -14035,6 +14040,11 @@
           "blueprint node",
           "create node",
           "connect pins in blueprint",
+          "connect blueprint nodes",
+          "connect nodes",
+          "wire pins",
+          "print string",
+          "print to screen",
           "pin default",
           "node property",
           "construction script",
@@ -14047,7 +14057,6 @@
           "print string node",
           "link pins",
           "wire nodes",
-          "connect nodes",
           "exec pin",
           "connect output to input",
           "build event graph",
@@ -14626,7 +14635,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6f814b53da95b09c58c1b44e1c262ca49c01444b3b70c183013147aa83e4901e",
-        "content": "315953fe3b63fcb9c4f0a989e7091bca327878239ed28132ab75600281044f4b"
+        "content": "ca9c414ff0c1fd4fa95199b940d25f85cefba776bad3ac3ae32ddfc44abebdab"
       }
     },
     {
@@ -16346,9 +16355,12 @@
         "domain": "widget",
         "family": "widget-info",
         "topics": [
-          "get_widget_info"
+          "get_widget_info",
+          "read widget layout",
+          "widget layout",
+          "slot layout"
         ],
-        "summary": "Read a Widget Blueprint: its tree summary or one slot.",
+        "summary": "Read a Widget Blueprint: its tree summary, or one slot layout (padding, alignment, size rule).",
         "whenToUse": [
           "The widget tree of a Widget Blueprint must be inspected before modifying widgets.",
           "The layout of a single widget must be inspected before adjusting it."
@@ -16617,7 +16629,7 @@
       },
       "examples": [
         {
-          "title": "Read a Widget Blueprint: its tree summary or one slot.",
+          "title": "Read a Widget Blueprint: its tree summary, or one slot layout (padding, alignment, size rule).",
           "input": {
             "action": "get_widget_info",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -16696,7 +16708,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b9aa334dfde18107695d6157528909655eec8b061466888a0145a924d7922a46",
-        "content": "5308a57db53bb3d49f7e12bf7329d8eefdd811d7af84a8ae0813c9c8a565963c"
+        "content": "8952267d76d5654fed4d8fec4c1da83f4358e12b3997010a661d608e7539a406"
       }
     },
     {
@@ -18192,6 +18204,10 @@
           "center text",
           "text alignment",
           "bold text",
+          "make text bold",
+          "change button text",
+          "hide widget",
+          "show widget",
           "font face",
           "letter spacing",
           "copy text style"
@@ -18627,7 +18643,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "38c16e20bd08eb430c3609cf4fb5711943b02f64ee9c5ad4e85864c0ff6a35e3",
-        "content": "99f3f2e8007cbfb599dce186f42256dcb1f31356b58f29207a628a6f5bcb02db"
+        "content": "088061451f43580da3fb9a42bd7d5ecc30750344555d0a40805653130258f29a"
       }
     },
     {
@@ -30887,10 +30903,12 @@
           "get_transform",
           "actor location",
           "where is the actor",
+          "where is the player",
+          "player location",
+          "actor position",
           "sample motion",
           "record trajectory",
           "track actor over time",
-          "actor position",
           "actor rotation",
           "watch actor move",
           "jump height"
@@ -31223,7 +31241,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "522a6216142b07d99711fa7ced0dca031691956f4451faee3593a393d3cc2c83",
-        "content": "aa604caa5a3d25c4eb990a137d1d1f5e131da1fca9423dc4b53fcfe072b3fdb0"
+        "content": "0c4990bcf3ec7d95d2198ec11b17edfbdf88193a8d4e010a998a9f56ef5dcc0e"
       }
     },
     {
@@ -31254,10 +31272,11 @@
           "actor transforms",
           "level layout",
           "variable values of many actors",
-          "actors near a point",
-          "nearest actors"
+          "how many actors",
+          "count actors",
+          "actors in the level"
         ],
-        "summary": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point: only the actors whose bounds come within radius of it, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
+        "summary": "List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
         "whenToUse": [
           "The actors present in the level must be enumerated.",
           "Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove.",
@@ -31486,7 +31505,7 @@
       },
       "examples": [
         {
-          "title": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point: only the actors whose bounds come within radius of it, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
+          "title": "List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
           "input": {
             "action": "list",
             "limit": 50,
@@ -31550,7 +31569,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d13549a90315b70deddc6c5dd2eea6c5e3017fd941485b7ba919542b00dcbc05",
-        "content": "b80a315c4ae714e3d94238732e81a39ee958010ac7b2dea7571fd31ffa7eb86e"
+        "content": "d7fc8da99c5148d1fd891f838ad04ca57f2327744a6f303f698e44c426636256"
       }
     },
     {
@@ -34597,6 +34616,9 @@
         "topics": [
           "play",
           "play in editor",
+          "press play",
+          "start the game",
+          "run the game",
           "start pie",
           "stop pie",
           "pause pie",
@@ -34605,7 +34627,6 @@
           "pie",
           "start game",
           "run game",
-          "press play",
           "simulate",
           "stop game",
           "end play",
@@ -34741,7 +34762,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
-        "content": "edd8205d9f6df3d4bf2b7e0e737ba4d07561617d0b26fffe15102f2629549e2f"
+        "content": "f3bacf75f2dc6d7b823bb120b591c8fdc9c4a7417df98e7746631c0da0ba95c0"
       }
     },
     {
@@ -75163,6 +75184,8 @@
         "topics": [
           "get_material_info",
           "material info",
+          "get material parameters",
+          "material parameters",
           "material node",
           "node connections",
           "find node",
@@ -75528,7 +75551,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c76ef6b0f275aa51142b8a3da742e9595dbd85d660f5a39c1b159058aeaf0752",
-        "content": "0a33a15e0e651e6e43461c46f1ec7e5794ea031430c34cc52a033ecc45aaa8b7"
+        "content": "8a5cfcb1ba18da8a32f3b737ba821064d87210e7a4cdf7636176e9f9ed84a5b0"
       }
     },
     {

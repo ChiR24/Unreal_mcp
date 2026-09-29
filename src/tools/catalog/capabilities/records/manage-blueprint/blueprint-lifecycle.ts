@@ -141,7 +141,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'compile',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['build blueprint', 'recompile', 'compile errors', 'compile blueprint'],
+    topics: ['build blueprint', 'recompile', 'compile errors', 'compile blueprint', 'compile widget blueprint', 'compile widget'],
     summary: 'Compile a Blueprint asset, optionally saving after compile.',
     whenToUse: ['Blueprint changes must be compiled to take effect.'],
     whenNotToUse: ['The Blueprint has no pending changes.'],

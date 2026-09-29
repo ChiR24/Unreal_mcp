@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { capabilityIndex } from '../../src/server/gateway/gateway-capability-index.js';
 import { searchGatewayCapabilities } from '../../src/server/gateway/gateway-search.js';
+import { tokenizeCapabilityText } from '../../src/tools/catalog/capabilities/retrieval/tokenize.js';
+import { readAllNativeShardRecords } from './capability-records/native-shard-records.js';
 
 // Task phrasings a model actually types, not catalog vocabulary. Every record
 // used to carry only its action name as `topics`, so "move actor" could not
@@ -55,6 +58,7 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   ['rotate actor', 'control_actor.set_transform'],
   ['list actors in level', 'control_actor.list'],
   ['list actors', 'control_actor.list'],
+  ['how many actors in the level', 'control_actor.list'],
   ['find actor by name', 'control_actor.find'],
   ['attach actor to another actor', 'control_actor.attach'],
   ['add tag to actor', 'control_actor.add_tag'],
@@ -82,6 +86,7 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   ['start play in editor', 'control_editor.play'],
   ['play in editor', 'control_editor.play'],
   ['start pie', 'control_editor.play'],
+  ['start the game', 'control_editor.play'],
   ['stop PIE', 'control_editor.play'],
   ['take screenshot', 'control_editor.screenshot'],
   ['screenshot of viewport', 'control_editor.screenshot'],
@@ -140,6 +145,49 @@ describe('plain-language task phrasings rank the intended capability first', () 
       expect(accepted, `top-1 for "${query}" was ${first || 'nothing'}; page: ${page}`).toContain(first);
     }
   );
+});
+
+// Phrasings a small model types for capabilities whose name says none of the words ("where is the
+// player" for get_transform, "press play" for play). A topic is the one place a record can carry them
+// (weight 8 in the TypeScript ranker, 12 in the native word rules). Both doors rank from the same
+// generated registry, so pinning the record pins both. Not every phrase is top-1 on both doors yet:
+// an action name that says the word outranks a topic that does, so this checks what was declared.
+const DECLARED_TOPICS: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['control_actor.get_transform', ['where is the player', 'player location', 'actor position']],
+  ['control_actor.list', ['how many actors', 'count actors', 'actors in the level']],
+  ['asset.list', ['what is in this folder', 'folder contents', 'assets in folder']],
+  ['blueprint.set_widget_layout', ['make text bold', 'change button text', 'hide widget', 'show widget', 'button label']],
+  ['blueprint.compile', ['compile widget blueprint', 'compile widget']],
+  ['control_editor.play', ['press play', 'start the game', 'run the game']],
+  ['blueprint.bind_widget', ['button click event', 'on clicked', 'click event']],
+  ['blueprint.edit_graph', ['connect blueprint nodes', 'connect nodes', 'wire pins', 'print string', 'print to screen']],
+  ['blueprint.get_widget_info', ['read widget layout', 'widget layout', 'slot layout']],
+  ['material.get_material_info', ['get material parameters', 'material parameters']]
+];
+
+describe('phrasings a name cannot carry are declared as topics', () => {
+  it.each(DECLARED_TOPICS.map(([id, phrases]) => [id, phrases] as const))('%s declares its plain phrasings', (id, phrases) => {
+    const topics = capabilityIndex().byId.get(id)?.discovery.topics ?? [];
+    for (const phrase of phrases) expect(topics, `${id} is missing the topic "${phrase}"`).toContain(phrase);
+  });
+
+  it('the native door carries the same phrasings in its generated shards', () => {
+    const shards = readAllNativeShardRecords();
+    for (const [id, phrases] of DECLARED_TOPICS) {
+      const discovery = shards.get(id)?.discovery as { topics?: readonly string[] } | undefined;
+      for (const phrase of phrases) expect(discovery?.topics, `native ${id} is missing the topic "${phrase}"`).toContain(phrase);
+    }
+  });
+
+  it('get_widget_info says slot layout in its summary too', () => {
+    expect(capabilityIndex().byId.get('blueprint.get_widget_info')?.discovery.summary).toContain('slot layout');
+  });
+
+  // The retrieval scorer keeps the first 48 tokens of a summary; the near-a-point sentence must fall inside.
+  it('control_actor.list keeps its near-a-point sentence inside the tokens the ranker reads', () => {
+    const summary = capabilityIndex().byId.get('control_actor.list')?.discovery.summary ?? '';
+    expect(tokenizeCapabilityText(summary).join(' ')).toContain('find what is near a point');
+  });
 });
 
 describe('a declared alias resolves like the capability it names', () => {
