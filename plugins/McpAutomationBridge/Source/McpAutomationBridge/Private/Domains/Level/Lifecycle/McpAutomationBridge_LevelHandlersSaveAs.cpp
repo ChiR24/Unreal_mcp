@@ -103,6 +103,8 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       Resp->SetStringField(TEXT("levelPath"), SavePath);
+      // levelPath is not a field the receipt reads; savedAssetPath gives it the new level's handle and change.
+      Resp->SetStringField(TEXT("savedAssetPath"), SavePath);
       Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, true,
           FString::Printf(TEXT("Level saved as %s"), *SavePath), Resp,

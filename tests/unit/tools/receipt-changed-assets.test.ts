@@ -168,3 +168,22 @@ describe('over the gateway: a preview lists no change, an edit still does', () =
     expect(receipt.changes).toEqual([WIDGET]);
   });
 });
+
+// A level save answered only details.verifiedPath (and save-as levelPath), neither of which the
+// receipt reads, so saving a level returned "handles": [] and "changes": [].
+describe('a level save names the level it saved', () => {
+  const LEVEL = '/Game/Maps/L_Stage01';
+
+  it('savedAssetPath gives the receipt a handle and a change', () => {
+    expect(extractChanges({ success: true, details: { savedAssetPath: LEVEL, verifiedPath: LEVEL } })).toEqual([LEVEL]);
+    expect(extractHandles({ success: true, details: { savedAssetPath: LEVEL } })).toContainEqual({ kind: 'asset', path: LEVEL });
+  });
+
+  it('save and save-as both answer savedAssetPath', () => {
+    const lifecycle = ['Domains', 'Level', 'Lifecycle'];
+    expect(nativeSource(...lifecycle, 'McpAutomationBridge_LevelHandlersSaveCurrent.cpp'))
+      .toMatch(/Resp->SetStringField\(TEXT\("savedAssetPath"\), LevelPath\);/u);
+    expect(nativeSource(...lifecycle, 'McpAutomationBridge_LevelHandlersSaveAs.cpp'))
+      .toMatch(/Resp->SetStringField\(TEXT\("savedAssetPath"\), SavePath\);/u);
+  });
+});

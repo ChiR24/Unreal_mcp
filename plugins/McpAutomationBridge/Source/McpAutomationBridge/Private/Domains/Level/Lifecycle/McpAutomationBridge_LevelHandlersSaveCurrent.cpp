@@ -70,6 +70,8 @@ bool HandleSaveCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, cons
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
       FString LevelPath = World->GetOutermost()->GetName();
       VerifyAssetExists(Resp, LevelPath);
+      // Names the level it saved, so the receipt has its handle and lists it as changed.
+      Resp->SetStringField(TEXT("savedAssetPath"), LevelPath);
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Level saved"), Resp, FString());
     } else {

@@ -129,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Widget receipts list the Widget Blueprint once**, by its package path (/Game/UI/WBP_Menu) instead of the package path and the object path side by side.
 - **inspect_graph's filter looks at pin values.** "Menu" found nothing in a graph whose Create Widget node builds WBP_MainMenu, because the class sits on a pin; a node now also matches on a pin's default value, text or object path.
 - **Style, clipping and edit_graph batch receipts name the asset they saved**; they had no handle and no change.
+- **A level save names the level it saved.** `manage_level` save and save-as answered only with fields the receipt does not read, so saving a level returned no handle and no change.
 - **An edit_graph batch no longer stops on a crowded position.** A step whose position overlapped a node ran out of retries and stopped the batch; the node now moves to free space and the step says where in placementWarning.
 - **A widget that was just added, copied or renamed can be used in a graph at once.** The Widget Blueprint is compiled after the edit (never during play), so edit_graph no longer says a flagged widget "is not marked as a variable"; when one really is missing, the error says whether the flag is off or the class is stale.
 - **compile's receipt lists the Blueprint it compiled**, not the words "compiled" and "saved" beside it.
