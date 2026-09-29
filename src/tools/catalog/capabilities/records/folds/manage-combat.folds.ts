@@ -32,7 +32,8 @@ export const MANAGE_COMBAT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_combat_info', selector: 'info',
-    summary: 'Read a combat Blueprint\'s configuration or its stats.',
+    summary: 'Read a weapon or projectile Blueprint: parent class, components, mesh, projectile movement and collision flags, and its variables with defaults; info=stats returns the variables plus a stats object of the numeric ones.',
+    topics: ['weapon stats', 'projectile settings', 'variable defaults'],
     members: { info: 'get_combat_info', stats: 'get_combat_stats' },
   },
 ];

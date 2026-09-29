@@ -120,7 +120,9 @@ export const GAS_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: GAS_PLUGIN,
     exampleInput: { action: 'create_gameplay_cue_notify', name: 'GC_Damage', cueType: 'Static', cueTag: 'GameplayCue.Damage' } }),
   buildRecord({ parentTool: T, id: `${T}.get_gas_info`, action: 'get_gas_info', family: F,
-    summary: 'Read GAS asset metadata.', whenToUse: ['Inspect GAS assets.'], whenNotToUse: ['Mutate assets.'],
+    topics: ['gameplay ability', 'gameplay effect', 'instancing policy', 'duration policy'],
+    summary: 'Read a Gameplay Ability System Blueprint: its kind (ability, effect, attribute set, cue notify), parent class, and an ability\'s instancing and net execution policy or an effect\'s duration policy, stacking type, modifier and cue counts.',
+    whenToUse: ['A GAS Blueprint\'s kind, ability policies or effect duration, stacking and modifier counts must be read.'], whenNotToUse: ['Mutate assets.'],
     inputProps: { assetPath: P.assetPath }, required: ['assetPath'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: GAS_PLUGIN,
     // `abilityCount` was declared but is never set by the handler

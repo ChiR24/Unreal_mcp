@@ -138,7 +138,8 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   inventoryRecord({
     action: 'get_inventory_info',
-    summary: 'Read inventory, item, pickup, loot, or recipe asset metadata.',
+    summary: 'Read an inventory asset: an item (properties), loot table (entries with item, weight and quantity range), recipe (ingredients, output item, station, craft time), or a pickup or inventory Blueprint (components, variables).',
+    topics: ['item properties', 'list loot table entries', 'recipe ingredients', 'pickup blueprint variables'],
     read: true,
     inputProps: {
       blueprintPath: IP.blueprintPath,

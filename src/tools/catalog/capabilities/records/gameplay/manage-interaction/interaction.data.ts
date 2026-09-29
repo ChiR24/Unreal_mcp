@@ -176,7 +176,8 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'get_interaction_info',
-    summary: 'Read interaction asset or editor-world actor metadata.',
+    summary: 'Read a door, switch, chest, trigger or other interaction Blueprint: its components and editable property defaults. With actorName, an editor-world actor\'s name and class only.',
+    topics: ['door settings', 'switch and chest', 'trigger properties', 'interactable defaults'],
     read: true,
     // projectCanonicalOutput keeps ONLY declared fields, so while the shared
     // {assetPath} default was the whole contract every metadata field the

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "49ef47d76c55a3ee",
+  "catalogRevision": "c3203ad9f6ebb8fa",
   "recordCount": 389,
   "records": [
     {
@@ -51596,9 +51596,12 @@
         "domain": "manage combat",
         "family": "combat",
         "topics": [
-          "get_combat_info"
+          "get_combat_info",
+          "weapon stats",
+          "projectile settings",
+          "variable defaults"
         ],
-        "summary": "Read a combat Blueprint's configuration or its stats.",
+        "summary": "Read a weapon or projectile Blueprint: parent class, components, mesh, projectile movement and collision flags, and its variables with defaults; info=stats returns the variables plus a stats object of the numeric ones.",
         "whenToUse": [
           "Inspect an authored weapon or projectile.",
           "Inspect authored weapon stats."
@@ -51664,7 +51667,7 @@
       },
       "examples": [
         {
-          "title": "Read a combat Blueprint's configuration or its stats.",
+          "title": "Read a weapon or projectile Blueprint: parent class, components, mesh, projectile movement and collision flags, and its variables with defaults; info=stats returns the variables plus a stats object of the numeric ones.",
           "input": {
             "action": "get_combat_info",
             "blueprintPath": "/Game/BP_Rifle",
@@ -51715,7 +51718,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fa9b48cddec15896cfab7fd10a3ffce861059c8bdbca74dbf61ac42758d01fec",
-        "content": "bcb280c6451262d620d53aa02adb7171eab00ff4403a29e86d606e992a68a494"
+        "content": "e83e5f808737bd6e512be55b713562596b5459d8705b677bdb992d2b5bbfd342"
       }
     },
     {
@@ -55810,11 +55813,15 @@
         "domain": "manage gas",
         "family": "gas",
         "topics": [
-          "get_gas_info"
+          "get_gas_info",
+          "gameplay ability",
+          "gameplay effect",
+          "instancing policy",
+          "duration policy"
         ],
-        "summary": "Read GAS asset metadata.",
+        "summary": "Read a Gameplay Ability System Blueprint: its kind (ability, effect, attribute set, cue notify), parent class, and an ability's instancing and net execution policy or an effect's duration policy, stacking type, modifier and cue counts.",
         "whenToUse": [
-          "Inspect GAS assets."
+          "A GAS Blueprint's kind, ability policies or effect duration, stacking and modifier counts must be read."
         ],
         "whenNotToUse": [
           "Mutate assets."
@@ -55909,7 +55916,7 @@
       },
       "examples": [
         {
-          "title": "Read GAS asset metadata.",
+          "title": "Read a Gameplay Ability System Blueprint: its kind (ability, effect, attribute set, cue notify), parent class, and an ability's instancing and net execution policy or an effect's duration policy, stacking type, modifier and cue counts.",
           "input": {
             "action": "get_gas_info",
             "assetPath": "/Game/BP_Char"
@@ -55953,7 +55960,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "219e6fcf09b1647a79c4b0fd860700d520a346fdbd8f2aaf0b23c8fde6353c47",
-        "content": "139f46bde7562faf16ea928774cc7c0599d3f03b24b4aa7a59933605ed20fe52"
+        "content": "e94df76c60fffd603a7e6f58e26680544ed666c1ab0afacf5b659999a4c65042"
       }
     },
     {
@@ -60716,9 +60723,13 @@
         "domain": "manage interaction",
         "family": "interaction",
         "topics": [
-          "get_interaction_info"
+          "get_interaction_info",
+          "door settings",
+          "switch and chest",
+          "trigger properties",
+          "interactable defaults"
         ],
-        "summary": "Read interaction asset or editor-world actor metadata.",
+        "summary": "Read a door, switch, chest, trigger or other interaction Blueprint: its components and editable property defaults. With actorName, an editor-world actor's name and class only.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -60829,7 +60840,7 @@
       },
       "examples": [
         {
-          "title": "Read interaction asset or editor-world actor metadata.",
+          "title": "Read a door, switch, chest, trigger or other interaction Blueprint: its components and editable property defaults. With actorName, an editor-world actor's name and class only.",
           "input": {
             "action": "get_interaction_info",
             "blueprintPath": "/Game/Blueprints/BP_Player"
@@ -60868,7 +60879,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6886490f854aedb61e2044ee7b68a874704e99fc6c639d40b6dda5ef50304c0a",
-        "content": "3288f55f4ee774c3bc47f7e1f49d15d45178cc06587f629a97eee494b85bacfe"
+        "content": "fb9e0fb4c4f76214833868535fd1f7533edec0f3f20ed42b390fd36b7f5aa65c"
       }
     },
     {
@@ -61715,9 +61726,13 @@
         "domain": "manage inventory",
         "family": "inventory",
         "topics": [
-          "get_inventory_info"
+          "get_inventory_info",
+          "item properties",
+          "list loot table entries",
+          "recipe ingredients",
+          "pickup blueprint variables"
         ],
-        "summary": "Read inventory, item, pickup, loot, or recipe asset metadata.",
+        "summary": "Read an inventory asset: an item (properties), loot table (entries with item, weight and quantity range), recipe (ingredients, output item, station, craft time), or a pickup or inventory Blueprint (components, variables).",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -61934,7 +61949,7 @@
       },
       "examples": [
         {
-          "title": "Read inventory, item, pickup, loot, or recipe asset metadata.",
+          "title": "Read an inventory asset: an item (properties), loot table (entries with item, weight and quantity range), recipe (ingredients, output item, station, craft time), or a pickup or inventory Blueprint (components, variables).",
           "input": {
             "action": "get_inventory_info",
             "blueprintPath": "/Game/Blueprints/BP_Player"
@@ -61973,7 +61988,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0aad5c7a33d7996e7f23731441a0ee135dc56e86041bf90f377e77d2c9221e48",
-        "content": "18c0ef9bf02ea8cca67128363ac511813133f9852669ffe388de3446d1406298"
+        "content": "62439381b5df97a759b8c22e410070ac52d8f5dfb8d3bb5747fd050e7422ac9c"
       }
     },
     {
