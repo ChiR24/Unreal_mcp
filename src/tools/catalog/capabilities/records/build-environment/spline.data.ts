@@ -193,7 +193,8 @@ export const SPLINE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.get_splines_info', action: 'get_splines_info', family: F,
-    summary: 'Retrieve spline actor information in the level.',
+    topics: ['point count and length', 'closed loop', 'world points'],
+    summary: 'List the spline actors in the level with each one\'s point count, length and world points (first 64); with actorName, one spline\'s points and types, length and closed-loop flag.',
     whenToUse: ['Spline actors must be enumerated.'],
     whenNotToUse: ['A specific spline path is already known.'],
     inputProps: { actorName: P.actorName },

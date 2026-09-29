@@ -151,7 +151,8 @@ export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.list_light_types', action: 'list_light_types', family: F,
-    summary: 'List available light types.',
+    topics: ['kinds available', 'light classes', 'class names'],
+    summary: 'List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight and any other loaded light class, with a count.',
     whenToUse: ['Available light types must be enumerated.'],
     whenNotToUse: ['A specific light type is already known.'],
     inputProps: {},

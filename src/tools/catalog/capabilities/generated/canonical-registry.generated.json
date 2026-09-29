@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d4b456bb5d2c5b69",
+  "catalogRevision": "ea1d554bf0045427",
   "recordCount": 389,
   "records": [
     {
@@ -26895,9 +26895,12 @@
         "domain": "environment",
         "family": "foliage",
         "topics": [
-          "get_foliage_instances"
+          "get_foliage_instances",
+          "count per type",
+          "vegetation count",
+          "positions and scale"
         ],
-        "summary": "Retrieve foliage instances for a foliage type, or for every type, with a per-type count (byType).",
+        "summary": "Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale. The summary flag drops the list; limit caps it.",
         "whenToUse": [
           "Existing foliage instances must be inspected.",
           "What foliage a level holds must be counted before removing it (summary)."
@@ -26964,7 +26967,7 @@
       },
       "examples": [
         {
-          "title": "Retrieve foliage instances for a foliage type, or for every type, with a per-type count (byType).",
+          "title": "Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale. The summary flag drops the list; limit caps it.",
           "input": {
             "action": "get_foliage_instances",
             "foliageType": "Bush_Type"
@@ -27002,7 +27005,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "15dd7086f7a2646b1b69660bf433f9dadea56bf1b2b4ca362671c56dc78b4265",
-        "content": "a65bb058b57271f4e81c2688629b39c264ce5d0d2bf54eb0222cf23ba03374b3"
+        "content": "03d3fcbedaf2eb227ad5cdcd9c3b920763bb9feb74a8829485a9a037b95706fd"
       }
     },
     {
@@ -27018,9 +27021,12 @@
         "domain": "environment",
         "family": "spline",
         "topics": [
-          "get_splines_info"
+          "get_splines_info",
+          "point count and length",
+          "closed loop",
+          "world points"
         ],
-        "summary": "Retrieve spline actor information in the level.",
+        "summary": "List the spline actors in the level with each one's point count, length and world points (first 64); with actorName, one spline's points and types, length and closed-loop flag.",
         "whenToUse": [
           "Spline actors must be enumerated."
         ],
@@ -27084,7 +27090,7 @@
       },
       "examples": [
         {
-          "title": "Retrieve spline actor information in the level.",
+          "title": "List the spline actors in the level with each one's point count, length and world points (first 64); with actorName, one spline's points and types, length and closed-loop flag.",
           "input": {
             "action": "get_splines_info"
           },
@@ -27122,7 +27128,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ca1ce2f032e05fd40185e583784ac1c87115dcd04f1f9fd48532cc92af4c81ad",
-        "content": "a9d307833b14949c0c750ac85ef0d6db2b2415331353d71a9138b10952539332"
+        "content": "71970e876d1826134009a38e4497912913db036ab7ef6ea518792a4a40345012"
       }
     },
     {
@@ -27263,9 +27269,12 @@
         "domain": "environment",
         "family": "lighting",
         "topics": [
-          "list_light_types"
+          "list_light_types",
+          "kinds available",
+          "light classes",
+          "class names"
         ],
-        "summary": "List available light types.",
+        "summary": "List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight and any other loaded light class, with a count.",
         "whenToUse": [
           "Available light types must be enumerated."
         ],
@@ -27327,7 +27336,7 @@
       },
       "examples": [
         {
-          "title": "List available light types.",
+          "title": "List the light classes known to the editor: DirectionalLight, PointLight, SpotLight, RectLight and any other loaded light class, with a count.",
           "input": {
             "action": "list_light_types"
           },
@@ -27370,7 +27379,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7ec9ac0fa423e13243d7c724e8c184e4c67d65a0eefe70eafa4035cc0be75369",
-        "content": "c60698052cadce5ab2542c58cbc866b89949d22142e16139a9badd0275801072"
+        "content": "3c148f930e878246108feb95d5121020ff755cf52f3c2c66874bf9399cbc33c2"
       }
     },
     {
