@@ -36,6 +36,13 @@ describe('pause_sound and resume_sound act on the sounds stop_sound stops', () =
     expect(read('McpAutomationBridge_AudioHandlersPrivate.h')).toContain('bool HandlePauseActions(');
   });
 
+  it('answer to exactly the two bridge actions the record dispatches, and to nothing else', () => {
+    const source = pause();
+    expect(source).toContain('Lower == TEXT("pause_sound")');
+    expect(source).toMatch(/if \(!bPause && Lower != TEXT\("resume_sound"\)\) \{\s*return false;/u);
+    expect(source).toContain('#include "UObject/UObjectIterator.h"');
+  });
+
   it('start from the 2D sounds play_sound started, and scan every audio component only with all', () => {
     expect(read('McpAutomationBridge_AudioHandlersPrivate.h')).toContain('McpPreviewSounds();');
     const source = pause();

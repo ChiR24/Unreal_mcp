@@ -17,6 +17,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
     primary: 'stop_sound', selector: 'soundOp',
     summary: 'Stop, pause or resume playing sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included. Pause holds a sound where it is and resume continues it; the reply counts the sounds changed (0 when none was playing).',
     topics: ['pause music', 'pause sound', 'resume music'],
+    whenNotToUse: ['The game or the Play In Editor session must be paused (use control_editor pause).'],
     members: { stop: 'stop_sound', pause: 'pause_sound', resume: 'resume_sound' },
   },
   {

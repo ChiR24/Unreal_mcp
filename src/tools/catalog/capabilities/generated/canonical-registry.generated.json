@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "26ec03e827ad4442",
+  "catalogRevision": "dff454cebab6f73c",
   "recordCount": 389,
   "records": [
     {
@@ -34937,6 +34937,9 @@
           "start pie",
           "stop pie",
           "pause pie",
+          "pause game",
+          "pause simulation",
+          "resume game",
           "eject",
           "possess",
           "pie",
@@ -35078,7 +35081,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
-        "content": "0ec04ab36954016148baf51593dccee709da2562457e3d00bb64a0eddfce816b"
+        "content": "a2e9e769b1b69c2dae12ccea800e8e8e3b18749c3d000d0d53f34d383d48ab93"
       }
     },
     {
@@ -48979,7 +48982,9 @@
           "soundOp=pause: Use it to pause the sounds stop_sound would stop, each held where it is. Sounds already paused are not counted.",
           "soundOp=resume: Use it to resume the paused sounds stop_sound would stop, each from where it was paused."
         ],
-        "whenNotToUse": []
+        "whenNotToUse": [
+          "The game or the Play In Editor session must be paused (use control_editor pause)."
+        ]
       },
       "schemas": {
         "input": {
@@ -49105,7 +49110,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "02700276699d3a4122e1ed9f6f68c6c5bc45952b544a4a36c89574fb3ae55d03",
-        "content": "68f54b46887596773b0f98b657b0c86fa1c9f6ebe641474eaeeef2f6d0b9433b"
+        "content": "0b724437e86a68e20fc8d47294ba33b2bb5d6e0de1bf52a67e1d28392bb7d3e1"
       }
     },
     {
