@@ -18,11 +18,24 @@
  * and a box at least as large as the source is a no-op rather than an upscale.
  *
  * Returns false and fills OutError only when "resolution" is present but
- * malformed; an absent resolution is success with OutSize == SourceSize.
+ * malformed. An absent resolution keeps the source size for a file-only capture
+ * and fits McpInlineScreenshotBox for one whose image is handed back inline.
  */
 bool ResolveScreenshotResolutionForMcp(const TSharedPtr<FJsonObject> &Payload,
                                        FIntPoint SourceSize, FIntPoint &OutSize,
                                        FString &OutError);
+
+/**
+ * Whether the capture hands its PNG back inline (returnBase64, true unless the
+ * caller says false). A caller on the far side of the bridge is usually a model
+ * that cannot open the saved file, so a plain "take a screenshot" must show it.
+ */
+bool McpScreenshotReturnsImage(const TSharedPtr<FJsonObject> &Payload);
+
+/** The box an inline image fits when no resolution was asked for: a native
+ *  2580x1460 editor window is ~2 MB of PNG and can pass the 3 MB base64 cap
+ *  once busy, while 1600x900 stays well under it. */
+constexpr const TCHAR *McpInlineScreenshotBox = TEXT("1600x900");
 
 /** Area-average resample of a BGRA bitmap. Alpha is forced opaque. */
 void ResampleBitmapForMcp(const TArray<FColor> &SrcBitmap, FIntPoint SrcSize,

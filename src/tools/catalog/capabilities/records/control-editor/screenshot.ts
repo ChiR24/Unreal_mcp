@@ -17,7 +17,7 @@ const SCREENSHOT_PROPS = {
   // It is also the documented way out of IMAGE_TOO_LARGE.
   resolution: {
     type: 'string',
-    description: 'Maximum WxH for the returned PNG (e.g. "1280x720"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit.'
+    description: 'Maximum WxH for the returned PNG (e.g. "1280x720"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Without it an image returned inline fits 1600x900, and a file-only capture (returnBase64 false) keeps the viewport size.'
   },
   // P.mode is shared with set_editor_mode and named no screenshot source, so
   // the one choice that decides whether UMG shows up was undiscoverable.
@@ -38,7 +38,7 @@ const SCREENSHOT_PROPS = {
   returnBase64: P.returnBase64,
   keepFile: {
     type: 'boolean',
-    description: 'false: hand the image back (needs returnBase64: true) without leaving a file in Saved/Screenshots. Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file.'
+    description: 'false: hand the image back without leaving a file in Saved/Screenshots (refused with returnBase64 false, which would leave no output at all). Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file.'
   },
   includeMetadata: P.includeMetadata,
   metadata: P.metadata,

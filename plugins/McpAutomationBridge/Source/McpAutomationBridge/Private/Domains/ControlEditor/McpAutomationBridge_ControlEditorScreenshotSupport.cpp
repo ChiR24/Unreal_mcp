@@ -70,12 +70,11 @@ void SendScreenshotReceiptForMcp(UMcpAutomationBridgeSubsystem *Subsystem,
   Payload->TryGetBoolField(TEXT("keepFile"), bKeepFile);
   const bool bSaved = bKeepFile && FFileHelper::SaveArrayToFile(
       TArrayView<const uint8>(PngData, static_cast<int32>(PngBytes)), *FullPath);
-  // Base64 is opt-in: a native 2040x949 viewport PNG is ~2 MB and always blew
-  // the base64 cap, so a default-on flag made the DEFAULT call fail. A plain
-  // capture returns path + metadata; returnBase64=true (optionally with
-  // resolution= to downscale) asks for inline image data.
-  bool bReturnBase64 = false;
-  Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
+  // The image comes back inline unless returnBase64 is false: a plain capture that
+  // answered only a file path showed a model caller nothing. The default used to be
+  // off because a native-size PNG blew the base64 cap; with no resolution given, an
+  // inline capture now fits McpInlineScreenshotBox (ResolveScreenshotResolutionForMcp).
+  const bool bReturnBase64 = McpScreenshotReturnsImage(Payload);
 
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetBoolField(TEXT("saved"), bSaved);

@@ -153,3 +153,26 @@ describe('todo17 BB-062: the budget rule and its native mirror', () => {
     expect(nativeReceipt()).not.toMatch(/control_editor\.screenshot|system_control\.screenshot|bIsImagePayload/u);
   });
 });
+
+// A screenshot answered only a file path unless returnBase64 was set, and a model on the far side
+// of the bridge cannot open that file, so "take a screenshot" showed it nothing. The image now
+// comes back inline by default, fitted to 1600x900 when no resolution is given (a native-size PNG
+// is what used to blow the base64 cap); returnBase64 false keeps the file-only, full-size capture.
+describe('a screenshot hands its image back by default', () => {
+  const plugin = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
+  const read = (...segments: string[]): string => readFileSync(join(plugin, ...segments), 'utf8');
+
+  it('returnBase64 defaults to true and an inline image without a resolution fits the box', () => {
+    const resample = read('Foundation', 'McpScreenshotResample.cpp');
+    expect(resample).toMatch(/bool McpScreenshotReturnsImage[\s\S]*bool bReturnBase64 = true;/u);
+    expect(resample).toMatch(/if \(Resolution\.IsEmpty\(\) && McpScreenshotReturnsImage\(Payload\)\) \{\s*Resolution = McpInlineScreenshotBox;/u);
+    expect(read('Foundation', 'McpScreenshotResample.h')).toMatch(/McpInlineScreenshotBox = TEXT\("1600x900"\)/u);
+  });
+
+  it('both screenshot capabilities read the same default', () => {
+    expect(read('Domains', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotSupport.cpp'))
+      .toMatch(/const bool bReturnBase64 = McpScreenshotReturnsImage\(Payload\);/u);
+    expect(read('Domains', 'Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp'))
+      .toMatch(/const bool bReturnBase64 = McpScreenshotReturnsImage\(Payload\);/u);
+  });
+});

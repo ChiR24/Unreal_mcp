@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "697f2723c6111118",
+  "catalogRevision": "2f82d05c45992d93",
   "recordCount": 389,
   "records": [
     {
@@ -35265,7 +35265,7 @@
             },
             "resolution": {
               "type": "string",
-              "description": "Maximum WxH for the returned PNG (e.g. \"1280x720\"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Use this to bring an oversized capture under the base64 limit."
+              "description": "Maximum WxH for the returned PNG (e.g. \"1280x720\"). The capture is downscaled to fit inside this box with its aspect ratio preserved; a box at least as large as the viewport leaves the image untouched. Without it an image returned inline fits 1600x900, and a file-only capture (returnBase64 false) keeps the viewport size."
             },
             "mode": {
               "type": "string",
@@ -35320,11 +35320,11 @@
             },
             "returnBase64": {
               "type": "boolean",
-              "description": "Return PNG image data as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
+              "description": "Return the PNG inline as an image (default true); a capture also saves a file unless keepFile is false. With no resolution, an inline image is downscaled to fit 1600x900. false returns only the saved path and metadata, at the full viewport size."
             },
             "keepFile": {
               "type": "boolean",
-              "description": "false: hand the image back (needs returnBase64: true) without leaving a file in Saved/Screenshots. Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file."
+              "description": "false: hand the image back without leaving a file in Saved/Screenshots (refused with returnBase64 false, which would leave no output at all). Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file."
             },
             "includeMetadata": {
               "type": "boolean",
@@ -35477,8 +35477,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7057513c0e17ea6ce678e9695c7da5ac7d82669af7e68e2b5895b512a3c3e0b8",
-        "content": "f4b2a75399eef36c6fc393d0ca32ba8d50768070589194262d5735a2c0cfb25a"
+        "schema": "e43cc4d98851d97cbf4841f8b021f94d8264294bf1fcffc395d5af0bf1b7c36c",
+        "content": "ccf7148b241d238021c61f95d2354a8cde10de8f645658b61b9d05e359193dfb"
       }
     },
     {
@@ -86504,7 +86504,7 @@
             },
             "resolution": {
               "type": "string",
-              "description": "Resolution as WxH."
+              "description": "Maximum WxH for the PNG (e.g. \"1280x720\"), aspect ratio kept, never upscaled. Without it an image returned inline fits 1600x900."
             },
             "width": {
               "type": "number",
@@ -86516,7 +86516,7 @@
             },
             "keepFile": {
               "type": "boolean",
-              "description": "false: hand the image back (needs returnBase64: true) without leaving a file in Saved/Screenshots. Default true. Files already written are listed by list_output_files and removed by delete_output_file."
+              "description": "false: hand the image back without leaving a file in Saved/Screenshots (refused with returnBase64 false, which would leave no output at all). Default true. Files already written are listed by list_output_files and removed by delete_output_file."
             },
             "path": {
               "type": "string",
@@ -86524,7 +86524,7 @@
             },
             "returnBase64": {
               "type": "boolean",
-              "description": "Return PNG as base64. Defaults to false — a plain capture returns path + metadata. Set true for inline image data; pair with resolution= (e.g. \"1280x720\") to keep the PNG under the base64 size cap."
+              "description": "Return the PNG inline as an image (default true); a capture also saves a file unless keepFile is false. With no resolution, an inline image is downscaled to fit 1600x900. false returns only the saved path and metadata, at the full viewport size."
             },
             "includeMetadata": {
               "type": "boolean",
@@ -86606,8 +86606,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f5ee313f74519eaaeb15a1317944335f3389fe18959d5ee0856448ab9b229592",
-        "content": "52b94582adccfaa2a96892023f21619231c90461fbda342794001c6916057b6e"
+        "schema": "10a302be395744507d80bb65c29c9ef7401d225b7815e6fb3cdf4839f9fbd47f",
+        "content": "2d0066a59f7f7b04f4a0d279cc5938343b2a9ee376c674f62f3c4ba7cec41497"
       }
     },
     {

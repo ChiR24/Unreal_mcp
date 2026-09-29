@@ -71,10 +71,9 @@ bool HandleScreenshotAction(
 
   const FString Filename = MakeSafeUiScreenshotFilenameForMcp(Payload);
 
-  // Opt-in, as the schema and the editor captures say: defaulting to true here
-  // made the same call return inline data on one mode and a path on the others.
-  bool bReturnBase64 = false;
-  Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
+  // The same rule as the editor captures (McpScreenshotReturnsImage): inline unless
+  // returnBase64 is false, fitted to McpInlineScreenshotBox when no resolution is given.
+  const bool bReturnBase64 = McpScreenshotReturnsImage(Payload);
 
   UGameViewportClient *ViewportClient = nullptr;
   bool bUsingPieViewport = false;

@@ -16,6 +16,14 @@ bool IsAllDigitsForMcp(const FString &Value) {
 }
 }  // namespace
 
+bool McpScreenshotReturnsImage(const TSharedPtr<FJsonObject> &Payload) {
+  bool bReturnBase64 = true;
+  if (Payload.IsValid()) {
+    Payload->TryGetBoolField(TEXT("returnBase64"), bReturnBase64);
+  }
+  return bReturnBase64;
+}
+
 bool ResolveScreenshotResolutionForMcp(const TSharedPtr<FJsonObject> &Payload,
                                        FIntPoint SourceSize, FIntPoint &OutSize,
                                        FString &OutError) {
@@ -47,6 +55,9 @@ bool ResolveScreenshotResolutionForMcp(const TSharedPtr<FJsonObject> &Payload,
     }
   }
 
+  if (Resolution.IsEmpty() && McpScreenshotReturnsImage(Payload)) {
+    Resolution = McpInlineScreenshotBox;
+  }
   if (Resolution.IsEmpty()) {
     return true;
   }
