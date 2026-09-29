@@ -177,7 +177,8 @@ bool HandleWidgetAuthoringManipulation(
 
         // The add funnel keeps the slot layout (padding and alignment used to reset to 0) and refuses a
         // parent inside the widget's own subtree, a cycle UMG recursed through until the editor died.
-        if (!SafeAddWidgetToTree(WidgetBP, TargetWidget, NewParentWidget->GetName()))
+        // The move is intended, so the funnel does not warn that the widget was already in the tree.
+        if (!SafeAddWidgetToTree(WidgetBP, TargetWidget, NewParentWidget->GetName(), TSharedPtr<FJsonObject>(), /*bMove=*/true))
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
                 TEXT("'%s' cannot move under '%s', which sits inside it. Nothing was changed."), *SlotName, *NewParent), TEXT("INVALID_PARENT"));

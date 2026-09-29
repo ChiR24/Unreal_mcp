@@ -158,8 +158,11 @@ namespace
  * still wins when the caller actually asked for new geometry. So are the old
  * parent and index, to put the widget back if the re-seat is refused.
  */
+// bWarnOnReuse says a widget found seated is a slotName re-used by an add, which is worth a
+// warning. A reparent moves a seated widget on purpose, so it passes false: the warning claimed
+// a duplicate had been avoided when the caller had only asked for a move.
 bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
-    UPanelSlot*& OutOldSlot, UPanelWidget*& OutOldParent, int32& OutOldIndex)
+    UPanelSlot*& OutOldSlot, UPanelWidget*& OutOldParent, int32& OutOldIndex, bool bWarnOnReuse)
 {
     OutOldSlot = nullptr;
     OutOldParent = nullptr;
@@ -190,7 +193,7 @@ bool DetachFromOwningPanel(UWidgetBlueprint* WidgetBP, UWidget* NewWidget,
             bDetached = true;
         }
     }
-    if (bDetached)
+    if (bDetached && bWarnOnReuse)
     {
         UE_LOG(LogTemp, Warning,
             TEXT("SafeAddWidgetToTree: '%s' was already in the tree; it was detached and re-seated "
@@ -227,12 +230,12 @@ void CarrySlotLayout(const UPanelSlot* From, UPanelSlot* To)
 }
 
 bool SafeAddWidgetToTree(UWidgetBlueprint* WidgetBP, UWidget* NewWidget, const FString& ParentSlot,
-    const TSharedPtr<FJsonObject>& Payload)
+    const TSharedPtr<FJsonObject>& Payload, bool bMove)
 {
     UPanelSlot* OldSlot = nullptr;
     UPanelWidget* OldParent = nullptr;
     int32 OldIndex = INDEX_NONE;
-    DetachFromOwningPanel(WidgetBP, NewWidget, OldSlot, OldParent, OldIndex);
+    DetachFromOwningPanel(WidgetBP, NewWidget, OldSlot, OldParent, OldIndex, !bMove);
 
     if (!SeatWidgetInTree(WidgetBP, NewWidget, ParentSlot))
     {

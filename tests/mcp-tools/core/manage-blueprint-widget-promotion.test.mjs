@@ -56,6 +56,9 @@ const testCases = [
   { scenario: 'NAME: add_widget_component under a text block name is refused', toolName: 'manage_blueprint', arguments: widgetArgs('add_widget_component', { componentType: 'Image', slotName: 'TitleText' }), expected: 'error|NAME_CONFLICT' },
   { scenario: 'NAME: a second unnamed add gets a free name', toolName: 'manage_blueprint', arguments: widgetArgs('add_spacer', { parentSlot: 'RootCanvas' }), expected: 'success', assertions: [{ path: 'structuredContent.result.slotName', includes: 'Spacer_', label: 'the first Spacer is left alone' }] },
 
+  // Re-using a slotName edits that widget in place; the funnel says so, since the caller may have meant a second widget.
+  { scenario: 'NAME: re-adding a taken slotName still warns that the widget was already in the tree', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'TitleText', parentSlot: 'RootCanvas', text: 'Title' }), expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings.0', includes: 'was already in the tree', label: 'the slotName re-use warning is kept' }] },
+
   // === STYLING ===
   { scenario: 'STYLE: set_font with an explicit face and size', toolName: 'manage_blueprint', arguments: widgetArgs('set_font', { slotName: 'TitleText', font: '/Engine/EngineFonts/Roboto.Roboto', fontSize: 32 }), expected: 'success' },
   { scenario: 'STYLE: set_font applies the default size', toolName: 'manage_blueprint', arguments: widgetArgs('set_font', { slotName: 'TitleText' }), expected: 'success' },
@@ -72,7 +75,8 @@ const testCases = [
   { scenario: 'INFO: get_widget_slot_info', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_slot_info', { slotName: 'TitleText' }), expected: 'success' },
 
   // === DESTRUCTIVE (last: these invalidate slots the cases above address) ===
-  { scenario: 'ACTION: reparent_widget', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RenameMe', newParent: 'MenuColumn' }), expected: 'success' },
+  // A reparent moves a seated widget on purpose; the add funnel's "was already in the tree" warning is for an add that re-uses a slotName.
+  { scenario: 'ACTION: reparent_widget', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RenameMe', newParent: 'MenuColumn' }), expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', length: 0, label: 'a move is not reported as a duplicate add' }] },
   // reparent_widget keeps the slot layout and takes an index; the same parent reorders.
   { scenario: 'Setup: second child of MenuColumn', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'OrderMe', parentSlot: 'MenuColumn', text: 'Order' }), expected: 'success' },
   { scenario: 'Setup: pad the second child', toolName: 'manage_blueprint', arguments: widgetArgs('set_margin', { slotName: 'OrderMe', top: 34 }), expected: 'success' },
