@@ -62,7 +62,7 @@ async function execute(
 }
 
 const preview = (result: Record<string, unknown>): Promise<Record<string, unknown>> =>
-  execute('blueprint.edit_widget_blueprint', { widgetPath: WIDGET, ...result }, { edit: 'preview', widgetPath: WIDGET });
+  execute('blueprint.preview_widget', { widgetPath: WIDGET, ...result }, { widgetPath: WIDGET });
 
 const nativeReceipt = (): string =>
   readFileSync(

@@ -152,7 +152,7 @@ describe('over the gateway: a preview lists no change, an edit still does', () =
       success: true, widgetPath: WIDGET, changedAssets: [], width: 1280, height: 720,
       mimeType: 'image/png', sizeBytes: 4, imageBase64: 'AAAA', editorOpened: false
     };
-    const receipt = await receiptOf('blueprint.edit_widget_blueprint', { edit: 'preview', widgetPath: WIDGET });
+    const receipt = await receiptOf('blueprint.preview_widget', { widgetPath: WIDGET });
 
     expect(receipt.status).toBe('success');
     expect(receipt.changes).toEqual([]);
