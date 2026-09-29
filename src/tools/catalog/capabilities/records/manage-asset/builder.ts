@@ -99,6 +99,8 @@ export interface RecordSpec {
   readonly dispatchAction: string;
   readonly examples: NonEmptyExamples;
   readonly availability: CapabilityAvailability;
+  readonly whenToUse?: readonly string[];
+  readonly whenNotToUse?: readonly string[];
 }
 
 export interface SpecOptions {
@@ -107,6 +109,10 @@ export interface SpecOptions {
   readonly dispatchAction?: string;
   readonly examples: NonEmptyExamples;
   readonly requiredPlugins?: readonly string[];
+  /** Situations this action is the answer to, as a caller would meet them. */
+  readonly whenToUse?: readonly string[];
+  /** Situations that look similar but need a sibling capability (name it). */
+  readonly whenNotToUse?: readonly string[];
 }
 
 const FAMILY_NAMES: Readonly<Record<Family, string>> = { asset: 'lifecycle', material: 'authoring', texture: 'procedural', struct: 'struct-authoring', datatable: 'datatable', enum: 'enum' };
@@ -131,6 +137,8 @@ export function r(
     topics: options.topics ?? [],
     dispatchAction: options.dispatchAction ?? action,
     examples: options.examples,
+    whenToUse: options.whenToUse ?? [],
+    whenNotToUse: options.whenNotToUse ?? [],
     availability: { ...DEFAULT_AVAILABILITY, requiredPlugins: plugins }
   };
 }
@@ -148,8 +156,8 @@ export function toSource(spec: RecordSpec): Record<string, unknown> {
       family: FAMILY_NAMES[spec.family],
       topics: [spec.action, ...spec.topics],
       summary: spec.summary,
-      whenToUse: [],
-      whenNotToUse: []
+      whenToUse: [...(spec.whenToUse ?? [])],
+      whenNotToUse: [...(spec.whenNotToUse ?? [])]
     },
     schemas: { input: spec.input, output: spec.output },
     examples: spec.examples,

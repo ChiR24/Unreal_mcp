@@ -70,6 +70,8 @@ export interface InteractionActionSpec {
    * identity handle records.test.ts requires of every capability.
    */
   readonly outputProps?: PropertyMap;
+  readonly whenToUse?: readonly string[];
+  readonly whenNotToUse?: readonly string[];
 }
 
 /**
@@ -86,8 +88,8 @@ export function interactionRecord(spec: InteractionActionSpec): CapabilityRecord
     family: 'interaction',
     summary: spec.summary,
     topics: spec.topics,
-    whenToUse: [],
-    whenNotToUse: [],
+    whenToUse: [...(spec.whenToUse ?? [])],
+    whenNotToUse: [...(spec.whenNotToUse ?? [])],
     inputProps: { ...spec.inputProps },
     required: [...(spec.required ?? [])],
     requiredOneOf: spec.requiredOneOf,

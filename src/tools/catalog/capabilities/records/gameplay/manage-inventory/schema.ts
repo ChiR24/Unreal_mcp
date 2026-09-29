@@ -77,6 +77,8 @@ export interface InventoryActionSpec {
   readonly read?: boolean;
   readonly outputProps?: PropertyMap;
   readonly outputRequired?: readonly string[];
+  readonly whenToUse?: readonly string[];
+  readonly whenNotToUse?: readonly string[];
 }
 
 /**
@@ -93,8 +95,8 @@ export function inventoryRecord(spec: InventoryActionSpec): CapabilityRecordSour
     family: 'inventory',
     summary: spec.summary,
     topics: spec.topics,
-    whenToUse: [],
-    whenNotToUse: [],
+    whenToUse: [...(spec.whenToUse ?? [])],
+    whenNotToUse: [...(spec.whenNotToUse ?? [])],
     inputProps: { ...spec.inputProps },
     required: [...(spec.required ?? [])],
     requiredOneOf: spec.requiredOneOf,
