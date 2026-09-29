@@ -116,7 +116,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveTrack(
   if (Track == MovieScene->GetCameraCutTrack()) {
     MovieScene->RemoveCameraCutTrack();
   } else {
-    MovieScene->RemoveTrack(*Track);
+    MCP_REMOVE_MOVIESCENE_TRACK(MovieScene, *Track);
   }
   Sequence->MarkPackageDirty();
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

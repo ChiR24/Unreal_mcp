@@ -229,7 +229,7 @@ TSharedPtr<FJsonObject> MakeStoppedRecordingResult(
         if (const UMovieScene* MovieScene = Sequence->GetMovieScene())
         {
             BindingCount = MovieScene->GetBindings().Num();
-            TrackCount = MovieScene->GetTracks().Num();
+            TrackCount = MCP_GET_MOVIESCENE_TRACKS(MovieScene).Num();
             for (const FMovieSceneBinding& Binding : MovieScene->GetBindings())
                 TrackCount += Binding.GetTracks().Num();
         }

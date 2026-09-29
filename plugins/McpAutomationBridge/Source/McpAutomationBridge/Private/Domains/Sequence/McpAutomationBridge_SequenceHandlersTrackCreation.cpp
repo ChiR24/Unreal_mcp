@@ -62,13 +62,8 @@ bool HandleAddTrack(UMcpAutomationBridgeSubsystem *Subsystem,
     if (BindingGuid.IsValid()) {
       NewTrack = MovieScene->AddTrack(TrackClass, BindingGuid);
     } else {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      NewTrack = MovieScene->AddTrack(TrackClass);
-#else
-      // 5.0 names the unbound-track call AddMasterTrack; refusing here left an Audio track (music
-      // for a cutscene) impossible to add without an actor.
-      NewTrack = MovieScene->AddMasterTrack(TrackClass);
-#endif
+      // An unbound track (an Audio track for cutscene music) is a master track before 5.2.
+      NewTrack = MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass);
     }
   } else if (TrackClass) {
     Subsystem->SendAutomationError(

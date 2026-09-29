@@ -48,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`read_log` `filter` takes alternatives.** It splits on `|` and matches a line (message or category; for build, livecoding and previous sources also the file tail) containing any alternative, case-insensitively; plain text, not a regex.
 - **`create_nav_modifier` can spawn a volume.** Without `blueprintPath` it spawns a NavModifierVolume (`actorName`, `location`, `extent`, `areaClass`); with one it adds the component. `create_nav_modifier_component` takes `actorName` to add an instance component to a placed actor.
 - **MetaSound graphs can be read and pruned (UE 5.5+).** `get_metasound_graph` returns nodes (`nodeId`, `name`, `className`, `kind`, inputs with literals, outputs), edges by pin name, `graphInputs` and `graphOutputs`. `edit_metasound` `remove_metasound_node` (`nodeId`/`nodeIds`, all-or-nothing; graph inputs and outputs refused) and `disconnect_metasound_nodes` (by target input, source output or exact pair) also run as `build_metasound` steps (`$id` ok in `nodeIds`).
-- **`manage_audio` `stop_sound` stops sounds.** `play_sound` spawns a tracked component that `stop_sound` stops (only `soundPath`'s sound when given); `all: true` stops every audio device of the editor and game. The reply has `stopped` and `allStopped`.
+- **`manage_audio` `stop_sound` stops, pauses and resumes sounds.** `play_sound` spawns a tracked component that `stop_sound` stops (only `soundPath`'s sound when given); `all: true` stops every audio device of the editor and game. The reply has `stopped` and `allStopped`. `soundOp` `pause` or `resume` pauses or resumes the same sounds instead (`all: true` covers every playing sound, game music included; `paused`, `resumed`).
+- **Cutscenes can have music.** `add_track` with `trackType: "Audio"` and then `add_section` with `soundPath` puts a sound on the sequence, sized to the sound unless `end` is given; a missing sound is `ASSET_NOT_FOUND` and `soundPath` on another track `INVALID_ARGUMENT`.
 
 </details>
 
@@ -123,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **The plugin compiles on UE 5.0 and 5.1.** Sequencer code called track functions that exist only from 5.2; it now uses the right names on every version, and removing a sequence-level track works on 5.0 and 5.1 too.
 - **WebSocket clients see why they were closed.** The bridge sends the close frame (4001-4005, 4008, 1002, 1009) with its reason, not a bare 1006.
 - **Native `/mcp` no longer leaks memory per request.** A long-running editor stops accumulating a telemetry entry per request.
 - **Automation cannot read or rewrite the bridge's own settings.** `get_project_settings` and `set_project_setting` refuse them (`SETTING_NOT_PERMITTED`); `set_preferences` skips them (`PREFERENCES_NOT_APPLIED`), so `bRequireCapabilityToken` cannot be turned off.
