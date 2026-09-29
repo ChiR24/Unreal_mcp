@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8aa7725128874456",
+  "catalogRevision": "f24a1b6de8d659d5",
   "recordCount": 389,
   "records": [
     {
@@ -13787,6 +13787,8 @@
           "duplicate widget",
           "copy widget",
           "clone widget",
+          "duplicate button",
+          "copy button",
           "repeat row"
         ],
         "summary": "Copy a widget and everything under it (a list row with its label, icon and button) inside a Widget Blueprint: same properties, slot layout and children, placed right after the original or under another panel.",
@@ -13947,7 +13949,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3a400164b23b63a15bb8b5d6d6899c09218b412a8173dc178595ebe0a223575f",
-        "content": "c982f9d4cf1580674d78f1daa5b4a5bb5159942ff03cc322242618f79a0d8ac7"
+        "content": "4ca26d3ad106b692276c85450758b389cdd69237fc6230144024c89b7deba88e"
       }
     },
     {
@@ -17748,7 +17750,12 @@
         "domain": "widget",
         "family": "widget-lifecycle",
         "topics": [
-          "remove_widget"
+          "remove_widget",
+          "delete widget",
+          "remove widget",
+          "delete button",
+          "remove button",
+          "remove label"
         ],
         "summary": "Remove a widget from the widget tree of a Widget Blueprint.",
         "whenToUse": [
@@ -17863,7 +17870,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f793a1304e70c73d90aa35e0c773ba07ea24cbe66ba5f5980d8d3cfa1e723f03",
-        "content": "8f2904408f5fa764c2a38ea3ff7c7d894fccbc633c8a93b9ff3f98f46928017e"
+        "content": "3cf77cc78f4a4579f9ce87978184616096119f5af833322e356f5a9c33e88e7e"
       }
     },
     {
@@ -18104,8 +18111,7 @@
         "blueprint.hide_widget",
         "blueprint.set_clipping",
         "blueprint.set_render_transform",
-        "blueprint.set_style",
-        "blueprint.set_button_text"
+        "blueprint.set_style"
       ],
       "legacyIds": [
         {
@@ -18190,7 +18196,10 @@
           "set_widget_layout",
           "widget anchor",
           "widget position",
+          "move widget",
           "widget size",
+          "resize widget",
+          "make widget bigger",
           "widget padding",
           "widget visibility",
           "z order",
@@ -18645,7 +18654,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d70a937d2c12b094355681ce2528329e623602277c6a79fa44c5e1243840372e",
-        "content": "dc8125cf9a47a55648c316f569604f32bad6b73085ebe5a081b4a2d3148b6124"
+        "content": "6b80de33b0ef76a11033ad79957116d3da9f2f73bc7c37f0c237d5db3a7c889c"
       }
     },
     {
@@ -39758,6 +39767,7 @@
           "inspect actor",
           "introspect object",
           "object properties",
+          "read all properties",
           "actor details",
           "level details",
           "material details",
@@ -40062,7 +40072,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-        "content": "90c313d3fa14d58467ce8d87d1581407813220daa637c0ba7f750891361a2c06"
+        "content": "52eec32955e39a285045043807ecb0ef9719a2859f8d2eeb6c2276345dd6790d"
       }
     },
     {

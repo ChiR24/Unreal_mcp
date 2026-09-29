@@ -16,7 +16,7 @@ export const NATIVE_RULE_WEIGHTS = {
 } as const;
 export const NATIVE_WORD_COVERAGE_BONUS = 5;
 export const NATIVE_ACTION_COVERED_BONUS = 50;
-export const NATIVE_FULL_COVERAGE_BONUS = 60;
+export const NATIVE_FULL_COVERAGE_BONUS = 100;
 export const NATIVE_READ_INTENT_BONUS = 40;
 export const NATIVE_DELETE_INTENT_BONUS = 40;
 

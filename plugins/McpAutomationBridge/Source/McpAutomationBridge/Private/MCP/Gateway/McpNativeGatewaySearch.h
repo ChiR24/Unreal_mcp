@@ -61,7 +61,7 @@ constexpr int32 McpSearchActionCoveredBonus = 50;
  * set_widget_layout's vocabulary, while add_content_widget matched two of its words
  * through alias names at 50 each and outranked it.
  */
-constexpr int32 McpSearchFullCoverageBonus = 60;
+constexpr int32 McpSearchFullCoverageBonus = 100;
 /**
  * When the query opens with a read word ("get actor location", "what is in this
  * folder"), a matching record whose effect is read ranks ahead: set_transform used

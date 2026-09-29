@@ -76,5 +76,10 @@ export const corpus: readonly CorpusCase[] = [
   { id: 'plain.actor_positions', kind: 'exact', intent: 'actor positions in the level', expected: { tool: 'control_actor', action: 'list' }, allowedAlternatives: [{ tool: 'control_actor', action: 'get_transform' }] },
   { id: 'plain.fab_download', kind: 'exact', intent: 'download free asset from fab', expected: { tool: 'manage_asset', action: 'import_marketplace_asset' }, allowedAlternatives: [{ tool: 'manage_asset', action: 'query_marketplace' }] },
   { id: 'plain.metasound_wav', kind: 'exact', intent: 'play a wav file in a metasound', expected: { tool: 'manage_audio', action: 'edit_metasound' }, allowedAlternatives: [] },
+  // Button edits: add_content_widget's member names (add_button, add_text_block) took every one.
+  { id: 'plain.button_text', kind: 'collision', intent: 'change button text', expected: { tool: 'manage_blueprint', action: 'set_style' }, allowedAlternatives: [] },
+  { id: 'plain.copy_button', kind: 'collision', intent: 'copy button', expected: { tool: 'manage_blueprint', action: 'duplicate_widget' }, allowedAlternatives: [] },
+  { id: 'plain.delete_button', kind: 'exact', intent: 'delete the quit button', expected: { tool: 'manage_blueprint', action: 'remove_widget' }, allowedAlternatives: [] },
+  { id: 'plain.move_button', kind: 'exact', intent: 'move the button', expected: { tool: 'manage_blueprint', action: 'set_position' }, allowedAlternatives: [] },
   { id: 'n.near_tie_del', kind: 'near_tie_destructive', intent: 'delete the selected object', expected: { tool: 'control_actor', action: 'delete' }, allowedAlternatives: [{ tool: 'manage_level', action: 'delete_level' }, { tool: 'manage_asset', action: 'delete_asset' }] },
 ];
