@@ -68,15 +68,24 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 	// anyway); params stays open because its keys are per-action; the TS bounds on
 	// the paging fields.
 	InputSchema->SetBoolField(TEXT("additionalProperties"), false);
-	const TSharedPtr<FJsonObject> Props = InputSchema->GetObjectField(TEXT("properties"));
-	Props->GetObjectField(TEXT("consent"))->SetBoolField(TEXT("additionalProperties"), false);
-	Props->GetObjectField(TEXT("options"))->SetBoolField(TEXT("additionalProperties"), false);
-	Props->GetObjectField(TEXT("params"))->SetBoolField(TEXT("additionalProperties"), true);
-	Props->GetObjectField(TEXT("limit"))->SetNumberField(TEXT("minimum"), 1);
-	Props->GetObjectField(TEXT("limit"))->SetNumberField(TEXT("maximum"), 25);
-	Props->GetObjectField(TEXT("offset"))->SetNumberField(TEXT("minimum"), 0);
-	Props->GetObjectField(TEXT("maxBytes"))->SetNumberField(TEXT("minimum"), 512);
-	Props->GetObjectField(TEXT("maxBytes"))->SetNumberField(TEXT("maximum"), 262144);
+	// Each property looked up and checked: a field dropped from the builder above
+	// fails loudly here instead of dereferencing a missing object.
+	const TSharedPtr<FJsonObject>* PropsPtr = nullptr;
+	checkf(InputSchema->TryGetObjectField(TEXT("properties"), PropsPtr) && PropsPtr, TEXT("unreal input schema has no properties"));
+	auto Prop = [&PropsPtr](const TCHAR* Name) -> FJsonObject&
+	{
+		const TSharedPtr<FJsonObject>* Found = nullptr;
+		checkf((*PropsPtr)->TryGetObjectField(Name, Found) && Found && Found->IsValid(), TEXT("unreal input schema lacks '%s'"), Name);
+		return **Found;
+	};
+	Prop(TEXT("consent")).SetBoolField(TEXT("additionalProperties"), false);
+	Prop(TEXT("options")).SetBoolField(TEXT("additionalProperties"), false);
+	Prop(TEXT("params")).SetBoolField(TEXT("additionalProperties"), true);
+	Prop(TEXT("limit")).SetNumberField(TEXT("minimum"), 1);
+	Prop(TEXT("limit")).SetNumberField(TEXT("maximum"), 25);
+	Prop(TEXT("offset")).SetNumberField(TEXT("minimum"), 0);
+	Prop(TEXT("maxBytes")).SetNumberField(TEXT("minimum"), 512);
+	Prop(TEXT("maxBytes")).SetNumberField(TEXT("maximum"), 262144);
 
 	auto Tool = MakeShared<FJsonObject>();
 	Tool->SetStringField(TEXT("name"), TEXT("unreal"));

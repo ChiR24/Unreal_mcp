@@ -150,7 +150,7 @@ describe('`params` is declared as an open object map, not an underspecified obje
     const cpp = readFileSync(nativeGatewayDefinitionPath, 'utf8');
     expect(cpp.includes('.Object(TEXT("params")')).toBe(true);
     expect(
-      cpp.includes('GetObjectField(TEXT("params"))->SetBoolField(TEXT("additionalProperties"), true)'),
+      cpp.includes('Prop(TEXT("params")).SetBoolField(TEXT("additionalProperties"), true)'),
       'native params must publish additionalProperties: true like the TypeScript surface'
     ).toBe(true);
   });
