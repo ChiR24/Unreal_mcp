@@ -1,11 +1,15 @@
-// Plan Todo 17 (BB-062) - a screenshot is one indivisible base64 image, so the
-// flat gateway cap refused a working capture with advice the caller cannot act
-// on. The native transport already exempts exactly two capabilities; this pins
-// the TypeScript mirror so the same call cannot succeed over /mcp and fail over
-// stdio.
+// Plan Todo 17 (BB-062) - an image is one indivisible base64 string, so the flat
+// gateway cap refused a working capture (a screenshot, a widget preview) with advice
+// the caller cannot act on. The exemption used to be a hard-coded pair of capability
+// ids, which left a 90 KB widget preview refused as RESULT_TOO_LARGE.
 //
-// Written after the fix landed, so non-vacuity is proven by mutation: toggle the
-// exemption off and the discriminating case fails.
+// The budget now follows the reply's shape, on both doors: 100000 characters plus the
+// length of a top-level `imageBase64` string when that string is at most 6,000,000
+// characters. The rest of any reply is still held to 100k, and the image has its own
+// ceiling. That is the same field the MCP image content promotion reads.
+//
+// Written after the fix landed, so non-vacuity is proven by mutation: drop the image
+// term and the image cases fail; widen it and the refusal cases pass.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -15,15 +19,17 @@ import { Logger } from '../../../src/utils/logging/logger.js';
 import type { GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 import { handleUnrealGatewayCall } from '../../../src/server/tool-registry-gateway.js';
+import * as dispatch from '../../../src/server/gateway/gateway-execute-dispatch.js';
 import {
-  IMAGE_PAYLOAD_CAPABILITIES,
   MAX_EXECUTION_RESULT_CHARS,
-  MAX_IMAGE_RESULT_CHARS
+  MAX_IMAGE_BASE64_CHARS,
+  resultCharBudget
 } from '../../../src/server/gateway/gateway-execute-dispatch.js';
 
-// Over the 100k flat cap, far under the 6M image budget: the ONLY thing that can
-// decide these two cases differently is the image exemption itself.
+// Over the 100k flat cap, far under the 6M image ceiling: the ONLY thing that can
+// decide the image and non-image cases differently is the image term itself.
 const PAYLOAD_CHARS = 200_000;
+const WIDGET = '/Game/UI/WBP_HUD';
 
 let handlerResult: unknown = { success: true };
 
@@ -43,13 +49,20 @@ function makeContext(): GatewayContext {
   };
 }
 
-async function executeWithOversizedResult(capability: string): Promise<Record<string, unknown>> {
-  handlerResult = { success: true, imageBase64: 'x'.repeat(PAYLOAD_CHARS) };
+async function execute(
+  capability: string,
+  result: Record<string, unknown>,
+  params: Record<string, unknown> = {}
+): Promise<Record<string, unknown>> {
+  handlerResult = { success: true, ...result };
   return (await handleUnrealGatewayCall(
-    { operation: 'execute', capability, params: {} },
+    { operation: 'execute', capability, params },
     makeContext()
   )) as Record<string, unknown>;
 }
+
+const preview = (result: Record<string, unknown>): Promise<Record<string, unknown>> =>
+  execute('blueprint.edit_widget_blueprint', { widgetPath: WIDGET, ...result }, { edit: 'preview', widgetPath: WIDGET });
 
 const nativeReceipt = (): string =>
   readFileSync(
@@ -58,41 +71,85 @@ const nativeReceipt = (): string =>
       'MCP', 'Gateway', 'McpNativeGatewayExecuteReceiptBuild.cpp'
     ),
     'utf8'
-  );
+  ).replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 
-describe('todo17 BB-062: an indivisible image payload is not refused as pageable', () => {
+describe('todo17 BB-062: an image reply earns its budget from its shape, whichever capability sent it', () => {
+  it('a widget preview with a 200k image passes the budget', async () => {
+    const result = await preview({ imageBase64: 'x'.repeat(PAYLOAD_CHARS), mimeType: 'image/png' });
+
+    expect(result.errorCode).not.toBe('RESULT_TOO_LARGE');
+    expect(result.success).toBe(true);
+  });
+
   it.each([
     'control_editor.screenshot',
     'system_control.screenshot'
-  ])('%s survives a payload the flat cap would refuse', async (capability) => {
-    const result = await executeWithOversizedResult(capability);
+  ])('%s still survives a payload the flat cap would refuse', async (capability) => {
+    const result = await execute(capability, { imageBase64: 'x'.repeat(PAYLOAD_CHARS) });
 
     expect(result.errorCode).not.toBe('RESULT_TOO_LARGE');
   });
 
-  it('a non-image capability with the SAME payload is still refused', async () => {
-    const result = await executeWithOversizedResult('asset.list');
+  it('a capability that was never on the old list gets the same treatment', async () => {
+    const result = await execute('asset.list', { imageBase64: 'x'.repeat(PAYLOAD_CHARS) });
 
-    // The discriminator: identical bytes, opposite verdict. If the exemption
-    // were removed both cases refuse; if it were unscoped neither would.
+    expect(result.errorCode).not.toBe('RESULT_TOO_LARGE');
+  });
+
+  it('the same 200k characters in a non-image field are still refused', async () => {
+    const result = await preview({ note: 'x'.repeat(PAYLOAD_CHARS) });
+
+    // The discriminator: identical bytes, opposite verdict.
     expect(result.errorCode).toBe('RESULT_TOO_LARGE');
     expect(typeof result.resultChars).toBe('number');
     expect(result.resultChars as number).toBeGreaterThan(100_000);
   });
-});
 
-describe('todo17 BB-062: the exemption mirrors the native budget', () => {
-  it('uses the native figures', () => {
-    expect(MAX_EXECUTION_RESULT_CHARS).toBe(100_000);
-    expect(MAX_IMAGE_RESULT_CHARS).toBe(6_000_000);
-    expect(nativeReceipt()).toMatch(/ResultCharBudget = bIsImagePayload \? 6000000 : 100000;/u);
+  it('the rest of an image reply is still held to 100k', async () => {
+    const image = 'x'.repeat(PAYLOAD_CHARS);
+
+    expect((await preview({ imageBase64: image, note: 'y'.repeat(90_000) })).errorCode).not.toBe('RESULT_TOO_LARGE');
+    expect((await preview({ imageBase64: image, note: 'y'.repeat(120_000) })).errorCode).toBe('RESULT_TOO_LARGE');
   });
 
-  it('exempts exactly the capabilities the native side names, and no others', () => {
-    expect([...IMAGE_PAYLOAD_CAPABILITIES]).toEqual(['control_editor.screenshot', 'system_control.screenshot']);
+  it('an image has its own ceiling: 6,000,000 characters pass, one more is refused', async () => {
+    expect((await preview({ imageBase64: 'x'.repeat(MAX_IMAGE_BASE64_CHARS) })).errorCode).not.toBe('RESULT_TOO_LARGE');
+    expect((await preview({ imageBase64: 'x'.repeat(MAX_IMAGE_BASE64_CHARS + 1) })).errorCode).toBe('RESULT_TOO_LARGE');
+  });
+
+  it('only a string earns the term: an object under imageBase64 is held to 100k', async () => {
+    const result = await preview({ imageBase64: { data: 'x'.repeat(PAYLOAD_CHARS) } });
+
+    expect(result.errorCode).toBe('RESULT_TOO_LARGE');
+  });
+});
+
+describe('todo17 BB-062: the budget rule and its native mirror', () => {
+  it('adds the image length to the flat cap, only for a top-level string within its own ceiling', () => {
+    expect(MAX_EXECUTION_RESULT_CHARS).toBe(100_000);
+    expect(MAX_IMAGE_BASE64_CHARS).toBe(6_000_000);
+    expect(resultCharBudget({ success: true })).toBe(100_000);
+    expect(resultCharBudget({ imageBase64: 'x'.repeat(10) })).toBe(100_010);
+    expect(resultCharBudget({ imageBase64: 'x'.repeat(MAX_IMAGE_BASE64_CHARS) })).toBe(100_000 + MAX_IMAGE_BASE64_CHARS);
+    expect(resultCharBudget({ imageBase64: 'x'.repeat(MAX_IMAGE_BASE64_CHARS + 1) })).toBe(100_000);
+    expect(resultCharBudget({ data: { imageBase64: 'x'.repeat(10) } })).toBe(100_000);
+    expect(resultCharBudget({ imageBase64: 12_345 })).toBe(100_000);
+    expect(resultCharBudget('text')).toBe(100_000);
+  });
+
+  it('the native gateway applies the same rule by the same figures', () => {
     const native = nativeReceipt();
-    for (const id of IMAGE_PAYLOAD_CAPABILITIES) {
-      expect(native).toContain(`CapabilityId == TEXT("${id}")`);
-    }
+
+    expect(native).toMatch(/int32 ResultCharBudget = 100000;/u);
+    expect(native).toMatch(
+      /Result->TryGetStringField\(TEXT\("imageBase64"\), ImageBase64\) && ImageBase64\.Len\(\) <= 6000000\)\s*\{\s*ResultCharBudget \+= ImageBase64\.Len\(\);/u
+    );
+    expect(native).toMatch(/McpSerializedResultExceeds\(Result, ResultCharBudget, &SerializedChars\)/u);
+  });
+
+  it('neither door names a capability any more', () => {
+    expect('IMAGE_PAYLOAD_CAPABILITIES' in dispatch).toBe(false);
+    expect('MAX_IMAGE_RESULT_CHARS' in dispatch).toBe(false);
+    expect(nativeReceipt()).not.toMatch(/control_editor\.screenshot|system_control\.screenshot|bIsImagePayload/u);
   });
 });

@@ -24,18 +24,22 @@ import type { GatewayReceiptContext } from './gateway-receipt-context.js';
 
 export const MAX_EXECUTION_RESULT_CHARS = 100_000;
 
-// A screenshot is one indivisible base64 image: it can neither page nor filter,
-// so the flat cap refused a working capture with advice the caller cannot act on.
-// The native transport already raises the budget for exactly these two
-// capabilities (McpNativeGatewayExecuteReceiptBuild.cpp:53-56); without the
-// mirror the identical call succeeds over /mcp and fails over stdio. The image
-// stays separately bounded by the handler's own base64 ceiling, so this is the
-// limit already enforced upstream rather than a general escape hatch.
-export const MAX_IMAGE_RESULT_CHARS = 6_000_000;
-export const IMAGE_PAYLOAD_CAPABILITIES: ReadonlySet<string> = new Set([
-  'control_editor.screenshot',
-  'system_control.screenshot'
-]);
+// An image is one indivisible base64 string: it can neither page nor filter, so
+// the flat cap refused a working capture (a screenshot, a widget preview) with
+// advice the caller cannot act on. The budget follows the reply's shape, not the
+// capability that sent it: a top-level `imageBase64` string of at most
+// MAX_IMAGE_BASE64_CHARS adds its own length to the flat cap. The rest of the
+// reply is still held to 100k, and an image past its own ceiling is refused.
+// Mirrors McpBuildGatewayExecuteReceipt on the native door, which promotes the
+// same field to MCP image content.
+export const MAX_IMAGE_BASE64_CHARS = 6_000_000;
+
+export function resultCharBudget(result: unknown): number {
+  const image = isRecord(result) ? result.imageBase64 : undefined;
+  return typeof image === 'string' && image.length <= MAX_IMAGE_BASE64_CHARS
+    ? MAX_EXECUTION_RESULT_CHARS + image.length
+    : MAX_EXECUTION_RESULT_CHARS;
+}
 
 export type GatewayContext = {
   tools: ITools;
@@ -202,10 +206,7 @@ export async function dispatchAndValidate(
   // same bytes with `success:true` were refused. Size is a transport concern and
   // does not care which way the handler reported.
   const serialized = JSON.stringify(result);
-  const resultCharBudget = IMAGE_PAYLOAD_CAPABILITIES.has(record.id)
-    ? MAX_IMAGE_RESULT_CHARS
-    : MAX_EXECUTION_RESULT_CHARS;
-  const oversized = serialized !== undefined && serialized.length > resultCharBudget;
+  const oversized = serialized !== undefined && serialized.length > resultCharBudget(result);
 
   if (handlerReportedFailure(result)) {
     // The plugin owns the live-state comparison (it must happen on the game

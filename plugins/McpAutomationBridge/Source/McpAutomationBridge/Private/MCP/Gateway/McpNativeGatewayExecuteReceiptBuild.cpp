@@ -104,16 +104,20 @@ TSharedPtr<FJsonObject> McpBuildGatewayExecuteReceipt(
 	// WebSocket frame the TS gateway projects embeds it), so it is reunited
 	// first; the projected output is what is both validated and published.
 	// The 100k budget exists to stop an unbounded listing from flooding a client, and
-	// every capability that can page or filter keeps it. A screenshot can do neither: the
-	// payload is one indivisible base64 image, so the cap turned a working capture into
-	// RESULT_TOO_LARGE with advice ("retry with pagination") that cannot be followed. The
-	// image is separately bounded by MaxScreenshotPngBytesForBase64ForMcp, so the raised
-	// budget here is not unbounded — it is the one already enforced at the handler.
-	// Deliberately narrow: this must not become a general escape hatch.
-	const bool bIsImagePayload =
-		CapabilityId == TEXT("control_editor.screenshot") ||
-		CapabilityId == TEXT("system_control.screenshot");
-	const int32 ResultCharBudget = bIsImagePayload ? 6000000 : 100000;
+	// every capability that can page or filter keeps it. An image can do neither: it is
+	// one indivisible base64 string, so the cap turned a working capture (a screenshot, a
+	// widget preview) into RESULT_TOO_LARGE with advice ("retry with pagination") that
+	// cannot be followed. The budget follows the reply's shape, not the capability that
+	// sent it: a top-level imageBase64 string of at most 6000000 characters adds its own
+	// length to the flat 100000. The rest of the reply is still held to 100k, and an image
+	// past its own ceiling is refused. Mirrors resultCharBudget() in
+	// src/server/gateway/gateway-execute-dispatch.ts.
+	int32 ResultCharBudget = 100000;
+	FString ImageBase64;
+	if (Result.IsValid() && Result->TryGetStringField(TEXT("imageBase64"), ImageBase64) && ImageBase64.Len() <= 6000000)
+	{
+		ResultCharBudget += ImageBase64.Len();
+	}
 
 	int64 SerializedChars = 0;
 	if (McpSerializedResultExceeds(Result, ResultCharBudget, &SerializedChars))
