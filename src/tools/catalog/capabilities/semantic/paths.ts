@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
-import { sanitizePath } from '../../../../utils/paths/path-security.js';
-import { UE_CONTENT_ROOTS } from '../../../../utils/paths/content-path-policy.js';
+import { getContentRoots, sanitizePath } from '../../../../utils/paths/path-security.js';
 import { SemanticBoundaryError } from './errors.js';
 
 // Wire-boundary Unreal path types. These are deliberately distinct from the
@@ -18,8 +17,6 @@ import { SemanticBoundaryError } from './errors.js';
 // directly, which throws a typed `SemanticBoundaryError` with a precise code
 // (PATH_TRAVERSAL / INVALID_PATH_ROOT). Direct `.parse()` on a schema throws a
 // ZodError (acceptable ZodError semantics); `.safeParse()` never throws.
-
-const ALLOWED_ROOTS = UE_CONTENT_ROOTS;
 
 // Case-insensitive /Content -> /Game mount normalization, applied exactly once
 // at the boundary (a /Game result can never re-trigger it). Matches the
@@ -72,18 +69,21 @@ function pathSuffixStart(normalized: string): number {
 
 // Asset-path root/traversal gate: throws a typed error (instead of a generic
 // one) for an invalid root or directory traversal before sanitizePath is reached.
+// The roots are the shared allowlist: the static roots, MCP_ADDITIONAL_PATH_PREFIXES
+// and the mounts the connected editor reports.
 function assertValidRootAndNoTraversal(normalized: string): void {
   assertNoTraversal(normalized);
   const end = pathSuffixStart(normalized);
   const prefix = end === Infinity ? normalized : normalized.slice(0, end);
-  const isAllowed = ALLOWED_ROOTS.some(
+  const roots = getContentRoots();
+  const isAllowed = roots.some(
     (root) => prefix === root || prefix.startsWith(`${root}/`)
   );
   if (!isAllowed) {
     throw new SemanticBoundaryError({
       kind: 'path',
       code: 'INVALID_PATH_ROOT',
-      message: `Invalid path: must start with one of [${ALLOWED_ROOTS.join(', ')}]`,
+      message: `Invalid path: must start with one of [${roots.join(', ')}]`,
       input: normalized
     });
   }
@@ -149,7 +149,7 @@ function sanitizeObjectOrClassPath(input: unknown): string {
 // so object/class references share the case-insensitive root policy of sanitizePath.
 function canonicalizeRoot(prefix: string): string {
   const lower = prefix.toLowerCase();
-  for (const root of ALLOWED_ROOTS) {
+  for (const root of getContentRoots()) {
     const rootLower = root.toLowerCase();
     if (lower === rootLower || lower.startsWith(`${rootLower}/`)) {
       return `${root}${prefix.slice(root.length)}`;

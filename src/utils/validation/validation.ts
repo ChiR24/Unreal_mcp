@@ -2,8 +2,7 @@
  * Validation and sanitization utilities for Unreal Engine assets
  */
 
-import { getAdditionalPathPrefixes } from '../../config.js';
-import { UE_CONTENT_ROOTS } from '../paths/content-path-policy.js';
+import { getContentRoots, getContentRootsRevision } from '../paths/path-security.js';
 
 /**
  * Maximum asset name length
@@ -26,15 +25,19 @@ const RESERVED_KEYWORDS = new Set([
   'default', 'transient', 'native'
 ]);
 
-const DEFAULT_ASSET_ROOTS = UE_CONTENT_ROOTS.map(root => root.slice(1));
 let cachedAssetRoots: Set<string> | undefined;
 let cachedRootByLowerCase: Map<string, string> | undefined;
+let cachedRootsRevision = -1;
 
+// Rebuilt whenever the content roots change (a connected editor reported new
+// mounts), so a plugin mount is recognised as a root instead of being treated as
+// a folder under /Game.
 function getAssetRoots(): Set<string> {
-  if (!cachedAssetRoots) {
-    const additionalRoots = getAdditionalPathPrefixes()
-      .map(p => p.replace(/^\//, '').replace(/\/$/, ''));
-    cachedAssetRoots = new Set([...DEFAULT_ASSET_ROOTS, ...additionalRoots]);
+  const revision = getContentRootsRevision();
+  if (!cachedAssetRoots || cachedRootsRevision !== revision) {
+    cachedAssetRoots = new Set(getContentRoots().map(root => root.replace(/^\//, '')));
+    cachedRootByLowerCase = undefined;
+    cachedRootsRevision = revision;
   }
   return cachedAssetRoots;
 }
@@ -49,8 +52,9 @@ function getAssetRoots(): Set<string> {
  * silently relocating the asset, in `/engine`'s case into a different mount.
  */
 function canonicalAssetRoot(segment: string): string | undefined {
+  const roots = getAssetRoots();
   if (!cachedRootByLowerCase) {
-    cachedRootByLowerCase = new Map([...getAssetRoots()].map(root => [root.toLowerCase(), root]));
+    cachedRootByLowerCase = new Map([...roots].map(root => [root.toLowerCase(), root]));
   }
   return cachedRootByLowerCase.get(segment.toLowerCase());
 }
@@ -102,7 +106,8 @@ export function sanitizeAssetName(name: string): string {
  *
  * Unlike the strict path-security helper, this function accepts partial paths,
  * defaults empty input to /Game, prefixes unknown roots with /Game, and
- * sanitizes individual path segments.
+ * sanitizes individual path segments. A known root is one of the static roots,
+ * a configured extra, or a mount the connected editor reported.
  * @param path The path to sanitize
  * @returns Sanitized path
  */
@@ -135,8 +140,9 @@ export function normalizeAndSanitizeAssetPath(path: string): string {
   }
 
   // Ensure the first segment is a valid root (Game, Engine, Script, Temp, Niagara,
-  // or configured extras), matched case-insensitively and rewritten to its
-  // declared spelling so the rest of the pipeline sees one canonical form.
+  // configured extras, or a mount the connected editor reported), matched
+  // case-insensitively and rewritten to its declared spelling so the rest of
+  // the pipeline sees one canonical form.
   const ROOTS = getAssetRoots();
   const declaredRoot = canonicalAssetRoot(segments[0]);
   segments = declaredRoot === undefined

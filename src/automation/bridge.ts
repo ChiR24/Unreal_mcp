@@ -8,10 +8,16 @@ import { CapabilityTokenProvider } from './capability-token-provider.js';
 import { ConnectionManager } from './connection-manager.js';
 import { HandshakeHandler } from './handshake.js';
 import { AutomationLogger } from './log-redaction.js';
-import { readBridgeAuthority, type BridgeAuthority } from './message-schema.js';
+import {
+    CONTENT_ROOTS_CHANGED_EVENT,
+    readBridgeAuthority,
+    readContentRoots,
+    type BridgeAuthority
+} from './message-schema.js';
 import { MessageHandler } from './message-handler.js';
 import { RequestTracker } from './request-tracker.js';
 import type { ExpectedRevisions } from '../tools/catalog/capabilities/semantic/execution-options.js';
+import { setEditorContentRoots } from '../utils/paths/path-security.js';
 import type {
     AutomationBridgeEvents,
     AutomationBridgeMessage,
@@ -52,7 +58,15 @@ export class AutomationBridge extends EventEmitter {
         );
         this.messageHandler = new MessageHandler(
             this.requestTracker,
-            (event) => this.emitAutomation('automationEvent', event),
+            (event) => {
+                // content_roots_changed is an internal bridge message: it updates the path
+                // allowlist and is not forwarded to MCP clients as a notification.
+                if (event.event === CONTENT_ROOTS_CHANGED_EVENT) {
+                    setEditorContentRoots(readContentRoots(event.payload));
+                    return;
+                }
+                this.emitAutomation('automationEvent', event);
+            },
             (autoId, update) => this.forwardAutomationProgress(autoId, update)
         );
         this.client = new AutomationBridgeClient({

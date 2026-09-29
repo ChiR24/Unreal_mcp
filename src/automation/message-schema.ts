@@ -53,8 +53,28 @@ export const bridgeAckSchema = z.looseObject({
     serverName: z.string().optional(),
     sessionId: z.string().optional(),
     protocolVersion: nonNegativeInteger.optional(),
-    authority: bridgeAuthoritySchema.optional()
+    authority: bridgeAuthoritySchema.optional(),
+    // The editor's mounted content roots (`/Game`, `/ShooterCore`, ...), which
+    // feed the path allowlist. Absent from plugins that predate it.
+    contentRoots: stringArray.optional()
 });
+
+/**
+ * The automation_event the plugin sends when a content mount comes or goes. Its
+ * payload carries the new `contentRoots` snapshot. It is an internal bridge
+ * message: it updates the path allowlist and is not forwarded to MCP clients.
+ */
+export const CONTENT_ROOTS_CHANGED_EVENT = 'content_roots_changed';
+
+/**
+ * The raw `contentRoots` of a bridge_ack's metadata or a content_roots_changed
+ * payload, or undefined when `source` is not a plain object. The value is not
+ * validated here; setEditorContentRoots (path-security.ts) validates it.
+ */
+export function readContentRoots(source: unknown): unknown {
+    if (source === null || typeof source !== 'object' || Array.isArray(source)) return undefined;
+    return (source as Record<string, unknown>).contentRoots;
+}
 
 export const bridgeErrorSchema = z.looseObject({
     type: z.literal('bridge_error'),

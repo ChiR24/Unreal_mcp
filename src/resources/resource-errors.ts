@@ -3,8 +3,8 @@ import {
   MAX_BOUNDED_BYTES,
   UE_CONTENT_ROOTS,
   isTraversalPath,
-  isUnderContentRoot,
 } from '../utils/paths/content-path-policy.js';
+import { isUnderAllowedContentRoot } from '../utils/paths/path-security.js';
 
 // src/resources/resource-errors.ts
 // Task 31: typed errors, byte budget, path guards, and redaction shared by the
@@ -87,11 +87,11 @@ export function normalizeContentPath(uri: string, rawPath: string): string {
     normalized = normalized.replace(/\/$/u, '');
   }
 
-  if (!isUnderContentRoot(normalized)) {
+  if (!isUnderAllowedContentRoot(normalized)) {
     throw new ResourceError(
       RESOURCE_ERROR_CODES.INVALID_URI,
       uri,
-      `Path must resolve under a UE content root (${UE_CONTENT_ROOTS.join(', ')})`,
+      `Path must resolve under a UE content root (${UE_CONTENT_ROOTS.join(', ')}, or a mount the connected editor reports)`,
     );
   }
   return normalized;

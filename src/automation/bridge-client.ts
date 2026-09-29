@@ -2,6 +2,7 @@ import { WebSocket } from 'ws';
 import { MAX_WS_MESSAGE_SIZE_BYTES } from '../constants.js';
 import { redactImagePayloadTextForLog } from '../utils/logging/log-redaction.js';
 import type { Logger } from '../utils/logging/logger.js';
+import { clearEditorContentRoots, setEditorContentRoots } from '../utils/paths/path-security.js';
 import { type AutomationBridgeResolvedConfig, formatHostForUrl } from './bridge-config.js';
 import type { AutomationBridgeRuntimeState } from './bridge-state.js';
 import type { ConnectionManager } from './connection-manager.js';
@@ -12,7 +13,7 @@ import {
     redactKnownAutomationCredentials
 } from './log-redaction.js';
 import type { MessageHandler } from './message-handler.js';
-import { automationMessageSchema } from './message-schema.js';
+import { automationMessageSchema, readContentRoots } from './message-schema.js';
 import type { AutomationBridgeEvents, AutomationBridgeMessage } from './types.js';
 
 type WebSocketWithInternalSocket = WebSocket & {
@@ -140,6 +141,8 @@ export class AutomationBridgeClient {
             }
 
             this.deps.state.lastDisconnect = { code, reason, at: new Date() };
+            // The mounts belonged to that editor; with none connected the allowlist is the static roots.
+            clearEditorContentRoots();
             this.deps.emit('disconnected', {
                 code,
                 reason,
@@ -157,6 +160,8 @@ export class AutomationBridgeClient {
     private recordHandshakeSuccess(socket: WebSocket, metadata: Record<string, unknown>): void {
         this.deps.state.lastHandshakeAt = new Date();
         this.deps.state.lastHandshakeMetadata = metadata;
+        // The editor's mount table feeds the path allowlist; a plugin that does not send it leaves the static roots.
+        setEditorContentRoots(readContentRoots(metadata));
         this.deps.state.lastHandshakeFailure = undefined;
         this.deps.connectionManager.updateLastMessageTime();
 
