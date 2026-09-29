@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d428a91cafa609da",
+  "catalogRevision": "d4b456bb5d2c5b69",
   "recordCount": 389,
   "records": [
     {
@@ -16195,9 +16195,13 @@
         "domain": "blueprint",
         "family": "scs",
         "topics": [
-          "get_scs"
+          "get_scs",
+          "component hierarchy",
+          "component tree",
+          "inherited from parent class",
+          "attach parent names"
         ],
-        "summary": "Read the SCS tree of a Blueprint plus the components it inherits from its parent class.",
+        "summary": "List a Blueprint's own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from its parent class.",
         "whenToUse": [
           "The SCS node hierarchy must be inspected before modifying components.",
           "An inherited component must be named as an attach parent for add_scs_component."
@@ -16281,7 +16285,7 @@
       },
       "examples": [
         {
-          "title": "Read the SCS tree of a Blueprint plus the components it inherits from its parent class.",
+          "title": "List a Blueprint's own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from its parent class.",
           "input": {
             "action": "get_scs",
             "blueprintPath": "/Game/Blueprints/BP_Test"
@@ -16337,7 +16341,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "491ea931b3d85045384699ca12ce48690edd9ba6d8f00aa3a5e638ba5d54b7ca",
-        "content": "6de7ab3bde006f498304a58900d5efff8580fe4ae3074c727bbdf238a3ed218d"
+        "content": "c607ebe5bd7a7080bde9108f1ef85100b313552a3658453243808309b7ef9110"
       }
     },
     {
@@ -37581,9 +37585,11 @@
         "domain": "enum",
         "family": "enum",
         "topics": [
-          "get_enum"
+          "get_enum",
+          "entry names and values",
+          "list entries"
         ],
-        "summary": "Retrieve UserDefinedEnum metadata and values.",
+        "summary": "Read a Blueprint enum (UserDefinedEnum): every entry with its name and numeric value, plus the value count.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -37663,7 +37669,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7c29d6fda67438a93c70057c205ad77742d03234f471cb0e01170f065585c3da",
-        "content": "32f424f4c28ee3713ad6d77b604e4256c337832216e25cd5b9d6b31f68b63e85"
+        "content": "34cfdd8937d2125a2f741c7438410cade77aa3b71df51677f3d836308ef46748"
       }
     },
     {
@@ -88381,9 +88387,13 @@
         "domain": "texture",
         "family": "procedural",
         "topics": [
-          "get_texture_info"
+          "get_texture_info",
+          "size and resolution",
+          "pixel format",
+          "compression setting",
+          "mip count"
         ],
-        "summary": "Retrieve texture information (size, format, etc.).",
+        "summary": "Read a 2D texture asset: width and height, pixel format, mip count, sRGB, compression setting, LOD bias, and virtual texture and never-stream flags.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -88463,7 +88473,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "10e205271d2121e78dc0575315d231d52509112f528477ec685c23db7b54ee09",
-        "content": "8e350f5c5fbd43532353411ad95feba02bf2e9ef35275100f4b4d8826b6616e0"
+        "content": "e6b166626d29c8149c564cf82877c86e606b8f4fdaaf835f98c819afaf248da8"
       }
     }
   ]

@@ -21,6 +21,6 @@ export const TEXTURE_CONFIG_RECORDS: readonly RecordSpec[] = [
     { examples: [ex('Enable virtual texture streaming', { assetPath: T, virtualTextureStreaming: true, save: true }, DONE)] }),
   r('set_streaming_priority', 'texture', 'Set never-stream on a texture (keep every mip resident). UTexture has no per-texture streaming priority to set.', schema({ assetPath: str('Texture /Game path.'), neverStream: bool('Never stream this texture.'), save: bool('Save after change.') }, ['assetPath']), OK, WRITE, WRITE_POLICY, LOW,
     { examples: [ex('Prioritise a hero texture and pin it resident', { assetPath: T, neverStream: true, save: true }, DONE)] }),
-  r('get_texture_info', 'texture', 'Retrieve texture information (size, format, etc.).', schema({ assetPath: str('Texture /Game path.') }, ['assetPath']), OK, READ, READ_POLICY, LOW,
-    { examples: [ex('Read a texture\'s size and format', { assetPath: T }, DONE)] })
+  r('get_texture_info', 'texture', 'Read a 2D texture asset: width and height, pixel format, mip count, sRGB, compression setting, LOD bias, and virtual texture and never-stream flags.', schema({ assetPath: str('Texture /Game path.') }, ['assetPath']), OK, READ, READ_POLICY, LOW,
+    { topics: ['size and resolution', 'pixel format', 'compression setting', 'mip count'], examples: [ex('Read a texture\'s size and format', { assetPath: T }, DONE)] })
 ];
