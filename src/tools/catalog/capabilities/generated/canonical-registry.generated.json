@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d109a4c043c6424a",
+  "catalogRevision": "0f9dc7279c481809",
   "recordCount": 389,
   "records": [
     {
@@ -13810,7 +13810,7 @@
             },
             "newName": {
               "type": "string",
-              "description": "Name of the copy (default the original name with _Copy). Widgets under it keep their names, made unique with a number."
+              "description": "Name of the copy (default the original name with _Copy; _1, _2... is added when that name is taken). Every widget under it is copied as <its own name>_Copy, made unique the same way: copying QuitButton gives QuitButton_Copy and its label QuitButtonText_Copy. copiedWidgets lists the pairs."
             },
             "newParent": {
               "type": "string",
@@ -13864,7 +13864,7 @@
             },
             "copiedWidgets": {
               "type": "array",
-              "description": "Every widget copied, as {source, copy} name pairs: the copy of the original comes last.",
+              "description": "Every widget copied, as {source, copy} name pairs: the children come first, each copied as <source>_Copy, and the copy of the original comes last.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -13897,7 +13897,16 @@
             "slotName": "Row_2",
             "newParent": "RowList",
             "index": 1,
-            "copiedWidgets": []
+            "copiedWidgets": [
+              {
+                "source": "RowLabel",
+                "copy": "RowLabel_Copy"
+              },
+              {
+                "source": "Row_1",
+                "copy": "Row_2"
+              }
+            ]
           }
         }
       ],
@@ -13931,8 +13940,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8ce8b15cf856f0e51a0b68092e14fec205391b6261240674dd020b2998b91e95",
-        "content": "72693606b677693a470d53a3367f10160b23351356e5b7026bace1f1e3584164"
+        "schema": "3a400164b23b63a15bb8b5d6d6899c09218b412a8173dc178595ebe0a223575f",
+        "content": "c982f9d4cf1580674d78f1daa5b4a5bb5159942ff03cc322242618f79a0d8ac7"
       }
     },
     {

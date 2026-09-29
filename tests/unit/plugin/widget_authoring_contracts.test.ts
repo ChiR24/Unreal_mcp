@@ -92,6 +92,28 @@ describe('SafeAddWidgetToTree: only an add that re-uses a slotName warns that th
   });
 });
 
+describe('duplicate_widget: the record says how the copies are named', () => {
+  const newName = (): string => {
+    const properties = capabilityIndex().byId.get('blueprint.duplicate_widget')?.schemas.input.properties;
+    const entry = isRecord(properties) ? properties.newName : undefined;
+    return isRecord(entry) && typeof entry.description === 'string' ? entry.description : '';
+  };
+
+  it('states the _Copy naming, made unique with a number, and no longer claims the children keep their names', () => {
+    expect(newName()).toMatch(/<its own name>_Copy/u);
+    expect(newName()).toMatch(/_1, _2/u);
+    expect(newName()).not.toMatch(/keep their names/u);
+  });
+
+  it('is what the handler does: every child is copied under its own name plus _Copy', () => {
+    const handler = read('Support', 'McpAutomationBridge_WidgetAuthoringDuplicate.cpp');
+
+    expect(handler).toContain('Source->GetName() + TEXT("_Copy")');
+    expect(handler).toMatch(/McpCopySubtree\(Tree, Child, FString\(\), Names\)/u);
+    expect(handler).toMatch(/TEXT\("%s_%d"\), \*Wanted, Suffix/u);
+  });
+});
+
 describe('set_size sizes a box child by rule, and the record declares what the handler reads', () => {
   const record = capabilityIndex().byId.get('blueprint.set_widget_layout');
   const properties = isRecord(record?.schemas.input.properties) ? record.schemas.input.properties : {};

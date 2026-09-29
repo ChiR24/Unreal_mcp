@@ -171,7 +171,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {
       widgetPath: P.widgetPath,
       slotName: { type: 'string', description: 'Widget to copy; everything under it is copied too.' },
-      newName: { type: 'string', description: 'Name of the copy (default the original name with _Copy). Widgets under it keep their names, made unique with a number.' },
+      newName: { type: 'string', description: 'Name of the copy (default the original name with _Copy; _1, _2... is added when that name is taken). Every widget under it is copied as <its own name>_Copy, made unique the same way: copying QuitButton gives QuitButton_Copy and its label QuitButtonText_Copy. copiedWidgets lists the pairs.' },
       newParent: { type: 'string', description: 'Panel the copy goes under (default the parent of the original).' },
       index: { type: 'integer', minimum: 0, description: 'Position among the children of that panel (0 = first). Default: right after the original, or last under another panel.' },
     },
@@ -181,7 +181,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       slotName: { type: 'string', description: 'Name of the copy, for later calls.' },
       newParent: { type: 'string', description: 'Panel the copy sits under.' },
       index: { type: 'integer', description: 'Where the copy sits among the children of that panel (0 = first).' },
-      copiedWidgets: { type: 'array', description: 'Every widget copied, as {source, copy} name pairs: the copy of the original comes last.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true } },
+      copiedWidgets: { type: 'array', description: 'Every widget copied, as {source, copy} name pairs: the children come first, each copied as <source>_Copy, and the copy of the original comes last.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true } },
     },
     outputRequired: ['widgetPath', 'slotName', 'newParent', 'index'],
     effect: 'write',
@@ -189,6 +189,6 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'low',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'duplicate_widget', widgetPath: '/Game/UI/WBP_Shop', slotName: 'Row_1', newName: 'Row_2' },
-    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_Shop', slotName: 'Row_2', newParent: 'RowList', index: 1, copiedWidgets: [] },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_Shop', slotName: 'Row_2', newParent: 'RowList', index: 1, copiedWidgets: [{ source: 'RowLabel', copy: 'RowLabel_Copy' }, { source: 'Row_1', copy: 'Row_2' }] },
   }),
 ];

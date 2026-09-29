@@ -10767,7 +10767,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "newName": {
           "type": "string",
-          "description": "Name of the copy (default the original name with _Copy). Widgets under it keep their names, made unique with a number."
+          "description": "Name of the copy (default the original name with _Copy; _1, _2... is added when that name is taken). Every widget under it is copied as <its own name>_Copy, made unique the same way: copying QuitButton gives QuitButton_Copy and its label QuitButtonText_Copy. copiedWidgets lists the pairs."
         },
         "newParent": {
           "type": "string",
@@ -11565,7 +11565,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "copiedWidgets": {
           "type": "array",
-          "description": "Every widget copied, as {source, copy} name pairs: the copy of the original comes last.",
+          "description": "Every widget copied, as {source, copy} name pairs: the children come first, each copied as <source>_Copy, and the copy of the original comes last.",
           "items": {
             "type": "object",
             "additionalProperties": true,
