@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3a19086201910079",
+  "catalogRevision": "b616d22c57602aae",
   "recordCount": 389,
   "records": [
     {
@@ -32909,7 +32909,8 @@
           "An open asset editor must be closed."
         ],
         "whenNotToUse": [
-          "The asset is not open."
+          "The asset is not open.",
+          "The Unreal Editor itself must close: that is restart_editor with relaunch false."
         ]
       },
       "schemas": {
@@ -32996,7 +32997,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "34aba8ae7de2a9142900e274781de5e7a335678b7322804a69856b571585e7bc",
-        "content": "b73468edaea229b1cf5107665674891d2ad69ce0264e85a0d9d1b42b878a29ab"
+        "content": "0da87589278b5dbf086b4e64aa199bd2c220137b5c7384d34cd70d47fb1d0fef"
       }
     },
     {

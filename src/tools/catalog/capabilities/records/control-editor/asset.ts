@@ -80,7 +80,7 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_editor', action: 'close_asset', domain: D, family: F,
     summary: 'Close every editor open on an asset, by asset path. Fails with EDITOR_NOT_OPEN when none is open; the asset is never loaded to do this.',
     whenToUse: ['An open asset editor must be closed.'],
-    whenNotToUse: ['The asset is not open.'],
+    whenNotToUse: ['The asset is not open.', 'The Unreal Editor itself must close: that is restart_editor with relaunch false.'],
     inputProps: { assetPath: P.assetPath },
     required: ['assetPath'],
     effect: 'write',
