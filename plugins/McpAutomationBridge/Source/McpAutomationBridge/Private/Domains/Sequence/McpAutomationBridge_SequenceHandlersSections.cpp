@@ -94,10 +94,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
           nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }
+    // /Content maps to /Game; a traversal or an unmounted root is refused before anything loads.
+    FString SoundObjectPath = SoundPath;
+    McpAssetPathCanonical::MapContentRootInline(SoundObjectPath);
+    SoundObjectPath = SanitizeProjectRelativePath(SoundObjectPath);
+    if (SoundObjectPath.IsEmpty()) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             FString::Printf(TEXT("Invalid soundPath '%s': a /Game asset path is required"), *SoundPath),
+                             nullptr, TEXT("INVALID_PATH"));
+      return true;
+    }
     Sound = LoadObject<USoundBase>(
         nullptr,
-        *(SoundPath.Contains(TEXT(".")) ? SoundPath
-                                        : SoundPath + TEXT(".") + FPackageName::GetShortName(SoundPath)),
+        *(SoundObjectPath.Contains(TEXT(".")) ? SoundObjectPath
+                                              : SoundObjectPath + TEXT(".") + FPackageName::GetShortName(SoundObjectPath)),
         nullptr, LOAD_NoWarn);
     if (!Sound) {
       SendAutomationResponse(Socket, RequestId, false,
@@ -112,10 +122,24 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
   UMovieSceneSection *NewSection =
       Sound ? AudioTrack->AddNewSoundOnRow(Sound, Start, INDEX_NONE) : Track->CreateNewSection();
   if (NewSection) {
-    if (Sound && !bHasEnd) {
-      EndFrame = FFrameRate::TransformTime(FFrameTime(NewSection->GetExclusiveEndFrame()),
-                                           MovieScene->GetTickResolution(),
-                                           MovieScene->GetDisplayRate()).AsDecimal();
+    if (Sound) {
+      // The row AddNewSoundOnRow picked fits the sound's own length. The range that stands is the
+      // one asked for, or the sound's; a zero-length sound (5.0-5.2 leave it empty, 5.3+ give it
+      // a second) gets a second on every version. Placing the section again for a different range
+      // keeps it from overlapping another section on its row.
+      const FFrameNumber SoundEnd = NewSection->GetExclusiveEndFrame();
+      const FFrameNumber Length =
+          bHasEnd ? End - Start
+                  : (Start < SoundEnd ? SoundEnd - Start
+                                      : MovieScene->GetTickResolution().AsFrameNumber(1.0));
+      if (Start + Length != SoundEnd) {
+        NewSection->InitialPlacementOnRow(Track->GetAllSections(), Start, Length.Value, INDEX_NONE);
+      }
+      if (!bHasEnd) {
+        EndFrame = FFrameRate::TransformTime(FFrameTime(Start + Length),
+                                             MovieScene->GetTickResolution(),
+                                             MovieScene->GetDisplayRate()).AsDecimal();
+      }
     } else {
       NewSection->SetRange(TRange<FFrameNumber>(Start, End));
     }

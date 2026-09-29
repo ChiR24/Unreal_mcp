@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "639f0e3442da15f6",
+  "catalogRevision": "b30d44c66335c030",
   "recordCount": 389,
   "records": [
     {
@@ -79124,8 +79124,7 @@
           "lock track",
           "add music to sequence",
           "add sound to cutscene",
-          "sequence audio",
-          "sequencer music"
+          "sequence audio"
         ],
         "summary": "Edit sequence tracks: add a track, section or keyframe; lock, mute or solo a track.",
         "whenToUse": [
@@ -79387,7 +79386,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4154c002c9eab96b66e70dffc618aa70cb4a27091688d89385222bb3806c8bd9",
-        "content": "70db2ba50fc2fd1cf4b106f53d3773b9a0c214b6bde78abf8e55acb8214f285e"
+        "content": "390fe934ff4055d6fb794001094f8cc8ca0e02f6278e96da3278e103c244d10e"
       }
     },
     {

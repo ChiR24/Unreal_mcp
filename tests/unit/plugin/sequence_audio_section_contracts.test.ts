@@ -10,7 +10,9 @@ import { describe, expect, it } from 'vitest';
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
-const SECTIONS = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'Sequence', 'McpAutomationBridge_SequenceHandlersSections.cpp');
+const SEQUENCE_DIR = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'Sequence');
+const SECTIONS = join(SEQUENCE_DIR, 'McpAutomationBridge_SequenceHandlersSections.cpp');
+const TRACK_CREATION = join(SEQUENCE_DIR, 'McpAutomationBridge_SequenceHandlersTrackCreation.cpp');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 function stripComments(source: string): string {
@@ -53,6 +55,18 @@ describe('sequence add_section soundPath: a sound on an audio track', () => {
     expect(code.indexOf('Track->CreateNewSection()')).toBeGreaterThan(notFound);
   });
 
+  it('runs the sound path through the shared sanitizer before it loads anything', () => {
+    const code = source();
+    const sanitize = code.indexOf('SanitizeProjectRelativePath(SoundObjectPath)');
+    const load = code.indexOf('LoadObject<USoundBase>(');
+
+    expect(code).toMatch(/MapContentRootInline\(SoundObjectPath\)/u);
+    expect(sanitize).toBeGreaterThan(code.indexOf('if (!AudioTrack)'));
+    expect(load).toBeGreaterThan(sanitize);
+    expect(code.slice(sanitize, load)).toContain('TEXT("INVALID_PATH")');
+    expect(code.slice(load)).not.toMatch(/LoadObject<USoundBase>\(\s*nullptr,\s*\*\(SoundPath/u);
+  });
+
   it('makes the section with the engine\'s AddNewSoundOnRow, which adds it to the track itself', () => {
     const code = source();
 
@@ -63,8 +77,25 @@ describe('sequence add_section soundPath: a sound on an audio track', () => {
   it('keeps the sound\'s own length without an end, and the given range with one', () => {
     const code = source();
 
-    expect(code).toMatch(/if \(Sound && !bHasEnd\) \{\s*EndFrame = FFrameRate::TransformTime\(FFrameTime\(NewSection->GetExclusiveEndFrame\(\)\)/u);
+    expect(code).toMatch(/const FFrameNumber SoundEnd = NewSection->GetExclusiveEndFrame\(\);/u);
+    expect(code).toMatch(/bHasEnd \? End - Start\s*: \(Start < SoundEnd \? SoundEnd - Start\s*: MovieScene->GetTickResolution\(\)\.AsFrameNumber\(1\.0\)\)/u);
+    expect(code).toMatch(/if \(!bHasEnd\) \{\s*EndFrame = FFrameRate::TransformTime\(FFrameTime\(Start \+ Length\),/u);
     expect(code).toMatch(/\} else \{\s*NewSection->SetRange\(TRange<FFrameNumber>\(Start, End\)\);/u);
+  });
+
+  it('places the section again for a range other than the sound\'s, so its row fits and nothing overlaps', () => {
+    const code = source();
+
+    expect(code).toMatch(/if \(Start \+ Length != SoundEnd\) \{\s*NewSection->InitialPlacementOnRow\(Track->GetAllSections\(\), Start, Length\.Value, INDEX_NONE\);/u);
+  });
+
+  it('gives a zero-length sound one second on every version, as 5.3 and later already do', () => {
+    const code = source();
+    const oneSecond = code.indexOf('AsFrameNumber(1.0)');
+
+    expect(oneSecond).toBeGreaterThan(code.indexOf('SoundEnd = NewSection->GetExclusiveEndFrame()'));
+    expect(oneSecond).toBeLessThan(code.indexOf('InitialPlacementOnRow('));
+    expect(code.slice(code.indexOf('Start < SoundEnd'), oneSecond)).toContain('SoundEnd - Start');
   });
 
   it('names the sound in the reply', () => {
@@ -72,6 +103,13 @@ describe('sequence add_section soundPath: a sound on an audio track', () => {
 
     expect(code).toMatch(/SetStringField\(TEXT\("soundPath"\), Sound->GetPathName\(\)\)/u);
     expect(code).toMatch(/SetStringField\(TEXT\("soundName"\), Sound->GetName\(\)\)/u);
+  });
+
+  it('adds an unbound Audio track on 5.0 too, through AddMasterTrack', () => {
+    const code = stripComments(readFileSync(TRACK_CREATION, 'utf8'));
+
+    expect(code).toMatch(/#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1\s*NewTrack = MovieScene->AddTrack\(TrackClass\);\s*#else\s*NewTrack = MovieScene->AddMasterTrack\(TrackClass\);\s*#endif/u);
+    expect(code).not.toContain('NOT_SUPPORTED');
   });
 
   it('is discoverable: soundPath is declared, trackType says Audio, music and cutscene sound are topics', () => {

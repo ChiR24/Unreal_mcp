@@ -26,7 +26,7 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.add_section', action: 'add_section', family: F, domain: D,
     summary: 'Add a section to an existing track in a Level Sequence; on an Audio track, soundPath puts music or a sound in it.',
-    topics: ['add music to sequence', 'add sound to cutscene', 'sequence audio', 'sequencer music'],
+    topics: ['add music to sequence', 'add sound to cutscene', 'sequence audio'],
     whenToUse: ['A section must be added to animate a sub-range of a track.',
       'Music or a sound must play in a cutscene: add an Audio track, then a section with soundPath.'],
     whenNotToUse: ['The track does not exist.', 'A sound must play in the running game, not inside a sequence.'],

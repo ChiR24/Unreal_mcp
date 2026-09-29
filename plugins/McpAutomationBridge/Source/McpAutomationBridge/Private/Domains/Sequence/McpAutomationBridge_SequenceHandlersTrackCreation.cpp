@@ -65,11 +65,9 @@ bool HandleAddTrack(UMcpAutomationBridgeSubsystem *Subsystem,
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
       NewTrack = MovieScene->AddTrack(TrackClass);
 #else
-      Subsystem->SendAutomationError(
-          RequestingSocket, RequestId,
-          TEXT("Adding tracks without binding is not supported in UE 5.0. Please provide an actor or object binding."),
-          TEXT("NOT_SUPPORTED"));
-      return true;
+      // 5.0 names the unbound-track call AddMasterTrack; refusing here left an Audio track (music
+      // for a cutscene) impossible to add without an actor.
+      NewTrack = MovieScene->AddMasterTrack(TrackClass);
 #endif
     }
   } else if (TrackClass) {
