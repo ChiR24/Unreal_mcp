@@ -19,7 +19,7 @@ import {
   RETRIEVAL_SCORE_CONSTANTS,
   SCORE_TIE_EPSILON,
 } from './constants.js';
-import { tokenizeCapabilityText, uniqueCapabilityTokens } from './tokenize.js';
+import { queryCapabilityTokens, tokenizeCapabilityText, uniqueCapabilityTokens } from './tokenize.js';
 
 export type CapabilityMatchField =
   | 'canonical_id'
@@ -445,7 +445,7 @@ export function rankCapabilityRecords(
   records: readonly CapabilityRecord[],
   query: string,
 ): readonly RankedCapability[] {
-  const queryTokens = uniqueCapabilityTokens(query);
+  const queryTokens = queryCapabilityTokens(query);
   if (queryTokens.length === 0) return [];
   // The first word as typed, before inflection folding, says what the caller wants done.
   const firstWord = query.toLowerCase().match(/[a-z0-9]+/u)?.[0] ?? '';

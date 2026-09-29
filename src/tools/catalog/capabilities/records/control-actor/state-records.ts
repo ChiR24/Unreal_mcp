@@ -108,7 +108,6 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_QUERY,
     topics: ['list actors', 'all actors in level', 'actors in scene', 'enumerate actors', 'world outliner', 'actors in level', 'level actors', 'actor positions', 'actor locations', 'actor transforms', 'level layout', 'variable values of many actors', 'how many actors', 'count actors', 'actors in the level'],
     aliases: ['control_actor.list_actors'],
-    // The retrieval scorer reads only the first 48 tokens of a summary: keep the near-a-point sentence inside them.
     summary: 'List actors in the current level with their label, class, location, rotation and scale, plus any propertyNames values, narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point, nearest first, each with its distance. summary counts the level by class, tag and folder instead.',
     whenToUse: ['The actors present in the level must be enumerated.', 'Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove.', 'Something seen in a screenshot or at a coordinate must be identified: list the actors near that point, nearest first.'],
     whenNotToUse: ['A specific known actor name is already available (use find_by_name).'],

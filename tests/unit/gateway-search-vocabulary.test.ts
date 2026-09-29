@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { capabilityIndex } from '../../src/server/gateway/gateway-capability-index.js';
 import { searchGatewayCapabilities } from '../../src/server/gateway/gateway-search.js';
-import { tokenizeCapabilityText } from '../../src/tools/catalog/capabilities/retrieval/tokenize.js';
+import { RETRIEVAL_TOKENIZATION } from '../../src/tools/catalog/capabilities/retrieval/constants.js';
+import { queryCapabilityTokens, tokenizeCapabilityText } from '../../src/tools/catalog/capabilities/retrieval/tokenize.js';
 import { readAllNativeShardRecords } from './capability-records/native-shard-records.js';
 
 // Task phrasings a model actually types, not catalog vocabulary. Every record
@@ -183,10 +184,14 @@ describe('phrasings a name cannot carry are declared as topics', () => {
     expect(capabilityIndex().byId.get('blueprint.get_widget_info')?.discovery.summary).toContain('slot layout');
   });
 
-  // The retrieval scorer keeps the first 48 tokens of a summary; the near-a-point sentence must fall inside.
-  it('control_actor.list keeps its near-a-point sentence inside the tokens the ranker reads', () => {
-    const summary = capabilityIndex().byId.get('control_actor.list')?.discovery.summary ?? '';
-    expect(tokenizeCapabilityText(summary).join(' ')).toContain('find what is near a point');
+  // Only a query is capped at maxTokens; record text is read whole, as the native door reads it. The cap
+  // once cut every summary past 48 tokens, so the tail of set_widget_layout's never reached search.
+  it('reads a long summary to its end and caps only the query', () => {
+    const summary = capabilityIndex().byId.get('blueprint.set_widget_layout')?.discovery.summary ?? '';
+    expect(tokenizeCapabilityText(summary).length).toBeGreaterThan(RETRIEVAL_TOKENIZATION.maxTokens);
+    expect(tokenizeCapabilityText(summary).join(' ')).toContain('press sound');
+    const longQuery = Array.from({ length: 60 }, (_, index) => `word${index}`).join(' ');
+    expect(queryCapabilityTokens(longQuery)).toHaveLength(RETRIEVAL_TOKENIZATION.maxTokens);
   });
 });
 

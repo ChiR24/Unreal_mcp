@@ -36,9 +36,7 @@ export function tokenizeCapabilityText(value: string): readonly string[] {
     : value;
   const matches = expanded.toLowerCase().match(ASCII_TOKEN_PATTERN);
   if (matches === null) return [];
-  const bounded = matches
-    .slice(0, RETRIEVAL_TOKENIZATION.maxTokens)
-    .map((token) => token.slice(0, RETRIEVAL_TOKENIZATION.maxTokenLength));
+  const bounded = matches.map((token) => token.slice(0, RETRIEVAL_TOKENIZATION.maxTokenLength));
   return (RETRIEVAL_TOKENIZATION.foldInflections ? bounded.map(foldInflection) : bounded).map(foldSynonym);
 }
 
@@ -51,4 +49,13 @@ export function uniqueCapabilityTokens(value: string): readonly string[] {
     tokens.push(token);
   }
   return tokens;
+}
+
+/**
+ * A query's unique tokens, at most maxTokens of them. Only the query is capped: record text is
+ * read whole, as the native door reads it; the cap once cut every summary past 48 tokens, so the
+ * tail of set_widget_layout's (font face, letter spacing, button sounds) never reached search.
+ */
+export function queryCapabilityTokens(query: string): readonly string[] {
+  return uniqueCapabilityTokens(query).slice(0, RETRIEVAL_TOKENIZATION.maxTokens);
 }
