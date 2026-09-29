@@ -99,7 +99,7 @@ export const RETRIEVAL_SCORE_CONSTANTS = Object.freeze({
   functionWordWeight: 0.25,
   headVerbAlignmentBonus: 6,
   headVerbMismatchPenalty: 10,
-  readIntentBonus: 20,
+  readIntentBonus: 80,
   deleteIntentBonus: 14,
   fullCoverageBonus: 100,
   minimumRelevanceScore: 0.01,
