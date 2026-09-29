@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "866c50862b4ac519",
+  "catalogRevision": "d75cc3d3248e4739",
   "recordCount": 389,
   "records": [
     {
@@ -14320,7 +14320,7 @@
             },
             "nodeType": {
               "type": "string",
-              "description": "Blueprint node type string for creation."
+              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists."
             },
             "posX": {
               "type": "number",
@@ -14857,8 +14857,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6f814b53da95b09c58c1b44e1c262ca49c01444b3b70c183013147aa83e4901e",
-        "content": "6e098e2cf7fc1280a138861d9a988b06d597273392d19772afda134eb735616b"
+        "schema": "bcabfc57e07bb0bd298b3468c796f52827c85a33754322fc672537a715e5a037",
+        "content": "2e77d96582c7d564b387947a7f71595d01dace884f43dc8e3040a213d938ffc8"
       }
     },
     {
