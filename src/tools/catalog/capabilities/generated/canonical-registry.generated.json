@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "860c3649d1d0e58b",
+  "catalogRevision": "8767f44056c83496",
   "recordCount": 389,
   "records": [
     {
@@ -31302,7 +31302,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor."
+              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
             },
             "summary": {
               "type": "boolean",
@@ -31528,8 +31528,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9ccae9965e26e399d6e749ffaea2c8ed57cd29ac6f745394a801ec8b8a79c227",
-        "content": "ddb6dbd1925894885df051c9c77cd131938bedf5332820bb4a487f102f31a147"
+        "schema": "74628282cee7c14f0a1b3d33b05b74c75bb44dee57b2df3e2b06d665a61fc711",
+        "content": "90b6978d2cd443b28cf6c4b16c8e62220894809461d38d61598cae8c1aaafcfb"
       }
     },
     {

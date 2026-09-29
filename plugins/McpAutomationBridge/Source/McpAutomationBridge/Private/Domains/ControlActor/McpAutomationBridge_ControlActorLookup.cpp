@@ -102,12 +102,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
   Payload->TryGetNumberField(TEXT("offset"), OffsetValue);
   const int32 Offset = FMath::Max(0, static_cast<int32>(OffsetValue));
   // Variable values across many actors in one call (which ? blocks hold what took one inspect per block).
-  TArray<FName> PropertyNames;
+  // A name is an actor property, or "Component.Property" for one of its components (StaticMeshComponent.LDMaxDrawDistance).
+  TArray<FString> PropertyNames;
   const TArray<TSharedPtr<FJsonValue>> *PropertyNamesArray = nullptr;
   if (Payload->TryGetArrayField(TEXT("propertyNames"), PropertyNamesArray)) {
     for (const TSharedPtr<FJsonValue> &Value : *PropertyNamesArray) {
       if (Value.IsValid() && Value->Type == EJson::String)
-        PropertyNames.AddUnique(FName(*Value->AsString()));
+        PropertyNames.AddUnique(Value->AsString());
     }
   }
 
@@ -199,14 +200,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
     if (PropertyNames.Num() > 0) {
       TSharedPtr<FJsonObject> Properties = McpHandlerUtils::CreateResultObject();
       // A name this actor's class lacks used to vanish from the reply, which
-      // read exactly like "that property is empty".
+      // read exactly like "that property is empty". A component's property is keyed
+      // as it was asked for ("Component.Property"), an actor's by its own name.
       TArray<TSharedPtr<FJsonValue>> Missing;
-      for (const FName &PropertyName : PropertyNames) {
-        if (FProperty *Property = Actor->GetClass()->FindPropertyByName(PropertyName))
-          Properties->SetStringField(Property->GetName(),
-                                     McpPropertyReflection::GetPropertyValueAsString(Actor, Property));
+      for (const FString &Wanted : PropertyNames) {
+        UObject *Owner = nullptr;
+        if (FProperty *Property = McpResolveActorPropertyPath(Actor, Wanted, Owner))
+          Properties->SetStringField(Wanted.Contains(TEXT(".")) ? Wanted : Property->GetName(),
+                                     McpPropertyReflection::GetPropertyValueAsString(Owner, Property));
         else
-          Missing.Add(MakeShared<FJsonValueString>(PropertyName.ToString()));
+          Missing.Add(MakeShared<FJsonValueString>(Wanted));
       }
       Entry->SetObjectField(TEXT("properties"), Properties);
       if (Missing.Num() > 0)

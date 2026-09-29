@@ -63,6 +63,19 @@ inline FString McpActorFolder(const AActor *Actor) {
   return Path.IsNone() ? FString() : Path.ToString();
 }
 
+// A property named for the whole actor or for one of its components: "bDead" is read off the actor,
+// "Visual.RelativeScale3D" off the component FindComponentByName finds under that name (a squash on
+// landing lives on a component, not the actor). One resolver for the propertyNames of sample_motion
+// and of list. OutOwner is the object to read the property from; null Property when nothing matches.
+inline FProperty *McpResolveActorPropertyPath(AActor *Actor, const FString &Wanted, UObject *&OutOwner) {
+  FString ComponentName, PropertyName = Wanted;
+  OutOwner = Actor;
+  if (Wanted.Split(TEXT("."), &ComponentName, &PropertyName)) {
+    OutOwner = FindComponentByName(Actor, ComponentName);
+  }
+  return OutOwner ? OutOwner->GetClass()->FindPropertyByName(FName(*PropertyName)) : nullptr;
+}
+
 // control_actor.list's structural filters. Finding every TextRenderActor, or
 // what an outliner folder holds, used to mean guessing label substrings. Tag:
 // the actor carries it. ClassName: the actor's class or any parent, by name or

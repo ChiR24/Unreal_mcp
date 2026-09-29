@@ -104,7 +104,7 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
       tag: { type: 'string', description: 'Only actors carrying this actor tag. With summary, shows what the tag covers before a delete_by_tag removes it.' },
       className: { type: 'string', description: 'Only actors of this class or a subclass, by name or path: TextRenderActor, Light (every light type), or a Blueprint such as BP_Sign, with or without _C.' },
       folder: { type: 'string', description: 'Only actors in this outliner folder or a folder under it (Level/Stage matches Level/Stage/Signs); "(none)" for the actors at the root.' },
-      propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content; a name that the class of an actor lacks is listed under missingProperties for that actor.' },
+      propertyNames: { type: 'array', items: { type: 'string' }, description: 'Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component\'s as "Component.Property" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor.' },
       summary: { type: 'boolean', description: 'Count the matching actors by class, actor tag and outliner folder (byClass, byTag, byFolder) instead of listing them; limit and offset do not apply. The cheap first look at an unfamiliar level.' },
     },
     required: [],

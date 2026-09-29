@@ -215,12 +215,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
   if (Payload->TryGetArrayField(TEXT("propertyNames"), Names) && Names) {
     for (const TSharedPtr<FJsonValue> &Name : *Names) {
       const FString Wanted = Name.IsValid() ? Name->AsString() : FString();
-      FString ComponentName, PropertyName = Wanted;
-      UObject *Owner = Found;
-      if (Wanted.Split(TEXT("."), &ComponentName, &PropertyName)) {
-        Owner = FindComponentByName(Found, ComponentName);
-      }
-      if (FProperty *Property = Owner ? Owner->GetClass()->FindPropertyByName(FName(*PropertyName)) : nullptr) {
+      UObject *Owner = nullptr;
+      if (FProperty *Property = McpResolveActorPropertyPath(Found, Wanted, Owner)) {
         Run->Properties.Add({Wanted, Owner, Property});
       } else if (!Wanted.IsEmpty()) {
         Run->Missing.Add(MakeShared<FJsonValueString>(Wanted));
