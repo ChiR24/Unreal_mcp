@@ -55,19 +55,28 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       referencers: bool('List the packages that USE this asset (Blueprints that spawn it, levels that place it) instead of the ones it uses; check this before deleting or replacing an asset.'),
     }, ['assetPath']),
     OK, READ, READ_POLICY, MEDIUM,
-    { examples: [ex('List the Blueprints and levels that use a Niagara system', { assetPath: '/Game/FX/NS_Puff', referencers: true }, { success: true })] }
+    { whenToUse: [
+        'Before deleting or replacing an asset, the packages, Blueprints and levels that use it must be listed.',
+        'The packages an asset itself uses must be listed (direct ones only).',
+      ],
+      whenNotToUse: ['The node graph inside a material or Blueprint is wanted, not package links (use asset.query_asset with lookup=graph).'],
+      examples: [ex('List the Blueprints and levels that use a Niagara system', { assetPath: '/Game/FX/NS_Puff', referencers: true }, { success: true })] }
   ),
 
   r('get_source_control_state', 'asset', 'Retrieve source-control state for an asset.',
     schema({ assetPath: ASSET_PATH, assetPaths: arr('Several asset paths to query in one call.'), recursive: bool('Also report every /Game package the assets depend on, transitively (up to 512).') }, [], ['assetPath', 'assetPaths']),
     OK, READ, READ_POLICY, LOW,
-    { examples: [ex('Check whether a mesh is checked out', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true })] }
+    { whenToUse: ['Before editing, it must be known whether assets are checked out, modified or held by someone else.'],
+      whenNotToUse: ['Assets must be checked out or submitted (use asset.source_control).'],
+      examples: [ex('Check whether a mesh is checked out', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true })] }
   ),
 
   r('analyze_graph', 'asset', 'Analyze the node graph inside a material or Blueprint asset.',
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
     ANALYZE_GRAPH_OK, READ, READ_POLICY, MEDIUM,
     { dispatchAction: 'get_asset_graph',
+      whenToUse: ['A material or Blueprint must be summarised: node counts, parameters, blend mode or graph count.'],
+      whenNotToUse: ['One Blueprint\'s variables, functions or components are wanted (use blueprint.get_blueprint).'],
       examples: [ex('Inspect a material\'s expression graph', { assetPath: '/Game/Materials/M_Base' },
         { success: true, graphType: 'Material', nodeCount: 4, parameterCount: 2, blendMode: 'BLEND_Opaque' })] }
   ),
@@ -75,13 +84,20 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
   r('get_asset_graph', 'asset', 'Retrieve the asset reference graph directly via the get_asset_graph bridge action.',
     schema({ assetPath: ASSET_PATH, maxDepth: num('Maximum traversal depth (clamped to 8).') }, ['assetPath']),
     GRAPH_OK, READ, READ_POLICY, MEDIUM,
-    { examples: [ex('Read the reference graph through the direct bridge route', { assetPath: '/Game/Materials/M_Base', maxDepth: 2 }, { success: true })] }
+    { whenToUse: ['The reference graph of an asset must be walked several levels deep in one call (depth is capped at 8).'],
+      whenNotToUse: [
+        'Only the direct packages an asset uses, or the packages that use it, are needed (use lookup=dependencies, which is cheaper).',
+        'A material\'s package references are wanted; a plain material answers here with its expression nodes (use lookup=dependencies).',
+      ],
+      examples: [ex('Read the reference graph through the direct bridge route', { assetPath: '/Game/Materials/M_Base', maxDepth: 2 }, { success: true })] }
   ),
 
   r('create_thumbnail', 'asset', 'Generate a thumbnail for an asset.',
     schema({ assetPath: ASSET_PATH, width: num('Thumbnail width.'), height: num('Thumbnail height.'), outputPath: str('Project-relative PNG file to write, e.g. Saved/Thumbnails/SM_Crate.png.') }, ['assetPath']),
     OK, WRITE, WRITE_POLICY, LOW,
     { dispatchAction: 'generate_thumbnail',
+      whenToUse: ['An asset needs a preview image, optionally written as a PNG file inside the project.'],
+      whenNotToUse: ['The image should show the editor viewport or a level camera view (use control_editor.screenshot).'],
       examples: [ex('Render a 256x256 thumbnail', { assetPath: '/Game/Meshes/SM_Crate', width: 256, height: 256 }, { success: true })] }
   ),
 
@@ -89,6 +105,11 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
     schema({ assetPath: ASSET_PATH, tags: arr('Tags to set.') }, ['assetPath', 'tags']),
     OK, WRITE, WRITE_POLICY, LOW,
     { dispatchAction: 'set_tags',
+      whenToUse: ['Simple labels such as Reviewed or Prop must be attached to an asset as package metadata; the change stays unsaved until the asset is saved.'],
+      whenNotToUse: [
+        'Actors in a level need a tag (use control_actor.add_tag).',
+        'Assets carrying the tag must be found afterwards (asset.query_asset lookup=by_tag sees it only if the tag is registered in project settings).',
+      ],
       examples: [ex('Tag an asset for review', { assetPath: '/Game/Meshes/SM_Crate', tags: ['Reviewed', 'Prop'] }, { success: true })] }
   ),
 
@@ -96,26 +117,37 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
     schema({ success: bool('Operation succeeded.'), assetPath: ASSET_PATH, tags: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Asset Registry tags (key-value).' }, metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Custom package metadata (key-value).' } }, ['success']),
     READ, READ_POLICY, LOW,
-    { examples: [ex('Read metadata for a mesh', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true, assetPath: '/Game/Meshes/SM_Crate', metadata: { Author: 'ArtTeam' } })] }
+    { whenToUse: ['What was recorded on an asset must be read back: its registry tags and the package metadata that asset.set_metadata writes.'],
+      whenNotToUse: ['The asset\'s own values are wanted, such as a texture size or material parameters (use texture.get_texture_info or material.get_material_info).'],
+      examples: [ex('Read metadata for a mesh', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true, assetPath: '/Game/Meshes/SM_Crate', metadata: { Author: 'ArtTeam' } })] }
   ),
 
   r('set_metadata', 'asset', 'Set metadata key-value pairs on an asset.',
     schema({ assetPath: ASSET_PATH, metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Metadata key-value pairs.' } }, ['assetPath', 'metadata']),
     OK, WRITE, WRITE_POLICY, LOW,
     { dispatchAction: 'set_metadata',
+      whenToUse: ['Key and value notes such as author or revision must be attached to an asset; the change stays unsaved until the asset is saved.'],
+      whenNotToUse: [
+        'The stored values must be read back (use asset.inspect_asset).',
+        'A property of the asset itself must change (use inspect.set_property).',
+      ],
       examples: [ex('Record authoring provenance', { assetPath: '/Game/Meshes/SM_Crate', metadata: { Author: 'ArtTeam', Revision: '3' } }, { success: true })] }
   ),
 
   r('validate', 'asset', 'Validate an asset for errors.',
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
     OK, READ, READ_POLICY, MEDIUM,
-    { examples: [ex('Validate a material before submit', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
+    { whenToUse: ['An asset must be confirmed to exist and load before other calls rely on it.'],
+      whenNotToUse: ['Every asset in a folder must be checked for load errors (use system_control.validate_assets).'],
+      examples: [ex('Validate a material before submit', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
   ),
 
   r('fixup_redirectors', 'asset', 'Fix up redirector assets in a directory.',
     schema({ directoryPath: str('Directory path to fix up.'), path: str('Alternative directory path.'), checkoutFiles: bool('Check the referencing packages out of source control before resaving them.') }, [], ['directoryPath', 'path']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'fixup_redirectors',
+      whenToUse: ['Redirectors left in a folder by earlier moves or renames must be resolved: referencers are repointed and the redirectors deleted.'],
+      whenNotToUse: ['Redirectors should only be listed before anything changes (use asset.query_asset with lookup=search and classNames ObjectRedirector).'],
       examples: [ex('Clean up redirectors left by a move', { directoryPath: '/Game/Meshes' }, { success: true })] }
   ),
 
@@ -123,18 +155,24 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
     schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths.') }, [], ['assetPaths', 'folderPath']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'refresh_blueprints',
+      whenToUse: ['Blueprints in a folder or a list need every node refreshed, then compiled and saved, for example after a class was renamed.'],
+      whenNotToUse: ['One Blueprint only needs compiling (use blueprint.compile).'],
       examples: [ex('Refresh the Blueprints after a class rename', { folderPath: '/Game/Blueprints' }, { success: true })] }
   ),
 
   r('find_by_tag', 'asset', 'Find /Game assets whose asset-registry tag matches (optionally a value).',
     schema({ tag: str('Tag name to search for.'), value: str('Optional tag value.') }, ['tag']),
     OK, READ, READ_POLICY, LOW,
-    { examples: [ex('Find every asset tagged Reviewed', { tag: 'Reviewed' }, { success: true })] }
+    { whenToUse: ['Assets must be found across the project by name, class, folder or asset-registry tag.'],
+      whenNotToUse: ['Actors placed in the open level must be found (use control_actor.find).'],
+      examples: [ex('Find every asset tagged Reviewed', { tag: 'Reviewed' }, { success: true })] }
   ),
 
   r('generate_report', 'asset', 'Generate an asset report for a directory.',
     schema({ directory: str('Directory to report on.'), reportType: str('Report type.'), outputPath: str('Output file path.') }, []),
     OK, READ, READ_POLICY, MEDIUM,
-    { examples: [ex('Report on the Meshes directory', { directory: '/Game/Meshes', reportType: 'summary', outputPath: '/Game/Reports/Meshes' }, { success: true })] }
+    { whenToUse: ['Every asset under a directory, with name, path and class, must be listed in one reply, optionally saved as a JSON file in the project.'],
+      whenNotToUse: ['A paged view of one folder is enough (use asset.list); the report returns the whole tree unpaged.'],
+      examples: [ex('Report on the Meshes directory', { directory: '/Game/Meshes', reportType: 'summary', outputPath: '/Game/Reports/Meshes' }, { success: true })] }
   )
 ];

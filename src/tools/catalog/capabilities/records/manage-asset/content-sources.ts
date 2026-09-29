@@ -72,7 +72,9 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('Guidance on what to do next given the current state.')
     }, ['success']),
     READ, READ_POLICY, LOW,
-    { dispatchAction: 'list_fab_downloads', 
+    { dispatchAction: 'list_fab_downloads',
+      whenToUse: ['It must be known which Fab packs are already downloaded to this machine and where they are cached.'],
+      whenNotToUse: ['A downloaded pack must be copied into the project (use asset.maintain_content with maintenance=migrate).'],
       examples: [ex('Check for downloaded Fab content', {}, { success: true, downloadCount: 0 })] }
   ),
 
@@ -91,7 +93,9 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('Guidance on refreshing or paging the sync.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'list_fab_library', 
+    { dispatchAction: 'list_fab_library',
+      whenToUse: ['The Fab listings the signed-in account owns must be listed, each with an id for adding to the project (needs a prior library sync).'],
+      whenNotToUse: ['A listing from the library is ready to add to the project (use asset.import_marketplace_asset with marketplace=fab_listing).'],
       examples: [ex('List the synced Fab library, skipping legacy engine entries', { limit: 50, filter: 'fab' }, { success: true, entryCount: 0 })] }
   ),
 
@@ -114,7 +118,12 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('How to place the downloaded pack into /Game.')
     }, ['success']),
     MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
-    { dispatchAction: 'download_fab_asset', 
+    { dispatchAction: 'download_fab_asset',
+      whenToUse: ['A signed Fab download URL is in hand and the pack must be fetched to disk; it lands in the Fab cache, not in /Game.'],
+      whenNotToUse: [
+        'Only a listing id is known, with no signed URL (use marketplace=fab_listing, which adds the listing directly).',
+        'Downloads already on disk must be listed, not fetched again (use asset.query_marketplace).',
+      ],
       examples: [ex('Download a pack from a signed URL', { assetId: 'abc123', downloadUrl: 'https://example.invalid/signed' }, { success: false })] }
   ),
 
@@ -141,7 +150,9 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       addBlockedReason: str('Present when canAddToProject is false: why this listing cannot be imported.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'get_fab_listing_details', 
+    { dispatchAction: 'get_fab_listing_details',
+      whenToUse: ['A Fab search hit must be judged before adding it: description, seller, file formats and whether the project can import it.'],
+      whenNotToUse: ['The listing is chosen and must be added to the project (use asset.import_marketplace_asset with marketplace=fab_listing).'],
       examples: [ex('Describe a listing before adding it', { listingId: 'ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1' }, { success: true, hasImage: true })] }
   ),
 
@@ -160,7 +171,9 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('How to use a returned listingId, and what listingType does and does not guarantee.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'search_fab_listings', 
+    { dispatchAction: 'search_fab_listings',
+      whenToUse: ['Content must be found on Fab by keyword, optionally free listings only, to get listing ids.'],
+      whenNotToUse: ['Content already installed in an engine template, plugin or Bridge folder is wanted (use asset.list with kind=content_sources).'],
       examples: [ex('Find free Unreal rocks on Fab', { query: 'rock', freeOnly: true, limit: 5 }, { success: true, listingCount: 0 })] }
   ),
 
@@ -181,7 +194,12 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('How to relocate the imported tree.')
     }, ['success']),
     MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
-    { dispatchAction: 'add_fab_asset_to_project', 
+    { dispatchAction: 'add_fab_asset_to_project',
+      whenToUse: ['A Fab listing id is known and its content must be added to the project through the signed-in Fab tab.'],
+      whenNotToUse: [
+        'The listing must first be found or judged (use asset.query_marketplace).',
+        'The pack is already downloaded on disk and only needs copying in (use asset.maintain_content with maintenance=migrate).',
+      ],
       examples: [ex('Add a Fab listing to the project', { listingId: 'ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1' }, { success: false })] }
   ),
 
@@ -198,7 +216,9 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       importAvailable: bool('True when this build links the MegascansPlugin module, so import_megascans_asset can run.')
     }, ['success']),
     READ, READ_POLICY, LOW,
-    { dispatchAction: 'list_megascans_library', 
+    { dispatchAction: 'list_megascans_library',
+      whenToUse: ['The Megascans packs downloaded by Bridge on this machine must be listed before one is imported.'],
+      whenNotToUse: ['A listed pack should be imported into the project (use asset.import_marketplace_asset with marketplace=megascans).'],
       examples: [ex('List the downloaded Megascans library', {}, { success: true, assetCount: 0 })] }
   ),
 
@@ -219,7 +239,12 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       note: str('Where the imported content lands.')
     }, ['success']),
     MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
-    { dispatchAction: 'import_megascans_asset', 
+    { dispatchAction: 'import_megascans_asset',
+      whenToUse: ['A Megascans pack already downloaded by Bridge must be imported with its master materials and presets applied.'],
+      whenNotToUse: [
+        'The Megascans library index must be browsed first (use asset.query_marketplace).',
+        'The pack files should just be copied in as they are (use asset.maintain_content with maintenance=migrate).',
+      ],
       examples: [ex('Import a downloaded surface pack', { folderName: 'Rock_Cliff_ud4kcfxda', assetType: 'surface', assetPaths: ['C:/Users/me/Documents/Megascans Library/Downloaded/UAssets/Rock_Cliff_ud4kcfxda'] }, { success: true, entryCount: 1 })] }
   ),
 
@@ -249,7 +274,15 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       warnings: arr('Advisory messages, including the reference-integrity warning for a relocated destination.')
     }, ['success']),
     MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
-    { dispatchAction: 'migrate_assets', 
+    { dispatchAction: 'migrate_assets',
+      whenToUse: [
+        'Loose .uasset content from an engine template, plugin or downloaded Fab or Megascans pack must be copied into the project.',
+        'A migration must be previewed with a dry run before any file is copied.',
+      ],
+      whenNotToUse: [
+        'A source file (FBX, PNG, WAV) must become an asset (use asset.import).',
+        'The available sources are still unknown (use asset.list with kind=content_sources).',
+      ],
       examples: [
         ex('Preview migrating the advanced vehicle template', { sourceRoot: 'engineTemplates', sourceId: 'TP_VehicleAdvBP', dryRun: true }, { success: true, referenceIntegrity: 'preserved' }),
         ex('Migrate a downloaded Megascans pack', { sourceRoot: 'megascansLibrary', sourceId: 'Rock_Cliff_ud4kcfxda' }, { success: true })

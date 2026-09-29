@@ -10,6 +10,11 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'add_loot_entry',
     summary: 'Add an entry to a loot table asset.',
+    whenToUse: ['A loot table needs another item entry with a drop weight and a quantity range.'],
+    whenNotToUse: [
+      'The loot table asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The table only needs to be read (use manage_inventory.get_inventory_info).',
+    ],
     inputProps: {
       lootTablePath: IP.lootTablePath,
       itemPath: IP.itemPath,
@@ -29,6 +34,11 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'add_recipe_ingredient',
     summary: 'Add an ingredient to a crafting recipe asset.',
+    whenToUse: ['A recipe needs one more ingredient item with the quantity it consumes.'],
+    whenNotToUse: [
+      'The recipe asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The recipe is a custom class, not one made by manage_inventory.create_inventory_asset (use inspect.set_property).',
+    ],
     inputProps: {
       recipePath: IP.recipePath,
       ingredientItemPath: IP.ingredientItemPath,
@@ -46,6 +56,11 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'assign_item_category',
     summary: 'Assign a category to an item asset.',
+    whenToUse: ['An item must be filed under an existing item category asset.'],
+    whenNotToUse: [
+      'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The category asset does not exist yet, and its path is stored without a check (use manage_inventory.create_inventory_asset, kind=item_category).',
+    ],
     inputProps: { itemPath: IP.itemPath, categoryPath: IP.categoryPath, save: IP.save },
     required: ['itemPath', 'categoryPath'],
     exampleInput: {
@@ -58,6 +73,14 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'configure_item_stacking',
     summary: 'Configure persistent item stacking rules.',
+    whenToUse: [
+      'An item must be marked stackable with a maximum stack size, or flagged as unique.',
+      'All three stacking fields should be given together, since an omitted one resets to stackable, 99 or not unique.',
+    ],
+    whenNotToUse: [
+      'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The item is a custom class with no stacking properties such as bStackable or MaxStackSize, so nothing is written (use inspect.set_property).',
+    ],
     inputProps: {
       itemPath: IP.itemPath,
       stackable: IP.stackable,
@@ -76,6 +99,14 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'configure_recipe_requirements',
     summary: 'Configure persistent crafting requirements.',
+    whenToUse: [
+      'A recipe must require a minimum character level or a named crafting station.',
+      'Level and station should be given together, since an omitted one resets to level 0 or station None.',
+    ],
+    whenNotToUse: [
+      'The recipe asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The recipe is a custom class, not one made by manage_inventory.create_inventory_asset (use inspect.set_property).',
+    ],
     inputProps: {
       recipePath: IP.recipePath,
       requiredLevel: IP.requiredLevel,
@@ -92,6 +123,8 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'create_crafting_recipe',
     summary: 'Create a crafting recipe asset.',
+    whenToUse: ['A recipe is needed that produces an output item in a set quantity and craft time.'],
+    whenNotToUse: ['Ingredients or requirements must be added to an existing recipe (use manage_inventory.configure_crafting).'],
     inputProps: {
       name: IP.name,
       path: IP.path,
@@ -111,6 +144,8 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'create_crafting_station',
     summary: 'Create a crafting station Blueprint asset.',
+    whenToUse: ['A crafting station Blueprint is needed with a station mesh and an interaction box.'],
+    whenNotToUse: ['An actor Blueprint with a different component set is needed (use blueprint.create).'],
     inputProps: { name: IP.name, path: IP.path, stationType: IP.stationType, save: IP.save },
     required: ['name'],
     exampleInput: { action: 'create_crafting_station', name: 'BP_Forge', stationType: 'Basic' },
@@ -118,6 +153,8 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'create_item_category',
     summary: 'Create an item category asset.',
+    whenToUse: ['A group such as Consumable or Weapon is needed so items can be filed under it.'],
+    whenNotToUse: ['An existing item only needs to be filed under an existing category (use manage_inventory.configure_item).'],
     inputProps: { name: IP.name, path: IP.path, save: IP.save },
     required: ['name'],
     exampleInput: { action: 'create_item_category', name: 'DA_Consumable', path: '/Game/Items/Categories' },
@@ -125,6 +162,8 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'create_item_data_asset',
     summary: 'Create an item data asset.',
+    whenToUse: ['A new item is needed as a data asset that item settings, loot entries and recipes can point at.'],
+    whenNotToUse: ['The item already exists and only its properties, icon, stacking or category change (use manage_inventory.configure_item).'],
     inputProps: { name: IP.name, path: IP.path, save: IP.save },
     required: ['name'],
     exampleInput: { action: 'create_item_data_asset', name: 'DA_Potion', path: '/Game/Items' },
@@ -132,6 +171,8 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'create_loot_table',
     summary: 'Create a loot table asset.',
+    whenToUse: ['A loot table asset is needed to hold weighted item entries and quality tiers.'],
+    whenNotToUse: ['Entries or tiers must go into an existing loot table (use manage_inventory.configure_loot).'],
     inputProps: { name: IP.name, path: IP.path, save: IP.save },
     required: ['name'],
     exampleInput: { action: 'create_loot_table', name: 'LT_Common', path: '/Game/Data/LootTables' },
@@ -140,6 +181,14 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_inventory_info',
     summary: 'Read an inventory asset: an item (properties), loot table (entries with item, weight and quantity range), recipe (ingredients, output item, station, craft time), or a pickup or inventory Blueprint (components, variables).',
     topics: ['item properties', 'list loot table entries', 'recipe ingredients', 'pickup blueprint variables'],
+    whenToUse: [
+      'The stored fields of an item, loot table or recipe asset must be checked, for example after changing it.',
+      'The components and variable defaults of a pickup or inventory Blueprint must be read.',
+    ],
+    whenNotToUse: [
+      'Assets must first be found by name, class or folder (use asset.query_asset).',
+      'The functions, events or graph node counts of a Blueprint are needed (use inspect.get_blueprint_details).',
+    ],
     read: true,
     inputProps: {
       blueprintPath: IP.blueprintPath,
@@ -183,6 +232,11 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'remove_loot_entry',
     summary: 'Remove an entry from a loot table asset.',
+    whenToUse: ['A loot table entry must be dropped, chosen by the entryIndex that adding it returned or by its item, which removes every entry for that item.'],
+    whenNotToUse: [
+      'The loot table asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The table only needs to be read (use manage_inventory.get_inventory_info).',
+    ],
     inputProps: {
       lootTablePath: IP.lootTablePath,
       entryIndex: IP.entryIndex,
@@ -200,6 +254,14 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'set_inventory_replication',
     summary: 'Set inventory component replication metadata.',
+    whenToUse: [
+      'A Blueprint with InventorySlots, MaxSlots, CurrentWeight and MaxWeight variables must replicate them to clients, or stop (replicated defaults to false).',
+      'Those variables need a replication condition such as OwnerOnly, SkipOwner, SimulatedOnly or InitialOnly.',
+    ],
+    whenNotToUse: [
+      'The Blueprint keeps inventory state in differently named variables (use manage_networking.configure_replication).',
+      'None of the four inventory variables exist yet (add them with blueprint.edit_variable).',
+    ],
     inputProps: {
       blueprintPath: IP.blueprintPath,
       replicated: IP.replicated,
@@ -216,6 +278,11 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'set_item_icon',
     summary: 'Set the icon reference on an item asset.',
+    whenToUse: ['An item needs an icon texture or material path recorded on it.'],
+    whenNotToUse: [
+      'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The icon image is not in the project yet (use asset.import).',
+    ],
     inputProps: { itemPath: IP.itemPath, iconPath: IP.iconPath, save: IP.save },
     required: ['itemPath'],
     exampleInput: {
@@ -227,6 +294,11 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'set_item_properties',
     summary: 'Set persistent item asset properties.',
+    whenToUse: ['An item needs custom fields such as a name, description, weight or value written onto its data asset.'],
+    whenNotToUse: [
+      'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The target is a Blueprint or class default rather than an item data asset (use inspect.set_property).',
+    ],
     inputProps: { itemPath: IP.itemPath, properties: IP.properties, save: IP.save },
     required: ['itemPath'],
     exampleInput: {
@@ -239,6 +311,11 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'set_loot_quality_tiers',
     summary: 'Set quality tiers on a loot table asset.',
+    whenToUse: ['A loot table needs quality tiers with drop weights; the tier list is replaced whole, and five default tiers apply if none are given.'],
+    whenNotToUse: [
+      'The loot table asset does not exist yet (use manage_inventory.create_inventory_asset).',
+      'The table only needs to be read (use manage_inventory.get_inventory_info).',
+    ],
     inputProps: { lootTablePath: IP.lootTablePath, tiers: IP.tiers, save: IP.save },
     required: ['lootTablePath'],
     exampleInput: {
