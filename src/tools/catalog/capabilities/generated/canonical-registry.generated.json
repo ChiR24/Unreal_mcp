@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ea1d554bf0045427",
+  "catalogRevision": "80c7ca7df91e7685",
   "recordCount": 389,
   "records": [
     {
@@ -30543,9 +30543,12 @@
         "domain": "actor",
         "family": "component",
         "topics": [
-          "get_component_property"
+          "get_component_property",
+          "value of a setting",
+          "nested struct member",
+          "no instance needed"
         ],
-        "summary": "Read a single property value from a named actor component, or from a Blueprint component template on the CDO.",
+        "summary": "Read one property's value and type from a named component on a live actor, or from a Blueprint's own component (blueprintPath, no instance needed); dotted paths reach into structs.",
         "whenToUse": [
           "A component property value must be inspected.",
           "A component template on a Blueprint with no instance in the level must be read."
@@ -30619,7 +30622,7 @@
       },
       "examples": [
         {
-          "title": "Read a single property value from a named actor component, or from a Blueprint component template on the CDO.",
+          "title": "Read one property's value and type from a named component on a live actor, or from a Blueprint's own component (blueprintPath, no instance needed); dotted paths reach into structs.",
           "input": {
             "action": "get_component_property",
             "actorName": "Cube1",
@@ -30661,7 +30664,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e8b055825782d8d8401021dd8138522ba2deb0a71dab5f2459f69b0e7650c86f",
-        "content": "003f82b81e65cbcce6b1d60e033261b5d079e0cdf58426b08d00aa93b4d51a74"
+        "content": "340dc13f0092dbb2ecd31981a86994792d5b63280835ac6a136ecbb0efb4c64c"
       }
     },
     {
@@ -33800,9 +33803,12 @@
         "domain": "editor",
         "family": "command",
         "topics": [
-          "describe_reflected_api"
+          "describe_reflected_api",
+          "class functions",
+          "function parameters",
+          "plugin surface"
         ],
-        "summary": "Enumerate the reflected UFunction surface of another plugin's live bridge object, by class name. Plugins that host a web view register a UObject with the page (Fab binds FabBrowserApi as window.ue.fab), and because that object is reflected it is reachable by name without linking the plugin. The answer is read from the INSTALLED build at call time, so an integration never has to hardcode another plugin's contract or freeze a copy of it that goes stale on the next engine update.",
+        "summary": "List a class's reflected functions (a plugin's live bridge object such as FabBrowserApi, or any engine class): each with its parameters, C++ types and return or out flags, read from the installed build; filter narrows by function name.",
         "whenToUse": [
           "An integration must discover what a plugin currently exposes, rather than assume a signature recorded earlier.",
           "A plugin API appears to have changed and the live surface needs checking."
@@ -33929,7 +33935,7 @@
       },
       "examples": [
         {
-          "title": "Enumerate the reflected UFunction surface of another plugin's live bridge object, by class name. Plugins that host a web view register a UObject with the page (Fab binds FabBrowserApi as window.ue.fab), and because that object is reflected it is reachable by name without linking the plugin. The answer is read from the INSTALLED build at call time, so an integration never has to hardcode another plugin's contract or freeze a copy of it that goes stale on the next engine update.",
+          "title": "List a class's reflected functions (a plugin's live bridge object such as FabBrowserApi, or any engine class): each with its parameters, C++ types and return or out flags, read from the installed build; filter narrows by function name.",
           "input": {
             "action": "describe_reflected_api",
             "className": "FabBrowserApi"
@@ -33968,7 +33974,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bc36cef3a29342e32f603e0b548ea9342493190446133a274b691f4c3715497e",
-        "content": "8afa789abbb38cc554f8f46e795d5b7ec9647f5e05d0e44fdf29aa2c54e743b5"
+        "content": "00b14de10b308f40222c16ee9b5ab1d1923b1e7d0656c290f0123fd18ff812cf"
       }
     },
     {

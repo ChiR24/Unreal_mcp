@@ -44,7 +44,8 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'describe_reflected_api', dispatchAction: 'control_editor',
     domain: D, family: F,
-    summary: 'Enumerate the reflected UFunction surface of another plugin\'s live bridge object, by class name. Plugins that host a web view register a UObject with the page (Fab binds FabBrowserApi as window.ue.fab), and because that object is reflected it is reachable by name without linking the plugin. The answer is read from the INSTALLED build at call time, so an integration never has to hardcode another plugin\'s contract or freeze a copy of it that goes stale on the next engine update.',
+    topics: ['class functions', 'function parameters', 'plugin surface'],
+    summary: 'List a class\'s reflected functions (a plugin\'s live bridge object such as FabBrowserApi, or any engine class): each with its parameters, C++ types and return or out flags, read from the installed build; filter narrows by function name.',
     whenToUse: [
       'An integration must discover what a plugin currently exposes, rather than assume a signature recorded earlier.',
       'A plugin API appears to have changed and the live surface needs checking.',

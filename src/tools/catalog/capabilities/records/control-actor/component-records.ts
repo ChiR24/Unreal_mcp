@@ -86,7 +86,8 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_component_property',
     domain: DOMAIN,
     family: FAMILY_COMPONENT,
-    summary: 'Read a single property value from a named actor component, or from a Blueprint component template on the CDO.',
+    topics: ['value of a setting', 'nested struct member', 'no instance needed'],
+    summary: 'Read one property\'s value and type from a named component on a live actor, or from a Blueprint\'s own component (blueprintPath, no instance needed); dotted paths reach into structs.',
     whenToUse: ['A component property value must be inspected.', 'A component template on a Blueprint with no instance in the level must be read.'],
     whenNotToUse: ['The property should be changed (use set_component_property).'],
     // The handler reads blueprintPath and propertyPath as well, and its twin
