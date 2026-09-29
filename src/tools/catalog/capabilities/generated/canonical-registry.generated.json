@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f24a1b6de8d659d5",
+  "catalogRevision": "dab9688518c4045e",
   "recordCount": 389,
   "records": [
     {
@@ -36092,7 +36092,9 @@
           "click button",
           "click ui button",
           "click button in running game",
+          "check or toggle a checkbox in running game",
           "press key",
+          "press jump key",
           "simulate key press",
           "drive game ui",
           "test running game"
@@ -36268,7 +36270,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cab41a14b392ca38f743e7d3bc1b3ea1f596f7fda3b2c0c4dae944829f9860a5",
-        "content": "b46675208720fa10b18fd48c0f378f351c513e020eb7991b0a76b09a5c65acf0"
+        "content": "686ef62e1919df00583d2939eff8ee01e26ad1525a4b2b8dc9574ad1856342fc"
       }
     },
     {
