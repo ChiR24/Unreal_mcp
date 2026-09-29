@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e5f992928f70d6fa",
+  "catalogRevision": "a5578f14b865e258",
   "recordCount": 389,
   "records": [
     {
@@ -72685,9 +72685,12 @@
         "domain": "tools",
         "family": "status",
         "topics": [
-          "get_status"
+          "get_status",
+          "how many tools are enabled",
+          "catalog revision",
+          "enabled and disabled counts"
         ],
-        "summary": "Get the current enabled/disabled tool status and category breakdown.",
+        "summary": "Read how many tools are enabled and disabled, the per-category breakdown, and the catalog revision numbers.",
         "whenToUse": [
           "Check aggregate tool visibility and per-category counts."
         ],
@@ -72770,7 +72773,7 @@
       },
       "examples": [
         {
-          "title": "Get the current enabled/disabled tool status and category breakdown.",
+          "title": "Read how many tools are enabled and disabled, the per-category breakdown, and the catalog revision numbers.",
           "input": {
             "action": "get_status"
           },
@@ -72819,7 +72822,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3e5744163fa0b65f990f3efce228e2e1e42356a11ee991afff519c7be5e29bcd",
-        "content": "72de68993276f57771bea83fa9b5e65bbcd53141c2351a2732e4446754873e80"
+        "content": "8553e6b631c34f1bb8e7cb19504773b64d7ca225a94a3a6c7ecb9aa3c8168b95"
       }
     },
     {
@@ -72835,9 +72838,11 @@
         "domain": "tools",
         "family": "list",
         "topics": [
-          "list_categories"
+          "list_categories",
+          "tool groups",
+          "core world gameplay utility"
         ],
-        "summary": "List tool categories with enabled state and tool counts.",
+        "summary": "List the four tool categories (core, world, gameplay, utility), each with its enabled flag, tool count and enabled tool count.",
         "whenToUse": [
           "Inspect the four categories (core, world, gameplay, utility)."
         ],
@@ -72912,7 +72917,7 @@
       },
       "examples": [
         {
-          "title": "List tool categories with enabled state and tool counts.",
+          "title": "List the four tool categories (core, world, gameplay, utility), each with its enabled flag, tool count and enabled tool count.",
           "input": {
             "action": "list_categories"
           },
@@ -72959,7 +72964,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "657f0057c0a96a09482942c4c8bee2de6df9c1ec43db240a60106f88ab5db9c6",
-        "content": "ecf6767bf45bdcdeb38b8dd80b3fa866ea84facad2c6aef3189de746e435bd7d"
+        "content": "fc1d88790fd7005a2925dc73d4ad3de1d51b29a9c773085b4f09ab80405ced6b"
       }
     },
     {
@@ -78645,7 +78650,7 @@
         "topics": [
           "get_metadata"
         ],
-        "summary": "Read metadata key-value pairs from a Level Sequence asset.",
+        "summary": "Read the custom metadata tags (string key/value pairs written by set_metadata) stored on a Level Sequence, or look up one key.",
         "whenToUse": [
           "Sequence asset metadata must be inspected."
         ],
@@ -78740,7 +78745,7 @@
       },
       "examples": [
         {
-          "title": "Read metadata key-value pairs from a Level Sequence asset.",
+          "title": "Read the custom metadata tags (string key/value pairs written by set_metadata) stored on a Level Sequence, or look up one key.",
           "input": {
             "action": "get_metadata",
             "path": "/Game/Cinematics/SEQ_Master"
@@ -78783,7 +78788,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "383366883099e4d6bf96c10c737ec23cd838823610079c0e76139270d4eae28a",
-        "content": "3198d4231c07a0d4df0e2a20062acaa44e4cdef82bde8de921fc7efa0d56e973"
+        "content": "5a0c284af524a4798b4d888ddc0b9b97f7dcedf7f935b6c4d25b91aed52853fc"
       }
     },
     {

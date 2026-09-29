@@ -56,7 +56,8 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   {
     action: 'list_categories',
     family: 'list',
-    summary: 'List tool categories with enabled state and tool counts.',
+    topics: ['tool groups', 'core world gameplay utility'],
+    summary: 'List the four tool categories (core, world, gameplay, utility), each with its enabled flag, tool count and enabled tool count.',
     whenToUse: ['Inspect the four categories (core, world, gameplay, utility).'],
     whenNotToUse: ['When individual tool states are needed (use list_tools).'],
     inputProps: {},
@@ -190,7 +191,8 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   {
     action: 'get_status',
     family: 'status',
-    summary: 'Get the current enabled/disabled tool status and category breakdown.',
+    topics: ['how many tools are enabled', 'catalog revision', 'enabled and disabled counts'],
+    summary: 'Read how many tools are enabled and disabled, the per-category breakdown, and the catalog revision numbers.',
     whenToUse: ['Check aggregate tool visibility and per-category counts.'],
     whenNotToUse: ['When individual tool detail is needed (use list_tools).'],
     inputProps: {},
