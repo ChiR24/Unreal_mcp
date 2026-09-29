@@ -1,4 +1,6 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
+#include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoComponents.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -26,8 +28,40 @@ bool ComponentClassMatches(const UClass *ComponentClass, const FString &Filter) 
   return Filter.IsEmpty();
 }
 
-// get_scs with a folder (path) instead of blueprintPath: every Blueprint under it whose own
-// components match componentClass, so "which Blueprints show a TextRender" is one call.
+TSharedPtr<FJsonValue> InheritedRow(const FString &Name, const UClass *Class, const FString &OwnerClass) {
+  TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
+  Obj->SetStringField(TEXT("componentName"), Name);
+  Obj->SetStringField(TEXT("componentType"), Class->GetName());
+  Obj->SetBoolField(TEXT("inherited"), true);
+  Obj->SetBoolField(TEXT("isSceneComponent"), Class->IsChildOf(USceneComponent::StaticClass()));
+  Obj->SetStringField(TEXT("ownerClass"), OwnerClass);
+  return MakeShared<FJsonValueObject>(Obj);
+}
+
+// What a Blueprint has without owning it: each parent Blueprint's SCS nodes, then the native
+// components on its parent class's CDO (a Character's Mesh). Neither is on its own SCS.
+void CollectInheritedComponents(UBlueprint *Blueprint, const FString &Filter, TArray<TSharedPtr<FJsonValue>> &Out) {
+  McpPropertyCdoComponents::ForEachScsNode(Blueprint, [&](USCS_Node *Node, bool bInherited) {
+    if (bInherited && Node->ComponentClass && ComponentClassMatches(Node->ComponentClass, Filter)) {
+      const UBlueprint *Owner = Node->GetSCS() ? Node->GetSCS()->GetBlueprint() : nullptr;
+      Out.Add(InheritedRow(Node->GetVariableName().ToString(), Node->ComponentClass,
+                           Owner && Owner->GeneratedClass ? Owner->GeneratedClass->GetName() : FString()));
+    }
+    return true;
+  });
+  UClass *ParentClass = Blueprint->ParentClass;
+  if (const AActor *ParentCDO = ParentClass ? Cast<AActor>(ParentClass->GetDefaultObject()) : nullptr) {
+    for (const UActorComponent *Comp : ParentCDO->GetComponents()) {
+      if (Comp && ComponentClassMatches(Comp->GetClass(), Filter)) {
+        Out.Add(InheritedRow(Comp->GetName(), Comp->GetClass(), ParentClass->GetName()));
+      }
+    }
+  }
+}
+
+// get_scs with a folder (path) instead of blueprintPath: every Blueprint under it with a
+// component matching componentClass, its own or inherited, so "which Blueprints show a
+// TextRender" is one call.
 bool SendScsFolderScan(UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
                        TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &Folder, const FString &Filter) {
   const FNormalizedAssetPath Norm = NormalizeAssetPath(Folder);
@@ -51,7 +85,7 @@ bool SendScsFolderScan(UMcpAutomationBridgeSubsystem &Bridge, const FString &Req
       break;
     }
     ++Scanned;
-    const UBlueprint *Blueprint = Cast<UBlueprint>(Data.GetAsset());
+    UBlueprint *Blueprint = Cast<UBlueprint>(Data.GetAsset());
     const USimpleConstructionScript *SCS = Blueprint ? Blueprint->SimpleConstructionScript : nullptr;
     TArray<TSharedPtr<FJsonValue>> Components;
     for (const USCS_Node *Node : SCS ? SCS->GetAllNodes() : TArray<USCS_Node *>()) {
@@ -61,6 +95,9 @@ bool SendScsFolderScan(UMcpAutomationBridgeSubsystem &Bridge, const FString &Req
         Comp->SetStringField(TEXT("componentType"), Node->ComponentClass->GetName());
         Components.Add(MakeShared<FJsonValueObject>(Comp));
       }
+    }
+    if (Blueprint) {
+      CollectInheritedComponents(Blueprint, Filter, Components);
     }
     if (Components.Num() > 0) {
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
@@ -182,23 +219,7 @@ bool HandleScsGet(const FBlueprintActionContext &Context) {
     // several, inherited from its parent class, and they are the ones callers
     // need to name as an attach parent. List them alongside, marked inherited.
     TArray<TSharedPtr<FJsonValue>> InheritedArray;
-    UClass *ParentClass = Blueprint ? Blueprint->ParentClass : nullptr;
-    if (AActor *ParentCDO =
-            ParentClass ? Cast<AActor>(ParentClass->GetDefaultObject()) : nullptr) {
-      for (UActorComponent *Comp : ParentCDO->GetComponents()) {
-        if (!Comp || !ComponentClassMatches(Comp->GetClass(), Filter)) {
-          continue;
-        }
-        TSharedPtr<FJsonObject> Obj = McpHandlerUtils::CreateResultObject();
-        Obj->SetStringField(TEXT("componentName"), Comp->GetName());
-        Obj->SetStringField(TEXT("componentType"), Comp->GetClass()->GetName());
-        Obj->SetBoolField(TEXT("inherited"), true);
-        Obj->SetBoolField(TEXT("isSceneComponent"),
-                          Cast<USceneComponent>(Comp) != nullptr);
-        Obj->SetStringField(TEXT("ownerClass"), ParentClass->GetName());
-        InheritedArray.Add(MakeShared<FJsonValueObject>(Obj));
-      }
-    }
+    CollectInheritedComponents(Blueprint, Filter, InheritedArray);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("components"), ComponentsArray);

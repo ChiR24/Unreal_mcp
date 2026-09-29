@@ -10974,7 +10974,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist)."
+          "description": "A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass, its own or inherited, is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist)."
         },
         "percent": {
           "type": "number",
@@ -11499,7 +11499,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType), in path order.",
+          "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType; inherited and ownerClass on one it inherits), in path order.",
           "x-unreal-reflection-boundary": true
         },
         "bottom": {
@@ -11797,7 +11797,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Components inherited from the parent class: componentName, componentType, isSceneComponent, ownerClass. Any of these names is valid as parentComponent.",
+          "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass. A native one is valid as parentComponent for add_scs_component; one from a parent Blueprint is not.",
           "x-unreal-reflection-boundary": true
         },
         "isVisible": {
@@ -17138,7 +17138,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "gameFrameworkInfo": {
           "type": "object",
-          "description": "Game Framework class assignments and rule state read from the GameMode.",
+          "description": "The game mode in use (gameModeClass) and its default pawn, player controller, game state, player state and HUD class paths; a level or live read also gives source, worldName and isPlayInEditor. Carries no game rules.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -17245,7 +17245,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sessionsInfo": {
           "type": "object",
-          "description": "Local and online session state, including player counts, split-screen, voice and hosting flags.",
+          "description": "Current play session: localPlayerCount, inPlaySession, currentPlayers, splitScreenEnabled, splitScreenActive, splitScreenLayout and pieInstances [{instance, netMode, url}]. Carries no online-subsystem, voice or hosting flags.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },

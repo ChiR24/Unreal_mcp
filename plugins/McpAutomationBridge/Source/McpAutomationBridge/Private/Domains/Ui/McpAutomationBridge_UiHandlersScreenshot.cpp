@@ -245,6 +245,11 @@ bool HandleScreenshotAction(
   Resp->SetBoolField(TEXT("saved"), bSaved);
   Resp->SetNumberField(TEXT("width"), Width);
   Resp->SetNumberField(TEXT("height"), Height);
+  // Only when resampled (a failed resample resets TargetSize), as the editor captures do.
+  if (TargetSize != CapturedSize) {
+    Resp->SetNumberField(TEXT("viewportWidth"), CapturedSize.X);
+    Resp->SetNumberField(TEXT("viewportHeight"), CapturedSize.Y);
+  }
   Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
   Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
   AddScreenshotMetadataForUiMcp(Resp, Payload);

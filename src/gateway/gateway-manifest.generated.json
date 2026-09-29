@@ -9145,7 +9145,7 @@
           },
           "path": {
             "type": "string",
-            "description": "A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist)."
+            "description": "A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass, its own or inherited, is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist)."
           },
           "percent": {
             "type": "number",

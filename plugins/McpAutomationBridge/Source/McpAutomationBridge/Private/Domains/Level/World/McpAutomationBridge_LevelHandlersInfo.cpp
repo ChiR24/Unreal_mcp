@@ -82,7 +82,7 @@ bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FS
       Result->SetStringField(TEXT("levelName"), AssetName);
       Result->SetNumberField(TEXT("actorCount"), TargetLevel->Actors.Num());
       Result->SetBoolField(TEXT("loaded"), true);
-      AddUnsavedState(Result, TargetLevel->GetOutermost());
+      AddUnsavedState(Result, TargetLevel);
 
       // A loaded level must be identifiable as a map asset without a
       // follow-up list_levels call. The record already declares these fields;

@@ -164,8 +164,10 @@ describe('a screenshot hands its image back by default', () => {
 
   it('returnBase64 defaults to true and an inline image without a resolution fits the box', () => {
     const resample = read('Foundation', 'McpScreenshotResample.cpp');
-    expect(resample).toMatch(/bool McpScreenshotReturnsImage[\s\S]*bool bReturnBase64 = true;/u);
-    expect(resample).toMatch(/if \(Resolution\.IsEmpty\(\) && McpScreenshotReturnsImage\(Payload\)\) \{\s*Resolution = McpInlineScreenshotBox;/u);
+    // Anchored in sequence: the default, the returnBase64 read that can clear it, and the return;
+    // then the box default directly before the no-resolution early return.
+    expect(resample).toMatch(/bool McpScreenshotReturnsImage[^{]*\{\s*bool bReturnBase64 = true;\s*if \(Payload\.IsValid\(\)\) \{\s*Payload->TryGetBoolField\(TEXT\("returnBase64"\), bReturnBase64\);\s*\}\s*return bReturnBase64;/u);
+    expect(resample).toMatch(/if \(Resolution\.IsEmpty\(\) && McpScreenshotReturnsImage\(Payload\)\) \{\s*Resolution = McpInlineScreenshotBox;\s*\}\s*if \(Resolution\.IsEmpty\(\)\) \{\s*return true;\s*\}/u);
     expect(read('Foundation', 'McpScreenshotResample.h')).toMatch(/McpInlineScreenshotBox = TEXT\("1600x900"\)/u);
   });
 
@@ -174,5 +176,14 @@ describe('a screenshot hands its image back by default', () => {
       .toMatch(/const bool bReturnBase64 = McpScreenshotReturnsImage\(Payload\);/u);
     expect(read('Domains', 'Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp'))
       .toMatch(/const bool bReturnBase64 = McpScreenshotReturnsImage\(Payload\);/u);
+  });
+
+  // The 1600x900 default downscales most captures, so each source names the size it was taken at.
+  it('every downscaled capture reports viewportWidth and viewportHeight', () => {
+    const editor = read('Domains', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshot.cpp');
+    expect(editor).toMatch(/if \(SourceSize\.X != ImageSize\.X \|\| SourceSize\.Y != ImageSize\.Y\) \{\s*Resp->SetNumberField\(TEXT\("viewportWidth"\), SourceSize\.X\);/u);
+    expect(editor).toMatch(/if \(OutputSize != ViewportSize\) \{\s*Resp->SetNumberField\(TEXT\("viewportWidth"\), ViewportSize\.X\);/u);
+    expect(read('Domains', 'Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp'))
+      .toMatch(/if \(TargetSize != CapturedSize\) \{\s*Resp->SetNumberField\(TEXT\("viewportWidth"\), CapturedSize\.X\);/u);
   });
 });

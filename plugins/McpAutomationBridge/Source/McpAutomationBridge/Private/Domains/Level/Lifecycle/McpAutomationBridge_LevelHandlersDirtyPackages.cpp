@@ -2,6 +2,7 @@
 
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
+#include "Engine/Level.h"
 #include "Engine/World.h"
 #include "FileHelpers.h"
 #include "RenderingThread.h"
@@ -52,7 +53,7 @@ void CountBlockingDirtyPackages(int32& OutWorldPackages,
   OutContentPackages = CollectBlockingDirtyPackages(OutWorldPackages).Num() - OutWorldPackages;
 }
 
-void AddUnsavedState(const TSharedPtr<FJsonObject>& Result, const UPackage* LevelPackage) {
+void AddUnsavedState(const TSharedPtr<FJsonObject>& Result, const ULevel* Level) {
   // "Is the level saved?" had no read answer; restart_editor validateOnly was the only one.
   int32 WorldCount = 0;
   const TArray<UPackage*> Packages = CollectBlockingDirtyPackages(WorldCount);
@@ -60,7 +61,18 @@ void AddUnsavedState(const TSharedPtr<FJsonObject>& Result, const UPackage* Leve
   for (int32 Index = 0; Index < Packages.Num() && Index < 100; ++Index) {
     Names.Add(MakeShared<FJsonValueString>(Packages[Index]->GetName()));
   }
-  Result->SetBoolField(TEXT("unsaved"), LevelPackage && LevelPackage->IsDirty());
+  // A one-file-per-actor (World Partition) level keeps its actors in external packages:
+  // moving one dirties that package, not the level's.
+  bool bUnsaved = Level && Level->GetOutermost()->IsDirty();
+  if (Level && !bUnsaved) {
+    for (UPackage* External : Level->GetLoadedExternalObjectPackages()) {
+      if (External && External->IsDirty() && Packages.Contains(External)) {
+        bUnsaved = true;
+        break;
+      }
+    }
+  }
+  Result->SetBoolField(TEXT("unsaved"), bUnsaved);
   Result->SetArrayField(TEXT("unsavedPackages"), Names);
   Result->SetNumberField(TEXT("unsavedPackageCount"), Packages.Num());
 }

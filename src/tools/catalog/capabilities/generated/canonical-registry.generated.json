@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e13e824a7540a005",
+  "catalogRevision": "5096fa2398e40917",
   "recordCount": 389,
   "records": [
     {
@@ -16220,7 +16220,7 @@
           "find blueprints by component class",
           "search blueprints for a component class"
         ],
-        "summary": "List a Blueprint's own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from its parent class; or, given a folder (path) and componentClass, every Blueprint under it that has such a component.",
+        "summary": "List a Blueprint's own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from parent Blueprints and its native parent class; or, given a folder (path) and componentClass, every Blueprint under it that has such a component, owned or inherited.",
         "whenToUse": [
           "The SCS node hierarchy must be inspected before modifying components.",
           "An inherited component must be named as an attach parent for add_scs_component.",
@@ -16245,7 +16245,7 @@
             },
             "path": {
               "type": "string",
-              "description": "A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist)."
+              "description": "A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass, its own or inherited, is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist)."
             },
             "componentClass": {
               "type": "string",
@@ -16299,7 +16299,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Components inherited from the parent class: componentName, componentType, isSceneComponent, ownerClass. Any of these names is valid as parentComponent.",
+              "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass. A native one is valid as parentComponent for add_scs_component; one from a parent Blueprint is not.",
               "x-unreal-reflection-boundary": true
             },
             "inheritedComponentCount": {
@@ -16313,7 +16313,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType), in path order.",
+              "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType; inherited and ownerClass on one it inherits), in path order.",
               "x-unreal-reflection-boundary": true
             },
             "blueprintCount": {
@@ -16337,7 +16337,7 @@
       },
       "examples": [
         {
-          "title": "List a Blueprint's own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from its parent class; or, given a folder (path) and componentClass, every Blueprint under it that has such a component.",
+          "title": "List a Blueprint's own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from parent Blueprints and its native parent class; or, given a folder (path) and componentClass, every Blueprint under it that has such a component, owned or inherited.",
           "input": {
             "action": "get_scs",
             "blueprintPath": "/Game/Blueprints/BP_Test"
@@ -16392,8 +16392,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "febbace80254657aa271f4fbbd6a105966713f1f33c238851671a8d199a7d334",
-        "content": "b5074a61a3729c8a023945d6eca34a7939676161cef088487afde8bdb83a16a9"
+        "schema": "957dfa5820eb56db1439248cd8baefd3985a3e8a712c9678388db328466f7803",
+        "content": "962686c5820230234dd0bf81bfad0c8c3f4c91a9a17d8addede00af9010db416"
       }
     },
     {
@@ -69966,7 +69966,7 @@
             },
             "gameFrameworkInfo": {
               "type": "object",
-              "description": "Game Framework class assignments and rule state read from the GameMode.",
+              "description": "The game mode in use (gameModeClass) and its default pawn, player controller, game state, player state and HUD class paths; a level or live read also gives source, worldName and isPlayInEditor. Carries no game rules.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             }
@@ -70023,8 +70023,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b70b1634f91e29331f2eb9cf1575bf1a0c689e582848eb98d1d22ebbc9e73f68",
-        "content": "75d4ef83dd913713b2d8d0a3eb043d6064591ed99360fc6592a0d11c75ffc329"
+        "schema": "41f9bed5d32982418a3eaf081163a7cbb4e1ca1a319d93371f59d5307b5951b9",
+        "content": "14166a2146e45ed596937006b8e2b5dfd581ffa9c94534cd6331a5977fb06b4e"
       }
     },
     {
@@ -70366,7 +70366,7 @@
             },
             "sessionsInfo": {
               "type": "object",
-              "description": "Local and online session state, including player counts, split-screen, voice and hosting flags.",
+              "description": "Current play session: localPlayerCount, inPlaySession, currentPlayers, splitScreenEnabled, splitScreenActive, splitScreenLayout and pieInstances [{instance, netMode, url}]. Carries no online-subsystem, voice or hosting flags.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             }
@@ -70390,16 +70390,11 @@
             "sessionsInfo": {
               "localPlayerCount": 1,
               "inPlaySession": false,
-              "currentSessionName": "None",
-              "isLANMatch": false,
-              "maxPlayers": 0,
               "currentPlayers": 1,
               "splitScreenEnabled": false,
-              "splitScreenType": "None",
-              "voiceChatEnabled": false,
-              "isHosting": false,
-              "connectedServerAddress": "",
-              "activeVoiceChannels": []
+              "splitScreenActive": false,
+              "splitScreenLayout": "Horizontal",
+              "pieInstances": []
             }
           }
         }
@@ -70435,8 +70430,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e1e3bae7d9a1873c762997e86b979798ffbbebdf5c8a3d7d398841b92463ed0f",
-        "content": "5c72f03ee79ed4fac6103d88133cd3fa837cc4dbe5b120cc8a3724126678e266"
+        "schema": "bb5f05a1eda981248b1c802f963c4fc1a0fe1a20e05d72cb6494b6b3a3e4c312",
+        "content": "61375d156a2b871cec222812ff1946764be9b39666f7088d20aa9ebd60502710"
       }
     },
     {
@@ -85260,7 +85255,7 @@
             },
             "filter": {
               "type": "string",
-              "description": "Case-sensitive substring matched against the plugin name and category."
+              "description": "Case-insensitive substring; a plugin is listed when its name or its category contains it."
             },
             "enabledOnly": {
               "type": "boolean",
@@ -85378,8 +85373,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ccbc4acdfde9e12389c802add85aef3a7d3eedc1162e1c208750d682950e6a85",
-        "content": "54764493806bd28e42ee31fab992db6267fb6d6aaef583569a2a9e5bc281655c"
+        "schema": "f3bf90fe7d36333be374840c9a5a5e2cc5de37c124945f936f63eef83426b175",
+        "content": "bbeb3a44766e923bc47846d4612a87732b23b5f61dae57b4308219429480441b"
       }
     },
     {

@@ -163,9 +163,8 @@ const ACTION_EXAMPLES: Readonly<Record<string, JsonValue>> = {
  *   gameFrameworkInfo - Private/Domains/GameFramework/...HandlersInfo.cpp writes
  *                       defaultPawnClass / playerControllerClass / gameStateClass /
  *                       playerStateClass / hudClass / gameModeClass / source.
- *   sessionsInfo      - Private/Domains/Sessions/...HandlersInfo.cpp writes all
- *                       twelve fields below unconditionally, including the
- *                       nested `activeVoiceChannels` array. The values are the
+ *   sessionsInfo      - Private/Domains/Sessions/...HandlersInfo.cpp writes the
+ *                       seven fields below unconditionally. The values are the
  *                       state a single-player editor session really reports.
  *
  * The audio and Enhanced Input payloads are deliberately absent: both are
@@ -187,16 +186,11 @@ const REFLECTED_EXAMPLES: Readonly<Record<string, JsonObject>> = {
   sessionsInfo: {
     localPlayerCount: 1,
     inPlaySession: false,
-    currentSessionName: 'None',
-    isLANMatch: false,
-    maxPlayers: 0,
     currentPlayers: 1,
     splitScreenEnabled: false,
-    splitScreenType: 'None',
-    voiceChatEnabled: false,
-    isHosting: false,
-    connectedServerAddress: '',
-    activeVoiceChannels: [],
+    splitScreenActive: false,
+    splitScreenLayout: 'Horizontal',
+    pieInstances: [],
   },
 };
 

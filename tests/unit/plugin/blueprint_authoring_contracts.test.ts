@@ -214,8 +214,17 @@ describe('get_scs scans a folder for a component class', () => {
     expect(source).toContain('ComponentClassMatches(Comp->GetClass(), Filter)');
   });
 
+  // A child Blueprint that adds no TextRender of its own still shows its parent's, and a
+  // Character's Mesh comes from the native parent: the scan read only each Blueprint's own SCS.
+  it('the scan and the listing both count inherited components', () => {
+    expect(source).toContain('McpPropertyCdoComponents::ForEachScsNode(Blueprint');
+    expect(source.match(/CollectInheritedComponents\(Blueprint, Filter, /gu)).toHaveLength(2);
+    expect(source).toContain('#include "Core/Compatibility/McpVersionCompatibility.h"');
+  });
+
   it('declares path and componentClass on the record', () => {
     expect(paramDescription('blueprint.get_scs', 'path')).toContain('folder');
+    expect(paramDescription('blueprint.get_scs', 'path')).toContain('inherited');
     expect(paramDescription('blueprint.get_scs', 'componentClass')).toContain('TextRender');
   });
 });

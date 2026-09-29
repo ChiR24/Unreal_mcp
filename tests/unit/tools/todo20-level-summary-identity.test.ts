@@ -104,13 +104,17 @@ describe('both level readers report unsaved state', () => {
   it('get_summary (loaded branch) and get_current_level call AddUnsavedState', () => {
     const info = code(levelHandlersInfo());
     const loadedStart = info.indexOf('if (TargetLevel)');
-    expect(info.slice(loadedStart, info.indexOf('SendAutomationResponse', loadedStart))).toContain('AddUnsavedState(Result, TargetLevel->GetOutermost());');
-    expect(lifecycle('McpAutomationBridge_LevelHandlersGetCurrent.cpp')).toContain('AddUnsavedState(Result, LevelPackage);');
+    expect(info.slice(loadedStart, info.indexOf('SendAutomationResponse', loadedStart))).toContain('AddUnsavedState(Result, TargetLevel);');
+    expect(lifecycle('McpAutomationBridge_LevelHandlersGetCurrent.cpp')).toContain('AddUnsavedState(Result, CurrentLevel);');
   });
 
-  it('the helper answers unsaved, unsavedPackages and unsavedPackageCount', () => {
+  // A World Partition level keeps its actors in external packages: moving one dirties that
+  // package and not the level's, and unsaved said false while unsavedPackages listed it.
+  it('the helper answers unsaved, counting the level\'s dirty external actor packages', () => {
     const source = lifecycle('McpAutomationBridge_LevelHandlersDirtyPackages.cpp');
-    expect(source).toContain('SetBoolField(TEXT("unsaved"), LevelPackage && LevelPackage->IsDirty())');
+    expect(source).toContain('bool bUnsaved = Level && Level->GetOutermost()->IsDirty();');
+    expect(source).toContain('Level->GetLoadedExternalObjectPackages()');
+    expect(source).toContain('SetBoolField(TEXT("unsaved"), bUnsaved)');
     expect(source).toContain('SetArrayField(TEXT("unsavedPackages"), Names)');
     expect(source).toContain('SetNumberField(TEXT("unsavedPackageCount"), Packages.Num())');
   });

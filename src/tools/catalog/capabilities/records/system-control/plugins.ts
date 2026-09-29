@@ -31,7 +31,7 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     ],
     whenNotToUse: ['Project content is being enumerated (use manage_asset list).'],
     inputProps: {
-      filter: { type: 'string', description: 'Case-sensitive substring matched against the plugin name and category.' },
+      filter: { type: 'string', description: 'Case-insensitive substring; a plugin is listed when its name or its category contains it.' },
       enabledOnly: { type: 'boolean', description: 'Return only plugins currently enabled for this project.' },
     },
     outputProps: {
