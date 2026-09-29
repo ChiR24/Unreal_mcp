@@ -9012,7 +9012,7 @@
           },
           "nodeType": {
             "type": "string",
-            "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists."
+            "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
           },
           "offset": {
             "type": "number",
@@ -15833,7 +15833,7 @@
           },
           "launchViewer": {
             "type": "boolean",
-            "description": "Also open the Unreal Insights application on the new trace (default false)."
+            "description": "Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants."
           },
           "level": {
             "type": "number",
@@ -15921,7 +15921,7 @@
           },
           "parentName": {
             "type": "string",
-            "description": "Optional parent panel name."
+            "description": "Panel to add the child under (get_widget_info lists the panels); omitted, the root panel. A name that is not a panel fails with PARENT_NOT_FOUND."
           },
           "path": {
             "type": "string",

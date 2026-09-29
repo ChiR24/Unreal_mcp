@@ -7,7 +7,8 @@
  * ASYNC/ARTIFACT CONTRACT:
  * - start_recording begins recording into a ULevelSequence via
  *   UTakeRecorderBlueprintLibrary::StartRecording. It does NOT return a
- *   completed recording; the recording runs until stop_recording is called.
+ *   completed recording; the recording runs for duration seconds when given,
+ *   otherwise until stop_recording is called.
  * - stop_recording stops the recording and returns hasRecordedData.
  *   If no data was captured, returns RECORDING_OUTPUT_EMPTY.
  * - Take Recorder has NO interrupt/cancel. An in-progress recording must be
@@ -47,7 +48,7 @@ export const TAKE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.take.start_recording', action: 'start_recording', family: F, domain: D,
-    summary: 'Start a Take Recorder recording into a Level Sequence. Recording runs until stop_recording. No interrupt/cancel available.',
+    summary: 'Start a Take Recorder recording into a Level Sequence. It runs for duration seconds when given, otherwise until stop_recording. No interrupt/cancel available.',
     whenToUse: ['A take recording must be started.'],
     whenNotToUse: ['A recording is already in progress (ALREADY_RECORDING).'],
     // HandleStartTakeRecording (TakeRecorderRecording.cpp) configures sources

@@ -58,11 +58,15 @@ export const WIDGET_AUDIO_VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = 
     inputProps: {
       widgetPath: { type: 'string', description: 'Parent widget path (required).' },
       childClass: { type: 'string', description: 'Child component class (required).' },
-      parentName: { type: 'string', description: 'Optional parent panel name.' },
-      name: { type: 'string', description: 'Optional component name.' },
+      parentName: { type: 'string', description: 'Panel to add the child under (get_widget_info lists the panels); omitted, the root panel. A name that is not a panel fails with PARENT_NOT_FOUND.' },
+      name: { type: 'string', description: 'Name of the new widget; omitted, a generated one.' },
       text: { type: 'string', description: 'Optional text for text-bearing components.' },
     },
     required: ['widgetPath', 'childClass'],
+    outputProps: {
+      componentName: { type: 'string', description: 'Name the new widget got.' },
+      parentName: { type: 'string', description: 'Panel it was added under.' },
+    },
     effect: 'write',
     costLatency: 'interactive',
     dispatchAction: 'manage_widget_authoring',

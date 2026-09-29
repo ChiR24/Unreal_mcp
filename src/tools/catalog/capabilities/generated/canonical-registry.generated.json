@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f3b47c0c9ef73635",
+  "catalogRevision": "d6408978283153b0",
   "recordCount": 389,
   "records": [
     {
@@ -14319,7 +14319,7 @@
             },
             "nodeType": {
               "type": "string",
-              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists."
+              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
             },
             "posX": {
               "type": "number",
@@ -14856,8 +14856,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bcabfc57e07bb0bd298b3468c796f52827c85a33754322fc672537a715e5a037",
-        "content": "2e77d96582c7d564b387947a7f71595d01dace884f43dc8e3040a213d938ffc8"
+        "schema": "b2988f99a20a6ec59229890c1b773ebddc98b6a7f30bc8e20af6ab1c19cb495f",
+        "content": "fbaefea47b13a56b79a4ca56a25f02b9035afae6a0d911383772ee8c2b12ba9e"
       }
     },
     {
@@ -84669,7 +84669,7 @@
             },
             "parentName": {
               "type": "string",
-              "description": "Optional parent panel name."
+              "description": "Panel to add the child under (get_widget_info lists the panels); omitted, the root panel. A name that is not a panel fails with PARENT_NOT_FOUND."
             },
             "text": {
               "type": "string",
@@ -84719,6 +84719,14 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "Name the new widget got."
+            },
+            "parentName": {
+              "type": "string",
+              "description": "Panel it was added under."
             }
           },
           "required": [
@@ -84806,8 +84814,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "433ee38013615666a1857965fe167a99bed270543bf9bc4f63565abecd19fb06",
-        "content": "c4674f172e79051bc097536d7530843a86977d6ded56356287ecef58b5355ed3"
+        "schema": "ce45b00d4825d402d452dc55a771c49f7333b233ee1e3cdf29a9f177228b2279",
+        "content": "fb507c73e8f81263fada4510ee970d2ede9094fd3e9fff231db09e6d1c14b4ce"
       }
     },
     {
@@ -87804,7 +87812,7 @@
             },
             "launchViewer": {
               "type": "boolean",
-              "description": "Also open the Unreal Insights application on the new trace (default false)."
+              "description": "Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants."
             },
             "snapshotPath": {
               "type": "string",
@@ -87948,8 +87956,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a59b5b98f185668a39d50e7315a508b5e14509bb1efd0d493d44683895181c01",
-        "content": "eb81c50c99dc56731e3b827478ef760498ece3d1e0063e61cd16cca1290e946a"
+        "schema": "97d1cc36b94f9c390de19d3250cb4fbe615168ef047389f7df9d605a2c5ddaae",
+        "content": "bd52afaa4785b371fd33e12647831c949245cbd00029aafbd800bdb67ecb1b0e"
       }
     },
     {

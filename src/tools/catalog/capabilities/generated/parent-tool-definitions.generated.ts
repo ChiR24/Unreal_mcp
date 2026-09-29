@@ -10842,7 +10842,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeType": {
           "type": "string",
-          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists."
+          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
         },
         "offset": {
           "type": "number",
@@ -19373,7 +19373,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "launchViewer": {
           "type": "boolean",
-          "description": "Also open the Unreal Insights application on the new trace (default false)."
+          "description": "Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants."
         },
         "level": {
           "type": "number",
@@ -19461,7 +19461,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentName": {
           "type": "string",
-          "description": "Optional parent panel name."
+          "description": "Panel to add the child under (get_widget_info lists the panels); omitted, the root panel. A name that is not a panel fails with PARENT_NOT_FOUND."
         },
         "path": {
           "type": "string",
@@ -19755,6 +19755,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The UAT command line this job launched."
         },
+        "componentName": {
+          "type": "string",
+          "description": "Name the new widget got."
+        },
         "configName": {
           "type": "string",
           "description": "Config file family (Engine, Game, Input, ...)."
@@ -19919,6 +19923,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Bounded console output captured from the command."
+        },
+        "parentName": {
+          "type": "string",
+          "description": "Panel it was added under."
         },
         "path": {
           "type": "string",
