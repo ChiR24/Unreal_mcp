@@ -221,6 +221,10 @@ const testCases = [
   // === VERIFY: pin default persisted on PrintString node ===
   { scenario: 'VERIFY: pin default persisted', toolName: 'manage_blueprint', arguments: { action: 'get_pin_details', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'InString', defaultValue: 'test' }, label: 'PrintString InString pin default is persisted' }] },
 
+  // === INFO: the graph filter also reads what a node's pins hold (a literal default, or a default object's path) ===
+  { scenario: 'CONFIG: set_pin_default_value a literal the graph filter can find', toolName: 'manage_blueprint', arguments: { action: 'set_pin_default_value', blueprintPath: BP_PATH, nodeGuid: '${captured:printNodeId}', pinName: 'InString', defaultValue: 'PinFilterNeedle', graphName: 'EventGraph' }, expected: 'success' },
+  { scenario: 'INFO: get_graph_details filter matches a pin default value, case-insensitively', toolName: 'manage_blueprint', arguments: { action: 'get_graph_details', blueprintPath: BP_PATH, graphName: 'EventGraph', filter: 'pinfilterneedle' }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 1, label: 'the node holding the literal is found by it' }] },
+
   // === BATCH: build_graph creates, wires and defaults nodes in one call, $id linking steps ===
   { scenario: 'BATCH: build_graph', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
     { edit: 'create_node', id: 'delay', nodeType: 'CallFunction', memberName: 'Delay', pinDefaults: { Duration: 0.25 } },

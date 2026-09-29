@@ -70,6 +70,31 @@ static TSharedPtr<FJsonObject> MakePinSummary(UEdGraphPin* Pin)
     return PinObject;
 }
 
+// A node matches a filter by its title or name, or by what its pins hold: a default value, a text
+// default, or the path of a default object. A Create Widget node names the widget it builds only on
+// its Class pin (/Game/UI/WBP_MainMenu.WBP_MainMenu_C), so a title-and-name filter of "Menu" found
+// nothing. Case-insensitive and spaces ignored on the pin text, like the title.
+static bool NodeMatchesGraphFilter(const UEdGraphNode* Node, const FString& Title, const FString& SquashedFilter)
+{
+    const auto Matches = [&SquashedFilter](const FString& Text)
+    {
+        return Text.Replace(TEXT(" "), TEXT("")).Contains(SquashedFilter);
+    };
+    if (Matches(Title) || Node->GetName().Contains(SquashedFilter))
+    {
+        return true;
+    }
+    for (const UEdGraphPin* Pin : Node->Pins)
+    {
+        if (Pin && (Matches(Pin->DefaultValue) || Matches(Pin->DefaultTextValue.ToString()) ||
+                    (Pin->DefaultObject && Matches(Pin->DefaultObject->GetPathName()))))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool GetGraphDetails(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("get_graph_details"))
@@ -81,8 +106,8 @@ static bool GetGraphDetails(FActionContext& Context)
     // graph's exec/data flow can be read in one call instead of a per-node
     // get_node_details loop. Default output is unchanged.
     // A large graph with pins overflows the response cap (290 nodes did), so a
-    // caller narrows by title or name (filter) and pages (offset/limit);
-    // totalCount and hasMore say what is left.
+    // caller narrows by title, name or a pin's default (filter) and pages
+    // (offset/limit); totalCount and hasMore say what is left.
     bool bIncludePins = false;
     FString Filter;
     int32 Offset = 0;
@@ -113,8 +138,7 @@ static bool GetGraphDetails(FActionContext& Context)
             continue;
         }
         const FString Title = Node->GetNodeTitle(ENodeTitleType::ListView).ToString();
-        if (!Filter.IsEmpty() && !Title.Replace(TEXT(" "), TEXT("")).Contains(SquashedFilter) &&
-            !Node->GetName().Contains(SquashedFilter))
+        if (!Filter.IsEmpty() && !NodeMatchesGraphFilter(Node, Title, SquashedFilter))
         {
             continue;
         }

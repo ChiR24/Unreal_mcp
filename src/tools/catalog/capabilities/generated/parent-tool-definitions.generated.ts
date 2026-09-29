@@ -10481,7 +10481,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Only nodes whose title or name contains this text (case-insensitive), e.g. \"IA_Move\" or \"Set bLocked\"."
+          "description": "Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. \"IA_Move\", \"Set bLocked\", or \"WBP_MainMenu\" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C."
         },
         "folder": {
           "type": "string",

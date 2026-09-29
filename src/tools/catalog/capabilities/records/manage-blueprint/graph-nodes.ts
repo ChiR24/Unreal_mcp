@@ -150,11 +150,11 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     summary: 'Read all nodes in a Blueprint graph, optionally including per-node pins and links; filter and page a large graph.',
-    whenToUse: ['The full node list of a graph must be inspected in one call.', 'A large graph must be read in parts: filter by node title, page with offset/limit.'],
+    whenToUse: ['The full node list of a graph must be inspected in one call.', 'A large graph must be read in parts: filter by node title or by what a pin holds, page with offset/limit.', 'The node that builds or uses a given asset, class or literal must be found, e.g. the Create Widget node for WBP_MainMenu.'],
     whenNotToUse: ['A single node\'s details are needed (use get_node_details).'],
     inputProps: {
       blueprintPath: P.blueprintPath, graphName: P.graphName, includePins: P.includePins,
-      filter: { type: 'string', description: 'Only nodes whose title or name contains this text (case-insensitive), e.g. "IA_Move" or "Set bLocked".' },
+      filter: { type: 'string', description: 'Only nodes whose title or name, or whose pin default value or default object path, contains this text (case-insensitive, spaces ignored), e.g. "IA_Move", "Set bLocked", or "WBP_MainMenu" for the Create Widget node whose Class pin holds /Game/UI/WBP_MainMenu.WBP_MainMenu_C.' },
       offset: { type: 'number', description: 'Skip this many matching nodes (paging).' },
       limit: { type: 'number', description: 'Return at most this many nodes; totalCount and hasMore say what is left. Use it with includePins on a big graph.' },
     },
