@@ -23,7 +23,6 @@ import { intersectRequired, mergeProperties } from './fold-widen.js';
 
 const LATENCY_RANK: Readonly<Record<string, number>> = { instant: 0, interactive: 1, 'long-running': 2 };
 const RESOURCE_RANK: Readonly<Record<string, number>> = { low: 0, medium: 1, high: 2 };
-const MAX_WHEN = 6;
 
 const namespaceOf = (id: string): string => id.slice(0, id.lastIndexOf('.'));
 const actionProp = (): JsonObject => ({ type: 'string', description: 'The action to execute on the parent tool.' });
@@ -168,14 +167,15 @@ export function buildFolded(
       ? line
       : `${selector}=${[...values].join('|')}: ${line}`);
   };
-  const whenToUse = spec.whenToUse ?? variantLines((member) => member.discovery.whenToUse).slice(0, MAX_WHEN);
+  // Every variant's lines, labelled: a cap of 6 cut struct.edit_struct's 13 variants to their first 6.
+  const whenToUse = spec.whenToUse ?? variantLines((member) => member.discovery.whenToUse);
   // A member's "(use create_node)" names a variant of this very record once folded; carried over,
   // it sent callers away from the capability they had already found.
   const ownActions = [spec.primary, ...memberActions];
   const pointsInside = (line: string): boolean =>
     ownActions.some((action) => new RegExp(`(^|[^A-Za-z0-9_])${action}([^A-Za-z0-9_]|$)`).test(line));
   const whenNotToUse = spec.whenNotToUse
-    ?? variantLines((member) => member.discovery.whenNotToUse.filter((line) => !pointsInside(line))).slice(0, MAX_WHEN);
+    ?? variantLines((member) => member.discovery.whenNotToUse.filter((line) => !pointsInside(line)));
 
   const idempotency = members.every((member) => member.behavior.idempotency === first.behavior.idempotency)
     ? first.behavior.idempotency

@@ -319,3 +319,12 @@ describe('variant labels stay out of search', () => {
     expect(tokens).not.toContain('summary');
   });
 });
+
+// A cap of 6 lines per list cut a 13-variant family to the guidance of its first 6 variants.
+describe('a folded family keeps every variant\'s guidance', () => {
+  it('struct.edit_struct lists a line for more than six of its variants', async () => {
+    const { capabilityIndex } = await import('../../../src/server/gateway/gateway-capability-index.js');
+    const record = capabilityIndex().records.find((entry) => String(entry.id) === 'struct.edit_struct');
+    expect(record?.discovery.whenToUse.length).toBeGreaterThan(6);
+  });
+});

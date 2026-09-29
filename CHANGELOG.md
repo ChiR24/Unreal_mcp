@@ -79,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔄 Changed</b></summary>
 
+- **A folded family keeps every variant's guidance.** A folded record kept only its first six `whenToUse` and six `whenNotToUse` lines, so `struct.edit_struct` (13 variants) said nothing about renaming, duplicating or importing a struct, and `add_material_node` (22) nothing about texture samples or parameters. Every variant's lines are kept, labelled.
 - **54 more capabilities say when to use them.** The asset, DataTable, enum, struct, texture, material, interaction and inventory records that had no `whenToUse` or `whenNotToUse` now carry both, each checked against its handler, so describe tells a caller when to reach for them and which capability to use instead.
 - **A folded capability says which variant each guidance line is about.** Merged `whenToUse`/`whenNotToUse` lines now name their variant ("control=play: PIE is already running."); unlabelled, `play` read as if no control worked while PIE runs. Lines every variant shares stay bare, and search ignores the labels.
 - **Motion sampling answers within 25 seconds by default.** `get_transform` motion stops at `maxRealSeconds`, which defaulted to 40, past the 30-second timeout some clients use, so a long run was cut off client-side while the editor kept sampling.

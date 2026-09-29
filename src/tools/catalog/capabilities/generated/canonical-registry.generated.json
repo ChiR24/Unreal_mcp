@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "385b78b70dbba95e",
+  "catalogRevision": "866c50862b4ac519",
   "recordCount": 389,
   "records": [
     {
@@ -1002,7 +1002,9 @@
           "kind=montage: A playable montage is needed.",
           "kind=blend_space_1d: A single-axis blend is needed.",
           "kind=blend_space_2d: A two-axis blend is needed.",
-          "kind=aim_offset: Aim blending by look direction is needed."
+          "kind=aim_offset: Aim blending by look direction is needed.",
+          "kind=pose_library: Named poses (facial shapes, hand poses, correctives) must be blended by name in an Animation Blueprint.",
+          "kind=procedural: A runtime-authored animation is needed."
         ],
         "whenNotToUse": [
           "kind=aim_offset: Use a blend space.",
@@ -1333,7 +1335,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "33593de8f9238751ef65b2d7e1c81c5a18f6b3fa10db6d43db144121dcecffd8",
-        "content": "a9f2623c9755391385f0073bc3a32be031b4ea78f91e03c69e567417ce591dab"
+        "content": "bbad23642617638f35ac52a23072e563bc18cde786cb42e0b050f5b83205c6a0"
       }
     },
     {
@@ -1852,7 +1854,13 @@
           "edit=add_slot_node: Montage slot must be exposed.",
           "edit=create_state_machine: State-driven animation is needed.",
           "edit=add_state_machine: A state machine must be embedded.",
-          "edit=add_state: A new animation state is needed."
+          "edit=add_state: A new animation state is needed.",
+          "edit=add_transition: States must connect.",
+          "edit=set_transition_rules: Transition condition must change.",
+          "edit=set_transition_rules: A state machine must actually be able to leave a state: author the condition here after add_transition.",
+          "edit=delete_transition: A transition was authored between the wrong two states.",
+          "edit=delete_transition: A transition is dead weight and its rule graph should go with it.",
+          "edit=create_blend_tree: Several animations must be switchable through one blend node in an AnimBlueprint."
         ],
         "whenNotToUse": [
           "edit=add_cached_pose: Inline pose suffices.",
@@ -2290,7 +2298,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "de92c8a8ddd6f559eddb1cc7b64ccae8e3cb51afc043f1f370840861cf72245e",
-        "content": "1679bc4dbdd42ab095910582dda0cf56763a409b8960429f4e313dadb4424b1f"
+        "content": "a1f5e91234a759295c038d2e5f01a826f43592ce558d9738c2abe7ce4843118f"
       }
     },
     {
@@ -2402,7 +2410,11 @@
           "edit=set_curve_key: Animate a curve.",
           "edit=add_notify: Frame event in a sequence.",
           "edit=add_notify_state: A ranged notify is needed.",
-          "edit=add_sync_marker: Sync groups needed."
+          "edit=add_sync_marker: Sync groups needed.",
+          "edit=set_additive_settings: Additive layering needed.",
+          "edit=set_root_motion_settings: Root motion locomotion needed.",
+          "edit=set_sequence_length: Clip duration must change.",
+          "edit=add_aim_offset_sample: Aim sample must be added."
         ],
         "whenNotToUse": [
           "edit=add_bone_track: Track exists.",
@@ -2410,7 +2422,8 @@
           "edit=add_sync_marker: No sync required.",
           "edit=set_additive_settings: Absolute pose.",
           "edit=set_root_motion_settings: In-place animation.",
-          "edit=set_sequence_length: Use create_animation_sequence."
+          "edit=set_sequence_length: Use create_animation_sequence.",
+          "edit=add_aim_offset_sample: Use create_aim_offset."
         ]
       },
       "schemas": {
@@ -2759,7 +2772,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5e941903157cc1884b1ba9610edf17df3e37616b2403063246ca50438a9059f9",
-        "content": "3397639da6413804f4dae48c36e4b9d56304e9769e4a69e0c338a35422dce315"
+        "content": "cf1d1070dcf4411630f107ae2ca90955584b285cf532e0e96e2caef366de53b0"
       }
     },
     {
@@ -3130,7 +3143,8 @@
           "edit=add_montage_slot: Montage must expose a slot.",
           "edit=link_sections: Sections must chain.",
           "edit=set_blend_in: Smooth entry needed.",
-          "edit=set_blend_out: Smooth exit needed."
+          "edit=set_blend_out: Smooth exit needed.",
+          "edit=set_section_timing: Section timing must change."
         ],
         "whenNotToUse": [
           "edit=add_montage_notify: Use add_notify_state.",
@@ -3351,7 +3365,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7d8363e77dad40c89a00bd721505ff0840935cecaf667d11f754416b5edd5d9f",
-        "content": "f84c8b0214f934174f466045deb536f61b9c19cc50b7ff33b16b7af55c9d6aa1"
+        "content": "594e82fb5d5628e3e3c701e897d5f829a3109f62e36622cb85400ed1c26324a2"
       }
     },
     {
@@ -3796,7 +3810,8 @@
           "edit=configure_body|modify_body: Body parameters must change.",
           "edit=add_constraint|set_constraint: Bodies must be jointed.",
           "edit=set_constraint: An existing joint needs a new name or limits.",
-          "edit=configure_constraint_limits: Joint limits must change."
+          "edit=configure_constraint_limits: Joint limits must change.",
+          "edit=assign: A Skeletal Mesh must reference a specific Physics Asset."
         ],
         "whenNotToUse": [
           "edit=create: PhysicsAsset exists.",
@@ -4212,7 +4227,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "39d71a1d53ddc235c3afb0963341e97170f329bc9a8eb1938b47f5ac4211099e",
-        "content": "a4207cb1358dff8b5d4fbc11fe41a36ed5fbdf6a7ce72421e476f85017cc0df2"
+        "content": "a24d85ed2ecd022479c091f3c20af9bea703ac3448b2650122a254cab0a02e78"
       }
     },
     {
@@ -5048,7 +5063,9 @@
           "info=sockets: Enumerate sockets.",
           "info=virtual_bones: Existing virtual bones must be discovered before adding another.",
           "info=bone_transform: A bone position must be read before placing a socket or constraint.",
-          "info=morph_targets: The available morph targets must be discovered before driving one."
+          "info=morph_targets: The available morph targets must be discovered before driving one.",
+          "info=physics_asset: The contents of a Physics Asset must be inspected before editing it.",
+          "info=physics_bodies: Enumerate physics bodies."
         ],
         "whenNotToUse": [
           "info=skeleton: Mutate the skeleton.",
@@ -5422,7 +5439,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "aee94e29d7d00f4b817197e625376a84c94a2a6774c250662aba7ea38c65f67b",
-        "content": "7bf30fbe4e037db526e49fd23f4b5941a4d0dda78de7f741e5e2e05b7538a9c8"
+        "content": "1df1e112196aa08e4307c74f87523e08e3eaae50b6a2d802f7ac5335b7cb747e"
       }
     },
     {
@@ -10842,7 +10859,14 @@
           "widgetKind=image: A new image widget must be added to a Widget Blueprint.",
           "widgetKind=button: A new button widget must be added to a Widget Blueprint.",
           "widgetKind=check_box: A new check box widget must be added to a Widget Blueprint.",
-          "widgetKind=combo_box: A new combo box widget must be added to a Widget Blueprint."
+          "widgetKind=combo_box: A new combo box widget must be added to a Widget Blueprint.",
+          "widgetKind=slider: A new slider widget must be added to a Widget Blueprint.",
+          "widgetKind=spin_box: A new spin box widget must be added to a Widget Blueprint.",
+          "widgetKind=progress_bar: A new progress bar widget must be added to a Widget Blueprint.",
+          "widgetKind=text_input: A new text input widget must be added to a Widget Blueprint.",
+          "widgetKind=list_view: A new list view widget must be added to a Widget Blueprint.",
+          "widgetKind=tree_view: A new tree view widget must be added to a Widget Blueprint.",
+          "widgetKind=component: A widget class is needed that no dedicated add_* action covers."
         ],
         "whenNotToUse": [
           "widgetKind=text_block|rich_text_block|image|button|check_box|combo_box|slider|spin_box|progress_bar|text_input|list_view|tree_view: A panel container is needed instead (see widget-panels family)."
@@ -11215,7 +11239,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0f827e182691a366f3a28bebb505f1f9527a00165d97222b1d45438576fcd0a4",
-        "content": "b575d1850c4305de61230ca2bc8054076a76a4818fe8992ae0bce802b2fac362"
+        "content": "94894b9ce081f2a83aff17a86c3000c1e5195c3050ff85d170bb2ca57d656265"
       }
     },
     {
@@ -11618,7 +11642,10 @@
           "widgetKind=crosshair: A HUD needs a crosshair without assembling it widget by widget.",
           "widgetKind=minimap: A HUD needs a minimap without assembling it widget by widget.",
           "widgetKind=compass: A HUD needs a compass without assembling it widget by widget.",
-          "widgetKind=damage_indicator: A HUD needs a damage indicator without assembling it widget by widget."
+          "widgetKind=damage_indicator: A HUD needs a damage indicator without assembling it widget by widget.",
+          "widgetKind=interaction_prompt: A HUD needs a interaction prompt without assembling it widget by widget.",
+          "widgetKind=objective_tracker: A HUD needs a objective tracker without assembling it widget by widget.",
+          "widgetKind=quest_tracker: A HUD needs a quest tracker without assembling it widget by widget."
         ],
         "whenNotToUse": [
           "A single plain widget is enough (add_content_widget).",
@@ -11904,7 +11931,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "67db144d8e6d635f756a3bec8fc1850f6d58674739b0f12ca87cb7f12e0f0b54",
-        "content": "ae1fdf082bf6da0a3b17976405cbdd1f79407c6978c43e117a3c320309d3f570"
+        "content": "383c737716670e48e732fa84946aa0a8bfcdab3b23ec50448aad14032203facc"
       }
     },
     {
@@ -12050,7 +12077,15 @@
           "widgetKind=vertical_box: A new vertical box must be added to a Widget Blueprint.",
           "widgetKind=horizontal_box: A new horizontal box must be added to a Widget Blueprint.",
           "widgetKind=grid_panel: A new grid panel must be added to a Widget Blueprint.",
-          "widgetKind=uniform_grid: A new uniform grid must be added to a Widget Blueprint."
+          "widgetKind=uniform_grid: A new uniform grid must be added to a Widget Blueprint.",
+          "widgetKind=wrap_box: A new wrap box must be added to a Widget Blueprint.",
+          "widgetKind=border: A new border must be added to a Widget Blueprint.",
+          "widgetKind=scroll_box: A new scroll box must be added to a Widget Blueprint.",
+          "widgetKind=size_box: A new size box must be added to a Widget Blueprint.",
+          "widgetKind=scale_box: A new scale box must be added to a Widget Blueprint.",
+          "widgetKind=spacer: Fixed empty space must separate sibling widgets in a box or panel.",
+          "widgetKind=safe_zone: HUD content must stay inside the title-safe area on console or TV output.",
+          "widgetKind=widget_switcher: Several pages or tabs must occupy one region with only one visible at a time."
         ],
         "whenNotToUse": [
           "widgetKind=canvas_panel|overlay|vertical_box|horizontal_box|grid_panel|uniform_grid|wrap_box|border|scroll_box|size_box|scale_box: A content widget (button, text, etc.) is needed instead.",
@@ -12493,7 +12528,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d4b2bd1ded58362f36e640b699a38b14fb0913cb15dcb3f530b5b4575e5a2780",
-        "content": "6697e21c046c0ef812e2f23152fbf386938934891582a7873195b83f1732bdce"
+        "content": "d44eebba775bc77672f074f55221ec7393de39f0f7d6ca2b6ba3ca5bd4618904"
       }
     },
     {
@@ -12610,7 +12645,11 @@
           "bindingKind=enabled: A widget's enabled must follow a Blueprint variable or function at runtime.",
           "bindingKind=percent: A widget's percent must follow a Blueprint variable or function at runtime.",
           "bindingKind=visibility: A widget's visibility must follow a Blueprint variable or function at runtime.",
-          "bindingKind=on_clicked: A widget's OnClicked event must run a Blueprint function."
+          "bindingKind=on_clicked: A widget's OnClicked event must run a Blueprint function.",
+          "bindingKind=on_hovered: A button must react when the pointer moves onto or off it.",
+          "bindingKind=on_value_changed: A widget's OnValueChanged event must run a Blueprint function.",
+          "bindingKind=localized_text: Displayed text must come from a string table rather than a literal.",
+          "bindingKind=localization_key: A Text Block must carry an explicit localization key for translators."
         ],
         "whenNotToUse": [
           "bindingKind=text|color|enabled|percent|visibility|on_clicked|on_value_changed: The widget should be set directly rather than bound.",
@@ -12856,7 +12895,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7022fed02084967d7cc4d952b90a6a2456e2a6a77413088c235916fa65193615",
-        "content": "f2eb3d865271f000754e9bc75b9c087d31f831ad5361434dc00c3ec59bd22349"
+        "content": "7e39154b0dac485305be1c8bb8df8c129899eed84593f2eb1987be784688d31b"
       }
     },
     {
@@ -13304,7 +13343,11 @@
           "screen=settings_menu: A game needs a settings menu and none exists yet.",
           "screen=loading_screen: A game needs a loading screen and none exists yet.",
           "screen=hud: A game needs a hud widget and none exists yet.",
-          "screen=dialog: A game needs a dialog widget and none exists yet."
+          "screen=dialog: A game needs a dialog widget and none exists yet.",
+          "screen=inventory: A game needs a inventory ui and none exists yet.",
+          "screen=radial_menu: A game needs a radial menu and none exists yet.",
+          "screen=credits: A game needs a credits screen and none exists yet.",
+          "screen=shop: A game needs a shop ui and none exists yet."
         ],
         "whenNotToUse": [
           "The Widget Blueprint already exists (edit it with the add_* and set_* widget actions)."
@@ -13611,7 +13654,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "be3004b8e6e5b1eed58270b5f427da76875741c9118bc61cc6f89ffe26fa033c",
-        "content": "4ea11e43b23c7773ebb549e3bad13020361562d176d7a135e0a2326c9be36576"
+        "content": "f401fef453c5ca3aba0f63884ca53885586d1f5c70b2e6a5773681960f6d2d8f"
       }
     },
     {
@@ -14246,7 +14289,12 @@
           "edit=create_reroute_node: Wire paths need a reroute node for cleaner layout.",
           "edit=create_struct_make_break_nodes: A MakeStruct or BreakStruct node must be placed for a known struct type.",
           "edit=connect_pins: An exec or data link between two existing nodes must be created.",
-          "edit=set_node_property: A node-level property (e.g. comment, position) must be updated."
+          "edit=set_node_property: A node-level property (e.g. comment, position) must be updated.",
+          "edit=set_pin_default_value: A pin's default literal value must be set when it has no incoming link.",
+          "edit=set_pin_default_value: A read-only text, string, name or number pin (TextRender Set Text's Value) needs a literal.",
+          "edit=add_construction_script: The Construction Script graph must be created or opened for editing.",
+          "edit=batch: More than a couple of nodes or links must be added to one Blueprint graph.",
+          "edit=batch: A new function and the nodes inside it must be built in one call."
         ],
         "whenNotToUse": [
           "edit=connect_pins: Links must be broken (use break_pin_links).",
@@ -14810,7 +14858,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6f814b53da95b09c58c1b44e1c262ca49c01444b3b70c183013147aa83e4901e",
-        "content": "4979b3e73bc5792faff30ffae887cbd5c24511e8ec504e0d479afe76b5534e8c"
+        "content": "6e098e2cf7fc1280a138861d9a988b06d597273392d19772afda134eb735616b"
       }
     },
     {
@@ -18444,7 +18492,11 @@
           "layoutProperty=size: The set size of a widget must be updated.",
           "layoutProperty=alignment: The set alignment of a widget must be updated.",
           "layoutProperty=padding: The set padding of a widget must be updated.",
-          "layoutProperty=z_order: The set z order of a widget must be updated."
+          "layoutProperty=z_order: The set z order of a widget must be updated.",
+          "layoutProperty=visibility: The set visibility of a widget must be updated.",
+          "layoutProperty=clipping: The set clipping of a widget must be updated.",
+          "layoutProperty=render_transform: The set render transform of a widget must be updated.",
+          "layoutProperty=style: The set style of a widget must be updated."
         ],
         "whenNotToUse": [
           "The widget should be removed rather than restyled."
@@ -18868,7 +18920,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d70a937d2c12b094355681ce2528329e623602277c6a79fa44c5e1243840372e",
-        "content": "b17affd1914bf1b3e7fbf0140a93d1aba1b85cb76812c15a12717d06e857d662"
+        "content": "f25998d2b09538de6daa86e334d088fe1f901593a39177c2ff58598b82d29cb9"
       }
     },
     {
@@ -19636,7 +19688,9 @@
           "setting=sun_position: The sun should follow a time-of-day system.",
           "setting=height_fog: Volumetric fog should be used instead.",
           "setting=volumetric_cloud: Static cloud textures are sufficient.",
-          "setting=time_of_day: A full time-of-day system should be created."
+          "setting=time_of_day: A full time-of-day system should be created.",
+          "setting=sky_color_curve: Static sky color is sufficient.",
+          "setting=light_color_curve: Static light color is sufficient."
         ]
       },
       "schemas": {
@@ -19951,7 +20005,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "363ac1b43986a751de1a8c48ea0cd84726b8da0491d2fbcddcf61747427bd14a",
-        "content": "8428e212a4cdd54580cc4b13ef7b254be80ba3461540ce4a9237badfd2575b96"
+        "content": "baea18c951953224a651fe1534e2db3cd1c4dd11d10bf6a792a18d87da579a26"
       }
     },
     {
@@ -24961,7 +25015,9 @@
           "kind=road: A generic spline should be used.",
           "kind=wall: Manual wall placement is sufficient.",
           "kind=fence: Manual fence placement is sufficient.",
-          "kind=pipe: Manual pipe placement is sufficient."
+          "kind=pipe: Manual pipe placement is sufficient.",
+          "kind=cable: A physics cable component should be used.",
+          "kind=river: A water body actor should be used instead."
         ]
       },
       "schemas": {
@@ -25395,7 +25451,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7c7590927815cea8b4fa13ee9401819e217b96caa62283fd4f1c3525e63238c4",
-        "content": "4ccb0d37bb0dfa3a4973206570a92bef1aa5bd37ae29b113ead92131d74dcc40"
+        "content": "b900f2ebb6286a2f66c8f02ced873cf94affc6872736252fc632d0e07758f393"
       }
     },
     {
@@ -32461,7 +32517,8 @@
           "transformMode=transform: A group of actors must shift by the same amount (actors, each with offset).",
           "transformMode=location: An actor must be moved to a new location.",
           "transformMode=rotation: An actor must be rotated.",
-          "transformMode=scale: An actor must be rescaled."
+          "transformMode=scale: An actor must be rescaled.",
+          "transformMode=teleport: Preferred when callers use the teleport_actor verb."
         ],
         "whenNotToUse": [
           "transformMode=transform: Only the transform needs to be read (use get_transform)."
@@ -32736,7 +32793,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4fe7c93999c330493f5229b508dad7131002b1140ce8432e5a89f2bfe66364f7",
-        "content": "2877b44e72cb5dfd367796c4821760c40c4c6d99d6b00f11464c7cb4650798ea"
+        "content": "a486aca13f6ebd7bbdd65acbca98103063f59684385ef01ff20ced78a60dd27e"
       }
     },
     {
@@ -33604,7 +33661,8 @@
           "setting=game_view: The viewport must show or hide the game view.",
           "setting=immersive_mode: The viewport must enter or exit immersive fullscreen.",
           "setting=realtime: Realtime rendering must be enabled or disabled.",
-          "setting=show_stats: A debug stat must be displayed."
+          "setting=show_stats: A debug stat must be displayed.",
+          "setting=hide_stats: A debug stat must be hidden."
         ],
         "whenNotToUse": [
           "setting=view_mode: The default Lit mode is acceptable.",
@@ -33612,7 +33670,8 @@
           "setting=game_view: The current game view state is acceptable.",
           "setting=immersive_mode: The current immersive state is acceptable.",
           "setting=realtime: The current realtime state is acceptable.",
-          "setting=show_stats: The stat is already shown."
+          "setting=show_stats: The stat is already shown.",
+          "setting=hide_stats: The stat is already hidden."
         ]
       },
       "schemas": {
@@ -33761,7 +33820,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60a97085918a840db26b8580e532b49bf142c40a1a65c99f1aac3672b78d4620",
-        "content": "02a8bf80793145c135527e7c3aa9f472f6e8c3b289007c04875ddd8b66768eed"
+        "content": "7ee190ec21561aadf051a6acaa727e007a4f12f51f5231b8df84e57a69adb5c0"
       }
     },
     {
@@ -34880,7 +34939,8 @@
           "control=resume: A paused PIE session must resume.",
           "control=stop: The PIE session must be terminated.",
           "control=eject: The player must detach from the possessed pawn.",
-          "control=possess: The player must take control of a specific actor."
+          "control=possess: The player must take control of a specific actor.",
+          "control=stop: The PIE session must be terminated using the stop_pie alias."
         ],
         "whenNotToUse": [
           "control=play: PIE is already running.",
@@ -35003,7 +35063,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
-        "content": "87e846972b0d2a9f4a7be0f6f88482b4f967d8b5a14ca09740d04138147b0e5b"
+        "content": "0ec04ab36954016148baf51593dccee709da2562457e3d00bb64a0eddfce816b"
       }
     },
     {
@@ -41265,7 +41325,9 @@
           "setting=area_cost: A navigation area class needs a different traversal cost.",
           "setting=area_class: A placed actor should carve a specific navigation area.",
           "setting=nav_link: A placed nav link actor needs endpoint or snap tuning.",
-          "setting=link_type: A link must switch between the simple and smart form."
+          "setting=link_type: A link must switch between the simple and smart form.",
+          "setting=smart_link_behavior: A smart link needs area-class switching or an obstacle.",
+          "setting=rebuild: NavMesh geometry is stale after level or settings edits."
         ],
         "whenNotToUse": [
           "setting=nav_link: Use create_nav_link_proxy to place the link first."
@@ -41648,7 +41710,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "efde91a9cabfb8569fb2d5a302d91bde215ffd6478ec2ac16aa9725ff3bc3521",
-        "content": "06ec01bf8d668e6252758198740487dd362ea6c0e2e5fd951846447c6cd55b9f"
+        "content": "f295e73cf263505a09b2a15700578b59b7f641e9907ae2673cb860f12f08ba48"
       }
     },
     {
@@ -42440,7 +42502,12 @@
           "edit=add_decorator: A Behavior Tree branch needs a conditional gate.",
           "edit=add_service: A Behavior Tree branch needs recurring background work.",
           "edit=add_node: A Behavior Tree graph needs a node placed at explicit coordinates.",
-          "edit=add_subnode: A graph node needs a decorator or service attached by class."
+          "edit=add_subnode: A graph node needs a decorator or service attached by class.",
+          "edit=connect: A parent graph node must be linked to a child.",
+          "edit=break_connections: A graph node must be detached from its links.",
+          "edit=configure_node: An existing Behavior Tree node needs property edits.",
+          "edit=set_node_properties: A graph node needs property or comment edits.",
+          "edit=remove_node: A graph node must be deleted."
         ],
         "whenNotToUse": []
       },
@@ -42766,7 +42833,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-        "content": "6511a9a209ec048528bd0a3d8e46e0425cee7ee6719d4708b0aa126910603653"
+        "content": "20f171c9314e9e0e4b2d59b5fd8ebcaddc846aa2047408c99a7530e125452946"
       }
     },
     {
@@ -45188,7 +45255,8 @@
           "setting=sight: An AIPerception component needs sight-sense tuning.",
           "setting=hearing: An AIPerception component needs hearing-sense tuning.",
           "setting=damage: An AIPerception component needs damage-sense tuning.",
-          "setting=team: An AI must belong to a specific perception team."
+          "setting=team: An AI must belong to a specific perception team.",
+          "setting=controller: One call should add the perception component and set its senses together."
         ],
         "whenNotToUse": [
           "setting=setup: Use the individual configure_*_config actions for one sense."
@@ -45505,7 +45573,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "54e7f626238bc0ec374aea51ce9ca1d70862d4cf52711496b21fd1b436728bb2",
-        "content": "ad6f5dd61e8e25b08198e6f046b3c1963d2d06df160d81dbe9d5083083eeaf84"
+        "content": "21311e8592e0da1e0edcbb4fa4f28177d38f4bc2341edef1debca6916c4c010a"
       }
     },
     {
@@ -46795,7 +46863,10 @@
           "kind=sound_mix: Use it to create a Sound Mix asset and return its asset path.",
           "kind=attenuation_settings: Use it to create attenuation settings and return the asset path.",
           "kind=reverb_effect: Use it to create a Reverb Effect asset and return its path.",
-          "kind=dialogue_voice: Use it to create a Dialogue Voice asset and return its path."
+          "kind=dialogue_voice: Use it to create a Dialogue Voice asset and return its path.",
+          "kind=dialogue_wave: Use it to create a Dialogue Wave asset and return its path; wavePath or speakerPath adds its first context mapping.",
+          "kind=source_effect_chain: Use it to create a Source Effect Chain asset and return its path.",
+          "kind=submix_effect: Use it to create a Sound Submix whose effect chain holds a new submix effect preset of effectType, and return its path."
         ],
         "whenNotToUse": []
       },
@@ -47060,7 +47131,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1855b92fc3acca256e944a1deafc687b073b1906e6973820e81fd934660c174a",
-        "content": "6627f860687b9d8631196ca3584ec990aa3df638c05bf4a57666b902bf56c74a"
+        "content": "8802eb3663c528cf607d9217c72d86ba8ca1e06cfbdaad1c3a0cf75af2387b84"
       }
     },
     {
@@ -47164,7 +47235,10 @@
           "edit=add_output: Use it to add an output to a MetaSound graph.",
           "edit=add_node: Use it to add a node to a MetaSound graph.",
           "edit=connect_nodes: Use it to connect two MetaSound graph pins.",
-          "edit=disconnect: Use it to remove a link from a MetaSound graph: the one into targetNodeId.targetInputName, or every link out of sourceNodeId.sourceOutputName; with both ends given, that exact link. Refused when there is no such link."
+          "edit=disconnect: Use it to remove a link from a MetaSound graph: the one into targetNodeId.targetInputName, or every link out of sourceNodeId.sourceOutputName; with both ends given, that exact link. Refused when there is no such link.",
+          "edit=remove_node: Use it to remove one node, or several with nodeIds, and every link on them from a MetaSound graph; graph inputs and outputs (On Play, Out Mono) are refused. All or nothing.",
+          "edit=set_default: Use it to set the default of a MetaSound graph input, or with nodeId the literal on a node input (an oscillator frequency, an envelope time, a note array).",
+          "edit=batch: Use it to run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps."
         ],
         "whenNotToUse": []
       },
@@ -47473,7 +47547,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "84b3f7039cdcc2fb99d2a81f4b2e8cfbe52308e058762174972c081464f0720e",
-        "content": "d29de9c0c5ace6a54758f52d19a0048b617763199b22010daaf44b75ffad248d"
+        "content": "810d502ea0864faee4fa8ecce097734615046729fd85f3c0964cf11c513b370f"
       }
     },
     {
@@ -49215,7 +49289,9 @@
           "setting=crouch: Crouch needed.",
           "setting=rotation: Rotation policy must change.",
           "setting=capsule_component: Capsule size must change.",
-          "setting=mesh_component: Mesh must change."
+          "setting=mesh_component: Mesh must change.",
+          "setting=camera_component: Camera setup needed.",
+          "setting=nav_movement: AI movement needed."
         ],
         "whenNotToUse": [
           "setting=movement_speeds: Use set_walk_speed.",
@@ -49604,7 +49680,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bcae2654a2de5b198c482ed9c60a5714ca0d0240bd522bffae79efd0967b8c74",
-        "content": "64547b7e8d7cc3a121ab247febd3e2e512b78115d7f1ad86b6e9886f32700e96"
+        "content": "cb37b94c42725540dbbb33e654eae60c87c06888060a0376a3e05994f996e252"
       }
     },
     {
@@ -52558,7 +52634,22 @@
           "moduleKind=spawn_burst: Burst spawn needed.",
           "moduleKind=spawn_per_unit: Spawn along a path/unit.",
           "moduleKind=initialize_particle: Particle init needed.",
-          "moduleKind=velocity: Particles need velocity."
+          "moduleKind=velocity: Particles need velocity.",
+          "moduleKind=acceleration: Particles need acceleration.",
+          "moduleKind=force: Particles need force.",
+          "moduleKind=color: Particle color must change.",
+          "moduleKind=size: Particle size must change.",
+          "moduleKind=collision: Particles must collide.",
+          "moduleKind=kill_particles: Particles must die on condition.",
+          "moduleKind=camera_offset: Camera-relative particles.",
+          "moduleKind=particle_state: Particle lifecycle state needed.",
+          "moduleKind=sprite_renderer: Sprite rendering needed.",
+          "moduleKind=mesh_renderer: Mesh rendering needed.",
+          "moduleKind=ribbon_renderer: Ribbon/trail rendering.",
+          "moduleKind=light_renderer: Per-particle light needed.",
+          "moduleKind=simulation_stage: Custom sim stage needed.",
+          "moduleKind=event_generator: Emitter emits events.",
+          "moduleKind=event_receiver: Emitter consumes events."
         ],
         "whenNotToUse": [
           "moduleKind=module: Use connect_niagara_pins.",
@@ -52825,7 +52916,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dfb50ff75119df54fef1b8056baa2082953c3a69b1166d76fd5bf8a535294a5b",
-        "content": "2e6a2022f529f1440541d9e7a9e9528564581168926fec7264193594cb28c1ab"
+        "content": "f6a61840a7efc916f8cb651cbcf6bcb3cd35cf07d6a4d7864d5edebe56a1fc15"
       }
     },
     {
@@ -53314,7 +53405,8 @@
           "kind=niagara_ribbon: Trail/ribbon FX needed.",
           "kind=particle_trail: A trailing effect is needed.",
           "kind=impact: Hit FX needed.",
-          "kind=environment: Ambient FX needed."
+          "kind=environment: Ambient FX needed.",
+          "kind=volumetric_fog: Volumetric fog needed."
         ],
         "whenNotToUse": [
           "kind=environment: Use build_environment weather.",
@@ -53593,7 +53685,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f8f1978baba2304c9affccd436dcb8db8d2f171d82277aae9c6caa94e1e87faf",
-        "content": "7ebf24174a1e9be7bc51f89d8f6793e20721af356ee4c7516e02bb0d2f82a152"
+        "content": "b8e386b6dbe9506163af24a352a440b401c6c136d59ff145df4697530a05e63e"
       }
     },
     {
@@ -53884,7 +53976,10 @@
           "edit=bind_parameter: Param driven externally.",
           "edit=set_parameter_value: Param value must change.",
           "edit=set_parameter: A parameter value must change.",
-          "edit=set_dynamic_input: Expression-driven value needed."
+          "edit=set_dynamic_input: Expression-driven value needed.",
+          "edit=set_emitter_properties: Emitter config must change.",
+          "edit=enable_gpu_simulation: GPU particles needed.",
+          "edit=connect_pins: Modules must wire together."
         ],
         "whenNotToUse": [
           "edit=add_emitter: Use create_niagara_emitter.",
@@ -54210,7 +54305,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4ca99c03c408274948e9e6cb6e45045af53f237d48171d4b5e25b9bf7b3eaa83",
-        "content": "53a82be72bdf65c88bfa8035bebe5c2c9923618698336f042075d57fe5b9018d"
+        "content": "aacf9c00ccc92cd21afb5f339960a24db48ef4b20cf34466eea332a166f3e137"
       }
     },
     {
@@ -55502,7 +55597,8 @@
           "setting=tags: Effect tags must change.",
           "setting=add_modifier: Effect modifies an attribute.",
           "setting=modifier_magnitude: Modifier amount must change.",
-          "setting=add_execution_calculation: Complex magnitude calc needed."
+          "setting=add_execution_calculation: Complex magnitude calc needed.",
+          "setting=add_cue: Effect needs a cue."
         ],
         "whenNotToUse": [
           "setting=duration: Use create_gameplay_effect.",
@@ -55818,7 +55914,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4e827b292fbe9c2893a6c673bf54ae05a383670d916dcc1c38c0027235aa2761",
-        "content": "bac9f3a197351d04f298ca2da7dfa2ee89b506f9b9c19faef10f1c32e8f58e40"
+        "content": "ec15c527b1b0896314c0b1605c120044cde47e2cbcbc39bf7b7ac0bf7175093f"
       }
     },
     {
@@ -57522,7 +57618,15 @@
           "primitive=cylinder: A cylinder primitive must be created.",
           "primitive=cone: A cone primitive must be created.",
           "primitive=capsule: A capsule primitive must be created.",
-          "primitive=plane: A flat plane primitive must be created."
+          "primitive=plane: A flat plane primitive must be created.",
+          "primitive=disc: A circular disc primitive must be created.",
+          "primitive=ring: A ring/annulus primitive must be created.",
+          "primitive=torus: A torus primitive must be created.",
+          "primitive=pipe: A pipe/tube primitive must be created.",
+          "primitive=arch: An arch primitive must be created.",
+          "primitive=ramp: A ramp primitive must be created.",
+          "primitive=stairs: A stair primitive must be created.",
+          "primitive=spiral_stairs: A spiral stair primitive must be created."
         ],
         "whenNotToUse": []
       },
@@ -57943,7 +58047,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "28bb87445a219f3f83084414deb4cf39b35a53eb693fed38dd5e313fe083df73",
-        "content": "1d250a9a1a19ecc0d2e7b46a0e0d4123376ccda3fed7e40f796ef031602b524d"
+        "content": "7e53f426bc905ec2141bae04817262dc008f71b47945d610c11791ea8a53d801"
       }
     },
     {
@@ -58065,7 +58169,12 @@
           "deform=taper: A mesh must be tapered.",
           "deform=stretch: A mesh must be stretched.",
           "deform=spherify: A mesh must be pushed toward spherical.",
-          "deform=cylindrify: A mesh must be pushed toward cylindrical."
+          "deform=cylindrify: A mesh must be pushed toward cylindrical.",
+          "deform=smooth: A mesh must be smoothed.",
+          "deform=relax: A mesh must be relaxed without shrinking.",
+          "deform=noise_deform: A mesh must be displaced by noise.",
+          "deform=lattice_deform: A complex deformation must be applied via a lattice.",
+          "deform=displace_by_texture: A mesh must be displaced by a texture."
         ],
         "whenNotToUse": []
       },
@@ -58301,7 +58410,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "79db5c89d50290cca5383ee4077f9d045ba6f9f6301cdfcfeca32d3ec5553c0b",
-        "content": "fd29abc5a84fdc3a9721fde201b9312f64e75f3193b753731f3f75c0052fd7ec"
+        "content": "a9204fd8aac38ddcab290e4e6ebbbf0bd4392996f068c68162ba56ef1f5c7e26"
       }
     },
     {
@@ -58405,7 +58514,10 @@
           "edit=append_triangle: A face must be added to an authored mesh in one call.",
           "edit=set_vertex_position: An authored vertex must be nudged without rebuilding the mesh.",
           "edit=set_vertex_color: Authored geometry must carry colour the material reads.",
-          "edit=set_uvs: An authored vertex needs an exact UV rather than a generated one."
+          "edit=set_uvs: An authored vertex needs an exact UV rather than a generated one.",
+          "edit=split_normals: Authored geometry shades too soft across its creases.",
+          "edit=translate: Authored geometry must shift inside its own local space.",
+          "edit=difference: A caller reaches for the CSG name for a subtraction."
         ],
         "whenNotToUse": [
           "edit=create: A parametric shape is enough; use a create_* primitive.",
@@ -58895,7 +59007,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "951a5bd8651753a25fae01551c3b20b93c2e003d7ac77462d0a7446dbf9aaa2f",
-        "content": "cc22e0f16e8e9eaa1197c29d7625136f3ae73f2a66d6f89163bf32020946fab3"
+        "content": "aa9160cdbc1793f4d0573408a86fad6c04f4bd93d28090d28617399141e75554"
       }
     },
     {
@@ -59739,7 +59851,18 @@
           "modeling=outset: Faces must be outset.",
           "modeling=offset_faces: Faces must be offset.",
           "modeling=bevel: Edges must be beveled.",
-          "modeling=chamfer: Edges must be chamfered."
+          "modeling=chamfer: Edges must be chamfered.",
+          "modeling=bridge: Two edge loops must be bridged.",
+          "modeling=loft: A lofted surface between profiles must be created.",
+          "modeling=sweep: A swept solid must be created.",
+          "modeling=revolve: A lathe/revolve solid must be created.",
+          "modeling=shell: A hollow shell must be generated.",
+          "modeling=loop_cut: An edge loop must be inserted.",
+          "modeling=edge_split: Specific edges must be subdivided.",
+          "modeling=poke: Faces must be split from their centre, or pushed out into pyramids or spikes.",
+          "modeling=quadrangulate: A triangulated mesh must be edited as quads.",
+          "modeling=extrude_along_spline: A mesh must be swept along a spline path.",
+          "modeling=duplicate_along_spline: Copies of a mesh must be distributed along a spline."
         ],
         "whenNotToUse": [
           "modeling=poke: The whole mesh should be refined evenly; use subdivide.",
@@ -60107,7 +60230,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "816fc9ac3f08e8dfba056ff56d90233a1a3f2c7edc0a2439ac999143baffac49",
-        "content": "26654366f341cac089fe6362c74593cf18cf0be1c1ad35b2f4eba8c22b369221"
+        "content": "06cee6143120e062b929cbdbd49befd4f3a46fafe4018ccce6fcced67441becd"
       }
     },
     {
@@ -60229,7 +60352,12 @@
           "optimization=remesh_voxel: A watertight voxel remesh is needed.",
           "optimization=subdivide: A mesh must be subdivided.",
           "optimization=merge_vertices: Duplicate vertices must be welded/merged.",
-          "optimization=weld_vertices: Vertices must be welded by threshold."
+          "optimization=weld_vertices: Vertices must be welded by threshold.",
+          "optimization=remove_degenerates: Degenerate triangles must be removed.",
+          "optimization=fill_holes: Mesh holes must be capped.",
+          "optimization=flip_normals: Normals must be flipped (inside-out).",
+          "optimization=recalculate_normals: Normals must be recalculated.",
+          "optimization=recompute_tangents: Tangents must be recomputed for correct shading."
         ],
         "whenNotToUse": []
       },
@@ -60417,7 +60545,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-        "content": "c91dee6b37f51bf0dd9052445cd4a5100709b30d9ba60565427dff349b13d1f0"
+        "content": "e000271b27e6063e5ea3be4f0c9cba339a8ec613dd684eaec5ce7d783bf4d707"
       }
     },
     {
@@ -67870,7 +67998,9 @@
           "setting=game_state_class: Use it to set a GameMode GameState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
           "setting=player_state_class: Use it to set a GameMode PlayerState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
           "setting=hud_class: Use it to set a GameMode HUD class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
-          "setting=rules: Use it to set a GameMode's bDelayedStart match rule; only GameMode (AGameMode) children have it, a GameModeBase child is refused with NOT_SUPPORTED."
+          "setting=rules: Use it to set a GameMode's bDelayedStart match rule; only GameMode (AGameMode) children have it, a GameModeBase child is refused with NOT_SUPPORTED.",
+          "setting=respawn: Use it to set the game mode's minimum respawn delay (AGameMode::MinRespawnDelay); a GameModeBase child is refused with NOT_SUPPORTED.",
+          "setting=spectating: Use it to set the GameMode spectator pawn class (SpectatorClass)."
         ],
         "whenNotToUse": []
       },
@@ -68085,7 +68215,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ab349f5200da8ed5b92947cc37e4fd2892821f5964930501cf7057dfc352bc0d",
-        "content": "1a8bbc4b05f18cf190f03f69d32ae3eade93af909f3889d7cc27a8dad17890be"
+        "content": "b332641e876691f16a64653f6f12d60ea69b4584968a976acfbd2a22da2c6230"
       }
     },
     {
@@ -68179,7 +68309,8 @@
           "setting=add_mapping: Use it to add an Enhanced Input mapping with optional trigger and modifier types.",
           "setting=map_action: Use it to map an Enhanced Input Action to a key in a context, with an optional trigger and modifier on that mapping; mapping the same action and key again redefines it.",
           "setting=set_trigger: Use it to add a trigger to an Enhanced Input Action; a trigger of that class already on the action is kept, not stacked.",
-          "setting=set_modifier: Use it to add a modifier to an Enhanced Input Action, or to one mapping when contextPath and key are given; a modifier of that class already there is kept, not stacked."
+          "setting=set_modifier: Use it to add a modifier to an Enhanced Input Action, or to one mapping when contextPath and key are given; a modifier of that class already there is kept, not stacked.",
+          "setting=enable_mapping: Use it to enable an Enhanced Input Mapping Context on the PIE local player at a priority; outside PIE it fails with PIE_NOT_RUNNING."
         ],
         "whenNotToUse": []
       },
@@ -68377,7 +68508,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "27f1ead38de13c5bb962f46d3fa2cfb5b4836fa1c5e2b6195331c4a74c6923a3",
-        "content": "72af0f0e5743757e9f7c3b81149e69eb22d90490afa0ee37f73032dc67f49edd"
+        "content": "5edd5d5425c197cc46bab3c521045c40c9c84b1df2ca2145a21ff4280fe652a6"
       }
     },
     {
@@ -68934,7 +69065,16 @@
           "setting=rep_notify: Use it to assign a RepNotify function to a property.",
           "setting=net_role: Use it to choose how clients see an Actor Blueprint's actors: ROLE_None turns replication off, ROLE_SimulatedProxy or ROLE_AutonomousProxy turn it on.",
           "setting=dormancy: Use it to set an Actor Blueprint's default network dormancy.",
-          "setting=always_relevant: Use it to set always-relevant replication behavior."
+          "setting=always_relevant: Use it to set always-relevant replication behavior.",
+          "setting=only_relevant_to_owner: Use it to set owner-only relevancy behavior.",
+          "setting=autonomous_proxy: Use it to make every replicated variable of a Blueprint replicate to the autonomous proxy only (COND_AutonomousOnly), or undo that; fails when it has no replicated variable.",
+          "setting=priority: Use it to configure actor network bandwidth priority.",
+          "setting=update_frequency: Use it to configure actor network update frequency.",
+          "setting=cull_distance: Use it to configure network relevancy cull distance.",
+          "setting=push_model: Use it to turn push-model replication on or off for every replicated variable of a Blueprint; fails when it has none.",
+          "setting=replicated_movement: Use it to configure replicated movement.",
+          "setting=replication_graph: Use it to set an Actor Blueprint's spatially loaded (World Partition) and net load on client defaults; only the fields sent are written.",
+          "setting=net_driver: Use it to write the game net driver's rate limits to its class defaults and DefaultEngine.ini, and to the running net driver when there is one; only the fields sent are written."
         ],
         "whenNotToUse": []
       },
@@ -69234,7 +69374,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "76d7f7ec91e303fd8f8d1299126361c78a718cdc85f65bcf3d53ddd4a2bc5535",
-        "content": "2af7bc8a94e4f31cc5d5fc0800920dd2695a3762e5e366fa516cc33e3c63ee5a"
+        "content": "364fc69d891694343cf7c01acd8bedd87e08cd11a1d03553205bd9e2ad3db8e8"
       }
     },
     {
@@ -71689,7 +71829,25 @@
           "nodeKind=spline_sampler: Points must be sampled along a spline.",
           "nodeKind=mesh_sampler: Points must be sampled on a mesh.",
           "nodeKind=volume_sampler: Points must be sampled within a volume.",
-          "nodeKind=static_mesh_spawner: Static meshes must be spawned at points."
+          "nodeKind=static_mesh_spawner: Static meshes must be spawned at points.",
+          "nodeKind=actor_spawner: Actors must be spawned at points.",
+          "nodeKind=spline_spawner: Actors/meshes must be spawned along a spline.",
+          "nodeKind=density_filter: Points must be filtered by density.",
+          "nodeKind=distance_filter: Points must be filtered by distance.",
+          "nodeKind=height_filter: Points must be filtered by height.",
+          "nodeKind=slope_filter: Points must be filtered by slope.",
+          "nodeKind=bounds_filter: Points must be filtered by bounds.",
+          "nodeKind=bounds_modifier: Point bounds must be modified.",
+          "nodeKind=landscape_data_node: A PCG graph must sample landscape data.",
+          "nodeKind=spline_data_node: A PCG graph must sample a spline.",
+          "nodeKind=actor_data_node: A PCG graph must sample existing actors.",
+          "nodeKind=texture_data_node: A PCG graph must sample a texture.",
+          "nodeKind=volume_data_node: A PCG graph must sample a volume.",
+          "nodeKind=transform_points: Points must be transformed.",
+          "nodeKind=copy_points: Points must be copied from one set to another.",
+          "nodeKind=merge_points: Multiple point sets must be merged.",
+          "nodeKind=project_to_surface: Points must be projected onto a surface.",
+          "nodeKind=self_pruning: Overlapping points must be pruned."
         ],
         "whenNotToUse": [
           "nodeKind=node: Pins must be connected; use connect_pcg_pins."
@@ -71934,7 +72092,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "51b32cde8a9f33e3a11050d91e75b0d047718e93f209515e683807223160e1cf",
-        "content": "e2ce530f6c9695eab3a1bf98df4ce705cb5bdb50912dbb3b164ac5dc4436a8bd"
+        "content": "7755050b5d03e367ad5600a445662a0f026cf6f0904830327f146e97d048584d"
       }
     },
     {
@@ -73983,7 +74141,24 @@
           "nodeKind=fresnel: A rim light, edge glow or view-angle fade is needed.",
           "nodeKind=if: A value must switch by comparing two numbers: A greater than, equal to or less than B.",
           "nodeKind=math: Values must be combined or reshaped: Add, Subtract, Multiply, Divide, Lerp, Clamp, Power, Frac, OneMinus or Append.",
-          "nodeKind=noise: A surface needs procedural variation such as dirt, clouds or breakup, with a scale and a number of octaves (levels)."
+          "nodeKind=noise: A surface needs procedural variation such as dirt, clouds or breakup, with a scale and a number of octaves (levels).",
+          "nodeKind=panner: UVs must scroll over time, as with flowing water or a conveyor belt.",
+          "nodeKind=pixel_depth: Distance from the camera per pixel is needed, for depth fades or distance-based blending.",
+          "nodeKind=reflection_vector: A reflection direction is needed, for example to sample a cubemap for fake reflections.",
+          "nodeKind=rotator: UVs must rotate over time, as with spinning dials or radial effects.",
+          "nodeKind=scalar_parameter: A float value must be tweakable per material instance, such as roughness, opacity or a speed.",
+          "nodeKind=static_switch_parameter: A compile-time on/off toggle must pick between two graph branches for each instance.",
+          "nodeKind=switch: A compile-time two-way branch is needed with no named parameter, chosen by a bool input or the node default.",
+          "nodeKind=texture_coordinate: A texture must repeat more or less often across a surface, or read a UV channel other than 0.",
+          "nodeKind=texture_sample: A texture must be sampled in the graph; pass parameterName to make it a texture parameter that instances can override.",
+          "nodeKind=vector_parameter: A color or vector value must be tweakable per instance, such as a tint or an emissive color.",
+          "nodeKind=vertex_normal: The world-space vertex normal is needed, for example for slope-based blending.",
+          "nodeKind=voronoi: A cell, crack or cobble-like pattern is needed from a Voronoi noise function; scale is its only setting.",
+          "nodeKind=world_position: The world position of each pixel is needed, for world-aligned textures or height-based blending.",
+          "nodeKind=material_function: A reusable material function must be called from a material or another function as a single node.",
+          "nodeKind=landscape_layer: A landscape weight layer needs its layer info asset, with hardness, physical material and weight-blend option, so it can be painted.",
+          "nodeKind=batch: Many nodes, wires and material properties must be built at once, with the material compiled and saved only at the end.",
+          "nodeKind=batch: New nodes must be wired to each other in the same call by id ($id) without waiting for node ids."
         ],
         "whenNotToUse": [
           "nodeKind=node: The node already exists and only needs wiring or moving (use material.connect_nodes or material.set_node_position).",
@@ -73991,7 +74166,27 @@
           "nodeKind=fresnel: The Fresnel node already exists and only needs wiring (use material.connect_nodes).",
           "nodeKind=if: A per-instance toggle is wanted (add a static switch parameter, then use material.set_material_parameter with parameterKind=static_switch).",
           "nodeKind=math: A math node already exists and only needs new wires (use material.connect_nodes).",
-          "nodeKind=noise: A noise texture asset is wanted instead of a per-pixel node (use texture.create_texture with kind=noise)."
+          "nodeKind=noise: A noise texture asset is wanted instead of a per-pixel node (use texture.create_texture with kind=noise).",
+          "nodeKind=panner: The panner exists and only its wiring or position changes (use material.connect_nodes or material.set_node_position).",
+          "nodeKind=pixel_depth: A pixel depth node exists and only needs wiring (use material.connect_nodes).",
+          "nodeKind=reflection_vector: The reflection vector node exists and only needs wiring (use material.connect_nodes).",
+          "nodeKind=rotator: The rotator exists and only needs wiring (use material.connect_nodes).",
+          "nodeKind=scalar_parameter: An existing scalar parameter value must change (use material.set_material_parameter with parameterKind=scalar).",
+          "nodeKind=static_switch_parameter: The value of an existing switch must change on an instance (use material.set_material_parameter with parameterKind=static_switch).",
+          "nodeKind=switch: The choice must change per instance (use a static switch parameter, set with material.set_material_parameter and parameterKind=static_switch).",
+          "nodeKind=texture_coordinate: The UV node exists and only needs wiring (use material.connect_nodes).",
+          "nodeKind=texture_sample: An instance only needs a different texture (use material.set_material_parameter with parameterKind=texture).",
+          "nodeKind=texture_sample: The texture asset itself must be made, adjusted or configured (use texture.create_texture, texture.adjust_texture or texture.configure_texture).",
+          "nodeKind=vector_parameter: An existing vector parameter value must change (use material.set_material_parameter with parameterKind=vector).",
+          "nodeKind=vertex_normal: A normal map should shade the surface: wire a texture sample into Normal (use material.connect_nodes).",
+          "nodeKind=voronoi: The Voronoi node exists and only needs wiring (use material.connect_nodes).",
+          "nodeKind=world_position: The world position node exists and only needs wiring (use material.connect_nodes).",
+          "nodeKind=material_function: The function does not exist yet (use material.create_material with kind=function).",
+          "nodeKind=material_function: The function needs another input or output pin (use material.add_function_io).",
+          "nodeKind=landscape_layer: The material needs a layer blend node that lists the layers (use material.configure_layer_blend).",
+          "nodeKind=landscape_layer: The landscape must be painted with the layer (use build_environment.edit_landscape with edit=paint_landscape_layer).",
+          "nodeKind=batch: Only one wire is needed (use material.connect_nodes).",
+          "nodeKind=batch: Nodes must be deleted or unwired; batches do not run those (use material.delete_node or material.disconnect_nodes)."
         ]
       },
       "schemas": {
@@ -74543,7 +74738,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3d2bd26bb14011b013238389d522be4376566eac76e8f90569c0a66d8d39c42a",
-        "content": "06337dfceb75f46018bddcafe921d7724737ee318b3fc0fc75b75a061ff99883"
+        "content": "57d8ab4adad673fd60230762f1b52eb8ee9e013b2b9cd0c62c8ef41897741305"
       }
     },
     {
@@ -76937,7 +77132,13 @@
           "trackKind=transform: Add a transform track to animate actor transforms during cinematic.",
           "trackKind=property: Add a property track to animate a specific property on a bound actor.",
           "trackKind=skeletal_animation: Add a skeletal animation track to play animations on a skeletal mesh.",
-          "trackKind=material_parameter: Add a material parameter collection track to animate material parameters."
+          "trackKind=material_parameter: Add a material parameter collection track to animate material parameters.",
+          "trackKind=particle: Add a particle track to trigger particle systems during cinematic.",
+          "trackKind=event: Add an event track to trigger events at specific frames.",
+          "trackKind=fade: Add a fade track for cinematic fade-in/fade-out transitions.",
+          "trackKind=level_visibility: Add a level visibility track to control level streaming during cinematic.",
+          "trackKind=shot: A shot track must be added to organize camera cuts.",
+          "trackKind=subsequence: A sub-sequence must be nested inside the master sequence."
         ],
         "whenNotToUse": [
           "trackKind=camera_cut: The sequence already has a camera cut track.",
@@ -77331,7 +77532,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "59c8648242c2d3b60b256b4b026b6439e7d56194c06a16ca4b1da178e050102a",
-        "content": "58927b31be34d25e8aca288cb85a6685e4b953a65f5aceab84aac1f62b292762"
+        "content": "3580e277288d68a382c6ef37d060f9d2bc85aa8f2e317b28b66479d6a511dd06"
       }
     },
     {
@@ -79375,7 +79576,9 @@
           "info=tracks: The tracks in a sequence must be enumerated.",
           "info=keys: Existing keys must be inspected before re-authoring a track.",
           "info=keys: A keyframe appeared to do nothing and the section range needs checking.",
-          "info=track_types: Available track types must be discovered before adding a track."
+          "info=track_types: Available track types must be discovered before adding a track.",
+          "info=list: Available sequences under a folder must be enumerated.",
+          "info=open: An existing sequence must be opened for editing."
         ],
         "whenNotToUse": [
           "info=properties: Properties are being set rather than read.",
@@ -79744,7 +79947,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a61b924acbdde2ac9d967747cbe781d5402ed3216e604fecabac3525f7ce125f",
-        "content": "3f6593998e54be1497da7d3fb34168a33d80d28b926c9fa965d95c150aa57bd3"
+        "content": "c7c2ce9a508ff1e7a5d886c0ee0d6be717eb99df6760ddd7be5a736d23e97ef7"
       }
     },
     {
@@ -81585,7 +81788,8 @@
           "control=seek: Demo playback must be seeked to a specific time.",
           "control=set_playback_speed: Demo playback speed must be changed.",
           "control=start_recording: A demo replay must be recorded.",
-          "control=stop_recording: An in-progress demo recording must be stopped."
+          "control=stop_recording: An in-progress demo recording must be stopped.",
+          "control=start_killcam: A killcam replay must be triggered."
         ],
         "whenNotToUse": [
           "control=play: A recording is in progress (ALREADY_PLAYING).",
@@ -81791,7 +81995,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f8d744e76d3bf545c162ba2a503379438fcd2da8c71fc3ad4e72bb81535d4b94",
-        "content": "2b9abfec3fac341ebfbfbae43f927cbaf30a34add650b0dccd00f0d2b443bba9"
+        "content": "9732ce0fbc527aef62cb7f2d54351ebcb85b510a2ab665a747b94d64be1c2c3c"
       }
     },
     {
@@ -82890,7 +83094,14 @@
           "edit=rename_struct_member: A field must be renamed while keeping its type and default; it is found by memberName or varGuid.",
           "edit=reorder_struct_members: One field must move to first, last, or before or after another field.",
           "edit=set_struct_member_default: A field needs a new default value; a value that cannot convert to the field type is rejected.",
-          "edit=set_struct_member_metadata: A field needs a tooltip or metadata key and value pairs."
+          "edit=set_struct_member_metadata: A field needs a tooltip or metadata key and value pairs.",
+          "edit=set_struct_member_type: A field needs a different type, for example Int to Float or a container; self-referencing and cyclic types are refused.",
+          "edit=rename_struct: The struct asset needs a new name or folder; a redirector is left at the old path when it is referenced, and dependent Blueprints recompile.",
+          "edit=duplicate_struct: A struct must be forked into a new asset with the same members, for example to try a second revision.",
+          "edit=import_struct: A struct must be rebuilt from a member list or a JSON file; members are replaced and a failed apply is rolled back.",
+          "edit=recompile_struct: Dependent Blueprints must be recompiled after a struct change and their compile errors listed; the changed assets are saved unless save is false.",
+          "edit=refresh_struct_dependencies: A struct was edited outside these tools and its Blueprints and DataTables must be rebuilt against the new layout; the affected assets are listed.",
+          "edit=set_instanced_struct_property: An FInstancedStruct property on an asset must be set to a chosen struct type with given field values."
         ],
         "whenNotToUse": [
           "edit=create_struct: A DataTable is wanted as well as its row struct (use datatable.edit_data_table to create the table and bind the struct).",
@@ -82898,7 +83109,14 @@
           "edit=rename_struct_member: A field must be removed instead of renamed (use struct.delete_struct with deleteScope=member).",
           "edit=reorder_struct_members: The current member order must be read before moving anything (use struct.get_struct).",
           "edit=set_struct_member_default: Values stored in a DataTable row must change, not the struct default (use datatable.edit_data_table).",
-          "edit=set_struct_member_metadata: Metadata for an enum entry is wanted (use enum.edit_enum)."
+          "edit=set_struct_member_metadata: Metadata for an enum entry is wanted (use enum.edit_enum).",
+          "edit=set_struct_member_type: The assets that use the struct must be found before a type change (use struct.get_struct with info=usage).",
+          "edit=rename_struct: A non-struct asset must be renamed or moved (use asset.rename or asset.move).",
+          "edit=duplicate_struct: An asset that is not a struct must be copied (use asset.duplicate).",
+          "edit=import_struct: The definition must be exported as JSON, not imported (use struct.get_struct with info=export).",
+          "edit=recompile_struct: One Blueprint must be compiled rather than a struct (use blueprint.compile).",
+          "edit=refresh_struct_dependencies: Only the struct status and validity must be read (use struct.get_struct).",
+          "edit=set_instanced_struct_property: A plain property on an actor or asset must be written (use inspect.set_property)."
         ]
       },
       "schemas": {
@@ -83238,7 +83456,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f952d9c08af78730bfc5951b162bf6aabc77d538887923111965fae2c6db13f0",
-        "content": "b1ccd3974062458d82b901e9738fe5efa6f68c02a0e53b27c63dda5c6f9d8d28"
+        "content": "3ebf48babfbc862358f91a6a24ea920405bbb580be5cf3547a77ca890cf5d074"
       }
     },
     {
@@ -83930,7 +84148,14 @@
           "setting=resolution_scale: The primary render resolution scale must be changed.",
           "setting=vsync: VSync must be toggled at runtime.",
           "setting=lod: A forced LOD level or LOD bias must be applied.",
-          "setting=nanite: Nanite must be enabled or its runtime parameters tuned."
+          "setting=nanite: Nanite must be enabled or its runtime parameters tuned.",
+          "setting=occlusion_culling: Occlusion culling must be enabled or its parameters tuned.",
+          "setting=texture_streaming: Texture streaming pool size or player-location boost must be tuned.",
+          "setting=world_partition: World Partition runtime settings must be tuned.",
+          "setting=gpu_timing: Per-frame GPU timing instrumentation must be enabled or disabled.",
+          "setting=draw_calls: Draw-call count must be reduced through instancing or batching.",
+          "setting=shaders: Shader compilation must be optimized or force-recompiled.",
+          "setting=baseline: A predefined performance baseline profile must be applied."
         ],
         "whenNotToUse": [
           "setting=scalability: A single CVar outside scalability groups is needed (use set_cvar).",
@@ -83938,7 +84163,12 @@
           "setting=resolution_scale: The window resolution must change (use set_resolution).",
           "setting=lod: Per-actor LOD is the goal (use control_actor).",
           "setting=nanite: The target mesh is not Nanite-compatible.",
-          "setting=occlusion_culling: The scene is too small to benefit from occlusion culling."
+          "setting=occlusion_culling: The scene is too small to benefit from occlusion culling.",
+          "setting=texture_streaming: A one-off texture import is the goal (use manage_asset).",
+          "setting=world_partition: Level streaming is managed per-sublevel (use manage_level).",
+          "setting=gpu_timing: A full profiling capture is needed (use start_profiling).",
+          "setting=draw_calls: Actors should be merged into a single mesh (use merge_actors).",
+          "setting=shaders: A full material recompile is needed (use manage_asset compile_material)."
         ]
       },
       "schemas": {
@@ -84194,7 +84424,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2dcd8535745c0025281e9251cbd80675ac21838c8a2d2373edaecfda4f995425",
-        "content": "2ce30ba67a7a65ca587d1780bbc2af1806e9802b0d5cb85147e447aa0c6cbe2f"
+        "content": "7a008b08c31c61359eb0bab0472602cfb4ba698ec72a7da21a6a169ff2663cea"
       }
     },
     {
@@ -87487,7 +87717,9 @@
           "control=pause: Trace capture must be temporarily suspended.",
           "control=resume: A paused trace session must continue capturing.",
           "control=capture_trace: A trace must be captured for later analysis.",
-          "control=send_snapshot: A snapshot must be forwarded to an active trace session."
+          "control=send_snapshot: A snapshot must be forwarded to an active trace session.",
+          "control=write_snapshot: A point-in-time trace snapshot must be written to disk.",
+          "control=launch_viewer: The Insights GUI must be launched for trace analysis."
         ],
         "whenNotToUse": [
           "control=start: A session is already running (use pause/resume/stop).",
@@ -87678,7 +87910,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a59b5b98f185668a39d50e7315a508b5e14509bb1efd0d493d44683895181c01",
-        "content": "a9a5271fc9d6b7dddd0624d2eb9f7eb86e1e1341d7e58a802d882d5b4ce5dea0"
+        "content": "eb81c50c99dc56731e3b827478ef760498ece3d1e0063e61cd16cca1290e946a"
       }
     },
     {
@@ -88586,7 +88818,10 @@
           "kind=pattern: A checker, grid, brick, stripe or dot pattern texture is needed, for example a debug or placeholder surface.",
           "kind=ao_from_mesh: A static mesh needs a ray-traced ambient occlusion map in its UV space; a convex mesh comes out flat white.",
           "kind=normal_from_height: A normal map must be derived from a heightmap texture; strength scales the bump depth.",
-          "kind=resized: A texture must be copied at a smaller or larger size such as 512px; the source texture is left as it is."
+          "kind=resized: A texture must be copied at a smaller or larger size such as 512px; the source texture is left as it is.",
+          "kind=channel_pack: Separate AO, roughness and metallic maps must be packed into the channels of one linear texture.",
+          "kind=channel_extract: One channel of a packed texture must become its own grayscale texture.",
+          "kind=combined: Two same-size textures must be blended into a new texture with Multiply, Screen, Overlay or Add at a set opacity."
         ],
         "whenNotToUse": [
           "kind=gradient: A gradient is only needed inside one material and can come from its UVs and math nodes (use material.add_material_node).",
@@ -88594,7 +88829,10 @@
           "kind=pattern: A photo or authored image file must be brought into the project (use asset.import).",
           "kind=ao_from_mesh: Scene lighting must be built, not a per-mesh texture (use build_environment.build_lighting).",
           "kind=normal_from_height: An existing normal map only needs a channel flipped (use texture.adjust_texture with adjust=invert).",
-          "kind=resized: Only runtime mip detail or memory must drop, not the source size (use texture.configure_texture)."
+          "kind=resized: Only runtime mip detail or memory must drop, not the source size (use texture.configure_texture).",
+          "kind=channel_pack: Separate textures can simply be sampled in a material (use material.add_material_node with nodeKind=texture_sample).",
+          "kind=channel_extract: A material only needs one channel of a texture (use material.add_material_node with a texture sample).",
+          "kind=combined: Two textures should blend per pixel at render time (use material.add_material_node)."
         ]
       },
       "schemas": {
@@ -89060,7 +89298,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "10a88705b4fe4e1dbfc8e9a39383a3b1c26b0113ee749683ed0a63e0001c01c5",
-        "content": "2324f89aadcf35908f7b6ecbb87851cbc8063979166e91cdc4751890c51125c5"
+        "content": "f460079c777368bdef5df73b46416ecfeb1bb721497918d43baac5f949ea500f"
       }
     },
     {
