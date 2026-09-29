@@ -96,6 +96,13 @@ describe('editor-reported content roots', () => {
     expect(() => sanitizePath('/ShooterCore/X')).toThrow(/must start with one of/);
   });
 
+  it('names the configured roots, not every reported mount, when a path is refused', () => {
+    setEditorContentRoots(Array.from({ length: 300 }, (_, index) => `/Mount${index}`));
+    expect(() => sanitizePath('/Nope/X')).toThrow(
+      'Invalid path: must start with one of [/Game, /Engine, /Script, /Temp, /Niagara] or a content mount the connected editor reports',
+    );
+  });
+
   it('still uses an explicit allowedRoots list as given', () => {
     setEditorContentRoots(['/ShooterCore']);
     expect(() => sanitizePath('/ShooterCore/X', ['/Game'])).toThrow(/must start with one of/);

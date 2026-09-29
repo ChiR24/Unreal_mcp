@@ -203,6 +203,13 @@ describe('editor-reported content roots at the semantic path boundary', () => {
     expect(AssetPathSchema.safeParse('/ShooterCore/X').success).toBe(false);
   });
 
+  it('names the configured roots, not every reported mount, in INVALID_PATH_ROOT', () => {
+    setEditorContentRoots(['/ShooterCore']);
+    expect(() => parseAssetPath('/Nope/X')).toThrow(
+      'Invalid path: must start with one of [/Game, /Engine, /Script, /Temp, /Niagara] or a content mount the connected editor reports',
+    );
+  });
+
   it('accepts an object path under a reported mount only while it is reported', () => {
     expect(ObjectPathSchema.safeParse('/ShooterCore/X.X').success).toBe(false);
 

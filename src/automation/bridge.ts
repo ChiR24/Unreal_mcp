@@ -17,7 +17,7 @@ import {
 import { MessageHandler } from './message-handler.js';
 import { RequestTracker } from './request-tracker.js';
 import type { ExpectedRevisions } from '../tools/catalog/capabilities/semantic/execution-options.js';
-import { setEditorContentRoots } from '../utils/paths/path-security.js';
+import { clearEditorContentRoots, setEditorContentRoots } from '../utils/paths/path-security.js';
 import type {
     AutomationBridgeEvents,
     AutomationBridgeMessage,
@@ -165,6 +165,8 @@ export class AutomationBridge extends EventEmitter {
         const stopError = new Error('Automation bridge server stopped');
         this.requestDispatcher.stop(stopError);
         this.connectionManager.close(1001, 'Server shutdown');
+        // close() detaches the socket's listeners, so its close handler never clears the mounts.
+        clearEditorContentRoots();
     }
 
     /** Connect now (the same lazy connect a request runs); false when Unreal is unreachable. */

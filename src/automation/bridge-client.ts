@@ -135,14 +135,17 @@ export class AutomationBridgeClient {
             this.abortedConnectionSockets.delete(socket);
             const reason = this.redactPeerText(reasonBuffer.toString('utf8'));
             const socketInfo = this.deps.connectionManager.removeSocket(socket);
+            // The mounts belonged to that editor; with none connected the allowlist is the static roots.
+            // A socket 'error' can unregister the socket before 'close', so check what is still registered.
+            if (!this.deps.connectionManager.getSocket()) {
+                clearEditorContentRoots();
+            }
 
             if (!socketInfo) {
                 return;
             }
 
             this.deps.state.lastDisconnect = { code, reason, at: new Date() };
-            // The mounts belonged to that editor; with none connected the allowlist is the static roots.
-            clearEditorContentRoots();
             this.deps.emit('disconnected', {
                 code,
                 reason,

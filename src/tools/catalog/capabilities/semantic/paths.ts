@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getContentRoots, sanitizePath } from '../../../../utils/paths/path-security.js';
+import { getConfiguredContentRoots, getContentRoots, sanitizePath } from '../../../../utils/paths/path-security.js';
 import { SemanticBoundaryError } from './errors.js';
 
 // Wire-boundary Unreal path types. These are deliberately distinct from the
@@ -75,15 +75,14 @@ function assertValidRootAndNoTraversal(normalized: string): void {
   assertNoTraversal(normalized);
   const end = pathSuffixStart(normalized);
   const prefix = end === Infinity ? normalized : normalized.slice(0, end);
-  const roots = getContentRoots();
-  const isAllowed = roots.some(
+  const isAllowed = getContentRoots().some(
     (root) => prefix === root || prefix.startsWith(`${root}/`)
   );
   if (!isAllowed) {
     throw new SemanticBoundaryError({
       kind: 'path',
       code: 'INVALID_PATH_ROOT',
-      message: `Invalid path: must start with one of [${roots.join(', ')}]`,
+      message: `Invalid path: must start with one of [${getConfiguredContentRoots().join(', ')}] or a content mount the connected editor reports`,
       input: normalized
     });
   }

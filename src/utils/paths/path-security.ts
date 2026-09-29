@@ -155,7 +155,11 @@ export function sanitizePath(path: string, allowedRoots?: string[]): string {
     );
 
     if (!isAllowed) {
-        throw new Error(`Invalid path: must start with one of [${normalizedRoots.join(', ')}]`);
+        // The editor-reported list can be long (up to MAX_EDITOR_ROOTS): name the configured roots
+        // and describe the rest.
+        const listed = allowedRoots ? normalizedRoots : getConfiguredContentRoots();
+        const mounts = allowedRoots ? '' : ' or a content mount the connected editor reports';
+        throw new Error(`Invalid path: must start with one of [${listed.join(', ')}]${mounts}`);
     }
 
     // Basic character validation (Unreal strictness)

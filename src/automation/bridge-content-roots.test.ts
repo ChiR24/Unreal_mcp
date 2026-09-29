@@ -2,7 +2,7 @@
 // initial list in bridge_ack, updates as content_roots_changed events, and
 // nothing once the socket closes.
 import { afterEach, describe, expect, it } from 'vitest';
-import type { WebSocketServer } from 'ws';
+import type { WebSocket, WebSocketServer } from 'ws';
 import { clearEditorContentRoots, getEditorContentRoots } from '../utils/paths/path-security.js';
 import { AutomationBridge } from './bridge.js';
 import { closeServer, startAckServer } from './socket.test-support.js';
@@ -10,6 +10,12 @@ import type { AutomationBridgeAutomationEvent } from './types.js';
 
 function sendToClients(server: WebSocketServer, message: Record<string, unknown>): void {
   for (const client of server.clients) client.send(JSON.stringify(message));
+}
+
+function connectedBridge(port: number): AutomationBridge {
+  const bridge = new AutomationBridge({ host: '127.0.0.1', port, connectionTimeoutMs: 1000, heartbeatIntervalMs: 0 });
+  bridge.on('error', () => undefined);
+  return bridge;
 }
 
 function nextMessage(bridge: AutomationBridge): Promise<void> {
@@ -62,6 +68,39 @@ describe('AutomationBridge editor content roots', () => {
       });
       for (const client of server.clients) client.close(1000, 'bye');
       await disconnected;
+      expect(getEditorContentRoots()).toEqual([]);
+    } finally {
+      bridge.stop();
+      await closeServer(server);
+    }
+  });
+
+  it('clears them when a socket error unregisters the socket before it closes', async () => {
+    const { server, port } = await startAckServer({ contentRoots: ['/Game', '/ShooterCore'] });
+    const bridge = connectedBridge(port);
+    try {
+      expect(await bridge.connect()).toBe(true);
+      const socket = (bridge as unknown as { connectionManager: { getSocket(): WebSocket } }).connectionManager.getSocket();
+      const closed = new Promise<void>(resolve => {
+        socket.once('close', () => resolve());
+      });
+      socket.emit('error', new Error('read ECONNRESET'));
+      for (const client of server.clients) client.close(1000, 'bye');
+      await closed;
+      expect(getEditorContentRoots()).toEqual([]);
+    } finally {
+      bridge.stop();
+      await closeServer(server);
+    }
+  });
+
+  it('clears them when the bridge stops', async () => {
+    const { server, port } = await startAckServer({ contentRoots: ['/Game', '/ShooterCore'] });
+    const bridge = connectedBridge(port);
+    try {
+      expect(await bridge.connect()).toBe(true);
+      expect(getEditorContentRoots()).toEqual(['/Game', '/ShooterCore']);
+      bridge.stop();
       expect(getEditorContentRoots()).toEqual([]);
     } finally {
       bridge.stop();
