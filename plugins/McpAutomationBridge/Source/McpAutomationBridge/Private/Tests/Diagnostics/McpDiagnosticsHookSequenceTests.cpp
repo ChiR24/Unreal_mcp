@@ -5,9 +5,9 @@
 // never touched and the store never resolves project paths during a test.
 // Every test resets the singleton and deletes its own temp root on the way out.
 //
-// Coverage (hook wiring - call-site placement itself is source-contract-gated
-// in tests/unit/plugin/diagnostics_hooks_contracts.test.ts; this file proves
-// the exact recorder SEQUENCES the hooks perform at the STORE level):
+// Coverage (hook wiring - no source-contract test gates the call sites any
+// more; this file proves the exact recorder SEQUENCES the hooks perform at the
+// STORE level):
 //   * admission -> pre-dispatch -> terminal -> PersistCurrent -> RotateOnStartup
 //     leaves the terminal record in previous (the H1/H4/H5 crash-preservation
 //     contract)

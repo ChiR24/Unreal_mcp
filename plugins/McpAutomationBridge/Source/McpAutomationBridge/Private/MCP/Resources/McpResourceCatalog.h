@@ -1,6 +1,6 @@
 // McpResourceCatalog.h
 // The resources and templates native /mcp lists. Mirrors the stdio surface in
-// src/server/resource-registry.ts and src/resources/resource-catalog.ts, minus
+// src/handlers/resource-handlers.ts and src/resources/resource-catalog.ts, minus
 // the live editor-state URIs the socket thread may not read (IsNativeUnservedUri).
 #pragma once
 

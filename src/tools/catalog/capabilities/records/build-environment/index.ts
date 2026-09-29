@@ -6,7 +6,8 @@
  * Each authored entry is a CapabilityRecordSource (hashes are computed at parse
  * time by createCapabilityRecord / parseCapabilityCatalog). The authored set
  * equals the 150-action source set from the normalization inventory; the folded
- * count is pinned by tests/unit/build-environment-pilot-records.test.ts.
+ * records count toward ALL_CAPABILITY_RECORD_COUNT (records/aggregate.ts), which
+ * throws on any drift.
  *
  * Family shards:
  *   landscape      16   foliage       14   procedural      5

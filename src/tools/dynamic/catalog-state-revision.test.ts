@@ -4,7 +4,7 @@
 //   npx vitest run src/tools/dynamic/catalog-state-revision.test.ts -t 'Task 28 baseline'
 //   npx vitest run src/tools/dynamic/catalog-state-revision.test.ts -t 'Task 28 desired'
 //
-// Decisions (.omo/notepads/pure-unreal-mcp-implementation/decisions.md, 2026-07-20):
+// Decisions (2026-07-20):
 // the generated `catalogRevision` string stays an immutable contract
 // fingerprint. `catalogStateRevision` is a NEW monotonic runtime counter that
 // tracks visibility state: it moves exactly once per effective mutation batch

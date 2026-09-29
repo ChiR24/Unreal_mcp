@@ -7,7 +7,7 @@ class FMcpToolRegistry;
 
 /**
  * Manages MCP tool visibility at runtime.
- * Port of src/tools/dynamic-tool-manager.ts.
+ * Port of src/tools/dynamic/dynamic-tool-manager.ts.
  */
 class FMcpDynamicToolManager
 {

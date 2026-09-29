@@ -2,8 +2,7 @@
  * Level structure family records (18 actions): the non-volume structural
  * operations of manage_level_structure.
  *
- * Grounded in src/tools/definitions/world/manage-level-structure-tool.ts and
- * the native LevelStructure domain dispatch (Private/Domains/LevelStructure/
+ * Grounded in the native LevelStructure domain dispatch (Private/Domains/LevelStructure/
  * McpAutomationBridge_LevelStructureActions.h). World Partition / data layer /
  * HLOD / level instance / packed level actor routes are editor-only and require
  * the editor state 'edit'.

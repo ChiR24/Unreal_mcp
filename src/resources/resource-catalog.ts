@@ -4,7 +4,7 @@
 // the native mirror is
 // `plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Resources/McpResourceCatalog.h`.
 // The plugin source-contract test asserts the two halves agree. The six
-// pre-existing resources stay registered in resource-registry.ts; these entries
+// pre-existing resources stay registered in src/handlers/resource-handlers.ts; these entries
 // are strictly additive so existing clients remain compatible.
 
 export interface ResourceDefinition {

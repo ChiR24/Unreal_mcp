@@ -3,8 +3,8 @@
  *
  * 86 authored CapabilityRecordSource entries -- primitives 14, operations 21,
  * deform 13, optimize 28, dynamicmesh 10 -- in manage_geometry action-enum
- * order, folded by MANAGE_GEOMETRY_FOLDS into the shipped records pinned by
- * tests/unit/world-capability-records.test.ts. Every authored action stays
+ * order, folded by MANAGE_GEOMETRY_FOLDS into the shipped records (counted by
+ * ALL_CAPABILITY_RECORD_COUNT in records/aggregate.ts). Every authored action stays
  * callable as a folded legacy pair. Each record requires the GeometryScripting
  * plugin and is grounded in the world tool definition and native Geometry
  * domain dispatch.
@@ -22,9 +22,8 @@ import { MANAGE_GEOMETRY_FOLDS } from '../folds/manage-geometry.folds.js';
 // Records are emitted in the exact legacy manage_geometry action-enum order.
 // The data shards below are authored in definition order (primitives, then
 // operations/deform/optimize), so concatenating them preserves that order
-// verbatim. Do NOT re-sort: the record order is a contractual parity assertion
-// against consolidatedToolDefinitions (see tests/unit/world-capability-records.test.ts),
-// not a free-standing ordering.
+// verbatim. Keep that historical order: the generated registry sorts by id, so
+// re-sorting here only reshuffles generated output.
 /** The authored records before folding; per-action contract tests pin these. */
 export const MANAGE_GEOMETRY_UNFOLDED_SOURCES: readonly CapabilityRecordSource[] = [
   ...GEOMETRY_PRIMITIVES_RECORDS,

@@ -2,11 +2,11 @@
 // McpNativeGatewayExecuteValidationTests.cpp — in-editor run of the suite
 //
 // The TypeScript side runs the same generated suite in
-// tests/unit/native-execute-suite.test.ts. Both build their cases from
+// tests/unit/generated-execute-suite.test.ts. Both build their cases from
 // the same canonical records with the same algorithm, so a rule that changes on
 // one surface and not the other fails here.
 //
-// Rule -> outcome matrix (must match .omo/evidence/task-27/execute-suite-summary.json):
+// Rule -> outcome matrix (the same on both surfaces):
 //   valid                      -> accepted
 //   undeclared-param           -> UNDECLARED_PARAMETER
 //   missing-required           -> MISSING_REQUIRED_PARAMETER
