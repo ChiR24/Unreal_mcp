@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c01463738021da35",
+  "catalogRevision": "697f2723c6111118",
   "recordCount": 389,
   "records": [
     {
@@ -18268,22 +18268,22 @@
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "Size override {x,y} of a CanvasPanel child. A HorizontalBox or VerticalBox child is sized by sizeRule and fillValue instead."
+              "description": "Size override {x,y} of a CanvasPanel child. A HorizontalBox, VerticalBox or ScrollBox child is sized by sizeRule and fillValue instead."
             },
             "sizeRule": {
               "type": "string",
-              "description": "A HorizontalBox or VerticalBox child: Auto sizes it to its content, Fill shares the free space between the Fill children by their fillValue weights (case-insensitive). Two buttons in a row that should share it evenly are both Fill with the same fillValue."
+              "description": "A HorizontalBox, VerticalBox or ScrollBox child: Auto sizes it to its content, Fill shares the free space between the Fill children by their fillValue weights (case-insensitive). Two buttons in a row that should share it evenly are both Fill with the same fillValue; a ScrollBox child that is Fill spans the box when it is shorter, so a vertical alignment of center can center it."
             },
             "fillValue": {
               "type": "number",
               "minimum": 0,
-              "description": "A HorizontalBox or VerticalBox child: the Fill weight, 0 or more (1 by default; a child of 2 gets twice the space of a child of 1). Given without sizeRule it makes the child Fill."
+              "description": "A HorizontalBox, VerticalBox or ScrollBox child: the Fill weight, 0 or more (1 by default; a child of 2 gets twice the space of a child of 1). Given without sizeRule it makes the child Fill."
             },
             "alignment": {
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "Widget alignment (0-1)."
+              "description": "CanvasPanel child: the pivot {x, y}, each 0-1. Any other slot (box, overlay, border, scroll box): x is the horizontal and y the vertical alignment, each a number (0 left/top, 0.5 center, 1 right/bottom) or a word: \"fill\", \"left\", \"center\", \"right\", \"top\", \"bottom\"; leave one out to keep it. {\"x\": \"fill\", \"y\": \"center\"} spans the width and centers vertically."
             },
             "padding": {
               "type": "object",
@@ -18642,8 +18642,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "38c16e20bd08eb430c3609cf4fb5711943b02f64ee9c5ad4e85864c0ff6a35e3",
-        "content": "088061451f43580da3fb9a42bd7d5ecc30750344555d0a40805653130258f29a"
+        "schema": "d70a937d2c12b094355681ce2528329e623602277c6a79fa44c5e1243840372e",
+        "content": "48e57d93f8970d6be59ef47c2fc3c14d7fddecbf2ebd2da673a267e6f16a4d38"
       }
     },
     {

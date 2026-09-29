@@ -66,7 +66,7 @@ export const WIDGET_LAYOUT_RECORDS: readonly CapabilityRecordSource[] = [
     { props: { alignment: P.alignment }, required: ['alignment'], example: { alignment: { x: 0.5, y: 0.5 } } }),
   layout('set_position', 'blueprint.set_position', 'Set the position offset for a widget in its slot.',
     { props: { position: P.position }, required: ['position'], example: { position: { x: 120, y: 64 } } }),
-  layout('set_size', 'blueprint.set_size', 'Set the size of a widget in its slot: a size override {x,y} for a CanvasPanel child, or sizeRule (Auto or Fill) and fillValue (the Fill weight) for a HorizontalBox or VerticalBox child.',
+  layout('set_size', 'blueprint.set_size', 'Set the size of a widget in its slot: a size override {x,y} for a CanvasPanel child, or sizeRule (Auto or Fill) and fillValue (the Fill weight) for a HorizontalBox, VerticalBox or ScrollBox child.',
     { props: { size: P.size, sizeRule: P.sizeRule, fillValue: P.fillValue }, required: [], example: { size: { x: 240, y: 80 } } }),
   layout('set_padding', 'blueprint.set_padding', 'Set the padding for a widget in its slot.',
     { props: { padding: P.padding }, required: ['padding'], example: { padding: { left: 8, top: 4, right: 8, bottom: 4 } } }),

@@ -135,15 +135,15 @@ export const P = {
   // Widget layout
   anchorMin: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Minimum anchor point (0-1).' },
   anchorMax: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Maximum anchor point (0-1).' },
-  alignment: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Widget alignment (0-1).' },
+  alignment: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'CanvasPanel child: the pivot {x, y}, each 0-1. Any other slot (box, overlay, border, scroll box): x is the horizontal and y the vertical alignment, each a number (0 left/top, 0.5 center, 1 right/bottom) or a word: "fill", "left", "center", "right", "top", "bottom"; leave one out to keep it. {"x": "fill", "y": "center"} spans the width and centers vertically.' },
   zOrder: N('Z-order for a canvas slot.'),
   padding: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Widget slot padding {left,top,right,bottom}.' },
   position: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Widget position offset.' },
   // set_size reads this via GetObjectField + x/y, exactly like position/alignment;
   // it was declared as a bare number, which no handler ever read.
-  size: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Size override {x,y} of a CanvasPanel child. A HorizontalBox or VerticalBox child is sized by sizeRule and fillValue instead.' },
-  sizeRule: S('A HorizontalBox or VerticalBox child: Auto sizes it to its content, Fill shares the free space between the Fill children by their fillValue weights (case-insensitive). Two buttons in a row that should share it evenly are both Fill with the same fillValue.'),
-  fillValue: { type: 'number', minimum: 0, description: 'A HorizontalBox or VerticalBox child: the Fill weight, 0 or more (1 by default; a child of 2 gets twice the space of a child of 1). Given without sizeRule it makes the child Fill.' },
+  size: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Size override {x,y} of a CanvasPanel child. A HorizontalBox, VerticalBox or ScrollBox child is sized by sizeRule and fillValue instead.' },
+  sizeRule: S('A HorizontalBox, VerticalBox or ScrollBox child: Auto sizes it to its content, Fill shares the free space between the Fill children by their fillValue weights (case-insensitive). Two buttons in a row that should share it evenly are both Fill with the same fillValue; a ScrollBox child that is Fill spans the box when it is shorter, so a vertical alignment of center can center it.'),
+  fillValue: { type: 'number', minimum: 0, description: 'A HorizontalBox, VerticalBox or ScrollBox child: the Fill weight, 0 or more (1 by default; a child of 2 gets twice the space of a child of 1). Given without sizeRule it makes the child Fill.' },
   translation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Render translation offset.' },
   shear: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Render shear.' },
   angle: N('Render rotation angle in degrees.'),
