@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
+- **A box child's size rule.** `set_widget_layout` size now sets a HorizontalBox or VerticalBox child to Auto or Fill (`sizeRule`) with a weight (`fillValue`), the setting get_widget_info already reported but nothing could change, so two buttons in a row can share it evenly. A canvas child keeps size {x, y}.
+- **`control_actor.list` finds what is near a point.** `near` ({x, y, z} or [x, y, z]) lists the matching actors nearest first, each row with its distance to the actor's bounds, and `radius` keeps only those within it. It combines with every other filter, so a thing seen in a screenshot can be looked up by where it is.
 - **describe says which variant reads each parameter.** A capability that stands for a family of variants (add_content_widget covers text, image, button, slider and nine more) lists every variant's parameters, 30 in that case, with nothing telling a slider's minValue from a progress bar's isMarquee. Each parameter only some variants read now carries `variants`, on the full describe and on the single-parameter one, on both doors. 201 of the 389 capabilities are such families.
 - **`control_actor.list` filters by `tag`, `className` and `folder`.** `className` also matches subclasses (`Light` finds every light type) and takes a name or a path, a Blueprint's `_C` optional; `folder` matches that outliner folder and every folder under it, `"(none)"` the root. With `summary`, it shows what a `delete_by_tag` would remove before the delete runs.
 - **`componentNames` on `get_components`** (`control_actor`, `inspect`) and `inspect_cdo` returns only the named components and lists a name that matches none under `missingComponents`; checking one component of a 27-component Blueprint used to return all 27.
@@ -121,6 +123,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **A preview or a played sound no longer claims to have changed an asset.** After preview_widget the receipt listed the Widget Blueprint under changes, and after play_sound the sound. A reply that states `changedAssets`, an empty one included, is now taken at its word; the actors it names still count.
+- **An image gets its own size budget.** Only the two screenshot capabilities were exempt from the 100k reply budget, so a busy widget preview at 1280x720 came back RESULT_TOO_LARGE with advice to paginate an image. Any reply's `imageBase64` (up to 6 million characters) now counts on top of the 100k the rest of the reply is held to.
+- **reparent_widget stops warning about a duplicate it never made.** Every move said the widget "was already in the tree" and to use a fresh slotName; the warning is kept for an add that re-uses a slotName.
+- **Widget receipts list the Widget Blueprint once**, by its package path (/Game/UI/WBP_Menu) instead of the package path and the object path side by side.
+- **inspect_graph's filter looks at pin values.** "Menu" found nothing in a graph whose Create Widget node builds WBP_MainMenu, because the class sits on a pin; a node now also matches on a pin's default value, text or object path.
+- **Style, clipping and edit_graph batch receipts name the asset they saved**; they had no handle and no change.
+- **An edit_graph batch no longer stops on a crowded position.** A step whose position overlapped a node ran out of retries and stopped the batch; the node now moves to free space and the step says where in placementWarning.
+- **A widget that was just added, copied or renamed can be used in a graph at once.** The Widget Blueprint is compiled after the edit (never during play), so edit_graph no longer says a flagged widget "is not marked as a variable"; when one really is missing, the error says whether the flag is off or the class is stale.
+- **compile's receipt lists the Blueprint it compiled**, not the words "compiled" and "saved" beside it.
+- **add_event binds a widget's event in a Widget Blueprint** ({componentName: "CreditsButton", eventName: "OnClicked"}), which failed with "Component not found".
+- **`control_actor.list` propertyNames reads a component's property** as "Component.Property" (StaticMeshComponent.LDMaxDrawDistance), as sample_motion already did.
+- **Record text that sent callers wrong:** duplicate_widget says copied children are named <name>_Copy; variableType lists every type add_variable accepts (class paths such as /Script/UMG.Widget, structs, enums, soft references, containers); the widget use-guidance reads as English ("A new text block widget must be added"); close_asset tells a caller who meant the editor to use restart_editor.
 - **`preview_widget` needs only the Read scope.** It draws a transient copy of the widget and changes nothing, but it was folded into `edit_widget_blueprint` with the writes, so a read-only principal was refused a picture. It is its own read capability now (389 capabilities).
 - **Combat actions say when the save failed.** Every weapon, projectile, damage-type and damage-execution action saved the Blueprint and answered success whatever the save returned; a read-only or source-controlled file now answers `SAVE_FAILED`.
 - **`configure_level_streaming` checks `streamingMethod` first.** An unknown method was refused only after the level had been added to the world as a streaming level, which stayed.
