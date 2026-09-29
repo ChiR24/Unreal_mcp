@@ -196,3 +196,26 @@ describe('an edit_graph reply names the Blueprint it ran on', () => {
     expect(source.indexOf('Context.NameBlueprint(')).toBeLessThan(source.indexOf('McpCompileBlueprintWithDiagnostics('));
   });
 });
+
+// "Which Blueprints show a TextRender label" took one get_scs per Blueprint.
+describe('get_scs scans a folder for a component class', () => {
+  const source = read('Domains', 'Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersScsGet.cpp');
+
+  it('takes path without blueprintPath as a folder scan, capped and sorted', () => {
+    expect(source).toMatch(/if \(!Folder\.IsEmpty\(\) && RequestedBlueprint\.IsEmpty\(\)\) \{\s*return SendScsFolderScan\(/u);
+    expect(source).toContain('NormalizeAssetPath(Folder)');
+    expect(source).toContain('GetAssetsByPath(FName(*Norm.Path), Assets, true)');
+    expect(source).toContain('bTruncated = Scanned >= McpScsScanMaxBlueprints;');
+  });
+
+  it('matches a component class through its parents, and filters one Blueprint too', () => {
+    expect(source).toMatch(/Class = Class->GetSuperClass\(\)/u);
+    expect(source).toContain('ComponentClassMatches(Node->ComponentClass, Filter)');
+    expect(source).toContain('ComponentClassMatches(Comp->GetClass(), Filter)');
+  });
+
+  it('declares path and componentClass on the record', () => {
+    expect(paramDescription('blueprint.get_scs', 'path')).toContain('folder');
+    expect(paramDescription('blueprint.get_scs', 'componentClass')).toContain('TextRender');
+  });
+});

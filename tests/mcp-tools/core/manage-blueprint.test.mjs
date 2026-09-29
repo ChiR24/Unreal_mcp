@@ -57,6 +57,8 @@ const testCases = [
 
   // === INFO: get_scs (blueprintPath) ===
   { scenario: 'INFO: get_scs', toolName: 'manage_blueprint', arguments: { action: 'get_scs', blueprintPath: BP_PATH }, expected: 'success' },
+  { scenario: 'INFO: get_scs filtered to one component class', toolName: 'manage_blueprint', arguments: { action: 'get_scs', blueprintPath: BP_PATH, componentClass: 'SceneComponent' }, expected: 'success' },
+  { scenario: 'INFO: get_scs scans a folder for a component class', toolName: 'manage_blueprint', arguments: { action: 'get_scs', path: TEST_FOLDER, componentClass: 'SceneComponent' }, expected: 'success' },
 
   // === ADD: add_scs_component (blueprint_path + component_class + component_name) ===
   { scenario: 'ADD: add_scs_component', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'PointLightComponent', componentName: 'TestSCSComp', parentComponent: 'DefaultSceneRoot' }, expected: 'success|already exists' },

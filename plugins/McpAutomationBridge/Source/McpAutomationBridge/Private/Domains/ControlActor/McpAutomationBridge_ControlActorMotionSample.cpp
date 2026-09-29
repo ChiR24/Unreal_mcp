@@ -185,7 +185,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
     return true;
   }
 
-  double Duration = 2.0, Interval = 0.05, MaxReal = 40.0;
+  // 25 s by default: a client that gives up at 30 s still gets the samples.
+  double Duration = 2.0, Interval = 0.05, MaxReal = 25.0;
   Payload->TryGetNumberField(TEXT("durationSeconds"), Duration);
   Payload->TryGetNumberField(TEXT("intervalSeconds"), Interval);
   Payload->TryGetNumberField(TEXT("maxRealSeconds"), MaxReal);

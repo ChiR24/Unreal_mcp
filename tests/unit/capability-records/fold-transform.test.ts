@@ -275,7 +275,19 @@ describe('applyFolds position math and throw paths', () => {
       [FOLD],
       'system_control',
     )[0] as CapabilityRecordSource;
-    expect(folded.discovery.whenNotToUse).toEqual(['Links must be broken (use break_links).', 'Querying every actor is slow; filter first.']);
+    expect(folded.discovery.whenNotToUse).toEqual(['which=one: Links must be broken (use break_links).', 'which=two: Querying every actor is slow; filter first.']);
+  });
+
+  it('names the variants a guidance line is about, and leaves a line every variant shares bare', () => {
+    const folded = applyFolds(
+      [
+        member('q_one', {}, [], undefined, ['PIE is already running.', 'Nothing is open.']),
+        member('q_two', {}, [], undefined, ['Nothing is open.']),
+      ],
+      [FOLD],
+      'system_control',
+    )[0] as CapabilityRecordSource;
+    expect(folded.discovery.whenNotToUse).toEqual(['which=one: PIE is already running.', 'Nothing is open.']);
   });
 
   it("adds a spec's own topics to its members' topics instead of replacing them", () => {
@@ -293,5 +305,17 @@ describe('applyFolds position math and throw paths', () => {
 
   it('byName derives selector values from the actions themselves', () => {
     expect(byName(['a', 'b'])).toEqual({ a: 'a', b: 'b' });
+  });
+});
+
+describe('variant labels stay out of search', () => {
+  it('indexes the guidance text without the "selector=value: " label', async () => {
+    const { capabilityIndex } = await import('../../../src/server/gateway/gateway-capability-index.js');
+    const document = capabilityIndex().search.documents.find((entry) => String(entry.record.id) === 'manage_level.get_summary');
+    expect(document?.record.discovery.whenToUse.some((line) => line.startsWith('info=summary: '))).toBe(true);
+    const tokens = document?.fields.find((field) => field.field === 'when_to_use')?.tokens ?? [];
+    expect(tokens.length).toBeGreaterThan(0);
+    expect(tokens).not.toContain('info');
+    expect(tokens).not.toContain('summary');
   });
 });

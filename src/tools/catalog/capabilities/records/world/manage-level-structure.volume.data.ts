@@ -169,7 +169,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['The set of volumes must be enumerated or inspected.'], whenNotToUse: ['A single volume must be resized; use set_volume_extent.'],
     inputProps: { filter: P.filter, volumeType: P.volumeType },
     required: [], effect: 'read', costLatency: 'instant', costResources: 'low',
-    exampleInput: { action: 'get_volumes_info', filter: 'Trigger' },
+    exampleInput: { action: 'get_volumes_info', volumeType: 'Trigger' },
     exampleOutput: { success: true, message: 'Found 1 volumes/triggers', volumesInfo: { totalCount: 1, volumes: [{ name: 'Trigger_01', class: 'TriggerBox', location: { x: 0, y: 0, z: 100 }, extent: { x: 64, y: 64, z: 64 } }] } },
     outputProps: { volumesInfo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'totalCount and volumes: each volume or trigger actor with name (its label), class, location and extent (the bounds half-size), as {x,y,z}.' } },
   }),

@@ -35,7 +35,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       offset: num('Zero-based offset into the full result set.'),
       pagination: boundedPagination(500, 50),
       cursor: str('Opaque pagination cursor returned by a previous list response. Forward verbatim to resume.'),
-      recursive: bool('Recurse into subdirectories.'),
+      recursive: bool('Include the assets of every subfolder (default true); false lists only this folder\'s own assets, its subfolders still named under folders.'),
       depth: num('Maximum recursion depth.'),
       includeTags: bool('When true, include asset tags in the listing response.'),
       includeMetadata: bool('When true, include the file size and modification date of each asset.'),

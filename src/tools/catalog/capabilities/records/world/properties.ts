@@ -79,8 +79,8 @@ export const P = {
   bUnbound: bool('Whether post process volume affects entire world.'),
   blendRadius: num('Blend radius for post process volume.'),
   blendWeight: num('Blend weight (0.0-1.0) for post process.'),
-  filter: str('Type filter for get_volumes_info (e.g. "Trigger", "Physics").'),
-  volumeType: str('Volume type for get_volumes_info.'),
+  filter: str('Only volumes whose label contains this text, ignoring case (e.g. "Kill", "Water"). For a kind of volume use volumeType.'),
+  volumeType: str('Only volumes whose class name contains this, ignoring case (e.g. "PostProcess", "Physics", "Blocking"); "Trigger" also returns the trigger actors (TriggerBox, TriggerSphere).'),
   bBlockOnSlowStreaming: bool('Block on slow streaming.'),
   boundsArray: {
     type: 'array',

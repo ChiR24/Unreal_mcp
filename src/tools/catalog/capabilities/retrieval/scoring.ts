@@ -121,6 +121,11 @@ function indexedField(field: CapabilityMatchField, values: readonly string[]): I
  * to, so filing them as mere aliases discards ranking signal the catalog
  * genuinely carries.
  */
+// fold-build prefixes a folded member's guidance line with the variants it is about
+// ("control=pause: PIE is not paused."): bookkeeping for describe, not words a caller types.
+const VARIANT_LABEL = /^[A-Za-z]\w*=[\w|]+: /u;
+const guidance = (lines: readonly string[]): string[] => lines.map((line) => line.replace(VARIANT_LABEL, ''));
+
 function searchFields(record: CapabilityRecord): readonly IndexedField[] {
   // An alias that is just a folded legacy action under the record's own
   // namespace restates evidence legacy_action already carries; only declared
@@ -141,8 +146,8 @@ function searchFields(record: CapabilityRecord): readonly IndexedField[] {
     indexedField('family', [record.discovery.family]),
     indexedField('topic', record.discovery.topics),
     indexedField('summary', [record.discovery.summary]),
-    indexedField('when_to_use', record.discovery.whenToUse),
-    indexedField('when_not_to_use', record.discovery.whenNotToUse),
+    indexedField('when_to_use', guidance(record.discovery.whenToUse)),
+    indexedField('when_not_to_use', guidance(record.discovery.whenNotToUse)),
   ]);
 }
 

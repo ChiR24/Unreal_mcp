@@ -103,17 +103,25 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_scs',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['component hierarchy', 'component tree', 'inherited from parent class', 'attach parent names'],
-    summary: 'List a Blueprint\'s own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from its parent class.',
-    whenToUse: ['The SCS node hierarchy must be inspected before modifying components.', 'An inherited component must be named as an attach parent for add_scs_component.'],
+    topics: ['component hierarchy', 'component tree', 'inherited from parent class', 'attach parent names', 'which blueprints have a component', 'which blueprints use a component', 'find blueprints by component class', 'search blueprints for a component class'],
+    summary: 'List a Blueprint\'s own components (SCS nodes) with class, parent, root flag and relative transform, plus the components it inherits from its parent class; or, given a folder (path) and componentClass, every Blueprint under it that has such a component.',
+    whenToUse: [
+      'The SCS node hierarchy must be inspected before modifying components.',
+      'An inherited component must be named as an attach parent for add_scs_component.',
+      'Every Blueprint with a kind of component (a TextRender label, a light, an audio source) must be found in one call: path plus componentClass.',
+    ],
     whenNotToUse: ['A single component property is needed (use get or set_scs_property).'],
-    inputProps: { blueprintPath: P.blueprintPath },
-    required: ['blueprintPath'],
+    inputProps: {
+      blueprintPath: P.blueprintPath,
+      path: { type: 'string', description: 'A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist).' },
+      componentClass: { type: 'string', description: 'Only components of this class or a subclass, by name part or /Script path: "TextRender" matches TextRenderComponent, "PointLight" PointLightComponent, "PrimitiveComponent" every primitive. Filters one Blueprint\'s listing too.' },
+    },
+    required: [],
+    requiredOneOf: ['blueprintPath', 'path'],
     // inheritedComponents was invisible before: a Character Blueprint with no SCS
     // nodes reported "Retrieved 0 SCS components" while owning several inherited
     // ones, which are exactly the names add_scs_component wants as parentComponent.
-    outputProps: { components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'SCS node descriptors with name, class, and parent.', 'x-unreal-reflection-boundary': true }, componentCount: { type: 'number', description: 'Number of SCS-owned components.' }, inheritedComponents: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Components inherited from the parent class: componentName, componentType, isSceneComponent, ownerClass. Any of these names is valid as parentComponent.', 'x-unreal-reflection-boundary': true }, inheritedComponentCount: { type: 'number', description: 'Number of inherited components.' } },
-    outputRequired: ['components'],
+    outputProps: { components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'SCS node descriptors with name, class, and parent.', 'x-unreal-reflection-boundary': true }, componentCount: { type: 'number', description: 'Number of SCS-owned components.' }, inheritedComponents: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Components inherited from the parent class: componentName, componentType, isSceneComponent, ownerClass. Any of these names is valid as parentComponent.', 'x-unreal-reflection-boundary': true }, inheritedComponentCount: { type: 'number', description: 'Number of inherited components.' }, blueprints: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'With path: each matching Blueprint as blueprintPath and components (componentName, componentType), in path order.', 'x-unreal-reflection-boundary': true }, blueprintCount: { type: 'number', description: 'With path: how many Blueprints matched.' }, scanned: { type: 'number', description: 'With path: how many Blueprints were opened.' }, truncated: { type: 'boolean', description: 'With path: true when the folder holds more than 300 Blueprints and the rest were not opened.' } },
     effect: 'read',
     latency: 'instant',
     resources: 'low',

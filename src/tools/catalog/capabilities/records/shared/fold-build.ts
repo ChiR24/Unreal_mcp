@@ -152,14 +152,30 @@ export function buildFolded(
   // A spec's topics add to its members' own: replacing them took 229 authored phrasings
   // ("press play", "actor position", "create actor") out of search.
   const topics = unique([spec.primary, ...(spec.topics ?? []), ...derivedTopics]);
-  const whenToUse = spec.whenToUse ?? unique(members.flatMap((member) => member.discovery.whenToUse)).slice(0, MAX_WHEN);
+  // A member's line holds for its own variant: "PIE is already running" is why play refuses, not
+  // stop. A line every variant carries stays bare; the rest name the variants they are about.
+  const variantLines = (pick: (member: CapabilityRecordSource) => readonly string[]): string[] => {
+    const owners = new Map<string, Set<string>>();
+    members.forEach((member, index) => {
+      const value = entries[index]?.value ?? entries[index]?.pin;
+      for (const line of pick(member)) {
+        const values = owners.get(line) ?? new Set<string>();
+        if (value !== undefined) values.add(value);
+        owners.set(line, values);
+      }
+    });
+    return [...owners].map(([line, values]) => selector === undefined || values.size === 0 || values.size >= selected.length
+      ? line
+      : `${selector}=${[...values].join('|')}: ${line}`);
+  };
+  const whenToUse = spec.whenToUse ?? variantLines((member) => member.discovery.whenToUse).slice(0, MAX_WHEN);
   // A member's "(use create_node)" names a variant of this very record once folded; carried over,
   // it sent callers away from the capability they had already found.
   const ownActions = [spec.primary, ...memberActions];
   const pointsInside = (line: string): boolean =>
     ownActions.some((action) => new RegExp(`(^|[^A-Za-z0-9_])${action}([^A-Za-z0-9_]|$)`).test(line));
-  const whenNotToUse = spec.whenNotToUse ?? unique(members.flatMap((member) => member.discovery.whenNotToUse))
-    .filter((line) => !pointsInside(line)).slice(0, MAX_WHEN);
+  const whenNotToUse = spec.whenNotToUse
+    ?? variantLines((member) => member.discovery.whenNotToUse.filter((line) => !pointsInside(line))).slice(0, MAX_WHEN);
 
   const idempotency = members.every((member) => member.behavior.idempotency === first.behavior.idempotency)
     ? first.behavior.idempotency

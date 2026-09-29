@@ -3558,7 +3558,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "durationSeconds": {
           "type": "number",
-          "description": "Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play."
+          "description": "Game seconds to watch (default 2, at most 30). Game time, so a clock slowed with set_game_speed still covers the same span of play; a run that needs more wall-clock time than maxRealSeconds stops there (endedBecause realTimeCap)."
         },
         "edit": {
           "type": "string",
@@ -3679,7 +3679,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "maxRealSeconds": {
           "type": "number",
-          "description": "Wall-clock cap (default 40, at most 50): an editor throttled to 3 fps stops here and reports how much game time it covered."
+          "description": "Wall-clock cap (default 25, at most 50): the run stops here and reports how much game time it covered, so a long run or an editor throttled to 3 fps still answers before a client that gives up at 30 s. Raise it only for a client that waits longer."
         },
         "maxTilt": {
           "type": "number",
@@ -10974,7 +10974,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "path": {
           "type": "string",
-          "description": "Destination /Game folder for a new Widget Blueprint."
+          "description": "A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist)."
         },
         "percent": {
           "type": "number",
@@ -11480,6 +11480,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Event binds: per event, its name, functionName, createdFunction, createdEvent, nodeId and callNodeId."
         },
+        "blueprintCount": {
+          "type": "number",
+          "description": "With path: how many Blueprints matched."
+        },
         "blueprintPath": {
           "type": "string",
           "description": "Canonical /Game Blueprint asset path."
@@ -11487,6 +11491,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "blueprintType": {
           "type": "string",
           "description": "Blueprint type (Normal, Interface, MacroLibrary, FunctionLibrary, ...)."
+        },
+        "blueprints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With path: each matching Blueprint as blueprintPath and components (componentName, componentType), in path order.",
+          "x-unreal-reflection-boundary": true
         },
         "bottom": {
           "type": "number",
@@ -12038,6 +12052,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the Widget Blueprint was saved."
         },
+        "scanned": {
+          "type": "number",
+          "description": "With path: how many Blueprints were opened."
+        },
         "scsVerification": {
           "type": "object",
           "description": "SCS node verification (exists, parent matches).",
@@ -12119,6 +12137,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "trackType": {
           "type": "string",
           "description": "Normalised track type that was keyed."
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "With path: true when the folder holds more than 300 Blueprints and the rest were not opened."
         },
         "value": {
           "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."
@@ -16144,7 +16166,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "filter": {
           "type": "string",
-          "description": "Type filter for get_volumes_info (e.g. \"Trigger\", \"Physics\")."
+          "description": "Only volumes whose label contains this text, ignoring case (e.g. \"Kill\", \"Water\"). For a kind of volume use volumeType."
         },
         "fluidFriction": {
           "type": "number",
@@ -16470,7 +16492,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "volumeType": {
           "type": "string",
-          "description": "Volume type for get_volumes_info."
+          "description": "Only volumes whose class name contains this, ignoring case (e.g. \"PostProcess\", \"Physics\", \"Blocking\"); \"Trigger\" also returns the trigger actors (TriggerBox, TriggerSphere)."
         },
         "action": {
           "type": "string",

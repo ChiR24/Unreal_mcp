@@ -55,6 +55,12 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     primary: 'list', selector: 'kind',
     summary: 'List the assets and subfolders in a folder (path), the registered content sources, or the instances of a material.',
     topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents', 'what is in this folder'],
+    whenToUse: [
+      'kind=assets: what a folder holds must be seen (subfolders included unless recursive is false).',
+      'kind=content_sources: which template, feature pack, plugin or Fab folders exist to copy content from.',
+      'kind=material_instances: which material instances use a parent material.',
+    ],
+    whenNotToUse: ['An asset must be found by name, class or tag anywhere in the project (use query_asset).'],
     members: { assets: 'list', content_sources: 'list_content_sources', material_instances: 'list_instances' },
   },
   {

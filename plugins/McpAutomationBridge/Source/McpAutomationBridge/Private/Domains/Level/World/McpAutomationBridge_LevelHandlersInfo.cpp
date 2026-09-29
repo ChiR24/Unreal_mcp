@@ -10,15 +10,19 @@
 
 namespace McpLevelHandlers {
 namespace {
-// The registry entry for a package or object path; a bare package path also tries "<path>.<ShortName>".
+// The registry entry for a package or object path. A bare package path tries the map asset
+// "<path>.<ShortName>" first: for a loaded level the bare path finds the in-memory UPackage,
+// whose entry reads class Package with no tags.
 FAssetData FindLevelAssetData(const FString& Path) {
   IAssetRegistry& AssetRegistry = FAssetRegistryModule::GetRegistry();
-  FAssetData Data = AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Path));
   const FString ShortName = FPackageName::GetShortName(Path);
-  if (!Data.IsValid() && !ShortName.IsEmpty() && !Path.Contains(TEXT("."))) {
-    Data = AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Path + TEXT(".") + ShortName));
+  if (!ShortName.IsEmpty() && !Path.Contains(TEXT("."))) {
+    const FAssetData MapData = AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Path + TEXT(".") + ShortName));
+    if (MapData.IsValid()) {
+      return MapData;
+    }
   }
-  return Data;
+  return AssetRegistry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Path));
 }
 
 // The entry's tags, minus FiBData: Blueprint bytecode that is kilobytes of non-UTF8 text, not metadata.
