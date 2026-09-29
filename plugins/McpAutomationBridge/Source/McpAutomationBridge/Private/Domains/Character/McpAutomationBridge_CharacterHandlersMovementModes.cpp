@@ -38,7 +38,7 @@ static bool HandleMovementScalar(
     (CharCDO->GetCharacterMovement()->*Property) = static_cast<float>(Value);
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
+    if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(FString(ResponseField), Value);
@@ -104,7 +104,7 @@ bool HandleConfigureCrouch(UMcpAutomationBridgeSubsystem* Self, const FString& R
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
+    if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(TEXT("crouchSpeed"), Movement->MaxWalkSpeedCrouched);

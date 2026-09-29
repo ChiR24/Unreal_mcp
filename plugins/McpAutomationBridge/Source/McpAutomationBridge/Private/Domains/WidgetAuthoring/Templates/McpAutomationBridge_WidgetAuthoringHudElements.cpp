@@ -59,11 +59,25 @@ bool HandleWidgetAuthoringHudElements(
         return true;
     }
     const FString Animation = McpFinishHudElement(WidgetBP, SubAction, SlotName, Payload);
+    // The damage indicator's vignette starts invisible: without its flash it never shows.
+    if (Animation.IsEmpty() && SubAction.Equals(TEXT("add_damage_indicator"), ESearchCase::IgnoreCase))
+    {
+        McpRollbackWidgetSpec(WidgetBP, Created);
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+            TEXT("The flash animation for '%s' could not be authored (is '%s_Flash' taken?); nothing was added."), *SlotName, *SlotName),
+            TEXT("ANIMATION_FAILED"));
+        return true;
+    }
     const bool bSaved = MarkWidgetBlueprintModifiedAndSave(WidgetBP);
     FString ValidationError;
     if (!ValidateWidgetCreation(WidgetBP, SlotName, ValidationError))
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, ValidationError, TEXT("ENGINE_ERROR"));
+        // As add_widget does: what this call made comes back out, so a failed compile
+        // does not leave the saved Blueprint broken.
+        McpRemoveWidgetAnimation(WidgetBP, Animation);
+        McpRollbackWidgetSpec(WidgetBP, Created);
+        MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, ValidationError + TEXT(" The HUD piece was removed again."), TEXT("ENGINE_ERROR"));
         return true;
     }
     RefreshWidgetBlueprintClass(WidgetBP); // the HUD piece's widgets are variables: give the generated class their properties

@@ -130,7 +130,7 @@ FString ApplyHudParams(const FString& Action, const TSharedPtr<FJsonObject>& Pay
     else if (Action == TEXT("add_minimap") || Action == TEXT("add_compass"))
     {
         const TSharedPtr<FJsonObject> Image = HudNode(Spec, Action == TEXT("add_minimap") ? TEXT("_Map") : TEXT("_Strip"));
-        if (!Texture.IsEmpty())
+        if (!Texture.IsEmpty() && Image.IsValid())
         {
             Image->SetStringField(TEXT("texture"), Texture);
             Image->SetArrayField(TEXT("color"), { MakeShared<FJsonValueNumber>(1), MakeShared<FJsonValueNumber>(1),

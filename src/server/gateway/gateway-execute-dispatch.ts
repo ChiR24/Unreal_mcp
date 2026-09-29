@@ -14,6 +14,7 @@ import { isRecord } from '../../utils/validation/type-guards.js';
 import { Logger } from '../../utils/logging/logger.js';
 import { executeAutomationRequest, type GatewayControls } from '../../tools/handlers/foundation/dispatch/automation-request-dispatch.js';
 import { handleManageToolsCall } from '../tool-registry-manage-tools.js';
+import { McpRequestCancelledError } from '../../automation/request-cancellation-error.js';
 import { normalizeAutomationFrame } from '../../utils/responses/automation-frame-normalization.js';
 import { validateAgainstCapabilitySchema } from './gateway-schema-validate.js';
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
@@ -164,7 +165,10 @@ async function runCapability(
     return normalizeAutomationFrame(await executeAutomationRequest(tools, tool, { ...params, action }, controls));
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    const code = /timeout/i.test(message) ? 'TOOL_TIMEOUT' : /security violation/i.test(message) ? 'SECURITY_VIOLATION' : 'TOOL_EXECUTION_FAILED';
+    // A client cancel is not a tool failure; it read as TOOL_EXECUTION_FAILED (or TOOL_TIMEOUT
+    // when the message happened to contain "timeout").
+    const code = err instanceof McpRequestCancelledError ? err.code
+      : /timeout/i.test(message) ? 'TOOL_TIMEOUT' : /security violation/i.test(message) ? 'SECURITY_VIOLATION' : 'TOOL_EXECUTION_FAILED';
     return cleanObject({ success: false, isError: true, error: code, message: `Failed to execute ${tool}: ${message}`, toolName: tool, action });
   }
 }

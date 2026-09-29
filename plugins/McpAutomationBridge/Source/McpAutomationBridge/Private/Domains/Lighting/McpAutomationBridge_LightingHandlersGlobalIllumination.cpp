@@ -58,6 +58,20 @@ bool HandleSetupGlobalIllumination(
             TEXT("INVALID_ARGUMENT"));
         return true;
     }
+    // Read back: a cvar set at higher priority (command line, device profile) ignores
+    // a code-priority Set, and the reply said "configured" either way.
+    IConsoleVariable* GICVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod"));
+    if (GICVar)
+    {
+        GICVar->Set(*GIMethod);
+    }
+    if (!GICVar || GICVar->GetInt() != *GIMethod)
+    {
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, GICVar
+            ? FString::Printf(TEXT("r.DynamicGlobalIlluminationMethod stayed %d: a higher-priority setting (command line or device profile) holds it"), GICVar->GetInt())
+            : FString(TEXT("r.DynamicGlobalIlluminationMethod is not registered in this editor")), TEXT("GI_METHOD_NOT_APPLIED"));
+        return true;
+    }
     APostProcessVolume* PPV = nullptr;
     if (Payload->HasTypedField<EJson::Number>(TEXT("indirectLightingIntensity")))
     {
@@ -92,10 +106,6 @@ bool HandleSetupGlobalIllumination(
         WorldSettings->LightmassSettings.NumIndirectLightingBounces =
             FMath::Clamp(FMath::RoundToInt(Payload->GetNumberField(TEXT("bounces"))), 0, 100);
         WorldSettings->MarkPackageDirty();
-    }
-    if (IConsoleVariable* CVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DynamicGlobalIlluminationMethod")))
-    {
-        CVar->Set(*GIMethod);
     }
     // Lumen GI pairs with Lumen reflections.
     IConsoleVariable* CVarRefl = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ReflectionMethod"));

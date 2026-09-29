@@ -17,7 +17,7 @@ constexpr int32 McpMaxMotionSamples = 400;
 struct FMcpMotionProperty {
   FString Label;
   TWeakObjectPtr<UObject> Owner;
-  FProperty *Property = nullptr;
+  FName Property; // by name, as FMcpMotionTrigger
 };
 
 struct FMcpMotionRun {
@@ -54,9 +54,9 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   if (Run.Properties.Num() > 0) {
     TSharedPtr<FJsonObject> Values = MakeShared<FJsonObject>();
     for (const FMcpMotionProperty &Watched : Run.Properties) {
-      if (UObject *Owner = Watched.Owner.Get()) {
-        Values->SetStringField(Watched.Label,
-                               McpPropertyReflection::GetPropertyValueAsString(Owner, Watched.Property));
+      UObject *Owner = Watched.Owner.Get();
+      if (FProperty *Property = Owner ? Owner->GetClass()->FindPropertyByName(Watched.Property) : nullptr) {
+        Values->SetStringField(Watched.Label, McpPropertyReflection::GetPropertyValueAsString(Owner, Property));
       }
     }
     Sample->SetObjectField(TEXT("properties"), Values);
@@ -217,7 +217,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
       const FString Wanted = Name.IsValid() ? Name->AsString() : FString();
       UObject *Owner = nullptr;
       if (FProperty *Property = McpResolveActorPropertyPath(Found, Wanted, Owner)) {
-        Run->Properties.Add({Wanted, Owner, Property});
+        Run->Properties.Add({Wanted, Owner, Property->GetFName()});
       } else if (!Wanted.IsEmpty()) {
         Run->Missing.Add(MakeShared<FJsonValueString>(Wanted));
       }

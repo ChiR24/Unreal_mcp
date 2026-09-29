@@ -103,7 +103,11 @@ bool AppendValue(const TSharedPtr<FJsonValue>& Value, FString& Out, bool bAllowF
 			Out.Append(FString::SanitizeFloat(Number));
 			return true;
 		}
-		Out.Append(FString::Printf(TEXT("%lld"), static_cast<int64>(Number)));
+		// Past int64 the cast is undefined (1e19 and 2e19 both rendered INT64_MIN, one
+		// fingerprint for two payloads). %.0f prints an integral double's exact digits, as
+		// JSON.stringify does below 1e21.
+		Out.Append(FMath::Abs(Number) < 9.2e18 ? FString::Printf(TEXT("%lld"), static_cast<int64>(Number))
+		                                       : FString::Printf(TEXT("%.0f"), Number));
 		return true;
 	}
 	case EJson::Array:

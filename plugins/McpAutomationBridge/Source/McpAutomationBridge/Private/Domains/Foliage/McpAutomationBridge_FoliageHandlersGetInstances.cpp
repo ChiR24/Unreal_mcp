@@ -28,18 +28,21 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
   UWorld *World = GEditor->GetEditorWorldContext().World();
   AInstancedFoliageActor *IFA =
       McpFoliageHandlers::GetOrCreateFoliageActorForWorldSafe(World, false);
-  UFoliageType *OnlyType = nullptr;
-  if (IFA && !FoliageTypePath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(FoliageTypePath)) {
-    OnlyType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
+  UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
+      ? nullptr : LoadObject<UFoliageType>(nullptr, *FoliageTypePath, nullptr, LOAD_NoWarn);
+  // A typo'd type read the same as a real one with no instances; remove_foliage refuses it.
+  if (!FoliageTypePath.IsEmpty() && !OnlyType) {
+    SendAutomationError(RequestingSocket, RequestId,
+                        FString::Printf(TEXT("Foliage type not found: %s"), *FoliageTypePath),
+                        TEXT("FOLIAGE_TYPE_NOT_FOUND"));
+    return true;
   }
-  if (!IFA || (!FoliageTypePath.IsEmpty() && !OnlyType)) {
+  if (!IFA) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetArrayField(TEXT("instances"), TArray<TSharedPtr<FJsonValue>>());
     Resp->SetNumberField(TEXT("count"), 0);
-    SendAutomationResponse(RequestingSocket, RequestId, true,
-                           IFA ? TEXT("Foliage type not found, 0 instances") : TEXT("No foliage actor found"),
-                           Resp, FString());
+    SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("No foliage actor found"), Resp, FString());
     return true;
   }
 

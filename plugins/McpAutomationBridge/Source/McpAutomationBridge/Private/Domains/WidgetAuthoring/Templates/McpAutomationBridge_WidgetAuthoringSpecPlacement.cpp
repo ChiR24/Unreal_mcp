@@ -128,16 +128,21 @@ bool McpAddSpecToWidget(UMcpAutomationBridgeSubsystem& Subsystem, const FString&
             *ParentSlot, *WidgetBP->GetName()), TEXT("PARENT_NOT_FOUND"));
         return false;
     }
+    UWidget* CreatedRoot = nullptr;
     if (ParentSlot.IsEmpty() && !Tree->RootWidget)
     {
         // A composite seated as the root would stretch across the whole screen.
-        Tree->RootWidget = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, Tree, TEXT("RootCanvas"));
+        Tree->RootWidget = CreatedRoot = CreateAndRegisterWidget<UCanvasPanel>(WidgetBP, Tree, TEXT("RootCanvas"));
     }
     FString Error;
     UWidget* Root = McpBuildWidgetSpec(WidgetBP, Spec, SlotName, OutCreated, Error);
     if (!Root || !SafeAddWidgetToTree(WidgetBP, Root, ParentSlot))
     {
-        McpRollbackWidgetSpec(WidgetBP, OutCreated);
+        // The canvas made for this call goes too: left behind, the next save wrote a stray root.
+        // Rollback runs last-to-first, so the root canvas, first in the list, goes after its children.
+        TArray<UWidget*> Undo{CreatedRoot};
+        Undo.Append(OutCreated);
+        McpRollbackWidgetSpec(WidgetBP, Undo);
         OutCreated.Reset();
         Subsystem.SendAutomationError(Socket, RequestId, Error.IsEmpty()
             ? FString::Printf(TEXT("could not seat '%s' in '%s'"), *SlotName, *WidgetBP->GetName()) : Error,
@@ -222,9 +227,23 @@ UWidgetAnimation* McpAddOpacityAnimation(UWidgetBlueprint* WidgetBP, const FStri
         FMcpWidgetKeyResult KeyResult;
         FString KeyError;
         FString KeyErrorCode;
-        McpAuthorWidgetAnimationKey(WidgetBP, Animation, Target, KeyPayload, KeyResult, KeyError, KeyErrorCode);
+        // A key that failed left an animation with no keys that the reply still named.
+        if (!McpAuthorWidgetAnimationKey(WidgetBP, Animation, Target, KeyPayload, KeyResult, KeyError, KeyErrorCode))
+        {
+            McpRemoveWidgetAnimation(WidgetBP, AnimationName);
+            return nullptr;
+        }
     }
     return Animation;
+}
+
+void McpRemoveWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName)
+{
+    if (UWidgetAnimation* Animation = WidgetBP ? FindWidgetAnimation(WidgetBP, AnimationName) : nullptr)
+    {
+        WidgetBP->Animations.Remove(Animation);
+        Animation->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
+    }
 }
 
 void McpBindSpecSlot(const TSharedPtr<FJsonObject>& Spec, const FString& SlotName)

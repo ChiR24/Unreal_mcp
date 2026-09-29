@@ -36,18 +36,22 @@ FName McpFreeCopyName(UWidgetTree* Tree, const FString& Wanted)
 // children through its slots, and the first edit of either tree then corrupts the other.
 UWidget* McpCopySubtree(UWidgetTree* Tree, UWidget* Source, const FString& RootName, TArray<TSharedPtr<FJsonValue>>& Names)
 {
-    const FName CopyName = McpFreeCopyName(Tree, RootName.IsEmpty() ? Source->GetName() + TEXT("_Copy") : RootName);
-    FObjectDuplicationParameters Params = InitStaticDuplicateObjectParams(Source, Tree, CopyName);
+    TMap<UObject*, UObject*> Seed;
     if (UPanelWidget* Panel = Cast<UPanelWidget>(Source))
     {
         for (int32 Index = 0; Index < Panel->GetChildrenCount(); ++Index)
         {
             if (UWidget* Child = Panel->GetChildAt(Index))
             {
-                Params.DuplicationSeed.Add(Child, McpCopySubtree(Tree, Child, FString(), Names));
+                Seed.Add(Child, McpCopySubtree(Tree, Child, FString(), Names));
             }
         }
     }
+    // Named after the children exist: a newName equal to a child's "<name>_Copy" was taken
+    // by then, and duplicating onto it replaced that child in place.
+    const FName CopyName = McpFreeCopyName(Tree, RootName.IsEmpty() ? Source->GetName() + TEXT("_Copy") : RootName);
+    FObjectDuplicationParameters Params = InitStaticDuplicateObjectParams(Source, Tree, CopyName);
+    Params.DuplicationSeed = MoveTemp(Seed);
     UWidget* Copy = Cast<UWidget>(StaticDuplicateObjectEx(Params));
     if (!Copy)
     {

@@ -14,7 +14,7 @@ authored, and never add a second mechanism for something this folder does (hooks
 
 Read this whole file before writing a recipe. Source of truth when in doubt: the code in this folder.
 
-## FILES (12 of 25; each <= 250 pure lines)
+## FILES (13 of 25; each <= 250 pure lines)
 
 | File | Holds |
 |------|-------|
@@ -22,6 +22,7 @@ Read this whole file before writing a recipe. Source of truth when in doubt: the
 | `...Behaviour.cpp` | `Author`: guards, plan, one batch, compile, commit or restore, save, reply text |
 | `...Recipe.cpp` | `ParseRecipe`, `LoadRecipe`, top-level fields, `BuildPlan` |
 | `...Members.cpp` | variables, dispatchers, custom events, functions: checks, flattening, variable flags and re-defaults |
+| `...Dispatchers.cpp` | `DispatcherSignatureMismatch`: an existing dispatcher's parameters against the recipe's |
 | `...HookEvents.cpp` | hook targets (overridable, component and custom events), id uniqueness, event creation with its parent call |
 | `...Hooks.cpp` | hook checks, the shared Sequence hub, `"$id"` rewriting |
 | `...Input.cpp` | the `input` section: host class, assets, key, node, registration, key mapping |
@@ -175,7 +176,8 @@ Top level (anything else is `INVALID_RECIPE`):
 
 `dispatchers[]`: `{name, parameters: [{name, type}]}`. What the editor's "+ Event Dispatcher" makes
 (member variable plus signature graph, `FBlueprintEditor::OnAddNewDelegate`). An existing dispatcher
-of that name is reused as it is (its parameters are not changed). Call it with a CallDelegate node;
+of that name is reused as it is (its parameters are not changed); one whose parameters differ from
+the declared ones (names and types, in order) is `VARIABLE_TYPE_CONFLICT` before anything changes. Call it with a CallDelegate node;
 other Blueprints bind to it.
 
 `customEvents[]`: `{id, eventName, shared}`. Made before the batch, with no parameters (pass data
@@ -424,7 +426,7 @@ Each member step compiles once (variables, dispatchers, functions), plus the fin
 | `INVALID_RECIPE` | No recipe; unknown field; malformed section; no tag; duplicate id; too many steps; a hook without id or with a bad form; wiring from a shared event's exec pin; hooking the recipe's own custom event; an input section that authors nothing |
 | `TYPE_RESOLUTION_FAILED` | A variable, parameter, input or output type does not resolve |
 | `NAME_CONFLICT` | A new member name is taken |
-| `VARIABLE_TYPE_CONFLICT` | An existing variable has another type |
+| `VARIABLE_TYPE_CONFLICT` | An existing variable has another type, or an existing dispatcher other parameters |
 | `FUNCTION_EXISTS` | A function or custom event of that name is not this behaviour's |
 | `HOOK_EVENT_NOT_FOUND`, `HOOK_EVENT_OWNED`, `HOOK_EVENTS_ON_DIFFERENT_PAGES`, `NO_EVENT_GRAPH` | HOOKS |
 | `BEHAVIOUR_IN_USE` | OWNERSHIP AND REPLACE |

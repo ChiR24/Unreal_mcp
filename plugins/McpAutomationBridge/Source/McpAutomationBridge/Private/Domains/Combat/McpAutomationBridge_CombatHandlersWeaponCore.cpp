@@ -105,19 +105,27 @@ bool FCombatActionContext::HandleWeaponCore() const
             return true;
         }
 
+        // A mesh that did not load, or a component that could not be made, was skipped while
+        // the reply still said "configured" and echoed the path back.
         FString MeshPath = GetJsonStringField(Payload, TEXT("weaponMeshPath"));
-        if (!MeshPath.IsEmpty())
+        if (MeshPath.IsEmpty())
         {
-            UStaticMeshComponent* WeaponMesh = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("WeaponMesh"));
-            if (WeaponMesh)
-            {
-                UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
-                if (Mesh)
-                {
-                    WeaponMesh->SetStaticMesh(Mesh);
-                }
-            }
+            SendAutomationError(RequestingSocket, RequestId, TEXT("Missing weaponMeshPath."), TEXT("INVALID_ARGUMENT"));
+            return true;
         }
+        UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, *MeshPath);
+        if (!Mesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("weaponMeshPath is not a static mesh: %s"), *MeshPath), TEXT("NOT_FOUND"));
+            return true;
+        }
+        UStaticMeshComponent* WeaponMesh = GetOrCreateSCSComponent<UStaticMeshComponent>(Blueprint, TEXT("WeaponMesh"));
+        if (!WeaponMesh)
+        {
+            SendAutomationError(RequestingSocket, RequestId, TEXT("The WeaponMesh component could not be created on this Blueprint."), TEXT("COMPONENT_CREATE_FAILED"));
+            return true;
+        }
+        WeaponMesh->SetStaticMesh(Mesh);
 
         McpSafeCompileBlueprint(Blueprint);
         if (!McpSafeAssetSave(Blueprint))

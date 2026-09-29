@@ -59,8 +59,15 @@ bool HandleConfigureRuntimeHashSetGrid(
     UStruct* PartitionStruct = StructProp->Struct;
 
     FNameProperty* NameProp = CastField<FNameProperty>(PartitionStruct->FindPropertyByName(TEXT("Name")));
+    // Without a Name field no row can be matched, and a created row could never be found again.
+    if (!NameProp)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            TEXT("RuntimePartitions rows have no Name field on this engine version"), nullptr, TEXT("INVALID_PARTITION_STRUCTURE"));
+        return true;
+    }
     int32 Index = INDEX_NONE;
-    for (int32 i = 0; NameProp && i < ArrayHelper.Num(); ++i)
+    for (int32 i = 0; i < ArrayHelper.Num(); ++i)
     {
         if (NameProp->GetPropertyValue_InContainer(ArrayHelper.GetRawPtr(i)) == TargetPartitionName)
         {
@@ -68,16 +75,21 @@ bool HandleConfigureRuntimeHashSetGrid(
             break;
         }
     }
-    const bool bCreated = Index == INDEX_NONE && bCreateIfMissing;
+    if (Index == INDEX_NONE && !bCreateIfMissing)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Grid '%s' not found in RuntimeHashSet; pass createIfMissing true to add it"), *TargetPartitionName.ToString()),
+            nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    HashSet->Modify();
+    const bool bCreated = Index == INDEX_NONE;
     if (bCreated)
     {
         Index = ArrayHelper.AddValue();
-        if (NameProp)
-        {
-            NameProp->SetPropertyValue_InContainer(ArrayHelper.GetRawPtr(Index), TargetPartitionName);
-        }
+        NameProp->SetPropertyValue_InContainer(ArrayHelper.GetRawPtr(Index), TargetPartitionName);
     }
-    const bool bFound = Index != INDEX_NONE;
+    const bool bFound = true;
 
     // The first of Names that Owner has as a numeric property, set on Container to Value.
     auto SetNumber = [](const UStruct* Owner, void* Container, std::initializer_list<const TCHAR*> Names, double Value)

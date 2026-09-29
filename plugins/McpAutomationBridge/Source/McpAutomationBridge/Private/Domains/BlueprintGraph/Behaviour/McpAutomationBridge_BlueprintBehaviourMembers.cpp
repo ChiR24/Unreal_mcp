@@ -140,6 +140,13 @@ bool PlanMembers(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Recipe, F
         {
             return false;
         }
+        // An existing dispatcher is reused as it is, so one declared with other parameters
+        // would wire calls against a signature it does not have.
+        const FString Mismatch = bExists ? DispatcherSignatureMismatch(Blueprint, Name, Dispatchers[Index]) : FString();
+        if (!Mismatch.IsEmpty())
+        {
+            return Fail(TEXT("VARIABLE_TYPE_CONFLICT"), FString::Printf(TEXT("%s: %s"), *Where, *Mismatch));
+        }
         TSharedPtr<FJsonObject> Step = MemberStep(TEXT("add_event_dispatcher"), Dispatchers[Index], {TEXT("parameters")});
         Step->SetStringField(TEXT("dispatcherName"), Name);
         AddOp(Plan, Step, Where + TEXT(" ") + Name);

@@ -1,6 +1,7 @@
 #include "Domains/Networking/McpAutomationBridge_NetworkingHandlersPrivate.h"
 
 #include "Engine/Engine.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Misc/Paths.h"
 
 namespace McpNetworkingHandlers
@@ -44,7 +45,8 @@ bool HandleConfigureNetDriver(FNetworkingActionContext& Context)
     // and the project's DefaultEngine.ini, and to a running driver when there is one.
     UWorld* World = GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
     UNetDriver* ActiveDriver = World ? World->GetNetDriver() : nullptr;
-    int32 Written = 0;
+    // Every value is checked before any is written: a bad second value used to leave the first on disk.
+    TArray<TPair<FIntProperty*, int32>> Pending;
     for (const FNetDriverSetting& Setting : Settings)
     {
         if (!Context.Payload->HasField(Setting.Field)) continue;
@@ -58,19 +60,39 @@ bool HandleConfigureNetDriver(FNetworkingActionContext& Context)
                 TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        Property->SetPropertyValue_InContainer(DriverCDO, Value);
-        DriverCDO->UpdateSinglePropertyInConfigFile(Property, DriverCDO->GetDefaultConfigFilename());
-        if (ActiveDriver && ActiveDriver->IsA(DriverClass))
-        {
-            Property->SetPropertyValue_InContainer(ActiveDriver, Value);
-        }
+        Pending.Emplace(Property, Value);
         ResultJson->SetNumberField(Setting.Field, Value);
-        ++Written;
     }
+    const int32 Written = Pending.Num();
     if (Written == 0)
     {
         Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("Nothing to configure: pass maxClientRate, maxInternetClientRate or netServerMaxTickRate."), TEXT("INVALID_PARAMS"));
         return true;
+    }
+    const FString ConfigFile = DriverCDO->GetDefaultConfigFilename();
+    for (const TPair<FIntProperty*, int32>& Entry : Pending)
+    {
+        Entry.Key->SetPropertyValue_InContainer(DriverCDO, Entry.Value);
+        DriverCDO->UpdateSinglePropertyInConfigFile(Entry.Key, ConfigFile);
+        if (ActiveDriver && ActiveDriver->IsA(DriverClass))
+        {
+            Entry.Key->SetPropertyValue_InContainer(ActiveDriver, Entry.Value);
+        }
+    }
+    // UpdateSinglePropertyInConfigFile returns nothing: a read-only or locked DefaultEngine.ini
+    // kept the old values while the reply said they were written. Read the file back.
+    FConfigFile OnDisk;
+    OnDisk.Read(ConfigFile);
+    for (const TPair<FIntProperty*, int32>& Entry : Pending)
+    {
+        int32 Stored = 0;
+        if (!OnDisk.GetInt(*DriverClass->GetPathName(), *Entry.Key->GetName(), Stored) || Stored != Entry.Value)
+        {
+            Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, FString::Printf(
+                TEXT("%s was set for this session but could not be written to %s (read-only or locked?)."),
+                *Entry.Key->GetName(), *FPaths::GetCleanFilename(ConfigFile)), TEXT("PERSIST_FAILED"));
+            return true;
+        }
     }
 
     const bool bAppliedToActive = ActiveDriver && ActiveDriver->IsA(DriverClass);
@@ -154,7 +176,13 @@ bool HandleConfigureReplicatedMovement(FNetworkingActionContext& Context)
         return true;
     }
 
-    AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
+    // A Blueprint whose class never compiled has no defaults to write; the edit used to be skipped and reported.
+    AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CDO)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("The Blueprint has no compiled Actor class to configure; compile it first."), TEXT("NOT_SUPPORTED"));
+        return true;
+    }
     if (CDO)
     {
         CDO->SetReplicatingMovement(bReplicateMovement);

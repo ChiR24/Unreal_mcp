@@ -37,6 +37,14 @@ UWidget* BuildNode(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& No
         return nullptr;
     }
     const FString Name = SpecName(Node, SlotName);
+    // The subtree is seated only after it is built, so FindWidget cannot see its own nodes: two
+    // spec nodes folding to one name ("New Game", "NewGame") made ConstructWidget replace the
+    // first in place and the panel list one widget twice.
+    if (OutCreated.ContainsByPredicate([&Name](const UWidget* Made) { return Made && Made->GetFName() == FName(*Name); }))
+    {
+        OutError = FString::Printf(TEXT("two widgets in this build would both be named '%s'; give them distinct names"), *Name);
+        return nullptr;
+    }
     const FString NameConflict = McpWidgetNameConflict(WidgetBP, FName(*Name), Class);
     if (!NameConflict.IsEmpty())
     {

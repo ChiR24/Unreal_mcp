@@ -60,8 +60,15 @@ void MoveFolderContents(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
     if (!OpenLevel.IsEmpty())
     {
         const FString Reopen = bMoved ? DestinationFolder + OpenLevel.Mid(SourceFolder.Len()) : OpenLevel;
-        McpSafeOperations::McpSafeLoadMap(Reopen);
-        Result->SetStringField(TEXT("reopenedLevel"), Reopen);
+        // A failed reload leaves the blank map the move parked on; naming the level as reopened said otherwise.
+        if (McpSafeOperations::McpSafeLoadMap(Reopen))
+        {
+            Result->SetStringField(TEXT("reopenedLevel"), Reopen);
+        }
+        else
+        {
+            Result->SetStringField(TEXT("levelNotReopened"), Reopen);
+        }
     }
 
     Result->SetStringField(TEXT("sourceFolder"), SourceFolder);

@@ -156,7 +156,9 @@ bool HandleWidgetAuthoringScreens(
     const bool bSaved = MarkWidgetBlueprintModifiedAndSave(WidgetBP);
     if (!ValidateWidgetCreation(WidgetBP, Root->GetName(), Error))
     {
-        Subsystem.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("ENGINE_ERROR"));
+        Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(
+            TEXT("%s '%s' was created and saved anyway; fix or delete it before retrying."), *Error, *WidgetBP->GetPathName()),
+            TEXT("ENGINE_ERROR"));
         return true;
     }
     TArray<TSharedPtr<FJsonValue>> Buttons;

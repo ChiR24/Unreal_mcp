@@ -12,15 +12,7 @@ FString ResolveParentSlotName(const TSharedPtr<FJsonObject>& Payload)
     {
         return FString();
     }
-    // The contract advertises both spellings; a caller that sent only parentName
-    // used to be silently reparented to the root, which is why explicitly placed
-    // widgets landed in the wrong panel.
-    FString Parent = GetJsonStringField(Payload, TEXT("parentSlot"));
-    if (Parent.IsEmpty())
-    {
-        Parent = GetJsonStringField(Payload, TEXT("parentName"));
-    }
-    return Parent;
+    return GetJsonStringField(Payload, TEXT("parentSlot"));
 }
 
 void ApplyCanvasSlotGeometry(const TSharedPtr<FJsonObject>& Payload, UWidget* Widget)

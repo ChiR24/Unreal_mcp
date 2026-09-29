@@ -114,6 +114,8 @@ export const WORKFLOW_PROMPTS: readonly WorkflowPrompt[] = [
   },
 ];
 
+const MAX_ARGUMENT_LENGTH = 512;
+
 const DISCLAIMER =
   'Guidance only. Nothing here runs on its own, no conversation state is kept, and you decide '
   + 'whether to run each call. Discover exact parameters with the gateway `describe` operation, '
@@ -136,7 +138,16 @@ export function getPrompt(name: string, args: Readonly<Record<string, string>>):
     if (!declared.has(argName)) throw new McpError(ErrorCode.InvalidParams, `Unknown argument: ${argName}`);
   }
   for (const spec of prompt.arguments) {
-    if (spec.required && args[spec.name] === undefined) throw new McpError(ErrorCode.InvalidParams, `Missing required argument: ${spec.name}`);
+    const value = args[spec.name];
+    if (value === undefined) {
+      if (spec.required) throw new McpError(ErrorCode.InvalidParams, `Missing required argument: ${spec.name}`);
+      continue;
+    }
+    // The value is echoed into a model-facing message: an unbounded one made the prompt as big as the caller liked.
+    if (value.length > MAX_ARGUMENT_LENGTH) throw new McpError(ErrorCode.InvalidParams, `Argument ${spec.name} is longer than ${String(MAX_ARGUMENT_LENGTH)} characters`);
+    if (spec.allowed !== undefined && !spec.allowed.includes(value)) {
+      throw new McpError(ErrorCode.InvalidParams, `Argument ${spec.name} must be one of: ${spec.allowed.join(', ')}`);
+    }
   }
 
   const provided = prompt.arguments.filter((spec) => args[spec.name] !== undefined).map((spec) => `- ${spec.name}: ${args[spec.name] ?? ''}`);

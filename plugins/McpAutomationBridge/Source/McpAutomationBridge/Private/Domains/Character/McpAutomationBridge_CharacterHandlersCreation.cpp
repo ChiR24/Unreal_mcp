@@ -83,7 +83,12 @@ bool HandleCreateCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const F
         }
     }
 
-    McpSafeAssetSave(Blueprint);
+    if (!McpSafeAssetSave(Blueprint))
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("%s was created in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
+        return true;
+    }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), Path / Name);

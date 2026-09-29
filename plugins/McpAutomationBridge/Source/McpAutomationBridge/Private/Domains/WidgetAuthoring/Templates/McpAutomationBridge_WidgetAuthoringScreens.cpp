@@ -66,10 +66,19 @@ TSharedPtr<FJsonObject> BuildLoadingScreen(const TSharedPtr<FJsonObject>& Payloa
 void FinishLoadingScreen(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& Payload, const TSharedPtr<FJsonObject>& Result)
 {
     const double Fade = GetJsonNumberField(Payload, TEXT("fadeTime"), 0.0);
-    if (Fade > 0.0 && McpAddOpacityAnimation(WidgetBP, TEXT("FadeIn"), WidgetBP->WidgetTree->RootWidget,
-                                            { FVector2D(0.0, 0.0), FVector2D(Fade, 1.0) }))
+    if (Fade <= 0.0)
+    {
+        return;
+    }
+    if (McpAddOpacityAnimation(WidgetBP, TEXT("FadeIn"), WidgetBP->WidgetTree->RootWidget,
+                               { FVector2D(0.0, 0.0), FVector2D(Fade, 1.0) }))
     {
         Result->SetStringField(TEXT("animationName"), TEXT("FadeIn"));
+    }
+    else
+    {
+        // fadeTime was asked for; leaving animationName out said nothing about why.
+        Result->SetStringField(TEXT("animationError"), TEXT("The FadeIn animation could not be authored; the screen has no fade."));
     }
 }
 

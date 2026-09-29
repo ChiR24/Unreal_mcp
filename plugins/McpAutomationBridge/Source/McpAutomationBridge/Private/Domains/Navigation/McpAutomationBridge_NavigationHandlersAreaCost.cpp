@@ -47,20 +47,21 @@ bool HandleConfigureNavAreaCost(
         Self->SendAutomationResponse(Socket, RequestId, false, TEXT("Pass areaCost, fixedAreaEnteringCost or both"), nullptr, TEXT("MISSING_PARAM"));
         return true;
     }
+    // FixedAreaEnteringCost is protected; it is an editable UPROPERTY, so write it by reflection.
+    // Found before anything is written, so a refusal leaves DefaultCost as it was.
+    FFloatProperty* EnteringProp = bHasEnteringCost ? FindFProperty<FFloatProperty>(AreaClass, TEXT("FixedAreaEnteringCost")) : nullptr;
+    if (bHasEnteringCost && !EnteringProp)
+    {
+        Self->SendAutomationResponse(Socket, RequestId, false, TEXT("FixedAreaEnteringCost property not found on this NavArea class"), nullptr, TEXT("PROPERTY_NOT_FOUND"));
+        return true;
+    }
     AreaCDO->Modify();
     if (bHasCost)
     {
         AreaCDO->DefaultCost = AreaCost;
     }
-    if (bHasEnteringCost)
+    if (EnteringProp)
     {
-        // FixedAreaEnteringCost is protected; it is an editable UPROPERTY, so write it by reflection.
-        FFloatProperty* EnteringProp = FindFProperty<FFloatProperty>(AreaClass, TEXT("FixedAreaEnteringCost"));
-        if (!EnteringProp)
-        {
-            Self->SendAutomationResponse(Socket, RequestId, false, TEXT("FixedAreaEnteringCost property not found on this NavArea class"), nullptr, TEXT("PROPERTY_NOT_FOUND"));
-            return true;
-        }
         EnteringProp->SetPropertyValue_InContainer(AreaCDO, static_cast<float>(GetJsonNumberField(Payload, TEXT("fixedAreaEnteringCost"), 0.0)));
     }
 

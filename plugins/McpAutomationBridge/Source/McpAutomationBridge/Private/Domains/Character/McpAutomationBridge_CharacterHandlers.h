@@ -43,6 +43,21 @@ using FCharacterSocket = TSharedPtr<FMcpBridgeWebSocket>;
 UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Name, UClass* ParentClass, FString& OutError);
 UBlueprint* LoadCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& BlueprintPath, FCharacterSocket Socket);
 
+// Compiles (so added variables are usable, dogfood #39) and saves one configure_* edit.
+// Every configure call used to compile only, answer "configured", and lose the change
+// when the editor closed. False once the SAVE_FAILED error has been sent.
+inline bool CommitCharacterEdit(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, UBlueprint* Blueprint, FCharacterSocket Socket)
+{
+    McpSafeCompileBlueprint(Blueprint);
+    if (McpSafeAssetSave(Blueprint))
+    {
+        return true;
+    }
+    Self->SendAutomationError(Socket, RequestId, FString::Printf(
+        TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
+    return false;
+}
+
 bool HandleCreateCharacterBlueprint(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);
 bool HandleConfigureCapsuleComponent(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);
 bool HandleConfigureMeshComponent(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, FCharacterSocket Socket);

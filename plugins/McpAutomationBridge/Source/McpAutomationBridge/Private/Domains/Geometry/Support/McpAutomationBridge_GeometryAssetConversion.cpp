@@ -116,6 +116,14 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
         // after this request returns.
         BodySetup->CreatePhysicsMeshes();
         CreatedMesh->MarkPackageDirty();
+        // The asset was written before the body was added; without a second save the
+        // collision was gone on the next editor load.
+        if (!McpSafeAssetSave(CreatedMesh))
+        {
+            Self->SendAutomationError(Socket, RequestId, FString::Printf(
+                TEXT("%s was created, but its collision body could not be saved to disk."), *AssetPath), TEXT("SAVE_FAILED"));
+            return true;
+        }
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

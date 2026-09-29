@@ -186,9 +186,14 @@ bool Write(USkeletalMesh* Mesh, int32 LOD, const FSourceMesh& In, bool bWeights,
     for (const FName& MorphName : MorphNames)
     {
         const TArray<FVector3f>* Deltas = In.Morphs.Find(MorphName);
+        if (!Deltas || Deltas->Num() < In.VertexIds.Num())
+        {
+            OutError = FString::Printf(TEXT("Morph target '%s' could not be written."), *MorphName.ToString());
+            return false;
+        }
         Attributes.RegisterMorphTargetAttribute(MorphName, false);
         TVertexAttributesRef<FVector3f> Target = Attributes.GetVertexMorphPositionDelta(MorphName);
-        if (!Deltas || !Target.IsValid())
+        if (!Target.IsValid())
         {
             OutError = FString::Printf(TEXT("Morph target '%s' could not be written."), *MorphName.ToString());
             return false;

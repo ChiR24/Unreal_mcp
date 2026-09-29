@@ -16,7 +16,12 @@ FString McpCanonicalFingerprint(const FString& CapabilityId, const TSharedPtr<FJ
 	// Sorted keys make the digest order-independent: payloads differing only in
 	// key order share a fingerprint. A null Params renders as {}.
 	FString Rendered;
-	McpCanonicalJsonObject(Params, Rendered, /*bAllowFractions=*/true);
+	// A render that stopped part way is a prefix other payloads share; a fresh GUID
+	// fails closed (a retry reads as a conflict, never as someone else's replay).
+	if (!McpCanonicalJsonObject(Params, Rendered, /*bAllowFractions=*/true))
+	{
+		Rendered = TEXT("!unrenderable:") + FGuid::NewGuid().ToString();
+	}
 	const FString Canonical = CapabilityId + TEXT(" ") + Rendered;
 
 	return McpSha256Hex(Canonical);

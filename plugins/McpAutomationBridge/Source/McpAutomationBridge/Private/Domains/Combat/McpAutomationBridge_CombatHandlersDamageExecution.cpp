@@ -95,6 +95,10 @@ bool FCombatActionContext::HandleDamageExecution() const
         double DamageMultiplier = GetJsonNumberField(Payload, TEXT("damageMultiplier"), 1.0);
         TSharedPtr<FJsonObject> AppliedHitboxSize = MakeShared<FJsonObject>();
         UActorComponent* CreatedHitbox = nullptr;
+        // GetObjectField on an omitted hitboxSize handed back an empty object, so its
+        // defaults (34/88, 50) overwrote the component's size. Only what was passed changes.
+        const TSharedPtr<FJsonObject>* SizePtr = nullptr;
+        const TSharedPtr<FJsonObject> Size = Payload->TryGetObjectField(TEXT("hitboxSize"), SizePtr) && SizePtr ? *SizePtr : nullptr;
 
         if (HitboxType == TEXT("Capsule"))
         {
@@ -102,16 +106,16 @@ bool FCombatActionContext::HandleDamageExecution() const
             CreatedHitbox = Hitbox;
             if (Hitbox)
             {
-                auto HitboxSizeObj = Payload->GetObjectField(TEXT("hitboxSize"));
-                if (HitboxSizeObj.IsValid())
+                if (Size.IsValid() && Size->HasField(TEXT("radius")))
                 {
-                    double Radius = GetJsonNumberField(HitboxSizeObj, TEXT("radius"), 34.0);
-                    double HalfHeight = GetJsonNumberField(HitboxSizeObj, TEXT("halfHeight"), 88.0);
-                    Hitbox->SetCapsuleRadius(static_cast<float>(Radius));
-                    Hitbox->SetCapsuleHalfHeight(static_cast<float>(HalfHeight));
-                    AppliedHitboxSize->SetNumberField(TEXT("radius"), Radius);
-                    AppliedHitboxSize->SetNumberField(TEXT("halfHeight"), HalfHeight);
+                    Hitbox->SetCapsuleRadius(static_cast<float>(Size->GetNumberField(TEXT("radius"))));
                 }
+                if (Size.IsValid() && Size->HasField(TEXT("halfHeight")))
+                {
+                    Hitbox->SetCapsuleHalfHeight(static_cast<float>(Size->GetNumberField(TEXT("halfHeight"))));
+                }
+                AppliedHitboxSize->SetNumberField(TEXT("radius"), Hitbox->GetUnscaledCapsuleRadius());
+                AppliedHitboxSize->SetNumberField(TEXT("halfHeight"), Hitbox->GetUnscaledCapsuleHalfHeight());
             }
         }
         else if (HitboxType == TEXT("Box"))
@@ -120,17 +124,11 @@ bool FCombatActionContext::HandleDamageExecution() const
             CreatedHitbox = Hitbox;
             if (Hitbox)
             {
-                auto HitboxSizeObj = Payload->GetObjectField(TEXT("hitboxSize"));
-                if (HitboxSizeObj.IsValid())
+                if (Size.IsValid() && Size->HasField(TEXT("extent")))
                 {
-                    auto ExtentObj = HitboxSizeObj->GetObjectField(TEXT("extent"));
-                    if (ExtentObj.IsValid())
-                    {
-                        FVector Extent = ExtractVectorField(HitboxSizeObj, TEXT("extent"), FVector::ZeroVector);
-                        Hitbox->SetBoxExtent(Extent);
-                        AppliedHitboxSize->SetObjectField(TEXT("extent"), McpHandlerUtils::VectorToJson(Extent));
-                    }
+                    Hitbox->SetBoxExtent(ExtractVectorField(Size, TEXT("extent"), Hitbox->GetUnscaledBoxExtent()));
                 }
+                AppliedHitboxSize->SetObjectField(TEXT("extent"), McpHandlerUtils::VectorToJson(Hitbox->GetUnscaledBoxExtent()));
             }
         }
         else if (HitboxType == TEXT("Sphere"))
@@ -139,13 +137,11 @@ bool FCombatActionContext::HandleDamageExecution() const
             CreatedHitbox = Hitbox;
             if (Hitbox)
             {
-                auto HitboxSizeObj = Payload->GetObjectField(TEXT("hitboxSize"));
-                if (HitboxSizeObj.IsValid())
+                if (Size.IsValid() && Size->HasField(TEXT("radius")))
                 {
-                    double Radius = GetJsonNumberField(HitboxSizeObj, TEXT("radius"), 50.0);
-                    Hitbox->SetSphereRadius(static_cast<float>(Radius));
-                    AppliedHitboxSize->SetNumberField(TEXT("radius"), Radius);
+                    Hitbox->SetSphereRadius(static_cast<float>(Size->GetNumberField(TEXT("radius"))));
                 }
+                AppliedHitboxSize->SetNumberField(TEXT("radius"), Hitbox->GetUnscaledSphereRadius());
             }
         }
 

@@ -35,7 +35,7 @@ bool HandleGetNetworkingInfo(FNetworkingActionContext& Context)
             return true;
         }
 
-        AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
+        AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
         if (CDO)
         {
             AddActorNetworkingInfo(NetworkingInfo, CDO);

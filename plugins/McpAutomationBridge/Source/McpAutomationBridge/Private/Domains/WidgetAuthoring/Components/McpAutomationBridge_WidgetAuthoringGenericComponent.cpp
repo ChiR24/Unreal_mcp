@@ -43,9 +43,8 @@ bool HandleWidgetAuthoringGenericComponent(
             return true;
         }
 
-        // slotName and parentSlot, the names every other add_content_widget kind takes; the folded family
-        // advertised parentSlot and parentName side by side. componentName/parentName still read as before.
-        FString ComponentName = GetJsonStringField(Payload, TEXT("slotName"), GetJsonStringField(Payload, TEXT("componentName")));
+        // slotName and parentSlot, the names every other add_content_widget kind takes.
+        FString ComponentName = GetJsonStringField(Payload, TEXT("slotName"));
         if (ComponentName.IsEmpty())
         {
             ComponentName = ComponentType + TEXT("_") + FGuid::NewGuid().ToString().Left(8);

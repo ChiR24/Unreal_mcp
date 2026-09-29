@@ -104,14 +104,20 @@ export class HandshakeHandler {
                     );
                     capabilityToken = this.capabilityToken || undefined;
                 }
-                if (settled) {
+                if (settled || socket.readyState !== WebSocket.OPEN) {
                     return;
                 }
                 const helloPayload: AutomationBridgeMessage = {
                     type: 'bridge_hello',
                     capabilityToken
                 };
-                socket.send(JSON.stringify(helloPayload));
+                // The socket may close while the token was read: ws then throws from send, which
+                // inside this void async block was an unhandled rejection, not a failed handshake.
+                try {
+                    socket.send(JSON.stringify(helloPayload));
+                } catch (error) {
+                    rejectHandshake(error instanceof Error ? error : new Error(String(error)));
+                }
             })();
         });
     }

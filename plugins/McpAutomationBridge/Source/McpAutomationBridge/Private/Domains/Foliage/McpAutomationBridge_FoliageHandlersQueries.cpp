@@ -52,24 +52,36 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   // same `area` box paint does (all three axes), over every type or the named one.
   // `areas` takes several boxes under one consent: four pits were four calls.
   TArray<FBox> Boxes;
-  auto AddBox = [&Boxes](const TSharedPtr<FJsonObject> &Area) {
+  bool bBadArea = false;
+  auto AddBox = [&Boxes, &bBadArea](const TSharedPtr<FJsonObject> &Area) {
     if (Area.IsValid() && Area->HasField(TEXT("min")) && Area->HasField(TEXT("max"))) {
       const FVector AreaMin = ExtractVectorField(Area, TEXT("min"), FVector::ZeroVector);
       const FVector AreaMax = ExtractVectorField(Area, TEXT("max"), FVector::ZeroVector);
       Boxes.Add(FBox(AreaMin.ComponentMin(AreaMax), AreaMin.ComponentMax(AreaMax)));
+    } else {
+      bBadArea = true;
     }
   };
   const TSharedPtr<FJsonObject> *AreaObj = nullptr;
-  if (Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj) {
-    AddBox(*AreaObj);
+  if (Payload->HasField(TEXT("area"))) {
+    AddBox(Payload->TryGetObjectField(TEXT("area"), AreaObj) && AreaObj ? *AreaObj : nullptr);
   }
   const TArray<TSharedPtr<FJsonValue>> *AreaList = nullptr;
-  if (Payload->TryGetArrayField(TEXT("areas"), AreaList)) {
-    for (const TSharedPtr<FJsonValue> &Area : *AreaList) {
-      if (Area.IsValid() && Area->Type == EJson::Object) {
-        AddBox(Area->AsObject());
+  if (Payload->HasField(TEXT("areas"))) {
+    if (!Payload->TryGetArrayField(TEXT("areas"), AreaList) || AreaList->Num() == 0) {
+      bBadArea = true;
+    } else {
+      for (const TSharedPtr<FJsonValue> &Area : *AreaList) {
+        AddBox(Area.IsValid() && Area->Type == EJson::Object ? Area->AsObject() : nullptr);
       }
     }
+  }
+  // A box that did not parse fell through to the whole-type (or removeAll) branch
+  // below and removed every instance the caller meant to keep.
+  if (bBadArea) {
+    SendAutomationError(RequestingSocket, RequestId, TEXT("Each area needs both min and max; nothing was removed"),
+                        TEXT("INVALID_ARGUMENT"));
+    return true;
   }
   if (Boxes.Num() > 0) {
     UFoliageType *OnlyType = FoliageTypePath.IsEmpty()
@@ -101,10 +113,6 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
       return true;
     });
     IFA->RemoveFoliageType(Types.GetData(), Types.Num());
-  } else if (FoliageTypePath.IsEmpty()) {
-    SendAutomationError(RequestingSocket, RequestId, TEXT("Each area needs both min and max"),
-                        TEXT("INVALID_ARGUMENT"));
-    return true;
   } else {
     UFoliageType *FoliageType = LoadObject<UFoliageType>(nullptr, *FoliageTypePath);
     if (FFoliageInfo *Info = FoliageType ? IFA->FindInfo(FoliageType) : nullptr) {

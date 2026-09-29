@@ -14,7 +14,13 @@ bool HandleConfigureNetPriority(FNetworkingActionContext& Context)
         return true;
     }
 
-    AActor* CDO = Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject());
+    // A Blueprint whose class never compiled has no defaults to write; the edit used to be skipped and reported.
+    AActor* CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+    if (!CDO)
+    {
+        Context.Bridge.SendAutomationError(Context.RequestingSocket, Context.RequestId, TEXT("The Blueprint has no compiled Actor class to configure; compile it first."), TEXT("NOT_SUPPORTED"));
+        return true;
+    }
     if (CDO)
     {
         CDO->NetPriority = static_cast<float>(NetPriority);

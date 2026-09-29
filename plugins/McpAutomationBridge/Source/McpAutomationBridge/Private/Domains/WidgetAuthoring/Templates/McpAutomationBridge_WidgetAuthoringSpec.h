@@ -78,9 +78,13 @@ FString McpFinishHudElement(UWidgetBlueprint* WidgetBP, const FString& Action, c
 UTexture2D* McpLoadSpecTexture(const FString& TexturePath);
 
 // Adds (or replaces the keys of) a RenderOpacity animation on Target: Keys are {time, opacity}.
-// Returns the animation, or null when the name is taken by something else.
+// Returns the animation, or null when the name is taken by something else or a key could not be
+// written (the half-made animation is removed again).
 UWidgetAnimation* McpAddOpacityAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName, UWidget* Target,
                                          const TArray<FVector2D>& Keys);
+
+// Takes a named animation back out of the Widget Blueprint; nothing when there is none.
+void McpRemoveWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName);
 
 // Reads an optional [r,g,b,a] or {r,g,b,a} payload color into a spec array.
 void McpCopyPayloadColor(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field,

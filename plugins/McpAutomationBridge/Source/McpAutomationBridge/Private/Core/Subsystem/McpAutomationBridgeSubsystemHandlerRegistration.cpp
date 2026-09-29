@@ -54,13 +54,15 @@ void NormalizeMaterialConnectionAliases(const TSharedPtr<FJsonObject>& Payload)
 // registration table, so refuse it loudly instead of registering it.
 bool IsValidActionIdentifier(const FString& Action)
 {
-    if (Action.IsEmpty() || Action.Len() > 96 || !FChar::IsLower(Action[0]))
+    // ASCII ranges, not FChar::IsLower/IsDigit: those accept 'é' and other Unicode letters.
+    auto Lower = [](TCHAR C) { return C >= TCHAR('a') && C <= TCHAR('z'); };
+    if (Action.IsEmpty() || Action.Len() > 96 || !Lower(Action[0]))
     {
         return false;
     }
     for (const TCHAR Character : Action)
     {
-        if (!FChar::IsLower(Character) && !FChar::IsDigit(Character) && Character != TCHAR('_'))
+        if (!Lower(Character) && !(Character >= TCHAR('0') && Character <= TCHAR('9')) && Character != TCHAR('_'))
         {
             return false;
         }

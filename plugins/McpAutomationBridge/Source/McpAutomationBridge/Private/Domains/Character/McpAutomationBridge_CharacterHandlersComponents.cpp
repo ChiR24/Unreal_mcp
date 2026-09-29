@@ -33,7 +33,7 @@ bool HandleConfigureCapsuleComponent(UMcpAutomationBridgeSubsystem* Self, const 
     const float CapsuleHalfHeight = Capsule->GetUnscaledCapsuleHalfHeight();
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
+    if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(TEXT("capsuleRadius"), CapsuleRadius);
@@ -104,7 +104,7 @@ bool HandleConfigureMeshComponent(UMcpAutomationBridgeSubsystem* Self, const FSt
     }
 
     FBlueprintEditorUtils::MarkBlueprintAsModified(Blueprint);
-    McpSafeCompileBlueprint(Blueprint); // compile so the added variables are usable (dogfood #39)
+    if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     if (!SkeletalMeshPath.IsEmpty())
@@ -213,6 +213,7 @@ bool HandleConfigureCameraComponent(UMcpAutomationBridgeSubsystem* Self, const F
         return true;
     }
     FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+    if (!CommitCharacterEdit(Self, RequestId, Blueprint, Socket)) return true;
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("blueprintPath"), BlueprintPath);
     Result->SetNumberField(TEXT("springArmLength"), ConfiguredArm->TargetArmLength);

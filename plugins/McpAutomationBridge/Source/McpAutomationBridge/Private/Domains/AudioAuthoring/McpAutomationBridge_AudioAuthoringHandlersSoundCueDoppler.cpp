@@ -86,6 +86,16 @@ TSharedPtr<FJsonObject> HandleSoundCueDopplerAction(const FString& SubAction, co
 		}
 		if (!DopplerGraphNode || InputPins.Num() == 0 || NewNode->ChildNodes.Num() == 0 || !DopplerGraphNode->GetOutputPin())
 		{
+			// ConstructSoundNode already registered it: left in AllNodes, a retry found this
+			// unlinked node and reported "updated" while the cue played unshifted.
+			if (NewNode)
+			{
+				Cue->AllNodes.Remove(NewNode);
+			}
+			if (DopplerGraphNode)
+			{
+				Cue->SoundCueGraph->RemoveNode(DopplerGraphNode);
+			}
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_NODE_FAILED"), TEXT("The Doppler node could not be created with an input for the cue's current root."));
 		}
 		DopplerGraphNode->NodePosX = OldGraphNode->NodePosX + 220;
