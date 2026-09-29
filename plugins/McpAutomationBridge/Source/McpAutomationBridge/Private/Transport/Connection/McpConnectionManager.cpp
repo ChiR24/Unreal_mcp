@@ -76,9 +76,11 @@ void FMcpConnectionManager::Start() {
   UE_LOG(LogMcpAutomationBridgeSubsystem, Log,
          TEXT("Starting MCP connection manager."));
   AttemptConnection();
+  SubscribeContentRootChanges();
 }
 
 void FMcpConnectionManager::Stop() {
+  UnsubscribeContentRootChanges();
   if (TickerHandle.IsValid()) {
     FTSTicker::GetCoreTicker().RemoveTicker(TickerHandle);
     TickerHandle = FTSTicker::FDelegateHandle();
@@ -110,6 +112,8 @@ void FMcpConnectionManager::SetOnMessageReceived(
 }
 
 bool FMcpConnectionManager::Tick(float DeltaTime) {
+  FlushContentRootsUpdate();
+
   // Handle reconnect countdown
   if (bReconnectEnabled && TimeUntilReconnect > 0.0f) {
     TimeUntilReconnect -= DeltaTime;
