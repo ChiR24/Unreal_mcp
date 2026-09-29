@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b30d44c66335c030",
+  "catalogRevision": "26ec03e827ad4442",
   "recordCount": 389,
   "records": [
     {
@@ -48936,11 +48936,28 @@
     },
     {
       "id": "manage_audio.stop_sound",
-      "aliases": [],
+      "aliases": [
+        "manage_audio.pause_sound",
+        "manage_audio.resume_sound"
+      ],
       "legacyIds": [
         {
           "tool": "manage_audio",
           "action": "stop_sound"
+        },
+        {
+          "tool": "manage_audio",
+          "action": "pause_sound",
+          "folded": {
+            "soundOp": "pause"
+          }
+        },
+        {
+          "tool": "manage_audio",
+          "action": "resume_sound",
+          "folded": {
+            "soundOp": "resume"
+          }
         }
       ],
       "discovery": {
@@ -48948,14 +48965,19 @@
         "family": "runtime",
         "topics": [
           "stop_sound",
+          "pause music",
+          "pause sound",
+          "resume music",
           "stop sound",
           "stop music",
           "stop audio",
           "silence"
         ],
-        "summary": "Stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included.",
+        "summary": "Stop, pause or resume playing sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included. Pause holds a sound where it is and resume continues it; the reply counts the sounds changed (0 when none was playing).",
         "whenToUse": [
-          "Use it to stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included."
+          "soundOp=stop: Use it to stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included.",
+          "soundOp=pause: Use it to pause the sounds stop_sound would stop, each held where it is. Sounds already paused are not counted.",
+          "soundOp=resume: Use it to resume the paused sounds stop_sound would stop, each from where it was paused."
         ],
         "whenNotToUse": []
       },
@@ -48966,7 +48988,7 @@
           "properties": {
             "action": {
               "type": "string",
-              "description": "Action."
+              "description": "The action to execute on the parent tool."
             },
             "soundPath": {
               "type": "string",
@@ -48974,7 +48996,17 @@
             },
             "all": {
               "type": "boolean",
-              "description": "Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started)."
+              "description": "Also act on every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started). Stop silences every audio device; pause and resume take soundPath to narrow it to one sound."
+            },
+            "soundOp": {
+              "type": "string",
+              "enum": [
+                "stop",
+                "pause",
+                "resume"
+              ],
+              "description": "Which stop sound variant to run; omit for 'stop'.",
+              "default": "stop"
             }
           },
           "required": [
@@ -49006,6 +49038,14 @@
             "allStopped": {
               "type": "boolean",
               "description": "Whether every sound on the editor and game audio devices was stopped (all: true)."
+            },
+            "paused": {
+              "type": "number",
+              "description": "Playing sounds this call paused (0 when none was playing)."
+            },
+            "resumed": {
+              "type": "number",
+              "description": "Paused sounds this call resumed (0 when none was paused)."
             }
           },
           "required": [
@@ -49016,9 +49056,10 @@
       },
       "examples": [
         {
-          "title": "Stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included.",
+          "title": "Stop, pause or resume playing sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included. Pause holds a sound where it is and resume continues it; the reply counts the sounds changed (0 when none was playing).",
           "input": {
-            "action": "stop_sound"
+            "action": "stop_sound",
+            "soundOp": "stop"
           },
           "output": {
             "success": true,
@@ -49051,12 +49092,20 @@
       },
       "routing": {
         "parentTool": "manage_audio",
-        "dispatchAction": "manage_audio"
+        "dispatchAction": "manage_audio",
+        "dispatchBy": {
+          "param": "soundOp",
+          "actions": {
+            "stop": "stop_sound",
+            "pause": "pause_sound",
+            "resume": "resume_sound"
+          }
+        }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9bbd813bb9e83acf24cb50f0636f5783cee5ed11e2839da797992eab3b47ab8b",
-        "content": "e6da083a6461cc9228f6241134fbb3757f27c440449c5d2ec2c268994be11b86"
+        "schema": "02700276699d3a4122e1ed9f6f68c6c5bc45952b544a4a36c89574fb3ae55d03",
+        "content": "68f54b46887596773b0f98b657b0c86fa1c9f6ebe641474eaeeef2f6d0b9433b"
       }
     },
     {

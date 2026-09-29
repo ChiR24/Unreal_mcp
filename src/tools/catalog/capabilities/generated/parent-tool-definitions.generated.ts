@@ -9483,7 +9483,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "all": {
           "type": "boolean",
-          "description": "Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started)."
+          "description": "Also act on every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started). Stop silences every audio device; pause and resume take soundPath to narrow it to one sound."
         },
         "applyEQ": {
           "type": "boolean",
@@ -9925,6 +9925,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Actor label/name or AudioComponent name of the playing sound."
         },
+        "soundOp": {
+          "type": "string",
+          "enum": [
+            "stop",
+            "pause",
+            "resume"
+          ],
+          "description": "Which stop sound variant to run; omit for 'stop'.",
+          "default": "stop"
+        },
         "soundPath": {
           "type": "string",
           "description": "Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound)."
@@ -10149,6 +10159,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Path of the parent Sound Class the inspected Sound Class inherits from."
         },
+        "paused": {
+          "type": "number",
+          "description": "Playing sounds this call paused (0 when none was playing)."
+        },
         "pitch": {
           "type": "number",
           "description": "Pitch multiplier declared by the inspected Sound Class."
@@ -10172,6 +10186,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Per-step outcome of a batch: index, edit, id, success, nodeId, appliedValue."
+        },
+        "resumed": {
+          "type": "number",
+          "description": "Paused sounds this call resumed (0 when none was paused)."
         },
         "rootNodeClass": {
           "type": "string",

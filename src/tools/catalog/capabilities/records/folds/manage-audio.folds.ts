@@ -14,6 +14,12 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
     members: { to_volume: 'fade_sound', in: 'fade_sound_in', out: 'fade_sound_out' },
   },
   {
+    primary: 'stop_sound', selector: 'soundOp',
+    summary: 'Stop, pause or resume playing sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included. Pause holds a sound where it is and resume continues it; the reply counts the sounds changed (0 when none was playing).',
+    topics: ['pause music', 'pause sound', 'resume music'],
+    members: { stop: 'stop_sound', pause: 'pause_sound', resume: 'resume_sound' },
+  },
+  {
     primary: 'control_sound_mix', selector: 'control',
     summary: 'Control sound mixes at runtime: push or pop a mix, set the base mix, set or clear a class override.',
     topics: ['sound mix', 'push sound mix', 'base sound mix', 'sound class override'],

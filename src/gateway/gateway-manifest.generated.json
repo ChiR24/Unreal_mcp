@@ -7588,6 +7588,7 @@
         "soundClassName",
         "soundClassPath",
         "soundName",
+        "soundOp",
         "soundPath",
         "soundWavePath",
         "sourceNodeId",
@@ -7615,7 +7616,7 @@
           },
           "all": {
             "type": "boolean",
-            "description": "Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started)."
+            "description": "Also act on every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started). Stop silences every audio device; pause and resume take soundPath to narrow it to one sound."
           },
           "applyEQ": {
             "type": "boolean",
@@ -8056,6 +8057,16 @@
           "soundName": {
             "type": "string",
             "description": "Actor label/name or AudioComponent name of the playing sound."
+          },
+          "soundOp": {
+            "type": "string",
+            "enum": [
+              "stop",
+              "pause",
+              "resume"
+            ],
+            "description": "Which stop sound variant to run; omit for 'stop'.",
+            "default": "stop"
           },
           "soundPath": {
             "type": "string",

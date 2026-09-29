@@ -152,7 +152,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   volumeAdjuster: 'Volume multiplier applied by the mix modifier.',
   wavePath: 'Canonical /Game SoundWave asset path.',
   windowSize: 'Analysis window size in samples.',
-  all: 'Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started).',
+  all: 'Also act on every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started). Stop silences every audio device; pause and resume take soundPath to narrow it to one sound.',
   applyEQ: 'Whether the mix applies its EQ (default true).',
   applyToChildren: 'Whether the modifier also applies to the child sound classes (default true).',
   bypass: 'Add the effect bypassed (default false).',

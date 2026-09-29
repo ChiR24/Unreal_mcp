@@ -34,7 +34,9 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
       !Lower.StartsWith(TEXT("set_base_sound_")) &&
       !Lower.StartsWith(TEXT("prime_")) &&
       !Lower.StartsWith(TEXT("spawn_sound_")) &&
-      Lower != TEXT("stop_sound"))
+      Lower != TEXT("stop_sound") &&
+      Lower != TEXT("pause_sound") &&
+      Lower != TEXT("resume_sound"))
   {
     return false;
   }
@@ -51,6 +53,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
   const McpAudioHandlers::FAudioActionHandler Handlers[] = {
       &McpAudioHandlers::HandlePlaybackActions,
+      &McpAudioHandlers::HandlePauseActions,
       &McpAudioHandlers::HandleAmbientActions,
       &McpAudioHandlers::HandleMixActions,
       &McpAudioHandlers::HandleComponentActions,
