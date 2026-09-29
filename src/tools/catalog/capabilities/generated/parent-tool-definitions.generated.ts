@@ -18377,6 +18377,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether to solo."
         },
+        "soundPath": {
+          "type": "string",
+          "description": "Audio track only: /Game path of the SoundWave, SoundCue or MetaSound the section plays. Without end the section is as long as the sound (one second for a looping one)."
+        },
         "sourceActors": {
           "type": "array",
           "items": {
@@ -18504,7 +18508,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "trackType": {
           "type": "string",
-          "description": "MovieScene track type string."
+          "description": "Track type: \"Audio\" (music or sound, then add_section with soundPath), \"Transform\", or a MovieScene track class name such as MovieSceneEventTrack."
         },
         "tracks": {
           "type": "array",
@@ -18954,7 +18958,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "trackType": {
           "type": "string",
-          "description": "MovieScene track type string."
+          "description": "Track type: \"Audio\" (music or sound, then add_section with soundPath), \"Transform\", or a MovieScene track class name such as MovieSceneEventTrack."
         },
         "tracks": {
           "type": "array",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d6408978283153b0",
+  "catalogRevision": "639f0e3442da15f6",
   "recordCount": 389,
   "records": [
     {
@@ -79121,12 +79121,17 @@
           "keyframe",
           "mute track",
           "solo track",
-          "lock track"
+          "lock track",
+          "add music to sequence",
+          "add sound to cutscene",
+          "sequence audio",
+          "sequencer music"
         ],
         "summary": "Edit sequence tracks: add a track, section or keyframe; lock, mute or solo a track.",
         "whenToUse": [
           "edit=add_track: A new track (transform, float, event, etc.) must be added.",
           "edit=add_section: A section must be added to animate a sub-range of a track.",
+          "edit=add_section: Music or a sound must play in a cutscene: add an Audio track, then a section with soundPath.",
           "edit=add_keyframe: A property value must be animated at a specific frame.",
           "edit=set_locked: A track must be protected from accidental edits.",
           "edit=set_muted: A track must be temporarily silenced.",
@@ -79135,6 +79140,7 @@
         "whenNotToUse": [
           "edit=add_track: The track type is not supported by the sequence.",
           "edit=add_section: The track does not exist.",
+          "edit=add_section: A sound must play in the running game, not inside a sequence.",
           "edit=add_keyframe: The actor is not bound to the sequence.",
           "edit=set_locked: The track needs to be edited.",
           "edit=set_muted: The track should be permanently removed.",
@@ -79156,7 +79162,7 @@
             },
             "trackType": {
               "type": "string",
-              "description": "MovieScene track type string."
+              "description": "Track type: \"Audio\" (music or sound, then add_section with soundPath), \"Transform\", or a MovieScene track class name such as MovieSceneEventTrack."
             },
             "trackName": {
               "type": "string",
@@ -79170,13 +79176,17 @@
               "type": "string",
               "description": "Camera binding GUID for a camera cut section (required on a camera cut track)."
             },
+            "soundPath": {
+              "type": "string",
+              "description": "Audio track only: /Game path of the SoundWave, SoundCue or MetaSound the section plays. Without end the section is as long as the sound (one second for a looping one)."
+            },
             "start": {
               "type": "number",
               "description": "Section start in display-rate frames (default 0)."
             },
             "end": {
               "type": "number",
-              "description": "Section end in display-rate frames, after start (default 100)."
+              "description": "Section end in display-rate frames, after start (default 100; with soundPath, the length of the sound)."
             },
             "property": {
               "type": "string",
@@ -79240,7 +79250,7 @@
             },
             "trackType": {
               "type": "string",
-              "description": "MovieScene track type string."
+              "description": "Track type: \"Audio\" (music or sound, then add_section with soundPath), \"Transform\", or a MovieScene track class name such as MovieSceneEventTrack."
             },
             "trackName": {
               "type": "string",
@@ -79344,6 +79354,9 @@
               "add_section",
               "add_keyframe"
             ],
+            "soundPath": [
+              "add_section"
+            ],
             "start": [
               "add_section"
             ],
@@ -79373,8 +79386,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ad5d998ab23c7f5c71394bd1a3d3e93a38cdf4208c3a13f181ed25a1d4d40882",
-        "content": "c4f74e9282dce33698ce156679718cb89689f2106e4bd1590a1b81c6cae93314"
+        "schema": "4154c002c9eab96b66e70dffc618aa70cb4a27091688d89385222bb3806c8bd9",
+        "content": "70db2ba50fc2fd1cf4b106f53d3773b9a0c214b6bde78abf8e55acb8214f285e"
       }
     },
     {

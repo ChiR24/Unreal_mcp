@@ -25,12 +25,14 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.add_section', action: 'add_section', family: F, domain: D,
-    summary: 'Add a section to an existing track in a Level Sequence.',
-    whenToUse: ['A section must be added to animate a sub-range of a track.'],
-    whenNotToUse: ['The track does not exist.'],
+    summary: 'Add a section to an existing track in a Level Sequence; on an Audio track, soundPath puts music or a sound in it.',
+    topics: ['add music to sequence', 'add sound to cutscene', 'sequence audio', 'sequencer music'],
+    whenToUse: ['A section must be added to animate a sub-range of a track.',
+      'Music or a sound must play in a cutscene: add an Audio track, then a section with soundPath.'],
+    whenNotToUse: ['The track does not exist.', 'A sound must play in the running game, not inside a sequence.'],
     // Native HandleSequenceAddSection (SequenceHandlersSections.cpp) filters the
     // track by actorName's binding and needs bindingId for a camera cut section.
-    inputProps: { path: P.path, trackName: P.trackName, actorName: { type: 'string', description: 'Only search the tracks of this bound actor.' }, bindingId: { type: 'string', description: 'Camera binding GUID for a camera cut section (required on a camera cut track).' }, start: { type: 'number', description: 'Section start in display-rate frames (default 0).' }, end: { type: 'number', description: 'Section end in display-rate frames, after start (default 100).' } },
+    inputProps: { path: P.path, trackName: P.trackName, actorName: { type: 'string', description: 'Only search the tracks of this bound actor.' }, bindingId: { type: 'string', description: 'Camera binding GUID for a camera cut section (required on a camera cut track).' }, soundPath: { type: 'string', description: 'Audio track only: /Game path of the SoundWave, SoundCue or MetaSound the section plays. Without end the section is as long as the sound (one second for a looping one).' }, start: { type: 'number', description: 'Section start in display-rate frames (default 0).' }, end: { type: 'number', description: 'Section end in display-rate frames, after start (default 100; with soundPath, the length of the sound).' } },
     required: ['path'],
     effect: 'write', latency: 'interactive', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'add_section', path: '/Game/Cinematics/SEQ_Master', trackName: 'Transform', start: 0, end: 60 },

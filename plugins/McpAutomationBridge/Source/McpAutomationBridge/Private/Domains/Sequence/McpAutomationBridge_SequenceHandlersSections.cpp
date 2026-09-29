@@ -1,7 +1,9 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
+#include "Misc/PackageName.h"
 #include "Sections/MovieSceneCameraCutSection.h"
+#include "Sound/SoundBase.h"
 #include "Tracks/MovieSceneCameraCutTrack.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
@@ -18,11 +20,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
   if (!Payload->TryGetNumberField(TEXT("startFrame"), StartFrame)) {
     Payload->TryGetNumberField(TEXT("start"), StartFrame);
   }
-  if (!Payload->TryGetNumberField(TEXT("endFrame"), EndFrame)) {
-    Payload->TryGetNumberField(TEXT("end"), EndFrame);
-  }
+  const bool bHasEnd = Payload->TryGetNumberField(TEXT("endFrame"), EndFrame) ||
+                       Payload->TryGetNumberField(TEXT("end"), EndFrame);
   FString BindingId;
   Payload->TryGetStringField(TEXT("bindingId"), BindingId);
+  FString SoundPath;
+  Payload->TryGetStringField(TEXT("soundPath"), SoundPath);
 
   UMovieScene *MovieScene = nullptr;
   ULevelSequence *Sequence = McpSequence::LoadOrReply(this, RequestId, Socket, Payload, TEXT("add_section"), MovieScene);
@@ -41,7 +44,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
     SendAutomationResponse(Socket, RequestId, false, FrameError, nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  if (End <= Start) {
+  // A sound with no end takes its length from the sound below, so the 0-100
+  // default range must not be range-checked against a later start.
+  if (End <= Start && (bHasEnd || SoundPath.IsEmpty())) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("end must be greater than start"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
@@ -76,16 +81,53 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
     return true;
   }
 
-  UMovieSceneSection *NewSection = Track->CreateNewSection();
+  // A sound goes onto an audio track only. Resolved before any section exists
+  // so a refusal leaves nothing orphaned.
+  UMovieSceneAudioTrack *AudioTrack = Cast<UMovieSceneAudioTrack>(Track);
+  USoundBase *Sound = nullptr;
+  if (!SoundPath.IsEmpty()) {
+    if (!AudioTrack) {
+      SendAutomationResponse(
+          Socket, RequestId, false,
+          FString::Printf(TEXT("soundPath only applies to an Audio track; '%s' is a %s"),
+                          *Track->GetName(), *Track->GetClass()->GetName()),
+          nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    Sound = LoadObject<USoundBase>(
+        nullptr,
+        *(SoundPath.Contains(TEXT(".")) ? SoundPath
+                                        : SoundPath + TEXT(".") + FPackageName::GetShortName(SoundPath)),
+        nullptr, LOAD_NoWarn);
+    if (!Sound) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             FString::Printf(TEXT("Sound not found: %s"), *SoundPath),
+                             nullptr, TEXT("ASSET_NOT_FOUND"));
+      return true;
+    }
+  }
+
+  // AddNewSoundOnRow sizes the section to the sound (one second for a looping
+  // one), picks a free row and adds it to the track itself.
+  UMovieSceneSection *NewSection =
+      Sound ? AudioTrack->AddNewSoundOnRow(Sound, Start, INDEX_NONE) : Track->CreateNewSection();
   if (NewSection) {
-    NewSection->SetRange(TRange<FFrameNumber>(Start, End));
+    if (Sound && !bHasEnd) {
+      EndFrame = FFrameRate::TransformTime(FFrameTime(NewSection->GetExclusiveEndFrame()),
+                                           MovieScene->GetTickResolution(),
+                                           MovieScene->GetDisplayRate()).AsDecimal();
+    } else {
+      NewSection->SetRange(TRange<FFrameNumber>(Start, End));
+    }
     if (UMovieSceneCameraCutSection *CutSection =
             Cast<UMovieSceneCameraCutSection>(NewSection)) {
       CutSection->SetCameraBindingID(
           UE::MovieScene::FRelativeObjectBindingID(CameraBinding));
     }
 
-    Track->AddSection(*NewSection);
+    if (!Sound) {
+      Track->AddSection(*NewSection);
+    }
     MovieScene->Modify();
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -95,8 +137,15 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
     if (bCameraBound) {
       Resp->SetStringField(TEXT("cameraBindingId"), BindingId);
     }
-    SendAutomationResponse(Socket, RequestId, true,
-                           TEXT("Section added to track"), Resp);
+    if (Sound) {
+      Resp->SetStringField(TEXT("soundPath"), Sound->GetPathName());
+      Resp->SetStringField(TEXT("soundName"), Sound->GetName());
+    }
+    SendAutomationResponse(
+        Socket, RequestId, true,
+        Sound ? FString::Printf(TEXT("Section added to track with sound %s"), *Sound->GetName())
+              : FString(TEXT("Section added to track")),
+        Resp);
   } else {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Failed to create section"), nullptr,
