@@ -87,6 +87,40 @@ describe('variableType: the description lists what the type resolver accepts', (
   });
 });
 
+describe('build_graph: an overlapping explicit position moves the node instead of stopping the batch', () => {
+  const placement = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
+
+  it('walks the overlap guard\'s suggestions for many hops, then the auto grid; the old six-retry cap is gone', () => {
+    const source = placement();
+
+    expect(source).toMatch(/constexpr int32 MaxSuggestionHops = 24;/u);
+    expect(source).toMatch(/constexpr int32 MaxPlacementTries = 48;/u);
+    expect(source).toMatch(/Moves < MaxSuggestionHops\)\s*\{\s*Payload->SetNumberField\(TEXT\("posX"\), \(\*Suggested\)->GetNumberField\(TEXT\("x"\)\)\);/u);
+    expect(source).toMatch(/else\s*\{\s*PlaceOnGrid\(State, Payload\);\s*\}/u);
+    expect(source).not.toMatch(/Retry < 6/u);
+  });
+
+  it('answers only NODE_OVERLAP refusals; any other failure still stops the batch', () => {
+    const source = placement();
+
+    expect(source).toMatch(/Reply\.ErrorCode == TEXT\("NODE_OVERLAP"\)/u);
+    expect((source.match(/TEXT\("NODE_OVERLAP"\)/gu) ?? []).length).toBe(1);
+  });
+
+  it('tells a caller who named the position where the node went, in the step\'s placementWarning', () => {
+    const source = placement();
+
+    expect(source).toMatch(/if \(Moves > 0 && !bAuto && Reply\.bSuccess && Reply\.Result\.IsValid\(\)\)/u);
+    expect(source).toMatch(/Requested position \(%d, %d\) overlaps %s; the node was placed at \(%d, %d\) instead\./u);
+    expect(source).toMatch(/Reply\.Result->SetStringField\(TEXT\("placementWarning"\), Warning\);/u);
+    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchSteps.cpp')).toContain('TEXT("placementWarning")');
+  });
+
+  it('the batch description says so, and where a step\'s placementWarning appears', () => {
+    expect(paramDescription('blueprint.edit_graph', 'operations')).toMatch(/overlap an existing node is placed at the nearest free position/u);
+  });
+});
+
 describe('an edit_graph reply names the Blueprint it ran on', () => {
   const shared = (): string => read('Domains', 'BlueprintGraph', 'Context', 'McpAutomationBridge_BlueprintGraphHandlersContextShared.cpp');
   const batch = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');

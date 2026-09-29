@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
 // One build_graph step: resolve its "$alias" references, run it through the
@@ -26,6 +27,17 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
                      const TSharedPtr<FJsonValue>& StepValue, int32 Index,
                      const TSharedPtr<FJsonObject>& Entry, const TSharedPtr<FJsonObject>& NodeIds,
                      FString& OutErrorCode);
+
+/** Runs one step's handler in-process (McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp) and hands
+ *  back the reply it parked instead of sent; OutPins describes the pins of a node the step created. */
+FMcpCapturedResponse RunStep(const FActionContext& Parent, const TSharedPtr<FJsonObject>& Payload,
+                             const FString& Edit, const FString& StepId, FString& OutPins);
+
+/** RunStep for a step that may create a node: auto-placed when it names no position, and moved to a free
+ *  slot, with a placementWarning naming where it went, when the position it named overlaps a node. */
+FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& State,
+                                   const TSharedPtr<FJsonObject>& Payload, const FString& Edit,
+                                   const FString& StepId, FString& OutPins);
 
 /** Synchronous, non-destructive edits only; the member steps are among them. */
 bool IsBatchableEdit(const FString& Edit);

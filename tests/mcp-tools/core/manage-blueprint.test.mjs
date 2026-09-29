@@ -238,6 +238,12 @@ const testCases = [
     { edit: 'connect_pins', from: '$entry.then', to: '$print.execute' },
   ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'the entry node resolved' }] },
 
+  // === BATCH: a step whose explicit posX/posY overlaps a node is moved to a free slot and says so, instead of stopping the batch ===
+  { scenario: 'BATCH: build_graph moves a create step off an overlapping position', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
+    { edit: 'create_node', id: 'first', nodeType: 'CallFunction', memberName: 'PrintString', posX: 4000, posY: 4000 },
+    { edit: 'create_node', id: 'second', nodeType: 'CallFunction', memberName: 'PrintString', posX: 4000, posY: 4000 },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 2, label: 'both steps ran' }, { path: 'structuredContent.result.results.1.placementWarning', includes: 'was placed at', label: 'the second step names where it went' }] },
+
   // === QUERY: find_text reads what the assets contain (search_assets matches names only) ===
   { scenario: 'QUERY: find_text finds a graph literal', toolName: 'manage_asset', arguments: { action: 'find_text', searchText: 'CONSTRUCTED', packagePaths: [TEST_FOLDER], includeLevel: false, limit: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.matches', includesObject: { field: 'InString', text: 'constructed' }, label: 'PrintString literal found' }] },
   { scenario: 'QUERY: find_text honours caseSensitive', toolName: 'manage_asset', arguments: { action: 'find_text', searchText: 'CONSTRUCTED', packagePaths: [TEST_FOLDER], caseSensitive: true, includeLevel: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.matchCount', equals: 0, label: 'no upper-case literal' }] },

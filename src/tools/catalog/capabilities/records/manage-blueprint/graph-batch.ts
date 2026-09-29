@@ -46,14 +46,16 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'from and to ("$id.PinName" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied '
           + 'to the new node; a read-only pin such as Set Text\'s Value gets a MakeLiteral node wired into it). "$entry" is '
           + 'the graph\'s own entry node (a Construction Script or function graph starts there: from "$entry.then"). A create '
-          + 'step without posX and posY is auto-placed. Every function, variable, dispatcher and async factory a step names is '
+          + 'step without posX and posY is auto-placed; one whose posX and posY overlap an existing node is placed at the nearest '
+          + 'free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a '
+          + 'single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is '
           + 'checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops '
           + 'the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran.',
       },
     },
     required: ['blueprintPath', 'operations'],
     outputProps: {
-      results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue.' },
+      results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps).' },
       nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds "<id>_return" for its return node.' },
       succeeded: { type: 'number', description: 'Steps that completed.' },
       failedIndex: { type: 'number', description: 'Index of the step that stopped the batch (failures only).' },

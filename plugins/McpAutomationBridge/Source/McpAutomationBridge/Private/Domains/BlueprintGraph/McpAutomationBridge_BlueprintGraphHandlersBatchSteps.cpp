@@ -1,13 +1,9 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.h"
 
-#include "Core/Requests/McpResponseCaptureRegistry.h"
-
 namespace McpBlueprintGraphHandlers::GraphBatch
 {
 namespace
 {
-constexpr int32 AutoColumns = 5;
-
 // "from": "$event.then" is shorthand for fromNodeId "$event" + fromPinName "then".
 void ExpandEndpoint(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Key,
                     const TCHAR* NodeField, const TCHAR* PinField)
@@ -76,71 +72,6 @@ bool ResolveStepAliases(const FBatchState& State, const TSharedPtr<FJsonObject>&
         Payload->SetStringField(Field, *Guid);
     }
     return true;
-}
-
-FMcpCapturedResponse RunStep(const FActionContext& Parent, const TSharedPtr<FJsonObject>& Payload,
-                             const FString& Edit, const FString& StepId, FString& OutPins)
-{
-    FMcpResponseCaptureRegistry::Get().Begin(StepId);
-    FActionContext Step{Parent.Subsystem, StepId, Payload, Parent.RequestingSocket, Edit};
-    Step.bDeferCompile = true;
-    if (!RunBlueprintMemberStep(Parent, Edit, StepId, Payload) && PrepareBlueprintAndGraph(Step))
-    {
-        const bool bHandled = HandleNodeCreationAction(Step) || HandlePinMutationAction(Step) ||
-                              HandleNodeMutationAction(Step);
-        (void)bHandled;
-    }
-    FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(StepId);
-    FString Guid;
-    if (Reply.bSuccess && Reply.Result.IsValid() && Step.TargetGraph &&
-        Reply.Result->TryGetStringField(TEXT("nodeGuid"), Guid))
-    {
-        OutPins = DescribeNodePins(Step.FindNode(Guid));
-    }
-    return Reply;
-}
-
-// Auto-placed nodes fill a grid right of whatever the graph already holds. A
-// slot that turns out to be taken -- auto or caller-chosen -- is retried at the
-// overlap guard's own suggestion instead of failing the batch: a hand layout a
-// few units off (estimated node sizes are only estimates) used to stop a
-// 50-step batch at its third node.
-FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& State,
-                                   const TSharedPtr<FJsonObject>& Payload, const FString& Edit,
-                                   const FString& StepId, FString& OutPins)
-{
-    const bool bCreates = Edit == TEXT("create_node") || Edit == TEXT("create_reroute_node");
-    const bool bAuto = bCreates && !Payload->HasField(TEXT("posX")) && !Payload->HasField(TEXT("x"));
-    if (bAuto)
-    {
-        const int32 Slot = State.AutoPlaced++;
-        Payload->SetNumberField(TEXT("posX"), State.OriginX + (Slot % AutoColumns) * 360.0f);
-        Payload->SetNumberField(TEXT("posY"), (Slot / AutoColumns) * 260.0f);
-    }
-    // The handlers read `x`/`y` before `posX`/`posY`; move them over so a nudge
-    // below (which writes posX/posY) takes effect.
-    double Coord = 0.0;
-    if (Payload->TryGetNumberField(TEXT("x"), Coord))
-    {
-        Payload->SetNumberField(TEXT("posX"), Coord);
-        Payload->RemoveField(TEXT("x"));
-    }
-    if (Payload->TryGetNumberField(TEXT("y"), Coord))
-    {
-        Payload->SetNumberField(TEXT("posY"), Coord);
-        Payload->RemoveField(TEXT("y"));
-    }
-    FMcpCapturedResponse Reply = RunStep(Parent, Payload, Edit, StepId, OutPins);
-    const TSharedPtr<FJsonObject>* Suggested = nullptr;
-    for (int32 Retry = 0; bCreates && Retry < 6 && !Reply.bSuccess && Reply.ErrorCode == TEXT("NODE_OVERLAP") &&
-                          Reply.Result.IsValid() && Reply.Result->TryGetObjectField(TEXT("suggestedPosition"), Suggested);
-         ++Retry)
-    {
-        Payload->SetNumberField(TEXT("posX"), (*Suggested)->GetNumberField(TEXT("x")));
-        Payload->SetNumberField(TEXT("posY"), (*Suggested)->GetNumberField(TEXT("y")));
-        Reply = RunStep(Parent, Payload, Edit, StepId, OutPins);
-    }
-    return Reply;
 }
 
 // pinDefaults on a create step: {"InString": "Hi"} sets each pin on the new node
