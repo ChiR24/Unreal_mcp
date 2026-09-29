@@ -68,7 +68,7 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'get_vertex_position', plugins: PLUGIN,
-    family: F, summary: 'Read the position of one vertex of a DynamicMesh actor.',
+    family: F, summary: 'Read the x, y, z position of one vertex, by vertexIndex, of a procedural DynamicMesh actor.',
     whenToUse: ['An authored vertex must be inspected before it is moved.'],
     whenNotToUse: ['Whole-mesh counts are wanted; use get_mesh_info.'],
     inputProps: { actorName: P.actorName, vertexIndex: P.vertexIndex },

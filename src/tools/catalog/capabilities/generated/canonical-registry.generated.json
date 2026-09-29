@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cc7bf3f27b56017e",
+  "catalogRevision": "7c606f523ba494d9",
   "recordCount": 389,
   "records": [
     {
@@ -58883,9 +58883,12 @@
         "domain": "world",
         "family": "optimize",
         "topics": [
-          "get_mesh_info"
+          "get_mesh_info",
+          "vertex count",
+          "triangle count",
+          "has uvs and normals"
         ],
-        "summary": "Return vertex/face/material info for a dynamic mesh.",
+        "summary": "Read a procedural DynamicMesh actor: vertex count and triangle count, and whether it has normals, UV sets, vertex colors and polygroups.",
         "whenToUse": [
           "Mesh stats must be inspected."
         ],
@@ -58954,7 +58957,7 @@
       },
       "examples": [
         {
-          "title": "Return vertex/face/material info for a dynamic mesh.",
+          "title": "Read a procedural DynamicMesh actor: vertex count and triangle count, and whether it has normals, UV sets, vertex colors and polygroups.",
           "input": {
             "action": "get_mesh_info",
             "targetActor": "DM_A"
@@ -58997,7 +59000,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9738f83d1bce302b716d4e63a228619ba0e9df32abf70cd4914cdae35813d180",
-        "content": "ed9960402766f2e321c4a5f78ae4559b9fbd3fe69938314fb04f8b72cef41530"
+        "content": "af57f230af43397d27035cd7d1dbc9c2f9b0fedcb1f23ea2b440f8653ab8dad5"
       }
     },
     {
@@ -59015,7 +59018,7 @@
         "topics": [
           "get_vertex_position"
         ],
-        "summary": "Read the position of one vertex of a DynamicMesh actor.",
+        "summary": "Read the x, y, z position of one vertex, by vertexIndex, of a procedural DynamicMesh actor.",
         "whenToUse": [
           "An authored vertex must be inspected before it is moved."
         ],
@@ -59104,7 +59107,7 @@
       },
       "examples": [
         {
-          "title": "Read the position of one vertex of a DynamicMesh actor.",
+          "title": "Read the x, y, z position of one vertex, by vertexIndex, of a procedural DynamicMesh actor.",
           "input": {
             "action": "get_vertex_position",
             "actorName": "DM_Authored",
@@ -59152,7 +59155,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "993e119dae9734b5c14d56085a2abb05dc846a12369ccadea738ad7bdc1eaf2c",
-        "content": "ad61208c387ff077981b2389c3e25a084adf71c1f76aad2d58ed7a6f0ea160c0"
+        "content": "c51fa13441d20a4530675bfedaddb39376aad33d76ca1661e8d045d6d5d21ddf"
       }
     },
     {
