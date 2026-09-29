@@ -23,7 +23,6 @@ import { intersectRequired, mergeProperties } from './fold-widen.js';
 
 const LATENCY_RANK: Readonly<Record<string, number>> = { instant: 0, interactive: 1, 'long-running': 2 };
 const RESOURCE_RANK: Readonly<Record<string, number>> = { low: 0, medium: 1, high: 2 };
-const MAX_TOPICS = 8;
 const MAX_WHEN = 6;
 
 const namespaceOf = (id: string): string => id.slice(0, id.lastIndexOf('.'));
@@ -150,7 +149,9 @@ export function buildFolded(
 
   const derivedTopics = unique(members.flatMap((member) =>
     member.discovery.topics.filter((topic) => !memberActions.has(topic) && topic !== spec.primary)));
-  const topics = unique([spec.primary, ...(spec.topics ?? derivedTopics.slice(0, MAX_TOPICS))]);
+  // A spec's topics add to its members' own: replacing them took 229 authored phrasings
+  // ("press play", "actor position", "create actor") out of search.
+  const topics = unique([spec.primary, ...(spec.topics ?? []), ...derivedTopics]);
   const whenToUse = spec.whenToUse ?? unique(members.flatMap((member) => member.discovery.whenToUse)).slice(0, MAX_WHEN);
   // A member's "(use create_node)" names a variant of this very record once folded; carried over,
   // it sent callers away from the capability they had already found.

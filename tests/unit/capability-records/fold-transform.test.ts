@@ -278,6 +278,19 @@ describe('applyFolds position math and throw paths', () => {
     expect(folded.discovery.whenNotToUse).toEqual(['Links must be broken (use break_links).', 'Querying every actor is slow; filter first.']);
   });
 
+  it("adds a spec's own topics to its members' topics instead of replacing them", () => {
+    const withTopics = (action: string, topics: readonly string[]): CapabilityRecordSource => {
+      const record = member(action, {}, []);
+      return { ...record, discovery: { ...record.discovery, topics: [...topics] } };
+    };
+    const folded = applyFolds(
+      [withTopics('q_one', ['press play', 'q_two']), withTopics('q_two', ['stop game'])],
+      [{ ...FOLD, topics: ['play in editor'] }],
+      'system_control',
+    )[0] as CapabilityRecordSource;
+    expect(folded.discovery.topics).toEqual(['query', 'play in editor', 'press play', 'stop game']);
+  });
+
   it('byName derives selector values from the actions themselves', () => {
     expect(byName(['a', 'b'])).toEqual({ a: 'a', b: 'b' });
   });

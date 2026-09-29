@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "83a40492d77f5160",
+  "catalogRevision": "145a920c9a9a90e3",
   "recordCount": 388,
   "records": [
     {
@@ -988,7 +988,12 @@
           "create blend space",
           "create aim offset",
           "pose asset",
-          "procedural animation"
+          "procedural animation",
+          "anim montage",
+          "montage asset",
+          "new montage",
+          "pose library",
+          "facial poses"
         ],
         "summary": "Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset, pose asset from a sequence, or procedural animation.",
         "whenToUse": [
@@ -1328,7 +1333,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "33593de8f9238751ef65b2d7e1c81c5a18f6b3fa10db6d43db144121dcecffd8",
-        "content": "f234d77818480ca40d95fd2da8741fcc826288e8e43a09eb53342c09273b2f7c"
+        "content": "d5e9726cf59d4f3ffd649430cf66d69ec9f6dcb5d255cd8069e13ffc676d9e2a"
       }
     },
     {
@@ -3399,7 +3404,9 @@
           "morph target",
           "morph target deltas",
           "import morph targets",
-          "morph target value"
+          "morph target value",
+          "transfer blend shapes",
+          "copy morph targets"
         ],
         "summary": "Create a morph target, set its deltas, import morph targets from another mesh, or set a morph target value on an actor.",
         "whenToUse": [
@@ -3692,7 +3699,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "07610052e16d1cb24beb51dc71dcabd89df89a4002cf0d97a66407113fde21f3",
-        "content": "3f4f4c25172d58bd3cc8c162277f9508402a4d1394bec8da8e7ec50e3636e325"
+        "content": "b4f7c1047aa283337197b40434d51bb295d77dfac9d0882328abeda0f11d3818"
       }
     },
     {
@@ -4540,7 +4547,14 @@
           "auto skin",
           "copy weights",
           "mirror weights",
-          "prune weights"
+          "prune weights",
+          "copy skin weights",
+          "transfer weights",
+          "weight transfer",
+          "mirror skin weights",
+          "symmetric weights",
+          "remove small influences",
+          "clean skin weights"
         ],
         "summary": "Edit skeletal-mesh skin weights: auto-skin, set vertex weights, copy them from another skinned mesh, mirror one side onto the other, or prune tiny influences. Weights are always normalized on write.",
         "whenToUse": [
@@ -4822,7 +4836,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8c17667891218dcaa20349a480258dd1bd3c310ae43d61160ebd77bb60983e9a",
-        "content": "da2a8fd468ed3a07964161b07d2cc4593230722274a62436d202f77117e7964c"
+        "content": "d11d9f7d57ef1eb5cba6e4ab2c332fd7801e684a1b6b4351ceca50d3ac6036f4"
       }
     },
     {
@@ -5811,7 +5825,9 @@
           "ik rig",
           "ik retargeter",
           "inverse kinematics",
-          "retarget chain mapping"
+          "retarget chain mapping",
+          "map retarget chains",
+          "fix retargeted limb"
         ],
         "summary": "Set up IK: create an IK rig or IK retargeter, a Control Rig for IK solvers, or set which source chain drives each target chain of a retargeter.",
         "whenToUse": [
@@ -6038,7 +6054,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "30cab5c53492a4cd94f7ba226aa424ccdc232e492948a408831866e66a01159c",
-        "content": "02692fec32aab26a021545c673b7deda5f59fb2dbc68e61d731b1b04952d7ec8"
+        "content": "a11c5aa0241c51909dbff420138d3621c8380283070bceeade67aa942b28e80d"
       }
     },
     {
@@ -7017,7 +7033,8 @@
           "delete assets",
           "remove asset",
           "delete asset permanently",
-          "delete imported asset"
+          "delete imported asset",
+          "destroy asset"
         ],
         "summary": "Delete one or more assets.",
         "whenToUse": [],
@@ -7115,7 +7132,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a83863754d93c784d2b59577d1ceba43a4ca2d086c736b14c2e0bfde855d708d",
-        "content": "3665d8fd219ccb3fa229c3177c20aaf70e359b658c80abd792289e5536561129"
+        "content": "59616d9ec14b14ab42a5aa110016e12d1f074bba061f50bf5221687ac7d0abb2"
       }
     },
     {
@@ -8805,7 +8822,10 @@
           "move",
           "move folder",
           "move content folder",
-          "relocate assets"
+          "relocate assets",
+          "move asset",
+          "relocate asset",
+          "rename folder"
         ],
         "summary": "Move an asset to a new path, or a whole folder: every asset under it moves (sub-folders kept) and references, redirectors and project settings follow.",
         "whenToUse": [],
@@ -8897,7 +8917,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "dea182528d5efb15af88c1e53505554fb2db2d6266bd7ecb217ec161bf69d8ea",
-        "content": "4d3edf015804b2536f9da3efd45a2bd1081d8c68510334f92699747089756ad2"
+        "content": "40c26a64b6c9f72b0e8bd8f32ee7661ca5661706622453007b6e879761e43ca9"
       }
     },
     {
@@ -9259,7 +9279,19 @@
           "where is text used",
           "analyze graph",
           "material stats",
-          "source control state"
+          "source control state",
+          "does asset exist",
+          "check asset",
+          "path exists",
+          "assets by class",
+          "filter assets",
+          "query assets",
+          "assets of type",
+          "search text",
+          "find string",
+          "text in widgets",
+          "text in blueprints",
+          "find literal"
         ],
         "summary": "Query assets: existence, search by name/class, find by tag, find where a text appears inside assets, the node graph inside a material or Blueprint, material stats, source-control state.",
         "whenToUse": [],
@@ -9631,7 +9663,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7424091fb091723441956dabe5efac0b4cdc8cc6e24b31e861a415c167a291d6",
-        "content": "1d732181f78333b65ec494ed18cefaf974b403dd7dca829b6324bd47ec5583d1"
+        "content": "f8941ea756589d662c4f70d463e5018eae090ea9308a689a3351575664d702df"
       }
     },
     {
@@ -10034,7 +10066,8 @@
         "topics": [
           "rename",
           "rename folder",
-          "rename several assets"
+          "rename several assets",
+          "rename asset"
         ],
         "summary": "Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along. Several unrelated assets in one call: maintain_content bulk_rename with renames.",
         "whenToUse": [],
@@ -10126,7 +10159,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4f0612ab59ebf8b8e59d76cb797971c321143558f3555c89bb92d44f512de920",
-        "content": "a51589fb7df43d465be54d2b7f37dc7b4fd9abfefd090e6a816287560caecf63"
+        "content": "d9f669bce71af27c81b409f6ff1daba78f4dac4c7d24b8ef60439f0f75bf7583"
       }
     },
     {
@@ -11037,7 +11070,15 @@
           "add function",
           "add event",
           "custom event",
-          "blueprint function"
+          "blueprint function",
+          "new function",
+          "custom function",
+          "function graph",
+          "define function",
+          "event node",
+          "begin play",
+          "tick event",
+          "event graph"
         ],
         "summary": "Add a function or an event to a Blueprint.",
         "whenToUse": [
@@ -11294,7 +11335,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c5597f01000ce3b05fdb051127df9e0d10110dae45fcc219938e63334cd4e1e4",
-        "content": "7e9663ff3641f06fbb93a6e77deb9a5a95f9b34f94120b68eb947b4f0bdedfba"
+        "content": "f09edc2fe1d0bbf5fc13bdd3381f6a88af642f0f170cf67fb5ce255e065e8b16"
       }
     },
     {
@@ -12802,7 +12843,9 @@
           "blueprint asset",
           "subclass",
           "derive from",
-          "get or create blueprint"
+          "get or create blueprint",
+          "idempotent create",
+          "create if missing"
         ],
         "summary": "Create a Blueprint asset from a parent class; optionally typed, or only if it does not exist yet.",
         "whenToUse": [
@@ -12965,7 +13008,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "33d527c1a206369346762623e1488370d4cb50fa5674facc52c6391d51343d59",
-        "content": "020cb337e8175373ca7bb8ebe132f19ba42fcc0e69bff9c7ee2894c1382084e8"
+        "content": "af750c21260b02c08605ac243588c3f654e97fb6f68b3556eaddba75dcbffb98"
       }
     },
     {
@@ -13986,7 +14029,21 @@
           "node property",
           "construction script",
           "reroute node",
-          "batch graph edit"
+          "batch graph edit",
+          "add node",
+          "place node",
+          "graph node",
+          "call function node",
+          "print string node",
+          "link pins",
+          "wire nodes",
+          "connect nodes",
+          "exec pin",
+          "connect output to input",
+          "build event graph",
+          "wire many nodes",
+          "blueprint graph batch",
+          "function with body"
         ],
         "summary": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits, variables included, in one batch.",
         "whenToUse": [
@@ -14559,7 +14616,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9a0a301b001627f90850aa41ceb506a21ffeaf1b110bf676d054f59796c3dcda",
-        "content": "32606b85702f327ec78d69c28ffc67aa5bf862a669190a1e111aa3eed130b614"
+        "content": "d75798d393263e9d123a71bd01d6be5c16e48bfea3c2f1275791268cea5f206b"
       }
     },
     {
@@ -14631,7 +14688,13 @@
           "static mesh component",
           "scs component",
           "component transform",
-          "component property"
+          "component property",
+          "attach component",
+          "mesh component",
+          "component template",
+          "add mesh to blueprint",
+          "add camera component",
+          "blueprint component"
         ],
         "summary": "Edit the Simple Construction Script: add a component template (or a non-SCS instance), reparent, set a property or transform, or apply batched operations.",
         "whenToUse": [
@@ -14951,7 +15014,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a9921a5bce4f37496208883abf8c77641b7ad85f662bb4c52f6ce0d90e9b373d",
-        "content": "71c982df8bec6b3435db806c7d11ccdf8bcb59e93248ca4b382f0f7b8de10427"
+        "content": "c0540f61e13d2310526d2c2d323dc40082d058dceae97807811bfba965798ed7"
       }
     },
     {
@@ -15014,7 +15077,17 @@
           "blueprint variable",
           "rename variable",
           "default value",
-          "variable metadata"
+          "variable metadata",
+          "new variable",
+          "member variable",
+          "add property",
+          "float variable",
+          "bool variable",
+          "integer variable",
+          "declare variable",
+          "cdo default",
+          "variable default",
+          "set property default"
         ],
         "summary": "Add or rename a Blueprint variable, set variable or Blueprint metadata, or set a class default value.",
         "whenToUse": [
@@ -15253,7 +15326,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "100de750952ef4e8be978fb564446c79a734f3f8fc568d4faccfe783b54adedc",
-        "content": "4681c2cbb7939704ca26a82b08703c9bacad5c40afe69a56eb4fa5c9e097f766"
+        "content": "3a6c9325b988c54b749d1acaa39fb6c09eed5dc9bca43a8ef6279e9370404069"
       }
     },
     {
@@ -15609,7 +15682,13 @@
           "reparent widget",
           "widget parent class",
           "render widget",
-          "see widget"
+          "see widget",
+          "umg widget",
+          "user widget",
+          "ui widget",
+          "hud",
+          "new widget",
+          "menu widget"
         ],
         "summary": "Create a Widget Blueprint, set its parent class, preview it (drawn offscreen and returned as an image), or rename/reparent a widget in its tree.",
         "whenToUse": [
@@ -15879,7 +15958,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6e132ff86314df13c197a3de248a13d1dce173e796ae710b82c29a607bd1d99f",
-        "content": "eef73de4bad5ffdc55ec20ae4c4a5303b4dc9bb9c78ec344c71582b10719cdf9"
+        "content": "64e05cc28bbd5ebf83e691f1cb028614c6094a3ea441f931bb5380924e952a88"
       }
     },
     {
@@ -15911,7 +15990,14 @@
           "blueprint info",
           "list blueprint variables",
           "blueprint details",
-          "blueprint property"
+          "blueprint property",
+          "blueprint metadata",
+          "list variables",
+          "list functions",
+          "inspect blueprint",
+          "blueprint variables",
+          "blueprint functions",
+          "blueprint components"
         ],
         "summary": "Read a Blueprint summary (variables, functions, components) or one of its default property values.",
         "whenToUse": [
@@ -16121,7 +16207,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
-        "content": "6c4a9c14f92ea9398560160306d6e63e05c81aecd4fed37e5c207afa8a4fb582"
+        "content": "6f04a4a9791eb175ae60d748b92b09ae850e918c608187fc100abea35dbacde0"
       }
     },
     {
@@ -18450,7 +18536,12 @@
           "scatter grass",
           "fill area with foliage",
           "plant trees",
-          "place bushes"
+          "place bushes",
+          "foliage",
+          "vegetation",
+          "grass",
+          "trees",
+          "plants"
         ],
         "summary": "Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground.",
         "whenToUse": [
@@ -18841,7 +18932,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bbb3f897cc067df978254d1885ecda9fcc25e37d33fb1a0e76b87ff1a1203092",
-        "content": "cbd7cb1525585a84f7de4f06a7278e2f36dba3668ecb9e6a089fcda7c7a41ad4"
+        "content": "2b05affbebc73a01e97bca93ce529c0c192c37a2cb8b3d86ae107fccdad7f644"
       }
     },
     {
@@ -29052,7 +29143,8 @@
           "delete by tag",
           "delete spawned actor",
           "delete selected actor",
-          "remove actor from level"
+          "remove actor from level",
+          "delete object"
         ],
         "summary": "Delete actors by name, or every actor carrying a tag.",
         "whenToUse": [
@@ -29204,7 +29296,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5e073932f61f951d025af198cd957884495756fa64bd6894d2c6e964bef6fa84",
-        "content": "b6c11ff351408f26ec7c7cb2662e4e1095b1f6b65ccee80bb80d771324794baa"
+        "content": "69fb9adce80e4b0187870654c7ae901a3466cac8ba0e1dd36d40712589d09047"
       }
     },
     {
@@ -29516,7 +29608,9 @@
           "set light intensity",
           "light color",
           "light radius",
-          "change light color"
+          "change light color",
+          "add component to actor",
+          "attach component to actor"
         ],
         "summary": "Add or remove an actor component, or set one or more of its properties (a light's Intensity or LightColor, a TextRender's Text).",
         "whenToUse": [
@@ -29682,7 +29776,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "72207c12be52e975e72863ba37afdb4cf6a28537e006795855b30fad2abe5047",
-        "content": "07bed4fd0ab611c03375d37da7ef4a924d6918fd41d0de5a3502354435e9acec"
+        "content": "1c37d64817589dcfd8a7aeb8752a352fc7c39dc3ab39ac541b2a585728c6b21c"
       }
     },
     {
@@ -29735,7 +29829,13 @@
           "find actor",
           "find actor by name",
           "find actors by class",
-          "search actors"
+          "search actors",
+          "actors of class",
+          "find actors by type",
+          "all actors of type",
+          "lookup actor by name",
+          "search actor",
+          "get actor by name"
         ],
         "summary": "Find actors by class or by name.",
         "whenToUse": [
@@ -29914,7 +30014,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "53b4af67cba2cd1b416685b200d41e3a31f0588a50ac32d7b637dee50d482a38",
-        "content": "f2d1b878b5c6dc4944f7c0e0a8d8a1f7b14aa1712e35d1a93bf107b374863538"
+        "content": "e6d7919a9ab56fa605238ce4f3227f8c4733a2037d6d273d802e969ccb2ccf63"
       }
     },
     {
@@ -30652,7 +30752,11 @@
           "where is the actor",
           "sample motion",
           "record trajectory",
-          "track actor over time"
+          "track actor over time",
+          "actor position",
+          "actor rotation",
+          "watch actor move",
+          "jump height"
         ],
         "summary": "Read an actor's transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
         "whenToUse": [
@@ -30982,7 +31086,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "522a6216142b07d99711fa7ced0dca031691956f4451faee3593a393d3cc2c83",
-        "content": "9cf772077054450b7bf61c47c836da94e177b1733dbb02539e2da13daacd9bbb"
+        "content": "aa604caa5a3d25c4eb990a137d1d1f5e131da1fca9423dc4b53fcfe072b3fdb0"
       }
     },
     {
@@ -31930,7 +32034,10 @@
           "scale actor",
           "set actor location",
           "set actor rotation",
-          "teleport actor"
+          "teleport actor",
+          "set position",
+          "set rotation",
+          "translate"
         ],
         "summary": "Set an actor's transform: full transform, or location, rotation or scale alone, or teleport it.",
         "whenToUse": [
@@ -32214,7 +32321,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4fe7c93999c330493f5229b508dad7131002b1140ce8432e5a89f2bfe66364f7",
-        "content": "4417fc9c720ce4d0b88706b37e91e88e431d219a6cfe585d8cd9f97448273b26"
+        "content": "3dabb5c83e7c16c2cdb8335f2eff5e9571c8d5c87d158f6576f9f568ed49570e"
       }
     },
     {
@@ -32387,7 +32494,18 @@
           "spawn blueprint",
           "place actor",
           "add actor to level",
-          "spawn many actors"
+          "spawn many actors",
+          "create actor",
+          "spawn cube",
+          "spawn static mesh",
+          "instantiate class",
+          "spawn blueprint actor",
+          "place blueprint in level",
+          "instantiate blueprint",
+          "batch spawn",
+          "place many actors",
+          "lay out level",
+          "build level layout"
         ],
         "summary": "Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.",
         "whenToUse": [
@@ -32657,7 +32775,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bfa13780ca076e03f3ace22caceb2968f5fc51cdbcd138f34ab73fe379a4e825",
-        "content": "52529312d77cb87c79def601d2e43b700eba3fa40dd922b3227520017bef8b0e"
+        "content": "5da7799b12f3079a0af49c143d73849ff4b9ed103842359294a685288ac6d951"
       }
     },
     {
@@ -34324,7 +34442,15 @@
           "stop pie",
           "pause pie",
           "eject",
-          "possess"
+          "possess",
+          "pie",
+          "start game",
+          "run game",
+          "press play",
+          "simulate",
+          "stop game",
+          "end play",
+          "exit pie"
         ],
         "summary": "Control Play In Editor with control: play (starts it), pause, resume, stop, eject (leave the pawn) or possess (take it back).",
         "whenToUse": [
@@ -34456,7 +34582,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d83e9462e52da1098b74fc82b63f160e6db309b334017e46d45dd8815c33cd66",
-        "content": "0b854df3b95d065cbea4650d67c60916ac24ae0a4621ce30d97cf92184e53965"
+        "content": "edd8205d9f6df3d4bf2b7e0e737ba4d07561617d0b26fffe15102f2629549e2f"
       }
     },
     {
@@ -36152,7 +36278,10 @@
         "topics": [
           "undo",
           "redo",
-          "transaction history"
+          "transaction history",
+          "undo last change",
+          "revert last action",
+          "ctrl z"
         ],
         "summary": "Undo or redo the last editor transaction; the reply names the transaction, or says there was none.",
         "whenToUse": [
@@ -36256,7 +36385,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cad5e3f87f5f3aa9f8e3761a8215e3ba98791bf0f41e8d6cbe1fd345a9832932",
-        "content": "2d117c9844ce26b0a52819d1ffcde738c0da10897e738394e338e5290a824481"
+        "content": "ac1ba37efafbed942588e72d683ae9561e9c08b466d5162448d28df4a999f7d7"
       }
     },
     {
@@ -38396,7 +38525,14 @@
           "viewport info",
           "world settings",
           "project settings",
-          "editor settings"
+          "editor settings",
+          "selection",
+          "current selection",
+          "editor selection",
+          "project config",
+          "engine version",
+          "project name",
+          "game settings"
         ],
         "summary": "Read editor state: selected actors, viewport, world settings, project settings, editor settings.",
         "whenToUse": [
@@ -38663,7 +38799,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cecdbed843545266149c7c4b9ef736894e851a1e5f7b5ad81f3c0761f4699a8c",
-        "content": "6c3d57fbbc54093d75a62cb03d32c661fbb058e1116da542ce8af11eb6e5596a"
+        "content": "403fa1d99003296f22c7778044d6c75a23ebcdf176c9f420b91a9257109f733a"
       }
     },
     {
@@ -39143,7 +39279,12 @@
           "class reflection",
           "inspect struct",
           "class default object",
-          "cdo"
+          "cdo",
+          "class info",
+          "class metadata",
+          "reflection",
+          "class properties",
+          "uclass"
         ],
         "summary": "Inspect a class, a struct, or a Blueprint's class default object.",
         "whenToUse": [
@@ -39377,7 +39518,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cfb78dbb5292e63d545be8b3eb1c41bbfdea8285b3736421eee439ebe99d31ef",
-        "content": "40b429346770fec72422aa58da3d6a2c23adcc239128d9a5b2e5d9d96dba94c5"
+        "content": "4f6dd2c2d59a227fee293162eda476ccfd1648749d5ad0c6f968aa39beb3c5cc"
       }
     },
     {
@@ -39448,7 +39589,11 @@
           "mesh dimensions",
           "mesh bounds",
           "how big is a mesh",
-          "mesh pivot"
+          "mesh pivot",
+          "object details",
+          "actor properties",
+          "dump object",
+          "all properties"
         ],
         "summary": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots).",
         "whenToUse": [
@@ -39739,7 +39884,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-        "content": "9440f7ddf50af37cc09f2c6c363690b5354169eee0ad4fbbafd738dfaa880b57"
+        "content": "90c313d3fa14d58467ce8d87d1581407813220daa637c0ba7f750891361a2c06"
       }
     },
     {
@@ -39801,7 +39946,9 @@
           "find by tag",
           "metadata",
           "bounding box",
-          "export"
+          "export",
+          "world objects",
+          "enumerate objects"
         ],
         "summary": "Query objects: list them, find by tag, read metadata or a bounding box, or export one.",
         "whenToUse": [
@@ -40017,7 +40164,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9e63dc514540de6db766715471c0df8d311947b3a057e69c547bc58cce632b8f",
-        "content": "e26885764a1b9c74bc5ea9a214f248cc3461a80a395b209a9bd9019b6a35dc73"
+        "content": "7de8d02d9da77d3d81b9c73f1615109f5ef7527141d7080a1bf6cf847df20fa5"
       }
     },
     {
@@ -41169,7 +41316,10 @@
           "create_behavior_tree",
           "behavior tree",
           "blackboard",
-          "create ai asset"
+          "create ai asset",
+          "bt asset",
+          "ai behavior",
+          "new behavior tree"
         ],
         "summary": "Create a Behavior Tree (directly or through the graph route) or a Blackboard asset.",
         "whenToUse": [
@@ -41317,7 +41467,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8292374c3d2061f01fc2c64035774c173ec46b36442b26bc61686a2654b3369f",
-        "content": "4d50c0033d7ca5c270d4491bab06441ea0334ac59f36820435ab14cfdd0f2926"
+        "content": "6dea45e9f71e91eb8acf9124dfcc3a2e512dbd3a56d6a2646c1266f67fec94b8"
       }
     },
     {
@@ -46140,7 +46290,9 @@
           "attenuation settings",
           "reverb effect",
           "dialogue wave",
-          "submix effect"
+          "submix effect",
+          "new sound cue",
+          "audio cue"
         ],
         "summary": "Create an audio asset: sound cue, sound class, sound mix, attenuation settings, reverb effect, dialogue voice or wave, source effect chain, submix effect.",
         "whenToUse": [
@@ -46416,7 +46568,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1855b92fc3acca256e944a1deafc687b073b1906e6973820e81fd934660c174a",
-        "content": "304f50710e387d2c438e686150555ce0219f0ac32e4beb3a953835f309410ef3"
+        "content": "5d1b44472e45dda0f8f42fed97c9b02a5afee826ef34de222b6e3446e698469a"
       }
     },
     {
@@ -46901,7 +47053,8 @@
           "cue attenuation",
           "cue concurrency",
           "doppler effect",
-          "source effect"
+          "source effect",
+          "pitch shift moving sound"
         ],
         "summary": "Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.",
         "whenToUse": [
@@ -47186,7 +47339,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "77ab96f66cc7db6f5a4994361d48cf99ef9c775783f9502fc1d9e74cac288b7f",
-        "content": "fc6c05288b5156bae10337f7e593d950c7e2042367d83d46901db8678e030a74"
+        "content": "fc8b2f4c336c9155f8e65f9e9710bad7129f3cd6a2311d3e6e2907b22c6473b4"
       }
     },
     {
@@ -47832,7 +47985,14 @@
           "play sound 2d",
           "play sound at location",
           "attached sound",
-          "prime sound"
+          "prime sound",
+          "play audio",
+          "play sfx",
+          "ui sound",
+          "play music",
+          "3d sound",
+          "spatial sound",
+          "positional audio"
         ],
         "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound.",
         "whenToUse": [
@@ -48058,7 +48218,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3fb0b4fc7150dc2e5a252bd3725a1a860044b885cc157164303491b99629c900",
-        "content": "9f317fece8eb7a90782a0601713babc25b91577c5dd9c31f7a72bffc3b31ffe3"
+        "content": "4e460290c6f5d607184638ca0e816616b8f0cc707af31423ce831520184e9f7d"
       }
     },
     {
@@ -50982,7 +51142,11 @@
           "weapon blueprint",
           "projectile blueprint",
           "damage type",
-          "create weapon"
+          "create weapon",
+          "weapon",
+          "gun",
+          "firearm",
+          "new weapon"
         ],
         "summary": "Create a combat asset: weapon Blueprint, projectile Blueprint, or damage type.",
         "whenToUse": [
@@ -51191,7 +51355,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "44f7382ba0dd09197ccc8a4eaa9fe592fa4930688d8687d19838169b6c4b3c6d",
-        "content": "35c501232a4c3cd0bd48ff4a9eaac56c497fa989d92ea865eade896c80bcf44c"
+        "content": "976eb61843a6b7b7965c1e15d0aae64775bcff45c5deebb23adadd00b62b29e8"
       }
     },
     {
@@ -52650,7 +52814,11 @@
           "particle trail",
           "impact effect",
           "volumetric fog",
-          "effect asset"
+          "effect asset",
+          "particle system",
+          "vfx",
+          "particle effect",
+          "new niagara system"
         ],
         "summary": "Create an effect: a Niagara system or emitter, a ribbon, particle trail, impact or environment effect, volumetric fog, or spawn a preset particle/niagara effect.",
         "whenToUse": [
@@ -52938,7 +53106,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f8f1978baba2304c9affccd436dcb8db8d2f171d82277aae9c6caa94e1e87faf",
-        "content": "5de91aa7d7bd94f3e5f524200f35fc7c5f5abbb9bfb1a075476e9a5017776630"
+        "content": "9bf032394e6a5dde3ad85e8567f5170ec3c05c2d5e850a72c7cfcac5117ca6eb"
       }
     },
     {
@@ -55219,7 +55387,11 @@
           "gameplay effect",
           "attribute set",
           "gameplay cue",
-          "execution calculation"
+          "execution calculation",
+          "ability",
+          "gas ability",
+          "new ability",
+          "skill"
         ],
         "summary": "Create a Gameplay Ability System asset: gameplay ability, gameplay effect, attribute set, gameplay cue notify, execution calculation.",
         "whenToUse": [
@@ -55406,7 +55578,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "337ebf0eb6f943ca9093c7695eeb251fb74e3ef443c5f041fa63740f5a72d40f",
-        "content": "433717c8bd0c711a21cb27f2de16363c3605689c275ee5d682eb2dc119836a46"
+        "content": "7139951e9afe30142a9de70634729d51ea3b0ff1d9ffe45533ef3fed626c688a"
       }
     },
     {
@@ -56841,7 +57013,10 @@
           "box mesh",
           "primitive mesh",
           "stairs",
-          "torus"
+          "torus",
+          "cube mesh",
+          "procedural box",
+          "geometry cube"
         ],
         "summary": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs.",
         "whenToUse": [
@@ -57271,7 +57446,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "28bb87445a219f3f83084414deb4cf39b35a53eb693fed38dd5e313fe083df73",
-        "content": "ba58d373e56f5a4d7d12a8ddf8f0685a29752093989305e49d0fc7b20b7416e8"
+        "content": "21ca13cb4aa2a8e1d9b1ad1c4548df0167afdc72538bb314ee2d2c78f677a67d"
       }
     },
     {
@@ -60087,7 +60262,10 @@
           "trigger actor",
           "interactable interface",
           "interaction component",
-          "create door"
+          "create door",
+          "new door",
+          "door actor",
+          "openable door"
         ],
         "summary": "Create an interactable: door, chest, switch, lever or trigger actor, an interactable interface, or an interaction component.",
         "whenToUse": [],
@@ -60306,7 +60484,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4992c4887a2ead1e11b980caa80da0cc22456e92602a9b5b9be7208785ad304d",
-        "content": "981d6f6bf19890398e4247a1054947c4f6be399c8d2ec1bea1c889287db1b487"
+        "content": "804f5692ae739abd42bc37d688e9314bbc8e3dff781c4826e45354a3036ed5b9"
       }
     },
     {
@@ -62672,7 +62850,11 @@
           "get_summary",
           "level summary",
           "current level",
-          "what is the current level"
+          "what is the current level",
+          "current map",
+          "which level is open",
+          "active level",
+          "level name"
         ],
         "summary": "Read a level summary, or the currently loaded level.",
         "whenToUse": [
@@ -62831,7 +63013,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9bde1b6b0439e4b6fda3c356cdab85943ce248d335c88e5bdeff73741c2ce51f",
-        "content": "03b5b94239f44811a0724e36dfc7c71b0a00f933ff1ab85f85a9cca36b2cfd50"
+        "content": "aa84610ba327a50b121195566b11dafa06e38cddd41f0ccaf27dbd92feeaaac1"
       }
     },
     {
@@ -63327,7 +63509,11 @@
         "domain": "level",
         "family": "lifecycle",
         "topics": [
-          "save"
+          "save",
+          "save level",
+          "save map",
+          "save current level",
+          "persist level"
         ],
         "summary": "Save the current or a named level, or save it under a new path.",
         "whenToUse": [
@@ -63443,7 +63629,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3c69e90da92ade17cf705416bd2d88af80046ddcbc6646e4152a3739c55dc7b7",
-        "content": "1a5eff1c8881e93240bce080a2e282d9c057f98af240313991333d52a4d8914c"
+        "content": "2a1517c5321b2e6494457da29da5bea2e8e291a32964665390cbcd9d524650ca"
       }
     },
     {
@@ -64609,7 +64795,16 @@
           "level instance",
           "packed level actor",
           "data layer",
-          "minimap volume"
+          "minimap volume",
+          "sublevel",
+          "sub level",
+          "streaming level",
+          "child level",
+          "instance a level",
+          "place level in level",
+          "reuse room level",
+          "packed level blueprint",
+          "bake level into instanced meshes"
         ],
         "summary": "Create level structure: a level, sublevel, level instance, packed level blueprint, data layer, or minimap volume.",
         "whenToUse": [
@@ -65038,7 +65233,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c28841c75554fdb86e0c805fb39061463e869ea91a41949aa46f9f8933d02ed3",
-        "content": "1ede4cd34cf47feffae45685645ea1e2fdd3c7ffb52f8acdd4490fb81f8bc343"
+        "content": "9012bbd742971c5d5b02f243fd16af0f762b9f569598f0567744578e08ea5423"
       }
     },
     {
@@ -67331,7 +67526,13 @@
           "enhanced input",
           "key mapping",
           "input trigger",
-          "input modifier"
+          "input modifier",
+          "new input action",
+          "key binding",
+          "input mapping",
+          "mapping context",
+          "imc",
+          "enhanced input mapping"
         ],
         "summary": "Enhanced Input: create an input action or mapping context, add or map keys, set triggers and modifiers, enable a context.",
         "whenToUse": [
@@ -67540,7 +67741,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "27f1ead38de13c5bb962f46d3fa2cfb5b4836fa1c5e2b6195331c4a74c6923a3",
-        "content": "eb822bc04d0e325f1a4027e1357a563737da990ee951ce5dab5aa9dd860d92db"
+        "content": "8b69ef91b1d76e4ad07ad0d67fe0cb1316f2e1c61fcf10866b11c0430aa37a21"
       }
     },
     {
@@ -68085,7 +68286,14 @@
           "net role",
           "relevancy",
           "net update frequency",
-          "push model"
+          "push model",
+          "replicated property",
+          "network variable",
+          "enable replication",
+          "multiplayer variable",
+          "replicate",
+          "replicated variable",
+          "variable replication"
         ],
         "summary": "Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net driver.",
         "whenToUse": [
@@ -68396,7 +68604,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "76d7f7ec91e303fd8f8d1299126361c78a718cdc85f65bcf3d53ddd4a2bc5535",
-        "content": "bb140336dbac3db51e4e5053d6afc5ca8eac08b6008bebaaba462dbc45c1630b"
+        "content": "ed954e5f4d3093b7c08c3bbe028e1300ff67fa3bba181d1d47583cae829a9f36"
       }
     },
     {
@@ -71176,7 +71384,10 @@
           "pcg subgraph",
           "connect pcg pins",
           "pcg node settings",
-          "partition grid size"
+          "partition grid size",
+          "procedural generation",
+          "pcg asset",
+          "new pcg graph"
         ],
         "summary": "Create a PCG graph or subgraph, connect pins, set node settings, or set the partition grid size.",
         "whenToUse": [
@@ -71528,7 +71739,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6164561824d2b553f79eb48a85feac3c661c6d1edcee8b3ce3bc22a600fa1288",
-        "content": "f84e63a02559b99d3d06a563eaa4f2f35fd6109044780e1913f6a129433d6a0b"
+        "content": "1e61bfc49bd5947a4855cab6152f0a0c030b94b8501d9d08602f6ed4413b4733"
       }
     },
     {
@@ -73137,7 +73348,10 @@
           "material function",
           "custom expression",
           "landscape layer",
-          "build material graph"
+          "build material graph",
+          "batch material edit",
+          "wire many material nodes",
+          "material graph batch"
         ],
         "summary": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.",
         "whenToUse": [],
@@ -73692,7 +73906,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3d2bd26bb14011b013238389d522be4376566eac76e8f90569c0a66d8d39c42a",
-        "content": "93c089bc50fe286176575e7d3fa5a301b11ef197165f962916024377bbbb8684"
+        "content": "fcf4213467be68e4aba3c7d2617118b18bb9864677507a32371c602920599845"
       }
     },
     {
@@ -74170,7 +74384,11 @@
           "decal material",
           "landscape material",
           "post process material",
-          "material function"
+          "material function",
+          "new material",
+          "make material",
+          "material asset",
+          "shader"
         ],
         "summary": "Create a material asset: a standard material, a decal, landscape or post-process material, or a material function.",
         "whenToUse": [],
@@ -74346,7 +74564,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "30698f5719dec15483c5b572099121e71fe78aa7079abc34a3cc3f7d0253c52e",
-        "content": "3bb42926a8345440022cad00e44b1b636199b26d6c1163affbf93bd6d393b3a0"
+        "content": "f7f77dbefafed25f1a25543aacc855331eeb9bcd5c389907e133008bffb159fd"
       }
     },
     {
@@ -75210,7 +75428,10 @@
           "scalar parameter value",
           "vector parameter value",
           "texture parameter",
-          "static switch"
+          "static switch",
+          "set parameter",
+          "scalar parameter",
+          "vector parameter"
         ],
         "summary": "Set a material or instance parameter value: any parameter by type, or a scalar, vector, texture or static-switch parameter.",
         "whenToUse": [],
@@ -75365,7 +75586,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c2ec4d93cd66f01f6ff2f5f08acc2a686c1d0430598c91486485c1ee8ecbfcd0",
-        "content": "795f67cd13844c9c4a96665e56cb39a1af56fa9b857c8621f616e8ebf92fe7ed"
+        "content": "3d0b90d812c4d91c64e73d6491b15b2043799e86edeb7b7c9102e81c7cdc8d3f"
       }
     },
     {
@@ -77229,7 +77450,13 @@
           "create sequence",
           "create cinematic",
           "duplicate sequence",
-          "rename sequence"
+          "rename sequence",
+          "new sequence",
+          "cinematic",
+          "sequencer",
+          "cutscene",
+          "level sequence asset",
+          "create level sequence"
         ],
         "summary": "Create a level sequence, or duplicate or rename one.",
         "whenToUse": [
@@ -77399,7 +77626,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "660472f540c2c7b42fd755267a723504b486e1e629265ca18bbdc65cd8fa732f",
-        "content": "a68fccafe69ef746587662a3830c36add6a75a787e50dc72574c11194a743e4c"
+        "content": "ccc1740b68a466a2c356641daa6f90a017c60c04892c265e1594df5dbacbbdc4"
       }
     },
     {
@@ -82555,7 +82782,11 @@
           "fullscreen",
           "quality settings",
           "show fps",
-          "profile"
+          "profile",
+          "cvar",
+          "set console variable",
+          "engine setting",
+          "rendering setting"
         ],
         "summary": "Configure display and rendering variables: resolution, fullscreen, quality, a console variable, FPS counter, profiling overlay.",
         "whenToUse": [
@@ -82786,7 +83017,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f715b4bc41fb53f524c78a2c44f5728579b53497023f0f2066199025fa584cb8",
-        "content": "29bb77300c3ba3b14ba7fd74cd1c1352a3a37130694b17cf20405ff5547f90e5"
+        "content": "a3e69b5c9135358ca65f31218e2d619228b64e6cdf36e5a100450ba70ea96b23"
       }
     },
     {
@@ -85955,7 +86186,9 @@
           "run tests",
           "ubt",
           "unreal build tool",
-          "build target"
+          "build target",
+          "test suite",
+          "functional tests"
         ],
         "summary": "Run automation tests, or run UnrealBuildTool for a target.",
         "whenToUse": [
@@ -86100,7 +86333,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "43605b0cbccb722c20f7bca8a1e6d1ef5f63effbb63ec9323ae43dfbe9725f1d",
-        "content": "a1219a179c569a1bbf8ab9c59c1fe66d3691daacfaeb7b682831ff05b5c69233"
+        "content": "fdc9ae13c56329c9a48735ede19ac528e9ab91d7787100466a9e92016f5383d3"
       }
     },
     {
