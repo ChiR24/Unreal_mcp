@@ -44,7 +44,7 @@ describe('control_actor.list near and radius: what is close to a point, nearest 
     expect(source).toMatch(/return FVector\(FMath::Max\(Outside\.X, 0\.0\), FMath::Max\(Outside\.Y, 0\.0\), FMath::Max\(Outside\.Z, 0\.0\)\)\.Size\(\);/u);
   });
 
-  it('filters and applies the radius first, sorts by distance (path breaks ties), then pages', () => {
+  it('filters and applies the radius first, sorts by distance (the smaller box, then path, breaks ties), then pages', () => {
     const source = list();
     const collect = source.indexOf('Listed.Add(');
     const sort = source.indexOf('Listed.Sort(');
@@ -55,7 +55,10 @@ describe('control_actor.list near and radius: what is close to a point, nearest 
     expect(page).toBeGreaterThan(sort);
     expect(source).toMatch(/McpActorMatchesListFilters\(Actor, TagFilter, ClassFilter, FolderFilter\)/u);
     expect(source).toMatch(/if \(bRadius && Distance > Radius\)\s*continue;/u);
-    expect(source).toMatch(/A\.Distance != B\.Distance \? A\.Distance < B\.Distance\s*:\s*A\.Actor->GetPathName\(\)\.Compare\(B\.Actor->GetPathName\(\)\) < 0/u);
+    // Equally near actors (all containing the point, say) put the smaller box first, so the thing at the
+    // spot leads and the level-wide foliage actor, which contains every point, comes last.
+    expect(source).toMatch(/if \(A\.Distance != B\.Distance\) return A\.Distance < B\.Distance;\s*if \(A\.BoundsSize != B\.BoundsSize\) return A\.BoundsSize < B\.BoundsSize;\s*return A\.Actor->GetPathName\(\)\.Compare\(B\.Actor->GetPathName\(\)\) < 0;/u);
+    expect(source).toMatch(/OutBoundsSize = Extent\.Size\(\);/u);
   });
 
   it('a row carries its distance only when near was given', () => {

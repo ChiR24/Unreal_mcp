@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4f927140f991f7ae",
+  "catalogRevision": "c01463738021da35",
   "recordCount": 389,
   "records": [
     {
@@ -31390,7 +31390,7 @@
                   },
                   "distance": {
                     "type": "number",
-                    "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first."
+                    "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first; of equally near actors the smaller box comes first, so the level-wide foliage actor, which contains every point, trails."
                   }
                 },
                 "additionalProperties": true,
@@ -31568,8 +31568,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d13549a90315b70deddc6c5dd2eea6c5e3017fd941485b7ba919542b00dcbc05",
-        "content": "d7fc8da99c5148d1fd891f838ad04ca57f2327744a6f303f698e44c426636256"
+        "schema": "f6a99e4cb2a5e67e67e432171df3caa8b9fed9f54a280211fbf842aba546903e",
+        "content": "6f59cf042fe74568ffeda1483bdca15b818323d90b26a2f48d1d4f188b9b5f99"
       }
     },
     {

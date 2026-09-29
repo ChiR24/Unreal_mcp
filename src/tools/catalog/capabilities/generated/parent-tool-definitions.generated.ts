@@ -3988,7 +3988,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   },
                   "distance": {
                     "type": "number",
-                    "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first."
+                    "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first; of equally near actors the smaller box comes first, so the level-wide foliage actor, which contains every point, trails."
                   }
                 },
                 "additionalProperties": true,

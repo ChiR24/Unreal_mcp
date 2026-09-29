@@ -8,13 +8,17 @@ namespace {
 struct FMcpListedActor {
   AActor *Actor = nullptr;
   double Distance = 0.0;
+  double BoundsSize = 0.0;
 };
 
 // How far the point is from the actor's world bounding box: 0 when the box contains it, so a big slab
-// under the point is at distance 0. An actor with no bounds is measured to its location.
-double McpDistanceToActorBounds(const AActor *Actor, const FVector &Point) {
+// under the point is at distance 0. An actor with no bounds is measured to its location. OutBoundsSize is
+// the box's half-diagonal, which orders equally near actors: of those containing the point, the smallest
+// is the thing at that spot, and the foliage actor, whose box covers the level, comes last.
+double McpDistanceToActorBounds(const AActor *Actor, const FVector &Point, double &OutBoundsSize) {
   FVector Origin, Extent;
   Actor->GetActorBounds(false, Origin, Extent);
+  OutBoundsSize = Extent.Size();
   const FVector Outside = (Point - Origin).GetAbs() - Extent;
   return FVector(FMath::Max(Outside.X, 0.0), FMath::Max(Outside.Y, 0.0), FMath::Max(Outside.Z, 0.0)).Size();
 }
@@ -132,16 +136,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
       continue;
     if (!McpActorMatchesListFilters(Actor, TagFilter, ClassFilter, FolderFilter))
       continue;
-    const double Distance = bNear ? McpDistanceToActorBounds(Actor, Near) : 0.0;
+    double BoundsSize = 0.0;
+    const double Distance = bNear ? McpDistanceToActorBounds(Actor, Near, BoundsSize) : 0.0;
     if (bRadius && Distance > Radius)
       continue;
-    Listed.Add({Actor, Distance});
+    Listed.Add({Actor, Distance, BoundsSize});
   }
   if (bNear) {
-    // Nearest first; equal distances by path, so the order never depends on the level's actor order.
+    // Nearest first; equally near, the smaller box first; then by path, so the order never depends on
+    // the level's actor order.
     Listed.Sort([](const FMcpListedActor &A, const FMcpListedActor &B) {
-      return A.Distance != B.Distance ? A.Distance < B.Distance
-                                      : A.Actor->GetPathName().Compare(B.Actor->GetPathName()) < 0;
+      if (A.Distance != B.Distance) return A.Distance < B.Distance;
+      if (A.BoundsSize != B.BoundsSize) return A.BoundsSize < B.BoundsSize;
+      return A.Actor->GetPathName().Compare(B.Actor->GetPathName()) < 0;
     });
   }
 
