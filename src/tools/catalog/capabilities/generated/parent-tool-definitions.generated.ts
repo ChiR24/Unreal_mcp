@@ -5234,11 +5234,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "viewportHeight": {
           "type": "number",
-          "description": "Source viewport height in pixels. Present only when resolution forced a downscale."
+          "description": "Height in pixels of the viewport or window the picture was taken at. Present only when the image was downscaled."
         },
         "viewportWidth": {
           "type": "number",
-          "description": "Source viewport width in pixels. Present only when resolution forced a downscale, so width/height differ from the viewport."
+          "description": "Width in pixels of the viewport (or, for full_editor_window, the window) the picture was taken at. Present only when the image was downscaled (a resolution, or the 1600x900 inline default), so width/height differ from it."
         },
         "wasMinimized": {
           "type": "boolean",

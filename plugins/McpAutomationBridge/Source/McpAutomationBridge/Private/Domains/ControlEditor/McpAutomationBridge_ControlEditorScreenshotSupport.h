@@ -53,7 +53,9 @@ TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,
                                                 FString &OutResolvedTitle,
                                                 FString &OutError);
 
+// OutSize is the PNG's size; OutSourceSize, when given, the window's before any downscale.
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
                                  const TSharedPtr<FJsonObject> &Payload,
                                  TArray<uint8> &OutPngData,
-                                 FIntVector &OutSize, FString &OutError);
+                                 FIntVector &OutSize, FString &OutError,
+                                 FIntPoint *OutSourceSize = nullptr);

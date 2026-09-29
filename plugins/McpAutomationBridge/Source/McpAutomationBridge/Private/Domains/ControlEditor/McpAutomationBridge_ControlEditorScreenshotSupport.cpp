@@ -121,7 +121,8 @@ void SendScreenshotReceiptForMcp(UMcpAutomationBridgeSubsystem *Subsystem,
 bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
                                  const TSharedPtr<FJsonObject> &Payload,
                                  TArray<uint8> &OutPngData,
-                                 FIntVector &OutSize, FString &OutError) {
+                                 FIntVector &OutSize, FString &OutError,
+                                 FIntPoint *OutSourceSize) {
   TSharedRef<SWidget> WindowWidget = Window;
   TArray<FColor> Bitmap;
 
@@ -147,6 +148,9 @@ bool CaptureSlateWindowPngForMcp(const TSharedRef<SWindow> &Window,
   }
 
   const FIntPoint CapturedSize(OutSize.X, OutSize.Y);
+  if (OutSourceSize) {
+    *OutSourceSize = CapturedSize;
+  }
   FIntPoint TargetSize = CapturedSize;
   if (!ResolveScreenshotResolutionForMcp(Payload, CapturedSize, TargetSize,
                                          OutError)) {

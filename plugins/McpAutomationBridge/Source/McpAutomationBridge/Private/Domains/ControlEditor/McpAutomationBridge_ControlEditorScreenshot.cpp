@@ -104,9 +104,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
     TArray<uint8> PngData;
     FIntVector ImageSize(0, 0, 0);
+    FIntPoint SourceSize(0, 0);
     FString CaptureError;
     if (!CaptureSlateWindowPngForMcp(EditorWindow.ToSharedRef(), Payload,
-                                     PngData, ImageSize, CaptureError)) {
+                                     PngData, ImageSize, CaptureError, &SourceSize)) {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"),
                                 CaptureError, nullptr);
       return true;
@@ -117,6 +118,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     Resp->SetStringField(TEXT("mode"), Mode);
     Resp->SetNumberField(TEXT("width"), ImageSize.X);
     Resp->SetNumberField(TEXT("height"), ImageSize.Y);
+    // As for the viewport: a downscaled window names the size it was taken at.
+    if (SourceSize.X != ImageSize.X || SourceSize.Y != ImageSize.Y) {
+      Resp->SetNumberField(TEXT("viewportWidth"), SourceSize.X);
+      Resp->SetNumberField(TEXT("viewportHeight"), SourceSize.Y);
+    }
     // Report which window was photographed and what else was open, so the next
     // call can address a different one without guessing at titles.
     Resp->SetStringField(TEXT("window"), ResolvedWindowTitle);

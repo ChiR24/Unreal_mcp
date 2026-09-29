@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "09811618de9a310d",
+  "catalogRevision": "0811db041497ea68",
   "recordCount": 389,
   "records": [
     {
@@ -35456,11 +35456,11 @@
             },
             "viewportWidth": {
               "type": "number",
-              "description": "Source viewport width in pixels. Present only when resolution forced a downscale, so width/height differ from the viewport."
+              "description": "Width in pixels of the viewport (or, for full_editor_window, the window) the picture was taken at. Present only when the image was downscaled (a resolution, or the 1600x900 inline default), so width/height differ from it."
             },
             "viewportHeight": {
               "type": "number",
-              "description": "Source viewport height in pixels. Present only when resolution forced a downscale."
+              "description": "Height in pixels of the viewport or window the picture was taken at. Present only when the image was downscaled."
             },
             "sizeBytes": {
               "type": "integer",
@@ -35556,8 +35556,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e43cc4d98851d97cbf4841f8b021f94d8264294bf1fcffc395d5af0bf1b7c36c",
-        "content": "ccf7148b241d238021c61f95d2354a8cde10de8f645658b61b9d05e359193dfb"
+        "schema": "f54a46b58bb8182e69755c35d351d29e09744148e6ce65071c05a5a35308875c",
+        "content": "edde22b9cffcec3fa5b3c6639d85605e15a08801abd61e96332bced9e7985497"
       }
     },
     {
