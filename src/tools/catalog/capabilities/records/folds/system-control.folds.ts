@@ -52,6 +52,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_widget', selector: 'widgetOp',
     summary: 'Create a runtime widget, add a child to it, or show it.',
+    topics: ['show widget on screen', 'add widget to viewport', 'display widget'],
     members: { create: 'create_widget', add_child: 'add_widget_child', show: 'show_widget' },
   },
   {

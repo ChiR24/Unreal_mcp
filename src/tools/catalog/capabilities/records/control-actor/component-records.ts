@@ -107,6 +107,7 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_material',
     domain: DOMAIN,
     family: FAMILY_MATERIAL,
+    topics: ['assign material to mesh', 'apply material to actor', 'change actor material'],
     summary: 'Apply a material asset to a mesh component on an actor, optionally per slot.',
     whenToUse: ['A material must be assigned to an actor mesh component.'],
     whenNotToUse: ['The mesh has no material slots (the assignment is a no-op).'],

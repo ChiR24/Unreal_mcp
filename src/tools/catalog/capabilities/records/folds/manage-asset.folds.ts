@@ -180,7 +180,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'set_material_parameter', selector: 'parameterKind',
     summary: 'Set a material or instance parameter value: any parameter by type, or a scalar, vector, texture or static-switch parameter.',
-    topics: ['material parameter', 'scalar parameter value', 'vector parameter value', 'texture parameter', 'static switch'],
+    topics: ['material parameter', 'scalar parameter value', 'vector parameter value', 'texture parameter', 'static switch', 'change material color', 'set material color'],
     members: { parameter: 'set_material_parameter', scalar: 'set_scalar_parameter_value', vector: 'set_vector_parameter_value', texture: 'set_texture_parameter_value', static_switch: 'set_static_switch_parameter_value' },
   },
   {

@@ -190,7 +190,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'read_log',
     domain: 'logs',
     family: 'logs',
-    topics: ['compile errors', 'build output', 'previous run', 'editor output'],
+    topics: ['compile errors', 'build output', 'previous run', 'editor output', 'check for errors', 'show errors'],
     summary: 'Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.',
     whenToUse: [
       'A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds).',

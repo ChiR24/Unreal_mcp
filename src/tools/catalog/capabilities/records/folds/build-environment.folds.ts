@@ -51,7 +51,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   { primary: 'remove_foliage', summary: 'Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).', members: ['remove_foliage_instances'] },
   // lighting
-  { primary: 'create_light', summary: 'Create a light actor of a given type.', members: ['create_dynamic_light', 'spawn_light'] },
+  { primary: 'create_light', summary: 'Create a light actor of a given type.', topics: ['add point light', 'add spot light', 'add a light', 'place a light'], members: ['create_dynamic_light', 'spawn_light'] },
   {
     primary: 'create_sky_light', selector: 'skyLightOp',
     summary: 'Create a sky light, or ensure the level has exactly one.',
@@ -138,7 +138,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_atmosphere', selector: 'setting',
     summary: 'Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.',
-    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light'],
+    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night'],
     members: {
       sky_atmosphere: 'configure_sky_atmosphere', sky_light: 'configure_sky_light', sun_position: 'configure_sun_position', directional_light: 'configure_directional_light_atmosphere',
       height_fog: 'configure_exponential_height_fog', volumetric_cloud: 'configure_volumetric_cloud', time_of_day: 'set_time_of_day',

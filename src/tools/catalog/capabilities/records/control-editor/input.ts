@@ -16,7 +16,7 @@ export const INPUT_RECORDS: readonly CapabilityRecordSource[] = [
     // add_content_widget, which edits a Widget Blueprint instead of pressing one.
     // widget_click is the type value itself: "widget click" ranked bind_widget first.
     aliases: ['control_editor.click_widget', 'control_editor.widget_click', 'control_editor.press_ui_button'],
-    topics: ['click button', 'click ui button', 'click button in running game', 'check or toggle a checkbox in running game', 'press key', 'press jump key', 'simulate key press', 'drive game ui', 'test running game', 'list live widgets', 'list widgets in running game', 'widgets on screen', 'list buttons on screen'],
+    topics: ['click button', 'click ui button', 'click button in running game', 'check or toggle a checkbox in running game', 'press key', 'press jump key', 'simulate key press', 'drive game ui', 'test running game', 'list live widgets', 'list widgets in running game', 'widgets on screen', 'list buttons on screen', 'press space', 'press spacebar'],
     summary: 'Simulate a keyboard or mouse input event (key_down, key_up, key_tap, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).',
     whenToUse: [
       'Synthetic input must be injected into the editor or PIE.',

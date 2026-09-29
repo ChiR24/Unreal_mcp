@@ -12,7 +12,7 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'set_transform', selector: 'transformMode',
     summary: 'Set an actor\'s transform: full transform, or location, rotation or scale alone, or teleport it.',
-    topics: ['move actor', 'rotate actor', 'scale actor', 'set actor location', 'set actor rotation', 'teleport actor'],
+    topics: ['move actor', 'rotate actor', 'scale actor', 'set actor location', 'set actor rotation', 'teleport actor', 'make actor bigger', 'make actor smaller', 'resize actor'],
     members: { transform: 'set_transform', location: 'set_actor_location', rotation: 'set_actor_rotation', scale: 'set_actor_scale', teleport: 'teleport_actor' },
     aliasMembers: ['set_actor_transform'],
   },

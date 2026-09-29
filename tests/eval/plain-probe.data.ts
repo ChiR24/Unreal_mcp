@@ -66,4 +66,18 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'list all levels', accepted: ['manage_level.list_levels'] },
   // get_summary answers unsaved and unsavedPackages; restart_editor validateOnly lists them too.
   { query: 'is the level saved', accepted: ['manage_level.get_summary', 'control_editor.restart_editor'] },
+  // Everyday game-building requests (2026-09-29): each missed on at least one door before its topic.
+  { query: 'make the actor bigger', accepted: ['control_actor.set_transform'] },
+  { query: 'add point light', accepted: ['build_environment.create_light'] },
+  { query: 'press space', accepted: ['control_editor.simulate_input'] },
+  { query: 'add fog', accepted: ['build_environment.configure_atmosphere'] },
+  { query: 'add sky', accepted: ['build_environment.configure_atmosphere'] },
+  { query: 'open blueprint editor', accepted: ['control_editor.open_asset'] },
+  { query: 'assign material to mesh', accepted: ['control_actor.set_material'] },
+  { query: 'change material color', accepted: ['material.set_material_parameter'] },
+  { query: 'check for errors', accepted: ['system_control.read_log'] },
+  { query: 'show widget on screen', accepted: ['system_control.create_widget'] },
+  { query: 'list sounds', accepted: ['asset.query_asset'] },
+  { query: 'widget click', accepted: ['control_editor.simulate_input'] },
+  { query: 'change this button text', accepted: ['blueprint.set_widget_layout'] },
 ];

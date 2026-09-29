@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d75cc3d3248e4739",
+  "catalogRevision": "f6ee623675c36f51",
   "recordCount": 389,
   "records": [
     {
@@ -19676,7 +19676,10 @@
           "volumetric cloud",
           "time of day",
           "sky light",
-          "directional light"
+          "directional light",
+          "add fog",
+          "add sky",
+          "make it night"
         ],
         "summary": "Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.",
         "whenToUse": [
@@ -20005,7 +20008,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "363ac1b43986a751de1a8c48ea0cd84726b8da0491d2fbcddcf61747427bd14a",
-        "content": "baea18c951953224a651fe1534e2db3cd1c4dd11d10bf6a792a18d87da579a26"
+        "content": "b98c900a5897d6bf79271a17c19923fcf7ea7deff58e38b626ea34aa85e175c5"
       }
     },
     {
@@ -24142,7 +24145,11 @@
         "domain": "environment",
         "family": "lighting",
         "topics": [
-          "create_light"
+          "create_light",
+          "add point light",
+          "add spot light",
+          "add a light",
+          "place a light"
         ],
         "summary": "Create a light actor of a given type.",
         "whenToUse": [
@@ -24325,7 +24332,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7c03d2a2a60294ce92d89a1f1c39a3af5e0fcf47f25bd6e6b5fcec879714f534",
-        "content": "f8dfaeae9a8b5068e2fc1dea94a0348faaa5d20c10fa727c0f812ee8deae47b4"
+        "content": "775d725e3aa8283a8327faf0e95510ce89dcb7c8308cc1f24ed6f7a71064246e"
       }
     },
     {
@@ -32315,7 +32322,10 @@
         "domain": "actor",
         "family": "material",
         "topics": [
-          "set_material"
+          "set_material",
+          "assign material to mesh",
+          "apply material to actor",
+          "change actor material"
         ],
         "summary": "Apply a material to an actor's mesh component(s).",
         "whenToUse": [
@@ -32442,7 +32452,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",
-        "content": "9d1a7ff0f88492dd1d0daf7aa2179d08d85fe25de42cf0fb3238fbd643d33d40"
+        "content": "54681c74b376c6ec4d9633894064303f9402355d6a85fe85537e604a39e1fbe2"
       }
     },
     {
@@ -32506,6 +32516,9 @@
           "set actor location",
           "set actor rotation",
           "teleport actor",
+          "make actor bigger",
+          "make actor smaller",
+          "resize actor",
           "set position",
           "set rotation",
           "translate"
@@ -32793,7 +32806,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4fe7c93999c330493f5229b508dad7131002b1140ce8432e5a89f2bfe66364f7",
-        "content": "a486aca13f6ebd7bbdd65acbca98103063f59684385ef01ff20ced78a60dd27e"
+        "content": "20606fe81d90df134e42cb488653538fe8ab72c41bf6b62778cecb5bea9f2079"
       }
     },
     {
@@ -34629,7 +34642,10 @@
         "domain": "editor",
         "family": "asset",
         "topics": [
-          "open_asset"
+          "open_asset",
+          "open blueprint editor",
+          "open asset editor",
+          "open in editor"
         ],
         "summary": "Open an asset in the appropriate editor by asset path.",
         "whenToUse": [
@@ -34728,7 +34744,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "34aba8ae7de2a9142900e274781de5e7a335678b7322804a69856b571585e7bc",
-        "content": "71cea4a48d089e6b6f969ce5a117c851244986c71ec2a79aae65c34919fee71e"
+        "content": "908c9b92b9377e96cc9878274e41c66ae9191680019e45d5a03e081733bf6eca"
       }
     },
     {
@@ -36392,7 +36408,9 @@
           "list live widgets",
           "list widgets in running game",
           "widgets on screen",
-          "list buttons on screen"
+          "list buttons on screen",
+          "press space",
+          "press spacebar"
         ],
         "summary": "Simulate a keyboard or mouse input event (key_down, key_up, key_tap, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
         "whenToUse": [
@@ -36565,7 +36583,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cab41a14b392ca38f743e7d3bc1b3ea1f596f7fda3b2c0c4dae944829f9860a5",
-        "content": "6d6f6d9547ccde2f0dec0e9183d0db84e24622d6a32a78025ce1e680ea47ff35"
+        "content": "d21530d2d0c10ca020e7623dd9c423c572ee810370242731ab3848c8891eef37"
       }
     },
     {
@@ -41730,7 +41748,8 @@
           "ai controller",
           "aicontroller",
           "npc controller",
-          "enemy ai"
+          "enemy ai",
+          "add enemy ai"
         ],
         "summary": "Create an AIController Blueprint asset.",
         "whenToUse": [
@@ -41829,7 +41848,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fad90d86cdbc13c4386180465febdd0bb45c804e587641eeda0232f888b1a346",
-        "content": "de165bdea674fefb63e7f53f791ab6c8032059b23d7d47f635393830756b594e"
+        "content": "0344c7fbfd1a26a06b801609f208c1353cdf59165e09da8fe62e9ae7f2a4ceb2"
       }
     },
     {
@@ -76328,6 +76347,8 @@
           "vector parameter value",
           "texture parameter",
           "static switch",
+          "change material color",
+          "set material color",
           "set parameter",
           "scalar parameter",
           "vector parameter"
@@ -76496,7 +76517,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c2ec4d93cd66f01f6ff2f5f08acc2a686c1d0430598c91486485c1ee8ecbfcd0",
-        "content": "65f590cd61c0e8c926b166ac85c109ec82c923729e39879c6ae71ebd1c8cee44"
+        "content": "14fcd07fb515f7a4efc35ccc3584ebc395e7dc710c29491bb20f9b3e37b132b7"
       }
     },
     {
@@ -84589,7 +84610,10 @@
         "domain": "widget",
         "family": "widget",
         "topics": [
-          "create_widget"
+          "create_widget",
+          "show widget on screen",
+          "add widget to viewport",
+          "display widget"
         ],
         "summary": "Create a runtime widget, add a child to it, or show it.",
         "whenToUse": [
@@ -84770,7 +84794,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "433ee38013615666a1857965fe167a99bed270543bf9bc4f63565abecd19fb06",
-        "content": "a1f3012809b3948138a57e7ee6ee9048e416a703294768ad8da3f3b934dd3ed5"
+        "content": "c4674f172e79051bc097536d7530843a86977d6ded56356287ecef58b5355ed3"
       }
     },
     {
@@ -87016,7 +87040,9 @@
           "compile errors",
           "build output",
           "previous run",
-          "editor output"
+          "editor output",
+          "check for errors",
+          "show errors"
         ],
         "summary": "Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.",
         "whenToUse": [
@@ -87168,7 +87194,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3c48a327260ec1f2462b2adb66c27682b96ab9d4f4a1a93b43b8d79f28351a71",
-        "content": "7d2aa563766a721c7f34049ccf6e6c3bddfca8c64f4e6abd86f5ff8e6f925915"
+        "content": "d40962d98eabdcff12500bf58a6c8ed64243ce8685af04125140ff978894cbfb"
       }
     },
     {
