@@ -15,6 +15,7 @@ import {
   declaredParameterNames,
   isRequiredParameter,
   parameterSchema,
+  parameterVariants,
   primaryExecutableAction
 } from './gateway-capability-view.js';
 import { closestMatches, MAX_SUGGESTIONS } from './gateway-guidance.js';
@@ -70,6 +71,7 @@ export function describeCapabilityParameter(
   // made the compact per-parameter describe useless ahead of any consented
   // write: the caller had to pay for a full-size describe to obtain one.
   const consentGrant = capabilityConsentGrant(record);
+  const variants = parameterVariants(record, param);
   return {
     success: true,
     operation: 'describe',
@@ -82,6 +84,7 @@ export function describeCapabilityParameter(
     param,
     required: isRequiredParameter(record, param),
     schema: parameterSchema(record, param) ?? {},
+    ...(variants === undefined ? {} : { variants: [...variants] }),
     perActionSchemas: true,
     ...origin,
     message: 'Single parameter schema for this capability. Pass it with the exact casing shown.'

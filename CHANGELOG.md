@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>✨ Added</b></summary>
 
+- **describe says which variant reads each parameter.** A capability that stands for a family of variants (add_content_widget covers text, image, button, slider and nine more) lists every variant's parameters, 30 in that case, with nothing telling a slider's minValue from a progress bar's isMarquee. Each parameter only some variants read now carries `variants`, on the full describe and on the single-parameter one, on both doors. 201 of the 388 capabilities are such families.
 - **`control_actor.list` filters by `tag`, `className` and `folder`.** `className` also matches subclasses (`Light` finds every light type) and takes a name or a path, a Blueprint's `_C` optional; `folder` matches that outliner folder and every folder under it, `"(none)"` the root. With `summary`, it shows what a `delete_by_tag` would remove before the delete runs.
 - **`componentNames` on `get_components`** (`control_actor`, `inspect`) and `inspect_cdo` returns only the named components and lists a name that matches none under `missingComponents`; checking one component of a 27-component Blueprint used to return all 27.
 - **`spawn_batch` names the actors it could not label.** An item without `actorName` is labelled after its mesh ("Cube" for every cube), so nothing in the reply could address it later. `unnamedActors` lists each one's unique actor name in batch order under either `report` mode, and a full report names it the same way.

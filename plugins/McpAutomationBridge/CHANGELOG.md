@@ -7,6 +7,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 ## [Unreleased]
 
 ### Added
+- **describe `variants`** — `SetVariants()` in `McpNativeGatewayDescribe.cpp` adds `variants` to each `parameters[]` row, and to the single-parameter reply, from the record's `DispatchByDeclaredBy` (routing.dispatchBy.declaredBy): the selector values whose variant reads that parameter. Parameters every variant reads carry none. The TypeScript describe does the same through `parameterVariants()`, and the session instructions mention the field on both doors.
 - **`control_actor.list` filters** — `tag`, `className` (the actor's class or any parent, by name or path, `_C` optional) and `folder` (that outliner folder or one under it, `"(none)"` for the root), matched by `McpActorMatchesListFilters` in `ControlActorSupport.h` before counting and paging.
 - **`componentNames`** on `get_components` (world actors and Blueprints) and `inspect_cdo`, applied by `McpHandlerUtils::FilterRowsByListedNames`, which reports unmatched names as `missingComponents`.
 - **`spawn_batch` `unnamedActors`** — `HandleControlActorSpawnBatch` reports an item without `actorName` by `GetName()` (its label repeats) and returns `unnamedActors` in batch order after the `report` filter.

@@ -85,6 +85,17 @@ TSharedPtr<FJsonObject> ParameterView(const TSharedPtr<FJsonObject>& Schema, con
 	return View;
 }
 
+// The variants of a folded family that read this parameter (none when all of them
+// do): the union schema lists every variant's parameters, so a caller adding a
+// slider could not tell minValue from isMarquee.
+void SetVariants(const TSharedPtr<FJsonObject>& Out, const FMcpCapabilityRecord& Record, const FString& Name)
+{
+	if (const TArray<FString>* Variants = Record.DispatchByDeclaredBy.Find(Name))
+	{
+		Out->SetArrayField(TEXT("variants"), GatewayStringArray(*Variants));
+	}
+}
+
 
 void SetObjectOrEmpty(const TSharedPtr<FJsonObject>& Out, const TCHAR* Field, const TSharedPtr<FJsonObject>& Value)
 {
@@ -186,7 +197,9 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	TArray<TSharedPtr<FJsonValue>> Parameters;
 	for (const FString& Name : ParameterNames(Record.InputSchema))
 	{
-		Parameters.Add(MakeShared<FJsonValueObject>(ParameterView(Record.InputSchema, Name)));
+		const TSharedPtr<FJsonObject> View = ParameterView(Record.InputSchema, Name);
+		SetVariants(View, Record, Name);
+		Parameters.Add(MakeShared<FJsonValueObject>(View));
 	}
 	Out->SetArrayField(TEXT("parameters"), Parameters);
 	Out->SetStringField(TEXT("parent"), Record.Parent);
@@ -278,6 +291,7 @@ TSharedPtr<FJsonObject> McpGatewayDescribeCapability(
 		Out->SetObjectField(TEXT("schema"), ParameterSchema(Record->InputSchema, Input.Param));
 		Out->SetStringField(TEXT("scope"), TEXT("capability"));
 		Out->SetBoolField(TEXT("success"), true);
+		SetVariants(Out, *Record, Input.Param);
 		return Out;
 	}
 

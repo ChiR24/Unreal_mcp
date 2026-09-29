@@ -120,6 +120,16 @@ export function parameterSchema(
   return isRecord(schema) ? schema : undefined;
 }
 
+/**
+ * The variants of a folded family that read this parameter (undefined when all
+ * of them do). The union schema lists every variant's parameters, so without
+ * this a caller adding a slider cannot tell minValue from isMarquee.
+ */
+export function parameterVariants(record: CapabilityRecord, name: string): readonly string[] | undefined {
+  const declaredBy = record.routing.dispatchBy?.declaredBy;
+  return declaredBy !== undefined && Object.hasOwn(declaredBy, name) ? declaredBy[name] : undefined;
+}
+
 export function parameterSummaries(record: CapabilityRecord): Array<Record<string, unknown>> {
   const required = requiredSet(record);
   return declaredParameterNames(record).map((name) => {
@@ -131,6 +141,8 @@ export function parameterSummaries(record: CapabilityRecord): Array<Record<strin
     };
     if (typeof schema.description === 'string') summary.description = schema.description;
     if (Array.isArray(schema.enum)) summary.enum = schema.enum;
+    const variants = parameterVariants(record, name);
+    if (variants !== undefined) summary.variants = [...variants];
     return summary;
   });
 }
