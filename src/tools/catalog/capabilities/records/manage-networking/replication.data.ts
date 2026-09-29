@@ -60,5 +60,6 @@ export const NETWORKING_REPLICATION_RECORDS: readonly CapabilityRecordSource[] =
   r('configure_net_driver', 'Write the game net driver\'s rate limits to its class defaults and DefaultEngine.ini, and to the running net driver when there is one; only the fields sent are written.', ['maxClientRate', 'maxInternetClientRate', 'netServerMaxTickRate']),
   r('set_net_role', 'Choose how clients see an Actor Blueprint\'s actors: ROLE_None turns replication off, ROLE_SimulatedProxy or ROLE_AutonomousProxy turn it on.', ['blueprintPath', 'role'], ['blueprintPath', 'role']),
   r('configure_replicated_movement', 'Configure replicated movement.', ['blueprintPath', 'replicateMovement'], ['blueprintPath']),
-  r('get_networking_info', 'Read networking state for a Blueprint or actor.', ['blueprintPath', 'actorName'], [], ['networkingInfo'], ['networkingInfo'], true),
+  withTopics(r('get_networking_info', 'Read an actor\'s or Blueprint\'s replication settings: replicates, always relevant, only relevant to owner, net update frequency, cull distance, priority and dormancy; for a live actor also its net role, remote role and authority.', ['blueprintPath', 'actorName'], [], ['networkingInfo'], ['networkingInfo'], true),
+    ['replication settings', 'is actor replicated', 'net dormancy value']),
 ];

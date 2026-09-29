@@ -28,7 +28,8 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'check_authority', selector: 'check',
-    summary: 'Check whether an actor has authority or is locally controlled.',
+    summary: 'Check an actor\'s network role by actorName: check=has_authority returns hasAuthority and the local net role; check=is_locally_controlled returns whether a pawn is locally controlled and has a local player controller.',
+    topics: ['locally controlled pawn', 'net role of actor', 'is server'],
     members: { has_authority: 'check_has_authority', is_locally_controlled: 'check_is_locally_controlled' },
   },
   {

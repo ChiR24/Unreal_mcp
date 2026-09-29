@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "dedaf4584de36c49",
+  "catalogRevision": "e5f992928f70d6fa",
   "recordCount": 389,
   "records": [
     {
@@ -67250,9 +67250,12 @@
         "domain": "networking",
         "family": "replication",
         "topics": [
-          "check_authority"
+          "check_authority",
+          "locally controlled pawn",
+          "net role of actor",
+          "is server"
         ],
-        "summary": "Check whether an actor has authority or is locally controlled.",
+        "summary": "Check an actor's network role by actorName: check=has_authority returns hasAuthority and the local net role; check=is_locally_controlled returns whether a pawn is locally controlled and has a local player controller.",
         "whenToUse": [
           "Use it to read runtime actor authority state.",
           "Use it to read local-control state for an actor."
@@ -67330,7 +67333,7 @@
       },
       "examples": [
         {
-          "title": "Check whether an actor has authority or is locally controlled.",
+          "title": "Check an actor's network role by actorName: check=has_authority returns hasAuthority and the local net role; check=is_locally_controlled returns whether a pawn is locally controlled and has a local player controller.",
           "input": {
             "action": "check_authority",
             "actorName": "BP_PlayerCharacter_C_0",
@@ -67379,7 +67382,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1b252eea3eb96a3521533d47cf0dcf210ac3bba5b86dc37d4b805c1b68ea0c64",
-        "content": "be727e54f517ab2a7f281b16c3c14af670f657a0fd1134942a864f5e1f4c0810"
+        "content": "57e7395c641999907ff3c721241f01d81762f49e003a6ac6b8c85cf84bb947b2"
       }
     },
     {
@@ -69807,11 +69810,14 @@
         "domain": "networking",
         "family": "gameFramework",
         "topics": [
-          "get_game_framework_info"
+          "get_game_framework_info",
+          "which mode is used",
+          "default pawn class",
+          "default classes"
         ],
-        "summary": "Read Game Framework class and rule state.",
+        "summary": "Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default.",
         "whenToUse": [
-          "Use it to read Game Framework class and rule state."
+          "Use it to read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default."
         ],
         "whenNotToUse": []
       },
@@ -69871,7 +69877,7 @@
       },
       "examples": [
         {
-          "title": "Read Game Framework class and rule state.",
+          "title": "Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default.",
           "input": {
             "action": "get_game_framework_info"
           },
@@ -69915,7 +69921,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b70b1634f91e29331f2eb9cf1575bf1a0c689e582848eb98d1d22ebbc9e73f68",
-        "content": "cc8af1ad76db6f59ecf7c7a97ccdf69b0c0e2a6aa2ce82ba913aacd287830237"
+        "content": "75d4ef83dd913713b2d8d0a3eb043d6064591ed99360fc6592a0d11c75ffc329"
       }
     },
     {
@@ -70087,11 +70093,14 @@
         "domain": "networking",
         "family": "replication",
         "topics": [
-          "get_networking_info"
+          "get_networking_info",
+          "replication settings",
+          "is actor replicated",
+          "net dormancy value"
         ],
-        "summary": "Read networking state for a Blueprint or actor.",
+        "summary": "Read an actor's or Blueprint's replication settings: replicates, always relevant, only relevant to owner, net update frequency, cull distance, priority and dormancy; for a live actor also its net role, remote role and authority.",
         "whenToUse": [
-          "Use it to read networking state for a Blueprint or actor."
+          "Use it to read an actor's or Blueprint's replication settings: replicates, always relevant, only relevant to owner, net update frequency, cull distance, priority and dormancy; for a live actor also its net role, remote role and authority."
         ],
         "whenNotToUse": []
       },
@@ -70151,7 +70160,7 @@
       },
       "examples": [
         {
-          "title": "Read networking state for a Blueprint or actor.",
+          "title": "Read an actor's or Blueprint's replication settings: replicates, always relevant, only relevant to owner, net update frequency, cull distance, priority and dormancy; for a live actor also its net role, remote role and authority.",
           "input": {
             "action": "get_networking_info"
           },
@@ -70194,7 +70203,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fd1738ad46a52188eeb3dbfd9792b40f56580ade75c8e0a50607985685e4e706",
-        "content": "6c275aaa8978d0500422276af3a20d0e034ee93f93a21eb8f089e7fb170fd3b1"
+        "content": "ebf9322be2e601233b8d9fe0ae64706637fdc0ea697dbb3eadd61586fec542c7"
       }
     },
     {
@@ -70210,11 +70219,13 @@
         "domain": "networking",
         "family": "session",
         "topics": [
-          "get_sessions_info"
+          "get_sessions_info",
+          "split screen settings",
+          "pie net mode"
         ],
-        "summary": "Read identifiable online-session state.",
+        "summary": "Read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, ListenServer, Client) and URL.",
         "whenToUse": [
-          "Use it to read identifiable online-session state."
+          "Use it to read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, ListenServer, Client) and URL."
         ],
         "whenNotToUse": []
       },
@@ -70266,7 +70277,7 @@
       },
       "examples": [
         {
-          "title": "Read identifiable online-session state.",
+          "title": "Read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, ListenServer, Client) and URL.",
           "input": {
             "action": "get_sessions_info"
           },
@@ -70322,7 +70333,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e1e3bae7d9a1873c762997e86b979798ffbbebdf5c8a3d7d398841b92463ed0f",
-        "content": "400337614130d5dfa32b2654e671e5b05ed93c2fbcf1d232753a43070bf1b023"
+        "content": "0772d05611d7285f77e176326f0d9d4c2539374751185f3904782545e60487e8"
       }
     },
     {
