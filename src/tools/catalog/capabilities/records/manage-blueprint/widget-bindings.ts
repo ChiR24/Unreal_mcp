@@ -39,7 +39,9 @@ function binding<K extends string>(action: string, id: string, summary: string, 
     family: FAMILY,
     domain: DOMAIN,
     summary,
-    whenToUse: [`A ${action.replace(/_/g, ' ')} must be created on a widget.`],
+    whenToUse: [action.startsWith('bind_on_')
+      ? `A widget's ${action.slice(5).split('_').map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join('')} event must run a Blueprint function.`
+      : `A widget's ${action.slice(5).replace(/_/g, ' ')} must follow a Blueprint variable or function at runtime.`],
     whenNotToUse: ['The widget should be set directly rather than bound.'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, bindingSource: P.bindingSource, ...extraProps },
     required: ['widgetPath', 'slotName', 'bindingSource', ...extraRequired],

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "5965d6a6d4d542a2",
+  "catalogRevision": "3a19086201910079",
   "recordCount": 389,
   "records": [
     {
@@ -10663,12 +10663,12 @@
         ],
         "summary": "Add a content widget to a Widget Blueprint: text, rich text, image, button, check box, combo box, slider, spin box, progress bar, text input, list/tree view, or any widget class.",
         "whenToUse": [
-          "A add text block widget must be added to a Widget Blueprint.",
-          "A add rich text block widget must be added to a Widget Blueprint.",
-          "A add image widget must be added to a Widget Blueprint.",
-          "A add button widget must be added to a Widget Blueprint.",
-          "A add check box widget must be added to a Widget Blueprint.",
-          "A add combo box widget must be added to a Widget Blueprint."
+          "A new text block widget must be added to a Widget Blueprint.",
+          "A new rich text block widget must be added to a Widget Blueprint.",
+          "A new image widget must be added to a Widget Blueprint.",
+          "A new button widget must be added to a Widget Blueprint.",
+          "A new check box widget must be added to a Widget Blueprint.",
+          "A new combo box widget must be added to a Widget Blueprint."
         ],
         "whenNotToUse": [
           "A panel container is needed instead (see widget-panels family)."
@@ -11041,7 +11041,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0f827e182691a366f3a28bebb505f1f9527a00165d97222b1d45438576fcd0a4",
-        "content": "360698dc5fd75c822df392f23482d37bbf0238e7408a3baa5912548475cfd901"
+        "content": "dbbb6c7181e850d5b4fb6cabb44445119ac14134dd28f74659aafd476162ebf6"
       }
     },
     {
@@ -11870,12 +11870,12 @@
         ],
         "summary": "Add a panel widget to a Widget Blueprint: canvas, overlay, boxes, grids, border, scroll/size/scale box, spacer, safe zone, switcher, wrap box.",
         "whenToUse": [
-          "A add canvas panel panel must be added to a Widget Blueprint.",
-          "A add overlay panel must be added to a Widget Blueprint.",
-          "A add vertical box panel must be added to a Widget Blueprint.",
-          "A add horizontal box panel must be added to a Widget Blueprint.",
-          "A add grid panel panel must be added to a Widget Blueprint.",
-          "A add uniform grid panel must be added to a Widget Blueprint."
+          "A new canvas panel must be added to a Widget Blueprint.",
+          "A new overlay must be added to a Widget Blueprint.",
+          "A new vertical box must be added to a Widget Blueprint.",
+          "A new horizontal box must be added to a Widget Blueprint.",
+          "A new grid panel must be added to a Widget Blueprint.",
+          "A new uniform grid must be added to a Widget Blueprint."
         ],
         "whenNotToUse": [
           "A content widget (button, text, etc.) is needed instead.",
@@ -12318,7 +12318,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d4b2bd1ded58362f36e640b699a38b14fb0913cb15dcb3f530b5b4575e5a2780",
-        "content": "9e82240b471718741cfdce22c848e1c701e7ce85b79d750000ccb4f72f49fc37"
+        "content": "afd0a57dd561ef2c6d3256bbafebf28e3e7e23aa19c56cce075b905bdb9ff506"
       }
     },
     {
@@ -12428,12 +12428,12 @@
         ],
         "summary": "Bind a widget property to a variable or pure function (text, color, enabled, visibility, progress bar percent or slider value; the converting getter is generated), wire an event to a function (on-clicked, hovered, value-changed; the function is created when missing), or bind localized text or a localization key.",
         "whenToUse": [
-          "A bind text must be created on a widget.",
-          "A bind color must be created on a widget.",
-          "A bind enabled must be created on a widget.",
-          "A bind percent must be created on a widget.",
-          "A bind visibility must be created on a widget.",
-          "A bind on clicked must be created on a widget."
+          "A widget's text must follow a Blueprint variable or function at runtime.",
+          "A widget's color must follow a Blueprint variable or function at runtime.",
+          "A widget's enabled must follow a Blueprint variable or function at runtime.",
+          "A widget's percent must follow a Blueprint variable or function at runtime.",
+          "A widget's visibility must follow a Blueprint variable or function at runtime.",
+          "A widget's OnClicked event must run a Blueprint function."
         ],
         "whenNotToUse": [
           "The widget should be set directly rather than bound.",
@@ -12679,7 +12679,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7022fed02084967d7cc4d952b90a6a2456e2a6a77413088c235916fa65193615",
-        "content": "ee7b1bd951d9b09d460243be61e111ae503f97f2e0c15997955b39b0f4003bde"
+        "content": "5c6058f6b6f1788a7622dcff3f91ba58f145696616c062edea21224431382123"
       }
     },
     {

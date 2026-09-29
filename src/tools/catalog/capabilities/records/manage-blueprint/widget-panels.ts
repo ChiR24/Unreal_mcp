@@ -22,7 +22,7 @@ function panel(action: string, id: string, summary: string, extraProps: Record<s
     family: FAMILY,
     domain: DOMAIN,
     summary,
-    whenToUse: [`A ${action.replace(/_/g, ' ')} panel must be added to a Widget Blueprint.`],
+    whenToUse: [`A new ${action.replace(/^add_/, '').replace(/_/g, ' ')} must be added to a Widget Blueprint.`],
     whenNotToUse: ['A content widget (button, text, etc.) is needed instead.'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, positionX: P.positionX, positionY: P.positionY, sizeX: P.sizeX, sizeY: P.sizeY, ...extraProps },
     required: ['widgetPath'],

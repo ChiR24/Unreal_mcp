@@ -21,7 +21,7 @@ function content(action: string, id: string, summary: string, extraProps: Record
     family: FAMILY,
     domain: DOMAIN,
     summary,
-    whenToUse: [`A ${action.replace(/_/g, ' ')} widget must be added to a Widget Blueprint.`],
+    whenToUse: [`A new ${action.replace(/^add_/, '').replace(/_/g, ' ')} widget must be added to a Widget Blueprint.`],
     whenNotToUse: ['A panel container is needed instead (see widget-panels family).'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, parentSlot: P.parentSlot, positionX: P.positionX, positionY: P.positionY, sizeX: P.sizeX, sizeY: P.sizeY, ...extraProps },
     required: ['widgetPath', ...extraRequired],
