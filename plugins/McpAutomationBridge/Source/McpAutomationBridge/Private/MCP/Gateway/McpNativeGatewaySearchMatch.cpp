@@ -46,23 +46,28 @@ bool IsAsciiAlnum(TCHAR Ch)
 	return (Ch >= TEXT('a') && Ch <= TEXT('z')) || (Ch >= TEXT('0') && Ch <= TEXT('9'));
 }
 
-bool OpensWithReadWord(const FString& LowerQuery)
+// Words that open a request to DELETE something (RETRIEVAL_DELETE_INTENT_WORDS):
+// "delete the spawned actor" used to rank spawn first, since "spawned" folds to spawn.
+const TCHAR* const DeleteIntentWords[] = { TEXT("delete"), TEXT("remove"), TEXT("destroy"), TEXT("erase") };
+
+/** The effect the query's first word, as typed, asks for: "read", "destructive" or empty. */
+FString IntendedEffect(const FString& LowerQuery)
 {
 	FString First;
 	for (const TCHAR Ch : LowerQuery)
 	{
-		if (!IsAsciiAlnum(Ch))
-		{
-			if (!First.IsEmpty()) break;
-			continue;
-		}
-		First.AppendChar(Ch);
+		if (IsAsciiAlnum(Ch)) First.AppendChar(Ch);
+		else if (!First.IsEmpty()) break;
 	}
 	for (const TCHAR* Word : ReadIntentWords)
 	{
-		if (First.Equals(Word, ESearchCase::CaseSensitive)) return true;
+		if (First.Equals(Word, ESearchCase::CaseSensitive)) return TEXT("read");
 	}
-	return false;
+	for (const TCHAR* Word : DeleteIntentWords)
+	{
+		if (First.Equals(Word, ESearchCase::CaseSensitive)) return TEXT("destructive");
+	}
+	return FString();
 }
 
 bool IsFunctionWord(const FString& Word)
@@ -287,9 +292,10 @@ bool McpSearchScoreRecord(
 		if (Fired[Rule]) Out.Reasons.Add(MatchRules[Rule].Reason);
 	}
 	// Reorders matches only: a record no rule fired for is still not a result.
-	if (Out.Reasons.Num() > 0 && Record.Effect.Equals(TEXT("read"), ESearchCase::CaseSensitive) && OpensWithReadWord(Query))
+	const FString Intended = Out.Reasons.Num() > 0 ? IntendedEffect(Query) : FString();
+	if (!Intended.IsEmpty() && Record.Effect.Equals(Intended, ESearchCase::CaseSensitive))
 	{
-		Score += McpSearchReadIntentBonus;
+		Score += Intended == TEXT("read") ? McpSearchReadIntentBonus : McpSearchDeleteIntentBonus;
 	}
 	Out.Score = Score;
 	return Out.Reasons.Num() > 0;

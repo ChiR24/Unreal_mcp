@@ -61,6 +61,8 @@ constexpr int32 McpSearchActionCoveredBonus = 50;
  * to answer "get actor location". Only reorders records that already matched.
  */
 constexpr int32 McpSearchReadIntentBonus = 40;
+/** The same for a query that opens with a delete word and a record whose effect is destructive. */
+constexpr int32 McpSearchDeleteIntentBonus = 40;
 constexpr int32 McpDescribeDefaultLimit = 20;
 constexpr int32 McpDescribeMaxLimit = 50;
 // Search result byte budget (24 KB); a page that would pass it is cut short and

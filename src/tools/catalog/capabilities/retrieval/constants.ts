@@ -63,6 +63,16 @@ export const RETRIEVAL_READ_INTENT_WORDS: ReadonlySet<string> = Object.freeze(ne
   'what', 'which', 'where', 'who', 'how', 'is', 'does',
 ]));
 
+/**
+ * Words that open a request to DELETE something: "delete the spawned actor from
+ * the level". Destructive capabilities that match rank ahead, so the native door
+ * no longer answered that with spawn ("spawned" folds to spawn). Same list as
+ * DeleteIntentWords in McpNativeGatewaySearchMatch.cpp.
+ */
+export const RETRIEVAL_DELETE_INTENT_WORDS: ReadonlySet<string> = Object.freeze(new Set([
+  'delete', 'remove', 'destroy', 'erase',
+]));
+
 export const SCORE_TIE_EPSILON = 1e-9 as const;
 export const MAX_MATCH_REASONS = 3 as const;
 export const MAX_REASON_TOKENS = 3 as const;
@@ -80,6 +90,7 @@ export const RETRIEVAL_SCORE_CONSTANTS = Object.freeze({
   headVerbAlignmentBonus: 6,
   headVerbMismatchPenalty: 10,
   readIntentBonus: 14,
+  deleteIntentBonus: 14,
   minimumRelevanceScore: 0.01,
   confidenceSaturation: 40,
   confidenceSaturationWeight: 0.85,

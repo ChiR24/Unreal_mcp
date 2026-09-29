@@ -14,6 +14,7 @@ import {
   RETRIEVAL_FIELD_WEIGHTS,
   RETRIEVAL_FUNCTION_WORDS,
   RETRIEVAL_NAME_FIELDS,
+  RETRIEVAL_DELETE_INTENT_WORDS,
   RETRIEVAL_READ_INTENT_WORDS,
   RETRIEVAL_SCORE_CONSTANTS,
   SCORE_TIE_EPSILON,
@@ -89,6 +90,8 @@ export type ScoreContext = {
   readonly querySet: ReadonlySet<string>;
   /** The query opens with a read word ("get actor location"): read-effect capabilities rank ahead. */
   readonly readIntent: boolean;
+  /** The query opens with a delete word ("delete the spawned actor"): destructive capabilities rank ahead. */
+  readonly deleteIntent: boolean;
 };
 
 /** The action segment of a declared alias: `control_actor.move_actor` -> `move_actor`. */
@@ -409,8 +412,10 @@ export function scoreDocument(
     + adjacencyScore(document.sequences, context.contentTokens);
   if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore) return null;
   // Only ever reorders records the query already matched; it never makes one a result.
+  const effect = document.record.behavior.effect;
   const score = matchScore
-    + (context.readIntent && document.record.behavior.effect === 'read' ? RETRIEVAL_SCORE_CONSTANTS.readIntentBonus : 0);
+    + (context.readIntent && effect === 'read' ? RETRIEVAL_SCORE_CONSTANTS.readIntentBonus : 0)
+    + (context.deleteIntent && effect === 'destructive' ? RETRIEVAL_SCORE_CONSTANTS.deleteIntentBonus : 0);
   contributions.sort((left, right) => {
     if (Math.abs(right.score - left.score) > SCORE_TIE_EPSILON) return right.score - left.score;
     return compareCanonicalCapabilityIds(left.field, right.field);
@@ -442,6 +447,8 @@ export function rankCapabilityRecords(
 ): readonly RankedCapability[] {
   const queryTokens = uniqueCapabilityTokens(query);
   if (queryTokens.length === 0) return [];
+  // The first word as typed, before inflection folding, says what the caller wants done.
+  const firstWord = query.toLowerCase().match(/[a-z0-9]+/u)?.[0] ?? '';
   // A caller may name an alias; ranking answers in primary space, so the
   // allow-list is canonicalised before it is applied.
   const allowedIds = new Set(
@@ -452,7 +459,8 @@ export function rankCapabilityRecords(
     queryTokens,
     contentTokens: queryTokens.filter((token) => !RETRIEVAL_FUNCTION_WORDS.has(token)),
     querySet: new Set(queryTokens),
-    readIntent: RETRIEVAL_READ_INTENT_WORDS.has(query.toLowerCase().match(/[a-z0-9]+/u)?.[0] ?? ''),
+    readIntent: RETRIEVAL_READ_INTENT_WORDS.has(firstWord),
+    deleteIntent: RETRIEVAL_DELETE_INTENT_WORDS.has(firstWord),
   } satisfies ScoreContext;
   const ranked = index.documents
     .filter((document) => allowedIds.has(String(document.record.id)))
