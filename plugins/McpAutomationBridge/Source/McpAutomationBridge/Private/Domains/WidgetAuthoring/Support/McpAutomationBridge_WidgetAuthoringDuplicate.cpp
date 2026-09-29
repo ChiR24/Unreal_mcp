@@ -123,6 +123,9 @@ bool HandleWidgetAuthoringDuplicate(
     Parent->ShiftChild(FMath::Clamp(Wanted, 0, Parent->GetChildrenCount() - 1), Copy);
     RegisterAllWidgetGuids(WidgetBP);
     MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+    // The copies are variables: without a compile the generated class has no property for them, and an
+    // edit_graph step naming one failed as "not marked as a variable".
+    RefreshWidgetBlueprintClass(WidgetBP);
 
     ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);

@@ -86,6 +86,36 @@ describe('set_style and set_clipping name the widget they saved into', () => {
   });
 });
 
+describe('a tree edit that adds or renames a variable widget leaves the generated class current', () => {
+  it('RefreshWidgetBlueprintClass compiles, but never while Play-In-Editor runs', () => {
+    expect(read('Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp')).toMatch(
+      /bool RefreshWidgetBlueprintClass\(UWidgetBlueprint\* WidgetBP\)\s*\{\s*return WidgetBP && !\(GEditor && GEditor->PlayWorld\) && McpSafeCompileBlueprint\(WidgetBP\);/u
+    );
+  });
+
+  it.each([
+    ['add_* widgets', ['Support', 'McpAutomationBridge_WidgetAuthoringAddWidget.cpp'], 'ValidateWidgetCreation('],
+    ['add_widget_component', ['Components', 'McpAutomationBridge_WidgetAuthoringGenericComponent.cpp'], 'McpSafeAssetSave(WidgetBP)'],
+    ['duplicate_widget', ['Support', 'McpAutomationBridge_WidgetAuthoringDuplicate.cpp'], 'MarkWidgetBlueprintModifiedAndSave(WidgetBP)'],
+    ['add_game_widget', ['Templates', 'McpAutomationBridge_WidgetAuthoringHudElements.cpp'], 'ValidateWidgetCreation(']
+  ] as const)('%s refreshes the class after the edit it saved', (_name, file, after) => {
+    const source = read(...file);
+    const refresh = source.indexOf('RefreshWidgetBlueprintClass(WidgetBP);');
+
+    expect(refresh, 'the handler refreshes the class').toBeGreaterThan(-1);
+    expect(refresh).toBeGreaterThan(source.indexOf(after));
+  });
+
+  it('rename_widget refreshes it inside its own block, not remove_widget\'s', () => {
+    const source = read('Support', 'McpAutomationBridge_WidgetAuthoringManipulation.cpp');
+    const rename = source.slice(source.indexOf('"rename_widget"'), source.indexOf('"reparent_widget"'));
+    const remove = source.slice(source.indexOf('"remove_widget"'), source.indexOf('"rename_widget"'));
+
+    expect(rename).toContain('WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);');
+    expect(remove).not.toContain('RefreshWidgetBlueprintClass');
+  });
+});
+
 describe('SafeAddWidgetToTree: only an add that re-uses a slotName warns that the widget was already seated', () => {
   it('the warning is gated on the caller not moving the widget on purpose', () => {
     const tree = read('Support', 'McpAutomationBridge_WidgetAuthoringTree.cpp');

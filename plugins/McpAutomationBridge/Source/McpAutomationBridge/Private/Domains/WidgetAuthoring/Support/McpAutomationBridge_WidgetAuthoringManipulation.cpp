@@ -132,6 +132,8 @@ bool HandleWidgetAuthoringManipulation(
             FBlueprintEditorUtils::ReplaceVariableReferences(WidgetBP, OldFName, NewFName);
         }
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        // The renamed variable widget has no property under its new name until a compile.
+        WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);

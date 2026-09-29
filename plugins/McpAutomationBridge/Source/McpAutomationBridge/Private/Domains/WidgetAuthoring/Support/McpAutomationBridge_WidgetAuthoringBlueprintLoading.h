@@ -24,6 +24,12 @@ FString WidgetBlueprintPackagePath(const UWidgetBlueprint* WidgetBP);
 // authoring edits survive an editor restart (dogfood c27: widgets added via MCP vanished).
 // Returns whether the save landed.
 bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP);
+// A widget added, renamed or copied since the last compile has no property on the Widget Blueprint's generated
+// class, so a graph step naming it (a VariableGet, an event bind) failed as if it were not a variable. Compiles
+// to make the class current, except while Play-In-Editor runs: a compile then reinstances the live widget, which
+// vanishes from the viewport. The outcome is not a failure of the edit that came before (a Blueprint with an
+// unrelated compile error must not fail a widget add); the return says whether it compiled clean.
+bool RefreshWidgetBlueprintClass(UWidgetBlueprint* WidgetBP);
 
 // Case-insensitive lookups shared by the animation and layout handlers; nullptr when absent.
 UWidgetAnimation* FindWidgetAnimation(UWidgetBlueprint* WidgetBP, const FString& AnimationName);

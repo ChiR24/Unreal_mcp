@@ -66,6 +66,7 @@ bool HandleWidgetAuthoringHudElements(
         Subsystem.SendAutomationError(RequestingSocket, RequestId, ValidationError, TEXT("ENGINE_ERROR"));
         return true;
     }
+    RefreshWidgetBlueprintClass(WidgetBP); // the HUD piece's widgets are variables: give the generated class their properties
     TArray<TSharedPtr<FJsonValue>> Names;
     for (const UWidget* Widget : Created)
     {

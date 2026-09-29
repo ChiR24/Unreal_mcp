@@ -97,6 +97,9 @@ bool AddConfiguredWidget(
         Subsystem.SendAutomationError(RequestingSocket, RequestId, ValidationError, TEXT("ENGINE_ERROR"));
         return true;
     }
+    // Every widget added here is a variable, so the generated class gets its property now: an edit_graph
+    // step naming it right after this call failed as "not marked as a variable" until a compile.
+    RefreshWidgetBlueprintClass(WidgetBP);
 
     const FString Message = FString::Printf(TEXT("Added %s"), Label);
     ResultJson->SetBoolField(TEXT("success"), true);

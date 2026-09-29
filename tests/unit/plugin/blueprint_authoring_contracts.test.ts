@@ -121,6 +121,27 @@ describe('build_graph: an overlapping explicit position moves the node instead o
   });
 });
 
+describe('a VariableGet of a widget: compile once when the class is stale, and never claim a set flag is false', () => {
+  const source = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp');
+
+  it('a flagged widget with no property compiles the Blueprint once and looks again, but not during play', () => {
+    expect(source()).toMatch(
+      /if \(!FoundProperty && !bFoundAsBlueprintVariable && TreeWidget && TreeWidget->bIsVariable &&\s*!\(GEditor && GEditor->PlayWorld\)\)\s*\{\s*McpSafeCompileBlueprint\(Context\.Blueprint\);\s*bCompiledHere = true;/u
+    );
+    expect(source()).toMatch(/GeneratedClass->FindPropertyByName\(VariableFName\)/u);
+  });
+
+  it('"not marked as a variable" is said only when the flag really is false', () => {
+    const text = source();
+    const flagged = text.slice(text.indexOf('if (TreeWidget && TreeWidget->bIsVariable)'), text.indexOf('else if (TreeWidget)'));
+    const unflagged = text.slice(text.indexOf('else if (TreeWidget)'), text.indexOf('Variable \'%s\' not found'));
+
+    expect(flagged).toContain('is marked as a variable');
+    expect(flagged).not.toContain('not marked as a variable');
+    expect(unflagged).toContain('is not marked as a variable');
+  });
+});
+
 describe('an edit_graph reply names the Blueprint it ran on', () => {
   const shared = (): string => read('Domains', 'BlueprintGraph', 'Context', 'McpAutomationBridge_BlueprintGraphHandlersContextShared.cpp');
   const batch = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');

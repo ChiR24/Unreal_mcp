@@ -131,6 +131,7 @@ bool HandleWidgetAuthoringGenericComponent(
 
         FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(WidgetBP);
         McpSafeAssetSave(WidgetBP);
+        RefreshWidgetBlueprintClass(WidgetBP); // the new widget is a variable: give the generated class its property
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);

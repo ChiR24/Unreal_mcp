@@ -5,6 +5,7 @@
 
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Editor.h"
 #include "Misc/EngineVersionComparison.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
@@ -116,6 +117,11 @@ UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath)
 FString WidgetBlueprintPackagePath(const UWidgetBlueprint* WidgetBP)
 {
     return WidgetBP && WidgetBP->GetOutermost() ? WidgetBP->GetOutermost()->GetName() : FString();
+}
+
+bool RefreshWidgetBlueprintClass(UWidgetBlueprint* WidgetBP)
+{
+    return WidgetBP && !(GEditor && GEditor->PlayWorld) && McpSafeCompileBlueprint(WidgetBP);
 }
 
 bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP)

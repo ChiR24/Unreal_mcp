@@ -85,7 +85,12 @@ const testCases = [
   // duplicate_widget copies a panel with its children, named and placed on request.
   { scenario: 'ACTION: duplicate_widget copies a subtree beside the original', toolName: 'manage_blueprint', arguments: widgetArgs('duplicate_widget', { slotName: 'MenuColumn', newName: 'MenuColumnCopy' }), expected: 'success', assertions: [{ path: 'structuredContent.result.slotName', equals: 'MenuColumnCopy', label: 'the copy takes newName' }] },
   { scenario: 'ACTION: duplicate_widget into another panel at an index', toolName: 'manage_blueprint', arguments: widgetArgs('duplicate_widget', { slotName: 'OrderMe', newParent: 'MenuColumnCopy', index: 0 }), expected: 'success', assertions: [{ path: 'structuredContent.result.index', equals: 0, label: 'placed first' }] },
+  // A widget the tree edit just made is a variable, and the generated class has its property at once (the handlers compile),
+  // so a graph step can name it without a manual compile in between.
+  { scenario: 'GRAPH: a VariableGet names the widget duplicate_widget just copied', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'MenuColumnCopy' }, expected: 'success' },
   { scenario: 'ACTION: rename_widget', toolName: 'manage_blueprint', arguments: widgetArgs('rename_widget', { slotName: 'RenameMe', newName: 'RenamedText' }), expected: 'success' },
+  { scenario: 'GRAPH: a VariableGet names the widget rename_widget just renamed', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'RenamedText' }, expected: 'success' },
+  { scenario: 'GRAPH: a VariableGet names the widget add_text_block just added', toolName: 'manage_blueprint', arguments: { action: 'create_node', blueprintPath: WIDGET_PATH, graphName: 'EventGraph', nodeType: 'VariableGet', memberName: 'OrderMe' }, expected: 'success' },
   { scenario: 'ACTION: remove_widget', toolName: 'manage_blueprint', arguments: widgetArgs('remove_widget', { slotName: 'RemoveMe' }), expected: 'success' },
   { scenario: 'ACTION: delete_animation', toolName: 'manage_blueprint', arguments: widgetArgs('delete_animation', { animationName: 'Anim_Doomed' }), expected: 'success|not found' },
 
