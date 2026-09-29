@@ -54,7 +54,8 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_niagara_info', selector: 'info',
-    summary: 'Read a Niagara asset\'s information, or validate a system.',
+    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.',
+    topics: ['emitter list', 'stack modules', 'user parameters'],
     members: { info: 'get_niagara_info', validate: 'validate_niagara_system' },
   },
 ];

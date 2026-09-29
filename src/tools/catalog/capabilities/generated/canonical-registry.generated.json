@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c3203ad9f6ebb8fa",
+  "catalogRevision": "cc7bf3f27b56017e",
   "recordCount": 389,
   "records": [
     {
@@ -53967,9 +53967,12 @@
         "domain": "manage effect",
         "family": "effect",
         "topics": [
-          "get_niagara_info"
+          "get_niagara_info",
+          "emitter list",
+          "stack modules",
+          "user parameters"
         ],
-        "summary": "Read a Niagara asset's information, or validate a system.",
+        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
         "whenToUse": [
           "Inspect a Niagara system.",
           "Catch authoring errors."
@@ -54056,7 +54059,7 @@
       },
       "examples": [
         {
-          "title": "Read a Niagara asset's information, or validate a system.",
+          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
           "input": {
             "action": "get_niagara_info",
             "assetPath": "/Game/NS_Fire",
@@ -54114,7 +54117,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fee55de6076abf44bef894f140bff1c0db710ab50f1a41cbfb67e8866dbf8e61",
-        "content": "ea70b2c95d2ee49dd88b883abfd4a48db8d019aa9117270df606e195305dd8c2"
+        "content": "d860c67b48d3b4b43382ef53d888a0336aa754ac94253dad4bbc77c59a17ca87"
       }
     },
     {
@@ -54130,11 +54133,14 @@
         "domain": "manage effect",
         "family": "effect",
         "topics": [
-          "list_debug_shapes"
+          "list_debug_shapes",
+          "drawable types",
+          "lines drawn",
+          "draw count"
         ],
-        "summary": "List active editor debug shapes.",
+        "summary": "List the debug shape types that can be drawn (sphere, box, line, arrow, capsule and more) and count the debug lines, points and meshes currently drawn in the editor world.",
         "whenToUse": [
-          "Enumerate debug shapes."
+          "The drawable debug shape types, or how many debug primitives are on screen, must be read."
         ],
         "whenNotToUse": [
           "Mutate shapes."
@@ -54181,7 +54187,7 @@
       },
       "examples": [
         {
-          "title": "List active editor debug shapes.",
+          "title": "List the debug shape types that can be drawn (sphere, box, line, arrow, capsule and more) and count the debug lines, points and meshes currently drawn in the editor world.",
           "input": {
             "action": "list_debug_shapes"
           },
@@ -54222,7 +54228,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "96416c45e736959b8c6131e04817febd9e290044c71bc799e879049388c6b6b9",
-        "content": "5dabe539071acc7291f0de4ca67a013b2c07e00bea53502f715384f0acf221c6"
+        "content": "6788c9b1dd9993ab386c5ac3135c1acef18a50643aec52e94890513ce8e5f6da"
       }
     },
     {
