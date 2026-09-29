@@ -55,8 +55,10 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
       family: spec.family,
       topics: [spec.action, ...(spec.topics ?? [])],
       summary: spec.summary,
-      whenToUse: [`Use when ${spec.summary.toLowerCase()}`],
-      whenNotToUse: ['Do not use when the required Unreal capability or target is unavailable.'],
+      // Every utility summary opens with an imperative verb, so this reads "Use it to create a sound cue...".
+      // Only the first letter is lowered: MetaSound, Enhanced Input and PIE keep their capitals.
+      whenToUse: [`Use it to ${spec.summary.charAt(0).toLowerCase()}${spec.summary.slice(1)}`],
+      whenNotToUse: [],
     },
     schemas: {
       input: inputSchema(inputFields, required, spec.requiredOneOf),

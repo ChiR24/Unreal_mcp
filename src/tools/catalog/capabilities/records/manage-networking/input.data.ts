@@ -25,7 +25,8 @@ export const NETWORKING_INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   i('set_input_trigger', 'Add a trigger to an Enhanced Input Action; a trigger of that class already on the action is kept, not stacked.', ['actionPath', 'triggerType'], ['actionPath', 'triggerType']),
   i('set_input_modifier', 'Add a modifier to an Enhanced Input Action, or to one mapping when contextPath and key are given; a modifier of that class already there is kept, not stacked.', ['contextPath', 'actionPath', 'key', 'modifierType'], ['actionPath', 'modifierType']),
   i('enable_input_mapping', 'Enable an Enhanced Input Mapping Context on the PIE local player at a priority; outside PIE it fails with PIE_NOT_RUNNING.', ['contextPath', 'priority'], ['contextPath']),
-  i('get_input_info', 'Read input asset and mapping state.', ['assetPath'], ['assetPath'],
+  // The mapping list comes back under details.mappings; searches for "key bindings" used to land on configure_input.
+  withTopics(i('get_input_info', 'Read an input asset: every key mapping of an Input Mapping Context (details.mappings: key, action, triggers, modifiers) or an Input Action\'s value type and consume flag.', ['assetPath'], ['assetPath'],
     ['assetPath', 'assetClass', 'assetName', 'existsAfter', 'type', 'valueType', 'consumeInput', 'mappingCount'],
-    ['assetPath', 'assetClass', 'assetName', 'existsAfter'], true, 'read'),
+    ['assetPath', 'assetClass', 'assetName', 'existsAfter'], true, 'read'), ['key bindings', 'input mappings', 'which keys', 'game controls', 'mapping context keys']),
 ];

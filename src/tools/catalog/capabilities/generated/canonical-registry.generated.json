@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "957e1c3f962335e3",
+  "catalogRevision": "4f927140f991f7ae",
   "recordCount": 389,
   "records": [
     {
@@ -45252,16 +45252,14 @@
         ],
         "summary": "Configure sound attenuation: distance falloff, spatialization, occlusion, reverb send, or a named attenuation preset.",
         "whenToUse": [
-          "Use when configure distance attenuation.",
-          "Use when configure audio spatialization.",
-          "Use when configure audio occlusion.",
-          "Use when configure an audio reverb send.",
-          "Use when configure occlusion settings on a sound asset.",
-          "Use when create or update sound attenuation settings."
+          "Use it to configure distance attenuation.",
+          "Use it to configure audio spatialization.",
+          "Use it to configure audio occlusion.",
+          "Use it to configure an audio reverb send.",
+          "Use it to configure occlusion settings on a sound asset.",
+          "Use it to create or update sound attenuation settings."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -45527,7 +45525,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1efa1d87dd07dba05eb309f5b0816a9ec836eb7c1242b154e783c925c2d89bd1",
-        "content": "af74b8878bef9400e01c476bcc93d6aeb40a2ceef5d4aa56912f789eae446f41"
+        "content": "f523051d0da6481313cb06b0c711eeb967275fd32e4a50acf61719c75396944b"
       }
     },
     {
@@ -45584,14 +45582,12 @@
         ],
         "summary": "Configure a sound class or mix: parent class, class properties, mix modifier, mix EQ.",
         "whenToUse": [
-          "Use when set a sound class parent.",
-          "Use when set sound class properties.",
-          "Use when add a sound class modifier to a sound mix; fadeintime and fadeouttime set the fades of the mix itself.",
-          "Use when configure sound mix equalization: the four bands through eqsettings, or the low, mid, highmid and high fields."
+          "Use it to set a Sound Class parent.",
+          "Use it to set Sound Class properties.",
+          "Use it to add a Sound Class modifier to a Sound Mix; fadeInTime and fadeOutTime set the fades of the mix itself.",
+          "Use it to configure Sound Mix equalization: the four bands through eqSettings, or the low, mid, highMid and high fields."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -45868,7 +45864,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d11a2ff84c587cbda995765b9d65ffc30a482725be96dcb9f177f3b59e898f9b",
-        "content": "e421ac42da674a2661e2e271a44f9fce6aee8cb2c9d00342e35ea90d06c7a647"
+        "content": "ab9b7920b21f797e8ce9179ae3c49bc9f9102cc2cc5ca4a95f2b4908163a23e4"
       }
     },
     {
@@ -45933,15 +45929,13 @@
         ],
         "summary": "Control sound mixes at runtime: push or pop a mix, set the base mix, set or clear a class override.",
         "whenToUse": [
-          "Use when push a sound mix onto the runtime mix stack.",
-          "Use when pop a sound mix from the runtime mix stack.",
-          "Use when set the runtime base sound mix.",
-          "Use when set a sound mix class override.",
-          "Use when clear a sound mix class override."
+          "Use it to push a Sound Mix onto the runtime mix stack.",
+          "Use it to pop a Sound Mix from the runtime mix stack.",
+          "Use it to set the runtime base Sound Mix.",
+          "Use it to set a Sound Mix class override.",
+          "Use it to clear a Sound Mix class override."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -46091,7 +46085,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "97d8ac7cfd0899e14e86c94bb8467f2bd79ed0e32ebfe540a18f1c782644f78a",
-        "content": "a1b63faadeaccbf38f8f890249ce4aa1d60239e0e639f0ff021e3b96b39da905"
+        "content": "fe7c33ec6c3cdead2f864fddb4adf27d187a3c3d5e881c7cf6e546bf9f16bab2"
       }
     },
     {
@@ -46139,13 +46133,11 @@
         ],
         "summary": "Create an ambient sound actor, an audio component on an actor, or a reverb zone.",
         "whenToUse": [
-          "Use when create an ambient sound actor.",
-          "Use when create an audio component on an actor, or on a new actor at location when actorname is omitted.",
-          "Use when create a runtime reverb zone actor."
+          "Use it to create an ambient sound actor.",
+          "Use it to create an audio component on an actor, or on a new actor at location when actorName is omitted.",
+          "Use it to create a runtime reverb zone actor."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -46369,7 +46361,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "64114b4934dd736867a71acc379711b80cbdcac26c0082de7c1d0b0214fd0957",
-        "content": "af9bd8dad97b52751d07a95fc0106687ff0e4a29dc60f9d33bd4742cd5d825bc"
+        "content": "a1ee707ad4f4b92a026346be35e8cbe1587cd87915a826b3bbbb3caf315f6154"
       }
     },
     {
@@ -46471,16 +46463,14 @@
         ],
         "summary": "Create an audio asset: sound cue, sound class, sound mix, attenuation settings, reverb effect, dialogue voice or wave, source effect chain, submix effect.",
         "whenToUse": [
-          "Use when create a sound cue asset and return its asset path; volume and pitch add a modulator over the wave player.",
-          "Use when create a sound class asset and return its asset path.",
-          "Use when create a sound mix asset and return its asset path.",
-          "Use when create attenuation settings and return the asset path.",
-          "Use when create a reverb effect asset and return its path.",
-          "Use when create a dialogue voice asset and return its path."
+          "Use it to create a Sound Cue asset and return its asset path; volume and pitch add a modulator over the wave player.",
+          "Use it to create a Sound Class asset and return its asset path.",
+          "Use it to create a Sound Mix asset and return its asset path.",
+          "Use it to create attenuation settings and return the asset path.",
+          "Use it to create a Reverb Effect asset and return its path.",
+          "Use it to create a Dialogue Voice asset and return its path."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -46743,7 +46733,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1855b92fc3acca256e944a1deafc687b073b1906e6973820e81fd934660c174a",
-        "content": "5d1b44472e45dda0f8f42fed97c9b02a5afee826ef34de222b6e3446e698469a"
+        "content": "91ddbe6f31d7c23d01b2cfec3cc1f1c1ccf22b74e9058db5dc32a3f7d0cf3797"
       }
     },
     {
@@ -46842,16 +46832,14 @@
         ],
         "summary": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect or disconnect nodes, remove nodes, set input and node literals, or run many edits in one batch.",
         "whenToUse": [
-          "Use when create a metasound asset and return its asset path.",
-          "Use when add an input to a metasound graph.",
-          "Use when add an output to a metasound graph.",
-          "Use when add a node to a metasound graph.",
-          "Use when connect two metasound graph pins.",
-          "Use when remove a link from a metasound graph: the one into targetnodeid.targetinputname, or every link out of sourcenodeid.sourceoutputname; with both ends given, that exact link. refused when there is no such link."
+          "Use it to create a MetaSound asset and return its asset path.",
+          "Use it to add an input to a MetaSound graph.",
+          "Use it to add an output to a MetaSound graph.",
+          "Use it to add a node to a MetaSound graph.",
+          "Use it to connect two MetaSound graph pins.",
+          "Use it to remove a link from a MetaSound graph: the one into targetNodeId.targetInputName, or every link out of sourceNodeId.sourceOutputName; with both ends given, that exact link. Refused when there is no such link."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -47158,7 +47146,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "84b3f7039cdcc2fb99d2a81f4b2e8cfbe52308e058762174972c081464f0720e",
-        "content": "a49722b3905fde24f79285e9d8285932e65afc75c2b56eb738e8003beec70c64"
+        "content": "35a35ae6d1e9031efe9dce7bf3a7d316d3e618961db118e498aa0eb3b6b16de5"
       }
     },
     {
@@ -47233,16 +47221,14 @@
         ],
         "summary": "Edit a sound cue graph: add or connect nodes, set attenuation or concurrency, add a Doppler pitch shift at the root, add a source effect.",
         "whenToUse": [
-          "Use when add a node to a sound cue graph: wave_player (wavepath), mixer, random, modulator (volume, pitch), looping (indefinite, loopcount), attenuation (attenuationpath), concatenator, delay (delay), switch or branch.",
-          "Use when connect two sound cue graph nodes.",
-          "Use when assign attenuation settings to a sound cue; omit attenuationpath to clear them.",
-          "Use when assign concurrency settings to a sound cue.",
-          "Use when add a doppler node at the root of a sound cue (or update the one already there) so the cue shifts pitch as its source moves toward or away from the listener. sound cues only; a soundwave or metasound is refused.",
-          "Use when add an effect to a source effect chain: a new preset of effecttype, or an existing preset asset by effectpresetpath."
+          "Use it to add a node to a Sound Cue graph: wave_player (wavePath), mixer, random, modulator (volume, pitch), looping (indefinite, loopCount), attenuation (attenuationPath), concatenator, delay (delay), switch or branch.",
+          "Use it to connect two Sound Cue graph nodes.",
+          "Use it to assign attenuation settings to a Sound Cue; omit attenuationPath to clear them.",
+          "Use it to assign concurrency settings to a Sound Cue.",
+          "Use it to add a Doppler node at the root of a Sound Cue (or update the one already there) so the cue shifts pitch as its source moves toward or away from the listener. Sound Cues only; a SoundWave or MetaSound is refused.",
+          "Use it to add an effect to a Source Effect Chain: a new preset of effectType, or an existing preset asset by effectPresetPath."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -47514,7 +47500,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "77ab96f66cc7db6f5a4994361d48cf99ef9c775783f9502fc1d9e74cac288b7f",
-        "content": "fc8b2f4c336c9155f8e65f9e9710bad7129f3cd6a2311d3e6e2907b22c6473b4"
+        "content": "31b9833010a0a33a0083d112d0566f0be0900af0a00c36194ff8f5643d119a73"
       }
     },
     {
@@ -47551,13 +47537,11 @@
         ],
         "summary": "Fade a playing sound: to a target volume, in, or out.",
         "whenToUse": [
-          "Use when fade a named sound instance to a target volume.",
-          "Use when fade a sound instance in.",
-          "Use when fade a sound instance out."
+          "Use it to fade a named sound instance to a target volume.",
+          "Use it to fade a sound instance in.",
+          "Use it to fade a sound instance out."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -47703,7 +47687,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5c00c06e120e9ba8334d9908c2acec526a5bc27ae74f4b591599620f8b18f196",
-        "content": "40388c0697a1cbcb2d8a210e8089f9c53e18abf30ea4cd5ca3f8c3c0bcbcf616"
+        "content": "289ae1fe1ca9c99ce44ed9167c69f2c7904981278d91bed8e3fd2a59b3d685b9"
       }
     },
     {
@@ -47723,11 +47707,9 @@
         ],
         "summary": "Read metadata for an audio asset.",
         "whenToUse": [
-          "Use when read metadata for an audio asset."
+          "Use it to read metadata for an audio asset."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -47876,7 +47858,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d7721e39f18730041b1432aef3272c497b5ea3faf98ef2a76ab23b9203737e9e",
-        "content": "a6fe1984119eab179b68bbe515fe30f2e868731d85c9fc4f1f2f99458c02e9f9"
+        "content": "5bc4e198232cd62823422584cea0477de0fa7b84624603025b512a352186914d"
       }
     },
     {
@@ -47901,11 +47883,9 @@
         ],
         "summary": "Read a MetaSound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs.",
         "whenToUse": [
-          "Use when read a metasound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs."
+          "Use it to read a MetaSound graph: every node with its input literals, the links by pin name, and the graph inputs and outputs."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -48098,7 +48078,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d5cf63fc9280b7fb3702b8053401d81414abc199289b2f8e8604720018423a66",
-        "content": "5adec55df7bcef9c56099732d44b6958fdd460cca3668712611ba6629319f62e"
+        "content": "811997ef014e15531030c85f1f8b085507ba8c7f6008ec5cc3e37781772f4112"
       }
     },
     {
@@ -48171,15 +48151,13 @@
         ],
         "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound.",
         "whenToUse": [
-          "Use when play a non-spatial sound.",
-          "Use when play a sound at a world location.",
-          "Use when spawn a transient sound at a world location.",
-          "Use when play a sound attached to an actor component.",
-          "Use when prime a sound asset for playback."
+          "Use it to play a non-spatial sound.",
+          "Use it to play a sound at a world location.",
+          "Use it to spawn a transient sound at a world location.",
+          "Use it to play a sound attached to an actor component.",
+          "Use it to prime a sound asset for playback."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -48393,7 +48371,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3fb0b4fc7150dc2e5a252bd3725a1a860044b885cc157164303491b99629c900",
-        "content": "4e460290c6f5d607184638ca0e816616b8f0cc707af31423ce831520184e9f7d"
+        "content": "0edfee6820b76aa3fe441516f9e7e293b7eacdcb245562be11e6721ed2a7aaa4"
       }
     },
     {
@@ -48413,11 +48391,9 @@
         ],
         "summary": "Add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays.",
         "whenToUse": [
-          "Use when add a context mapping to a dialogue wave: who speaks it, to whom, and which soundwave plays."
+          "Use it to add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -48529,7 +48505,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "515cf23378c5a85b600ba7bbe18d52780e170475651c9a8b39db183b4d5b06ea",
-        "content": "1f96b77475abf631b5ae4918217d1d34314e46e2be4408a62dcd20070f2bb111"
+        "content": "78184309d3bdca9c863713574a3f534de1da596534acbdaebf33274ac36c5e96"
       }
     },
     {
@@ -48553,11 +48529,9 @@
         ],
         "summary": "Stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included.",
         "whenToUse": [
-          "Use when stop sounds: the 2d sounds play_sound started (only that sound with soundpath), or with all every sound the editor and a running game play, its music included."
+          "Use it to stop sounds: the 2D sounds play_sound started (only that sound with soundPath), or with all every sound the editor and a running game play, its music included."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -48656,7 +48630,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9bbd813bb9e83acf24cb50f0636f5783cee5ed11e2839da797992eab3b47ab8b",
-        "content": "f7c2da9127bf954de3961b490a7118631092bc286510a48e5325cad26fb16db4"
+        "content": "e6da083a6461cc9228f6241134fbb3757f27c440449c5d2ec2c268994be11b86"
       }
     },
     {
@@ -66863,12 +66837,10 @@
         ],
         "summary": "Add a legacy input action or axis mapping.",
         "whenToUse": [
-          "Use when add a legacy action mapping.",
-          "Use when add a legacy axis mapping."
+          "Use it to add a legacy action mapping.",
+          "Use it to add a legacy axis mapping."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -67027,7 +66999,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ed4d870c1f55b679bbcfcee2287f0303fe354f01e712e3470ff9a35124264e2c",
-        "content": "adc3ef3161e57094977db4e4a9bac8e24e4af52595c0ef4c0739e8d795bc384f"
+        "content": "d5cfa4a0f9b397a99d2661e66871d81be0cd315b9308b307a495d89a99c3405a"
       }
     },
     {
@@ -67047,11 +67019,9 @@
         ],
         "summary": "Add a local player and return its player state.",
         "whenToUse": [
-          "Use when add a local player and return its player state."
+          "Use it to add a local player and return its player state."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -67147,7 +67117,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4b44ad05a5f7c16c01074dd3bcda84369f732c90d8935fd2f27c98444bc7de5f",
-        "content": "b01734e4fef5b5879bbf85159fa2ff1fc19126ec1aab0421383f913c79b1c0e0"
+        "content": "e294004f87aaeb53b3989075a4e785063798ab6db5faa73e327b49408b748764"
       }
     },
     {
@@ -67184,12 +67154,10 @@
         ],
         "summary": "Check whether an actor has authority or is locally controlled.",
         "whenToUse": [
-          "Use when read runtime actor authority state.",
-          "Use when read local-control state for an actor."
+          "Use it to read runtime actor authority state.",
+          "Use it to read local-control state for an actor."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -67311,7 +67279,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1b252eea3eb96a3521533d47cf0dcf210ac3bba5b86dc37d4b805c1b68ea0c64",
-        "content": "0890b22bdf09e142fa6ab286653d9d9cb816b4978414d758018b183f458fac12"
+        "content": "be727e54f517ab2a7f281b16c3c14af670f657a0fd1134942a864f5e1f4c0810"
       }
     },
     {
@@ -67400,16 +67368,14 @@
         ],
         "summary": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.",
         "whenToUse": [
-          "Use when set a gamemode default pawn class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
-          "Use when set a gamemode playercontroller class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
-          "Use when set a gamemode gamestate class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
-          "Use when set a gamemode playerstate class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
-          "Use when set a gamemode hud class. pass makedefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveinopenlevel).",
-          "Use when set a gamemode's bdelayedstart match rule; only gamemode (agamemode) children have it, a gamemodebase child is refused with not_supported."
+          "Use it to set a GameMode default pawn class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
+          "Use it to set a GameMode PlayerController class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
+          "Use it to set a GameMode GameState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
+          "Use it to set a GameMode PlayerState class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
+          "Use it to set a GameMode HUD class. Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).",
+          "Use it to set a GameMode's bDelayedStart match rule; only GameMode (AGameMode) children have it, a GameModeBase child is refused with NOT_SUPPORTED."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -67622,7 +67588,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ab349f5200da8ed5b92947cc37e4fd2892821f5964930501cf7057dfc352bc0d",
-        "content": "f6aacc71bbb9533da95c1df4d9e8a2550ba152ebda9c7e3bf2307c47f084e216"
+        "content": "d46cc326dc3eebf1713652c86a4fff4813f398e62c687b53f391a580ab2bfa20"
       }
     },
     {
@@ -67711,16 +67677,14 @@
         ],
         "summary": "Enhanced Input: create an input action or mapping context, add or map keys, set triggers and modifiers, enable a context.",
         "whenToUse": [
-          "Use when create an enhanced input action asset (valuetype: digital, axis1d, axis2d, or axis3d — movement/look actions need axes).",
-          "Use when create an enhanced input mapping context asset; its priority is chosen when it is enabled (enable_input_mapping).",
-          "Use when add an enhanced input mapping with optional trigger and modifier types.",
-          "Use when map an enhanced input action to a key in a context, with an optional trigger and modifier on that mapping; mapping the same action and key again redefines it.",
-          "Use when add a trigger to an enhanced input action; a trigger of that class already on the action is kept, not stacked.",
-          "Use when add a modifier to an enhanced input action, or to one mapping when contextpath and key are given; a modifier of that class already there is kept, not stacked."
+          "Use it to create an Enhanced Input Action asset (valueType: digital, axis1d, axis2d, or axis3d — movement/look actions need axes).",
+          "Use it to create an Enhanced Input Mapping Context asset; its priority is chosen when it is enabled (enable_input_mapping).",
+          "Use it to add an Enhanced Input mapping with optional trigger and modifier types.",
+          "Use it to map an Enhanced Input Action to a key in a context, with an optional trigger and modifier on that mapping; mapping the same action and key again redefines it.",
+          "Use it to add a trigger to an Enhanced Input Action; a trigger of that class already on the action is kept, not stacked.",
+          "Use it to add a modifier to an Enhanced Input Action, or to one mapping when contextPath and key are given; a modifier of that class already there is kept, not stacked."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -67916,7 +67880,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "27f1ead38de13c5bb962f46d3fa2cfb5b4836fa1c5e2b6195331c4a74c6923a3",
-        "content": "8b69ef91b1d76e4ad07ad0d67fe0cb1316f2e1c61fcf10866b11c0430aa37a21"
+        "content": "f99b1b3d9e59733f2047ab30219a00b0f22835d3f42845b41887e3fb53c84f34"
       }
     },
     {
@@ -67940,11 +67904,9 @@
         ],
         "summary": "Set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N. The engine only matches the tag against a ?Portal=<tag> travel option; team spawning needs a game mode that reads it. Undoable; the level is left modified, not saved.",
         "whenToUse": [
-          "Use when set the playerstarttag of a playerstart in the open level: an explicit tag, or teamn for teamindex n. the engine only matches the tag against a ?portal=<tag> travel option; team spawning needs a game mode that reads it. undoable; the level is left modified, not saved."
+          "Use it to set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N. The engine only matches the tag against a ?Portal=<tag> travel option; team spawning needs a game mode that reads it. Undoable; the level is left modified, not saved."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -68060,7 +68022,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0944b6ddf7de293f887bfded50c802f6a033ddb557795699e4194d09abaeb494",
-        "content": "57d10c145b66f1ea3f2818dd2b1d8a7d8d2f47df42d20acaf4893f23611ddfba"
+        "content": "8850c95e725956d7c2b44ee888cb3f3d57d9d9ff971e94393cac1afb081ec812"
       }
     },
     {
@@ -68119,14 +68081,12 @@
         ],
         "summary": "Configure client-side prediction: client, movement, server correction, or add prediction data (a variable replicated only to the owning client).",
         "whenToUse": [
-          "Use when set whether a character blueprint always replicates its movement transform timestamp (charactermovement bnetworkalwaysreplicatetransformupdatetimestamp); other blueprints are refused.",
-          "Use when set a character blueprint's movement network smoothing mode and smoothing distances; only the fields sent are written, other blueprints are refused.",
-          "Use when set how long a character blueprint's simulated proxies smooth server corrections; other blueprints are refused.",
-          "Use when add a blueprint variable, or convert an existing one of the same type, that replicates only to the owning client (cond_autonomousonly) for client-side prediction state. pawn, character, controller and actorcomponent blueprints only (no other actor is an autonomous proxy); the reply says whether the blueprint itself replicates."
+          "Use it to set whether a Character Blueprint always replicates its movement transform timestamp (CharacterMovement bNetworkAlwaysReplicateTransformUpdateTimestamp); other Blueprints are refused.",
+          "Use it to set a Character Blueprint's movement network smoothing mode and smoothing distances; only the fields sent are written, other Blueprints are refused.",
+          "Use it to set how long a Character Blueprint's simulated proxies smooth server corrections; other Blueprints are refused.",
+          "Use it to add a Blueprint variable, or convert an existing one of the same type, that replicates only to the owning client (COND_AutonomousOnly) for client-side prediction state. Pawn, Character, Controller and ActorComponent Blueprints only (no other actor is an autonomous proxy); the reply says whether the Blueprint itself replicates."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -68314,7 +68274,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4a9064debc6c032cf3ea057ab744fc380298c23b5650c6c5bc99ee81197a5979",
-        "content": "2d282985e8ed26ecc221c0b38024870213788ed6eb3acedd2f0b26ab3de0893b"
+        "content": "a297cae568d41a84137247ca94af3b0106d23bb9e1666038b8db910754c6ffc4"
       }
     },
     {
@@ -68472,16 +68432,14 @@
         ],
         "summary": "Configure replication on a Blueprint: property replication and conditions, RepNotify, net role, dormancy, relevancy, priority, update frequency, cull distance, push model, replicated movement, replication graph, net driver.",
         "whenToUse": [
-          "Use when turn replication of a blueprint variable on or off, optionally with its replication condition.",
-          "Use when set a blueprint property replication condition.",
-          "Use when assign a repnotify function to a property.",
-          "Use when choose how clients see an actor blueprint's actors: role_none turns replication off, role_simulatedproxy or role_autonomousproxy turn it on.",
-          "Use when set an actor blueprint's default network dormancy.",
-          "Use when set always-relevant replication behavior."
+          "Use it to turn replication of a Blueprint variable on or off, optionally with its replication condition.",
+          "Use it to set a Blueprint property replication condition.",
+          "Use it to assign a RepNotify function to a property.",
+          "Use it to choose how clients see an Actor Blueprint's actors: ROLE_None turns replication off, ROLE_SimulatedProxy or ROLE_AutonomousProxy turn it on.",
+          "Use it to set an Actor Blueprint's default network dormancy.",
+          "Use it to set always-relevant replication behavior."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -68779,7 +68737,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "76d7f7ec91e303fd8f8d1299126361c78a718cdc85f65bcf3d53ddd4a2bc5535",
-        "content": "ed954e5f4d3093b7c08c3bbe028e1300ff67fa3bba181d1d47583cae829a9f36"
+        "content": "a45eb98220c280d94b599d7f908a05229b07e158ac13c8cda6882f5a54c47ae0"
       }
     },
     {
@@ -68828,13 +68786,11 @@
         ],
         "summary": "Create an RPC function, or set its validation or reliability.",
         "whenToUse": [
-          "Use when create a blueprint rpc function (server, client or netmulticast).",
-          "Use when configure rpc validation.",
-          "Use when set rpc reliability."
+          "Use it to create a Blueprint RPC function (Server, Client or NetMulticast).",
+          "Use it to configure RPC validation.",
+          "Use it to set RPC reliability."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -68976,7 +68932,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e50307054c12c339f873c12fcc1f36172e6798bd924d668def6d75dbe5b75f79",
-        "content": "ec2a518d0e93a87b03a7e580764624e4f610e172701d9f439dd8e7b569e56ef3"
+        "content": "2b99a63f86efaf9020fd8446cd5f089a682d74c179378a1918cf40a2131207de"
       }
     },
     {
@@ -69036,13 +68992,11 @@
         ],
         "summary": "Configure multiplayer for the project: the default game port for LAN hosting and joining, the online subsystem (Null, Steam, EOS...), and the local split-screen layout. Written to DefaultEngine.ini.",
         "whenToUse": [
-          "Use when set the project default game port ([url] port in defaultengine.ini) that listen servers bind and joins without a port connect to; packaged games use it from their next launch and the running editor at once.",
-          "Use when choose the online subsystem the project uses ([onlinesubsystem] defaultplatformservice in defaultengine.ini): null for lan and local play, steam, eos and others whose onlinesubsystem plugin is enabled; also turns on [onlinesubsystem<name>] benabled when the engine config has it off. takes effect on the next launch (steam only in standalone and packaged games).",
-          "Use when turn local split screen on or off and pick a layout by name: none (off), twoplayer_horizontal, twoplayer_vertical, threeplayer_favortop, threeplayer_favorbottom, threeplayer_vertical, threeplayer_horizontal, fourplayer_grid, fourplayer_vertical or fourplayer_horizontal. only the layout for that player count changes; written to defaultengine.ini and live in pie."
+          "Use it to set the project default game port ([URL] Port in DefaultEngine.ini) that listen servers bind and joins without a port connect to; packaged games use it from their next launch and the running editor at once.",
+          "Use it to choose the online subsystem the project uses ([OnlineSubsystem] DefaultPlatformService in DefaultEngine.ini): Null for LAN and local play, Steam, EOS and others whose OnlineSubsystem plugin is enabled; also turns on [OnlineSubsystem<Name>] bEnabled when the engine config has it off. Takes effect on the next launch (Steam only in standalone and packaged games).",
+          "Use it to turn local split screen on or off and pick a layout by name: None (off), TwoPlayer_Horizontal, TwoPlayer_Vertical, ThreePlayer_FavorTop, ThreePlayer_FavorBottom, ThreePlayer_Vertical, ThreePlayer_Horizontal, FourPlayer_Grid, FourPlayer_Vertical or FourPlayer_Horizontal. Only the layout for that player count changes; written to DefaultEngine.ini and live in PIE."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -69232,7 +69186,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "efb3447cae3af875aba78261273685cd2546484595c8330b99f6d089c473761e",
-        "content": "a9530bfaf36d646736df29077677a8ddb3d37e7effffdaeefeb94a3f62ea8638"
+        "content": "cca6cdca5cc19601e648e57eab3b2b60d95a90e74dd11f74a7e35153636d0f5e"
       }
     },
     {
@@ -69282,13 +69236,11 @@
         ],
         "summary": "Voice chat: start or stop it now, set the project VoIP settings (online voice on or off, mic gain, noise gate, silence detection, sample rate), or mute a player.",
         "whenToUse": [
-          "Use when enable or disable online voice chat.",
-          "Use when configure project voip: turn online voice on or off, microphone gain, noise gate and silence detection thresholds, and the voip sample rate. written to defaultengine.ini for packaged games; the voice console variables also apply to the running editor.",
-          "Use when mute or unmute an online player through the voice chat or online voice interface; fails with not_supported when neither applies it."
+          "Use it to enable or disable online voice chat.",
+          "Use it to configure project VoIP: turn online voice on or off, microphone gain, noise gate and silence detection thresholds, and the VoIP sample rate. Written to DefaultEngine.ini for packaged games; the voice console variables also apply to the running editor.",
+          "Use it to mute or unmute an online player through the voice chat or online voice interface; fails with NOT_SUPPORTED when neither applies it."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -69488,7 +69440,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8fbc0e0352a0a452ba685853b25c4348c2051ef99a2558ba7127d28850f513c9",
-        "content": "1e81b75b00d8d7259dde4bd8b9886c764e15ba791f03a96d02fd377bc5c9cb4d"
+        "content": "27d0a6f768d2b9ce7aae8dcd0e75ff22acfa354619ca1ee6134c4654b27ebf56"
       }
     },
     {
@@ -69563,16 +69515,14 @@
         ],
         "summary": "Create a game framework Blueprint: game mode, game state, game instance, player controller, player state, HUD.",
         "whenToUse": [
-          "Use when create a gamemode blueprint asset and return its path; an unloadable parentclass, or one that is not a gamemode, is refused.",
-          "Use when create a gamestate blueprint asset and return its path; an unloadable parentclass, or one that is not a gamestate, is refused.",
-          "Use when create a gameinstance blueprint asset and return its path; an unloadable parentclass, or one that is not a gameinstance, is refused.",
-          "Use when create a playercontroller blueprint asset and return its path; an unloadable parentclass, or one that is not a playercontroller, is refused.",
-          "Use when create a playerstate blueprint asset and return its path; an unloadable parentclass, or one that is not a playerstate, is refused.",
-          "Use when create a hud blueprint asset and return its path; an unloadable parentclass, or one that is not a hud, is refused."
+          "Use it to create a GameMode Blueprint asset and return its path; an unloadable parentClass, or one that is not a GameMode, is refused.",
+          "Use it to create a GameState Blueprint asset and return its path; an unloadable parentClass, or one that is not a GameState, is refused.",
+          "Use it to create a GameInstance Blueprint asset and return its path; an unloadable parentClass, or one that is not a GameInstance, is refused.",
+          "Use it to create a PlayerController Blueprint asset and return its path; an unloadable parentClass, or one that is not a PlayerController, is refused.",
+          "Use it to create a PlayerState Blueprint asset and return its path; an unloadable parentClass, or one that is not a PlayerState, is refused.",
+          "Use it to create a HUD Blueprint asset and return its path; an unloadable parentClass, or one that is not a HUD, is refused."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -69741,7 +69691,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8328e701741baced0429b8023749085be2bbe7abc1baa044d7a4ac1ef9712438",
-        "content": "bd288fc3445c38a42547d366bc992ccc4e512159f14e24f3cd53836a6e0a74aa"
+        "content": "dcb0e68d445d007e16133542fd5eb081ec130147d91d652aef4a9a1392127108"
       }
     },
     {
@@ -69761,11 +69711,9 @@
         ],
         "summary": "Read Game Framework class and rule state.",
         "whenToUse": [
-          "Use when read game framework class and rule state."
+          "Use it to read Game Framework class and rule state."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -69867,7 +69815,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b70b1634f91e29331f2eb9cf1575bf1a0c689e582848eb98d1d22ebbc9e73f68",
-        "content": "a431a384ed91f247d7ef754d4e642388e13f9ebf0eedb7a04ce57bbbd4ca04d2"
+        "content": "cc8af1ad76db6f59ecf7c7a97ccdf69b0c0e2a6aa2ce82ba913aacd287830237"
       }
     },
     {
@@ -69883,15 +69831,18 @@
         "domain": "networking",
         "family": "input",
         "topics": [
-          "get_input_info"
+          "get_input_info",
+          "key bindings",
+          "input mappings",
+          "which keys",
+          "game controls",
+          "mapping context keys"
         ],
-        "summary": "Read input asset and mapping state.",
+        "summary": "Read an input asset: every key mapping of an Input Mapping Context (details.mappings: key, action, triggers, modifiers) or an Input Action's value type and consume flag.",
         "whenToUse": [
-          "Use when read input asset and mapping state."
+          "Use it to read an input asset: every key mapping of an Input Mapping Context (details.mappings: key, action, triggers, modifiers) or an Input Action's value type and consume flag."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -69975,7 +69926,7 @@
       },
       "examples": [
         {
-          "title": "Read input asset and mapping state.",
+          "title": "Read an input asset: every key mapping of an Input Mapping Context (details.mappings: key, action, triggers, modifiers) or an Input Action's value type and consume flag.",
           "input": {
             "action": "get_input_info",
             "assetPath": "/Game/Input/Actions/IA_Jump"
@@ -70020,7 +69971,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "36265202b4f653ff04f88a1ecef472a3a47316da23ce617db24e91e4da83025e",
-        "content": "a88016d7f073e0f7e7332b0c925327b1bfa5c99ea688e7fa882c799e99e5fd61"
+        "content": "dfe8133a36a7e4a536c97903d9dc6e50f52cc6baf51ed9bcccb4761801c83168"
       }
     },
     {
@@ -70040,11 +69991,9 @@
         ],
         "summary": "Read networking state for a Blueprint or actor.",
         "whenToUse": [
-          "Use when read networking state for a blueprint or actor."
+          "Use it to read networking state for a Blueprint or actor."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -70145,7 +70094,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fd1738ad46a52188eeb3dbfd9792b40f56580ade75c8e0a50607985685e4e706",
-        "content": "d89ea421919941b36a7119e9e5b82ec5d0cce2816161c661ba44b1d07a9c8082"
+        "content": "6c275aaa8978d0500422276af3a20d0e034ee93f93a21eb8f089e7fb170fd3b1"
       }
     },
     {
@@ -70165,11 +70114,9 @@
         ],
         "summary": "Read identifiable online-session state.",
         "whenToUse": [
-          "Use when read identifiable online-session state."
+          "Use it to read identifiable online-session state."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -70275,7 +70222,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e1e3bae7d9a1873c762997e86b979798ffbbebdf5c8a3d7d398841b92463ed0f",
-        "content": "cc5b401afbcc5cf7716473042a013b88ccc464744079ba7dee81670b86d0b777"
+        "content": "400337614130d5dfa32b2654e671e5b05ed93c2fbcf1d232753a43070bf1b023"
       }
     },
     {
@@ -70309,12 +70256,10 @@
         ],
         "summary": "Host a LAN listen server (build the travel URL, optionally travel to it), or make a running Play-In-Editor instance join one.",
         "whenToUse": [
-          "Use when build the lan listen-server travel url for a map; nothing is hosted unless executetravel is true, which travels the running world to it.",
-          "Use when make a running play-in-editor instance join a server at serveraddress:serverport (clienttravel); the connection completes asynchronously. refused when pie is not running or every instance is hosting."
+          "Use it to build the LAN listen-server travel URL for a map; nothing is hosted unless executeTravel is true, which travels the running world to it.",
+          "Use it to make a running Play-In-Editor instance join a server at serverAddress:serverPort (ClientTravel); the connection completes asynchronously. Refused when PIE is not running or every instance is hosting."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -70479,7 +70424,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9c94012d0f5288fa052141c2f048368fe2a494bc67787cf4c9508fcd1eb25fcd",
-        "content": "90c7ce0dd64944f456a360ab448733352009a9d706ddd3eb68d247122a848dda"
+        "content": "f9017105f4b263f9e26ce6da3a280ab526915d5552d5b2f30d0eb8dd054143e6"
       }
     },
     {
@@ -70516,12 +70461,10 @@
         ],
         "summary": "Remove a legacy input action or axis mapping.",
         "whenToUse": [
-          "Use when remove a legacy action mapping.",
-          "Use when remove a legacy axis mapping."
+          "Use it to remove a legacy action mapping.",
+          "Use it to remove a legacy axis mapping."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -70680,7 +70623,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4c4523f3f7cfa89283ff10a7d339b6a95d212295b1f837a64460dcdf9d6f0dc9",
-        "content": "fa4421e4e461cb122d21e6aa7934c96bb8815cb20e7a231bd5251f3228862a69"
+        "content": "8e940c1df7017d2f1c0d1baa50f82dafa9d943d288c3795d62aebcc50a654158"
       }
     },
     {
@@ -70700,11 +70643,9 @@
         ],
         "summary": "Remove a local player.",
         "whenToUse": [
-          "Use when remove a local player."
+          "Use it to remove a local player."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -70794,7 +70735,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "436cbece9b527ef863aabe63691af6e57bf5f6f4c074c70a44ab9d04f0015c95",
-        "content": "d7233e8a1e97e9fd04ba633a369965290aeae956de4e74a7329035ea736ad46f"
+        "content": "67832ed1307b652f7955409dc4d8a02cac037e86f96135a5ea6de71e7c96a2bf"
       }
     },
     {
@@ -70816,11 +70757,9 @@
         ],
         "summary": "Remove an Enhanced Input mapping; removing an action's keys is how an input action is disabled.",
         "whenToUse": [
-          "Use when remove an enhanced input mapping; removing an action's keys is how an input action is disabled."
+          "Use it to remove an Enhanced Input mapping; removing an action's keys is how an input action is disabled."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -70919,7 +70858,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2a6134884a718d676243af5d47a6ab99f33c149f40a849312c6a003faeb2481d",
-        "content": "f803006817f822ec32518e807c4f68b2a0fd744cce174d3ff5e79c0fd6c2b662"
+        "content": "ab77b6564824fd0d79dd6bf540d68349e9ef230f661bd739bf69081afe536f7a"
       }
     },
     {
@@ -70939,11 +70878,9 @@
         ],
         "summary": "Set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused.",
         "whenToUse": [
-          "Use when set or clear (empty owneractorname) the owner of a runtime actor; an owner name that matches no actor is refused."
+          "Use it to set or clear (empty ownerActorName) the owner of a runtime actor; an owner name that matches no actor is refused."
         ],
-        "whenNotToUse": [
-          "Do not use when the required Unreal capability or target is unavailable."
-        ]
+        "whenNotToUse": []
       },
       "schemas": {
         "input": {
@@ -71035,7 +70972,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5205a3321a1ce821d1b145a0532a2b4a08b7108d36ac337ae5f6596cc9368667",
-        "content": "a52b294f4747623d50c8cb23335d5daec66b163790297c32744d120ccf6f0589"
+        "content": "eb06fea6d8a94d0652a0aa67c6cb192c90fde7d1e09663a444b938a19c8ca894"
       }
     },
     {
