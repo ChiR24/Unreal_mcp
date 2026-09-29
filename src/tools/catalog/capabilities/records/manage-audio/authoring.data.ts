@@ -100,7 +100,9 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   withTopics(a('create_sound_cue', 'Create a Sound Cue asset and return its asset path; volume and pitch add a modulator over the wave player.', ['name', 'path', 'wavePath', 'looping', 'volume', 'pitch', 'save'], ['name'], ['assetPath'], ['assetPath']), ['sound cue', 'new sound cue', 'audio cue']),
   a('create_sound_mix', 'Create a Sound Mix asset and return its asset path.', ['name', 'path', 'save'], ['name'], ['assetPath'], ['assetPath']),
   utilityRecord({
-    tool: T, action: 'get_audio_info', family: 'authoring', summary: 'Read metadata for an audio asset.',
+    tool: T, action: 'get_audio_info', family: 'authoring',
+    summary: 'Read an audio asset: Sound Wave duration, sample rate and channel count; Sound Cue duration, node count and attenuation; Sound Class volume, pitch and parent; Sound Mix modifier count; Attenuation falloff.',
+    topics: ['sound length', 'duration', 'sample rate', 'channel count'],
     params: ['assetPath'], required: ['assetPath'], effect: 'read',
     outputs: ['assetPath', 'assetClass', 'type', 'duration', 'nodeCount', 'attenuationPath', 'sampleRate',
       'numChannels', 'volume', 'pitch', 'parentClass', 'modifierCount', 'falloffDistance', 'spatialize'],

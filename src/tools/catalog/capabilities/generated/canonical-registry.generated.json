@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7597116910beb387",
+  "catalogRevision": "49ef47d76c55a3ee",
   "recordCount": 389,
   "records": [
     {
@@ -47762,11 +47762,15 @@
         "domain": "audio",
         "family": "authoring",
         "topics": [
-          "get_audio_info"
+          "get_audio_info",
+          "sound length",
+          "duration",
+          "sample rate",
+          "channel count"
         ],
-        "summary": "Read metadata for an audio asset.",
+        "summary": "Read an audio asset: Sound Wave duration, sample rate and channel count; Sound Cue duration, node count and attenuation; Sound Class volume, pitch and parent; Sound Mix modifier count; Attenuation falloff.",
         "whenToUse": [
-          "Use it to read metadata for an audio asset."
+          "Use it to read an audio asset: Sound Wave duration, sample rate and channel count; Sound Cue duration, node count and attenuation; Sound Class volume, pitch and parent; Sound Mix modifier count; Attenuation falloff."
         ],
         "whenNotToUse": []
       },
@@ -47875,7 +47879,7 @@
       },
       "examples": [
         {
-          "title": "Read metadata for an audio asset.",
+          "title": "Read an audio asset: Sound Wave duration, sample rate and channel count; Sound Cue duration, node count and attenuation; Sound Class volume, pitch and parent; Sound Mix modifier count; Attenuation falloff.",
           "input": {
             "action": "get_audio_info",
             "assetPath": "/Game/Audio/Cues/Cue_FootstepConcrete"
@@ -47917,7 +47921,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d7721e39f18730041b1432aef3272c497b5ea3faf98ef2a76ab23b9203737e9e",
-        "content": "5bc4e198232cd62823422584cea0477de0fa7b84624603025b512a352186914d"
+        "content": "d6ddd926681e33fadc4803c87f5d375365a9baafcb6a40a970c14140ec777654"
       }
     },
     {
@@ -49789,11 +49793,15 @@
         "domain": "manage character",
         "family": "character",
         "topics": [
-          "get_character_info"
+          "get_character_info",
+          "movement settings",
+          "walk speed",
+          "jump velocity",
+          "capsule size"
         ],
-        "summary": "Read character Blueprint metadata.",
+        "summary": "Read a character Blueprint's defaults: capsule size, walk speed, jump velocity and count, air control, gravity scale, spring arm and camera settings, and the live player view state in PIE.",
         "whenToUse": [
-          "Inspect a character."
+          "A character's movement, capsule or camera defaults must be read before tuning them."
         ],
         "whenNotToUse": [
           "Mutate the character."
@@ -49945,7 +49953,7 @@
       },
       "examples": [
         {
-          "title": "Read character Blueprint metadata.",
+          "title": "Read a character Blueprint's defaults: capsule size, walk speed, jump velocity and count, air control, gravity scale, spring arm and camera settings, and the live player view state in PIE.",
           "input": {
             "action": "get_character_info",
             "blueprintPath": "/Game/BP_Char"
@@ -49987,7 +49995,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c3a3c200c486ff612778cb0082bc3e20620b3c71fd0de6a09926689cc864f775",
-        "content": "bb0cf09396ec6cb77870ce8248615ef2d63b026c2491f189687ece98ff5985f3"
+        "content": "db4414abdac2485020e55b7c4f76109da50c302147e27d57c946709555e26fcf"
       }
     },
     {

@@ -16,7 +16,9 @@ const F = 'character';
 
 export const CHARACTER_2: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.get_character_info`, action: 'get_character_info', family: F,
-    summary: 'Read character Blueprint metadata.', whenToUse: ['Inspect a character.'], whenNotToUse: ['Mutate the character.'],
+    topics: ['movement settings', 'walk speed', 'jump velocity', 'capsule size'],
+    summary: 'Read a character Blueprint\'s defaults: capsule size, walk speed, jump velocity and count, air control, gravity scale, spring arm and camera settings, and the live player view state in PIE.',
+    whenToUse: ['A character\'s movement, capsule or camera defaults must be read before tuning them.'], whenNotToUse: ['Mutate the character.'],
     inputProps: { blueprintPath: P.blueprintPath }, required: ['blueprintPath'],
     effect: 'read', latency: 'instant', resources: 'low',
     outputProps: {
