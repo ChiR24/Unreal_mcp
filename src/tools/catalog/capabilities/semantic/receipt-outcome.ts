@@ -40,7 +40,9 @@ const CHANGE_ARRAY_FIELDS = ['changes', 'changedEntities', 'changedAssets', 'aff
 // widgetPath was listed for handles but not here, so create_game_screen and
 // create_widget_template published a handle to a brand-new asset while leaving
 // changes[] empty — a caller diffing changes[] missed every widget it authored.
-const CHANGE_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'deletedPath', 'widgetPath', 'actorName', 'actorPath'] as const;
+// Exported so the parity test can hold the native lists (McpNativeReceiptOutcome.cpp) to them.
+export const CHANGE_ASSET_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'deletedPath', 'widgetPath'] as const;
+export const CHANGE_ACTOR_SINGLE_FIELDS = ['actorName', 'actorPath'] as const;
 
 export function extractHandles(result: unknown): TypedHandle[] {
   if (!isRecord(result)) return [];
@@ -100,7 +102,13 @@ export function extractChanges(result: unknown): string[] {
       }
     }
   }
-  for (const field of CHANGE_SINGLE_FIELDS) {
+  // A result that carries a changedAssets array states every asset it changed, an
+  // empty one included, so the asset paths it merely echoes are not read as changes:
+  // a widget preview and a played sound name the asset they looked at or used. An
+  // actor it changed is a separate fact and is still inferred from the actor fields.
+  const assetsStated = Array.isArray(read('changedAssets'));
+  const singles = assetsStated ? CHANGE_ACTOR_SINGLE_FIELDS : [...CHANGE_ASSET_SINGLE_FIELDS, ...CHANGE_ACTOR_SINGLE_FIELDS];
+  for (const field of singles) {
     const value = read(field);
     if (typeof value === 'string' && value.length > 0) collected.push(value);
   }

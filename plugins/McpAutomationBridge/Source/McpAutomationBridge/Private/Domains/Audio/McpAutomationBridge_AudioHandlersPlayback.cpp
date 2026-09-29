@@ -76,6 +76,7 @@ bool HandlePlaybackActions(
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("soundPath"), SoundPath);
     Resp->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Location));
+    McpHandlerUtils::MarkNoAssetsChanged(Resp); // playing a sound changes no asset
 
     Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played at location"), Resp);
@@ -135,8 +136,9 @@ bool HandlePlaybackActions(
     Resp->SetNumberField(TEXT("volume"), Volume);
     Resp->SetNumberField(TEXT("pitch"), Pitch);
 
-    // Sound played - add sound asset verification
+    // Sound played - add sound asset verification. The asset is used, not changed.
     McpHandlerUtils::AddVerification(Resp, Sound);
+    McpHandlerUtils::MarkNoAssetsChanged(Resp);
     Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Sound played 2D"), Resp);
     return true;
@@ -263,6 +265,7 @@ bool HandlePlaybackActions(
       Resp->SetStringField(TEXT("attachedTo"), AttachComp->GetName());
       Resp->SetBoolField(TEXT("playing"), AudioComp->IsPlaying());
       McpHandlerUtils::AddVerification(Resp, Sound);
+      McpHandlerUtils::MarkNoAssetsChanged(Resp); // the sound asset is used, not changed
       AddComponentVerification(Resp, AudioComp);
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Sound attached"), Resp);

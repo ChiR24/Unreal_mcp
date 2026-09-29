@@ -12,6 +12,7 @@
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "TextureResource.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
@@ -108,6 +109,8 @@ bool HandleWidgetAuthoringPreview(
     UAssetEditorSubsystem* AssetEditors = bOpen && GEditor ? GEditor->GetEditorSubsystem<UAssetEditorSubsystem>() : nullptr;
     ResultJson->SetBoolField(TEXT("success"), true);
     ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);
+    // The preview only draws the widget: without this the receipt lists widgetPath under changes.
+    McpHandlerUtils::MarkNoAssetsChanged(ResultJson);
     ResultJson->SetNumberField(TEXT("width"), Size.X);
     ResultJson->SetNumberField(TEXT("height"), Size.Y);
     ResultJson->SetStringField(TEXT("mimeType"), TEXT("image/png"));

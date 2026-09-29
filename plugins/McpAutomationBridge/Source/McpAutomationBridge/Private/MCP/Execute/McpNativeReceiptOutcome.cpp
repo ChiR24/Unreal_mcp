@@ -111,10 +111,23 @@ const TCHAR* const CHANGE_ARRAYS[] = {
 // `widgetPath` was listed for handles but not here, so create_game_screen and
 // create_widget_template published a handle to a brand-new asset while leaving
 // changes[] empty - a caller diffing changes[] missed every widget it authored.
-const TCHAR* const CHANGE_SINGLES[] = {
+const TCHAR* const CHANGE_ASSET_SINGLES[] = {
 	TEXT("assetPath"), TEXT("createdAssetPath"), TEXT("savedAssetPath"),
-	TEXT("destinationPath"), TEXT("deletedPath"), TEXT("widgetPath"),
-	TEXT("actorName"), TEXT("actorPath")};
+	TEXT("destinationPath"), TEXT("deletedPath"), TEXT("widgetPath")};
+const TCHAR* const CHANGE_ACTOR_SINGLES[] = {TEXT("actorName"), TEXT("actorPath")};
+
+template <int32 Count>
+void AddSingleChanges(const TSharedPtr<FJsonObject>& Result, const TCHAR* const (&Fields)[Count], TArray<FString>& Changes)
+{
+	for (const TCHAR* Field : Fields)
+	{
+		const FString Text = OutcomeReadString(Result, Field);
+		if (!Text.IsEmpty())
+		{
+			Changes.AddUnique(Text);
+		}
+	}
+}
 }  // namespace
 
 TArray<FString> McpExtractReceiptChanges(const TSharedPtr<FJsonObject>& RawResult)
@@ -140,14 +153,17 @@ TArray<FString> McpExtractReceiptChanges(const TSharedPtr<FJsonObject>& RawResul
 			}
 		}
 	}
-	for (const TCHAR* Field : CHANGE_SINGLES)
+	// A result that carries a changedAssets array states every asset it changed, an
+	// empty one included, so the asset paths it merely echoes are not read as changes
+	// (a widget preview and a played sound name the asset they looked at or used). An
+	// actor it changed is a separate fact and is still inferred. Mirrors extractChanges.
+	const TSharedPtr<FJsonValue> StatedAssets = ReadField(RawResult, TEXT("changedAssets"));
+	const TArray<TSharedPtr<FJsonValue>>* StatedArray = nullptr;
+	if (!StatedAssets.IsValid() || !StatedAssets->TryGetArray(StatedArray))
 	{
-		const FString Text = OutcomeReadString(RawResult, Field);
-		if (!Text.IsEmpty())
-		{
-			Changes.AddUnique(Text);
-		}
+		AddSingleChanges(RawResult, CHANGE_ASSET_SINGLES, Changes);
 	}
+	AddSingleChanges(RawResult, CHANGE_ACTOR_SINGLES, Changes);
 	return Changes;
 }
 

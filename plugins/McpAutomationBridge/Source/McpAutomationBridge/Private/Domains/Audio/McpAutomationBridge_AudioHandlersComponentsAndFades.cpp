@@ -164,8 +164,11 @@ bool HandleComponentActions(
       return true;
     }
     UGameplayStatics::PrimeSound(Sound);
+    TSharedPtr<FJsonObject> Primed = McpHandlerUtils::CreateResultObject();
+    Primed->SetBoolField(TEXT("success"), true);
+    McpHandlerUtils::MarkNoAssetsChanged(Primed); // priming loads the sound, it changes no asset
     Self->SendAutomationResponse(RequestingSocket, RequestId, true,
-                           TEXT("Sound primed"), nullptr);
+                           TEXT("Sound primed"), Primed);
     return true;
   }
 

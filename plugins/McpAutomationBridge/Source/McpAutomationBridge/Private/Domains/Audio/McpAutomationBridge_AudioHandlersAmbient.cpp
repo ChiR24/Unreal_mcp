@@ -148,6 +148,7 @@ bool HandleAmbientActions(
       Resp->SetStringField(TEXT("componentName"), AudioComp->GetName());
       Resp->SetStringField(TEXT("componentPath"), AudioComp->GetPathName());
       McpHandlerUtils::AddVerification(Resp, Sound);
+      McpHandlerUtils::MarkNoAssetsChanged(Resp); // the sound asset is used, not changed
       AddComponentVerification(Resp, AudioComp);
       Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Sound spawned"), Resp);
