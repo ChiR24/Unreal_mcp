@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `58e05b8404708e44`
+Catalog revision: `5965d6a6d4d542a2`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 388 capabilities across
+The catalog declares 389 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -44,7 +44,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 13 | 2 | 11 | 0 | audio |
-| `manage_blueprint` | 27 | 5 | 16 | 6 | blueprint, widget |
+| `manage_blueprint` | 28 | 6 | 16 | 6 | blueprint, widget |
 | `manage_character` | 10 | 2 | 8 | 0 | manage character |
 | `manage_combat` | 5 | 1 | 4 | 0 | manage combat |
 | `manage_effect` | 13 | 2 | 10 | 1 | manage effect |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-62 of 388 capabilities require consent.
+62 of 389 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -193,11 +193,12 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.edit_scs` | `manage_blueprint` | `add_scs_component` | write | write | none | `manage_blueprint.edit_scs` `manage_blueprint.add_scs_component` `manage_blueprint.add_component` `manage_blueprint.modify_scs` `manage_blueprint.reparent_scs_component` `manage_blueprint.set_scs_property` `manage_blueprint.set_scs_transform` |
 | `blueprint.edit_variable` | `manage_blueprint` | `add_variable` | write | write | none | `manage_blueprint.edit_variable` `manage_blueprint.add_variable` `manage_blueprint.rename_variable` `manage_blueprint.set_variable_metadata` `manage_blueprint.set_metadata` `manage_blueprint.set_default` |
 | `blueprint.edit_widget_animation` | `manage_blueprint` | `create_widget_animation` | write | write | none | `manage_blueprint.edit_widget_animation` `manage_blueprint.create_widget_animation` `manage_blueprint.add_animation_track` `manage_blueprint.add_animation_keyframe` |
-| `blueprint.edit_widget_blueprint` | `manage_blueprint` | `create_widget_blueprint` | write | write | none | `manage_blueprint.edit_widget_blueprint` `manage_blueprint.create_widget_blueprint` `manage_blueprint.set_widget_parent_class` `manage_blueprint.preview_widget` `manage_blueprint.rename_widget` `manage_blueprint.reparent_widget` |
+| `blueprint.edit_widget_blueprint` | `manage_blueprint` | `create_widget_blueprint` | write | write | none | `manage_blueprint.edit_widget_blueprint` `manage_blueprint.create_widget_blueprint` `manage_blueprint.set_widget_parent_class` `manage_blueprint.rename_widget` `manage_blueprint.reparent_widget` |
 | `blueprint.get_blueprint` | `manage_blueprint` | `get_blueprint` | read | read | none | `manage_blueprint.get_blueprint` `manage_blueprint.get` |
 | `blueprint.get_scs` | `manage_blueprint` | `get_scs` | read | read | none | `manage_blueprint.get_scs` |
 | `blueprint.get_widget_info` | `manage_blueprint` | `get_widget_info` | read | read | none | `manage_blueprint.get_widget_info` `manage_blueprint.get_widget_slot_info` |
 | `blueprint.inspect_graph` | `manage_blueprint` | `get_graph_details` | read | read | none | `manage_blueprint.inspect_graph` `manage_blueprint.get_graph_details` `manage_blueprint.get_node_details` `manage_blueprint.get_pin_details` `manage_blueprint.list_node_types` |
+| `blueprint.preview_widget` | `manage_blueprint` | `preview_widget` | read | read | none | `manage_blueprint.preview_widget` |
 | `blueprint.probe_handle` | `manage_blueprint` | `probe_handle` | read | read | none | `manage_blueprint.probe_handle` |
 | `blueprint.remove_function` | `manage_blueprint` | `remove_function` | destructive | destructive | explicit | `manage_blueprint.remove_function` `manage_blueprint.remove_event` |
 | `blueprint.remove_scs_component` | `manage_blueprint` | `remove_scs_component` | destructive | destructive | explicit | `manage_blueprint.remove_scs_component` |

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "58e05b8404708e44",
-  "recordCount": 388,
+  "catalogRevision": "5965d6a6d4d542a2",
+  "recordCount": 389,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -15625,7 +15625,6 @@
         "blueprint.create_widget_blueprint",
         "blueprint.create_widget",
         "blueprint.set_widget_parent_class",
-        "blueprint.preview_widget",
         "blueprint.rename_widget",
         "blueprint.reparent_widget"
       ],
@@ -15650,13 +15649,6 @@
         },
         {
           "tool": "manage_blueprint",
-          "action": "preview_widget",
-          "folded": {
-            "edit": "preview"
-          }
-        },
-        {
-          "tool": "manage_blueprint",
           "action": "rename_widget",
           "folded": {
             "edit": "rename_widget"
@@ -15677,12 +15669,9 @@
           "edit_widget_blueprint",
           "widget blueprint",
           "umg",
-          "preview widget",
           "rename widget",
           "reparent widget",
           "widget parent class",
-          "render widget",
-          "see widget",
           "umg widget",
           "user widget",
           "ui widget",
@@ -15690,11 +15679,10 @@
           "new widget",
           "menu widget"
         ],
-        "summary": "Create a Widget Blueprint, set its parent class, preview it (drawn offscreen and returned as an image), or rename/reparent a widget in its tree.",
+        "summary": "Create a Widget Blueprint, set its parent class, or rename/reparent a widget in its tree.",
         "whenToUse": [
           "A new UMG Widget Blueprint must be created.",
           "A Widget Blueprint must inherit from a specific UserWidget subclass.",
-          "A Widget Blueprint must be seen after an edit (layout, colours, fonts) without running PIE.",
           "A widget name must change so bindings and lookups can address it.",
           "An existing widget must move into another panel without being recreated.",
           "Children of a panel must be reordered (same newParent, with index)."
@@ -15702,7 +15690,6 @@
         "whenNotToUse": [
           "A non-widget Blueprint is needed (use create or create_blueprint).",
           "The Widget Blueprint already has the correct parent.",
-          "What the running game shows is needed, runtime texts included (play, then control_editor screenshot mode full_editor_window).",
           "The Widget Blueprint asset itself should be renamed (use manage_asset).",
           "The widget is being added for the first time (use the matching add action)."
         ]
@@ -15736,14 +15723,6 @@
               "type": "string",
               "description": "Canonical /Game Widget Blueprint asset path."
             },
-            "resolution": {
-              "type": "string",
-              "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
-            },
-            "openEditor": {
-              "type": "boolean",
-              "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
-            },
             "slotName": {
               "type": "string",
               "description": "Slot name for a child widget inside its parent."
@@ -15766,7 +15745,6 @@
               "enum": [
                 "create",
                 "set_parent_class",
-                "preview",
                 "rename_widget",
                 "reparent_widget"
               ],
@@ -15799,30 +15777,6 @@
             "widgetPath": {
               "type": "string",
               "description": "Canonical /Game Widget Blueprint asset path."
-            },
-            "imageBase64": {
-              "type": "string",
-              "description": "The drawn widget as PNG, base64; returned as an image."
-            },
-            "mimeType": {
-              "type": "string",
-              "description": "image/png."
-            },
-            "width": {
-              "type": "number",
-              "description": "Image width in pixels."
-            },
-            "height": {
-              "type": "number",
-              "description": "Image height in pixels."
-            },
-            "sizeBytes": {
-              "type": "number",
-              "description": "PNG size in bytes."
-            },
-            "editorOpened": {
-              "type": "boolean",
-              "description": "Whether the Widget Blueprint editor was opened (openEditor)."
             },
             "oldName": {
               "type": "string",
@@ -15863,7 +15817,7 @@
       },
       "examples": [
         {
-          "title": "Create a Widget Blueprint, set its parent class, preview it (drawn offscreen and returned as an image), or rename/reparent a widget in its tree.",
+          "title": "Create a Widget Blueprint, set its parent class, or rename/reparent a widget in its tree.",
           "input": {
             "action": "edit_widget_blueprint",
             "name": "WBP_MainUI",
@@ -15899,7 +15853,7 @@
       },
       "cost": {
         "latency": "interactive",
-        "resources": "medium"
+        "resources": "low"
       },
       "routing": {
         "parentTool": "manage_blueprint",
@@ -15909,7 +15863,6 @@
           "actions": {
             "create": "create_widget_blueprint",
             "set_parent_class": "set_widget_parent_class",
-            "preview": "preview_widget",
             "rename_widget": "rename_widget",
             "reparent_widget": "reparent_widget"
           },
@@ -15929,15 +15882,8 @@
             ],
             "widgetPath": [
               "set_parent_class",
-              "preview",
               "rename_widget",
               "reparent_widget"
-            ],
-            "resolution": [
-              "preview"
-            ],
-            "openEditor": [
-              "preview"
             ],
             "slotName": [
               "rename_widget",
@@ -15957,8 +15903,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6e132ff86314df13c197a3de248a13d1dce173e796ae710b82c29a607bd1d99f",
-        "content": "64e05cc28bbd5ebf83e691f1cb028614c6094a3ea441f931bb5380924e952a88"
+        "schema": "3b3d25e99b48c495bc7ffb05bcefe4597f20cdee1d833c5dbf01b97fa2e21157",
+        "content": "3b606ac8c2779b8d6a7d0d31a68f793fc4563eb3ae7bda8aa3a9ea193be48a0e"
       }
     },
     {
@@ -17054,6 +17000,166 @@
         "algorithm": "sha256",
         "schema": "f5d347ea89786ac7136be6488c04edcbc6f34aae6f79f3936a12b9f5dcd26ecb",
         "content": "54c8e55fbf9e26e8804d4bad4e7363c8b685064998044577ed789abfd500612a"
+      }
+    },
+    {
+      "id": "blueprint.preview_widget",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_blueprint",
+          "action": "preview_widget"
+        }
+      ],
+      "discovery": {
+        "domain": "widget",
+        "family": "widget-lifecycle",
+        "topics": [
+          "preview_widget",
+          "preview widget",
+          "render widget",
+          "see widget",
+          "widget screenshot",
+          "widget image"
+        ],
+        "summary": "Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image. Design mode, like its thumbnail: Construct graphs do not run, so texts are the designer defaults.",
+        "whenToUse": [
+          "A Widget Blueprint must be seen after an edit (layout, colours, fonts) without running PIE."
+        ],
+        "whenNotToUse": [
+          "What the running game shows is needed, runtime texts included (play, then control_editor screenshot mode full_editor_window)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "resolution": {
+              "type": "string",
+              "description": "Screen size the widget is drawn for, \"WxH\" (default \"1280x720\"); the project DPI scaling for that size applies, as in the game."
+            },
+            "openEditor": {
+              "type": "boolean",
+              "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
+            }
+          },
+          "required": [
+            "action",
+            "widgetPath"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "widgetPath": {
+              "type": "string",
+              "description": "Canonical /Game Widget Blueprint asset path."
+            },
+            "imageBase64": {
+              "type": "string",
+              "description": "The drawn widget as PNG, base64; returned as an image."
+            },
+            "mimeType": {
+              "type": "string",
+              "description": "image/png."
+            },
+            "width": {
+              "type": "number",
+              "description": "Image width in pixels."
+            },
+            "height": {
+              "type": "number",
+              "description": "Image height in pixels."
+            },
+            "sizeBytes": {
+              "type": "number",
+              "description": "PNG size in bytes."
+            },
+            "editorOpened": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint editor was opened (openEditor)."
+            }
+          },
+          "required": [
+            "success",
+            "widgetPath"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image. Design mode, like its thumbnail: Construct graphs do not run, so texts are the designer defaults.",
+          "input": {
+            "action": "preview_widget",
+            "widgetPath": "/Game/UI/WBP_MainUI"
+          },
+          "output": {
+            "success": true,
+            "message": "Widget drawn at 1280x720 (design mode: Construct graphs do not run)",
+            "widgetPath": "/Game/UI/WBP_MainUI",
+            "mimeType": "image/png",
+            "width": 1280,
+            "height": 720
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [
+          "EditorScriptingUtilities",
+          "UMG"
+        ],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "medium"
+      },
+      "routing": {
+        "parentTool": "manage_blueprint",
+        "dispatchAction": "preview_widget"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "2e2da924899322ad4f6cd6d69f6daa4e2a84a464d139dfeb5bfc313e42db7595",
+        "content": "061bc3eeb025aaa5bbba337c3ff9a86ef295f2d75336c5b28f625e986c4919ab"
       }
     },
     {
@@ -23875,7 +23981,12 @@
         "effect": "write",
         "idempotency": "non-idempotent",
         "longRunning": false,
-        "safeToRetry": false
+        "safeToRetry": false,
+        "compensation": {
+          "inverse": [
+            "build_environment.delete"
+          ]
+        }
       },
       "policy": {
         "requiredScope": "write",
@@ -23893,7 +24004,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7c03d2a2a60294ce92d89a1f1c39a3af5e0fcf47f25bd6e6b5fcec879714f534",
-        "content": "63ab6f10c66743007718d5188a350ddc563e8264d2fa300dc277dd6c284e4f93"
+        "content": "f8dfaeae9a8b5068e2fc1dea94a0348faaa5d20c10fa727c0f812ee8deae47b4"
       }
     },
     {
@@ -36207,12 +36318,7 @@
         "effect": "write",
         "idempotency": "non-idempotent",
         "longRunning": false,
-        "safeToRetry": false,
-        "compensation": {
-          "inverse": [
-            "control_editor.stop_recording"
-          ]
-        }
+        "safeToRetry": false
       },
       "policy": {
         "requiredScope": "write",
@@ -36251,7 +36357,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3ff0579598dab72811add84ae15b3cb007559f636e3d08831d07c5bed98600db",
-        "content": "9315d67482d4ea949bd9a7e969bd7420e1347ede047f626da2404af1a8b0f343"
+        "content": "0ea1eda375e9c42b6ee3460b1f336cc7234e2b213d183b2b4c0b95228793f7ef"
       }
     },
     {
@@ -80299,7 +80405,10 @@
         "effect": "write",
         "idempotency": "non-idempotent",
         "longRunning": true,
-        "safeToRetry": false
+        "safeToRetry": false,
+        "compensation": {
+          "guidance": "Rendered frames are written to the configured MRQ output directory and are not removed by any capability; delete them from disk. The render itself only supports advisory cancellation while running."
+        }
       },
       "policy": {
         "requiredScope": "write",
@@ -80384,7 +80493,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e6ffc51142ebe3ccf32f571ea029be00769fe14c9afaabf64ab8e7228f092c55",
-        "content": "de79e917feee1e99cae1fb9745258e20ec57a4e914389ccf17f9c9a7343c229e"
+        "content": "63a0c8e4c128763c1f6c5bcf293393e5eceebc614d3c1c8a7c3d45e47ce1ee70"
       }
     },
     {
@@ -86817,12 +86926,7 @@
         "effect": "write",
         "idempotency": "non-idempotent",
         "longRunning": false,
-        "safeToRetry": false,
-        "compensation": {
-          "inverse": [
-            "system_control.stop_session"
-          ]
-        }
+        "safeToRetry": false
       },
       "policy": {
         "requiredScope": "write",
@@ -86893,7 +86997,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a59b5b98f185668a39d50e7315a508b5e14509bb1efd0d493d44683895181c01",
-        "content": "131184cc82990a4e3bbbd9d11589c7e70bf8e11dfc882579ff09a2c1a02de7d0"
+        "content": "d5e541df8540fcfbc8bdfcc122df72f3ee1fd39808ecef0a64040a007ab913f1"
       }
     },
     {

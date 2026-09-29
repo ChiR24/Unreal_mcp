@@ -10407,7 +10407,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_track",
             "add_keyframe",
             "set_parent_class",
-            "preview",
             "rename_widget",
             "reparent_widget"
           ],
@@ -11347,6 +11346,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "remove_function",
             "probe_handle",
             "edit_widget_blueprint",
+            "preview_widget",
             "remove_widget",
             "duplicate_widget",
             "add_panel_widget",

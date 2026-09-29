@@ -63,9 +63,9 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_widget_blueprint', selector: 'edit',
-    summary: 'Create a Widget Blueprint, set its parent class, preview it (drawn offscreen and returned as an image), or rename/reparent a widget in its tree.',
-    topics: ['widget blueprint', 'umg', 'preview widget', 'rename widget', 'reparent widget', 'widget parent class', 'render widget', 'see widget'],
-    members: { create: 'create_widget_blueprint', set_parent_class: 'set_widget_parent_class', preview: 'preview_widget', rename_widget: 'rename_widget', reparent_widget: 'reparent_widget' },
+    summary: 'Create a Widget Blueprint, set its parent class, or rename/reparent a widget in its tree.',
+    topics: ['widget blueprint', 'umg', 'rename widget', 'reparent widget', 'widget parent class'],
+    members: { create: 'create_widget_blueprint', set_parent_class: 'set_widget_parent_class', rename_widget: 'rename_widget', reparent_widget: 'reparent_widget' },
   },
   {
     primary: 'add_panel_widget', selector: 'widgetKind',

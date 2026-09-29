@@ -59,6 +59,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'preview_widget',
     family: FAMILY,
     domain: DOMAIN,
+    topics: ['preview widget', 'render widget', 'see widget', 'widget screenshot', 'widget image'],
     summary: 'Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image. Design mode, like its thumbnail: Construct graphs do not run, so texts are the designer defaults.',
     whenToUse: ['A Widget Blueprint must be seen after an edit (layout, colours, fonts) without running PIE.'],
     whenNotToUse: ['What the running game shows is needed, runtime texts included (play, then control_editor screenshot mode full_editor_window).'],
@@ -78,8 +79,10 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       editorOpened: { type: 'boolean', description: 'Whether the Widget Blueprint editor was opened (openEditor).' },
     },
     outputRequired: ['widgetPath'],
-    effect: 'write',
-    behavior: { idempotency: 'idempotent' },
+    // Read, and its own record: the widget and render target are transient, and
+    // openEditor only opens a tab. Folded with the edit_widget_blueprint writes it
+    // demanded Write scope for a picture.
+    effect: 'read',
     latency: 'interactive',
     resources: 'medium',
     plugins: WIDGET_PLUGINS,
