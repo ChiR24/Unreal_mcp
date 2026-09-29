@@ -32,7 +32,8 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_tree', selector: 'info',
-    summary: 'Read a Behavior Tree graph or a Blackboard key value.',
+    summary: 'Read a Behavior Tree as a nested node tree: root composite with its tasks, decorators and services, node counts and assigned Blackboard; info=blackboard_value reads a Blackboard key\'s type and default value.',
+    topics: ['behavior structure', 'nodes and services', 'blackboard key default'],
     members: { tree: 'get_tree', blackboard_value: 'get_blackboard_value' },
   },
   {
@@ -90,7 +91,8 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_ai_info', selector: 'info',
-    summary: 'Read AI asset or controller information, or navigation system information.',
+    summary: 'Read an AI asset: a pawn or AI controller Blueprint (perception, team, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.',
+    topics: ['controller settings', 'list blackboard keys', 'navmesh settings', 'state tree states'],
     members: { ai: 'get_ai_info', navigation: 'get_navigation_info' },
   },
 ];

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a9edc39452ff597a",
+  "catalogRevision": "7597116910beb387",
   "recordCount": 389,
   "records": [
     {
@@ -43832,9 +43832,13 @@
         "domain": "manage ai",
         "family": "ai",
         "topics": [
-          "get_ai_info"
+          "get_ai_info",
+          "controller settings",
+          "list blackboard keys",
+          "navmesh settings",
+          "state tree states"
         ],
-        "summary": "Read AI asset or controller information, or navigation system information.",
+        "summary": "Read an AI asset: a pawn or AI controller Blueprint (perception, team, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.",
         "whenToUse": [
           "A caller needs the current state of an AI asset.",
           "A caller needs current NavMesh and agent settings."
@@ -44075,7 +44079,7 @@
       },
       "examples": [
         {
-          "title": "Read AI asset or controller information, or navigation system information.",
+          "title": "Read an AI asset: a pawn or AI controller Blueprint (perception, team, movement), a Behavior Tree summary, Blackboard keys, State Tree states or EQS query options; info=navigation returns NavMesh and agent settings.",
           "input": {
             "action": "get_ai_info",
             "controllerPath": "/Game/AI/AIC_Enemy",
@@ -44145,7 +44149,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2cba2666511b027bc9d3708558d0762894825cd9738e19784681644314107dfd",
-        "content": "8234d15bd226b338948f119c46f7a5bf9812af3bcdcd0771399bde830bb24e46"
+        "content": "495f1399c23a752395b01db0324eedcd5e6764172976fb997dd0b08d1257cbf5"
       }
     },
     {
@@ -44170,9 +44174,12 @@
         "domain": "manage ai",
         "family": "ai",
         "topics": [
-          "get_tree"
+          "get_tree",
+          "behavior structure",
+          "nodes and services",
+          "blackboard key default"
         ],
-        "summary": "Read a Behavior Tree graph or a Blackboard key value.",
+        "summary": "Read a Behavior Tree as a nested node tree: root composite with its tasks, decorators and services, node counts and assigned Blackboard; info=blackboard_value reads a Blackboard key's type and default value.",
         "whenToUse": [
           "A caller needs the node graph of a Behavior Tree.",
           "A caller needs the authored default of a Blackboard key."
@@ -44259,7 +44266,7 @@
       },
       "examples": [
         {
-          "title": "Read a Behavior Tree graph or a Blackboard key value.",
+          "title": "Read a Behavior Tree as a nested node tree: root composite with its tasks, decorators and services, node counts and assigned Blackboard; info=blackboard_value reads a Blackboard key's type and default value.",
           "input": {
             "action": "get_tree",
             "assetPath": "/Game/AI/BT_Enemy",
@@ -44322,7 +44329,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1774b526fa1da64dc19a57a3bb9b1c1de66b7e39cb556750e3d184599c5d93e4",
-        "content": "36c22109dd289eacc448720068d5a6932a035c7393fcda5781ecd7ce1fe71c10"
+        "content": "9b3641a7e10b146b6b3de899f929b65d9434c3929724073e8371c036d28c945d"
       }
     },
     {
