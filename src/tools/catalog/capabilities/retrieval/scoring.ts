@@ -14,6 +14,7 @@ import {
   RETRIEVAL_FIELD_WEIGHTS,
   RETRIEVAL_FUNCTION_WORDS,
   RETRIEVAL_NAME_FIELDS,
+  RETRIEVAL_READ_INTENT_WORDS,
   RETRIEVAL_SCORE_CONSTANTS,
   SCORE_TIE_EPSILON,
 } from './constants.js';
@@ -86,6 +87,8 @@ export type ScoreContext = {
   /** `queryTokens` less closed-class glue, which no identifier can ever spell. */
   readonly contentTokens: readonly string[];
   readonly querySet: ReadonlySet<string>;
+  /** The query opens with a read word ("get actor location"): read-effect capabilities rank ahead. */
+  readonly readIntent: boolean;
 };
 
 /** The action segment of a declared alias: `control_actor.move_actor` -> `move_actor`. */
@@ -400,11 +403,14 @@ export function scoreDocument(
     .filter((entry): entry is FieldContribution => entry !== null);
   let lexicalScore = 0;
   for (const entry of contributions) lexicalScore += entry.score;
-  const score = lexicalScore
+  const matchScore = lexicalScore
     + exactMatchBonus(document, context)
     + actionCoverageScore(document, context)
     + adjacencyScore(document.sequences, context.contentTokens);
-  if (score < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore) return null;
+  if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore) return null;
+  // Only ever reorders records the query already matched; it never makes one a result.
+  const score = matchScore
+    + (context.readIntent && document.record.behavior.effect === 'read' ? RETRIEVAL_SCORE_CONSTANTS.readIntentBonus : 0);
   contributions.sort((left, right) => {
     if (Math.abs(right.score - left.score) > SCORE_TIE_EPSILON) return right.score - left.score;
     return compareCanonicalCapabilityIds(left.field, right.field);
@@ -446,6 +452,7 @@ export function rankCapabilityRecords(
     queryTokens,
     contentTokens: queryTokens.filter((token) => !RETRIEVAL_FUNCTION_WORDS.has(token)),
     querySet: new Set(queryTokens),
+    readIntent: RETRIEVAL_READ_INTENT_WORDS.has(query.toLowerCase().match(/[a-z0-9]+/u)?.[0] ?? ''),
   } satisfies ScoreContext;
   const ranked = index.documents
     .filter((document) => allowedIds.has(String(document.record.id)))

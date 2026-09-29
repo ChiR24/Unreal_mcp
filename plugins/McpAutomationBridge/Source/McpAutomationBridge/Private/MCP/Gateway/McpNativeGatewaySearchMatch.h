@@ -1,7 +1,9 @@
 // McpNativeGatewaySearchMatch.h — word-level match rules for the native gateway search
 //
-// Mirrors `scoreRecord()` in tests/unit/plugin/gateway/native-discovery-search.ts
-// exactly. Matching is WORD-level, never substring: "move" must not hit
+// The native door's own rule-based ranker (the TypeScript door ranks with BM25 in
+// src/tools/catalog/capabilities/retrieval/scoring.ts); the two share the function
+// words and the read-intent words, which tests/unit/tools/search-read-intent-parity
+// .test.ts pins. Matching is WORD-level, never substring: "move" must not hit
 // `remove_*`, and a namespace word must not make every record under it look
 // like a hit. A record's declared aliases are its own names, so a verb the
 // action does not carry ("move actor" -> control_actor.move_actor) still lands.

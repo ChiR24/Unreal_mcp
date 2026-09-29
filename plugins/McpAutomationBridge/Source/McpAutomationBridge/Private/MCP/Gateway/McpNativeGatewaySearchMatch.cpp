@@ -32,9 +32,37 @@ const TCHAR* const FunctionWords[] = {
 	TEXT("can"), TEXT("could"), TEXT("should"), TEXT("would"), TEXT("will"), TEXT("want"), TEXT("need"),
 };
 
+// Words that open a request to READ something, matched against the first word as
+// typed (before folding). Same list as RETRIEVAL_READ_INTENT_WORDS in the
+// TypeScript retrieval constants; verbs that also open changes (view, look, see,
+// check, print) are left out.
+const TCHAR* const ReadIntentWords[] = {
+	TEXT("get"), TEXT("read"), TEXT("list"), TEXT("inspect"), TEXT("query"), TEXT("describe"), TEXT("find"), TEXT("count"),
+	TEXT("show"), TEXT("what"), TEXT("which"), TEXT("where"), TEXT("who"), TEXT("how"), TEXT("is"), TEXT("does"),
+};
+
 bool IsAsciiAlnum(TCHAR Ch)
 {
 	return (Ch >= TEXT('a') && Ch <= TEXT('z')) || (Ch >= TEXT('0') && Ch <= TEXT('9'));
+}
+
+bool OpensWithReadWord(const FString& LowerQuery)
+{
+	FString First;
+	for (const TCHAR Ch : LowerQuery)
+	{
+		if (!IsAsciiAlnum(Ch))
+		{
+			if (!First.IsEmpty()) break;
+			continue;
+		}
+		First.AppendChar(Ch);
+	}
+	for (const TCHAR* Word : ReadIntentWords)
+	{
+		if (First.Equals(Word, ESearchCase::CaseSensitive)) return true;
+	}
+	return false;
 }
 
 bool IsFunctionWord(const FString& Word)
@@ -253,11 +281,16 @@ bool McpSearchScoreRecord(
 		bAliasRun = bAliasRun || (AliasWords.Num() >= 2 && QueryRun.Contains(SpacedRun(AliasWords), ESearchCase::CaseSensitive));
 	}
 	if (Matched == ContentWords.Num() && (bOwnCovered || bAliasRun)) Score += McpSearchActionCoveredBonus;
-	Out.Score = Score;
 	Out.Reasons.Empty();
 	for (int32 Rule = 0; Rule < RuleCount; ++Rule)
 	{
 		if (Fired[Rule]) Out.Reasons.Add(MatchRules[Rule].Reason);
 	}
+	// Reorders matches only: a record no rule fired for is still not a result.
+	if (Out.Reasons.Num() > 0 && Record.Effect.Equals(TEXT("read"), ESearchCase::CaseSensitive) && OpensWithReadWord(Query))
+	{
+		Score += McpSearchReadIntentBonus;
+	}
+	Out.Score = Score;
 	return Out.Reasons.Num() > 0;
 }

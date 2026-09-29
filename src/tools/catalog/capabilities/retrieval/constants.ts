@@ -49,6 +49,20 @@ export const RETRIEVAL_FUNCTION_WORDS: ReadonlySet<string> = Object.freeze(new S
   'can', 'could', 'should', 'would', 'will', 'want', 'need',
 ]));
 
+/**
+ * Words that open a request to READ something: "get actor location", "what is
+ * in this folder". A grammatical role, not vocabulary: ranking uses it only to
+ * prefer capabilities whose declared effect is read, so "get actor location"
+ * stops ranking set_transform first. Verbs that also open requests to change
+ * things (view, look, see, check, print) are left out. Matched against the
+ * first word as typed, before inflection folding. The native gateway search
+ * uses the same list (McpNativeGatewaySearchMatch.cpp ReadIntentWords).
+ */
+export const RETRIEVAL_READ_INTENT_WORDS: ReadonlySet<string> = Object.freeze(new Set([
+  'get', 'read', 'list', 'inspect', 'query', 'describe', 'find', 'count', 'show',
+  'what', 'which', 'where', 'who', 'how', 'is', 'does',
+]));
+
 export const SCORE_TIE_EPSILON = 1e-9 as const;
 export const MAX_MATCH_REASONS = 3 as const;
 export const MAX_REASON_TOKENS = 3 as const;
@@ -65,6 +79,7 @@ export const RETRIEVAL_SCORE_CONSTANTS = Object.freeze({
   functionWordWeight: 0.25,
   headVerbAlignmentBonus: 6,
   headVerbMismatchPenalty: 10,
+  readIntentBonus: 14,
   minimumRelevanceScore: 0.01,
   confidenceSaturation: 40,
   confidenceSaturationWeight: 0.85,

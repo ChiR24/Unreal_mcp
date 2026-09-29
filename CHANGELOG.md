@@ -120,6 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **Search answers a question with a reader.** "get actor location" ranked set_transform first on both doors, "show blueprint graph" edit_graph, and "read datatable rows" a row delete; a small model that takes the first row then changed what it meant to read. A query that opens with a read word (get, read, list, inspect, query, describe, find, count, show, what, which, where, who, how, is, does) now ranks the matching capabilities that only read ahead. It only reorders matches, and requests to change something ("set actor location", "show hidden actor") rank as before.
 - **Receipts name the Blueprint or MetaSound a call changed.** A `modify_scs` edit, a reply naming its asset as `blueprintPath`, and a `build_metasound` batch left the receipt's `changedAssets` empty, so nothing said what to save or check again.
 - **SCS edits say briefly how many placed copies took the change.** `instancesUpdated` is always there now, 0 included, and `updatedInstances` names at most three; an edit to a Blueprint placed a hundred times listed every one, and "none" read as a missing field.
 - **A mesh or material set on a hidden component says so.** `modify_scs` reported success with nothing to see; the operation's result now carries a hint, repeated in warnings, when the component is invisible or hidden in game.

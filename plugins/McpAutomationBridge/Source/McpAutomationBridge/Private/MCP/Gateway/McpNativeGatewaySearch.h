@@ -55,6 +55,12 @@ constexpr int32 McpSearchWordCoverageBonus = 5;
  * delete_node, where a folded record's aliases used to out-score it word by word.
  */
 constexpr int32 McpSearchActionCoveredBonus = 50;
+/**
+ * When the query opens with a read word ("get actor location", "what is in this
+ * folder"), a matching record whose effect is read ranks ahead: set_transform used
+ * to answer "get actor location". Only reorders records that already matched.
+ */
+constexpr int32 McpSearchReadIntentBonus = 40;
 constexpr int32 McpDescribeDefaultLimit = 20;
 constexpr int32 McpDescribeMaxLimit = 50;
 // Search result byte budget (24 KB); a page that would pass it is cut short and

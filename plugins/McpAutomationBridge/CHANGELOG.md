@@ -86,6 +86,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **WebSocket client mode** (the server keeps rejecting unmasked client frames), the **raw-socket bare action names** neither MCP door sent, and the Project Settings `LogVerbosity`, `bApplyLogVerbosityToAll`, `bEnableSocketTelemetry` and `HeartbeatIntervalMs`, which nothing read.
 
 ### Fixed
+- **Read-intent search rule** — `McpSearchScoreRecord` (`McpNativeGatewaySearchMatch.cpp`) adds `McpSearchReadIntentBonus` (40) to a matched record whose effect is read when the query's first word, as typed, is one of `ReadIntentWords`; the TypeScript door adds `readIntentBonus` (14) with the same list (`RETRIEVAL_READ_INTENT_WORDS`), and a parity test pins the shared list. The header no longer points at a TypeScript mirror that does not exist.
 - **Receipt assets** — `blueprintPath` joins the receipt asset fields on both doors (`McpNativeReceiptOutcome.cpp`, `receipt-outcome.ts`); `modify_scs` sets `changedAssets` and `build_metasound` its `assetPath` on success.
 - **SCS propagation report** — `PropagateAndReport` (`BlueprintHandlersScsPropagate.h`) always sets `instancesUpdated` and caps `updatedInstances` at three paths (`ToJsonStrings(..., Max)`).
 - **Hidden component hint** — `McpScsHiddenHint` (`BlueprintHandlersScsTemplateAssets.h`) flags a mesh or material applied to a component that is invisible or hidden in game; `modify_scs` repeats it in warnings.
