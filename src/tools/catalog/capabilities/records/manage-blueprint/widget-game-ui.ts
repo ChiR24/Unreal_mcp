@@ -56,7 +56,7 @@ function hud(action: string, summary: string, defaultSlot: string, extraProps: R
     resources: 'low',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action, widgetPath: '/Game/UI/WBP_HUD', ...example },
-    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_HUD.WBP_HUD', slotName: defaultSlot, widgets: [defaultSlot] },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_HUD', slotName: defaultSlot, widgets: [defaultSlot] },
   });
 }
 

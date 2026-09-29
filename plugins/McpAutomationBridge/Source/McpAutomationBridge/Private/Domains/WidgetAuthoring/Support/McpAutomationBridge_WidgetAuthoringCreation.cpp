@@ -74,13 +74,11 @@ bool HandleWidgetAuthoringCreation(
         const bool bSaved = McpSafeAssetSave(WidgetBlueprint);
         const bool bPostCreateSucceeded = bCompiled && bSaved;
 
-        FString ObjectPath = WidgetBlueprint->GetPathName();
-
         ResultJson->SetBoolField(TEXT("success"), bPostCreateSucceeded);
         ResultJson->SetStringField(TEXT("message"), bPostCreateSucceeded
             ? FString::Printf(TEXT("Created widget blueprint: %s"), *Name)
             : FString::Printf(TEXT("Widget blueprint created but post-create steps failed: %s"), *Name));
-        ResultJson->SetStringField(TEXT("widgetPath"), ObjectPath);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBlueprint));
         ResultJson->SetBoolField(TEXT("compileSucceeded"), bCompiled);
         ResultJson->SetBoolField(TEXT("saveSucceeded"), bSaved);
 

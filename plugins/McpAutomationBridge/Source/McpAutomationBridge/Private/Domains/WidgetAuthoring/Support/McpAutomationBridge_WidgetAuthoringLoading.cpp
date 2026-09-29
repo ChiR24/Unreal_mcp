@@ -113,6 +113,11 @@ UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath)
     }
     return WidgetBP;
 }
+FString WidgetBlueprintPackagePath(const UWidgetBlueprint* WidgetBP)
+{
+    return WidgetBP && WidgetBP->GetOutermost() ? WidgetBP->GetOutermost()->GetName() : FString();
+}
+
 bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP)
 {
     if (!WidgetBP)

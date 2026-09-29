@@ -76,7 +76,7 @@ const testCases = [
 
   // === DESTRUCTIVE (last: these invalidate slots the cases above address) ===
   // A reparent moves a seated widget on purpose; the add funnel's "was already in the tree" warning is for an add that re-uses a slotName.
-  { scenario: 'ACTION: reparent_widget', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RenameMe', newParent: 'MenuColumn' }), expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', length: 0, label: 'a move is not reported as a duplicate add' }] },
+  { scenario: 'ACTION: reparent_widget', toolName: 'manage_blueprint', arguments: widgetArgs('reparent_widget', { slotName: 'RenameMe', newParent: 'MenuColumn' }), expected: 'success', assertions: [{ path: 'structuredContent.receipt.warnings', length: 0, label: 'a move is not reported as a duplicate add' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'the widget is listed once, not as a package path and again as an object path' }] },
   // reparent_widget keeps the slot layout and takes an index; the same parent reorders.
   { scenario: 'Setup: second child of MenuColumn', toolName: 'manage_blueprint', arguments: widgetArgs('add_text_block', { slotName: 'OrderMe', parentSlot: 'MenuColumn', text: 'Order' }), expected: 'success' },
   { scenario: 'Setup: pad the second child', toolName: 'manage_blueprint', arguments: widgetArgs('set_margin', { slotName: 'OrderMe', top: 34 }), expected: 'success' },

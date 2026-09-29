@@ -157,7 +157,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'low',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'reparent_widget', widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', newParent: 'HeaderBox' },
-    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI.WBP_MainUI', slotName: 'TitleText', newParent: 'HeaderBox', index: 0 },
+    exampleOutput: { success: true, widgetPath: '/Game/UI/WBP_MainUI', slotName: 'TitleText', newParent: 'HeaderBox', index: 0 },
   }),
   buildRecord({
     id: 'blueprint.duplicate_widget',

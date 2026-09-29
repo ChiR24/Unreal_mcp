@@ -15,6 +15,10 @@ class UWidgetTree;
 namespace WidgetAuthoringHelpers
 {
 UWidgetBlueprint* LoadWidgetBlueprint(const FString& WidgetPath);
+// The canonical /Game package path of a Widget Blueprint (/Game/UI/WBP_Menu), which is what every
+// widgetPath a reply carries must name. UObject::GetPathName() answers the object path
+// (/Game/UI/WBP_Menu.WBP_Menu), so a receipt listed the same asset twice beside assetPath.
+FString WidgetBlueprintPackagePath(const UWidgetBlueprint* WidgetBP);
 // Loads the widget blueprint, creating an empty UUserWidget-based asset at the path when missing.
 // Marks the Widget Blueprint structurally modified and saves it through the safe wrapper, so
 // authoring edits survive an editor restart (dogfood c27: widgets added via MCP vanished).

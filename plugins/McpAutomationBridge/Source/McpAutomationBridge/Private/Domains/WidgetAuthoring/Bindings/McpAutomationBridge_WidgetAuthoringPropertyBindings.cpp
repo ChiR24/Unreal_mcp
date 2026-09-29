@@ -231,7 +231,7 @@ bool HandleWidgetAuthoringPropertyBindings(
         return true;
     }
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
+    ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), SlotName);
     ResultJson->SetStringField(TEXT("property"), Property.ToString());
     ResultJson->SetStringField(TEXT("bindingSource"), Source.ToString());

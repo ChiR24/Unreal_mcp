@@ -140,7 +140,7 @@ void ReplyWidgetLayout(UMcpAutomationBridgeSubsystem& Subsystem, const FString& 
 {
     ResultJson->SetBoolField(TEXT("saved"), MarkWidgetBlueprintModifiedAndSave(WidgetBP));
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
+    ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), Widget->GetName());
     ResultJson->SetObjectField(TEXT("applied"), McpDescribeWidgetLayout(Widget));
     ResultJson->SetStringField(TEXT("message"), Message);

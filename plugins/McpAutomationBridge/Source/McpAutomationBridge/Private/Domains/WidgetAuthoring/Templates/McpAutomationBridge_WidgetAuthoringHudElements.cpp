@@ -73,7 +73,7 @@ bool HandleWidgetAuthoringHudElements(
     }
     const FString Message = FString::Printf(TEXT("Added %s '%s' (%d widgets)"), *Label, *SlotName, Created.Num());
     ResultJson->SetBoolField(TEXT("success"), true);
-    ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
+    ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     ResultJson->SetStringField(TEXT("slotName"), SlotName);
     ResultJson->SetArrayField(TEXT("widgets"), Names);
     ResultJson->SetBoolField(TEXT("saved"), bSaved);

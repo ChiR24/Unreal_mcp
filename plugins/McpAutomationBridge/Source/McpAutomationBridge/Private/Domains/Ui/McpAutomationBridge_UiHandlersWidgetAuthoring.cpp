@@ -138,9 +138,11 @@ bool HandleWidgetAuthoringAction(
     ScanPathSynchronous(WidgetBlueprint->GetOutermost()->GetName());
 
     bSuccess = true;
-    Message = FString::Printf(TEXT("Widget blueprint created at %s"),
-                              *WidgetBlueprint->GetPathName());
-    Resp->SetStringField(TEXT("widgetPath"), WidgetBlueprint->GetPathName());
+    // The package path, as the already-exists reply above answers it: GetPathName() is the object
+    // path (/Game/UI/WBP_Menu.WBP_Menu), which a receipt listed as a second asset.
+    const FString CreatedPath = WidgetBlueprint->GetOutermost()->GetName();
+    Message = FString::Printf(TEXT("Widget blueprint created at %s"), *CreatedPath);
+    Resp->SetStringField(TEXT("widgetPath"), CreatedPath);
     Resp->SetStringField(TEXT("widgetName"), WidgetName);
     if (!WidgetType.IsEmpty()) {
       Resp->SetStringField(TEXT("widgetType"), WidgetType);

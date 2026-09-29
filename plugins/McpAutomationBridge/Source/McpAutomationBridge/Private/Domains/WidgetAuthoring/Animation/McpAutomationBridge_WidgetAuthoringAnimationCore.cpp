@@ -93,7 +93,7 @@ bool HandleWidgetAuthoringAnimationCore(
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("animationName"), AnimationName);
         ResultJson->SetNumberField(TEXT("duration"), SafeDuration);
-        ResultJson->SetStringField(TEXT("widgetPath"), WidgetBP->GetPathName());
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
 
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Widget animation created"), ResultJson);
         return true;

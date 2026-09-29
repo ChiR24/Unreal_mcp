@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b616d22c57602aae",
+  "catalogRevision": "92a5c1a8333e679a",
   "recordCount": 389,
   "records": [
     {
@@ -11628,7 +11628,7 @@
           },
           "output": {
             "success": true,
-            "widgetPath": "/Game/UI/WBP_HUD.WBP_HUD",
+            "widgetPath": "/Game/UI/WBP_HUD",
             "slotName": "HealthBar",
             "widgets": [
               "HealthBar"
@@ -11729,7 +11729,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "67db144d8e6d635f756a3bec8fc1850f6d58674739b0f12ca87cb7f12e0f0b54",
-        "content": "8273175d9bddd665cca8d3d3985a1bf965bb054443706d8d971bc4ce9746e26f"
+        "content": "b751f1daf98fa8b30411a935404359466e8d6e01c89721e16eda37b84f9b086f"
       }
     },
     {

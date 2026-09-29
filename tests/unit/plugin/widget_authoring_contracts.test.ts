@@ -24,6 +24,44 @@ function sources(dir: string = DOMAIN): string[] {
     entry.isDirectory() ? sources(join(dir, entry.name)) : /\.(cpp|h)$/u.test(entry.name) ? [join(dir, entry.name)] : []);
 }
 
+const UI_WIDGET_AUTHORING = join(
+  'plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'Ui',
+  'McpAutomationBridge_UiHandlersWidgetAuthoring.cpp'
+);
+
+describe('widgetPath is the canonical /Game package path, never the object path', () => {
+  const objectPathWrite = /SetStringField\(\s*TEXT\("widgetPath"\)\s*,[^;]*GetPathName\(\)/u;
+
+  it('no widget handler derives the widgetPath it answers from GetPathName()', () => {
+    const files = [...sources(), UI_WIDGET_AUTHORING];
+    const offenders = files.filter((file) => objectPathWrite.test(stripComments(readFileSync(file, 'utf8'))));
+
+    expect(files.length).toBeGreaterThan(30);
+    expect(offenders.map((file) => file.replace(/^.*[\\/]/u, ''))).toEqual([]);
+  });
+
+  it('the shared layout reply, the creators and the template builders name the package path', () => {
+    const viaHelper = /SetStringField\(TEXT\("widgetPath"\), WidgetBlueprintPackagePath\((?:WidgetBP|WidgetBlueprint)\)\)/u;
+    for (const segments of [
+      ['Support', 'McpAutomationBridge_WidgetAuthoringSlotReadback.cpp'],
+      ['Support', 'McpAutomationBridge_WidgetAuthoringCreation.cpp'],
+      ['Animation', 'McpAutomationBridge_WidgetAuthoringAnimationCore.cpp'],
+      ['Bindings', 'McpAutomationBridge_WidgetAuthoringPropertyBindings.cpp'],
+      ['Templates', 'McpAutomationBridge_WidgetAuthoringHudElements.cpp'],
+      ['Templates', 'McpAutomationBridge_WidgetAuthoringScreenParts.cpp']
+    ] as const) {
+      expect(read(...segments), segments.join('/')).toMatch(viaHelper);
+    }
+    expect(stripComments(readFileSync(UI_WIDGET_AUTHORING, 'utf8'))).toMatch(/const FString CreatedPath = WidgetBlueprint->GetOutermost\(\)->GetName\(\);/u);
+  });
+
+  it('WidgetBlueprintPackagePath is the package name of the asset', () => {
+    expect(read('Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp')).toMatch(
+      /FString WidgetBlueprintPackagePath\(const UWidgetBlueprint\* WidgetBP\)\s*\{\s*return WidgetBP && WidgetBP->GetOutermost\(\) \? WidgetBP->GetOutermost\(\)->GetName\(\) : FString\(\);/u
+    );
+  });
+});
+
 describe('SafeAddWidgetToTree: only an add that re-uses a slotName warns that the widget was already seated', () => {
   it('the warning is gated on the caller not moving the widget on purpose', () => {
     const tree = read('Support', 'McpAutomationBridge_WidgetAuthoringTree.cpp');
