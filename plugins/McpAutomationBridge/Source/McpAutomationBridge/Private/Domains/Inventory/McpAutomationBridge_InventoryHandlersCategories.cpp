@@ -123,9 +123,6 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetStringField(TEXT("categoryPath"), CategoryPath);
     Result->SetBoolField(TEXT("assigned"), bCategoryAssigned);
-    if (!bCategoryAssigned && !AssignError.IsEmpty()) {
-      Result->SetStringField(TEXT("note"), TEXT("Category property not found on item class. Ensure your item class has a Category or ItemCategory property."));
-    }
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Category assigned to item"), Result);
     return true;

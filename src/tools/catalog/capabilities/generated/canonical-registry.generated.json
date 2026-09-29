@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8991c98926dc6f53",
+  "catalogRevision": "f3b47c0c9ef73635",
   "recordCount": 389,
   "records": [
     {
@@ -61595,7 +61595,7 @@
           "setting=properties: The target is a Blueprint or class default rather than an item data asset (use inspect.set_property).",
           "setting=icon: The icon image is not in the project yet (use asset.import).",
           "setting=icon: The item is a custom class with none of the properties Icon, ItemIcon, Thumbnail, DisplayIcon or InventoryIcon, so the call fails and names the missing property (use inspect.set_property on the class's own icon property).",
-          "setting=stacking: The item is a custom class with no stacking properties such as bStackable or MaxStackSize, so nothing is written (use inspect.set_property).",
+          "setting=stacking: The item is a custom class with no stacking properties such as bStackable or MaxStackSize: the call fails with PROPERTY_NOT_FOUND and writes nothing (use inspect.set_property).",
           "setting=category: The category asset does not exist yet, and its path is stored without a check (use manage_inventory.create_inventory_asset, kind=item_category)."
         ]
       },
@@ -61758,7 +61758,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "139925576f73ffd8feb756d8ee9b26fe37460d0e5a875cfbf2223e6f2587db63",
-        "content": "925f3c7c20e5f6246c4123697802d55a2418debe66305c0d8effaec40a3a5740"
+        "content": "9cf6242b691ec5c1d32c8fc39e6ab6063bd35cf41fc2607b6077214424ae06fe"
       }
     },
     {
@@ -62384,7 +62384,7 @@
               },
               "description": "Quality tiers, each with a name and a dropWeight."
             },
-            "entryCount": {
+            "lootEntryCount": {
               "type": "number",
               "description": "Number of loot entries."
             },
@@ -62496,8 +62496,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0aad5c7a33d7996e7f23731441a0ee135dc56e86041bf90f377e77d2c9221e48",
-        "content": "ce8ef41b7f17ca1c122527b1c6666f480b6fa559e9334910b0a070b8f49d827a"
+        "schema": "7f6e779fd4e595a798635745d1d9f73a62f916e86f16391095cc67456358db31",
+        "content": "473e7341b3f61463fbaa169089c988cf69c6fb8b5383e2a324e2273bf8e3f7a7"
       }
     },
     {

@@ -58,6 +58,12 @@ TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Param
         TEXTURE_ERROR_RESPONSE(Error);
     }
     UTexture2D* NewTexture = CreateEmptyTexture(Path, Name, NewWidth, NewHeight, false);
+    if (NewTexture)
+    {
+        // The same texture at another size: keep its colour space and compression (a mask stays linear).
+        NewTexture->SRGB = SourceTexture->SRGB;
+        NewTexture->CompressionSettings = SourceTexture->CompressionSettings;
+    }
     if (!NewTexture)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create resized texture"));

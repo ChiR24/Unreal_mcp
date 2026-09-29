@@ -72,6 +72,14 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
       }
     }
 
+    // A success that wrote nothing read as done; the caller must reach for set_property instead.
+    if (ModifiedProps.Num() == 0) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId,
+          FString::Printf(TEXT("%s has no stacking property (bStackable, MaxStackSize or StackLimit); nothing was changed. Set the item's own fields with inspect.set_property."),
+                          *ItemAsset->GetClass()->GetName()),
+          TEXT("PROPERTY_NOT_FOUND"));
+      return true;
+    }
     ItemAsset->MarkPackageDirty();
 
     if (GetJsonBoolField(Payload, TEXT("save"), true)) {
@@ -89,11 +97,7 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
       ModArr.Add(MakeShared<FJsonValueString>(Prop));
     }
     Result->SetArrayField(TEXT("modifiedProperties"), ModArr);
-    Result->SetBoolField(TEXT("configured"), ModifiedProps.Num() > 0);
-
-    if (ModifiedProps.Num() == 0) {
-      Result->SetStringField(TEXT("note"), TEXT("No stacking properties found. Ensure your item class has bStackable, MaxStackSize, or StackLimit properties."));
-    }
+    Result->SetBoolField(TEXT("configured"), true);
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Item stacking configured"), Result);

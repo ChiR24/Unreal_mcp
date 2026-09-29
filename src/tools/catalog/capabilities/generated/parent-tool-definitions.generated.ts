@@ -15411,10 +15411,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
-        "entryCount": {
-          "type": "number",
-          "description": "Number of loot entries."
-        },
         "icon": {
           "type": "string",
           "description": "Canonical /Game texture or material path used as the item icon."
@@ -15440,6 +15436,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Loot table entries."
+        },
+        "lootEntryCount": {
+          "type": "number",
+          "description": "Number of loot entries."
         },
         "lootTablePath": {
           "type": "string",

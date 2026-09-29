@@ -76,15 +76,12 @@ inline bool EnumSaveRequested(const TSharedPtr<FJsonObject>& Params)
 }
 
 // Commit a UUserDefinedEnum mutation: refresh editor state, mark the package
-// dirty, and persist through the safe save wrapper when bSave is set.
-inline void FinalizeEnum(UUserDefinedEnum* Enum, bool bSave)
+// dirty, and persist through the safe save wrapper when bSave is set. True when it was saved.
+inline bool FinalizeEnum(UUserDefinedEnum* Enum, bool bSave)
 {
     Enum->PostEditChange();
     Enum->GetOutermost()->MarkPackageDirty();
-    if (bSave)
-    {
-        McpSafeAssetSave(Enum);
-    }
+    return bSave && McpSafeAssetSave(Enum);
 }
 
 // Resolve the enum from Params; on failure populate OutResult and set bHandled

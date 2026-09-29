@@ -122,16 +122,13 @@ bool HandleStructLifecycleActions(UMcpAutomationBridgeSubsystem& Bridge, const F
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(S);
-        if (bSave)
-        {
-            McpSafeAssetSave(S);
-        }
+        const bool bSaved = bSave && McpSafeAssetSave(S);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("assetPath"), PackageName + TEXT(".") + SanitizedName);
         Result->SetStringField(TEXT("structName"), SanitizedName);
         Result->SetStringField(TEXT("status"), TEXT("UpToDate"));
-        Result->SetBoolField(TEXT("saved"), bSave);
+        Result->SetBoolField(TEXT("saved"), bSaved);
         Result->SetNumberField(TEXT("placeholderMembers"), PlaceholderMembers);
         if (bHasMembers)
         {

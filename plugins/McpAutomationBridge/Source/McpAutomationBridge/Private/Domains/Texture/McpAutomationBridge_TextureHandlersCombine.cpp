@@ -33,6 +33,7 @@ TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Par
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create output texture"));
     }
+    OutputTexture->SRGB = BaseTex->SRGB;
 
     const TArray<uint8> BasePixels = ReadSourceBGRA(BaseTex);
     const TArray<uint8> OverlayPixels = ReadSourceBGRA(OverlayTex);

@@ -85,7 +85,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
     ],
     whenNotToUse: [
       'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
-      'The item is a custom class with no stacking properties such as bStackable or MaxStackSize, so nothing is written (use inspect.set_property).',
+      'The item is a custom class with no stacking properties such as bStackable or MaxStackSize: the call fails with PROPERTY_NOT_FOUND and writes nothing (use inspect.set_property).',
     ],
     inputProps: {
       itemPath: IP.itemPath,
@@ -221,7 +221,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
       replication: { type: 'string', description: 'Replication condition applied to inventory state.' },
       lootEntries: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Loot table entries.' },
       tiers: IP.tiers,
-      entryCount: { type: 'number', description: 'Number of loot entries.' },
+      lootEntryCount: { type: 'number', description: 'Number of loot entries.' },
       ingredients: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Recipe ingredients.' },
       outputItem: { type: 'string', description: 'Recipe output item asset path.' },
       outputQuantity: IP.outputQuantity,
