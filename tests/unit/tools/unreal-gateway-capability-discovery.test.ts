@@ -108,9 +108,9 @@ describe('search filters bound the catalog by domain, family, parent and effect'
   });
 
   it('filters to a single family inside a domain', () => {
-    const result = search({ domain: 'tools', family: 'status', limit: 10 });
+    const result = search({ domain: 'tools', family: 'tool-status', limit: 10 });
     expect(rows(result).length).toBeGreaterThan(0);
-    expect(rows(result).every((row) => row.domain === 'tools' && row.family === 'status')).toBe(true);
+    expect(rows(result).every((row) => row.domain === 'tools' && row.family === 'tool-status')).toBe(true);
   });
 
   it('filters to a legacy parent tool as a migration view', () => {
@@ -141,10 +141,10 @@ describe('search filters bound the catalog by domain, family, parent and effect'
   });
 
   it('rejects an unknown family with bounded suggestions', () => {
-    const result = search({ domain: 'tools', family: 'statuses' });
+    const result = search({ domain: 'tools', family: 'tool-statuses' });
     expect(result.success).toBe(false);
     expect(result.errorCode).toBe('UNKNOWN_FAMILY');
-    expect(result.suggestions).toContain('status');
+    expect(result.suggestions).toContain('tool-status');
   });
 });
 
@@ -178,11 +178,11 @@ describe('describe browses the catalog by domain then family', () => {
     expect(result.scope).toBe('domain');
     expect(result.domain).toBe('tools');
     const families = (result.families as Row[]).map((row) => row.family);
-    expect(families).toContain('status');
+    expect(families).toContain('tool-status');
   });
 
   it('lists the capabilities of a family without any schema body', () => {
-    const result = describeCapability({ domain: 'tools', family: 'status' });
+    const result = describeCapability({ domain: 'tools', family: 'tool-status' });
     expect(result.scope).toBe('family');
     const capabilities = result.capabilities as Row[];
     expect(capabilities.length).toBeGreaterThan(0);

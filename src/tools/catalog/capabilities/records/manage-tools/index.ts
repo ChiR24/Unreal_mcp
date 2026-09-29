@@ -17,7 +17,7 @@ const TOOLS_ARRAY: JsonObject = {
 const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   {
     action: 'list_tools',
-    family: 'list',
+    family: 'tool-catalog',
     topics: ['list tools', 'available tools', 'all tools', 'which tools', 'tool list', 'capabilities'],
     summary: 'List all canonical tools with their enabled state and category.',
     whenToUse: ['Enumerate every registered tool and its current visibility.'],
@@ -55,7 +55,7 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   },
   {
     action: 'list_categories',
-    family: 'list',
+    family: 'tool-catalog',
     topics: ['tool groups', 'core world gameplay utility'],
     summary: 'List the four tool categories (core, world, gameplay, utility), each with its enabled flag, tool count and enabled tool count.',
     whenToUse: ['Inspect the four categories (core, world, gameplay, utility).'],
@@ -90,7 +90,7 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   },
   {
     action: 'enable_tools',
-    family: 'enable',
+    family: 'tool-visibility',
     summary: 'Enable specific tools by name.',
     whenToUse: ['Re-enable tools that were previously disabled.'],
     whenNotToUse: ['When the tools are already enabled.'],
@@ -113,7 +113,7 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   },
   {
     action: 'disable_tools',
-    family: 'disable',
+    family: 'tool-visibility',
     summary: 'Disable specific tools by name.',
     whenToUse: ['Hide non-essential tools from the MCP tool list.'],
     whenNotToUse: [
@@ -140,7 +140,7 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   },
   {
     action: 'enable_category',
-    family: 'enable',
+    family: 'tool-visibility',
     summary: 'Enable all tools in a category.',
     whenToUse: ['Re-enable an entire category or all categories at once.'],
     whenNotToUse: ['When only specific tools need re-enabling (use enable_tools).'],
@@ -163,7 +163,7 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   },
   {
     action: 'disable_category',
-    family: 'disable',
+    family: 'tool-visibility',
     summary: 'Disable all tools in a category.',
     whenToUse: ['Hide an entire non-essential category from the tool list.'],
     whenNotToUse: [
@@ -190,7 +190,7 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   },
   {
     action: 'get_status',
-    family: 'status',
+    family: 'tool-status',
     topics: ['how many tools are enabled', 'catalog revision', 'enabled and disabled counts'],
     summary: 'Read how many tools are enabled and disabled, the per-category breakdown, and the catalog revision numbers.',
     whenToUse: ['Check aggregate tool visibility and per-category counts.'],
@@ -229,7 +229,7 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
   },
   {
     action: 'reset',
-    family: 'reset',
+    family: 'tool-visibility',
     summary: 'Reset all tools and categories to their default enabled state.',
     whenToUse: ['Restore the full default tool set after disabling tools or categories.'],
     whenNotToUse: ['When only a subset needs re-enabling (use enable_tools or enable_category).'],

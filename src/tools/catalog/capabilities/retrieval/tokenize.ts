@@ -1,4 +1,4 @@
-import { RETRIEVAL_TOKENIZATION } from './constants.js';
+import { RETRIEVAL_FUNCTION_WORDS, RETRIEVAL_TOKENIZATION } from './constants.js';
 
 const CAMEL_CASE_BOUNDARY = /([a-z0-9])([A-Z])/g;
 const ASCII_TOKEN_PATTERN = /[a-z0-9]+/g;
@@ -7,9 +7,12 @@ const ASCII_TOKEN_PATTERN = /[a-z0-9]+/g;
  * Regular plurals and the two regular verb inflections only - deliberately NOT
  * a stemmer. Every rule is a suffix rewrite depending on nothing but the token,
  * so any surface mirroring this seam reproduces it exactly; replacing it with a
- * real stemmer would silently break that parity.
+ * real stemmer would silently break that parity. A function word stays whole,
+ * or "this" and "does" fold to "thi" and "doe" and slip past the function-word
+ * filter.
  */
 function foldInflection(token: string): string {
+  if (RETRIEVAL_FUNCTION_WORDS.has(token)) return token;
   if (token.length > 4 && token.endsWith('ies')) return `${token.slice(0, -3)}y`;
   if (
     token.length > 4

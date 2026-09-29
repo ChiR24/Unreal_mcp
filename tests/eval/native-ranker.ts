@@ -31,8 +31,9 @@ type NativeRecord = {
   readonly effect: string;
 };
 
-/** Suffix rewrites only (FoldInflection), then the delete synonyms (FoldSynonym). */
+/** Suffix rewrites only (FoldInflection), then the delete synonyms (FoldSynonym). A function word stays whole. */
 function foldWord(word: string): string {
+  if (RETRIEVAL_FUNCTION_WORDS.has(word)) return word;
   const length = word.length;
   let folded = word;
   if (length > 4 && folded.endsWith('ies')) folded = `${folded.slice(0, -3)}y`;
@@ -61,7 +62,7 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
   let fired = false;
   const fire = (rule: keyof typeof NATIVE_RULE_WEIGHTS): void => { score += NATIVE_RULE_WEIGHTS[rule]; fired = true; };
   if (record.id.toLowerCase() === query || actionEquals(record, all.join('_')) || actionEquals(record, content.join('_'))) fire('id-exact');
-  if (content.length >= 2) {
+  if (all.length >= 2) {
     if (record.topics.some((topic) => topic.toLowerCase().includes(query))) fire('topic');
     if (record.summary.toLowerCase().includes(query)) fire('summary');
   }

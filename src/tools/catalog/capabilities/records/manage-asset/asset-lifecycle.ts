@@ -123,7 +123,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       offset: num('Zero-based offset into the full result set.')
     }, []),
     PAGINATED_OUTPUT, READ, READ_POLICY, MEDIUM,
-    { aliases: ['asset.find_assets'], topics: ['find assets', 'search assets', 'assets by class', 'filter assets', 'query assets', 'assets of type'],
+    { aliases: ['asset.find_assets'], topics: ['find assets', 'search assets', 'assets by class', 'filter assets', 'query assets', 'assets of type', 'list sounds', 'list sound cues', 'list materials', 'list textures', 'list images', 'list meshes', 'list blueprints', 'list widget blueprints', 'list animations'],
       examples: [ex('Search materials by name',
         { searchText: 'M_Rock', classNames: ['Material'], packagePaths: ['/Game/Materials'], recursivePaths: true, limit: 25 },
         { success: true, assets: [{ name: 'M_Rock', path: '/Game/Materials/M_Rock.M_Rock', class: 'Material', packagePath: '/Game/Materials' }], folders: [], totalCount: 1, count: 1, limit: 25, offset: 0, hasMore: false, nextOffset: 1, cursor: null, nextCursor: null })] }

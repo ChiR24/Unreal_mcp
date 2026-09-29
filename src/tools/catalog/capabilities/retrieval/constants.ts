@@ -22,12 +22,14 @@ export const RETRIEVAL_NAME_FIELDS: ReadonlySet<CapabilityMatchField> = new Set<
 
 /**
  * Fields whose matches count toward full coverage (fullCoverageBonus): the
- * record's own names, family, domain and topics. Prose also holds filler words
- * ("subtract one mesh from another") and a parent tool name is shared by the
- * whole tool. The native door counts the same fields (McpNativeGatewaySearchMatch.cpp).
+ * record's action names (legacy_action carries every id and alias action
+ * segment), family, domain and topics. Prose also holds filler words
+ * ("subtract one mesh from another"), a parent tool name is shared by the whole
+ * tool, and an id's namespace ("blueprint.") would name "blueprint" for every
+ * record under it. The native door counts the same fields (McpNativeGatewaySearchMatch.cpp).
  */
 export const RETRIEVAL_COVERAGE_FIELDS: ReadonlySet<CapabilityMatchField> = new Set<CapabilityMatchField>([
-  'canonical_id', 'alias', 'legacy_action', 'domain', 'family', 'topic',
+  'legacy_action', 'domain', 'family', 'topic',
 ]);
 
 export const RETRIEVAL_FIELD_WEIGHTS = Object.freeze({

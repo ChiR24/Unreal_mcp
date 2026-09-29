@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0811db041497ea68",
+  "catalogRevision": "e13e824a7540a005",
   "recordCount": 389,
   "records": [
     {
@@ -9299,6 +9299,15 @@
           "filter assets",
           "query assets",
           "assets of type",
+          "list sounds",
+          "list sound cues",
+          "list materials",
+          "list textures",
+          "list images",
+          "list meshes",
+          "list blueprints",
+          "list widget blueprints",
+          "list animations",
           "search text",
           "find string",
           "text in widgets",
@@ -9675,7 +9684,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7424091fb091723441956dabe5efac0b4cdc8cc6e24b31e861a415c167a291d6",
-        "content": "f8941ea756589d662c4f70d463e5018eae090ea9308a689a3351575664d702df"
+        "content": "396d63679d03b576b66c04c7da00adb250d7ae423b7e59af5dc520606ae7ac19"
       }
     },
     {
@@ -36144,6 +36153,7 @@
       "id": "control_editor.simulate_input",
       "aliases": [
         "control_editor.click_widget",
+        "control_editor.widget_click",
         "control_editor.press_ui_button"
       ],
       "legacyIds": [
@@ -36165,7 +36175,11 @@
           "press jump key",
           "simulate key press",
           "drive game ui",
-          "test running game"
+          "test running game",
+          "list live widgets",
+          "list widgets in running game",
+          "widgets on screen",
+          "list buttons on screen"
         ],
         "summary": "Simulate a keyboard or mouse input event (key_down, key_up, key_tap, mouse_click, mouse_move), or list and press the live UMG widgets of a PIE session (widget_list, widget_click).",
         "whenToUse": [
@@ -36338,7 +36352,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "cab41a14b392ca38f743e7d3bc1b3ea1f596f7fda3b2c0c4dae944829f9860a5",
-        "content": "686ef62e1919df00583d2939eff8ee01e26ad1525a4b2b8dc9574ad1856342fc"
+        "content": "6d6f6d9547ccde2f0dec0e9183d0db84e24622d6a32a78025ce1e680ea47ff35"
       }
     },
     {
@@ -72209,7 +72223,7 @@
       ],
       "discovery": {
         "domain": "tools",
-        "family": "disable",
+        "family": "tool-visibility",
         "topics": [
           "disable_category"
         ],
@@ -72338,7 +72352,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d750f800e2c346a6582891e5cdbf7587bfe341ebad2de3178627e5c54452fbe4",
-        "content": "70d782f393235e994ece3f3e052753620d8a4eb5504bd5724f96ba310e20abc4"
+        "content": "aa485651d39b219e41ef97e1787d4f1755698ef8983f3448d4d8684d5e612146"
       }
     },
     {
@@ -72352,7 +72366,7 @@
       ],
       "discovery": {
         "domain": "tools",
-        "family": "disable",
+        "family": "tool-visibility",
         "topics": [
           "disable_tools"
         ],
@@ -72479,7 +72493,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2424e5f4c97a68bf4803cd40981926899019be66efa4d883b234620a80cbdd5f",
-        "content": "d40f29604f0f86107c802622701fc5721daf0c533076d9dc4be8b7671388fe66"
+        "content": "d714161c6053be589b96d14ef2c11c376598196df89ade2a0436f08a2257a5cf"
       }
     },
     {
@@ -72493,7 +72507,7 @@
       ],
       "discovery": {
         "domain": "tools",
-        "family": "enable",
+        "family": "tool-visibility",
         "topics": [
           "enable_category"
         ],
@@ -72620,7 +72634,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3ed47f28e445df4fa9d8168dbb05c74c17658ce33afa22a4cc167ed6ec0123b6",
-        "content": "214c091d396aa6da75ea88666b1ef7908571c324362fb4f4df7bb2e1120266e9"
+        "content": "6b44deba4648bbeba81310b005df272879a87503aefd489c23215a8159e8bb57"
       }
     },
     {
@@ -72634,7 +72648,7 @@
       ],
       "discovery": {
         "domain": "tools",
-        "family": "enable",
+        "family": "tool-visibility",
         "topics": [
           "enable_tools"
         ],
@@ -72758,7 +72772,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5f226be1a7e7bbc0406bf786b8c87cae200c880c68d83531d2ab64fcde4cf470",
-        "content": "ea8ac6edd812afc3d298134ab61fdf4781a2d8a573a8eb9c466ae7251fbde066"
+        "content": "d4f08c19da673337f901ce5e13ffc61f95218a0ac3b263288b3bfd1034008894"
       }
     },
     {
@@ -72772,7 +72786,7 @@
       ],
       "discovery": {
         "domain": "tools",
-        "family": "status",
+        "family": "tool-status",
         "topics": [
           "get_status",
           "how many tools are enabled",
@@ -72911,7 +72925,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3e5744163fa0b65f990f3efce228e2e1e42356a11ee991afff519c7be5e29bcd",
-        "content": "8553e6b631c34f1bb8e7cb19504773b64d7ca225a94a3a6c7ecb9aa3c8168b95"
+        "content": "a34737f098f19697f97f6728bf315e6a25c18c84d4265fc8c17147d4fe0e3d4a"
       }
     },
     {
@@ -72925,7 +72939,7 @@
       ],
       "discovery": {
         "domain": "tools",
-        "family": "list",
+        "family": "tool-catalog",
         "topics": [
           "list_categories",
           "tool groups",
@@ -73053,7 +73067,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "657f0057c0a96a09482942c4c8bee2de6df9c1ec43db240a60106f88ab5db9c6",
-        "content": "fc1d88790fd7005a2925dc73d4ad3de1d51b29a9c773085b4f09ab80405ced6b"
+        "content": "6c2f860596a17fa576cfa2500ccbea6ace40218c274f526c648518226070ce3e"
       }
     },
     {
@@ -73067,7 +73081,7 @@
       ],
       "discovery": {
         "domain": "tools",
-        "family": "list",
+        "family": "tool-catalog",
         "topics": [
           "list_tools",
           "list tools",
@@ -73205,7 +73219,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f7b732c4ac9d9aa47edc95c06d8bf3440fc1231fb206ebfafcdb6cc6b0de82a5",
-        "content": "6a36278bb784bdce29965bf5d96cb2056b52da297a656d7adb6a1e9f9cf3c837"
+        "content": "e52d61196657ba4241b61f66dc5bf90cdd21ec0a07e464f697aee96b1bc9cc22"
       }
     },
     {
@@ -73219,7 +73233,7 @@
       ],
       "discovery": {
         "domain": "tools",
-        "family": "reset",
+        "family": "tool-visibility",
         "topics": [
           "reset"
         ],
@@ -73315,7 +73329,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7fa450f4749de1294acf9e794acbf0d0f528c9ce8916fba4e9cd5b776e11f0f2",
-        "content": "791d13112006ecca3820aa73f6413625ca2e4da07b5eef676b3f56f5b5e6802d"
+        "content": "59a943ad42404d45a52d01d13ad176519e3f17187f63bd22f830a8480ab24218"
       }
     },
     {

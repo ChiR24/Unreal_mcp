@@ -86,9 +86,11 @@ bool EndsWith(const FString& Word, const TCHAR* Suffix)
 
 // Regular plurals and the two regular verb inflections, first matching rule
 // wins (`foldInflection`). Deliberately not a stemmer: every rule is a suffix
-// rewrite so both surfaces reproduce it exactly.
+// rewrite so both surfaces reproduce it exactly. A function word stays whole, or
+// "this" and "does" fold to "thi" and "doe" and slip past the function-word filter.
 FString FoldInflection(const FString& Word)
 {
+	if (IsFunctionWord(Word)) return Word;
 	const int32 Len = Word.Len();
 	if (Len > 4 && EndsWith(Word, TEXT("ies"))) return Word.Left(Len - 3) + FString(TEXT("y"));
 	if (Len > 4 && (EndsWith(Word, TEXT("ses")) || EndsWith(Word, TEXT("xes")) || EndsWith(Word, TEXT("ches")) || EndsWith(Word, TEXT("shes"))))
@@ -224,9 +226,10 @@ bool McpSearchScoreRecord(
 		Fired[RuleIdExact] = true;
 		Score += MatchRules[RuleIdExact].Weight;
 	}
-	// Phrase hits in prose only count for multi-word queries; a single word is
-	// already scored by the word pass and must not count twice.
-	if (ContentWords.Num() >= 2)
+	// Phrase hits in prose only count for multi-word queries ("what is in this
+	// folder" is one); a single word is already scored by the word pass and must
+	// not count twice.
+	if (AllWords.Num() >= 2)
 	{
 		if (AnyTopicContainsPhrase(Record.Topics, Query))
 		{
