@@ -55,6 +55,16 @@ bool HandleConfigureLevelStreaming(
         return true;
     }
 
+    // streamingMethod used to be echoed back without ever changing the streaming class. Resolved
+    // before FindOrAddStreamingLevel, which may add the level to the world.
+    UClass* StreamingClass = Payload->HasField(TEXT("streamingMethod")) ? ResolveLevelStreamingClass(StreamingMethod) : nullptr;
+    if (Payload->HasField(TEXT("streamingMethod")) && !StreamingClass)
+    {
+        Subsystem->SendAutomationResponse(Socket, RequestId, false,
+            FString::Printf(TEXT("Unknown streamingMethod '%s'; use Blueprint or AlwaysLoaded."), *StreamingMethod), nullptr, TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+
     ULevelStreaming* FoundLevel = FindOrAddStreamingLevel(World, LevelName);
     if (!FoundLevel)
     {
@@ -63,16 +73,8 @@ bool HandleConfigureLevelStreaming(
         return true;
     }
 
-    // streamingMethod used to be echoed back without ever changing the streaming class.
-    if (Payload->HasField(TEXT("streamingMethod")))
+    if (StreamingClass)
     {
-        UClass* StreamingClass = ResolveLevelStreamingClass(StreamingMethod);
-        if (!StreamingClass)
-        {
-            Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Unknown streamingMethod '%s'; use Blueprint or AlwaysLoaded."), *StreamingMethod), nullptr, TEXT("INVALID_ARGUMENT"));
-            return true;
-        }
         if (!FoundLevel->IsA(StreamingClass))
         {
             ULevelStreaming* Converted = UEditorLevelUtils::SetStreamingClassForLevel(FoundLevel, StreamingClass);

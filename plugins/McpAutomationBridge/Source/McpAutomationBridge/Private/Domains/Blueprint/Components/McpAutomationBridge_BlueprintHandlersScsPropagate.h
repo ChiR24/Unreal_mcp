@@ -51,6 +51,15 @@ struct FDefaults
       Old.Emplace(Path, Text);
   }
 
+  // A collision setter writes more than the key it was given (a profile also sets
+  // the object type and every channel response), so all of it is captured.
+  void CaptureCollision()
+  {
+    for (const TCHAR *Path : {TEXT("BodyInstance.CollisionProfileName"), TEXT("BodyInstance.CollisionEnabled"),
+                              TEXT("BodyInstance.ObjectType"), TEXT("BodyInstance.CollisionResponses")})
+      Capture(Path);
+  }
+
   // Number of placed components that took at least one new default; their paths
   // go to OutPaths when given. A value that did not hold is never counted: it
   // goes to OutFailed as "component path: property", read back after the write.

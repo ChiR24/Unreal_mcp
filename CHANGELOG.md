@@ -1,4 +1,4 @@
-﻿# 📋 Changelog
+# ?? Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -7,12 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 🏷️ [Unreleased]
+## ??? [Unreleased]
 
 <details>
-<summary><b>✨ Added</b></summary>
+<summary><b>? Added</b></summary>
 
-- **describe says which variant reads each parameter.** A capability that stands for a family of variants (add_content_widget covers text, image, button, slider and nine more) lists every variant's parameters, 30 in that case, with nothing telling a slider's minValue from a progress bar's isMarquee. Each parameter only some variants read now carries `variants`, on the full describe and on the single-parameter one, on both doors. 201 of the 388 capabilities are such families.
+- **describe says which variant reads each parameter.** A capability that stands for a family of variants (add_content_widget covers text, image, button, slider and nine more) lists every variant's parameters, 30 in that case, with nothing telling a slider's minValue from a progress bar's isMarquee. Each parameter only some variants read now carries `variants`, on the full describe and on the single-parameter one, on both doors. 201 of the 389 capabilities are such families.
 - **`control_actor.list` filters by `tag`, `className` and `folder`.** `className` also matches subclasses (`Light` finds every light type) and takes a name or a path, a Blueprint's `_C` optional; `folder` matches that outliner folder and every folder under it, `"(none)"` the root. With `summary`, it shows what a `delete_by_tag` would remove before the delete runs.
 - **`componentNames` on `get_components`** (`control_actor`, `inspect`) and `inspect_cdo` returns only the named components and lists a name that matches none under `missingComponents`; checking one component of a 27-component Blueprint used to return all 27.
 - **`spawn_batch` names the actors it could not label.** An item without `actorName` is labelled after its mesh ("Cube" for every cube), so nothing in the reply could address it later. `unnamedActors` lists each one's unique actor name in batch order under either `report` mode, and a full report names it the same way.
@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`generate_lods` saves its bake where you say.** LODs on a dynamic-mesh actor need a static mesh, which was always written to a hard-coded `/Game/MCPTest` folder. It takes `outputPath` now and otherwise follows `convert_to_static_mesh` into `/Game/GeneratedMeshes`.
 - **`set_transform` moves by an `offset`.** `offset: [dx, dy, dz]` moves an actor from where it stands instead of to an absolute `location` (giving both is refused), and each `actors` item takes its own, so a group shifts by one amount without reading every position first: raising a 16-part castle onto a plaza took 16 absolute locations.
 - **An unknown action points at the tool that has it.** When the action exists under exactly one other tool, `UNKNOWN_ACTION` (execute and describe, both doors) says so in its message and its `nextCall` describes that tool's action: `manage_blueprint.set_blueprint_variables` used to suggest `edit_variable`, while the action is `control_actor`'s. When none of the suggestions shares the action's verb (a one-letter typo still counts as shared), `nextCall` searches the action's words instead, so `manage_asset.save_asset` leads to `control_editor.save_all` rather than to `move_asset`.
-- **Ready-made HUD pieces are back, and they are built for real.** `add_game_widget` (`widgetKind`: `health_bar`, `ammo_counter`, `crosshair`, `minimap`, `compass`, `damage_indicator`, `interaction_prompt`, `objective_tracker`, `quest_tracker`) adds a styled piece to an existing Widget Blueprint. A `slotName` already in the tree is refused (`SLOT_EXISTS`) instead of duplicated, a missing parent is refused, an empty tree gets a canvas root, and `positionX`, `positionY`, `sizeX` and `sizeY` override the default placement. The settings the old actions declared and never read now take effect: the health bar's `percent`, fill colour and label, the text, size and colour of the counter and crosshair, a minimap or compass texture (refused when it does not load), the damage vignette colour with a `<slot>_Flash` animation lasting `fadeTime`, the prompt's key and text, and the trackers' title and rows (`items`, `maxVisibleObjectives`). The reply lists every widget created, so each part can be bound or restyled by name. "health bar", "crosshair" and "minimap" find it in search. These pieces and the screens below were in the Removed list and come back rebuilt, not restored: `add_game_widget`, `create_widget_template` and their 19 member names (`add_health_bar`, `create_main_menu`, …) are callable again, which brings the catalog to 382 records and 1,453 `{tool, action}` pairs. `create_game_screen`, `create_property_binding`, `set_animation_loop` and `set_widget_binding` stay removed; `bind_widget` makes property bindings.
+- **Ready-made HUD pieces are back, and they are built for real.** `add_game_widget` (`widgetKind`: `health_bar`, `ammo_counter`, `crosshair`, `minimap`, `compass`, `damage_indicator`, `interaction_prompt`, `objective_tracker`, `quest_tracker`) adds a styled piece to an existing Widget Blueprint. A `slotName` already in the tree is refused (`SLOT_EXISTS`) instead of duplicated, a missing parent is refused, an empty tree gets a canvas root, and `positionX`, `positionY`, `sizeX` and `sizeY` override the default placement. The settings the old actions declared and never read now take effect: the health bar's `percent`, fill colour and label, the text, size and colour of the counter and crosshair, a minimap or compass texture (refused when it does not load), the damage vignette colour with a `<slot>_Flash` animation lasting `fadeTime`, the prompt's key and text, and the trackers' title and rows (`items`, `maxVisibleObjectives`). The reply lists every widget created, so each part can be bound or restyled by name. "health bar", "crosshair" and "minimap" find it in search. These pieces and the screens below were in the Removed list and come back rebuilt, not restored: `add_game_widget`, `create_widget_template` and their 19 member names (`add_health_bar`, `create_main_menu`, �) are callable again, which brings the catalog to 382 records and 1,453 `{tool, action}` pairs. `create_game_screen`, `create_property_binding`, `set_animation_loop` and `set_widget_binding` stay removed; `bind_widget` makes property bindings.
 - **Ready-made screens are back as new Widget Blueprints.** `create_widget_template` (`screen`: `main_menu`, `pause_menu`, `settings_menu`, `loading_screen`, `hud`, `dialog`, `inventory`, `radial_menu`, `credits`, `shop`) creates a new Widget Blueprint holding that screen. An existing asset is refused instead of having its tree wiped, and a bad setting is refused before the asset is created. The screens read at a glance: near-black backdrops, slate-blue rounded buttons with padded labels, a credits list that is actually visible (the old one was zero pixels wide, with white text on white), shop cards wide enough for their labels in a scroll area that stops at its content, and a Quality combo box whose text is dark on its light face. The settings menu holds a Quality combo box, Fullscreen and VSync check boxes and volume and sensitivity sliders, chosen by `settingsType`; `hud` starts with the pieces named in `elements`; the loading screen can fade in (`fadeTime`); `buttons`, `responseCount`, `columns`, `rows`, `segmentCount`, `entries` and `itemCount` set how many of each part it gets. The reply lists every Button created, ready to wire with `bind_widget` `on_clicked`.
 - **Blueprints get component events.** `add_event` (and `add_function` with `kind: "event"`) takes `componentName` with `eventName` and builds the event the editor's component "+" button makes: `OnComponentBeginOverlap` on a BoxComponent, or `OnComponentHit` on a Character's inherited CapsuleComponent. The code path existed, but `componentName` was not declared, so the gateway refused the only way in. When a call did get through, it found only components the Blueprint added itself, and a component added since the last compile produced a node with no pins and no function name that was reported as success. A delegate that Blueprints cannot bind is refused with `DELEGATE_NOT_ASSIGNABLE`, a missing component lists the Blueprint's components, and the reply's `nodeGuid` finds the new node.
 - **`create_light` spawns any light class.** `lightClass` (a class name or path, including a Blueprint light such as `/Game/Lights/BP_Lamp.BP_Lamp_C`) can replace `lightType`, and `properties` sets intensity, color, shadows, attenuation radius, cone angles and source size on the light component. The handler already read both, but the contract did not declare them, so the gateway refused them. `rename_level` also takes `destinationPath`, which moves the level instead of renaming it in place.
@@ -73,15 +73,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>🔄 Changed</b></summary>
+<summary><b>?? Changed</b></summary>
 
 - **Setting a game mode class no longer changes the project's game mode.** `set_default_pawn_class`, `set_player_controller_class`, `set_game_state_class`, `set_player_state_class` and `set_hud_class` used to make that game mode the project default on every call (written to the per-user Saved config, not DefaultEngine.ini), set it as the open level's GameMode Override and mark the level dirty. They now change only the class on the game mode you name. `makeDefault: true` makes it the project default in DefaultEngine.ini, as Project Settings does. Every reply reports `madeDefault`, `openLevelGameMode` (what the open level runs in play) and `effectiveInOpenLevel`, and the message says when the open level runs a different game mode.
 - **Level edits say when they are not saved.** Level-structure and volume edits (streaming, World Partition, data layers, level blueprint nodes, volumes) still leave the level unsaved unless `save: true` is passed, because saving a level also writes every other unsaved change in it. The reply now carries `saved: false` and says the level is not saved yet, where it used to say nothing.
-- **The stdio server runs every capability the way the native door does.** `execute` forwards `{action, ...params}` to the record's parent tool and the plugin's parent routing picks the handler; the TypeScript per-domain action layer is gone. Both doors now accept exactly the parameters a record declares: a spelling only that layer converted (`path` for `blueprint.create`'s `savePath`, a `Game/…` path without its leading slash) is refused with the declared name, while the aliases a record declares (`type` on `add_material_node`, `targetPath` on `import_level`/`duplicate_level`, `sourceNode`/`sourcePin`/`targetNode`/`targetPin` on `connect_metasound_nodes`, `emitter` on Niagara module actions, `actorName` on `set_niagara_parameter`) are read by the plugin.
+- **The stdio server runs every capability the way the native door does.** `execute` forwards `{action, ...params}` to the record's parent tool and the plugin's parent routing picks the handler; the TypeScript per-domain action layer is gone. Both doors now accept exactly the parameters a record declares: a spelling only that layer converted (`path` for `blueprint.create`'s `savePath`, a `Game/�` path without its leading slash) is refused with the declared name, while the aliases a record declares (`type` on `add_material_node`, `targetPath` on `import_level`/`duplicate_level`, `sourceNode`/`sourcePin`/`targetNode`/`targetPin` on `connect_metasound_nodes`, `emitter` on Niagara module actions, `actorName` on `set_niagara_parameter`) are read by the plugin.
 - **One dispatch table in the plugin.** The fallback chain that retried every handler for an unmatched action is gone; each parent tool routes its sub-actions explicitly, `system_control`'s widget, screenshot, project-settings, sound and display actions included.
 - **Scalar property writes are strict.** Integer properties refuse non-integral and out-of-range values instead of truncating them, and enums refuse hidden and `_MAX` entries (display names are accepted).
-- **`create_blend_space` creates a 2D blend space** (Direction −180..180 × Speed 0..600), as its record describes; `create_blend_space_1d` makes one axis.
-- **`apply_baseline_settings` moves every scalability group** through `Scalability::SetQualityLevels` (performance → Low, balanced → High, quality → Epic) plus `r.VSync`, instead of seven hand-picked console variables; it no longer touches `r.AllowHDR`.
+- **`create_blend_space` creates a 2D blend space** (Direction -180..180 � Speed 0..600), as its record describes; `create_blend_space_1d` makes one axis.
+- **`apply_baseline_settings` moves every scalability group** through `Scalability::SetQualityLevels` (performance ? Low, balanced ? High, quality ? Epic) plus `r.VSync`, instead of seven hand-picked console variables; it no longer touches `r.AllowHDR`.
 - **Enhanced Input triggers and modifiers resolve by class**, so every trigger and modifier class works. The spellings only the old ladder knew are refused instead of silently becoming Tap, Smooth or Scalar: `DoubleTap` (use `RepeatedTap`, 5.6+), `SwizzleInputAxis` (use `SwizzleAxis`), `SmoothDelta` before 5.4 and `ScaleByDeltaTime` before 5.1.
 - **Paths.** An invalid asset path reports itself instead of resolving a same-named asset under another root; landscape grass types land in their `path`; MCP-created landscapes no longer carry `MCP_Landscape*` tags; `stream_level`/`unload` refuse a level that is not a sublevel of the editor world instead of reporting a console command's success.
 - **Refusal codes and reply fields.** Several refusals carry precise codes (`SKELETON_NOT_FOUND`, `ANIMATION_NOT_FOUND`, `ASSET_CREATION_FAILED`, `BLUEPRINT_NOT_FOUND`, `SCS_NOT_FOUND`, `PARAM_TYPE_MISMATCH`, `ASSET_ALREADY_EXISTS` for an existing interactable), and constant or duplicated reply fields are gone: `validationResult` on `validate_niagara_system`, the header dump on `analyze_trace`, `maxTailSize` on `write_snapshot`/`send_snapshot`, `navMeshPresent`/`bHasNavMesh` on navigation replies and three always-equal `delete_level` flags.
@@ -98,7 +98,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>🗑️ Removed</b></summary>
+<summary><b>??? Removed</b></summary>
 
 - **117 actions that only echoed their input, faked success or answered `NOT_SUPPORTED`** (the catalog goes from 389 to 382 records; 1,453 `{tool, action}` pairs stay callable):
   - `animation_physics` (7): `copy_weights`, `create_pose_library`, `import_morph_targets`, `mirror_weights`, `normalize_weights`, `prune_weights`, `set_retarget_chain_mapping`
@@ -119,8 +119,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>🔧 Fixed</b></summary>
+<summary><b>?? Fixed</b></summary>
 
+- **`preview_widget` needs only the Read scope.** It draws a transient copy of the widget and changes nothing, but it was folded into `edit_widget_blueprint` with the writes, so a read-only principal was refused a picture. It is its own read capability now (389 capabilities).
+- **Combat actions say when the save failed.** Every weapon, projectile, damage-type and damage-execution action saved the Blueprint and answered success whatever the save returned; a read-only or source-controlled file now answers `SAVE_FAILED`.
+- **`configure_level_streaming` checks `streamingMethod` first.** An unknown method was refused only after the level had been added to the world as a streaming level, which stayed.
+- **`restart_editor` with `relaunch: false` closes without a save prompt.** With `discardUnsaved`, the close could still ask to save the packages the caller had chosen to drop, a dialog no remote caller can answer.
+- **A collision edit on a component template reaches placed actors whole.** `set_scs_property` and `edit_scs` pushed only the key they were given, while a collision profile also sets the object type and every channel response; placed actors now take all of it.
+- **describe names the right way back.** Most `compensation.inverse` hints were keyed by names that had been folded into other capabilities and never attached, and two named the capability itself as its own inverse.
 - **The session instructions stop quoting a stale count.** Every client read "380 capabilities covering 1,500+ editor actions" at connect; the catalog holds 388 capabilities and about 1,450 actions, and the number went stale with every new record. The first line now says what the one tool reaches instead (actors, levels, Blueprints and their graphs, widgets, materials, audio, animation, effects).
 - **Search answers a question with a reader.** "get actor location" ranked set_transform first on both doors, "show blueprint graph" edit_graph, and "read datatable rows" a row delete; a small model that takes the first row then changed what it meant to read. A query that opens with a read word (get, read, list, inspect, query, describe, find, count, show, what, which, where, who, how, is, does) now ranks the matching capabilities that only read ahead. It only reorders matches, and requests to change something ("set actor location", "show hidden actor") rank as before.
 - **Search answers a delete with a delete.** "delete the spawned actor from the level" ranked spawn first on the native door, because "spawned" matched spawn. A query that opens with delete, remove, destroy or erase now ranks the matching capabilities that delete ahead, on both doors; it only reorders matches. The eval gate now measures the native door as well: its corpus top-1 went from 88.5% to 90.2% (the TypeScript door from 95.1% to 96.7%), and both must stay at 90% or better.
@@ -137,7 +143,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Engine warnings about an asset keep its name.** Redaction replaced the whole disk path of a package file, leaving "[path redacted], Default Material will be used"; the path becomes the asset's package path (`/Game/Maps/M_Wall`) instead.
 - **`set_project_setting` saves per-user settings where the editor reads them.** A class saved per user (EditorPerProjectUserSettings) was written to the project's Default ini, where the user's own saved value overrode it; it is saved to the user's config now, as the settings editor does.
 - **The `play` summary names the values `control` takes.** It said "start, pause, resume, stop", but `start` is not one of them (`play` starts Play In Editor), so a caller going by the summary was refused.
-- **The plugin builds on UE 5.8.** UBT failed with `Could not find definition for module 'MegascansPlugin'` because the Fab adapter probed for Megascans by folder name, and 5.8 ships `Engine/Plugins/MegascansPlugin` as a content-only folder; `McpAutomationBridgeFab.Build.cs` now counts a module as present only when its `<Module>.Build.cs` exists (Fab is still detected, Megascans reports unavailable). The link failed with `LNK1194` because 5.8 PCG exports a data symbol (`PCG::Private::UserParameterTagData`) and MSVC cannot delay-load a DLL that data is imported from; PCG is linked normally on 5.8+, UE 5.2–5.7 keep the delay-load so prebuilt packages still load where PCG is off, and `PCG` stays `Optional` in the `.uplugin` for UE 5.0–5.1.
+- **The plugin builds on UE 5.8.** UBT failed with `Could not find definition for module 'MegascansPlugin'` because the Fab adapter probed for Megascans by folder name, and 5.8 ships `Engine/Plugins/MegascansPlugin` as a content-only folder; `McpAutomationBridgeFab.Build.cs` now counts a module as present only when its `<Module>.Build.cs` exists (Fab is still detected, Megascans reports unavailable). The link failed with `LNK1194` because 5.8 PCG exports a data symbol (`PCG::Private::UserParameterTagData`) and MSVC cannot delay-load a DLL that data is imported from; PCG is linked normally on 5.8+, UE 5.2�5.7 keep the delay-load so prebuilt packages still load where PCG is off, and `PCG` stays `Optional` in the `.uplugin` for UE 5.0�5.1.
 - **Reusing a widget's root name no longer crashes the editor.** Adding a canvas under a `slotName` the root already had made the root its own child, and UMG recursed until the stack overflowed. A widget can no longer be seated inside itself or its own subtree, `add_widget_component` seats through the same path as every other add, and a refused add never removes an existing widget.
 - **Creating a game-framework class twice during Play no longer crashes the editor.** The duplicate check could not see the existing Blueprint while PIE ran, so the second `create_hud_class` (or any `create_*` class) asserted in the engine; it now reads the asset registry and answers "already exists".
 - **`system_control.set_quality` works on the native door**, and `play_sound` without `soundPath` plays the editor's compile-success cue; both existed only in the TypeScript layer.
@@ -175,7 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Search ranks the exact action above a folded one.** On the native door "delete blueprint graph node" ranked `edit_anim_graph` and `edit_graph` above `delete_node`, because a folded record's aliases score word by word. A record gets a bonus when the query names every word of its own action (two words or more) and every query word matches it.
 - **A boolean named like a secret reads back.** A Blueprint default such as `bSecret: true` came back as `"[REDACTED]"`, because receipt redaction masks any value under a key that names a credential. A boolean can carry no credential, so it is no longer masked; strings, numbers, objects and arrays under such keys still are, on both transports.
 - **"remove", "destroy" and "erase" find delete capabilities.** They matched only capabilities literally named `remove_*`: on the native door "remove actor" answered a Sequencer binding edit, and "remove node from blueprint graph" reached `delete_node` on neither door. Both doors now read all three as "delete" in queries and catalog text alike. `remove_tag` declares "remove tag from actor" as a topic so that phrasing still finds it. On the native door, an alias the query names word for word also earns the exact-action bonus.
-- **A single graph edit leaves the Blueprint saved.** Single-step graph edits (`connect_pins`, `create_node`, `delete_node`, …) saved the Blueprint and then compiled it for the reply, and the compile marked it unsaved again, so every single edit left it dirty and the reply never said so. The reply now saves after that compile and reports `saved`.
+- **A single graph edit leaves the Blueprint saved.** Single-step graph edits (`connect_pins`, `create_node`, `delete_node`, �) saved the Blueprint and then compiled it for the reply, and the compile marked it unsaved again, so every single edit left it dirty and the reply never said so. The reply now saves after that compile and reports `saved`.
 - **A Blueprint named as `memberClass` resolves.** A CallFunction node with `memberClass` `BP_MarioGI_C` or `/Game/Mario/Blueprints/BP_MarioGI` answered "Function 'AddCoin' not found": the class lookup rejected a Blueprint's own names, and the error never said the class was the problem. Both spellings resolve now, and a `memberClass` that still resolves nothing is named in the error.
 - **A Custom material node's extra outputs can be wired straight away.** `add_custom_expression` and `update_custom_expression` stored `additionalOutputs` but the node kept one output pin until the material was reopened, so connecting `"$node.Emis"` in the same batch failed with "Source output 1 does not exist". The pins are rebuilt when the outputs are set, and `additionalOutputs` now documents its `{name, type}` items.
 - **A folded capability no longer sends you to itself.** A folded record kept its members' "use X" guidance, so `edit_graph` said "use create_node" and `inspect_graph` "use get_node_details", which are variants of the same capabilities. Those lines are dropped; guidance that points elsewhere stays.
@@ -318,9 +324,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>⚠️ Migration</b></summary>
+<summary><b>?? Migration</b></summary>
 
 - `set_*_class` on `manage_networking`: pass `makeDefault: true` to keep making the game mode the project default. These actions never change the open level's GameMode Override any more; set it in the level's World Settings.
+- `edit_widget_blueprint` with `edit: "preview"`: call `preview_widget` instead. The action name `manage_blueprint.preview_widget` works as before.
 - `configure_net_serialization` is removed. It refused every call: custom net serialization is a C++ `NetSerialize` on a USTRUCT, which no Blueprint setting reaches.
 - `control_actor.list` with `summary: true`: `byClass`, `byTag` and `byFolder` are arrays of `{name, count}` rows sorted by name, no longer `{name: count}` objects.
 - Send the parameter names `describe` lists: a stdio call that relied on the removed TypeScript conversions is refused with the declared name in its message.
@@ -359,26 +366,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 🏷️ [0.6.0-beta-b] - 2026-09-25
+## ??? [0.6.0-beta-b] - 2026-09-25
 
 > [!NOTE]
 > **Beta.** Published as a semver prerelease (`0.6.0-beta-b`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release, **`0.5.30`**. This section is everything on `dev` since the `v0.6.0-beta-a` tag, written from the code diff.
 
 > [!IMPORTANT]
-> ### 🧱 Fewer calls, honest replies, and a game you can drive from the tool
-> Batch forms turn a Blueprint graph, a material graph, a MetaSound, a whole level layout or a row of actors into one call each, and a Play-In-Editor game can be played, timed and inspected without the OS cursor. A long list of handlers that answered success for work they never did now report what actually happened. Two small contract changes are listed under **⚠️ Migration**.
+> ### ?? Fewer calls, honest replies, and a game you can drive from the tool
+> Batch forms turn a Blueprint graph, a material graph, a MetaSound, a whole level layout or a row of actors into one call each, and a Play-In-Editor game can be played, timed and inspected without the OS cursor. A long list of handlers that answered success for work they never did now report what actually happened. Two small contract changes are listed under **?? Migration**.
 
 <details>
-<summary><b>✨ Added</b></summary>
+<summary><b>? Added</b></summary>
 
 #### One call instead of many
 
-- **`manage_blueprint.build_graph`** — runs up to 200 graph edits (`create_node`, `connect_pins`, `set_pin_default_value`, `set_node_property`, `create_reroute_node`, `add_variable`) through the ordinary single-step handlers, with their replies captured instead of sent. A step names its node with `id` and later steps refer to it as `"$id"`; `from`/`to` take `"$id.pin"` shorthand; a create step can carry `pinDefaults`; `"$entry"` is the graph's own function-entry node (a Construction Script's start). Nodes without a position fill a grid to the right of the existing graph, and an overlap is retried at the guard's own suggestion. Before any step runs, every function and variable a step names is resolved, so a misspelled name fails the batch with nothing applied; any other failure stops at that step and returns the node ids of the steps that were applied. The Blueprint compiles and saves once at the end.
-- **`manage_material_authoring.build_material_graph`** — adds a material's nodes, wires them and sets blend mode, shading model, domain and two-sidedness in one consented call, then recompiles and saves once through `compile_material` and reports its errors. Only additive edits are batched; deleting and disconnecting keep their own consent. Auto-placed nodes are stacked by their reported height, so tall vector-parameter swatches no longer overlap.
-- **`manage_audio.build_metasound`** — MetaSound `add_node`, `connect`, `set_default`, `add_input` and `add_output` steps in one call, with the same `$id` aliases.
-- **`control_actor.spawn_batch`** — up to 500 actors per call, each item merged over shared `defaults` and run through the ordinary spawn path (mesh, class or Blueprint, per-item `variables`, folder, tags). A failed item is reported and the rest still spawn; `report: "failures"` returns counts and failed items only.
+- **`manage_blueprint.build_graph`** � runs up to 200 graph edits (`create_node`, `connect_pins`, `set_pin_default_value`, `set_node_property`, `create_reroute_node`, `add_variable`) through the ordinary single-step handlers, with their replies captured instead of sent. A step names its node with `id` and later steps refer to it as `"$id"`; `from`/`to` take `"$id.pin"` shorthand; a create step can carry `pinDefaults`; `"$entry"` is the graph's own function-entry node (a Construction Script's start). Nodes without a position fill a grid to the right of the existing graph, and an overlap is retried at the guard's own suggestion. Before any step runs, every function and variable a step names is resolved, so a misspelled name fails the batch with nothing applied; any other failure stops at that step and returns the node ids of the steps that were applied. The Blueprint compiles and saves once at the end.
+- **`manage_material_authoring.build_material_graph`** � adds a material's nodes, wires them and sets blend mode, shading model, domain and two-sidedness in one consented call, then recompiles and saves once through `compile_material` and reports its errors. Only additive edits are batched; deleting and disconnecting keep their own consent. Auto-placed nodes are stacked by their reported height, so tall vector-parameter swatches no longer overlap.
+- **`manage_audio.build_metasound`** � MetaSound `add_node`, `connect`, `set_default`, `add_input` and `add_output` steps in one call, with the same `$id` aliases.
+- **`control_actor.spawn_batch`** � up to 500 actors per call, each item merged over shared `defaults` and run through the ordinary spawn path (mesh, class or Blueprint, per-item `variables`, folder, tags). A failed item is reported and the rest still spawn; `report: "failures"` returns counts and failed items only.
 - **List forms of existing actions**, each item running the single-item path and each reported, with a batch that fails naming only the items that did not apply: `set_transform` `actors` (each with its own location, rotation or scale, as `{x,y,z}` objects or arrays), `set_blueprint_variables` `actors` (each with its own values), `set_material` and `add_tag` `actorNames`, `delete_by_tag` `tags`, `remove_scs_component` `componentNames`, `set_variable_metadata` `variableNames`, `set_material_parameter` and `create_material_instance` `parameters`, and `remove_foliage` `areas`. One consent grant covers the whole list.
-- **An omitted fold selector is inferred** — a call that leaves out a family's selector (for example `nodeKind`) but sends parameters that only one variant declares now runs that variant on both gateways; parameters pointing at different variants still run the default.
+- **An omitted fold selector is inferred** � a call that leaves out a family's selector (for example `nodeKind`) but sends parameters that only one variant declares now runs that variant on both gateways; parameters pointing at different variants still run the default.
 
 #### Reading what is already there
 
@@ -391,21 +398,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Driving and testing a running game
 
-- **`simulate_input` drives Enhanced Input** — `inputAction` (an asset path), `value` and `holdSeconds` inject the action itself, which a raw key never reaches; the reply names `injectedAction`. Holds are measured in game seconds and all end when the editor shuts down; `key_tap` presses and releases, keeping the key down for at least two game frames. `widget_list` names every live UMG widget in a PIE session and `widget_click` presses a Button, toggles a CheckBox or sets a Slider by name, without moving the OS cursor or taking focus.
-- **The game clock acts on the running game** — `set_game_speed` and `set_fixed_delta_time` apply to the PIE world (a fixed step is switched off again when play stops), and `step_frame` steps the requested number of frames in the plugin and reports them.
+- **`simulate_input` drives Enhanced Input** � `inputAction` (an asset path), `value` and `holdSeconds` inject the action itself, which a raw key never reaches; the reply names `injectedAction`. Holds are measured in game seconds and all end when the editor shuts down; `key_tap` presses and releases, keeping the key down for at least two game frames. `widget_list` names every live UMG widget in a PIE session and `widget_click` presses a Button, toggles a CheckBox or sets a Slider by name, without moving the OS cursor or taking focus.
+- **The game clock acts on the running game** � `set_game_speed` and `set_fixed_delta_time` apply to the PIE world (a fixed step is switched off again when play stops), and `step_frame` steps the requested number of frames in the plugin and reports them.
 - **`control_editor.restore_editor_window`** restores a minimized editor window without activating it, and by default turns off the background CPU throttle that pins a minimized editor's PIE at about 3 fps.
 - **`control_editor.restart_editor`** relaunches the editor on the same project, with `validateOnly`, `delaySeconds`, and `discardUnsaved` (unsaved packages are refused otherwise).
 - **`system_control.launch_build`** smoke-runs the game that `package_project` produced (offscreen by default, 5 to 120 seconds) and `package_status` reports the maps it loaded, its error count and the tail of its log.
 
 #### Authoring
 
-- **MetaHuman Creator in `manage_character`** — `metahuman_status`, `create_metahuman`, `rig_metahuman` (Epic's cloud auto-rig, non-blocking by default), `build_metahuman` and `export_metahuman` (geometry, materials or DNA).
-- **Sequencer keys** — `list_track_keys` and `remove_keyframe` in `manage_sequence`, resolving tracks the same way every other track edit does; `onlyJob` is honoured when a Movie Render Queue render starts.
-- **Animation Blueprints** — `set_transition_rules` builds the transition condition from `conditionVariable`, `conditionComparison` and `conditionValue`; `delete_transition` removes one; transitions honour `crossfadeDuration` (alias `blendTime`), `priorityOrder`, `automaticRule` and `bidirectional`; `add_state` wires the state's entry and, with an animation, a sequence player into its result.
+- **MetaHuman Creator in `manage_character`** � `metahuman_status`, `create_metahuman`, `rig_metahuman` (Epic's cloud auto-rig, non-blocking by default), `build_metahuman` and `export_metahuman` (geometry, materials or DNA).
+- **Sequencer keys** � `list_track_keys` and `remove_keyframe` in `manage_sequence`, resolving tracks the same way every other track edit does; `onlyJob` is honoured when a Movie Render Queue render starts.
+- **Animation Blueprints** � `set_transition_rules` builds the transition condition from `conditionVariable`, `conditionComparison` and `conditionValue`; `delete_transition` removes one; transitions honour `crossfadeDuration` (alias `blendTime`), `priorityOrder`, `automaticRule` and `bidirectional`; `add_state` wires the state's entry and, with an animation, a sequence player into its result.
 - **`animation_physics.skin_mesh_to_skeleton`** skins a static mesh (or a donor skeletal mesh) to a skeleton through GeometryScripting; retargeting builds real IK Rig definitions and a retarget pipeline.
-- **Blueprint graphs** — `set_node_property` reaches a node's reflected asset and object fields; `add_variable` stores object defaults and keeps `isPublic: false`.
+- **Blueprint graphs** � `set_node_property` reaches a node's reflected asset and object fields; `add_variable` stores object defaults and keeps `isPublic: false`.
 - **Fab** is driven through its own API by reflection: the tab opens without the web page, an already-open Fab window is reused, listings are claimed before download, and `obj` and `usdz` downloads are accepted alongside `unreal-engine`, `gltf`, `glb` and `fbx`.
-- **FBX animation import** — `manage_asset.import` brings in the animation an FBX carries as an AnimSequence on a named skeleton.
+- **FBX animation import** � `manage_asset.import` brings in the animation an FBX carries as an AnimSequence on a named skeleton.
 
 #### Finding the right capability
 
@@ -414,7 +421,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>🔧 Changed</b></summary>
+<summary><b>?? Changed</b></summary>
 
 - **Native requests are timed from their last progress, not their start.** While the game thread is alive, every open request gets a "still working" progress notification every 20 seconds, `MaxLifetimeSeconds` still ends a request that never answers, and progress percentages never go backwards. Long imports and builds are no longer killed and reported as failures.
 - **A too-large result names the parameters that would narrow it** on the native gateway as well, and `summary` counts as a narrowing parameter on both.
@@ -423,27 +430,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The `.env` file** is read from `MCP_ENV_FILE` when it is set, otherwise from the package root, otherwise from the working directory, using Node's own loader.
 - **A client's capability profile** comes from the capabilities the client declares, not from a lookup table of known client names.
 - **The console command policy** compiles each rule's pattern once instead of on every command, and every command-queue failure is logged.
-- **Lighting and geometry records declare what their handlers read** — `configure_lumen` takes `quality`, `indirectLightingIntensity` and `bounces`; `configure_shadows` takes the shadow quality, cascade, distance, contact, ray-traced and virtual-shadow-map settings; `configure_exposure` takes `method`; `enable_volumetric_fog` honours `enabled: false`; the geometry primitives take their own dimensions (box `height`, cone `baseRadius` and `topRadius`, capsule `length`, plane `width` and `depth`, stairs `floating`, arch `angle`, ramp `width`, `length` and `height`), and the deform, operation and optimize records accept `actorName` or `targetActor`.
+- **Lighting and geometry records declare what their handlers read** � `configure_lumen` takes `quality`, `indirectLightingIntensity` and `bounces`; `configure_shadows` takes the shadow quality, cascade, distance, contact, ray-traced and virtual-shadow-map settings; `configure_exposure` takes `method`; `enable_volumetric_fog` honours `enabled: false`; the geometry primitives take their own dimensions (box `height`, cone `baseRadius` and `topRadius`, capsule `length`, plane `width` and `depth`, stairs `floating`, arch `angle`, ramp `width`, `length` and `height`), and the deform, operation and optimize records accept `actorName` or `targetActor`.
 - **`set_project_setting`** also finds a setting by its console-variable name and reports it persisted only when the key is really in the config file on disk; **`set_preferences`** writes to the settings object its category names, not only to console variables.
 - **The plugin's integer `Version`** in the `.uplugin` now follows the semver (`600` for 0.6.0), and `bump-version` writes it with `VersionName`.
 
 </details>
 
 <details>
-<summary><b>🛡️ Security</b></summary>
+<summary><b>??? Security</b></summary>
 
-- **Dangerous engine commands are refused on both doors** — a console command whose first token is `debug`, `exec`, `crash`, `gpucrash`, `check`, `gpf`, `ensure`, `ensurealways`, `fatal`, `bufferoverrun`, `crtinvalid`, `stall`, `hitch`, `renderhitch`, `softlock` or `eatmem` answers `DANGEROUS_ENGINE_COMMAND`.
-- **Traversal detection decodes instead of matching spellings** — percent-encoding is decoded to a fixed point (at most four rounds, and malformed encoding is refused), so mixed forms such as `%2e.`, `.%2e` and `..%2f` are caught; the asset handlers use the same shared predicate; mount roots match case-insensitively.
+- **Dangerous engine commands are refused on both doors** � a console command whose first token is `debug`, `exec`, `crash`, `gpucrash`, `check`, `gpf`, `ensure`, `ensurealways`, `fatal`, `bufferoverrun`, `crtinvalid`, `stall`, `hitch`, `renderhitch`, `softlock` or `eatmem` answers `DANGEROUS_ENGINE_COMMAND`.
+- **Traversal detection decodes instead of matching spellings** � percent-encoding is decoded to a fixed point (at most four rounds, and malformed encoding is refused), so mixed forms such as `%2e.`, `.%2e` and `..%2f` are caught; the asset handlers use the same shared predicate; mount roots match case-insensitively.
 - **Plugin content roots pass the native path canonicalizer** while host filesystem roots (`/home`, `/Users`, `/etc`, `/proc`, `/var`, `/tmp` and the like) are still refused.
 - **Identity keys are redacted before a log line or error leaves the editor** (`UserId`, `AccountId` and `LoginId`, however they are spaced), `console_command` output and log text pass the per-line sanitizer, and the log tail `launch_build` returns gets the same treatment as `read_log`. A mount root named in plain prose is no longer redacted as if it were a path.
 - **`launch_build` only starts a game inside the project directory**; Fab only adopts a browser that is on fab.com; MetaHuman export keeps `externalPath` contained.
-- **Batches are bounded and stay on their own asset** — every actor list form refuses more than 500 actors, and a step of `build_graph`, `build_material_graph` or `build_metasound` cannot point at an asset other than the batch's.
+- **Batches are bounded and stay on their own asset** � every actor list form refuses more than 500 actors, and a step of `build_graph`, `build_material_graph` or `build_metasound` cannot point at an asset other than the batch's.
 - The unused loopback media-URL settings were removed from the plugin settings.
 
 </details>
 
 <details>
-<summary><b>🛠️ Fixed</b></summary>
+<summary><b>??? Fixed</b></summary>
 
 #### Replies that said success for work that did not happen
 
@@ -489,7 +496,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>🗑️ Removed</b></summary>
+<summary><b>??? Removed</b></summary>
 
 - The TypeScript log reader, replaced by the native `read_log`.
 - The migration translator and artifact modules the gateway never called, the unused tool-definition utility schemas with their stale `manage-asset/catalog.json`, and unused semantic-boundary helpers.
@@ -500,7 +507,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>⚠️ Migration</b></summary>
+<summary><b>?? Migration</b></summary>
 
 - **Coming from `0.5.30`, the current stable release?** Every step in the `0.6.0-beta-a` migration below still applies: the single `unreal` gateway tool is permanent, and a direct `tools/call` on a canonical tool name answers `DIRECT_TOOL_CALL_REMOVED` with an executable `nextCall`.
 - **`manage_level`**: send `subLevelPath` (or `levelPath`) instead of `sublevelPath`.
@@ -511,7 +518,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>🧪 Tests & CI</b></summary>
+<summary><b>?? Tests & CI</b></summary>
 
 - `type-check` also type-checks `tests/` and `scripts/`, `no-explicit-any` and `no-console` are lint errors in `src/`, the contract suites can fail, integration cases assert what the handlers answer, and a failed build stops the integration run (`UNREAL_MCP_ALLOW_TS_FALLBACK=1` runs the source instead).
 - The dependency audit runs as its own job and blocks runtime advisories at moderate again; the MCP Registry publish waits for npm to serve the new version.
@@ -522,7 +529,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>🔄 Dependencies</b></summary>
+<summary><b>?? Dependencies</b></summary>
 
 | Package | Change |
 |---------|--------|
@@ -532,14 +539,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 </details>
 
 <details>
-<summary><b>👥 Contributors</b></summary>
+<summary><b>?? Contributors</b></summary>
 
 - @SoloGorilla for making `manage_gas` compile, verify and save what it authors (#606), and for pairing each record's display name with its address in text summaries (#621).
 
 </details>
 
 <details>
-<summary><b>📊 Change Statistics</b></summary>
+<summary><b>?? Change Statistics</b></summary>
 
 | Metric | Count |
 |--------|-------|
@@ -555,49 +562,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 🏷️ [0.6.0-beta-a] - 2026-09-18
+## ??? [0.6.0-beta-a] - 2026-09-18
 
 > [!NOTE]
-> **Beta.** Published as a semver prerelease (`0.6.0-beta-a`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release. `0.6.0a` is not valid semver — npm, the `bump-version` workflow and the version-consistency gate all reject it — so the release spells the beta out.
+> **Beta.** Published as a semver prerelease (`0.6.0-beta-a`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release. `0.6.0a` is not valid semver � npm, the `bump-version` workflow and the version-consistency gate all reject it � so the release spells the beta out.
 
 > [!IMPORTANT]
-> ### 🚪 Single-Tool Gateway, Capability Catalog & Full Source Reorganization
+> ### ?? Single-Tool Gateway, Capability Catalog & Full Source Reorganization
 > Everything on this branch since the `0.5.30` tag: the permanent cutover to a single public `unreal` gateway tool, a hand-authored capability catalog that now generates both the TypeScript and the C++ contract surfaces, cinematics/render/replay automation, and a top-to-bottom split of the TypeScript handlers and the C++ plugin into per-domain modules.
-> **This release contains breaking changes** — see the **⚠️ Migration** section below.
+> **This release contains breaking changes** � see the **?? Migration** section below.
 
 <details>
-<summary><b>✨ Added</b></summary>
+<summary><b>? Added</b></summary>
 
-- **Folded capability families** — a record can stand for a whole family of bridge actions. `routing.dispatchBy` maps one selector parameter's value to the existing handler action, and every former name stays callable as a folded legacy pair whose pins supply the value it implied; both gateways apply the same two steps (pins before validation, action after it). The folds are data (`records/folds/<parent>.folds.ts`, applied by `records/shared/fold.ts`): 244 fold families across 22 parents (222 of the resulting records dispatch through a `routing.dispatchBy` selector — 221 of them from the fold specs, plus `manage_level_structure.create_volume`, whose `volumeClass` dispatch is authored on the record itself — and the remaining 23 families are pure-alias folds; 246 of the 380 records carry at least one folded legacy pair, across 1,166 pinned pairs) take the catalog from 1,379 authored pre-fold action entries to **380 records**, while all 1,549 `{tool, action}` pairs (every shipped name plus 164 new family primaries) still resolve, describe and execute, the normalization audit total is unchanged at 1,341, and a fold whose primary is one of its members keeps the selector optional so every pre-fold call is unchanged. A consent grant may name the capability by any name it answers to (canonical id, alias, or a folded `tool.action` pair) on both doors; the native completion pool completes the old names too; the search index counts a name once per identifier field and stops re-scoring folded member ids as aliases. Per-action contract tests pin the authored, unfolded records (`records/unfolded.ts`), and the integration suites derive one twin case per family (`tests/fold-twins.mjs`) so every advertised primary and selector is exercised.
+- **Folded capability families** � a record can stand for a whole family of bridge actions. `routing.dispatchBy` maps one selector parameter's value to the existing handler action, and every former name stays callable as a folded legacy pair whose pins supply the value it implied; both gateways apply the same two steps (pins before validation, action after it). The folds are data (`records/folds/<parent>.folds.ts`, applied by `records/shared/fold.ts`): 244 fold families across 22 parents (222 of the resulting records dispatch through a `routing.dispatchBy` selector � 221 of them from the fold specs, plus `manage_level_structure.create_volume`, whose `volumeClass` dispatch is authored on the record itself � and the remaining 23 families are pure-alias folds; 246 of the 380 records carry at least one folded legacy pair, across 1,166 pinned pairs) take the catalog from 1,379 authored pre-fold action entries to **380 records**, while all 1,549 `{tool, action}` pairs (every shipped name plus 164 new family primaries) still resolve, describe and execute, the normalization audit total is unchanged at 1,341, and a fold whose primary is one of its members keeps the selector optional so every pre-fold call is unchanged. A consent grant may name the capability by any name it answers to (canonical id, alias, or a folded `tool.action` pair) on both doors; the native completion pool completes the old names too; the search index counts a name once per identifier field and stops re-scoring folded member ids as aliases. Per-action contract tests pin the authored, unfolded records (`records/unfolded.ts`), and the integration suites derive one twin case per family (`tests/fold-twins.mjs`) so every advertised primary and selector is exercised.
 
 #### Gateway surface
 
-- **`unreal` gateway tool with four operations** — `search`, `describe`, `execute`, and `configure` are now the entire public MCP surface on both transports. The routing engine lives in `src/server/gateway/` (26 TypeScript modules) and covers capability indexing and views, search filters, browse/capability describe modes, execute resolve → validate → policy → authorization → dispatch, receipt context, schema normalization, guidance, and availability probing.
-- **Execute idempotency ledger** — repeat `execute` calls carrying the same idempotency key return the original receipt instead of re-running the action. Mirrored on both sides of the bridge: TypeScript (`src/server/gateway/idempotency-ledger.ts`, cap 1024) and C++ (`Private/Foundation/McpIdempotencyLedger`, cap 4096).
-- **Compensation receipts and capability principals** — `Private/Foundation/McpCompensationReceipt` and `McpCapabilityPrincipal`/`McpCapabilityAuthorization` give the plugin its own authorization identity rather than trusting the caller's claim.
-- **`DIRECT_TOOL_CALL_REMOVED` migration receipt** — a direct `tools/call` on a canonical parent name returns a bounded, executable receipt whose `nextCall` re-runs the same request through the gateway.
-- **Execute option validation and refusal** — `timeoutMs` must be an integer in 1..600000 ms and `idempotencyKey` 1..128 characters — a malformed key previously bypassed the ledger entirely, so a retry re-ran the mutation with nothing reporting that dedup was off. `preview` is refused outright with `UNSUPPORTED_PREVIEW` (no dispatch path implements a dry run, and `behavior.supportsPreview` is deliberately not consulted, because honouring it would perform the real mutation and call it a preview), and an option that is accepted but not implemented (`savePolicy`, `validationLevel`, `taskPreference`) answers `UNSUPPORTED_OPTION` instead of being validated, echoed on a success receipt, and dropped. An `expectedCatalogRevision` that no longer matches answers `STALE_STATE`. A result that would exceed the transport budget is refused as `RESULT_TOO_LARGE` (100,000 characters, 6,000,000 for image-payload capabilities) on the failure path as well as the success path.
-- **Bounded search** — `limit` defaults to 12 and is capped at 25, a page is additionally held to `maxBytes` (default 24,576, floor 512, ceiling 262,144) by dropping whole trailing rows, and `hasMore`, `truncated`, `truncationReason`, `nextCursor`, `coercions` and `budgetExceeded` report exactly what happened: an argument that was clamped is named, a page that could not fit even one row answers `budgetExceeded` instead of returning an identical cursor forever, and a truncated page says why. A capability id or alias that collides in the index fails closed with `GATEWAY_INDEX_CONFLICT` rather than resolving to an arbitrary record.
+- **`unreal` gateway tool with four operations** � `search`, `describe`, `execute`, and `configure` are now the entire public MCP surface on both transports. The routing engine lives in `src/server/gateway/` (26 TypeScript modules) and covers capability indexing and views, search filters, browse/capability describe modes, execute resolve ? validate ? policy ? authorization ? dispatch, receipt context, schema normalization, guidance, and availability probing.
+- **Execute idempotency ledger** � repeat `execute` calls carrying the same idempotency key return the original receipt instead of re-running the action. Mirrored on both sides of the bridge: TypeScript (`src/server/gateway/idempotency-ledger.ts`, cap 1024) and C++ (`Private/Foundation/McpIdempotencyLedger`, cap 4096).
+- **Compensation receipts and capability principals** � `Private/Foundation/McpCompensationReceipt` and `McpCapabilityPrincipal`/`McpCapabilityAuthorization` give the plugin its own authorization identity rather than trusting the caller's claim.
+- **`DIRECT_TOOL_CALL_REMOVED` migration receipt** � a direct `tools/call` on a canonical parent name returns a bounded, executable receipt whose `nextCall` re-runs the same request through the gateway.
+- **Execute option validation and refusal** � `timeoutMs` must be an integer in 1..600000 ms and `idempotencyKey` 1..128 characters � a malformed key previously bypassed the ledger entirely, so a retry re-ran the mutation with nothing reporting that dedup was off. `preview` is refused outright with `UNSUPPORTED_PREVIEW` (no dispatch path implements a dry run, and `behavior.supportsPreview` is deliberately not consulted, because honouring it would perform the real mutation and call it a preview), and an option that is accepted but not implemented (`savePolicy`, `validationLevel`, `taskPreference`) answers `UNSUPPORTED_OPTION` instead of being validated, echoed on a success receipt, and dropped. An `expectedCatalogRevision` that no longer matches answers `STALE_STATE`. A result that would exceed the transport budget is refused as `RESULT_TOO_LARGE` (100,000 characters, 6,000,000 for image-payload capabilities) on the failure path as well as the success path.
+- **Bounded search** � `limit` defaults to 12 and is capped at 25, a page is additionally held to `maxBytes` (default 24,576, floor 512, ceiling 262,144) by dropping whole trailing rows, and `hasMore`, `truncated`, `truncationReason`, `nextCursor`, `coercions` and `budgetExceeded` report exactly what happened: an argument that was clamped is named, a page that could not fit even one row answers `budgetExceeded` instead of returning an identical cursor forever, and a truncated page says why. A capability id or alias that collides in the index fails closed with `GATEWAY_INDEX_CONFLICT` rather than resolving to an arbitrary record.
 
 #### Capability catalog and contract generation
 
-- **Hand-authored capability records as the single source of truth** — `src/tools/catalog/capabilities/records/**` holds **380 records** across the **23** canonical parents, authored with `buildCoreRecord()` declaring deltas only. `aggregate.ts` hard-asserts the record count and throws on mismatch.
-- **Generation pipeline** — `scripts/generate-canonical-registry.ts` (+ the `scripts/canonical-registry/` modules) emits the generated capability shards, the orchestration routing index, the docs action reference, and the C++ side: `Private/MCP/Generated/` shards and `McpGeneratedParentRegistry*`. `scripts/generate-gateway-manifest.ts` (+ `scripts/gateway-manifest/`) emits `src/gateway/gateway-manifest.generated.{ts,json}` with content hashing and path policy.
-- **New drift gates** — `registry:generate`, `registry:check`, `manifest:check`, `policy:generate`, `policy:check`, `normalization:check`, `normalization:audit`, `migration:check`, `primitives:check`, `security:check`, `eval:check`, `version:check`, `workflow:check`.
-- **Deterministic ordering helper** — `src/utils/serialization/ordering.ts` provides byte-order comparison so generated shards are byte-identical across machines and locales (`localeCompare` is no longer used for ordering).
+- **Hand-authored capability records as the single source of truth** � `src/tools/catalog/capabilities/records/**` holds **380 records** across the **23** canonical parents, authored with `buildCoreRecord()` declaring deltas only. `aggregate.ts` hard-asserts the record count and throws on mismatch.
+- **Generation pipeline** � `scripts/generate-canonical-registry.ts` (+ the `scripts/canonical-registry/` modules) emits the generated capability shards, the orchestration routing index, the docs action reference, and the C++ side: `Private/MCP/Generated/` shards and `McpGeneratedParentRegistry*`. `scripts/generate-gateway-manifest.ts` (+ `scripts/gateway-manifest/`) emits `src/gateway/gateway-manifest.generated.{ts,json}` with content hashing and path policy.
+- **New drift gates** � `registry:generate`, `registry:check`, `manifest:check`, `policy:generate`, `policy:check`, `normalization:check`, `normalization:audit`, `migration:check`, `primitives:check`, `security:check`, `eval:check`, `version:check`, `workflow:check`.
+- **Deterministic ordering helper** � `src/utils/serialization/ordering.ts` provides byte-order comparison so generated shards are byte-identical across machines and locales (`localeCompare` is no longer used for ordering).
 
 #### MCP protocol primitives
 
-- **Resources, prompts, completions and progress** — new `src/server/mcp-primitives/` implements the primitive registry, wiring, handlers, notifications, catalog revision reader, and fallback pointers, with a prompt catalog and typed prompt errors, a completion provider (ranking, slots, sources, fixtures), and a progress reporter/token/sink registry.
-- **MCP Tasks (`2025-11-25`)** — a per-session **bounded** task store implementing the MCP SDK's own `TaskStore` contract, so `tasks/get|list|cancel|result` are auto-registered and reachable from the wire. It deliberately does not reuse the SDK's `InMemoryTaskStore`, which is unbounded, drives expiry off real `setTimeout` timers, and ignores `sessionId` entirely. Task checkpoints ride alongside it.
-- **Resource subscriptions and revisions** — a subscription store with a notification coalescer so bursts of editor changes collapse into one client notification, plus resource revision stamps for change detection.
-- **Session capability profiles and `configure` state** — a client profile store, a session capability profile and a session configure store model the gateway's `configure` operation and per-client capability negotiation. The session resolver is exercised by tests only — nothing in the stdio path installs one yet.
-- **Elicitation decision policy** — a decision policy (`isSafeToElicit`) that answers whether a field is safe to elicit. Elicitation itself is wired into the execute path: `dispatchAndValidate()` awaits `maybeElicitMissingArgs()`, which prefills only missing required primitive fields through the client's elicitation function, under a timeout and a `missing-params` fallback. It never elicits secrets, tokens, or credentials, and never a destructive-confirmation value. Mirrored natively for cross-transport parity.
-- **Resource providers** — new `src/resources/` supplies capability resources, editor-state resources, knowledge resources, the resource catalog, read router, typed resource errors, and asset pagination.
-- **Native primitive parity** — the plugin gained matching `Private/MCP/Primitives/`, `Resources/`, `Routing/`, `Execute/`, `Gateway/`, and `DynamicTools/` modules (task store and methods, subscription store, notification coalescer, completion pools and provider, prompt catalog/render/argument validation, client profile store, elicitation policy), audited by the `primitives:check` parity harness.
-- **Protocol negotiation** — support for `2025-11-25` plus the native transport's `MCP-Protocol-Version` header guard: a present-but-unsupported version is refused with HTTP 400, while an absent header derives from the session's negotiated version and otherwise falls back to the `2025-03-26` default. Native accepts the three modern versions; the TypeScript SDK additionally accepts two legacy ones, from the pinned SDK's own supported set rather than from code in this repository.
-- **Bounded task store and progress** — only `search` and `describe` may be task-augmented; any mutating operation, and any tool other than `unreal`, is refused with `TASK_CHECKPOINT_REFUSED` before any work runs. The per-session store is capped at 32 tasks with a 5 to 30 minute lifetime, refuses creation with a JSON-RPC `-32600` `TASK_STORE_AT_CAPACITY` while every retained task is still running, and permits exactly one terminal transition (`TASK_ALREADY_TERMINAL`). Progress notifications carry the client's own `_meta` token (without one the reporter is inert rather than inventing an id), are strictly monotonic, and are bounded to 64 notifications per operation with a 512-character message clamp and a 256-entry reporter map.
-- **Resource surface** — `resources/templates/list` is registered with four templates (`ue://capability/{capabilityId}`, `ue://knowledge/{engineVersion}/{topic}`, `ue://object/{objectPath}`, `ue://asset/{assetPath}`) plus five static resources (`ue://capability/catalog`, `ue://project`, `ue://editor`, `ue://selection`, `ue://state/revisions`), every read is held to a 64 KiB budget with typed `RESOURCE_*` codes (`RESOURCE_TRAVERSAL_REJECTED` for host paths and traversal), and `ue://health` now also carries `readiness`, the telemetry `diagnostics` snapshot, `currentSession`/`previousSession` and `metricsExposition` alongside the capability and editor-state resources.
+- **Resources, prompts, completions and progress** � new `src/server/mcp-primitives/` implements the primitive registry, wiring, handlers, notifications, catalog revision reader, and fallback pointers, with a prompt catalog and typed prompt errors, a completion provider (ranking, slots, sources, fixtures), and a progress reporter/token/sink registry.
+- **MCP Tasks (`2025-11-25`)** � a per-session **bounded** task store implementing the MCP SDK's own `TaskStore` contract, so `tasks/get|list|cancel|result` are auto-registered and reachable from the wire. It deliberately does not reuse the SDK's `InMemoryTaskStore`, which is unbounded, drives expiry off real `setTimeout` timers, and ignores `sessionId` entirely. Task checkpoints ride alongside it.
+- **Resource subscriptions and revisions** � a subscription store with a notification coalescer so bursts of editor changes collapse into one client notification, plus resource revision stamps for change detection.
+- **Session capability profiles and `configure` state** � a client profile store, a session capability profile and a session configure store model the gateway's `configure` operation and per-client capability negotiation. The session resolver is exercised by tests only � nothing in the stdio path installs one yet.
+- **Elicitation decision policy** � a decision policy (`isSafeToElicit`) that answers whether a field is safe to elicit. Elicitation itself is wired into the execute path: `dispatchAndValidate()` awaits `maybeElicitMissingArgs()`, which prefills only missing required primitive fields through the client's elicitation function, under a timeout and a `missing-params` fallback. It never elicits secrets, tokens, or credentials, and never a destructive-confirmation value. Mirrored natively for cross-transport parity.
+- **Resource providers** � new `src/resources/` supplies capability resources, editor-state resources, knowledge resources, the resource catalog, read router, typed resource errors, and asset pagination.
+- **Native primitive parity** � the plugin gained matching `Private/MCP/Primitives/`, `Resources/`, `Routing/`, `Execute/`, `Gateway/`, and `DynamicTools/` modules (task store and methods, subscription store, notification coalescer, completion pools and provider, prompt catalog/render/argument validation, client profile store, elicitation policy), audited by the `primitives:check` parity harness.
+- **Protocol negotiation** � support for `2025-11-25` plus the native transport's `MCP-Protocol-Version` header guard: a present-but-unsupported version is refused with HTTP 400, while an absent header derives from the session's negotiated version and otherwise falls back to the `2025-03-26` default. Native accepts the three modern versions; the TypeScript SDK additionally accepts two legacy ones, from the pinned SDK's own supported set rather than from code in this repository.
+- **Bounded task store and progress** � only `search` and `describe` may be task-augmented; any mutating operation, and any tool other than `unreal`, is refused with `TASK_CHECKPOINT_REFUSED` before any work runs. The per-session store is capped at 32 tasks with a 5 to 30 minute lifetime, refuses creation with a JSON-RPC `-32600` `TASK_STORE_AT_CAPACITY` while every retained task is still running, and permits exactly one terminal transition (`TASK_ALREADY_TERMINAL`). Progress notifications carry the client's own `_meta` token (without one the reporter is inert rather than inventing an id), are strictly monotonic, and are bounded to 64 notifications per operation with a 512-character message clamp and a 256-entry reporter map.
+- **Resource surface** � `resources/templates/list` is registered with four templates (`ue://capability/{capabilityId}`, `ue://knowledge/{engineVersion}/{topic}`, `ue://object/{objectPath}`, `ue://asset/{assetPath}`) plus five static resources (`ue://capability/catalog`, `ue://project`, `ue://editor`, `ue://selection`, `ue://state/revisions`), every read is held to a 64 KiB budget with typed `RESOURCE_*` codes (`RESOURCE_TRAVERSAL_REJECTED` for host paths and traversal), and `ue://health` now also carries `readiness`, the telemetry `diagnostics` snapshot, `currentSession`/`previousSession` and `metricsExposition` alongside the capability and editor-state resources.
 
 #### Cinematics, render and media automation
 
@@ -605,124 +612,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Blueprint authoring
 
-- **`add_event` supports component-bound events** — pass `componentName` plus `eventName` (the delegate name) to wire a component's multicast delegate (e.g. `NearMissZone.OnComponentBeginOverlap`). Previously such requests fell through to the custom-event branch and produced an unbound `Event_<guid>` that never fired. The new branch resolves the SCS component, locates the multicast delegate property on its class (accepting both the bare name and the `__DelegateSignature` suffix), and creates a properly initialized `UK2Node_ComponentBoundEvent` with `ComponentPropertyName`, `DelegatePropertyName`, and `DelegateOwnerClass` set. Idempotent on repeat calls; returns `INVALID_ARGUMENT` / `COMPONENT_NOT_FOUND` / `COMPONENT_CLASS_UNRESOLVED` / `DELEGATE_NOT_FOUND` when inputs are missing or unresolvable. Guarded by `MCP_HAS_K2NODE_COMPONENTBOUNDEVENT` so the file still compiles on engine layouts where the header isn't reachable.
-- **`create_node` / `add_node` sets the widget class on CreateWidget nodes** — a `K2Node_CreateWidget` previously fell through to generic instantiation that never assigned `WidgetType`, producing a generic `UUserWidget` `Class` pin and an untyped `Return Value`. A dedicated branch now reads `targetClass` (Widget Blueprint asset path such as `/Game/Widgets/WBP_HUD`, or a class name), resolves it, and assigns `WidgetType` before pin allocation so `ReconstructNode` builds the correct typed `Return Value`. Returns `INVALID_ARGUMENT` / `CLASS_NOT_FOUND`.
-- **`create_node` / `add_node` sets the target class on DynamicCast nodes** — a `K2Node_DynamicCast` ("Cast To …") previously produced an unusable "Bad cast node" with only a wildcard `Object` pin and no typed `As <Class>` output. A dedicated cast branch reads `targetClass`, resolves it via `ResolveClassByName`, and assigns `UK2Node_DynamicCast::TargetType`.
+- **`add_event` supports component-bound events** � pass `componentName` plus `eventName` (the delegate name) to wire a component's multicast delegate (e.g. `NearMissZone.OnComponentBeginOverlap`). Previously such requests fell through to the custom-event branch and produced an unbound `Event_<guid>` that never fired. The new branch resolves the SCS component, locates the multicast delegate property on its class (accepting both the bare name and the `__DelegateSignature` suffix), and creates a properly initialized `UK2Node_ComponentBoundEvent` with `ComponentPropertyName`, `DelegatePropertyName`, and `DelegateOwnerClass` set. Idempotent on repeat calls; returns `INVALID_ARGUMENT` / `COMPONENT_NOT_FOUND` / `COMPONENT_CLASS_UNRESOLVED` / `DELEGATE_NOT_FOUND` when inputs are missing or unresolvable. Guarded by `MCP_HAS_K2NODE_COMPONENTBOUNDEVENT` so the file still compiles on engine layouts where the header isn't reachable.
+- **`create_node` / `add_node` sets the widget class on CreateWidget nodes** � a `K2Node_CreateWidget` previously fell through to generic instantiation that never assigned `WidgetType`, producing a generic `UUserWidget` `Class` pin and an untyped `Return Value`. A dedicated branch now reads `targetClass` (Widget Blueprint asset path such as `/Game/Widgets/WBP_HUD`, or a class name), resolves it, and assigns `WidgetType` before pin allocation so `ReconstructNode` builds the correct typed `Return Value`. Returns `INVALID_ARGUMENT` / `CLASS_NOT_FOUND`.
+- **`create_node` / `add_node` sets the target class on DynamicCast nodes** � a `K2Node_DynamicCast` ("Cast To �") previously produced an unusable "Bad cast node" with only a wildcard `Object` pin and no typed `As <Class>` output. A dedicated cast branch reads `targetClass`, resolves it via `ResolveClassByName`, and assigns `UK2Node_DynamicCast::TargetType`.
 - Factored the class-resolution and payload-reading logic shared by DynamicCast and CreateWidget into `ResolveTargetClassFromString` and `ReadTargetClassPayload`, so every node branch with a class pin accepts the same input forms (Blueprint asset path, generated-class path, native class name) and the same legacy field fallbacks (`memberClass` / `nodeClass` / `widgetType`, plus a `CastTo<Class>` prefix peel from `nodeType`).
-- **`add_variable` applies `defaultValue`** — the handler read the field but never assigned it, so every variable was created with a zero/empty default (a float requested as `0.35` stayed `0`). The parsed default is now written to `FBPVariableDescription::DefaultValue` with type-aware formatting: booleans as lowercase `true`/`false`, integer/byte categories as whole numbers, floats/doubles via `SanitizeFloat`, and strings/struct literals passed through.
-- **18 widget-authoring actions are now routable on both surfaces** — `add_quest_tracker`, `add_safe_zone`, `add_spacer`, `add_widget_component`, `add_widget_switcher`, `bind_localized_text`, `create_credits_screen`, `create_shop_ui`, `create_widget_style`, `delete_animation`, `get_widget_slot_info`, `remove_widget`, `rename_widget`, `reparent_widget`, `set_font`, `set_localization_key`, `set_margin`, and `set_widget_binding` were absent from both the TypeScript `WIDGET_AUTHORING_ACTIONS` set and the native `WidgetAuthoring()` routing array, so the handlers behind them could not be reached. Added to both, with matching capability-record property fragments for the widget path, layout, content, and panel inputs.
-- **Promoted skeleton routes are named on both surfaces** — fifteen previously hidden native skeleton routes (`add_socket`, `modify_socket`, `set_physics_asset`, `modify_physics_body`, `remove_physics_body`, `set_physics_constraint`, `get_physics_asset_info`, `list_morph_targets`, `set_morph_target_value`, `get_bone_transform`, `list_virtual_bones`, `remove_socket`, plus the `delete_*` spellings) now carry explicit route names on the TypeScript `SKELETON_ACTIONS` and the native `Skeleton()` routing array, with twelve promoted to canonical capability records (marked `post-migration` so the pre-gateway audit total stays truthful). The remaining three `delete_*` spellings (`delete_socket`, `delete_morph_target`, `delete_virtual_bone`) stay hidden pending a retrieval-IDF budget fix.
+- **`add_variable` applies `defaultValue`** � the handler read the field but never assigned it, so every variable was created with a zero/empty default (a float requested as `0.35` stayed `0`). The parsed default is now written to `FBPVariableDescription::DefaultValue` with type-aware formatting: booleans as lowercase `true`/`false`, integer/byte categories as whole numbers, floats/doubles via `SanitizeFloat`, and strings/struct literals passed through.
+- **18 widget-authoring actions are now routable on both surfaces** � `add_quest_tracker`, `add_safe_zone`, `add_spacer`, `add_widget_component`, `add_widget_switcher`, `bind_localized_text`, `create_credits_screen`, `create_shop_ui`, `create_widget_style`, `delete_animation`, `get_widget_slot_info`, `remove_widget`, `rename_widget`, `reparent_widget`, `set_font`, `set_localization_key`, `set_margin`, and `set_widget_binding` were absent from both the TypeScript `WIDGET_AUTHORING_ACTIONS` set and the native `WidgetAuthoring()` routing array, so the handlers behind them could not be reached. Added to both, with matching capability-record property fragments for the widget path, layout, content, and panel inputs.
+- **Promoted skeleton routes are named on both surfaces** � fifteen previously hidden native skeleton routes (`add_socket`, `modify_socket`, `set_physics_asset`, `modify_physics_body`, `remove_physics_body`, `set_physics_constraint`, `get_physics_asset_info`, `list_morph_targets`, `set_morph_target_value`, `get_bone_transform`, `list_virtual_bones`, `remove_socket`, plus the `delete_*` spellings) now carry explicit route names on the TypeScript `SKELETON_ACTIONS` and the native `Skeleton()` routing array, with twelve promoted to canonical capability records (marked `post-migration` so the pre-gateway audit total stays truthful). The remaining three `delete_*` spellings (`delete_socket`, `delete_morph_target`, `delete_virtual_bone`) stay hidden pending a retrieval-IDF budget fix.
 
 #### Plugin capabilities
 
-- **`MCP_NATIVE_PORT` environment variable** — overrides the native MCP HTTP/SSE port at startup without editing committed ini, so several editors can run at once on distinct ports. Falls back to the `Native MCP Port` project setting when unset or invalid.
-- **`IKRigEditor` optional module** — declared for the `create_ik_rig` path so IK Rig creation works without a hard dependency on the editor module being present.
-- **Pre-queue capability gate** — every automation request is authorized before it reaches the editor queue (`Private/Core/Security/McpPrequeueGate`), resolving the demand with the same `NormalizeAction` the dispatchers use, so a payload cannot authorize one capability and execute another. The refusal order is fixed (scope, consent, project, paths, path coverage, console command, consent nonce, quota), a refused request performs no editor work at all (the in-handler checks remain as post-queue defence), an unknown or misspelled action fails closed to `Admin`, an ambiguous one takes the strictest scope, and the recursive console-command scan (depth 8, 4096 nodes) treats a truncated scan as `COMMAND_BLOCKED`.
-- **Scoped capability tokens, quotas and single-use consent** — a scoped token carries its profile, scopes, allowed path prefixes, allowed projects and per-minute request/tool-call quotas (a scoped `Admin` entry is invalid and ignored), and the `bridge_ack` `authority` block reports the effective identity without ever carrying the token, its paths or its limits. A presented-but-unresolvable token is refused even where a token is not required, and a project-restricted principal is refused at the handshake rather than per request. The quota ledger is shared by both transports, keyed by principal rather than socket or session, bounded to 256 tracked identities with least-recently-seen eviction, charged only after every other refusal, and `QUOTA_EXCEEDED` is the one refusal marked retryable — so a reconnect cannot reset a budget. A consent grant's nonce is burned after all authorization refusals and before the quota charge, so a replay answers `CONSENT_REUSED` without spending budget; nonce-less grants from older clients keep capability-match-only behaviour.
-- **New state and refusal codes** — `STALE_STATE` and the `UNDO_UNAVAILABLE_*` family (`_DURABLE_WRITE`, `_EXTERNAL_PROCESS`, `_ASYNC_PIPELINE`, `_NO_TRANSACTION_BUFFER`, `_NON_TRANSACTIONAL_OBJECT`, plus `UNDO_BROKEN_BY_DURABLE_WRITE` from a package-saved witness) join the shared strings, `EDITOR_BLOCKED` reports a game-thread stall over 15 s, and `EDITOR_STATE_MISMATCH` reports a preview/state mismatch.
-- **Cancellation and deferred replies are attributed to their transport** — a cancel from a socket that does not own the request is refused, and `McpRequestOriginRegistry` (cap 512) records the admitting transport per request id. That fixes native `/mcp` deferred replies which used to fall back to the WebSocket path, get dropped, and surface to the caller as an untyped 300 s `TIMEOUT`.
-- **Editor policy surfaces** — the plugin settings carry the Movie Render Queue caps (dimension 8192, 33,554,432 px aggregate, `MaxMovieRenderAggregateWork`, executor/burn-in/Take-Recorder class allowlists) and the native session limits (600 requests and 120 tool calls per minute per client).
-- **Bounded native sessions** — at most 16 active sessions (`MaxActiveSessions`) with a 120 s idle reclaim, and a 32-connection ceiling (`MaxConcurrentConnections`) that answers 503 beyond it.
+- **`MCP_NATIVE_PORT` environment variable** � overrides the native MCP HTTP/SSE port at startup without editing committed ini, so several editors can run at once on distinct ports. Falls back to the `Native MCP Port` project setting when unset or invalid.
+- **`IKRigEditor` optional module** � declared for the `create_ik_rig` path so IK Rig creation works without a hard dependency on the editor module being present.
+- **Pre-queue capability gate** � every automation request is authorized before it reaches the editor queue (`Private/Core/Security/McpPrequeueGate`), resolving the demand with the same `NormalizeAction` the dispatchers use, so a payload cannot authorize one capability and execute another. The refusal order is fixed (scope, consent, project, paths, path coverage, console command, consent nonce, quota), a refused request performs no editor work at all (the in-handler checks remain as post-queue defence), an unknown or misspelled action fails closed to `Admin`, an ambiguous one takes the strictest scope, and the recursive console-command scan (depth 8, 4096 nodes) treats a truncated scan as `COMMAND_BLOCKED`.
+- **Scoped capability tokens, quotas and single-use consent** � a scoped token carries its profile, scopes, allowed path prefixes, allowed projects and per-minute request/tool-call quotas (a scoped `Admin` entry is invalid and ignored), and the `bridge_ack` `authority` block reports the effective identity without ever carrying the token, its paths or its limits. A presented-but-unresolvable token is refused even where a token is not required, and a project-restricted principal is refused at the handshake rather than per request. The quota ledger is shared by both transports, keyed by principal rather than socket or session, bounded to 256 tracked identities with least-recently-seen eviction, charged only after every other refusal, and `QUOTA_EXCEEDED` is the one refusal marked retryable � so a reconnect cannot reset a budget. A consent grant's nonce is burned after all authorization refusals and before the quota charge, so a replay answers `CONSENT_REUSED` without spending budget; nonce-less grants from older clients keep capability-match-only behaviour.
+- **New state and refusal codes** � `STALE_STATE` and the `UNDO_UNAVAILABLE_*` family (`_DURABLE_WRITE`, `_EXTERNAL_PROCESS`, `_ASYNC_PIPELINE`, `_NO_TRANSACTION_BUFFER`, `_NON_TRANSACTIONAL_OBJECT`, plus `UNDO_BROKEN_BY_DURABLE_WRITE` from a package-saved witness) join the shared strings, `EDITOR_BLOCKED` reports a game-thread stall over 15 s, and `EDITOR_STATE_MISMATCH` reports a preview/state mismatch.
+- **Cancellation and deferred replies are attributed to their transport** � a cancel from a socket that does not own the request is refused, and `McpRequestOriginRegistry` (cap 512) records the admitting transport per request id. That fixes native `/mcp` deferred replies which used to fall back to the WebSocket path, get dropped, and surface to the caller as an untyped 300 s `TIMEOUT`.
+- **Editor policy surfaces** � the plugin settings carry the Movie Render Queue caps (dimension 8192, 33,554,432 px aggregate, `MaxMovieRenderAggregateWork`, executor/burn-in/Take-Recorder class allowlists) and the native session limits (600 requests and 120 tool calls per minute per client).
+- **Bounded native sessions** � at most 16 active sessions (`MaxActiveSessions`) with a 120 s idle reclaim, and a 32-connection ceiling (`MaxConcurrentConnections`) that answers 503 beyond it.
 
 #### Replies that report what actually happened
 
 A write that lands is not a write that is correct, and several actions used to answer a bare `success` for a result the caller would only discover by looking at the editor. These replies now carry the finding itself:
 
-- **Placement feedback on `control_actor` spawn and `set_transform`** — the reply names what the actor interpenetrates (`overlappingActors[]` with `penetrationDepth`), whether it is sunk into or floating above the surface beneath it (`groundZ`, `groundClearance`), and a `suggestedLocation` that rests on that surface. A Character's location is its capsule **centre**, so reusing a mesh's feet-relative Z buries it to the waist — the exact bug this was written for. Volume/trigger/light actors and subsystem debug-draw proxies (whose bounds span the level) are excluded, and slabs bedded into each other are read as floor layering rather than penetration, so the findings are the real ones.
-- **`control_actor.audit_placement`** — the same check swept over a whole level for placements nobody will call back into. Findings come worst-first with a severity in world units, a `byKind` tally (`sunk`/`floating`/`overlapping`/`unsupported`) and `minSeverity`/`nameFilter`/`limit` to narrow, so one sweep of a 776-actor level answers within the transport budget instead of being refused as `RESULT_TOO_LARGE`. A geometric test cannot tell a mistake from a composition — a keep beds its towers into its platform, an island is meant to hang in the air — so an actor tagged `mcp.placement.ok` drops out as both subject and overlap target, letting the flagged count reach zero and mean something instead of training the caller to ignore it.
-- **`audit_placement` also catches an actor lying on its side** — overlap and ground checks both pass for a building tipped onto its face: it is inside nothing, and its now-horizontal bounds still rest on the floor. Eighteen shop houses in one level stood on their gable ends with the sweep reporting nothing, because the ±90 meant to turn them to face the street had been written into `pitch` instead of `yaw`. Lean is now measured as the angle between the actor's up vector and world up, so yaw never counts and a fully inverted actor reads 180 rather than wrapping back to 0. Severity stays in world units — the distance the actor's top travelled from upright — so a toppled house outranks a tipped pebble instead of tying with it at "90", and `maxTilt` (default 30°) keeps the few degrees of lean that make a prop look hand-placed from reporting. Only actors that render a mesh are judged: rotation is the whole point of a light, a camera or a decal.
-- **Re-using a `slotName` edits that widget instead of duplicating it** — re-adding is how a caller changes an existing widget ("the text block called `Txt_Health` now reads 0"), and `ConstructWidget` re-initialises the object already holding that name rather than making a second one. That re-initialisation clears the widget's `Slot`, so `GetParent()` answered null while the parent panel's slot list still pointed at the widget, and the add appended a second slot for the same widget — one widget listed twice under one parent, with the graph's variable binding to whichever the compiler reached first. Three HUDs were corrupted this way before the cause was found. The detach now asks the panels which of them lists the widget, because a parent's slot list survives the re-initialisation that erases the widget's own back-pointer, and it carries the slot's layout and Z-order across the re-seat — otherwise editing a label's text silently moved it to the panel's default corner. Geometry passed in the call still wins.
-- **A whole-graph pin read reports pin literals, like the single-node one does** — `inspect_graph` with `info: "graph"` and `includePins` emitted each pin’s type, direction and `linkedTo` but never its `defaultValue`, while `info: "pins"` on the same pin did. Nothing said the field was being withheld, so an absent `defaultValue` read as “this pin is empty”: a branch comparing the level name against `"L_Hub"` looked like it compared against `""`, and a `bShowMouseCursor` that was set looked unset. Both readings were wrong and both sent a live debugging session down the wrong path. The graph-level view now emits `defaultValue`/`defaultTextValue`/`defaultObjectPath` on the same terms as the per-node view.
-- **`create_node` seeds a Get Subsystem node with its subsystem type** — the `UK2Node_GetSubsystem` family (`GetSubsystem`, `GetSubsystemFromPC`, `GetEngineSubsystem`, `GetEditorSubsystem`) keeps its type in a `CustomClass` UPROPERTY that the editor palette seeds via `Initialize()` before the node is placed, not on a pin. Spawned by class name the property stayed null, so the node came back with an untyped result pin and the blueprint stopped compiling with "Node Invalid Subsystem Type must have a class specified" — and nothing could repair it, because the visible `Class` pin is only promoted into `CustomClass` during node reconstruction and `set_node_property` cannot reach the property. `targetClass` was accepted and silently ignored, so the only evidence was a compile error on a later call. The node is now seeded from `targetClass` before its pins are allocated, a non-`USubsystem` class is rejected, and a request without `targetClass` is refused rather than answered with a node that can never compile. Found wiring `AddMappingContext` into a live player controller.
-- **`set_node_property` names the properties it accepts** — an unsupported name answered `Unsupported node property 'X'` and nothing else, so a caller could not tell a misspelling from a property that is simply not settable there, and had to guess. The refusal now lists the supported set and says that a node is moved with `NodePosX`/`NodePosY` and that node-class fields such as a cast target are set at creation via `create_node` `targetClass`.
-- **`delete_node` refuses a `pinName` it would have ignored** — `break_pin_links` folds into `delete_node` under `deleteScope: "pin_links"`, so sending `pinName` without that scope meant "operate on this pin" and "delete the whole node" at once, and the node won, silently. It cost a live Branch node and the whole death branch hanging off it before the cause was clear. A destructive default must not resolve a contradiction in its own favour: the call is now refused with `CONTRADICTORY_SCOPE`, naming the scope that does what the pin was obviously meant to do. The refusal runs above the transaction, so a rejected request leaves no empty undo entry.
-- **`manage_asset` `edit_struct` reports `saved`** — and warns via `persistenceWarning` when `save` was omitted, because struct members added in memory survive the session, pass `list_struct_members`, expose Break-struct pins, accept DataTable imports, and then vanish on the next editor start. `save_all` never rescues them: the package is not dirty.
-- **`import_rows` reports `fieldsDefaulted`** — with a `dataLossWarning` naming the columns the entry omitted, because the import builds each row from a default-constructed struct. A 5-field import over a 20-field row used to reset the other 15 and still answer `imported: n, invalidRows: []`.
-- **A throttled save no longer reports a write that did not happen** — `SaveLoadedAssetThrottled` skipped saves inside its window and returned `true` regardless, so a caller editing one Blueprint in a burst was told `saved: true` for every edit while only the first reached disk, and lost the tail of the burst on the next editor start. It now refuses to skip a package with unsaved work; a clean package is still skipped, because there is nothing to write.
-- **`manage_blueprint compile` marks the recompiled asset unsaved** — a compile regenerates the class in memory without dirtying the package, so `control_editor.save_all` answered "0 dirty" and the caller concluded everything had persisted while the asset on disk still carried the previous bytecode. Compiling from the editor UI marks the asset unsaved; the action now does the same and reports `pendingSave` with a `persistenceHint`, so the ordinary edit → compile → save_all workflow ends with the work actually on disk.
-- **`CONSENT_REQUIRED` hands back the grant that satisfies it** — the native refusal now spells out the exact `consent` sibling to re-send, matching what the TypeScript gateway already returned. It previously named only the gap and pointed at `describe`, so a caller's first use of any consent-bearing capability cost a full contract round-trip to learn two strings the refusal already held. The re-send still names the capability, which is what the gate is for.
+- **Placement feedback on `control_actor` spawn and `set_transform`** � the reply names what the actor interpenetrates (`overlappingActors[]` with `penetrationDepth`), whether it is sunk into or floating above the surface beneath it (`groundZ`, `groundClearance`), and a `suggestedLocation` that rests on that surface. A Character's location is its capsule **centre**, so reusing a mesh's feet-relative Z buries it to the waist � the exact bug this was written for. Volume/trigger/light actors and subsystem debug-draw proxies (whose bounds span the level) are excluded, and slabs bedded into each other are read as floor layering rather than penetration, so the findings are the real ones.
+- **`control_actor.audit_placement`** � the same check swept over a whole level for placements nobody will call back into. Findings come worst-first with a severity in world units, a `byKind` tally (`sunk`/`floating`/`overlapping`/`unsupported`) and `minSeverity`/`nameFilter`/`limit` to narrow, so one sweep of a 776-actor level answers within the transport budget instead of being refused as `RESULT_TOO_LARGE`. A geometric test cannot tell a mistake from a composition � a keep beds its towers into its platform, an island is meant to hang in the air � so an actor tagged `mcp.placement.ok` drops out as both subject and overlap target, letting the flagged count reach zero and mean something instead of training the caller to ignore it.
+- **`audit_placement` also catches an actor lying on its side** � overlap and ground checks both pass for a building tipped onto its face: it is inside nothing, and its now-horizontal bounds still rest on the floor. Eighteen shop houses in one level stood on their gable ends with the sweep reporting nothing, because the �90 meant to turn them to face the street had been written into `pitch` instead of `yaw`. Lean is now measured as the angle between the actor's up vector and world up, so yaw never counts and a fully inverted actor reads 180 rather than wrapping back to 0. Severity stays in world units � the distance the actor's top travelled from upright � so a toppled house outranks a tipped pebble instead of tying with it at "90", and `maxTilt` (default 30�) keeps the few degrees of lean that make a prop look hand-placed from reporting. Only actors that render a mesh are judged: rotation is the whole point of a light, a camera or a decal.
+- **Re-using a `slotName` edits that widget instead of duplicating it** � re-adding is how a caller changes an existing widget ("the text block called `Txt_Health` now reads 0"), and `ConstructWidget` re-initialises the object already holding that name rather than making a second one. That re-initialisation clears the widget's `Slot`, so `GetParent()` answered null while the parent panel's slot list still pointed at the widget, and the add appended a second slot for the same widget � one widget listed twice under one parent, with the graph's variable binding to whichever the compiler reached first. Three HUDs were corrupted this way before the cause was found. The detach now asks the panels which of them lists the widget, because a parent's slot list survives the re-initialisation that erases the widget's own back-pointer, and it carries the slot's layout and Z-order across the re-seat � otherwise editing a label's text silently moved it to the panel's default corner. Geometry passed in the call still wins.
+- **A whole-graph pin read reports pin literals, like the single-node one does** � `inspect_graph` with `info: "graph"` and `includePins` emitted each pin�s type, direction and `linkedTo` but never its `defaultValue`, while `info: "pins"` on the same pin did. Nothing said the field was being withheld, so an absent `defaultValue` read as �this pin is empty�: a branch comparing the level name against `"L_Hub"` looked like it compared against `""`, and a `bShowMouseCursor` that was set looked unset. Both readings were wrong and both sent a live debugging session down the wrong path. The graph-level view now emits `defaultValue`/`defaultTextValue`/`defaultObjectPath` on the same terms as the per-node view.
+- **`create_node` seeds a Get Subsystem node with its subsystem type** � the `UK2Node_GetSubsystem` family (`GetSubsystem`, `GetSubsystemFromPC`, `GetEngineSubsystem`, `GetEditorSubsystem`) keeps its type in a `CustomClass` UPROPERTY that the editor palette seeds via `Initialize()` before the node is placed, not on a pin. Spawned by class name the property stayed null, so the node came back with an untyped result pin and the blueprint stopped compiling with "Node Invalid Subsystem Type must have a class specified" � and nothing could repair it, because the visible `Class` pin is only promoted into `CustomClass` during node reconstruction and `set_node_property` cannot reach the property. `targetClass` was accepted and silently ignored, so the only evidence was a compile error on a later call. The node is now seeded from `targetClass` before its pins are allocated, a non-`USubsystem` class is rejected, and a request without `targetClass` is refused rather than answered with a node that can never compile. Found wiring `AddMappingContext` into a live player controller.
+- **`set_node_property` names the properties it accepts** � an unsupported name answered `Unsupported node property 'X'` and nothing else, so a caller could not tell a misspelling from a property that is simply not settable there, and had to guess. The refusal now lists the supported set and says that a node is moved with `NodePosX`/`NodePosY` and that node-class fields such as a cast target are set at creation via `create_node` `targetClass`.
+- **`delete_node` refuses a `pinName` it would have ignored** � `break_pin_links` folds into `delete_node` under `deleteScope: "pin_links"`, so sending `pinName` without that scope meant "operate on this pin" and "delete the whole node" at once, and the node won, silently. It cost a live Branch node and the whole death branch hanging off it before the cause was clear. A destructive default must not resolve a contradiction in its own favour: the call is now refused with `CONTRADICTORY_SCOPE`, naming the scope that does what the pin was obviously meant to do. The refusal runs above the transaction, so a rejected request leaves no empty undo entry.
+- **`manage_asset` `edit_struct` reports `saved`** � and warns via `persistenceWarning` when `save` was omitted, because struct members added in memory survive the session, pass `list_struct_members`, expose Break-struct pins, accept DataTable imports, and then vanish on the next editor start. `save_all` never rescues them: the package is not dirty.
+- **`import_rows` reports `fieldsDefaulted`** � with a `dataLossWarning` naming the columns the entry omitted, because the import builds each row from a default-constructed struct. A 5-field import over a 20-field row used to reset the other 15 and still answer `imported: n, invalidRows: []`.
+- **A throttled save no longer reports a write that did not happen** � `SaveLoadedAssetThrottled` skipped saves inside its window and returned `true` regardless, so a caller editing one Blueprint in a burst was told `saved: true` for every edit while only the first reached disk, and lost the tail of the burst on the next editor start. It now refuses to skip a package with unsaved work; a clean package is still skipped, because there is nothing to write.
+- **`manage_blueprint compile` marks the recompiled asset unsaved** � a compile regenerates the class in memory without dirtying the package, so `control_editor.save_all` answered "0 dirty" and the caller concluded everything had persisted while the asset on disk still carried the previous bytecode. Compiling from the editor UI marks the asset unsaved; the action now does the same and reports `pendingSave` with a `persistenceHint`, so the ordinary edit ? compile ? save_all workflow ends with the work actually on disk.
+- **`CONSENT_REQUIRED` hands back the grant that satisfies it** � the native refusal now spells out the exact `consent` sibling to re-send, matching what the TypeScript gateway already returned. It previously named only the gap and pointed at `describe`, so a caller's first use of any consent-bearing capability cost a full contract round-trip to learn two strings the refusal already held. The re-send still names the capability, which is what the gate is for.
 
 #### Services and tests
 
-- **Telemetry and readiness services** — `src/services/` gained a telemetry registry, observation and schema modules plus a readiness probe.
-- **New test tiers** — `tests/eval/` (own Vitest config, run by `eval:check`), `tests/audits/`, `tests/harness/`, and `tests/fixtures/`, alongside `scripts/qa/` adversarial, cross-transport matrix, and capability-metadata audits.
-- **Readiness vs. health** — `/health` now answers 503 while the server is not ready instead of reporting `ok` unconditionally, and a new `/ready` probe reports the same state without the health payload.
-- **Capability-aware timeouts** — operation timeouts derive from the record's declared cost tier: `resolveActionTimeoutMs()` reads the generated `capability-cost-index.generated.ts` for the `tool::action` pair and maps its latency and resources onto `CAPABILITY_TIMEOUT_TIER_MS` (15 s to 20 min), with a 15 s floor, a 120 s fallback for unclassified pairs, and an `MCP_REQUEST_TIMEOUT_MS` override — replacing one flat default for every action.
-- **Asset-listing cache invalidation** — the listing is invalidated after every successful mutation (`invalidateAssetCacheForMutation()` runs straight after dispatch, with 26 listing-neutral actions exempted and everything else treated as a mutation, fail-safe). The `/Content/...` alias is now mapped before path sanitization, which fixes a deleted asset lingering in the cache for the full TTL because sanitization threw on the unaliased path and the catch swallowed it. A diagnostics snapshot reader with a 64 KiB cap and an allowlist projection (tokens, paths and session ids dropped) joins the automation client, though nothing on the production path reads it yet.
+- **Telemetry and readiness services** � `src/services/` gained a telemetry registry, observation and schema modules plus a readiness probe.
+- **New test tiers** � `tests/eval/` (own Vitest config, run by `eval:check`), `tests/audits/`, `tests/harness/`, and `tests/fixtures/`, alongside `scripts/qa/` adversarial, cross-transport matrix, and capability-metadata audits.
+- **Readiness vs. health** � `/health` now answers 503 while the server is not ready instead of reporting `ok` unconditionally, and a new `/ready` probe reports the same state without the health payload.
+- **Capability-aware timeouts** � operation timeouts derive from the record's declared cost tier: `resolveActionTimeoutMs()` reads the generated `capability-cost-index.generated.ts` for the `tool::action` pair and maps its latency and resources onto `CAPABILITY_TIMEOUT_TIER_MS` (15 s to 20 min), with a 15 s floor, a 120 s fallback for unclassified pairs, and an `MCP_REQUEST_TIMEOUT_MS` override � replacing one flat default for every action.
+- **Asset-listing cache invalidation** � the listing is invalidated after every successful mutation (`invalidateAssetCacheForMutation()` runs straight after dispatch, with 26 listing-neutral actions exempted and everything else treated as a mutation, fail-safe). The `/Content/...` alias is now mapped before path sanitization, which fixes a deleted asset lingering in the cache for the full TTL because sanitization threw on the unaliased path and the catch swallowed it. A diagnostics snapshot reader with a 64 KiB cap and an allowlist projection (tokens, paths and session ids dropped) joins the automation client, though nothing on the production path reads it yet.
 
 #### Handlers, catalog and native routing
 
-- **User-defined action aliases** — a project can add its own action names in `handler-aliases.json` (schema `Resources/MCP/custom-handler-aliases.schema.json`): version 1, at most 128 aliases and 64 KB, `lower_snake_case` names only, resolved through three search paths. An alias pointing at another alias, or at the protected `inspect`/`manage_tools` actions, is rejected, and an alias whose target is not registered yet stays pending until the target arrives.
-- **Geometry dynamic-mesh authoring** — `manage_geometry` gained procedural-mesh authoring through one `edit_dynamic_mesh` family: `create_procedural_mesh`, `append_vertex`, `append_triangle`, `delete_vertex`, `delete_triangle`, `get_vertex_position`, `set_vertex_position`, `set_vertex_color`, `set_uvs`, `split_normals`, `translate_mesh` and a boolean `difference`.
-- **AI authoring routes** — `set_ai_perception`, `create_nav_modifier` and `set_ai_movement` join behaviour tree, blackboard, EQS query, MassEntity, SmartObject, StateTree, navigation and nav-actor configuration as named actions instead of only through the behaviour-tree umbrella.
-- **Native search matches words, and pages** — the native gateway search matcher scores word-level matches and accepts `actionOffset` and `maxBytes` so a large action list can be paged.
+- **User-defined action aliases** � a project can add its own action names in `handler-aliases.json` (schema `Resources/MCP/custom-handler-aliases.schema.json`): version 1, at most 128 aliases and 64 KB, `lower_snake_case` names only, resolved through three search paths. An alias pointing at another alias, or at the protected `inspect`/`manage_tools` actions, is rejected, and an alias whose target is not registered yet stays pending until the target arrives.
+- **Geometry dynamic-mesh authoring** � `manage_geometry` gained procedural-mesh authoring through one `edit_dynamic_mesh` family: `create_procedural_mesh`, `append_vertex`, `append_triangle`, `delete_vertex`, `delete_triangle`, `get_vertex_position`, `set_vertex_position`, `set_vertex_color`, `set_uvs`, `split_normals`, `translate_mesh` and a boolean `difference`.
+- **AI authoring routes** � `set_ai_perception`, `create_nav_modifier` and `set_ai_movement` join behaviour tree, blackboard, EQS query, MassEntity, SmartObject, StateTree, navigation and nav-actor configuration as named actions instead of only through the behaviour-tree umbrella.
+- **Native search matches words, and pages** � the native gateway search matcher scores word-level matches and accepts `actionOffset` and `maxBytes` so a large action list can be paged.
 
 #### Fab asset-store bridge
 
-- **`McpAutomationBridgeFab` delay-loaded module** — a second editor module that bridges the Fab asset store through the Fab plugin's own browser widget and download API (`McpFabBrowserBridge`, `McpFabSearchOperation`, `McpFabDetailsOperation`, `McpFabAddToProject`, `McpFabImportWatcher`). Its Fab and Megascans engine dependencies are declared optional and listed in `PublicDelayLoadDLLs` on Win64, so the module compiles away when they are absent. The store actions themselves are dispatched by the main module's `Private/Domains/AssetWorkflow/`: `search_fab_listings`, `get_fab_listing_details`, `add_fab_asset_to_project`, `download_fab_asset`, `list_fab_downloads`, `list_fab_library`, `list_megascans_library`, and `import_megascans_asset`. Two further actions, `list_content_sources` and `migrate_assets`, are generic content ingestion (engine templates, engine and plugin content, downloaded Bridge packs) rather than Fab-specific, and a migrate request never carries a filesystem path: it names a root token plus a relative id, both resolved against a fixed root table.
-- **Diagnostics snapshot store** — `Foundation/Diagnostics/` ships a bounded, crash-tolerant singleton that records request admission, pre-dispatch, refusal, terminal, handshake, disconnect, and session events to `<Project>/Saved/MCP/diagnostics/`. Atomic file writes with temp+rename, previous-session rotation, corrupt-file tolerance with one-shot bounded warnings.
-- **Reflected function invocation** — `Foundation/Reflection/McpReflectedInvoke` provides a shared RAII parameter-block marshalling primitive for arbitrary UFunction invoke, gated behind `effect: destructive` + `consent: elevated` on both `control_editor.invoke_reflected_function` and `control_actor.call_actor_function`.
-- **`native-gates.ps1`** — PowerShell script for local native compile and smoke gates (`npm run native:compile`, `native:smoke`, `native:smoke:core`, `native:smoke:fab`, `native:check`), so a non-compiling C++ security control can never pass CI.
+- **`McpAutomationBridgeFab` delay-loaded module** � a second editor module that bridges the Fab asset store through the Fab plugin's own browser widget and download API (`McpFabBrowserBridge`, `McpFabSearchOperation`, `McpFabDetailsOperation`, `McpFabAddToProject`, `McpFabImportWatcher`). Its Fab and Megascans engine dependencies are declared optional and listed in `PublicDelayLoadDLLs` on Win64, so the module compiles away when they are absent. The store actions themselves are dispatched by the main module's `Private/Domains/AssetWorkflow/`: `search_fab_listings`, `get_fab_listing_details`, `add_fab_asset_to_project`, `download_fab_asset`, `list_fab_downloads`, `list_fab_library`, `list_megascans_library`, and `import_megascans_asset`. Two further actions, `list_content_sources` and `migrate_assets`, are generic content ingestion (engine templates, engine and plugin content, downloaded Bridge packs) rather than Fab-specific, and a migrate request never carries a filesystem path: it names a root token plus a relative id, both resolved against a fixed root table.
+- **Diagnostics snapshot store** � `Foundation/Diagnostics/` ships a bounded, crash-tolerant singleton that records request admission, pre-dispatch, refusal, terminal, handshake, disconnect, and session events to `<Project>/Saved/MCP/diagnostics/`. Atomic file writes with temp+rename, previous-session rotation, corrupt-file tolerance with one-shot bounded warnings.
+- **Reflected function invocation** � `Foundation/Reflection/McpReflectedInvoke` provides a shared RAII parameter-block marshalling primitive for arbitrary UFunction invoke, gated behind `effect: destructive` + `consent: elevated` on both `control_editor.invoke_reflected_function` and `control_actor.call_actor_function`.
+- **`native-gates.ps1`** � PowerShell script for local native compile and smoke gates (`npm run native:compile`, `native:smoke`, `native:smoke:core`, `native:smoke:fab`, `native:check`), so a non-compiling C++ security control can never pass CI.
 
 #### Source control and project setup
 
-- **A project can be put under revision control from the tool** — `source_control_checkout` and `source_control_submit` shipped, but the step that has to happen first had no action at all, so on a project that had never been committed both answered `SOURCE_CONTROL_DISABLED` and the only way forward was the editor's Revision Control login dialog: the exact UI an automation caller is replacing. `source_control_init` creates the repository, writes an Unreal `.gitignore`, makes the first commit and selects the Git provider; `source_control_commit_all` snapshots everything after that. `source_control_enable` had been dispatched by the plugin since the source-control handlers were written, but no capability record ever published it, so the gateway rejected the action name outright — an implemented, registered, documented handler nothing could call. Both new actions run git on a worker thread and hop back to the game thread to answer, because `git add` over a full Content tree takes minutes and `ExecProcess` blocks its caller: on the game thread the editor stops pumping and the bridge socket looks dead. The `.gitignore` is not cosmetic — without it the stage walks roughly 10 GB of `Intermediate/`, `Saved/` and `Binaries/`. "Nothing to commit" reports `alreadyClean` rather than an error so a caller snapshotting on a timer sees no spurious failures, and every git invocation is returned in `steps[]` so a failure names the command that failed.
+- **A project can be put under revision control from the tool** � `source_control_checkout` and `source_control_submit` shipped, but the step that has to happen first had no action at all, so on a project that had never been committed both answered `SOURCE_CONTROL_DISABLED` and the only way forward was the editor's Revision Control login dialog: the exact UI an automation caller is replacing. `source_control_init` creates the repository, writes an Unreal `.gitignore`, makes the first commit and selects the Git provider; `source_control_commit_all` snapshots everything after that. `source_control_enable` had been dispatched by the plugin since the source-control handlers were written, but no capability record ever published it, so the gateway rejected the action name outright � an implemented, registered, documented handler nothing could call. Both new actions run git on a worker thread and hop back to the game thread to answer, because `git add` over a full Content tree takes minutes and `ExecProcess` blocks its caller: on the game thread the editor stops pumping and the bridge socket looks dead. The `.gitignore` is not cosmetic � without it the stage walks roughly 10 GB of `Intermediate/`, `Saved/` and `Binaries/`. "Nothing to commit" reports `alreadyClean` rather than an error so a caller snapshotting on a timer sees no spurious failures, and every git invocation is returned in `steps[]` so a failure names the command that failed.
 
 #### Widget styling and receipts
 
-- **`set_style` can round a widget's corners** — every UMG panel this tool could author was a hard-edged rectangle and nothing on the published surface could change that, so a request to polish a UI had no answer short of hand-editing the asset. `cornerRadius` (plus optional `outlineColor` and `outlineWidth`) now applies to whichever brush the widget actually draws with: an Image's `Brush`, a Border's `Background`, or **all four** of a Button's normal/hovered/pressed/disabled brushes — rounding one alone makes the corners snap square under the cursor. A widget with no brush refuses with `STYLE_FIELD_UNSUPPORTED` and names the three classes that have one, instead of falling through to the generic reflection path that would answer success without changing anything.
-- **Every receipt reports the world the request ran against** — an actor mutation reported success for whichever world was current at that instant, so if a level load then replaced that world the actor was unreachable and the receipt gave no hint anything had changed underneath it; the failure looked like the mutation never happened. Receipts now carry `worldName`.
-- **Transport diagnostics name the dispatched capability** — `tools/call` logged only the parent tool, so an editor death left behind `tool=control_editor`, one of twenty possible actions, with no way to attribute the crash. The dispatched capability and at-cap session evictions are now logged.
+- **`set_style` can round a widget's corners** � every UMG panel this tool could author was a hard-edged rectangle and nothing on the published surface could change that, so a request to polish a UI had no answer short of hand-editing the asset. `cornerRadius` (plus optional `outlineColor` and `outlineWidth`) now applies to whichever brush the widget actually draws with: an Image's `Brush`, a Border's `Background`, or **all four** of a Button's normal/hovered/pressed/disabled brushes � rounding one alone makes the corners snap square under the cursor. A widget with no brush refuses with `STYLE_FIELD_UNSUPPORTED` and names the three classes that have one, instead of falling through to the generic reflection path that would answer success without changing anything.
+- **Every receipt reports the world the request ran against** � an actor mutation reported success for whichever world was current at that instant, so if a level load then replaced that world the actor was unreachable and the receipt gave no hint anything had changed underneath it; the failure looked like the mutation never happened. Receipts now carry `worldName`.
+- **Transport diagnostics name the dispatched capability** � `tools/call` logged only the parent tool, so an editor death left behind `tool=control_editor`, one of twenty possible actions, with no way to attribute the crash. The dispatched capability and at-cap session evictions are now logged.
 
 </details>
 
 <details>
-<summary><b>🔧 Changed</b></summary>
+<summary><b>?? Changed</b></summary>
 
-- **Static `unreal` gateway tool replaces the 23-tool public surface.** The TypeScript stdio and native MCP transports now permanently expose a single `unreal` tool. The 23 canonical parents (`manage_asset`, `control_actor`, …) are internal and reachable only through `search`, `describe`, `execute`, and `configure`. This reduces client context pressure and eliminates hallucinated tool/action calls.
-- **C++ plugin reorganized into per-domain modules** — `Private/` is now split into `Core/` (errors, requests, security, subsystem), `Domains/` (**66** domain directories), `Foundation/` (blueprint, bridge helpers, handler utils, capability authorization, idempotency, compensation), `MCP/` (transport, routing, execute, gateway, primitives, resources, dynamic tools, generated shards, tools), `Safety/`, and `Transport/`. The former per-tool `McpTool_*.cpp` files and the `McpNativeTransport.{h,cpp}` monolith are gone, replaced by generated registries and `Private/MCP/Transport/`.
-- **`Private/Safety/` split into per-operation headers** — asset save, level save, map load, folder delete (assets/verify), animation delete, delete quiesce/compilation, world delete, package tools, material, and classification each have their own header; `McpSafeOperations.h` survives only as a short umbrella that includes them.
-- **TypeScript tools reorganized** — the monolithic `src/tools/handlers/*-handlers.ts` files were replaced by **37** per-domain directories (**203** files, up from 64 flat ones at `v0.5.30`), and `src/tools/` now holds `catalog/` (capability records), `definitions/` (tool schemas), `orchestration/` (the canonical dispatcher, routing, and generated routing index), `dynamic/`, and `handlers/`. The former `src/tools/editor/` and `src/tools/level/` class modules had no live caller and are gone; the live code is `src/tools/handlers/editor/` and `src/tools/handlers/level/`. Types were split into `src/types/handlers/` and `src/types/tools/`; utilities were regrouped into nine `src/utils/` areas (`commands`, `paths`, `responses`, `validation`, `collections`, `serialization`, `logging`, `config`, `interaction`).
-- **Automation bridge split into focused modules** — `src/automation/` now separates the client, config, frame codec, state, status, connection lifecycle, request dispatcher, request context/correlation, cancellation errors, capability-token provider, log redaction, the gateway consent/correlation/timeout/expected-revisions contexts, the read-only diagnostics snapshot reader, and the natural-timeout cancellation path.
-- **`control_actor` spawn is transactional** — a requested `meshPath` that can't be applied no longer leaves a misconfigured actor in the level. It fails `MESH_NOT_FOUND` before spawning if the mesh can't load, or rolls back (`Destroy()` + `MESH_APPLY_FAILED`) if a resolved mesh can't be applied.
-- **Console-command validation is generated** — the allow/deny model now lives in `src/utils/commands/console-command-policy*.ts` with a generated policy artifact and a `policy:check` drift gate, instead of a hand-maintained validator.
+- **Static `unreal` gateway tool replaces the 23-tool public surface.** The TypeScript stdio and native MCP transports now permanently expose a single `unreal` tool. The 23 canonical parents (`manage_asset`, `control_actor`, �) are internal and reachable only through `search`, `describe`, `execute`, and `configure`. This reduces client context pressure and eliminates hallucinated tool/action calls.
+- **C++ plugin reorganized into per-domain modules** � `Private/` is now split into `Core/` (errors, requests, security, subsystem), `Domains/` (**66** domain directories), `Foundation/` (blueprint, bridge helpers, handler utils, capability authorization, idempotency, compensation), `MCP/` (transport, routing, execute, gateway, primitives, resources, dynamic tools, generated shards, tools), `Safety/`, and `Transport/`. The former per-tool `McpTool_*.cpp` files and the `McpNativeTransport.{h,cpp}` monolith are gone, replaced by generated registries and `Private/MCP/Transport/`.
+- **`Private/Safety/` split into per-operation headers** � asset save, level save, map load, folder delete (assets/verify), animation delete, delete quiesce/compilation, world delete, package tools, material, and classification each have their own header; `McpSafeOperations.h` survives only as a short umbrella that includes them.
+- **TypeScript tools reorganized** � the monolithic `src/tools/handlers/*-handlers.ts` files were replaced by **37** per-domain directories (**203** files, up from 64 flat ones at `v0.5.30`), and `src/tools/` now holds `catalog/` (capability records), `definitions/` (tool schemas), `orchestration/` (the canonical dispatcher, routing, and generated routing index), `dynamic/`, and `handlers/`. The former `src/tools/editor/` and `src/tools/level/` class modules had no live caller and are gone; the live code is `src/tools/handlers/editor/` and `src/tools/handlers/level/`. Types were split into `src/types/handlers/` and `src/types/tools/`; utilities were regrouped into nine `src/utils/` areas (`commands`, `paths`, `responses`, `validation`, `collections`, `serialization`, `logging`, `config`, `interaction`).
+- **Automation bridge split into focused modules** � `src/automation/` now separates the client, config, frame codec, state, status, connection lifecycle, request dispatcher, request context/correlation, cancellation errors, capability-token provider, log redaction, the gateway consent/correlation/timeout/expected-revisions contexts, the read-only diagnostics snapshot reader, and the natural-timeout cancellation path.
+- **`control_actor` spawn is transactional** � a requested `meshPath` that can't be applied no longer leaves a misconfigured actor in the level. It fails `MESH_NOT_FOUND` before spawning if the mesh can't load, or rolls back (`Destroy()` + `MESH_APPLY_FAILED`) if a resolved mesh can't be applied.
+- **Console-command validation is generated** � the allow/deny model now lives in `src/utils/commands/console-command-policy*.ts` with a generated policy artifact and a `policy:check` drift gate, instead of a hand-maintained validator.
 - **Minimum Node.js raised to `>=20.19.0`** (was `>=18`).
-- **Structural scale of the reorganisation** — `src/` grew from 154 files to 832, the plugin's `Private/` tree from 133 `.cpp`/`.h` files in one flat list to 1,530 files under `Core/`, `Domains/`, `Foundation/`, `MCP/`, `Safety/`, `Tests/`, `Transport/` and `UI/`, and `src/tools/handlers/` from 64 flat files to 203 files in 37 domain directories.
-- **`MCP_DEFAULT_CATEGORIES` is inert** — setting it now logs a warning and changes nothing: the public surface is the single gateway tool, so there is no category listing left to filter.
-- **ESLint enforces the Node floor** — `eslint-plugin-n`'s node-builtins and ES-syntax rules run at `warn` (and therefore fail CI's `--max-warnings=0`), so an API above Node 20.19 cannot land unnoticed.
-- **`manage_tools.list_tools` / `get_status` contract change** — the `description` field is dropped from the row shape, and `catalogRevision` plus `catalogStateRevision` are reported instead of hardcoded counts.
+- **Structural scale of the reorganisation** � `src/` grew from 154 files to 832, the plugin's `Private/` tree from 133 `.cpp`/`.h` files in one flat list to 1,530 files under `Core/`, `Domains/`, `Foundation/`, `MCP/`, `Safety/`, `Tests/`, `Transport/` and `UI/`, and `src/tools/handlers/` from 64 flat files to 203 files in 37 domain directories.
+- **`MCP_DEFAULT_CATEGORIES` is inert** � setting it now logs a warning and changes nothing: the public surface is the single gateway tool, so there is no category listing left to filter.
+- **ESLint enforces the Node floor** � `eslint-plugin-n`'s node-builtins and ES-syntax rules run at `warn` (and therefore fail CI's `--max-warnings=0`), so an API above Node 20.19 cannot land unnoticed.
+- **`manage_tools.list_tools` / `get_status` contract change** � the `description` field is dropped from the row shape, and `catalogRevision` plus `catalogStateRevision` are reported instead of hardcoded counts.
 
 </details>
 
 <details>
-<summary><b>🛡️ Security</b></summary>
+<summary><b>??? Security</b></summary>
 
-- **Scopes are exact-set membership with an `Admin` wildcard, not rank-based** — `Write` does **not** imply `Read`, and an unresolvable capability demands `Admin`.
+- **Scopes are exact-set membership with an `Admin` wildcard, not rank-based** � `Write` does **not** imply `Read`, and an unresolvable capability demands `Admin`.
 - **Consent rides as an `automation_request` envelope sibling, never a handler param**, and is re-validated plugin-side. It is never inferred from loopback, a prior call, idempotency, or preview.
-- **Capability-token auth is on by default** — tokens compare in constant time and are never logged; the plugin re-enforces every check the TypeScript layer performs.
-- **Path handling routed through a shared canonicalizer** — paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` plus sanitized additions, with the `/Content` alias handled in one place instead of re-implemented per handler.
-- **Render/media output hardening** — continuous local output-path validation against symlink replacement, and network-backed media URLs disabled because redirect destinations cannot be pinned.
-- **Native transport hardening** — client-scoped rate limits retained across native MCP session rotation, strict native `manage_tools` argument validation, and sanitized streamed log payloads.
+- **Capability-token auth is on by default** � tokens compare in constant time and are never logged; the plugin re-enforces every check the TypeScript layer performs.
+- **Path handling routed through a shared canonicalizer** � paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` plus sanitized additions, with the `/Content` alias handled in one place instead of re-implemented per handler.
+- **Render/media output hardening** � continuous local output-path validation against symlink replacement, and network-backed media URLs disabled because redirect destinations cannot be pinned.
+- **Native transport hardening** � client-scoped rate limits retained across native MCP session rotation, strict native `manage_tools` argument validation, and sanitized streamed log payloads.
 - **An `action`/`subAction` mismatch can no longer authorize one capability and execute another.** `AuthorizeAutomationRequest` normalizes any payload that declares both with different values (overwriting `action` from the authoritative `subAction`), the native execute stage stamps `subAction` from the server-resolved action, and the pre-queue gate resolves its demand with the same `NormalizeAction` the dispatchers call, so the gate and the dispatcher cannot disagree.
-- **Scoped tokens are narrower than the legacy token by construction** — a scoped token may list only `Read`/`Write`/`Destructive` (never `Admin`), and a scoped token colliding with the legacy token wins because the narrower grant applies.
-- **Reflected property access cannot reach the plugin's own settings** — `McpSafeReflectionTarget` refuses every `/Script` target with `OBJECT_NOT_ADDRESSABLE`, deliberately distinct from `OBJECT_NOT_FOUND`, from the array, element, insert and append property handlers, so a path- or project-restricted principal cannot reach the settings that govern the transport itself: a `write`-scoped principal could otherwise switch off `bRequireCapabilityToken` through `inspect.set_property`, and a `read`-scoped principal could read the Admin token out. `/Game`, `/Engine`, spawned actors and Blueprint CDOs are unaffected.
-- **URL-looking arguments are refused outright** — handler URL validation rejects every URL form, including loopback and `file:` URLs, rather than trying to allow a safe subset.
-- **Parameter gates use own-property lookups** — `hasOwn()` replaces an inherited-property check, so `__proto__`, `constructor` or `toString` cannot slip past an `additionalProperties` or dispatch gate, matching the native `TMap` lookup.
-- **Token resolution and log redaction on the TypeScript side** — the bridge re-reads the token file on every `bridge_hello` and fails closed when it cannot resolve one, and `AutomationLogger` redacts tokens, paths and handshake metadata rather than trusting callers to keep them out.
+- **Scoped tokens are narrower than the legacy token by construction** � a scoped token may list only `Read`/`Write`/`Destructive` (never `Admin`), and a scoped token colliding with the legacy token wins because the narrower grant applies.
+- **Reflected property access cannot reach the plugin's own settings** � `McpSafeReflectionTarget` refuses every `/Script` target with `OBJECT_NOT_ADDRESSABLE`, deliberately distinct from `OBJECT_NOT_FOUND`, from the array, element, insert and append property handlers, so a path- or project-restricted principal cannot reach the settings that govern the transport itself: a `write`-scoped principal could otherwise switch off `bRequireCapabilityToken` through `inspect.set_property`, and a `read`-scoped principal could read the Admin token out. `/Game`, `/Engine`, spawned actors and Blueprint CDOs are unaffected.
+- **URL-looking arguments are refused outright** � handler URL validation rejects every URL form, including loopback and `file:` URLs, rather than trying to allow a safe subset.
+- **Parameter gates use own-property lookups** � `hasOwn()` replaces an inherited-property check, so `__proto__`, `constructor` or `toString` cannot slip past an `additionalProperties` or dispatch gate, matching the native `TMap` lookup.
+- **Token resolution and log redaction on the TypeScript side** � the bridge re-reads the token file on every `bridge_hello` and fails closed when it cannot resolve one, and `AutomationLogger` redacts tokens, paths and handshake metadata rather than trusting callers to keep them out.
 
-- **A refused call no longer eats the caller’s consent grant** — the pre-queue gate burned a single-use consent nonce BEFORE the handler ran, so a call the handler then refused (a misspelled component name, a path that resolved to nothing) spent the grant on work that never happened; the retry came back `CONSENT_REUSED` and the caller had to re-run describe for a nonce, for a call that changed nothing. The burn now registers against the request and the single response funnel hands it back on failure and forgets it on success, so replay protection is unchanged: a grant that actually did something stays spent.
-- **The param-scoped describe mints a consent grant too** — `describe {tool, action}` returned a contract plus a single-use `consentGrant.nonce`, while `describe {tool, action, param}` returned the per-parameter schema and no grant at all, even though it names the same capability under the same consent policy.
-- **A cold-boot session cannot be rehydrated without the capability token** — `ValidateSession` rehydrated a session id predating the current transport instance without checking any credential, so a session id surviving a transport restart was accepted on its own. The plugin is the sole authority for auth and re-enforces it on this path as on every other.
+- **A refused call no longer eats the caller�s consent grant** � the pre-queue gate burned a single-use consent nonce BEFORE the handler ran, so a call the handler then refused (a misspelled component name, a path that resolved to nothing) spent the grant on work that never happened; the retry came back `CONSENT_REUSED` and the caller had to re-run describe for a nonce, for a call that changed nothing. The burn now registers against the request and the single response funnel hands it back on failure and forgets it on success, so replay protection is unchanged: a grant that actually did something stays spent.
+- **The param-scoped describe mints a consent grant too** � `describe {tool, action}` returned a contract plus a single-use `consentGrant.nonce`, while `describe {tool, action, param}` returned the per-parameter schema and no grant at all, even though it names the same capability under the same consent policy.
+- **A cold-boot session cannot be rehydrated without the capability token** � `ValidateSession` rehydrated a session id predating the current transport instance without checking any credential, so a session id surviving a transport restart was accepted on its own. The plugin is the sole authority for auth and re-enforces it on this path as on every other.
 </details>
 
 <details>
-<summary><b>🛠️ Fixed</b></summary>
+<summary><b>??? Fixed</b></summary>
 
 #### Component trees and struct members
 
-- **`attachTo` in a batched `edit_scs` actually attaches.** The parent search matched the requested name against the *exported text* of an `FSubobjectDataHandle` — an opaque id that never contains a component name — so it always fell through to the first handle it had, the root. Fourteen body parts landed on the collision cylinder while every op reported success. The parent is now resolved by name after the node exists, and an `attachTo` that cannot be resolved fails that op with a reason instead of being dropped.
+- **`attachTo` in a batched `edit_scs` actually attaches.** The parent search matched the requested name against the *exported text* of an `FSubobjectDataHandle` � an opaque id that never contains a component name � so it always fell through to the first handle it had, the root. Fourteen body parts landed on the collision cylinder while every op reported success. The parent is now resolved by name after the node exists, and an `attachTo` that cannot be resolved fails that op with a reason instead of being dropped.
 - **Inherited components are addressable from the batch path.** A Blueprint's own SCS is only half its component tree: anything inherited from a native parent (ACharacter's `Mesh`, `CapsuleComponent`, `CharacterMovement`) lives on the CDO with no `USCS_Node`. `modify_component` answered "Component not found or template missing" for components the Blueprint plainly has, and `reparent_scs_component` answered `SCS_PARENT_NOT_FOUND` for a reparent the editor does with a drag. Both now resolve through the CDO, and a node parented to a native component records it the way the editor does.
-- **`add_struct_member` honours the `members` array its own contract declares.** Only the single `memberName`/`memberType` pair was ever read, so the array form was refused with `MISSING_PARAMETER` and a ten-field struct cost ten calls. The array is validated as a whole — a bad entry refuses the batch rather than half-building a struct, because a partially applied member list is worse than none.
+- **`add_struct_member` honours the `members` array its own contract declares.** Only the single `memberName`/`memberType` pair was ever read, so the array form was refused with `MISSING_PARAMETER` and a ten-field struct cost ten calls. The array is validated as a whole � a bad entry refuses the batch rather than half-building a struct, because a partially applied member list is worse than none.
 
 #### Editor capture, actor search and graph authoring
 
@@ -730,7 +737,7 @@ A write that lands is not a write that is correct, and several actions used to a
 - **`control_editor.take_screenshot` with `mode: "game_viewport"` no longer answers `NOT_IMPLEMENTED`.** The UI handler gates on the payload's own `subAction`, which still carried whichever alias the caller used, so the published `take_screenshot` spelling fell past the screenshot branch. The forward now names the canonical action.
 - **`control_actor.find_actors_by_class` refuses a class name that does not resolve** instead of reporting "Found 0 actors". A Blueprint short name such as `BP_Thing_C` read as an empty level rather than as the typo it was; the refusal is `CLASS_NOT_FOUND` and names the generated-class path form that works.
 - **`add_node` resolves the StandardMacros aliases that `create_node` already did.** `ForEachLoop`, `ForLoop`, `DoOnce`, `Gate` and friends are Blueprint macros, not `UK2Node_*` classes, so the same `nodeType` answered `UNSUPPORTED_NODE` on one action and succeeded on the other.
-- **An unknown container type says how containers are spelled.** `TArray<Text>` and `Text[]` — the spellings a C++ author reaches for — produced a bare `Unknown type`, with no hint that the resolver takes `Array<T>`, `Set<T>` and `Map<Key,Value>`.
+- **An unknown container type says how containers are spelled.** `TArray<Text>` and `Text[]` � the spellings a C++ author reaches for � produced a bare `Unknown type`, with no hint that the resolver takes `Array<T>`, `Set<T>` and `Map<Key,Value>`.
 - **`set_widget_layout` applies every canvas-geometry field the call carries.** `layoutProperty` selects which one names the variant; `position`, `size` and `zOrder` sent together used to have two of the three silently dropped, so a widget landed in the right place at the default size behind everything else. The response lists what was `applied`.
 
 #### Cinematics, render and replay
@@ -743,81 +750,81 @@ A write that lands is not a write that is correct, and several actions used to a
 
 #### Engine compatibility
 
-- **Source compatibility restored across the supported UE 5.0–5.8 range.** Several engine APIs and relocated headers were used without guards, and several existing guards named the wrong engine boundary, so the plugin failed to compile on parts of the range it advertises. Header selection now probes with `__has_include` instead of hard-coded version numbers wherever the engine moved a header, and the remaining guards were corrected against the engine source. Affected areas: the StructUtils headers, `FAssetCompilingManager::FinishCompilationForObjects`, `UWidgetBlueprint::WidgetVariableNameToGuidMap`, `CreateNewIKRigAsset`, `FString::RightChopInline`/`LeftInline`, and `PhysicsEngine/SkeletalBodySetup.h`. A redundant `UObject/StrProperty.h` include was dropped (`FStrProperty` comes from the already-included `UObject/UnrealType.h`). Three further shims were added for APIs that differ across the supported range (`MCP_SET_ENUMS`, `MCP_HAS_GET_OBJECTS_FLAGS`/`MCP_GET_OBJECTS_NO_NESTED`, `MCP_DISALLOW_SHRINKING`), and the `MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM` guard was reversed because the boundary it named sat on the wrong minor.
-- **JSON key-type change handled across the plugin** — 14 files move from `FJsonObject::Values` lookups with an `FString` key to `HasField()`, the ambiguous `TEXT("ReadOnly")` comparison is qualified, and the diagnostics filename no longer trips C2084.
-- **Fab API conformance** — the adapter follows the engine's current Fab API surface, and `bCompileForEdit` (a member added in 5.6, absent on 5.5) is guarded in the shared Niagara stack-issue collector.
-- **Render console handler** — use `FJsonObject::HasField()` instead of `Values.Contains(FString)`, following the `FJsonObject::Values` key-type change.
-- **Asset soft-path fallback returned the wrong string shape** — `MCP_ASSET_DATA_GET_SOFT_PATH` used `PackageName` (`/Game/Foo`) where callers expected an object path (`/Game/Foo.Foo`). It now uses `FAssetData::ObjectPath`, the equivalent of the `GetSoftObjectPath()` used in the other branch.
-- **Clean build fixed** — the memreport scan passed `256` as a seventh argument to `IFileManager::FindFilesRecursive`, but that parameter is `bClearFileNames`, not a result ceiling, so the call did not compile. The bound was dropped rather than reworked: truncating is also wrong here, since picking the newest of an arbitrary subset can miss the actual newest report. A real traversal bound would need `IterateDirectoryStatRecursively`.
-- **Last source warning cleared** — `FLinearColor ColorValue;` left its channels uninitialized in the material-parameter track handler, and the only writer runs on one branch, so the compiler could not correlate the write with the guarded use and warned C4701. Seeded to opaque black, matching `ReadLinearColor`'s own defaults.
+- **Source compatibility restored across the supported UE 5.0�5.8 range.** Several engine APIs and relocated headers were used without guards, and several existing guards named the wrong engine boundary, so the plugin failed to compile on parts of the range it advertises. Header selection now probes with `__has_include` instead of hard-coded version numbers wherever the engine moved a header, and the remaining guards were corrected against the engine source. Affected areas: the StructUtils headers, `FAssetCompilingManager::FinishCompilationForObjects`, `UWidgetBlueprint::WidgetVariableNameToGuidMap`, `CreateNewIKRigAsset`, `FString::RightChopInline`/`LeftInline`, and `PhysicsEngine/SkeletalBodySetup.h`. A redundant `UObject/StrProperty.h` include was dropped (`FStrProperty` comes from the already-included `UObject/UnrealType.h`). Three further shims were added for APIs that differ across the supported range (`MCP_SET_ENUMS`, `MCP_HAS_GET_OBJECTS_FLAGS`/`MCP_GET_OBJECTS_NO_NESTED`, `MCP_DISALLOW_SHRINKING`), and the `MCP_HAS_IKRETARGETER_SET_IKRIG_ENUM` guard was reversed because the boundary it named sat on the wrong minor.
+- **JSON key-type change handled across the plugin** � 14 files move from `FJsonObject::Values` lookups with an `FString` key to `HasField()`, the ambiguous `TEXT("ReadOnly")` comparison is qualified, and the diagnostics filename no longer trips C2084.
+- **Fab API conformance** � the adapter follows the engine's current Fab API surface, and `bCompileForEdit` (a member added in 5.6, absent on 5.5) is guarded in the shared Niagara stack-issue collector.
+- **Render console handler** � use `FJsonObject::HasField()` instead of `Values.Contains(FString)`, following the `FJsonObject::Values` key-type change.
+- **Asset soft-path fallback returned the wrong string shape** � `MCP_ASSET_DATA_GET_SOFT_PATH` used `PackageName` (`/Game/Foo`) where callers expected an object path (`/Game/Foo.Foo`). It now uses `FAssetData::ObjectPath`, the equivalent of the `GetSoftObjectPath()` used in the other branch.
+- **Clean build fixed** � the memreport scan passed `256` as a seventh argument to `IFileManager::FindFilesRecursive`, but that parameter is `bClearFileNames`, not a result ceiling, so the call did not compile. The bound was dropped rather than reworked: truncating is also wrong here, since picking the newest of an arbitrary subset can miss the actual newest report. A real traversal bound would need `IterateDirectoryStatRecursively`.
+- **Last source warning cleared** � `FLinearColor ColorValue;` left its channels uninitialized in the material-parameter track handler, and the only writer runs on one branch, so the compiler could not correlate the write with the guarded use and warned C4701. Seeded to opaque black, matching `ReadLinearColor`'s own defaults.
 
-- **UE 5.8 string-literal compilation in the Fab module** — `McpFabAddToProject.cpp` failed to compile against UE 5.8’s stricter string-literal handling. Contributed by [@punal100](https://github.com/punal100) in [#639](https://github.com/ChiR24/Unreal_mcp/pull/639).
+- **UE 5.8 string-literal compilation in the Fab module** � `McpFabAddToProject.cpp` failed to compile against UE 5.8�s stricter string-literal handling. Contributed by [@punal100](https://github.com/punal100) in [#639](https://github.com/ChiR24/Unreal_mcp/pull/639).
 
 #### Handlers and routing
 
-- **Asset listing accepted the wrong field name** — the asset-listing resource read `directory` where its schema declares `path`; the declared name now works.
-- **`validate_niagara_system` reports real errors** — it previously hard-coded `isValid=true`. It now builds a full Niagara system view model and harvests stack issues (e.g. "The module has unmet dependencies.") across the system and emitter stacks. A data-processing-only view model cannot be used because `UNiagaraStackModuleItem::RefreshIssues()` emits no per-module issues in that mode.
-- **IK Rigs created on the `NewObject` fallback path are registered with the asset registry** — `FAssetRegistryModule::AssetCreated()` is now called explicitly on that branch, which the static factory does for us on engines that have it. Without it the rig existed on disk but was unregistered, so it never appeared in the Content Browser until an unrelated rescan happened to pick it up: the asset looked lost even though creation had reported success.
-- **Widget GUID registration logs a truthful no-op** — `RegisterWidgetGuid`, `UnregisterWidgetGuid`, and `RegisterAnimationGuid` each logged "registered"/"unregistered" on engine versions that have no `WidgetVariableNameToGuidMap`, claiming work they had not done. On those versions the engine owns the widget variable's GUID in `UBlueprint::NewVariables[].VarGuid`, and writing our own would overwrite a value existing bindings resolve through — so a no-op is correct, it just has to say so.
-- **Bare `remove_variable` / `rename_variable` match on the native transport** — the Blueprint variable removal/rename handler matched only the `blueprint_`-prefixed forms, so the bare action names fell through unhandled. Both the snake_case (`remove_variable`, `rename_variable`) and alphanumeric-lowered (`removevariable`, `renamevariable`) bare forms are now accepted alongside the prefixed ones.
-- **Every texture call was failing** — `action` is injected by the consolidated routing layer (`WithPayloadSubAction`) as the legacy dispatch verb, but it is not a client parameter and was absent from the handlers' `ValidParams` allowlists, so schema-valid texture calls were rejected with `TEXTURE_ERROR: Invalid parameter: action`. Added to all five affected handlers (gradient, noise, normal, pattern, resize).
-- **`ListenPorts` drop warning** — when multi-listen is on and a partial `ListenPorts` override omits a default bridge port (8090/8091), a warning is logged instead of the drop being silent. The user's ports stay authoritative.
-- **TS and native responses share one frame shape** — `normalizeAutomationFrame()` gives the TypeScript bridge the native `structuredContent` envelope, which fixed closed-output-schema failures across the whole 379-record catalog.
-- **Blueprint macro nodes and material roots resolve correctly** — `ForLoop`, `ForLoopWithBreak`, `WhileLoop` and `ForEachLoop` were removed from the `K2Node_*` alias map (`ForEachLoop` was wrongly aliased to `K2Node_ForEachElementInEnum`), so the bare names reach the bridge and `TryCreateMacroNode` builds a real `K2Node_MacroInstance`. Material root targets (`root`, `output`, `materialoutput`, `materialgraphnoderoot`, `…_Root_<n>`) canonicalize to one sentinel with normalized output-pin casing for `connect_nodes`, and `propertyValue` is accepted as an alias of `value`.
-- **Domain fixes surfaced by the sweep** — a property conversion that cannot coerce now answers `PROPERTY_CONVERSION_FAILED` with `partial: true` for the fields it did apply, unknown World Partition actions answer `UNKNOWN_ACTION` instead of falling through, `modify_scs` reaches the property-applying implementation, `advance_simulation` advances `steps` ticks once instead of `steps` squared, `simplify_mesh` no longer divides by zero on an empty mesh, and the pipeline status report states what it measured instead of a hardcoded value.
+- **Asset listing accepted the wrong field name** � the asset-listing resource read `directory` where its schema declares `path`; the declared name now works.
+- **`validate_niagara_system` reports real errors** � it previously hard-coded `isValid=true`. It now builds a full Niagara system view model and harvests stack issues (e.g. "The module has unmet dependencies.") across the system and emitter stacks. A data-processing-only view model cannot be used because `UNiagaraStackModuleItem::RefreshIssues()` emits no per-module issues in that mode.
+- **IK Rigs created on the `NewObject` fallback path are registered with the asset registry** � `FAssetRegistryModule::AssetCreated()` is now called explicitly on that branch, which the static factory does for us on engines that have it. Without it the rig existed on disk but was unregistered, so it never appeared in the Content Browser until an unrelated rescan happened to pick it up: the asset looked lost even though creation had reported success.
+- **Widget GUID registration logs a truthful no-op** � `RegisterWidgetGuid`, `UnregisterWidgetGuid`, and `RegisterAnimationGuid` each logged "registered"/"unregistered" on engine versions that have no `WidgetVariableNameToGuidMap`, claiming work they had not done. On those versions the engine owns the widget variable's GUID in `UBlueprint::NewVariables[].VarGuid`, and writing our own would overwrite a value existing bindings resolve through � so a no-op is correct, it just has to say so.
+- **Bare `remove_variable` / `rename_variable` match on the native transport** � the Blueprint variable removal/rename handler matched only the `blueprint_`-prefixed forms, so the bare action names fell through unhandled. Both the snake_case (`remove_variable`, `rename_variable`) and alphanumeric-lowered (`removevariable`, `renamevariable`) bare forms are now accepted alongside the prefixed ones.
+- **Every texture call was failing** � `action` is injected by the consolidated routing layer (`WithPayloadSubAction`) as the legacy dispatch verb, but it is not a client parameter and was absent from the handlers' `ValidParams` allowlists, so schema-valid texture calls were rejected with `TEXTURE_ERROR: Invalid parameter: action`. Added to all five affected handlers (gradient, noise, normal, pattern, resize).
+- **`ListenPorts` drop warning** � when multi-listen is on and a partial `ListenPorts` override omits a default bridge port (8090/8091), a warning is logged instead of the drop being silent. The user's ports stay authoritative.
+- **TS and native responses share one frame shape** � `normalizeAutomationFrame()` gives the TypeScript bridge the native `structuredContent` envelope, which fixed closed-output-schema failures across the whole 379-record catalog.
+- **Blueprint macro nodes and material roots resolve correctly** � `ForLoop`, `ForLoopWithBreak`, `WhileLoop` and `ForEachLoop` were removed from the `K2Node_*` alias map (`ForEachLoop` was wrongly aliased to `K2Node_ForEachElementInEnum`), so the bare names reach the bridge and `TryCreateMacroNode` builds a real `K2Node_MacroInstance`. Material root targets (`root`, `output`, `materialoutput`, `materialgraphnoderoot`, `�_Root_<n>`) canonicalize to one sentinel with normalized output-pin casing for `connect_nodes`, and `propertyValue` is accepted as an alias of `value`.
+- **Domain fixes surfaced by the sweep** � a property conversion that cannot coerce now answers `PROPERTY_CONVERSION_FAILED` with `partial: true` for the fields it did apply, unknown World Partition actions answer `UNKNOWN_ACTION` instead of falling through, `modify_scs` reaches the property-applying implementation, `advance_simulation` advances `steps` ticks once instead of `steps` squared, `simplify_mesh` no longer divides by zero on an empty mesh, and the pipeline status report states what it measured instead of a hardcoded value.
 
 #### Live-editor sweep (2026-09-16 to 09-18)
 
-- **A compile no longer pins a dead world** — the editor died with "Fatal World Leaks" several calls *after* the compile that caused it: compiling a Blueprint reinstances its live instances, the originals become garbage, and anything of them still sitting in the transaction buffer keeps the owning world alive. The first full GC — which the game itself triggers on its first `OpenLevel` — then took the whole editor down. The buffer is now cleared at the compile, but only when that Blueprint is actually pinned (the undo buffer references it, or it had live instances). Losing undo history beats losing the editor, and the receipt says which happened and why.
-- **`add_node` no longer wires unrelated nodes into `Event Tick`** — a graph-wide exec-link sweep ran after *every* `add_node`, walking every node in the graph and connecting any `VariableSet` or `CallFunction` with a free exec input to the graph’s "preferred event". Adding one node could silently hang nodes the caller never mentioned off `Event Tick` or `Event PreConstruct`; the only trace was an `execLinked` boolean the gateway projects away. In a live project this put an `Add to Viewport` with a null target on `Event Tick`, logging a Blueprint runtime error every frame in PIE.
-- **A synthetic click actually presses the button** — `mouse_click` reached the right widget and reported `handledBySlate: true` while the button never fired. Slate recomputes hover every frame from the *real* cursor, so a hover set by a separate `mouse_move` call was gone before the next request arrived, and `SButton` only raises `OnClicked` when the release lands on a widget it still considers hovered. The click now carries its own move in the same dispatch and borrows the hardware cursor for the press/release, putting it straight back where the person left it — a single-frame blip rather than parking the cursor on the target, which is what made automation unusable alongside other work.
-- **`add_scs_component` routes through one implementation** — it had THREE payload readers (the batch `operations[]` path, `HandleScsAddComponent`, and a third copy inside `HandleBlueprintScsWrappers` that sat earlier in the route table and so answered every call). The wrapper read only `parent_component`/`parentComponent`, so `attachTo` was dropped and a component asked for `attachTo: "Mesh"` still landed on the collision cylinder, reported as success. Verified live: `attachTo: "Mesh"` on a Character now reports parent `Mesh`/`CharacterMesh0`.
-- **Attaching to inherited components works** — parent resolution searched SCS nodes only, so on a Character every spelling of the inherited capsule and mesh failed. "Attach a weapon, light or camera to the character’s skeletal mesh" is the most common Blueprint task there is and it had no reachable path.
-- **`MacroInstance` is refused instead of building a broken node** — `nodeType: "MacroInstance"` is the node *class*, not a macro; it fell through to the generic path, spawned a `UK2Node_MacroInstance` with no macro graph attached, and reported "Node created." on a Blueprint that no longer compiled. The spellings that actually resolve (`ForEachLoop`, `ForLoop`, `WhileLoop` and friends) are now named, and nothing is built otherwise.
-- **`CreateWidget` nodes carry their class** — both authoring paths wrote a `WidgetType` UPROPERTY that `UK2Node_CreateWidget` does not have, so the reflection write did nothing while the call answered "Node added"; the Blueprint then failed to compile with "Spawn node Create Widget must have a class specified". The class lives on the node’s `Class` input pin, which is now written and reconstructed.
-- **`GetVariable` nodes bind their member** — `add_node` with `nodeType: "GetVariable"` reported success and a `nodeGuid` and produced a node with ZERO pins, because the schema publishes `memberName` and the handler read `variableName`; any later `connect_pins` then failed with `PIN_NOT_FOUND`, pointing at the wrong problem.
-- **Behavior Tree authoring no longer crashes the editor** — `SpawnMissingNodes()` was called on an already-populated graph, which the engine only ever does from `OnCreated()`; a BTGraph with no nodes (exactly what authoring a tree over the bridge produces) also hard-asserted.
-- **Landscapes are created with components** — `create_landscape` produced an `ALandscape` with ZERO components: no geometry, bounds, collision or surface to sculpt, paint or stand on. `ALandscape::Import()` is what allocates the `ULandscapeComponent`s; `SetHeightData()` only writes into components that already exist.
-- **Volumes are created with real extents** — the box brush was built on a volume whose `UModel`/`UPolys` had never been allocated, so every volume came out with bounds `{0,0,0}`: a `NavMeshBoundsVolume` enclosing no navigable area, a `PostProcessVolume` affecting nothing.
-- **Writes that persist instead of echoing** — `set_world_settings` wrote the transient `WorldGravityZ` cache and enabled the override without touching `GlobalGravityZ`, discarding the requested value *and* pinning world gravity to 0; `create_interactable` accepted a full door/chest behaviour spec and stored none of it; interaction widget/component settings, switch and trigger config, `edit_blackboard.add_key`’s `baseObjectClass`, `create_skeleton`’s `name` and `paint_foliage_instances`’ `radius`/`density` were all accepted and dropped.
-- **Struct and DataTable round-tripping** — every struct authored over MCP carried a permanent junk `MemberVar_0` that appeared in every row built on it; `update_row` replaced instead of merging, so a call setting two fields silently wiped the other thirteen, from an action whose name promises the opposite.
-- **Closed output contracts stopped hiding handler data** — a field a handler emits but its record does not declare is projected away in silence, which accounted for a whole class of "the data is missing" findings where the data was never missing: sequence `add_actors`/`remove_actors` results and counts, `blueprint.get_scs` inherited components, `blueprint.connect_pins` pin names/types and `saved`, material node placement telemetry (including `overlappingNodes` and `placementWarning`, previously wired to three handlers out of sixteen), and `invoke_function`’s resolved target and `value`.
-- **Success is no longer reported over a no-op** — `configure_volume` with properties the class does not carry, a `.t3d` import that imported nothing, a legacy input mapping removal that matched nothing, `add_foliage`’s `scatter` variant (which creates a `UFoliageType` and places zero instances), and UMG animation looping (which has no persisted setting at all — looping is a `PlayAnimation()` argument) each answered success while doing nothing.
-- **`inspect` reads Blueprint variable defaults from the CDO** — `FBPVariableDescription::DefaultValue` is a legacy string that stays empty for every variable whose value was written to the CDO, which is where the Blueprint actually stores it.
-- **Niagara module stack errors reach `warnings[]`** — `add_niagara_module` reported status `success` with an empty `warnings[]` while parking `stackErrors: ["The module has unmet dependencies."]` in details.
-- **Texture create actions accept the folded `kind` discriminator** — the handlers validate against an explicit allowlist and `kind` was missing from all five, so the variant discriminator every caller of a folded action must send was rejected.
-- **`save` is published on the struct and DataTable write actions** — both handlers had always read it; no capability record declared it, so no caller could reach working native support.
-- **Mojibake repaired in source comments** — the same Windows-1252 round-trip that mangled `CHANGELOG.md` left double-encoded em dashes in 24 places across 13 files.
+- **A compile no longer pins a dead world** � the editor died with "Fatal World Leaks" several calls *after* the compile that caused it: compiling a Blueprint reinstances its live instances, the originals become garbage, and anything of them still sitting in the transaction buffer keeps the owning world alive. The first full GC � which the game itself triggers on its first `OpenLevel` � then took the whole editor down. The buffer is now cleared at the compile, but only when that Blueprint is actually pinned (the undo buffer references it, or it had live instances). Losing undo history beats losing the editor, and the receipt says which happened and why.
+- **`add_node` no longer wires unrelated nodes into `Event Tick`** � a graph-wide exec-link sweep ran after *every* `add_node`, walking every node in the graph and connecting any `VariableSet` or `CallFunction` with a free exec input to the graph�s "preferred event". Adding one node could silently hang nodes the caller never mentioned off `Event Tick` or `Event PreConstruct`; the only trace was an `execLinked` boolean the gateway projects away. In a live project this put an `Add to Viewport` with a null target on `Event Tick`, logging a Blueprint runtime error every frame in PIE.
+- **A synthetic click actually presses the button** � `mouse_click` reached the right widget and reported `handledBySlate: true` while the button never fired. Slate recomputes hover every frame from the *real* cursor, so a hover set by a separate `mouse_move` call was gone before the next request arrived, and `SButton` only raises `OnClicked` when the release lands on a widget it still considers hovered. The click now carries its own move in the same dispatch and borrows the hardware cursor for the press/release, putting it straight back where the person left it � a single-frame blip rather than parking the cursor on the target, which is what made automation unusable alongside other work.
+- **`add_scs_component` routes through one implementation** � it had THREE payload readers (the batch `operations[]` path, `HandleScsAddComponent`, and a third copy inside `HandleBlueprintScsWrappers` that sat earlier in the route table and so answered every call). The wrapper read only `parent_component`/`parentComponent`, so `attachTo` was dropped and a component asked for `attachTo: "Mesh"` still landed on the collision cylinder, reported as success. Verified live: `attachTo: "Mesh"` on a Character now reports parent `Mesh`/`CharacterMesh0`.
+- **Attaching to inherited components works** � parent resolution searched SCS nodes only, so on a Character every spelling of the inherited capsule and mesh failed. "Attach a weapon, light or camera to the character�s skeletal mesh" is the most common Blueprint task there is and it had no reachable path.
+- **`MacroInstance` is refused instead of building a broken node** � `nodeType: "MacroInstance"` is the node *class*, not a macro; it fell through to the generic path, spawned a `UK2Node_MacroInstance` with no macro graph attached, and reported "Node created." on a Blueprint that no longer compiled. The spellings that actually resolve (`ForEachLoop`, `ForLoop`, `WhileLoop` and friends) are now named, and nothing is built otherwise.
+- **`CreateWidget` nodes carry their class** � both authoring paths wrote a `WidgetType` UPROPERTY that `UK2Node_CreateWidget` does not have, so the reflection write did nothing while the call answered "Node added"; the Blueprint then failed to compile with "Spawn node Create Widget must have a class specified". The class lives on the node�s `Class` input pin, which is now written and reconstructed.
+- **`GetVariable` nodes bind their member** � `add_node` with `nodeType: "GetVariable"` reported success and a `nodeGuid` and produced a node with ZERO pins, because the schema publishes `memberName` and the handler read `variableName`; any later `connect_pins` then failed with `PIN_NOT_FOUND`, pointing at the wrong problem.
+- **Behavior Tree authoring no longer crashes the editor** � `SpawnMissingNodes()` was called on an already-populated graph, which the engine only ever does from `OnCreated()`; a BTGraph with no nodes (exactly what authoring a tree over the bridge produces) also hard-asserted.
+- **Landscapes are created with components** � `create_landscape` produced an `ALandscape` with ZERO components: no geometry, bounds, collision or surface to sculpt, paint or stand on. `ALandscape::Import()` is what allocates the `ULandscapeComponent`s; `SetHeightData()` only writes into components that already exist.
+- **Volumes are created with real extents** � the box brush was built on a volume whose `UModel`/`UPolys` had never been allocated, so every volume came out with bounds `{0,0,0}`: a `NavMeshBoundsVolume` enclosing no navigable area, a `PostProcessVolume` affecting nothing.
+- **Writes that persist instead of echoing** � `set_world_settings` wrote the transient `WorldGravityZ` cache and enabled the override without touching `GlobalGravityZ`, discarding the requested value *and* pinning world gravity to 0; `create_interactable` accepted a full door/chest behaviour spec and stored none of it; interaction widget/component settings, switch and trigger config, `edit_blackboard.add_key`�s `baseObjectClass`, `create_skeleton`�s `name` and `paint_foliage_instances`� `radius`/`density` were all accepted and dropped.
+- **Struct and DataTable round-tripping** � every struct authored over MCP carried a permanent junk `MemberVar_0` that appeared in every row built on it; `update_row` replaced instead of merging, so a call setting two fields silently wiped the other thirteen, from an action whose name promises the opposite.
+- **Closed output contracts stopped hiding handler data** � a field a handler emits but its record does not declare is projected away in silence, which accounted for a whole class of "the data is missing" findings where the data was never missing: sequence `add_actors`/`remove_actors` results and counts, `blueprint.get_scs` inherited components, `blueprint.connect_pins` pin names/types and `saved`, material node placement telemetry (including `overlappingNodes` and `placementWarning`, previously wired to three handlers out of sixteen), and `invoke_function`�s resolved target and `value`.
+- **Success is no longer reported over a no-op** � `configure_volume` with properties the class does not carry, a `.t3d` import that imported nothing, a legacy input mapping removal that matched nothing, `add_foliage`�s `scatter` variant (which creates a `UFoliageType` and places zero instances), and UMG animation looping (which has no persisted setting at all � looping is a `PlayAnimation()` argument) each answered success while doing nothing.
+- **`inspect` reads Blueprint variable defaults from the CDO** � `FBPVariableDescription::DefaultValue` is a legacy string that stays empty for every variable whose value was written to the CDO, which is where the Blueprint actually stores it.
+- **Niagara module stack errors reach `warnings[]`** � `add_niagara_module` reported status `success` with an empty `warnings[]` while parking `stackErrors: ["The module has unmet dependencies."]` in details.
+- **Texture create actions accept the folded `kind` discriminator** � the handlers validate against an explicit allowlist and `kind` was missing from all five, so the variant discriminator every caller of a folded action must send was rejected.
+- **`save` is published on the struct and DataTable write actions** � both handlers had always read it; no capability record declared it, so no caller could reach working native support.
+- **Mojibake repaired in source comments** � the same Windows-1252 round-trip that mangled `CHANGELOG.md` left double-encoded em dashes in 24 places across 13 files.
 
-- **The bridge reports its target, and resolves the project’s own port** — a `NOT_CONNECTED` failure did not say what it had tried to reach, and a project that does not pin `MCP_AUTOMATION_PORT` was not consulted for its own setting. `readProjectListenPort()` now reads the first `ListenPorts` token from the project config (the plugin binds every configured token in order and a busy port silently drops out of the set, so the first token is the one to trust), and `describeBridgeFailure()` classifies the cause from structured transport codes rather than message text, which a peer controls. Contributed by [@punal100](https://github.com/punal100) in [#640](https://github.com/ChiR24/Unreal_mcp/pull/640).
+- **The bridge reports its target, and resolves the project�s own port** � a `NOT_CONNECTED` failure did not say what it had tried to reach, and a project that does not pin `MCP_AUTOMATION_PORT` was not consulted for its own setting. `readProjectListenPort()` now reads the first `ListenPorts` token from the project config (the plugin binds every configured token in order and a busy port silently drops out of the set, so the first token is the one to trust), and `describeBridgeFailure()` classifies the cause from structured transport codes rather than message text, which a peer controls. Contributed by [@punal100](https://github.com/punal100) in [#640](https://github.com/ChiR24/Unreal_mcp/pull/640).
 
 #### Fab asset store
 
-- **Fab search no longer hides results** — the search call was pinned to `channels=unreal-engine`, which hid the whole Megascans library; the pin is gone, so the public catalog is discoverable and importability is settled at add time instead.
-- **`add_fab_asset_to_project` claims the listing first** — it performs a real `POST /add-to-library` (the same change Fab's own UI makes when you press Add to Project) because Fab answers 404 for a download the account does not own; it then picks the first importable format, and success is decided by the asset registry rather than by Fab's response.
-- **Typed Fab failures** — `FAB_NOT_READY`, `FAB_REJECTED`, `NO_IMPORTABLE_FORMAT` and `IMPORT_TIMED_OUT` replace generic refusals, so a caller can tell a missing Fab plugin from a rejected download, an unimportable format, or an import that ran out of time.
+- **Fab search no longer hides results** � the search call was pinned to `channels=unreal-engine`, which hid the whole Megascans library; the pin is gone, so the public catalog is discoverable and importability is settled at add time instead.
+- **`add_fab_asset_to_project` claims the listing first** � it performs a real `POST /add-to-library` (the same change Fab's own UI makes when you press Add to Project) because Fab answers 404 for a download the account does not own; it then picks the first importable format, and success is decided by the asset registry rather than by Fab's response.
+- **Typed Fab failures** � `FAB_NOT_READY`, `FAB_REJECTED`, `NO_IMPORTABLE_FORMAT` and `IMPORT_TIMED_OUT` replace generic refusals, so a caller can tell a missing Fab plugin from a rejected download, an unimportable format, or an import that ran out of time.
 
 </details>
 
 <details>
-<summary><b>🗑️ Removed</b></summary>
+<summary><b>??? Removed</b></summary>
 
-- **Gateway-mode opt-outs and the legacy 23-tool listing (permanent single-tool cutover).** The TypeScript `MCP_GATEWAY_MODE` env var and the native **Enable Native Gateway** (`bEnableNativeGateway`) project setting are both gone. The private 23-parent dispatch and legacy action mappings stay inside `unreal.execute`. `MCP_AUTOMATION_CLIENT_MODE` is unaffected — it remains a separate WebSocket client/server topology control.
-- **Superseded TypeScript modules** — the root-level `src/tools/consolidated-tool-handlers.ts`, `property-dictionary.ts`, `tool-definition-utils.ts`, `src/tools/editor.ts`, `src/tools/level.ts`, `src/tools/schemas/core-tools.ts`, and the monolithic `src/tools/handlers/*-handlers.ts` set, all replaced by the catalog and per-domain directories. `src/tools/orchestration/consolidated-tool-handlers.ts` survives as the bootstrap/export facade, and `src/tools/dynamic/dynamic-tool-manager.ts` is still live: gateway availability and the execute static stage both gate on `isToolEnabled()`, `configure` mutates it, and it backs the local `manage_tools` category state rather than a per-tool public listing.
-- **Superseded plugin sources** — the per-tool `McpTool_*.cpp` definitions, `McpDynamicToolManager.cpp`, `McpConsolidatedActionRouting.h`, and the `McpNativeTransport.{h,cpp}` monolith.
+- **Gateway-mode opt-outs and the legacy 23-tool listing (permanent single-tool cutover).** The TypeScript `MCP_GATEWAY_MODE` env var and the native **Enable Native Gateway** (`bEnableNativeGateway`) project setting are both gone. The private 23-parent dispatch and legacy action mappings stay inside `unreal.execute`. `MCP_AUTOMATION_CLIENT_MODE` is unaffected � it remains a separate WebSocket client/server topology control.
+- **Superseded TypeScript modules** � the root-level `src/tools/consolidated-tool-handlers.ts`, `property-dictionary.ts`, `tool-definition-utils.ts`, `src/tools/editor.ts`, `src/tools/level.ts`, `src/tools/schemas/core-tools.ts`, and the monolithic `src/tools/handlers/*-handlers.ts` set, all replaced by the catalog and per-domain directories. `src/tools/orchestration/consolidated-tool-handlers.ts` survives as the bootstrap/export facade, and `src/tools/dynamic/dynamic-tool-manager.ts` is still live: gateway availability and the execute static stage both gate on `isToolEnabled()`, `configure` mutates it, and it backs the local `manage_tools` category state rather than a per-tool public listing.
+- **Superseded plugin sources** � the per-tool `McpTool_*.cpp` definitions, `McpDynamicToolManager.cpp`, `McpConsolidatedActionRouting.h`, and the `McpNativeTransport.{h,cpp}` monolith.
 - **Dead code sweep (2026-09-05)**: the legacy `src/tools/editor/` and `src/tools/level/` class modules (only their own unit tests imported them; the live paths are `src/tools/handlers/editor` and `src/tools/handlers/level`), the orphan `src/tools/handlers/niagara/` handler (Niagara authoring is served by `effect/effect-niagara-actions.ts`), the stale `material-authoring-types.ts` copy of `material-authoring-common.ts`, the unused `src/types/index.ts` and `src/utils/index.ts` barrels, 33 exported functions and constants with no callers, the security PoC harness under `tests/unit/_poc_security/`, the orphan `evidence-aggregator.mjs`, the `.jules/` sentinel notes for code that no longer exists, and the `lint:c` / `lint:csharp` npm scripts. The generated `McpNativeGatewayManifest.h` (298 KB, never included by any translation unit since the native gateway moved to the generated registry) is no longer emitted; `generate-gateway-manifest.ts` now writes only the TypeScript and JSON manifests.
 - **Deep cleanup continuation (2026-09-06)**: `UnrealCommandQueue` lost its unused `retryPolicy` recovery path (no caller ever passed one; a failed command is never re-run), the retired `route:effect:shadowed_stubs` disposition and its `EFFECT_MODULE_ROUTING` evidence path are gone (76 non-public routes, 7 typed removals), the unused `UE_EDITOR_EXE` / `UE_SCREENSHOT_DIR` env keys and the `src/types/tools/tool-*.ts` type modules were dropped, `toFiniteNumber` moved into `type-coercion.ts`, record builders share `SCHEMA_URI`, `V5_0`, `V5_8_P1` and the `str`/`num`/`bool` schema props, and generator scripts share `writeManifestTargets`. `docs/handler-mapping.md` names the files that actually own the foliage, property and sequence-metadata handlers.
 - **Second removal pass (2026-09-06)**: the never-wired semantic value grammars (`semantic/frame-time.ts`, `geometry.ts`, `pagination.ts`, their parse helpers and the schema-only test) are gone; `save-policy.ts` and `property-assignment.ts` keep only the schemas the envelope and execution-options modules actually import. Dead exports dropped: `resolveAlias`, `PrimitiveHandler`, `AutomationMessageSchema`, `VerbFamily`, the unused per-parent record aliases, three `z.infer` aliases in execution-options and the six unused `*Response` interfaces. `animation_physics.list_bones` now declares the bone objects the plugin really emits (name, index, parentIndex, parentName, location) instead of `string[]`, so the gateway no longer refuses its result.
 - The `typescript@^6` `overrides` block in `package.json`, alongside the toolchain pinning described under *Dependencies*.
 - **The experimental in-editor ACP assistant panel is gone.** The separate assistant plugin subtree was removed from this tree and ships in no release; it survives only on feature branches. External consumers that drove the editor through it must target the native `/mcp` surface or the TypeScript stdio `unreal` gateway instead.
-- **Superseded repo files (2026-09-06 and later)** — `GEMINI.md`, the root `mcp-config-example.json` and `claude_desktop_config_example.json` (with their `.github/labeler.yml` globs), `tests/heartbeat-progress.test.mjs`, `tests/integration/get_ai_info_characterization.mjs`, `tests/unit/tools/level_security.test.ts`, the unreferenced `Public/Plugin_setup_guide.mp4`, and the local-only `docs/native-automation-progress.md` progress log.
+- **Superseded repo files (2026-09-06 and later)** � `GEMINI.md`, the root `mcp-config-example.json` and `claude_desktop_config_example.json` (with their `.github/labeler.yml` globs), `tests/heartbeat-progress.test.mjs`, `tests/integration/get_ai_info_characterization.mjs`, `tests/unit/tools/level_security.test.ts`, the unreferenced `Public/Plugin_setup_guide.mp4`, and the local-only `docs/native-automation-progress.md` progress log.
 
 </details>
 
 <details>
-<summary><b>⚠️ Migration</b></summary>
+<summary><b>?? Migration</b></summary>
 
-- **Direct canonical tool calls are breaking.** Any client calling a canonical name directly (`tools/call` with `name: "manage_asset"`, `name: "control_actor"`, …) now receives a `DIRECT_TOOL_CALL_REMOVED` receipt instead of a result. Update call sites to the `unreal` gateway: `search` to find capabilities, `describe` for the exact action/parameter contract, then `execute` with `tool`, `action`, and `params`. There is no opt-out — `MCP_GATEWAY_MODE` and **Enable Native Gateway** are removed and there is no legacy listing to restore. The receipt's `nextCall` is executable and re-runs the original request through the gateway.
+- **Direct canonical tool calls are breaking.** Any client calling a canonical name directly (`tools/call` with `name: "manage_asset"`, `name: "control_actor"`, �) now receives a `DIRECT_TOOL_CALL_REMOVED` receipt instead of a result. Update call sites to the `unreal` gateway: `search` to find capabilities, `describe` for the exact action/parameter contract, then `execute` with `tool`, `action`, and `params`. There is no opt-out � `MCP_GATEWAY_MODE` and **Enable Native Gateway** are removed and there is no legacy listing to restore. The receipt's `nextCall` is executable and re-runs the original request through the gateway.
 - **`manage_post_process` is folded into `manage_render`.** The `Render/McpAutomationBridge_RenderPostProcess*.cpp` files dispatch through `manage_render`; any client calling `manage_post_process` directly now fails with `does not match prefix`. Switch to `manage_render` and pass the desired sub-action via `subAction`. The reflection-capture resolution setter was renamed from `configure_capture_resolution` to `configure_reflection_capture_resolution`; the scene-capture path keeps the original name. `McpAutomationBridge_RenderHandlers.cpp` is now a 74-line dispatcher, with per-concern handlers under `Render/McpAutomationBridge_Render*.cpp`.
 - **`control_actor` spawn with an unresolvable `meshPath` now fails.** A request that previously still produced a spawned actor and a success response now returns `MESH_NOT_FOUND` and spawns nothing.
 - **Node.js `>=20.19.0` is required.** Node 18 is no longer supported.
@@ -825,59 +832,59 @@ A write that lands is not a write that is correct, and several actions used to a
 </details>
 
 <details>
-<summary><b>🧪 Tests & CI</b></summary>
+<summary><b>?? Tests & CI</b></summary>
 
-- **CI gate order is now asserted** by `tests/unit/workflow_gate_order_contract.test.ts`. The pipeline runs: `eslint --max-warnings=0` → `type-check` → `test:unit` → `registry:check` → `normalization:check` → `manifest:check` → `policy:check` → `test:params` → `migration:check` → `primitives:check` → `security:check` → `eval:check` → `version:check` → `workflow:check`, then a blocking `npm audit --omit=dev --audit-level=high` and an informational full-tree audit. A second matrix job (Node 20.19.x + 26.x) adds `build` + `test:smoke`.
+- **CI gate order is now asserted** by `tests/unit/workflow_gate_order_contract.test.ts`. The pipeline runs: `eslint --max-warnings=0` ? `type-check` ? `test:unit` ? `registry:check` ? `normalization:check` ? `manifest:check` ? `policy:check` ? `test:params` ? `migration:check` ? `primitives:check` ? `security:check` ? `eval:check` ? `version:check` ? `workflow:check`, then a blocking `npm audit --omit=dev --audit-level=high` and an informational full-tree audit. A second matrix job (Node 20.19.x + 26.x) adds `build` + `test:smoke`.
 - **Source-contract tests** in `tests/unit/plugin/*contracts.test.ts` read the C++ as text and assert required and forbidden patterns: pure-line ceilings, resolvable `Mcp*` includes, absence of split artifacts, constant-time token comparison, and no non-loopback bind without `bRequireCapabilityToken`.
-- **Plugin-failure detection is word-bounded and content-scoped** — the generic indicator list that still includes the word `unknown` is unchanged, but a separate hard short-circuit list (which does not) runs before it, and the broad list now scans only the message and error strings rather than the whole response body, so a legitimate dispatcher message such as `"Unknown subAction."` no longer reads as a plugin crash. Real plugin errors are already caught by `isError: true` / `structuredContent.success: false`.
-- **The test runner propagates failures via `throw`, not `process.exit(1)`** — it still sets `process.exitCode = 1`, but the error is rethrown so wrappers catching via `try`/`catch` or `Promise.all` see the underlying failure. Consumers that relied on the runner terminating the process from a `catch` block should switch to the rethrow contract.
+- **Plugin-failure detection is word-bounded and content-scoped** � the generic indicator list that still includes the word `unknown` is unchanged, but a separate hard short-circuit list (which does not) runs before it, and the broad list now scans only the message and error strings rather than the whole response body, so a legitimate dispatcher message such as `"Unknown subAction."` no longer reads as a plugin crash. Real plugin errors are already caught by `isError: true` / `structuredContent.success: false`.
+- **The test runner propagates failures via `throw`, not `process.exit(1)`** � it still sets `process.exitCode = 1`, but the error is rethrown so wrappers catching via `try`/`catch` or `Promise.all` see the underlying failure. Consumers that relied on the runner terminating the process from a `catch` block should switch to the rethrow contract.
 - Added a `scripts/ci/unreal-job-gate.mjs` job gate and `scripts/qa/` adversarial, cross-transport-matrix, and capability-metadata audits.
-- **The integration harness drives the gateway** — `tests/test-runner.mjs` exports `toGatewayCall()`, which rewrites every legacy `{tool, action}` case into an `unreal.execute` call (gateway options lifted into `options`, `action`/`subAction`/`params`/`consent` stripped out of `params`, case-level consent attached as the execute envelope sibling, all timeouts clamped to a 600 s ceiling). Assertions and capture selection moved to `tests/test-runner-response-utils.mjs`, and a missing `${captured:...}` value now throws instead of substituting a placeholder.
-- **Crash detection is bounded** — the runner's crash and connection-loss signals moved from substring lists to word-boundary and bounded regexes (`hasCrashConnectionSignal`), with the bare `1006` code dropped as a standalone indicator and explicit close-code and not-connected matches added.
-- **New test tiers and gate composition** — `security:check` runs `tests/unit/security` plus `tests/unit/adversarial`, `migration:check` also runs the gateway migration doc contract, and the suite gained adversarial fuzz/shrink/soak harnesses, evidence oracles, engine certification and readiness records, live drivers, cross-transport checks including dist freshness, and an offline native-discovery harness that compiles the real `McpNativeGateway*` sources and generated shards against a minimal engine shim.
-- **Doc claims are machine-checked** — `tests/unit/docs/docs-claim-contract.test.ts` audits every published doc and the unreleased section of both changelogs against stale-claim rules (retired public tool surface, the removed in-editor assistant panel, unsupported protocol versions, unbacked certification and engine-range claims, stale capability-record counts), each with a negative control that proves the rule can fail.
-- **CI job topology** — an opt-in `package-plugin` job (gated on the engine-root repo variable, with `MCP_STRICT_DEPRECATIONS=1`) and an opt-in `live-matrix` job (which builds and runs the Unreal integration suite on a labelled runner) join the always-on `unreal-optional-status` job that announces which Unreal-dependent jobs were skipped and why; four workflow contract tests plus the release-archive contract guard the pipeline.
-- **Packaging writes a SHA-256 manifest and hardens the archive** — `scripts/lib/package-manifest.mjs` writes `McpAutomationBridge-v<version>-UE<engine>-<platform>.manifest.json` beside the archive, the archive additionally excludes `.cache/` and `DerivedDataCache/` and prunes `*.pdb`, `*.debug`, `*.sym` and `*.dSYM`, and a post-archive check fails the build if a generated build directory slipped in.
+- **The integration harness drives the gateway** � `tests/test-runner.mjs` exports `toGatewayCall()`, which rewrites every legacy `{tool, action}` case into an `unreal.execute` call (gateway options lifted into `options`, `action`/`subAction`/`params`/`consent` stripped out of `params`, case-level consent attached as the execute envelope sibling, all timeouts clamped to a 600 s ceiling). Assertions and capture selection moved to `tests/test-runner-response-utils.mjs`, and a missing `${captured:...}` value now throws instead of substituting a placeholder.
+- **Crash detection is bounded** � the runner's crash and connection-loss signals moved from substring lists to word-boundary and bounded regexes (`hasCrashConnectionSignal`), with the bare `1006` code dropped as a standalone indicator and explicit close-code and not-connected matches added.
+- **New test tiers and gate composition** � `security:check` runs `tests/unit/security` plus `tests/unit/adversarial`, `migration:check` also runs the gateway migration doc contract, and the suite gained adversarial fuzz/shrink/soak harnesses, evidence oracles, engine certification and readiness records, live drivers, cross-transport checks including dist freshness, and an offline native-discovery harness that compiles the real `McpNativeGateway*` sources and generated shards against a minimal engine shim.
+- **Doc claims are machine-checked** � `tests/unit/docs/docs-claim-contract.test.ts` audits every published doc and the unreleased section of both changelogs against stale-claim rules (retired public tool surface, the removed in-editor assistant panel, unsupported protocol versions, unbacked certification and engine-range claims, stale capability-record counts), each with a negative control that proves the rule can fail.
+- **CI job topology** � an opt-in `package-plugin` job (gated on the engine-root repo variable, with `MCP_STRICT_DEPRECATIONS=1`) and an opt-in `live-matrix` job (which builds and runs the Unreal integration suite on a labelled runner) join the always-on `unreal-optional-status` job that announces which Unreal-dependent jobs were skipped and why; four workflow contract tests plus the release-archive contract guard the pipeline.
+- **Packaging writes a SHA-256 manifest and hardens the archive** � `scripts/lib/package-manifest.mjs` writes `McpAutomationBridge-v<version>-UE<engine>-<platform>.manifest.json` beside the archive, the archive additionally excludes `.cache/` and `DerivedDataCache/` and prunes `*.pdb`, `*.debug`, `*.sym` and `*.dSYM`, and a post-archive check fails the build if a generated build directory slipped in.
 
-- **The catalog-import case got a timeout that fits it** — "inspect_cdo is in the tool schema action enum" cold-imports the generated catalog (the consolidated tool definitions plus all 380 records) inside the test body. That import alone runs past the 10s default under full-suite load, so the case failed on timing rather than content: it passed whenever the file was run on its own and failed in `npm run test:unit` regardless of what the rest of the change touched. Raised to 30s with the reason recorded beside it.
+- **The catalog-import case got a timeout that fits it** � "inspect_cdo is in the tool schema action enum" cold-imports the generated catalog (the consolidated tool definitions plus all 380 records) inside the test body. That import alone runs past the 10s default under full-suite load, so the case failed on timing rather than content: it passed whenever the file was run on its own and failed in `npm run test:unit` regardless of what the rest of the change touched. Raised to 30s with the reason recorded beside it.
 </details>
 
 <details>
-<summary><b>📚 Documentation</b></summary>
+<summary><b>?? Documentation</b></summary>
 
 - **21 `AGENTS.md` files (20 area guides plus the root workspace guide)** now cover the tree: catalog, tools, handlers, gateway, MCP primitives, server, automation, utils, resources, types, plugin scope, plugin core/domains/safety/native-MCP/foundation/transport, tests, and the two test-area guides (`tests/unit/plugin/`, `tests/unit/mcp-primitives/`).
-- **Gateway migration and protocol docs** — the permanent single-`unreal` surface on both transports (the former `MCP_GATEWAY_MODE` and **Enable Native Gateway** toggles were removed, not merely defaulted off), the `DIRECT_TOOL_CALL_REMOVED` receipt, `2025-11-25` negotiation with the `MCP-Protocol-Version` header guard, and the manifest generate/`--check` workflow.
+- **Gateway migration and protocol docs** � the permanent single-`unreal` surface on both transports (the former `MCP_GATEWAY_MODE` and **Enable Native Gateway** toggles were removed, not merely defaulted off), the `DIRECT_TOOL_CALL_REMOVED` receipt, `2025-11-25` negotiation with the `MCP-Protocol-Version` header guard, and the manifest generate/`--check` workflow.
 - Published a generated action reference, migration map, and capability support matrix from the capability records.
-- **The `bump-version` workflow rewrites all seven version sources** — `package.json` and `package-lock.json`, `server.json`, `McpAutomationBridge.uplugin`, `Resources/MCP/server-info.json`, the `src/server/server-factory.ts` fallback and the `McpNativeTransport.h` `ServerVersion` literal, then verifies with `npm ci && npm run version:check`. Release and plugin archives exclude `Binaries/`, `Intermediate/`, `Saved/`, `.cache/` and `DerivedDataCache/`, prune debug symbols, and fail the build when a generated build directory survives into the archive.
+- **The `bump-version` workflow rewrites all seven version sources** � `package.json` and `package-lock.json`, `server.json`, `McpAutomationBridge.uplugin`, `Resources/MCP/server-info.json`, the `src/server/server-factory.ts` fallback and the `McpNativeTransport.h` `ServerVersion` literal, then verifies with `npm ci && npm run version:check`. Release and plugin archives exclude `Binaries/`, `Intermediate/`, `Saved/`, `.cache/` and `DerivedDataCache/`, prune debug symbols, and fail the build when a generated build directory survives into the archive.
 
 </details>
 
 <details>
-<summary><b>🔄 Dependencies</b></summary>
+<summary><b>?? Dependencies</b></summary>
 
 | Package | Change |
 |---------|--------|
-| `@modelcontextprotocol/sdk` | `^1.25.0` → pinned `1.29.0` |
-| `eslint` | `^10.0.2` → pinned `9.39.5` |
-| `@eslint/js` | `^10.0.1` → pinned `9.39.5` |
-| `@typescript-eslint/{eslint-plugin,parser}` | `^8.4x` → pinned `8.63.0` |
-| `typescript` | `^6.0.2` → pinned `5.9.3` (and the `overrides` block removed) |
-| `@types/node` | `^25.0.2` → `^26.0.1` |
-| `github/codeql-action/{init,analyze,autobuild}` | `4.37.9` → `4.38.0` (Dependabot) |
+| `@modelcontextprotocol/sdk` | `^1.25.0` ? pinned `1.29.0` |
+| `eslint` | `^10.0.2` ? pinned `9.39.5` |
+| `@eslint/js` | `^10.0.1` ? pinned `9.39.5` |
+| `@typescript-eslint/{eslint-plugin,parser}` | `^8.4x` ? pinned `8.63.0` |
+| `typescript` | `^6.0.2` ? pinned `5.9.3` (and the `overrides` block removed) |
+| `@types/node` | `^25.0.2` ? `^26.0.1` |
+| `github/codeql-action/{init,analyze,autobuild}` | `4.37.9` ? `4.38.0` (Dependabot) |
 | `eslint-plugin-n`, `js-yaml` | added (dev) |
 
 </details>
 
 <details>
-<summary><b>✅ Verification</b></summary>
+<summary><b>? Verification</b></summary>
 
-- **Supports Unreal Engine 5.0–5.8.** The range is a source-compatibility target: per-version build and live-editor results are not asserted here. See [docs/performance-and-evidence.md](docs/performance-and-evidence.md) for the engine matrix and what each version's record actually shows.
+- **Supports Unreal Engine 5.0�5.8.** The range is a source-compatibility target: per-version build and live-editor results are not asserted here. See [docs/performance-and-evidence.md](docs/performance-and-evidence.md) for the engine matrix and what each version's record actually shows.
 - **Live-editor acceptance is not claimed for the TypeScript gateway build.** Gateway behavior, `2025-11-25` negotiation, manifest generation, and parity/parameter audits are verified through source-contract tests and the build, not against a running Unreal Editor. The integration suite (`npm test`) requires a live editor plus the bridge plugin and runs only in the opt-in `live-matrix` CI job; it is skipped by default rather than excluded. Do not treat any unexecuted live-editor proof as verified.
 
 </details>
 
 <details>
-<summary><b>👥 Contributors</b></summary>
+<summary><b>?? Contributors</b></summary>
 
 Special thanks to everyone who shipped code in this release window, with author aliases collapsed. Contributors whose work merged after the `v0.5.30` tag but is already credited in the 0.5.30 section below are not repeated here.
 
@@ -893,7 +900,7 @@ Special thanks to everyone who shipped code in this release window, with author 
 </details>
 
 <details>
-<summary><b>📊 Change Statistics</b></summary>
+<summary><b>?? Change Statistics</b></summary>
 
 | Metric | Count |
 |--------|-------|
@@ -917,53 +924,53 @@ Special thanks to everyone who shipped code in this release window, with author 
 
 ---
 
-## 🏷️ [0.5.30] - 2026-06-05
+## ??? [0.5.30] - 2026-06-05
 
 > [!IMPORTANT]
-> ### 🚀 Native MCP & Code-Backed Tool Parity Release
+> ### ?? Native MCP & Code-Backed Tool Parity Release
 > This release covers the `v0.5.21` to `0.5.30` release diff, including the TypeScript MCP server, native bridge plugin, tests, scripts, docs, workflows, and dependency manifests. The summary below is based on code and test changes, not commit subjects alone.
 
 <details>
-<summary><b>✨ Added</b></summary>
+<summary><b>? Added</b></summary>
 
-- **Native MCP Streamable HTTP endpoint** — added an opt-in in-plugin `/mcp` server with JSON-RPC 2.0 initialize/tools/list/tools/call handling, POST/GET/DELETE routing, `Mcp-Session-Id` session tracking, SSE tool-result streaming, progress notifications, persistent notification streams, `notifications/tools/list_changed` broadcasts, CORS handling, loopback-first binding, capability-token checks, and an editor status-bar indicator.
-- **Self-describing native MCP tools** — added C++ `FMcpToolRegistry`, `FMcpSchemaBuilder`, `MCP_REGISTER_TOOL`, canonical native tool filtering, cached schema generation, and native dynamic tool/category enablement for the 23 canonical parent tools.
-- **PCG automation** — added `manage_pcg` TypeScript/native schemas and handlers for graph/subgraph creation, PCG node aliases, pin connections, reflected node settings, component/world execution, partition grid configuration, save/overwrite behavior, and PCG plugin availability errors.
-- **Environment systems automation** — added build-environment coverage for heightmap import/export, landscape layer info/material/splines/LOD/streaming proxies, foliage type configuration/paint/remove flows, sky and volumetric-cloud setup, weather/wind/time-of-day systems, water bodies, water waves/material/collision, and buoyancy components.
-- **Behavior Tree authoring and introspection** — added `add_subnode`, root-sentinel decorators, decorator/service validation, subnode-aware lookup, `FBlackboardKeySelector` assignment, and `get_tree` runtime hierarchy serialization with root decorators, edge decorators, decorator ops, services, key properties, subtree references, and a success-with-null-root contract for graphless trees.
-- **Blueprint, property, and inspection tools** — added `inspect_cdo`, Class Default Object component/property export, SCS and inherited SCS component classification, typed Blueprint custom-event pins, Enhanced Input graph nodes, inherited variable/member-class graph node lookup, and property access for Blueprint-added SCS component templates.
-- **Editor, world, and input capabilities** — added full editor-window screenshots, game viewport screenshot routing, image content responses, simulated keyboard/mouse input aliases, active camera reporting, PIE runtime inspection, native `get_current_level`, actor material/view-target native actions, spawn scale support, and create-plane height handling.
-- **Material, audio, animation, and system actions** — added Material Function creation/editing/calls/info, FunctionInput/FunctionOutput graph support, source-effect chains and source-effect presets, `force_rebuild_blend_space`, legacy/per-key input mapping edits, project setting writes, native asset validation, and `execute_python` for inline or project-local Python files.
-
-</details>
-
-<details>
-<summary><b>🛡️ Security</b></summary>
-
-- **GraphQL attack surface removed** — deleted the GraphQL server, schema/resolver/loaders, GraphQL docs, GraphQL unit tests, and direct GraphQL runtime dependencies.
-- **Native MCP exposure controls** — default native MCP binding stays loopback-only unless explicitly allowed; non-loopback hosts warn, sessions are validated, stale requests/streams are cleaned up, and native HTTP requests use explicit request-origin routing instead of socket inference.
-- **Capability-token and dynamic-tool protections** — native MCP validates `X-MCP-Capability-Token` when required, while both TypeScript and native dynamic tool managers protect `manage_tools`/`inspect` and protected categories from accidental disablement.
-- **Python execution hardening** — `execute_python` enforces code/file exclusivity, a 1 MB inline code limit, project-root path normalization, symlink escape checks, `__file__` setup for file execution, temp-file cleanup, and direct `PythonScriptPlugin` execution.
-- **Path, command, log, and workflow hardening** — tightened UE path normalization, console-command validation, snapshot/log path handling, level save/load flows, image/log redaction, safe `tmp/` cleanup, sync-script argument parsing, and GitHub Actions interpolation by moving untrusted values into environment variables.
+- **Native MCP Streamable HTTP endpoint** � added an opt-in in-plugin `/mcp` server with JSON-RPC 2.0 initialize/tools/list/tools/call handling, POST/GET/DELETE routing, `Mcp-Session-Id` session tracking, SSE tool-result streaming, progress notifications, persistent notification streams, `notifications/tools/list_changed` broadcasts, CORS handling, loopback-first binding, capability-token checks, and an editor status-bar indicator.
+- **Self-describing native MCP tools** � added C++ `FMcpToolRegistry`, `FMcpSchemaBuilder`, `MCP_REGISTER_TOOL`, canonical native tool filtering, cached schema generation, and native dynamic tool/category enablement for the 23 canonical parent tools.
+- **PCG automation** � added `manage_pcg` TypeScript/native schemas and handlers for graph/subgraph creation, PCG node aliases, pin connections, reflected node settings, component/world execution, partition grid configuration, save/overwrite behavior, and PCG plugin availability errors.
+- **Environment systems automation** � added build-environment coverage for heightmap import/export, landscape layer info/material/splines/LOD/streaming proxies, foliage type configuration/paint/remove flows, sky and volumetric-cloud setup, weather/wind/time-of-day systems, water bodies, water waves/material/collision, and buoyancy components.
+- **Behavior Tree authoring and introspection** � added `add_subnode`, root-sentinel decorators, decorator/service validation, subnode-aware lookup, `FBlackboardKeySelector` assignment, and `get_tree` runtime hierarchy serialization with root decorators, edge decorators, decorator ops, services, key properties, subtree references, and a success-with-null-root contract for graphless trees.
+- **Blueprint, property, and inspection tools** � added `inspect_cdo`, Class Default Object component/property export, SCS and inherited SCS component classification, typed Blueprint custom-event pins, Enhanced Input graph nodes, inherited variable/member-class graph node lookup, and property access for Blueprint-added SCS component templates.
+- **Editor, world, and input capabilities** � added full editor-window screenshots, game viewport screenshot routing, image content responses, simulated keyboard/mouse input aliases, active camera reporting, PIE runtime inspection, native `get_current_level`, actor material/view-target native actions, spawn scale support, and create-plane height handling.
+- **Material, audio, animation, and system actions** � added Material Function creation/editing/calls/info, FunctionInput/FunctionOutput graph support, source-effect chains and source-effect presets, `force_rebuild_blend_space`, legacy/per-key input mapping edits, project setting writes, native asset validation, and `execute_python` for inline or project-local Python files.
 
 </details>
 
 <details>
-<summary><b>🔧 Changed</b></summary>
+<summary><b>??? Security</b></summary>
 
-- **Release metadata** — updated `package.json`, `package-lock.json`, `server.json`, the `src/index.ts` fallback, and `McpAutomationBridge.uplugin` to `0.5.30`.
-- **Canonical TypeScript tool surface** — kept the 23 parent tools but moved action lists into shared constants, grouped tools into `core`, `world`, `gameplay`, and `utility`, merged nested `params` into top-level arguments for constrained clients, centralized handler routing, and removed legacy per-domain tool files.
-- **Dynamic tool listing** — `tools/list` now checks known client support for `tools.listChanged`; dynamic clients can receive category-filtered tools, while clients without dynamic loading still see the full compatible tool surface.
-- **Automation bridge lifecycle** — refactored host/port parsing, multi-port WebSocket connection attempts, handshake metadata, request queueing, progress timeout extension, stale-progress detection, absolute timeout caps, rate/message-size boundaries, disconnect/error tracking, and image-payload redaction.
-- **Native bridge runtime** — split request dispatch out of the subsystem, added explicit `ERequestOrigin`, queued requests through the game thread, converted captured engine errors into failed responses, pumped GameThread tasks during native transport shutdown, and exposed native transport session/tool counts to UI.
-- **Response and schema handling** — improved response validation, summary text generation, image response content, scalar result promotion, safe JSON cleanup, schema reuse, action-specific parameter descriptions, and stricter error context on tool failures.
-- **Plugin compatibility** — updated bridge metadata for UE 5.8 Preview and added PythonScriptPlugin, StructUtils, Synthesis, and PCG plugin declarations where the new handlers need them.
-- **Scripts and workflows** — made smoke tests run through SDK `InMemoryTransport`, added native parity/parameter audit npm scripts, changed `clean` to remove `tsconfig.tsbuildinfo`, added Linux/macOS/Windows plugin packaging scripts, strengthened sync/cleanup scripts, and made CI/publish/release gates stricter.
+- **GraphQL attack surface removed** � deleted the GraphQL server, schema/resolver/loaders, GraphQL docs, GraphQL unit tests, and direct GraphQL runtime dependencies.
+- **Native MCP exposure controls** � default native MCP binding stays loopback-only unless explicitly allowed; non-loopback hosts warn, sessions are validated, stale requests/streams are cleaned up, and native HTTP requests use explicit request-origin routing instead of socket inference.
+- **Capability-token and dynamic-tool protections** � native MCP validates `X-MCP-Capability-Token` when required, while both TypeScript and native dynamic tool managers protect `manage_tools`/`inspect` and protected categories from accidental disablement.
+- **Python execution hardening** � `execute_python` enforces code/file exclusivity, a 1 MB inline code limit, project-root path normalization, symlink escape checks, `__file__` setup for file execution, temp-file cleanup, and direct `PythonScriptPlugin` execution.
+- **Path, command, log, and workflow hardening** � tightened UE path normalization, console-command validation, snapshot/log path handling, level save/load flows, image/log redaction, safe `tmp/` cleanup, sync-script argument parsing, and GitHub Actions interpolation by moving untrusted values into environment variables.
 
 </details>
 
 <details>
-<summary><b>🛠️ Fixed</b></summary>
+<summary><b>?? Changed</b></summary>
+
+- **Release metadata** � updated `package.json`, `package-lock.json`, `server.json`, the `src/index.ts` fallback, and `McpAutomationBridge.uplugin` to `0.5.30`.
+- **Canonical TypeScript tool surface** � kept the 23 parent tools but moved action lists into shared constants, grouped tools into `core`, `world`, `gameplay`, and `utility`, merged nested `params` into top-level arguments for constrained clients, centralized handler routing, and removed legacy per-domain tool files.
+- **Dynamic tool listing** � `tools/list` now checks known client support for `tools.listChanged`; dynamic clients can receive category-filtered tools, while clients without dynamic loading still see the full compatible tool surface.
+- **Automation bridge lifecycle** � refactored host/port parsing, multi-port WebSocket connection attempts, handshake metadata, request queueing, progress timeout extension, stale-progress detection, absolute timeout caps, rate/message-size boundaries, disconnect/error tracking, and image-payload redaction.
+- **Native bridge runtime** � split request dispatch out of the subsystem, added explicit `ERequestOrigin`, queued requests through the game thread, converted captured engine errors into failed responses, pumped GameThread tasks during native transport shutdown, and exposed native transport session/tool counts to UI.
+- **Response and schema handling** � improved response validation, summary text generation, image response content, scalar result promotion, safe JSON cleanup, schema reuse, action-specific parameter descriptions, and stricter error context on tool failures.
+- **Plugin compatibility** � updated bridge metadata for UE 5.8 Preview and added PythonScriptPlugin, StructUtils, Synthesis, and PCG plugin declarations where the new handlers need them.
+- **Scripts and workflows** � made smoke tests run through SDK `InMemoryTransport`, added native parity/parameter audit npm scripts, changed `clean` to remove `tsconfig.tsbuildinfo`, added Linux/macOS/Windows plugin packaging scripts, strengthened sync/cleanup scripts, and made CI/publish/release gates stricter.
+
+</details>
+
+<details>
+<summary><b>??? Fixed</b></summary>
 
 #### Routing & Native Tool Parity
 
@@ -988,7 +995,7 @@ Special thanks to everyone who shipped code in this release window, with author 
 </details>
 
 <details>
-<summary><b>🧪 Tests</b></summary>
+<summary><b>?? Tests</b></summary>
 
 - Added/expanded Vitest coverage for automation bridge connection, handshake, message schema, request tracking, config defaults, resources, health/metrics services, response validation, command validation, log reading/redaction, safe JSON, type coercion, normalization, queues, elicitation, and consolidated handler routing.
 - Expanded MCP integration suites across core/world/gameplay/utility tools, including PCG, Behavior Tree subnodes/get-tree, networking/sessions/input, control-editor screenshots/input, actor list handling, audio/source effects, assets/material functions, Blueprints/SCS, levels, geometry, GAS, combat, inventory, interaction, sequence, environment, and system-control Python/project-setting flows.
@@ -998,7 +1005,7 @@ Special thanks to everyone who shipped code in this release window, with author 
 </details>
 
 <details>
-<summary><b>🧰 Maintenance</b></summary>
+<summary><b>?? Maintenance</b></summary>
 
 - Refreshed AGENTS/project guidance, README/setup content, handler maps, testing guide, native automation progress notes, Roadmap, MCP coverage notes, UE 5.8 support notes, native audio routing notes, plugin READMEs, issue templates, labels, gitignore rules, production env defaults, Context7 config, and release metadata.
 - Removed obsolete GraphQL API docs and GraphQL security tests with the GraphQL implementation.
@@ -1007,7 +1014,7 @@ Special thanks to everyone who shipped code in this release window, with author 
 </details>
 
 <details>
-<summary><b>🔄 Dependencies</b></summary>
+<summary><b>?? Dependencies</b></summary>
 
 - Removed direct runtime dependencies for `@graphql-tools/schema`, `dataloader`, `graphql`, and `graphql-yoga`.
 - Refreshed the lockfile across npm dependency groups, including security/maintenance updates for transitive runtime and dev packages.
@@ -1016,7 +1023,7 @@ Special thanks to everyone who shipped code in this release window, with author 
 </details>
 
 <details>
-<summary><b>📚 Documentation</b></summary>
+<summary><b>?? Documentation</b></summary>
 
 - Refreshed root and plugin README content, MCP/native transport setup, handler mapping, editor plugin extension notes, Roadmap, testing guide, native automation progress, MCP coverage notes, UE 5.8 support, and native audio routing notes.
 - Added and updated repository guidance files for root, TypeScript server/tools/handlers/automation/utils/tests, native MCP internals, and McpAutomationBridge areas.
@@ -1025,7 +1032,7 @@ Special thanks to everyone who shipped code in this release window, with author 
 </details>
 
 <details>
-<summary><b>👥 Contributors</b></summary>
+<summary><b>?? Contributors</b></summary>
 
 Special thanks to the contributors in this release window, with obvious author aliases collapsed.
 
@@ -1043,7 +1050,7 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>📊 Release Statistics</b></summary>
+<summary><b>?? Release Statistics</b></summary>
 
 | Metric | Count |
 |--------|-------|
@@ -1059,47 +1066,47 @@ Special thanks to the contributors in this release window, with obvious author a
 
 ---
 
-## 🏷️ [0.5.21] - 2026-04-03
+## ??? [0.5.21] - 2026-04-03
 
 > [!IMPORTANT]
-> ### 🔒 Security, New Features & Major Crash Fixes
+> ### ?? Security, New Features & Major Crash Fixes
 > This release adds custom content mount points, full audio authoring, project settings management, vehicle physics configuration, blend tree/procedural animation/state machine creation, sequencer improvements, and critical crash prevention for deleting animation/IK assets and folders.
 
 <details>
-<summary><b>🛡️ Security</b></summary>
+<summary><b>??? Security</b></summary>
 
-- **Command Injection in bump-version action** – Sanitized `release-type` input ([#327](https://github.com/ChiR24/Unreal_mcp/pull/327))
-- **Command Injection in editor console commands** – Mixed-context sanitization for `start_recording`, `set_camera_fov`, `set_game_speed` ([#322](https://github.com/ChiR24/Unreal_mcp/pull/322))
-- **Path Traversal in `export_level`** – Added path validation ([#305](https://github.com/ChiR24/Unreal_mcp/pull/305))
-- **Path Traversal in screenshot filename** – Sanitized filenames, blocked traversal patterns ([#314](https://github.com/ChiR24/Unreal_mcp/pull/314))
-- **Synchronous fs Hardening** – Replaced blocking `fs.existsSync` / `fs.readdirSync` with async versions ([#318](https://github.com/ChiR24/Unreal_mcp/pull/318))
-
-</details>
-
-<details>
-<summary><b>✨ Added</b></summary>
-
-- **Custom Content Mount Points** – `MCP_ADDITIONAL_PATH_PREFIXES` to whitelist plugin mount points (`/ProjectObject/`, etc.) ([#326](https://github.com/ChiR24/Unreal_mcp/pull/326) – thanks @6r0m)
-- **Full Audio Authoring** – Create sound waves, sound cues, sound classes, sound mixes, attenuation settings; success flags in responses.
-- **Project Settings Management** – New `manage_project_settings` tool (get/set project settings via config).
-- **Animation Authoring** – `create_blend_tree`, `create_procedural_anim`, `create_state_machine` (C++ implementations, not console commands).
-- **Vehicle Physics Configuration** – `configure_vehicle` with wheels, engine, transmission, mass, drag coefficient.
-- **Sequencer** – `set_tick_resolution`, `set_view_range` actions.
-- **Widget Authoring** – New template widgets: main menu, pause menu, HUD, crosshair, ammo counter, health bar, compass, interaction prompt, objective tracker, damage indicator, inventory grid, dialog box, radial menu, credits scroll, shop UI, quest tracker.
-- **Runtime Module Checks** – Verify GameplayAbilities, EnhancedInput, BehaviorTreeEditor, LevelSequenceEditor, NiagaraEditor, StateTree, SmartObjects, MassEntity are loaded before use (clear error messages when plugins missing).
+- **Command Injection in bump-version action** � Sanitized `release-type` input ([#327](https://github.com/ChiR24/Unreal_mcp/pull/327))
+- **Command Injection in editor console commands** � Mixed-context sanitization for `start_recording`, `set_camera_fov`, `set_game_speed` ([#322](https://github.com/ChiR24/Unreal_mcp/pull/322))
+- **Path Traversal in `export_level`** � Added path validation ([#305](https://github.com/ChiR24/Unreal_mcp/pull/305))
+- **Path Traversal in screenshot filename** � Sanitized filenames, blocked traversal patterns ([#314](https://github.com/ChiR24/Unreal_mcp/pull/314))
+- **Synchronous fs Hardening** � Replaced blocking `fs.existsSync` / `fs.readdirSync` with async versions ([#318](https://github.com/ChiR24/Unreal_mcp/pull/318))
 
 </details>
 
 <details>
-<summary><b>🛠️ Fixed</b></summary>
+<summary><b>? Added</b></summary>
+
+- **Custom Content Mount Points** � `MCP_ADDITIONAL_PATH_PREFIXES` to whitelist plugin mount points (`/ProjectObject/`, etc.) ([#326](https://github.com/ChiR24/Unreal_mcp/pull/326) � thanks @6r0m)
+- **Full Audio Authoring** � Create sound waves, sound cues, sound classes, sound mixes, attenuation settings; success flags in responses.
+- **Project Settings Management** � New `manage_project_settings` tool (get/set project settings via config).
+- **Animation Authoring** � `create_blend_tree`, `create_procedural_anim`, `create_state_machine` (C++ implementations, not console commands).
+- **Vehicle Physics Configuration** � `configure_vehicle` with wheels, engine, transmission, mass, drag coefficient.
+- **Sequencer** � `set_tick_resolution`, `set_view_range` actions.
+- **Widget Authoring** � New template widgets: main menu, pause menu, HUD, crosshair, ammo counter, health bar, compass, interaction prompt, objective tracker, damage indicator, inventory grid, dialog box, radial menu, credits scroll, shop UI, quest tracker.
+- **Runtime Module Checks** � Verify GameplayAbilities, EnhancedInput, BehaviorTreeEditor, LevelSequenceEditor, NiagaraEditor, StateTree, SmartObjects, MassEntity are loaded before use (clear error messages when plugins missing).
+
+</details>
+
+<details>
+<summary><b>??? Fixed</b></summary>
 
 #### Crash Prevention (UE 5.7+)
 
-- **Animation/Rig asset deletion** – Completely rewrote `McpSafeDeleteFolder` and added `DeleteAnimationRigClusterOrdered` to prevent 0xFFFFFFFFFFFFFFFF crashes when deleting AnimBlueprints, IKRigs, IKRetargeters, ControlRigBlueprints, and AnimSequences.
-- **Folder deletion** – Replaced `UEditorAssetLibrary::DeleteDirectory` with `McpSafeDeleteFolder` (proper world switching, package unloading, compilation quiesce).
-- **Blueprint creation** – Added pre‑creation checks in `CreateControlRigBlueprint` and widget blueprint creation to prevent engine assertion failures.
-- **Widget creation** – Fixed widget crash ([#306](https://github.com/ChiR24/Unreal_mcp/pull/306)) by adding GUID registration (`RegisterWidgetGuid`) and safe tree replacement (`SafeAddWidgetToTree`).
-- **AnimNotify/NotifyState** – Added abstract class validation and track existence checks.
+- **Animation/Rig asset deletion** � Completely rewrote `McpSafeDeleteFolder` and added `DeleteAnimationRigClusterOrdered` to prevent 0xFFFFFFFFFFFFFFFF crashes when deleting AnimBlueprints, IKRigs, IKRetargeters, ControlRigBlueprints, and AnimSequences.
+- **Folder deletion** � Replaced `UEditorAssetLibrary::DeleteDirectory` with `McpSafeDeleteFolder` (proper world switching, package unloading, compilation quiesce).
+- **Blueprint creation** � Added pre-creation checks in `CreateControlRigBlueprint` and widget blueprint creation to prevent engine assertion failures.
+- **Widget creation** � Fixed widget crash ([#306](https://github.com/ChiR24/Unreal_mcp/pull/306)) by adding GUID registration (`RegisterWidgetGuid`) and safe tree replacement (`SafeAddWidgetToTree`).
+- **AnimNotify/NotifyState** � Added abstract class validation and track existence checks.
 
 #### Asset & Path Handling
 
@@ -1111,7 +1118,7 @@ Special thanks to the contributors in this release window, with obvious author a
 
 #### Blueprint & Graph Editing
 
-- Unified pin serialization across blueprint graph handlers ([#309](https://github.com/ChiR24/Unreal_mcp/pull/309)) – linked pins returned as objects with `nodeId` and `pinName`.
+- Unified pin serialization across blueprint graph handlers ([#309](https://github.com/ChiR24/Unreal_mcp/pull/309)) � linked pins returned as objects with `nodeId` and `pinName`.
 - Improved actor lookup to match subsystem behavior (checks both label and name).
 - Aligned `get_ai_info` output with TypeScript schema ([#310](https://github.com/ChiR24/Unreal_mcp/pull/310)).
 
@@ -1120,22 +1127,22 @@ Special thanks to the contributors in this release window, with obvious author a
 - Delegated console command settings to C++ handler for better performance.
 - Ensured successful execution of console commands (check `GEngine->Exec` return value).
 - Added validation for required session parameters (interfaceType, controllerId, playerIndex, etc.).
-- Removed redundant `AsyncTask` wrappers in `generate_thumbnail` and `generate_lods` (fixed 30‑second timeout).
+- Removed redundant `AsyncTask` wrappers in `generate_thumbnail` and `generate_lods` (fixed 30-second timeout).
 
 #### Level Operations
 
-- **`rename_level`** – Now uses `DuplicateAsset` + `DeleteAsset` to avoid modal “Find/Replace” dialog.
-- **`duplicate_level`** – Validates source existence and deletes destination if already present.
-- **`export_level`** – Added source level existence check before export.
+- **`rename_level`** � Now uses `DuplicateAsset` + `DeleteAsset` to avoid modal �Find/Replace� dialog.
+- **`duplicate_level`** � Validates source existence and deletes destination if already present.
+- **`export_level`** � Added source level existence check before export.
 
 #### Voice Chat & Sessions
 
-- Improved `mute_player` – falls back to `BlockPlayers` when voice server not connected.
+- Improved `mute_player` � falls back to `BlockPlayers` when voice server not connected.
 - Added validation for required parameters in all session actions.
 
 #### Plugin Stability
 
-- Used delay‑load for optional plugin modules to prevent missing dependency errors ([#317](https://github.com/ChiR24/Unreal_mcp/pull/317)).
+- Used delay-load for optional plugin modules to prevent missing dependency errors ([#317](https://github.com/ChiR24/Unreal_mcp/pull/317)).
 - Refactored IK retargeter initialization using controller API (UE 5.7+) with backward compatibility fallback.
 - Enhanced actor and component stability across subsystems.
 
@@ -1146,18 +1153,18 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>🔄 Dependencies</b></summary>
+<summary><b>?? Dependencies</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `picomatch` | 4.0.3 → 4.0.4 | [#316](https://github.com/ChiR24/Unreal_mcp/pull/316) |
+| `picomatch` | 4.0.3 ? 4.0.4 | [#316](https://github.com/ChiR24/Unreal_mcp/pull/316) |
 | Dependencies group | 9 updates | [#320](https://github.com/ChiR24/Unreal_mcp/pull/320) |
-| `github/codeql-action` | 4.33.0 → 4.34.1 | [#319](https://github.com/ChiR24/Unreal_mcp/pull/319) |
+| `github/codeql-action` | 4.33.0 ? 4.34.1 | [#319](https://github.com/ChiR24/Unreal_mcp/pull/319) |
 
 </details>
 
 <details>
-<summary><b>👥 Contributors</b></summary>
+<summary><b>?? Contributors</b></summary>
 
 - @google-labs-jules[bot] for all security fixes
 - @kalihman for asset query, searchText, docs, and blueprint graph fixes
@@ -1168,20 +1175,20 @@ Special thanks to the contributors in this release window, with obvious author a
 
 ---
 
-## 🏷️ [0.5.20] - 2026-03-21
+## ??? [0.5.20] - 2026-03-21
 
 > [!IMPORTANT]
-> ### 🛡️ Security Fix & UE 5.0 Compatibility
+> ### ??? Security Fix & UE 5.0 Compatibility
 > This release includes a critical path traversal fix in export_asset, UE 5.0 compatibility improvements, and external actors support for World Partition.
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Path Traversal in export_asset</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/5cf2a3c">5cf2a3c</a>)</summary>
+<summary><b>?? Path Traversal in export_asset</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/5cf2a3c">5cf2a3c</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 CRITICAL |
+| **Severity** | ?? CRITICAL |
 | **Vulnerability** | Path traversal in `export_asset` action |
 | **Fix** | Added path validation to prevent directory traversal attacks |
 
@@ -1190,10 +1197,10 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🌍 External Actors Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/51143c3">51143c3</a>)</summary>
+<summary><b>?? External Actors Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/51143c3">51143c3</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1205,10 +1212,10 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🎮 UE 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/1057023">1057023</a>)</summary>
+<summary><b>?? UE 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/1057023">1057023</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1221,7 +1228,7 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>🐛 Tick Task Manager Crashes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/8c311d7">8c311d7</a>)</summary>
+<summary><b>?? Tick Task Manager Crashes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/8c311d7">8c311d7</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1236,7 +1243,7 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>🐛 Sublevel Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/bffb68c">bffb68c</a>)</summary>
+<summary><b>?? Sublevel Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/bffb68c">bffb68c</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1248,7 +1255,7 @@ Special thanks to the contributors in this release window, with obvious author a
 </details>
 
 <details>
-<summary><b>🔧 UE 5.7 Build</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/295">#295</a>)</summary>
+<summary><b>?? UE 5.7 Build</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/295">#295</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1258,7 +1265,7 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
@@ -1280,7 +1287,7 @@ Special thanks to the contributors in this release window, with obvious author a
 
 </details>
 
-### 🔌 Plugin
+### ?? Plugin
 
 <details>
 <summary><b>MCP Automation Bridge v0.1.3</b></summary>
@@ -1293,16 +1300,16 @@ See [Plugin CHANGELOG](plugins/McpAutomationBridge/CHANGELOG.md) for details.
 
 ---
 
-## 🏷️ [0.5.19] - 2026-03-18
+## ??? [0.5.19] - 2026-03-18
 
 > [!IMPORTANT]
-> ### 🛡️ Security Hardening & Major Plugin Refactoring
+> ### ??? Security Hardening & Major Plugin Refactoring
 > This release includes critical security fixes for command injection and path traversal vulnerabilities, a complete deep-level refactoring of 57 C++ handler files with centralized utilities, and removal of the WebAssembly integration.
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Command Injection Prevention</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/288">#288</a>)</summary>
+<summary><b>?? Command Injection Prevention</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/288">#288</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1316,7 +1323,7 @@ See [Plugin CHANGELOG](plugins/McpAutomationBridge/CHANGELOG.md) for details.
 </details>
 
 <details>
-<summary><b>🔒 Path Traversal Fixes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/271">#271</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/282">#282</a>)</summary>
+<summary><b>?? Path Traversal Fixes</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/271">#271</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/282">#282</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1327,7 +1334,7 @@ See [Plugin CHANGELOG](plugins/McpAutomationBridge/CHANGELOG.md) for details.
 </details>
 
 <details>
-<summary><b>🔒 GraphQL CORS Hardening</b></summary>
+<summary><b>?? GraphQL CORS Hardening</b></summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1337,10 +1344,10 @@ See [Plugin CHANGELOG](plugins/McpAutomationBridge/CHANGELOG.md) for details.
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
-<summary><b>🏗️ Complete C++ Plugin Refactoring</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/280">#280</a>)</summary>
+<summary><b>??? Complete C++ Plugin Refactoring</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/280">#280</a>)</summary>
 
 Deep line-by-line refactoring of 57 handler files and 8 infrastructure files:
 
@@ -1365,7 +1372,7 @@ Deep line-by-line refactoring of 57 handler files and 8 infrastructure files:
 </details>
 
 <details>
-<summary><b>⚡ Performance Improvements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/283">#283</a>)</summary>
+<summary><b>? Performance Improvements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/283">#283</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1376,7 +1383,7 @@ Deep line-by-line refactoring of 57 handler files and 8 infrastructure files:
 </details>
 
 <details>
-<summary><b>🗑️ WebAssembly Integration Removed</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/240">#240</a>)</summary>
+<summary><b>??? WebAssembly Integration Removed</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/240">#240</a>)</summary>
 
 Removed WebAssembly (wasm-pack/Rust) integration:
 - Deleted `src/wasm/` directory (874 lines)
@@ -1386,10 +1393,10 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🐛 Blueprint Inspect Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/270">#270</a>)</summary>
+<summary><b>?? Blueprint Inspect Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/270">#270</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1399,7 +1406,7 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 </details>
 
 <details>
-<summary><b>🐛 GAS Duplicate Effect Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/251">#251</a>)</summary>
+<summary><b>?? GAS Duplicate Effect Creation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/251">#251</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1408,7 +1415,7 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 </details>
 
 <details>
-<summary><b>🐛 Volume Handler Mobility</b></summary>
+<summary><b>?? Volume Handler Mobility</b></summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1417,7 +1424,7 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 </details>
 
 <details>
-<summary><b>🐛 UE 5.7 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/274">#274</a>)</summary>
+<summary><b>?? UE 5.7 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/274">#274</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1426,7 +1433,7 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 </details>
 
 <details>
-<summary><b>🐛 Action Name Alignment</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/253">#253</a>)</summary>
+<summary><b>?? Action Name Alignment</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/253">#253</a>)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1434,25 +1441,25 @@ Removed WebAssembly (wasm-pack/Rust) integration:
 
 </details>
 
-### 🗑️ Removed
+### ??? Removed
 
 <details>
 <summary><b>Deprecated Tool Files</b></summary>
 
 Removed deprecated standalone tool files (consolidated into handlers):
-- `src/tools/audio.ts` → `src/tools/handlers/audio-handlers.ts`
-- `src/tools/debug.ts` → consolidated into system handlers
-- `src/tools/introspection.ts` → `src/tools/handlers/inspect-handlers.ts`
-- `src/tools/materials.ts` → `src/tools/handlers/material-authoring-handlers.ts`
-- `src/tools/performance.ts` → `src/tools/handlers/performance-handlers.ts`
-- `src/tools/ui.ts` → consolidated into widget handlers
-- `src/tools/input.ts` → `src/tools/handlers/input-handlers.ts`
-- `src/tools/behavior-tree.ts` → consolidated
-- `src/tools/engine.ts` → consolidated
+- `src/tools/audio.ts` ? `src/tools/handlers/audio-handlers.ts`
+- `src/tools/debug.ts` ? consolidated into system handlers
+- `src/tools/introspection.ts` ? `src/tools/handlers/inspect-handlers.ts`
+- `src/tools/materials.ts` ? `src/tools/handlers/material-authoring-handlers.ts`
+- `src/tools/performance.ts` ? `src/tools/handlers/performance-handlers.ts`
+- `src/tools/ui.ts` ? consolidated into widget handlers
+- `src/tools/input.ts` ? `src/tools/handlers/input-handlers.ts`
+- `src/tools/behavior-tree.ts` ? consolidated
+- `src/tools/engine.ts` ? consolidated
 
 </details>
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>NPM Package Updates</b></summary>
@@ -1477,7 +1484,7 @@ Removed deprecated standalone tool files (consolidated into handlers):
 
 </details>
 
-### 📊 Statistics
+### ?? Statistics
 
 - **Commits:** 55 non-merge commits
 - **Files Changed:** 185 files
@@ -1489,16 +1496,16 @@ Removed deprecated standalone tool files (consolidated into handlers):
 
 ---
 
-## 🏷️ [0.5.18] - 2026-02-21
+## ??? [0.5.18] - 2026-02-21
 
 > [!IMPORTANT]
-> ### 🔧 Installation, Documentation & Dependency Updates
+> ### ?? Installation, Documentation & Dependency Updates
 > This release fixes npm install failures when downloading from GitHub releases, adds first-time project setup guidance, and updates dependencies.
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🐛 npm install failure from release archives</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/215">#215</a>)</summary>
+<summary><b>?? npm install failure from release archives</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/215">#215</a>)</summary>
 
 | Issue | Root Cause | Fix |
 |-------|------------|-----|
@@ -1513,10 +1520,10 @@ Removed deprecated standalone tool files (consolidated into handlers):
 
 </details>
 
-### 📚 Documentation
+### ?? Documentation
 
 <details>
-<summary><b>📖 First-time project open instructions</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/112df08">112df08</a>)</summary>
+<summary><b>?? First-time project open instructions</b> (<a href="https://github.com/ChiR24/Unreal_mcp/commit/112df08">112df08</a>)</summary>
 
 Added guidance for users opening Unreal projects for the first time:
 - Explains UE prompt to rebuild missing modules
@@ -1525,7 +1532,7 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### ⬆️ Dependencies
+### ?? Dependencies
 
 | Package | From | To | PR |
 |---------|------|-----|-----|
@@ -1536,16 +1543,16 @@ Added guidance for users opening Unreal projects for the first time:
 
 ---
 
-## 🏷️ [0.5.17] - 2026-02-16
+## ??? [0.5.17] - 2026-02-16
 
 > [!IMPORTANT]
-> ### 🔧 World Tools Category Fixes & Security Hardening
+> ### ?? World Tools Category Fixes & Security Hardening
 > This release includes critical bug fixes, security hardening, and UE 5.7 compatibility improvements across all world-building tools (landscape, foliage, geometry, volumes, navigation).
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Path Validation & Input Sanitization</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/207">#207</a>)</summary>
+<summary><b>?? Path Validation & Input Sanitization</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/207">#207</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1562,10 +1569,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🐛 Landscape Handler Silent Fallback Bug</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
+<summary><b>?? Landscape Handler Silent Fallback Bug</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
 
 | Bug | Root Cause | Fix |
 |-----|------------|-----|
@@ -1578,7 +1585,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🐛 Rotation Yaw Bug</b> (McpAutomationBridge_LightingHandlers.cpp:200)</summary>
+<summary><b>?? Rotation Yaw Bug</b> (McpAutomationBridge_LightingHandlers.cpp:200)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1589,7 +1596,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🐛 Integer Overflow in Heightmap Operations</b> (McpAutomationBridge_LandscapeHandlers.cpp:631-635)</summary>
+<summary><b>?? Integer Overflow in Heightmap Operations</b> (McpAutomationBridge_LandscapeHandlers.cpp:631-635)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1600,7 +1607,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🐛 set_curve_key Success Reporting</b> (McpAutomationBridge_AnimationHandlers.cpp:2139)</summary>
+<summary><b>?? set_curve_key Success Reporting</b> (McpAutomationBridge_AnimationHandlers.cpp:2139)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1611,16 +1618,16 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🐛 CraftingSpeed Truncation</b> (McpAutomationBridge_InventoryHandlers.cpp:2716)</summary>
+<summary><b>?? CraftingSpeed Truncation</b> (McpAutomationBridge_InventoryHandlers.cpp:2716)</summary>
 
 | Bug | Fix |
 |-----|-----|
-| `int32 CraftingSpeed` truncated fractional multipliers (1.5 → 1) | Changed to `double` |
+| `int32 CraftingSpeed` truncated fractional multipliers (1.5 ? 1) | Changed to `double` |
 
 </details>
 
 <details>
-<summary><b>🐛 Invalid Color Fallback Not Applied</b> (McpAutomationBridge_LightingHandlers.cpp:277)</summary>
+<summary><b>?? Invalid Color Fallback Not Applied</b> (McpAutomationBridge_LightingHandlers.cpp:277)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1629,7 +1636,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🐛 Double-Validation in Snapshot Path</b> (src/tools/environment.ts:253, 322)</summary>
+<summary><b>?? Double-Validation in Snapshot Path</b> (src/tools/environment.ts:253, 322)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1638,7 +1645,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🐛 Intel GPU Driver Crash Prevention</b> (McpAutomationBridgeHelpers.h)</summary>
+<summary><b>?? Intel GPU Driver Crash Prevention</b> (McpAutomationBridgeHelpers.h)</summary>
 
 | Bug | Fix |
 |-----|-----|
@@ -1646,10 +1653,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🛤️ LOD Generation Enhancements</b> (McpAutomationBridge_GeometryHandlers.cpp)</summary>
+<summary><b>??? LOD Generation Enhancements</b> (McpAutomationBridge_GeometryHandlers.cpp)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1660,7 +1667,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🌿 FoliageType Auto-Creation</b> (McpAutomationBridge_FoliageHandlers.cpp)</summary>
+<summary><b>?? FoliageType Auto-Creation</b> (McpAutomationBridge_FoliageHandlers.cpp)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1670,7 +1677,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🏔️ Landscape Layer Auto-Creation</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
+<summary><b>??? Landscape Layer Auto-Creation</b> (McpAutomationBridge_LandscapeHandlers.cpp)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1679,7 +1686,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>📊 Handler Verification</b> (Multiple Handler Files)</summary>
+<summary><b>?? Handler Verification</b> (Multiple Handler Files)</summary>
 
 | Pattern | Description |
 |---------|-------------|
@@ -1692,10 +1699,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
-<summary><b>🎮 UE 5.7 Compatibility</b></summary>
+<summary><b>?? UE 5.7 Compatibility</b></summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1709,7 +1716,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>📈 Performance Improvements</b></summary>
+<summary><b>?? Performance Improvements</b></summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1719,7 +1726,7 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### 📊 Statistics
+### ?? Statistics
 
 - **Files Changed:** 70 files
 - **Lines Added:** ~7,200
@@ -1729,16 +1736,16 @@ Added guidance for users opening Unreal projects for the first time:
 
 ---
 
-## 🏷️ [0.5.16] - 2026-02-12
+## ??? [0.5.16] - 2026-02-12
 
 > [!IMPORTANT]
-> ### 🚀 Major Feature Release: 200+ Action Handlers
+> ### ?? Major Feature Release: 200+ Action Handlers
 > This release adds ~200 new C++ automation sub-actions across all domains, introduces progress heartbeat protocol for long-running operations, dynamic tool management, IPv6 support, and comprehensive security hardening.
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🎮 200+ MCP Action Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/200">#200</a>)</summary>
+<summary><b>?? 200+ MCP Action Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/200">#200</a>)</summary>
 
 | Domain | New Actions |
 |--------|-------------|
@@ -1767,7 +1774,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>💓 Progress Heartbeat Protocol</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/201">#201</a>)</summary>
+<summary><b>?? Progress Heartbeat Protocol</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/201">#201</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1778,12 +1785,12 @@ Added guidance for users opening Unreal projects for the first time:
 | **Max Extensions** | 10 extensions per request |
 
 **Timeout Changes:**
-- Default request timeout: 60s → 30s (extensions handle slow ops)
+- Default request timeout: 60s ? 30s (extensions handle slow ops)
 
 </details>
 
 <details>
-<summary><b>🔧 Dynamic Tool Management</b></summary>
+<summary><b>?? Dynamic Tool Management</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1795,7 +1802,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🌐 IPv6 Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/194">#194</a>)</summary>
+<summary><b>?? IPv6 Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/194">#194</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1807,10 +1814,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Security Hardening</b></summary>
+<summary><b>?? Security Hardening</b></summary>
 
 | Function | Description |
 |----------|-------------|
@@ -1826,7 +1833,7 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>🔒 String Escaping Fix</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/202">#202</a>)</summary>
+<summary><b>?? String Escaping Fix</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/202">#202</a>)</summary>
 
 | Issue | Fix |
 |-------|-----|
@@ -1834,10 +1841,10 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
-<summary><b>🎮 UE 5.7 Compatibility Fixes</b></summary>
+<summary><b>?? UE 5.7 Compatibility Fixes</b></summary>
 
 | Component | Change |
 |-----------|--------|
@@ -1849,21 +1856,21 @@ Added guidance for users opening Unreal projects for the first time:
 </details>
 
 <details>
-<summary><b>⚡ Performance & Infrastructure</b></summary>
+<summary><b>? Performance & Infrastructure</b></summary>
 
 | Change | Description |
 |--------|-------------|
 | **Memory Detection** | Windows `GlobalMemoryStatusEx` replaces heuristic detection |
-| **Rate Limit** | `MaxAutomationRequestsPerMinute` raised 120 → 600 |
+| **Rate Limit** | `MaxAutomationRequestsPerMinute` raised 120 ? 600 |
 | **Logging** | Improved request/response logging with action name and filtered payload preview |
 | **Blueprint Handler** | Variable name collision generates unique suffix, type validation before loading |
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🐛 Various Fixes</b></summary>
+<summary><b>?? Various Fixes</b></summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1874,7 +1881,7 @@ Added guidance for users opening Unreal projects for the first time:
 
 </details>
 
-### 📊 Statistics
+### ?? Statistics
 
 - **Files Changed:** 83 files
 - **Lines Added:** ~23,000
@@ -1884,16 +1891,16 @@ Added guidance for users opening Unreal projects for the first time:
 
 ---
 
-## 🏷️ [0.5.15] - 2026-02-06
+## ??? [0.5.15] - 2026-02-06
 
 > [!NOTE]
-> ### 🌐 Network Configuration Release
+> ### ?? Network Configuration Release
 > This release adds support for non-loopback binding in automation bridge settings, enabling LAN access configuration.
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🌐 Non-Loopback Binding Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/193">#193</a>)</summary>
+<summary><b>?? Non-Loopback Binding Support</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/193">#193</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1913,19 +1920,19 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>Dependabot Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `github/codeql-action` | 4.32.1 → 4.32.2 | [#189](https://github.com/ChiR24/Unreal_mcp/pull/189) |
+| `github/codeql-action` | 4.32.1 ? 4.32.2 | [#189](https://github.com/ChiR24/Unreal_mcp/pull/189) |
 | Dependencies group | 2 updates | [#190](https://github.com/ChiR24/Unreal_mcp/pull/190) |
 
 </details>
 
-### 📊 Statistics
+### ?? Statistics
 
 - **Files Changed:** 8 files
 - **Lines Added:** ~270
@@ -1933,20 +1940,20 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ---
 
-## 🏷️ [0.5.14] - 2026-02-05
+## ??? [0.5.14] - 2026-02-05
 
 > [!IMPORTANT]
-> ### 🔐 TLS & Network Security Release
+> ### ?? TLS & Network Security Release
 > This release introduces TLS/SSL support for secure WebSocket connections (`wss://`), per-connection rate limiting, loopback-only network binding enforcement, and authentication state tracking for the Automation Bridge.
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Loopback-Only Binding & Handshake Enforcement</b> (<code>70c2745</code>)</summary>
+<summary><b>?? Loopback-Only Binding & Handshake Enforcement</b> (<code>70c2745</code>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 HIGH |
+| **Severity** | ?? HIGH |
 | **Loopback Binding** | Automation Bridge now only binds to loopback addresses (127.0.0.1 or ::1) |
 | **Handshake Required** | Automation requests require completed `bridge_hello` handshake |
 
@@ -1961,10 +1968,10 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🔐 TLS/SSL, Rate Limiting & Schema Validation</b> (<code>d2a94cf</code>)</summary>
+<summary><b>?? TLS/SSL, Rate Limiting & Schema Validation</b> (<code>d2a94cf</code>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -1985,10 +1992,10 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🔧 TLS Memory Management</b> (<code>321206e</code>)</summary>
+<summary><b>?? TLS Memory Management</b> (<code>321206e</code>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -1998,7 +2005,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>🔧 Thread Safety & TLS Error Handling</b> (<code>6fd1553</code>)</summary>
+<summary><b>?? Thread Safety & TLS Error Handling</b> (<code>6fd1553</code>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -2008,7 +2015,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>🔧 Review Feedback Fixes</b> (<code>8987a3e</code>)</summary>
+<summary><b>?? Review Feedback Fixes</b> (<code>8987a3e</code>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -2017,14 +2024,14 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>NPM Package Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `@modelcontextprotocol/sdk` | 1.25.3 → 1.26.0 | [#187](https://github.com/ChiR24/Unreal_mcp/pull/187) |
+| `@modelcontextprotocol/sdk` | 1.25.3 ? 1.26.0 | [#187](https://github.com/ChiR24/Unreal_mcp/pull/187) |
 | `mcp-client-capabilities` | Latest | [#186](https://github.com/ChiR24/Unreal_mcp/pull/186) |
 
 </details>
@@ -2034,27 +2041,27 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `github/codeql-action` | 4.32.0 → 4.32.1 | [#185](https://github.com/ChiR24/Unreal_mcp/pull/185) |
-| `actions/github-script` | 7.0.1 → 8.0.0 | [#184](https://github.com/ChiR24/Unreal_mcp/pull/184) |
+| `github/codeql-action` | 4.32.0 ? 4.32.1 | [#185](https://github.com/ChiR24/Unreal_mcp/pull/185) |
+| `actions/github-script` | 7.0.1 ? 8.0.0 | [#184](https://github.com/ChiR24/Unreal_mcp/pull/184) |
 
 </details>
 
 ---
 
-## 🏷️ [0.5.13] - 2026-02-02
+## ??? [0.5.13] - 2026-02-02
 
 > [!IMPORTANT]
-> ### 🛡️ Security & Compatibility Release
+> ### ??? Security & Compatibility Release
 > This release includes multiple critical security fixes for command injection and path traversal vulnerabilities, along with full Unreal Engine 5.0 backward compatibility and WebSocket stability improvements.
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Command Injection in UITools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/144">#144</a>)</summary>
+<summary><b>?? Command Injection in UITools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/144">#144</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 HIGH |
+| **Severity** | ?? HIGH |
 | **Vulnerability** | Command injection via unsanitized user input in widget creation |
 | **Fix** | Added `sanitizeConsoleString()` and applied `sanitizeAssetName()` to all user-provided identifiers |
 | **Contributors** | @google-labs-jules[bot] |
@@ -2062,11 +2069,11 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>🔒 Command Injection in LevelTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/179">#179</a>)</summary>
+<summary><b>?? Command Injection in LevelTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/179">#179</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 HIGH |
+| **Severity** | ?? HIGH |
 | **Vulnerability** | Command injection via level names, event types, and game mode parameters |
 | **Fix** | Added `sanitizeCommandArgument()` and applied to all console command parameters |
 | **Contributors** | @google-labs-jules[bot] |
@@ -2074,21 +2081,21 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>🔒 Path Traversal in Asset Listing</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/163">#163</a>)</summary>
+<summary><b>?? Path Traversal in Asset Listing</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/163">#163</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 HIGH |
+| **Severity** | ?? HIGH |
 | **Vulnerability** | Path traversal in `listAssets` via `filter.pathStartsWith` parameter |
 | **Fix** | Applied `normalizeAndSanitizePath()` to GraphQL `listAssets` and asset handler `list` action |
 | **Contributors** | @google-labs-jules[bot] |
 
 </details>
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🎮 Unreal Engine 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/183">#183</a>)</summary>
+<summary><b>?? Unreal Engine 5.0 Compatibility</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/183">#183</a>)</summary>
 
 | Component | Description |
 |-----------|-------------|
@@ -2105,10 +2112,10 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🔌 WebSocket Stability</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/180">#180</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/181">#181</a>)</summary>
+<summary><b>?? WebSocket Stability</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/180">#180</a>, <a href="https://github.com/ChiR24/Unreal_mcp/pull/181">#181</a>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -2121,7 +2128,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>🔧 Resource Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/165">#165</a>)</summary>
+<summary><b>?? Resource Handlers</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/165">#165</a>)</summary>
 
 - Fixed broken actors and level resource handlers
 - Added missing actors and level resources to MCP resource list
@@ -2131,7 +2138,7 @@ MCP_AUTOMATION_HOST=0.0.0.0
 </details>
 
 <details>
-<summary><b>🔧 Other Fixes</b></summary>
+<summary><b>?? Other Fixes</b></summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -2142,20 +2149,20 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### 🧪 Testing
+### ?? Testing
 
 - Added security regression tests for UITools, LevelTools, and asset handlers
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `release-drafter/release-drafter` | 6.1.1 → 6.2.0 | [#160](https://github.com/ChiR24/Unreal_mcp/pull/160) |
-| `actions/checkout` | 6.0.1 → 6.0.2 | [#161](https://github.com/ChiR24/Unreal_mcp/pull/161) |
-| `github/codeql-action` | 4.31.10 → 4.32.0 | [#168](https://github.com/ChiR24/Unreal_mcp/pull/168), [#170](https://github.com/ChiR24/Unreal_mcp/pull/170) |
+| `release-drafter/release-drafter` | 6.1.1 ? 6.2.0 | [#160](https://github.com/ChiR24/Unreal_mcp/pull/160) |
+| `actions/checkout` | 6.0.1 ? 6.0.2 | [#161](https://github.com/ChiR24/Unreal_mcp/pull/161) |
+| `github/codeql-action` | 4.31.10 ? 4.32.0 | [#168](https://github.com/ChiR24/Unreal_mcp/pull/168), [#170](https://github.com/ChiR24/Unreal_mcp/pull/170) |
 | `google-github-actions/run-gemini-cli` | Latest | [#177](https://github.com/ChiR24/Unreal_mcp/pull/177) |
 
 </details>
@@ -2166,37 +2173,37 @@ MCP_AUTOMATION_HOST=0.0.0.0
 | Package | Update | PR |
 |---------|--------|-----|
 | `@modelcontextprotocol/sdk` | Latest | [#154](https://github.com/ChiR24/Unreal_mcp/pull/154) |
-| `hono` | 4.11.4 → 4.11.7 | [#173](https://github.com/ChiR24/Unreal_mcp/pull/173) |
+| `hono` | 4.11.4 ? 4.11.7 | [#173](https://github.com/ChiR24/Unreal_mcp/pull/173) |
 | `@types/node` | Various updates | [#158](https://github.com/ChiR24/Unreal_mcp/pull/158), [#162](https://github.com/ChiR24/Unreal_mcp/pull/162), [#175](https://github.com/ChiR24/Unreal_mcp/pull/175) |
 
 </details>
 
 ---
 
-## 🏷️ [0.5.12] - 2026-01-15
+## ??? [0.5.12] - 2026-01-15
 
 > [!NOTE]
-> ### 🔧 Handler Synchronization Release
+> ### ?? Handler Synchronization Release
 > This release focuses on synchronizing TypeScript handler parameters with C++ handlers and dependency updates.
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🔧 TS Handler Parameter Sync</b> (<code>5953232</code>)</summary>
+<summary><b>?? TS Handler Parameter Sync</b> (<code>5953232</code>)</summary>
 
 - Synchronized TypeScript handler parameters with C++ handlers for consistency
 - Fixed parameter mapping issues between TS and C++ layers
 
 </details>
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `release-drafter/release-drafter` | 6.1.0 → 6.1.1 | [#141](https://github.com/ChiR24/Unreal_mcp/pull/141) |
+| `release-drafter/release-drafter` | 6.1.0 ? 6.1.1 | [#141](https://github.com/ChiR24/Unreal_mcp/pull/141) |
 | `google-github-actions/run-gemini-cli` | Latest | [#142](https://github.com/ChiR24/Unreal_mcp/pull/142) |
 
 </details>
@@ -2212,84 +2219,84 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 ---
 
-## 🏷️ [0.5.11] - 2026-01-12
+## ??? [0.5.11] - 2026-01-12
 
 > [!IMPORTANT]
-> ### 🛡️ Security Hardening & UE 5.7 Compatibility
+> ### ??? Security Hardening & UE 5.7 Compatibility
 > This release includes multiple critical security fixes for path traversal and command injection vulnerabilities, along with UE 5.7 Interchange compatibility fixes.
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Path Traversal in Asset Import</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/125">#125</a>)</summary>
+<summary><b>?? Path Traversal in Asset Import</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/125">#125</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 CRITICAL |
+| **Severity** | ?? CRITICAL |
 | **Vulnerability** | Path traversal in asset import functionality |
 | **Fix** | Added path sanitization and validation |
 
 </details>
 
 <details>
-<summary><b>🔒 Command Injection Bypass</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/122">#122</a>)</summary>
+<summary><b>?? Command Injection Bypass</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/122">#122</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 CRITICAL |
+| **Severity** | ?? CRITICAL |
 | **Vulnerability** | Command injection bypass via flexible whitespace |
 | **Fix** | Enhanced command validation to detect and block bypass attempts |
 
 </details>
 
 <details>
-<summary><b>🔒 Path Traversal in Screenshots</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/120">#120</a>)</summary>
+<summary><b>?? Path Traversal in Screenshots</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/120">#120</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 HIGH |
+| **Severity** | ?? HIGH |
 | **Vulnerability** | Path traversal in screenshot filenames |
 | **Fix** | Implemented filename sanitization and path validation |
 
 </details>
 
 <details>
-<summary><b>🔒 Path Traversal in GraphQL</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/135">#135</a>)</summary>
+<summary><b>?? Path Traversal in GraphQL</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/135">#135</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 HIGH |
+| **Severity** | ?? HIGH |
 | **Vulnerability** | Path traversal in GraphQL resolvers |
 | **Fix** | Added input sanitization for GraphQL resolver paths |
 
 </details>
 
 <details>
-<summary><b>🔒 GraphQL CORS Configuration</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/118">#118</a>)</summary>
+<summary><b>?? GraphQL CORS Configuration</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/118">#118</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 MEDIUM |
+| **Severity** | ?? MEDIUM |
 | **Vulnerability** | Insecure GraphQL CORS configuration |
 | **Fix** | Implemented secure CORS policy |
 
 </details>
 
 <details>
-<summary><b>🔒 Enhanced Command Validation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/113">#113</a>)</summary>
+<summary><b>?? Enhanced Command Validation</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/113">#113</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 HIGH |
+| **Severity** | ?? HIGH |
 | **Vulnerability** | Command injection bypasses |
 | **Fix** | Enhanced validation patterns to prevent injection bypasses |
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>🐛 UE 5.7 Asset Import Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/138">#138</a>)</summary>
+<summary><b>?? UE 5.7 Asset Import Crash</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/138">#138</a>)</summary>
 
 | Fix | Description |
 |-----|-------------|
@@ -2300,15 +2307,15 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 </details>
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>NPM Package Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `@modelcontextprotocol/sdk` | 1.25.1 → 1.25.2 | [#119](https://github.com/ChiR24/Unreal_mcp/pull/119) |
-| `hono` | 4.11.1 → 4.11.4 | [#129](https://github.com/ChiR24/Unreal_mcp/pull/129) |
+| `@modelcontextprotocol/sdk` | 1.25.1 ? 1.25.2 | [#119](https://github.com/ChiR24/Unreal_mcp/pull/119) |
+| `hono` | 4.11.1 ? 4.11.4 | [#129](https://github.com/ChiR24/Unreal_mcp/pull/129) |
 | `@types/node` | Various updates | [#130](https://github.com/ChiR24/Unreal_mcp/pull/130), [#133](https://github.com/ChiR24/Unreal_mcp/pull/133), [#134](https://github.com/ChiR24/Unreal_mcp/pull/134) |
 
 </details>
@@ -2318,24 +2325,24 @@ MCP_AUTOMATION_HOST=0.0.0.0
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `github/codeql-action` | 4.31.9 → 4.31.10 | [#126](https://github.com/ChiR24/Unreal_mcp/pull/126) |
-| `actions/setup-node` | 6.1.0 → 6.2.0 | [#133](https://github.com/ChiR24/Unreal_mcp/pull/133) |
-| `dependabot/fetch-metadata` | 2.4.0 → 2.5.0 | [#114](https://github.com/ChiR24/Unreal_mcp/pull/114) |
+| `github/codeql-action` | 4.31.9 ? 4.31.10 | [#126](https://github.com/ChiR24/Unreal_mcp/pull/126) |
+| `actions/setup-node` | 6.1.0 ? 6.2.0 | [#133](https://github.com/ChiR24/Unreal_mcp/pull/133) |
+| `dependabot/fetch-metadata` | 2.4.0 ? 2.5.0 | [#114](https://github.com/ChiR24/Unreal_mcp/pull/114) |
 
 </details>
 
 ---
 
-## 🏷️ [0.5.10] - 2026-01-04
+## ??? [0.5.10] - 2026-01-04
 
 > [!IMPORTANT]
-> ### 🚀 Context Reduction Initiative & Spline System
+> ### ?? Context Reduction Initiative & Spline System
 > This release implements the **Context Reduction Initiative** (Phases 48-53), reducing AI context overhead from ~78,000 to ~25,000 tokens, and adds a complete **Spline System** (Phase 26) with 21 new actions. ([#107](https://github.com/ChiR24/Unreal_mcp/pull/107), [#105](https://github.com/ChiR24/Unreal_mcp/pull/105))
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🛤️ Spline System (Phase 26)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/105">#105</a>)</summary>
+<summary><b>??? Spline System (Phase 26)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/105">#105</a>)</summary>
 
 New `manage_splines` tool with 21 actions for spline-based content creation:
 
@@ -2355,7 +2362,7 @@ New `manage_splines` tool with 21 actions for spline-based content creation:
 </details>
 
 <details>
-<summary><b>🔧 Pipeline Management Tool</b></summary>
+<summary><b>?? Pipeline Management Tool</b></summary>
 
 New `manage_pipeline` tool for dynamic tool category management:
 
@@ -2372,10 +2379,10 @@ New `manage_pipeline` tool for dynamic tool category management:
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
-<summary><b>📉 Context Reduction Initiative (Phases 48-53)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/107">#107</a>)</summary>
+<summary><b>?? Context Reduction Initiative (Phases 48-53)</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/107">#107</a>)</summary>
 
 | Phase | Description | Token Reduction |
 |-------|-------------|-----------------|
@@ -2394,7 +2401,7 @@ New `manage_pipeline` tool for dynamic tool category management:
 </details>
 
 <details>
-<summary><b>🔀 Tool Consolidation (Phase 53)</b></summary>
+<summary><b>?? Tool Consolidation (Phase 53)</b></summary>
 
 | Deprecated Tool | Merged Into | Actions Moved |
 |-----------------|-------------|---------------|
@@ -2404,21 +2411,21 @@ New `manage_pipeline` tool for dynamic tool category management:
 | `manage_animation_authoring` | `animation_physics` | 45 authoring actions |
 
 **Benefits:**
-- Reduced tool count: 38 → 35
+- Reduced tool count: 38 ? 35
 - Simplified tool discovery for AI assistants
 - Backward compatible: deprecated tools still work with once-per-session warnings
 - Action routing uses parameter sniffing to resolve conflicts
 
 </details>
 
-### ⚠️ Deprecated
+### ?? Deprecated
 
 - `manage_blueprint_graph` - Use `manage_blueprint` with graph actions instead
 - `manage_audio_authoring` - Use `manage_audio` with authoring actions instead
 - `manage_niagara_authoring` - Use `manage_effect` with authoring actions instead
 - `manage_animation_authoring` - Use `animation_physics` with authoring actions instead
 
-### 📊 Statistics
+### ?? Statistics
 
 - **Files Changed:** 20
 - **Lines Added:** 4,541
@@ -2428,26 +2435,26 @@ New `manage_pipeline` tool for dynamic tool category management:
 - **New TS Handler:** 169 lines (`spline-handlers.ts`)
 - **Common Schemas Added:** 50+ reusable schema definitions
 
-### 🔗 Related Issues
+### ?? Related Issues
 
 Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://github.com/ChiR24/Unreal_mcp/issues/106), [#108](https://github.com/ChiR24/Unreal_mcp/issues/108), [#109](https://github.com/ChiR24/Unreal_mcp/issues/109), [#111](https://github.com/ChiR24/Unreal_mcp/issues/111)
 
 ---
 
-## 🏷️ [0.5.9] - 2026-01-03
+## ??? [0.5.9] - 2026-01-03
 
 > [!IMPORTANT]
-> ### 🎮 Major Feature Release
+> ### ?? Major Feature Release
 > This release introduces **15+ new automation tools** with comprehensive handlers for Navigation, Volumes, Level Structure, Sessions, Game Framework, and complete game development systems. ([#53](https://github.com/ChiR24/Unreal_mcp/pull/53))
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Fix Arbitrary File Read in LogTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/103">#103</a>)</summary>
+<summary><b>?? Fix Arbitrary File Read in LogTools</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/103">#103</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 CRITICAL |
+| **Severity** | ?? CRITICAL |
 | **Vulnerability** | Arbitrary file read via `logPath` parameter |
 | **Impact** | Attackers could read any file on the system by manipulating the `logPath` override |
 | **Fix** | Validated that `logPath` ends with `.log` and is within `Saved/Logs` directory |
@@ -2459,10 +2466,10 @@ Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://g
 
 </details>
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🛠️ New Automation Tools</b></summary>
+<summary><b>??? New Automation Tools</b></summary>
 
 | Tool | Description |
 |------|-------------|
@@ -2488,7 +2495,7 @@ Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://g
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
 <summary><b>Build & Infrastructure Improvements</b></summary>
@@ -2502,43 +2509,43 @@ Closes [#104](https://github.com/ChiR24/Unreal_mcp/issues/104), [#106](https://g
 
 </details>
 
-### 📊 Statistics
+### ?? Statistics
 
 - **New Tools:** 15+
 - **New C++ Handler Files:** 20+
 
 ---
 
-## 🏷️ [0.5.8] - 2026-01-02
+## ??? [0.5.8] - 2026-01-02
 
 > [!IMPORTANT]
-> ### 🛡️ Security Release
+> ### ??? Security Release
 > Critical security fix for path traversal vulnerability and material graph parameter improvements.
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Fix Path Traversal in INI Reader</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/48">#48</a>)</summary>
+<summary><b>?? Fix Path Traversal in INI Reader</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/48">#48</a>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 CRITICAL |
+| **Severity** | ?? CRITICAL |
 | **Vulnerability** | Path traversal in `getProjectSetting()` |
 | **Impact** | Attackers could access arbitrary files by injecting `../` sequences into the category parameter |
 | **Fix** | Added strict regex validation `^[a-zA-Z0-9_-]+$` to `cleanCategory` in `src/utils/ini-reader.ts` |
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
 <summary><b>Material Graph Parameter Mapping</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/50">#50</a>)</summary>
 
 | Schema Parameter | C++ Handler Expected | Status |
 |------------------|---------------------|--------|
-| `fromNodeId` | `sourceNodeId` | ✅ Auto-mapped |
-| `toNodeId` | `targetNodeId` | ✅ Auto-mapped |
-| `toPin` | `inputName` | ✅ Auto-mapped |
+| `fromNodeId` | `sourceNodeId` | ? Auto-mapped |
+| `toNodeId` | `targetNodeId` | ? Auto-mapped |
+| `toPin` | `inputName` | ? Auto-mapped |
 
 Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
 
@@ -2546,27 +2553,27 @@ Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
 
 ---
 
-## 🏷️ [0.5.7] - 2026-01-01
+## ??? [0.5.7] - 2026-01-01
 
 > [!IMPORTANT]
-> ### 🛡️ Security Release
+> ### ??? Security Release
 > Critical security fix for Python execution bypass vulnerability.
 
-### 🛡️ Security
+### ??? Security
 
 <details>
-<summary><b>🔒 Fix Python Execution Bypass</b> (<code>e16dab0</code>)</summary>
+<summary><b>?? Fix Python Execution Bypass</b> (<code>e16dab0</code>)</summary>
 
 | Aspect | Details |
 |--------|---------|
-| **Severity** | 🚨 CRITICAL |
+| **Severity** | ?? CRITICAL |
 | **Vulnerability** | Python execution restriction bypass |
 | **Impact** | Attackers could execute arbitrary Python code by using tabs instead of spaces after the `py` command |
 | **Fix** | Updated `CommandValidator` to use regex `^py(?:\s|$)` which correctly matches `py` followed by any whitespace |
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
 <summary><b>Release Process Improvements</b></summary>
@@ -2576,31 +2583,31 @@ Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
 
 </details>
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>Package Updates</b></summary>
 
 | Package | Update | Type |
 |---------|--------|------|
-| `zod` | 4.2.1 → 4.3.4 | Minor |
-| `qs` | 6.14.0 → 6.14.1 | Patch (indirect) |
-| `github/codeql-action` | 3.28.1 → 4.31.9 | Major |
+| `zod` | 4.2.1 ? 4.3.4 | Minor |
+| `qs` | 6.14.0 ? 6.14.1 | Patch (indirect) |
+| `github/codeql-action` | 3.28.1 ? 4.31.9 | Major |
 
 </details>
 
 ---
 
-## 🏷️ [0.5.6] - 2025-12-30
+## ??? [0.5.6] - 2025-12-30
 
 > [!IMPORTANT]
-> ### 🛡️ Type Safety Milestone
+> ### ??? Type Safety Milestone
 > This release achieves **near-zero `any` type usage** across the entire codebase. All tool interfaces, handlers, automation bridge, GraphQL resolvers, and WASM integration now use strict TypeScript types with `unknown` and proper type guards.
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>📐 New Zod Schema Infrastructure</b></summary>
+<summary><b>?? New Zod Schema Infrastructure</b></summary>
 
 | File | Description |
 |------|-------------|
@@ -2614,7 +2621,7 @@ Closes [#49](https://github.com/ChiR24/Unreal_mcp/issues/49)
 </details>
 
 <details>
-<summary><b>🔧 Type-Safe Argument Helpers</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>?? Type-Safe Argument Helpers</b> (<code>d5e6d1e</code>)</summary>
 
 New extraction functions in `argument-helper.ts`:
 
@@ -2640,7 +2647,7 @@ New extraction functions in `argument-helper.ts`:
 </details>
 
 <details>
-<summary><b>🔌 WASM Module Interface</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>?? WASM Module Interface</b> (<code>d5e6d1e</code>)</summary>
 
 Defined structured `WASMModule` interface replacing `any`:
 
@@ -2656,7 +2663,7 @@ interface WASMModule {
 </details>
 
 <details>
-<summary><b>📝 Automation Bridge Types</b> (<code>f97b008</code>)</summary>
+<summary><b>?? Automation Bridge Types</b> (<code>f97b008</code>)</summary>
 
 | Type | Location | Description |
 |------|----------|-------------|
@@ -2666,10 +2673,10 @@ interface WASMModule {
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
-<summary><b>🎯 Tool Interfaces Refactored</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>?? Tool Interfaces Refactored</b> (<code>d5e6d1e</code>)</summary>
 
 **ITools Interface - Replaced all `any` with concrete types:**
 
@@ -2692,20 +2699,20 @@ interface WASMModule {
 | Index signature | `[key: string]: any` | `[key: string]: unknown` |
 
 **StandardActionResponse:**
-- Changed `StandardActionResponse<T = any>` → `StandardActionResponse<T = unknown>`
+- Changed `StandardActionResponse<T = any>` ? `StandardActionResponse<T = unknown>`
 
 **IBlueprintTools:**
-- `operations: any[]` → `operations: Array<Record<string, unknown>>`
-- `defaultValue?: any` → `defaultValue?: unknown`
-- `propertyValue: any` → `propertyValue: unknown`
+- `operations: any[]` ? `operations: Array<Record<string, unknown>>`
+- `defaultValue?: any` ? `defaultValue?: unknown`
+- `propertyValue: any` ? `propertyValue: unknown`
 
 **IAssetResources:**
-- `list(): Promise<any>` → `list(): Promise<Record<string, unknown>>`
+- `list(): Promise<any>` ? `list(): Promise<Record<string, unknown>>`
 
 </details>
 
 <details>
-<summary><b>🔷 GraphQL Resolvers Type Safety</b> (<code>f97b008</code>, <code>fa4dddc</code>)</summary>
+<summary><b>?? GraphQL Resolvers Type Safety</b> (<code>f97b008</code>, <code>fa4dddc</code>)</summary>
 
 All scalar resolvers now use typed parameters:
 
@@ -2717,14 +2724,14 @@ All scalar resolvers now use typed parameters:
 | `JSON.parseLiteral` | `(ast: any)` | `(ast: ASTNode): unknown` |
 
 **Internal interfaces typed:**
-- `Asset.metadata?: Record<string, any>` → `Record<string, unknown>`
-- `Actor.properties?: Record<string, any>` → `Record<string, unknown>`
-- `Blueprint.defaultValue?: any` → `unknown`
+- `Asset.metadata?: Record<string, any>` ? `Record<string, unknown>`
+- `Actor.properties?: Record<string, any>` ? `Record<string, unknown>`
+- `Blueprint.defaultValue?: any` ? `unknown`
 
 </details>
 
 <details>
-<summary><b>🌐 Automation Bridge Type Safety</b> (<code>f97b008</code>)</summary>
+<summary><b>?? Automation Bridge Type Safety</b> (<code>f97b008</code>)</summary>
 
 | Location | Before | After |
 |----------|--------|-------|
@@ -2737,7 +2744,7 @@ All scalar resolvers now use typed parameters:
 </details>
 
 <details>
-<summary><b>🔌 WASM Integration Type Safety</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>?? WASM Integration Type Safety</b> (<code>d5e6d1e</code>)</summary>
 
 | Method | Before | After |
 |--------|--------|-------|
@@ -2751,16 +2758,16 @@ All scalar resolvers now use typed parameters:
 </details>
 
 <details>
-<summary><b>📊 Handler Types Expanded</b> (<code>d5e6d1e</code>)</summary>
+<summary><b>?? Handler Types Expanded</b> (<code>d5e6d1e</code>)</summary>
 
 `src/types/handler-types.ts` expanded with 147+ lines of new typed interfaces for all handler argument types.
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>✅ extractOptionalArray Behavior</b> (<code>f97b008</code>)</summary>
+<summary><b>? extractOptionalArray Behavior</b> (<code>f97b008</code>)</summary>
 
 - Now returns `undefined` (instead of throwing) when value is not an array
 - Documented behavior: graceful fallback for type mismatches
@@ -2768,24 +2775,24 @@ All scalar resolvers now use typed parameters:
 
 </details>
 
-### 📊 Statistics
+### ?? Statistics
 
 - **Files Changed:** 70 source files
 - **Lines Added:** 3,806
 - **Lines Removed:** 1,816
 - **Net Change:** +1,990 lines (mostly type definitions)
 - **New Schema Files:** 4 (981 lines total)
-- **`any` → `unknown` Replacements:** 100+ occurrences
+- **`any` ? `unknown` Replacements:** 100+ occurrences
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
 
 | Package | Update | PR |
 |---------|--------|-----|
-| `actions/first-interaction` | 1.3.0 → 3.1.0 | [#38](https://github.com/ChiR24/Unreal_mcp/pull/38) |
-| `actions/labeler` | 5.0.0 → 6.0.1 | Dependabot |
+| `actions/first-interaction` | 1.3.0 ? 3.1.0 | [#38](https://github.com/ChiR24/Unreal_mcp/pull/38) |
+| `actions/labeler` | 5.0.0 ? 6.0.1 | Dependabot |
 | `github/codeql-action` | SHA update | Dependabot |
 | `release-drafter/release-drafter` | SHA update | Dependabot |
 | Dev dependencies group | 2 updates | Dependabot |
@@ -2794,16 +2801,16 @@ All scalar resolvers now use typed parameters:
 
 ---
 
-## 🏷️ [0.5.5] - 2025-12-29
+## ??? [0.5.5] - 2025-12-29
 
 > [!NOTE]
-> ### 📝 Quality & Validation Release
+> ### ?? Quality & Validation Release
 > This release focuses on **input validation**, **structured logging**, and **developer experience** improvements. WebSocket connections now enforce message size limits, Blueprint graph editing supports user-friendly node names, and all tools use structured logging.
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🔌 WebSocket Message Size Limits</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
+<summary><b>?? WebSocket Message Size Limits</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -2819,7 +2826,7 @@ All scalar resolvers now use typed parameters:
 </details>
 
 <details>
-<summary><b>🔷 Blueprint Node Type Aliases</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+<summary><b>?? Blueprint Node Type Aliases</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
 
 User-friendly node names now map to internal K2Node classes:
 
@@ -2843,7 +2850,7 @@ User-friendly node names now map to internal K2Node classes:
 </details>
 
 <details>
-<summary><b>🌳 Behavior Tree Generic Node Types</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+<summary><b>?? Behavior Tree Generic Node Types</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
 
 | Node Type | Default Class | Category |
 |-----------|---------------|----------|
@@ -2857,7 +2864,7 @@ Aliases for common BT nodes: `Wait`, `MoveTo`, `PlaySound`, `Cooldown`, `Loop`, 
 </details>
 
 <details>
-<summary><b>📊 show_stats Action</b></summary>
+<summary><b>?? show_stats Action</b></summary>
 
 New `show_stats` action in `system_control` tool:
 - Toggle engine stats display (`stat Unit`, `stat FPS`, etc.)
@@ -2865,10 +2872,10 @@ New `show_stats` action in `system_control` tool:
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
-<summary><b>📋 Structured Logging</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
+<summary><b>?? Structured Logging</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/36">#36</a>)</summary>
 
 Replaced `console.error`/`console.warn` with structured `Logger` across all tools:
 
@@ -2883,7 +2890,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>🎯 Handler Response Improvements</b></summary>
+<summary><b>?? Handler Response Improvements</b></summary>
 
 | Handler | Change |
 |---------|--------|
@@ -2893,10 +2900,10 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 <details>
-<summary><b>✅ Input Validation Enhancements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
+<summary><b>? Input Validation Enhancements</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/37">#37</a>)</summary>
 
 | Handler | Validation Added |
 |---------|------------------|
@@ -2911,7 +2918,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>🔧 WASM Binding Patching</b> (<code>7cc602a</code>)</summary>
+<summary><b>?? WASM Binding Patching</b> (<code>7cc602a</code>)</summary>
 
 - Fixed TOCTOU (Time-of-Check-Time-of-Use) race condition in `patch-wasm.js`
 - Uses atomic file operations with file descriptors (`openSync`, `ftruncateSync`, `writeSync`)
@@ -2919,10 +2926,10 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🗑️ Removed
+### ??? Removed
 
 <details>
-<summary><b>🧹 Code Cleanup</b></summary>
+<summary><b>?? Code Cleanup</b></summary>
 
 | Removed | Lines | Reason |
 |---------|-------|--------|
@@ -2932,7 +2939,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 📊 Statistics
+### ?? Statistics
 
 - **Files Changed:** 28+ source files
 - **Lines Removed:** 436 (cleanup)
@@ -2941,13 +2948,13 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 ---
 
-## 🏷️ [0.5.4] - 2025-12-27
+## ??? [0.5.4] - 2025-12-27
 
 > [!IMPORTANT]
-> ### 🛡️ Security Release
+> ### ??? Security Release
 > This release focuses on **security hardening** and **defensive improvements** across the entire stack, including command injection prevention, network isolation, and resource management.
 
-### 🛡️ Security & Command Hardening
+### ??? Security & Command Hardening
 
 <details>
 <summary><b>UBT Validation & Safe Execution</b></summary>
@@ -2961,7 +2968,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🌐 Network & Host Binding
+### ?? Network & Host Binding
 
 <details>
 <summary><b>Localhost Default & Remote Configuration</b></summary>
@@ -2975,7 +2982,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🚦 Resource Management
+### ?? Resource Management
 
 <details>
 <summary><b>Rate Limiting & Queue Management</b></summary>
@@ -2988,7 +2995,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🧪 Testing & Cleanup
+### ?? Testing & Cleanup
 
 <details>
 <summary><b>Test Updates & File Cleanup</b></summary>
@@ -3001,25 +3008,25 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 - **dependencies group**: Bumped 2 updates via @dependabot ([#33](https://github.com/ChiR24/Unreal_mcp/pull/33))
 
 ---
 
-## 🏷️ [0.5.3] - 2025-12-21
+## ??? [0.5.3] - 2025-12-21
 
 > [!IMPORTANT]
-> ### 🔄 Major Enhancements
+> ### ?? Major Enhancements
 > - **Dynamic Type Discovery** - New runtime introspection for lights, debug shapes, and sequencer tracks
 > - **Metrics Rate Limiting** - Per-IP rate limiting (60 req/min) on Prometheus endpoint
 > - **Centralized Class Configuration** - Unified Unreal Engine class aliases
 > - **Enhanced Type Safety** - Comprehensive TypeScript interfaces replacing `any` types
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🔍 Dynamic Discovery & Engine Handlers</b></summary>
+<summary><b>?? Dynamic Discovery & Engine Handlers</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -3039,7 +3046,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>⚙️ Tooling & Configuration</b></summary>
+<summary><b>?? Tooling & Configuration</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -3056,7 +3063,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>📈 Metrics Server Enhancements</b></summary>
+<summary><b>?? Metrics Server Enhancements</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -3067,7 +3074,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>📚 Documentation & DX</b></summary>
+<summary><b>?? Documentation & DX</b></summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -3077,7 +3084,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🔧 Changed
+### ?? Changed
 
 <details>
 <summary><b>Handler Type Safety & Logic</b></summary>
@@ -3116,36 +3123,36 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🛠️ Fixed
+### ??? Fixed
 
 - **Command Injection Prevention** - Additional dangerous command patterns blocked
 - **Path Security** - Enhanced asset-name validation
 - **Type Safety** - Eliminated `any` types across handler functions
 - **Error Messages** - Clearer error messages for class resolution failures
 
-### 📊 Statistics
+### ?? Statistics
 
 - **Files Changed:** 20+
 - **New Interfaces:** 15+ handler type definitions
 - **Discovery Actions:** 3 new runtime introspection methods
 - **Security Enhancements:** 5+ new validation patterns
 
-### 🔄 Dependencies
+### ?? Dependencies
 
 - **graphql-yoga**: Bumped from 5.17.1 to 5.18.0 (#31)
 
 ---
 
-## 🏷️ [0.5.2] - 2025-12-18
+## ??? [0.5.2] - 2025-12-18
 
 > [!IMPORTANT]
-> ### 🔄 Breaking Changes
+> ### ?? Breaking Changes
 > - **Standardized Tools & Type Safety** - All tool handlers now use consistent interfaces with improved type safety. Some internal API signatures have changed. (`079e3c2`)
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🛠️ Blueprint Enhancements</b> (<code>e710751</code>)</summary>
+<summary><b>??? Blueprint Enhancements</b> (<code>e710751</code>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -3154,10 +3161,10 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🔄 Changed
+### ?? Changed
 
 <details>
-<summary><b>🎯 Standardized Tool Interfaces</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/28">#28</a>)</summary>
+<summary><b>?? Standardized Tool Interfaces</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/28">#28</a>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -3167,24 +3174,24 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🔧 CI/CD
+### ?? CI/CD
 
-- 🔗 **MCP Publisher** - Fixed download URL format in workflow steps (`0d452e7`)
-- 🧹 **Workflow Cleanup** - Removed unnecessary success conditions from MCP workflow steps (`82bd575`)
+- ?? **MCP Publisher** - Fixed download URL format in workflow steps (`0d452e7`)
+- ?? **Workflow Cleanup** - Removed unnecessary success conditions from MCP workflow steps (`82bd575`)
 
 ---
 
-## 🏷️ [0.5.1] - 2025-12-17
+## ??? [0.5.1] - 2025-12-17
 
 > [!WARNING]
-> ### ⚠️ Breaking Changes
+> ### ?? Breaking Changes
 > - **Standardized Return Types** - All tool methods now return `StandardActionResponse` type instead of generic objects. Consumers must update their code to handle the new response structure with `success`, `data`, `warnings`, and `error` fields. (`5e615c5`)
 > - **Test Suite Structure** - New test files added and existing tests enhanced with comprehensive coverage.
 
-### 🔄 Changed
+### ?? Changed
 
 <details>
-<summary><b>🎯 Standardized Tool Interfaces</b> (<code>5e615c5</code>)</summary>
+<summary><b>?? Standardized Tool Interfaces</b> (<code>5e615c5</code>)</summary>
 
 | Component | Change |
 |-----------|--------|
@@ -3196,10 +3203,10 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🧪 Comprehensive Test Suite</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/25">#25</a>)</summary>
+<summary><b>?? Comprehensive Test Suite</b> (<a href="https://github.com/ChiR24/Unreal_mcp/pull/25">#25</a>)</summary>
 
 | Feature | Description |
 |---------|-------------|
@@ -3214,22 +3221,22 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🧹 Maintenance
+### ?? Maintenance
 
-- 🗑️ **Prompts Module Cleanup** - Removed prompts module and related GraphQL prompt functionality ([#26](https://github.com/ChiR24/Unreal_mcp/pull/26))
-- 🔒 **Security Updates** - Removed unused dependencies (axios, json5, yargs) from package.json for security (`5e615c5`)
-- 📐 **Tool Interfaces** - Enhanced asset and level tools with security validation and timeout handling (`5e615c5`)
+- ??? **Prompts Module Cleanup** - Removed prompts module and related GraphQL prompt functionality ([#26](https://github.com/ChiR24/Unreal_mcp/pull/26))
+- ?? **Security Updates** - Removed unused dependencies (axios, json5, yargs) from package.json for security (`5e615c5`)
+- ?? **Tool Interfaces** - Enhanced asset and level tools with security validation and timeout handling (`5e615c5`)
 
-### 📦 Dependencies
+### ?? Dependencies
 
 <details>
 <summary><b>GitHub Actions Updates</b></summary>
 
 | Package | Update | PR | Commit |
 |---------|--------|-----|--------|
-| `actions/checkout` | v4 → v6 | [#23](https://github.com/ChiR24/Unreal_mcp/pull/23) | `4c6b3b5` |
-| `actions/setup-node` | v4 → v6 | [#22](https://github.com/ChiR24/Unreal_mcp/pull/22) | `71aa35c` |
-| `softprops/action-gh-release` | 2.0.8 → 2.5.0 | [#21](https://github.com/ChiR24/Unreal_mcp/pull/21) | `b6c8a46` |
+| `actions/checkout` | v4 ? v6 | [#23](https://github.com/ChiR24/Unreal_mcp/pull/23) | `4c6b3b5` |
+| `actions/setup-node` | v4 ? v6 | [#22](https://github.com/ChiR24/Unreal_mcp/pull/22) | `71aa35c` |
+| `softprops/action-gh-release` | 2.0.8 ? 2.5.0 | [#21](https://github.com/ChiR24/Unreal_mcp/pull/21) | `b6c8a46` |
 
 </details>
 
@@ -3238,45 +3245,45 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 | Package | Update |
 |---------|--------|
-| `@modelcontextprotocol/sdk` | 1.25.0 → 1.25.1 |
-| `@types/node` | 25.0.2 → 25.0.3 |
+| `@modelcontextprotocol/sdk` | 1.25.0 ? 1.25.1 |
+| `@types/node` | 25.0.2 ? 25.0.3 |
 
 </details>
 
 ---
 
-## 🏷️ [0.5.0] - 2025-12-16
+## ??? [0.5.0] - 2025-12-16
 
 > [!IMPORTANT]
-> ### 🔄 Major Architecture Migration
+> ### ?? Major Architecture Migration
 > This release marks the **complete migration** from Unreal's built-in Remote Plugin to a native C++ **McpAutomationBridge** plugin. This provides:
-> - ⚡ Better performance
-> - 🔗 Tighter editor integration
-> - 🚫 No dependency on Unreal's Remote API
+> - ? Better performance
+> - ?? Tighter editor integration
+> - ?? No dependency on Unreal's Remote API
 >
 > **BREAKING CHANGE:** Response format has been standardized across all automation tools. Clients should expect responses to follow the new `StandardActionResponse` format with `success`, `data`, `warnings`, and `error` fields.
 
-### 🏗️ Architecture
+### ??? Architecture
 
 | Change | Description |
 |--------|-------------|
-| 🆕 **Native C++ Plugin** | Introduced `McpAutomationBridge` - a native UE5 editor plugin replacing the Remote API |
-| 🔌 **Direct Editor Integration** | Commands execute directly in the editor context via automation bridge subsystem |
-| 🌐 **WebSocket Communication** | Implemented `McpBridgeWebSocket` for real-time bidirectional communication |
-| 🎯 **Bridge-First Architecture** | All operations route through the native C++ bridge (`fe65968`) |
-| 📐 **Standardized Responses** | All tools now return `StandardActionResponse` format (`0a8999b`) |
+| ?? **Native C++ Plugin** | Introduced `McpAutomationBridge` - a native UE5 editor plugin replacing the Remote API |
+| ?? **Direct Editor Integration** | Commands execute directly in the editor context via automation bridge subsystem |
+| ?? **WebSocket Communication** | Implemented `McpBridgeWebSocket` for real-time bidirectional communication |
+| ?? **Bridge-First Architecture** | All operations route through the native C++ bridge (`fe65968`) |
+| ?? **Standardized Responses** | All tools now return `StandardActionResponse` format (`0a8999b`) |
 
-### ✨ Added
+### ? Added
 
 <details>
-<summary><b>🎮 Engine Compatibility</b></summary>
+<summary><b>?? Engine Compatibility</b></summary>
 
 - **UE 5.7 Support** - Updated McpAutomationBridge with ControlRig dynamic loading and improved sequence handling (`ec5409b`)
 
 </details>
 
 <details>
-<summary><b>🔧 New APIs & Integrations</b></summary>
+<summary><b>?? New APIs & Integrations</b></summary>
 
 - **GraphQL API** - Broadened automation bridge with GraphQL support, WASM integration, UI/editor integrations (`ffdd814`)
 - **WebAssembly Integration** - High-performance JSON parsing with 5-8x performance gains (`23f63c7`)
@@ -3284,7 +3291,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>🌉 Automation Bridge Features</b></summary>
+<summary><b>?? Automation Bridge Features</b></summary>
 
 | Feature | Commit |
 |---------|--------|
@@ -3296,22 +3303,22 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>🎛️ New Tool Systems (0a8999b, 0ac82ac)</b></summary>
+<summary><b>??? New Tool Systems (0a8999b, 0ac82ac)</b></summary>
 
 | Tool | Description |
 |------|-------------|
-| 🎮 **Input Management** | New `manage_input` tool with EnhancedInput support for Input Actions and Mapping Contexts |
-| 💡 **Lighting Manager** | Full lighting configuration via `manage_lighting` including spawn, GI setup, shadow config, build lighting |
-| 📊 **Performance Manager** | `manage_performance` with profiling (CPU/GPU/Memory), optimization, scalability, Nanite/Lumen config |
-| 🌳 **Behavior Tree Editing** | Full behavior tree creation and node editing via `manage_behavior_tree` |
-| 🎬 **Enhanced Sequencer** | Track operations (add/remove tracks, set muted/solo/locked), display rate, tick resolution |
-| 🌍 **World Partition** | Cell management, data layer toggling via `manage_level` |
-| 🖼️ **Widget Management** | UI widget creation, visibility controls, child widget adding |
+| ?? **Input Management** | New `manage_input` tool with EnhancedInput support for Input Actions and Mapping Contexts |
+| ?? **Lighting Manager** | Full lighting configuration via `manage_lighting` including spawn, GI setup, shadow config, build lighting |
+| ?? **Performance Manager** | `manage_performance` with profiling (CPU/GPU/Memory), optimization, scalability, Nanite/Lumen config |
+| ?? **Behavior Tree Editing** | Full behavior tree creation and node editing via `manage_behavior_tree` |
+| ?? **Enhanced Sequencer** | Track operations (add/remove tracks, set muted/solo/locked), display rate, tick resolution |
+| ?? **World Partition** | Cell management, data layer toggling via `manage_level` |
+| ??? **Widget Management** | UI widget creation, visibility controls, child widget adding |
 
 </details>
 
 <details>
-<summary><b>📊 Graph Editing Capabilities (0a8999b)</b></summary>
+<summary><b>?? Graph Editing Capabilities (0a8999b)</b></summary>
 
 - **Blueprint Graph** - Direct node manipulation with `manage_blueprint_graph` (create_node, delete_node, connect_pins, etc.)
 - **Material Graph** - Node operations via `manage_asset` (add_material_node, connect_material_pins, etc.)
@@ -3320,7 +3327,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>🛠️ New Handlers & Actions</b></summary>
+<summary><b>??? New Handlers & Actions</b></summary>
 
 - Blueprint graph management and Niagara functionalities (`aff4d55`)
 - Physics simulation setup in AnimationTools (`83a6f5d`)
@@ -3334,7 +3341,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 </details>
 
 <details>
-<summary><b>🧪 Test Suites</b></summary>
+<summary><b>?? Test Suites</b></summary>
 
 **50+ new test cases** covering:
 - Animation, Assets, Materials
@@ -3345,7 +3352,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 </details>
 
-### 🔄 Changed
+### ?? Changed
 
 #### Core Refactors
 | Component | Change | Commit |
@@ -3358,20 +3365,20 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 | Connection Manager | Streamlined connection handling | `0ac82ac` |
 
 #### Tool Improvements
-- 🚗 **PhysicsTools** - Vehicle config logic updated, deprecated checks removed (`6dba9f7`)
-- 🎬 **AnimationTools** - Logging and response normalization (`7666c31`)
-- ⚠️ **Error Handling** - Utilities refactored, INI file reader added (`f5444e4`)
-- 📐 **Blueprint Actions** - Timeout handling enhancements (`65d2738`)
-- 🎨 **Materials** - Enhanced material graph editing capabilities (`0a8999b`)
-- 🔊 **Audio** - Improved sound component management (`0a8999b`)
+- ?? **PhysicsTools** - Vehicle config logic updated, deprecated checks removed (`6dba9f7`)
+- ?? **AnimationTools** - Logging and response normalization (`7666c31`)
+- ?? **Error Handling** - Utilities refactored, INI file reader added (`f5444e4`)
+- ?? **Blueprint Actions** - Timeout handling enhancements (`65d2738`)
+- ?? **Materials** - Enhanced material graph editing capabilities (`0a8999b`)
+- ?? **Audio** - Improved sound component management (`0a8999b`)
 
 #### Other Changes
-- 📡 **Connection & Logging** - Improved error messages for clarity (`41350b3`)
-- 📚 **Documentation** - README updated with UE 5.7, WASM docs, architecture overview, 17 tools (`8d72f28`, `4d77b7e`)
-- 🔄 **Dependencies** - Updated to latest versions (`08eede5`)
-- 📝 **Type Definitions** - Enhanced tool interfaces and type coverage (`0a8999b`)
+- ?? **Connection & Logging** - Improved error messages for clarity (`41350b3`)
+- ?? **Documentation** - README updated with UE 5.7, WASM docs, architecture overview, 17 tools (`8d72f28`, `4d77b7e`)
+- ?? **Dependencies** - Updated to latest versions (`08eede5`)
+- ?? **Type Definitions** - Enhanced tool interfaces and type coverage (`0a8999b`)
 
-### 🐛 Fixed
+### ?? Fixed
 
 - `McpAutomationBridgeSubsystem` - Header removal, logging category, heartbeat methods (`498f644`)
 - `McpBridgeWebSocket` - Reliable WebSocket communication (`861ad91`)
@@ -3379,126 +3386,126 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 - **UI Handlers** - Missing payload and invalid widget path error handling (`bb4f6a8`)
 - **Screenshot** - Clearer error messages and flow (`bb4f6a8`)
 
-### 🗑️ Removed
+### ??? Removed
 
 | Removed | Reason |
 |---------|--------|
-| 🔌 Remote API Dependency | Replaced by native C++ plugin |
-| 🐍 Python Fallbacks | Native C++ automation preferred (`fe65968`) |
-| 📦 Unused HTTP Client | Cleanup from error-handler (`f5444e4`) |
+| ?? Remote API Dependency | Replaced by native C++ plugin |
+| ?? Python Fallbacks | Native C++ automation preferred (`fe65968`) |
+| ?? Unused HTTP Client | Cleanup from error-handler (`f5444e4`) |
 
 ---
 
-## 🏷️ [0.4.7] - 2025-11-16
+## ??? [0.4.7] - 2025-11-16
 
-### ✨ Added
+### ? Added
 - Output Log reading via `system_control` tool with `read_log` action. filtering by category, level, line count.
 - New `src/tools/logs.ts` implementing robust log tailing.
-- 🆕 Initial `McpAutomationBridge` plugin with foundational implementation (`30e62f9`)
-- 🧪 Comprehensive test suites for various Unreal Engine tools (`31c6db9`)
+- ?? Initial `McpAutomationBridge` plugin with foundational implementation (`30e62f9`)
+- ?? Comprehensive test suites for various Unreal Engine tools (`31c6db9`)
 
-### 🔄 Changed
+### ?? Changed
 - `system_control` tool schema: Added `read_log` action.
 - Updated tool handlers to route `read_log` to LogTools.
 - Version bumped to 0.4.7.
 
-### 📚 Documentation
+### ?? Documentation
 - Updated README.md with initial bridge documentation (`a24dafd`)
 
 ---
 
-## 🏷️ [0.4.6] - 2025-10-04
+## ??? [0.4.6] - 2025-10-04
 
-### 🐛 Fixed
+### ?? Fixed
 - Fixed duplicate response output issue where tool responses were displayed twice in MCP content
 - Response validator now emits concise summaries instead of duplicating full JSON payloads
 - Structured content preserved for validation while user-facing output is streamlined
 
 ---
 
-## 🏷️ [0.4.5] - 2025-10-03
+## ??? [0.4.5] - 2025-10-03
 
-### ✨ Added
-- 🔧 Expose `UE_PROJECT_PATH` environment variable across runtime config, Smithery manifest, and client configs
-- 📁 Added `projectPath` to runtime `configSchema` for Smithery's session UI
+### ? Added
+- ?? Expose `UE_PROJECT_PATH` environment variable across runtime config, Smithery manifest, and client configs
+- ?? Added `projectPath` to runtime `configSchema` for Smithery's session UI
 
-### 🔄 Changed
-- ⚡ Made `createServer` synchronous factory (removed `async`)
-- 🏠 Default for `ueHost` in exported `configSchema`
+### ?? Changed
+- ? Made `createServer` synchronous factory (removed `async`)
+- ?? Default for `ueHost` in exported `configSchema`
 
-### 📚 Documentation
+### ?? Documentation
 - Updated `README.md`, config examples to include `UE_PROJECT_PATH`
 - Updated `smithery.yaml` and `server.json` manifests
 
-### 🔨 Build
+### ?? Build
 - Rebuilt Smithery bundle and TypeScript output
 
-### 🐛 Fixed
+### ?? Fixed
 - Smithery UI blank `ueHost` field by defining default in runtime schema
 
 ---
 
-## 🏷️ [0.4.4] - 2025-09-28
+## ??? [0.4.4] - 2025-09-28
 
-### ✨ Improvements
+### ? Improvements
 
-- 🤝 **Client Elicitation Helper** - Added support for Cursor, VS Code, Claude Desktop, and other MCP clients
-- 📊 **Consistent RESULT Parsing** - Handles JSON5 and legacy Python literals across all tools
-- 🔒 **Safe Output Stringification** - Robust handling of circular references and complex objects
-- 🔍 **Enhanced Logging** - Improved validation messages for easier debugging
+- ?? **Client Elicitation Helper** - Added support for Cursor, VS Code, Claude Desktop, and other MCP clients
+- ?? **Consistent RESULT Parsing** - Handles JSON5 and legacy Python literals across all tools
+- ?? **Safe Output Stringification** - Robust handling of circular references and complex objects
+- ?? **Enhanced Logging** - Improved validation messages for easier debugging
 
 ---
 
-## 🏷️ [0.4.0] - 2025-09-20
+## ??? [0.4.0] - 2025-09-20
 
 > **Major Release** - Consolidated Tools Mode
 
-### ✨ Improvements
+### ? Improvements
 
-- 🎯 **Consolidated Tools Mode Exclusively** - Removed legacy mode, all tools now use unified handler system
-- 🧹 **Simplified Tool Handlers** - Removed deprecated code paths and inline plugin validation
-- 📝 **Enhanced Error Handling** - Better error messages and recovery mechanisms
+- ?? **Consolidated Tools Mode Exclusively** - Removed legacy mode, all tools now use unified handler system
+- ?? **Simplified Tool Handlers** - Removed deprecated code paths and inline plugin validation
+- ?? **Enhanced Error Handling** - Better error messages and recovery mechanisms
 
-### 🔧 Quality & Maintenance
+### ?? Quality & Maintenance
 
-- ⚡ Reduced resource usage by optimizing tool handlers
-- 🧹 Cleanup of deprecated environment variables
+- ? Reduced resource usage by optimizing tool handlers
+- ?? Cleanup of deprecated environment variables
 
 ---
 
-## 🏷️ [0.3.1] - 2025-09-19
+## ??? [0.3.1] - 2025-09-19
 
 > **BREAKING:** Connection behavior is now on-demand
 
-### 🏗️ Architecture
+### ??? Architecture
 
-- 🔄 **On-Demand Connection** - Shifted to intelligent on-demand connection model
-- 🚫 **No Background Processes** - Eliminated persistent background connections
+- ?? **On-Demand Connection** - Shifted to intelligent on-demand connection model
+- ?? **No Background Processes** - Eliminated persistent background connections
 
-### ⚡ Performance
+### ? Performance
 
 - Reduced resource usage and eliminated background processes
 - Optimized connection state management
 
-### 🛡️ Reliability
+### ??? Reliability
 
 - Improved error handling and connection state management
 - Better recovery from connection failures
 
 ---
 
-## 🏷️ [0.3.0] - 2025-09-17
+## ??? [0.3.0] - 2025-09-17
 
-> 🎉 **Initial Public Release**
+> ?? **Initial Public Release**
 
-### ✨ Features
+### ? Features
 
-- 🎮 **13 Consolidated Tools** - Full suite of Unreal Engine automation tools
-- 📁 **Normalized Asset Listing** - Auto-map `/Content` and `/Game` paths
-- 🏔️ **Landscape Creation** - Returns real UE/Python response data
-- 📝 **Action-Oriented Descriptions** - Enhanced tool documentation with usage examples
+- ?? **13 Consolidated Tools** - Full suite of Unreal Engine automation tools
+- ?? **Normalized Asset Listing** - Auto-map `/Content` and `/Game` paths
+- ??? **Landscape Creation** - Returns real UE/Python response data
+- ?? **Action-Oriented Descriptions** - Enhanced tool documentation with usage examples
 
-### 🔧 Quality & Maintenance
+### ?? Quality & Maintenance
 
 - Server version 0.3.0 with clarified 13-tool mode
 - Comprehensive documentation and examples
@@ -3508,7 +3515,7 @@ Replaced `console.error`/`console.warn` with structured `Logger` across all tool
 
 <div align="center">
 
-### 🔗 Links
+### ?? Links
 
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github)](https://github.com/ChiR24/Unreal_mcp)
 [![npm](https://img.shields.io/badge/npm-Package-CB3837?style=for-the-badge&logo=npm)](https://www.npmjs.com/package/unreal-engine-mcp-server)

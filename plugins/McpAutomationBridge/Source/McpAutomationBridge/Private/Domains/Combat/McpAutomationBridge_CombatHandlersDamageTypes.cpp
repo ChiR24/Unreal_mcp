@@ -63,7 +63,11 @@ bool FCombatActionContext::HandleDamageTypes() const
         }
 
         McpSafeCompileBlueprint(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        if (!McpSafeAssetSave(Blueprint))
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("damageTypePath"), Blueprint->GetPathName());
@@ -90,7 +94,11 @@ bool FCombatActionContext::HandleDamageTypes() const
         }
 
         McpSafeCompileBlueprint(Blueprint);
-        McpSafeAssetSave(Blueprint);
+        if (!McpSafeAssetSave(Blueprint))
+        {
+            SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("%s was changed in the editor but could not be saved to disk."), *Blueprint->GetPathName()), TEXT("SAVE_FAILED"));
+            return true;
+        }
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("damageTypePath"), Blueprint->GetPathName());

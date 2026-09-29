@@ -35,8 +35,7 @@ inline TArray<FString> Apply(UActorComponent *Template, const TSharedPtr<FJsonOb
     FString Error;
     if (McpIsCollisionSetterKey(Template, Name))
     {
-      Defaults.Capture(TEXT("BodyInstance.CollisionProfileName"));
-      Defaults.Capture(TEXT("BodyInstance.CollisionEnabled"));
+      Defaults.CaptureCollision();
       if (McpApplyCollisionSetterKey(Template, Name, Pair.Value, Error))
         bAnyApplied = true;
       else

@@ -85,8 +85,8 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
   // Placed actors keep their old component values across the recompile unless the
   // change is pushed to them (McpScsPropagate); one someone overrode keeps its own.
   McpScsPropagate::FDefaults Defaults{ComponentTemplate, Blueprint, FName(*ComponentName)};
-  Defaults.Capture(PropertyName);
   if (PropertyValue.IsValid() && McpIsCollisionSetterKey(TemplateComponent, PropertyName)) {
+    Defaults.CaptureCollision();
     // Collision goes through the setters, as control_actor and modify_scs do.
     FString CollisionError;
     if (!McpApplyCollisionSetterKey(TemplateComponent, PropertyName, PropertyValue, CollisionError)) {
@@ -120,6 +120,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::SetSCSComponentProperty(
       return Result;
     }
 
+    Defaults.Capture(ResolvedPath);
     if (ApplyJsonValueToProperty(ContainerPtr, TargetProp, PropertyValue,
                                  FailureMessage)) {
       bAppliedValue = true;

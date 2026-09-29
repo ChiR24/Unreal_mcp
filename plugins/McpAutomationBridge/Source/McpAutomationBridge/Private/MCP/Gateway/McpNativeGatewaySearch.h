@@ -1,9 +1,9 @@
 // McpNativeGatewaySearch.h — deterministic capability search for the unreal gateway
 //
-// Mirrors the TypeScript discovery reference exactly: same filters, same match
-// reasons and weights, same total order, same paging, same byte budget, same
-// guided errors. Discovery fixtures from both surfaces are diffed byte-for-byte,
-// so any divergence here is a test failure rather than a silent drift.
+// Its own integer rule ranking, not the TypeScript BM25 scorer: the two surfaces
+// share the filters, the read/delete intent word lists (pinned by
+// search-read-intent-parity.test.ts), the total order and the paging, but not
+// the weights, so result order can differ between them.
 //
 // Reads only the generated capability store. There is no alternate catalog: an
 // unavailable store yields a typed error, never substituted metadata.

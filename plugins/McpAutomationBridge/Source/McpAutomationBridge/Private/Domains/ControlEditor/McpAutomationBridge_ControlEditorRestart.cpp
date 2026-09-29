@@ -127,10 +127,24 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestart(
   // already made that decision explicitly -- leaving it true would raise a
   // modal dialog that no remote caller can answer.
   FTSTicker::GetCoreTicker().AddTicker(
-      FTickerDelegate::CreateLambda([bRelaunch](float) {
+      FTickerDelegate::CreateLambda([bRelaunch, bDiscardUnsaved](float) {
         if (bRelaunch) {
           FUnrealEdMisc::Get().RestartEditor(/*bWarn=*/false);
         } else if (GEditor) {
+          // CloseEditor has no bWarn: the main frame asks to save anything dirty,
+          // so packages the caller chose to discard are marked clean first.
+          if (bDiscardUnsaved) {
+            TArray<UPackage *> Dirty;
+            TArray<UPackage *> DirtyContent;
+            FEditorFileUtils::GetDirtyWorldPackages(Dirty);
+            FEditorFileUtils::GetDirtyContentPackages(DirtyContent);
+            Dirty.Append(DirtyContent);
+            for (UPackage *Package : Dirty) {
+              if (Package) {
+                Package->SetDirtyFlag(false);
+              }
+            }
+          }
           GEditor->CloseEditor(); // ends PIE first, then requests engine exit
         }
         return false;
