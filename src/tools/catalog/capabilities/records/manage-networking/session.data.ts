@@ -27,6 +27,6 @@ export const NETWORKING_SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   s('host_lan_server', 'Build the LAN listen-server travel URL for a map; nothing is hosted unless executeTravel is true, which travels the running world to it.', ['mapName', 'maxPlayers', 'travelOptions', 'executeTravel'], ['mapName'], ['mapPath', 'travelURL'], ['travelURL']),
   s('enable_voice_chat', 'Enable or disable online voice chat.', ['voiceEnabled'], ['voiceEnabled']),
   s('mute_player', 'Mute or unmute an online player through the voice chat or online voice interface; fails with NOT_SUPPORTED when neither applies it.', ['playerName', 'targetPlayerId', 'muted', 'localPlayerNum', 'systemWide'], [], undefined, undefined, undefined, ['playerName', 'targetPlayerId']),
-  withTopics(s('get_sessions_info', 'Read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance\'s net mode (Standalone, ListenServer, Client) and URL.', [], [], ['sessionsInfo'], ['sessionsInfo'], 'read'),
+  withTopics(s('get_sessions_info', 'Read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance\'s net mode (Standalone, DedicatedServer, ListenServer or Client) and URL.', [], [], ['sessionsInfo'], ['sessionsInfo'], 'read'),
     ['split screen settings', 'pie net mode']),
 ];

@@ -16517,6 +16517,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Instanced static mesh components on the Blueprint."
         },
+        "levelStructureInfo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "currentLevel, persistentLevel, actorCount, sublevelCount, sublevels (package names), streamingLevels (name, packageName, isLoaded, isVisible, shouldBeLoaded, shouldBeVisible, streamingClass, alwaysLoaded, actorCount), worldPartitionEnabled, dataLayers when World Partition is on (name, fullName, isRuntime, runtimeState, initialRuntimeState), levelInstances (labels) and hlodLayers (name, type and the layer settings)."
+        },
         "loaded": {
           "type": "boolean",
           "description": "Whether the instanced level is loaded in the editor now."
@@ -16533,20 +16539,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the action succeeded."
         },
-        "volumes": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Volume actor paths."
+        "volumesInfo": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "totalCount and volumes: each volume or trigger actor with name (its label), class, location and extent (the bounds half-size), as {x,y,z}."
         },
         "worldAsset": {
           "type": "string",
           "description": "The level the instance loads."
-        },
-        "worldPartition": {
-          "type": "boolean",
-          "description": "Whether World Partition is enabled."
         }
       },
       "additionalProperties": true

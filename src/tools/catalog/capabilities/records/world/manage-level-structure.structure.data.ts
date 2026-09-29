@@ -189,7 +189,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: {},
     required: [], effect: 'read', costLatency: 'instant', costResources: 'low',
     exampleInput: { action: 'get_level_structure_info' },
-    exampleOutput: { success: true, message: 'Level structure info', worldPartition: false },
-    outputProps: { worldPartition: { type: 'boolean', description: 'Whether World Partition is enabled.' } },
+    exampleOutput: { success: true, message: 'Retrieved level structure information', levelStructureInfo: { currentLevel: 'L_Stage01', persistentLevel: '/Game/Maps/L_Stage01', actorCount: 412, sublevelCount: 0, sublevels: [], streamingLevels: [], worldPartitionEnabled: false, levelInstances: [], hlodLayers: [] } },
+    outputProps: { levelStructureInfo: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'currentLevel, persistentLevel, actorCount, sublevelCount, sublevels (package names), streamingLevels (name, packageName, isLoaded, isVisible, shouldBeLoaded, shouldBeVisible, streamingClass, alwaysLoaded, actorCount), worldPartitionEnabled, dataLayers when World Partition is on (name, fullName, isRuntime, runtimeState, initialRuntimeState), levelInstances (labels) and hlodLayers (name, type and the layer settings).' } },
   }),
 ];

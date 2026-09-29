@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "30861fd755099b52",
+  "catalogRevision": "8e7c85d328a8ab84",
   "recordCount": 389,
   "records": [
     {
@@ -66347,9 +66347,11 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
-            "worldPartition": {
-              "type": "boolean",
-              "description": "Whether World Partition is enabled."
+            "levelStructureInfo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "currentLevel, persistentLevel, actorCount, sublevelCount, sublevels (package names), streamingLevels (name, packageName, isLoaded, isVisible, shouldBeLoaded, shouldBeVisible, streamingClass, alwaysLoaded, actorCount), worldPartitionEnabled, dataLayers when World Partition is on (name, fullName, isRuntime, runtimeState, initialRuntimeState), levelInstances (labels) and hlodLayers (name, type and the layer settings)."
             }
           },
           "required": [
@@ -66366,8 +66368,18 @@
           },
           "output": {
             "success": true,
-            "message": "Level structure info",
-            "worldPartition": false
+            "message": "Retrieved level structure information",
+            "levelStructureInfo": {
+              "currentLevel": "L_Stage01",
+              "persistentLevel": "/Game/Maps/L_Stage01",
+              "actorCount": 412,
+              "sublevelCount": 0,
+              "sublevels": [],
+              "streamingLevels": [],
+              "worldPartitionEnabled": false,
+              "levelInstances": [],
+              "hlodLayers": []
+            }
           }
         }
       ],
@@ -66398,8 +66410,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "be70018728ff9e0bd0cc231fa331a5be07366e9c1b81b9b894b3855e433ba5fc",
-        "content": "ebd82d49ac86c55cc138958db56da845d1cbd009524468126639284046128c32"
+        "schema": "b03bbc9cec1beb418aa156bea186d8497bb6d3e31c37e68f66d4d7fdd35f070b",
+        "content": "8f3036ad25f83f5354543e864556cd32a96b28192a6537bc011b5935629eb79e"
       }
     },
     {
@@ -66467,12 +66479,11 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
-            "volumes": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Volume actor paths."
+            "volumesInfo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "totalCount and volumes: each volume or trigger actor with name (its label), class, location and extent (the bounds half-size), as {x,y,z}."
             }
           },
           "required": [
@@ -66490,10 +66501,26 @@
           },
           "output": {
             "success": true,
-            "message": "Volumes listed",
-            "volumes": [
-              "/Game/Maps/Demo.Trigger_01"
-            ]
+            "message": "Found 1 volumes/triggers",
+            "volumesInfo": {
+              "totalCount": 1,
+              "volumes": [
+                {
+                  "name": "Trigger_01",
+                  "class": "TriggerBox",
+                  "location": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 100
+                  },
+                  "extent": {
+                    "x": 64,
+                    "y": 64,
+                    "z": 64
+                  }
+                }
+              ]
+            }
           }
         }
       ],
@@ -66524,8 +66551,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6f4bcd1e4016670eb17c7551f5cf4ecfa53d63fc32b0e3510ebefc4ec6ea361f",
-        "content": "281ed3a8d3170a624a1de410e96c47bedac5cef831cfa27bb4cfbcdda1a9a9cc"
+        "schema": "3efdbef8784e6fd27078af961d2998ea334835f7ce30701273da467e49815fad",
+        "content": "74ae5f8c60300d5a64a9c11d4a909bdacf1c6f9200a583e7605faaf5d9932d1e"
       }
     },
     {
@@ -70224,9 +70251,9 @@
           "split screen settings",
           "pie net mode"
         ],
-        "summary": "Read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, ListenServer, Client) and URL.",
+        "summary": "Read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, DedicatedServer, ListenServer or Client) and URL.",
         "whenToUse": [
-          "Use it to read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, ListenServer, Client) and URL."
+          "Use it to read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, DedicatedServer, ListenServer or Client) and URL."
         ],
         "whenNotToUse": []
       },
@@ -70278,7 +70305,7 @@
       },
       "examples": [
         {
-          "title": "Read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, ListenServer, Client) and URL.",
+          "title": "Read the current play session: local player count, whether PIE is running, the split-screen setting and layout, and each PIE instance's net mode (Standalone, DedicatedServer, ListenServer or Client) and URL.",
           "input": {
             "action": "get_sessions_info"
           },
@@ -70334,7 +70361,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "e1e3bae7d9a1873c762997e86b979798ffbbebdf5c8a3d7d398841b92463ed0f",
-        "content": "0772d05611d7285f77e176326f0d9d4c2539374751185f3904782545e60487e8"
+        "content": "5c72f03ee79ed4fac6103d88133cd3fa837cc4dbe5b120cc8a3724126678e266"
       }
     },
     {
