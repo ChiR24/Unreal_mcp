@@ -164,7 +164,8 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'get_volumes_info', dispatchAction: 'get_volumes_info',
-    family: F, summary: 'List volumes in the level, optionally filtered by type.',
+    topics: ['box extents', 'trigger actors'],
+    family: F, summary: 'List the volumes and trigger actors in the level with name, class, location and box extent, and a total count; filter by label or volumeType (a class name part such as Trigger or PostProcess).',
     whenToUse: ['The set of volumes must be enumerated or inspected.'], whenNotToUse: ['A single volume must be resized; use set_volume_extent.'],
     inputProps: { filter: P.filter, volumeType: P.volumeType },
     required: [], effect: 'read', costLatency: 'instant', costResources: 'low',

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7c606f523ba494d9",
+  "catalogRevision": "dedaf4584de36c49",
   "recordCount": 389,
   "records": [
     {
@@ -64459,9 +64459,12 @@
         "domain": "level",
         "family": "query",
         "topics": [
-          "validate_level"
+          "validate_level",
+          "does it exist",
+          "map file",
+          "check map path"
         ],
-        "summary": "Validate that a level asset exists on disk.",
+        "summary": "Check that a level asset exists: returns exists, its normalized path, the .umap file path, and whether the package and the file are present.",
         "whenToUse": [
           "A level asset path must be verified before load or delete."
         ],
@@ -64528,7 +64531,7 @@
       },
       "examples": [
         {
-          "title": "Validate that a level asset exists on disk.",
+          "title": "Check that a level asset exists: returns exists, its normalized path, the .umap file path, and whether the package and the file are present.",
           "input": {
             "action": "validate_level",
             "levelPath": "/Game/Maps/Demo"
@@ -64569,7 +64572,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d4b002cbdc07fda37aacb2467284fed04c085a2732cca5f0c6aaf3401bbcfb09",
-        "content": "e157743cdb35bb92b5507196a3ba41872841cd274965cfbfe3aadeb7e9372755"
+        "content": "190b657e7d750d1ac2292afde9b6ed8b52c33bfcba019f563de2109d7e2a4ccb"
       }
     },
     {
@@ -66297,9 +66300,13 @@
         "domain": "world",
         "family": "structure",
         "topics": [
-          "get_level_structure_info"
+          "get_level_structure_info",
+          "list streaming sublevels",
+          "world partition enabled",
+          "list data layers",
+          "hlod layers"
         ],
-        "summary": "Return structural info for the current level (sub-levels, data layers, WP state).",
+        "summary": "Read the open level's structure: streaming sub-levels (loaded, visible, actor counts), whether World Partition is on, its data layers, level instances and HLOD layers.",
         "whenToUse": [
           "The level structure must be inspected."
         ],
@@ -66352,7 +66359,7 @@
       },
       "examples": [
         {
-          "title": "Return structural info for the current level (sub-levels, data layers, WP state).",
+          "title": "Read the open level's structure: streaming sub-levels (loaded, visible, actor counts), whether World Partition is on, its data layers, level instances and HLOD layers.",
           "input": {
             "action": "get_level_structure_info"
           },
@@ -66391,7 +66398,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "be70018728ff9e0bd0cc231fa331a5be07366e9c1b81b9b894b3855e433ba5fc",
-        "content": "5b390ba4a3f18acbc745bc6c72dd655c75b6b13d53e27704b214bd3e0a35c50e"
+        "content": "ebd82d49ac86c55cc138958db56da845d1cbd009524468126639284046128c32"
       }
     },
     {
@@ -66407,9 +66414,11 @@
         "domain": "world",
         "family": "volume",
         "topics": [
-          "get_volumes_info"
+          "get_volumes_info",
+          "box extents",
+          "trigger actors"
         ],
-        "summary": "List volumes in the level, optionally filtered by type.",
+        "summary": "List the volumes and trigger actors in the level with name, class, location and box extent, and a total count; filter by label or volumeType (a class name part such as Trigger or PostProcess).",
         "whenToUse": [
           "The set of volumes must be enumerated or inspected."
         ],
@@ -66473,7 +66482,7 @@
       },
       "examples": [
         {
-          "title": "List volumes in the level, optionally filtered by type.",
+          "title": "List the volumes and trigger actors in the level with name, class, location and box extent, and a total count; filter by label or volumeType (a class name part such as Trigger or PostProcess).",
           "input": {
             "action": "get_volumes_info",
             "filter": "Trigger"
@@ -66515,7 +66524,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "6f4bcd1e4016670eb17c7551f5cf4ecfa53d63fc32b0e3510ebefc4ec6ea361f",
-        "content": "ffd7a3e9799ca665a6d5dcf697d9b6de4a86cfa985c398060005a9880a9d19b1"
+        "content": "281ed3a8d3170a624a1de410e96c47bedac5cef831cfa27bb4cfbcdda1a9a9cc"
       }
     },
     {

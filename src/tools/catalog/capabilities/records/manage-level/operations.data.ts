@@ -54,7 +54,8 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'validate_level',
     domain: D, family: 'query',
-    summary: 'Validate that a level asset exists on disk.',
+    topics: ['does it exist', 'map file', 'check map path'],
+    summary: 'Check that a level asset exists: returns exists, its normalized path, the .umap file path, and whether the package and the file are present.',
     whenToUse: ['A level asset path must be verified before load or delete.'],
     whenNotToUse: ['The level should be loaded; use load.'],
     inputProps: { levelPath: P.levelPath, assetPath: P.assetPath },

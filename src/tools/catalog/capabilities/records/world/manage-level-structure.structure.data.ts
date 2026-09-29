@@ -183,7 +183,8 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'get_level_structure_info', dispatchAction: 'get_level_structure_info',
-    family: F, summary: 'Return structural info for the current level (sub-levels, data layers, WP state).',
+    topics: ['list streaming sublevels', 'world partition enabled', 'list data layers', 'hlod layers'],
+    family: F, summary: 'Read the open level\'s structure: streaming sub-levels (loaded, visible, actor counts), whether World Partition is on, its data layers, level instances and HLOD layers.',
     whenToUse: ['The level structure must be inspected.'], whenNotToUse: ['A specific volume list is needed; use get_volumes_info.'],
     inputProps: {},
     required: [], effect: 'read', costLatency: 'instant', costResources: 'low',
