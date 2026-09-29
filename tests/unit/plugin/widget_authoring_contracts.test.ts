@@ -65,6 +65,27 @@ describe('widgetPath is the canonical /Game package path, never the object path'
   });
 });
 
+describe('set_style and set_clipping name the widget they saved into', () => {
+  const styling = (): string => read('Styling', 'McpAutomationBridge_WidgetAuthoringStyleClipping.cpp');
+
+  it('widgetPath is on the reply before either variant branches', () => {
+    const source = styling();
+    const named = source.indexOf('ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));');
+
+    expect(named).toBeGreaterThan(-1);
+    expect(named).toBeLessThan(source.indexOf('SubAction.Equals(TEXT("set_clipping")', named));
+  });
+
+  it('a property read names the widget without claiming a change', () => {
+    const source = styling();
+    const readBranch = source.slice(source.indexOf('TEXT("read")'), source.indexOf('bool bWriteSuccess'));
+
+    expect(readBranch.length).toBeGreaterThan(0);
+    expect(readBranch).toContain('McpHandlerUtils::MarkNoAssetsChanged(ResultJson)');
+    expect(readBranch).not.toContain('bWriteSuccess');
+  });
+});
+
 describe('SafeAddWidgetToTree: only an add that re-uses a slotName warns that the widget was already seated', () => {
   it('the warning is gated on the caller not moving the widget on purpose', () => {
     const tree = read('Support', 'McpAutomationBridge_WidgetAuthoringTree.cpp');

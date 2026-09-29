@@ -52,3 +52,31 @@ describe('get_graph_details filter reads what a node\'s pins hold', () => {
     expect(description).toMatch(/WBP_MainMenu/u);
   });
 });
+
+describe('an edit_graph reply names the Blueprint it ran on', () => {
+  const shared = (): string => read('Domains', 'BlueprintGraph', 'Context', 'McpAutomationBridge_BlueprintGraphHandlersContextShared.cpp');
+  const batch = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
+
+  it('NameBlueprint writes blueprintPath unless an assetPath is there, and changedAssets for a change', () => {
+    const body = shared().slice(shared().indexOf('void FActionContext::NameBlueprint('), shared().indexOf('void FActionContext::SendResponse('));
+
+    expect(body).toMatch(/Blueprint->GetOutermost\(\)->GetName\(\)/u);
+    expect(body).toMatch(/!Result->HasField\(TEXT\("assetPath"\)\) && !Result->HasField\(TEXT\("blueprintPath"\)\)/u);
+    expect(body).toMatch(/bChanged && !Result->HasField\(TEXT\("changedAssets"\)\)/u);
+    expect(body).toMatch(/SetArrayField\(TEXT\("changedAssets"\), Changed\)/u);
+  });
+
+  it('every reply that goes through the funnel is named, on the dirty test the funnel already uses', () => {
+    const send = shared().slice(shared().indexOf('void FActionContext::SendResponse('));
+
+    expect(send).toMatch(/NameBlueprint\(Result, Blueprint && Blueprint->Status == BS_Dirty\);/u);
+    expect(send.indexOf('NameBlueprint(')).toBeLessThan(send.indexOf('McpCompileBlueprintWithDiagnostics('));
+  });
+
+  it('the batch states its own change, since its compile leaves the Blueprint clean', () => {
+    const source = batch();
+
+    expect(source).toMatch(/Context\.NameBlueprint\(Result,\s*true\);/u);
+    expect(source.indexOf('Context.NameBlueprint(')).toBeLessThan(source.indexOf('McpCompileBlueprintWithDiagnostics('));
+  });
+});

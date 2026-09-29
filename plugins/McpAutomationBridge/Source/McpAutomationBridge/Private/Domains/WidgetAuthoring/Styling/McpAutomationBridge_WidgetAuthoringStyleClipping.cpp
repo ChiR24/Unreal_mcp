@@ -9,6 +9,7 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "JsonObjectConverter.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -52,6 +53,9 @@ bool HandleWidgetAuthoringStyleClipping(
             Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Widget not found"), TEXT("WIDGET_NOT_FOUND"));
             return true;
         }
+        // Every reply names the Widget Blueprint it saved into. Neither widgetPath nor assetPath was
+        // there, so the receipt of a style or clipping change carried no handle and no change.
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
 
         if (SubAction.Equals(TEXT("set_clipping"), ESearchCase::IgnoreCase))
         {
@@ -208,6 +212,7 @@ bool HandleWidgetAuthoringStyleClipping(
                 MCP_PROPERTY_EXPORT_TEXT(Prop, ExportedValue, ValuePtr, ValuePtr, Widget, PPF_None);
 
                 ResultJson->SetStringField(TEXT("mode"), TEXT("read"));
+                McpHandlerUtils::MarkNoAssetsChanged(ResultJson); // a read: the widgetPath above is identity, not a change
                 ResultJson->SetStringField(TEXT("propertyName"), PropertyName);
                 ResultJson->SetStringField(TEXT("value"), ExportedValue);
                 ResultJson->SetStringField(TEXT("widgetName"), SlotName);

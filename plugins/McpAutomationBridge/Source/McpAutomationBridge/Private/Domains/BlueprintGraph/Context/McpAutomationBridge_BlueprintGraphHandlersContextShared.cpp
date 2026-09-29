@@ -74,11 +74,33 @@ void FActionContext::SendErrorWithDetails(
         ErrorCode);
 }
 
+void FActionContext::NameBlueprint(const TSharedPtr<FJsonObject>& Result, bool bChanged) const
+{
+    if (!Result.IsValid() || !Blueprint)
+    {
+        return;
+    }
+    const FString Path = Blueprint->GetOutermost()->GetName();
+    if (!Result->HasField(TEXT("assetPath")) && !Result->HasField(TEXT("blueprintPath")))
+    {
+        Result->SetStringField(TEXT("blueprintPath"), Path);
+    }
+    if (bChanged && !Result->HasField(TEXT("changedAssets")))
+    {
+        TArray<TSharedPtr<FJsonValue>> Changed;
+        Changed.Add(MakeShared<FJsonValueString>(Path));
+        Result->SetArrayField(TEXT("changedAssets"), Changed);
+    }
+}
+
 void FActionContext::SendResponse(
     const FString& Message,
     const TSharedPtr<FJsonObject>& Result) const
 {
     FString OutMessage = Message;
+    // A reply that named no asset (create_node on its dynamic path, build_graph) left the receipt with no
+    // handle and no change. The dirty test below is the one this funnel already uses for "THIS call changed it".
+    NameBlueprint(Result, Blueprint && Blueprint->Status == BS_Dirty);
     // "Node created." while the graph no longer compiles is the worst answer a
     // mutation can give: nothing surfaces until someone presses Play, and by
     // then the edit that broke it is many calls back. Every mutation here marks

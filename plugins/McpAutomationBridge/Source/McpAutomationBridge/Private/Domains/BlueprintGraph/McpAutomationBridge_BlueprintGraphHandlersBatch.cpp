@@ -227,6 +227,9 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
     Result->SetArrayField(TEXT("results"), Results);
     Result->SetObjectField(TEXT("nodeIds"), NodeIds);
     Result->SetNumberField(TEXT("succeeded"), Results.Num());
+    // Every step ran, so the Blueprint changed. The compile below leaves it clean, which the reply funnel
+    // reads as "unchanged", so the batch says it itself: the receipt then names and lists the Blueprint.
+    Context.NameBlueprint(Result, /*bChanged=*/true);
     if (!bCompile)
     {
         // The caller compiles and saves once its own work is done.

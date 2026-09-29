@@ -142,6 +142,9 @@ struct FActionContext
     void SendResponse(
         const FString& Message,
         const TSharedPtr<FJsonObject>& Result) const;
+    // Names the Blueprint the edit ran on (blueprintPath, unless the reply already carries its assetPath), so the
+    // receipt has its handle. bChanged also lists it under changedAssets, which the receipt reads as changed.
+    void NameBlueprint(const TSharedPtr<FJsonObject>& Result, bool bChanged) const;
 
     UEdGraphNode* FindNode(const FString& Id) const;
     void SendNodeNotFound(const FString& Id) const;

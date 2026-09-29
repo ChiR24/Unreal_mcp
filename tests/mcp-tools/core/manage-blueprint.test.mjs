@@ -230,7 +230,7 @@ const testCases = [
     { edit: 'create_node', id: 'delay', nodeType: 'CallFunction', memberName: 'Delay', pinDefaults: { Duration: 0.25 } },
     { edit: 'create_node', id: 'print', nodeType: 'CallFunction', memberName: 'PrintString', pinDefaults: { InString: 'batched' } },
     { edit: 'connect_pins', from: '$delay.then', to: '$print.execute' },
-  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }] },
+  ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.succeeded', equals: 3, label: 'build_graph ran all three steps' }, { path: 'structuredContent.receipt.handles.0.kind', equals: 'asset', label: 'the receipt names the Blueprint the batch edited' }, { path: 'structuredContent.receipt.changes', length: 1, label: 'and lists it once as changed' }] },
 
   // === BATCH: "$entry" addresses the Construction Script's entry node without a lookup ===
   { scenario: 'BATCH: build_graph from the construction script entry', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'UserConstructionScript', operations: [
@@ -410,6 +410,8 @@ const testCases = [
     toolName: 'manage_blueprint',
     arguments: widgetArgs(action, { slotName: 'TitleText', ...extra }),
     expected: 'success',
+    // Every layout and style reply names the widget it saved into, so its receipt lists it once as changed.
+    assertions: [{ path: 'structuredContent.receipt.changes', length: 1, label: 'the receipt lists the widget the call changed' }],
   }));
 
   const bindingCases = [
