@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f6ee623675c36f51",
+  "catalogRevision": "56193e57ea5554b9",
   "recordCount": 389,
   "records": [
     {
@@ -7496,6 +7496,8 @@
           "import obj",
           "import png",
           "import wav",
+          "import sound file",
+          "import audio file",
           "bring file into project",
           "import animation",
           "import mocap",
@@ -7622,7 +7624,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5bfa2da7e50a8d27c44a880440ebf39a1ec458951fe418482023ec610ee68c80",
-        "content": "2ea20a4d936db0a4d451e7f0ec8f985a73ca110e56f59aff834648a8811168dc"
+        "content": "3a13d3d34143ea60826c3b897ba1b102f59dd03be85ad7adfd216ec87c0c5385"
       }
     },
     {
@@ -41334,7 +41336,9 @@
           "nav area",
           "nav link",
           "smart link",
-          "rebuild navigation"
+          "rebuild navigation",
+          "navmesh",
+          "add navmesh"
         ],
         "summary": "Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh.",
         "whenToUse": [
@@ -41728,7 +41732,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "efde91a9cabfb8569fb2d5a302d91bde215ffd6478ec2ac16aa9725ff3bc3521",
-        "content": "f295e73cf263505a09b2a15700578b59b7f641e9907ae2673cb860f12f08ba48"
+        "content": "a1b857fdb9c5d9c5495ea10ceebf87431247eb55e09f9f3747fb5938dcf4a8c6"
       }
     },
     {
@@ -45662,7 +45666,8 @@
           "spatialization",
           "occlusion",
           "reverb send",
-          "falloff distance"
+          "falloff distance",
+          "make sound 3d"
         ],
         "summary": "Configure sound attenuation: distance falloff, spatialization, occlusion, reverb send, or a named attenuation preset.",
         "whenToUse": [
@@ -45939,7 +45944,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "1efa1d87dd07dba05eb309f5b0816a9ec836eb7c1242b154e783c925c2d89bd1",
-        "content": "b14993b143e88e1c78cafa2e4513703d150612079204ac00053246ec35a5f243"
+        "content": "8faf1a59c5cb1e8000541555dc5436d4a3fe6bf8e0f646a627d3daebafa77e79"
       }
     },
     {
@@ -54759,7 +54764,9 @@
           "play effect",
           "spawn vfx",
           "spawn niagara system",
-          "emit particles"
+          "emit particles",
+          "spawn explosion effect",
+          "spawn effect at location"
         ],
         "summary": "Spawn a Niagara system instance at runtime (PIE).",
         "whenToUse": [
@@ -54892,7 +54899,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c9fc3e35ba08cb638dff146f4c7df5061e9083e036d23ac7df8c92be11b63ba8",
-        "content": "6e806fc784f8f3c477267f233a02fee34e3371605245eaeee3252a57595ab930"
+        "content": "62413b8f0541749f3bcbe51faf8ae8d90ea64c7854c76148c35e5502980cb202"
       }
     },
     {
@@ -55397,7 +55404,9 @@
         "topics": [
           "configure_attribute_set",
           "attribute",
-          "attribute base value"
+          "attribute base value",
+          "add health attribute",
+          "health attribute"
         ],
         "summary": "Configure an attribute set: add an attribute or set its base value.",
         "whenToUse": [
@@ -55529,7 +55538,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3a12a58f68e17801ad8f4c6af64159cf8314b34326ed1bad512e52614a93f3bb",
-        "content": "d2badc5ff8fbc7d0ae4102fd09343fadf2a09b66ec4011def853208d1b7d251a"
+        "content": "d2ffdaaea14607aa0b910a121371ef4ff6ffd03661e689ff7e0be79e7484b633"
       }
     },
     {
@@ -60923,7 +60932,8 @@
           "create door",
           "new door",
           "door actor",
-          "openable door"
+          "openable door",
+          "door that opens"
         ],
         "summary": "Create an interactable: door, chest, switch, lever or trigger actor, an interactable interface, or an interaction component.",
         "whenToUse": [
@@ -61156,7 +61166,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4992c4887a2ead1e11b980caa80da0cc22456e92602a9b5b9be7208785ad304d",
-        "content": "df1f01b41747680ccbe8d329a46695a0a3fdb6639f772d2f16d63f84d72f75a0"
+        "content": "01c5934216b94b530fe85510e98b4d4abe119f16eda8bf7a48f7b7807f65d2c8"
       }
     },
     {
@@ -68008,7 +68018,8 @@
           "default pawn",
           "game rules",
           "respawn",
-          "spectating"
+          "spectating",
+          "set game mode"
         ],
         "summary": "Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.",
         "whenToUse": [
@@ -68234,7 +68245,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ab349f5200da8ed5b92947cc37e4fd2892821f5964930501cf7057dfc352bc0d",
-        "content": "b332641e876691f16a64653f6f12d60ea69b4584968a976acfbd2a22da2c6230"
+        "content": "5fa9a5f2a8fe814db393c581e0cda853f47d77b9df80893394395f01ede6d807"
       }
     },
     {
@@ -78414,6 +78425,7 @@
           "cinematic",
           "sequencer",
           "cutscene",
+          "make a cutscene",
           "level sequence asset",
           "create level sequence"
         ],
@@ -78585,7 +78597,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "660472f540c2c7b42fd755267a723504b486e1e629265ca18bbdc65cd8fa732f",
-        "content": "4c0aa66905e5ee272e173de2a4349cfed09cd7d6454adbb8bb2e65a4d14c04cc"
+        "content": "3fa4cae50878108b7a84802bb5604737af801acace6bc31bb448a442c3bbeb81"
       }
     },
     {

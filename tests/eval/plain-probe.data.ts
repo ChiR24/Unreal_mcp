@@ -80,4 +80,11 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'list sounds', accepted: ['asset.query_asset'] },
   { query: 'widget click', accepted: ['control_editor.simulate_input'] },
   { query: 'change this button text', accepted: ['blueprint.set_widget_layout'] },
+  { query: 'make a cutscene', accepted: ['sequence.create'] },
+  { query: 'spawn explosion effect at location', accepted: ['manage_effect.spawn_niagara'] },
+  { query: 'import sound file', accepted: ['asset.import'] },
+  { query: 'make sound 3d', accepted: ['manage_audio.configure_sound_attenuation'] },
+  { query: 'set game mode', accepted: ['manage_networking.configure_game_mode'] },
+  { query: 'make a door that opens', accepted: ['manage_interaction.create_interactable'] },
+  { query: 'add health attribute', accepted: ['manage_gas.configure_attribute_set'] },
 ];

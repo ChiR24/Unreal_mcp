@@ -48,7 +48,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('import', 'asset', 'Import an asset from a filesystem source into the project content hierarchy.',
     schema({ sourcePath: SOURCE_PATH, destinationPath: DEST_PATH, overwrite: bool('Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings.'), save: bool('Save the imported asset. Defaults to true; pass false to keep it in memory only.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations.') }, ['sourcePath', 'destinationPath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence'],
+    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'import sound file', 'import audio file', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence'],
       whenToUse: [
         'A source file inside the project folder (FBX, OBJ, PNG, WAV) must become an asset at a /Game path.',
         'An FBX animation take must be imported onto an existing skeleton without importing the mesh again.',

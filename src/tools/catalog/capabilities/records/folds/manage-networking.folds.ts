@@ -41,7 +41,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_game_mode', selector: 'setting',
     summary: 'Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.',
-    topics: ['default pawn', 'game rules', 'respawn', 'spectating'],
+    topics: ['default pawn', 'game rules', 'respawn', 'spectating', 'set game mode'],
     members: {
       default_pawn_class: 'set_default_pawn_class', player_controller_class: 'set_player_controller_class', game_state_class: 'set_game_state_class', player_state_class: 'set_player_state_class',
       hud_class: 'set_hud_class', rules: 'configure_game_rules', respawn: 'set_respawn_rules', spectating: 'configure_spectating',

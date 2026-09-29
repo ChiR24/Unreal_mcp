@@ -44,7 +44,7 @@ export const MANAGE_AUDIO_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_sound_attenuation', selector: 'setting',
     summary: 'Configure sound attenuation: distance falloff, spatialization, occlusion, reverb send, or a named attenuation preset.',
-    topics: ['attenuation', 'spatialization', 'occlusion', 'reverb send', 'falloff distance'],
+    topics: ['attenuation', 'spatialization', 'occlusion', 'reverb send', 'falloff distance', 'make sound 3d'],
     members: {
       distance: 'configure_distance_attenuation', spatialization: 'configure_spatialization', occlusion: 'configure_occlusion', reverb_send: 'configure_reverb_send',
       audio_occlusion: 'set_audio_occlusion', preset: 'set_sound_attenuation',

@@ -36,7 +36,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', editorStates: ['edit'], latency: 'instant', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'debug_shape', shape: 'Sphere', location: [0, 0, 0], radius: 100 } }),
   buildRecord({ parentTool: T, id: `${T}.spawn_niagara`, action: 'spawn_niagara', family: F,
-    topics: ['spawn particle', 'play effect', 'spawn vfx', 'spawn niagara system', 'emit particles'],
+    topics: ['spawn particle', 'play effect', 'spawn vfx', 'spawn niagara system', 'emit particles', 'spawn explosion effect', 'spawn effect at location'],
     summary: 'Spawn a Niagara system instance at runtime (PIE).', whenToUse: ['A Niagara effect must play on a live actor.'], whenNotToUse: ['Author the system.'],
     inputProps: { actorName: P.actorName, assetPath: P.assetPath, system: E.system, systemPath: E.systemPath, attachToActor: E.attachToActor, location: P.location, rotation: P.rotation, scale: E.scale }, required: [],
     effect: 'write', editorStates: ['edit', 'pie', 'simulate'], behavior: {  }, latency: 'interactive', resources: 'low', plugins: NIAGARA,

@@ -32,7 +32,7 @@ export const MANAGE_GAS_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_attribute_set', selector: 'setting',
     summary: 'Configure an attribute set: add an attribute or set its base value.',
-    topics: ['attribute', 'attribute base value'],
+    topics: ['attribute', 'attribute base value', 'add health attribute', 'health attribute'],
     members: { add_attribute: 'add_attribute', base_value: 'set_attribute_base_value' },
   },
   {

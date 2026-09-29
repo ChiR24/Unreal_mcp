@@ -48,7 +48,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_navigation', selector: 'setting',
     summary: 'Configure navigation: nav mesh settings, agent properties, area cost or class, nav links, smart links, or rebuild the nav mesh.',
-    topics: ['nav mesh', 'navigation', 'nav agent', 'nav area', 'nav link', 'smart link', 'rebuild navigation'],
+    topics: ['nav mesh', 'navigation', 'nav agent', 'nav area', 'nav link', 'smart link', 'rebuild navigation', 'navmesh', 'add navmesh'],
     members: {
       mesh_settings: 'configure_nav_mesh_settings', agent_properties: 'set_nav_agent_properties', area_cost: 'configure_nav_area_cost', area_class: 'set_nav_area_class',
       nav_link: 'configure_nav_link', link_type: 'set_nav_link_type', smart_link_behavior: 'configure_smart_link_behavior', rebuild: 'rebuild_navigation',
