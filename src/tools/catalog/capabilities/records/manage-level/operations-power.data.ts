@@ -94,7 +94,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
   // back to system_control.execute_python. Published here against the same
   // native action; the handler re-validates and reports what it applied.
   buildCoreRecord({
-    parentTool: 'manage_level', action: 'set_world_settings', dispatchAction: 'set_level_world_settings',
+    parentTool: 'manage_level', action: 'set_world_settings', topics: ['kill z height', 'world gravity', 'override game mode'], dispatchAction: 'set_level_world_settings',
     domain: D, family: 'settings',
     summary: "Set the loaded level's WorldSettings: GameMode override, kill Z, gravity, time dilation, and world bounds checks.",
     whenToUse: ['A level needs its GameMode override or physics/world defaults set.'],
@@ -131,7 +131,7 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'manage_level', action: 'list_levels', dispatchAction: 'list_levels',
     domain: D, family: 'query',
-    topics: ['all levels', 'maps in project', 'list maps', 'available levels'],
+    topics: ['all levels', 'maps in project', 'list maps', 'available levels', 'what maps exist', 'what levels exist'],
     summary: 'List all levels available in the project.',
     whenToUse: ['The set of available level assets must be enumerated.'],
     whenNotToUse: ['A single level summary is needed; use get_summary.'],

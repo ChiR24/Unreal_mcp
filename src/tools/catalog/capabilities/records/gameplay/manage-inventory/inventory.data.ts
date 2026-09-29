@@ -259,6 +259,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   inventoryRecord({
     action: 'set_inventory_replication',
+    topics: ['replicate inventory'],
     summary: 'Set inventory component replication metadata.',
     whenToUse: [
       'A Blueprint with InventorySlots, MaxSlots, CurrentWeight and MaxWeight variables must replicate them to clients, or stop (replicated defaults to false).',

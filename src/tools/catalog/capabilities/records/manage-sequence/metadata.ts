@@ -14,7 +14,7 @@ const D = 'sequence';
 
 export const METADATA_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
-    id: 'sequence.get_metadata', action: 'get_metadata', family: F, domain: D,
+    id: 'sequence.get_metadata', action: 'get_metadata', topics: ['sequence tags'], family: F, domain: D,
     summary: 'Read the custom metadata tags (string key/value pairs written by set_metadata) stored on a Level Sequence, or look up one key.',
     whenToUse: ['Sequence asset metadata must be inspected.'],
     whenNotToUse: ['Metadata is being written rather than read.'],

@@ -4654,7 +4654,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "key": {
           "type": "string",
-          "description": "Input key name for simulate_input."
+          "description": "Key name: SpaceBar, D, Left, Enter, P. Escape is the editor stop-play key: in Play In Editor it ends the session instead of reaching the game, so test an action bound to Escape through another key mapped to it."
         },
         "levelPath": {
           "type": "string",

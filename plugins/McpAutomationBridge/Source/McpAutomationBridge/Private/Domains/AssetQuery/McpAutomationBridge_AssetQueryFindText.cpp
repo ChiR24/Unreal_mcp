@@ -19,6 +19,7 @@
 #include "EngineUtils.h"
 #include "Internationalization/StringTable.h"
 #include "Internationalization/StringTableCore.h"
+#include "Misc/PackageName.h"
 #include "WidgetBlueprint.h"
 
 namespace McpAssetQueryHandlers
@@ -53,7 +54,7 @@ struct FMcpFindTextScan
     }
 
     // Every string, text and name reachable through Struct's properties: nested structs and arrays
-    // are followed, object references are not.
+    // are followed; an object reference is matched by its path, never followed.
     void Properties(const UStruct* Struct, const void* Container, const FString& Asset, const FString& Where,
                     const FString& Prefix, int32 Depth = 0)
     {
@@ -83,6 +84,18 @@ struct FMcpFindTextScan
         else if (const FNameProperty* Name = CastField<FNameProperty>(Property))
         {
             Hit(Asset, Where, Field, Name->GetPropertyValue(Data).ToString());
+        }
+        else if (const FObjectPropertyBase* Ref = CastField<FObjectPropertyBase>(Property))
+        {
+            // A reference to another asset counts by its path (a component's Sound set to MS_Music),
+            // not by what it holds; links inside the same package and native classes are skipped.
+            const FSoftObjectProperty* Soft = CastField<FSoftObjectProperty>(Property);
+            const UObject* Target = Soft ? nullptr : Ref->GetObjectPropertyValue(Data);
+            const FString Path = Soft ? Soft->GetPropertyValue(Data).ToString() : (Target ? Target->GetPathName() : FString());
+            if (!Path.IsEmpty() && !Path.StartsWith(TEXT("/Script/")) && FPackageName::ObjectPathToPackageName(Path) != FPackageName::ObjectPathToPackageName(Asset))
+            {
+                Hit(Asset, Where, Field, Path);
+            }
         }
         else if (const FStructProperty* Nested = CastField<FStructProperty>(Property))
         {

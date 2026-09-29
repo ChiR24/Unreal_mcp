@@ -157,7 +157,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'audit_placement',
     domain: DOMAIN,
     family: FAMILY_FIND,
-    topics: ['placement problems', 'overlapping actors', 'sunk actors', 'floating actors', 'tilted actors', 'upside down actors', 'level audit', 'intersecting geometry', 'z-fighting', 'flickering surfaces', 'coplanar faces', 'texture flicker'],
+    topics: ['placement problems', 'overlapping actors', 'sunk actors', 'floating actors', 'tilted actors', 'upside down actors', 'level audit', 'intersecting geometry', 'z-fighting', 'flickering surfaces', 'coplanar faces', 'texture flicker', 'check for floating actors', 'actors that overlap'],
     summary: 'Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker).',
     whenToUse: [
       'A level was assembled programmatically and needs checking before anyone looks at it.',

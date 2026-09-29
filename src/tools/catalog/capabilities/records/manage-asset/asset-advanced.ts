@@ -15,6 +15,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
     schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game/Textures).'), renderTargetPath: str('Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath.'), width: num('Width in pixels.'), height: num('Height in pixels.'), format: str('Pixel format.'), save: bool('Save after creation. Defaults to true.') }, [], ['name', 'renderTargetPath']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'manage_texture',
+      topics: ['make render target'],
       whenToUse: [
         'A scene capture, or a Blueprint that draws to a texture, needs a render target asset to render into.',
         'A render target of a chosen size and pixel format must exist at a /Game path; one already there is reported, not replaced.',

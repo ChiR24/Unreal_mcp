@@ -59,7 +59,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'preview_widget',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['preview widget', 'render widget', 'see widget', 'widget screenshot', 'widget image'],
+    topics: ['preview widget', 'render widget', 'see widget', 'widget screenshot', 'widget image', 'preview ui'],
     summary: 'Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image. Design mode, like its thumbnail: Construct graphs do not run, so texts are the designer defaults.',
     whenToUse: ['A Widget Blueprint must be seen after an edit (layout, colours, fonts) without running PIE.'],
     whenNotToUse: ['What the running game shows is needed, runtime texts included (play, then control_editor screenshot mode full_editor_window).'],

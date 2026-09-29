@@ -5,14 +5,14 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'play', selector: 'control',
     summary: 'Control Play In Editor with control: play (starts it), pause, resume, stop, eject (leave the pawn) or possess (take it back).',
-    topics: ['play in editor', 'press play', 'start the game', 'run the game', 'start pie', 'stop pie', 'pause pie', 'pause game', 'pause simulation', 'resume game', 'eject', 'possess'],
+    topics: ['play in editor', 'press play', 'start the game', 'run the game', 'start pie', 'stop pie', 'pause pie', 'pause game', 'pause simulation', 'resume game', 'eject', 'possess', 'quit game'],
     members: { play: 'play', pause: 'pause', resume: 'resume', stop: 'stop', eject: 'eject', possess: 'possess' },
     aliasMembers: { stop: 'stop_pie' },
   },
   {
     primary: 'set_game_speed', selector: 'control',
     summary: 'Control the clock of the running game during Play In Editor: game speed (slow motion), a fixed delta time, or step frames.',
-    topics: ['game speed', 'time dilation', 'fixed delta time', 'step frame', 'slow motion'],
+    topics: ['game speed', 'time dilation', 'fixed delta time', 'step frame', 'slow motion', 'game too fast'],
     members: { speed: 'set_game_speed', fixed_delta_time: 'set_fixed_delta_time', step_frame: 'step_frame' },
     aliasMembers: { step_frame: 'single_frame_step' },
   },
@@ -24,7 +24,7 @@ export const CONTROL_EDITOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'set_camera', selector: 'cameraOp',
     summary: 'Set the viewport camera transform, its field of view, or the view target actor.',
-    topics: ['viewport camera', 'camera position', 'camera fov', 'view target', 'look at actor'],
+    topics: ['viewport camera', 'camera position', 'camera fov', 'view target', 'look at actor', 'move the camera', 'move camera'],
     members: { transform: 'set_camera', fov: 'set_camera_fov', view_target: 'set_view_target' },
     aliasMembers: { transform: ['set_camera_position', 'set_viewport_camera'], view_target: 'set_game_view_target' },
   },

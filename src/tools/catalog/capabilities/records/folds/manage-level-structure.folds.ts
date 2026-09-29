@@ -26,7 +26,7 @@ export const MANAGE_LEVEL_STRUCTURE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'set_volume_properties', selector: 'volumeProperty',
     summary: 'Set a volume\'s properties, its extent, or its bounds.',
-    topics: ['volume extent', 'volume bounds', 'volume properties'],
+    topics: ['volume extent', 'volume bounds', 'volume properties', 'resize volume'],
     members: { properties: 'set_volume_properties', extent: 'set_volume_extent', bounds: 'set_volume_bounds' },
   },
 ];

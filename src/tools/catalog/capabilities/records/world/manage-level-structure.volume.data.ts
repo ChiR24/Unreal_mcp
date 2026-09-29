@@ -155,7 +155,7 @@ export const LEVEL_VOLUME_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'set_volume_properties', volumeName: 'PP_01', bEnabled: true },
   }),
   buildWorldRecord({
-    parentTool: 'manage_level_structure', action: 'remove_volume', dispatchAction: 'remove_volume',
+    parentTool: 'manage_level_structure', action: 'remove_volume', topics: ['remove trigger volume'], dispatchAction: 'remove_volume',
     family: F, summary: 'Remove a volume actor from the level.',
     whenToUse: ['A volume actor must be permanently removed.'], whenNotToUse: ['The volume should be disabled; use set_volume_properties.'],
     inputProps: { volumeName: P.volumeName, save: P.levelEditSave },

@@ -59,7 +59,7 @@ export const P = {
     'x-unreal-reflection-boundary': true,
   },
   steps: int('Number of frames to step.'),
-  key: str('Input key name for simulate_input.'),
+  key: str('Key name: SpaceBar, D, Left, Enter, P. Escape is the editor stop-play key: in Play In Editor it ends the session instead of reaching the game, so test an action bound to Escape through another key mapped to it.'),
   type: str('Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session.'),
   inputType: str('Alias for type used by simulate_input.'),
   inputAction: str('Enhanced Input action to inject directly, as an asset path such as /Game/Input/IA_Move. A raw key already reaches Enhanced Input through the active mapping contexts (key_down D moves a pawn whose context maps D); use inputAction when no key is mapped to the action, or to inject an analog value.'),

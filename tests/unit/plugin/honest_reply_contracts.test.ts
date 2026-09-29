@@ -42,6 +42,24 @@ describe('handlers answer what they did', () => {
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersCombine.cpp')).toContain('OutputTexture->SRGB = BaseTex->SRGB;');
   });
 
+  // UEditorAssetLibrary::DoesAssetExist answers false for every path while Play In Editor runs, so
+  // exists, dependencies and the asset graph called a real asset missing during play.
+  it('asset exists, dependencies and graph read the asset registry, which works during Play', () => {
+    const source = code('AssetWorkflow', 'Analysis', 'McpAutomationBridge_AssetWorkflowDependencies.cpp');
+    expect(source).not.toContain('UEditorAssetLibrary');
+    expect(source.match(/McpAssetExists\(/gu)?.length ?? 0).toBeGreaterThanOrEqual(4);
+  });
+
+  // A GameMode whose Audio component plays MS_Music gave 0 matches for "MS_Music": object
+  // references were skipped outright.
+  it('find_text matches a reference to another asset by its path', () => {
+    const source = code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp');
+    expect(source).toMatch(/else if \(const FObjectPropertyBase\* Ref = CastField<FObjectPropertyBase>\(Property\)\)/u);
+    expect(source).toContain('Soft->GetPropertyValue(Data).ToString()');
+    expect(source).toContain('!Path.StartsWith(TEXT("/Script/"))');
+    expect(source).toContain('FPackageName::ObjectPathToPackageName(Path) != FPackageName::ObjectPathToPackageName(Asset)');
+  });
+
   it('a loot entry added after a removal takes a new key', () => {
     expect(code('Inventory', 'McpAutomationBridge_InventoryHandlersLootTables.cpp')).toContain('NextIndexedPropertyIndex(');
   });

@@ -170,7 +170,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'duplicate',
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
-    topics: ['clone actor', 'copy actor'],
+    topics: ['clone actor', 'copy actor', 'make actor copy'],
     summary:
       'Duplicate an existing actor, optionally with a new name and offset.',
     whenToUse: ['An actor must be copied within the current level.'],
@@ -195,7 +195,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'rename',
     domain: DOMAIN,
     family: FAMILY_LIFECYCLE,
-    topics: ['rename actor', 'actor label', 'relabel actor', 'outliner name', 'actor object name'],
+    topics: ['rename actor', 'actor label', 'relabel actor', 'outliner name', 'actor object name', 'give actor a new name', 'change actor name'],
     summary: 'Rename an actor: its label (the name the Outliner and every other call use), and with renameObject its object name too, which is the name a cooked level ships.',
     whenToUse: [
       'An actor should go by a different name.',

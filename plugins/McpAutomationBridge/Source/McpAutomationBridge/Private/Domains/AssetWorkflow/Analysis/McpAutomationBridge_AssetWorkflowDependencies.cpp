@@ -10,7 +10,6 @@
 #include "Misc/PackageName.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "EditorAssetLibrary.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -30,7 +29,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+  if (!McpAssetExists(SafeAssetPath)) {
     SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
                         TEXT("ASSET_NOT_FOUND"));
@@ -95,7 +94,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+  if (!McpAssetExists(SafeAssetPath)) {
     SendAutomationError(Socket, RequestId,
                         FString::Printf(TEXT("Asset not found: %s"), *SafeAssetPath),
                         TEXT("ASSET_NOT_FOUND"));
@@ -220,7 +219,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
     for (const TSharedPtr<FJsonValue> &Value : *Paths) {
       const FString Raw = Value.IsValid() ? Value->AsString() : FString();
       const FString Path = SanitizeProjectRelativePath(Raw);
-      const bool bExists = !Path.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(Path);
+      const bool bExists = !Path.IsEmpty() && McpAssetExists(Path);
       Each->SetBoolField(Path.IsEmpty() ? Raw : Path, bExists);
       Existing += bExists ? 1 : 0;
     }
@@ -246,7 +245,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
     return true;
   }
 
-  bool bExists = UEditorAssetLibrary::DoesAssetExist(AssetPath);
+  bool bExists = McpAssetExists(AssetPath);
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);

@@ -6,14 +6,14 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_primitive', selector: 'primitive',
     summary: 'Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs.',
-    topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus'],
+    topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus', 'make a cube or ramp'],
     members: byTarget('create_', ['create_box', 'create_sphere', 'create_cylinder', 'create_cone', 'create_capsule', 'create_plane', 'create_disc',
       'create_ring', 'create_torus', 'create_pipe', 'create_arch', 'create_ramp', 'create_stairs', 'create_spiral_stairs']),
   },
   {
     primary: 'boolean_mesh', selector: 'booleanOp',
     summary: 'Boolean mesh operations: union, subtract, intersection, trim, self-union.',
-    topics: ['boolean', 'union', 'subtract', 'intersection', 'trim mesh', 'csg'],
+    topics: ['boolean', 'union', 'subtract', 'intersection', 'trim mesh', 'csg', 'cut a hole in a mesh'],
     members: { union: 'boolean_union', subtract: 'boolean_subtract', intersection: 'boolean_intersection', trim: 'boolean_trim', self_union: 'self_union' },
   },
   {
@@ -32,7 +32,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'optimize_mesh', selector: 'optimization',
     summary: 'Optimize or repair a mesh: simplify, remesh (uniform or voxel), subdivide, merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.',
-    topics: ['simplify mesh', 'remesh', 'subdivide', 'weld vertices', 'fill holes', 'recalculate normals', 'flip normals', 'decimate'],
+    topics: ['simplify mesh', 'remesh', 'subdivide', 'weld vertices', 'fill holes', 'recalculate normals', 'flip normals', 'decimate', 'reduce triangles'],
     members: byName(['simplify_mesh', 'remesh_uniform', 'remesh_voxel', 'subdivide', 'merge_vertices', 'weld_vertices', 'remove_degenerates', 'fill_holes',
       'flip_normals', 'recalculate_normals', 'recompute_tangents']),
   },
@@ -63,7 +63,7 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_dynamic_mesh', selector: 'edit',
     summary: 'Edit a procedural/dynamic mesh: create one, append vertices or triangles, set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.',
-    topics: ['procedural mesh', 'dynamic mesh', 'append vertex', 'append triangle', 'vertex color', 'vertex position'],
+    topics: ['procedural mesh', 'dynamic mesh', 'append vertex', 'append triangle', 'vertex color', 'vertex position', 'move a vertex', 'create a mesh from vertices'],
     members: { create: 'create_procedural_mesh', append_vertex: 'append_vertex', append_triangle: 'append_triangle', set_vertex_position: 'set_vertex_position',
       set_vertex_color: 'set_vertex_color', set_uvs: 'set_uvs', split_normals: 'split_normals', translate: 'translate_mesh', difference: 'difference' },
   },

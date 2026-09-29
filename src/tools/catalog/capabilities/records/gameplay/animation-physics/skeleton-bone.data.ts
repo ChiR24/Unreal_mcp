@@ -16,7 +16,7 @@ const ESU = ['EditorScriptingUtilities'];
 const SKEL_BONE_REQUIRED = ['skeletonPath', 'boneName'];
 
 export const SKELETON_BONE_RECORDS: readonly CapabilityRecordSource[] = [
-  buildRecord({ parentTool: T, id: `${T}.create_skeleton`, action: 'create_skeleton', family: F,
+  buildRecord({ parentTool: T, id: `${T}.create_skeleton`, action: 'create_skeleton', topics: ['new skeleton asset'], family: F,
     summary: 'Create a new Skeleton asset.', whenToUse: W, whenNotToUse: ['A SkeletalMesh already exists.'],
     inputProps: { name: P.name, path: P.path, rootBoneName: A.rootBoneName, save: A.save }, required: [],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: ESU,

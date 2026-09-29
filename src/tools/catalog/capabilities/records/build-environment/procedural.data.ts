@@ -49,7 +49,7 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'bake_lightmap', quality: 'Preview' },
   }),
   buildRecord({
-    id: 'build_environment.export_snapshot', action: 'export_snapshot', family: F,
+    id: 'build_environment.export_snapshot', action: 'export_snapshot', topics: ['save environment snapshot'], family: F,
     summary: 'Export an environment snapshot to a file.',
     whenToUse: ['An environment state must be exported for later restoration.'],
     whenNotToUse: ['The level should be saved directly.'],
@@ -65,7 +65,7 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
       skyLightActorPath: '/Game/Maps/Main.Main:PersistentLevel.SkyLight_0' },
   }),
   buildRecord({
-    id: 'build_environment.import_snapshot', action: 'import_snapshot', family: F,
+    id: 'build_environment.import_snapshot', action: 'import_snapshot', topics: ['load an environment snapshot'], family: F,
     summary: 'Import an environment snapshot from a file.',
     whenToUse: ['A previously exported environment snapshot must be restored.'],
     whenNotToUse: ['The environment should be rebuilt from scratch.'],
@@ -79,7 +79,7 @@ export const PROCEDURAL_RECORDS: readonly CapabilityRecordSource[] = [
       skyLightActorPath: '/Game/Maps/Main.Main:PersistentLevel.SkyLight_0' },
   }),
   buildRecord({
-    id: 'build_environment.delete', action: 'delete', family: F,
+    id: 'build_environment.delete', action: 'delete', topics: ['delete water, ocean, lake, river or landscape'], family: F,
     summary: 'Delete environment actors by name or path.',
     whenToUse: ['Environment actors must be permanently removed.'],
     whenNotToUse: ['Actors should be hidden rather than deleted.'],

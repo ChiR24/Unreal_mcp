@@ -14,7 +14,7 @@ const D = 'sequence';
 export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.play', action: 'play', family: F, domain: D,
-    topics: ['play sequence', 'play cinematic', 'preview sequence'],
+    topics: ['play sequence', 'play cinematic', 'preview sequence', 'play cutscene', 'preview cutscene'],
     summary: 'Start playing the currently open Level Sequence.',
     whenToUse: ['Sequence playback must be started for preview or PIE.'],
     whenNotToUse: ['The sequence is already playing.'],

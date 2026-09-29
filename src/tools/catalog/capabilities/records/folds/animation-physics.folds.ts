@@ -5,14 +5,14 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   { primary: 'play_montage', summary: 'Play an animation montage on an actor.', members: ['play_anim_montage'] },
   {
-    primary: 'setup_ragdoll', selector: 'ragdoll',
+    primary: 'setup_ragdoll', topics: ['go limp', 'make body go limp', 'make character go limp'], selector: 'ragdoll',
     summary: 'Set up ragdoll physics on an actor, or activate/deactivate an existing ragdoll.',
     members: { setup: 'setup_ragdoll', activate: 'activate_ragdoll' },
   },
   {
     primary: 'create_animation_asset', selector: 'kind',
     summary: 'Create an animation asset: a sequence, montage, blend space (1D/2D), aim offset, pose asset from a sequence, or procedural animation.',
-    topics: ['create animation', 'create montage', 'create blend space', 'create aim offset', 'pose asset', 'procedural animation'],
+    topics: ['create animation', 'create montage', 'create blend space', 'create aim offset', 'pose asset', 'procedural animation', 'new animation sequence'],
     members: {
       asset: 'create_animation_asset', sequence: 'create_animation_sequence', montage: 'create_montage',
       blend_space: 'create_blend_space', blend_space_1d: 'create_blend_space_1d', blend_space_2d: 'create_blend_space_2d',
@@ -29,13 +29,13 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_montage', selector: 'edit',
     summary: 'Edit an animation montage: notifies, sections, slots, section links, blend-in/out times and section timing.',
-    topics: ['montage section', 'montage slot', 'montage notify', 'blend in', 'blend out', 'link sections'],
+    topics: ['montage section', 'montage slot', 'montage notify', 'blend in', 'blend out', 'link sections', 'blend in time'],
     members: byName(['add_montage_notify', 'add_montage_section', 'add_montage_slot', 'link_sections', 'set_blend_in', 'set_blend_out', 'set_section_timing']),
   },
   {
     primary: 'edit_anim_graph', selector: 'edit',
     summary: 'Edit an Animation Blueprint graph: blend, cached-pose and slot nodes, state machines, states, transitions and transition rules, blend trees.',
-    topics: ['anim graph', 'state machine', 'add state', 'add transition', 'blend node', 'blend tree', 'cached pose', 'slot node'],
+    topics: ['anim graph', 'state machine', 'add state', 'add transition', 'blend node', 'blend tree', 'cached pose', 'slot node', 'add walk state', 'locomotion states'],
     members: byName(['add_blend_node', 'add_cached_pose', 'add_slot_node', 'create_state_machine', 'add_state_machine',
       'add_state', 'add_transition', 'set_transition_rules', 'delete_transition', 'create_blend_tree']),
   },
@@ -48,7 +48,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_anim_graph_node', selector: 'edit',
     summary: 'Configure an AnimGraph node: add a layered-blend-per-bone node or set a node property value.',
-    topics: ['layered blend per bone', 'anim graph node value'],
+    topics: ['layered blend per bone', 'anim graph node value', 'blend upper body only'],
     members: { add_layered_blend_per_bone: 'add_layered_blend_per_bone', set_value: 'set_anim_graph_node_value' },
   },
   {
@@ -66,7 +66,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_physics_asset', selector: 'edit',
     summary: 'Create a physics asset or edit its bodies and constraints, and assign it to a skeletal mesh.',
-    topics: ['physics asset', 'physics body', 'physics constraint', 'constraint limits', 'assign physics asset', 'skeleton physics', 'preview physics'],
+    topics: ['physics asset', 'physics body', 'physics constraint', 'constraint limits', 'assign physics asset', 'skeleton physics', 'preview physics', 'add collision to bones', 'assign physics asset to mesh'],
     members: {
       create: 'create_physics_asset', add_body: 'add_physics_body', configure_body: 'configure_physics_body', modify_body: 'modify_physics_body',
       add_constraint: 'add_physics_constraint', set_constraint: 'set_physics_constraint', configure_constraint_limits: 'configure_constraint_limits',
@@ -86,7 +86,7 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
     members: { create: 'create_morph_target', set_deltas: 'set_morph_target_deltas', import: 'import_morph_targets', set_value: 'set_morph_target_value' },
   },
   {
-    primary: 'bind_cloth_to_skeletal_mesh', selector: 'clothOp',
+    primary: 'bind_cloth_to_skeletal_mesh', topics: ['add cloth simulation'], selector: 'clothOp',
     summary: 'Bind or assign a cloth asset to a skeletal mesh section.',
     members: { bind: 'bind_cloth_to_skeletal_mesh', assign: 'assign_cloth_asset_to_mesh' },
   },
@@ -94,13 +94,13 @@ export const ANIMATION_PHYSICS_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'setup_ik', selector: 'kind',
     summary: 'Set up IK: create an IK rig or IK retargeter, a Control Rig for IK solvers, or set which source chain drives each target chain of a retargeter.',
-    topics: ['ik rig', 'ik retargeter', 'inverse kinematics', 'retarget chain mapping'],
+    topics: ['ik rig', 'ik retargeter', 'inverse kinematics', 'retarget chain mapping', 'full body ik'],
     members: { setup: 'setup_ik', rig: 'create_ik_rig', retargeter: 'create_ik_retargeter', chain_mapping: 'set_retarget_chain_mapping' },
   },
   {
     primary: 'get_skeleton_info', selector: 'info',
     summary: 'Read skeleton data: summary, bones, sockets, virtual bones, bone transforms, morph targets, physics asset and bodies.',
-    topics: ['skeleton info', 'list bones', 'list sockets', 'bone transform', 'morph targets', 'physics bodies', 'virtual bones'],
+    topics: ['skeleton info', 'list bones', 'list sockets', 'bone transform', 'morph targets', 'physics bodies', 'virtual bones', 'check skeleton bones'],
     members: {
       skeleton: 'get_skeleton_info', bones: 'list_bones', sockets: 'list_sockets', virtual_bones: 'list_virtual_bones',
       bone_transform: 'get_bone_transform', morph_targets: 'list_morph_targets', physics_asset: 'get_physics_asset_info', physics_bodies: 'list_physics_bodies',

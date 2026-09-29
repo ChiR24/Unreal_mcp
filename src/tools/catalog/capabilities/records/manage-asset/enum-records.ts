@@ -23,7 +23,7 @@ export const ENUM_RECORDS: readonly RecordSpec[] = [
       whenToUse: ['An obsolete enum asset must be deleted from the project; a blocked delete is reported as DELETE_FAILED.'],
       whenNotToUse: ['Assets that still use the enum must be found first (use asset.inspect_asset with lookup=dependencies and referencers=true).', 'The enum should be renamed or moved, not deleted (use asset.rename).'] }),
   r('get_enum', 'enum', 'Read a Blueprint enum (UserDefinedEnum): every entry with its name and numeric value, plus the value count.', schema({ enumPath: ENUM_PATH }, ['enumPath']), OK, READ, READ_POLICY, LOW,
-    { topics: ['entry names and values', 'list entries'], examples: [ex('Read an enum\'s values', { enumPath: E }, DONE)],
+    { topics: ['entry names and values', 'list entries', 'show enum values'], examples: [ex('Read an enum\'s values', { enumPath: E }, DONE)],
       whenToUse: ['The current entries of an enum, with their exact names and numeric values, must be read before any edit that names an entry.','An enum must be checked after an edit: its entries, numeric values and entry count.'],
       whenNotToUse: ['An enum must be changed rather than read (use enum.edit_enum).', 'The enum asset must be found by name first (use asset.query_asset).'] }),
   r('add_enum_value', 'enum', 'Add a new value to a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, save: SAVE }, ['enumPath', 'valueName']), OK, WRITE, WRITE_POLICY, LOW,

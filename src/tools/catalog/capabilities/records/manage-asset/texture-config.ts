@@ -32,7 +32,7 @@ export const TEXTURE_CONFIG_RECORDS: readonly RecordSpec[] = [
       whenToUse: ['A texture must stay sharp because every mip is kept resident instead of streaming in late; there is no per-texture streaming priority to set.'],
       whenNotToUse: ['The pixels or size of the texture must change, not its asset settings (use texture.adjust_texture or texture.create_texture).', 'The global texture streaming budget must change, not one texture (use system_control.configure_performance with setting=texture_streaming).'] }),
   r('get_texture_info', 'texture', 'Read a 2D texture asset: width and height, pixel format, mip count, sRGB, compression setting, LOD bias, and virtual texture and never-stream flags.', schema({ assetPath: str('Texture /Game path.') }, ['assetPath']), OK, READ, READ_POLICY, LOW,
-    { topics: ['size and resolution', 'pixel format', 'compression setting', 'mip count'], examples: [ex('Read a texture\'s size and format', { assetPath: T }, DONE)],
+    { topics: ['size and resolution', 'pixel format', 'compression setting', 'mip count', 'how big is a texture'], examples: [ex('Read a texture\'s size and format', { assetPath: T }, DONE)],
       whenToUse: ['A texture\'s size, pixel format, mip count, sRGB flag and compression must be read before its pixels or settings are changed.','A texture setting must be verified after it was changed.'],
       whenNotToUse: ['A texture setting must be changed, not read (use texture.configure_texture).', 'The texture group or another property not listed here must be read (use inspect.get_property).'] })
 ];

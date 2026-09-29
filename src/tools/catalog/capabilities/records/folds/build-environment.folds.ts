@@ -12,7 +12,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'sculpt', selector: 'sculptOp',
     summary: 'Sculpt a landscape with a brush, modify its heightmap data directly, or set its material.',
-    topics: ['sculpt landscape', 'heightmap', 'landscape material'],
+    topics: ['sculpt landscape', 'heightmap', 'landscape material', 'raise or flatten the terrain or ground'],
     members: { sculpt: 'sculpt', heightmap: 'modify_heightmap', material: 'set_landscape_material' },
     aliasMembers: ['sculpt_landscape'],
   },
@@ -35,7 +35,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     // led callers to ask for 120 instances in a 6000uu radius, get a
     // success back, and find an empty level.
     summary: 'Create or update a foliage type asset, place explicit instances/transforms, or paint instances over a brush disc or a box area, dropped onto the ground.',
-    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes'],
+    topics: ['add foliage', 'paint foliage', 'foliage instances', 'scatter foliage', 'scatter grass', 'fill area with foliage', 'plant trees', 'place bushes', 'add trees, grass or flowers to the level', 'make a forest', 'scatter rocks'],
     members: { scatter: 'add_foliage', instances: 'add_foliage_instances', paint: 'paint_foliage' },
   },
   {
@@ -49,9 +49,9 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
     topics: ['foliage mesh', 'foliage placement', 'foliage collision', 'foliage culling', 'foliage lod'],
     members: byTarget('configure_foliage_', ['configure_foliage_mesh', 'configure_foliage_placement', 'configure_foliage_collision', 'configure_foliage_culling', 'configure_foliage_lod']),
   },
-  { primary: 'remove_foliage', summary: 'Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).', members: ['remove_foliage_instances'] },
+  { primary: 'remove_foliage', topics: ['remove trees or grass'], summary: 'Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).', members: ['remove_foliage_instances'] },
   // lighting
-  { primary: 'create_light', summary: 'Create a light actor of a given type.', topics: ['add point light', 'add spot light', 'add a light', 'place a light'], members: ['create_dynamic_light', 'spawn_light'] },
+  { primary: 'create_light', summary: 'Create a light actor of a given type.', topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight'], members: ['create_dynamic_light', 'spawn_light'] },
   {
     primary: 'create_sky_light', selector: 'skyLightOp',
     summary: 'Create a sky light, or ensure the level has exactly one.',
@@ -61,7 +61,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_lighting', selector: 'setting',
     summary: 'Configure scene lighting: shadows, ambient occlusion, exposure, global illumination, volumetric fog.',
-    topics: ['shadows', 'ambient occlusion', 'exposure', 'global illumination', 'lumen', 'volumetric fog'],
+    topics: ['shadows', 'ambient occlusion', 'exposure', 'global illumination', 'lumen', 'volumetric fog', 'turn on lumen'],
     members: { shadows: 'configure_shadows', ambient_occlusion: 'set_ambient_occlusion', exposure: 'set_exposure', global_illumination: 'setup_global_illumination', volumetric_fog: 'setup_volumetric_fog' },
   },
   {
@@ -79,7 +79,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_post_process', selector: 'setting',
     summary: 'Configure a post-process setting on a volume or camera: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, SSR, screen percentage, blend.',
-    topics: ['post process', 'bloom', 'exposure', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette'],
+    topics: ['post process', 'bloom', 'exposure', 'depth of field', 'motion blur', 'tonemapper', 'color grading', 'vignette', 'add bloom', 'screen tint', 'add bloom or depth of field'],
     members: byName(['configure_bloom', 'set_bloom_intensity', 'set_bloom_threshold', 'configure_exposure', 'set_exposure_compensation', 'set_exposure_method',
       'set_exposure_min_max', 'configure_dof', 'set_dof_method', 'set_focal_distance', 'set_aperture', 'configure_bokeh', 'configure_motion_blur',
       'set_motion_blur_amount', 'set_motion_blur_max', 'configure_tonemapper', 'set_tonemapper_type', 'set_pp_color_grading', 'set_pp_lut',
@@ -89,7 +89,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_capture_actor', selector: 'kind',
     summary: 'Create a scene capture (2D or cube) or a reflection capture (sphere, box or planar).',
-    topics: ['scene capture', 'reflection capture', 'planar reflection', 'render target capture'],
+    topics: ['scene capture', 'reflection capture', 'planar reflection', 'render target capture', 'place a reflection capture'],
     members: { scene_capture_2d: 'create_scene_capture_2d', scene_capture_cube: 'create_scene_capture_cube', sphere_reflection: 'create_sphere_reflection_capture', box_reflection: 'create_box_reflection_capture', planar_reflection: 'create_planar_reflection' },
   },
   {
@@ -116,7 +116,7 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_spline', selector: 'kind',
     summary: 'Create a spline actor, a spline mesh component, or a typed spline (road, wall, fence, pipe, cable, river).',
-    topics: ['spline actor', 'spline mesh', 'road spline', 'wall spline', 'fence', 'pipe', 'cable', 'river spline'],
+    topics: ['spline actor', 'spline mesh', 'road spline', 'wall spline', 'fence', 'pipe', 'cable', 'river spline', 'make a spline', 'add a cable', 'add a fence along a path'],
     members: {
       actor: 'create_spline_actor', mesh_component: 'create_spline_mesh_component', road: 'create_road_spline', wall: 'create_wall_spline',
       fence: 'create_fence_spline', pipe: 'create_pipe_spline', cable: 'create_cable_spline', river: 'create_river_spline',
@@ -131,14 +131,14 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_spline_meshes', selector: 'setting',
     summary: 'Configure meshes along a spline: mesh asset, material, forward axis, spacing, randomization, or scatter meshes along it.',
-    topics: ['spline mesh asset', 'spline mesh material', 'mesh spacing', 'scatter along spline', 'mesh randomization'],
+    topics: ['spline mesh asset', 'spline mesh material', 'mesh spacing', 'scatter along spline', 'mesh randomization', 'space fence posts'],
     members: { mesh_asset: 'set_spline_mesh_asset', material: 'set_spline_mesh_material', axis: 'configure_spline_mesh_axis', spacing: 'configure_mesh_spacing', randomization: 'configure_mesh_randomization', scatter: 'scatter_meshes_along_spline' },
   },
   // atmosphere
   {
     primary: 'configure_atmosphere', selector: 'setting',
     summary: 'Configure the sky and atmosphere: sky atmosphere, sky light, sun position, directional light, height fog, volumetric clouds, time of day, sky/light color curves.',
-    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night'],
+    topics: ['sky atmosphere', 'sun position', 'height fog', 'volumetric cloud', 'time of day', 'sky light', 'directional light', 'add fog', 'add sky', 'make it night', 'make it foggy', 'make it sunset or sunrise', 'add fog to the scene'],
     members: {
       sky_atmosphere: 'configure_sky_atmosphere', sky_light: 'configure_sky_light', sun_position: 'configure_sun_position', directional_light: 'configure_directional_light_atmosphere',
       height_fog: 'configure_exponential_height_fog', volumetric_cloud: 'configure_volumetric_cloud', time_of_day: 'set_time_of_day',
@@ -155,14 +155,14 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_weather', selector: 'setting',
     summary: 'Configure weather effects: rain, snow, lightning, wind.',
-    topics: ['rain', 'snow', 'lightning', 'wind', 'weather'],
+    topics: ['rain', 'snow', 'lightning', 'wind', 'weather', 'add snow', 'add rain, snow, wind or lightning'],
     members: { rain: 'configure_rain_particles', snow: 'configure_snow_particles', lightning: 'configure_lightning', wind: 'configure_wind' },
   },
   // water
   {
     primary: 'create_water_body', selector: 'kind',
     summary: 'Create a water body: ocean, lake, river or custom.',
-    topics: ['water body', 'ocean', 'lake', 'river'],
+    topics: ['water body', 'ocean', 'lake', 'river', 'add a lake or ocean', 'add a river', 'create a river', 'make a river'],
     members: byTarget('create_water_body_', ['create_water_body_ocean', 'create_water_body_lake', 'create_water_body_river', 'create_water_body_custom']),
   },
   {

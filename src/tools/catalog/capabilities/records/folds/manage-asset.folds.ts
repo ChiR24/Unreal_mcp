@@ -13,7 +13,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'source_control', selector: 'sourceControlOp',
     summary: 'Revision control: initialise a repository, enable a provider, check out, submit, or commit every change.',
-    topics: ['source control', 'revision control', 'checkout', 'submit', 'commit', 'init repository', 'perforce', 'git'],
+    topics: ['source control', 'revision control', 'checkout', 'submit', 'commit', 'init repository', 'perforce', 'git', 'check out file', 'initialize git repo', 'connect to perforce', 'set up version control', 'check in changes'],
     members: {
       checkout: 'source_control_checkout', submit: 'source_control_submit',
       enable: 'source_control_enable', init: 'source_control_init',
@@ -21,14 +21,14 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     },
   },
   {
-    primary: 'set_metadata', selector: 'kind',
+    primary: 'set_metadata', topics: ['tag asset'], selector: 'kind',
     summary: 'Set asset metadata key/values or asset tags.',
     members: { metadata: 'set_metadata', tags: 'set_tags' },
   },
   {
     primary: 'maintain_content', selector: 'maintenance',
     summary: 'Content maintenance: bulk-rename assets, fix up redirectors, refresh the nodes of every Blueprint in a folder, or migrate packages from another content source.',
-    topics: ['bulk rename', 'fixup redirectors', 'migrate assets', 'content maintenance', 'refresh all nodes', 'refresh blueprints'],
+    topics: ['bulk rename', 'fixup redirectors', 'migrate assets', 'content maintenance', 'refresh all nodes', 'refresh blueprints', 'fix redirectors', 'rename multiple assets', 'batch rename'],
     members: { bulk_rename: 'bulk_rename', fixup_redirectors: 'fixup_redirectors', refresh_blueprints: 'refresh_blueprints', migrate: 'migrate_assets' },
   },
   {
@@ -45,7 +45,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'query_marketplace', selector: 'lookup',
     summary: 'Query marketplace libraries: Fab listing details, Fab downloads, Fab library, Fab search, Megascans library.',
-    topics: ['fab library', 'fab listing', 'search fab', 'megascans library', 'marketplace'],
+    topics: ['fab library', 'fab listing', 'search fab', 'megascans library', 'marketplace', 'my fab downloads', 'browse marketplace'],
     members: {
       fab_listing_details: 'get_fab_listing_details', fab_downloads: 'list_fab_downloads', fab_library: 'list_fab_library',
       fab_search: 'search_fab_listings', megascans_library: 'list_megascans_library',
@@ -54,7 +54,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'list', selector: 'kind',
     summary: 'List the assets and subfolders in a folder (path), the registered content sources, or the instances of a material.',
-    topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents', 'what is in this folder'],
+    topics: ['list assets', 'browse folder', 'content browser', 'assets in folder', 'directory listing', 'folder contents', 'what is in this folder', 'show folders', 'count assets in folder', 'get assets in folder'],
     whenToUse: [
       'kind=assets: what a folder holds must be seen (subfolders included unless recursive is false).',
       'kind=content_sources: which template, feature pack, plugin or Fab folders exist to copy content from.',
@@ -66,7 +66,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'query_asset', selector: 'lookup',
     summary: 'Query assets: existence, search by name/class, find by tag, find where a text appears inside assets, the node graph inside a material or Blueprint, material stats, source-control state.',
-    topics: ['find assets', 'search assets', 'asset exists', 'find by tag', 'find assets by tag', 'find text', 'where is text used', 'analyze graph', 'material stats', 'source control state'],
+    topics: ['find assets', 'search assets', 'asset exists', 'find by tag', 'find assets by tag', 'find text', 'where is text used', 'analyze graph', 'material stats', 'source control state', 'list all widget blueprints', 'asset name', 'project assets', 'list all meshes', 'is asset checked out'],
     members: {
       exists: 'exists', search: 'search_assets', by_tag: 'find_by_tag', text: 'find_text', graph: 'analyze_graph',
       material_stats: 'get_material_stats', source_control_state: 'get_source_control_state',
@@ -77,37 +77,37 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'move',
     summary: 'Move an asset to a new path, or a whole folder: every asset under it moves (sub-folders kept) and references, redirectors and project settings follow.',
-    topics: ['move folder', 'move content folder', 'relocate assets'],
+    topics: ['move folder', 'move content folder', 'relocate assets', 'organize assets', 'put assets in folder'],
     members: ['move_asset'],
   },
   {
     primary: 'rename',
     summary: 'Rename an asset or a folder in place (newName), or move it (destinationPath); a folder takes every asset under it along. Several unrelated assets in one call: maintain_content bulk_rename with renames.',
-    topics: ['rename folder', 'rename several assets'],
+    topics: ['rename folder', 'rename several assets', 'rename material', 'rename texture', 'rename blueprint'],
     members: ['rename_asset'],
   },
   {
     primary: 'delete', summary: 'Delete one or more assets.',
-    topics: ['delete asset', 'delete assets', 'remove asset', 'delete asset permanently', 'delete imported asset'],
+    topics: ['delete asset', 'delete assets', 'remove asset', 'delete asset permanently', 'delete imported asset', 'delete texture', 'delete folder', 'delete mesh', 'delete asset from project'],
     members: ['delete_asset', 'delete_assets'],
   },
   {
     primary: 'process_asset', selector: 'process',
     summary: 'Post-process an asset: render a thumbnail or generate mesh LODs.',
-    topics: ['thumbnail', 'generate lods'],
+    topics: ['thumbnail', 'generate lods', 'material thumbnail'],
     members: { thumbnail: 'create_thumbnail', lods: 'generate_lods' },
   },
   {
     primary: 'inspect_asset', selector: 'lookup',
     summary: 'Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, or a directory report.',
-    topics: ['asset metadata', 'asset dependencies', 'asset referencers', 'what uses this asset', 'find references', 'asset graph', 'validate asset', 'asset report'],
+    topics: ['asset metadata', 'asset dependencies', 'asset referencers', 'what uses this asset', 'find references', 'asset graph', 'validate asset', 'asset report', 'asset used', 'show asset details', 'look at asset'],
     members: { metadata: 'get_metadata', dependencies: 'get_dependencies', graph: 'get_asset_graph', validate: 'validate', report: 'generate_report' },
   },
   // datatable
   {
     primary: 'edit_data_table', selector: 'edit',
     summary: 'Create a data table or row struct, add/update/import rows, or set the row struct.',
-    topics: ['data table', 'data table row', 'row struct', 'import rows'],
+    topics: ['data table', 'data table row', 'row struct', 'import rows', 'make data table', 'change data table row', 'add item to data table'],
     members: {
       create: 'create_data_table', create_row_struct: 'create_row_struct', add_row: 'add_data_table_row', update_row: 'update_data_table_row',
       import_rows: 'import_data_table_rows', set_row_struct: 'set_data_table_row_struct', set_struct_as_row_struct: 'set_struct_as_row_struct',
@@ -128,7 +128,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_enum', selector: 'edit',
     summary: 'Create an enum or edit its values: add, rename, reorder, set metadata, split.',
-    topics: ['enum value', 'user defined enum', 'reorder enum', 'split enum'],
+    topics: ['enum value', 'user defined enum', 'reorder enum', 'split enum', 'make enum', 'new enum', 'define enum'],
     members: { create: 'create_enum', add_value: 'add_enum_value', rename_value: 'rename_enum_value', reorder_values: 'reorder_enum_values', set_value_metadata: 'set_enum_value_metadata', split: 'split_enum' },
   },
   {
@@ -140,7 +140,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'add_material_node', selector: 'nodeKind',
     summary: 'Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.',
-    topics: ['material node', 'material expression', 'scalar parameter', 'vector parameter', 'texture sample', 'material function', 'custom expression', 'landscape layer', 'build material graph'],
+    topics: ['material node', 'material expression', 'scalar parameter', 'vector parameter', 'texture sample', 'material function', 'custom expression', 'landscape layer', 'build material graph', 'create custom shader'],
     members: {
       node: 'add_material_node', custom_expression: 'add_custom_expression', fresnel: 'add_fresnel', if: 'add_if', math: 'add_math_node',
       noise: 'add_noise', panner: 'add_panner', pixel_depth: 'add_pixel_depth', reflection_vector: 'add_reflection_vector', rotator: 'add_rotator',
@@ -163,7 +163,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     topics: ['create material', 'decal material', 'landscape material', 'post process material', 'material function'],
     members: { material: 'create_material', decal: 'create_decal_material', landscape: 'create_landscape_material', post_process: 'create_post_process_material', function: 'create_material_function' },
   },
-  { primary: 'connect_nodes', summary: 'Connect two material graph pins.', members: ['connect_material_pins'] },
+  { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Connect two material graph pins.', members: ['connect_material_pins'] },
   { primary: 'disconnect_nodes', summary: 'Disconnect a material graph pin or node.', members: ['break_material_connections'] },
   { primary: 'delete_node', summary: 'Delete a node from a material graph.', members: ['remove_material_node'] },
   {
@@ -174,13 +174,13 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'set_material_property', selector: 'materialProperty',
     summary: 'Set a material property: blend mode, domain, shading model or two-sided.',
-    topics: ['blend mode', 'material domain', 'shading model', 'two sided'],
+    topics: ['blend mode', 'material domain', 'shading model', 'two sided', 'make material transparent', 'unlit material'],
     members: { blend_mode: 'set_blend_mode', domain: 'set_material_domain', shading_model: 'set_shading_model', two_sided: 'set_two_sided' },
   },
   {
     primary: 'set_material_parameter', selector: 'parameterKind',
     summary: 'Set a material or instance parameter value: any parameter by type, or a scalar, vector, texture or static-switch parameter.',
-    topics: ['material parameter', 'scalar parameter value', 'vector parameter value', 'texture parameter', 'static switch', 'change material color', 'set material color'],
+    topics: ['material parameter', 'scalar parameter value', 'vector parameter value', 'texture parameter', 'static switch', 'change material color', 'set material color', 'set roughness', 'set metallic', 'set base color', 'override material parameter', 'set parameter on material instance'],
     members: { parameter: 'set_material_parameter', scalar: 'set_scalar_parameter_value', vector: 'set_vector_parameter_value', texture: 'set_texture_parameter_value', static_switch: 'set_static_switch_parameter_value' },
   },
   {
@@ -196,7 +196,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_struct', selector: 'edit',
     summary: 'Create a user-defined struct or edit it: members, defaults, metadata, types, order, rename, duplicate, import, recompile, refresh dependencies, instanced struct properties.',
-    topics: ['user defined struct', 'struct member', 'struct default', 'recompile struct', 'instanced struct'],
+    topics: ['user defined struct', 'struct member', 'struct default', 'recompile struct', 'instanced struct', 'make struct', 'new struct', 'define struct'],
     members: byName(['create_struct', 'add_struct_member', 'rename_struct_member', 'reorder_struct_members', 'set_struct_member_default',
       'set_struct_member_metadata', 'set_struct_member_type', 'rename_struct', 'duplicate_struct', 'import_struct', 'recompile_struct',
       'refresh_struct_dependencies', 'set_instanced_struct_property']),
@@ -204,7 +204,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'get_struct', selector: 'info',
     summary: 'Read a struct: definition, members, usage, comparison, export, instanced property values, or list structs.',
-    topics: ['struct members', 'list structs', 'compare structs', 'export struct', 'struct usage'],
+    topics: ['struct members', 'list structs', 'compare structs', 'export struct', 'struct usage', 'look at struct'],
     members: {
       struct: 'get_struct', read: 'read_struct', members: 'list_struct_members', list: 'list_structs', usage: 'search_struct_usage',
       compare: 'compare_structs', export: 'export_struct', instanced_property: 'get_instanced_struct_property',
@@ -228,7 +228,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'adjust_texture', selector: 'adjust',
     summary: 'Adjust texture pixels in place: curves, levels, blur, sharpen, desaturate, invert.',
-    topics: ['adjust texture', 'blur texture', 'sharpen', 'desaturate', 'invert texture', 'levels', 'curves'],
+    topics: ['adjust texture', 'blur texture', 'sharpen', 'desaturate', 'invert texture', 'levels', 'curves', 'grayscale texture', 'sharpen image'],
     members: { curves: 'adjust_curves', levels: 'adjust_levels', blur: 'blur', sharpen: 'sharpen', desaturate: 'desaturate', invert: 'invert' },
   },
   {

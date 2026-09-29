@@ -5,14 +5,14 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'spawn', selector: 'spawnKind',
     summary: 'Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.',
-    topics: ['spawn actor', 'spawn blueprint', 'place actor', 'add actor to level', 'spawn many actors'],
+    topics: ['spawn actor', 'spawn blueprint', 'place actor', 'add actor to level', 'spawn many actors', 'add player start', 'spawn enemy', 'spawn actors in a row', 'spawn actors in a grid'],
     members: { class: 'spawn', blueprint: 'spawn_blueprint', batch: 'spawn_batch' },
     aliasMembers: ['spawn_actor'],
   },
   {
     primary: 'set_transform', selector: 'transformMode',
     summary: 'Set an actor\'s transform: full transform, or location, rotation or scale alone, or teleport it.',
-    topics: ['move actor', 'rotate actor', 'scale actor', 'set actor location', 'set actor rotation', 'teleport actor', 'make actor bigger', 'make actor smaller', 'resize actor'],
+    topics: ['move actor', 'rotate actor', 'scale actor', 'set actor location', 'set actor rotation', 'teleport actor', 'make actor bigger', 'make actor smaller', 'resize actor', 'shrink actor'],
     members: { transform: 'set_transform', location: 'set_actor_location', rotation: 'set_actor_rotation', scale: 'set_actor_scale', teleport: 'teleport_actor' },
     aliasMembers: ['set_actor_transform'],
   },
@@ -44,7 +44,7 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   { primary: 'find_by_tag', summary: 'Find actors carrying a tag.', members: ['find_actors_by_tag'] },
   { primary: 'set_material', summary: 'Apply a material to an actor\'s mesh component(s).', members: ['apply_material', 'set_actor_material'] },
   { primary: 'attach', summary: 'Attach an actor to a parent actor.', members: ['attach_actor'] },
-  { primary: 'detach', summary: 'Detach an actor from its parent.', members: ['detach_actor'] },
+  { primary: 'detach', topics: ['unparent actor', 'remove actor from parent'], summary: 'Detach an actor from its parent.', members: ['detach_actor'] },
   {
     primary: 'delete', selector: 'deleteScope',
     summary: 'Delete actors by name, or every actor carrying a tag.',

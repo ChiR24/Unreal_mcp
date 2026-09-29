@@ -85,7 +85,7 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'configure_water_collision', collisionEnabled: true },
   }),
   buildRecord({
-    id: 'build_environment.create_buoyancy_component', action: 'create_buoyancy_component', family: F,
+    id: 'build_environment.create_buoyancy_component', action: 'create_buoyancy_component', topics: ['make a boat float'], family: F,
     summary: 'Create a buoyancy component on an actor for water interaction.',
     whenToUse: WU, whenNotToUse: ['Buoyancy is not needed.'],
     inputProps: { actorPath: P.actorPath, actorName: P.actorName, targetActor: P.targetActor, settings: P.settings },

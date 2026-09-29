@@ -14,7 +14,7 @@ const PAINT = { region: P.region, strength: P.strength, skipFlush: P.skipFlush }
 export const LANDSCAPE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.create_landscape', action: 'create_landscape', family: F,
-    topics: ['landscape', 'terrain', 'new landscape', 'heightfield'],
+    topics: ['landscape', 'terrain', 'new landscape', 'heightfield', 'add a landscape'],
     summary: 'Create a new Landscape actor in the current level.',
     whenToUse: WU, whenNotToUse: ['A landscape already exists and should be modified.'],
     inputProps: { name: P.name, landscapeName: P.landscapeName, location: P.location, sizeX: P.sizeX,

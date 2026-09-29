@@ -39,7 +39,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'setup_perception', selector: 'setting',
     summary: 'Set up AI perception on a Blueprint or controller: add the component, configure sight, hearing or damage senses, team, or runtime perception.',
-    topics: ['ai perception', 'sight config', 'hearing config', 'damage sense', 'perception team'],
+    topics: ['ai perception', 'sight config', 'hearing config', 'damage sense', 'perception team', 'sight range'],
     members: {
       setup: 'setup_perception', add_component: 'add_ai_perception_component', sight: 'configure_sight_config', hearing: 'configure_hearing_config',
       damage: 'configure_damage_sense_config', team: 'set_perception_team', controller: 'set_ai_perception',
@@ -57,11 +57,11 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_nav_actor', selector: 'kind',
     summary: 'Create a nav link proxy, a smart link, or a nav modifier (actor or component).',
-    topics: ['nav link proxy', 'smart link', 'nav modifier'],
+    topics: ['nav link proxy', 'smart link', 'nav modifier', 'add nav modifier'],
     members: { link_proxy: 'create_nav_link_proxy', smart_link: 'create_smart_link', modifier: 'create_nav_modifier', modifier_component: 'create_nav_modifier_component' },
   },
   {
-    primary: 'set_focus', selector: 'focusOp',
+    primary: 'set_focus', topics: ['make look player'], selector: 'focusOp',
     summary: 'Set or clear an AI controller\'s focus actor.',
     members: { set: 'set_focus', clear: 'clear_focus' },
   },
@@ -86,7 +86,7 @@ export const MANAGE_AI_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_state_tree', selector: 'edit',
     summary: 'Create a State Tree or edit it: add states and transitions, configure tasks.',
-    topics: ['state tree', 'state tree state', 'state tree transition', 'state tree task'],
+    topics: ['state tree', 'state tree state', 'state tree transition', 'state tree task', 'make a state tree'],
     members: { create: 'create_state_tree', add_state: 'add_state_tree_state', add_transition: 'add_state_tree_transition', configure_task: 'configure_state_tree_task' },
   },
   {
