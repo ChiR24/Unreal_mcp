@@ -18,6 +18,10 @@ const CHILD_ACTOR = `MCP_ChildActor_${ts}`;
 const BP_NAME = `BP_ControlActor_${ts}`;
 const BP_PATH = `${TEST_FOLDER}/${BP_NAME}`;
 const BP_ACTOR = `MCP_BlueprintActor_${ts}`;
+// Two cubes far from everything else, for the near queries: NEAR_ACTOR's bounds contain (30000, 30000, 100), and
+// FAR_ACTOR's begin 250 units to the right of it (a cube is 100 units wide).
+const NEAR_ACTOR = `MCP_NearActor_${ts}`;
+const FAR_ACTOR = `MCP_NearFarActor_${ts}`;
 const TAG = `MCPControlActorTag_${ts}`;
 const DELETE_TAG = `MCPDeleteTag_${ts}`;
 const BATCH_TAG = `MCPBatchTag_${ts}`;
@@ -48,6 +52,8 @@ const testCases = [
   cubeSpawn('Setup: spawn tag-delete test actor', TAG_DELETE_ACTOR, { x: 360, y: 0, z: 100 }),
   cubeSpawn('Setup: spawn duplicate test actor', DUPLICATE_ACTOR, { x: 480, y: 0, z: 100 }),
   cubeSpawn('Setup: spawn attach parent actor', PARENT_ACTOR, { x: 600, y: 0, z: 100 }),
+  cubeSpawn('Setup: spawn the near-query actor', NEAR_ACTOR, { x: 30000, y: 30000, z: 100 }),
+  cubeSpawn('Setup: spawn the actor 300 units from it', FAR_ACTOR, { x: 30300, y: 30000, z: 100 }),
   cubeSpawn('Setup: spawn attach child actor', CHILD_ACTOR, { x: 720, y: 0, z: 100 }),
   { scenario: 'Setup: tag actor for delete_by_tag', toolName: 'control_actor', arguments: { action: 'add_tag', actorName: TAG_DELETE_ACTOR, tag: DELETE_TAG }, expected: 'success|already exists' },
 
@@ -140,6 +146,12 @@ const testCases = [
   // A component's property is read the way sample_motion reads it: "Component.Property", the component by name.
   { scenario: 'INFO: list reads a component property as Component.Property', toolName: 'control_actor', arguments: { action: 'list', limit: 1, filter: MAIN_ACTOR, propertyNames: ['StaticMeshComponent.LDMaxDrawDistance'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.missingProperties', equals: undefined, label: 'the component property resolved, so nothing is missing' }] },
   { scenario: 'INFO: list names a component property that does not resolve as missing', toolName: 'control_actor', arguments: { action: 'list', limit: 1, filter: MAIN_ACTOR, propertyNames: ['NoSuchComponent.Foo'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.missingProperties.0', equals: 'NoSuchComponent.Foo', label: 'the unresolved name is reported as asked' }] },
+  // near and radius find what is close to a world point, nearest first, each row with its distance to the actor's bounds.
+  { scenario: 'INFO: list near a point inside an actor\'s bounds finds it at distance 0', toolName: 'control_actor', arguments: { action: 'list', filter: 'MCP_Near', near: [30000, 30000, 100], radius: 100 }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 1, label: 'only the actor whose bounds the point is in, within 100' }, { path: 'structuredContent.result.actors.0.distance', equals: 0, label: 'the point is inside its bounds' }] },
+  { scenario: 'INFO: list near a point with a larger radius sorts nearest first', toolName: 'control_actor', arguments: { action: 'list', filter: 'MCP_Near', near: { x: 30000, y: 30000, z: 100 }, radius: 400 }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 2, label: 'both cubes are within 400' }, { path: 'structuredContent.result.actors.0.distance', equals: 0, label: 'the nearer is first' }, { path: 'structuredContent.result.actors.1.distance', equals: 250, label: 'the second is 250 from the point to its bounds' }] },
+  { scenario: 'INFO: list near a point without a radius sorts every matching actor by distance', toolName: 'control_actor', arguments: { action: 'list', filter: 'MCP_Near', near: [30300, 30000, 100], limit: 1 }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.distance', equals: 0, label: 'nearest first: the cube at the point comes before the one 250 away' }, { path: 'structuredContent.result.totalCount', equals: 2, label: 'nothing is dropped without a radius' }] },
+  { scenario: 'INFO: list near a distant point with a radius finds nothing', toolName: 'control_actor', arguments: { action: 'list', filter: 'MCP_Near', near: [-30000, -30000, 100], radius: 500 }, expected: 'success', assertions: [{ path: 'structuredContent.result.totalCount', equals: 0, label: 'no actor within 500 of that point' }] },
+  { scenario: 'ERROR: list radius without near is refused', toolName: 'control_actor', arguments: { action: 'list', radius: 100 }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'INFO: list pages on with offset', toolName: 'control_actor', arguments: { action: 'list', limit: 1, offset: 1, filter: 'MCP_' }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 1, label: 'the second page holds one actor' }] },
 
   // === MISC ===
@@ -154,7 +166,7 @@ const testCases = [
   { scenario: 'ACTION: call_actor_function', toolName: 'control_actor', arguments: actorArgs('call_actor_function', { functionName: 'SetActorTickEnabled', arguments: [true] }), expected: 'success|FUNCTION_NOT_FOUND' },
 
   // === CLEANUP ===
-  { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, DUPLICATE_COPY, MESH_ACTOR, PARENT_ACTOR, CHILD_ACTOR, BP_ACTOR, `MCP_SpawnSphere_${ts}`, `MCP_SpawnCylinder_${ts}`] }, expected: 'success|not found' },
+  { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, DUPLICATE_COPY, MESH_ACTOR, PARENT_ACTOR, CHILD_ACTOR, BP_ACTOR, NEAR_ACTOR, FAR_ACTOR, `MCP_SpawnSphere_${ts}`, `MCP_SpawnCylinder_${ts}`] }, expected: 'success|not found' },
 ];
 
 runToolTests('control-actor', testCases, { folder: TEST_FOLDER });

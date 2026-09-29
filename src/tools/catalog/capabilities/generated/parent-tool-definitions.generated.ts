@@ -3701,6 +3701,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Only examine actors whose label contains this text. Omit to sweep the whole level."
         },
+        "near": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "A world point as [x, y, z] (an {x, y, z} object works too): list what is close to it, nearest first, each row with its distance. With radius, only actors whose bounds come within radius of the point; without it, every matching actor sorted by distance. Combines with filter, tag, className and folder."
+        },
         "newName": {
           "type": "string",
           "description": "New name for the duplicate or renamed actor."
@@ -3768,6 +3777,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "propertyPath": {
           "type": "string",
           "description": "Same as propertyName (a name or a dotted path such as BodyInstance.CollisionEnabled); used when propertyName is absent."
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0,
+          "description": "World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near."
         },
         "readMode": {
           "type": "string",
@@ -3950,30 +3964,66 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Full object path of the actor."
         },
         "actors": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "label": {
-                "type": "string",
-                "description": "Actor label."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Actor label."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Actor name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Actor path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Actor class."
+                  },
+                  "distance": {
+                    "type": "number",
+                    "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first."
+                  }
+                },
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
               },
-              "name": {
-                "type": "string",
-                "description": "Actor name."
-              },
-              "path": {
-                "type": "string",
-                "description": "Actor path."
-              },
-              "class": {
-                "type": "string",
-                "description": "Actor class."
-              }
+              "description": "Matched actors; with near, nearest first, each with its distance."
             },
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Actor label."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Actor name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Actor path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Actor class."
+                  }
+                },
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Matched actors."
+            }
+          ],
           "description": "Matched actors."
         },
         "actorsMoved": {

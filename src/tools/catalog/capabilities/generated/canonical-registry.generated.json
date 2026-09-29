@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8767f44056c83496",
+  "catalogRevision": "32a0c1492f0dbd10",
   "recordCount": 389,
   "records": [
     {
@@ -31253,12 +31253,15 @@
           "actor locations",
           "actor transforms",
           "level layout",
-          "variable values of many actors"
+          "variable values of many actors",
+          "actors near a point",
+          "nearest actors"
         ],
-        "summary": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. summary counts the level by class, tag and folder instead.",
+        "summary": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point: only the actors whose bounds come within radius of it, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
         "whenToUse": [
           "The actors present in the level must be enumerated.",
-          "Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove."
+          "Every actor with one tag, of one class or in one outliner folder must be found, for example to see what a delete_by_tag would remove.",
+          "Something seen in a screenshot or at a coordinate must be identified: list the actors near that point, nearest first."
         ],
         "whenNotToUse": [
           "A specific known actor name is already available (use find_by_name)."
@@ -31303,6 +31306,20 @@
                 "type": "string"
               },
               "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
+            },
+            "near": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "A world point as [x, y, z] (an {x, y, z} object works too): list what is close to it, nearest first, each row with its distance. With radius, only actors whose bounds come within radius of the point; without it, every matching actor sorted by distance. Combines with filter, tag, className and folder."
+            },
+            "radius": {
+              "type": "number",
+              "minimum": 0,
+              "description": "World units from near: an actor is listed when its bounding box comes within this distance of the point (the distance is 0 for a box that contains the point, such as a floor slab under it). Needs near."
             },
             "summary": {
               "type": "boolean",
@@ -31351,12 +31368,16 @@
                   "class": {
                     "type": "string",
                     "description": "Actor class."
+                  },
+                  "distance": {
+                    "type": "number",
+                    "description": "With near: world units from the point to the actor's bounding box, 0 when the box contains it. Rows are sorted by it, nearest first."
                   }
                 },
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matched actors."
+              "description": "Matched actors; with near, nearest first, each with its distance."
             },
             "count": {
               "type": "number",
@@ -31465,7 +31486,7 @@
       },
       "examples": [
         {
-          "title": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. summary counts the level by class, tag and folder instead.",
+          "title": "List actors in the current level - each with its label, class, location, rotation and scale, plus any properties named in propertyNames - narrowed by name filter, tag, class or outliner folder; page on with offset. near (a world point) with radius is how to find what is near a point: only the actors whose bounds come within radius of it, nearest first, each with its distance. summary counts the level by class, tag and folder instead.",
           "input": {
             "action": "list",
             "limit": 50,
@@ -31528,8 +31549,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "74628282cee7c14f0a1b3d33b05b74c75bb44dee57b2df3e2b06d665a61fc711",
-        "content": "90b6978d2cd443b28cf6c4b16c8e62220894809461d38d61598cae8c1aaafcfb"
+        "schema": "d13549a90315b70deddc6c5dd2eea6c5e3017fd941485b7ba919542b00dcbc05",
+        "content": "b80a315c4ae714e3d94238732e81a39ee958010ac7b2dea7571fd31ffa7eb86e"
       }
     },
     {
