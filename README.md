@@ -303,7 +303,9 @@ MCP_REQUEST_TIMEOUT_MS=120000
 ASSET_LIST_TTL_MS=10000
 
 # Custom content mount points (comma-separated)
-# Plugins with CanContainContent register mount points beyond /Game/.
+# Plugins with CanContainContent register mount points beyond /Game/. The connected
+# editor reports its mounts, so this is only needed for mounts the editor does not
+# report, or with no editor connected.
 # MCP_ADDITIONAL_PATH_PREFIXES=/ProjectObject/,/ProjectAnimation/
 ```
 

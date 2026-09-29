@@ -62,6 +62,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Screenshot camera** — the editor-viewport path of `take_screenshot` sets the viewport client's view location and rotation from `location`/`rotation` before capturing; under PIE it says the camera fields do not apply.
 - **Explicit bulk renames** — `bulk_rename` resolves each `renames` entry before collecting a folder, skipping a missing source or a taken destination (`skipped`).
 - **Coplanar parts inside a Blueprint** — `FixCoplanarInsideBlueprints` (`Placement/CoplanarBlueprintFix.cpp`) plans every part move before any Blueprint compiles (a compile replaces the placed actors), converts the world shift into the parent's space, and applies it with `FSCSHandlers::SetSCSComponentTransform`, once per part per pass; `HandleFixCoplanar` keeps moved actors by name for the same reason.
+- **Content roots for the path allowlist** — `SendBridgeAck` (`Transport/Connection/McpConnectionManagerAuthority.cpp`) adds `contentRoots` from `FPackageName::QueryRootContentPaths`; `McpConnectionManagerContentRoots.cpp` marks the list stale on `OnContentPathMounted`/`OnContentPathDismounted` and the ticker sends one `content_roots_changed` automation_event with the new snapshot to every authenticated socket. Tests: `McpAutomationBridge.Transport.ContentRoots.*`.
 
 ### Changed
 - **Motion sample real-time cap** — `McpAutomationBridge_ControlActorMotionSample.cpp` defaults `maxRealSeconds` to 25 (was 40), under a 30-second client timeout; the 50-second ceiling is unchanged.

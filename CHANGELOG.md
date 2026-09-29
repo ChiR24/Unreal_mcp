@@ -368,6 +368,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`search_assets` takes any short class name** (`ObjectRedirector`, `InputMappingContext`), not only thirty listed ones.
 - **Component template edits reach placed actors.** `edit_scs` `set_transform` and `set_property` changed only the Blueprint while placed actors kept the old value; every placed actor that still had the old value now takes the new one (`instancesUpdated`), as in the Blueprint editor.
 - **Tool descriptions.** `move` and `rename` say they take folders, `edit_scs` documents its batch `transform` object, and `classNames` names both accepted forms.
+- **Plugin and game-feature content reachable without configuration.** The plugin reports the editor's mounted content roots in `bridge_ack` and whenever a mount comes or goes, and the path gate allows them alongside `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` and `MCP_ADDITIONAL_PATH_PREFIXES`. `/ShooterCore/...` used to fail as a `SECURITY_VIOLATION` unless the mount was listed by hand, and create paths under a mount were rewritten to `/Game/...`. File paths keep the static list, and a path starting with two separators (`//host/share`) is refused.
 
 </details>
 

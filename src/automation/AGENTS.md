@@ -12,7 +12,7 @@ automation/
 |-- bridge-state.ts, bridge-status.ts  # diagnostic state and the status snapshot
 |-- connection-manager.ts          # the one socket, WS-ping heartbeat, inbound rate limit
 |-- connection-lifecycle.ts        # connect/disconnect transitions, reconnect policy, stop()
-|-- handshake.ts                   # bridge_hello / bridge_ack (sends the capability token, redacts it in logs)
+|-- handshake.ts                   # bridge_hello / bridge_ack (sends the capability token, redacts it in logs; applies bridge_ack.contentRoots)
 |-- message-handler.ts             # responses, events, progress correlation
 |-- message-schema.ts              # Zod wire-message validation
 |-- request-tracker.ts             # ids, timeouts, progress extensions
@@ -24,11 +24,11 @@ automation/
 |-- diagnostics-snapshot-reader.ts # read-only reader for plugin diagnostics snapshots
 |-- types.ts, index.ts
 ```
-21 implementation files plus 17 colocated `*.test.ts` files.
+21 implementation files plus 18 colocated `*.test.ts` files.
 
 ## DATA FLOW
 1. `AutomationRequestDispatcher` lazily starts the client and waits for `connected`.
-2. `HandshakeHandler` sends `bridge_hello`; only a validated `bridge_ack` registers the socket.
+2. `HandshakeHandler` sends `bridge_hello`; only a validated `bridge_ack` registers the socket. The bridge_ack's `contentRoots` and later `content_roots_changed` events feed the path allowlist; the socket closing clears them.
 3. `RequestTracker` allocates the request id before `send()`. Gateway controls (`correlationId`, `consent`, `expectedRevisions`, `timeoutMs`) arrive as explicit send options and ride the envelope, never handler params.
 4. Inbound frames are size-checked, rate-checked, parsed, schema-validated, then correlated by `MessageHandler`.
 5. Completion, timeout, disconnect, cancel or `stop()` rejects work exactly once and clears timers.

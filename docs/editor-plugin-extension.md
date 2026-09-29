@@ -26,7 +26,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 
 ### Connection Management
 - **WebSocket Server Mode**: Plugin connects TO the MCP server's WebSocket listener (default: `ws://127.0.0.1:8091`)
-- **Handshake Protocol**: `bridge_hello` → capability token validation → `bridge_ack`
+- **Handshake Protocol**: `bridge_hello` → capability token validation → `bridge_ack` (which carries `contentRoots`, the editor's mounted content roots)
 - **Reconnection**: Automatic with exponential backoff (configurable delay, 5s default)
 - **Heartbeat**: Optional heartbeat tracking for connection health monitoring
 - **Capability Token**: Optional security layer for authentication
@@ -40,7 +40,7 @@ The MCP Automation Bridge is a production-ready Unreal Editor plugin that enable
 
 ## Server Integration (0.5.30)
 - `src/automation/` connects **out** as a WebSocket client (default `ws://127.0.0.1:8091`) to the listen socket the plugin opens; the TypeScript side never binds a server socket of its own.
-- Handshake flow: the client sends `bridge_hello` carrying the optional capability token → the plugin validates it → the plugin replies `bridge_ack` and the socket is cached for subsequent automation requests.
+- Handshake flow: the client sends `bridge_hello` carrying the optional capability token → the plugin validates it → the plugin replies `bridge_ack` and the socket is cached for subsequent automation requests. `bridge_ack.contentRoots` lists the editor's mounted content roots for the path allowlist; when a mount comes or goes the plugin sends a `content_roots_changed` automation_event with the new list.
 - Environment flags: `MCP_AUTOMATION_HOST` and `MCP_AUTOMATION_PORT` relocate the target the client dials, and `MCP_AUTOMATION_CAPABILITY_TOKEN` supplies the handshake token — all without code changes.
 - Health endpoint (`ue://health`) now surfaces bridge connectivity status so MCP clients can confirm when the plugin is online.
 

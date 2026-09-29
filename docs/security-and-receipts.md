@@ -82,7 +82,12 @@ re-validated plugin-side.
 ## Path gating
 
 The permitted asset roots are `/Game`, `/Engine`, `/Script`, `/Temp`,
-`/Niagara`, plus sanitized `MCP_ADDITIONAL_PATH_PREFIXES` entries.
+`/Niagara`, the content mounts the connected editor reports
+(`bridge_ack.contentRoots`, kept current by `content_roots_changed`), plus
+sanitized `MCP_ADDITIONAL_PATH_PREFIXES` entries. A key the plugin opens as a
+file on disk keeps the static roots plus `/Saved` and `/tmp`, and never gets the
+editor-reported mounts; a path starting with two separators (`//host/share`) is
+refused.
 
 The gate **scans request values, not an allowlist of key names**, canonicalizing
 first so it sees the same string the handler will resolve. The `/Content` alias
