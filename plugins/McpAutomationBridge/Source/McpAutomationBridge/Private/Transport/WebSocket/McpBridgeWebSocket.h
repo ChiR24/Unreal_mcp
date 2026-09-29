@@ -79,6 +79,7 @@ private:
     bool SendFrame(const TArray<uint8>& Frame);
     bool SendTextFrame(const void* Data, SIZE_T Length);
     bool SendControlFrame(uint8 ControlOpCode, const TArray<uint8>& Payload);
+    void SendCloseFrame(int32 StatusCode, const FString& Reason);
     void HandleTextPayload(const TArray<uint8>& Payload);
     void ResetFragmentState();
     bool ReceiveFrame();
@@ -122,6 +123,7 @@ private:
     bool bListening = false;
     bool bStopping = false;
     TAtomic<bool> bCloseStarted{false};
+    TAtomic<bool> bCloseFrameSent{false};
 
     bool bUseTls = false;
     bool bTlsServer = true;

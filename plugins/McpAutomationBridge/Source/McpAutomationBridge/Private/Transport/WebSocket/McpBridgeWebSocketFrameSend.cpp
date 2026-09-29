@@ -81,3 +81,17 @@ bool FMcpBridgeWebSocket::SendControlFrame(const uint8 ControlOpCode,
   FScopeLock Guard(&SendMutex);
   return SendFrame(Frame);
 }
+
+// Tells an upgraded peer why it is being closed (RFC 6455 5.5.1: a 2-byte code, then
+// UTF-8 reason). Without it the 4004/4005/4008/4403 codes the bridge closes with never
+// left the process and the client saw an abnormal 1006. Once per socket; best effort.
+void FMcpBridgeWebSocket::SendCloseFrame(int32 StatusCode, const FString &Reason) {
+  if (!bConnected || bCloseFrameSent.Exchange(true)) {
+    return;
+  }
+  const uint16 Code = NETWORK_ORDER16(static_cast<uint16>(StatusCode));
+  TArray<uint8> Payload(reinterpret_cast<const uint8 *>(&Code), sizeof(Code));
+  const FTCHARToUTF8 ReasonUtf8(*Reason);
+  Payload.Append(reinterpret_cast<const uint8 *>(ReasonUtf8.Get()), FMath::Min(ReasonUtf8.Length(), 123));
+  SendControlFrame(OpCodeClose, Payload);
+}

@@ -227,7 +227,8 @@ FString FMcpNativeTransport::HandleInitialize(
 
 	auto ServerInfo = MakeShared<FJsonObject>();
 	ServerInfo->SetStringField(TEXT("name"), ServerName);
-	ServerInfo->SetStringField(TEXT("version"), ServerVersion);
+	// serverInfo.version is required by MCP; an unresolvable plugin descriptor left it "".
+	ServerInfo->SetStringField(TEXT("version"), ServerVersion.IsEmpty() ? FString(TEXT("unknown")) : ServerVersion);
 	Result->SetObjectField(TEXT("serverInfo"), ServerInfo);
 
 	FString CombinedInstructions = BaseInstructions;

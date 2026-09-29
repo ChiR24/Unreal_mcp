@@ -184,11 +184,20 @@ void UMcpAutomationBridgeSubsystem::SendAutomationResponse(
         // deployment scrapes permanently empty counters. Recorded BEFORE the
         // delivery attempt so a dropped delivery is still counted, and only the
         // bounded error CODE is forwarded - EffectiveMessage routinely carries
-        // asset paths and object names.
-        FMcpTelemetryRegistry::Get().EndRequest(
-            RequestId,
-            bSuccess ? TEXT("success") : TEXT("failure"),
-            EffectiveErrorCode);
+        // asset paths and object names. Through the connection manager, which also drops
+        // the action it recorded at dispatch: calling the registry directly left one
+        // ActiveRequestActions entry behind per native request, for the editor's lifetime.
+        if (ConnectionManager.IsValid())
+        {
+            ConnectionManager->RecordAutomationTelemetry(RequestId, bSuccess, FString(), EffectiveErrorCode);
+        }
+        else
+        {
+            FMcpTelemetryRegistry::Get().EndRequest(
+                RequestId,
+                bSuccess ? TEXT("success") : TEXT("failure"),
+                EffectiveErrorCode);
+        }
         if (!NativeTransport->CompletePendingRequest(
                 RequestId,
                 bSuccess,

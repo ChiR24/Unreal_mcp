@@ -8,6 +8,7 @@
 #include "HAL/PlatformAtomics.h"
 #include "HAL/PlatformProcess.h"
 #include "HAL/RunnableThread.h"
+#include "Misc/ByteSwap.h"
 #include "Misc/ScopeLock.h"
 #include "SocketSubsystem.h"
 #include "Sockets.h"
@@ -161,6 +162,8 @@ void FMcpBridgeWebSocket::Close(int32 StatusCode, const FString &Reason) {
     }
   }
 
+  SendCloseFrame(StatusCode, Reason);
+
   if (FSocket *LocalSocket = DetachSocket()) {
     LocalSocket->Close();
     ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
@@ -209,6 +212,7 @@ void FMcpBridgeWebSocket::Stop() {
 
 void FMcpBridgeWebSocket::TearDown(const FString &Reason, bool bWasClean,
                                    int32 StatusCode) {
+  SendCloseFrame(StatusCode, Reason);
   if (FSocket *LocalSocket = DetachSocket()) {
     LocalSocket->Close();
     ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->DestroySocket(LocalSocket);
