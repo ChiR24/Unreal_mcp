@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a5578f14b865e258",
+  "catalogRevision": "b8397b67d4c1eea9",
   "recordCount": 389,
   "records": [
     {
@@ -84472,9 +84472,13 @@
         "domain": "project",
         "family": "project",
         "topics": [
-          "get_project_settings"
+          "get_project_settings",
+          "rendering and physics",
+          "config section",
+          "default map",
+          "ini key"
         ],
-        "summary": "Retrieve project settings for a section via the local system_control wrapper.",
+        "summary": "Read project settings: with no section, the engine version, project name and directory, default maps and general settings; with a section or category (rendering, input, physics, audio, packaging...), every config property of it, or one key's value.",
         "whenToUse": [
           "Project settings must be read for a section."
         ],
@@ -84564,7 +84568,7 @@
       },
       "examples": [
         {
-          "title": "Retrieve project settings for a section via the local system_control wrapper.",
+          "title": "Read project settings: with no section, the engine version, project name and directory, default maps and general settings; with a section or category (rendering, input, physics, audio, packaging...), every config property of it, or one key's value.",
           "input": {
             "action": "get_project_settings",
             "section": "/Script/EngineSettings.GeneralProjectSettings"
@@ -84602,7 +84606,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "20a00229886138c003f09ce674b9576bdf5b5e0a5f2f87ef37bcb48d1ee0576b",
-        "content": "fc794d163c4c44ff04ba708d757e7a7e5b6f3c4613d622b17ed3d81313c2639a"
+        "content": "c07eb639f7b94c3fbfd7c889186957e52e5d6393ef6e4a3561d49f484e6fc9b7"
       }
     },
     {
@@ -84627,12 +84631,16 @@
         "domain": "insights",
         "family": "insights",
         "topics": [
-          "get_trace_status"
+          "get_trace_status",
+          "insights session",
+          "is tracing active",
+          "active channels",
+          "file size"
         ],
-        "summary": "Read the trace session status, or analyze a trace file.",
+        "summary": "Read the Unreal Insights trace session status (connected, destination, active channels, connection type, paused); info=analyze reads a .utrace file's existence, size and modified time.",
         "whenToUse": [
           "The active trace session status must be read.",
-          "A captured trace must be analyzed for timing or counter data."
+          "A captured .utrace file must be checked for existence, size and modified time."
         ],
         "whenNotToUse": [
           "A new session must be started (use start_session)."
@@ -84728,7 +84736,7 @@
       },
       "examples": [
         {
-          "title": "Read the trace session status, or analyze a trace file.",
+          "title": "Read the Unreal Insights trace session status (connected, destination, active channels, connection type, paused); info=analyze reads a .utrace file's existence, size and modified time.",
           "input": {
             "action": "get_trace_status",
             "info": "status"
@@ -84778,7 +84786,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "5569cae20762e00fdb5d2fa795292725c266f37d594c0cbffc1a7698e1c2e26b",
-        "content": "d21b4afee0eccac5707fc51484908dcdab37cd42aac03a22738b5a4f73257c3f"
+        "content": "1a9cd46a9ae398ed0dafc83c2ada631bf720a9060044786575024d8825be21ad"
       }
     },
     {
@@ -85124,9 +85132,12 @@
         "domain": "project",
         "family": "plugin",
         "topics": [
-          "list_plugins"
+          "list_plugins",
+          "which are enabled",
+          "installed",
+          "content path"
         ],
-        "summary": "List every plugin discovered by this editor with its enabled state, category, version and mounted content path.",
+        "summary": "List every plugin discovered by this editor with its enabled state, category, version and mounted content path; enabledOnly and filter (name or category) narrow the list.",
         "whenToUse": [
           "A capability or migrated asset needs a plugin and its enabled state must be checked first.",
           "The mounted content root of a plugin is needed in order to list the assets it ships."
@@ -85226,7 +85237,7 @@
       },
       "examples": [
         {
-          "title": "List every plugin discovered by this editor with its enabled state, category, version and mounted content path.",
+          "title": "List every plugin discovered by this editor with its enabled state, category, version and mounted content path; enabledOnly and filter (name or category) narrow the list.",
           "input": {
             "action": "list_plugins",
             "filter": "Chaos"
@@ -85265,7 +85276,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ccbc4acdfde9e12389c802add85aef3a7d3eedc1162e1c208750d682950e6a85",
-        "content": "bff4ebf18f38d04e66cda5da5df6018aa5894a2abcc76d722bb98db25b7d394f"
+        "content": "54764493806bd28e42ee31fab992db6267fb6d6aaef583569a2a9e5bc281655c"
       }
     },
     {
@@ -86229,9 +86240,13 @@
         "domain": "logs",
         "family": "logs",
         "topics": [
-          "read_log"
+          "read_log",
+          "compile errors",
+          "build output",
+          "previous run",
+          "editor output"
         ],
-        "summary": "Read the most recent editor log lines (kept since editor start), filtered by text, category or minimum severity.",
+        "summary": "Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.",
         "whenToUse": [
           "A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds)."
         ],
@@ -86336,7 +86351,7 @@
       },
       "examples": [
         {
-          "title": "Read the most recent editor log lines (kept since editor start), filtered by text, category or minimum severity.",
+          "title": "Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.",
           "input": {
             "action": "read_log",
             "lines": 50,
@@ -86381,7 +86396,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3c48a327260ec1f2462b2adb66c27682b96ab9d4f4a1a93b43b8d79f28351a71",
-        "content": "a133299e1c3f51d3eec55e7d1c97c3a5b5d773f1a679704414da73b93364c3ed"
+        "content": "7d2aa563766a721c7f34049ccf6e6c3bddfca8c64f4e6abd86f5ff8e6f925915"
       }
     },
     {
@@ -87306,9 +87321,13 @@
         "domain": "project",
         "family": "project",
         "topics": [
-          "validate_assets"
+          "validate_assets",
+          "check they load",
+          "broken",
+          "fail to load",
+          "content folder"
         ],
-        "summary": "Check that assets load: each asset path is loaded, and a folder path loads every asset in it (recursive by default); results[] reports each path.",
+        "summary": "Check that assets load without error: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results (asset, directory or missing, with a message) and the checked and invalid counts.",
         "whenToUse": [
           "Asset references must be validated before use."
         ],
@@ -87376,7 +87395,7 @@
       },
       "examples": [
         {
-          "title": "Check that assets load: each asset path is loaded, and a folder path loads every asset in it (recursive by default); results[] reports each path.",
+          "title": "Check that assets load without error: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results (asset, directory or missing, with a message) and the checked and invalid counts.",
           "input": {
             "action": "validate_assets",
             "paths": [
@@ -87416,7 +87435,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4eff181b46982e5ab1e50ca1616f8a9b99cd6314549b8ab32de422209407008f",
-        "content": "b977b0ca6556a0eb8c5422f875597e2ad6e0cd05ac261cb1bb10e43f040c2edd"
+        "content": "589bc86b2fccc6cea1cfb3de33b0376016daf4258400af8e67505bf0e2b27978"
       }
     },
     {

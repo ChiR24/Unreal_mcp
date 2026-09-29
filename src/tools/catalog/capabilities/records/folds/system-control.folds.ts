@@ -33,7 +33,9 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_trace_status', selector: 'info',
-    summary: 'Read the trace session status, or analyze a trace file.',
+    summary: 'Read the Unreal Insights trace session status (connected, destination, active channels, connection type, paused); info=analyze reads a .utrace file\'s existence, size and modified time.',
+    topics: ['insights session', 'is tracing active', 'active channels', 'file size'],
+    whenToUse: ['The active trace session status must be read.', 'A captured .utrace file must be checked for existence, size and modified time.'],
     members: { status: 'get_trace_status', analyze: 'analyze_trace' },
   },
   {

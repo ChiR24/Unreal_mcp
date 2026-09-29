@@ -23,7 +23,8 @@ export const PLUGIN_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'list_plugins',
     domain: 'project',
     family: 'plugin',
-    summary: 'List every plugin discovered by this editor with its enabled state, category, version and mounted content path.',
+    topics: ['which are enabled', 'installed', 'content path'],
+    summary: 'List every plugin discovered by this editor with its enabled state, category, version and mounted content path; enabledOnly and filter (name or category) narrow the list.',
     whenToUse: [
       'A capability or migrated asset needs a plugin and its enabled state must be checked first.',
       'The mounted content root of a plugin is needed in order to list the assets it ships.',

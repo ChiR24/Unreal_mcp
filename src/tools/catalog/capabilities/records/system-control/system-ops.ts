@@ -190,7 +190,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'read_log',
     domain: 'logs',
     family: 'logs',
-    summary: 'Read the most recent editor log lines (kept since editor start), filtered by text, category or minimum severity.',
+    topics: ['compile errors', 'build output', 'previous run', 'editor output'],
+    summary: 'Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.',
     whenToUse: [
       'A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds).',
     ],
@@ -373,7 +374,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'get_project_settings',
     domain: 'project',
     family: 'project',
-    summary: 'Retrieve project settings for a section via the local system_control wrapper.',
+    topics: ['rendering and physics', 'config section', 'default map', 'ini key'],
+    summary: 'Read project settings: with no section, the engine version, project name and directory, default maps and general settings; with a section or category (rendering, input, physics, audio, packaging...), every config property of it, or one key\'s value.',
     whenToUse: ['Project settings must be read for a section.'],
     whenNotToUse: ['A single setting must be written (use set_project_setting).'],
     inputProps: {
@@ -409,7 +411,8 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'validate_assets',
     domain: 'project',
     family: 'project',
-    summary: 'Check that assets load: each asset path is loaded, and a folder path loads every asset in it (recursive by default); results[] reports each path.',
+    topics: ['check they load', 'broken', 'fail to load', 'content folder'],
+    summary: 'Check that assets load without error: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results (asset, directory or missing, with a message) and the checked and invalid counts.',
     whenToUse: ['Asset references must be validated before use.'],
     whenNotToUse: ['A single asset must be imported or created (use manage_asset).'],
     inputProps: {
