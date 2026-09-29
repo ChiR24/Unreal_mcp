@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b8397b67d4c1eea9",
+  "catalogRevision": "30861fd755099b52",
   "recordCount": 389,
   "records": [
     {
@@ -29784,6 +29784,7 @@
           "add component",
           "remove component",
           "component property",
+          "set component property value",
           "actor component",
           "text render text",
           "change sign text",
@@ -29958,7 +29959,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "72207c12be52e975e72863ba37afdb4cf6a28537e006795855b30fad2abe5047",
-        "content": "1c37d64817589dcfd8a7aeb8752a352fc7c39dc3ab39ac541b2a585728c6b21c"
+        "content": "cd6acdf665edbffa0b91e420b5caaf640dcff315163cb6a50c712059b245a8d8"
       }
     },
     {
