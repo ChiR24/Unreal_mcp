@@ -70,7 +70,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_blueprint_details', dispatchAction: 'blueprint_get', domain: D, family: 'object',
-    summary: 'Inspect a Blueprint asset via the separate blueprint_get bridge route.',
+    topics: ['compile status', 'parent class', 'graph node counts'],
+    summary: 'Read a Blueprint asset without spawning it: parent class, type, compile status, variables with defaults, functions, events, graph node counts, and components with transforms, meshes and materials.',
     whenToUse: ['A Blueprint asset\'s structure must be read without spawning an actor.'],
     whenNotToUse: ['A world actor is in scope; use inspect_object.'],
     inputProps: { objectPath: P.objectPath, blueprintPath: P.blueprintPath },

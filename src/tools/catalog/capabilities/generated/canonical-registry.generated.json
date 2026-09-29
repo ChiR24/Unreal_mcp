@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "80c7ca7df91e7685",
+  "catalogRevision": "a9edc39452ff597a",
   "recordCount": 389,
   "records": [
     {
@@ -38110,9 +38110,11 @@
         "domain": "inspect",
         "family": "actor",
         "topics": [
-          "find_by_class"
+          "find_by_class",
+          "all actors of a type",
+          "every instance"
         ],
-        "summary": "Find world actors by class name or /Script path.",
+        "summary": "Find the actors of a class in the level, by class name or /Script path: returns each match's name, path and class plus a count. Searches the PIE world while a game runs.",
         "whenToUse": [
           "All actors of a specific class must be enumerated."
         ],
@@ -38182,7 +38184,7 @@
       },
       "examples": [
         {
-          "title": "Find world actors by class name or /Script path.",
+          "title": "Find the actors of a class in the level, by class name or /Script path: returns each match's name, path and class plus a count. Searches the PIE world while a game runs.",
           "input": {
             "action": "find_by_class",
             "className": "PointLight"
@@ -38222,7 +38224,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3e4f28f6990d2587632d64d17e88dd490d529a95ab4c5cfc48946894b9058a8c",
-        "content": "83dfda886c57653ec990d625aa3a2e07f0aad34466e5ae51ae4cc277d62adae9"
+        "content": "d6df5b060bfe776276d80ab7c6efca9c9377999115a2f2feb6d8a4f1b6515ee6"
       }
     },
     {
@@ -38238,9 +38240,12 @@
         "domain": "inspect",
         "family": "object",
         "topics": [
-          "get_blueprint_details"
+          "get_blueprint_details",
+          "compile status",
+          "parent class",
+          "graph node counts"
         ],
-        "summary": "Inspect a Blueprint asset via the separate blueprint_get bridge route.",
+        "summary": "Read a Blueprint asset without spawning it: parent class, type, compile status, variables with defaults, functions, events, graph node counts, and components with transforms, meshes and materials.",
         "whenToUse": [
           "A Blueprint asset's structure must be read without spawning an actor."
         ],
@@ -38297,7 +38302,7 @@
       },
       "examples": [
         {
-          "title": "Inspect a Blueprint asset via the separate blueprint_get bridge route.",
+          "title": "Read a Blueprint asset without spawning it: parent class, type, compile status, variables with defaults, functions, events, graph node counts, and components with transforms, meshes and materials.",
           "input": {
             "action": "get_blueprint_details",
             "blueprintPath": "/Game/Blueprints/BP_Test"
@@ -38335,7 +38340,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3cfc3fdccbe14bb3951e0aa36e3e6142fe757513abb7056407bf6482b3292972",
-        "content": "389d5ad87a96e747754045f995f8107deaabd87c761b80562cb005f3b0297dbb"
+        "content": "8e8e1aa1e00f657ed2d33d9af230b17ac8b36bfd9714042257f7d4337def9ba3"
       }
     },
     {
@@ -38360,9 +38365,12 @@
         "domain": "inspect",
         "family": "components",
         "topics": [
-          "get_component_details"
+          "get_component_details",
+          "bounds and mobility",
+          "collision and mesh",
+          "world transform"
         ],
-        "summary": "Read a component's details or one of its properties.",
+        "summary": "Read one component of an actor or Blueprint: class, relative and world transform, mobility, visibility, attachment, bounds, collision, mesh and chosen property values; info=property returns a single property's value.",
         "whenToUse": [
           "One component's full details must be read.",
           "A single component property value must be read."
@@ -38464,7 +38472,7 @@
       },
       "examples": [
         {
-          "title": "Read a component's details or one of its properties.",
+          "title": "Read one component of an actor or Blueprint: class, relative and world transform, mobility, visibility, attachment, bounds, collision, mesh and chosen property values; info=property returns a single property's value.",
           "input": {
             "action": "get_component_details",
             "actorName": "PlayerStart_1",
@@ -38524,7 +38532,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9c2e56bd2418f4d56c9f1b2688f8c90660c36e927c0760296f28e3533fc740d3",
-        "content": "e2d90b41bb480c20d4a1405696c17fab325d3f935b709d09b3d900f778aa0cb4"
+        "content": "85e175fb6ce542f4f61be4a1548f4f40513d51dc96d4a3e26da423179c22fcec"
       }
     },
     {
@@ -39206,7 +39214,7 @@
           "scene stats",
           "fps"
         ],
-        "summary": "Read performance, memory or scene statistics.",
+        "summary": "Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak) or scene statistics (actors by category, components, hidden actors).",
         "whenToUse": [
           "Performance metrics must be inspected.",
           "Memory usage must be inspected.",
@@ -39397,7 +39405,7 @@
       },
       "examples": [
         {
-          "title": "Read performance, memory or scene statistics.",
+          "title": "Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak) or scene statistics (actors by category, components, hidden actors).",
           "input": {
             "action": "get_stats",
             "statsKind": "performance"
@@ -39457,7 +39465,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0be07f4b1168be953398eae3226a9732782b05549d73586ef9c03c552e8e4a45",
-        "content": "5fca3b62c97a4f9f3a01ed8d6f71444ff5b76cde0d39d18888bdd20d143fed7e"
+        "content": "58bf8acf7fd745085a5c8e54e8490d344dac218fc7b704648f11723029bd239b"
       }
     },
     {
@@ -40403,9 +40411,12 @@
         "domain": "inspect",
         "family": "runtime",
         "topics": [
-          "runtime_report"
+          "runtime_report",
+          "pie state",
+          "inspect running game",
+          "live actors"
         ],
-        "summary": "Report runtime (PIE) object state.",
+        "summary": "Report the live state of a running PIE game: up to 25 matching actors with class, transform, tags and components, plus the player controller, pawn, view target and camera; actors are reported only while PIE runs.",
         "whenToUse": [
           "Runtime state of actors/components/properties must be inspected during PIE.",
           "PIE-only runtime state must be inspected."
@@ -40544,7 +40555,7 @@
       },
       "examples": [
         {
-          "title": "Report runtime (PIE) object state.",
+          "title": "Report the live state of a running PIE game: up to 25 matching actors with class, transform, tags and components, plus the player controller, pawn, view target and camera; actors are reported only while PIE runs.",
           "input": {
             "action": "runtime_report",
             "actorName": "PlayerStart_1"
@@ -40588,7 +40599,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "de082c161cdb56f1839e834c630eecd7057afd2f088327f1c6a72022e3e045bc",
-        "content": "b2c30179d764f82c74db71c0d4c5ee9e729893643211b664c20b529c02102dab"
+        "content": "a86b8242e7e00437091a001aaeef0db8eaac71c7b208513f888ac9b26d846299"
       }
     },
     {

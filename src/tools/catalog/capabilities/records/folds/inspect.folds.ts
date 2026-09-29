@@ -16,7 +16,8 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_component_details', selector: 'info',
-    summary: 'Read a component\'s details or one of its properties.',
+    summary: 'Read one component of an actor or Blueprint: class, relative and world transform, mobility, visibility, attachment, bounds, collision, mesh and chosen property values; info=property returns a single property\'s value.',
+    topics: ['bounds and mobility', 'collision and mesh', 'world transform'],
     members: { details: 'get_component_details', property: 'get_component_property' },
   },
   {
@@ -38,9 +39,14 @@ export const INSPECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_stats', selector: 'statsKind',
-    summary: 'Read performance, memory or scene statistics.',
+    summary: 'Read performance (FPS, frame rate and time, thread and GPU ms), memory usage (used, available, peak) or scene statistics (actors by category, components, hidden actors).',
     topics: ['performance stats', 'memory stats', 'scene stats', 'fps'],
     members: { performance: 'get_performance_stats', memory: 'get_memory_stats', scene: 'get_scene_stats' },
   },
-  { primary: 'runtime_report', summary: 'Report runtime (PIE) object state.', members: ['pie_report'] },
+  {
+    primary: 'runtime_report',
+    summary: 'Report the live state of a running PIE game: up to 25 matching actors with class, transform, tags and components, plus the player controller, pawn, view target and camera; actors are reported only while PIE runs.',
+    topics: ['pie state', 'inspect running game', 'live actors'],
+    members: ['pie_report'],
+  },
 ];

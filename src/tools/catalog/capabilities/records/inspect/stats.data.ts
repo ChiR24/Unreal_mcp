@@ -21,7 +21,7 @@ export const STATS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_performance_stats', dispatchAction: 'get_performance_stats', domain: D, family: 'stats',
-    summary: 'Return performance statistics (frame rate, frame time, draw calls).',
+    summary: 'Return performance statistics (frame rate, frame time, game, render and GPU thread times, actor count).',
     whenToUse: ['Performance metrics must be inspected.'],
     whenNotToUse: ['Scene composition is needed; use get_scene_stats.'],
     inputProps: {},
