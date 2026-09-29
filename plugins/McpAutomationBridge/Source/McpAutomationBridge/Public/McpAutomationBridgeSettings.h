@@ -258,6 +258,15 @@ public:
         return FPlatformAtomics::AtomicRead(&EditGenerationCounter());
     }
 
+    // These settings are the automation channel's security posture and hold its tokens:
+    // no automation read or write may reach them. The resolved class is checked as well as
+    // the text, since a short-name lookup finds this class under any casing or module path.
+    static bool IsAutomationTarget(const FString& SectionOrCategory, const UClass* Resolved)
+    {
+        return SectionOrCategory.Contains(TEXT("McpAutomationBridge"), ESearchCase::IgnoreCase) ||
+               (Resolved && Resolved->IsChildOf(StaticClass()));
+    }
+
     // Persist changed properties immediately when edited in Project Settings
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override
     {

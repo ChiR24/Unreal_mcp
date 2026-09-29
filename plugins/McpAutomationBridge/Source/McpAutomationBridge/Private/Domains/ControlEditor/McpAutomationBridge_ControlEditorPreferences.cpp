@@ -3,6 +3,7 @@
 
 #include "UObject/UnrealType.h"
 #include "EditorModeManager.h"
+#include "McpAutomationBridgeSettings.h"
 
 namespace {
 // Editor Preferences and Project Settings live on config-backed UObject CDOs
@@ -25,7 +26,9 @@ UObject *ResolveSettingsObjectForMcp(const FString &Category) {
   for (const FString &Name : Candidates) {
     UClass *SettingsClass =
         FindFirstObject<UClass>(*Name, EFindFirstObjectOptions::NativeFirst);
-    if (SettingsClass && SettingsClass->HasAnyClassFlags(CLASS_Config)) {
+    // The plugin's own settings: a write here could switch its token auth off.
+    if (SettingsClass && SettingsClass->HasAnyClassFlags(CLASS_Config) &&
+        !UMcpAutomationBridgeSettings::IsAutomationTarget(Category, SettingsClass)) {
       return SettingsClass->GetDefaultObject();
     }
   }

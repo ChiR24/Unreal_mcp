@@ -3,6 +3,7 @@
 #include "Domains/Ui/McpAutomationBridge_UiHandlersPrivate.h"
 #include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsProjectConfig.h"
+#include "McpAutomationBridgeSettings.h"
 
 #include "Engine/Engine.h"
 #include "HAL/IConsoleManager.h"
@@ -85,6 +86,14 @@ TSharedPtr<FJsonObject> ExportConfigProperties(UClass *Class, int32 &OutCount) {
   return Values;
 }
 
+// The refusal every branch sends: message and code on the reply, and in its error field.
+bool Refuse(const TSharedPtr<FJsonObject> &Resp, FString &Message, FString &ErrorCode, const FString &Text, const TCHAR *Code) {
+  Message = Text;
+  ErrorCode = Code;
+  Resp->SetStringField(TEXT("error"), Message);
+  return true;
+}
+
 } // namespace
 
 bool HandleProjectSettingsAction(const FString &LowerSub,
@@ -100,23 +109,21 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
     if (Section.IsEmpty() && !Category.IsEmpty()) {
       const TCHAR *Mapped = SectionForCategory(Category);
       if (!Mapped) {
-        Message = FString::Printf(
+        return Refuse(Resp, Message, ErrorCode, FString::Printf(
             TEXT("Unknown settings category '%s'. Use a section path such as /Script/Engine.RendererSettings, or one of: general, maps, packaging, rendering, input, physics, collision, audio, engine, navigation"),
-            *Category);
-        ErrorCode = TEXT("NOT_FOUND");
-        Resp->SetStringField(TEXT("error"), Message);
-        return true;
+            *Category), TEXT("NOT_FOUND"));
       }
       Section = Mapped;
     }
 
     if (!Section.IsEmpty()) {
       UClass *Class = ResolveSettingsClass(Section);
+      // Its CapabilityToken and ScopedCapabilityTokens are secrets.
+      if (UMcpAutomationBridgeSettings::IsAutomationTarget(Section, Class)) {
+        return Refuse(Resp, Message, ErrorCode, TEXT("get_project_settings cannot read the McpAutomationBridge settings section"), TEXT("SETTING_NOT_PERMITTED"));
+      }
       if (!Class) {
-        Message = FString::Printf(TEXT("Settings class not found for section '%s'"), *Section);
-        ErrorCode = TEXT("NOT_FOUND");
-        Resp->SetStringField(TEXT("error"), Message);
-        return true;
+        return Refuse(Resp, Message, ErrorCode, FString::Printf(TEXT("Settings class not found for section '%s'"), *Section), TEXT("NOT_FOUND"));
       }
       int32 Count = 0;
       TSharedPtr<FJsonObject> Values = ExportConfigProperties(Class, Count);
@@ -143,10 +150,7 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
                 TEXT("note"),
                 TEXT("Raw INI entry, not a live UProperty: present on disk but not applied to the running editor."));
           } else {
-            Message = FString::Printf(TEXT("Setting '%s' not found in %s"), *Key, *Class->GetPathName());
-            ErrorCode = TEXT("NOT_FOUND");
-            Resp->SetStringField(TEXT("error"), Message);
-            return true;
+            return Refuse(Resp, Message, ErrorCode, FString::Printf(TEXT("Setting '%s' not found in %s"), *Key, *Class->GetPathName()), TEXT("NOT_FOUND"));
           }
         } else {
           Resp->SetStringField(TEXT("key"), Key);
@@ -199,10 +203,7 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
   Payload->TryGetStringField(TEXT("value"), Value);
 
   if (Section.IsEmpty() || Key.IsEmpty()) {
-    Message = TEXT("section and key are required for set_project_setting");
-    ErrorCode = TEXT("INVALID_ARGUMENT");
-    Resp->SetStringField(TEXT("error"), Message);
-    return true;
+    return Refuse(Resp, Message, ErrorCode, TEXT("section and key are required for set_project_setting"), TEXT("INVALID_ARGUMENT"));
   }
 
   FString NormalizedSection = Section;
@@ -214,17 +215,14 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
   // The plugin's own settings live under this section; letting the automation
   // channel rewrite them could disable its own token authentication, so that
   // section is refused outright.
-  if (NormalizedSection.Contains(TEXT("McpAutomationBridge"))) {
-    Message = TEXT("set_project_setting cannot target the McpAutomationBridge settings section");
-    ErrorCode = TEXT("SETTING_NOT_PERMITTED");
-    Resp->SetStringField(TEXT("error"), Message);
-    return true;
+  UClass *Class = ResolveSettingsClass(NormalizedSection);
+  if (UMcpAutomationBridgeSettings::IsAutomationTarget(NormalizedSection, Class)) {
+    return Refuse(Resp, Message, ErrorCode, TEXT("set_project_setting cannot target the McpAutomationBridge settings section"), TEXT("SETTING_NOT_PERMITTED"));
   }
 
   // Apply to the live settings object when the section is a config class, so
   // the editor sees the change immediately, then persist it to the project's
   // Default<Config>.ini (the old code only wrote DefaultEngine.ini in memory).
-  UClass *Class = ResolveSettingsClass(NormalizedSection);
   const FString ConfigName = Class ? Class->ClassConfigName.ToString() : FString(TEXT("Engine"));
   FString ConfigFile = FPaths::ConvertRelativePathToFull(
       FPaths::ProjectConfigDir() / FString::Printf(TEXT("Default%s.ini"), *ConfigName));
@@ -256,10 +254,7 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
           if (!Class->HasAnyClassFlags(CLASS_DefaultConfig)) { CDO->SaveConfig(); ConfigFile = FPaths::ConvertRelativePathToFull(Class->GetConfigName()); }
           bPersisted = !Class->HasAnyClassFlags(CLASS_DefaultConfig) || CDO->TryUpdateDefaultConfigFile(FString(), false);
         } else {
-          Message = FString::Printf(TEXT("Value '%s' could not be parsed for %s.%s (%s)"), *Value, *Class->GetName(), *Key, *Property->GetCPPType());
-          ErrorCode = TEXT("INVALID_VALUE");
-          Resp->SetStringField(TEXT("error"), Message);
-          return true;
+          return Refuse(Resp, Message, ErrorCode, FString::Printf(TEXT("Value '%s' could not be parsed for %s.%s (%s)"), *Value, *Class->GetName(), *Key, *Property->GetCPPType()), TEXT("INVALID_VALUE"));
         }
       }
     }
@@ -270,10 +265,7 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
     FString PersistError;
     bPersisted = McpHandlerUtils::WriteProjectConfigValue(NormalizedSection, Key, Value, ConfigName, ConfigFile, PersistError);
     if (!bPersisted) {
-      Message = PersistError;
-      ErrorCode = TEXT("PERSIST_FAILED");
-      Resp->SetStringField(TEXT("error"), Message);
-      return true;
+      return Refuse(Resp, Message, ErrorCode, PersistError, TEXT("PERSIST_FAILED"));
     }
   }
 
