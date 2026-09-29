@@ -16,6 +16,7 @@ export const NATIVE_RULE_WEIGHTS = {
 } as const;
 export const NATIVE_WORD_COVERAGE_BONUS = 5;
 export const NATIVE_ACTION_COVERED_BONUS = 50;
+export const NATIVE_FULL_COVERAGE_BONUS = 60;
 export const NATIVE_READ_INTENT_BONUS = 40;
 export const NATIVE_DELETE_INTENT_BONUS = 40;
 
@@ -65,6 +66,7 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
     if (record.summary.toLowerCase().includes(query)) fire('summary');
   }
   let matched = 0;
+  let named = 0;
   for (const word of content) {
     const hits: [keyof typeof NATIVE_RULE_WEIGHTS, boolean][] = [
       ['id', actionHasWord(record, word)],
@@ -81,8 +83,10 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
       fire(rule);
     }
     if (any) matched += 1;
+    if (hits.some(([rule, hit]) => hit && rule !== 'summary' && rule !== 'parent')) named += 1;
   }
   score += matched * NATIVE_WORD_COVERAGE_BONUS;
+  if (content.length >= 2 && named === content.length) score += NATIVE_FULL_COVERAGE_BONUS;
   const own = searchWords(lastSegment(record.id));
   const ownCovered = own.length >= 2 && own.every((word) => content.includes(word));
   const run = ` ${content.join(' ')} `;

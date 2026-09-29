@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2f82d05c45992d93",
+  "catalogRevision": "8aa7725128874456",
   "recordCount": 389,
   "records": [
     {
@@ -18101,9 +18101,11 @@
         "blueprint.set_padding",
         "blueprint.set_z_order",
         "blueprint.set_visibility",
+        "blueprint.hide_widget",
         "blueprint.set_clipping",
         "blueprint.set_render_transform",
-        "blueprint.set_style"
+        "blueprint.set_style",
+        "blueprint.set_button_text"
       ],
       "legacyIds": [
         {
@@ -18643,7 +18645,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "d70a937d2c12b094355681ce2528329e623602277c6a79fa44c5e1243840372e",
-        "content": "48e57d93f8970d6be59ef47c2fc3c14d7fddecbf2ebd2da673a267e6f16a4d38"
+        "content": "dc8125cf9a47a55648c316f569604f32bad6b73085ebe5a081b4a2d3148b6124"
       }
     },
     {
@@ -38996,6 +38998,7 @@
           "get value",
           "read field",
           "actor property",
+          "object property",
           "game instance variable"
         ],
         "summary": "Read a property value from a world actor, asset, or Blueprint CDO.",
@@ -39119,7 +39122,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "177b82e58004b002aadb7264c9128557e1954fb2a9703f917017661cbc66035e",
-        "content": "cb19ee18e2be763cdf4122712c412283100307fdf079cfedea0b92896baa24bb"
+        "content": "9e70408de9512af54805b6328d02f2ffbab5f4824efbf7967615e54a210e7f2f"
       }
     },
     {

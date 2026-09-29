@@ -33,11 +33,14 @@ interface LayoutExtras<K extends string> {
   readonly props: Record<string, unknown>;
   readonly required: readonly K[];
   readonly example: Record<K, unknown> & JsonObject;
+  /** Names a caller types for this edit when the action name lacks their words. */
+  readonly aliases?: readonly string[];
 }
 
 function layout<K extends string>(action: string, id: string, summary: string, extras: LayoutExtras<K>): CapabilityRecordSource {
   return buildRecord({
     id,
+    ...(extras.aliases === undefined ? {} : { aliases: extras.aliases }),
     action,
     family: FAMILY,
     domain: DOMAIN,
@@ -75,12 +78,12 @@ export const WIDGET_LAYOUT_RECORDS: readonly CapabilityRecordSource[] = [
   layout('set_render_transform', 'blueprint.set_render_transform', 'Set the render transform (translation, shear, angle) for a widget.',
     { props: { translation: P.translation, shear: P.shear, angle: P.angle, scale: P.scale }, required: [], example: {} }),
   layout('set_visibility', 'blueprint.set_visibility', 'Set the visibility mode (Visible, Collapsed, Hidden, etc.) for a widget.',
-    { props: { visibility: P.visibility }, required: ['visibility'], example: { visibility: 'Visible' } }),
+    { props: { visibility: P.visibility }, required: ['visibility'], example: { visibility: 'Visible' }, aliases: ['blueprint.hide_widget'] }),
   // text/texturePath/renderOpacity were implemented in the handler but never
   // declared here, so the gateway rejected them as undeclared and there was no
   // published way to change an existing widget's label or icon at all.
   layout('set_style', 'blueprint.set_style', 'Set the visual style (color, font size, face and letter spacing, text, text justification, brush texture, button hover/press sounds) for a widget, or copy the look of another text block with copyStyleFrom.',
-    { props: { colorAndOpacity: P.colorAndOpacity, fontSize: P.fontSize, text: P.text, texturePath: P.texturePath, renderOpacity: P.renderOpacity, propertyName: { type: 'string', description: 'Any other widget property, by reflection (such as WidgetStyle or Brush): read without value, written with it.' }, value: { description: 'New value for propertyName: a string, number or bool, or an object or array for a struct property.' }, cornerRadius: P.cornerRadius, outlineColor: P.outlineColor, outlineWidth: P.outlineWidth, hoverSoundPath: P.hoverSoundPath, pressSoundPath: P.pressSoundPath, justification: P.justification, fontFamily: P.fontFamily, typeface: P.typeface, letterSpacing: P.letterSpacing, copyStyleFrom: P.copyStyleFrom }, required: [], example: { cornerRadius: 18 } }),
+    { props: { colorAndOpacity: P.colorAndOpacity, fontSize: P.fontSize, text: P.text, texturePath: P.texturePath, renderOpacity: P.renderOpacity, propertyName: { type: 'string', description: 'Any other widget property, by reflection (such as WidgetStyle or Brush): read without value, written with it.' }, value: { description: 'New value for propertyName: a string, number or bool, or an object or array for a struct property.' }, cornerRadius: P.cornerRadius, outlineColor: P.outlineColor, outlineWidth: P.outlineWidth, hoverSoundPath: P.hoverSoundPath, pressSoundPath: P.pressSoundPath, justification: P.justification, fontFamily: P.fontFamily, typeface: P.typeface, letterSpacing: P.letterSpacing, copyStyleFrom: P.copyStyleFrom }, required: [], example: { cornerRadius: 18 }, aliases: ['blueprint.set_button_text'] }),
   layout('set_clipping', 'blueprint.set_clipping', 'Set the clipping mode (Inherit, ClipToBounds, etc.) for a widget.',
     { props: { clipping: P.clipping }, required: ['clipping'], example: { clipping: 'ClipToBounds' } }),
 ];

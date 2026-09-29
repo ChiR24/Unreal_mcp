@@ -11,6 +11,7 @@ import { canonicalCapabilityId, deriveAliasFold, type AliasFold } from './alias-
 import {
   MAX_MATCH_REASONS,
   MAX_REASON_TOKENS,
+  RETRIEVAL_COVERAGE_FIELDS,
   RETRIEVAL_FIELD_WEIGHTS,
   RETRIEVAL_FUNCTION_WORDS,
   RETRIEVAL_NAME_FIELDS,
@@ -413,7 +414,15 @@ export function scoreDocument(
   if (matchScore < RETRIEVAL_SCORE_CONSTANTS.minimumRelevanceScore) return null;
   // Only ever reorders records the query already matched; it never makes one a result.
   const effect = document.record.behavior.effect;
+  // Every content word named by the record itself: "change button text" is all of
+  // set_widget_layout's vocabulary, while add_content_widget matched two of its
+  // words through member names and outranked it.
+  const named = new Set(contributions
+    .filter((entry) => RETRIEVAL_COVERAGE_FIELDS.has(entry.field))
+    .flatMap((entry) => entry.allMatchedTokens));
+  const fullyNamed = context.contentTokens.length >= 2 && context.contentTokens.every((token) => named.has(token));
   const score = matchScore
+    + (fullyNamed ? RETRIEVAL_SCORE_CONSTANTS.fullCoverageBonus : 0)
     + (context.readIntent && effect === 'read' ? RETRIEVAL_SCORE_CONSTANTS.readIntentBonus : 0)
     + (context.deleteIntent && effect === 'destructive' ? RETRIEVAL_SCORE_CONSTANTS.deleteIntentBonus : 0);
   contributions.sort((left, right) => {

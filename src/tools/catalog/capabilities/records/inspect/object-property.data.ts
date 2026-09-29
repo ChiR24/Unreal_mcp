@@ -126,7 +126,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_property', dispatchAction: 'get_property', domain: D, family: 'property',
-    topics: ['read property', 'property value', 'get value', 'read field', 'actor property', 'game instance variable'],
+    topics: ['read property', 'property value', 'get value', 'read field', 'actor property', 'object property', 'game instance variable'],
     summary: 'Read a property value from a world actor, asset, or Blueprint CDO.',
     whenToUse: ['A single property value must be read.'],
     whenNotToUse: ['All properties are needed; use inspect_object or inspect_cdo.'],

@@ -56,6 +56,13 @@ constexpr int32 McpSearchWordCoverageBonus = 5;
  */
 constexpr int32 McpSearchActionCoveredBonus = 50;
 /**
+ * When every word of a multi-word query is named by the record's action, aliases,
+ * family, domain or topics (not its summary): "change button text" is all of
+ * set_widget_layout's vocabulary, while add_content_widget matched two of its words
+ * through alias names at 50 each and outranked it.
+ */
+constexpr int32 McpSearchFullCoverageBonus = 60;
+/**
  * When the query opens with a read word ("get actor location", "what is in this
  * folder"), a matching record whose effect is read ranks ahead: set_transform used
  * to answer "get actor location". Only reorders records that already matched.

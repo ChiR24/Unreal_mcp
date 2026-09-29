@@ -125,17 +125,12 @@ bool ContainsWord(const FString& Text, const FString& Word)
 	return false;
 }
 
-FString JoinWords(const TArray<FString>& Words)
-{
-	return FString::Join(Words, TEXT("_"));
-}
-
 /** The folded action key of an id or alias: "blueprint.list_blueprint_variables" -> "list_blueprint_variable". */
 FString ActionKey(const FString& Id)
 {
 	TArray<FString> Words;
 	McpSearchWords(McpLastDottedSegment(Id), Words);
-	return JoinWords(Words);
+	return FString::Join(Words, TEXT("_"));
 }
 
 bool ActionHasWord(const FMcpCapabilityRecord& Record, const FString& Word)
@@ -223,8 +218,8 @@ bool McpSearchScoreRecord(
 	// Phrase pass: the whole query as an exact id, or as the exact action
 	// spelling of the id or of a declared alias, with or without function words.
 	if (Record.Id.ToLower().Equals(Query, ESearchCase::CaseSensitive)
-		|| ActionEquals(Record, JoinWords(AllWords))
-		|| ActionEquals(Record, JoinWords(ContentWords)))
+		|| ActionEquals(Record, FString::Join(AllWords, TEXT("_")))
+		|| ActionEquals(Record, FString::Join(ContentWords, TEXT("_"))))
 	{
 		Fired[RuleIdExact] = true;
 		Score += MatchRules[RuleIdExact].Weight;
@@ -248,6 +243,7 @@ bool McpSearchScoreRecord(
 	// segment and the declared aliases; namespace words reach a record only
 	// through its domain and parent, at their own weights.
 	int32 Matched = 0;
+	int32 Named = 0;
 	for (const FString& Word : ContentWords)
 	{
 		bool Hits[RuleCount] = {};
@@ -266,8 +262,12 @@ bool McpSearchScoreRecord(
 			Score += MatchRules[Rule].Weight;
 		}
 		if (bAny) ++Matched;
+		// Named by the action, aliases, family, domain or topics; summary prose also
+		// holds filler words ("one", "another") and does not count.
+		if (Hits[RuleId] || Hits[RuleFamily] || Hits[RuleDomain] || Hits[RuleTopic]) ++Named;
 	}
 	Score += Matched * McpSearchWordCoverageBonus;
+	if (ContentWords.Num() >= 2 && Named == ContentWords.Num()) Score += McpSearchFullCoverageBonus;
 	TArray<FString> OwnAction;
 	McpSearchWords(McpLastDottedSegment(Record.Id), OwnAction);
 	bool bOwnCovered = OwnAction.Num() >= 2;
