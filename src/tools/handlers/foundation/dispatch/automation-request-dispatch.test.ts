@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ITools } from '../../../../types/tools/tool-interfaces.js';
+import { clearEditorContentRoots, setEditorContentRoots } from '../../../../utils/paths/path-security.js';
 import { executeAutomationRequest } from './automation-request-dispatch.js';
 
 function createConnectedTools() {
@@ -87,5 +88,37 @@ describe('executeAutomationRequest console command validation', () => {
     await executeAutomationRequest(tools, 'manage_sequence', { action: 'start_render' }, { timeoutMs: 65000 });
 
     expect(sendAutomationRequest).toHaveBeenCalledWith('manage_sequence', { action: 'start_render' }, { timeoutMs: 65000 });
+  });
+});
+
+describe('executeAutomationRequest path gate with editor-reported content roots', () => {
+  afterEach(() => {
+    clearEditorContentRoots();
+  });
+
+  // The gateway sends { ...params, action } (no subAction), so these are the
+  // payloads a gateway execute really produces.
+  it('sends a content path under a reported mount, and refuses it without the mount', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+    const args = { path: '/ShooterCore/X', action: 'list' };
+
+    await expect(executeAutomationRequest(tools, 'manage_asset', args)).rejects.toThrow(/unauthorized absolute path/);
+    expect(sendAutomationRequest).not.toHaveBeenCalled();
+
+    setEditorContentRoots(['/Game', '/ShooterCore']);
+    await executeAutomationRequest(tools, 'manage_asset', args);
+    expect(sendAutomationRequest).toHaveBeenCalledWith('manage_asset', args, { timeoutMs: expect.any(Number) });
+  });
+
+  it('refuses a reported mount as the file an import reads', async () => {
+    const { tools, sendAutomationRequest } = createConnectedTools();
+    setEditorContentRoots(['/Game', '/ShooterCore']);
+
+    await expect(executeAutomationRequest(tools, 'manage_asset', {
+      sourcePath: '/ShooterCore/x.fbx',
+      destinationPath: '/Game/X',
+      action: 'import',
+    })).rejects.toThrow(/unauthorized absolute path/);
+    expect(sendAutomationRequest).not.toHaveBeenCalled();
   });
 });

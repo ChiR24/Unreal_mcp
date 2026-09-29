@@ -63,4 +63,25 @@ describe('HandshakeHandler', () => {
         expect(socket.listenerCount('error')).toBe(0);
         expect(socket.listenerCount('close')).toBe(0);
     });
+
+    it('keeps the contentRoots of bridge_ack in the handshake metadata', async () => {
+        const socket = new FakeSocket();
+        const promise = new HandshakeHandler().initiateHandshake(socket, 1000);
+
+        await vi.advanceTimersByTimeAsync(0);
+        socket.emit('message', JSON.stringify({ type: 'bridge_ack', contentRoots: ['/Game', '/ShooterCore'] }));
+
+        await expect(promise).resolves.toEqual({ contentRoots: ['/Game', '/ShooterCore'] });
+    });
+
+    it('refuses a bridge_ack whose contentRoots is not a list of strings', async () => {
+        const socket = new FakeSocket();
+        const promise = new HandshakeHandler().initiateHandshake(socket, 1000);
+        const assertion = expect(promise).rejects.toThrow('Handshake expected bridge_ack');
+
+        await vi.advanceTimersByTimeAsync(0);
+        socket.emit('message', JSON.stringify({ type: 'bridge_ack', contentRoots: '/Game' }));
+
+        await assertion;
+    });
 });
