@@ -124,6 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **Deleting an output file shows up in the receipt.** `delete_output_file` answered only `path`, so removing a screenshot returned `changes: []`. It now lists every file it deleted.
 - **A preview or a played sound no longer claims to have changed an asset.** After preview_widget the receipt listed the Widget Blueprint under changes, and after play_sound the sound. A reply that states `changedAssets`, an empty one included, is now taken at its word; the actors it names still count.
 - **An image gets its own size budget.** Only the two screenshot capabilities were exempt from the 100k reply budget, so a busy widget preview at 1280x720 came back RESULT_TOO_LARGE with advice to paginate an image. Any reply's `imageBase64` (up to 6 million characters) now counts on top of the 100k the rest of the reply is held to.
 - **reparent_widget stops warning about a duplicate it never made.** Every move said the widget "was already in the tree" and to use a fresh slotName; the warning is kept for an add that re-uses a slotName.

@@ -195,6 +195,9 @@ bool HandleDeleteOutputFile(UMcpAutomationBridgeSubsystem* Self, const FString& 
       Self->SendAutomationError(RequestingSocket, RequestId, Error, ErrorCode);
       return true;
     }
+    // The receipt's changes[] reads changedEntities; `path` alone left it empty.
+    Resp->SetArrayField(TEXT("changedEntities"),
+                        TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(Resp->GetStringField(TEXT("path")))});
     Self->SendAutomationResponse(RequestingSocket, RequestId, true,
                                  FString::Printf(TEXT("Deleted %s"), *Resp->GetStringField(TEXT("path"))), Resp);
     return true;
@@ -207,7 +210,7 @@ bool HandleDeleteOutputFile(UMcpAutomationBridgeSubsystem* Self, const FString& 
     return true;
   }
   TArray<TSharedPtr<FJsonValue>> Results;
-  int32 DeletedCount = 0;
+  TArray<TSharedPtr<FJsonValue>> DeletedPaths;
   for (const TSharedPtr<FJsonValue>& Value : *PathValues) {
     FString Path;
     if (Value.IsValid()) {
@@ -215,12 +218,19 @@ bool HandleDeleteOutputFile(UMcpAutomationBridgeSubsystem* Self, const FString& 
     }
     FString ErrorCode;
     FString Error;
-    Results.Add(MakeShared<FJsonValueObject>(DeleteOneOutputFile(Project, Path, ErrorCode, Error)));
-    DeletedCount += ErrorCode.IsEmpty() ? 1 : 0;
+    const TSharedPtr<FJsonObject> Entry = DeleteOneOutputFile(Project, Path, ErrorCode, Error);
+    Results.Add(MakeShared<FJsonValueObject>(Entry));
+    if (ErrorCode.IsEmpty()) {
+      DeletedPaths.Add(MakeShared<FJsonValueString>(Entry->GetStringField(TEXT("path"))));
+    }
   }
+  const int32 DeletedCount = DeletedPaths.Num();
   const int32 FailedCount = Results.Num() - DeletedCount;
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetArrayField(TEXT("results"), Results);
+  if (DeletedCount > 0) {
+    Resp->SetArrayField(TEXT("changedEntities"), DeletedPaths);
+  }
   Resp->SetNumberField(TEXT("deletedCount"), DeletedCount);
   Resp->SetNumberField(TEXT("failedCount"), FailedCount);
   const FString Message = FString::Printf(TEXT("Deleted %d of %d file(s)"), DeletedCount, Results.Num());

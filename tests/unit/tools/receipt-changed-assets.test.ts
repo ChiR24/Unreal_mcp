@@ -187,3 +187,18 @@ describe('a level save names the level it saved', () => {
       .toMatch(/Resp->SetStringField\(TEXT\("savedAssetPath"\), SavePath\);/u);
   });
 });
+
+// delete_output_file answered only `path` (a disk file, not an asset field), so deleting a
+// screenshot returned "changes": []. It now names every file it deleted in changedEntities.
+describe('an output-file delete names the files it deleted', () => {
+  it('changedEntities is read into changes', () => {
+    const FILE = 'Saved/Screenshots/check.png';
+    expect(extractChanges({ success: true, details: { path: FILE, deleted: true, changedEntities: [FILE] } })).toEqual([FILE]);
+  });
+
+  it('the single and the list form both answer changedEntities', () => {
+    const source = nativeSource('Domains', 'SystemControl', 'McpAutomationBridge_SystemControlHandlersOutputFiles.cpp');
+    expect(source).toMatch(/SetArrayField\(TEXT\("changedEntities"\),\s*TArray<TSharedPtr<FJsonValue>>\{MakeShared<FJsonValueString>/u);
+    expect(source).toMatch(/SetArrayField\(TEXT\("changedEntities"\), DeletedPaths\);/u);
+  });
+});
