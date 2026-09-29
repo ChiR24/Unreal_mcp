@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "145a920c9a9a90e3",
+  "catalogRevision": "58e05b8404708e44",
   "recordCount": 388,
   "records": [
     {
@@ -8136,7 +8136,7 @@
           "directory listing",
           "folder contents"
         ],
-        "summary": "List assets under a path, the registered content sources, or the instances of a material.",
+        "summary": "List the assets and subfolders in a folder (path), the registered content sources, or the instances of a material.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -8329,7 +8329,7 @@
       },
       "examples": [
         {
-          "title": "List assets under a path, the registered content sources, or the instances of a material.",
+          "title": "List the assets and subfolders in a folder (path), the registered content sources, or the instances of a material.",
           "input": {
             "path": "/Game",
             "action": "list",
@@ -8425,7 +8425,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "4b745ceba2c741c02e8ccc7679e4c2851cb9b90cd42bc2920b60ca3d8fcebb21",
-        "content": "4674849a0d8c6c7bddfbab51ee67c529e1982315cab405c13d131c56a7c65829"
+        "content": "c6a619096d7c17534e0a7f9725cb16df9aac78ce8e2c9bb5f1e8d66dbaab8eff"
       }
     },
     {
@@ -75018,7 +75018,7 @@
           "material graph nodes",
           "material node details"
         ],
-        "summary": "Inspect a material or material function: summary, node lookup, node details/properties/connections, node chains and connected subgraphs.",
+        "summary": "Inspect a material or material function: summary with its parameters and overrides, node lookup, node details/properties/connections, node chains and connected subgraphs.",
         "whenToUse": [],
         "whenNotToUse": []
       },
@@ -75252,7 +75252,7 @@
       },
       "examples": [
         {
-          "title": "Inspect a material or material function: summary, node lookup, node details/properties/connections, node chains and connected subgraphs.",
+          "title": "Inspect a material or material function: summary with its parameters and overrides, node lookup, node details/properties/connections, node chains and connected subgraphs.",
           "input": {
             "assetPath": "/Game/Materials/M_Base",
             "action": "get_material_info",
@@ -75374,7 +75374,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c76ef6b0f275aa51142b8a3da742e9595dbd85d660f5a39c1b159058aeaf0752",
-        "content": "3600ae249c53d6480c4e7613e9a8aeafa4ec11ca946b87b97e4a2b1a345ca3f2"
+        "content": "0a33a15e0e651e6e43461c46f1ec7e5794ea031430c34cc52a033ecc45aaa8b7"
       }
     },
     {

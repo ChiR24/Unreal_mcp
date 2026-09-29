@@ -53,7 +53,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'list', selector: 'kind',
-    summary: 'List assets under a path, the registered content sources, or the instances of a material.',
+    summary: 'List the assets and subfolders in a folder (path), the registered content sources, or the instances of a material.',
     members: { assets: 'list', content_sources: 'list_content_sources', material_instances: 'list_instances' },
   },
   {
@@ -178,7 +178,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_material_info', selector: 'info',
-    summary: 'Inspect a material or material function: summary, node lookup, node details/properties/connections, node chains and connected subgraphs.',
+    summary: 'Inspect a material or material function: summary with its parameters and overrides, node lookup, node details/properties/connections, node chains and connected subgraphs.',
     topics: ['material info', 'material node', 'node connections', 'find node', 'material function info', 'inspect material graph', 'read material graph', 'material graph nodes', 'material node details'],
     members: {
       material: 'get_material_info', function: 'get_material_function_info', find_node: 'find_node', node_details: 'get_material_node_details',
