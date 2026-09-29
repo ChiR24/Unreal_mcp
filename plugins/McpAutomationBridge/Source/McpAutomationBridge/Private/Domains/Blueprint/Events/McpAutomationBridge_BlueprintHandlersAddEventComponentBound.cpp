@@ -6,6 +6,7 @@
 
 #include "Engine/Blueprint.h"
 #include "Components/ActorComponent.h"
+#include "Components/Widget.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 // K2Node_ComponentBoundEvent wires a per-component delegate (e.g. OnComponentBeginOverlap) to an event node.
 #include "K2Node_ComponentBoundEvent.h"
@@ -51,14 +52,20 @@ bool McpBlueprintAddEventComponentBound(
   // built without that property was left with no signature: no pins and no
   // function name, a dead event reported as success. A component added since
   // the last compile has no property yet, so compile once before giving up.
-  auto FindComponentProperty = [BP, &ComponentName]() -> FObjectProperty * {
+  // A Widget Blueprint binds a widget's event the same way (the "On Clicked
+  // (PlayButton)" node is a K2Node_ComponentBoundEvent on the widget's object
+  // property), so a widget variable counts as a component too; only a widget
+  // flagged Is Variable has a property at all.
+  auto IsBindable = [](const UClass *PropertyClass) {
+    return PropertyClass && (PropertyClass->IsChildOf(UActorComponent::StaticClass()) ||
+                             PropertyClass->IsChildOf(UWidget::StaticClass()));
+  };
+  auto FindComponentProperty = [BP, &ComponentName, &IsBindable]() -> FObjectProperty * {
     if (!BP->GeneratedClass) {
       return nullptr;
     }
     for (TFieldIterator<FObjectProperty> PropIt(BP->GeneratedClass); PropIt; ++PropIt) {
-      if (PropIt->GetName().Equals(ComponentName, ESearchCase::IgnoreCase) &&
-          PropIt->PropertyClass &&
-          PropIt->PropertyClass->IsChildOf(UActorComponent::StaticClass())) {
+      if (PropIt->GetName().Equals(ComponentName, ESearchCase::IgnoreCase) && IsBindable(PropIt->PropertyClass)) {
         return *PropIt;
       }
     }
@@ -73,14 +80,14 @@ bool McpBlueprintAddEventComponentBound(
     TArray<FString> Known;
     if (BP->GeneratedClass) {
       for (TFieldIterator<FObjectProperty> PropIt(BP->GeneratedClass); PropIt; ++PropIt) {
-        if (PropIt->PropertyClass && PropIt->PropertyClass->IsChildOf(UActorComponent::StaticClass())) {
+        if (IsBindable(PropIt->PropertyClass)) {
           Known.Add(PropIt->GetName());
         }
       }
     }
     Bridge.SendAutomationError(
         RequestingSocket, RequestId,
-        FString::Printf(TEXT("Component '%s' not found on Blueprint '%s'. Its components: %s."),
+        FString::Printf(TEXT("Component '%s' not found on Blueprint '%s'. Its components and widget variables: %s."),
                         *ComponentName, *RegistryKey,
                         Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("<none>")),
         TEXT("COMPONENT_NOT_FOUND"));

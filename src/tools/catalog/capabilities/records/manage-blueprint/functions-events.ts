@@ -64,14 +64,14 @@ export const FUNCTIONS_EVENTS_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['custom event', 'event node', 'begin play', 'tick event', 'event graph'],
-    summary: 'Add an event node to a Blueprint event graph: built-in, custom, or bound to a component delegate (componentName plus eventName, e.g. OnComponentBeginOverlap on a BoxComponent).',
-    whenToUse: ['An event handler node must be created in the EventGraph.', 'A component event such as OnComponentBeginOverlap or OnComponentHit must be handled.'],
+    summary: 'Add an event node to a Blueprint event graph: built-in, custom, or bound to a component delegate (componentName plus eventName, e.g. OnComponentBeginOverlap on a BoxComponent) or to a Widget Blueprint widget\'s event (componentName the widget, e.g. PlayButton with OnClicked).',
+    whenToUse: ['An event handler node must be created in the EventGraph.', 'A component event such as OnComponentBeginOverlap or OnComponentHit must be handled.', 'A Widget Blueprint button, slider or other widget event such as OnClicked must be handled.'],
     whenNotToUse: ['A callable function is needed (use add_function).'],
     inputProps: {
       blueprintPath: P.blueprintPath, eventType: P.eventType, customEventName: P.customEventName, posX: P.posX, posY: P.posY, parameters: P.parameters,
       graphName: { ...P.graphName, description: 'Event graph page to add the event to; omitted, the main EventGraph.' },
-      eventName: { ...P.eventName, description: 'Custom event name; with componentName, the component delegate to bind (OnComponentBeginOverlap, OnComponentHit, ...).' },
-      componentName: { ...P.componentName, description: 'Component whose delegate fires the event, added by the Blueprint or inherited (a Character\'s CapsuleComponent). Makes a component-bound event (K2Node_ComponentBoundEvent) named by eventName.' },
+      eventName: { ...P.eventName, description: 'Custom event name; with componentName, the delegate to bind: a component\'s (OnComponentBeginOverlap, OnComponentHit, ...) or a widget\'s (OnClicked, OnHovered, OnValueChanged, ...).' },
+      componentName: { ...P.componentName, description: 'Component whose delegate fires the event, added by the Blueprint or inherited (a Character\'s CapsuleComponent), or in a Widget Blueprint a widget of its tree that is a variable (every widget the widget handlers add is), e.g. PlayButton with eventName OnClicked. Makes a component-bound event (K2Node_ComponentBoundEvent) named by eventName.' },
     },
     required: ['blueprintPath'],
     outputProps: {

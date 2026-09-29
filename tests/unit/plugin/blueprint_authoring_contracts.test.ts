@@ -142,6 +142,33 @@ describe('a VariableGet of a widget: compile once when the class is stale, and n
   });
 });
 
+describe('add_event with componentName binds a Widget Blueprint widget\'s event as it binds a component\'s', () => {
+  const bound = (): string => read('Domains', 'Blueprint', 'Events', 'McpAutomationBridge_BlueprintHandlersAddEventComponentBound.cpp');
+
+  it('a widget variable of the generated class is a bindable object property beside the components', () => {
+    const source = bound();
+
+    expect(source).toMatch(
+      /IsBindable = \[\]\(const UClass \*PropertyClass\)\s*\{\s*return PropertyClass && \(PropertyClass->IsChildOf\(UActorComponent::StaticClass\(\)\) \|\|\s*PropertyClass->IsChildOf\(UWidget::StaticClass\(\)\)\);/u
+    );
+    expect(source).toMatch(/Equals\(ComponentName, ESearchCase::IgnoreCase\) && IsBindable\(PropIt->PropertyClass\)/u);
+    expect(source).toContain('#include "Components/Widget.h"');
+  });
+
+  it('the refusal lists the widget variables too, and compile-once-before-giving-up is kept', () => {
+    const source = bound();
+
+    expect(source).toContain('Its components and widget variables: %s.');
+    expect(source).toMatch(/if \(!ComponentProp\) \{\s*McpSafeCompileBlueprint\(BP\);\s*ComponentProp = FindComponentProperty\(\);/u);
+  });
+
+  it('the add_event record and the batch description name the widget case', () => {
+    expect(paramDescription('blueprint.add_function', 'componentName')).toMatch(/Widget Blueprint a widget of its tree that is a variable/u);
+    expect(paramDescription('blueprint.add_function', 'eventName')).toMatch(/OnClicked/u);
+    expect(paramDescription('blueprint.edit_graph', 'operations')).toMatch(/component or Widget Blueprint widget delegate/u);
+  });
+});
+
 describe('an edit_graph reply names the Blueprint it ran on', () => {
   const shared = (): string => read('Domains', 'BlueprintGraph', 'Context', 'McpAutomationBridge_BlueprintGraphHandlersContextShared.cpp');
   const batch = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');

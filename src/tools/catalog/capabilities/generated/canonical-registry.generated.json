@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "feb6f879671e7938",
+  "catalogRevision": "860c3649d1d0e58b",
   "recordCount": 389,
   "records": [
     {
@@ -11080,11 +11080,12 @@
           "tick event",
           "event graph"
         ],
-        "summary": "Add a function or an event to a Blueprint.",
+        "summary": "Add a function or an event to a Blueprint; an event can be bound to a component's or a Widget Blueprint widget's delegate (OnClicked).",
         "whenToUse": [
           "A new callable function must be created on the Blueprint.",
           "An event handler node must be created in the EventGraph.",
-          "A component event such as OnComponentBeginOverlap or OnComponentHit must be handled."
+          "A component event such as OnComponentBeginOverlap or OnComponentHit must be handled.",
+          "A Widget Blueprint button, slider or other widget event such as OnClicked must be handled."
         ],
         "whenNotToUse": []
       },
@@ -11165,11 +11166,11 @@
             },
             "eventName": {
               "type": "string",
-              "description": "Custom event name; with componentName, the component delegate to bind (OnComponentBeginOverlap, OnComponentHit, ...)."
+              "description": "Custom event name; with componentName, the delegate to bind: a component's (OnComponentBeginOverlap, OnComponentHit, ...) or a widget's (OnClicked, OnHovered, OnValueChanged, ...)."
             },
             "componentName": {
               "type": "string",
-              "description": "Component whose delegate fires the event, added by the Blueprint or inherited (a Character's CapsuleComponent). Makes a component-bound event (K2Node_ComponentBoundEvent) named by eventName."
+              "description": "Component whose delegate fires the event, added by the Blueprint or inherited (a Character's CapsuleComponent), or in a Widget Blueprint a widget of its tree that is a variable (every widget the widget handlers add is), e.g. PlayButton with eventName OnClicked. Makes a component-bound event (K2Node_ComponentBoundEvent) named by eventName."
             },
             "kind": {
               "type": "string",
@@ -11229,7 +11230,7 @@
       },
       "examples": [
         {
-          "title": "Add a function or an event to a Blueprint.",
+          "title": "Add a function or an event to a Blueprint; an event can be bound to a component's or a Widget Blueprint widget's delegate (OnClicked).",
           "input": {
             "action": "add_function",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -11334,8 +11335,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c5597f01000ce3b05fdb051127df9e0d10110dae45fcc219938e63334cd4e1e4",
-        "content": "f09edc2fe1d0bbf5fc13bdd3381f6a88af642f0f170cf67fb5ce255e065e8b16"
+        "schema": "4a9e08d84cf74a3cc798dcd65b4e60e651521d2ba74406aff2a486f9dd91cdc1",
+        "content": "cd5b3810d8d20967799666afd755907b7e643b26f1649543b66ad89a6ac29c06"
       }
     },
     {
@@ -14218,7 +14219,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component delegate) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function graph). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed; one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function graph). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed; one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran."
             },
             "edit": {
               "type": "string",
@@ -14624,8 +14625,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c47cbb4b8fbc60a718d19af3569019e3d8a373bf379b9e8741d97a08541c4106",
-        "content": "9b84724bcf1153a5e9a5e7607c0546d047ffa603ab315ae6a20f25bfb8c39c5b"
+        "schema": "6f814b53da95b09c58c1b44e1c262ca49c01444b3b70c183013147aa83e4901e",
+        "content": "315953fe3b63fcb9c4f0a989e7091bca327878239ed28132ab75600281044f4b"
       }
     },
     {

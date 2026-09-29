@@ -46,7 +46,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_function', selector: 'kind',
-    summary: 'Add a function or an event to a Blueprint.',
+    summary: 'Add a function or an event to a Blueprint; an event can be bound to a component\'s or a Widget Blueprint widget\'s delegate (OnClicked).',
     topics: ['add function', 'add event', 'custom event', 'blueprint function'],
     members: { function: 'add_function', event: 'add_event' },
   },
