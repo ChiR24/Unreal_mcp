@@ -29,6 +29,26 @@ UPackage* CreateInventoryAssetPackage(const FString& Path, const FString& Name)
   return CreatePackage(*PackageName);
 }
 
+int32 NextIndexedPropertyIndex(const TMap<FString, FString>& Properties, const FString& Prefix)
+{
+  int32 Next = 0;
+  for (const TPair<FString, FString>& Pair : Properties) {
+    if (!Pair.Key.StartsWith(Prefix)) {
+      continue;
+    }
+    // Only a plain run of digits names an index; a key such as "LootEntry_x" or "LootEntry_-1" is ignored.
+    const FString Suffix = Pair.Key.RightChop(Prefix.Len());
+    bool bIndex = Suffix.Len() > 0 && Suffix.Len() < 10;
+    for (int32 Char = 0; bIndex && Char < Suffix.Len(); ++Char) {
+      bIndex = FChar::IsDigit(Suffix[Char]);
+    }
+    if (bIndex) {
+      Next = FMath::Max(Next, FCString::Atoi(*Suffix) + 1);
+    }
+  }
+  return Next;
+}
+
 UBlueprint* LoadInventoryBlueprintOrError(UMcpAutomationBridgeSubsystem& Bridge,
                                           const FString& RequestId,
                                           TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,

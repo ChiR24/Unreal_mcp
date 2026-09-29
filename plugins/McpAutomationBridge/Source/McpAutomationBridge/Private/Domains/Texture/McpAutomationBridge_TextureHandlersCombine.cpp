@@ -34,16 +34,16 @@ TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Par
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to create output texture"));
     }
 
-    const uint8* BaseData = BaseTex->Source.LockMipReadOnly(0);
-    const uint8* OverlayData = OverlayTex->Source.LockMipReadOnly(0);
+    const TArray<uint8> BasePixels = ReadSourceBGRA(BaseTex);
+    const TArray<uint8> OverlayPixels = ReadSourceBGRA(OverlayTex);
     uint8* OutData = OutputTexture->Source.LockMip(0);
-    if (!BaseData || !OverlayData || !OutData)
+    if (BasePixels.IsEmpty() || OverlayPixels.IsEmpty() || !OutData)
     {
-        if (BaseData) BaseTex->Source.UnlockMip(0);
-        if (OverlayData) OverlayTex->Source.UnlockMip(0);
         if (OutData) OutputTexture->Source.UnlockMip(0);
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture data"));
     }
+    const uint8* BaseData = BasePixels.GetData();
+    const uint8* OverlayData = OverlayPixels.GetData();
 
     for (int32 Index = 0; Index < Width * Height; ++Index)
     {
@@ -74,8 +74,6 @@ TSharedPtr<FJsonObject> HandleCombineTextures(const TSharedPtr<FJsonObject>& Par
         OutData[Idx + 3] = BaseData[Idx + 3];
     }
 
-    BaseTex->Source.UnlockMip(0);
-    OverlayTex->Source.UnlockMip(0);
     OutputTexture->Source.UnlockMip(0);
     OutputTexture->UpdateResource();
     FAssetRegistryModule::AssetCreated(OutputTexture);

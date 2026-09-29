@@ -74,7 +74,7 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
 
     ItemAsset->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(ItemAsset);
     }
 
@@ -122,6 +122,8 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
 
     bool bIconSet = false;
     FString IconPropertyName;
+    FString RejectedProperty;
+    FString RejectedReason;
 
     // Try common icon property names
     TArray<FString> IconPropNames = {
@@ -142,6 +144,10 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
           IconPropertyName = PropName;
           break;
         }
+        if (RejectedProperty.IsEmpty()) {
+          RejectedProperty = PropName;
+          RejectedReason = ApplyError;
+        }
       }
     }
 
@@ -153,21 +159,32 @@ bool HandleInventoryItemPresentationActions(UMcpAutomationBridgeSubsystem& Bridg
       }
     }
 
+    // A class with no usable icon property used to answer success with iconSet:false and change nothing.
+    if (!bIconSet) {
+      const FString ClassName = ItemAsset->GetClass()->GetName();
+      if (RejectedProperty.IsEmpty()) {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("%s has no Icon, ItemIcon, Thumbnail, DisplayIcon or InventoryIcon property to hold the icon; add one to the item class, or set the icon with inspect set_property"), *ClassName),
+            TEXT("PROPERTY_NOT_FOUND"));
+      } else {
+        Bridge.SendAutomationError(RequestingSocket, RequestId,
+            FString::Printf(TEXT("The '%s' property of %s did not accept '%s': %s"), *RejectedProperty, *ClassName, *IconPath, *RejectedReason),
+            TEXT("INVALID_ARGUMENT"));
+      }
+      return true;
+    }
+
     ItemAsset->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(ItemAsset);
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("itemPath"), ItemPath);
     Result->SetStringField(TEXT("iconPath"), IconPath);
-    Result->SetBoolField(TEXT("iconSet"), bIconSet);
-    if (bIconSet) {
-      Result->SetStringField(TEXT("propertyModified"), IconPropertyName);
-    } else {
-      Result->SetStringField(TEXT("note"), TEXT("No icon property found. Ensure your item class has an Icon, ItemIcon, or Thumbnail property."));
-    }
+    Result->SetBoolField(TEXT("iconSet"), true);
+    Result->SetStringField(TEXT("propertyModified"), IconPropertyName);
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Item icon configured"), Result);

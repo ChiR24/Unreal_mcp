@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "56193e57ea5554b9",
+  "catalogRevision": "8991c98926dc6f53",
   "recordCount": 389,
   "records": [
     {
@@ -6718,13 +6718,9 @@
               },
               "description": "Explicit asset paths to delete."
             },
-            "showConfirmation": {
-              "type": "boolean",
-              "description": "Show confirmation prompt."
-            },
             "fixupRedirectors": {
               "type": "boolean",
-              "description": "Fix up redirectors left behind by the deletion."
+              "description": "Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones."
             }
           },
           "required": [],
@@ -6762,7 +6758,6 @@
               "/Game/MCPTest/OldA",
               "/Game/MCPTest/OldB"
             ],
-            "showConfirmation": false,
             "fixupRedirectors": true
           },
           "output": {
@@ -6799,8 +6794,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "29a35500820781b00684faadfba5b62d96c414ec1580444e6ca4719366b3b487",
-        "content": "339a7495e9e91a464cb842ca0c52c64935f072331ed3c5701d39f683206a1a64"
+        "schema": "ad60c8609021ec94b6323150452cf3e014775468d8cb713caa27dc70568131c7",
+        "content": "3517be76b2f6e2769af66e19a3d37c77d7509d728d234adae66afa25b9a35f52"
       }
     },
     {
@@ -7993,13 +7988,13 @@
           "validate asset",
           "asset report"
         ],
-        "summary": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, validation, or a directory report.",
+        "summary": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, or a directory report.",
         "whenToUse": [
-          "lookup=metadata: What was recorded on an asset must be read back: its registry tags and the package metadata that asset.set_metadata writes.",
+          "lookup=metadata: What was recorded on an asset must be read back: its registry tags and the package metadata that asset.set_metadata writes, tags included (a tag set with kind=tags shows under metadata as \"true\").",
           "lookup=dependencies: Before deleting or replacing an asset, the packages, Blueprints and levels that use it must be listed.",
           "lookup=dependencies: The packages an asset itself uses must be listed (direct ones only).",
           "lookup=graph: The reference graph of an asset must be walked several levels deep in one call (depth is capped at 8).",
-          "lookup=validate: An asset must be confirmed to exist and load before other calls rely on it.",
+          "lookup=validate: An asset must be confirmed to exist and load before other calls rely on it (no content, reference or data checks are run).",
           "lookup=report: Every asset under a directory, with name, path and class, must be listed in one reply, optionally saved as a JSON file in the project."
         ],
         "whenNotToUse": [
@@ -8072,12 +8067,12 @@
             "tags": {
               "type": "object",
               "x-unreal-reflection-boundary": true,
-              "description": "Asset Registry tags (key-value)."
+              "description": "Asset Registry tags (key-value). A tag written by set_tags appears here only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry."
             },
             "metadata": {
               "type": "object",
               "x-unreal-reflection-boundary": true,
-              "description": "Custom package metadata (key-value)."
+              "description": "Package metadata (key-value): what set_metadata wrote, and each set_tags tag as its name with the value \"true\"."
             },
             "details": {
               "type": "object",
@@ -8110,7 +8105,7 @@
       },
       "examples": [
         {
-          "title": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, validation, or a directory report.",
+          "title": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, or a directory report.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "action": "inspect_asset",
@@ -8187,8 +8182,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "14d5be28c910a0905c91c7ef61b3e064998a006f7a01bd7795d3b2a04d5fd9ab",
-        "content": "1386b8972464f1e2f2b3d6b3688a126868c7fdac783fab53502c08c3d6cfbddf"
+        "schema": "145428ec6e63a6f611f13febd5d124ecbb5682b042c63fe1c3c71c67066513d1",
+        "content": "edb7a5a10e926be46485ecb41eee576402c98f44e266d24faf7c2d6907074487"
       }
     },
     {
@@ -9436,7 +9431,8 @@
         "summary": "Query assets: existence, search by name/class, find by tag, find where a text appears inside assets, the node graph inside a material or Blueprint, material stats, source-control state.",
         "whenToUse": [
           "lookup=exists: A path must be tested for an asset, or several paths at once, before creating, importing or referencing one.",
-          "lookup=search|by_tag: Assets must be found across the project by name, class, folder or asset-registry tag.",
+          "lookup=search: Assets must be found across the project by name, class, folder or asset-registry tag.",
+          "lookup=by_tag: Assets under /Game must be found by an asset-registry tag, optionally with one value, such as the ParentClass tag every Blueprint carries. A tag written by asset.set_metadata with kind=tags is in the registry only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry and the asset has been saved; otherwise nothing matches (asset.inspect_asset lookup=metadata reads one asset).",
           "lookup=text: A piece of text, such as a UI label or dialogue line, must be traced to the Blueprint, widget, table row or level actor holding it.",
           "lookup=graph: A material or Blueprint must be summarised: node counts, parameters, blend mode or graph count.",
           "lookup=material_stats: A material's shading model, blend mode, domain, node and parameter counts, or the input pins its Main result node accepts, must be read.",
@@ -9506,11 +9502,11 @@
             },
             "tag": {
               "type": "string",
-              "description": "Tag name to search for."
+              "description": "Asset-registry tag name, for example ParentClass, which every Blueprint carries."
             },
             "value": {
               "type": "string",
-              "description": "Optional tag value."
+              "description": "Optional tag value to match, ignoring case."
             },
             "caseSensitive": {
               "type": "boolean",
@@ -9816,8 +9812,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7424091fb091723441956dabe5efac0b4cdc8cc6e24b31e861a415c167a291d6",
-        "content": "58bb9b26ed9e5131ccb0ff8d8b676683b76b5f6af258a20ba1a83e183ba60bd5"
+        "schema": "35fbce16e381714533140fb28a0da7821c1d568479381647e9e89131f7da0840",
+        "content": "709cc1ac89eaf292dd78fb3c224ed8f1dd06566848a70e699da83c992fcd3fee"
       }
     },
     {
@@ -10367,7 +10363,8 @@
           "kind=metadata: The stored values must be read back (use asset.inspect_asset).",
           "kind=metadata: A property of the asset itself must change (use inspect.set_property).",
           "kind=tags: Actors in a level need a tag (use control_actor.add_tag).",
-          "kind=tags: Assets carrying the tag must be found afterwards (asset.query_asset lookup=by_tag sees it only if the tag is registered in project settings)."
+          "kind=tags: Assets must be found by the tag afterwards. asset.query_asset lookup=by_tag reads the asset registry, which carries a package-metadata tag only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry and the asset has been saved; otherwise it finds nothing.",
+          "kind=tags: The tags on an asset must be read back (use asset.inspect_asset lookup=metadata, which lists them under metadata at once)."
         ]
       },
       "schemas": {
@@ -10389,7 +10386,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Tags to set."
+              "description": "Tag names to set; each is written as package metadata with the value \"true\"."
             },
             "kind": {
               "type": "string",
@@ -10487,8 +10484,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6dcd7609f71291dd32650de20032157ad6ff80c049415538bdb254d18ade3f1c",
-        "content": "e19d224825027cb0bd586bf98866d70e2498395da4d38fff546d4bac9df663bd"
+        "schema": "017fb775355b2f930ddcd44a77e116483d8977bfcd1d2e3a167bf88ecdd095b2",
+        "content": "c25cfe4b78cbcc90f5e88ba91340f256847a48172f904712a1378109c08c7115"
       }
     },
     {
@@ -37550,7 +37547,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Save the enum asset after the operation."
+              "description": "Persist the enum asset to disk. Defaults to true; pass false to keep the change in memory only."
             },
             "deleteScope": {
               "type": "string",
@@ -37644,8 +37641,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ce946d75d3e902745d0ae290c25246588091a18bfe9a2d6c7f6fa36368aa0804",
-        "content": "a8e2c2037a303eefdaba0f7eb66cc9c31490c3cd9fe7cf6f5e1a9389e8f77101"
+        "schema": "e3e213ae32f450a21849d0f36090c37b2c3c4d5efedd0b8cd8b08be19609793b",
+        "content": "dbc769bd0a2017038fdf9d66c2f2b98570380f0cbdecfa1b8fb9042ce38ab6b6"
       }
     },
     {
@@ -37718,7 +37715,7 @@
         ],
         "summary": "Create an enum or edit its values: add, rename, reorder, set metadata, split.",
         "whenToUse": [
-          "edit=create: A new Blueprint enum is needed for a fixed set of named choices; pass values for its entries and save to keep it.",
+          "edit=create: A new Blueprint enum is needed for a fixed set of named choices; pass values for its entries. It is saved unless save is false.",
           "edit=add_value: One more named entry must be appended to the end of an existing enum.",
           "edit=rename_value: An enum entry needs a new name while keeping its place in the order.",
           "edit=reorder_values: The order of entries must change; the order list must name every current value and numeric values follow the new order.",
@@ -37760,7 +37757,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Save the enum asset after the operation."
+              "description": "Persist the enum asset to disk. Defaults to true; pass false to keep the change in memory only."
             },
             "valueName": {
               "type": "string",
@@ -37925,8 +37922,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1642a88e601c2a78d57ea7e7b14cbe1e8e9974c06bb91a44996b818a3e134c94",
-        "content": "390b33f48dd5d15d527e6908ab54bc1db8c84ff5575eab903fa7bf76218592f4"
+        "schema": "3956b64c267832810139adbf7b9b8dbe6cc7a182e3bba6b67b4d633bd2d2d975",
+        "content": "db16650a201b825d12c9fbede0226dce2b7bdd0006c063684cee1cf647e90f7b"
       }
     },
     {
@@ -60694,7 +60691,7 @@
             },
             "traceType": {
               "type": "string",
-              "description": "Interaction trace shape (line, sphere, or box)."
+              "description": "Free-text name stored in the TraceType Name variable of the Blueprint (default sphere). It does not choose or change a trace shape: the shape comes from the sphere and box components, which traceDistance and traceRadius resize."
             },
             "traceDistance": {
               "type": "number",
@@ -60702,7 +60699,7 @@
             },
             "traceRadius": {
               "type": "number",
-              "description": "Interaction trace radius in world units."
+              "description": "Cross-section of each box component in world units (default 50): a box gets extent traceDistance by traceRadius. Sphere components ignore it."
             },
             "setting": {
               "type": "string",
@@ -60847,8 +60844,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1575afbc9c41c204bfd1248588cd93942d6ffa938b962e4d6e6f7aa40efe66ff",
-        "content": "d10cde5164da1683e44cfc669af55befba71478aa362b46f6be607f40e25ad09"
+        "schema": "7cbfc7ae311e69a1b7ad09ec4380697f20704f051cb814c94243e8b162c5261c",
+        "content": "d22a782b2b047f28990fff9f50b07676351e9a7e68e96e948ad506987b342a17"
       }
     },
     {
@@ -61384,6 +61381,7 @@
         "summary": "Configure a crafting recipe: add ingredients or set its requirements.",
         "whenToUse": [
           "setting=add_recipe_ingredient: A recipe needs one more ingredient item with the quantity it consumes.",
+          "setting=add_recipe_ingredient: The ingredient is stored under the key Ingredient_<n>, one past the highest n in use (the first is Ingredient_0).",
           "setting=recipe_requirements: A recipe must require a minimum character level or a named crafting station.",
           "setting=recipe_requirements: Level and station should be given together, since an omitted one resets to level 0 or station None."
         ],
@@ -61411,7 +61409,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true, for every inventory action). With false the change stays in memory only and is lost when the editor restarts."
             },
             "requiredLevel": {
               "type": "number",
@@ -61528,8 +61526,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bb6387f5b3788c3472debf2819da6dba073a94f0f8279868ad1ff51ed16befd3",
-        "content": "79edb361c4270790be58f977b90507d91e23f6ea447e72af921ed54889ab1403"
+        "schema": "fb29f4a5cce2961fcf8aecdea16f04d14545348baa1335e7fc70b4b16aee3c53",
+        "content": "6202f309387d337c91f58f7503b51e0dc7b3f68ce56f4b3ba0c5e44992ff522d"
       }
     },
     {
@@ -61596,6 +61594,7 @@
           "The item asset does not exist yet (use manage_inventory.create_inventory_asset).",
           "setting=properties: The target is a Blueprint or class default rather than an item data asset (use inspect.set_property).",
           "setting=icon: The icon image is not in the project yet (use asset.import).",
+          "setting=icon: The item is a custom class with none of the properties Icon, ItemIcon, Thumbnail, DisplayIcon or InventoryIcon, so the call fails and names the missing property (use inspect.set_property on the class's own icon property).",
           "setting=stacking: The item is a custom class with no stacking properties such as bStackable or MaxStackSize, so nothing is written (use inspect.set_property).",
           "setting=category: The category asset does not exist yet, and its path is stored without a check (use manage_inventory.create_inventory_asset, kind=item_category)."
         ]
@@ -61617,7 +61616,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true, for every inventory action). With false the change stays in memory only and is lost when the editor restarts."
             },
             "iconPath": {
               "type": "string",
@@ -61758,8 +61757,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1cc3d6b158755aa7b1354d578749c193e6f106c9c0d13ce92aacf5dfb3145b7e",
-        "content": "dc6f010378279be98dc8afde412100b872ba85180475cf310a9b967c3b53b637"
+        "schema": "139925576f73ffd8feb756d8ee9b26fe37460d0e5a875cfbf2223e6f2587db63",
+        "content": "925f3c7c20e5f6246c4123697802d55a2418debe66305c0d8effaec40a3a5740"
       }
     },
     {
@@ -61807,6 +61806,7 @@
         "summary": "Configure a loot table: add or remove entries, set quality tiers.",
         "whenToUse": [
           "setting=add_entry: A loot table needs another item entry with a drop weight and a quantity range.",
+          "setting=add_entry: The entry is stored under the key LootEntry_<n>, one past the highest n in use, and n comes back as entryIndex; an earlier removal never makes a new entry overwrite a surviving one.",
           "setting=remove_entry: A loot table entry must be dropped, chosen by the entryIndex that adding it returned or by its item, which removes every entry for that item.",
           "setting=quality_tiers: A loot table needs quality tiers with drop weights; the tier list is replaced whole, and five default tiers apply if none are given."
         ],
@@ -61842,11 +61842,11 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true, for every inventory action). With false the change stays in memory only and is lost when the editor restarts."
             },
             "entryIndex": {
               "type": "number",
-              "description": "Zero-based loot entry index to remove."
+              "description": "Number n of the LootEntry_<n> key of the entry to remove: the entryIndex add_loot_entry returned, or the n in a LootEntry_<n> key of get_inventory_info properties. It is a key suffix, not a position: removing an entry renumbers nothing, and a new entry takes one past the highest suffix in use."
             },
             "tiers": {
               "type": "array",
@@ -61986,8 +61986,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "224cb2d14f36ae86f4dc27602fd4f4180a4c14282d6e47b097d117ea9055cb80",
-        "content": "dedf9c756ae12d10509e44dbf9e5b29a137661a2aa66a5ecf027fc7d7ec75b21"
+        "schema": "6de57ef25a5f5c2d14f60602c509de4a29c594332e34aac8b439b7b07ef2c03b",
+        "content": "7bacae4d23d8b2b779f5ffda6fb2a3c916aacbe57a39edf34e92fa5e4b33b861"
       }
     },
     {
@@ -62082,7 +62082,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true, for every inventory action). With false the change stays in memory only and is lost when the editor restarts."
             },
             "outputItemPath": {
               "type": "string",
@@ -62212,8 +62212,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1c5d96d8051f880e10f004b45426670217f1f0e49acb28d1f1d686f254c245f7",
-        "content": "5f25542fd09b24392d72835ac7fc61ed838ac94cfd98d1a9b94a937969a9d9d7"
+        "schema": "b472a55cea71eeef835537252f883b734bbc62e7e088a3e320c3193678bdadd3",
+        "content": "4833d9be8f6f722972124a53afe0f86e90bb984148691cabb693f763cd96a4c4"
       }
     },
     {
@@ -62518,7 +62518,8 @@
         "summary": "Set inventory component replication metadata.",
         "whenToUse": [
           "A Blueprint with InventorySlots, MaxSlots, CurrentWeight and MaxWeight variables must replicate them to clients, or stop (replicated defaults to false).",
-          "Those variables need a replication condition such as OwnerOnly, SkipOwner, SimulatedOnly or InitialOnly."
+          "Those variables need a replication condition such as OwnerOnly, SkipOwner, SimulatedOnly or InitialOnly.",
+          "A RepNotify function already set on those variables is kept: replicated=true sets only the replication flag and condition, and replicated=false clears the flag and condition and leaves the function name in place."
         ],
         "whenNotToUse": [
           "The Blueprint keeps inventory state in differently named variables (use manage_networking.configure_replication).",
@@ -62544,7 +62545,7 @@
             },
             "save": {
               "type": "boolean",
-              "description": "Persist the created/modified asset to disk."
+              "description": "Save the asset to disk after the change (default true, for every inventory action). With false the change stays in memory only and is lost when the editor restarts."
             }
           },
           "required": [
@@ -62621,8 +62622,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8bb1956553dec9a16a0da1c88298f1a2596ad73656cfb6d743739f8b5c05cb12",
-        "content": "5463a82efc59403cfc23f8fa92b256e4e6f19b1f810189021c0ef2bf485f779a"
+        "schema": "89bb4e85437b25e1e615c8cec57060d502018c4a31ffcff97145e2458d8737a0",
+        "content": "0c72f0cfa19cc6f32db3c6938acfea6976464dc3f31ec66be35330989befd1dd"
       }
     },
     {
@@ -83125,7 +83126,7 @@
           "edit=create_struct: A new Blueprint struct is needed; give its members up front, otherwise it keeps one placeholder member.",
           "edit=add_struct_member: One or several fields, each with a type, optional default and tooltip, must be added to an existing struct.",
           "edit=rename_struct_member: A field must be renamed while keeping its type and default; it is found by memberName or varGuid.",
-          "edit=reorder_struct_members: One field must move to first, last, or before or after another field.",
+          "edit=reorder_struct_members: One field, named by memberName or varGuid, must move to first, last, or before or after another field.",
           "edit=set_struct_member_default: A field needs a new default value; a value that cannot convert to the field type is rejected.",
           "edit=set_struct_member_metadata: A field needs a tooltip or metadata key and value pairs.",
           "edit=set_struct_member_type: A field needs a different type, for example Int to Float or a container; self-referencing and cyclic types are refused.",
@@ -83218,11 +83219,11 @@
                 "before",
                 "after"
               ],
-              "description": "Reorder anchor position."
+              "description": "Where the moved member goes: first or last of the struct, or before or after the member named in relativeTo."
             },
             "relativeTo": {
               "type": "string",
-              "description": "Target member GUID or name."
+              "description": "Name or GUID of the member to place the moved member next to. Required for before and after; ignored for first and last."
             },
             "newName": {
               "type": "string",
@@ -83238,11 +83239,11 @@
             },
             "destinationPath": {
               "type": "string",
-              "description": "Destination /Game path."
+              "description": "Folder for the copy, e.g. /Game/Structs, when destinationName is given, the path ends in \"/\" or the folder exists; the copy is destinationPath/destinationName, or keeps the source name without one. Otherwise the full new asset path, e.g. /Game/Structs/S_WeaponRow_V2. A copy onto an existing struct is refused with ALREADY_EXISTS."
             },
             "destinationName": {
               "type": "string",
-              "description": "New asset name."
+              "description": "Name of the new asset. With destinationPath it is placed in that folder; on its own the copy stays beside the source."
             },
             "sourcePath": {
               "type": "string",
@@ -83488,8 +83489,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f952d9c08af78730bfc5951b162bf6aabc77d538887923111965fae2c6db13f0",
-        "content": "3ebf48babfbc862358f91a6a24ea920405bbb580be5cf3547a77ca890cf5d074"
+        "schema": "b002fc46c708ed2fe0a4266089a6e5b472914fcd90521c84609c0229c2cdeeda",
+        "content": "ea7b9a653b0f4d2593e27544a79facc04b5197b5894ce37f46a6305e68e9c805"
       }
     },
     {
@@ -88346,7 +88347,7 @@
           "properties": {
             "assetPath": {
               "type": "string",
-              "description": "Texture /Game path."
+              "description": "Texture /Game path. Its source must be 8-bit BGRA8 or single-channel G8 (a channel_extract result); a G8 texture is rewritten as BGRA8 with its gray in R, G and B and alpha 255. Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
             },
             "channel": {
               "type": "string",
@@ -88528,8 +88529,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d7e3a9ad3a3fe457f03a5099e340c08d4243a83c5fac0ee1cb163fcc1cb1d69f",
-        "content": "b7cd1da54a3fedc56f4857b1b81a8f008f1a93d74f9adf3e905e5ce39b9ef11b"
+        "schema": "11c4a371bedde4696f93f822f8c49762b217699d9258feddcae8ac18a56ba640",
+        "content": "85308d71c1dd115b93401cb40c5c4852a411e52e34882165fc1d3cefa2efed77"
       }
     },
     {
@@ -88858,6 +88859,7 @@
           "kind=normal_from_height: A normal map must be derived from a heightmap texture; strength scales the bump depth.",
           "kind=resized: A texture must be copied at a smaller or larger size such as 512px; the source texture is left as it is.",
           "kind=channel_pack: Separate AO, roughness and metallic maps must be packed into the channels of one linear texture.",
+          "kind=channel_pack: Sources are 8-bit BGRA8 or single-channel G8 textures such as channel_extract results; a BGRA8 source gives its same channel (alpha from its alpha), a G8 source gives its gray to whichever channel it is assigned, and any other source format (G16, RGBA16, float, HDR) fails naming the format found.",
           "kind=channel_extract: One channel of a packed texture must become its own grayscale texture.",
           "kind=combined: Two same-size textures must be blended into a new texture with Multiply, Screen, Overlay or Add at a set opacity."
         ],
@@ -89000,7 +89002,7 @@
             },
             "sourceTexture": {
               "type": "string",
-              "description": "Source heightmap texture path."
+              "description": "Source heightmap texture path; its source must be an 8-bit BGRA8 or single-channel G8 texture, read as its luminance (a G8 source is its gray). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
             },
             "strength": {
               "type": "number",
@@ -89008,7 +89010,7 @@
             },
             "sourcePath": {
               "type": "string",
-              "description": "Source texture path."
+              "description": "Source texture path; its source must be an 8-bit BGRA8 or single-channel G8 texture (a channel_extract result, read as gray in R, G and B with alpha 255). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
             },
             "newWidth": {
               "type": "number",
@@ -89024,23 +89026,23 @@
             },
             "redTexture": {
               "type": "string",
-              "description": "Red channel source."
+              "description": "Red channel source: an 8-bit BGRA8 or G8 texture."
             },
             "greenTexture": {
               "type": "string",
-              "description": "Green channel source."
+              "description": "Green channel source: an 8-bit BGRA8 or G8 texture."
             },
             "blueTexture": {
               "type": "string",
-              "description": "Blue channel source."
+              "description": "Blue channel source: an 8-bit BGRA8 or G8 texture."
             },
             "alphaTexture": {
               "type": "string",
-              "description": "Alpha channel source."
+              "description": "Alpha channel source: an 8-bit BGRA8 or G8 texture."
             },
             "assetPath": {
               "type": "string",
-              "description": "Texture /Game path."
+              "description": "Texture /Game path; its source must be an 8-bit BGRA8 or single-channel G8 texture (a channel_extract result, read as gray in R, G and B with alpha 255). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
             },
             "channel": {
               "type": "string",
@@ -89048,11 +89050,11 @@
             },
             "baseTexture": {
               "type": "string",
-              "description": "Base texture path."
+              "description": "Base texture path; its source must be an 8-bit BGRA8 or single-channel G8 texture (a channel_extract result, read as gray in R, G and B with alpha 255). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
             },
             "blendTexture": {
               "type": "string",
-              "description": "Blend texture path."
+              "description": "Blend texture path; it must have the width and height of baseTexture. Its source can be BGRA8 or G8 whichever baseTexture is. Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
             },
             "blendType": {
               "type": "string",
@@ -89335,8 +89337,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "10a88705b4fe4e1dbfc8e9a39383a3b1c26b0113ee749683ed0a63e0001c01c5",
-        "content": "f460079c777368bdef5df73b46416ecfeb1bb721497918d43baac5f949ea500f"
+        "schema": "bbb60e664ebdae6891de274cbbb2469042410c9cc59e2e08e0db251e946c8fe6",
+        "content": "ba333dc2503202bfcf63c3b0429d8bdc8c168a032af9d9d2672229725cb7ffee"
       }
     },
     {

@@ -65,14 +65,14 @@ TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Param
 
     const int32 SrcWidth = SourceTexture->Source.GetSizeX();
     const int32 SrcHeight = SourceTexture->Source.GetSizeY();
-    const uint8* SrcData = SourceTexture->Source.LockMipReadOnly(0);
+    const TArray<uint8> SrcPixels = ReadSourceBGRA(SourceTexture);
     uint8* DstMipData = NewTexture->Source.LockMip(0);
-    if (!SrcData || !DstMipData)
+    if (SrcPixels.IsEmpty() || !DstMipData)
     {
-        if (SrcData) SourceTexture->Source.UnlockMip(0);
         if (DstMipData) NewTexture->Source.UnlockMip(0);
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture data"));
     }
+    const uint8* SrcData = SrcPixels.GetData();
 
     auto GetPixelBGRA = [&](int32 PX, int32 PY) -> FColor
     {
@@ -141,7 +141,6 @@ TSharedPtr<FJsonObject> HandleResizeTexture(const TSharedPtr<FJsonObject>& Param
         }
     }
 
-    SourceTexture->Source.UnlockMip(0);
     NewTexture->Source.UnlockMip(0);
     NewTexture->UpdateResource();
     FAssetRegistryModule::AssetCreated(NewTexture);

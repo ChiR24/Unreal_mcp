@@ -53,16 +53,17 @@ TSharedPtr<FJsonObject> HandleChannelPack(const TSharedPtr<FJsonObject>& Params)
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock output texture data"));
     }
-    // A missing or smaller source leaves its channel 0 (alpha 255).
+    // A missing or smaller source leaves its channel 0 (alpha 255). A channel copies the same channel of its
+    // source; a G8 source is one gray channel, so its gray feeds whichever channel it is assigned, alpha included.
     for (int32 i = 0; i < 4; ++i)
     {
-        const uint8* Src = Sources[i] ? Sources[i]->Source.LockMipReadOnly(0) : nullptr;
-        const int32 SrcPixels = Src ? Sources[i]->Source.GetSizeX() * Sources[i]->Source.GetSizeY() : 0;
+        const TArray<uint8> Src = Sources[i] ? ReadSourceBGRA(Sources[i]) : TArray<uint8>();
+        const int32 SrcPixels = Src.Num() / 4;
+        const int32 SrcOffset = Sources[i] && Sources[i]->Source.GetFormat() == TSF_G8 ? 0 : Offsets[i];
         for (int32 Pixel = 0; Pixel < Width * Height; ++Pixel)
         {
-            OutData[Pixel * 4 + Offsets[i]] = Pixel < SrcPixels ? Src[Pixel * 4 + Offsets[i]] : (i == 3 ? 255 : 0);
+            OutData[Pixel * 4 + Offsets[i]] = Pixel < SrcPixels ? Src[Pixel * 4 + SrcOffset] : (i == 3 ? 255 : 0);
         }
-        if (Src) Sources[i]->Source.UnlockMip(0);
     }
 
     OutputTexture->Source.UnlockMip(0);

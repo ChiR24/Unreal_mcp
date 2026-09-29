@@ -93,7 +93,8 @@ bool ValidateStructMembers(
         }
         (*MemberObj)->TryGetStringField(TEXT("tooltip"), V.Tooltip);
         const TSharedPtr<FJsonObject>* Meta = nullptr;
-        if ((*MemberObj)->TryGetObjectField(TEXT("metadata"), Meta) && Meta && (*Meta).IsValid())
+        // export_struct writes the key as metaData; add_struct_member takes metadata.
+        if (((*MemberObj)->TryGetObjectField(TEXT("metadata"), Meta) || (*MemberObj)->TryGetObjectField(TEXT("metaData"), Meta)) && Meta && (*Meta).IsValid())
         {
             V.Metadata = *Meta;
         }

@@ -87,7 +87,36 @@ FString NormalizeTexturePath(const FString& Path)
     return McpCanonicalizeContentPath(Path, /*bAssumeGameRoot=*/true);
 }
 
-UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError)
+TArray<uint8> ReadSourceBGRA(UTexture2D* Texture)
+{
+    TArray<uint8> Pixels;
+    const int32 NumPixels = Texture->Source.GetSizeX() * Texture->Source.GetSizeY();
+    const bool bGray = Texture->Source.GetFormat() == TSF_G8;
+    const uint8* Mip = Texture->Source.LockMipReadOnly(0);
+    if (!Mip)
+    {
+        return Pixels;
+    }
+    Pixels.SetNumUninitialized(NumPixels * 4);
+    if (bGray)
+    {
+        uint8* Out = Pixels.GetData();
+        for (int32 i = 0; i < NumPixels; ++i, Out += 4)
+        {
+            Out[0] = Out[1] = Out[2] = Mip[i];
+            Out[3] = 255;
+        }
+    }
+    else
+    {
+        FMemory::Memcpy(Pixels.GetData(), Mip, NumPixels * 4);
+    }
+    Texture->Source.UnlockMip(0);
+    return Pixels;
+}
+
+UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError,
+                              bool bConvertToBGRA8)
 {
     OutPath = NormalizeTexturePath(RawPath);
     UTexture2D* Texture = OutPath.IsEmpty() ? nullptr : LoadObject<UTexture2D>(nullptr, *OutPath);
@@ -97,10 +126,23 @@ UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FStrin
                                      : FString::Printf(TEXT("%s: no texture at '%s'"), Field, *RawPath);
         return nullptr;
     }
-    if (Texture->Source.GetFormat() != TSF_BGRA8)
+    const ETextureSourceFormat Format = Texture->Source.GetFormat();
+    if (Format != TSF_BGRA8 && Format != TSF_G8)
     {
-        OutError = FString::Printf(TEXT("%s '%s' has no 8-bit BGRA source data"), Field, *OutPath);
+        OutError = FString::Printf(TEXT("%s '%s' has a %s source; only 8-bit BGRA8 and G8 sources can be read"),
+                                   Field, *OutPath,
+                                   *StaticEnum<ETextureSourceFormat>()->GetNameStringByValue(static_cast<int64>(Format)));
         return nullptr;
+    }
+    if (bConvertToBGRA8 && Format == TSF_G8)
+    {
+        const TArray<uint8> Pixels = ReadSourceBGRA(Texture);
+        if (Pixels.IsEmpty())
+        {
+            OutError = FString::Printf(TEXT("%s '%s': failed to read the G8 source data"), Field, *OutPath);
+            return nullptr;
+        }
+        Texture->Source.Init(Texture->Source.GetSizeX(), Texture->Source.GetSizeY(), 1, 1, TSF_BGRA8, Pixels.GetData());
     }
     return Texture;
 }

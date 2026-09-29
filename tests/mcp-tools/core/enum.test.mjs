@@ -18,12 +18,12 @@ const testCases = [
       action: 'create_enum',
       name: `E_MCP_Enum_${ts}`,
       path: TEST_FOLDER,
-      save: true,
     },
     expected: 'success',
     captureResult: { key: 'enumPath', fromField: 'result.enumPath' },
     assertions: [
       { path: 'structuredContent.result.enumName', equals: `E_MCP_Enum_${ts}`, label: 'enum name reported' },
+      { path: 'structuredContent.result.saved', equals: true, label: 'save defaults to true' },
     ],
   },
   {

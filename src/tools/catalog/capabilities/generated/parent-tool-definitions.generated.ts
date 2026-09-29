@@ -7321,7 +7321,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "alphaTexture": {
           "type": "string",
-          "description": "Alpha channel source."
+          "description": "Alpha channel source: an 8-bit BGRA8 or G8 texture."
         },
         "amount": {
           "type": "number",
@@ -7386,7 +7386,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "baseTexture": {
           "type": "string",
-          "description": "Base texture path."
+          "description": "Base texture path; its source must be an 8-bit BGRA8 or single-channel G8 texture (a channel_extract result, read as gray in R, G and B with alpha 255). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
         },
         "blendMode": {
           "type": "string",
@@ -7394,7 +7394,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blendTexture": {
           "type": "string",
-          "description": "Blend texture path."
+          "description": "Blend texture path; it must have the width and height of baseTexture. Its source can be BGRA8 or G8 whichever baseTexture is. Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
         },
         "blendType": {
           "type": "string",
@@ -7402,7 +7402,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueTexture": {
           "type": "string",
-          "description": "Blue channel source."
+          "description": "Blue channel source: an 8-bit BGRA8 or G8 texture."
         },
         "brickRatio": {
           "type": "number",
@@ -7533,7 +7533,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "destinationName": {
           "type": "string",
-          "description": "New asset name."
+          "description": "Name of the new asset. With destinationPath it is placed in that folder; on its own the copy stays beside the source."
         },
         "destinationPath": {
           "oneOf": [
@@ -7548,7 +7548,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
-              "description": "Destination /Game path."
+              "description": "Folder for the copy, e.g. /Game/Structs, when destinationName is given, the path ends in \"/\" or the folder exists; the copy is destinationPath/destinationName, or keeps the source name without one. Otherwise the full new asset path, e.g. /Game/Structs/S_WeaponRow_V2. A copy onto an existing struct is refused with ALREADY_EXISTS."
             }
           ],
           "description": "Destination /Game asset path."
@@ -7649,7 +7649,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "fixupRedirectors": {
           "type": "boolean",
-          "description": "Fix up redirectors left behind by the deletion."
+          "description": "Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones."
         },
         "folderName": {
           "type": "string",
@@ -7686,7 +7686,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "greenTexture": {
           "type": "string",
-          "description": "Green channel source."
+          "description": "Green channel source: an 8-bit BGRA8 or G8 texture."
         },
         "group": {
           "type": "string",
@@ -8320,7 +8320,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "before",
             "after"
           ],
-          "description": "Reorder anchor position."
+          "description": "Where the moved member goes: first or last of the struct, or before or after the member named in relativeTo."
         },
         "prefix": {
           "type": "string",
@@ -8371,7 +8371,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "redTexture": {
           "type": "string",
-          "description": "Red channel source."
+          "description": "Red channel source: an 8-bit BGRA8 or G8 texture."
         },
         "referencers": {
           "type": "boolean",
@@ -8379,7 +8379,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "relativeTo": {
           "type": "string",
-          "description": "Target member GUID or name."
+          "description": "Name or GUID of the member to place the moved member next to. Required for before and after; ignored for first and last."
         },
         "renames": {
           "type": "array",
@@ -8490,10 +8490,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Shading model."
         },
-        "showConfirmation": {
-          "type": "boolean",
-          "description": "Show confirmation prompt."
-        },
         "skeletonPath": {
           "type": "string",
           "description": "Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."
@@ -8531,7 +8527,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourceTexture": {
           "type": "string",
-          "description": "Source heightmap texture path."
+          "description": "Source heightmap texture path; its source must be an 8-bit BGRA8 or single-channel G8 texture, read as its luminance (a G8 source is its gray). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
         },
         "speed": {
           "type": "number",
@@ -8579,14 +8575,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "tag": {
           "type": "string",
-          "description": "Tag name to search for."
+          "description": "Asset-registry tag name, for example ParentClass, which every Blueprint carries."
         },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Tags to set."
+          "description": "Tag names to set; each is written as package metadata with the value \"true\"."
         },
         "targetNodeId": {
           "type": "string",
@@ -8666,7 +8662,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
-              "description": "Optional tag value."
+              "description": "Optional tag value to match, ignoring case."
             }
           ],
           "description": "Metadata value."
@@ -9154,7 +9150,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "metadata": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
-          "description": "Custom package metadata (key-value)."
+          "description": "Package metadata (key-value): what set_metadata wrote, and each set_tags tag as its name with the value \"true\"."
         },
         "mimeType": {
           "type": "string",
@@ -9391,10 +9387,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "object",
               "x-unreal-reflection-boundary": true,
-              "description": "Asset Registry tags (key-value)."
+              "description": "Asset Registry tags (key-value). A tag written by set_tags appears here only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry."
             }
           ],
-          "description": "Asset Registry tags (key-value)."
+          "description": "Asset Registry tags (key-value). A tag written by set_tags appears here only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry."
         },
         "textureSampleCount": {
           "type": "number",
@@ -15098,11 +15094,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "traceRadius": {
           "type": "number",
-          "description": "Interaction trace radius in world units."
+          "description": "Cross-section of each box component in world units (default 50): a box gets extent traceDistance by traceRadius. Sphere components ignore it."
         },
         "traceType": {
           "type": "string",
-          "description": "Interaction trace shape (line, sphere, or box)."
+          "description": "Free-text name stored in the TraceType Name variable of the Blueprint (default sphere). It does not choose or change a trace shape: the shape comes from the sphere and box components, which traceDistance and traceRadius resize."
         },
         "triggerPath": {
           "type": "string",
@@ -15208,7 +15204,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "entryIndex": {
           "type": "number",
-          "description": "Zero-based loot entry index to remove."
+          "description": "Number n of the LootEntry_<n> key of the entry to remove: the entryIndex add_loot_entry returned, or the n in a LootEntry_<n> key of get_inventory_info properties. It is a key suffix, not a position: removing an entry renumbers nothing, and a new entry takes one past the highest suffix in use."
         },
         "iconPath": {
           "type": "string",
@@ -15305,7 +15301,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "save": {
           "type": "boolean",
-          "description": "Persist the created/modified asset to disk."
+          "description": "Save the asset to disk after the change (default true, for every inventory action). With false the change stays in memory only and is lost when the editor restarts."
         },
         "setting": {
           "type": "string",

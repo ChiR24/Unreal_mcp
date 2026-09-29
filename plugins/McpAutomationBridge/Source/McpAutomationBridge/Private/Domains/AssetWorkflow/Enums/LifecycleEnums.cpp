@@ -35,7 +35,7 @@ bool HandleEnumLifecycleActions(
         FString EnumPath = GetJsonStringField(Params, TEXT("enumPath"));
         FString Name = GetJsonStringField(Params, TEXT("name"));
         FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Enums"));
-        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
+        bool bSave = EnumSaveRequested(Params);
 
         if (Name.IsEmpty() && !EnumPath.IsEmpty())
         {

@@ -58,7 +58,7 @@ bool HandleInventoryLootDropActions(UMcpAutomationBridgeSubsystem& Bridge, const
     LootTable->Properties.Add(TEXT("QualityTiers"), FString::Join(Encoded, TEXT(",")));
     LootTable->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(LootTable);
     }
 

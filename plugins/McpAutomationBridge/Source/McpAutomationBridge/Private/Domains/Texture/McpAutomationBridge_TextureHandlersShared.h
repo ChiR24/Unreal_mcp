@@ -36,9 +36,15 @@ bool ValidateTextureIterationCount(double Value, const TCHAR* Name,
                                    int32 MinValue, int32 MaxValue,
                                    int32& OutValue, FString& OutError);
 FString NormalizeTexturePath(const FString& Path);
-// RawPath as a texture whose source mip is 8-bit BGRA, the layout every pixel operation
-// walks; null with OutError set otherwise.
-UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError);
+// RawPath as a texture whose source is 8-bit BGRA or single-channel G8 (channel_extract output);
+// null with OutError naming the source format otherwise. bConvertToBGRA8 rewrites a G8 source to
+// BGRA8 in the asset, for the operations that edit it in place; the ones that only read use
+// ReadSourceBGRA and leave the asset as it is.
+UTexture2D* LoadSourceTexture(const FString& RawPath, const TCHAR* Field, FString& OutPath, FString& OutError,
+                              bool bConvertToBGRA8 = false);
+// Source mip 0 of a LoadSourceTexture result as a BGRA8 copy (G8 becomes gray in B, G and R,
+// alpha 255); empty when the mip cannot be locked.
+TArray<uint8> ReadSourceBGRA(UTexture2D* Texture);
 // Where a generated texture goes: outputPath (a full asset path) when given, else path/name.
 bool ResolveOutputTarget(const TSharedPtr<FJsonObject>& Params, const FString& DefaultPath, const FString& DefaultName,
                          FString& OutPath, FString& OutName, FString& OutError);

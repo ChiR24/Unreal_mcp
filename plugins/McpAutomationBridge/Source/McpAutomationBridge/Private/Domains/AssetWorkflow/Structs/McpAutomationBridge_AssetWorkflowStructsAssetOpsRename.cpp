@@ -3,6 +3,7 @@
 #include "UObject/ObjectRedirector.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
+#include "EditorAssetLibrary.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
 
@@ -82,6 +83,7 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
         FString StructPath = GetJsonStringField(Payload, TEXT("structPath"));
         FString DestName = GetJsonStringField(Payload, TEXT("destinationName"));
         FString DestPath = GetJsonStringField(Payload, TEXT("destinationPath"));
+        DestName.TrimStartAndEndInline();
         if (StructPath.IsEmpty() || (DestName.IsEmpty() && DestPath.IsEmpty()))
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -90,18 +92,21 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
             return true;
         }
 
-        FString FinalDest;
-        FString FinalName;
+        // Same rule as asset.duplicate: destinationPath is a folder when destinationName is given
+        // (unless an asset sits there) or when it names an existing folder; otherwise it is the
+        // full new asset path. With only destinationName the copy stays beside the source.
+        FString DupParentFolder = FPaths::GetPath(StructPath);
+        FString FinalName = DestName;
         if (!DestPath.IsEmpty())
         {
-            FinalDest = DestPath;
-            FinalName = FPaths::GetBaseFilename(DestPath);
-        }
-        else
-        {
-            FString Parent = FPaths::GetPath(StructPath);
-            FinalName = SanitizeAssetName(DestName);
-            FinalDest = FString::Printf(TEXT("%s/%s"), *Parent, *FinalName);
+            const bool bIsFolder = DestPath.EndsWith(TEXT("/")) || UEditorAssetLibrary::DoesDirectoryExist(DestPath) ||
+                (!DestName.IsEmpty() && !UEditorAssetLibrary::DoesAssetExist(DestPath));
+            DupParentFolder = bIsFolder ? DestPath : FPaths::GetPath(DestPath);
+            DupParentFolder.RemoveFromEnd(TEXT("/"));
+            if (FinalName.IsEmpty())
+            {
+                FinalName = FPaths::GetBaseFilename(bIsFolder ? StructPath : DestPath);
+            }
         }
 
         // Normalize the resolved name and validate the destination through the
@@ -109,7 +114,6 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
         // rejects out-of-root paths, '..' traversal, and read-only engine/script
         // targets, and yields a canonical package path for CreatePackage.
         FinalName = SanitizeAssetName(FinalName);
-        const FString DupParentFolder = FPaths::GetPath(FinalDest);
         FString DupPackageName;
         FString DupPathError;
         if (!ValidateAssetCreationPath(DupParentFolder, FinalName, DupPackageName, DupPathError))
@@ -125,6 +129,14 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
                 TEXT("INVALID_PATH"));
             return true;
         }
+        // A copy onto an existing struct (for example its own name in the source folder) would overwrite it.
+        const FString DupObjectPath = DupPackageName + TEXT(".") + FinalName;
+        if (LoadObject<UUserDefinedStruct>(nullptr, *DupObjectPath))
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                TEXT("Destination already exists: ") + DupObjectPath, TEXT("ALREADY_EXISTS"));
+            return true;
+        }
 
         FString Err;
         UUserDefinedStruct* Dup = DuplicateStructTo(StructPath, DupPackageName, FinalName, Err);
@@ -136,7 +148,6 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("sourcePath"), StructPath);
-        const FString DupObjectPath = DupPackageName + TEXT(".") + FinalName;
         Result->SetStringField(TEXT("duplicatedPath"), DupObjectPath);
         Result->SetBoolField(TEXT("duplicated"), true);
         Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,

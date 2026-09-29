@@ -115,7 +115,7 @@ bool HandleInventoryCategoryActions(UMcpAutomationBridgeSubsystem& Bridge, const
     }
     ItemObj->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(ItemObj);
     }
 

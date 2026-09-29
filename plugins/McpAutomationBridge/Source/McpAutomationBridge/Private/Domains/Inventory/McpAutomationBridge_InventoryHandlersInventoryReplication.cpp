@@ -45,9 +45,9 @@ bool HandleInventoryReplicationActions(UMcpAutomationBridgeSubsystem& Bridge, co
 
       if (bIsInventoryVar) {
         if (bReplicated) {
+          // Only the replication flag and condition change: a RepNotify function already on the variable is
+          // kept (this used to reset it to none, silently dropping the OnRep_ hook the caller had wired).
           Var.PropertyFlags |= CPF_Net;
-          Var.RepNotifyFunc = NAME_None; // Can be set to a custom function name
-
           Var.ReplicationCondition = static_cast<ELifetimeCondition>(Condition);
         } else {
           Var.PropertyFlags &= ~CPF_Net;
