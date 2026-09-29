@@ -96,3 +96,22 @@ describe('Todo 20 BB-018 the get_summary record still declares the full identity
     ]));
   });
 });
+
+// "Is the level saved?" had no read answer: restart_editor validateOnly was the only one.
+describe('both level readers report unsaved state', () => {
+  const lifecycle = (name: string) => code(read(resolve(PRIVATE_ROOT, 'Domains', 'Level', 'Lifecycle', name)));
+
+  it('get_summary (loaded branch) and get_current_level call AddUnsavedState', () => {
+    const info = code(levelHandlersInfo());
+    const loadedStart = info.indexOf('if (TargetLevel)');
+    expect(info.slice(loadedStart, info.indexOf('SendAutomationResponse', loadedStart))).toContain('AddUnsavedState(Result, TargetLevel->GetOutermost());');
+    expect(lifecycle('McpAutomationBridge_LevelHandlersGetCurrent.cpp')).toContain('AddUnsavedState(Result, LevelPackage);');
+  });
+
+  it('the helper answers unsaved, unsavedPackages and unsavedPackageCount', () => {
+    const source = lifecycle('McpAutomationBridge_LevelHandlersDirtyPackages.cpp');
+    expect(source).toContain('SetBoolField(TEXT("unsaved"), LevelPackage && LevelPackage->IsDirty())');
+    expect(source).toContain('SetArrayField(TEXT("unsavedPackages"), Names)');
+    expect(source).toContain('SetNumberField(TEXT("unsavedPackageCount"), Packages.Num())');
+  });
+});

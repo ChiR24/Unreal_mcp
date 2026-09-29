@@ -1,5 +1,7 @@
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDirtyPackageLoad.h"
 
+#include "Dom/JsonObject.h"
+#include "Dom/JsonValue.h"
 #include "Engine/World.h"
 #include "FileHelpers.h"
 #include "RenderingThread.h"
@@ -48,6 +50,19 @@ TArray<UPackage*> CollectBlockingDirtyPackages(int32& OutWorldCount) {
 void CountBlockingDirtyPackages(int32& OutWorldPackages,
                                 int32& OutContentPackages) {
   OutContentPackages = CollectBlockingDirtyPackages(OutWorldPackages).Num() - OutWorldPackages;
+}
+
+void AddUnsavedState(const TSharedPtr<FJsonObject>& Result, const UPackage* LevelPackage) {
+  // "Is the level saved?" had no read answer; restart_editor validateOnly was the only one.
+  int32 WorldCount = 0;
+  const TArray<UPackage*> Packages = CollectBlockingDirtyPackages(WorldCount);
+  TArray<TSharedPtr<FJsonValue>> Names;
+  for (int32 Index = 0; Index < Packages.Num() && Index < 100; ++Index) {
+    Names.Add(MakeShared<FJsonValueString>(Packages[Index]->GetName()));
+  }
+  Result->SetBoolField(TEXT("unsaved"), LevelPackage && LevelPackage->IsDirty());
+  Result->SetArrayField(TEXT("unsavedPackages"), Names);
+  Result->SetNumberField(TEXT("unsavedPackageCount"), Packages.Num());
 }
 
 bool SaveBlockingDirtyPackagesForLevelLoad(int32& OutInitialWorldPackages,

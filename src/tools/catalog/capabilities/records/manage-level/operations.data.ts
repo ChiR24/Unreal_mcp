@@ -9,12 +9,19 @@ import { P } from './properties.js';
 import { D, OPERATIONS_POWER_RECORDS } from './operations-power.data.js';
 import { OPERATIONS_IO_RECORDS } from './operations-io.data.js';
 
+// Both readers answer whether the level (and anything else) is unsaved (AddUnsavedState).
+const UNSAVED_OUT = {
+  unsaved: { type: 'boolean', description: 'Whether this level has changes that are not saved.' },
+  unsavedPackages: { type: 'array', items: { type: 'string' }, description: 'Every level and asset package with unsaved changes, levels first (the first 100).' },
+  unsavedPackageCount: { type: 'number', description: 'How many packages have unsaved changes.' },
+};
+
 export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   ...OPERATIONS_POWER_RECORDS,
   buildCoreRecord({
     parentTool: 'manage_level', action: 'get_current_level', dispatchAction: 'get_current_level',
     domain: D, family: 'query',
-    topics: ['current level', 'current map', 'which level is open', 'active level', 'level name'],
+    topics: ['current level', 'current map', 'which level is open', 'active level', 'level name', 'is the level saved', 'list unsaved changes'],
     summary: 'Return the path of the level currently loaded in the editor.',
     whenToUse: ['The active level path must be inspected.'],
     whenNotToUse: ['All levels must be enumerated; use list_levels.'],
@@ -22,8 +29,8 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     effect: 'read',
     exampleInput: { action: 'get_current_level' },
-    exampleOutput: { success: true, message: 'Current level', levelPath: '/Game/Maps/Demo' },
-    outputProps: { levelPath: P.levelPath },
+    exampleOutput: { success: true, message: 'Current level', levelPath: '/Game/Maps/Demo', unsaved: true, unsavedPackages: ['/Game/Maps/Demo'], unsavedPackageCount: 1 },
+    outputProps: { levelPath: P.levelPath, ...UNSAVED_OUT },
   }),
   buildCoreRecord({
     parentTool: 'manage_level', action: 'get_summary', dispatchAction: 'get_summary',
@@ -49,6 +56,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
       objectPath: { type: 'string', description: 'Object path (asset-registry lookup).' },
       assetClass: { type: 'string', description: 'Asset class path (asset-registry lookup).' },
       tagsAndValues: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Asset-registry tag/value pairs (asset-registry lookup).' },
+      ...UNSAVED_OUT,
     },
   }),
   buildCoreRecord({

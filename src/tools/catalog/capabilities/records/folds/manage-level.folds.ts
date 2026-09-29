@@ -18,8 +18,8 @@ export const MANAGE_LEVEL_FOLDS: readonly FoldSpec[] = [
   { primary: 'delete', summary: 'Delete one or more level assets.', members: ['delete_level'] },
   {
     primary: 'get_summary', selector: 'info',
-    summary: 'Read a level summary, or the currently loaded level.',
-    topics: ['level summary', 'current level', 'what is the current level'],
+    summary: 'Read a level (path, name, actor count, asset data) or the one open in the editor, and whether it has unsaved changes, with every unsaved level and asset listed.',
+    topics: ['level summary', 'current level', 'what is the current level', 'unsaved changes'],
     members: { summary: 'get_summary', current_level: 'get_current_level' },
   },
   {

@@ -1,4 +1,5 @@
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
+#include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDirtyPackageLoad.h"
 #include "Domains/Level/World/McpAutomationBridge_LevelHandlersWorldAccess.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -77,6 +78,7 @@ bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FS
       Result->SetStringField(TEXT("levelName"), AssetName);
       Result->SetNumberField(TEXT("actorCount"), TargetLevel->Actors.Num());
       Result->SetBoolField(TEXT("loaded"), true);
+      AddUnsavedState(Result, TargetLevel->GetOutermost());
 
       // A loaded level must be identifiable as a map asset without a
       // follow-up list_levels call. The record already declares these fields;

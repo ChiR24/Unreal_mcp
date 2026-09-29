@@ -1,4 +1,5 @@
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
+#include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDirtyPackageLoad.h"
 
 #include "Editor.h"
 #include "Engine/Level.h"
@@ -45,6 +46,7 @@ bool HandleGetCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const
     // The capability's declared contract promises `loaded`; the current level is
     // loaded by definition, so it is stated rather than left absent.
     Result->SetBoolField(TEXT("loaded"), true);
+    AddUnsavedState(Result, LevelPackage);
 
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Current level retrieved"), Result);

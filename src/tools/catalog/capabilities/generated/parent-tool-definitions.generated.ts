@@ -15920,6 +15920,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "timeDilation": {
           "type": "number",
           "description": "Global time dilation multiplier for the level."
+        },
+        "unsaved": {
+          "type": "boolean",
+          "description": "Whether this level has changes that are not saved."
+        },
+        "unsavedPackageCount": {
+          "type": "number",
+          "description": "How many packages have unsaved changes."
+        },
+        "unsavedPackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every level and asset package with unsaved changes, levels first (the first 100)."
         }
       },
       "additionalProperties": true

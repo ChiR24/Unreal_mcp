@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8e7c85d328a8ab84",
+  "catalogRevision": "e924a9945fbb1a9b",
   "recordCount": 389,
   "records": [
     {
@@ -63092,12 +63092,15 @@
           "level summary",
           "current level",
           "what is the current level",
+          "unsaved changes",
           "current map",
           "which level is open",
           "active level",
-          "level name"
+          "level name",
+          "is the level saved",
+          "list unsaved changes"
         ],
-        "summary": "Read a level summary, or the currently loaded level.",
+        "summary": "Read a level (path, name, actor count, asset data) or the one open in the editor, and whether it has unsaved changes, with every unsaved level and asset listed.",
         "whenToUse": [
           "Metadata and stats for a specific level must be inspected.",
           "The active level path must be inspected."
@@ -63188,6 +63191,21 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "Asset-registry tag/value pairs (asset-registry lookup)."
+            },
+            "unsaved": {
+              "type": "boolean",
+              "description": "Whether this level has changes that are not saved."
+            },
+            "unsavedPackages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every level and asset package with unsaved changes, levels first (the first 100)."
+            },
+            "unsavedPackageCount": {
+              "type": "number",
+              "description": "How many packages have unsaved changes."
             }
           },
           "required": [
@@ -63198,7 +63216,7 @@
       },
       "examples": [
         {
-          "title": "Read a level summary, or the currently loaded level.",
+          "title": "Read a level (path, name, actor count, asset data) or the one open in the editor, and whether it has unsaved changes, with every unsaved level and asset listed.",
           "input": {
             "action": "get_summary",
             "levelPath": "/Game/Maps/Demo",
@@ -63253,8 +63271,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9bde1b6b0439e4b6fda3c356cdab85943ce248d335c88e5bdeff73741c2ce51f",
-        "content": "aa84610ba327a50b121195566b11dafa06e38cddd41f0ccaf27dbd92feeaaac1"
+        "schema": "a7aa79607f3284a6adfc45018cd012e416e1fcd721b44f334db90ec2ab1a56ef",
+        "content": "8ba08c1b232d5a9c91f032f66aef985315ecdcde717ada726cecad27c5be5a8d"
       }
     },
     {
