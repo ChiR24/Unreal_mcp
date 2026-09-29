@@ -80,14 +80,19 @@ bool McpInitMotionTrigger(AActor *Gate, const TSharedPtr<FJsonObject> &When, UWo
                             *Gate->GetClass()->GetName());
     return false;
   }
-  bool bEquals = false;
-  double Number = 0.0;
-  if (When->TryGetBoolField(TEXT("equals"), bEquals)) {
-    Out.Equals = bEquals ? TEXT("True") : TEXT("False");
-  } else if (When->TryGetNumberField(TEXT("equals"), Number)) {
-    Out.Equals = FString::SanitizeFloat(Number);
-  } else if (!When->TryGetStringField(TEXT("equals"), Out.Equals)) {
-    Error = TEXT("startWhen.equals is required: the value to wait for, as samples show it (\"True\").");
+  // Read by the value's own JSON type: TryGetBoolField coerces a number (non-zero)
+  // and any string (FString::ToBool, so "2" is true) to a bool, and a startWhen on
+  // Phase == 2 waited for "True" and never fired.
+  const TSharedPtr<FJsonValue> EqualsValue = When->TryGetField(TEXT("equals"));
+  const EJson EqualsType = EqualsValue.IsValid() ? EqualsValue->Type : EJson::None;
+  if (EqualsType == EJson::Boolean) {
+    Out.Equals = EqualsValue->AsBool() ? TEXT("True") : TEXT("False");
+  } else if (EqualsType == EJson::Number) {
+    Out.Equals = FString::SanitizeFloat(EqualsValue->AsNumber());
+  } else if (EqualsType == EJson::String) {
+    Out.Equals = EqualsValue->AsString();
+  } else {
+    Error = TEXT("startWhen.equals is required: the value to wait for, as samples show it (\"True\", 3, \"Walking\").");
     return false;
   }
   When->TryGetBoolField(TEXT("waitForChange"), Out.bWaitForChange);

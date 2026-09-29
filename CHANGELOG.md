@@ -130,6 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **`startWhen` waits for the value it was given.** `get_transform` motion with `startWhen.equals` 2 waited for "True" instead: every value was read as a bool first, so any number or string became "True" or "False" ("Walking" became "False"), and a run gated on `Phase` 2 never started. Each value is now read as its own JSON type.
 - **A downscaled window capture says what size it was taken at.** `full_editor_window` screenshots now carry `viewportWidth`/`viewportHeight` when the image was downscaled, as editor-viewport captures already did; a 2560x1440 window returned at 1600x900 gave no hint of its real size.
 - **`get_summary` names the map asset.** For a loaded level it reported `assetClass` Package with no tags: the bare package path found the in-memory package before the map inside it. The map asset is tried first now.
 - **Three descriptions say what the handler does.** `get_volumes_info` `filter` matches the actor label (it claimed to filter by type; `volumeType` does that), `asset.list` `recursive` defaults to true, and `asset.list` gained guidance for each of its three listings.

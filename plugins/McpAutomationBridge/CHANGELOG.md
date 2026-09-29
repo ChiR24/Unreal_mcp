@@ -94,6 +94,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **WebSocket client mode** (the server keeps rejecting unmasked client frames), the **raw-socket bare action names** neither MCP door sent, and the Project Settings `LogVerbosity`, `bApplyLogVerbosityToAll`, `bEnableSocketTelemetry` and `HeartbeatIntervalMs`, which nothing read.
 
 ### Fixed
+- **`startWhen.equals` read by JSON type** — `McpInitMotionTrigger` (`ControlActor/ControlActorMotionInputs.cpp`) dispatches on `FJsonValue::Type` (bool → "True"/"False", number → `SanitizeFloat`, string as given). `TryGetBoolField` ran first and succeeds on any number or string (non-zero, `FString::ToBool`), so the number and string branches never ran.
 - **Window capture source size** — `CaptureSlateWindowPngForMcp` hands back the pre-resample size (`OutSourceSize`), and the full-window branch of `take_screenshot` reports it as `viewportWidth`/`viewportHeight` when it differs from the PNG.
 - **Level asset lookup** — `FindLevelAssetData` (`Level/World/LevelHandlersInfo.cpp`) tries `<path>.<ShortName>` before the bare package path, which resolved to the loaded `UPackage` and answered class Package with no tags.
 - **Output-file deletes carry change evidence** — `HandleDeleteOutputFile` (`SystemControlHandlersOutputFiles.cpp`) answers `changedEntities` with the deleted path (single form) or every path that was deleted (list form), which both receipt readers take into `changes`.

@@ -112,3 +112,14 @@ describe('control_actor.list propertyNames takes "Component.Property" like sampl
     expect(listParamDescription('propertyNames')).toMatch(/StaticMeshComponent\.LDMaxDrawDistance/u);
   });
 });
+
+// startWhen {equals: 2} (or "2") waited for "True": TryGetBoolField coerces numbers and strings.
+describe('startWhen.equals is read by its JSON type', () => {
+  const source = read('McpAutomationBridge_ControlActorMotionInputs.cpp');
+
+  it('dispatches on the value type instead of trying a bool first', () => {
+    expect(source).toContain('When->TryGetField(TEXT("equals"))');
+    expect(source).toMatch(/EqualsType == EJson::Number\) \{\s*Out\.Equals = FString::SanitizeFloat\(EqualsValue->AsNumber\(\)\);/u);
+    expect(source).not.toMatch(/TryGetBoolField\(TEXT\("equals"\)/u);
+  });
+});
