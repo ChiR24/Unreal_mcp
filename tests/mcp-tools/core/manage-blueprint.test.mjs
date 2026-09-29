@@ -38,7 +38,7 @@ const testCases = [
   { scenario: 'ACTION: get', toolName: 'manage_blueprint', arguments: { action: 'get', blueprintPath: BP_PATH }, expected: 'success', timeoutMs: 5000 },
 
   // === ACTION: compile (uses blueprintPath) ===
-  { scenario: 'ACTION: compile', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: BP_PATH, saveAfterCompile: false }, expected: 'success' },
+  { scenario: 'ACTION: compile', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: BP_PATH, saveAfterCompile: false }, expected: 'success', assertions: [{ path: 'structuredContent.receipt.changes', length: 1, label: 'the receipt lists the compiled asset, not the words compiled and saved' }, { path: 'structuredContent.receipt.changes', notIncludes: 'compiled', label: 'no status word among the changes' }] },
 
   // === ADD: add_component (blueprintPath + componentClass + componentName) ===
   { scenario: 'ADD: add_component', toolName: 'manage_blueprint', arguments: { action: 'add_component', blueprintPath: BP_PATH, componentType: 'PointLightComponent', componentName: 'TestLight', attachTo: 'DefaultSceneRoot' }, expected: 'success|already exists' },

@@ -4,7 +4,6 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintCompilation.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintDiagnostics.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
-#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 #include "Engine/Blueprint.h"
 
@@ -82,13 +81,10 @@ bool HandleBlueprintCompile(const FBlueprintActionContext &Context) {
                "broken blueprint was NOT written to disk."));
     }
     Out->SetStringField(TEXT("blueprintPath"), Path);
-    // Derived from what actually happened, never from the request: a failed
-    // compile with a skipped save contributes nothing and the receipt stays
-    // truthfully empty rather than reporting a write that did not occur.
-    TArray<FString> CompileChanges;
-    if (bCompiled) { CompileChanges.Add(TEXT("compiled")); }
-    if (bSaved) { CompileChanges.Add(TEXT("saved")); }
-    AddMutationEvidence(Out, BP, CompileChanges);
+    // The reply names the asset (the receipt lists it as the entity changed) and carries `compiled` and
+    // `saved` as booleans. It used to push "compiled" and "saved" into changedEntities as well, which holds
+    // entity paths: the receipt then listed the two status words beside the asset as things that changed.
+    McpHandlerUtils::AddVerification(Out, BP);
     Bridge.SendAutomationResponse(
         RequestingSocket, RequestId, /*bSuccess=*/bCompiled,
         bCompiled ? FString(TEXT("Blueprint compiled"))

@@ -129,30 +129,30 @@ describe('todo16 BB-008: every asset-mutating Interaction handler stamps evidenc
   });
 });
 
-describe('todo16 BB-045: compile evidence is derived from actual state', () => {
-  it('compiled and saved are each gated on their own observed flag', () => {
+describe('todo16 BB-045 / P12: compile evidence is the asset, never status words', () => {
+  it('the reply names the compiled asset and carries compiled and saved as booleans', () => {
     const source = compile();
 
-    expect(source).toContain('McpAutomationBridgeHelpersMutationEvidence.h');
-    expect(source).toMatch(/if \(bCompiled\)\s*\{\s*CompileChanges\.Add\(TEXT\("compiled"\)\);/u);
-    expect(source).toMatch(/if \(bSaved\)\s*\{\s*CompileChanges\.Add\(TEXT\("saved"\)\);/u);
-    expect(source).toContain('AddMutationEvidence(Out, BP, CompileChanges)');
+    expect(source).toContain('McpHandlerUtils::AddVerification(Out, BP);');
+    expect(source).toMatch(/Out->SetBoolField\(TEXT\("saved"\), bSaved\);/u);
+    expect(nativeSource('Foundation', 'BridgeHelpers', 'Blueprints', 'McpAutomationBridgeHelpersBlueprintDiagnostics.h'))
+      .toMatch(/Out->SetBoolField\(TEXT\("compiled"\), bCompiled\);/u);
   });
 
-  it('nothing is added unconditionally, so a failed compile reports no change', () => {
+  it('changedEntities holds entity paths only, so the compile handler no longer writes it', () => {
     const source = compile();
-    // Every Add must sit immediately behind its own `if (bFlag) {` guard; a bare
-    // or brace-wrapped unconditional Add is rejected.
-    const adds = [...source.matchAll(/CompileChanges\.Add\(/gu)];
-    expect(adds.length).toBeGreaterThanOrEqual(2);
-    // Exactly the two states the handler observes. Requiring only "behind some
-    // flag" let an invented third entry ride in behind `if (bAlways)`.
-    const literals = [...source.matchAll(/CompileChanges\.Add\(TEXT\("(\w+)"\)\)/gu)].map((m) => m[1]).sort();
-    expect(literals, 'compile evidence is exactly compiled + saved').toEqual(['compiled', 'saved']);
-    for (const match of adds) {
-      const before = source.slice(Math.max(0, (match.index ?? 0) - 40), match.index);
-      expect(before, 'each CompileChanges.Add must sit behind its own flag').toMatch(/if \(b\w+\)\s*\{\s*$/u);
-    }
+
+    expect(source).not.toContain('changedEntities');
+    expect(source).not.toContain('CompileChanges');
+    expect(source).not.toContain('AddMutationEvidence');
+    expect(source, 'no status word is pushed as a change').not.toMatch(/\.Add\(TEXT\("(compiled|saved)"\)\)/u);
+  });
+
+  it('a compile reply\'s receipt lists the asset and not the words compiled and saved', () => {
+    const reply = { success: true, compiled: true, saved: true, assetPath: '/Game/UI/WBP_MainMenu', assetName: 'WBP_MainMenu' };
+
+    expect(extractChanges(reply)).toEqual(['/Game/UI/WBP_MainMenu']);
+    expect(extractHandles(reply)).toContainEqual({ kind: 'asset', path: '/Game/UI/WBP_MainMenu' });
   });
 });
 
