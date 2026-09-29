@@ -33,7 +33,8 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
         items: ITEM,
         'x-unreal-reflection-boundary': true,
         description: 'Steps run in order, 1-200. Each is {edit, ...that edit\'s own params}. Member steps come before the nodes '
-          + 'that use them: add_variable (variableName, variableType, defaultValue, isPublic, category), add_function '
+          + 'that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container '
+          + 'types, defaultValue, isPublic, category), add_function '
           + '(functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, "$id" '
           + 'is its entry node and "$id_return" its return node, which exists when outputs are declared), add_event '
           + '(customEventName and parameters, or componentName plus eventName for a component delegate) and add_event_dispatcher '

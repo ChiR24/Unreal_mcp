@@ -53,6 +53,40 @@ describe('get_graph_details filter reads what a node\'s pins hold', () => {
   });
 });
 
+describe('variableType: the description lists what the type resolver accepts', () => {
+  const baseTypes = (): string => read('Foundation', 'Blueprint', 'McpBlueprintUtilsBaseTypes.cpp');
+  const resolver = (): string => read('Foundation', 'Blueprint', 'McpBlueprintUtilsTypeResolver.cpp');
+  const description = (): string => paramDescription('blueprint.edit_variable', 'variableType');
+
+  it('names only basic types the resolver knows, and a class path as an object reference', () => {
+    const known = new Set([...baseTypes().matchAll(/TEXT\("(\w+)"\)/gu)].map((match) => (match[1] ?? '').toLowerCase()));
+    const basics = /Basic: ([^.]+)\./u.exec(description())?.[1]?.split(', ') ?? [];
+
+    expect(basics.length).toBeGreaterThan(10);
+    for (const name of basics) expect(known.has(name.toLowerCase()), `${name} is a basic type`).toBe(true);
+    expect(description()).toMatch(/a bare class name or path is an object reference/u);
+    expect(baseTypes()).toMatch(/ResolveClassByName\(Token\)\)\s*\{\s*OutPin = MakePin\(K2::PC_Object, NAME_None, ClassResolve\);/u);
+  });
+
+  it('documents the class, struct, enum and container spellings it parses, with one example', () => {
+    for (const prefix of ['object:', 'class:', 'softobject:', 'softclass:', 'enum:', 'struct:']) {
+      expect(baseTypes(), prefix).toContain(`TEXT("${prefix}")`);
+    }
+    for (const spelling of ['Object:<class>', 'Class:<class>', 'SoftObject:<class>', 'SoftClass:<class>', 'struct:<path>', 'enum:<object path>',
+      'Array<T>', 'Set<T>', 'Map<Key,Value>', 'Array:T', 'Set:T', 'Map:Key,Value']) {
+      expect(description(), spelling).toContain(spelling);
+    }
+    for (const container of ['array:', 'set:', 'map:', 'array<', 'set<', 'map<']) {
+      expect(resolver(), container).toContain(`TEXT("${container}")`);
+    }
+    expect(description()).toContain('Example: Array<Object:/Script/UMG.Widget>');
+  });
+
+  it('the batch add_variable step points at the same specs', () => {
+    expect(paramDescription('blueprint.edit_graph', 'operations')).toMatch(/variableType as add_variable takes it/u);
+  });
+});
+
 describe('an edit_graph reply names the Blueprint it ran on', () => {
   const shared = (): string => read('Domains', 'BlueprintGraph', 'Context', 'McpAutomationBridge_BlueprintGraphHandlersContextShared.cpp');
   const batch = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
