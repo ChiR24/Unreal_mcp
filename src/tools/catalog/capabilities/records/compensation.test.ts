@@ -3,7 +3,7 @@ import { ALL_CAPABILITY_RECORDS } from './aggregate.js';
 import { COMPENSATION } from './compensation.js';
 
 describe('compensation', () => {
-  const ids = new Set(ALL_CAPABILITY_RECORDS.map((record) => record.id));
+  const ids = new Set<string>(ALL_CAPABILITY_RECORDS.map((record) => String(record.id)));
 
   it('keys and inverses name live records, never the key itself', () => {
     for (const [key, compensation] of COMPENSATION) {
