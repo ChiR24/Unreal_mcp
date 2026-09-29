@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "dab9688518c4045e",
+  "catalogRevision": "d428a91cafa609da",
   "recordCount": 389,
   "records": [
     {
@@ -4852,11 +4852,16 @@
         "domain": "animation physics",
         "family": "physics",
         "topics": [
-          "get_animation_info"
+          "get_animation_info",
+          "length and frame rate",
+          "notifies and curves",
+          "list montage sections",
+          "blend space axes"
         ],
-        "summary": "Read animation asset metadata.",
+        "summary": "Read an animation asset: sequence or montage length, frame rate, notifies, curves, root motion and additive flags; montage sections and slots; blend space axes; anim Blueprint skeleton and parent class.",
         "whenToUse": [
-          "Inspect animation assets."
+          "The length, notifies or curves of an animation sequence or montage must be read.",
+          "A montage's sections and slots, or a blend space's axes, must be checked before editing."
         ],
         "whenNotToUse": [
           "Mutate assets."
@@ -4911,7 +4916,7 @@
       },
       "examples": [
         {
-          "title": "Read animation asset metadata.",
+          "title": "Read an animation asset: sequence or montage length, frame rate, notifies, curves, root motion and additive flags; montage sections and slots; blend space axes; anim Blueprint skeleton and parent class.",
           "input": {
             "action": "get_animation_info",
             "assetPath": "/Game/A_Run"
@@ -4954,7 +4959,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "aadb9f4a7264b3cff76e1eafdaac489b5ebd3df261a6cc13f55246b89a0efbde",
-        "content": "f40ef2b81221ebf61b7c88248bb98f946e75e1ae83322f1afe3ca72a55c1f3f2"
+        "content": "9d36cf5d20656a9ab9c1b2e50731680eaf62a6a079dac564f83cc5d27bd5cf88"
       }
     },
     {
