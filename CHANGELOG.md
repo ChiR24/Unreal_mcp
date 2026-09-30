@@ -269,6 +269,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `generate_collision` refuses an unknown `collisionType`; `simplify_collision` works on a copy so the render mesh keeps its triangles; `convert_to_static_mesh` saves the collision body it adds; modeling records declare the knobs their handlers read; rounded bevels are refused before UE 5.4.
   - PCG node edits declare `settings` and `save`, and an explicit `title` wins over the `nodeName` used to find the node.
 - **Handlers that did the opposite of what they described now do it.** `activate_ragdoll` reaches its handler; `create_render_target` maps `RG8` to `PF_R8G8`; `add_state_tree_state` finds a parent at any depth; `inspect_struct` resolves a bare struct name; `enable_gpu_simulation` applies the flags it reports; `create_animation_asset` refuses an existing asset of another class (`ASSET_TYPE_MISMATCH`); `set_loot_quality_tiers` stores the tiers it reports; `configure_grid_size` on a RuntimeHashSet world answers `INVALID_ARGUMENT` for a missing grid unless `createIfMissing`.
+- **Registry installs no longer pin the server's settings.** `server.json` gave its environment variables fixed values (a 30 s timeout for every capability, port 8091, a placeholder project path); they are now defaults and placeholders, `UE_PROJECT_PATH` is marked required, and the capability-token and path-prefix variables are listed.
 
 </details>
 

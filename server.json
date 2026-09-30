@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.ChiR24/unreal-engine-mcp",
-  "description": "MCP server for Unreal Engine 5 with 23 tools for game development automation.",
+  "description": "Automate the Unreal Editor (UE 5.0-5.8): levels, Blueprints, UI, materials, VFX and more.",
   "version": "0.6.0-beta-b",
   "packages": [
     {
@@ -14,58 +14,81 @@
       },
       "environmentVariables": [
         {
-          "name": "LOG_LEVEL",
-          "description": "Logging level: debug, info, warn, error (default: info)",
-          "isRequired": false,
-          "value": "info"
+          "name": "UE_PROJECT_PATH",
+          "description": "Your Unreal project folder or its .uproject file. The server reads the capability token from <project>/Saved/MCP/capability-token and the WebSocket port from the project settings.",
+          "isRequired": true,
+          "format": "filepath",
+          "placeholder": "C:/Users/YourName/Documents/Unreal Projects/MyGame"
         },
         {
-          "name": "UE_PROJECT_PATH",
-          "description": "Absolute path to your Unreal .uproject file",
+          "name": "MCP_AUTOMATION_CAPABILITY_TOKEN",
+          "description": "Capability token to present to the editor. Only needed when the server cannot read the project folder, for example over LAN.",
           "isRequired": false,
-          "value": "C:/Users/YourName/Documents/Unreal Projects/YourProject"
+          "isSecret": true
         },
         {
           "name": "MCP_AUTOMATION_PORT",
-          "description": "Automation bridge WebSocket port (default: 8091)",
+          "description": "Editor WebSocket port. Default: the first Listen Ports entry in the project settings, else 8090.",
           "isRequired": false,
-          "value": "8091"
+          "format": "number",
+          "placeholder": "8090"
         },
         {
           "name": "MCP_AUTOMATION_HOST",
-          "description": "Automation bridge WebSocket host (default: 127.0.0.1). Set to 0.0.0.0 for LAN access (requires MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true)",
+          "description": "Editor host to connect to. A LAN address also needs MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true and Allow Non Loopback in the plugin settings.",
           "isRequired": false,
-          "value": "127.0.0.1"
+          "default": "127.0.0.1"
         },
         {
           "name": "MCP_AUTOMATION_ALLOW_NON_LOOPBACK",
-          "description": "SECURITY: Allow binding to non-loopback addresses (e.g., 0.0.0.0) for LAN access. Only enable if you understand the security implications. (default: false)",
+          "description": "SECURITY: allow a non-loopback MCP_AUTOMATION_HOST. Enable only on a trusted network.",
           "isRequired": false,
-          "value": "false"
+          "format": "boolean",
+          "default": "false"
         },
         {
           "name": "MCP_AUTOMATION_USE_TLS",
-          "description": "Use wss:// for the automation bridge client connection (default: false)",
+          "description": "Connect with wss:// instead of ws://.",
           "isRequired": false,
-          "value": "false"
+          "format": "boolean",
+          "default": "false"
+        },
+        {
+          "name": "MCP_ADDITIONAL_PATH_PREFIXES",
+          "description": "Extra content roots to allow besides /Game, /Engine, /Script, /Temp and /Niagara, comma-separated. Example: /MyPluginContent/",
+          "isRequired": false
         },
         {
           "name": "MCP_CONNECTION_TIMEOUT_MS",
-          "description": "Connection timeout in milliseconds (default: 5000)",
+          "description": "How long to wait for the editor connection, in milliseconds.",
           "isRequired": false,
-          "value": "5000"
+          "format": "number",
+          "default": "5000"
         },
         {
           "name": "MCP_REQUEST_TIMEOUT_MS",
-          "description": "Request timeout in milliseconds (default: 30000)",
+          "description": "Overrides every per-capability request timeout, in milliseconds. Leave unset: each capability gets a budget that fits its cost.",
           "isRequired": false,
-          "value": "30000"
+          "format": "number"
         },
         {
           "name": "MCP_AUTOMATION_MAX_MESSAGES_PER_MINUTE",
-          "description": "Max inbound automation bridge messages per minute before disconnect (default: 600)",
+          "description": "Inbound messages per minute from the editor before the server disconnects.",
           "isRequired": false,
-          "value": "600"
+          "format": "number",
+          "default": "600"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "description": "Log level. Logs go to stderr.",
+          "isRequired": false,
+          "choices": [
+            "debug",
+            "info",
+            "warn",
+            "error"
+          ],
+          "default": "info"
         }
       ]
     }
