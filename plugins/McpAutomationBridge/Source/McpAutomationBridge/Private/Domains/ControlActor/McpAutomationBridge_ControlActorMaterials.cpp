@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -14,6 +15,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                                 FString::Printf(TEXT("actorNames takes at most %d actors"), MaxActors), nullptr);
       return true;
+    }
+    // One undo step for the whole list, as set_visibility's: the actors that resolve and their primitive
+    // components go into one transaction, and each actor's run below (captured) leaves its own to this one.
+    TArray<UObject *> Undoable;
+    for (const TSharedPtr<FJsonValue> &Named : *Names) {
+      if (AActor *Actor = Named.IsValid() ? FindActorByName(Named->AsString()) : nullptr) {
+        McpAddActorUndoSet(Actor, Undoable);
+      }
+    }
+    TUniquePtr<FMcpScopedEditorTransaction> Transaction;
+    if (Undoable.Num() > 0) {
+      Transaction = MakeUnique<FMcpScopedEditorTransaction>(
+          FText::FromString(TEXT("Set Actor Material")), EMcpMutationDurability::EditorStateOnly, Undoable);
     }
     FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
     TArray<TSharedPtr<FJsonValue>> Results;
@@ -51,6 +65,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     Data->SetArrayField(TEXT("results"), Results);
     Data->SetNumberField(TEXT("applied"), Applied);
     Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
+    if (Transaction) {
+      Transaction->DescribeInto(Data);
+    }
     if (Failures.Num() > 0) {
       SendAutomationResponse(Socket, RequestId, false,
                              FString::Printf(TEXT("Material set on %d of %d actors; %s"), Applied,
@@ -143,17 +160,39 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
   bool bAllComponents = false;
   Payload->TryGetBoolField(TEXT("allComponents"), bAllComponents);
 
-  TArray<TSharedPtr<FJsonValue>> AppliedComponents;
+  // The components that take the slot (the first one unless allComponents), settled before anything changes,
+  // so a call that changes nothing opens no undo step.
+  TArray<UPrimitiveComponent *> Takers;
   for (UPrimitiveComponent *Component : TargetComponents) {
-    if (!Component) {
-      continue;
+    if (Component && MaterialSlot < Component->GetNumMaterials()) {
+      Takers.Add(Component);
+      if (!bAllComponents) {
+        break;
+      }
     }
+  }
+  if (Takers.Num() == 0) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("MATERIAL_SLOT_NOT_FOUND"),
+        FString::Printf(TEXT("No primitive components expose material slot %d"), MaterialSlot),
+        nullptr);
+    return true;
+  }
 
+  // One undo step for the assignment, as set_visibility's: the actor and every primitive component, each flagged
+  // RF_Transactional first. A run inside a batch (captured) leaves the step to its caller: the actorNames form
+  // holds one for every actor, and spawn_batch's material was never undoable.
+  TUniquePtr<FMcpScopedEditorTransaction> Transaction;
+  if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
+    TArray<UObject *> Undoable;
+    McpAddActorUndoSet(Found, Undoable);
+    Transaction = MakeUnique<FMcpScopedEditorTransaction>(
+        FText::FromString(TEXT("Set Actor Material")), EMcpMutationDurability::EditorStateOnly, Undoable);
+  }
+
+  TArray<TSharedPtr<FJsonValue>> AppliedComponents;
+  for (UPrimitiveComponent *Component : Takers) {
     const int32 MaterialCount = Component->GetNumMaterials();
-    if (MaterialSlot >= MaterialCount) {
-      continue;
-    }
-
     Component->Modify();
     Component->SetMaterial(MaterialSlot, Material);
     // Contingency (UE 5.7): UDynamicMeshComponent::SetMaterial routes
@@ -176,18 +215,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     ComponentObj->SetStringField(TEXT("path"), Component->GetPathName());
     ComponentObj->SetNumberField(TEXT("materialSlots"), MaterialCount);
     AppliedComponents.Add(MakeShared<FJsonValueObject>(ComponentObj));
-
-    if (!bAllComponents) {
-      break;
-    }
-  }
-
-  if (AppliedComponents.Num() == 0) {
-    SendStandardErrorResponse(
-        this, Socket, RequestId, TEXT("MATERIAL_SLOT_NOT_FOUND"),
-        FString::Printf(TEXT("No primitive components expose material slot %d"), MaterialSlot),
-        nullptr);
-    return true;
   }
 
   Found->MarkComponentsRenderStateDirty();
@@ -200,6 +227,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
   Data->SetStringField(TEXT("resolvedMaterialPath"), ResolvedMaterialPath);
   Data->SetNumberField(TEXT("materialSlot"), MaterialSlot);
   Data->SetArrayField(TEXT("components"), AppliedComponents);
+  if (Transaction) {
+    Transaction->DescribeInto(Data);
+  }
   McpHandlerUtils::AddVerification(Data, Found);
 
   SendAutomationResponse(Socket, RequestId, true, TEXT("Actor material set"), Data);

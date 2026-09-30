@@ -34,7 +34,10 @@ public:
 	/** Stop capturing and hand back what arrived (bCaptured false when nothing did). */
 	FMcpCapturedResponse End(const FString& RequestId);
 
+	/** True between Begin and End of `RequestId`: the handler runs as a step of a bigger call. */
+	bool IsCapturing(const FString& RequestId) const;
+
 private:
-	FCriticalSection Mutex;
+	mutable FCriticalSection Mutex;
 	TMap<FString, FMcpCapturedResponse> Pending;
 };

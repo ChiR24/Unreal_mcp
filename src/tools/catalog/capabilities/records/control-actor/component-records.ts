@@ -13,7 +13,7 @@ const FAMILY_MATERIAL = 'material';
 const MATERIAL_INPUT = {
   inputProps: {
     actorName: P.actorName,
-    actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to give the same material in one call, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it.' },
+    actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to give the same material in one call and one undo step, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it.' },
     materialPath: P.materialPath, componentName: P.componentName, materialSlot: P.materialSlot, materialIndex: P.materialIndex, allComponents: P.allComponents,
   },
   required: ['materialPath'],

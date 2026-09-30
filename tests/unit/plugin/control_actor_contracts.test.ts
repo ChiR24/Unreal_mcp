@@ -458,3 +458,59 @@ describe('the batch forms of spawn_batch, set_transform and set_blueprint_variab
     expect(description).toMatch(/the actors that took a variable come back under affectedActors/u);
   });
 });
+
+// set_material changed components with Modify() and no transaction around it, so nothing it did reached the
+// undo buffer and the reply carried no `undo` block, where set_visibility and set_actor_collision name theirs.
+describe('set_material is one undoable step, single and many, as set_visibility is', () => {
+  const source = (): string => read('McpAutomationBridge_ControlActorMaterials.cpp');
+  const many = (): string => sliceBetween(source(), 'TEXT("actorNames")', 'FString TargetName;');
+  const single = (): string => source().slice(source().indexOf('FString TargetName;'));
+  const registry = readFileSync(
+    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Core', 'Requests', 'McpResponseCaptureRegistry.cpp'),
+    'utf8',
+  );
+  const registryHeader = readFileSync(
+    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Core', 'Requests', 'McpResponseCaptureRegistry.h'),
+    'utf8',
+  );
+
+  it('the single form settles which components take the slot before it opens the transaction, so a no-op leaves no undo step', () => {
+    const body = single();
+
+    expect(body).toMatch(/TArray<UPrimitiveComponent \*> Takers;\s*for \(UPrimitiveComponent \*Component : TargetComponents\) \{\s*if \(Component && MaterialSlot < Component->GetNumMaterials\(\)\) \{\s*Takers\.Add\(Component\);\s*if \(!bAllComponents\) \{\s*break;\s*\}/u);
+    expect(body.indexOf('TEXT("MATERIAL_SLOT_NOT_FOUND")'), 'refused before anything is recorded').toBeLessThan(body.indexOf('MakeUnique<FMcpScopedEditorTransaction>'));
+    expect(body.indexOf('MakeUnique<FMcpScopedEditorTransaction>'), 'opened before the first Modify').toBeLessThan(body.indexOf('Component->Modify();'));
+    expect(body).toContain('for (UPrimitiveComponent *Component : Takers) {');
+    expect(body, 'the loop no longer re-checks what Takers settled').not.toContain('continue;');
+  });
+
+  it('the single form opens a "Set Actor Material" transaction over the actor and its primitive components, and describes it in the reply', () => {
+    const body = single();
+
+    expect(body).toMatch(/if \(!FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*TArray<UObject \*> Undoable;\s*McpAddActorUndoSet\(Found, Undoable\);\s*Transaction = MakeUnique<FMcpScopedEditorTransaction>\(\s*FText::FromString\(TEXT\("Set Actor Material"\)\), EMcpMutationDurability::EditorStateOnly, Undoable\);\s*\}/u);
+    expect(body).toMatch(/Data->SetArrayField\(TEXT\("components"\), AppliedComponents\);\s*if \(Transaction\) \{\s*Transaction->DescribeInto\(Data\);\s*\}\s*McpHandlerUtils::AddVerification\(Data, Found\);/u);
+  });
+
+  it('the actorNames form holds one transaction over every actor that resolves, and describes it on the incomplete reply too', () => {
+    const body = many();
+
+    expect(body).toMatch(/TArray<UObject \*> Undoable;\s*for \(const TSharedPtr<FJsonValue> &Named : \*Names\) \{\s*if \(AActor \*Actor = Named\.IsValid\(\) \? FindActorByName\(Named->AsString\(\)\) : nullptr\) \{\s*McpAddActorUndoSet\(Actor, Undoable\);\s*\}\s*\}\s*TUniquePtr<FMcpScopedEditorTransaction> Transaction;\s*if \(Undoable\.Num\(\) > 0\) \{\s*Transaction = MakeUnique<FMcpScopedEditorTransaction>\(\s*FText::FromString\(TEXT\("Set Actor Material"\)\), EMcpMutationDurability::EditorStateOnly, Undoable\);\s*\}/u);
+    expect(body.indexOf('MakeUnique<FMcpScopedEditorTransaction>'), 'opened before the first actor runs').toBeLessThan(body.indexOf('HandleControlActorSetMaterial(ItemId, One, Socket);'));
+    expect(body).toMatch(/if \(Transaction\) \{\s*Transaction->DescribeInto\(Data\);\s*\}\s*if \(Failures\.Num\(\) > 0\) \{/u);
+  });
+
+  it('a run inside a batch leaves the step to its caller: the list runs every actor captured, and so does spawn_batch\'s material', () => {
+    expect(many()).toMatch(/Capture\.Begin\(ItemId\);\s*HandleControlActorSetMaterial\(ItemId, One, Socket\);/u);
+    expect(read('McpAutomationBridge_ControlActorSpawnBatch.cpp')).toMatch(/Capture\.Begin\(MaterialId\);\s*HandleControlActorSetMaterial\(MaterialId, MaterialPayload, Socket\);/u);
+    expect(registryHeader).toContain('bool IsCapturing(const FString& RequestId) const;');
+    expect(registryHeader).toContain('mutable FCriticalSection Mutex;');
+    expect(registry).toMatch(/bool FMcpResponseCaptureRegistry::IsCapturing\(const FString& RequestId\) const\s*\{\s*FScopeLock Lock\(&Mutex\);\s*return Pending\.Contains\(RequestId\);\s*\}/u);
+  });
+
+  it('the record says the list is one undo step', () => {
+    const properties = capabilityIndex().byId.get('control_actor.set_material')?.schemas.input.properties;
+    const actorNames = isRecord(properties) ? properties.actorNames : undefined;
+
+    expect(isRecord(actorNames) ? actorNames.description : '').toMatch(/one call and one undo step/u);
+  });
+});

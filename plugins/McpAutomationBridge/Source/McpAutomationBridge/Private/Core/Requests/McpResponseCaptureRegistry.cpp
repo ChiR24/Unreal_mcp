@@ -40,3 +40,9 @@ FMcpCapturedResponse FMcpResponseCaptureRegistry::End(const FString& RequestId)
 	Pending.RemoveAndCopyValue(RequestId, Captured);
 	return Captured;
 }
+
+bool FMcpResponseCaptureRegistry::IsCapturing(const FString& RequestId) const
+{
+	FScopeLock Lock(&Mutex);
+	return Pending.Contains(RequestId);
+}

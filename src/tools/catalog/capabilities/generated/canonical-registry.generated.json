@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "326f57db3ee85056",
+  "catalogRevision": "43792b36e4de73c4",
   "recordCount": 389,
   "records": [
     {
@@ -33113,7 +33113,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to give the same material in one call, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it."
+              "description": "Several actors to give the same material in one call and one undo step, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it."
             },
             "materialPath": {
               "type": "string",
@@ -33211,8 +33211,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "46eaab0f8c20592be92a24ec00131860aa87ab4af7e45204c7889d4eab35d7ea",
-        "content": "a63acf9c4b660beb021179c0f33660bbfe18be6b5dc243c7c618431c6822ec71"
+        "schema": "5adaedcc1bd8e3abf24a884c5d55ddd3645e155ae4ec95e5e149e16328e679b8",
+        "content": "6d132fe2ca7b9f77413cb263b112d1bd9263e8f22a55779f869196f43b3aee30"
       }
     },
     {
