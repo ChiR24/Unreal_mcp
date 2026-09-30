@@ -48,6 +48,8 @@ inline FString ExtractAssetName(const FString& Path)
 MCPAUTOMATIONBRIDGE_API UWorld* GetEditorWorld();
 // Label, name or path (case-insensitive) in the PIE world, else the editor world.
 MCPAUTOMATIONBRIDGE_API AActor* FindActorByName(const FString& ActorName);
+// A mesh component's staticMesh path and the material drawn in each slot (materials).
+MCPAUTOMATIONBRIDGE_API void AddMeshAssetFields(const UActorComponent* Component, const TSharedPtr<FJsonObject>& Entry);
 MCPAUTOMATIONBRIDGE_API UObject* ResolveObjectFromPath(
     const FString& ObjectPath,
     FString* OutResolvedPath = nullptr);

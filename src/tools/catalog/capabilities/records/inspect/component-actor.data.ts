@@ -24,7 +24,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'get_components', actorName: 'PlayerStart_1' },
     exampleOutput: { success: true, message: 'Components listed', components: [] },
     outputProps: {
-      components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials.' },
+      components: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Component info objects: name, class, parent, source. A mesh component also carries staticMesh and materials (the material drawn in each slot, overrides included); a Blueprint component also carries its relative location/rotation/scale and visible.' },
       missingComponents: { type: 'array', items: { type: 'string' }, description: 'componentNames that matched no component.' },
     },
   }),

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a9090e75b9da4abc",
+  "catalogRevision": "27d3a982ec384cb9",
   "recordCount": 389,
   "records": [
     {
@@ -31357,6 +31357,17 @@
                     "minItems": 3,
                     "maxItems": 3,
                     "description": "Relative scale [x, y, z]."
+                  },
+                  "staticMesh": {
+                    "type": "string",
+                    "description": "Static mesh asset path (static mesh components)."
+                  },
+                  "materials": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Material drawn in each slot, overrides included (mesh components)."
                   }
                 },
                 "additionalProperties": true,
@@ -31455,8 +31466,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a1655a4ae47f0a83ddac9c500754374fa0cb63fc2fdb4112da4b824a89c641cc",
-        "content": "e433a850513ef84b68798c4cbb86b43a925404efe21fa01246d6e85f8e199944"
+        "schema": "b9dc812af382ae100702b254bc4aa31069b75e57dda588b9c1e751e149d54ade",
+        "content": "62936aa66a34e7c6dc697f495fa305d2b369c1b63cfcffb88929e9eb71879386"
       }
     },
     {
@@ -39325,7 +39336,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials."
+              "description": "Component info objects: name, class, parent, source. A mesh component also carries staticMesh and materials (the material drawn in each slot, overrides included); a Blueprint component also carries its relative location/rotation/scale and visible."
             },
             "missingComponents": {
               "type": "array",
@@ -39382,8 +39393,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8f4b6c31fb423ecf552a54baa76a38791f847a484539318736c6334b352cecf2",
-        "content": "2e62b87e73ad7bf5ddcd3a188a432a17f3e61b00f6ab8ed36b2c4317f97a7b57"
+        "schema": "c584f5a8cd8e7a04bf3631fd68b41861df9210cc75f1f935ec77c540186ddf88",
+        "content": "689ea11d2f22b7d267fdf3d1b8d3e8954d280d93beff8987ad4fe44d690eaa3f"
       }
     },
     {

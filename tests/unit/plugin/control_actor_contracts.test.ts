@@ -256,3 +256,11 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
     }
   });
 });
+
+// A world actor's mesh and materials took an inspect_object call per actor to find;
+// only a Blueprint's own components listed them.
+describe('get_components rows name the mesh and materials a component draws', () => {
+  it('world rows add the shared mesh asset fields', () => {
+    expect(read('McpAutomationBridge_ControlActorComponentDetails.cpp')).toContain('McpHandlerUtils::AddMeshAssetFields(Component, Entry);');
+  });
+});

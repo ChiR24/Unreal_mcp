@@ -9,6 +9,9 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Components/ActorComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInterface.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/AssetRegistryHelpers.h"
 #include "EditorAssetLibrary.h"
@@ -31,5 +34,22 @@ AActor* FindActorByName(const FString& ActorName)
 {
     UWorld* World = GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
     return FindActorByNameInWorldForMcp(World, ActorName, true);
+}
+
+void AddMeshAssetFields(const UActorComponent* Component, const TSharedPtr<FJsonObject>& Entry)
+{
+    if (const UStaticMeshComponent* Mesh = Cast<UStaticMeshComponent>(Component))
+    {
+        Entry->SetStringField(TEXT("staticMesh"), Mesh->GetStaticMesh() ? Mesh->GetStaticMesh()->GetPathName() : TEXT(""));
+    }
+    if (const UMeshComponent* MeshComponent = Cast<UMeshComponent>(Component))
+    {
+        TArray<TSharedPtr<FJsonValue>> Materials;
+        for (UMaterialInterface* Material : MeshComponent->GetMaterials())
+        {
+            Materials.Add(MakeShared<FJsonValueString>(Material ? Material->GetPathName() : TEXT("")));
+        }
+        Entry->SetArrayField(TEXT("materials"), Materials);
+    }
 }
 }

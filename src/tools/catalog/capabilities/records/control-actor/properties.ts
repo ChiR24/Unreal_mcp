@@ -84,6 +84,8 @@ export const P = {
         relativeLocation: vec3('Relative location [x, y, z].'),
         relativeRotation: vec3('Relative rotation [pitch, yaw, roll].'),
         relativeScale: vec3('Relative scale [x, y, z].'),
+        staticMesh: str('Static mesh asset path (static mesh components).'),
+        materials: { type: 'array', items: { type: 'string' }, description: 'Material drawn in each slot, overrides included (mesh components).' },
       },
       additionalProperties: true,
       'x-unreal-reflection-boundary': true,

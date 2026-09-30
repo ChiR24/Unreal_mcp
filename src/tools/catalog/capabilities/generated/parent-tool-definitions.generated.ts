@@ -4168,6 +4168,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "minItems": 3,
                 "maxItems": 3,
                 "description": "Relative scale [x, y, z]."
+              },
+              "staticMesh": {
+                "type": "string",
+                "description": "Static mesh asset path (static mesh components)."
+              },
+              "materials": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Material drawn in each slot, overrides included (mesh components)."
               }
             },
             "additionalProperties": true,
@@ -5704,7 +5715,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Component info objects: name, class, parent, source. Blueprint components also carry their relative location/rotation/scale, visible, staticMesh and materials."
+              "description": "Component info objects: name, class, parent, source. A mesh component also carries staticMesh and materials (the material drawn in each slot, overrides included); a Blueprint component also carries its relative location/rotation/scale and visible."
             },
             {
               "type": "array",

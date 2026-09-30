@@ -36,6 +36,8 @@ void McpAppendComponentDetailFields(UActorComponent *Component,
   } else {
     Entry->SetBoolField(TEXT("isSceneComponent"), false);
   }
+  // A world actor's mesh and materials took an inspect_object call per actor to find.
+  McpHandlerUtils::AddMeshAssetFields(Component, Entry);
 
   // Bounded property census: name plus the shared reflection type name for at
   // most ten non-deprecated instance properties. Bounded so a component with

@@ -44,19 +44,7 @@ void McpDescribeComponentTemplate(const UActorComponent *Template, const TShared
         Entry->SetArrayField(TEXT("scale"), McpTriple(S.X, S.Y, S.Z));
         Entry->SetBoolField(TEXT("visible"), Scene->GetVisibleFlag());
     }
-    if (const UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(Template))
-    {
-        Entry->SetStringField(TEXT("staticMesh"), Mesh->GetStaticMesh() ? Mesh->GetStaticMesh()->GetPathName() : TEXT(""));
-    }
-    if (const UMeshComponent *MeshComponent = Cast<UMeshComponent>(Template))
-    {
-        TArray<TSharedPtr<FJsonValue>> Materials;
-        for (UMaterialInterface *Material : MeshComponent->GetMaterials())
-        {
-            Materials.Add(MakeShared<FJsonValueString>(Material ? Material->GetPathName() : TEXT("")));
-        }
-        Entry->SetArrayField(TEXT("materials"), Materials);
-    }
+    McpHandlerUtils::AddMeshAssetFields(Template, Entry);
 }
 
 TSharedPtr<FJsonObject> McpMakeComponentEntry(const FString &Name, const UClass *Class,
