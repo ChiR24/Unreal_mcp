@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d4006f314fde05a9",
+  "catalogRevision": "18dd3b8c75b729fa",
   "recordCount": 389,
   "records": [
     {
@@ -16119,7 +16119,7 @@
         "whenNotToUse": [
           "edit=create: A non-widget Blueprint is needed (use create or create_blueprint).",
           "edit=set_parent_class: The Widget Blueprint already has the correct parent.",
-          "edit=rename_widget: The Widget Blueprint asset itself should be renamed (use manage_asset).",
+          "edit=rename_widget: A Blueprint or Widget Blueprint asset itself should be renamed (use asset.rename).",
           "edit=reparent_widget: The widget is being added for the first time (use the matching add action)."
         ]
       },
@@ -16333,7 +16333,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3b3d25e99b48c495bc7ffb05bcefe4597f20cdee1d833c5dbf01b97fa2e21157",
-        "content": "84cd6efbc565db71b42e645fc85a37afd87e24d2391947687c93a97a2eea2a88"
+        "content": "afcfcd4f273675fcf9d4a20cc5310521d3f7f8011ac7b469e0c4d93ad3cc7504"
       }
     },
     {
@@ -16615,7 +16615,8 @@
           "Every Blueprint with a kind of component (a TextRender label, a light, an audio source) must be found in one call: path plus componentClass."
         ],
         "whenNotToUse": [
-          "A single component property is needed (use get or set_scs_property)."
+          "A single component property is needed (use get or set_scs_property).",
+          "The assets that use a Blueprint are wanted (use asset.inspect_asset lookup=dependencies with referencers true)."
         ]
       },
       "schemas": {
@@ -16781,7 +16782,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "957dfa5820eb56db1439248cd8baefd3985a3e8a712c9678388db328466f7803",
-        "content": "962686c5820230234dd0bf81bfad0c8c3f4c91a9a17d8addede00af9010db416"
+        "content": "f0db85bd721fe531afb91bcf92dc5e7d7583dff827954aa80e060ad1cf8a4fe0"
       }
     },
     {
@@ -68599,7 +68600,9 @@
           "setting=respawn: Use it to set the game mode's minimum respawn delay (AGameMode::MinRespawnDelay); a GameModeBase child is refused with NOT_SUPPORTED.",
           "setting=spectating: Use it to set the GameMode spectator pawn class (SpectatorClass)."
         ],
-        "whenNotToUse": []
+        "whenNotToUse": [
+          "setting=default_pawn_class|player_controller_class|game_state_class|player_state_class|hud_class: A Blueprint's own class default values (its CDO) must be set (use blueprint.edit_variable edit=set_default)."
+        ]
       },
       "schemas": {
         "input": {
@@ -68812,7 +68815,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ab349f5200da8ed5b92947cc37e4fd2892821f5964930501cf7057dfc352bc0d",
-        "content": "4920cd900119417ab8146424f28e5a2d80c194d8470a13fefc5243307081bcc1"
+        "content": "0288442c91ade769c5f99ab1c07de62d9ed4460f94203d31b9b81f92feb671ef"
       }
     },
     {

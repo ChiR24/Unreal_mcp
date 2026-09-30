@@ -110,7 +110,10 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
       'An inherited component must be named as an attach parent for add_scs_component.',
       'Every Blueprint with a kind of component (a TextRender label, a light, an audio source) must be found in one call: path plus componentClass.',
     ],
-    whenNotToUse: ['A single component property is needed (use get or set_scs_property).'],
+    whenNotToUse: [
+      'A single component property is needed (use get or set_scs_property).',
+      'The assets that use a Blueprint are wanted (use asset.inspect_asset lookup=dependencies with referencers true).',
+    ],
     inputProps: {
       blueprintPath: P.blueprintPath,
       path: { type: 'string', description: 'A folder (e.g. /Game/Blueprints) to scan instead of one Blueprint: each Blueprint under it, subfolders included, that has a component matching componentClass, its own or inherited, is listed under blueprints (at most 300 Blueprints are opened; truncated says when more exist).' },

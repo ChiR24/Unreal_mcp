@@ -94,6 +94,11 @@ export function withTopics(record: CapabilityRecordSource, topics: readonly stri
   return { ...record, discovery: { ...record.discovery, topics: [...record.discovery.topics, ...topics] } };
 }
 
+/** Add when-not-to-use lines: a redirect for the request that lands on this record by mistake. */
+export function withWhenNotToUse(record: CapabilityRecordSource, lines: readonly string[]): CapabilityRecordSource {
+  return { ...record, discovery: { ...record.discovery, whenNotToUse: [...record.discovery.whenNotToUse, ...lines] } };
+}
+
 /**
  * Replace or add input properties the name-keyed pins cannot express: a field
  * whose type depends on its target (a MetaSound literal), or one no other

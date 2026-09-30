@@ -1,5 +1,5 @@
 import type { CapabilityRecordSource, JsonObject } from '../../model.js';
-import { utilityRecord, withInputProps, withTopics } from '../utility/utility-record-builders.js';
+import { utilityRecord, withInputProps, withTopics, withWhenNotToUse } from '../utility/utility-record-builders.js';
 
 const T = 'manage_networking' as const;
 // Every Game Framework action authors a Blueprint asset, and an unsaved edit is lost on the next
@@ -21,10 +21,11 @@ const create = (action: string, label: string, extra: readonly string[] = []): C
 // Setting a class changes only this game mode. makeDefault opts in to making it the project default
 // (DefaultEngine.ini), and the reply always says which game mode the open level runs in play.
 const EFFECTIVE = ' Pass makeDefault: true to also make this game mode the project default; the reply says whether the open level runs it (effectiveInOpenLevel).';
-const setClass = (action: string, label: string, field: string, alias: readonly string[] = []): CapabilityRecordSource => f(
+// "set class defaults" (a Blueprint's CDO values) ranked these first through their set/default/class names.
+const setClass = (action: string, label: string, field: string, alias: readonly string[] = []): CapabilityRecordSource => withWhenNotToUse(f(
   action, `Set a GameMode ${label} class.${EFFECTIVE}`, ['gameModeBlueprint', 'blueprintPath', field, ...alias, 'makeDefault', 'save'], ['gameModeBlueprint', field],
   ['madeDefault', 'effectiveInOpenLevel', 'openLevelGameMode'],
-);
+), ['A Blueprint\'s own class default values (its CDO) must be set (use blueprint.edit_variable edit=set_default).']);
 
 export const NETWORKING_FRAMEWORK_RECORDS: readonly CapabilityRecordSource[] = [
   create('create_game_mode', 'GameMode', ['defaultPawnClass', 'playerControllerClass', 'gameStateClass', 'playerStateClass', 'hudClass']),

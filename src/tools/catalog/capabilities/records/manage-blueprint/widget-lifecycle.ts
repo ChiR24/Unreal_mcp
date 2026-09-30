@@ -119,7 +119,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     summary: 'Rename a widget inside the widget tree of a Widget Blueprint.',
     whenToUse: ['A widget name must change so bindings and lookups can address it.'],
-    whenNotToUse: ['The Widget Blueprint asset itself should be renamed (use manage_asset).'],
+    whenNotToUse: ['A Blueprint or Widget Blueprint asset itself should be renamed (use asset.rename).'],
     inputProps: { widgetPath: P.widgetPath, slotName: P.slotName, newName: P.newName },
     required: ['widgetPath', 'slotName', 'newName'],
     outputProps: { widgetPath: P.widgetPath, oldName: P.oldName, newName: P.newName },
