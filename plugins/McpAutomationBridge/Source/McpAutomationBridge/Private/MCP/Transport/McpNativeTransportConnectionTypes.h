@@ -88,6 +88,8 @@ struct FSSEConnection
 	// The dispatched arguments, so a refusal can hand back a call built from them
 	// (ACTOR_NOT_FOUND names the actorName that missed).
 	TSharedPtr<FJsonObject> Arguments;
+	// Warnings the gateway found before dispatch, added to the receipt.
+	TArray<FString> GatewayWarnings;
 };
 
 /** Persistent SSE notification stream (GET /mcp). */

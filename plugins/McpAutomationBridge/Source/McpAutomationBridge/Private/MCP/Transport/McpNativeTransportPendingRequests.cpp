@@ -112,6 +112,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		Context.RequestId = Conn->RequestId;
 		Context.IdempotencyId = Conn->IdempotencyId;
 		Context.StartTimeSeconds = Conn->RequestStartSeconds;
+		Context.GatewayWarnings = Conn->GatewayWarnings;
 		ReportedResult = McpBuildGatewayExecuteReceipt(
 			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
 		AddActorNotFoundGuidance(ReportedResult, Conn->Arguments);

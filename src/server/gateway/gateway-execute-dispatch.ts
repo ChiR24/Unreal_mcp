@@ -194,7 +194,8 @@ export async function dispatchAndValidate(
   options: Record<string, unknown> | undefined,
   context: GatewayContext,
   receiptContext: GatewayReceiptContext,
-  controls: GatewayControls
+  controls: GatewayControls,
+  unread: readonly string[] = []
 ): Promise<Record<string, unknown>> {
   const record = target.record;
   // A folded family dispatches the action the caller named, or maps the
@@ -289,6 +290,6 @@ export async function dispatchAndValidate(
     resolvedFromAlias: target.resolvedFromAlias,
     migratedFrom: target.migratedFrom,
     options,
-    warnings: pieWorldWarnings(record, result)
+    warnings: [...pieWorldWarnings(record, result), ...unread]
   }, receiptContext);
 }

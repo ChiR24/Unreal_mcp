@@ -81,6 +81,29 @@ export function inferSelector(
 }
 
 /**
+ * The parameters a call sent that only other variants of its folded family read. The family
+ * declares them, so the call is accepted, and the variant that ran ignored them without a word:
+ * inspect_graph info=node with pinName answered every pin. The receipt names each one.
+ * `sent` is the caller's own parameter names (before declared defaults fill any in).
+ */
+export function unreadVariantParams(
+  record: CapabilityRecord,
+  sent: readonly string[],
+  params: Record<string, unknown>
+): readonly string[] {
+  const dispatchBy = record.routing.dispatchBy;
+  const selected = dispatchBy === undefined ? undefined : params[dispatchBy.param];
+  if (dispatchBy?.declaredBy === undefined || typeof selected !== 'string') return [];
+  const declaredBy = dispatchBy.declaredBy;
+  return sent.flatMap((name) => {
+    const owners = Object.hasOwn(declaredBy, name) ? declaredBy[name] : undefined;
+    return owners === undefined || owners.includes(selected)
+      ? []
+      : [`${name} is read only when ${dispatchBy.param} is ${owners.join(' or ')}; this ${dispatchBy.param}=${selected} call did not use it.`];
+  });
+}
+
+/**
  * The bridge action to dispatch once params are validated. An old name
  * dispatches itself, so a folded family never changes what the handlers see;
  * the primary operation maps its selector through routing.dispatchBy. The

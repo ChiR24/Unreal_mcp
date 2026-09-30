@@ -13,7 +13,7 @@ import { buildNextCall, closestMatches, MAX_SUGGESTIONS } from './gateway-guidan
 import type { ExecuteTarget } from './gateway-execute-resolve.js';
 import { capabilityIndex } from './gateway-capability-index.js';
 import { primaryLegacyPair } from './gateway-execute-lookup.js';
-import { applyFoldedPins, inferSelector, requestedAction } from './gateway-dispatch-by.js';
+import { applyFoldedPins, inferSelector, requestedAction, unreadVariantParams } from './gateway-dispatch-by.js';
 import { applyDeclaredDefaults, coerceVectorShapes, validateAgainstCapabilitySchema, VIOLATION_GATEWAY_CODES } from './gateway-schema-validate.js';
 import { findControlKeyInParams, validateExecutionOptions } from './gateway-option-validate.js';
 import type { ResolvedFailure } from './gateway-execute-envelope.js';
@@ -67,6 +67,8 @@ export type StaticCheck =
     readonly params: Record<string, unknown>;
     readonly expectedRevisions?: ExpectedRevisions;
     readonly timeoutMs?: number;
+    /** Receipt warnings: parameters only other variants of the family read. */
+    readonly unread: readonly string[];
   };
 
 export function checkStaticRequest(target: ExecuteTarget, args: Record<string, unknown>): StaticCheck {
@@ -178,6 +180,7 @@ export function checkStaticRequest(target: ExecuteTarget, args: Record<string, u
   return inputFailure === undefined
     ? {
       params: withDefaults,
+      unread: unreadVariantParams(record, Object.keys(pins.params), withDefaults),
       ...(expectedRevisions === undefined ? {} : { expectedRevisions }),
       ...(timeoutMs === undefined ? {} : { timeoutMs })
     }

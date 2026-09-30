@@ -142,7 +142,7 @@ export async function executeGatewayCall(
       consent: consentGrant,
       expectedRevisions: checked.expectedRevisions,
       timeoutMs: checked.timeoutMs
-    });
+    }, checked.unread);
 
   // Dedup sits here, after every refusal stage, so an unauthorized or invalid
   // request can never occupy a slot or be replayed as a recorded success.

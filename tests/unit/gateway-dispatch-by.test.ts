@@ -359,6 +359,40 @@ describe('folded family: an omitted selector follows the parameters', () => {
   });
 });
 
+// inspect_graph info=node with pinName answered every pin: the family declares pinName (for info=pins),
+// so the call was accepted, and the variant that ran ignored it without a word.
+describe('folded family: a parameter only other variants read is named in the receipt', () => {
+  beforeEach(() => {
+    dispatched.length = 0;
+  });
+
+  const warningsOf = (result: Record<string, unknown>): readonly string[] => {
+    const receipt = result.receipt as { warnings?: readonly string[] } | undefined;
+    return receipt?.warnings ?? [];
+  };
+
+  it('warns about each sent parameter the variant that ran does not read', async () => {
+    const result = await execute({
+      tool: 'manage_blueprint',
+      action: 'inspect_graph',
+      params: { info: 'node', blueprintPath: '/Game/BP_Test', graphName: 'EventGraph', nodeId: 'A1', pinName: 'then' }
+    });
+    expect(result.errorCode).toBeUndefined();
+    expect(warningsOf(result)).toContain('pinName is read only when info is pins; this info=node call did not use it.');
+  });
+
+  it('says nothing for parameters the variant reads, or for a default the caller never sent', async () => {
+    const pins = await execute({
+      tool: 'manage_blueprint',
+      action: 'inspect_graph',
+      params: { info: 'pins', blueprintPath: '/Game/BP_Test', graphName: 'EventGraph', nodeId: 'A1', pinName: 'then' }
+    });
+    expect(warningsOf(pins).filter((warning) => warning.includes('did not use it'))).toEqual([]);
+    const exists = await execute({ tool: 'manage_asset', action: 'query_asset', params: { lookup: 'exists', assetPath: '/Game/X' } });
+    expect(warningsOf(exists).filter((warning) => warning.includes('did not use it'))).toEqual([]);
+  });
+});
+
 describe('a folded family still refuses a bare call no member accepted', () => {
   beforeEach(() => {
     dispatched.length = 0;

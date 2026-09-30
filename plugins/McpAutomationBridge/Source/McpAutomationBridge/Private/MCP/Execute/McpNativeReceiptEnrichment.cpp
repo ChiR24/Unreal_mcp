@@ -196,6 +196,10 @@ TSharedPtr<FJsonObject> McpBuildCanonicalReceipt(
 		TArray<FString> WarningTexts;
 		McpCollectResultWarnings(RawResult, WarningTexts);
 		McpCollectResultWarnings(Data, WarningTexts);
+		for (const FString& Warning : Context.GatewayWarnings)
+		{
+			WarningTexts.AddUnique(Warning);
+		}
 		if (bMutates)
 		{
 			McpAddPieWorldWarning(CapabilityId, RawResult, WarningTexts);

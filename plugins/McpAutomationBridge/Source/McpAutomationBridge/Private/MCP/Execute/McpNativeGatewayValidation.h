@@ -36,6 +36,9 @@ struct FMcpGatewayExecutePlan
 	 * transport-thread comparison would be stale by dispatch time.
 	 */
 	TMap<EMcpStateKind, int64> ExpectedRevisions;
+
+	/** Parameters the call sent that only other variants of its folded family read. */
+	TArray<FString> Warnings;
 };
 
 /**

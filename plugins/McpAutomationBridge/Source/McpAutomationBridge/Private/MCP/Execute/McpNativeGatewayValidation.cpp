@@ -34,6 +34,33 @@ bool IsCatalogRevisionDigest(const FString& Value)
 	}
 	return true;
 }
+
+// The parameters a call sent (the caller's names, before defaults) that only other variants of its
+// folded family read. The family declares them, so the call is accepted, and the variant that ran ignored
+// them without a word: inspect_graph info=node with pinName answered every pin. One receipt warning each
+// (mirror of unreadVariantParams in gateway-dispatch-by.ts).
+TArray<FString> McpUnreadVariantParams(
+	const FMcpCapabilityRecord& Record, const TArray<FString>& Sent, const TSharedPtr<FJsonObject>& Params)
+{
+	TArray<FString> Out;
+	FString Selected;
+	if (Record.DispatchByDeclaredBy.Num() == 0 || !Params.IsValid() ||
+		!Params->TryGetStringField(Record.DispatchBySelector, Selected))
+	{
+		return Out;
+	}
+	for (const FString& Name : Sent)
+	{
+		const TArray<FString>* Owners = Record.DispatchByDeclaredBy.Find(Name);
+		if (Owners && !Owners->Contains(Selected))
+		{
+			Out.Add(FString::Printf(TEXT("%s is read only when %s is %s; this %s=%s call did not use it."),
+				*Name, *Record.DispatchBySelector, *FString::Join(*Owners, TEXT(" or ")),
+				*Record.DispatchBySelector, *Selected));
+		}
+	}
+	return Out;
+}
 }
 
 TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
@@ -112,8 +139,17 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	}
 	// Before defaults fill the selector in (mirror of inferSelector).
 	McpInferFoldSelector(*Request.Record, Request.Params);
+	TArray<FString> SentNames;
+	if (Request.Params.IsValid())
+	{
+		for (const auto& Pair : Request.Params->Values)
+		{
+			SentNames.Add(FString(*Pair.Key));
+		}
+	}
 	TSharedPtr<FJsonObject> WithDefaults = McpCoerceCanonicalVectorShapes(
 		McpApplyCanonicalSchemaDefaults(Request.Params, InputSchema), InputSchema);
+	OutPlan.Warnings = McpUnreadVariantParams(*Request.Record, SentNames, WithDefaults);
 
 	TSharedPtr<FJsonObject> ToValidate = MakeShared<FJsonObject>();
 	ToValidate->Values = WithDefaults->Values;

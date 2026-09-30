@@ -74,6 +74,9 @@ struct FMcpReceiptContext
 
 	/** Live-state pins, carried to the game-thread gate that enforces them. */
 	TMap<EMcpStateKind, int64> ExpectedRevisions;
+
+	/** Receipt warnings the gateway found before dispatch (McpUnreadVariantParams). */
+	TArray<FString> GatewayWarnings;
 };
 
 FMcpSemanticError McpValidationError(const FString& GatewayCode, const FString& Message, const FString& Pointer = FString());

@@ -62,6 +62,7 @@ void FMcpNativeTransport::HandleGatewayExecute(
 		return;
 	}
 	Context.ExpectedRevisions = Plan.ExpectedRevisions;
+	Context.GatewayWarnings = Plan.Warnings;
 
 	// The same pre-queue security gate the WebSocket bridge applies, so both
 	// transports refuse identically, with the identical typed error, before any
