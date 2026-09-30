@@ -203,6 +203,16 @@ describe('editor-reported content roots at the semantic path boundary', () => {
     expect(AssetPathSchema.safeParse('/ShooterCore/X').success).toBe(false);
   });
 
+  it('matches asset-path roots case-insensitively, like sanitizePath, and keeps the root boundary', () => {
+    expect(parseAssetPath('/game/Foo')).toBe('/game/Foo');
+
+    setEditorContentRoots(['/Game', '/ShooterCore']);
+    expect(parseAssetPath('/shootercore/X')).toBe('/shootercore/X');
+    expect(AssetPathSchema.safeParse('/SHOOTERCORE').success).toBe(true);
+    expect(() => parseAssetPath('/shootercorex/X')).toThrow(SemanticBoundaryError);
+    expect(() => parseAssetPath('/gamex/Foo')).toThrow(SemanticBoundaryError);
+  });
+
   it('names the configured roots, not every reported mount, in INVALID_PATH_ROOT', () => {
     setEditorContentRoots(['/ShooterCore']);
     expect(() => parseAssetPath('/Nope/X')).toThrow(

@@ -1,6 +1,11 @@
 import { z } from 'zod';
 
-import { getConfiguredContentRoots, getContentRoots, sanitizePath } from '../../../../utils/paths/path-security.js';
+import {
+  getConfiguredContentRoots,
+  getContentRoots,
+  isUnderAllowedContentRoot,
+  sanitizePath
+} from '../../../../utils/paths/path-security.js';
 import { SemanticBoundaryError } from './errors.js';
 
 // Wire-boundary Unreal path types. These are deliberately distinct from the
@@ -70,15 +75,13 @@ function pathSuffixStart(normalized: string): number {
 // Asset-path root/traversal gate: throws a typed error (instead of a generic
 // one) for an invalid root or directory traversal before sanitizePath is reached.
 // The roots are the shared allowlist: the static roots, MCP_ADDITIONAL_PATH_PREFIXES
-// and the mounts the connected editor reports.
+// and the mounts the connected editor reports, matched case-insensitively like
+// sanitizePath (UE mount roots are case-insensitive).
 function assertValidRootAndNoTraversal(normalized: string): void {
   assertNoTraversal(normalized);
   const end = pathSuffixStart(normalized);
   const prefix = end === Infinity ? normalized : normalized.slice(0, end);
-  const isAllowed = getContentRoots().some(
-    (root) => prefix === root || prefix.startsWith(`${root}/`)
-  );
-  if (!isAllowed) {
+  if (!isUnderAllowedContentRoot(prefix)) {
     throw new SemanticBoundaryError({
       kind: 'path',
       code: 'INVALID_PATH_ROOT',
