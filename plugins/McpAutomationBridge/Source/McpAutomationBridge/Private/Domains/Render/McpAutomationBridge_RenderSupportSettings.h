@@ -50,12 +50,15 @@ inline bool ApplyJsonSettings(
     {
         return true;
     }
+    const int32 AppliedBefore = OutApplied.Num();
+    TArray<FString> Unknown;
     for (const TPair<FString, TSharedPtr<FJsonValue>> Pair : Settings->Values)
     {
         FProperty* Property = StructType->FindPropertyByName(FName(*Pair.Key));
         if (!Property)
         {
             OutUnsupported.Add(Pair.Key);
+            Unknown.Add(Pair.Key);
             continue;
         }
         if (!ApplyJsonValueToProperty(Target, Property, Pair.Value, OutError))
@@ -73,6 +76,24 @@ inline bool ApplyJsonSettings(
             }
         }
         OutApplied.Add(Pair.Key);
+    }
+    // Every key unknown used to answer success with them all under unsupportedSettings, so
+    // {"saturation": 1.1} read as applied. Refuse, and name the fields the keys come close to.
+    if (Unknown.Num() > 0 && OutApplied.Num() == AppliedBefore)
+    {
+        TArray<FString> Near;
+        for (TFieldIterator<FProperty> It(StructType); It && Near.Num() < 8; ++It)
+        {
+            if (Unknown.ContainsByPredicate([&It](const FString& Key) { return It->GetName().Contains(Key); }))
+            {
+                Near.Add(It->GetName());
+            }
+        }
+        OutError = FString::Printf(
+            TEXT("No settings key is a %s field: %s. Keys are the engine field names%s."),
+            *StructType->GetName(), *FString::Join(Unknown, TEXT(", ")),
+            *(Near.Num() > 0 ? TEXT(", e.g. ") + FString::Join(Near, TEXT(", ")) : FString()));
+        return false;
     }
     return true;
 }

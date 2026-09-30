@@ -24,11 +24,11 @@ const BLEND = { blendWeight: P.blendWeight, infiniteUnbound: P.infiniteUnbound }
 export const RENDER_SCREEN_RECORDS: readonly CapabilityRecordSource[] = [
   R('set_exposure_compensation', 'Set exposure compensation value.', { compensationValue: P.compensationValue, ...BLEND }),
   R('set_exposure_min_max', 'Set exposure min and max brightness; a bound left out keeps its value.', { minBrightness: P.minBrightness, maxBrightness: P.maxBrightness, ...BLEND }),
-  R('configure_ssao', 'Configure screen-space ambient occlusion.', { settings: P.settings, amount: { ...P.amount, description: 'Ambient occlusion intensity; written after settings.' }, ...BLEND }),
-  R('configure_gtao', 'Configure ground-truth ambient occlusion.', { settings: P.settings, ...BLEND }),
+  R('configure_ssao', 'Configure screen-space ambient occlusion.', { settings: P.ppSettings, amount: { ...P.amount, description: 'Ambient occlusion intensity; written after settings.' }, ...BLEND }),
+  R('configure_gtao', 'Configure ground-truth ambient occlusion.', { settings: P.ppSettings, ...BLEND }),
   R('configure_vignette', 'Configure vignette settings.', { amount: P.amount, ...BLEND }),
-  R('configure_chromatic_aberration', 'Configure chromatic aberration.', { settings: P.settings, amount: { ...P.amount, description: 'Scene fringe intensity; written after settings.' }, ...BLEND }),
-  R('configure_grain', 'Configure film grain settings.', { settings: P.settings, amount: { ...P.amount, description: 'Film grain intensity; written after settings.' }, ...BLEND }),
+  R('configure_chromatic_aberration', 'Configure chromatic aberration.', { settings: P.ppSettings, amount: { ...P.amount, description: 'Scene fringe intensity; written after settings.' }, ...BLEND }),
+  R('configure_grain', 'Configure film grain settings.', { settings: P.ppSettings, amount: { ...P.amount, description: 'Film grain intensity; written after settings.' }, ...BLEND }),
   buildRecord({
     id: `${ID}configure_screen_percentage`, action: 'configure_screen_percentage', family: F,
     summary: 'Set screen percentage for rendering (the r.ScreenPercentage console variable; no volume involved).',

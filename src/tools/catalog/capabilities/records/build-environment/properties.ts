@@ -135,6 +135,14 @@ export const P = {
     type: 'object', description: 'Action-specific settings key-value pairs.',
     additionalProperties: true, 'x-unreal-reflection-boundary': true,
   } as JsonObject,
+  // {"saturation": 1.1} passed as applied: nothing said the keys are engine field names.
+  ppSettings: {
+    type: 'object',
+    description: 'FPostProcessSettings fields by engine name, e.g. {"ColorSaturation": {"x": 1.1, "y": 1.1, "z": 1.1, "w": 1}, '
+      + '"VignetteIntensity": 0.3}; each field\'s bOverride_ flag is set for you. A key that is not a field is listed under '
+      + 'unsupportedSettings, and when no key is one the call fails naming the closest fields.',
+    additionalProperties: true, 'x-unreal-reflection-boundary': true,
+  } as JsonObject,
   // The sky, light, fog and cloud actors apply their settings by reflection;
   // a caller could not tell that the keys are property names.
   actorSettings: {

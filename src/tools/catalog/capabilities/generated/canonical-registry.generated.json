@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "87db23cde1cdf9d6",
+  "catalogRevision": "a9090e75b9da4abc",
   "recordCount": 389,
   "records": [
     {
@@ -21364,7 +21364,7 @@
             },
             "settings": {
               "type": "object",
-              "description": "Action-specific settings key-value pairs.",
+              "description": "FPostProcessSettings fields by engine name, e.g. {\"ColorSaturation\": {\"x\": 1.1, \"y\": 1.1, \"z\": 1.1, \"w\": 1}, \"VignetteIntensity\": 0.3}; each field's bOverride_ flag is set for you. A key that is not a field is listed under unsupportedSettings, and when no key is one the call fails naming the closest fields.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -21713,8 +21713,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ab3cdce3549e4cd37ab9221e8438cdc2a03919c804bda5eb83e1cf7879611391",
-        "content": "1295edbe6538c1badf0ea6da1abb67468beabe920ad7a424bdcbf663c553eb7c"
+        "schema": "8aee5e45c49e9a6c798cf11206b9aaefea3d6ba723ecc6bc6e6d01793c1140b9",
+        "content": "a931ec7cb4c9218f0a2e279ea278401e1f84bdf30ce5c66862059869fc7cec4f"
       }
     },
     {

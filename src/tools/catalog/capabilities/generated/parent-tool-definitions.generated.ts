@@ -2998,6 +2998,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "object",
+              "description": "FPostProcessSettings fields by engine name, e.g. {\"ColorSaturation\": {\"x\": 1.1, \"y\": 1.1, \"z\": 1.1, \"w\": 1}, \"VignetteIntensity\": 0.3}; each field's bOverride_ flag is set for you. A key that is not a field is listed under unsupportedSettings, and when no key is one the call fails naming the closest fields.",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            {
+              "type": "object",
               "description": "Landscape properties by name, e.g. {\"MaxLODLevel\": 2, \"LODDistributionSetting\": 1.5}.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true

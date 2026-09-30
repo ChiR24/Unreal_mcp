@@ -130,4 +130,11 @@ describe('handlers answer what they did', () => {
     expect(role).toMatch(/for \(TObjectIterator<UUserWidget> It; It; \+\+It\)/u);
     expect(role).toContain('It->GetWorld() == World');
   });
-});
+
+  // set_pp_color_grading with {"saturation": 1.1} answered "applied" with every key under unsupportedSettings.
+  it('a settings object where no key is a field fails and names the close fields', () => {
+    const settings = code('Render', 'McpAutomationBridge_RenderSupportSettings.h');
+    expect(settings).toMatch(/if \(Unknown\.Num\(\) > 0 && OutApplied\.Num\(\) == AppliedBefore\)[\s\S]*?return false;/u);
+    expect(settings).toContain('It->GetName().Contains(Key)');
+  });
+});
