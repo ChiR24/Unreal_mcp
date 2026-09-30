@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a1515a68120e8997",
+  "catalogRevision": "2476c0e8fca6aeee",
   "recordCount": 389,
   "records": [
     {
@@ -13234,6 +13234,20 @@
             "blueprintPath": {
               "type": "string",
               "description": "Canonical /Game Blueprint asset path."
+            },
+            "appliedProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The properties names set on the class defaults; a subobject property reads Holder.Property."
+            },
+            "failedProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Each properties name that was not set, as \"Name: reason\"; the Blueprint is created anyway."
             }
           },
           "required": [
@@ -13309,8 +13323,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "33d527c1a206369346762623e1488370d4cb50fa5674facc52c6391d51343d59",
-        "content": "1347943f06aca8218f91ab4154d93783ae31971d81d03b0064471eecd95d7432"
+        "schema": "8112f090ea714ad21412abd3693dda7805eb1c2b2e7645916731e3b9c2e807a0",
+        "content": "a434060696fb77dc81c0a09e81cfb0dd4a3531c445459ec3832d6cbaf52414b7"
       }
     },
     {

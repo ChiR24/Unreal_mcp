@@ -23,8 +23,10 @@ struct FRequestContext {
 bool ExecuteBlueprintCreation(UMcpAutomationBridgeSubsystem* Self,
                               const FRequestContext& Context);
 UFactory* CreateBlueprintFactory(const FRequestContext& Context);
+// Sets the payload `properties` on the class default object; every name lands in one of the lists.
 void ApplyBlueprintProperties(
-    UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Payload);
+    UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Payload,
+    TArray<FString>& OutApplied, TArray<FString>& OutFailed);
 TSharedPtr<FJsonObject> BuildBlueprintResult(
     UBlueprint* Blueprint, const FString& NormalizedPath);
 }

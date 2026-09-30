@@ -11562,6 +11562,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "set_style: the style fields that were written (text, fontSize, colorAndOpacity, cornerRadius...)."
         },
+        "appliedProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The properties names set on the class defaults; a subobject property reads Holder.Property."
+        },
         "appliedValue": {
           "type": "string",
           "description": "Literal actually stored on the pin (or the resolved object path for object/class pins)."
@@ -11843,6 +11850,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "failedIndex": {
           "type": "number",
           "description": "Index of the step that stopped the batch (failures only)."
+        },
+        "failedProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Each properties name that was not set, as \"Name: reason\"; the Blueprint is created anyway."
         },
         "fontSize": {
           "type": "number",

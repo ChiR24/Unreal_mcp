@@ -10,6 +10,14 @@ import { P } from './properties.js';
 const FAMILY = 'lifecycle';
 const DOMAIN = 'blueprint';
 
+// Every `properties` name lands in one list: a name the class lacks or a value the property refused
+// used to vanish while create answered success.
+const CREATE_OUTPUT = {
+  blueprintPath: P.blueprintPath,
+  appliedProperties: { type: 'array', items: { type: 'string' }, description: 'The properties names set on the class defaults; a subobject property reads Holder.Property.' },
+  failedProperties: { type: 'array', items: { type: 'string' }, description: 'Each properties name that was not set, as "Name: reason"; the Blueprint is created anyway.' },
+};
+
 export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'blueprint.create',
@@ -26,7 +34,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     // the field is consumed here even though no manage_blueprint record declared it.
     inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, properties: P.properties, blueprintType: P.blueprintType },
     required: ['name', 'savePath', 'parentClass'],
-    outputProps: { blueprintPath: P.blueprintPath },
+    outputProps: CREATE_OUTPUT,
     outputRequired: ['blueprintPath'],
     effect: 'write',
     latency: 'interactive',
@@ -45,7 +53,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The simpler create action suffices when only a parent class is needed.'],
     inputProps: { name: P.name, savePath: P.savePath, parentClass: P.parentClass, blueprintType: P.blueprintType, properties: P.properties },
     required: ['name', 'savePath', 'parentClass'],
-    outputProps: { blueprintPath: P.blueprintPath },
+    outputProps: CREATE_OUTPUT,
     outputRequired: ['blueprintPath'],
     effect: 'write',
     latency: 'interactive',

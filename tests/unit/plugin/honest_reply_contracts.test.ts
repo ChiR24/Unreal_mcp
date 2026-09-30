@@ -80,6 +80,18 @@ describe('handlers answer what they did', () => {
       .toMatch(/Its variables: %s\."\), \*PropertyName, \*McpBlueprintVariableList\(Generated\)\),\s*Resp, TEXT\("PROPERTY_NOT_FOUND"\)\);/u);
   });
 
+  // {"RotOscillation": {"Pitch": {"Amplitude": 0.8}}} on a LegacyCameraShake became empty text and
+  // vanished; create still answered "Blueprint created".
+  it('create sets properties through the shared writer and names each one it did not set', () => {
+    const writer = code('BlueprintCreation', 'McpAutomationBridge_BlueprintCreationHandlersProperties.cpp');
+    expect(writer).toContain('ApplyJsonValueToProperty(TargetObject, Property, Pair.Value, Error)');
+    expect(writer).not.toContain('McpJsonScalarToString');
+    expect(writer).toMatch(/if \(!Property\) \{\s*OutFailed\.Add\(/u);
+    const reply = code('BlueprintCreation', 'McpAutomationBridge_BlueprintCreationHandlersAssets.cpp');
+    expect(reply).toContain('ResultPayload->SetArrayField(TEXT("failedProperties")');
+    expect(reply).toContain('of its properties were not set: %s');
+  });
+
   it('a loot entry added after a removal takes a new key', () => {
     expect(code('Inventory', 'McpAutomationBridge_InventoryHandlersLootTables.cpp')).toContain('NextIndexedPropertyIndex(');
   });

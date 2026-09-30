@@ -29,7 +29,8 @@ const testCases = [
   { scenario: 'Setup: create input action asset', toolName: 'manage_networking', arguments: { action: 'create_input_action', name: INPUT_ACTION_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
 
   // === ACTION: create (requires name + path/blueprintPath) ===
-  { scenario: 'ACTION: create', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Create_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor', properties: { bReplicates: true } }, expected: 'success|already exists' },
+  { scenario: 'ACTION: create', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Create_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor', properties: { bReplicates: true } }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.appliedProperties.0', equals: 'bReplicates', label: 'the property that was set is listed' }] },
+  { scenario: 'ACTION: create names a property it could not set', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_CreateBadProp_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor', properties: { NoSuchProperty: 1 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.failedProperties.0', includes: 'NoSuchProperty', label: 'the miss is named, not dropped' }] },
 
   // === INFO: get_blueprint (uses blueprintPath) ===
   { scenario: 'INFO: get_blueprint', toolName: 'manage_blueprint', arguments: { action: 'get_blueprint', blueprintPath: BP_PATH }, expected: 'success' },

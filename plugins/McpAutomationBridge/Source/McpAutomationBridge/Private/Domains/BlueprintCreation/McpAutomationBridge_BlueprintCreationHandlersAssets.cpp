@@ -6,6 +6,7 @@
 #include "AssetToolsModule.h"
 #include "Engine/Blueprint.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 
 namespace McpBlueprintCreationHandlers {
@@ -66,7 +67,8 @@ bool ExecuteBlueprintCreation(UMcpAutomationBridgeSubsystem *Self,
   }
 
   UBlueprint *CreatedBlueprint = Cast<UBlueprint>(NewObject);
-  ApplyBlueprintProperties(CreatedBlueprint, Context.Payload);
+  TArray<FString> AppliedProperties, FailedProperties;
+  ApplyBlueprintProperties(CreatedBlueprint, Context.Payload, AppliedProperties, FailedProperties);
 
   if (!CreatedBlueprint) {
     if (RespondIfBlueprintExists(Self, Context)) {
@@ -90,8 +92,18 @@ bool ExecuteBlueprintCreation(UMcpAutomationBridgeSubsystem *Self,
 
   const TSharedPtr<FJsonObject> ResultPayload =
       BuildBlueprintResult(CreatedBlueprint, NormalizedPath);
+  FString Message = TEXT("Blueprint created");
+  if (AppliedProperties.Num() + FailedProperties.Num() > 0) {
+    ResultPayload->SetArrayField(TEXT("appliedProperties"), McpHandlerUtils::ToJsonStringArray(AppliedProperties));
+    ResultPayload->SetArrayField(TEXT("failedProperties"), McpHandlerUtils::ToJsonStringArray(FailedProperties));
+  }
+  if (FailedProperties.Num() > 0) {
+    // The asset exists either way, so the create stands; what was not set is named, not hidden.
+    Message = FString::Printf(TEXT("Blueprint created; %d of its properties were not set: %s"),
+                              FailedProperties.Num(), *FString::Join(FailedProperties, TEXT("; ")));
+  }
   Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, true,
-                               TEXT("Blueprint created"), ResultPayload, FString());
+                               Message, ResultPayload, FString());
 
   TWeakObjectPtr<UBlueprint> WeakCreatedBlueprint = CreatedBlueprint;
   if (WeakCreatedBlueprint.IsValid()) {

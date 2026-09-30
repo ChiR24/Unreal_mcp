@@ -1,6 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlersPrivate.h"
-#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
+#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApply.h"
 
 
 #include "Engine/Blueprint.h"
@@ -9,68 +9,70 @@
 namespace McpBlueprintCreationHandlers {
 namespace {
 
+// Every name is accounted for. A struct given as a JSON object ({"RotOscillation": {"Pitch":
+// {"Amplitude": 0.8}}}) used to become empty text and vanish, as did an unknown name or a value
+// the property refused, while create answered success. An instanced subobject still takes a
+// nested object of its own properties; every other value goes through the writer set_property uses.
 void ApplyPropertiesToObject(UObject *TargetObject,
-                             const TSharedPtr<FJsonObject> &Properties) {
+                             const TSharedPtr<FJsonObject> &Properties,
+                             const FString &Prefix, TArray<FString> &OutApplied,
+                             TArray<FString> &OutFailed) {
   if (!TargetObject || !Properties.IsValid()) {
     return;
   }
 
   for (const auto &Pair : Properties->Values) {
+    const FString Name = Prefix + Pair.Key;
     FProperty *Property =
         TargetObject->GetClass()->FindPropertyByName(*Pair.Key);
     if (!Property) {
+      OutFailed.Add(FString::Printf(TEXT("%s: %s has no such property"), *Name,
+                                    *TargetObject->GetClass()->GetName()));
       continue;
     }
 
-    if (FObjectProperty *ObjectProperty =
-            CastField<FObjectProperty>(Property)) {
-      if (Pair.Value->Type == EJson::Object) {
-        UObject *ChildObject =
-            ObjectProperty->GetObjectPropertyValue_InContainer(TargetObject);
-        if (ChildObject) {
-          ApplyPropertiesToObject(ChildObject, Pair.Value->AsObject());
-        }
-        continue;
+    FObjectProperty *ObjectProperty = CastField<FObjectProperty>(Property);
+    if (ObjectProperty && Pair.Value->Type == EJson::Object) {
+      UObject *ChildObject =
+          ObjectProperty->GetObjectPropertyValue_InContainer(TargetObject);
+      if (ChildObject) {
+        ApplyPropertiesToObject(ChildObject, Pair.Value->AsObject(),
+                                Name + TEXT("."), OutApplied, OutFailed);
+      } else {
+        OutFailed.Add(FString::Printf(
+            TEXT("%s: holds no object whose properties could be set"), *Name));
       }
+      continue;
     }
 
-    FString TextValue;
-    McpJsonScalarToString(Pair.Value, TextValue);
-
-    if (!TextValue.IsEmpty()) {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      Property->ImportText_Direct(
-          *TextValue, Property->ContainerPtrToValuePtr<void>(TargetObject),
-          TargetObject, 0);
-#else
-      Property->ImportText(
-          *TextValue, Property->ContainerPtrToValuePtr<void>(TargetObject),
-          PPF_None, TargetObject);
-#endif
+    FString Error;
+    if (ApplyJsonValueToProperty(TargetObject, Property, Pair.Value, Error)) {
+      OutApplied.Add(Name);
+    } else {
+      OutFailed.Add(FString::Printf(TEXT("%s: %s"), *Name, *Error));
     }
   }
 }
 
 }
 
-void ApplyBlueprintProperties(
-    UBlueprint *Blueprint, const TSharedPtr<FJsonObject> &Payload) {
-  if (!Blueprint || !Blueprint->GeneratedClass) {
-    return;
-  }
-
+void ApplyBlueprintProperties(UBlueprint *Blueprint,
+                              const TSharedPtr<FJsonObject> &Payload,
+                              TArray<FString> &OutApplied,
+                              TArray<FString> &OutFailed) {
   const TSharedPtr<FJsonObject> *Properties = nullptr;
-  if (!Payload->TryGetObjectField(TEXT("properties"), Properties)) {
+  if (!Blueprint || !Blueprint->GeneratedClass ||
+      !Payload->TryGetObjectField(TEXT("properties"), Properties)) {
     return;
   }
 
   UObject *ClassDefaultObject =
       Blueprint->GeneratedClass->GetDefaultObject();
   if (ClassDefaultObject) {
-    ApplyPropertiesToObject(ClassDefaultObject, *Properties);
+    ApplyPropertiesToObject(ClassDefaultObject, *Properties, FString(),
+                            OutApplied, OutFailed);
     Blueprint->Modify();
   }
 }
 
 }
-
