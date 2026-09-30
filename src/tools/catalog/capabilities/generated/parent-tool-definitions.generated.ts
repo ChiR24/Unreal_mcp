@@ -8278,7 +8278,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "operationId": {
           "type": "string",
-          "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId."
+          "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId, or neither to list the queue."
         },
         "operations": {
           "type": "array",
@@ -8932,7 +8932,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "alreadyRunning": {
           "type": "boolean",
-          "description": "True when this listing was already being imported and this call returned that same operation instead of starting another."
+          "description": "True when this listing was already queued or being imported and this call returned that same operation instead of starting another."
         },
         "assetClass": {
           "type": "string",
@@ -9429,7 +9429,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "operationId": {
           "type": "string",
-          "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On ALREADY_IN_FLIGHT it names the import that is running instead."
+          "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead."
         },
         "outputName": {
           "type": "string",
@@ -9503,7 +9503,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "phase": {
           "type": "string",
-          "description": "downloading right after Fab accepts. Absent when alreadyRunning: the status read has the current phase."
+          "description": "queued when another import is running, else downloading right after Fab accepts. For alreadyRunning, the phase the operation was in."
         },
         "placementWarning": {
           "type": "string",
@@ -9524,6 +9524,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "query": {
           "type": "string",
           "description": "Query that was run."
+        },
+        "queue": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "The import that is running, then every add waiting behind it in the order they start: operationId, listingId, title, phase, queuePosition, elapsedSeconds and downloadedBytes when known. Absent when nothing is running or queued."
+        },
+        "queueLength": {
+          "type": "number",
+          "description": "How many imports are running or queued."
+        },
+        "queuePosition": {
+          "type": "number",
+          "description": "1-based place in the queue while phase is queued; absent otherwise."
         },
         "referenceIntegrity": {
           "type": "string",

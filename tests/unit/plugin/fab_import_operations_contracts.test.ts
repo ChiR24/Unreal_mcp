@@ -26,31 +26,34 @@ describe('the Fab add answers when Fab accepts, not when the import ends', () =>
 
   it('starts the watcher and replies in the same step, without waiting on it', () => {
     const watch = add.indexOf('McpFabImportWatcher::WatchForImport(');
-    const reply = add.indexOf('OnAccepted(Result);', watch);
+    const reply = add.indexOf('OnResolved(Result);', watch);
     expect(watch, 'the accepted path must start the watcher').toBeGreaterThan(-1);
     expect(reply, 'and reply right after it').toBeGreaterThan(watch);
   });
 
   it('gives the watcher no completion callback for the caller to wait on', () => {
-    const header = code(fab('McpFabImportWatcher.h'));
+    const header = code(fab('Import/McpFabImportWatcher.h'));
     expect(header).toMatch(/void WatchForImport\(/u);
     expect(header).not.toMatch(/OnComplete|OnAccepted/u);
     // The outcome goes to the store instead.
-    expect(code(fab('McpFabImportWatcher.cpp'))).toContain('McpFabImportOperations::Finish(OperationId, Accepted);');
+    expect(code(fab('Import/McpFabImportWatcher.cpp'))).toContain('McpFabImportOperations::Finish(OperationId, Accepted);');
   });
 
-  it('refuses a second import while one runs, before it registers another', () => {
-    const running = add.indexOf('McpFabImportOperations::FindRunning(');
+  it('queues a second import behind the running one instead of refusing it', () => {
+    const queue = add.indexOf('McpFabImportOperations::ListQueue(');
     const begin = add.indexOf('McpFabImportOperations::Begin(');
-    expect(running).toBeGreaterThan(-1);
-    expect(begin).toBeGreaterThan(running);
-    expect(add).toContain('ALREADY_IN_FLIGHT');
+    expect(queue).toBeGreaterThan(-1);
+    expect(begin).toBeGreaterThan(queue);
+    expect(add).toContain('McpFabImportOperations::Enqueue(OperationId,');
+    // Nothing is refused for being busy: only a full queue is.
+    expect(add).not.toContain('ALREADY_IN_FLIGHT');
+    expect(add).toContain('QUEUE_FULL');
   });
 
-  it('names the import in the way and the call that reads it', () => {
-    expect(add).toMatch(/Poll asset\.query_marketplace with lookup=fab_import_status and operationId/u);
+  it('answers a full queue with the import at its head and the call that reads it', () => {
+    expect(add).toMatch(/It is working on %s \(operation %s, %s%s, %\.0f s in\)\. Poll asset\.query_marketplace with lookup=fab_import_status/u);
     const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
-    expect(handler).toMatch(/ALREADY_IN_FLIGHT[\s\S]*MakeStatusNextCall\(Result\.OperationId\)/u);
+    expect(handler).toMatch(/QUEUE_FULL[\s\S]*MakeStatusNextCall\(Result\.OperationId\)/u);
     const json = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h'));
     expect(json).toContain('TEXT("fab_import_status")');
     expect(json).toContain('TEXT("query_marketplace")');
@@ -97,7 +100,7 @@ describe('what an import record can carry', () => {
 });
 
 describe('the Fab log capture', () => {
-  const capture = code(fab('McpFabLogCapture.cpp'));
+  const capture = code(fab('Import/McpFabLogCapture.cpp'));
 
   it('keeps only LogFab errors, and masks a line before it is stored', () => {
     expect(capture).toContain('TEXT("LogFab")');
@@ -118,7 +121,7 @@ describe('the Fab log capture', () => {
 });
 
 describe('the Fab mesh-merging guard', () => {
-  const guard = code(fab('McpFabInterchange.cpp'));
+  const guard = code(fab('Import/McpFabInterchange.cpp'));
 
   it('reaches Interchange by reflection only, so the module takes no build dependency on it', () => {
     expect(guard).toContain('FindObject<UClass>(nullptr, AssetsPipelinePath)');
@@ -135,7 +138,7 @@ describe('the Fab mesh-merging guard', () => {
   });
 
   it('works only when the caller asked for separate meshes, and says whether it took', () => {
-    const watcher = code(fab('McpFabImportWatcher.cpp'));
+    const watcher = code(fab('Import/McpFabImportWatcher.cpp'));
     expect(watcher).toMatch(/MeshesSeparated\.IsSet\(\) && !Accepted\.MeshesSeparated\.GetValue\(\) && McpFabInterchange::SeparateMeshes\(\) > 0/u);
     expect(watcher).toContain('McpFabImportOperations::SetMeshesSeparated(OperationId, true);');
   });
@@ -163,7 +166,7 @@ describe('the post-import save', () => {
   });
 
   it('runs after the registry hook is off and before the outcome is stored', () => {
-    const watcher = code(fab('McpFabImportWatcher.cpp'));
+    const watcher = code(fab('Import/McpFabImportWatcher.cpp'));
     const hookOff = watcher.indexOf('RegistryRef.OnAssetAdded().Remove(Watch->AddedHandle);');
     const ran = watcher.indexOf('PostImport(Accepted, Added);');
     const stored = watcher.indexOf('McpFabImportOperations::Finish(OperationId, Accepted);');
@@ -176,5 +179,44 @@ describe('the post-import save', () => {
     expect(code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp')))
       .toContain('Options.PostImport = &McpFabPostImport::Run;');
     expect(code(fab('McpFabAddOperation.cpp'))).toContain('Options.PostImport');
+  });
+});
+
+describe('the Fab add queue', () => {
+  const store = code(fab('Import/McpFabImportOperations.cpp'));
+
+  it('starts the oldest queued add, and only once nothing is running', () => {
+    const start = store.slice(store.indexOf('void StartNext()'), store.indexOf('void SchedulePump()'));
+    expect(start).toMatch(/if \(IsRunning\(Op\)\)\s*\{\s*return;/u);
+    expect(start).toContain('Operations().FindByPredicate(');
+    expect(start).toContain('EState::Queued');
+    // Launched from the moved-out closure, so nothing touches the record after it runs.
+    expect(start).toContain('TFunction<void()> Launch = MoveTemp(Next->Launch);');
+  });
+
+  it('starts the next add when an import ends, outside the ticker that ended it', () => {
+    const finish = store.slice(store.indexOf('void Finish('), store.indexOf('bool FindRunning('));
+    expect(finish).toContain('SchedulePump();');
+    expect(store).toMatch(/FTSTicker::GetCoreTicker\(\)\.AddTicker\(FTickerDelegate::CreateLambda/u);
+  });
+
+  it('keeps arrival order: an add behind a non-empty queue waits, even when nothing is running yet', () => {
+    const add = code(fab('McpFabAddOperation.cpp'));
+    expect(add).toContain('const bool bBusy = Queue.Num() > 0;');
+    expect(add).toContain('if (!bBusy)');
+    expect(add).toMatch(/constexpr int32 MaxQueued = 8;/u);
+  });
+
+  it('gives a queued add the same start as any other, so its refusals reach the status', () => {
+    const add = code(fab('McpFabAddOperation.cpp'));
+    expect(add).toMatch(/Launch\(OperationId, ListingId, EngineVersion, Options, nullptr\);/u);
+    expect(add).toMatch(/McpFabImportOperations::Finish\(OperationId, Result\);\s*if \(OnResolved\)/u);
+  });
+
+  it('is listed by the status read, which reads it from the store like everything else', () => {
+    const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_AssetWorkflowFabImportStatus.cpp'));
+    expect(status).toContain('Provider->GetImportQueue(Queue);');
+    expect(status).toContain('TEXT("queue")');
+    expect(code(fab('McpAutomationBridgeFabModule.cpp'))).toContain('McpFabImportOperations::ListQueue(');
   });
 });

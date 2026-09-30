@@ -32,18 +32,41 @@ FString NextStep(const FMcpFabImportStatus &Status) {
   if (Status.Phase == TEXT("failed")) {
     return TEXT("The import did not finish; failureCode and failure say why, and what landed before it stopped is under importedRoot. Fab's own log lines are listed under fabErrors, and system_control read_log with filter LogFab shows the rest. Add the listing again to retry.");
   }
+  if (Status.Phase == TEXT("queued")) {
+    return TEXT("Queued behind the import that is running: it starts by itself, in order, when that one ends. The queue lists what is ahead. Poll again in 20 to 30 seconds.");
+  }
   return TEXT("Still running: poll again in 20 to 30 seconds. While Fab imports, the editor is held and every call, this read included, answers EDITOR_BLOCKED; that is the import working, not a failure.");
+}
+
+/** One line of the queue: enough to tell the imports apart and see how far each has come. */
+TSharedPtr<FJsonValue> QueueRow(const FMcpFabImportStatus &Entry) {
+  TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+  Row->SetStringField(TEXT("operationId"), Entry.OperationId);
+  Row->SetStringField(TEXT("listingId"), Entry.ListingId);
+  if (!Entry.Result.Title.IsEmpty()) {
+    Row->SetStringField(TEXT("title"), Entry.Result.Title);
+  }
+  Row->SetStringField(TEXT("phase"), Entry.Phase);
+  if (Entry.QueuePosition > 0) {
+    Row->SetNumberField(TEXT("queuePosition"), Entry.QueuePosition);
+  }
+  Row->SetNumberField(TEXT("elapsedSeconds"), FMath::RoundToInt(Entry.ElapsedSeconds));
+  if (Entry.DownloadedBytes >= 0) {
+    Row->SetNumberField(TEXT("downloadedBytes"), static_cast<double>(Entry.DownloadedBytes));
+  }
+  return MakeShared<FJsonValueObject>(Row);
 }
 } // namespace
 
 /**
- * Reports one Fab import the add started, by operation id or by listing id.
+ * Reports one Fab import the add started, by operation id or by listing id, and the queue it is in.
  *
  * The add answers when Fab accepts the download; the download and the import
- * that follows run on in the background. This reads what the adapter has
- * learned since -- the phase, how much has downloaded when the cache shows it,
- * and, once the asset registry settles, where the content landed -- from the
- * operation store, so it never touches Fab's page and needs no sign-in.
+ * that follows run on in the background, one at a time, with later adds queued
+ * behind them. This reads what the adapter has learned since -- the phase, how
+ * much has downloaded when the cache shows it, and, once the asset registry
+ * settles, where the content landed -- from the operation store, so it never
+ * touches Fab's page and needs no sign-in.
  */
 bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -62,11 +85,34 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
   if (Key.IsEmpty()) {
     Payload->TryGetStringField(TEXT("listingId"), Key);
   }
-  if (!IsPlainKey(Key)) {
+  if (!Key.IsEmpty() && !IsPlainKey(Key)) {
     SendAutomationResponse(
         Socket, RequestId, false,
-        TEXT("Pass 'operationId' (from the add's reply) or 'listingId' (its newest import is reported); each is [A-Za-z0-9_-], 64 characters at most."),
+        TEXT("'operationId' (from the add's reply) and 'listingId' (its newest import is reported) are each [A-Za-z0-9_-], 64 characters at most."),
         nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  TArray<FMcpFabImportStatus> Queue;
+  Provider->GetImportQueue(Queue);
+  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+  TArray<TSharedPtr<FJsonValue>> Rows;
+  for (const FMcpFabImportStatus &Entry : Queue) {
+    Rows.Add(QueueRow(Entry));
+  }
+  if (Rows.Num() > 0) {
+    Data->SetArrayField(TEXT("queue"), Rows);
+  }
+  Data->SetNumberField(TEXT("queueLength"), Rows.Num());
+
+  // No id: the caller wants the whole picture, which is the queue.
+  if (Key.IsEmpty()) {
+    Data->SetStringField(
+        TEXT("note"),
+        Rows.Num() > 0 ? TEXT("The import that is running comes first, then the adds waiting behind it in the order they start. Pass operationId to read one in full.")
+                       : TEXT("Nothing is running or queued. Pass operationId or listingId to read a finished import."));
+    SendAutomationResponse(Socket, RequestId, true,
+                           FString::Printf(TEXT("%d Fab import(s) running or queued."), Rows.Num()), Data);
     return true;
   }
 
@@ -81,12 +127,14 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
 
   const FMcpFabAddResult &Result = Status.Result;
   const bool bFinished = Status.Phase == TEXT("done") || Status.Phase == TEXT("failed");
-  TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("operationId"), Status.OperationId);
   Data->SetStringField(TEXT("listingId"), Status.ListingId);
   Data->SetStringField(TEXT("phase"), Status.Phase);
   Data->SetBoolField(TEXT("finished"), bFinished);
   Data->SetNumberField(TEXT("elapsedSeconds"), FMath::RoundToInt(Status.ElapsedSeconds));
+  if (Status.QueuePosition > 0) {
+    Data->SetNumberField(TEXT("queuePosition"), Status.QueuePosition);
+  }
   McpFabImportJson::SetAddFacts(Data, Result);
   // Present only when the add asked for separate meshes and Fab merges them for this listing.
   if (Result.MeshesSeparated.IsSet()) {
@@ -130,11 +178,11 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
     }
     Data->SetArrayField(TEXT("fabErrors"), Lines);
   }
-  Data->SetObjectField(
-      TEXT("task"),
-      McpFabImportJson::MakeTask(Status.OperationId, Status.Phase == TEXT("done") ? TEXT("completed")
-                                                     : Status.Phase == TEXT("failed") ? TEXT("failed")
-                                                                                      : TEXT("running")));
+  const TCHAR *TaskState = Status.Phase == TEXT("done")     ? TEXT("completed")
+                           : Status.Phase == TEXT("failed") ? TEXT("failed")
+                           : Status.Phase == TEXT("queued") ? TEXT("queued")
+                                                            : TEXT("running");
+  Data->SetObjectField(TEXT("task"), McpFabImportJson::MakeTask(Status.OperationId, TaskState));
   Data->SetStringField(TEXT("note"), NextStep(Status));
 
   SendAutomationResponse(

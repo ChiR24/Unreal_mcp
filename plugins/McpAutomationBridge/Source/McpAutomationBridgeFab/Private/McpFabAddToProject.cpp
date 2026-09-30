@@ -84,6 +84,7 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
     .then(function (r) { out.listingStatus = r.status; return r.json(); })
     .then(function (listingJson) {
       var formats = (listingJson && listingJson.assetFormats) || [];
+      out.title = String((listingJson && listingJson.title) || "").slice(0, 120);
       out.formatShape = formats.length ? shape(formats[0], 2) : "none";
       out.formatCodes = formats.map(function (f) {
         return f.assetFormatType ? f.assetFormatType.code : (f.code || f.type || "?");

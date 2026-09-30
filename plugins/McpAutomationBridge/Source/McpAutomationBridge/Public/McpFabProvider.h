@@ -52,10 +52,16 @@ struct FMcpFabAddResult
 	TArray<FString> SamplePaths;
 	bool bEngineExactMatch = false;
 	FString VersionName;
-	/** The background import this add started; for ALREADY_IN_FLIGHT, the one still running. */
+	/** The background import this add started; for QUEUE_FULL, the one still running. */
 	FString OperationId;
-	/** True when the same listing was already being imported and this add joined that operation. */
+	/** True when the same listing was already queued or being imported and this add joined that operation. */
 	bool bAlreadyRunning = false;
+	/** Where the operation stood when this replied: queued, resolving or downloading. */
+	FString Phase;
+	/** 1-based place in the queue while queued, else 0. */
+	int32 QueuePosition = 0;
+	/** The listing's title, as Fab names it; empty until the page has been asked. */
+	FString Title;
 	/** The format Fab was asked to import: unreal-engine, gltf, glb, fbx, obj or usdz. */
 	FString FormatCode;
 	/** Quality tier of the chosen file (raw, high, mid, low); empty when the listing has none. */
@@ -99,8 +105,10 @@ struct FMcpFabImportStatus
 {
 	FString OperationId;
 	FString ListingId;
-	/** resolving, downloading, importing, done or failed. */
+	/** queued, resolving, downloading, importing, done or failed. */
 	FString Phase;
+	/** 1-based place in the queue while queued, else 0. */
+	int32 QueuePosition = 0;
 	/** Seconds since the add was requested; frozen once the import finished. */
 	double ElapsedSeconds = 0.0;
 	/** Bytes fetched so far, or -1 when the download cannot be observed. */
@@ -185,7 +193,8 @@ public:
 	 *
 	 * The download and the import take minutes and hold the game thread, far past any client's request
 	 * timeout, so OnAccepted fires once, on the game thread, with OperationId set; the import then
-	 * continues in the background and GetImportStatus reports how it is going. Returns false when the
+	 * continues in the background and GetImportStatus reports how it is going. One import runs at a
+	 * time: an add made while another runs is queued (Phase queued) and starts by itself, in order. Returns false when the
 	 * adapter cannot even start (Fab absent), in which case OnAccepted never runs.
 	 */
 	virtual bool AddToProject(
@@ -199,6 +208,9 @@ public:
 	 * holds the last few operations of this editor session.
 	 */
 	virtual bool GetImportStatus(const FString& OperationOrListingId, FMcpFabImportStatus& OutStatus) = 0;
+
+	/** The import that is running, then every add waiting behind it, in the order they will start. */
+	virtual void GetImportQueue(TArray<FMcpFabImportStatus>& OutQueue) = 0;
 
 	/**
 	 * Queries the Fab catalog through the signed-in page.

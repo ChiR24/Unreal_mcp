@@ -1,4 +1,4 @@
-// The Fab add turns a second import away while one runs. ALREADY_IN_FLIGHT named nothing, so a caller
+// The Fab add turns an add away when the queue is full. QUEUE_FULL named nothing, so a caller
 // could not tell which listing was in the way or how to find out when it would finish. The handler now
 // returns the call that reads the running import, and both doors hand it back as the refusal's nextCall.
 
@@ -42,17 +42,17 @@ describe('a refusal that names the call which settles it', () => {
     const result = await addListing({
       type: 'automation_response',
       success: false,
-      error: 'ALREADY_IN_FLIGHT',
+      error: 'QUEUE_FULL',
       message: 'Fab is still importing listing xyz',
       result: { listingId: 'abc123', operationId: 'fab-3f9a1c2e40', nextCall: STATUS_CALL }
     });
 
-    expect(result.errorCode).toBe('ALREADY_IN_FLIGHT');
+    expect(result.errorCode).toBe('QUEUE_FULL');
     expect(result.nextCall).toEqual(STATUS_CALL);
   });
 
   it('TS: reads it from a flat handler result too', async () => {
-    const result = await addListing({ success: false, error: 'ALREADY_IN_FLIGHT', message: 'busy', nextCall: STATUS_CALL });
+    const result = await addListing({ success: false, error: 'QUEUE_FULL', message: 'busy', nextCall: STATUS_CALL });
 
     expect(result.nextCall).toEqual(STATUS_CALL);
   });

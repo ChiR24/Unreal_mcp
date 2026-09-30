@@ -2,8 +2,8 @@
 
 #include "McpFabAddScript.h"
 #include "McpFabProvider.h"
-#include "McpFabImportOperations.h"
-#include "McpFabLogCapture.h"
+#include "Import/McpFabImportOperations.h"
+#include "Import/McpFabLogCapture.h"
 
 #include "Features/IModularFeatures.h"
 
@@ -149,6 +149,11 @@ public:
 	virtual bool GetImportStatus(const FString& OperationOrListingId, FMcpFabImportStatus& OutStatus) override
 	{
 		return McpFabImportOperations::Find(OperationOrListingId, GetCacheLocation(), OutStatus);
+	}
+
+	virtual void GetImportQueue(TArray<FMcpFabImportStatus>& OutQueue) override
+	{
+		McpFabImportOperations::ListQueue(GetCacheLocation(), OutQueue);
 	}
 
 	virtual bool GetListingDetails(

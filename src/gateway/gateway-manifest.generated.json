@@ -6893,7 +6893,7 @@
           },
           "operationId": {
             "type": "string",
-            "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId."
+            "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId, or neither to list the queue."
           },
           "operations": {
             "type": "array",

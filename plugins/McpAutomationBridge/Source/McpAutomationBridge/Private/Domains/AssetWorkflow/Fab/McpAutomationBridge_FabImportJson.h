@@ -34,11 +34,17 @@ inline TSharedPtr<FJsonObject> MakeStatusNextCall(const FString& OperationId)
 	return Next;
 }
 
-/** What the page decided for an add: format, quality tier, file, size, engine version and whether meshes merge. */
+/**
+ * What the page decided for an add: title, format, quality tier, file, size, engine version and whether
+ * meshes merge. An add the page has not answered yet (queued, or still resolving) carries none of it, and
+ * the fields are left out rather than reported as false or empty.
+ */
 inline void SetAddFacts(const TSharedPtr<FJsonObject>& Data, const FMcpFabAddResult& Result)
 {
+	if (!Result.Title.IsEmpty()) { Data->SetStringField(TEXT("title"), Result.Title); }
+	if (Result.FormatCode.IsEmpty()) { return; }
 	Data->SetBoolField(TEXT("combinesMeshes"), Result.bMergesMeshes);
-	if (!Result.FormatCode.IsEmpty()) { Data->SetStringField(TEXT("formatCode"), Result.FormatCode); }
+	Data->SetStringField(TEXT("formatCode"), Result.FormatCode);
 	if (!Result.Quality.IsEmpty()) { Data->SetStringField(TEXT("quality"), Result.Quality); }
 	if (!Result.FileName.IsEmpty()) { Data->SetStringField(TEXT("fileName"), Result.FileName); }
 	// Unknown is not zero: a pack publishes no size, so the field is left out rather than reported as 0.

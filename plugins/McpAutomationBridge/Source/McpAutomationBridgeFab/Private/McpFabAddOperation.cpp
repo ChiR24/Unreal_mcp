@@ -20,9 +20,9 @@
 #include "McpFabProvider.h"
 #include "McpFabAddScript.h"
 #include "McpFabBridgeDispatch.h"
-#include "McpFabImportOperations.h"
-#include "McpFabImportWatcher.h"
-#include "McpFabInterchange.h"
+#include "Import/McpFabImportOperations.h"
+#include "Import/McpFabImportWatcher.h"
+#include "Import/McpFabInterchange.h"
 
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -58,12 +58,25 @@ TSet<FString> SnapshotGameAssets()
 	return Paths;
 }
 
-/** Names the import that is in the way, so a refused caller knows what to wait for and where to look. */
-FString DescribeRunning(const FMcpFabImportStatus& Running)
+/** How many adds may wait behind the running import. */
+constexpr int32 MaxQueued = 8;
+
+/** Names the import at the head of a full queue: its listing and title, phase, progress and elapsed time. */
+FString DescribeRunning(const FMcpFabImportStatus& Head, int32 QueueLimit)
 {
+	const FString Name = Head.Result.Title.IsEmpty()
+		? Head.ListingId
+		: FString::Printf(TEXT("%s (%s)"), *Head.Result.Title, *Head.ListingId);
+	FString Progress;
+	if (Head.DownloadedBytes >= 0)
+	{
+		Progress = Head.Result.DownloadBytes > 0
+			? FString::Printf(TEXT(", %.0f of %.0f MB downloaded"), Head.DownloadedBytes / 1.0e6, Head.Result.DownloadBytes / 1.0e6)
+			: FString::Printf(TEXT(", %.0f MB downloaded"), Head.DownloadedBytes / 1.0e6);
+	}
 	return FString::Printf(
-		TEXT("Fab is still importing listing %s (operation %s, %s, %.0f s in). Poll asset.query_marketplace with lookup=fab_import_status and operationId %s until its phase is done or failed, then add the next listing."),
-		*Running.ListingId, *Running.OperationId, *Running.Phase, Running.ElapsedSeconds, *Running.OperationId);
+		TEXT("Fab's add queue is full (%d waiting). It is working on %s (operation %s, %s%s, %.0f s in). Poll asset.query_marketplace with lookup=fab_import_status: it lists the queue, and an add is accepted again once fewer than %d wait."),
+		QueueLimit, *Name, *Head.OperationId, *Head.Phase, *Progress, Head.ElapsedSeconds, QueueLimit);
 }
 
 /** What the add told the caller, read out of the page's reply. Parsed even on failure: the page says why it refused. */
@@ -84,6 +97,7 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 		Root->TryGetStringField(TEXT("formatCode"), Result.FormatCode);
 		Root->TryGetStringField(TEXT("quality"), Result.Quality);
 		Root->TryGetBoolField(TEXT("combinesMeshes"), Result.bMergesMeshes);
+		Root->TryGetStringField(TEXT("title"), Result.Title);
 		double Bytes = 0.0;
 		if (Root->TryGetNumberField(TEXT("downloadBytes"), Bytes) && Bytes >= 0.0)
 		{
@@ -158,6 +172,58 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 	}
 	return Result;
 }
+/**
+ * Resolves the listing on Fab's page and, once Fab accepts, starts watching the import. Runs at once for
+ * an add made while nothing else is going, or later for a queued one, when its turn comes. OnResolved is
+ * the caller's reply while there still is a caller: a queued add was answered when it was queued and passes
+ * none, so how it went is read from the status.
+ */
+void Launch(const FString& OperationId, const FString& ListingId, const FString& EngineVersion,
+	const FMcpFabAddOptions& Options, TFunction<void(const FMcpFabAddResult&)> OnResolved)
+{
+	TSet<FString> Before = SnapshotGameAssets();
+
+	FString Error;
+	FString ErrorCode;
+	const bool bDispatched = McpFabBridgeDispatch::Dispatch(
+		[&ListingId, &EngineVersion, &Options](const FString& RequestId)
+		{
+			return BuildAddScript(RequestId, ListingId, EngineVersion, Options.CombineMeshes);
+		},
+		[Before = MoveTemp(Before), OperationId, OnResolved, Options](bool bSuccess, const FString& Payload) mutable
+		{
+			FMcpFabAddResult Result = ParseAddReply(bSuccess, Payload);
+			Result.OperationId = OperationId;
+			if (!Result.bAccepted)
+			{
+				McpFabImportOperations::Finish(OperationId, Result);
+				if (OnResolved) { OnResolved(Result); }
+				return;
+			}
+			Result.Phase = TEXT("downloading");
+			// Only a listing Fab merges meshes for has anything to separate; the watcher works at it.
+			if (Options.CombineMeshes.IsSet() && !Options.CombineMeshes.GetValue() && Result.bMergesMeshes)
+			{
+				Result.MeshesSeparated = false;
+			}
+			// Accepted only means the URL was handed over. Unreal decides success, later, and the
+			// watcher records it under the operation id.
+			McpFabImportOperations::Accept(OperationId, Result);
+			McpFabImportWatcher::WatchForImport(OperationId, MoveTemp(Before), Result, Options.PostImport);
+			if (OnResolved) { OnResolved(Result); }
+		},
+		Error, ErrorCode);
+
+	if (!bDispatched)
+	{
+		FMcpFabAddResult Failed;
+		Failed.ErrorCode = ErrorCode;
+		Failed.Error = Error;
+		Failed.OperationId = OperationId;
+		McpFabImportOperations::Finish(OperationId, Failed);
+		if (OnResolved) { OnResolved(Failed); }
+	}
+}
 } // namespace
 
 /** Shared entry point used by the provider implementation. */
@@ -186,70 +252,52 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		return true;
 	}
 
-	// One import at a time: the registry diff that decides success cannot tell two apart.
-	FMcpFabImportStatus Running;
-	if (McpFabImportOperations::FindRunning(CacheLocation, Running))
+	// The caller repeated an add that is already queued or running, most likely after a timeout: hand
+	// back that operation rather than start a second one for the same listing.
+	FMcpFabImportStatus Open;
+	if (McpFabImportOperations::FindOpenByListing(ListingId, CacheLocation, Open))
 	{
-		FMcpFabAddResult Busy;
-		if (Running.ListingId == ListingId && Running.Result.bAccepted)
-		{
-			// The caller repeated the add it already made, most likely after a timeout: hand back
-			// the operation that is running rather than refuse or start a second one.
-			Busy = Running.Result;
-			Busy.bAlreadyRunning = true;
-		}
-		else
-		{
-			Busy.ErrorCode = TEXT("ALREADY_IN_FLIGHT");
-			Busy.Error = DescribeRunning(Running);
-		}
-		Busy.OperationId = Running.OperationId;
-		OnAccepted(Busy);
+		FMcpFabAddResult Same = Open.Result;
+		Same.bAccepted = true;
+		Same.bAlreadyRunning = true;
+		Same.OperationId = Open.OperationId;
+		Same.Phase = Open.Phase;
+		Same.QueuePosition = Open.QueuePosition;
+		OnAccepted(Same);
+		return true;
+	}
+
+	// One import runs at a time: the registry diff that decides success cannot tell two apart. An add
+	// made behind a running or queued one is queued and starts by itself, oldest first.
+	TArray<FMcpFabImportStatus> Queue;
+	McpFabImportOperations::ListQueue(CacheLocation, Queue);
+	const bool bBusy = Queue.Num() > 0;
+	if (bBusy && McpFabImportOperations::QueuedCount() >= MaxQueued)
+	{
+		FMcpFabAddResult Full;
+		Full.ErrorCode = TEXT("QUEUE_FULL");
+		Full.Error = DescribeRunning(Queue[0], MaxQueued);
+		Full.OperationId = Queue[0].OperationId;
+		OnAccepted(Full);
 		return true;
 	}
 
 	const FString OperationId = McpFabImportOperations::Begin(ListingId);
-	TSet<FString> Before = SnapshotGameAssets();
-
-	FString Error;
-	FString ErrorCode;
-	const bool bDispatched = McpFabBridgeDispatch::Dispatch(
-		[&ListingId, &EngineVersion, &Options](const FString& RequestId)
-		{
-			return BuildAddScript(RequestId, ListingId, EngineVersion, Options.CombineMeshes);
-		},
-		[Before = MoveTemp(Before), OperationId, OnAccepted, Options](bool bSuccess, const FString& Payload) mutable
-		{
-			FMcpFabAddResult Result = ParseAddReply(bSuccess, Payload);
-			Result.OperationId = OperationId;
-			if (!Result.bAccepted)
-			{
-				McpFabImportOperations::Finish(OperationId, Result);
-				OnAccepted(Result);
-				return;
-			}
-			// Only a listing Fab merges meshes for has anything to separate; the watcher works at it.
-			if (Options.CombineMeshes.IsSet() && !Options.CombineMeshes.GetValue() && Result.bMergesMeshes)
-			{
-				Result.MeshesSeparated = false;
-			}
-			// Accepted only means the URL was handed over. Unreal decides success, later, and the
-			// watcher records it under the operation id.
-			McpFabImportOperations::Accept(OperationId, Result);
-			McpFabImportWatcher::WatchForImport(OperationId, MoveTemp(Before), Result, Options.PostImport);
-			OnAccepted(Result);
-		},
-		Error, ErrorCode);
-
-	if (!bDispatched)
+	if (!bBusy)
 	{
-		FMcpFabAddResult Failed;
-		Failed.ErrorCode = ErrorCode;
-		Failed.Error = Error;
-		Failed.OperationId = OperationId;
-		McpFabImportOperations::Finish(OperationId, Failed);
-		OnAccepted(Failed);
+		Launch(OperationId, ListingId, EngineVersion, Options, OnAccepted);
+		return true;
 	}
+	McpFabImportOperations::Enqueue(OperationId, [OperationId, ListingId, EngineVersion, Options]()
+	{
+		Launch(OperationId, ListingId, EngineVersion, Options, nullptr);
+	});
+	FMcpFabAddResult Queued;
+	Queued.bAccepted = true;
+	Queued.OperationId = OperationId;
+	Queued.Phase = TEXT("queued");
+	Queued.QueuePosition = McpFabImportOperations::QueuedCount();
+	OnAccepted(Queued);
 	return true;
 }
 } // namespace McpFabAddOperation

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "acf418b261cb1dbc",
+  "catalogRevision": "80f60b249066d6a1",
   "recordCount": 389,
   "records": [
     {
@@ -7819,15 +7819,23 @@
             },
             "operationId": {
               "type": "string",
-              "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On ALREADY_IN_FLIGHT it names the import that is running instead."
+              "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead."
             },
             "alreadyRunning": {
               "type": "boolean",
-              "description": "True when this listing was already being imported and this call returned that same operation instead of starting another."
+              "description": "True when this listing was already queued or being imported and this call returned that same operation instead of starting another."
             },
             "phase": {
               "type": "string",
-              "description": "downloading right after Fab accepts. Absent when alreadyRunning: the status read has the current phase."
+              "description": "queued when another import is running, else downloading right after Fab accepts. For alreadyRunning, the phase the operation was in."
+            },
+            "queuePosition": {
+              "type": "number",
+              "description": "1-based place in the queue while phase is queued; absent otherwise."
+            },
+            "title": {
+              "type": "string",
+              "description": "The listing title, once Fab has been asked about it (absent while queued)."
             },
             "formatCode": {
               "type": "string",
@@ -7991,8 +7999,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b909b64649b37bd1681b4f19ff44275d162c1ddf3c11f02171fa34f0d7d35092",
-        "content": "8dc6cebf816ee486fba9009a28d31d90ad2bebdfb5fc7167213b2c48fe0c1751"
+        "schema": "78b3b1667447856ff95cae87f05e76cdc57d2865faa3851b17b04f8351c636ca",
+        "content": "20ecf05cc9f2979096e8cebb13cf47b8d16fe425f7b6b799f2027678af1ffd05"
       }
     },
     {
@@ -10035,7 +10043,7 @@
             },
             "operationId": {
               "type": "string",
-              "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId."
+              "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId, or neither to list the queue."
             },
             "lookup": {
               "type": "string",
@@ -10236,11 +10244,27 @@
             },
             "phase": {
               "type": "string",
-              "description": "resolving, downloading, importing, done or failed."
+              "description": "queued, resolving, downloading, importing, done or failed."
             },
             "finished": {
               "type": "boolean",
               "description": "True once phase is done or failed; stop polling."
+            },
+            "queuePosition": {
+              "type": "number",
+              "description": "1-based place in the queue while phase is queued; absent otherwise."
+            },
+            "queue": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "The import that is running, then every add waiting behind it in the order they start: operationId, listingId, title, phase, queuePosition, elapsedSeconds and downloadedBytes when known. Absent when nothing is running or queued."
+            },
+            "queueLength": {
+              "type": "number",
+              "description": "How many imports are running or queued."
             },
             "elapsedSeconds": {
               "type": "number",
@@ -10414,8 +10438,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8033b6d7712ed5bc95cd8e2189b6012126c68e26943cd5b17912bd059a8ab530",
-        "content": "9f5c4d923fc7461595e431becf013ba4726dd1b514bd0a0432175e8ffd92e758"
+        "schema": "b1da7486e0c4b8a5d9600cbe73f08b1baca7c17cca552c9e1234592aa9d5e065",
+        "content": "69d06d6c3faae7db3bfc04128c20e9bdb7d58fefd9181bbc12104723165c8073"
       }
     },
     {

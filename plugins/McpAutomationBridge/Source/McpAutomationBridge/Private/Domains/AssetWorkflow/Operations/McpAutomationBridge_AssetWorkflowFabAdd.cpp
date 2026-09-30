@@ -72,29 +72,37 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
             Data->SetStringField(TEXT("operationId"), Result.OperationId);
           }
           if (!Result.bAccepted) {
-            // A refusal for a running import names it, and the call that reads it.
-            if (Result.ErrorCode == TEXT("ALREADY_IN_FLIGHT") && !Result.OperationId.IsEmpty()) {
+            // A full queue names the import at its head and the call that reads it.
+            if (Result.ErrorCode == TEXT("QUEUE_FULL") && !Result.OperationId.IsEmpty()) {
               Data->SetObjectField(TEXT("nextCall"), McpFabImportJson::MakeStatusNextCall(Result.OperationId));
             }
             Self->SendAutomationResponse(Socket, RequestId, false, Result.Error, Data, Result.ErrorCode);
             return;
           }
           McpFabImportJson::SetAddFacts(Data, Result);
-          // The phase of an import this call joined is not known here; the status read says.
-          if (!Result.bAlreadyRunning) {
-            Data->SetStringField(TEXT("phase"), TEXT("downloading"));
+          if (!Result.Phase.IsEmpty()) {
+            Data->SetStringField(TEXT("phase"), Result.Phase);
+          }
+          if (Result.QueuePosition > 0) {
+            Data->SetNumberField(TEXT("queuePosition"), Result.QueuePosition);
           }
           Data->SetBoolField(TEXT("alreadyRunning"), Result.bAlreadyRunning);
-          Data->SetObjectField(TEXT("task"), McpFabImportJson::MakeTask(Result.OperationId, TEXT("running")));
+          const bool bQueued = Result.Phase == TEXT("queued");
+          Data->SetObjectField(
+              TEXT("task"), McpFabImportJson::MakeTask(Result.OperationId, bQueued ? TEXT("queued") : TEXT("running")));
           Data->SetStringField(
               TEXT("note"),
               TEXT("Not imported yet. Poll asset.query_marketplace with lookup=fab_import_status and this operationId until phase is done or failed; do not call this add again. "
+                   "One import runs at a time: an add made while another runs is queued and starts by itself, in order, and that read lists the queue. "
                    "While Fab imports, the editor is held and every call, the status read included, answers EDITOR_BLOCKED: keep polling. "
                    "Fab chooses the destination folder; the status read reports importedRoot, and asset.move relocates a folder."));
           Self->SendAutomationResponse(
               Socket, RequestId, true,
-              FString::Printf(TEXT("Fab accepted the download of %s; operation %s continues in the background."),
-                              *ListingId, *Result.OperationId),
+              bQueued
+                  ? FString::Printf(TEXT("Fab is busy with another import, so %s is queued (position %d) as operation %s; it starts by itself when the running import ends."),
+                                    *ListingId, Result.QueuePosition, *Result.OperationId)
+                  : FString::Printf(TEXT("Fab accepted the download of %s; operation %s continues in the background."),
+                                    *ListingId, *Result.OperationId),
               Data, FString());
         });
       });
