@@ -50,7 +50,7 @@ const testCases = [
   { scenario: 'CONFIG: set_component_property properties bag', toolName: 'inspect', arguments: { action: 'set_component_property', actorName: ACTOR, componentName: COMPONENT, properties: { Intensity: 1300, 'LightmassSettings.ShadowExponent': 2 } }, expected: 'success' },
 
   // === CLASS / CDO / LISTING ===
-  { scenario: 'INFO: inspect_class', toolName: 'inspect', arguments: { action: 'inspect_class', className: 'StaticMeshActor' }, expected: 'success' },
+  { scenario: 'INFO: inspect_class', toolName: 'inspect', arguments: { action: 'inspect_class', className: 'StaticMeshActor' }, expected: 'success', assertions: [{ path: 'structuredContent.result.properties', minLength: 1, label: 'the class property list comes back' }] },
   { scenario: 'INFO: inspect_class via classPath alias', toolName: 'inspect', arguments: { action: 'inspect_class', classPath: '/Script/Engine.StaticMeshActor' }, expected: 'success', assertions: [{ path: 'structuredContent.result.classPath', equals: '/Script/Engine.StaticMeshActor', label: 'classPath alias resolves inspected class' }] },
   { scenario: 'INFO: inspect_cdo', toolName: 'inspect', arguments: { action: 'inspect_cdo', blueprintPath: BP_PATH, detailed: true }, expected: 'success' },
   { scenario: 'INFO: inspect_cdo narrowed by componentNames', toolName: 'inspect', arguments: { action: 'inspect_cdo', blueprintPath: BP_PATH, componentNames: ['NoSuchComponent'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.missingComponents.0', equals: 'NoSuchComponent', label: 'a name no component has is reported' }] },

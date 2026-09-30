@@ -5576,6 +5576,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Actor info objects."
         },
+        "ancestors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Super-classes from the parent up to Object."
+        },
         "availablePhysicalBytes": {
           "type": "number",
           "description": "Available physical memory in bytes."
@@ -5677,6 +5684,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Default GameMode class path set on WorldSettings."
         },
+        "defaultObjectPath": {
+          "type": "string",
+          "description": "Path of the class default object."
+        },
+        "defaultProperties": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Default value of each property on the class default object, as text."
+        },
         "deleted": {
           "type": "string",
           "description": "Name of the deleted actor."
@@ -5710,6 +5727,40 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Estimated frames per second from delta time."
         },
+        "flags": {
+          "type": "object",
+          "properties": {
+            "abstract": {
+              "type": "boolean"
+            },
+            "blueprintable": {
+              "type": "boolean"
+            },
+            "blueprintType": {
+              "type": "boolean"
+            },
+            "deprecated": {
+              "type": "boolean"
+            },
+            "transient": {
+              "type": "boolean"
+            },
+            "config": {
+              "type": "boolean"
+            },
+            "interface": {
+              "type": "boolean"
+            },
+            "isActor": {
+              "type": "boolean"
+            },
+            "isComponent": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Class flags as booleans."
+        },
         "fps": {
           "type": "number",
           "description": "Reported frames per second (same as estimatedFps)."
@@ -5722,6 +5773,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Frame time in milliseconds."
         },
+        "functionCount": {
+          "type": "number",
+          "description": "Functions the class declares or inherits."
+        },
         "gRunningCommandlet": {
           "type": "number",
           "description": "1 when running as a commandlet, else 0."
@@ -5733,6 +5788,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "gameThreadMs": {
           "type": "number",
           "description": "Game thread time in milliseconds."
+        },
+        "generatedBy": {
+          "type": "string",
+          "description": "Blueprint asset that generated the class, when it is Blueprint-generated."
         },
         "gpuMs": {
           "type": "number",
@@ -5762,6 +5821,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the engine is in benchmarking mode."
         },
+        "isBlueprintGenerated": {
+          "type": "boolean",
+          "description": "True for a Blueprint-generated class."
+        },
         "isEditor": {
           "type": "boolean",
           "description": "Whether running in the editor."
@@ -5769,6 +5832,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "isHidden": {
           "type": "boolean",
           "description": "True when the actor is hidden in the editor viewport."
+        },
+        "isNative": {
+          "type": "boolean",
+          "description": "True for a C++ class."
         },
         "isPIE": {
           "type": "boolean",
@@ -5830,6 +5897,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "componentNames that matched no component."
         },
+        "module": {
+          "type": "string",
+          "description": "Module that declares a C++ class (empty for a Blueprint class)."
+        },
         "mouseScrollCameraSpeed": {
           "type": "number",
           "description": "Mouse scroll camera speed."
@@ -5862,6 +5933,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parentClass": {
           "type": "string",
           "description": "Immediate super-class name (\"None\" when the class has no super)."
+        },
+        "parentClassPath": {
+          "type": "string",
+          "description": "Full path of the super-class."
         },
         "pawn": {
           "type": "string",
@@ -5910,10 +5985,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Project version string."
         },
         "properties": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "Requested property values."
+          "description": "kind=class: every property the class declares or inherits (name, type, category, declaredIn, editable, blueprintVisible, deprecated). kind=cdo: the requested property values by name."
+        },
+        "propertiesTruncated": {
+          "type": "boolean",
+          "description": "True when the class has more than the 200 properties listed."
+        },
+        "propertyCount": {
+          "type": "number",
+          "description": "Properties the class has, including any past the 200 listed."
         },
         "realTimeSeconds": {
           "type": "number",

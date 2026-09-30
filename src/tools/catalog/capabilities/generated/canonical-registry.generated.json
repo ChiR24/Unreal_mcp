@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0b4a0b7c628b053c",
+  "catalogRevision": "a1515a68120e8997",
   "recordCount": 389,
   "records": [
     {
@@ -40187,6 +40187,92 @@
               "type": "string",
               "description": "Immediate super-class name (\"None\" when the class has no super)."
             },
+            "parentClassPath": {
+              "type": "string",
+              "description": "Full path of the super-class."
+            },
+            "module": {
+              "type": "string",
+              "description": "Module that declares a C++ class (empty for a Blueprint class)."
+            },
+            "isNative": {
+              "type": "boolean",
+              "description": "True for a C++ class."
+            },
+            "isBlueprintGenerated": {
+              "type": "boolean",
+              "description": "True for a Blueprint-generated class."
+            },
+            "generatedBy": {
+              "type": "string",
+              "description": "Blueprint asset that generated the class, when it is Blueprint-generated."
+            },
+            "ancestors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Super-classes from the parent up to Object."
+            },
+            "flags": {
+              "type": "object",
+              "properties": {
+                "abstract": {
+                  "type": "boolean"
+                },
+                "blueprintable": {
+                  "type": "boolean"
+                },
+                "blueprintType": {
+                  "type": "boolean"
+                },
+                "deprecated": {
+                  "type": "boolean"
+                },
+                "transient": {
+                  "type": "boolean"
+                },
+                "config": {
+                  "type": "boolean"
+                },
+                "interface": {
+                  "type": "boolean"
+                },
+                "isActor": {
+                  "type": "boolean"
+                },
+                "isComponent": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false,
+              "description": "Class flags as booleans."
+            },
+            "properties": {
+              "description": "kind=class: every property the class declares or inherits (name, type, category, declaredIn, editable, blueprintVisible, deprecated). kind=cdo: the requested property values by name."
+            },
+            "propertyCount": {
+              "type": "number",
+              "description": "Properties the class has, including any past the 200 listed."
+            },
+            "propertiesTruncated": {
+              "type": "boolean",
+              "description": "True when the class has more than the 200 properties listed."
+            },
+            "defaultProperties": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Default value of each property on the class default object, as text."
+            },
+            "defaultObjectPath": {
+              "type": "string",
+              "description": "Path of the class default object."
+            },
+            "functionCount": {
+              "type": "number",
+              "description": "Functions the class declares or inherits."
+            },
             "result": {
               "type": "object",
               "additionalProperties": true,
@@ -40206,12 +40292,6 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "Default property values on the Class Default Object."
-            },
-            "properties": {
-              "type": "object",
-              "additionalProperties": true,
-              "x-unreal-reflection-boundary": true,
-              "description": "Requested property values."
             },
             "components": {
               "type": "array",
@@ -40314,8 +40394,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cfb78dbb5292e63d545be8b3eb1c41bbfdea8285b3736421eee439ebe99d31ef",
-        "content": "f1653c50b884a5b78f6d67a98bf7433ddec4b94cae1166084e134157be25f2d4"
+        "schema": "d41542ecf3f852cf1367d19b8c8db86b041aeebf978e7ee90539b32a5af2861e",
+        "content": "8a8d7acc9a5a0078168067ffde59d6fff14bb1a7a1af22f42dda2c35b29dee05"
       }
     },
     {
