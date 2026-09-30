@@ -66,6 +66,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   // unique name is the only address a later call has; report: failures used to drop it.
   TArray<TSharedPtr<FJsonValue>> Unnamed;
   TArray<FString> Failures;
+  // The actors that spawned, by the name each result carries, whatever `report` keeps of the
+  // results: what the receipt lists as changes and gives an actor handle apiece.
+  TArray<FString> Affected;
   int32 SpawnedCount = 0;
   for (int32 Index = 0; Index < Items->Num(); ++Index) {
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
@@ -106,8 +109,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
     if (!bNamed) {
       Unnamed.Add(MakeShared<FJsonValueString>(Actor ? Actor->GetName() : FString()));
     }
+    // A spawned actor that no lookup finds is listed by its path, so the list still counts it.
+    const FString Shown = Actor ? (bNamed ? Actor->GetActorLabel() : Actor->GetName()) : ActorPath;
+    Affected.Add(Shown);
     if (Actor) {
-      Entry->SetStringField(TEXT("name"), bNamed ? Actor->GetActorLabel() : Actor->GetName());
+      Entry->SetStringField(TEXT("name"), Shown);
       ApplySpawnOrganisation(Actor, Item);
     }
 
@@ -188,6 +194,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
     Data->SetStringField(TEXT("report"), Report);
   }
   Data->SetArrayField(TEXT("results"), Results);
+  Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
   if (Unnamed.Num() > 0) {
     Data->SetArrayField(TEXT("unnamedActors"), Unnamed);
   }

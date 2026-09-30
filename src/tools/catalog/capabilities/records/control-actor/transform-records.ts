@@ -72,6 +72,10 @@ const TRANSFORM_OUTPUT_PROPS = {
     description: 'actors: one entry per actor (actorName, success, read-back location/rotation/scale, placementWarning, error).',
   },
   movedActors: { type: 'number', description: 'actors: how many actors took their transform.' },
+  affectedActors: {
+    type: 'array', items: { type: 'string' },
+    description: 'actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each.',
+  },
 } as const;
 
 export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [

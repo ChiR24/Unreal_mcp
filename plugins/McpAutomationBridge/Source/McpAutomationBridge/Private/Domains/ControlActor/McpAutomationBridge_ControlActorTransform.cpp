@@ -53,13 +53,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     // Each item was checked right after its own move, while the actors after
     // it still stood at their old spots: a coin moved into a new arc reported
     // overlapping a coin that was about to move away. Re-check every moved
-    // actor against the finished layout.
+    // actor against the finished layout. The same pass names the actors that moved (each
+    // McpActorRef, once), for the receipt's changes and handles.
+    TArray<FString> Affected;
     for (const TSharedPtr<FJsonValue> &Value : Results) {
       const TSharedPtr<FJsonObject> Entry = Value->AsObject();
       AActor *Moved = Entry->GetBoolField(TEXT("success"))
                           ? FindActorByName(Entry->GetStringField(TEXT("actorName"))) : nullptr;
       if (!Moved)
         continue;
+      Affected.AddUnique(McpActorRef(Moved));
       TSharedPtr<FJsonObject> Fresh = McpHandlerUtils::CreateResultObject();
       McpPlacement::DescribePlacement(Moved, Fresh);
       Entry->RemoveField(TEXT("placementWarning"));
@@ -70,6 +73,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetArrayField(TEXT("results"), Results);
     Data->SetNumberField(TEXT("movedActors"), Done);
+    Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
     if (Failures.Num() > 0) {
       SendAutomationResponse(Socket, RequestId, false,
                              FString::Printf(TEXT("Moved %d of %d actors; %s"), Done, Results.Num(),

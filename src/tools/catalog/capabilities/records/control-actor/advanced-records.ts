@@ -58,7 +58,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
       actors: {
         type: 'array',
         items: { type: 'object', properties: { actorName: P.actorName, variables: P.variables }, required: ['actorName', 'variables'], additionalProperties: false },
-        description: 'Many actors in one call, each {actorName, variables} with its own values; every actor is reported, and the call fails naming any that did not take all of its variables.',
+        description: 'Many actors in one call, each {actorName, variables} with its own values; every actor is reported, the actors that took a variable come back under affectedActors (which the receipt lists as changes, with an actor handle each), and the call fails naming any that did not take all of its variables.',
       },
     },
     required: [],

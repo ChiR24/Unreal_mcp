@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "82bc5879e239a3ae",
+  "catalogRevision": "326f57db3ee85056",
   "recordCount": 389,
   "records": [
     {
@@ -32971,7 +32971,7 @@
                 ],
                 "additionalProperties": false
               },
-              "description": "Many actors in one call, each {actorName, variables} with its own values; every actor is reported, and the call fails naming any that did not take all of its variables."
+              "description": "Many actors in one call, each {actorName, variables} with its own values; every actor is reported, the actors that took a variable come back under affectedActors (which the receipt lists as changes, with an actor handle each), and the call fails naming any that did not take all of its variables."
             }
           },
           "required": [
@@ -33049,8 +33049,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f2d52889b8868f739c8eb725b2b0544ef61dcd496864a2af545f5bcddf40b2f8",
-        "content": "c2ea271d03ec0111b35341eeba68fb63535104e6a03dfc6288bdfe6120a02488"
+        "schema": "8af5c45577e70371af2c0d4b07ac1752c1e9d4037e2cd7bb7f1d65efb458b2e8",
+        "content": "531d37b11de7769989c49ef1adf18e81a54438a2bb2c2cc4a048e9844556fc3a"
       }
     },
     {
@@ -33476,6 +33476,13 @@
             "movedActors": {
               "type": "number",
               "description": "actors: how many actors took their transform."
+            },
+            "affectedActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
             }
           },
           "required": [
@@ -33566,8 +33573,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4fe7c93999c330493f5229b508dad7131002b1140ce8432e5a89f2bfe66364f7",
-        "content": "a3487eb887faaba97ef33fd418aa2f40b9b3b28a9979741607b1fdd30aedad38"
+        "schema": "3cfbc082be6b8906881c912e40412752fd7be45a86f86062e4bd1ca0839688a3",
+        "content": "c89aba40f3c989cd77e392014c4d46341da7f8d18fa6316553fcdaf75f316096"
       }
     },
     {
@@ -33926,6 +33933,13 @@
               },
               "description": "The unique name of every item that gave no actorName, in batch order (\"\" where it failed), under either report mode. Their labels repeat (every cube is \"Cube\"), so these are the names later calls must use."
             },
+            "affectedActors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors that spawned, by the name each result carries, in batch order and under either report mode; the receipt lists them as changes, with an actor handle each (the first 20)."
+            },
             "report": {
               "type": "string",
               "description": "Echoes report when it narrowed results."
@@ -34037,8 +34051,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bfa13780ca076e03f3ace22caceb2968f5fc51cdbcd138f34ab73fe379a4e825",
-        "content": "f948f0edc2c78b36a75f24809548d447deeb1efc404e40ad2cbc61bffa0032c7"
+        "schema": "b6f3fcc5ef063ff10306a5c6f7fce584d3eea4c81616ad63c07524c84378de5f",
+        "content": "d91b1b124b9881013e0ebb17a0cc87fe73d4d47bb703ad78619506a4c20583a7"
       }
     },
     {

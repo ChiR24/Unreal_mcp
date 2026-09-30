@@ -22,6 +22,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failures;
+    // The actors that took at least one variable, each by the name its one-actor run replied with, once
+    // each: what the receipt lists as changes and gives an actor handle apiece.
+    TArray<FString> Affected;
     for (int32 Index = 0; Index < Items->Num(); ++Index) {
       const TSharedPtr<FJsonObject> *Item = nullptr;
       TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
@@ -54,6 +57,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
       Entry->SetBoolField(TEXT("success"), bAll);
       if (Updated)
         Entry->SetArrayField(TEXT("updated"), *Updated);
+      if (Updated && Updated->Num() > 0) {
+        FString Changed;
+        if (!ReplyData || !(*ReplyData)->TryGetStringField(TEXT("actorName"), Changed) || Changed.IsEmpty())
+          Changed = Name;
+        Affected.AddUnique(Changed);
+      }
       if (!bAll) {
         // A call that ran reports "Variables updated"; what went wrong is in its warnings.
         TArray<FString> Reasons;
@@ -75,6 +84,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetArrayField(TEXT("results"), Results);
     Data->SetNumberField(TEXT("updatedActors"), Done);
+    Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
     if (Failures.Num() > 0) {
       SendAutomationResponse(Socket, RequestId, false,
                              FString::Printf(TEXT("Variables set on %d of %d actors; %s"), Done,
@@ -159,6 +169,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     for (const FString &Name : Applied)
       AppliedArray.Add(MakeShared<FJsonValueString>(Name));
     Data->SetArrayField(TEXT("updated"), AppliedArray);
+    // The instance whose variables changed (the Blueprint asset itself did not), so the receipt names it.
+    Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
   }
 
   SendStandardSuccessResponse(this, Socket, RequestId,

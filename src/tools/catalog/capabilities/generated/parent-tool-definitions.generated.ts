@@ -3540,7 +3540,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 ],
                 "additionalProperties": false
               },
-              "description": "Many actors in one call, each {actorName, variables} with its own values; every actor is reported, and the call fails naming any that did not take all of its variables."
+              "description": "Many actors in one call, each {actorName, variables} with its own values; every actor is reported, the actors that took a variable come back under affectedActors (which the receipt lists as changes, with an actor handle each), and the call fails naming any that did not take all of its variables."
             }
           ],
           "description": "Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags (actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn."
@@ -4087,6 +4087,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "actorsMoved": {
           "type": "number",
           "description": "Actors moved (0 under dryRun)."
+        },
+        "affectedActors": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The actors that spawned, by the name each result carries, in batch order and under either report mode; the receipt lists them as changes, with an actor handle each (the first 20)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "actors: the actors that took their transform, each by name and once; the receipt lists them as changes, with an actor handle each."
+            }
+          ],
+          "description": "The actors that spawned, by the name each result carries, in batch order and under either report mode; the receipt lists them as changes, with an actor handle each (the first 20)."
         },
         "blueprintsFixed": {
           "type": "array",

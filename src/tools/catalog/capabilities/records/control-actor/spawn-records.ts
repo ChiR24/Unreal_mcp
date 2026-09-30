@@ -149,6 +149,12 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         description: 'The unique name of every item that gave no actorName, in batch order ("" where it failed), under '
           + 'either report mode. Their labels repeat (every cube is "Cube"), so these are the names later calls must use.',
       },
+      affectedActors: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'The actors that spawned, by the name each result carries, in batch order and under either report mode; '
+          + 'the receipt lists them as changes, with an actor handle each (the first 20).',
+      },
       report: { type: 'string', description: 'Echoes report when it narrowed results.' },
     },
     outputRequired: [],
@@ -163,7 +169,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         { actorName: 'Block_2', location: [100, 0, 50], materialPath: '/Game/Materials/M_Brick' },
       ],
     },
-    exampleOutput: { success: true, message: 'Spawned 2 actors', spawned: 2, failed: 0 },
+    exampleOutput: { success: true, message: 'Spawned 2 actors', spawned: 2, failed: 0, affectedActors: ['Block_1', 'Block_2'] },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',

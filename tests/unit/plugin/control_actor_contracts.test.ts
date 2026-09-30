@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
-import { extractChanges } from '../../../src/tools/catalog/capabilities/semantic/receipt-outcome.js';
+import { extractChanges, extractHandles } from '../../../src/tools/catalog/capabilities/semantic/receipt-outcome.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
@@ -391,5 +391,70 @@ describe('the many forms of set_visibility, set_actor_collision, add_tag and set
 
       expect(isRecord(actorNames) ? actorNames.description : '', id).toMatch(/the actors (?:changed|tagged) under affectedActors/u);
     }
+  });
+});
+
+// spawn_batch, the set_transform batch and the set_blueprint_variables batch answered a per-item results list and
+// named no actor at the top, so a receipt listed nothing for a call that placed, moved or configured dozens. The
+// single set_blueprint_variables answered only {updated} inside its data envelope, naming no actor either.
+describe('the batch forms of spawn_batch, set_transform and set_blueprint_variables name the actors they changed, for the receipt', () => {
+  const batch = (file: string, start: string, end: string): string => sliceBetween(read(file), start, end);
+
+  it('spawn_batch lists every actor that spawned, by the name its result carries, under either report mode', () => {
+    const source = read('McpAutomationBridge_ControlActorSpawnBatch.cpp');
+
+    expect(source).toMatch(/const FString Shown = Actor \? \(bNamed \? Actor->GetActorLabel\(\) : Actor->GetName\(\)\) : ActorPath;\s*Affected\.Add\(Shown\);\s*if \(Actor\) \{\s*Entry->SetStringField\(TEXT\("name"\), Shown\);/u);
+    expect(source.indexOf('Affected.Add(Shown);'), 'only an item that spawned is listed').toBeGreaterThan(source.indexOf('++SpawnedCount;'));
+    expect(source).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
+    expect(source.indexOf('TEXT("affectedActors")'), 'the report filter narrows results, not this list').toBeGreaterThan(source.indexOf('Results.RemoveAll('));
+    expect(source.match(/TEXT\("affectedActors"\)/gu)).toHaveLength(1);
+  });
+
+  it('the set_transform batch lists each actor that moved once, by McpActorRef, in the pass that re-checks the layout', () => {
+    const many = batch('McpAutomationBridge_ControlActorTransform.cpp', 'TEXT("actors")', 'FString TargetName;');
+
+    expect(many).toMatch(/TArray<FString> Affected;\s*for \(const TSharedPtr<FJsonValue> &Value : Results\) \{[\s\S]*?if \(!Moved\)\s*continue;\s*Affected\.AddUnique\(McpActorRef\(Moved\)\);/u);
+    expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
+    expect(read('McpAutomationBridge_ControlActorTransform.cpp').match(/TEXT\("affectedActors"\)/gu), 'the set_visibility list and this one').toHaveLength(2);
+  });
+
+  it('the set_blueprint_variables batch lists an actor that took a variable, and the single form names the instance it changed', () => {
+    const source = read('McpAutomationBridge_ControlActorAdvanced.cpp');
+    const many = sliceBetween(source, 'TEXT("actors")', 'FString TargetName;');
+    const single = source.slice(source.indexOf('FString TargetName;'), source.indexOf('HandleControlActorExport('));
+
+    expect(many).toMatch(/if \(Updated && Updated->Num\(\) > 0\) \{\s*FString Changed;\s*if \(!ReplyData \|\| !\(\*ReplyData\)->TryGetStringField\(TEXT\("actorName"\), Changed\) \|\| Changed\.IsEmpty\(\)\)\s*Changed = Name;\s*Affected\.AddUnique\(Changed\);\s*\}/u);
+    expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
+    expect(single).toMatch(/if \(Applied\.Num\(\) > 0\) \{[\s\S]*?Data->SetArrayField\(TEXT\("updated"\), AppliedArray\);\s*Data->SetStringField\(TEXT\("actorName"\), McpActorRef\(Found\)\);\s*\}/u);
+    expect(single.match(/TEXT\("actorName"\), McpActorRef/gu), 'the actor is named only when a variable was set').toHaveLength(1);
+  });
+
+  it('replies shaped like the three batches give the receipt a change and an actor handle per actor, and nothing from the per-item results', () => {
+    const spawned = { success: true, results: [{ index: 0, success: true, name: 'Block_1', path: '/Temp/Untitled_1.Untitled_1:PersistentLevel.Block_1' }], spawned: 2, failed: 0, affectedActors: ['Block_1', 'Block_2'], unnamedActors: ['StaticMeshActor_3'] };
+    const moved = { success: true, results: [{ actorName: 'Sign_1', success: true, location: [0, 0, 1] }], movedActors: 2, affectedActors: ['Sign_1', 'Sign_2'] };
+    const configured = { success: true, results: [{ actorName: 'Sign_1', success: true, updated: ['Headline'] }], updatedActors: 2, affectedActors: ['Sign_1', 'Sign_2'] };
+    const single = { success: true, data: { updated: ['Headline'], actorName: 'Sign_1' }, warnings: [], error: null };
+
+    expect(extractChanges(spawned)).toEqual(['Block_1', 'Block_2']);
+    expect(extractHandles(spawned)).toEqual([{ kind: 'actor', ref: 'Block_1' }, { kind: 'actor', ref: 'Block_2' }]);
+    for (const reply of [moved, configured]) {
+      expect(extractChanges(reply)).toEqual(['Sign_1', 'Sign_2']);
+      expect(extractHandles(reply)).toEqual([{ kind: 'actor', ref: 'Sign_1' }, { kind: 'actor', ref: 'Sign_2' }]);
+    }
+    expect(extractChanges(single)).toEqual(['Sign_1']);
+    expect(extractHandles(single)).toEqual([{ kind: 'actor', ref: 'Sign_1' }]);
+  });
+
+  it('the records say where the changed actors come back', () => {
+    for (const id of ['control_actor.spawn', 'control_actor.set_transform']) {
+      const properties = capabilityIndex().byId.get(id)?.schemas.output.properties;
+      const affected = isRecord(properties) ? properties.affectedActors : undefined;
+
+      expect(isRecord(affected) ? affected.description : '', id).toMatch(/receipt lists them as changes, with an actor handle each/u);
+    }
+    const actors = capabilityIndex().byId.get('control_actor.set_blueprint_variables')?.schemas.input.properties;
+    const description = isRecord(actors) && isRecord(actors.actors) ? actors.actors.description : '';
+
+    expect(description).toMatch(/the actors that took a variable come back under affectedActors/u);
   });
 });
