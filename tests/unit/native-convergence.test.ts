@@ -39,10 +39,13 @@ function sourceFilesUnder(...relativeDirs: readonly string[]): readonly string[]
 }
 
 const handlerSources = sourceFilesUnder('Domains', 'Core', 'Foundation');
+// Read once: re-reading every source file per call took 14.7 s under a loaded machine and timed
+// out the 10 s tests after the first (which alone has 60 s for this first read).
+let handlerTexts: readonly (readonly [string, string])[] | undefined;
 const filesMentioning = (token: string): readonly string[] =>
-  handlerSources
-    .filter((file) => readFileSync(file, 'utf8').includes(token))
-    .map((file) => file.slice(pluginPrivate.length + 1).replaceAll('\\', '/'))
+  (handlerTexts ??= handlerSources.map((file) => [file, readFileSync(file, 'utf8')] as const))
+    .filter(([, text]) => text.includes(token))
+    .map(([file]) => file.slice(pluginPrivate.length + 1).replaceAll('\\', '/'))
     .sort();
 
 describe('Task 27 / Task 21: the residual native handler divergence stays visible', () => {
