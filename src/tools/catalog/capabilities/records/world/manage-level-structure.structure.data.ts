@@ -176,7 +176,7 @@ export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'connect_level_blueprint_nodes', dispatchAction: 'connect_level_blueprint_nodes',
     family: F, summary: 'Connect two level blueprint graph nodes by pin names.',
-    whenToUse: ['Two level blueprint nodes must be wired together.'], whenNotToUse: ['A node must be created first; use add_level_blueprint_node.'],
+    whenToUse: ['Two level blueprint nodes must be wired together.'], whenNotToUse: ['A node must be created first; use add_level_blueprint_node.', 'The nodes are in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=connect_pins).'],
     inputProps: { sourceNodeName: P.sourceNodeName, sourcePinName: P.sourcePinName, targetNodeName: P.targetNodeName, targetPinName: P.targetPinName, levelPath: BP_LEVEL, save: P.levelEditSave },
     required: ['sourceNodeName', 'targetNodeName'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'connect_level_blueprint_nodes', sourceNodeName: 'EventBegin', targetNodeName: 'Print' },

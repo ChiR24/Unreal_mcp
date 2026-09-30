@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d4d8e5da6cb1d24c",
+  "catalogRevision": "106558f28182eeae",
   "recordCount": 389,
   "records": [
     {
@@ -67136,7 +67136,8 @@
           "edit=remove_node: A level blueprint node must be deleted, or an unbound K2Node_CallFunction (\"Could not find a function named None\") must be repaired."
         ],
         "whenNotToUse": [
-          "edit=open: A sub-level blueprint is needed; use the asset path directly."
+          "edit=open: A sub-level blueprint is needed; use the asset path directly.",
+          "edit=connect_nodes: The nodes are in a Blueprint asset, not the level Blueprint; use blueprint.edit_graph (edit=connect_pins)."
         ]
       },
       "schemas": {
@@ -67336,7 +67337,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b9d10ac3d13c2ea3c71cd06c108407400b86b03a005044d6174f5129e7fc5d9e",
-        "content": "d7c7fe482c606064f132d2220daecc9719190cd6e43d1c503f7f36f5a253b4b2"
+        "content": "3148f63545c7bb75fe6c32f80c751aa82e968477f02c78dc8fbf2e1477c70cc1"
       }
     },
     {
