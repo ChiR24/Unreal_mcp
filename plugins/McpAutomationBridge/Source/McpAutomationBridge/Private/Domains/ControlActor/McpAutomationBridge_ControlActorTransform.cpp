@@ -242,7 +242,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   // Every primitive component is mutated too, so each one has to be in the one transaction.
   TArray<UObject *> Undoable;
   for (AActor *Actor : Actors) {
-    McpAddVisibilityUndoSet(Actor, Undoable);
+    McpAddActorUndoSet(Actor, Undoable);
   }
 
   FMcpScopedEditorTransaction Transaction(

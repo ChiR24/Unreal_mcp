@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorApplyForce(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -130,6 +131,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     Actors.Add(Found);
   }
 
+  // One transaction for the whole call, as set_visibility opens one: every actor and primitive
+  // component changed below, each flagged RF_Transactional where the engine made it without, so a
+  // single undo takes the whole list back and the reply says it can.
+  TArray<UObject*> Undoable;
+  for (AActor* Actor : Actors)
+  {
+    McpAddActorUndoSet(Actor, Undoable);
+  }
+  FMcpScopedEditorTransaction Transaction(
+      FText::FromString(TEXT("Set Actor Collision")),
+      EMcpMutationDurability::EditorStateOnly, Undoable);
+
   // Two-part fix: (1) flip the authoritative actor-level switch, (2) apply the
   // collision mode to EVERY primitive component, not just the root. The old
   // root-only loop silently skipped attached components (e.g. a DynamicMesh
@@ -173,6 +186,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("collisionEnabled"), bCollisionEnabled);
   Data->SetNumberField(TEXT("componentsUpdated"), Updated);
+  Transaction.DescribeInto(Data);
   if (!bMany)
   {
     Data->SetStringField(TEXT("actorName"), ActorName);

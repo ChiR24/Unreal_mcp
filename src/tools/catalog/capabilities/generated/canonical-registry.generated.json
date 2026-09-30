@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1dd0e4994180d2b3",
+  "catalogRevision": "39cd9aaab53b680d",
   "recordCount": 389,
   "records": [
     {
@@ -32788,7 +32788,7 @@
         "topics": [
           "set_actor_collision"
         ],
-        "summary": "Enable or disable collision on an actor, or on many actors at once with actorNames; normalizes to set_collision.",
+        "summary": "Enable or disable collision on an actor, or on many actors at once with actorNames, as one undoable step; normalizes to set_collision.",
         "whenToUse": [
           "Actor collision must be toggled.",
           "Many actors must have collision toggled together (actorNames does them in one call)."
@@ -32815,7 +32815,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to toggle in one call, in place of actorName; names not found are listed back under missing."
+              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing."
             },
             "collisionEnabled": {
               "type": "boolean",
@@ -32857,7 +32857,7 @@
       },
       "examples": [
         {
-          "title": "Enable or disable collision on an actor, or on many actors at once with actorNames; normalizes to set_collision.",
+          "title": "Enable or disable collision on an actor, or on many actors at once with actorNames, as one undoable step; normalizes to set_collision.",
           "input": {
             "action": "set_actor_collision",
             "actorName": "Cube1",
@@ -32895,8 +32895,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6bf10acc91433f10d1db9ec4f8803398e20cef58a992bd4d461a8d0ad8dfece4",
-        "content": "7ed80b697346ba007aa64545f26e4128472d9e75b34959934e3679828f8b23ca"
+        "schema": "562bb0bc13f6f5c891474f183480ea8c07f15b5aa0872d7640f18d05d7950fe7",
+        "content": "c1c454efbbee65a05944d44149c5cae1ed00d4799e9969eaa62d0b1552f8456b"
       }
     },
     {

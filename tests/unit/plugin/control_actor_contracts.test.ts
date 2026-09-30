@@ -199,13 +199,13 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
 
   it('set_visibility holds every named actor and its primitive components in ONE transaction, opened before the first write', () => {
     const source = visibility();
-    const collect = source.indexOf('McpAddVisibilityUndoSet(Actor, Undoable);');
+    const collect = source.indexOf('McpAddActorUndoSet(Actor, Undoable);');
     const open = source.indexOf('FMcpScopedEditorTransaction Transaction(');
     const write = source.indexOf('McpApplyActorVisibility(Actor, bVisible)');
-    const undoSet = sliceBetween(support(), 'inline void McpAddVisibilityUndoSet(', 'struct FMcpMotionInput');
+    const undoSet = sliceBetween(support(), 'inline void McpAddActorUndoSet(', 'struct FMcpMotionInput');
 
     expect(source.match(/FMcpScopedEditorTransaction Transaction\(/gu)).toHaveLength(1);
-    expect(source).toMatch(/for \(AActor \*Actor : Actors\) \{\s*McpAddVisibilityUndoSet\(Actor, Undoable\);\s*\}/u);
+    expect(source).toMatch(/for \(AActor \*Actor : Actors\) \{\s*McpAddActorUndoSet\(Actor, Undoable\);\s*\}/u);
     expect(collect).toBeGreaterThan(-1);
     expect(collect).toBeLessThan(open);
     expect(open).toBeLessThan(write);
@@ -217,12 +217,12 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
   // set_visibility on a Blueprint actor's BillboardComponent answered undoable:false: the transaction
   // gate refuses an object without RF_Transactional, and that component has none.
   it('flags each actor and primitive component that lacks RF_Transactional before the transaction opens, so its undo is recorded', () => {
-    const undoSet = sliceBetween(support(), 'inline void McpAddVisibilityUndoSet(', 'struct FMcpMotionInput');
+    const undoSet = sliceBetween(support(), 'inline void McpAddActorUndoSet(', 'struct FMcpMotionInput');
     const source = visibility();
 
     expect(undoSet).toMatch(/if \(!Object->HasAnyFlags\(RF_Transactional\)\) \{\s*Object->SetFlags\(RF_Transactional\);\s*\}\s*Undoable\.Add\(Object\);/u);
     expect(undoSet).toMatch(/Add\(Actor\);\s*for \(UActorComponent \*Comp : Actor->GetComponents\(\)\) \{\s*if \(UPrimitiveComponent \*Prim = Cast<UPrimitiveComponent>\(Comp\)\) \{\s*Add\(Prim\);/u);
-    expect(source.indexOf('McpAddVisibilityUndoSet(Actor, Undoable);')).toBeLessThan(source.indexOf('FMcpScopedEditorTransaction Transaction('));
+    expect(source.indexOf('McpAddActorUndoSet(Actor, Undoable);')).toBeLessThan(source.indexOf('FMcpScopedEditorTransaction Transaction('));
   });
 
   it('a mismatch on any actor fails the call naming it; the single-actor replies keep their shape', () => {
@@ -262,5 +262,55 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
 describe('get_components rows name the mesh and materials a component draws', () => {
   it('world rows add the shared mesh asset fields', () => {
     expect(read('McpAutomationBridge_ControlActorComponentDetails.cpp')).toContain('McpHandlerUtils::AddMeshAssetFields(Component, Entry);');
+  });
+});
+
+// set_actor_collision opened no transaction, one actor or many, so control_editor.undo had nothing to take
+// back, while set_visibility already was one undo step.
+describe('set_actor_collision is one undoable step over every actor it changes, as set_visibility is', () => {
+  const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
+  const from = (file: string, marker: string): string => {
+    const source = read(file);
+    return source.slice(source.indexOf(marker));
+  };
+  const collision = (): string => from('McpAutomationBridge_ControlActorPhysics.cpp', 'HandleControlActorSetCollision(');
+  const visibility = (): string => from('McpAutomationBridge_ControlActorTransform.cpp', 'HandleControlActorSetVisibility(');
+
+  it('builds the shared undo set for each actor and opens ONE named transaction, before the first write', () => {
+    const source = collision();
+    const collect = source.indexOf('McpAddActorUndoSet(Actor, Undoable);');
+    const open = source.indexOf('FMcpScopedEditorTransaction Transaction(');
+    const write = source.indexOf('Actor->SetActorEnableCollision(bCollisionEnabled);');
+
+    expect(source.match(/FMcpScopedEditorTransaction Transaction\(/gu)).toHaveLength(1);
+    expect(source).toMatch(/for \(AActor\* Actor : Actors\)\s*\{\s*McpAddActorUndoSet\(Actor, Undoable\);\s*\}/u);
+    expect(source).toMatch(/FMcpScopedEditorTransaction Transaction\(\s*FText::FromString\(TEXT\("Set Actor Collision"\)\),\s*EMcpMutationDurability::EditorStateOnly, Undoable\);/u);
+    expect(collect).toBeGreaterThan(-1);
+    expect(collect).toBeLessThan(open);
+    expect(open).toBeLessThan(write);
+    expect(read('McpAutomationBridge_ControlActorPhysics.cpp')).toContain('#include "Foundation/McpScopedEditorTransaction.h"');
+  });
+
+  it('the undo block rides in the reply of the single and of the many form alike', () => {
+    const source = collision();
+
+    expect(source.match(/Transaction\.DescribeInto\(Data\);/gu)).toHaveLength(1);
+    expect(source).toMatch(/Data->SetNumberField\(TEXT\("componentsUpdated"\), Updated\);\s*Transaction\.DescribeInto\(Data\);\s*if \(!bMany\)/u);
+  });
+
+  it('set_visibility and set_actor_collision build their undo sets through the one helper, which flags what lacks RF_Transactional', () => {
+    const undoSet = sliceBetween(support(), 'inline void McpAddActorUndoSet(', 'struct FMcpMotionInput');
+
+    expect(visibility()).toContain('McpAddActorUndoSet(Actor, Undoable);');
+    expect(collision()).toContain('McpAddActorUndoSet(Actor, Undoable);');
+    expect(undoSet).toMatch(/if \(!Object->HasAnyFlags\(RF_Transactional\)\) \{\s*Object->SetFlags\(RF_Transactional\);\s*\}\s*Undoable\.Add\(Object\);/u);
+    expect(support()).not.toContain('McpAddVisibilityUndoSet');
+  });
+
+  it('the record says the many form is one undo step', () => {
+    const input = capabilityIndex().byId.get('control_actor.set_actor_collision')?.schemas.input;
+    const actorNames = isRecord(input?.properties) ? input.properties.actorNames : undefined;
+
+    expect(isRecord(actorNames) ? actorNames.description : '').toMatch(/one call and one undo step/u);
   });
 });
