@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1ad0b0160168d78c",
+  "catalogRevision": "a1b3d41ef5ce8f94",
   "recordCount": 389,
   "records": [
     {
@@ -29477,7 +29477,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to tag in one call, in place of actorName; names not found are listed back."
+              "description": "Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes)."
             },
             "tag": {
               "type": "string",
@@ -29576,8 +29576,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "206a655d691534a4127813d32bf24393620c85a26288493e5810f35928eebd06",
-        "content": "2f89e5cab4f5cacc9c038d71474c17bc78d7a96b3701d114442b2b6ec517decb"
+        "schema": "cccdc279d601c2f38f5c9cce1dec6a8872cc51ef59999402299872399f87e150",
+        "content": "046fc81c09453ee289a9717346f363bd0a02996264dbb8c6a0b25a8b8ca04736"
       }
     },
     {

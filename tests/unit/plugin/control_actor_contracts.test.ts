@@ -319,11 +319,12 @@ describe('set_actor_collision is one undoable step over every actor it changes, 
 // The receipt lists a call's changes from its reply: a single form names actorName and actorPath, but the
 // actorNames form named no actor, so its receipt's changes[] came back empty although updatedActors, missing
 // and the undo block were right. Both doors' extractors already read an affectedActors array.
-describe('the many forms of set_visibility and set_actor_collision name the actors they changed, for the receipt', () => {
+describe('the many forms of set_visibility, set_actor_collision and add_tag name the actors they changed, for the receipt', () => {
   const from = (file: string, marker: string): string => {
     const source = read(file);
     return source.slice(source.indexOf(marker));
   };
+  const addTag = (): string => sliceBetween(read('McpAutomationBridge_ControlActorTags.cpp'), 'HandleControlActorAddTag(', 'HandleControlActorRemoveTag(');
   const visibility = (): string => from('McpAutomationBridge_ControlActorTransform.cpp', 'HandleControlActorSetVisibility(');
   const collision = (): string => from('McpAutomationBridge_ControlActorPhysics.cpp', 'HandleControlActorSetCollision(');
   const nativeOutcome = readFileSync(
@@ -350,18 +351,30 @@ describe('the many forms of set_visibility and set_actor_collision name the acto
     expect(single, 'the single form returns before the many branch').not.toContain('affectedActors');
   });
 
+  it('add_tag lists every actor it resolved and tagged, each by name, in the many form only (remove_tag has no many form)', () => {
+    const source = addTag();
+    const single = source.slice(source.indexOf('if (TargetName.IsEmpty() || TagValue.IsEmpty())'));
+
+    expect(source).toMatch(/TArray<FString> Affected;\s*for \(AActor \*Actor : Actors\) \{\s*Actor->Tags\.AddUnique\(TagName\);\s*Actor->MarkPackageDirty\(\);\s*Affected\.Add\(McpActorRef\(Actor\)\);\s*\}/u);
+    expect(source).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
+    expect(single, 'the single form returns after the many branch').not.toContain('affectedActors');
+    expect(read('McpAutomationBridge_ControlActorTags.cpp').match(/TEXT\("affectedActors"\)/gu)).toHaveLength(1);
+  });
+
   it('a reply shaped like the many form lists the changed actors, and only them, as the receipt\'s changes on both doors', () => {
     expect(extractChanges({ success: true, visible: false, updatedActors: 2, missing: ['Gone'], affectedActors: ['Sign_1', 'Sign_2'], undo: { undoable: true } }))
+      .toEqual(['Sign_1', 'Sign_2']);
+    expect(extractChanges({ success: true, tag: 'Pickup', taggedCount: 2, missing: ['Gone'], affectedActors: ['Sign_1', 'Sign_2'], undo: { undoable: true } }))
       .toEqual(['Sign_1', 'Sign_2']);
     expect(nativeOutcome).toMatch(/CHANGE_ARRAYS\[\] = \{[^}]*TEXT\("affectedActors"\)/u);
   });
 
   it('the records say where the changed actors come back', () => {
-    for (const id of ['control_actor.set_visibility', 'control_actor.set_actor_collision']) {
+    for (const id of ['control_actor.set_visibility', 'control_actor.set_actor_collision', 'control_actor.add_tag']) {
       const properties = capabilityIndex().byId.get(id)?.schemas.input.properties;
       const actorNames = isRecord(properties) ? properties.actorNames : undefined;
 
-      expect(isRecord(actorNames) ? actorNames.description : '', id).toMatch(/the actors changed under affectedActors/u);
+      expect(isRecord(actorNames) ? actorNames.description : '', id).toMatch(/the actors (?:changed|tagged) under affectedActors/u);
     }
   });
 });

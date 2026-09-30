@@ -76,13 +76,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
     }
     FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Actor Tag")),
                                             EMcpMutationDurability::EditorStateOnly, Targets);
+    // The reply names every actor it tagged, so the receipt's changes[] lists them
+    // (the single form names actorName; the many form named no actor at all).
+    TArray<FString> Affected;
     for (AActor *Actor : Actors) {
       Actor->Tags.AddUnique(TagName);
       Actor->MarkPackageDirty();
+      Affected.Add(McpActorRef(Actor));
     }
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("tag"), TagName.ToString());
     Data->SetNumberField(TEXT("taggedCount"), Actors.Num());
+    Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
     Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
     Transaction.DescribeInto(Data);
     SendAutomationResponse(Socket, RequestId, true,

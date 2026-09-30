@@ -136,7 +136,7 @@ const testCases = [
 
   // === TAGS / SEARCH ===
   { scenario: 'ADD: add_tag', toolName: 'control_actor', arguments: actorArgs('add_tag', { tag: TAG }), expected: 'success|already exists' },
-  { scenario: 'ADD: add_tag to many actors at once, listing names not found', toolName: 'control_actor', arguments: { action: 'add_tag', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, `MCP_MissingActor_${ts}`], tag: TAG }, expected: 'success' },
+  { scenario: 'ADD: add_tag to many actors at once, listing names not found', toolName: 'control_actor', arguments: { action: 'add_tag', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, `MCP_MissingActor_${ts}`], tag: TAG }, expected: 'success', assertions: [{ path: 'structuredContent.result.taggedCount', equals: 2, label: 'both actors that exist took the tag' }, { path: 'structuredContent.result.missing.0', equals: `MCP_MissingActor_${ts}`, label: 'the name that matched no actor is listed back' }, { path: 'structuredContent.result.affectedActors', length: 2, label: 'the actors tagged are named' }, { path: 'structuredContent.result.affectedActors.0', equals: MAIN_ACTOR, label: 'in the order the caller gave them' }, { path: 'structuredContent.receipt.changes', length: 2, label: 'so the receipt lists them as changes' }] },
   { scenario: 'INFO: find_by_tag', toolName: 'control_actor', arguments: { action: 'find_by_tag', tag: TAG }, expected: 'success' },
   { scenario: 'INFO: find_actors_by_tag', toolName: 'control_actor', arguments: { action: 'find_actors_by_tag', tag: TAG }, expected: 'success' },
   { scenario: 'INFO: find_by_name', toolName: 'control_actor', arguments: { action: 'find_by_name', name: MAIN_ACTOR }, expected: 'success' },

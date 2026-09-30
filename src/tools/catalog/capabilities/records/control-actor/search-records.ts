@@ -31,7 +31,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The tag is already present (idempotent re-add is a no-op).'],
     inputProps: {
       actorName: P.actorName,
-      actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to tag in one call, in place of actorName; names not found are listed back.' },
+      actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes).' },
       tag: P.tag,
     },
     required: ['tag'],
