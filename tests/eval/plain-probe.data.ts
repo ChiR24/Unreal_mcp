@@ -390,4 +390,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'screenshot game view', accepted: ['control_editor.screenshot', 'system_control.screenshot'] },
   { query: 'list widget children', accepted: ['blueprint.get_widget_info'] },
   { query: 'set movie resolution', accepted: ['sequence.mrq.configure_render_job'] },
+  { query: 'find nodes in blueprint', accepted: ['blueprint.inspect_graph'] },
+  { query: 'filter graph nodes', accepted: ['blueprint.inspect_graph'] },
 ];

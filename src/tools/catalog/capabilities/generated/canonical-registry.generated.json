@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6be4ecfd1bfe956b",
+  "catalogRevision": "049dc29913696eee",
   "recordCount": 389,
   "records": [
     {
@@ -17212,9 +17212,11 @@
           "graph details",
           "node details",
           "pin details",
-          "node types"
+          "node types",
+          "find nodes",
+          "search graph nodes"
         ],
-        "summary": "Inspect a Blueprint graph: graph details, node details, pin details, or the available node types.",
+        "summary": "Inspect a Blueprint graph: its nodes (every one, or those whose title, pin default, text or object path matches a filter), node details, pin details, or the available node types.",
         "whenToUse": [
           "info=graph: The full node list of a graph must be inspected in one call.",
           "info=graph: A large graph must be read in parts: filter by node title or by what a pin holds, page with offset/limit.",
@@ -17409,7 +17411,7 @@
       },
       "examples": [
         {
-          "title": "Inspect a Blueprint graph: graph details, node details, pin details, or the available node types.",
+          "title": "Inspect a Blueprint graph: its nodes (every one, or those whose title, pin default, text or object path matches a filter), node details, pin details, or the available node types.",
           "input": {
             "action": "inspect_graph",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -17500,7 +17502,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9e5d9d523e289be0eed41b4a457ae50b79488bd1d645714b945de48d124a6207",
-        "content": "5f1f8e2987e5d541121cb91c0fbc63bafd5b67d1d96d5fe4b112d68210bf038a"
+        "content": "1e594cf5c6860af643fd3f5d0b4d3e7367b7020af9679074170632059eb2aafd"
       }
     },
     {
