@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7a6615b415992b21",
+  "catalogRevision": "9825df0d8cd4eb3a",
   "recordCount": 389,
   "records": [
     {
@@ -14289,6 +14289,7 @@
         "blueprint.set_node_property",
         "blueprint.set_pin_default_value",
         "blueprint.add_construction_script",
+        "blueprint.arrange_nodes",
         "blueprint.build_graph"
       ],
       "legacyIds": [
@@ -14354,6 +14355,13 @@
         },
         {
           "tool": "manage_blueprint",
+          "action": "arrange_nodes",
+          "folded": {
+            "edit": "arrange_nodes"
+          }
+        },
+        {
+          "tool": "manage_blueprint",
           "action": "build_graph",
           "folded": {
             "edit": "batch"
@@ -14382,6 +14390,9 @@
           "timeline",
           "delay node",
           "cast node",
+          "arrange nodes",
+          "tidy graph",
+          "clean up graph layout",
           "add node",
           "place node",
           "graph node",
@@ -14391,12 +14402,14 @@
           "wire nodes",
           "exec pin",
           "connect output to input",
+          "move nodes next to each other",
+          "layout nodes",
           "build event graph",
           "wire many nodes",
           "blueprint graph batch",
           "function with body"
         ],
-        "summary": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits, variables included, in one batch.",
+        "summary": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, arrange nodes beside what they are wired to, or run many of those edits, variables included, in one batch.",
         "whenToUse": [
           "edit=add_node: A node must be added using a friendly type alias (e.g. Branch, Cast, GetVariable).",
           "edit=create_node: A new node must be placed in a Blueprint event or function graph.",
@@ -14407,11 +14420,13 @@
           "edit=set_pin_default_value: A pin's default literal value must be set when it has no incoming link.",
           "edit=set_pin_default_value: A read-only text, string, name or number pin (TextRender Set Text's Value) needs a literal.",
           "edit=add_construction_script: The Construction Script graph must be created or opened for editing.",
+          "edit=arrange_nodes: Nodes of a chain sit far from each other or from the event they hang off, and should be laid out beside what they are wired to.",
           "edit=batch: More than a couple of nodes or links must be added to one Blueprint graph.",
           "edit=batch: A new function and the nodes inside it must be built in one call."
         ],
         "whenNotToUse": [
           "edit=connect_pins: Links must be broken (use break_pin_links).",
+          "edit=arrange_nodes: Every listed node is wired only to other listed nodes: nothing anchors them, so none moves; leave the head of the chain (its event) out of nodeIds.",
           "edit=batch: Nodes or links must be deleted (use delete_node; destructive edits are not batched)."
         ]
       },
@@ -14557,6 +14572,15 @@
               "type": "string",
               "description": "Pin name on a graph node."
             },
+            "nodeIds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "The nodes to move, by nodeId or nodeGuid. Nodes left out stay where they are and anchor the ones listed; a node wired to nothing left in place goes back where it was and is listed under unmoved."
+            },
             "operations": {
               "type": "array",
               "items": {
@@ -14578,6 +14602,7 @@
                 "set_node_property",
                 "set_pin_default_value",
                 "add_construction_script",
+                "arrange_nodes",
                 "batch"
               ],
               "description": "Which edit graph variant to run."
@@ -14757,6 +14782,22 @@
               "type": "string",
               "description": "Guid of the MakeLiteral node carrying the value when the pin itself takes no literal; setting the pin again updates that node."
             },
+            "moved": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Each node that moved: nodeId, nodeTitle and its new x and y."
+            },
+            "unmoved": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Ids of listed nodes that stayed where they were: wired to no node left in place, or no free slot near one."
+            },
             "results": {
               "type": "array",
               "items": {
@@ -14791,7 +14832,7 @@
       },
       "examples": [
         {
-          "title": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, or run many of those edits, variables included, in one batch.",
+          "title": "Edit a Blueprint graph: add or create nodes (including reroute and struct make/break nodes), connect pins, set node properties and pin defaults, add a construction script, arrange nodes beside what they are wired to, or run many of those edits, variables included, in one batch.",
           "input": {
             "action": "edit_graph",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -14845,6 +14886,7 @@
             "set_node_property": "set_node_property",
             "set_pin_default_value": "set_pin_default_value",
             "add_construction_script": "add_construction_script",
+            "arrange_nodes": "arrange_nodes",
             "batch": "build_graph"
           },
           "declaredBy": {
@@ -14856,6 +14898,7 @@
               "connect_pins",
               "set_node_property",
               "set_pin_default_value",
+              "arrange_nodes",
               "batch"
             ],
             "nodeType": [
@@ -14964,6 +15007,9 @@
             "pinName": [
               "set_pin_default_value"
             ],
+            "nodeIds": [
+              "arrange_nodes"
+            ],
             "operations": [
               "batch"
             ]
@@ -14972,8 +15018,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f5dd3f9ea8b5fb483f08d912809310a603f1c0bedaf455b91ed006d55850310e",
-        "content": "55c94ad0d50541d84ac947bc77fcb54e0c776232e85e15cd7f19315f7dbd9ba9"
+        "schema": "53943709fd6eada4e25f11fa770cf801117cf5a257c8c57822ac2f70cb741286",
+        "content": "9636ad7a620a3fd2efed243080638e70910e82d6f2cf13bec739e9c5f0f17a55"
       }
     },
     {

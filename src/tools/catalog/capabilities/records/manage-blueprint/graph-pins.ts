@@ -109,6 +109,34 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'set_pin_default_value', blueprintPath: '/Game/Blueprints/BP_Test', graphName: 'EventGraph', nodeId: 'A1B2C3D4', pinName: 'InString', propertyValue: 'Hello' },
     exampleOutput: { success: true, message: 'Pin default value set', nodeId: 'A1B2C3D4', pinName: 'InString', appliedValue: 'Hello' },
   }),
+  // A chain built without positions, or before the batch settle pass, can sit thousands of units from the
+  // node it hangs off; this moves the nodes named beside what they are wired to (SettleAutoPlacedNodes).
+  buildRecord({
+    id: 'blueprint.arrange_nodes',
+    action: 'arrange_nodes',
+    family: FAMILY,
+    domain: DOMAIN,
+    topics: ['arrange nodes', 'tidy graph', 'clean up graph layout', 'move nodes next to each other', 'layout nodes'],
+    summary: 'Tidy a graph: move the listed nodes beside the nodes they are wired to (right of what runs them, below-left of what reads them), each to the nearest free slot; the nodes left out stay put and anchor them.',
+    whenToUse: ['Nodes of a chain sit far from each other or from the event they hang off, and should be laid out beside what they are wired to.'],
+    whenNotToUse: ['One node must go to an exact position (use set_node_property with NodePosX and NodePosY).', 'Every listed node is wired only to other listed nodes: nothing anchors them, so none moves; leave the head of the chain (its event) out of nodeIds.'],
+    inputProps: {
+      blueprintPath: P.blueprintPath, graphName: P.graphName,
+      nodeIds: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 500, description: 'The nodes to move, by nodeId or nodeGuid. Nodes left out stay where they are and anchor the ones listed; a node wired to nothing left in place goes back where it was and is listed under unmoved.' },
+    },
+    required: ['blueprintPath', 'nodeIds'],
+    outputProps: {
+      moved: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Each node that moved: nodeId, nodeTitle and its new x and y.' },
+      unmoved: { type: 'array', items: { type: 'string' }, description: 'Ids of listed nodes that stayed where they were: wired to no node left in place, or no free slot near one.' },
+    },
+    outputRequired: [],
+    effect: 'write',
+    latency: 'interactive',
+    resources: 'low',
+    plugins: BP_PLUGINS,
+    exampleInput: { action: 'arrange_nodes', blueprintPath: '/Game/Blueprints/BP_Test', graphName: 'EventGraph', nodeIds: ['A1B2C3D4', 'E5F6A7B8'] },
+    exampleOutput: { success: true, message: 'Moved 2 of 2 nodes beside the nodes they are wired to.', moved: [{ nodeId: 'A1B2C3D4', nodeTitle: 'Print String', x: 480, y: 0 }], unmoved: [] },
+  }),
   buildRecord({
     id: 'blueprint.add_construction_script',
     action: 'add_construction_script',

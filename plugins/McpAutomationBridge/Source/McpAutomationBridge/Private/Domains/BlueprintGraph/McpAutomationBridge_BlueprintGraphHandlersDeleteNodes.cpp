@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
+#include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 #include "ScopedTransaction.h"
@@ -113,6 +114,79 @@ bool DeleteNodes(FActionContext& Context)
     Result->SetNumberField(TEXT("removedCount"), Removed.Num());
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(Removed.Num() == 1 ? TEXT("Node deleted.") : FString::Printf(TEXT("%d nodes deleted."), Removed.Num()), Result);
+    return true;
+}
+
+// arrange_nodes: the listed nodes move beside the nodes they are wired to, as a build_graph step's
+// auto-placed nodes do (SettleAutoPlacedNodes); the nodes left out stay put and anchor them. The listed
+// ones are parked out of the way first, so their old spots block nothing; one with no wired neighbour
+// left in place, or no free slot near it, goes back where it was and is named under unmoved.
+bool ArrangeNodes(FActionContext& Context)
+{
+    if (Context.SubAction != TEXT("arrange_nodes"))
+    {
+        return false;
+    }
+    const TArray<TSharedPtr<FJsonValue>>* Ids = nullptr;
+    if (!Context.Payload->TryGetArrayField(TEXT("nodeIds"), Ids) || Ids->Num() == 0)
+    {
+        Context.SendError(TEXT("arrange_nodes needs nodeIds: the nodes to move. The nodes left out stay put and anchor them."),
+                          TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    const FScopedTransaction Transaction(FText::FromString(TEXT("Arrange Nodes")));
+    GraphBatch::FBatchState State;
+    TMap<UEdGraphNode*, FIntPoint> Original;
+    for (const TSharedPtr<FJsonValue>& Id : *Ids)
+    {
+        UEdGraphNode* Node = Context.FindNode(Id.IsValid() ? Id->AsString() : FString());
+        if (!Node)
+        {
+            for (const TPair<UEdGraphNode*, FIntPoint>& Entry : Original)
+            {
+                Entry.Key->NodePosX = Entry.Value.X;
+                Entry.Key->NodePosY = Entry.Value.Y;
+            }
+            Context.SendNodeNotFound(Id.IsValid() ? Id->AsString() : FString());
+            return true;
+        }
+        if (!Original.Contains(Node))
+        {
+            Original.Add(Node, FIntPoint(Node->NodePosX, Node->NodePosY));
+            Node->Modify();
+            Node->NodePosX = -1000000 - Original.Num() * 480;
+            Node->NodePosY = -1000000;
+            State.AutoPlacedGuids.Add(Node->NodeGuid.ToString());
+        }
+    }
+    const TArray<UEdGraphNode*> Unmoved = GraphBatch::SettleAutoPlacedNodes(Context.Blueprint, State);
+    TArray<TSharedPtr<FJsonValue>> Moved;
+    TArray<TSharedPtr<FJsonValue>> Stayed;
+    for (const TPair<UEdGraphNode*, FIntPoint>& Entry : Original)
+    {
+        UEdGraphNode* Node = Entry.Key;
+        if (Unmoved.Contains(Node))
+        {
+            Node->NodePosX = Entry.Value.X;
+            Node->NodePosY = Entry.Value.Y;
+            Stayed.Add(MakeShared<FJsonValueString>(Node->NodeGuid.ToString()));
+            continue;
+        }
+        TSharedPtr<FJsonObject> Row = MakeShared<FJsonObject>();
+        Row->SetStringField(TEXT("nodeId"), Node->NodeGuid.ToString());
+        Row->SetStringField(TEXT("nodeTitle"), Node->GetNodeTitle(ENodeTitleType::ListView).ToString());
+        Row->SetNumberField(TEXT("x"), Node->NodePosX);
+        Row->SetNumberField(TEXT("y"), Node->NodePosY);
+        Moved.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    Context.TargetGraph->NotifyGraphChanged();
+    FBlueprintEditorUtils::MarkBlueprintAsModified(Context.Blueprint);
+    SaveLoadedAssetThrottled(Context.Blueprint);
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetArrayField(TEXT("moved"), Moved);
+    Result->SetArrayField(TEXT("unmoved"), Stayed);
+    Context.SendResponse(FString::Printf(TEXT("Moved %d of %d nodes beside the nodes they are wired to."),
+                                         Moved.Num(), Original.Num()), Result);
     return true;
 }
 }

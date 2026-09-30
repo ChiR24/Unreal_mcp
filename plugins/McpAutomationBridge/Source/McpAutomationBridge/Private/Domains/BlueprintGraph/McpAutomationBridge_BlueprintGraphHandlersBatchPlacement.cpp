@@ -197,7 +197,7 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
 // units from the event it hangs off (a Bounce event at x 7646 wired to a new node at x 46464). Each
 // auto-placed node now moves beside a node it is wired to, the nearest free slot when that spot is taken;
 // one wired only to other new nodes follows them once they have moved, and one with no free slot stays.
-void SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchState& State)
+TArray<UEdGraphNode*> SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchState& State)
 {
     TArray<UEdGraphNode*> Pending;
     TSet<const UEdGraphNode*> Unsettled;
@@ -236,5 +236,6 @@ void SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchState& State)
             bMoved = true;
         }
     }
+    return Pending;
 }
 }

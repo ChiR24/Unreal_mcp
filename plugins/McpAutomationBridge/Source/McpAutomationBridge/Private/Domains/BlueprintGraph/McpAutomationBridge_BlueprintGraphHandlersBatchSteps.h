@@ -62,6 +62,7 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile);
 /** A node of Blueprint by guid text, in any of its graphs. */
 UEdGraphNode* FindBatchNode(UBlueprint* Blueprint, const FString& Guid);
 
-/** Once every step ran, moves each auto-placed node beside a node it is wired to. */
-void SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchState& State);
+/** Once every step ran, moves each auto-placed node beside a node it is wired to (arrange_nodes too).
+ *  Returns the nodes that found no wired neighbour to settle by, or no free slot, and did not move. */
+TArray<UEdGraphNode*> SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchState& State);
 }

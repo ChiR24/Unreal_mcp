@@ -8619,6 +8619,7 @@
               "set_node_property",
               "set_pin_default_value",
               "add_construction_script",
+              "arrange_nodes",
               "batch",
               "add_scs_component",
               "add_component",
@@ -9016,12 +9017,26 @@
             "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
           },
           "nodeIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1,
-            "maxItems": 500,
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 500,
+                "description": "Several node ids or guids to delete in one call, in place of nodeId. Every id must resolve to a deletable node or nothing is deleted."
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "maxItems": 500,
+                "description": "The nodes to move, by nodeId or nodeGuid. Nodes left out stay where they are and anchor the ones listed; a node wired to nothing left in place goes back where it was and is listed under unmoved."
+              }
+            ],
             "description": "Several node ids or guids to delete in one call, in place of nodeId. Every id must resolve to a deletable node or nothing is deleted."
           },
           "nodeName": {

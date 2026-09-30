@@ -321,3 +321,16 @@ describe('build_graph settles auto-placed nodes beside what they are wired to', 
     expect(paramDescription('blueprint.edit_graph', 'operations')).toContain('moves beside a node it is wired to');
   });
 });
+
+describe('arrange_nodes moves listed nodes beside what they are wired to', () => {
+  it('parks the listed nodes, settles them like auto-placed batch nodes, and puts back the ones that found no anchor', () => {
+    const source = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersDeleteNodes.cpp');
+    const park = source.indexOf('Node->NodePosY = -1000000;');
+    const settle = source.indexOf('GraphBatch::SettleAutoPlacedNodes(Context.Blueprint, State)');
+    expect(park).toBeGreaterThan(-1);
+    expect(settle).toBeGreaterThan(park);
+    expect(source).toContain('if (Unmoved.Contains(Node))');
+    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp')).toContain('ArrangeNodes(Context)');
+    expect(read('Core', 'Subsystem', 'McpAutomationBridgeSubsystemHandlerRegistration.cpp')).toContain('TEXT("arrange_nodes")');
+  });
+});

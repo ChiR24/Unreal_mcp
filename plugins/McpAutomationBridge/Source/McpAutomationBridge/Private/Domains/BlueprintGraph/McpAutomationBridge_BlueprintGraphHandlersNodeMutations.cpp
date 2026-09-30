@@ -6,8 +6,9 @@
 
 namespace McpBlueprintGraphHandlers
 {
-// delete_node (one node or nodeIds) lives in ...BlueprintGraphHandlersDeleteNodes.cpp.
+// delete_node and arrange_nodes (both take nodeIds) live in ...BlueprintGraphHandlersDeleteNodes.cpp.
 bool DeleteNodes(FActionContext& Context);
+bool ArrangeNodes(FActionContext& Context);
 
 static bool CreateRerouteNode(FActionContext& Context)
 {
@@ -221,6 +222,7 @@ bool HandleNodeMutationAction(FActionContext& Context)
 {
     return DeleteNodes(Context) ||
            CreateRerouteNode(Context) ||
-           SetNodeProperty(Context);
+           SetNodeProperty(Context) ||
+           ArrangeNodes(Context);
 }
 }

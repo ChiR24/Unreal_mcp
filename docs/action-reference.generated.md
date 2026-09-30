@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `7a6615b415992b21`
+Catalog revision: `9825df0d8cd4eb3a`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -189,7 +189,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.delete_animation` | `manage_blueprint` | `delete_animation` | destructive | destructive | explicit | `manage_blueprint.delete_animation` |
 | `blueprint.delete_node` | `manage_blueprint` | `delete_node` | destructive | destructive | explicit | `manage_blueprint.delete_node` `manage_blueprint.break_pin_links` |
 | `blueprint.duplicate_widget` | `manage_blueprint` | `duplicate_widget` | write | write | none | `manage_blueprint.duplicate_widget` |
-| `blueprint.edit_graph` | `manage_blueprint` | `add_node` | write | write | none | `manage_blueprint.edit_graph` `manage_blueprint.add_node` `manage_blueprint.create_node` `manage_blueprint.create_reroute_node` `manage_blueprint.create_struct_make_break_nodes` `manage_blueprint.connect_pins` `manage_blueprint.set_node_property` `manage_blueprint.set_pin_default_value` `manage_blueprint.add_construction_script` `manage_blueprint.build_graph` |
+| `blueprint.edit_graph` | `manage_blueprint` | `add_node` | write | write | none | `manage_blueprint.edit_graph` `manage_blueprint.add_node` `manage_blueprint.create_node` `manage_blueprint.create_reroute_node` `manage_blueprint.create_struct_make_break_nodes` `manage_blueprint.connect_pins` `manage_blueprint.set_node_property` `manage_blueprint.set_pin_default_value` `manage_blueprint.add_construction_script` `manage_blueprint.arrange_nodes` `manage_blueprint.build_graph` |
 | `blueprint.edit_scs` | `manage_blueprint` | `add_scs_component` | write | write | none | `manage_blueprint.edit_scs` `manage_blueprint.add_scs_component` `manage_blueprint.add_component` `manage_blueprint.modify_scs` `manage_blueprint.reparent_scs_component` `manage_blueprint.set_scs_property` `manage_blueprint.set_scs_transform` |
 | `blueprint.edit_variable` | `manage_blueprint` | `add_variable` | write | write | none | `manage_blueprint.edit_variable` `manage_blueprint.add_variable` `manage_blueprint.rename_variable` `manage_blueprint.set_variable_metadata` `manage_blueprint.set_metadata` `manage_blueprint.set_default` |
 | `blueprint.edit_widget_animation` | `manage_blueprint` | `create_widget_animation` | write | write | none | `manage_blueprint.edit_widget_animation` `manage_blueprint.create_widget_animation` `manage_blueprint.add_animation_track` `manage_blueprint.add_animation_keyframe` |

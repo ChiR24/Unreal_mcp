@@ -10546,6 +10546,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_node_property",
             "set_pin_default_value",
             "add_construction_script",
+            "arrange_nodes",
             "batch",
             "add_scs_component",
             "add_component",
@@ -10943,12 +10944,26 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
         },
         "nodeIds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "maxItems": 500,
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "Several node ids or guids to delete in one call, in place of nodeId. Every id must resolve to a deletable node or nothing is deleted."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "description": "The nodes to move, by nodeId or nodeGuid. Nodes left out stay where they are and anchor the ones listed; a node wired to nothing left in place goes back where it was and is listed under unmoved."
+            }
+          ],
           "description": "Several node ids or guids to delete in one call, in place of nodeId. Every id must resolve to a deletable node or nothing is deleted."
         },
         "nodeName": {
@@ -11980,6 +11995,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "image/png."
         },
+        "moved": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Each node that moved: nodeId, nodeTitle and its new x and y."
+        },
         "name": {
           "type": "string",
           "description": "Blueprint asset name."
@@ -12286,6 +12310,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "truncated": {
           "type": "boolean",
           "description": "With path: true when the folder holds more than 300 Blueprints and the rest were not opened."
+        },
+        "unmoved": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ids of listed nodes that stayed where they were: wired to no node left in place, or no free slot near one."
         },
         "value": {
           "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."
