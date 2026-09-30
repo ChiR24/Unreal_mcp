@@ -43,6 +43,11 @@ const CHANGE_ARRAY_FIELDS = ['changes', 'changedEntities', 'changedAssets', 'aff
 // Exported so the parity test can hold the native lists (McpNativeReceiptOutcome.cpp) to them.
 export const CHANGE_ASSET_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'deletedPath', 'widgetPath'] as const;
 export const CHANGE_ACTOR_SINGLE_FIELDS = ['actorName', 'actorPath'] as const;
+// The many forms (set_visibility, set_actor_collision and add_tag with actorNames) name every actor they
+// changed in affectedActors and carry no single actorName, so their receipts published no actor handle. One
+// handle per entry, the first AFFECTED_ACTOR_HANDLE_LIMIT entries. Exported so the parity test can hold
+// MAX_AFFECTED_ACTOR_HANDLES in McpNativeReceiptOutcome.cpp to it.
+export const AFFECTED_ACTOR_HANDLE_LIMIT = 20;
 
 // The running game's objects (GameInstance, a live widget) live in the transient package, so a
 // handler names /Engine/Transient as their "asset"; no asset changed. Mirrors
@@ -90,6 +95,15 @@ export function extractHandles(result: unknown): TypedHandle[] {
         add(parsed.data);
         break;
       }
+    }
+  }
+
+  const affected = read('affectedActors');
+  if (Array.isArray(affected)) {
+    for (const ref of affected.slice(0, AFFECTED_ACTOR_HANDLE_LIMIT)) {
+      if (typeof ref !== 'string') continue;
+      const parsed = TypedHandleSchema.safeParse({ kind: 'actor', ref });
+      if (parsed.success) add(parsed.data);
     }
   }
 

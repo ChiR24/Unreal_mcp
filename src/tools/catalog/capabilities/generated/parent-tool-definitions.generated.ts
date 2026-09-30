@@ -3434,21 +3434,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes)."
+              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes)."
+              "description": "Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes)."
+              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
             }
           ],
           "description": "Actor names to act on (batch delete)."

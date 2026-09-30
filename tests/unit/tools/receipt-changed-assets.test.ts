@@ -17,6 +17,7 @@ import type { ITools } from '../../../src/types/tools/tool-interfaces.js';
 import { handleUnrealGatewayCall, type GatewayContext } from '../../../src/server/tool-registry-gateway.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 import {
+  AFFECTED_ACTOR_HANDLE_LIMIT,
   CHANGE_ACTOR_SINGLE_FIELDS,
   CHANGE_ASSET_SINGLE_FIELDS,
   extractChanges,
@@ -127,7 +128,7 @@ describe('the handlers that only look at an asset state that they changed none',
   });
 });
 
-describe('over the gateway: a preview lists no change, an edit still does', () => {
+describe('over the gateway: a preview lists no change, an edit still does, a many form names its actors', () => {
   let bridgeResult: unknown = { success: true };
 
   function context(): GatewayContext {
@@ -166,6 +167,14 @@ describe('over the gateway: a preview lists no change, an edit still does', () =
     });
 
     expect(receipt.changes).toEqual([WIDGET]);
+  });
+
+  it('an add_tag many-form reply lists each actor it tagged as a change and as an actor handle', async () => {
+    bridgeResult = { success: true, tag: 'Pickup', taggedCount: 2, missing: ['Gone'], affectedActors: ['Sign_1', 'Sign_2'] };
+    const receipt = await receiptOf('control_actor.add_tag', { actorNames: ['Sign_1', 'Sign_2', 'Gone'], tag: 'Pickup' });
+
+    expect(receipt.changes).toEqual(['Sign_1', 'Sign_2']);
+    expect(receipt.handles).toEqual([{ kind: 'actor', ref: 'Sign_1' }, { kind: 'actor', ref: 'Sign_2' }]);
   });
 });
 
@@ -219,5 +228,73 @@ describe('the transient package is never a changed asset', () => {
     expect(source).toContain('Path == TEXT("/Engine/Transient") || Path.StartsWith(TEXT("/Engine/Transient."))');
     expect(source).toContain('if (!Text.IsEmpty() && !IsTransientPackagePath(Text))');
     expect(source).toContain('if (IsAllowedPath(Path) && !IsTransientPackagePath(Path))');
+  });
+});
+
+// The many forms of set_visibility, set_actor_collision and add_tag (actorNames) name every actor they
+// changed in affectedActors and carry no single actorName, so a receipt listed them in changes[] but held no
+// actor handle. Both extractors derive one handle per entry rather than each handler building a handles array.
+describe('the actors a many form names each get a typed actor handle, on both doors', () => {
+  const actor = (ref: string): { kind: 'actor'; ref: string } => ({ kind: 'actor', ref });
+  const named = (count: number): string[] => Array.from({ length: count }, (_, index) => `Sign_${index + 1}`);
+
+  it('one handle per entry, in the order the reply named them', () => {
+    expect(extractHandles({ success: true, taggedCount: 2, affectedActors: ['Sign_1', 'Sign_2'] }))
+      .toEqual([actor('Sign_1'), actor('Sign_2')]);
+  });
+
+  it('only the first AFFECTED_ACTOR_HANDLE_LIMIT entries become handles, while changes still lists every one', () => {
+    const affectedActors = named(AFFECTED_ACTOR_HANDLE_LIMIT + 5);
+
+    expect(extractHandles({ affectedActors })).toEqual(affectedActors.slice(0, AFFECTED_ACTOR_HANDLE_LIMIT).map(actor));
+    expect(extractChanges({ affectedActors })).toEqual(affectedActors);
+  });
+
+  it('a repeated entry, or the actor a single field already named, is one handle', () => {
+    expect(extractHandles({ actorName: 'Sign_1', affectedActors: ['Sign_1', 'Sign_2', 'Sign_2'] }))
+      .toEqual([actor('Sign_1'), actor('Sign_2')]);
+  });
+
+  it('an entry that is not a valid actor ref is dropped, not coerced, and still counts toward the bound', () => {
+    expect(extractHandles({ affectedActors: ['Sign_1', '', 42, null, { name: 'x' }, 'x'.repeat(513), 'Sign_2'] }))
+      .toEqual([actor('Sign_1'), actor('Sign_2')]);
+    expect(extractHandles({ affectedActors: [...Array.from({ length: 5 }, () => ''), ...named(AFFECTED_ACTOR_HANDLE_LIMIT)] }))
+      .toEqual(named(AFFECTED_ACTOR_HANDLE_LIMIT - 5).map(actor));
+  });
+
+  it('is read from data and details like every other field, and a value that is not an array names nothing', () => {
+    expect(extractHandles({ data: { affectedActors: ['Sign_1'] } })).toEqual([actor('Sign_1')]);
+    expect(extractHandles({ details: { affectedActors: ['Sign_1'] } })).toEqual([actor('Sign_1')]);
+    expect(extractHandles({ affectedActors: 'Sign_1' })).toEqual([]);
+  });
+
+  describe('the native McpExtractReceiptHandles', () => {
+    const source = (): string => nativeSource('MCP', 'Execute', 'McpNativeReceiptOutcome.cpp');
+
+    it('takes the same bound over the same entries through the same gate', () => {
+      const body = source().slice(source().indexOf('McpExtractReceiptHandles('));
+
+      expect(source()).toContain(`const int32 MAX_AFFECTED_ACTOR_HANDLES = ${AFFECTED_ACTOR_HANDLE_LIMIT};`);
+      expect(body).toMatch(/ReadField\(RawResult,\s*TEXT\("affectedActors"\)\)/u);
+      expect(body).toMatch(
+        /for \(int32 Index = 0; Index < AffectedArray->Num\(\) && Index < MAX_AFFECTED_ACTOR_HANDLES; \+\+Index\)\s*\{\s*FString Ref;\s*if \(McpHandlerUtils::TryGetJsonValueString\(\(\*AffectedArray\)\[Index\], Ref\) && !Ref\.IsEmpty\(\) && Ref\.Len\(\) <= 512\)\s*\{\s*AddHandle\(TEXT\("actor"\), TEXT\("ref"\), Ref\);/u
+      );
+    });
+
+    it('derives them after the single actor field, as extractHandles does', () => {
+      const body = source().slice(source().indexOf('McpExtractReceiptHandles('));
+
+      expect(body.indexOf('for (const TCHAR* Field : ACTOR_FIELDS)')).toBeGreaterThan(-1);
+      expect(body.indexOf('for (const TCHAR* Field : ACTOR_FIELDS)')).toBeLessThan(body.indexOf('TEXT("affectedActors")'));
+    });
+
+    it('reads a field from the root, then data, details and data.details, the order makeReader uses', () => {
+      const reader = sliceBetween(source(), 'TSharedPtr<FJsonValue> ReadField(', 'FString OutcomeReadString(');
+
+      expect(reader).toMatch(
+        /Holders\[\] = \{\s*Result,\s*Data,\s*OutcomeChildObject\(Result, TEXT\("details"\)\),\s*OutcomeChildObject\(Data, TEXT\("details"\)\)\};/u
+      );
+      expect(reader).toMatch(/Data = OutcomeChildObject\(Result, TEXT\("data"\)\);/u);
+    });
   });
 });

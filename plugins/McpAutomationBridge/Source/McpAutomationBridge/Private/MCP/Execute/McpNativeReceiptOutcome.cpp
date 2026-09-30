@@ -41,6 +41,16 @@ bool IsPathKind(const FString& Kind)
 	return Kind == TEXT("object") || Kind == TEXT("asset") || Kind == TEXT("class");
 }
 
+TSharedPtr<FJsonObject> OutcomeChildObject(const TSharedPtr<FJsonObject>& Parent, const TCHAR* Name)
+{
+	const TSharedPtr<FJsonObject>* Object = nullptr;
+	if (Parent.IsValid() && Parent->TryGetObjectField(Name, Object) && Object)
+	{
+		return *Object;
+	}
+	return nullptr;
+}
+
 // Read a field from the result root, then its nested `data` payload (the native
 // completion carries the verdict separately from the payload), then `details`
 // (the gateway folds undeclared handler fields into it) and finally the
@@ -49,36 +59,16 @@ bool IsPathKind(const FString& Kind)
 // transports read the same winner.
 TSharedPtr<FJsonValue> ReadField(const TSharedPtr<FJsonObject>& Result, const TCHAR* Key)
 {
-	if (const TSharedPtr<FJsonValue> Rooted = Result->TryGetField(Key))
+	const TSharedPtr<FJsonObject> Data = OutcomeChildObject(Result, TEXT("data"));
+	const TSharedPtr<FJsonObject> Holders[] = {
+		Result, Data, OutcomeChildObject(Result, TEXT("details")), OutcomeChildObject(Data, TEXT("details"))};
+	for (const TSharedPtr<FJsonObject>& Holder : Holders)
 	{
-		return Rooted;
-	}
-	TSharedPtr<FJsonObject> Data;
-	const TSharedPtr<FJsonObject>* DataField = nullptr;
-	if (Result->TryGetObjectField(TEXT("data"), DataField) && DataField)
-	{
-		Data = *DataField;
-		if (const TSharedPtr<FJsonValue> Nested = Data->TryGetField(Key))
+		if (Holder.IsValid())
 		{
-			return Nested;
-		}
-	}
-	const TSharedPtr<FJsonObject>* Details = nullptr;
-	if (Result->TryGetObjectField(TEXT("details"), Details) && Details)
-	{
-		if (const TSharedPtr<FJsonValue> Nested = (*Details)->TryGetField(Key))
-		{
-			return Nested;
-		}
-	}
-	if (Data.IsValid())
-	{
-		const TSharedPtr<FJsonObject>* DataDetails = nullptr;
-		if (Data->TryGetObjectField(TEXT("details"), DataDetails) && DataDetails)
-		{
-			if (const TSharedPtr<FJsonValue> NestedDetails = (*DataDetails)->TryGetField(Key))
+			if (const TSharedPtr<FJsonValue> Value = Holder->TryGetField(Key))
 			{
-				return NestedDetails;
+				return Value;
 			}
 		}
 	}
@@ -114,6 +104,10 @@ const TCHAR* const ASSET_FIELDS[] = {
 // (/Temp/...:PersistentLevel.Actor_UAID_...) is not a stable handle. The path
 // is still published under `actorPath` in the payload.
 const TCHAR* const ACTOR_FIELDS[] = {TEXT("actorName"), TEXT("actorLabel"), TEXT("actorPath")};
+// The many forms (set_visibility, set_actor_collision, add_tag with actorNames) name every actor they
+// changed in affectedActors and carry no single actorName: one handle per entry, the first this many.
+// Mirrors AFFECTED_ACTOR_HANDLE_LIMIT in src/tools/catalog/capabilities/semantic/receipt-outcome.ts.
+const int32 MAX_AFFECTED_ACTOR_HANDLES = 20;
 const TCHAR* const CHANGE_ARRAYS[] = {
 	TEXT("changes"), TEXT("changedEntities"), TEXT("changedAssets"), TEXT("affectedActors"),
 	TEXT("modifiedPaths"), TEXT("deleted")};
@@ -242,6 +236,19 @@ TArray<TSharedPtr<FJsonValue>> McpExtractReceiptHandles(const TSharedPtr<FJsonOb
 		{
 			AddHandle(TEXT("actor"), TEXT("ref"), Ref);
 			break;
+		}
+	}
+	const TSharedPtr<FJsonValue> Affected = ReadField(RawResult, TEXT("affectedActors"));
+	const TArray<TSharedPtr<FJsonValue>>* AffectedArray = nullptr;
+	if (Affected.IsValid() && Affected->TryGetArray(AffectedArray) && AffectedArray)
+	{
+		for (int32 Index = 0; Index < AffectedArray->Num() && Index < MAX_AFFECTED_ACTOR_HANDLES; ++Index)
+		{
+			FString Ref;
+			if (McpHandlerUtils::TryGetJsonValueString((*AffectedArray)[Index], Ref) && !Ref.IsEmpty() && Ref.Len() <= 512)
+			{
+				AddHandle(TEXT("actor"), TEXT("ref"), Ref);
+			}
 		}
 	}
 	return Handles;

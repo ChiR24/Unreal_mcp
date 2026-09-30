@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a1b3d41ef5ce8f94",
+  "catalogRevision": "1a54d4e552323e02",
   "recordCount": 389,
   "records": [
     {
@@ -29477,7 +29477,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes)."
+              "description": "Several actors to tag in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors tagged under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             "tag": {
               "type": "string",
@@ -29576,8 +29576,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cccdc279d601c2f38f5c9cce1dec6a8872cc51ef59999402299872399f87e150",
-        "content": "046fc81c09453ee289a9717346f363bd0a02996264dbb8c6a0b25a8b8ca04736"
+        "schema": "b1cef078e60136030f52192b1e2cbfd063abe76bae21a1a13459494a48fd55ec",
+        "content": "9a3b37c97916d8f6829b7bf7f319ab6e594aed7dab72f5b2d896016bd43223d9"
       }
     },
     {
@@ -32821,7 +32821,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes)."
+              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             "collisionEnabled": {
               "type": "boolean",
@@ -32901,8 +32901,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cfcad0d9520cd3c99f926b816b9510952d932c546141aa6dc6672aa0b552fff6",
-        "content": "7a320df2dee3db0a31688b26136c5a4344b811827bd173c86c9e60f1dec5635f"
+        "schema": "2a9198bfe38e9006c5187546c21827b63ecb4a9ae1e09a84aa1cb6f5f5d0e268",
+        "content": "0e31897e73092fdcb1c0a911205ea69c63b95102a0e66071f1db9c888041e8ee"
       }
     },
     {
@@ -33628,7 +33628,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes)."
+              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each)."
             },
             "visible": {
               "type": "boolean",
@@ -33708,8 +33708,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "faf4dfabe924508e45a9d168348ea030fb67c43e0a2ffdf217fbeb04ba0fadb5",
-        "content": "8f81468190d0ae390decfc5891c4e52d2a6c149f393c0ea74a422918272e6a47"
+        "schema": "127a0b12e6f6500a252b87c15fadc2915c8b2428ed6cf5027ab0d09a9c8d0e79",
+        "content": "9fa33ce140e4e5da9e76fec8a873835aec2f818900815b0dd735ec71d3220d01"
       }
     },
     {
