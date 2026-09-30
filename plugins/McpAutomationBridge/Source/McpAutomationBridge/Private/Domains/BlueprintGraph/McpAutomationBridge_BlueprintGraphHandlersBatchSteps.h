@@ -17,6 +17,8 @@ struct FBatchState
     /** Left edge of the grid auto-placed nodes fill, right of existing nodes. */
     float OriginX = 0.0f;
     int32 AutoPlaced = 0;
+    /** Guids of the nodes placed on that grid, for SettleAutoPlacedNodes. */
+    TArray<FString> AutoPlacedGuids;
 };
 
 /**
@@ -59,4 +61,7 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile);
 
 /** A node of Blueprint by guid text, in any of its graphs. */
 UEdGraphNode* FindBatchNode(UBlueprint* Blueprint, const FString& Guid);
+
+/** Once every step ran, moves each auto-placed node beside a node it is wired to. */
+void SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchState& State);
 }

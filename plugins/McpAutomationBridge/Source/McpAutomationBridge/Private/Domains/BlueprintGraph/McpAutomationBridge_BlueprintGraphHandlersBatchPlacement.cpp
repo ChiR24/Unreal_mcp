@@ -1,5 +1,7 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.h"
 
+#include "EdGraphSchema_K2.h"
+
 namespace McpBlueprintGraphHandlers::GraphBatch
 {
 namespace
@@ -42,6 +44,50 @@ FString OverlappedTitles(const FMcpCapturedResponse& Refusal)
         }
     }
     return Titles.Num() > 0 ? FString::Join(Titles, TEXT(", ")) : FString(TEXT("an existing node"));
+}
+
+// Where a node goes beside one it is wired to; the lowest Rank wins.
+struct FAnchor
+{
+    int32 Rank = MAX_int32;
+    float X = 0.0f;
+    float Y = 0.0f;
+};
+
+// Right of what runs it, below-left of what reads it, left of what it runs, right of what feeds it.
+// A node still waiting to be settled is no anchor: it sits on the grid.
+FAnchor AnchorBeside(const UEdGraphNode& Node, const TSet<const UEdGraphNode*>& Unsettled)
+{
+    constexpr float Gap = 80.0f;
+    float Width = 0.0f;
+    float Height = 0.0f;
+    McpGraphLayout::EstimateNodeExtent(Node, Width, Height);
+    FAnchor Best;
+    for (const UEdGraphPin* Pin : Node.Pins)
+    {
+        if (!Pin)
+        {
+            continue;
+        }
+        const bool bExec = Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec;
+        const bool bInput = Pin->Direction == EGPD_Input;
+        for (const UEdGraphPin* Linked : Pin->LinkedTo)
+        {
+            const UEdGraphNode* Other = Linked ? Linked->GetOwningNode() : nullptr;
+            const int32 Rank = bExec ? (bInput ? 0 : 2) : (bInput ? 3 : 1);
+            if (!Other || Unsettled.Contains(Other) || Rank >= Best.Rank)
+            {
+                continue;
+            }
+            float OtherW = 0.0f;
+            float OtherH = 0.0f;
+            McpGraphLayout::EstimateNodeExtent(*Other, OtherW, OtherH);
+            Best.Rank = Rank;
+            Best.X = Rank == 0 || Rank == 3 ? Other->NodePosX + OtherW + Gap : Other->NodePosX - Width - Gap;
+            Best.Y = Rank == 1 ? Other->NodePosY + OtherH + Gap : Other->NodePosY;
+        }
+    }
+    return Best;
 }
 } // namespace
 
@@ -122,6 +168,11 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
         }
         Reply = RunStep(Parent, Payload, Edit, StepId, OutPins);
     }
+    FString CreatedGuid;
+    if (bAuto && Reply.bSuccess && Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("nodeGuid"), CreatedGuid))
+    {
+        State.AutoPlacedGuids.Add(CreatedGuid);
+    }
     if (Moves > 0 && !bAuto && Reply.bSuccess && Reply.Result.IsValid())
     {
         double PlacedX = RequestedX;
@@ -140,5 +191,50 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
         Reply.Result->SetStringField(TEXT("placementWarning"), Warning);
     }
     return Reply;
+}
+
+// The grid sits right of everything the graph held, so a chain added to a big graph landed thousands of
+// units from the event it hangs off (a Bounce event at x 7646 wired to a new node at x 46464). Each
+// auto-placed node now moves beside a node it is wired to, the nearest free slot when that spot is taken;
+// one wired only to other new nodes follows them once they have moved, and one with no free slot stays.
+void SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchState& State)
+{
+    TArray<UEdGraphNode*> Pending;
+    TSet<const UEdGraphNode*> Unsettled;
+    for (const FString& Guid : State.AutoPlacedGuids)
+    {
+        if (UEdGraphNode* Node = FindBatchNode(Blueprint, Guid))
+        {
+            Pending.Add(Node);
+            Unsettled.Add(Node);
+        }
+    }
+    for (bool bMoved = true; bMoved;)
+    {
+        bMoved = false;
+        for (int32 Index = 0; Index < Pending.Num(); ++Index)
+        {
+            UEdGraphNode* Node = Pending[Index];
+            const FAnchor Anchor = AnchorBeside(*Node, Unsettled);
+            float Width = 0.0f;
+            float Height = 0.0f;
+            McpGraphLayout::EstimateNodeExtent(*Node, Width, Height);
+            float X = Anchor.X;
+            float Y = Anchor.Y;
+            TArray<McpGraphLayout::FGraphNodeOccupant> Occupants;
+            if (Anchor.Rank == MAX_int32 ||
+                (McpGraphLayout::CheckGraphNodeOverlap(Node->GetGraph(), X, Y, Width, Height, Occupants,
+                                                       McpGraphLayout::NodeOverlapPadding, Node) &&
+                 !McpGraphLayout::FindNearestFreeSlot(Node->GetGraph(), Anchor.X, Anchor.Y, Width, Height, Node, X, Y)))
+            {
+                continue;
+            }
+            Node->NodePosX = FMath::RoundToInt(X);
+            Node->NodePosY = FMath::RoundToInt(Y);
+            Unsettled.Remove(Node);
+            Pending.RemoveAt(Index--);
+            bMoved = true;
+        }
+    }
 }
 }

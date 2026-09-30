@@ -303,3 +303,21 @@ describe('a Blueprint asset path resolves wherever a graph node takes a class', 
       .toContain('TargetClass = ResolveTargetClassFromString(MemberClass);');
   });
 });
+
+// Auto-placed batch nodes sat on a grid right of the whole graph: a chain added to BP_Rider's Bounce event
+// (x 7646) landed at x 46464, a wire across the graph.
+describe('build_graph settles auto-placed nodes beside what they are wired to', () => {
+  it('records each auto-placed node and settles them after the last step, before the compile', () => {
+    const placement = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
+    expect(placement).toContain('State.AutoPlacedGuids.Add(CreatedGuid)');
+    expect(placement).toContain('FindNearestFreeSlot(Node->GetGraph(), Anchor.X, Anchor.Y, Width, Height, Node, X, Y)');
+    const batch = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
+    const settle = batch.indexOf('SettleAutoPlacedNodes(Context.Blueprint, State)');
+    expect(settle).toBeGreaterThan(-1);
+    expect(settle).toBeLessThan(batch.indexOf('McpCompileBlueprintWithDiagnostics'));
+  });
+
+  it('the batch description says where an auto-placed node goes', () => {
+    expect(paramDescription('blueprint.edit_graph', 'operations')).toContain('moves beside a node it is wired to');
+  });
+});

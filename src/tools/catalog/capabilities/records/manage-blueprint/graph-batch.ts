@@ -47,7 +47,7 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
           + 'from and to ("$id.PinName" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied '
           + 'to the new node; a read-only pin such as Set Text\'s Value gets a MakeLiteral node wired into it). "$entry" is '
           + 'the graph\'s own entry node (a Construction Script or function graph starts there: from "$entry.then"). A create '
-          + 'step without posX and posY is auto-placed; one whose posX and posY overlap an existing node is placed at the nearest '
+          + 'step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest '
           + 'free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a '
           + 'single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is '
           + 'checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops '

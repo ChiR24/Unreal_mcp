@@ -223,6 +223,7 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
         return true;
     }
 
+    SettleAutoPlacedNodes(Context.Blueprint, State);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetArrayField(TEXT("results"), Results);
     Result->SetObjectField(TEXT("nodeIds"), NodeIds);
