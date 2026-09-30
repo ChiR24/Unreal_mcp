@@ -3,6 +3,33 @@
 #include "CoreMinimal.h"
 #include "UObject/UnrealType.h"
 
+// Up to 8 property names of Scope sharing a word (3+ letters, split at capitals) with Wanted, so a
+// miss names what the caller probably meant ("FadeAmount" finds OnAudioFadeChangeEvent); empty
+// when nothing shares one. A miss used to say only "not found in scope".
+static inline FString McpSimilarPropertyNames(const UStruct *Scope, const FString &Wanted) {
+  TArray<FString> Words;
+  FString Word;
+  for (const TCHAR Char : Wanted + TEXT(" ")) {
+    const bool bBreak = FChar::IsUpper(Char) || !FChar::IsAlnum(Char);
+    if (bBreak && Word.Len() >= 3) {
+      Words.Add(Word);
+    }
+    if (bBreak) {
+      Word.Reset();
+    }
+    if (FChar::IsAlnum(Char)) {
+      Word.AppendChar(Char);
+    }
+  }
+  TArray<FString> Similar;
+  for (TFieldIterator<FProperty> It(Scope); It && Similar.Num() < 8; ++It) {
+    if (Words.ContainsByPredicate([&It](const FString &Each) { return It->GetName().Contains(Each); })) {
+      Similar.Add(It->GetName());
+    }
+  }
+  return FString::Join(Similar, TEXT(", "));
+}
+
 static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
                                                    const FString &PropertyPath,
                                                    void *&OutContainerPtr,
@@ -38,10 +65,11 @@ static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
     CurrentProperty =
         FindFProperty<FProperty>(CurrentTypeScope, FName(*Segment));
     if (!CurrentProperty) {
+      const FString Similar = McpSimilarPropertyNames(CurrentTypeScope, Segment);
       OutError = FString::Printf(
-          TEXT("Property '%s' not found in scope '%s' (segment %d of %d)"),
+          TEXT("Property '%s' not found in scope '%s' (segment %d of %d)%s"),
           *Segment, *CurrentTypeScope->GetName(), Index + 1,
-          PathSegments.Num());
+          PathSegments.Num(), Similar.IsEmpty() ? TEXT("") : *(TEXT("; similar: ") + Similar));
       return nullptr;
     }
 

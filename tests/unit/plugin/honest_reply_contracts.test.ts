@@ -95,4 +95,12 @@ describe('handlers answer what they did', () => {
   it('a loot entry added after a removal takes a new key', () => {
     expect(code('Inventory', 'McpAutomationBridge_InventoryHandlersLootTables.cpp')).toContain('NextIndexedPropertyIndex(');
   });
+
+  // get_property "FadeAmount" on a PlayerCameraManager said only "not found in scope".
+  it('a property path miss names the similar properties of that scope', () => {
+    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersNestedPropertyPath.h');
+    expect(resolver).toContain('static inline FString McpSimilarPropertyNames(const UStruct *Scope, const FString &Wanted)');
+    expect(resolver).toMatch(/McpSimilarPropertyNames\(CurrentTypeScope, Segment\);\s*OutError = FString::Printf\(/u);
+    expect(resolver).toContain('TEXT("; similar: ")');
+  });
 });
