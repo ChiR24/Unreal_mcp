@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "dcf7449a0b5738c8",
+  "catalogRevision": "339b33f05189b00d",
   "recordCount": 389,
   "records": [
     {
@@ -35864,9 +35864,11 @@
           "snapshot",
           "take picture",
           "look from here",
-          "camera screenshot"
+          "camera screenshot",
+          "game view screenshot",
+          "screenshot hud"
         ],
-        "summary": "Capture a viewport screenshot, optionally from a camera location and rotation given in the same call.",
+        "summary": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call), of the running game view, or of the whole editor window with the game UI.",
         "whenToUse": [
           "A visual snapshot of the editor or game viewport is needed."
         ],
@@ -36065,7 +36067,7 @@
       },
       "examples": [
         {
-          "title": "Capture a viewport screenshot, optionally from a camera location and rotation given in the same call.",
+          "title": "Capture a screenshot of the level viewport (optionally from a camera location and rotation given in the same call), of the running game view, or of the whole editor window with the game UI.",
           "input": {
             "action": "screenshot",
             "mode": "editor_viewport",
@@ -36106,7 +36108,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f54a46b58bb8182e69755c35d351d29e09744148e6ce65071c05a5a35308875c",
-        "content": "edde22b9cffcec3fa5b3c6639d85605e15a08801abd61e96332bced9e7985497"
+        "content": "beda5068a71f94babc9b4488f88ff31c9ebe4ef3f326919efc0907d58885d52f"
       }
     },
     {

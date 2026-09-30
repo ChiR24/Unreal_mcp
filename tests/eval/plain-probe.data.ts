@@ -387,4 +387,5 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'text shadow', accepted: ['blueprint.set_widget_layout'] },
   { query: 'fade in widget', accepted: ['blueprint.edit_widget_animation'] },
   { query: 'screen shake', accepted: ['blueprint.create'] },
+  { query: 'screenshot game view', accepted: ['control_editor.screenshot', 'system_control.screenshot'] },
 ];
