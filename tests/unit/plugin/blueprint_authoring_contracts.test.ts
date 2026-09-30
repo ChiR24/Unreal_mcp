@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
+import { sliceBetween } from './plugin-contract-fixtures.js';
+
 const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -370,5 +372,62 @@ describe('graph details list each node position', () => {
     const queries = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersQueries.cpp');
     expect(queries).toContain('NodeObject->SetNumberField(TEXT("x"), Node->NodePosX);');
     expect(queries).toContain('NodeObject->SetNumberField(TEXT("y"), Node->NodePosY);');
+  });
+});
+
+// A modify_component operation with `rotation` given on it, not inside `transform` (the contract also
+// promises "those three directly on the operation"), applied its properties, dropped the rotation and
+// answered success: CameraBoom kept its yaw while TargetArmLength changed.
+describe('an edit_scs operation takes location, rotation and scale directly on it, as it takes them in transform', () => {
+  const scs = (file: string): string => read('Domains', 'Blueprint', 'Components', file);
+  const transform = (): string => scs('McpAutomationBridge_BlueprintHandlersScsTransform.h');
+  const ops = (): string => scs('McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp');
+
+  it('folds the three keys into transform, a part already there winning, before either op handler reads it', () => {
+    const fold = sliceBetween(transform(), 'inline void FoldDirect(', 'inline TArray<FString> Apply(');
+    for (const key of ['location', 'rotation', 'scale']) expect(fold, key).toContain(`TEXT("${key}")`);
+    expect(fold).toMatch(/Part\.IsValid\(\) && !Part->IsNull\(\) && !Transform->HasField\(Key\)/u);
+    expect(fold).toContain('Op->SetObjectField(TEXT("transform"), Transform);');
+
+    const entry = ops().slice(ops().indexOf('void ApplyModifyScsComponentOperation('));
+    const folded = entry.indexOf('McpScsTransform::FoldDirect(Op);');
+    expect(folded).toBeGreaterThan(-1);
+    expect(folded).toBeLessThan(entry.indexOf('ApplyModifyScsModifyComponent('));
+    expect(folded).toBeLessThan(entry.indexOf('ApplyModifyScsAddComponent('));
+  });
+
+  it('modify_component reads its placement through one Apply, and answers what did not land with the properties', () => {
+    const modify = sliceBetween(ops(), 'void ApplyModifyScsModifyComponent(', 'void ApplyModifyScsAddComponent(');
+
+    expect(modify).not.toContain('TransformObj');
+    expect(modify).toContain('McpScsTransform::Apply(Template, Op, Defaults, bAnySuccess)');
+    expect(modify).toContain('Rejected.Append(McpScsPropertyBag::Apply(Template, PropertiesObj, Defaults, bAnySuccess));');
+    expect(modify).toContain('OpSummary->SetArrayField(TEXT("rejectedProperties"), Values);');
+    expect(scs('McpAutomationBridge_BlueprintHandlersModifyScsFinalize.cpp')).toMatch(/did not apply %s/u);
+  });
+
+  it('names a transform that is not an object, a component that has none and a part it cannot read; writes nothing when no part was readable', () => {
+    const apply = transform().slice(transform().indexOf('inline TArray<FString> Apply('));
+    const write = apply.indexOf('Scene->SetRelativeLocation(Location);');
+
+    expect(apply).toMatch(/if \(!Value->TryGetObject\(Transform\) \|\| !Transform\)\s*Rejected\.Add\(/u);
+    expect(apply).toMatch(/else if \(!Scene\)\s*Rejected\.Add\(/u);
+    expect(apply).toMatch(/Field->Type == EJson::Object \|\| \(Field->TryGetArray\(Triple\) && Triple->Num\(\) >= 3\)\)\s*\+\+Readable;\s*else\s*Rejected\.Add\(/u);
+    expect(apply.indexOf('if (Readable == 0)')).toBeGreaterThan(-1);
+    expect(apply.indexOf('if (Readable == 0)')).toBeLessThan(write);
+    expect(apply).toMatch(/Scene->SetRelativeRotation\(Rotation\);\s*Scene->SetRelativeScale3D\(Scale\);\s*bAnyApplied = true;/u);
+  });
+
+  it('a component added through the fallback route is placed and configured too', () => {
+    const fallback = sliceBetween(ops(), 'LocalSCS->CreateNode(ComponentClass', 'Failed to create SCS node');
+
+    expect(fallback).toMatch(/Op->HasField\(TEXT\("transform"\)\) \|\| Op->HasField\(TEXT\("properties"\)\)\) \{\s*ApplyModifyScsModifyComponent\(LocalBP, LocalSCS, Op, OpSummary\);/u);
+  });
+
+  it('the record promises the direct form and says an unreadable part is named', () => {
+    const description = paramDescription('blueprint.edit_scs', 'operations');
+
+    expect(description).toContain('(or those three directly on the operation)');
+    expect(description).toMatch(/named in warnings, not skipped/u);
   });
 });

@@ -59,19 +59,8 @@ bool PrepareModifyScsPayload(const FBlueprintActionContext &Context,
       for (const TCHAR *Key : BatchKeys) {
         Op->RemoveField(Key);
       }
-      // The ops read a `transform` object; the single-component shape carries
-      // location, rotation and scale at the top level, which the op dropped.
-      if (!Op->HasField(TEXT("transform"))) {
-        TSharedPtr<FJsonObject> Transform = MakeShared<FJsonObject>();
-        for (const TCHAR *Key : {TEXT("location"), TEXT("rotation"), TEXT("scale")}) {
-          if (const TSharedPtr<FJsonValue> Value = Op->TryGetField(Key)) {
-            Transform->SetField(Key, Value);
-          }
-        }
-        if (Transform->Values.Num() > 0) {
-          Op->SetObjectField(TEXT("transform"), Transform);
-        }
-      }
+      // location, rotation and scale stay on the op; ApplyModifyScsComponentOperation
+      // folds them into `transform` for this op as for every other.
       const bool bIsAdd = Op->HasField(TEXT("componentClass")) ||
                           Op->HasField(TEXT("componentType"));
       Op->SetStringField(TEXT("type"), bIsAdd ? TEXT("add_component")

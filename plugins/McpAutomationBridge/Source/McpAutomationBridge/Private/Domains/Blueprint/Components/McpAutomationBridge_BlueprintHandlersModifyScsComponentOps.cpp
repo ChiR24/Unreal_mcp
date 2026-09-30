@@ -9,6 +9,7 @@
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsParentResolve.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropertyBag.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsTransform.h"
 
 #include "Components/ActorComponent.h"
 #include "Components/SceneComponent.h"
@@ -24,8 +25,6 @@ namespace {
 void ApplyModifyScsModifyComponent(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
 FString ComponentName;
 Op->TryGetStringField(TEXT("componentName"), ComponentName);
-const TSharedPtr<FJsonValue> TransformVal = Op->TryGetField(TEXT("transform"));
-const TSharedPtr<FJsonObject> TransformObj = TransformVal.IsValid() && TransformVal->Type == EJson::Object ? TransformVal->AsObject() : nullptr;
 const TSharedPtr<FJsonValue> PropertiesVal = Op->TryGetField(TEXT("properties"));
 const TSharedPtr<FJsonObject> PropertiesObj = PropertiesVal.IsValid() && PropertiesVal->Type == EJson::Object ? PropertiesVal->AsObject() : nullptr;
 if (ComponentName.IsEmpty()) {
@@ -49,26 +48,15 @@ if (!Template) {
 }
 bool bAnySuccess = false;
 McpScsPropagate::FDefaults Defaults{Template, LocalBP, FName(*ComponentName)};
-if (TransformObj.IsValid() &&
-    Template->IsA<USceneComponent>()) {
-  for (const TCHAR *Path : {TEXT("RelativeLocation"), TEXT("RelativeRotation"), TEXT("RelativeScale3D")}) Defaults.Capture(Path);
-  USceneComponent *SceneTemplate =
-      Cast<USceneComponent>(Template);
-  const FVector Location = ExtractVectorField(TransformObj, TEXT("location"), SceneTemplate->GetRelativeLocation());
-  const FRotator Rotation = ExtractRotatorField(TransformObj, TEXT("rotation"), SceneTemplate->GetRelativeRotation());
-  const FVector Scale = ExtractVectorField(TransformObj, TEXT("scale"), SceneTemplate->GetRelativeScale3D());
-  SceneTemplate->SetRelativeLocation(Location);
-  SceneTemplate->SetRelativeRotation(Rotation);
-  SceneTemplate->SetRelativeScale3D(Scale);
-  bAnySuccess = true;
-}
+// What did not land, transform parts and properties alike, is named in the batch's warnings.
+TArray<FString> Rejected = McpScsTransform::Apply(Template, Op, Defaults, bAnySuccess);
 if (PropertiesObj.IsValid()) {
-  const TArray<FString> Rejected = McpScsPropertyBag::Apply(Template, PropertiesObj, Defaults, bAnySuccess);
-  if (Rejected.Num() > 0) {
-    TArray<TSharedPtr<FJsonValue>> Values;
-    for (const FString &Entry : Rejected) Values.Add(MakeShared<FJsonValueString>(Entry));
-    OpSummary->SetArrayField(TEXT("rejectedProperties"), Values);
-  }
+  Rejected.Append(McpScsPropertyBag::Apply(Template, PropertiesObj, Defaults, bAnySuccess));
+}
+if (Rejected.Num() > 0) {
+  TArray<TSharedPtr<FJsonValue>> Values;
+  for (const FString &Entry : Rejected) Values.Add(MakeShared<FJsonValueString>(Entry));
+  OpSummary->SetArrayField(TEXT("rejectedProperties"), Values);
 }
 for (const TCHAR *Path : {TEXT("StaticMesh"), TEXT("OverrideMaterials")}) Defaults.Capture(Path);
 const bool bAssetsApplied = ApplyScsTemplateAssets(Template, Op);
@@ -279,6 +267,10 @@ if (!ComponentClass) {
         OpSummary->SetStringField(TEXT("componentName"), ComponentName);
         McpScsParent::AttachAndReport(LocalBP, LocalSCS, ComponentName,
                                       AttachToName, OpSummary);
+        // The subsystem route above places and configures what it added; this one dropped both.
+        if (Op->HasField(TEXT("transform")) || Op->HasField(TEXT("properties"))) {
+          ApplyModifyScsModifyComponent(LocalBP, LocalSCS, Op, OpSummary);
+        }
       } else {
         OpSummary->SetBoolField(TEXT("success"), false);
         OpSummary->SetStringField(TEXT("warning"),
@@ -291,6 +283,8 @@ if (!ComponentClass) {
 } // namespace
 
 void ApplyModifyScsComponentOperation(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const FString &NormalizedType, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
+  // location/rotation/scale on the operation itself take the road `transform` takes, for add and modify alike.
+  McpScsTransform::FoldDirect(Op);
   if (NormalizedType == TEXT("modify_component")) {
     ApplyModifyScsModifyComponent(LocalBP, LocalSCS, Op, OpSummary);
   } else if (NormalizedType == TEXT("add_component")) {
