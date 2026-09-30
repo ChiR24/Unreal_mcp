@@ -142,8 +142,9 @@ bool HandleWidgetAuthoringAnimationCore(
         ResultJson->SetStringField(TEXT("propertyName"), Track.PropertyName);
         ResultJson->SetStringField(TEXT("trackClass"), Track.TrackClass);
         ResultJson->SetStringField(TEXT("bindingGuid"), Track.BindingGuid);
-        ResultJson->SetBoolField(TEXT("bindingCreated"), Track.bCreatedBinding);
-        ResultJson->SetBoolField(TEXT("trackCreated"), Track.bCreatedTrack);
+        ResultJson->SetBoolField(TEXT("createdBinding"), Track.bCreatedBinding);
+        ResultJson->SetBoolField(TEXT("createdTrack"), Track.bCreatedTrack);
+        ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(TEXT("%s track %s on '%s' in '%s'"),
             *Track.PropertyName, Track.bCreatedTrack ? TEXT("added") : TEXT("already present"), *SlotName, *AnimationName), ResultJson);
         return true;

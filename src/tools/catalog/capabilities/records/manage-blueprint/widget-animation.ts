@@ -13,6 +13,20 @@ import { P } from './properties.js';
 const FAMILY = 'widget-animation';
 const DOMAIN = 'widget';
 
+// What add_animation_track and add_animation_keyframe answer about the track they touched.
+const TRACK_OUTPUT = {
+  widgetPath: P.widgetPath,
+  animationName: P.animationName,
+  slotName: { type: 'string', description: 'Widget the track animates.' },
+  trackType: { type: 'string', description: 'Normalised track type.' },
+  propertyName: { type: 'string', description: 'Widget property driven by the track (RenderOpacity, ColorAndOpacity, RenderTransform).' },
+  trackClass: { type: 'string', description: 'MovieScene track class that owns the section.' },
+  createdTrack: { type: 'boolean', description: 'Whether the property track was created by this call.' },
+  createdBinding: { type: 'boolean', description: 'Whether the widget binding was created by this call.' },
+  bindingGuid: { type: 'string', description: 'MovieScene possessable GUID bound to the widget.' },
+  saved: { type: 'boolean', description: 'Whether the Widget Blueprint was saved.' },
+} as const;
+
 export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'blueprint.create_widget_animation',
@@ -24,7 +38,11 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A Blueprint graph animation is needed (use animation_physics).'],
     inputProps: { widgetPath: P.widgetPath, animationName: P.animationName, duration: P.duration },
     required: ['widgetPath', 'animationName'],
-    outputProps: { animationName: P.animationName },
+    outputProps: {
+      animationName: P.animationName,
+      widgetPath: P.widgetPath,
+      duration: { type: 'number', description: 'Length of the new animation in seconds.' },
+    },
     outputRequired: ['animationName'],
     effect: 'write',
     latency: 'interactive',
@@ -43,6 +61,8 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The animation has enough tracks.'],
     inputProps: { widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName },
     required: ['widgetPath', 'animationName', 'trackType'],
+    outputProps: TRACK_OUTPUT,
+    outputRequired: [],
     effect: 'write',
     latency: 'interactive',
     resources: 'low',
@@ -57,22 +77,17 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a keyframe at a specific time on a widget animation track.',
     whenToUse: ['A property value must be keyframed at a specific time in a widget animation.'],
     whenNotToUse: ['The track should be removed rather than keyframed.'],
-    inputProps: { widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName, time: P.time, propertyValue: P.propertyValue, interpolation: P.interpolation, value: P.value },
+    inputProps: { widgetPath: P.widgetPath, animationName: P.animationName, trackType: P.trackType, slotName: P.slotName, time: P.time,
+      propertyValue: { description: 'The key value, by trackType: opacity a number 0-1; color {r,g,b,a} or [r,g,b,a]; translation, scale or shear {x,y} or [x,y]; angle a number in degrees; transform any of {translation:{x,y}, scale:{x,y}, angle, shear:{x,y}}. A value of the wrong shape is refused before anything is added.' },
+      interpolation: P.interpolation,
+      value: { type: 'number', description: 'A plain number for an opacity or angle key, in place of propertyValue.' } },
     required: ['widgetPath', 'animationName', 'time'],
     outputProps: {
-      animationName: P.animationName,
-      slotName: { type: 'string', description: 'Widget the key was authored on.' },
-      trackType: { type: 'string', description: 'Normalised track type that was keyed.' },
-      propertyName: { type: 'string', description: 'Widget property driven by the track (RenderOpacity, ColorAndOpacity, RenderTransform).' },
-      trackClass: { type: 'string', description: 'MovieScene track class that owns the section.' },
+      ...TRACK_OUTPUT,
       time: { type: 'number', description: 'Key time in seconds.' },
       frameNumber: { type: 'number', description: 'Key position in MovieScene tick-resolution frames.' },
       keyCount: { type: 'number', description: 'Keys on the last channel written after this call.' },
       channelCount: { type: 'number', description: 'Channels that received a key.' },
-      createdTrack: { type: 'boolean', description: 'Whether the property track was created by this call.' },
-      createdBinding: { type: 'boolean', description: 'Whether the widget binding was created by this call.' },
-      bindingGuid: { type: 'string', description: 'MovieScene possessable GUID bound to the widget.' },
-      saved: { type: 'boolean', description: 'Whether the Widget Blueprint was saved.' },
     },
     outputRequired: ['animationName', 'slotName', 'propertyName', 'keyCount'],
     effect: 'write',

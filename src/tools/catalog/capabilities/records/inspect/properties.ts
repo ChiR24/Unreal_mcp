@@ -14,7 +14,7 @@ const arrStr = (description: string): Prop => ({ type: 'array', items: { type: '
 
 export const P = {
   objectPath: str('Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel).'),
-  runtimeObjectPath: str('Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel); while PIE runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game.'),
+  runtimeObjectPath: str('Object path of the world actor or asset (e.g. /Game/Maps/Demo.Demo_PersistentLevel); while PIE runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game, and a live widget goes by the name control_editor simulate_input widget_list reports (WBP_HUD_C_0 or WBP_HUD; its widgets are properties: CoinBox.RenderTransform).'),
   actorName: str('World actor name to inspect.'),
   actorNames: arrStr('Several world actors to act on in one call, in place of actorName; names not found are listed back.'),
   name: str('Actor name identifier (alias of actorName).'),

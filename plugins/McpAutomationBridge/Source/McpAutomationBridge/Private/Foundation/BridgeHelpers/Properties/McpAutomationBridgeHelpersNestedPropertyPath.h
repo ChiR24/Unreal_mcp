@@ -5,7 +5,8 @@
 
 // Up to 8 property names of Scope sharing a word (3+ letters, split at capitals) with Wanted, so a
 // miss names what the caller probably meant ("FadeAmount" finds OnAudioFadeChangeEvent); empty
-// when nothing shares one. A miss used to say only "not found in scope".
+// when nothing shares one. A miss used to say only "not found in scope". A shared word counts by
+// how rare it is in Scope, so "LifeTime" lists InitialLifeSpan before the many ...Time properties.
 static inline FString McpSimilarPropertyNames(const UStruct *Scope, const FString &Wanted) {
   TArray<FString> Words;
   FString Word;
@@ -21,11 +22,28 @@ static inline FString McpSimilarPropertyNames(const UStruct *Scope, const FStrin
       Word.AppendChar(Char);
     }
   }
-  TArray<FString> Similar;
-  for (TFieldIterator<FProperty> It(Scope); It && Similar.Num() < 8; ++It) {
-    if (Words.ContainsByPredicate([&It](const FString &Each) { return It->GetName().Contains(Each); })) {
-      Similar.Add(It->GetName());
+  TArray<FString> Names;
+  for (TFieldIterator<FProperty> It(Scope); It; ++It) {
+    Names.Add(It->GetName());
+  }
+  TArray<int32> Holders;
+  for (const FString &Each : Words) {
+    Holders.Add(Names.FilterByPredicate([&Each](const FString &Name) { return Name.Contains(Each); }).Num());
+  }
+  TArray<TPair<double, FString>> Scored;
+  for (const FString &Name : Names) {
+    double Score = 0.0;
+    for (int32 Index = 0; Index < Words.Num(); ++Index) {
+      Score += Name.Contains(Words[Index]) ? 1.0 / Holders[Index] : 0.0;
     }
+    if (Score > 0.0) {
+      Scored.Emplace(Score, Name);
+    }
+  }
+  Scored.StableSort([](const TPair<double, FString> &A, const TPair<double, FString> &B) { return A.Key > B.Key; });
+  TArray<FString> Similar;
+  for (int32 Index = 0; Index < FMath::Min(8, Scored.Num()); ++Index) {
+    Similar.Add(Scored[Index].Value);
   }
   return FString::Join(Similar, TEXT(", "));
 }

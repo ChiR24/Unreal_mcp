@@ -103,4 +103,31 @@ describe('handlers answer what they did', () => {
     expect(resolver).toMatch(/McpSimilarPropertyNames\(CurrentTypeScope, Segment\);\s*OutError = FString::Printf\(/u);
     expect(resolver).toContain('TEXT("; similar: ")');
   });
+
+  // A scale key without an {x,y} pair created the binding and an empty track, then answered
+  // INVALID_ARGUMENT; the later valid key reported createdTrack false.
+  it('a refused widget animation key or track leaves nothing behind', () => {
+    const keys = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringAnimationKeys.cpp');
+    const author = keys.slice(keys.indexOf('bool McpAuthorWidgetAnimationKey('));
+    expect(author.indexOf('OutError = KeyValueError(Kind, TrackType, ValueField);')).toBeGreaterThan(-1);
+    expect(author.indexOf('OutError = KeyValueError(Kind, TrackType, ValueField);')).toBeLessThan(author.indexOf('FindOrCreateBinding('));
+    const track = keys.slice(keys.indexOf('bool McpAddWidgetAnimationTrack('));
+    expect(track.indexOf('!IsTransformKind(Kind)')).toBeLessThan(track.indexOf('FindOrCreateBinding('));
+  });
+
+  it('widget animation track and key replies name the Widget Blueprint for the receipt', () => {
+    expect(code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationKeyframe.cpp'))
+      .toContain('ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));');
+    const core = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationCore.cpp');
+    expect(core).toContain('ResultJson->SetBoolField(TEXT("createdTrack"), Track.bCreatedTrack);');
+    expect(core).not.toContain('TEXT("trackCreated")');
+  });
+
+  // widget_list named WBP_HUD_C_0, then get_property answered OBJECT_NOT_FOUND for it.
+  it('a live widget resolves by the name widget_list reports', () => {
+    const resolution = code('..', 'Foundation', 'HandlerUtils', 'McpHandlerUtilsObjectResolution.cpp');
+    const role = resolution.slice(resolution.indexOf('UObject* ResolveRuntimeRole('));
+    expect(role).toMatch(/for \(TObjectIterator<UUserWidget> It; It; \+\+It\)/u);
+    expect(role).toContain('It->GetWorld() == World');
+  });
 });

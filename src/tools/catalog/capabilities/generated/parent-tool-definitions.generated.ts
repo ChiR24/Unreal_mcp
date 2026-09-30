@@ -4451,7 +4451,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Only when nothing matched: up to 10 labels that match once case, separators and leading zeros are ignored (\"Bug1\" finds Bug_01)."
+          "description": "Only when nothing matched: up to 10 labels that contain the query once case, separators and leading zeros are ignored (\"Bug1\" finds Bug_01 and Bug_10)."
         },
         "skipped": {
           "type": "array",
@@ -11138,13 +11138,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "propertyValue": {
           "oneOf": [
             {
+              "description": "The key value, by trackType: opacity a number 0-1; color {r,g,b,a} or [r,g,b,a]; translation, scale or shear {x,y} or [x,y]; angle a number in degrees; transform any of {translation:{x,y}, scale:{x,y}, angle, shear:{x,y}}. A value of the wrong shape is refused before anything is added."
+            },
+            {
               "description": "Value to assign to the property."
             },
             {
               "description": "Value to write: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field."
             }
           ],
-          "description": "Value to assign to the property."
+          "description": "The key value, by trackType: opacity a number 0-1; color {r,g,b,a} or [r,g,b,a]; translation, scale or shear {x,y} or [x,y]; angle a number in degrees; transform any of {translation:{x,y}, scale:{x,y}, angle, shear:{x,y}}. A value of the wrong shape is refused before anything is added."
         },
         "pure": {
           "type": "boolean",
@@ -11409,10 +11412,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "number",
+              "description": "A plain number for an opacity or angle key, in place of propertyValue."
+            },
+            {
+              "type": "number",
               "description": "Numeric value for a slider, spin box, or animation keyframe."
             }
           ],
-          "description": "New value for propertyName: a string, number or bool, or an object or array for a struct property."
+          "description": "A plain number for an opacity or angle key, in place of propertyValue."
         },
         "variableName": {
           "type": "string",
@@ -11804,6 +11811,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Compile messages: { severity, message }.",
           "x-unreal-reflection-boundary": true
+        },
+        "duration": {
+          "type": "number",
+          "description": "Length of the new animation in seconds."
         },
         "editorOpened": {
           "type": "boolean",
@@ -12270,7 +12281,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "trackType": {
           "type": "string",
-          "description": "Normalised track type that was keyed."
+          "description": "Normalised track type."
         },
         "truncated": {
           "type": "boolean",

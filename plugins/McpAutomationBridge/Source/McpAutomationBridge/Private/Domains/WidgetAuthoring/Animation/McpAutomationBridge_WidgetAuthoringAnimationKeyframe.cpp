@@ -66,6 +66,8 @@ bool HandleWidgetAuthoringAnimationKeyframe(UMcpAutomationBridgeSubsystem& Subsy
     ResultJson->SetBoolField(TEXT("createdBinding"), KeyResult.bCreatedBinding);
     ResultJson->SetStringField(TEXT("bindingGuid"), KeyResult.BindingGuid);
     ResultJson->SetBoolField(TEXT("saved"), bSaved);
+    // Names the Widget Blueprint so the receipt lists it: a saved key answered changes [].
+    ResultJson->SetStringField(TEXT("widgetPath"), WidgetBlueprintPackagePath(WidgetBP));
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Keyframe added at %.3fs on %s.%s (%d key%s in the track)"), Time, *TargetWidget->GetName(),
                         *KeyResult.PropertyName, KeyResult.KeyCount, KeyResult.KeyCount == 1 ? TEXT("") : TEXT("s")),

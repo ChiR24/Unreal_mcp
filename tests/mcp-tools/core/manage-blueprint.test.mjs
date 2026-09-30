@@ -533,6 +533,8 @@ const testCases = [
     { scenario: 'CREATE: create_widget_animation', toolName: 'manage_blueprint', arguments: widgetArgs('create_widget_animation', { animationName: ANIMATION_NAME, duration: 1.25 }), expected: 'success|already exists' },
     { scenario: 'ADD: add_animation_track', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_track', { animationName: ANIMATION_NAME, slotName: 'TitleText', trackType: 'opacity' }), expected: 'success|already exists' },
     { scenario: 'ADD: add_animation_keyframe', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_keyframe', { animationName: ANIMATION_NAME, slotName: 'TitleText', time: 0.25, value: 0.5, interpolation: 'linear' }), expected: 'success' },
+    { scenario: 'ERROR: a scale key without an {x,y} pair adds nothing', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_keyframe', { animationName: ANIMATION_NAME, slotName: 'PlayButton', trackType: 'scale', time: 0, value: 1 }), expected: 'error|INVALID_ARGUMENT' },
+    { scenario: 'ADD: the first valid key on that widget creates its binding', toolName: 'manage_blueprint', arguments: widgetArgs('add_animation_keyframe', { animationName: ANIMATION_NAME, slotName: 'PlayButton', trackType: 'scale', time: 0, propertyValue: { x: 1, y: 1 } }), expected: 'success', assertions: [{ path: 'structuredContent.result.createdBinding', equals: true, label: 'the refused key left no binding behind' }] },
 
     // === INFO ===
     { scenario: 'INFO: get_widget_info', toolName: 'manage_blueprint', arguments: widgetArgs('get_widget_info'), expected: 'success' },

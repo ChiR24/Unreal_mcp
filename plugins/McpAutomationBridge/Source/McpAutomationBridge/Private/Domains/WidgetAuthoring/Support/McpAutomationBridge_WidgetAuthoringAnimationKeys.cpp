@@ -58,6 +58,51 @@ bool IsTransformKind(const FString& Kind)
     return Kind == TEXT("translation") || Kind == TEXT("position") || Kind == TEXT("scale") || Kind == TEXT("shear") ||
            Kind == TEXT("angle") || Kind == TEXT("rotation") || Kind == TEXT("transform") || Kind == TEXT("rendertransform");
 }
+
+// Checked before anything is touched: a refused key used to leave a new binding and an empty track
+// behind (a scale key without an {x,y} pair created both on CoinBox, then answered INVALID_ARGUMENT).
+FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value)
+{
+    double A = 0.0;
+    double B = 0.0;
+    const TSharedPtr<FJsonObject>* Object = nullptr;
+    const TArray<TSharedPtr<FJsonValue>>* Array = nullptr;
+    if (Kind == TEXT("opacity") || Kind == TEXT("renderopacity") || Kind == TEXT("float"))
+    {
+        return Value.IsValid() && Value->TryGetNumber(A) ? FString()
+                                                         : FString(TEXT("opacity keys need a numeric value (0..1) in propertyValue or value"));
+    }
+    if (Kind == TEXT("color") || Kind == TEXT("colorandopacity") || Kind == TEXT("tint"))
+    {
+        return Value.IsValid() && ((Value->TryGetObject(Object) && Object) || (Value->TryGetArray(Array) && Array && Array->Num() >= 3))
+                   ? FString()
+                   : FString(TEXT("color keys need a {r,g,b,a} object or [r,g,b,a] array in propertyValue"));
+    }
+    if (!IsTransformKind(Kind))
+    {
+        return FString::Printf(
+            TEXT("Unsupported trackType '%s'; supported: opacity, color, translation, scale, angle, shear, transform"), *TrackType);
+    }
+    bool bValid = false;
+    if (Kind == TEXT("angle") || Kind == TEXT("rotation"))
+    {
+        bValid = Value.IsValid() && Value->TryGetNumber(A);
+    }
+    else if (Kind != TEXT("transform") && Kind != TEXT("rendertransform"))
+    {
+        bValid = ReadPair(Value, TEXT("x"), TEXT("y"), A, B);
+    }
+    else if (Value.IsValid() && Value->TryGetObject(Object) && Object)
+    {
+        bValid = ReadPair((*Object)->TryGetField(TEXT("translation")), TEXT("x"), TEXT("y"), A, B) ||
+                 ReadPair((*Object)->TryGetField(TEXT("scale")), TEXT("x"), TEXT("y"), A, B) ||
+                 ReadPair((*Object)->TryGetField(TEXT("shear")), TEXT("x"), TEXT("y"), A, B) ||
+                 (*Object)->TryGetNumberField(TEXT("angle"), A);
+    }
+    return bValid ? FString()
+                  : FString::Printf(TEXT("%s keys need an {x,y} pair in propertyValue (angle: a number; transform: "
+                                         "{translation,scale,angle,shear})"), *TrackType);
+}
 } // namespace
 
 bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation, UWidget* Target,
@@ -88,6 +133,12 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
     const FFrameNumber Frame = (Time * MovieScene->GetTickResolution()).RoundToFrame();
     const TSharedPtr<FJsonValue> ValueField = ReadValueField(Payload);
     const FString Kind = TrackType.ToLower();
+    OutError = KeyValueError(Kind, TrackType, ValueField);
+    if (!OutError.IsEmpty())
+    {
+        OutErrorCode = TEXT("INVALID_ARGUMENT");
+        return false;
+    }
     MovieScene->Modify();
     Animation->Modify();
     const FGuid Guid = FindOrCreateBinding(MovieScene, Animation, Target, Out.bCreatedBinding);
@@ -188,6 +239,12 @@ bool McpAddWidgetAnimationTrack(UWidgetAnimation* Animation, UWidget* Target, co
         return false;
     }
     const FString Kind = TrackType.ToLower();
+    // The kind is checked before the binding is made, so a refused track leaves nothing behind.
+    if (Kind != TEXT("opacity") && Kind != TEXT("renderopacity") && Kind != TEXT("color") && !IsTransformKind(Kind))
+    {
+        OutError = FString::Printf(TEXT("trackType '%s' is not one of opacity, color, translation, scale, angle, shear, transform"), *TrackType);
+        return false;
+    }
     MovieScene->Modify();
     Animation->Modify();
     UMovieSceneTrack* Track = nullptr;
@@ -203,15 +260,10 @@ bool McpAddWidgetAnimationTrack(UWidgetAnimation* Animation, UWidget* Target, co
         Track = FindOrAddPropertyTrack<UMovieSceneColorTrack>(MovieScene, Guid, TEXT("ColorAndOpacity"), Out.bCreatedTrack);
         Out.PropertyName = TEXT("ColorAndOpacity");
     }
-    else if (IsTransformKind(Kind))
+    else
     {
         Track = FindOrAddPropertyTrack<UMovieScene2DTransformTrack>(MovieScene, Guid, TEXT("RenderTransform"), Out.bCreatedTrack);
         Out.PropertyName = TEXT("RenderTransform");
-    }
-    else
-    {
-        OutError = FString::Printf(TEXT("trackType '%s' is not one of opacity, color, translation, scale, angle, shear, transform"), *TrackType);
-        return false;
     }
     Out.bCreatedBinding = bBinding;
     Out.BindingGuid = Guid.ToString();

@@ -13,7 +13,7 @@ const FIND_OUTPUT = { actors: P.actors, count: P.count };
 // With no match, labels equal to the query once case, separators and leading zeros are ignored.
 const FIND_BY_NAME_OUTPUT = {
   ...FIND_OUTPUT,
-  similar: { type: 'array', items: { type: 'string' }, description: 'Only when nothing matched: up to 10 labels that match once case, separators and leading zeros are ignored ("Bug1" finds Bug_01).' },
+  similar: { type: 'array', items: { type: 'string' }, description: 'Only when nothing matched: up to 10 labels that contain the query once case, separators and leading zeros are ignored ("Bug1" finds Bug_01 and Bug_10).' },
 };
 
 export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [

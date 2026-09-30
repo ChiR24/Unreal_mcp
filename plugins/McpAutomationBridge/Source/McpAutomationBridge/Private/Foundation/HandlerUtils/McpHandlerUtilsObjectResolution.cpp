@@ -19,6 +19,8 @@
 #include "GameFramework/HUD.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerState.h"
+#include "Blueprint/UserWidget.h"
+#include "UObject/UObjectIterator.h"
 
 namespace McpHandlerUtils
 {
@@ -27,7 +29,8 @@ FString DescribeObjectNotFound(const FString& ObjectPath)
 {
     return FString::Printf(
         TEXT("Unable to find object at path %s. Actors are found by name or label; while PIE runs, GameInstance, "
-             "GameMode, GameState, PlayerController, PlayerPawn, PlayerState and HUD name those runtime objects."),
+             "GameMode, GameState, PlayerController, PlayerPawn, PlayerState and HUD name those runtime objects, "
+             "and a live widget goes by the name simulate_input widget_list reports (WBP_HUD_C_0 or WBP_HUD)."),
         *ObjectPath);
 }
 
@@ -49,6 +52,19 @@ UObject* ResolveRuntimeRole(const FString& Role)
     if (Is(TEXT("PlayerPawn"))) return PC ? PC->GetPawn() : nullptr;
     if (Is(TEXT("PlayerState"))) return PC ? PC->GetPlayerState<APlayerState>() : nullptr;
     if (Is(TEXT("HUD"))) return PC ? PC->GetHUD() : nullptr;
+    // A live UMG widget by the object or Widget Blueprint name widget_list reports (WBP_HUD_C_0, WBP_HUD):
+    // widget_list named it, then get_property could not reach it. Its tree widgets are properties
+    // (CoinBox.RenderTransform).
+    for (TObjectIterator<UUserWidget> It; It; ++It)
+    {
+        FString ClassName = It->GetClass()->GetName();
+        ClassName.RemoveFromEnd(TEXT("_C"));
+        if (It->GetWorld() == World && (It->GetName().Equals(Role, ESearchCase::IgnoreCase) ||
+                                        ClassName.Equals(Role, ESearchCase::IgnoreCase)))
+        {
+            return *It;
+        }
+    }
     return nullptr;
 }
 
