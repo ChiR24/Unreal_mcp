@@ -317,6 +317,14 @@ describe('build_graph settles auto-placed nodes beside what they are wired to', 
     expect(settle).toBeLessThan(batch.indexOf('McpCompileBlueprintWithDiagnostics'));
   });
 
+  // A pure node settled before the Branch reading it went beside the variable it reads, 1640 units away.
+  it('a node waits for the neighbour it belongs beside, and a stalled pass relaxes one node at a time', () => {
+    const placement = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
+    expect(placement).toContain('Best.bBetterPending = PendingRank < Best.Rank;');
+    expect(placement).toContain('if (Anchor.bBetterPending && !bRelax)');
+    expect(placement).toContain('Index < Pending.Num() && !(bRelax && bMoved)');
+  });
+
   it('the batch description says where an auto-placed node goes', () => {
     expect(paramDescription('blueprint.edit_graph', 'operations')).toContain('moves beside a node it is wired to');
   });

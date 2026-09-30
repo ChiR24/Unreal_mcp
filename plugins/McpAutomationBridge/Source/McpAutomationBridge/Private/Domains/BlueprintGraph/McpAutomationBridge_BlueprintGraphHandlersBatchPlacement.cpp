@@ -46,12 +46,14 @@ FString OverlappedTitles(const FMcpCapturedResponse& Refusal)
     return Titles.Num() > 0 ? FString::Join(Titles, TEXT(", ")) : FString(TEXT("an existing node"));
 }
 
-// Where a node goes beside one it is wired to; the lowest Rank wins.
+// Where a node goes beside one it is wired to; the lowest Rank wins. bBetterPending: a neighbour
+// that would rank better has not settled yet.
 struct FAnchor
 {
     int32 Rank = MAX_int32;
     float X = 0.0f;
     float Y = 0.0f;
+    bool bBetterPending = false;
 };
 
 // Right of what runs it, below-left of what reads it, left of what it runs, right of what feeds it.
@@ -63,6 +65,7 @@ FAnchor AnchorBeside(const UEdGraphNode& Node, const TSet<const UEdGraphNode*>& 
     float Height = 0.0f;
     McpGraphLayout::EstimateNodeExtent(Node, Width, Height);
     FAnchor Best;
+    int32 PendingRank = MAX_int32;
     for (const UEdGraphPin* Pin : Node.Pins)
     {
         if (!Pin)
@@ -75,7 +78,12 @@ FAnchor AnchorBeside(const UEdGraphNode& Node, const TSet<const UEdGraphNode*>& 
         {
             const UEdGraphNode* Other = Linked ? Linked->GetOwningNode() : nullptr;
             const int32 Rank = bExec ? (bInput ? 0 : 2) : (bInput ? 3 : 1);
-            if (!Other || Unsettled.Contains(Other) || Rank >= Best.Rank)
+            if (Other && Unsettled.Contains(Other))
+            {
+                PendingRank = FMath::Min(PendingRank, Rank);
+                continue;
+            }
+            if (!Other || Rank >= Best.Rank)
             {
                 continue;
             }
@@ -87,6 +95,7 @@ FAnchor AnchorBeside(const UEdGraphNode& Node, const TSet<const UEdGraphNode*>& 
             Best.Y = Rank == 1 ? Other->NodePosY + OtherH + Gap : Other->NodePosY;
         }
     }
+    Best.bBetterPending = PendingRank < Best.Rank;
     return Best;
 }
 } // namespace
@@ -209,13 +218,20 @@ TArray<UEdGraphNode*> SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchS
             Unsettled.Add(Node);
         }
     }
-    for (bool bMoved = true; bMoved;)
+    // A node waits while the neighbour it belongs beside has not settled: a pure node went beside the
+    // far-left variable it reads (x 8494) when the Branch reading it settled later (x 10134). A pass that
+    // settles nothing lets one node take its best settled neighbour, then the waiting resumes.
+    for (bool bRelax = false;;)
     {
-        bMoved = false;
-        for (int32 Index = 0; Index < Pending.Num(); ++Index)
+        bool bMoved = false;
+        for (int32 Index = 0; Index < Pending.Num() && !(bRelax && bMoved); ++Index)
         {
             UEdGraphNode* Node = Pending[Index];
             const FAnchor Anchor = AnchorBeside(*Node, Unsettled);
+            if (Anchor.bBetterPending && !bRelax)
+            {
+                continue;
+            }
             float Width = 0.0f;
             float Height = 0.0f;
             McpGraphLayout::EstimateNodeExtent(*Node, Width, Height);
@@ -235,6 +251,11 @@ TArray<UEdGraphNode*> SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchS
             Pending.RemoveAt(Index--);
             bMoved = true;
         }
+        if (!bMoved && bRelax)
+        {
+            break;
+        }
+        bRelax = !bMoved;
     }
     return Pending;
 }
