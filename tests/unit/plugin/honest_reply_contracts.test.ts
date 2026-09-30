@@ -176,4 +176,14 @@ describe('handlers answer what they did', () => {
     expect(sample).toMatch(/if \(!ResolvedTexture\) \{\s*Bridge->SendAutomationError\([\s\S]*?TEXT\("ASSET_NOT_FOUND"\)\);/u);
     expect(sample).toContain('CreatedExpr->AutoSetSampleType();');
   });
+
+  // revolve turned the same fixed vase at the origin whatever profile, name or place was asked.
+  it('revolve turns the given profile, placed and named as asked', () => {
+    const source = code('Geometry', 'Primitives', 'McpAutomationBridge_GeometryPrimitivesShapes.cpp');
+    expect(source).toContain('Payload->TryGetArrayField(TEXT("profile"), Profile)');
+    expect(source).toContain('RevolveOptions.RevolveDegrees = ');
+    expect(source).toContain('ProfilePoints, RevolveOptions, Steps, bCap, nullptr);');
+    expect(source).toContain('SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), Name, DynMesh, Result)');
+    expect(source).toContain('Result->SetBoolField(TEXT("usedDefaultProfile"), bDefaultProfile);');
+  });
 });

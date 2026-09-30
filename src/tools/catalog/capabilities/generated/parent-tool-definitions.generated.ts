@@ -14350,7 +14350,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "cap": {
           "type": "boolean",
-          "description": "Cap open ends of tubes."
+          "description": "Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true)."
         },
         "center": {
           "type": "object",
@@ -14706,6 +14706,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "spiral_stairs"
           ],
           "description": "Which create primitive variant to run."
+        },
+        "profile": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "radius": {
+                "type": "number",
+                "description": "Distance from the axis in cm, 0 or more."
+              },
+              "height": {
+                "type": "number",
+                "description": "Height above the base in cm."
+              }
+            },
+            "required": [
+              "radius",
+              "height"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. Omit for a small built-in vase."
         },
         "r": {
           "type": "number",

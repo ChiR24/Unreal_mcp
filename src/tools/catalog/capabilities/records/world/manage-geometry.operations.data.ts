@@ -15,6 +15,9 @@ const PLUGIN = ['GeometryScripting'] as const;
 const BEVEL_DISTANCE = { type: 'number', description: 'Bevel width in world units (default 5).' };
 const BEVEL_SEGMENTS = { type: 'integer', description: 'Subdivisions for a rounded bevel (UE 5.4 or later); omit or 0 for a flat bevel.' };
 const SWEEP_STEPS = { type: 'integer', description: 'Path steps along the sweep (default 16); the profile uses half as many sides.' };
+// A fold keeps the first member's description, so text shared by sweep and revolve names both.
+const STEPS = { type: 'integer', description: 'Path steps along a sweep (default 16; the profile uses half as many sides), or segments around the axis for a revolve (default 16, 3 to 512; 48 or more reads as round).' };
+const CAP = { type: 'boolean', description: 'Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true).' };
 
 export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -85,9 +88,23 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'revolve', plugins: PLUGIN,
-    family: F, summary: 'Revolve a profile curve into a solid mesh.', whenToUse: ['A lathe/revolve solid must be created.'], whenNotToUse: ['A sweep along a spline is needed; use sweep.'],
-    inputProps: { steps: P.steps }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
-    exampleInput: { action: 'revolve', steps: 32 },
+    family: F, summary: 'Turn a profile of {radius, height} points around the vertical axis into a new dynamic mesh actor: a vase, column, bottle, tower or dome.', whenToUse: ['A lathe/revolve solid must be created.'], whenNotToUse: ['A sweep along a spline is needed; use sweep.'],
+    inputProps: {
+      name: P.name, location: P.location, rotation: P.rotation, scale: P.scale,
+      profile: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: { radius: { type: 'number', description: 'Distance from the axis in cm, 0 or more.' }, height: { type: 'number', description: 'Height above the base in cm.' } },
+          required: ['radius', 'height'], additionalProperties: false,
+        },
+        description: 'Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. Omit for a small built-in vase.',
+      },
+      angle: { type: 'number', description: 'Degrees to turn the profile, 1 to 360 (default 360); less leaves an open wedge.' },
+      steps: STEPS, cap: CAP,
+    },
+    required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    exampleInput: { action: 'revolve', name: 'Column', profile: [{ radius: 40, height: 0 }, { radius: 30, height: 300 }, { radius: 45, height: 320 }], steps: 32 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'chamfer', plugins: PLUGIN,
@@ -98,7 +115,7 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'extrude_along_spline', plugins: PLUGIN,
     family: F, summary: 'Extrude a profile along a spline actor.', whenToUse: ['A mesh must be swept along a spline path.'], whenNotToUse: ['A straight extrude is needed; use extrude.'],
-    inputProps: { actorName: P.actorName, cap: P.cap, segments: P.segments, targetActor: P.targetActor, splineActorName: P.splineActorName }, required: ['splineActorName'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    inputProps: { actorName: P.actorName, cap: CAP, segments: P.segments, targetActor: P.targetActor, splineActorName: P.splineActorName }, required: ['splineActorName'], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'extrude_along_spline', targetActor: 'DM_A', splineActorName: 'Spline_01' },
   }),
   buildWorldRecord({
@@ -110,13 +127,13 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'loft', plugins: PLUGIN,
     family: F, summary: 'Loft between two or more profile curves.', whenToUse: ['A lofted surface between profiles must be created.'], whenNotToUse: ['A sweep along a spline is needed; use sweep.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, splineActorName: P.splineActorName, segments: SWEEP_STEPS, cap: P.cap }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, splineActorName: P.splineActorName, segments: SWEEP_STEPS, cap: CAP }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'loft', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'sweep', plugins: PLUGIN,
     family: F, summary: 'Sweep a profile along a path of a dynamic mesh.', whenToUse: ['A swept solid must be created.'], whenNotToUse: ['A revolve is needed; use revolve.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, splineActorName: P.splineActorName, steps: SWEEP_STEPS, cap: P.cap }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, splineActorName: P.splineActorName, steps: STEPS, cap: CAP }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'sweep', targetActor: 'DM_A' },
   }),
   buildWorldRecord({

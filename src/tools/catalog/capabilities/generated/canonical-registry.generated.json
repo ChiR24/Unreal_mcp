@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "adc38edeceb16a4e",
+  "catalogRevision": "656ac3f1033b19c1",
   "recordCount": 389,
   "records": [
     {
@@ -60529,11 +60529,98 @@
             },
             "cap": {
               "type": "boolean",
-              "description": "Cap open ends of tubes."
+              "description": "Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true)."
             },
             "steps": {
               "type": "integer",
-              "description": "Path steps along the sweep (default 16); the profile uses half as many sides."
+              "description": "Path steps along a sweep (default 16; the profile uses half as many sides), or segments around the axis for a revolve (default 16, 3 to 512; 48 or more reads as round)."
+            },
+            "name": {
+              "type": "string",
+              "description": "Name for the new asset or node."
+            },
+            "location": {
+              "type": "object",
+              "description": "World location {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "rotation": {
+              "type": "object",
+              "description": "Rotation {pitch, yaw, roll}.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
+            },
+            "scale": {
+              "type": "object",
+              "description": "Spawn scale {x, y, z}.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            "profile": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "radius": {
+                    "type": "number",
+                    "description": "Distance from the axis in cm, 0 or more."
+                  },
+                  "height": {
+                    "type": "number",
+                    "description": "Height above the base in cm."
+                  }
+                },
+                "required": [
+                  "radius",
+                  "height"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Points from bottom to top, at least 2. For a hollow shape with walls, go up the outside and back down the inside. Omit for a small built-in vase."
+            },
+            "angle": {
+              "type": "number",
+              "description": "Degrees to turn the profile, 1 to 360 (default 360); less leaves an open wedge."
             },
             "thickness": {
               "type": "number",
@@ -60796,10 +60883,29 @@
             "cap": [
               "loft",
               "sweep",
+              "revolve",
               "extrude_along_spline"
             ],
             "steps": [
               "sweep",
+              "revolve"
+            ],
+            "name": [
+              "revolve"
+            ],
+            "location": [
+              "revolve"
+            ],
+            "rotation": [
+              "revolve"
+            ],
+            "scale": [
+              "revolve"
+            ],
+            "profile": [
+              "revolve"
+            ],
+            "angle": [
               "revolve"
             ],
             "thickness": [
@@ -60828,8 +60934,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "816fc9ac3f08e8dfba056ff56d90233a1a3f2c7edc0a2439ac999143baffac49",
-        "content": "06cee6143120e062b929cbdbd49befd4f3a46fafe4018ccce6fcced67441becd"
+        "schema": "9bdae56ae7eb5fc461c19b411d81fcb64b39fd6037b00085ca238741702b87b2",
+        "content": "74ee269cc77b98b281ab1e8ce13f84b2466c9b282736e3e3a53983cd83a9c118"
       }
     },
     {

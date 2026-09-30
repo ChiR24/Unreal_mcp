@@ -91,19 +91,53 @@ bool HandleCreateRamp(UMcpAutomationBridgeSubsystem* Self, const FString& Reques
 bool HandleRevolve(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
                           const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // model_mesh declares only steps for revolve: a fixed vase profile turned a full circle.
-    const int32 Steps = GetJsonIntField(Payload, TEXT("steps"), 16);
-    const TArray<FVector2D> ProfilePoints = {{10, 0}, {30, 0}, {50, 25}, {50, 75}, {30, 100}, {10, 100}};
+    // The profile runs bottom to top as {radius, height}; it used to be a fixed vase whatever was asked.
+    TArray<FVector2D> ProfilePoints;
+    const TArray<TSharedPtr<FJsonValue>>* Profile = nullptr;
+    if (Payload->TryGetArrayField(TEXT("profile"), Profile))
+    {
+        for (const TSharedPtr<FJsonValue>& Value : *Profile)
+        {
+            const TSharedPtr<FJsonObject>* Point = nullptr;
+            double Radius = 0.0, Height = 0.0;
+            if (!Value.IsValid() || !Value->TryGetObject(Point) || !(*Point)->TryGetNumberField(TEXT("radius"), Radius) ||
+                !(*Point)->TryGetNumberField(TEXT("height"), Height) || Radius < 0.0)
+            {
+                Self->SendAutomationError(Socket, RequestId, TEXT("Each profile point must be {radius, height} with radius 0 or more."), TEXT("INVALID_ARGUMENT"));
+                return true;
+            }
+            ProfilePoints.Add(FVector2D(Radius, Height));
+        }
+        if (ProfilePoints.Num() < 2)
+        {
+            Self->SendAutomationError(Socket, RequestId, TEXT("A profile needs at least 2 points."), TEXT("INVALID_ARGUMENT"));
+            return true;
+        }
+    }
+    const bool bDefaultProfile = ProfilePoints.Num() == 0;
+    if (bDefaultProfile) ProfilePoints = {{10, 0}, {30, 0}, {50, 25}, {50, 75}, {30, 100}, {10, 100}};
+
+    const int32 Steps = FMath::Clamp(GetJsonIntField(Payload, TEXT("steps"), 16), 3, 512);
+    FGeometryScriptRevolveOptions RevolveOptions;
+    RevolveOptions.RevolveDegrees = FMath::Clamp(GetJsonNumberField(Payload, TEXT("angle"), 360.0), 1.0, 360.0);
+    bool bCap = true;
+    Payload->TryGetBoolField(TEXT("cap"), bCap);
+    FString Name = GetJsonStringField(Payload, TEXT("name"));
+    if (Name.IsEmpty()) Name = TEXT("GeneratedRevolve");
 
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
     UGeometryScriptLibrary_MeshPrimitiveFunctions::AppendRevolvePath(
-        DynMesh, FGeometryScriptPrimitiveOptions(), FTransform::Identity, ProfilePoints, FGeometryScriptRevolveOptions(), Steps, true, nullptr);
+        DynMesh, FGeometryScriptPrimitiveOptions(), FTransform::Identity, ProfilePoints, RevolveOptions, Steps, bCap, nullptr);
 
     TSharedPtr<FJsonObject> Result;
-    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, FTransform::Identity, TEXT("GeneratedRevolve"), DynMesh, Result)) return true;
+    if (!SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), Name, DynMesh, Result)) return true;
     Result->SetNumberField(TEXT("steps"), Steps);
     Result->SetNumberField(TEXT("profilePoints"), ProfilePoints.Num());
-    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Revolve created"), Result);
+    Result->SetNumberField(TEXT("angle"), RevolveOptions.RevolveDegrees);
+    Result->SetBoolField(TEXT("capped"), bCap);
+    Result->SetBoolField(TEXT("usedDefaultProfile"), bDefaultProfile);
+    Self->SendAutomationResponse(Socket, RequestId, true,
+        bDefaultProfile ? TEXT("Revolve created from the built-in vase profile, since no profile was given") : TEXT("Revolve created"), Result);
     return true;
 }
 
