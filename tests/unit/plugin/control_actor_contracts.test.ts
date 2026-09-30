@@ -147,3 +147,13 @@ describe('sample_motion runs at full rate or says it did not', () => {
     expect(source).toContain('McpSlowFrameWarning(*Run)');
   });
 });
+
+// "Bug1" found nothing among Bug_01..Bug_10 and the empty list read as "there are no bugs".
+describe('find_by_name offers similar labels when nothing matches', () => {
+  it('compares names without case, separators and leading zeros, only after a miss', () => {
+    const source = read('McpAutomationBridge_ControlActorQuery.cpp');
+    expect(source).toContain('if (Matches.Num() == 0) {');
+    expect(source).toContain('FChar::IsAlnum(In[I]) && !bLeadingZero');
+    expect(source).toContain('Data->SetArrayField(TEXT("similar"), SimilarValues);');
+  });
+});

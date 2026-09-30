@@ -65,6 +65,15 @@ describe('handlers answer what they did', () => {
     expect(source).toContain('FPackageName::ObjectPathToPackageName(Path) != FPackageName::ObjectPathToPackageName(Asset)');
   });
 
+  // {Direction: 0} on an enemy whose variable is Dir answered success "Variables updated", set
+  // nothing, and dirtied the level.
+  it('set_blueprint_variables fails when no name is a variable, and names the real ones', () => {
+    const source = code('ControlActor', 'McpAutomationBridge_ControlActorAdvanced.cpp');
+    expect(source).toMatch(/if \(Missing\.Num\(\) > 0 && Missing\.Num\(\) == \(\*VariablesPtr\)->Values\.Num\(\)\) \{/u);
+    expect(source).toContain('TEXT("PROPERTY_NOT_FOUND")');
+    expect(source.indexOf('TEXT("PROPERTY_NOT_FOUND")')).toBeLessThan(source.indexOf('Found->Modify();'));
+  });
+
   it('a loot entry added after a removal takes a new key', () => {
     expect(code('Inventory', 'McpAutomationBridge_InventoryHandlersLootTables.cpp')).toContain('NextIndexedPropertyIndex(');
   });

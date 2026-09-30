@@ -134,6 +134,7 @@ const testCases = [
   { scenario: 'INFO: find_by_tag', toolName: 'control_actor', arguments: { action: 'find_by_tag', tag: TAG }, expected: 'success' },
   { scenario: 'INFO: find_actors_by_tag', toolName: 'control_actor', arguments: { action: 'find_actors_by_tag', tag: TAG }, expected: 'success' },
   { scenario: 'INFO: find_by_name', toolName: 'control_actor', arguments: { action: 'find_by_name', name: MAIN_ACTOR }, expected: 'success' },
+  { scenario: 'INFO: find_by_name near miss offers similar labels', toolName: 'control_actor', arguments: { action: 'find_by_name', name: MAIN_ACTOR.toLowerCase().replace(/_/g, ' ') }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', equals: 0, label: 'spaces for underscores match nothing' }, { path: 'structuredContent.result.similar', minLength: 1, label: 'the real label is offered' }] },
   { scenario: 'INFO: find_actors_by_name', toolName: 'control_actor', arguments: { action: 'find_actors_by_name', name: MAIN_ACTOR }, expected: 'success' },
   { scenario: 'INFO: find_by_class', toolName: 'control_actor', arguments: { action: 'find_by_class', className: 'StaticMeshActor' }, expected: 'success' },
   { scenario: 'INFO: find_by_class via class alias', toolName: 'control_actor', arguments: { action: 'find_by_class', class: 'StaticMeshActor' }, expected: 'success' },
@@ -156,6 +157,7 @@ const testCases = [
 
   // === MISC ===
   { scenario: 'CONFIG: set_blueprint_variables', toolName: 'control_actor', arguments: actorArgs('set_blueprint_variables', { variables: { InitialLifeSpan: 0 } }), expected: 'success' },
+  { scenario: 'ERROR: set_blueprint_variables with no real variable sets nothing', toolName: 'control_actor', arguments: actorArgs('set_blueprint_variables', { variables: { NoSuchVariable: 1 } }), expected: 'error|PROPERTY_NOT_FOUND' },
   { scenario: 'CONFIG: set_blueprint_variables on many actors, each its own values', toolName: 'control_actor', arguments: { action: 'set_blueprint_variables', actors: [{ actorName: MAIN_ACTOR, variables: { InitialLifeSpan: 0 } }, { actorName: PARENT_ACTOR, variables: { InitialLifeSpan: 0 } }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.updatedActors', equals: 2, label: 'both actors took their variables' }] },
   { scenario: 'CREATE: create_snapshot', toolName: 'control_actor', arguments: actorArgs('create_snapshot', { snapshotName: `Snapshot_${ts}` }), expected: 'success|already exists' },
   { scenario: 'ACTION: attach', toolName: 'control_actor', arguments: { action: 'attach', childActor: CHILD_ACTOR, parentActor: PARENT_ACTOR }, expected: 'success' },

@@ -3512,7 +3512,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "classPath": {
           "type": "string",
-          "description": "Unreal class path (e.g. /Script/Engine.PointLight) for the actor to spawn."
+          "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Bug) of the actors to find (alias of className)."
         },
         "collisionEnabled": {
           "type": "boolean",
@@ -4445,6 +4445,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Scale as [x, y, z]."
+        },
+        "similar": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Only when nothing matched: up to 10 labels that match once case, separators and leading zeros are ignored (\"Bug1\" finds Bug_01)."
         },
         "skipped": {
           "type": "array",

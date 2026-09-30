@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "24ea76e9b77caa6b",
+  "catalogRevision": "0b4a0b7c628b053c",
   "recordCount": 389,
   "records": [
     {
@@ -30501,7 +30501,7 @@
             },
             "classPath": {
               "type": "string",
-              "description": "Unreal class path (e.g. /Script/Engine.PointLight) for the actor to spawn."
+              "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Bug) of the actors to find (alias of className)."
             },
             "name": {
               "type": "string",
@@ -30569,6 +30569,13 @@
             "count": {
               "type": "number",
               "description": "Number of actors returned."
+            },
+            "similar": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Only when nothing matched: up to 10 labels that match once case, separators and leading zeros are ignored (\"Bug1\" finds Bug_01)."
             }
           },
           "required": [
@@ -30646,8 +30653,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "53b4af67cba2cd1b416685b200d41e3a31f0588a50ac32d7b637dee50d482a38",
-        "content": "59a6d8cfa5a04579b575251d4da6622dca2ffa5064bb50829e9b4a5846468d1a"
+        "schema": "fb9aa647de5e23e826434f52f15996cbf6d3697b904a6062be692172cafbbdd3",
+        "content": "cd75d9f8c1184589cd52c1c0cab3c5754b2a1206419e24790094c2946d1c963f"
       }
     },
     {

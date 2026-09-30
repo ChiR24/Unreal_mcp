@@ -99,8 +99,38 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByName(
   Data->SetStringField(TEXT("query"), Query);
   Data->SetStringField(TEXT("worldSearched"),
                        QueryWorld ? QueryWorld->GetName() : TEXT(""));
-  SendStandardSuccessResponse(this, Socket, RequestId,
-                              TEXT("Actor query executed"), Data);
+  // "Bug1" found nothing among Bug_01..Bug_10, and the empty list read as "there are no bugs".
+  // With no match, names equal to the query once case, separators and leading zeros are
+  // ignored ("bug1" in "Bug_01") are offered under similar.
+  FString Message = TEXT("Actor query executed");
+  if (Matches.Num() == 0) {
+    const auto Loose = [](const FString &In) {
+      FString Out;
+      for (int32 I = 0; I < In.Len(); ++I) {
+        const bool bLeadingZero = In[I] == TEXT('0') && I + 1 < In.Len() && FChar::IsDigit(In[I + 1]) &&
+                                  (I == 0 || !FChar::IsDigit(In[I - 1]));
+        if (FChar::IsAlnum(In[I]) && !bLeadingZero)
+          Out.AppendChar(FChar::ToLower(In[I]));
+      }
+      return Out;
+    };
+    const FString Want = Loose(Query);
+    TArray<FString> Similar;
+    for (AActor *Actor : AllActors) {
+      if (Actor && Similar.Num() < 10 && !Want.IsEmpty() &&
+          (Loose(Actor->GetActorLabel()).Contains(Want) || Loose(Actor->GetName()).Contains(Want)))
+        Similar.Add(Actor->GetActorLabel());
+    }
+    if (Similar.Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> SimilarValues;
+      for (const FString &Label : Similar)
+        SimilarValues.Add(MakeShared<FJsonValueString>(Label));
+      Data->SetArrayField(TEXT("similar"), SimilarValues);
+      Message = FString::Printf(TEXT("No actor name, label or path contains '%s'; similar: %s"), *Query,
+                                *FString::Join(Similar, TEXT(", ")));
+    }
+  }
+  SendStandardSuccessResponse(this, Socket, RequestId, Message, Data);
   return true;
 }
 

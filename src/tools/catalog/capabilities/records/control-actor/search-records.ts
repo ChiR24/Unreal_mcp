@@ -10,6 +10,11 @@ const FAMILY_TAGS = 'tags';
 const FAMILY_FIND = 'find';
 
 const FIND_OUTPUT = { actors: P.actors, count: P.count };
+// With no match, labels equal to the query once case, separators and leading zeros are ignored.
+const FIND_BY_NAME_OUTPUT = {
+  ...FIND_OUTPUT,
+  similar: { type: 'array', items: { type: 'string' }, description: 'Only when nothing matched: up to 10 labels that match once case, separators and leading zeros are ignored ("Bug1" finds Bug_01).' },
+};
 
 export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -95,7 +100,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Actors should be located by tag (use find_by_tag).'],
     inputProps: { name: P.name },
     required: ['name'],
-    outputProps: FIND_OUTPUT,
+    outputProps: FIND_BY_NAME_OUTPUT,
     outputRequired: [],
     effect: 'read',
     exampleInput: { action: 'find_by_name', name: 'Cube' },
@@ -111,7 +116,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Use find_by_name to avoid alias normalization.'],
     inputProps: { name: P.name },
     required: ['name'],
-    outputProps: FIND_OUTPUT,
+    outputProps: FIND_BY_NAME_OUTPUT,
     outputRequired: [],
     effect: 'read',
     exampleInput: { action: 'find_actors_by_name', name: 'Cube' },
@@ -126,7 +131,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Find all actors in the level matching a Unreal class name or path.',
     whenToUse: ['All instances of a class must be located.'],
     whenNotToUse: ['A tag-based lookup is more appropriate (use find_by_tag).'],
-    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: P.classPath },
+    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Bug) of the actors to find (alias of className).' } },
     required: [],
     requiredOneOf: ['className', 'class', 'classPath'],
     outputProps: FIND_OUTPUT,
@@ -143,7 +148,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of find_by_class. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit find_actors_by_class verb.'],
     whenNotToUse: ['Use find_by_class to avoid alias normalization.'],
-    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: P.classPath },
+    inputProps: { className: P.className, class: { type: 'string', description: 'Unreal class name or path (alias of className).' }, classPath: { type: 'string', description: 'Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Bug) of the actors to find (alias of className).' } },
     required: [],
     requiredOneOf: ['className', 'class', 'classPath'],
     outputProps: FIND_OUTPUT,

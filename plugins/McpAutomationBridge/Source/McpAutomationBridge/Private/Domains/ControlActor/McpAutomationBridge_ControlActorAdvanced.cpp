@@ -3,6 +3,8 @@
 #include "Foundation/Reflection/McpReflectedInvoke.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "UObject/Script.h"
+#include "Components/ActorComponent.h"
+#include "Engine/BlueprintGeneratedClass.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -110,6 +112,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
   }
 
   UClass *ActorClass = Found->GetClass();
+  // Names are resolved before the actor is touched: a call whose every name missed wrote nothing,
+  // yet answered "Variables updated" (and dirtied the level). The error names the real variables.
+  TArray<FString> Missing, Known;
+  for (const auto &Pair : (*VariablesPtr)->Values) {
+    if (!ActorClass->FindPropertyByName(*Pair.Key))
+      Missing.Add(Pair.Key);
+  }
+  if (Missing.Num() > 0 && Missing.Num() == (*VariablesPtr)->Values.Num()) {
+    for (TFieldIterator<FProperty> It(ActorClass); It; ++It) {
+      const FObjectProperty *Object = CastField<FObjectProperty>(*It);
+      if (Cast<UBlueprintGeneratedClass>(It->GetOwnerClass()) && It->HasAnyPropertyFlags(CPF_BlueprintVisible) &&
+          !(Object && Object->PropertyClass && Object->PropertyClass->IsChildOf(UActorComponent::StaticClass())))
+        Known.Add(It->GetName());
+    }
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("PROPERTY_NOT_FOUND"),
+        FString::Printf(TEXT("%s has no variable named %s; nothing was set. Its Blueprint variables: %s."),
+                        *TargetName, *FString::Join(Missing, TEXT(", ")),
+                        Known.Num() > 0 ? *FString::Join(Known, TEXT(", ")) : TEXT("none")), nullptr);
+    return true;
+  }
   Found->Modify();
   TArray<FString> Applied;
   TArray<FString> Warnings;
