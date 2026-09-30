@@ -225,10 +225,11 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     FVector HitExtent = FVector::ZeroVector;
     HitActor->GetActorBounds(true, HitOrigin, HitExtent);
     const double HitBottomZ = HitOrigin.Z - HitExtent.Z;
-    // Something resting ON the actor starts where the trace starts: a pipe's
-    // lip sitting on its body was "the surface under it", and the body read as
-    // sunk by its own full height.
-    if (HitBottomZ >= TraceStart.Z - 1.0) {
+    // Something the actor holds up is not the floor under it: a pipe's lip on
+    // its body, or a shelf deck its legs poke 12 units into (the trace starts
+    // inside the deck), read as "the surface under it", so the body or leg was
+    // sunk by its own full height and suggestedZ put it on top of the deck.
+    if (HitBottomZ >= Origin.Z) {
       continue;
     }
     // A floor is floor-shaped, or it reaches down past the actor's base to hold
