@@ -382,4 +382,9 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'create camera shake', accepted: ['blueprint.create'] },
   { query: 'outline text', accepted: ['blueprint.set_widget_layout'] },
   { query: 'button outline', accepted: ['blueprint.set_widget_layout'] },
+  { query: '3d text', accepted: ['control_actor.edit_component', 'blueprint.edit_scs'] },
+  { query: 'floating text above actor', accepted: ['control_actor.edit_component', 'blueprint.edit_scs'] },
+  { query: 'text shadow', accepted: ['blueprint.set_widget_layout'] },
+  { query: 'fade in widget', accepted: ['blueprint.edit_widget_animation'] },
+  { query: 'screen shake', accepted: ['blueprint.create'] },
 ];

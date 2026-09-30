@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f082122c9f5cfc39",
+  "catalogRevision": "dcf7449a0b5738c8",
   "recordCount": 389,
   "records": [
     {
@@ -13153,6 +13153,7 @@
           "child blueprint",
           "camera shake class",
           "camera shake blueprint",
+          "screen shake",
           "get or create blueprint",
           "idempotent create",
           "create if missing"
@@ -13332,7 +13333,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8112f090ea714ad21412abd3693dda7805eb1c2b2e7645916731e3b9c2e807a0",
-        "content": "8b4bdcc03d2133b4e542291c022b3ea0277bd4607563129c6e2484d307f07c4f"
+        "content": "bf8e3ad333605cb6acb6262bdb30d6791b7c31fe7560d2aa2b7b6614815271b5"
       }
     },
     {
@@ -15786,7 +15787,8 @@
           "animate widget scale",
           "widget scale animation",
           "pulse widget",
-          "pop a widget"
+          "pop a widget",
+          "fade in widget"
         ],
         "summary": "Create a widget animation or add tracks and keyframes to it.",
         "whenToUse": [
@@ -16040,7 +16042,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "08e559dd30be22e0c4b263ced1391950bd64107b28ffd2df484106b88e3f3154",
-        "content": "cc75ba085884985b69544d39960bf11aec395e7ba484c2e9f5fd54586e3f90bc"
+        "content": "c2c23331a3aa42dd9b44a7d18549ea6995b0990c3955493390281cbdb80175a7"
       }
     },
     {
@@ -18707,7 +18709,9 @@
           "rounded corners",
           "text outline",
           "outline text",
-          "add outline to text"
+          "add outline to text",
+          "text shadow",
+          "drop shadow on text"
         ],
         "summary": "Set a widget slot layout property (anchor, position, size (canvas {x,y}; box child sizeRule Auto/Fill and fillValue weight), alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.",
         "whenToUse": [
@@ -18864,7 +18868,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Any other widget property, by reflection (such as WidgetStyle or Brush): read without value, written with it. A dotted path reaches into a struct: Font.OutlineSettings.OutlineSize (a number) outlines the text of a TextBlock and Font.OutlineSettings.OutlineColor colors that outline."
+              "description": "Any other widget property, by reflection (such as WidgetStyle or Brush): read without value, written with it. A dotted path reaches into a struct: Font.OutlineSettings.OutlineSize (a number) outlines the text of a TextBlock and Font.OutlineSettings.OutlineColor colors that outline; ShadowOffset ({X, Y}) with ShadowColorAndOpacity gives it a drop shadow."
             },
             "value": {
               "description": "New value for propertyName: a string, number or bool, or an object or array for a struct property."
@@ -19143,8 +19147,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1d8bfda53155cde126521926fa3c7a0240475306517d0ca5c18e8c6e7bed928f",
-        "content": "32bab62379e650912e0fbc76f8adc4a87b5b317cc42d78fe45b060f44fdcff55"
+        "schema": "b6a9ec25769c59bd6de821faf00bedd7cb78a07e652bf9013a41042b77908a39",
+        "content": "4eed55fde685623c850659f51901fb6f1cc7cc251e98afa9b82a974a73e0a7f8"
       }
     },
     {
@@ -30326,6 +30330,10 @@
           "light color",
           "light radius",
           "change light color",
+          "3d text",
+          "world text",
+          "floating text above actor",
+          "text above head",
           "add component to actor",
           "attach component to actor"
         ],
@@ -30493,7 +30501,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "72207c12be52e975e72863ba37afdb4cf6a28537e006795855b30fad2abe5047",
-        "content": "a00f7be7eb1b91eae298c9f046f998ce1cd8616c60d68e6a7c5dffe341ec9474"
+        "content": "4900b01a040da5883350685c5e2fe2e6e7afaac0eb816fa49349243a15fe1583"
       }
     },
     {
