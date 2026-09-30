@@ -8456,7 +8456,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "pinName": {
           "type": "string",
-          "description": "Pin name."
+          "description": "Input to unplug: a pin of nodeId by name or label (a custom node input such as OB), or for nodeId Main a material output input (BaseColor, Normal...). A name that matches none fails listing the inputs; only a material function's output node takes none, unplugging every output."
         },
         "posX": {
           "type": "number",

@@ -44,7 +44,7 @@ bool HandleAddTextureSample(UMcpAutomationBridgeSubsystem* Bridge, const FString
     AddExpressionToContainer(Material, Function, CreatedExpr);
     FINALIZE_HOST();
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
     Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(CreatedExpr));
     // Placement telemetry used to come only from the parameter-adding variants,
     // so the documented overlappingNodes / placementWarning detection could never

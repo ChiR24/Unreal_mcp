@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "27d3a982ec384cb9",
+  "catalogRevision": "0f95ee1ffcea4f7f",
   "recordCount": 389,
   "records": [
     {
@@ -76396,7 +76396,7 @@
             },
             "pinName": {
               "type": "string",
-              "description": "Pin name."
+              "description": "Input to unplug: a pin of nodeId by name or label (a custom node input such as OB), or for nodeId Main a material output input (BaseColor, Normal...). A name that matches none fails listing the inputs; only a material function's output node takes none, unplugging every output."
             }
           },
           "required": [
@@ -76468,8 +76468,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7380f88bfa14c951ba653172606ef8e7d3eb62f351daaf0f546d7a94c7d3b480",
-        "content": "a4d9a12a183980b8d99e886ef70b8689587b8f2d2ff0ac9c1734b0352582407c"
+        "schema": "0554c4e2a6a6e993289f90aaaec33036c10f7a5ec29e55099f4d8253b34efbed",
+        "content": "eed37a176ef0756f692aa2005770459790a7108f31ad0a448364ccd49fea668d"
       }
     },
     {

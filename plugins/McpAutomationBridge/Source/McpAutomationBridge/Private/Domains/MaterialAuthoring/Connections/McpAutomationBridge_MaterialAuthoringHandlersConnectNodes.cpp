@@ -186,7 +186,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
           Wire(*MainInput);
           FINALIZE_HOST();
           Bridge->SendAutomationResponse(Socket, RequestId, true,
-                                 TEXT("Connected to main material node."));
+                                 TEXT("Connected to main material node."), McpMaterialHostResult(HostOuter));
         } else {
           Bridge->SendAutomationError(
               Socket, RequestId,
@@ -215,7 +215,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
         Wire(TargetOutput->A);
         FINALIZE_HOST();
         Bridge->SendAutomationResponse(Socket, RequestId, true,
-                               TEXT("Connected to function output."));
+                               TEXT("Connected to function output."), McpMaterialHostResult(HostOuter));
         return true;
       }
     }
@@ -242,7 +242,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
           Wire(*InputPtr);
           FINALIZE_HOST();
           Bridge->SendAutomationResponse(Socket, RequestId, true,
-                                 TEXT("Nodes connected."));
+                                 TEXT("Nodes connected."), McpMaterialHostResult(HostOuter));
           return true;
         }
       }
@@ -261,7 +261,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
       if (Label.Equals(InputName, ESearchCase::IgnoreCase) || Plain.Equals(InputName, ESearchCase::IgnoreCase)) {
         Wire(*Input);
         FINALIZE_HOST();
-        Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected."));
+        Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Nodes connected."), McpMaterialHostResult(HostOuter));
         return true;
       }
       Available += FString::Printf(TEXT("%s%s"), Available.IsEmpty() ? TEXT("") : TEXT(", "), *Label);

@@ -145,4 +145,23 @@ describe('handlers answer what they did', () => {
     expect(batch.indexOf('Bridge->ForgetCapturedMessages(')).toBeGreaterThan(-1);
     expect(batch.indexOf('Bridge->ForgetCapturedMessages(')).toBeLessThan(batch.indexOf('RunStep(CompileId, Compile);'));
   });
+
+  // update_custom_expression and connect_nodes answered with changes: [] for the material they edited.
+  it('a material graph edit names the material it changed', () => {
+    for (const file of [
+      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersUpdateCustomExpression.cpp'],
+      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersDeleteNode.cpp'],
+      ['Parameters', 'McpAutomationBridge_MaterialAuthoringHandlersAddParameter.cpp'],
+    ] as const) {
+      expect(code('MaterialAuthoring', ...file)).toContain('McpMaterialHostResult(HostOuter)');
+    }
+    expect(code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp').split('McpMaterialHostResult(HostOuter)').length).toBe(5);
+  });
+
+  // disconnect_nodes answered "Disconnect operation completed." with nothing unplugged.
+  it('disconnect_nodes fails when no pin matched and unplugs a custom node input by label', () => {
+    const source = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersDisconnectNodes.cpp');
+    expect(source).not.toContain('Disconnect operation completed');
+    expect(source).toContain('Target = TargetExpr->GetInput(InputIndex);');
+  });
 });

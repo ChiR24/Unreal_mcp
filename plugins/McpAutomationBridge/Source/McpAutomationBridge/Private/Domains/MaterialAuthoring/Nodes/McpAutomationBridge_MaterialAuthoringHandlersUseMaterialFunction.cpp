@@ -55,7 +55,7 @@ bool HandleUseMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     HostOuter->PostEditChange();
     HostOuter->MarkPackageDirty();
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(FuncCall));
     Result->SetStringField(TEXT("hostType"),

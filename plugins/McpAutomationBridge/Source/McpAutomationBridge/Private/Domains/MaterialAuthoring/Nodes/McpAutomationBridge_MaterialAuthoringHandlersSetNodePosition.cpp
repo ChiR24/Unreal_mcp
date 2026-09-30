@@ -52,7 +52,7 @@ bool HandleSetNodePosition(UMcpAutomationBridgeSubsystem* Bridge, const FString&
   Expr->MaterialExpressionEditorY = static_cast<int32>(PosY);
   FINALIZE_HOST();
 
-  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
   Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
   const FString PlacementWarning =
       AddMaterialNodePlacementFields(Result, Material, Expr);

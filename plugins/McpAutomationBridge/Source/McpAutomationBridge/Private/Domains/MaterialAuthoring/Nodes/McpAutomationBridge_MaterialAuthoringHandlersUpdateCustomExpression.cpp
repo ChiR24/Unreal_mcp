@@ -47,7 +47,7 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
 
     FINALIZE_HOST();
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
     Result->SetStringField(TEXT("nodeId"), NodeId);
     Result->SetStringField(TEXT("code"), CustomExpr->Code);
     Result->SetNumberField(TEXT("inputCount"), CustomExpr->Inputs.Num());

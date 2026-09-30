@@ -26,7 +26,7 @@ bool AddPlacedExpression(UMcpAutomationBridgeSubsystem* Bridge, const FString& R
   AddExpressionToContainer(Material, Function, NewExpr);
   FINALIZE_HOST();
 
-  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
   Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(NewExpr));
   AddMaterialNodePlacementFields(Result, Material, NewExpr);
   Bridge->SendAutomationResponse(Socket, RequestId, true, Message, Result);

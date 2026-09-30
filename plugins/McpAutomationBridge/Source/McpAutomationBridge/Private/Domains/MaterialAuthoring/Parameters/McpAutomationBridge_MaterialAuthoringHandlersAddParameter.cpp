@@ -36,7 +36,7 @@ bool AddParameterExpression(UMcpAutomationBridgeSubsystem* Bridge, const FString
   AddExpressionToContainer(Material, Function, Param);
   FINALIZE_HOST();
 
-  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
   Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Param));
   const FString PlacementWarning = AddMaterialNodePlacementFields(Result, Material, Param);
   Bridge->SendAutomationResponse(Socket, RequestId, true,

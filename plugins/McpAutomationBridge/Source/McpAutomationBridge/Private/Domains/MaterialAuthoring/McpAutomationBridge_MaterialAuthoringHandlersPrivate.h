@@ -288,6 +288,14 @@ bool HandleSetTwoSided(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
       else if (Function) { Function->PostEditChange(); Function->MarkPackageDirty(); } \
     } while (0)
 
+// The reply to an edit of the loaded material or function. It names the host, so the receipt
+// lists it as changed; update_custom_expression and connect_nodes answered with changes: [].
+inline TSharedPtr<FJsonObject> McpMaterialHostResult(UObject *Host) {
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  McpHandlerUtils::AddVerification(Result, Host);
+  return Result;
+}
+
 // Stable node ID: use UObject name (e.g. "MaterialExpressionCustom_0")
 // which is unique within an asset and immune to GUID duplication.
 // Responses also include "guid" for backwards compatibility.

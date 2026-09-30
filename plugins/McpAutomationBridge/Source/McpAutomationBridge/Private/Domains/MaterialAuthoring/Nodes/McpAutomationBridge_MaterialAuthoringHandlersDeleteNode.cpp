@@ -69,7 +69,7 @@ bool HandleDeleteNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Requ
     Payload->TryGetBoolField(TEXT("save"), bSave);
     const bool bSaved = bSave && (Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
     Result->SetBoolField(TEXT("saved"), bSaved);
     TArray<TSharedPtr<FJsonValue>> RemovedArr;
     for (const FString &R : Removed) {

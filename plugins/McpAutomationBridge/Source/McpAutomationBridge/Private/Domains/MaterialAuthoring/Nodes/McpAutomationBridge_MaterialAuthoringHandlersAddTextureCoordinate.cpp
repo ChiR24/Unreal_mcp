@@ -26,7 +26,7 @@ bool HandleAddTextureCoordinate(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     AddExpressionToContainer(Material, Function, TexCoord);
     FINALIZE_HOST();
 
-    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
     Result->SetStringField(TEXT("nodeId"),
                            MCP_NODE_ID(TexCoord));
     // Placement telemetry used to come only from the parameter-adding variants,
