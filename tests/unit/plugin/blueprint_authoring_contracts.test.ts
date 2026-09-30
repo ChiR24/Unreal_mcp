@@ -130,6 +130,22 @@ describe('build_graph: an overlapping explicit position moves the node instead o
   });
 });
 
+// create_node MakeStruct in a batch (structPath given) made a pinless "Make <unknown struct>" and
+// the batch answered success.
+describe('create_node: a Make/Break struct node gets its struct or is refused', () => {
+  it('sets StructType from structPath before the pins are allocated', () => {
+    const dynamic = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCreationDynamic.cpp');
+    expect(dynamic).toContain('NodeClass->IsChildOf(UK2Node_StructOperation::StaticClass())');
+    expect(dynamic).toMatch(/needs structPath: a Blueprint Struct asset/u);
+    expect(dynamic.indexOf('StructNode->StructType = StructType;')).toBeGreaterThan(-1);
+    expect(dynamic.indexOf('StructNode->StructType = StructType;')).toBeLessThan(dynamic.indexOf('NewNode->AllocateDefaultPins();'));
+  });
+
+  it('the create_node contract declares structPath', () => {
+    expect(paramDescription('blueprint.edit_graph', 'structPath')).toMatch(/For MakeStruct or BreakStruct|Blueprint Struct asset path/u);
+  });
+});
+
 describe('a VariableGet of a widget: compile once when the class is stale, and never claim a set flag is false', () => {
   const source = (): string => read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp');
 

@@ -3,6 +3,7 @@
 #include "K2Node_CallArrayFunction.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_DynamicCast.h"
+#include "K2Node_StructOperation.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -203,6 +204,30 @@ void CreateDynamicNode(
         return;
     }
 
+    // Make/Break struct nodes build their pins from StructType. Spawned by class name they came out
+    // as a pinless "Make <unknown struct>" while the batch answered success; structPath names the
+    // struct (a Blueprint Struct asset or a native one such as /Script/SlateCore.SlateColor).
+    UScriptStruct* StructType = nullptr;
+    if (NodeClass->IsChildOf(UK2Node_StructOperation::StaticClass()))
+    {
+        FString StructPath;
+        Context.Payload->TryGetStringField(TEXT("structPath"), StructPath);
+        StructType = StructPath.IsEmpty() ? nullptr : LoadObject<UScriptStruct>(nullptr, *StructPath);
+        if (!StructType && !StructPath.IsEmpty() && !StructPath.Contains(TEXT(".")))
+        {
+            StructType = LoadObject<UScriptStruct>(nullptr, *(StructPath + TEXT(".") + FPackageName::GetShortName(StructPath)));
+        }
+        if (!StructType)
+        {
+            Context.SendError(
+                FString::Printf(TEXT("%s needs structPath: a Blueprint Struct asset or a native struct such as "
+                                     "/Script/SlateCore.SlateColor%s."),
+                                *NodeType, StructPath.IsEmpty() ? TEXT("") : *FString::Printf(TEXT("; '%s' was not found"), *StructPath)),
+                TEXT("INVALID_ARGUMENT"));
+            return;
+        }
+    }
+
     UEdGraphNode* NewNode =
         NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass);
     if (!NewNode)
@@ -211,6 +236,10 @@ void CreateDynamicNode(
             TEXT("Failed to instantiate node."),
             TEXT("CREATE_FAILED"));
         return;
+    }
+    if (UK2Node_StructOperation* StructNode = Cast<UK2Node_StructOperation>(NewNode))
+    {
+        StructNode->StructType = StructType;
     }
 
     Context.TargetGraph->AddNode(NewNode, false, false);
