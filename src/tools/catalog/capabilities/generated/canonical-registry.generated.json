@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8a81481a409e6fcf",
+  "catalogRevision": "fa6921efd3a4d6a2",
   "recordCount": 389,
   "records": [
     {
@@ -15587,7 +15587,7 @@
             },
             "operations": {
               "type": "array",
-              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.",
+              "description": "SCS operations applied in order. Each entry is an object with `type` plus that operation's own fields; `type: \"add_component\"` also takes componentName, componentClass, attachTo, transform, meshPath, materialPath and a nested properties bag; `type: \"modify_component\"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: \"attach_component\"` (or \"reparent\") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -15816,8 +15816,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0d058badd11862373df04c6b258142098be21a4b100c84abe1dff1819622fc63",
-        "content": "f25095465abbe114e8cb382c1e3c0b02f7354215f65e93b7fce4365a6e5b59ca"
+        "schema": "67123ee7747856c5a560a53c39f2e0f91254db382677f804ddb947dd8ec21dbb",
+        "content": "1b0d3791f05e54a307985e9dad9219be6547eaf394022b6fe32987fe5d1e0e5a"
       }
     },
     {

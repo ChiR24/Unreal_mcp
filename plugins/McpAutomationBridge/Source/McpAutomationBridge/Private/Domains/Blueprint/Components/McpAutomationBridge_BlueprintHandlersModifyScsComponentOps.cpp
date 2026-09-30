@@ -5,6 +5,7 @@
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersScsLookup.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersSubobjectTraits.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsOpFields.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsTemplateAssets.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsParentResolve.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
@@ -48,19 +49,20 @@ if (!Template) {
 }
 bool bAnySuccess = false;
 McpScsPropagate::FDefaults Defaults{Template, LocalBP, FName(*ComponentName)};
-// What did not land, transform parts and properties alike, is named in the batch's warnings.
+// What did not land - transform parts, properties, mesh and material alike - is named in the batch's warnings.
 TArray<FString> Rejected = McpScsTransform::Apply(Template, Op, Defaults, bAnySuccess);
 if (PropertiesObj.IsValid()) {
   Rejected.Append(McpScsPropertyBag::Apply(Template, PropertiesObj, Defaults, bAnySuccess));
 }
+for (const TCHAR *Path : {TEXT("StaticMesh"), TEXT("OverrideMaterials")}) Defaults.Capture(Path);
+bool bAssetsApplied = false;
+Rejected.Append(ApplyScsTemplateAssets(Template, Op, bAssetsApplied));
+bAnySuccess = bAssetsApplied || bAnySuccess;
 if (Rejected.Num() > 0) {
   TArray<TSharedPtr<FJsonValue>> Values;
   for (const FString &Entry : Rejected) Values.Add(MakeShared<FJsonValueString>(Entry));
   OpSummary->SetArrayField(TEXT("rejectedProperties"), Values);
 }
-for (const TCHAR *Path : {TEXT("StaticMesh"), TEXT("OverrideMaterials")}) Defaults.Capture(Path);
-const bool bAssetsApplied = ApplyScsTemplateAssets(Template, Op);
-bAnySuccess = bAssetsApplied || bAnySuccess;
 const FString HiddenHint = bAssetsApplied ? McpScsHiddenHint(Template, ComponentName) : FString();
 if (!HiddenHint.IsEmpty()) { OpSummary->SetStringField(TEXT("hint"), HiddenHint); }
 McpScsPropagate::PropagateAndReport(Defaults, OpSummary);
@@ -68,7 +70,7 @@ McpScsPropagate::Pending().Emplace(Template, Defaults);
 OpSummary->SetBoolField(TEXT("success"), bAnySuccess);
 OpSummary->SetStringField(TEXT("componentName"), ComponentName);
 if (!bAnySuccess) {
-  OpSummary->SetStringField(TEXT("warning"), TEXT("No transform or properties applied"));
+  OpSummary->SetStringField(TEXT("warning"), TEXT("No transform, properties, mesh or material applied"));
 }
 }
 
@@ -106,9 +108,9 @@ if (!ComponentClass) {
     OpSummary->SetStringField(TEXT("warning"),
                               TEXT("Component already exists"));
     // Re-running a prefab definition is how a caller corrects one, so an
-    // existing node takes this call's transform and properties instead of
-    // being skipped outright.
-    if (Op->HasField(TEXT("transform")) || Op->HasField(TEXT("properties"))) {
+    // existing node takes this call's transform, properties, mesh and material
+    // instead of being skipped outright.
+    if (ScsOpHasEdits(Op)) {
       ApplyModifyScsModifyComponent(LocalBP, LocalSCS, Op, OpSummary);
     }
   } else {
@@ -246,12 +248,13 @@ if (!ComponentClass) {
                                     ComponentName, AttachToName, OpSummary);
       if (!AdditionMethodStr.IsEmpty())
         OpSummary->SetStringField(TEXT("additionMethod"), AdditionMethodStr);
-      // The contract says add_component also takes `transform` and a
-      // `properties` bag, but this only ever created the node: in a batch every
-      // placement and every mesh assignment was accepted, reported success, and
-      // silently dropped, so a prefab built this way came out as a pile of empty
-      // components at the origin. Reuse the modify path on the node just added.
-      if (Op->HasField(TEXT("transform")) || Op->HasField(TEXT("properties"))) {
+      // The contract says add_component also takes `transform`, a `properties`
+      // bag, `meshPath` and `materialPath`, but this only ever created the node:
+      // in a batch every placement and every mesh assignment was accepted,
+      // reported success, and silently dropped, so a prefab built this way came
+      // out as a pile of empty components at the origin. Reuse the modify path
+      // on the node just added, whichever of them the operation names.
+      if (ScsOpHasEdits(Op)) {
         TSharedPtr<FJsonObject> Applied = MakeShared<FJsonObject>(*Op);
         FString RenamedTo;
         if (OpSummary->TryGetStringField(TEXT("renamedTo"), RenamedTo))
@@ -268,7 +271,7 @@ if (!ComponentClass) {
         McpScsParent::AttachAndReport(LocalBP, LocalSCS, ComponentName,
                                       AttachToName, OpSummary);
         // The subsystem route above places and configures what it added; this one dropped both.
-        if (Op->HasField(TEXT("transform")) || Op->HasField(TEXT("properties"))) {
+        if (ScsOpHasEdits(Op)) {
           ApplyModifyScsModifyComponent(LocalBP, LocalSCS, Op, OpSummary);
         }
       } else {

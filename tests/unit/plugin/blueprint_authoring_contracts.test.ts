@@ -421,7 +421,7 @@ describe('an edit_scs operation takes location, rotation and scale directly on i
   it('a component added through the fallback route is placed and configured too', () => {
     const fallback = sliceBetween(ops(), 'LocalSCS->CreateNode(ComponentClass', 'Failed to create SCS node');
 
-    expect(fallback).toMatch(/Op->HasField\(TEXT\("transform"\)\) \|\| Op->HasField\(TEXT\("properties"\)\)\) \{\s*ApplyModifyScsModifyComponent\(LocalBP, LocalSCS, Op, OpSummary\);/u);
+    expect(fallback).toMatch(/if \(ScsOpHasEdits\(Op\)\) \{\s*ApplyModifyScsModifyComponent\(LocalBP, LocalSCS, Op, OpSummary\);/u);
   });
 
   it('the record promises the direct form and says an unreadable part is named', () => {
@@ -429,5 +429,57 @@ describe('an edit_scs operation takes location, rotation and scale directly on i
 
     expect(description).toContain('(or those three directly on the operation)');
     expect(description).toMatch(/named in warnings, not skipped/u);
+  });
+});
+
+// An add_component operation given only meshPath/materialPath answered success with an empty
+// component: the add handed the node on to the modify path, the one that applies a mesh, only when it
+// named a transform or properties.
+describe('an edit_scs add_component operation applies the mesh and material it names, and names one that did not land', () => {
+  const scs = (file: string): string => read('Domains', 'Blueprint', 'Components', file);
+  const fields = (): string => scs('McpAutomationBridge_BlueprintHandlersScsOpFields.h');
+  const assets = (): string => scs('McpAutomationBridge_BlueprintHandlersScsTemplateAssets.h');
+  const ops = (): string => scs('McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp');
+
+  it('one predicate decides whether an add has anything to hand on: a placement, properties, a mesh or a material, null being nothing', () => {
+    const predicate = fields().slice(fields().indexOf('inline bool ScsOpHasEdits('));
+
+    expect(predicate).toMatch(/for \(const TCHAR \*Key : \{TEXT\("transform"\), TEXT\("properties"\)\}\)/u);
+    expect(predicate).toMatch(/Value\.IsValid\(\) && !Value->IsNull\(\)\)\s*return true;/u);
+    expect(predicate).toContain('return !ScsOpMeshPath(Op).IsEmpty() || !ScsOpMaterialPath(Op).IsEmpty();');
+    expect(fields()).toMatch(/McpGetFirstStringField\(Op, \{TEXT\("meshPath"\), TEXT\("mesh_path"\), TEXT\("staticMesh"\)\}\)/u);
+    expect(fields()).toMatch(/McpGetFirstStringField\(Op, \{TEXT\("materialPath"\), TEXT\("material_path"\)\}\)/u);
+  });
+
+  it('every route an add takes to the modify path asks it, and none keeps the old transform-or-properties test', () => {
+    const add = sliceBetween(ops(), 'void ApplyModifyScsAddComponent(', 'void ApplyModifyScsComponentOperation(');
+
+    expect(add.match(/if \(ScsOpHasEdits\(Op\)\) \{/gu)).toHaveLength(3);
+    expect(add).not.toMatch(/Op->HasField\(TEXT\("transform"\)\)/u);
+    expect(add).not.toMatch(/Op->HasField\(TEXT\("properties"\)\)/u);
+  });
+
+  it('the applier reads the mesh and material through the shared spellings, and returns what did not land as "part: reason"', () => {
+    const apply = assets().slice(assets().indexOf('inline TArray<FString> ApplyScsTemplateAssets('));
+
+    expect(apply).toContain('const FString MeshPath = ScsOpMeshPath(Op);');
+    expect(apply).toContain('const FString MaterialPath = ScsOpMaterialPath(Op);');
+    expect(apply).not.toContain('TryGetStringField');
+    expect(apply.match(/Rejected\.Add\(FString::Printf\(TEXT\("meshPath: /gu)).toHaveLength(3);
+    expect(apply.match(/Rejected\.Add\(FString::Printf\(TEXT\("materialPath: /gu)).toHaveLength(2);
+    expect(apply).toContain('return Rejected;');
+  });
+
+  it('the modify path puts those misses in the same rejectedProperties as the transform and the properties, so the batch warnings name them', () => {
+    const modify = sliceBetween(ops(), 'void ApplyModifyScsModifyComponent(', 'void ApplyModifyScsAddComponent(');
+    const applied = modify.indexOf('Rejected.Append(ApplyScsTemplateAssets(Template, Op, bAssetsApplied));');
+
+    expect(applied).toBeGreaterThan(-1);
+    expect(applied).toBeLessThan(modify.indexOf('OpSummary->SetArrayField(TEXT("rejectedProperties"), Values);'));
+    expect(modify).toContain('bAnySuccess = bAssetsApplied || bAnySuccess;');
+  });
+
+  it('the record says a mesh or material that does not load is named in warnings', () => {
+    expect(paramDescription('blueprint.edit_scs', 'operations')).toMatch(/as is a meshPath or materialPath that does not load or that its component cannot take/u);
   });
 });
