@@ -20,7 +20,7 @@ Entry: `src/server/tool-registry-gateway.ts` → `handleUnrealGatewayCall()` swi
 | `gateway-option-validate.ts` | execution-option rules (keys, timeout bounds, idempotency key, `expectedRevisions`) |
 | `gateway-schema-validate.ts` | Draft-2020-12 subset validator: fail-closed on unknown keywords, `UNDECLARED_PARAMETER`, declared defaults |
 | `gateway-execute-policy.ts` | catalog-revision, scope and consent checks |
-| `gateway-dispatch-by.ts` | folded families: `applyFoldedPins()` before validation, `resolveDispatchAction()` after |
+| `gateway-dispatch-by.ts` | folded families: `applyFoldedPins()` and `inferSelector()` before validation, `resolveDispatchAction()` after; `unreadVariantParams()` warns about a sent param only other variants read |
 | `gateway-execute-dispatch.ts` | `runCapability()` → `handleManageToolsCall` (manage_tools) or `executeAutomationRequest(tools, parentTool, { ...params, action }, controls)`; output held to the declared schema |
 | `gateway-execute-idempotency.ts`, `idempotency-ledger.ts` | principal-scoped ledger (cap 1024; native mirror cap 4096 — change both) |
 | `gateway-execute-envelope.ts`, `gateway-receipt-context.ts` | success/error envelopes, receipts |

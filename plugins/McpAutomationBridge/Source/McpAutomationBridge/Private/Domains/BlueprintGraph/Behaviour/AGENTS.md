@@ -224,7 +224,8 @@ References:
   takes an asset path (`"MappingContext": "/Game/Input/IMC_MCP.IMC_MCP"`); a read-only pin gets a
   MakeLiteral node wired into it. Declared on a member step it is refused.
 - Nodes without posX and posY are auto-placed on a grid right of the event graph's nodes (function
-  graphs too; they compile the same, they just sit to the right).
+  graphs too), and once every step ran each moves beside a node it is wired to
+  (`SettleAutoPlacedNodes`: right of what runs it, below-left of what reads it, nearest free slot).
 
 Engine pin spellings recipes use: `execute`, `then`, `self` (a call's Target), `ReturnValue`;
 Branch `Condition`, `then`, `else`; Sequence `then_0`, `then_1`...; Cast `Object`, `then`,
