@@ -119,6 +119,15 @@ describe('build_graph: an overlapping explicit position moves the node instead o
   it('the batch description says so, and where a step\'s placementWarning appears', () => {
     expect(paramDescription('blueprint.edit_graph', 'operations')).toMatch(/overlap an existing node is placed at the nearest free position/u);
   });
+
+  // "Right of the pile" alone walked a node asked for beside BeginPlay along a crowded event row,
+  // 24 piles, then to the graph's far right edge (x 46464).
+  it('the overlap guard suggests the nearest free slot in any direction', () => {
+    const layout = read('Foundation', 'GraphLayout', 'McpGraphNodeExtent.h');
+    expect(layout).toContain('inline bool FindNearestFreeSlot(');
+    expect(layout).toMatch(/FindNearestFreeSlot\(Graph, NewX, NewY, NewW, NewH, IgnoreNode, FreeX, FreeY\)/u);
+    expect(layout).toContain('BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage, Graph)');
+  });
 });
 
 describe('a VariableGet of a widget: compile once when the class is stale, and never claim a set flag is false', () => {

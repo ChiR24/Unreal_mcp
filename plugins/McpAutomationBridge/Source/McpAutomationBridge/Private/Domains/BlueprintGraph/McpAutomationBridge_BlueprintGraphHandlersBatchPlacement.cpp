@@ -5,8 +5,8 @@ namespace McpBlueprintGraphHandlers::GraphBatch
 namespace
 {
 constexpr int32 AutoColumns = 5;
-// A refused slot moves along the overlap guard's own suggestions (free space right of what it hit) for
-// this many hops, then to the auto grid, which is clear of everything the graph held when the batch began.
+// A refused slot moves to the overlap guard's own suggestion (the nearest free slot, else free space right
+// of what it hit) for this many hops, then to the auto grid, clear of everything the graph held when the batch began.
 constexpr int32 MaxSuggestionHops = 24;
 constexpr int32 MaxPlacementTries = 48;
 

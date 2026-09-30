@@ -201,7 +201,7 @@ struct FActionContext
                 FString OverlapMessage;
                 TSharedPtr<FJsonObject> OverlapDetails =
                     McpGraphLayout::BuildNodeOverlapDetails(
-                        X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage);
+                        X, Y, NewWidth, NewHeight, Overlapping, OverlapMessage, TargetGraph);
                 SendErrorWithDetails(OverlapMessage, TEXT("NODE_OVERLAP"), OverlapDetails);
                 return;
             }

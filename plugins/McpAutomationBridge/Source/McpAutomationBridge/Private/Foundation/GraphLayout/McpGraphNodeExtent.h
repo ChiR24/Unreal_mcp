@@ -163,14 +163,49 @@ inline FString AddNodePlacementFields(const TSharedPtr<FJsonObject>& Result, con
 	return Warning;
 }
 
+// The free slot nearest (X, Y), tried on a lattice ring by ring (Chebyshev rings, so a ring's
+// corner can lose to the next ring's edge by a little). "Right of the pile" alone walked a node
+// placed in a crowded event row 24 piles along, then to the far right edge of the graph.
+inline bool FindNearestFreeSlot(const UEdGraph* Graph, float X, float Y, float W, float H,
+	const UEdGraphNode* IgnoreNode, float& OutX, float& OutY)
+{
+	constexpr float Step = 48.0f;
+	constexpr int32 MaxRings = 40;
+	TArray<FGraphNodeOccupant> Scratch;
+	for (int32 Ring = 1; Graph != nullptr && Ring <= MaxRings; ++Ring)
+	{
+		int32 Best = MAX_int32;
+		for (int32 DX = -Ring; DX <= Ring; ++DX)
+		{
+			for (int32 DY = -Ring; DY <= Ring; ++DY)
+			{
+				const int32 Distance = DX * DX + DY * DY;
+				if (FMath::Max(FMath::Abs(DX), FMath::Abs(DY)) == Ring && Distance < Best &&
+					!CheckGraphNodeOverlap(Graph, X + DX * Step, Y + DY * Step, W, H, Scratch, NodeOverlapPadding, IgnoreNode))
+				{
+					Best = Distance;
+					OutX = X + DX * Step;
+					OutY = Y + DY * Step;
+				}
+			}
+		}
+		if (Best != MAX_int32)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 // Packs the refusal payload for NODE_OVERLAP: the requested slot, every
 // occupant (title, object name and full coordinates), and two suggested free
-// slots — one to the right of the pile and one below it — so the caller (or
-// the next AI) can re-run with a concrete position instead of guessing.
+// slots — the nearest free one when Graph is given (else right of the pile) and
+// one below the pile — so the caller (or the next AI) can re-run with a concrete
+// position instead of guessing.
 inline TSharedPtr<FJsonObject> BuildNodeOverlapDetails(
 	float NewX, float NewY, float NewW, float NewH,
 	const TArray<FGraphNodeOccupant>& Overlapping,
-	FString& OutMessage)
+	FString& OutMessage, const UEdGraph* Graph = nullptr, const UEdGraphNode* IgnoreNode = nullptr)
 {
 	float RightEdge = NewX;
 	float BottomEdge = NewY;
@@ -191,7 +226,16 @@ inline TSharedPtr<FJsonObject> BuildNodeOverlapDetails(
 		Entry->SetNumberField(TEXT("estimatedHeight"), Occupant.Height);
 		OccupantValues.Add(MakeShared<FJsonValueObject>(Entry));
 	}
-	const int32 SuggestedRightX = FMath::CeilToInt(RightEdge + NodeSuggestGap);
+	int32 SuggestedX = FMath::CeilToInt(RightEdge + NodeSuggestGap);
+	int32 SuggestedY = FMath::CeilToInt(NewY);
+	float FreeX = 0.0f;
+	float FreeY = 0.0f;
+	const bool bNearest = FindNearestFreeSlot(Graph, NewX, NewY, NewW, NewH, IgnoreNode, FreeX, FreeY);
+	if (bNearest)
+	{
+		SuggestedX = FMath::RoundToInt(FreeX);
+		SuggestedY = FMath::RoundToInt(FreeY);
+	}
 	const int32 SuggestedBelowY = FMath::CeilToInt(BottomEdge + NodeSuggestGap);
 
 	OutMessage = FString::Printf(
@@ -201,11 +245,12 @@ inline TSharedPtr<FJsonObject> BuildNodeOverlapDetails(
 		// spell it nodePosition, so naming either one sends half of them
 		// straight into an UNDECLARED_PARAMETER on the retry.
 		TEXT("No node was created. Re-run at a free position — e.g. ")
-		TEXT("(%d, %d) (right of the pile) or (%d, %d) (below it); ")
+		TEXT("(%d, %d) (%s) or (%d, %d) (below it); ")
 		TEXT("`suggestedPosition` carries the same two points."),
 		FMath::CeilToInt(NewX), FMath::CeilToInt(NewY), NewW, NewH,
 		Overlapping.Num(), *FString::Join(Names, TEXT(", ")),
-		SuggestedRightX, FMath::CeilToInt(NewY), FMath::CeilToInt(NewX), SuggestedBelowY);
+		SuggestedX, SuggestedY, bNearest ? TEXT("the nearest free spot") : TEXT("right of the pile"),
+		FMath::CeilToInt(NewX), SuggestedBelowY);
 
 	TSharedPtr<FJsonObject> Details = MakeShared<FJsonObject>();
 	Details->SetBoolField(TEXT("success"), false);
@@ -215,8 +260,8 @@ inline TSharedPtr<FJsonObject> BuildNodeOverlapDetails(
 	Details->SetNumberField(TEXT("requestedHeight"), NewH);
 	Details->SetArrayField(TEXT("overlappingNodes"), OccupantValues);
 	TSharedPtr<FJsonObject> Suggested = MakeShared<FJsonObject>();
-	Suggested->SetNumberField(TEXT("x"), SuggestedRightX);
-	Suggested->SetNumberField(TEXT("y"), FMath::CeilToInt(NewY));
+	Suggested->SetNumberField(TEXT("x"), SuggestedX);
+	Suggested->SetNumberField(TEXT("y"), SuggestedY);
 	Details->SetObjectField(TEXT("suggestedPosition"), Suggested);
 	TSharedPtr<FJsonObject> SuggestedBelow = MakeShared<FJsonObject>();
 	SuggestedBelow->SetNumberField(TEXT("x"), FMath::CeilToInt(NewX));
@@ -240,7 +285,7 @@ inline bool RefuseOverlappingNode(UEdGraph* Graph, UEdGraphNode* Node, float Pos
 		return false;
 	}
 	Graph->RemoveNode(Node);
-	OutDetails = BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage);
+	OutDetails = BuildNodeOverlapDetails(PosX, PosY, Width, Height, Overlapping, OutMessage, Graph);
 	return true;
 }
 

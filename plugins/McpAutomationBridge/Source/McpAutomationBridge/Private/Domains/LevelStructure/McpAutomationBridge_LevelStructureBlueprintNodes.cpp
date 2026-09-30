@@ -171,7 +171,7 @@ bool HandleAddLevelBlueprintNode(
                     TSharedPtr<FJsonObject> OverlapDetails =
                         McpGraphLayout::BuildNodeOverlapDetails(
                             static_cast<float>(PosX), static_cast<float>(PosY),
-                            NewWidth, NewHeight, Overlapping, OverlapMessage);
+                            NewWidth, NewHeight, Overlapping, OverlapMessage, EventGraph, NewNode);
                     NewNode->MarkAsGarbage();
                     Subsystem->SendAutomationResponse(Socket, RequestId, false,
                         OverlapMessage, OverlapDetails, TEXT("NODE_OVERLAP"));
