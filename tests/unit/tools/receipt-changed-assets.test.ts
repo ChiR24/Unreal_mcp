@@ -202,3 +202,22 @@ describe('an output-file delete names the files it deleted', () => {
     expect(source).toMatch(/SetArrayField\(TEXT\("changedEntities"\), DeletedPaths\);/u);
   });
 });
+
+// set_property on the PIE GameInstance answered handles [{kind: asset, path: /Engine/Transient}] and
+// changes ["/Engine/Transient"]: the running game's objects live in the transient package, and no
+// asset changed.
+describe('the transient package is never a changed asset', () => {
+  it('extractHandles and extractChanges skip it, and still read the actor fields', () => {
+    const result = { success: true, details: { assetPath: '/Engine/Transient', actorName: 'BP_RiderGM0' } };
+    expect(extractHandles(result)).toEqual([{ kind: 'actor', ref: 'BP_RiderGM0' }]);
+    expect(extractChanges(result)).toEqual(['BP_RiderGM0']);
+    expect(extractChanges({ assetPath: '/Engine/Transient.BP_RiderGI_C_0' })).toEqual([]);
+  });
+
+  it('the native extraction skips it on the same fields', () => {
+    const source = nativeSource('MCP', 'Execute', 'McpNativeReceiptOutcome.cpp');
+    expect(source).toContain('Path == TEXT("/Engine/Transient") || Path.StartsWith(TEXT("/Engine/Transient."))');
+    expect(source).toContain('if (!Text.IsEmpty() && !IsTransientPackagePath(Text))');
+    expect(source).toContain('if (IsAllowedPath(Path) && !IsTransientPackagePath(Path))');
+  });
+});

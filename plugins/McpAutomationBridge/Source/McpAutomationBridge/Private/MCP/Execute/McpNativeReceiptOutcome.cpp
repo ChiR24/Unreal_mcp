@@ -22,6 +22,15 @@ bool IsAllowedPath(const FString& Path)
 	return false;
 }
 
+// The running game's objects (GameInstance, a live widget) live in the transient package, so a
+// handler names /Engine/Transient as their "asset"; no asset changed. Mirrors
+// isTransientPackagePath in src/tools/catalog/capabilities/semantic/receipt-outcome.ts.
+bool IsTransientPackagePath(const FString& Path)
+{
+	return Path == TEXT("/Engine/Transient") || Path.StartsWith(TEXT("/Engine/Transient.")) ||
+		   Path.StartsWith(TEXT("/Engine/Transient:"));
+}
+
 bool IsRefKind(const FString& Kind)
 {
 	return Kind == TEXT("actor") || Kind == TEXT("component") || Kind == TEXT("node");
@@ -122,7 +131,7 @@ void AddSingleChanges(const TSharedPtr<FJsonObject>& Result, const TCHAR* const 
 	for (const TCHAR* Field : Fields)
 	{
 		const FString Text = OutcomeReadString(Result, Field);
-		if (!Text.IsEmpty())
+		if (!Text.IsEmpty() && !IsTransientPackagePath(Text))
 		{
 			Changes.AddUnique(Text);
 		}
@@ -220,7 +229,7 @@ TArray<TSharedPtr<FJsonValue>> McpExtractReceiptHandles(const TSharedPtr<FJsonOb
 	for (const TCHAR* Field : ASSET_FIELDS)
 	{
 		const FString Path = OutcomeReadString(RawResult, Field);
-		if (IsAllowedPath(Path))
+		if (IsAllowedPath(Path) && !IsTransientPackagePath(Path))
 		{
 			AddHandle(TEXT("asset"), TEXT("path"), Path);
 			break;

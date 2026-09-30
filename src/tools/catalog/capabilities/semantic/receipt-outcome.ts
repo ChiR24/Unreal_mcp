@@ -44,6 +44,12 @@ const CHANGE_ARRAY_FIELDS = ['changes', 'changedEntities', 'changedAssets', 'aff
 export const CHANGE_ASSET_SINGLE_FIELDS = ['assetPath', 'createdAssetPath', 'savedAssetPath', 'destinationPath', 'deletedPath', 'widgetPath'] as const;
 export const CHANGE_ACTOR_SINGLE_FIELDS = ['actorName', 'actorPath'] as const;
 
+// The running game's objects (GameInstance, a live widget) live in the transient package, so a
+// handler names /Engine/Transient as their "asset"; no asset changed. Mirrors
+// IsTransientPackagePath in McpNativeReceiptOutcome.cpp.
+export const isTransientPackagePath = (path: string): boolean =>
+  path === '/Engine/Transient' || path.startsWith('/Engine/Transient.') || path.startsWith('/Engine/Transient:');
+
 export function extractHandles(result: unknown): TypedHandle[] {
   if (!isRecord(result)) return [];
   const read = makeReader(result);
@@ -67,7 +73,7 @@ export function extractHandles(result: unknown): TypedHandle[] {
 
   for (const field of ASSET_FIELDS) {
     const value = read(field);
-    if (typeof value === 'string') {
+    if (typeof value === 'string' && !isTransientPackagePath(value)) {
       const parsed = TypedHandleSchema.safeParse({ kind: 'asset', path: value });
       if (parsed.success) {
         add(parsed.data);
@@ -110,7 +116,7 @@ export function extractChanges(result: unknown): string[] {
   const singles = assetsStated ? CHANGE_ACTOR_SINGLE_FIELDS : [...CHANGE_ASSET_SINGLE_FIELDS, ...CHANGE_ACTOR_SINGLE_FIELDS];
   for (const field of singles) {
     const value = read(field);
-    if (typeof value === 'string' && value.length > 0) collected.push(value);
+    if (typeof value === 'string' && value.length > 0 && !isTransientPackagePath(value)) collected.push(value);
   }
   return [...new Set(collected)];
 }
