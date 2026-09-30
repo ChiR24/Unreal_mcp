@@ -85,6 +85,9 @@ struct FSSEConnection
 	FString IdempotencySlot;
 	double RequestStartSeconds = 0.0;
 	TSharedPtr<FJsonObject> OutputSchema;
+	// The dispatched arguments, so a refusal can hand back a call built from them
+	// (ACTOR_NOT_FOUND names the actorName that missed).
+	TSharedPtr<FJsonObject> Arguments;
 };
 
 /** Persistent SSE notification stream (GET /mcp). */

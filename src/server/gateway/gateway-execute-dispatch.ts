@@ -149,6 +149,21 @@ function narrowingGuidance(
   };
 }
 
+// ACTOR_NOT_FOUND from any handler said only "Actor not found" ("Bug1" beside Bug_01..Bug_10).
+// A find by the same name answers with the labels it resembles (similar), so the refusal hands
+// that call over. Mirrors the native completion in McpNativeTransportPendingRequests.cpp.
+export function actorNotFoundGuidance(
+  handlerCode: string | undefined,
+  params: Record<string, unknown>
+): { readonly suggestions?: readonly string[]; readonly nextCall?: Record<string, unknown> } {
+  const name = params.actorName;
+  if (handlerCode !== 'ACTOR_NOT_FOUND' || typeof name !== 'string' || name === '') return {};
+  return {
+    suggestions: [`No actor in the world is labeled or named '${name}'; control_actor find by name lists near labels under similar.`],
+    nextCall: { operation: 'execute', tool: 'control_actor', action: 'find', params: { findBy: 'name', name } }
+  };
+}
+
 // Every capability runs the way the native gateway runs it: the record's parent
 // tool receives {action, ...params} and the plugin's parent routing picks the
 // domain handler. Only manage_tools records are served in process.
@@ -234,6 +249,7 @@ export async function dispatchAndValidate(
       errorCode: staleState ? 'STALE_STATE' : handlerCode ?? 'UNREAL_EXECUTION_ERROR',
       message: failureMessage(result),
       ...(handlerCode === undefined ? {} : { handlerCode }),
+      ...actorNotFoundGuidance(handlerCode, params),
       ...(staleState && currentRevision !== undefined ? { currentRevision } : {}),
       ...(staleState && expectedRevision !== undefined ? { expectedRevision } : {}),
       // The code and message stay - they are small and are the actionable part.

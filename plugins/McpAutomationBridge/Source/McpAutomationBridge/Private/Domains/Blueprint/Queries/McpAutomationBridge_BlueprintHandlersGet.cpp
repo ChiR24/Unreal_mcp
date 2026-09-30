@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintAssetLoad.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintDiagnostics.h"
 
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
@@ -105,7 +106,7 @@ bool HandleBlueprintGet(const FBlueprintActionContext &Context) {
         Resp->SetStringField(TEXT("propertyName"), PropertyName);
         Bridge.SendAutomationResponse(
             RequestingSocket, RequestId, false,
-            FString::Printf(TEXT("Property '%s' not found on blueprint (its variables, CDO properties and, as Component.Property, its components' defaults are searched)"), *PropertyName),
+            FString::Printf(TEXT("Property '%s' not found on blueprint (its variables, CDO properties and, as Component.Property, its components' defaults are searched). Its variables: %s."), *PropertyName, *McpBlueprintVariableList(Generated)),
             Resp, TEXT("PROPERTY_NOT_FOUND"));
         return true;
       }

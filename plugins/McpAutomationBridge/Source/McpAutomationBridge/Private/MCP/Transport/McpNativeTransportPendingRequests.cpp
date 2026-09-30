@@ -2,6 +2,33 @@
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
 
+namespace
+{
+// ACTOR_NOT_FOUND from any handler said only "Actor not found" ("Bug1" beside Bug_01..Bug_10).
+// A find by the same name answers with the labels it resembles (similar), so the refusal hands
+// that call over. Mirrors actorNotFoundGuidance in src/server/gateway/gateway-execute-dispatch.ts.
+void AddActorNotFoundGuidance(const TSharedPtr<FJsonObject>& Receipt, const TSharedPtr<FJsonObject>& Arguments)
+{
+	FString Code, Name;
+	if (!Receipt.IsValid() || !Arguments.IsValid() || !Receipt->TryGetStringField(TEXT("errorCode"), Code) ||
+		Code != TEXT("ACTOR_NOT_FOUND") || !Arguments->TryGetStringField(TEXT("actorName"), Name) || Name.IsEmpty())
+	{
+		return;
+	}
+	TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+	Params->SetStringField(TEXT("findBy"), TEXT("name"));
+	Params->SetStringField(TEXT("name"), Name);
+	TSharedPtr<FJsonObject> Next = MakeShared<FJsonObject>();
+	Next->SetStringField(TEXT("operation"), TEXT("execute"));
+	Next->SetStringField(TEXT("tool"), TEXT("control_actor"));
+	Next->SetStringField(TEXT("action"), TEXT("find"));
+	Next->SetObjectField(TEXT("params"), Params);
+	Receipt->SetArrayField(TEXT("suggestions"), {MakeShared<FJsonValueString>(FString::Printf(
+		TEXT("No actor in the world is labeled or named '%s'; control_actor find by name lists near labels under similar."), *Name))});
+	Receipt->SetObjectField(TEXT("nextCall"), Next);
+}
+}
+
 bool FMcpNativeTransport::CompletePendingRequest(
 	const FString& RequestId, bool bSuccess, const FString& Message,
 	const TSharedPtr<FJsonObject>& Result, const FString& ErrorCode)
@@ -87,6 +114,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		Context.StartTimeSeconds = Conn->RequestStartSeconds;
 		ReportedResult = McpBuildGatewayExecuteReceipt(
 			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
+		AddActorNotFoundGuidance(ReportedResult, Conn->Arguments);
 		bReportedSuccess = McpReceiptSucceeded(ReportedResult);
 		ReportedMessage = McpReceiptMessage(ReportedResult);
 		ReportedErrorCode.Reset();

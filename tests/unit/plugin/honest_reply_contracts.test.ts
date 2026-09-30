@@ -72,6 +72,12 @@ describe('handlers answer what they did', () => {
     expect(source).toMatch(/if \(Missing\.Num\(\) > 0 && Missing\.Num\(\) == \(\*VariablesPtr\)->Values\.Num\(\)\) \{/u);
     expect(source).toContain('TEXT("PROPERTY_NOT_FOUND")');
     expect(source.indexOf('TEXT("PROPERTY_NOT_FOUND")')).toBeLessThan(source.indexOf('Found->Modify();'));
+    expect(source).toContain('*McpBlueprintVariableList(ActorClass)');
+  });
+
+  it('get_blueprint with a property that misses names the variables the Blueprint has', () => {
+    expect(code('Blueprint', 'Queries', 'McpAutomationBridge_BlueprintHandlersGet.cpp'))
+      .toMatch(/Its variables: %s\."\), \*PropertyName, \*McpBlueprintVariableList\(Generated\)\),\s*Resp, TEXT\("PROPERTY_NOT_FOUND"\)\);/u);
   });
 
   it('a loot entry added after a removal takes a new key', () => {

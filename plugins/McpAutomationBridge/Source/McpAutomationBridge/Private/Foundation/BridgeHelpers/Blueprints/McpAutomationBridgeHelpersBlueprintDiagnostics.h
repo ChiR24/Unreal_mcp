@@ -4,6 +4,8 @@
 #include "Dom/JsonObject.h"
 
 #include "Engine/Blueprint.h"
+#include "Engine/BlueprintGeneratedClass.h"
+#include "Components/ActorComponent.h"
 #include "Kismet2/CompilerResultsLog.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Editor.h"
@@ -142,5 +144,22 @@ inline bool McpCompileBlueprintWithDiagnostics(
     }
   }
   return bCompiled;
+}
+
+// The variables a Blueprint class declares (its own and its Blueprint parents', Blueprint-visible),
+// so a refusal for a name that missed can name the ones that exist. Components are left out: they
+// are reached as Component.Property, not as variables. "none" when the class declares none.
+inline FString McpBlueprintVariableList(const UClass *Class) {
+  TArray<FString> Names;
+  if (!Class) {
+    return TEXT("none");
+  }
+  for (TFieldIterator<FProperty> It(Class); It; ++It) {
+    const FObjectProperty *Object = CastField<FObjectProperty>(*It);
+    if (Cast<UBlueprintGeneratedClass>(It->GetOwnerClass()) && It->HasAnyPropertyFlags(CPF_BlueprintVisible) &&
+        !(Object && Object->PropertyClass && Object->PropertyClass->IsChildOf(UActorComponent::StaticClass())))
+      Names.Add(It->GetName());
+  }
+  return Names.Num() > 0 ? FString::Join(Names, TEXT(", ")) : FString(TEXT("none"));
 }
 
