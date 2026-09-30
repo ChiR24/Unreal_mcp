@@ -44,6 +44,22 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       return true;
     }
 
+    // A texture node (TextureObjectParameter, TextureSample...) added here had no way to
+    // take its texture. Resolved before the node exists, so a path that does not load adds nothing.
+    UTexture *NodeTexture = nullptr;
+    FString NodeTexturePath;
+    if (Payload->TryGetStringField(TEXT("texturePath"), NodeTexturePath) && !NodeTexturePath.IsEmpty()) {
+      NodeTexture = Cast<UTexture>(McpLoadAsset(SanitizeProjectRelativePath(NodeTexturePath)));
+      const bool bTextureNode = ExpressionClass->IsChildOf(UMaterialExpressionTextureBase::StaticClass());
+      if (!NodeTexture || !bTextureNode) {
+        Bridge->SendAutomationError(Socket, RequestId,
+            bTextureNode ? FString::Printf(TEXT("Texture not found: %s"), *NodeTexturePath)
+                         : FString::Printf(TEXT("texturePath applies to texture nodes (TextureObjectParameter, TextureSample...); %s is not one."), *NodeType),
+            bTextureNode ? TEXT("ASSET_NOT_FOUND") : TEXT("INVALID_ARGUMENT"));
+        return true;
+      }
+    }
+
     UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(
         HostOuter, ExpressionClass, NAME_None, RF_Transactional);
     if (!NewExpr) {
@@ -58,9 +74,16 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
 
     FString ParamName;
     if (Payload->TryGetStringField(TEXT("name"), ParamName) && !ParamName.IsEmpty()) {
-      if (UMaterialExpressionParameter *ParamExpr = Cast<UMaterialExpressionParameter>(NewExpr)) {
-        ParamExpr->ParameterName = FName(*ParamName);
+      // Texture parameters are not UMaterialExpressionParameter, so the cast this used
+      // left a TextureObjectParameter named "None" and no instance could override it.
+      if (NewExpr->HasAParameterName()) {
+        NewExpr->SetParameterName(FName(*ParamName));
       }
+    }
+    if (NodeTexture) {
+      UMaterialExpressionTextureBase *TextureNode = CastChecked<UMaterialExpressionTextureBase>(NewExpr);
+      TextureNode->Texture = NodeTexture;
+      TextureNode->AutoSetSampleType();
     }
 
     // Apply the requested default value. Previously only `name` was honoured, so

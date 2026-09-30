@@ -200,6 +200,8 @@ const testCases = [
 
     // === ADD ===
     { scenario: 'ADD: add_texture_sample', toolName: 'manage_asset', arguments: { action: 'add_texture_sample', materialPath: MATERIAL_PATH, texturePath: TEXTURE_PATH, parameterName: 'AlbedoTex', x: -600, y: -300 }, expected: 'success|already exists' },
+    { scenario: 'ADD: add_material_node TextureObjectParameter with name and texturePath', toolName: 'manage_asset', arguments: { action: 'add_material_node', materialPath: MATERIAL_PATH, nodeType: 'TextureObjectParameter', name: 'DetailTex', texturePath: TEXTURE_PATH, x: -600, y: 0 }, expected: 'success' },
+    { scenario: 'ERROR: add_texture_sample texturePath that does not load', toolName: 'manage_asset', arguments: { action: 'add_texture_sample', materialPath: MATERIAL_PATH, texturePath: '/Game/McpTest/NoSuchTexture', parameterName: 'MissingTex' }, expected: 'error|not found' },
     { scenario: 'ADD: add_texture_coordinate', toolName: 'manage_asset', arguments: { action: 'add_texture_coordinate', materialPath: MATERIAL_PATH, coordinateIndex: 0, uTiling: 1, vTiling: 1, x: -800, y: -300 }, expected: 'success|already exists' },
     { scenario: 'ADD: add_scalar_parameter', toolName: 'manage_asset', arguments: { action: 'add_scalar_parameter', materialPath: MATERIAL_PATH, parameterName: 'RoughnessParam', defaultValue: 0.5, group: 'MCP', x: -400, y: 120 }, expected: 'success|already exists' },
     { scenario: 'ADD: add_vector_parameter', toolName: 'manage_asset', arguments: { action: 'add_vector_parameter', materialPath: MATERIAL_PATH, parameterName: 'TintParam', defaultValue: { r: 0.1, g: 0.4, b: 0.8, a: 1 }, group: 'MCP', x: -400, y: 260 }, expected: 'success|already exists' },

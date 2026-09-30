@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0f95ee1ffcea4f7f",
+  "catalogRevision": "adc38edeceb16a4e",
   "recordCount": 389,
   "records": [
     {
@@ -74782,6 +74782,7 @@
         "summary": "Add a node to a material graph: any expression class by name, or a typed node (parameters, texture sample/coordinate, math, noise, panner, rotator, fresnel, switches, custom HLSL, function call, landscape layer), or build a whole graph (nodes, wires, material properties) in one batch.",
         "whenToUse": [
           "nodeKind=node: An expression is needed by class name with no dedicated adder, such as Constant, Constant3Vector (with defaultValue), ComponentMask or Saturate.",
+          "nodeKind=node: A texture object must feed a Custom node or a material function input (nodeType TextureObjectParameter with name and texturePath).",
           "nodeKind=custom_expression: A calculation the standard nodes cannot express is needed as HLSL, with named inputs and optional extra outputs.",
           "nodeKind=fresnel: A rim light, edge glow or view-angle fade is needed.",
           "nodeKind=if: A value must switch by comparing two numbers: A greater than, equal to or less than B.",
@@ -74853,7 +74854,11 @@
             },
             "name": {
               "type": "string",
-              "description": "Parameter name, when the node type is a parameter."
+              "description": "Parameter name, when the node type is a parameter of any kind (scalar, vector, static switch, TextureObjectParameter, TextureSampleParameter2D)."
+            },
+            "texturePath": {
+              "type": "string",
+              "description": "Texture for a texture node (TextureObjectParameter, TextureSample...): its default, with the sampler type set to match (a normal map samples as Normal). A path that does not load adds nothing and fails."
             },
             "defaultValue": {
               "description": "Initial value for a Constant (number) or Constant3Vector (rgb array or {r,g,b}) node."
@@ -74953,10 +74958,6 @@
             "vTiling": {
               "type": "number",
               "description": "V tiling factor (default 1)."
-            },
-            "texturePath": {
-              "type": "string",
-              "description": "Texture /Game asset path."
             },
             "functionPath": {
               "type": "string",
@@ -75202,6 +75203,10 @@
             "name": [
               "node"
             ],
+            "texturePath": [
+              "node",
+              "texture_sample"
+            ],
             "defaultValue": [
               "node",
               "scalar_parameter",
@@ -75354,9 +75359,6 @@
             "vTiling": [
               "texture_coordinate"
             ],
-            "texturePath": [
-              "texture_sample"
-            ],
             "functionPath": [
               "material_function"
             ],
@@ -75386,8 +75388,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "61ca511d593ec2627113119beb6125826cfed5623059558d155be2442f38fae6",
-        "content": "5049a98e24a029012a1f19d7a43857ac7b4028090b48eda04e7e9e83e6076f25"
+        "schema": "7f33b50544a35a0ee835a2ed63f461590848f710b959af2461196ca3ac81a67d",
+        "content": "aa16d9073e534c946ea9a4457e1e755a45e26e0b1d9f3527628f08a32878b343"
       }
     },
     {
@@ -76569,6 +76571,7 @@
           "info=function: The materials that call the function must be found (use asset.inspect_asset with lookup=dependencies and referencers=true).",
           "info=find_node: The material asset itself must be located by name or class (use asset.query_asset).",
           "info=node_details|node_properties: A parameter value or Custom node code must change, not be read (use material.set_material_parameter or material.update_custom_expression).",
+          "info=node_details|node_properties: Any other property of a node must change, such as the Texture or SamplerType of a texture parameter (use inspect.set_property with objectPath \"<material path>.<material name>:<nodeId>\").",
           "info=node_connections|node_chain: A wire must be added, cut or rerouted, not traced (use material.connect_nodes or material.disconnect_nodes).",
           "info=subgraph: Orphaned nodes are to be removed (use material.delete_node once their ids are known)."
         ]
@@ -76925,7 +76928,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "c76ef6b0f275aa51142b8a3da742e9595dbd85d660f5a39c1b159058aeaf0752",
-        "content": "00b38912966d9da5963a8137e7bdeb7b45267b166a0d34408116f617951b9f55"
+        "content": "5b37095419330ec52f5b42ee52fb5da8ddafadc88faef9952ba6a5c50706bb1c"
       }
     },
     {

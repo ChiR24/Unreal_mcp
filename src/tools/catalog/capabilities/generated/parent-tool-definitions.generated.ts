@@ -8752,7 +8752,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "texturePath": {
           "type": "string",
-          "description": "Texture /Game asset path."
+          "description": "Texture /Game path, for parameterType texture."
         },
         "tilesX": {
           "type": "number",

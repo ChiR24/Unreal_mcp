@@ -165,4 +165,15 @@ describe('handlers answer what they did', () => {
     expect(source).not.toContain('Disconnect operation completed');
     expect(source).toContain('Target = TargetExpr->GetInput(InputIndex);');
   });
+
+  // A TextureObjectParameter added by type stayed named "None" and had no texture, so no
+  // instance could set it; add_texture_sample dropped a path that did not load.
+  it('texture nodes take their name and texture, and a texture that does not load fails', () => {
+    const generic = code('MaterialAuthoring', 'Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersAddMaterialNode.cpp');
+    expect(generic).toContain('if (NewExpr->HasAParameterName()) {');
+    expect(generic).toContain('TextureNode->AutoSetSampleType();');
+    const sample = code('MaterialAuthoring', 'Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersAddTextureSample.cpp');
+    expect(sample).toMatch(/if \(!ResolvedTexture\) \{\s*Bridge->SendAutomationError\([\s\S]*?TEXT\("ASSET_NOT_FOUND"\)\);/u);
+    expect(sample).toContain('CreatedExpr->AutoSetSampleType();');
+  });
 });

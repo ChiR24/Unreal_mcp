@@ -26,7 +26,13 @@ bool HandleAddTextureSample(UMcpAutomationBridgeSubsystem* Bridge, const FString
     // Resolve shared texture/sampler options first
     UTexture *ResolvedTexture = nullptr;
     if (!TexturePath.IsEmpty()) {
-      ResolvedTexture = LoadObject<UTexture>(nullptr, *TexturePath);
+      // A path that did not load was dropped and the sample added empty, answered as a success.
+      ResolvedTexture = Cast<UTexture>(McpLoadAsset(TexturePath));
+      if (!ResolvedTexture) {
+        Bridge->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Texture not found: %s"), *TexturePath), TEXT("ASSET_NOT_FOUND"));
+        return true;
+      }
     }
     // A named sample is a TextureSampleParameter2D, which derives from TextureSample.
     UMaterialExpressionTextureSample *CreatedExpr = NewObject<UMaterialExpressionTextureSample>(
@@ -37,7 +43,11 @@ bool HandleAddTextureSample(UMcpAutomationBridgeSubsystem* Bridge, const FString
     if (UMaterialExpressionTextureSampleParameter2D *Param = Cast<UMaterialExpressionTextureSampleParameter2D>(CreatedExpr)) {
       Param->ParameterName = FName(*ParameterName);
     }
-    if (ResolvedTexture) CreatedExpr->Texture = ResolvedTexture;
+    // The sampler follows the texture: a normal map sampled as Color fails the compile.
+    if (ResolvedTexture) {
+      CreatedExpr->Texture = ResolvedTexture;
+      CreatedExpr->AutoSetSampleType();
+    }
     CreatedExpr->MaterialExpressionEditorX = (int32)X;
     CreatedExpr->MaterialExpressionEditorY = (int32)Y;
 
