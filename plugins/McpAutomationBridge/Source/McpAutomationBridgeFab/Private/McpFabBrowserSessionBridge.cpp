@@ -25,6 +25,7 @@
 #include "SWebBrowser.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Docking/TabManager.h"
+#include "Framework/MultiBox/MultiBox.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/App.h"
 #include "ToolMenus.h"
@@ -49,11 +50,13 @@ static constexpr int32 MaxFabTabIndex = 16;
  * Opens the Fab tab the same way the menu item does, so no human has to click.
  *
  * Fab never registers a nomad tab spawner we could invoke: FFabBrowser builds a
- * fresh "Fab%d" tab each time and only exposes CreateNewFabTab, which lives in
- * the plugin's Private folder with no _API export, so it cannot be linked. What
- * IS reachable is the ToolMenus entry Fab installs in SetupEntryPoints --
- * "OpenFabTab" under MainFrame.MainMenu.Window, section GetContent -- whose
- * FUIAction calls CreateNewFabTab. Executing that action is exactly what
+ * fresh "Fab%d" tab each time through CreateNewFabTab, which lives in the
+ * plugin's Private folder with no _API export, so it cannot be linked. What
+ * IS reachable is the "OpenFabTab" entry Fab adds to MainFrame.MainMenu.Window.
+ * Its action is a plain FUIAction, which FToolMenuEntry keeps private, and
+ * TryExecuteToolUIAction only fires an FToolUIAction, so calling that on the
+ * entry never opened anything. Generating the menu puts the same FUIAction on a
+ * public multibox block named after the entry; executing it is exactly what
  * choosing the menu item does.
  *
  * Guarded to a rendering editor: FFabBrowser::OpenTab asserts under -NullRHI,
@@ -66,37 +69,23 @@ static bool TryOpenFabTabViaMenu()
 		return false;
 	}
 	UToolMenus* ToolMenus = UToolMenus::Get();
-	if (!ToolMenus)
+	const FName WindowMenu(TEXT("MainFrame.MainMenu.Window"));
+	if (!ToolMenus || !ToolMenus->IsMenuRegistered(WindowMenu))
 	{
 		return false;
 	}
-	// The toolbar button carries the same action, so either entry will do.
-	const TArray<TPair<FName, FName>> Candidates = {
-		{ TEXT("MainFrame.MainMenu.Window"), TEXT("OpenFabTab") },
-		{ TEXT("ContentBrowser.Toolbar"), TEXT("OpenFabWindow") },
-	};
-	for (const TPair<FName, FName>& Candidate : Candidates)
+	const TSharedRef<SWidget> Widget = ToolMenus->GenerateWidget(WindowMenu, FToolMenuContext());
+	if (Widget->GetTypeAsString() != TEXT("SMultiBoxWidget"))
 	{
-		UToolMenu* Menu = ToolMenus->FindMenu(Candidate.Key);
-		if (!Menu)
+		return false;
+	}
+	for (const TSharedRef<const FMultiBlock>& Block :
+		 StaticCastSharedRef<SMultiBoxWidget>(Widget)->GetMultiBox()->GetBlocks())
+	{
+		if (Block->GetExtensionHook() == FName(TEXT("OpenFabTab")) && Block->GetDirectActions().Execute())
 		{
-			continue;
-		}
-		for (FToolMenuSection& Section : Menu->Sections)
-		{
-			if (FToolMenuEntry* Entry = Section.FindEntry(Candidate.Value))
-			{
-				// FToolMenuEntry::Action is private; TryExecuteToolUIAction is the
-				// public way to fire the same delegate the menu item fires.
-				FToolMenuContext EmptyContext;
-				if (Entry->TryExecuteToolUIAction(EmptyContext))
-				{
-					UE_LOG(LogMcpFabBridge, Log,
-						TEXT("Opened the Fab tab through menu entry %s."),
-						*Candidate.Value.ToString());
-					return true;
-				}
-			}
+			UE_LOG(LogMcpFabBridge, Log, TEXT("Opened the Fab tab through the Window > Fab menu action."));
+			return true;
 		}
 	}
 	return false;
@@ -183,7 +172,7 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic)
 		OutDiagnostic = TEXT("The Fab tab is not open and could not be opened automatically. "
 							 "Open Window > Fab and sign in, then retry. "
 							 "(Looked for tab ids FabTab and Fab1..Fab16, and for the "
-							 "OpenFabTab/OpenFabWindow menu entries.)");
+							 "Window > Fab menu action.)");
 		return nullptr;
 	}
 

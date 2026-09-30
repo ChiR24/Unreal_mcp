@@ -396,3 +396,13 @@ describe('Fab bridge: the rules can actually reject a violation', () => {
     expect(/^(?:u \|\| home|home|u)$/u.test((match?.[1] ?? '').trim())).toBe(false);
   });
 });
+
+// Fab adds Window > Fab with a plain FUIAction; TryExecuteToolUIAction only fires an FToolUIAction,
+// so every auto-open answered FAB_NOT_READY with Fab installed and the tab one click away.
+describe('Fab tab auto-open', () => {
+  it('runs the Window > Fab action from the generated menu block', () => {
+    const source = readFileSync(join(fabModuleRoot, 'Private', 'McpFabBrowserSessionBridge.cpp'), 'utf8');
+    expect(source).toContain('Block->GetDirectActions().Execute()');
+    expect(source).not.toContain('TryExecuteToolUIAction(');
+  });
+});
