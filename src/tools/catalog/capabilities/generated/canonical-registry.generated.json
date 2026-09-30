@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "56ce3f0f65453fd4",
+  "catalogRevision": "59e92f2274e5ac1e",
   "recordCount": 389,
   "records": [
     {
@@ -31606,6 +31606,10 @@
                 "type": "string"
               },
               "description": "propertyNames the actor's class does not have."
+            },
+            "windowRestored": {
+              "type": "boolean",
+              "description": "True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run."
             }
           },
           "required": [
@@ -31697,8 +31701,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6490c068e4a3097c986ae97e90cee96429ae978301d7f16f3ffd6f32b6904408",
-        "content": "6beeb48bcfe79d1b7b57ddf2da99b8fe3a76160473b9da5dbe7723dfba758801"
+        "schema": "46cdf548307c9f6fa9e6ee8aebe6e251b695738b8fd665993b397e5855170f66",
+        "content": "aeab8e2e692b31e11165bc388d10861c1f592dff0d8dc7c23cc423f527c3a5b3"
       }
     },
     {

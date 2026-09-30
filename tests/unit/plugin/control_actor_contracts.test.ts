@@ -130,3 +130,20 @@ describe('startWhen.equals is read by its JSON type', () => {
     expect(source).not.toMatch(/TryGetBoolField\(TEXT\("equals"\)/u);
   });
 });
+
+// A minimized editor stepped PIE 0.333 s at a time: a 0.22 s jump was held 0.67 s and the
+// samples read as the level's own behaviour, with nothing in the reply to say so.
+describe('sample_motion runs at full rate or says it did not', () => {
+  const source = read('McpAutomationBridge_ControlActorMotionSample.cpp');
+
+  it('puts a minimized editor back on screen without focus before the run', () => {
+    expect(source).toContain('Run->bWindowRestored = RestoreWindowForCaptureForMcp(Root.ToSharedRef());');
+    expect(source).toContain('Data->SetBoolField(TEXT("windowRestored"), true);');
+  });
+
+  it('warns when the game advanced 0.1 s or more per frame', () => {
+    expect(source).toContain('Run.Frames += 1;');
+    expect(source).toMatch(/if \(PerFrame < 0\.1\) \{\s*return FString\(\);/u);
+    expect(source).toContain('McpSlowFrameWarning(*Run)');
+  });
+});

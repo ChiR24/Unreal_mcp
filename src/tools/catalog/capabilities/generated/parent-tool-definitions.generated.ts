@@ -4490,6 +4490,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game seconds spent waiting for startWhen before the run began."
         },
+        "windowRestored": {
+          "type": "boolean",
+          "description": "True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run."
+        },
         "worldName": {
           "type": "string",
           "description": "Name of the active world (or PIE world) the actors were listed from."

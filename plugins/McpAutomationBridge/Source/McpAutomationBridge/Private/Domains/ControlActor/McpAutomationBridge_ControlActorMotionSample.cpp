@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Containers/Ticker.h"
+#include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "GameFramework/Pawn.h"
 
@@ -32,7 +33,8 @@ struct FMcpMotionRun {
   FVector First = FVector::ZeroVector, Last = FVector::ZeroVector;
   TArray<FMcpMotionInput> Inputs;
   FMcpMotionTrigger Trigger;
-  bool bWaiting = false;
+  int32 Frames = 0;
+  bool bWaiting = false, bWindowRestored = false;
 };
 
 double McpRoundTo(double Value, double Scale) { return FMath::RoundToDouble(Value * Scale) / Scale; }
@@ -93,7 +95,24 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   if (Run.Waited >= 0.0) {
     Data->SetNumberField(TEXT("waitedSeconds"), McpRoundTo(Run.Waited, 1000.0));
   }
+  if (Run.bWindowRestored) {
+    Data->SetBoolField(TEXT("windowRestored"), true);
+  }
   return Data;
+}
+
+// A throttled editor (in the background with the throttle preference on) steps
+// PIE a third of a second at a time: every key and sample lands that late, so a
+// 0.2 s jump held for 0.67 s and the samples read as the game's own behaviour.
+FString McpSlowFrameWarning(const FMcpMotionRun &Run) {
+  const double PerFrame = Run.Frames > 1 ? (Run.LastGame - Run.StartGame) / Run.Frames : 0.0;
+  if (PerFrame < 0.1) {
+    return FString();
+  }
+  return FString::Printf(TEXT("the game advanced %.2f s per frame (about %.0f fps), so inputs and samples landed "
+                              "up to that late and holds ran long: the editor is throttled in the background "
+                              "(control_editor.restore_editor_window; set_game_speed fixed_delta_time makes timing "
+                              "exact)."), PerFrame, 1.0 / PerFrame);
 }
 
 // Keys pressed while the player's pawn stood perfectly still never reached it:
@@ -141,6 +160,7 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
     Run.EndGame = Now + Run.Duration;
     Run.NextSample = Now;
   }
+  Run.Frames += 1;
   McpApplyMotionInputs(Run.Inputs, Now - Run.StartGame, false);
   if (Now >= Run.NextSample || Now >= Run.EndGame) {
     McpTakeMotionSample(Run, Actor, Now);
@@ -228,6 +248,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
     McpTakeMotionSample(*Run, Found, Run->StartGame);
     Run->NextSample = Run->StartGame + Run->Interval;
   }
+  // A minimized editor runs PIE at about 3 fps whatever the throttle preference
+  // says; put it back on screen first, without taking focus, as a screenshot does.
+  if (const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow()) {
+    Run->bWindowRestored = RestoreWindowForCaptureForMcp(Root.ToSharedRef());
+  }
 
   const FString ActorName = McpActorRef(Found);
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
@@ -247,11 +272,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
         // The envelope's own warnings list; a `warnings` field set on the data
         // is overwritten by it.
         TArray<FString> Warnings;
-        const FString Warning = Ended == TEXT("startWhenTimeout") ? McpStartWhenTimeoutWarning(Run->Trigger)
-                                                                 : McpIgnoredInputsWarning(*Run);
-        if (!Warning.IsEmpty()) {
-          Message += TEXT(". WARNING: ") + Warning;
-          Warnings.Add(Warning);
+        for (const FString &Warning : {Ended == TEXT("startWhenTimeout") ? McpStartWhenTimeoutWarning(Run->Trigger)
+                                                                        : McpIgnoredInputsWarning(*Run),
+                                       McpSlowFrameWarning(*Run)}) {
+          if (!Warning.IsEmpty()) {
+            Message += TEXT(". WARNING: ") + Warning;
+            Warnings.Add(Warning);
+          }
         }
         SendStandardSuccessResponse(Self, Socket, RequestId, Message, McpMotionResult(*Run, ActorName, Ended),
                                     Warnings);
