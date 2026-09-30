@@ -148,6 +148,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
   // root-only loop silently skipped attached components (e.g. a DynamicMesh
   // actor's component chain) and reported success while nothing changed.
   int32 Updated = 0;
+  TArray<FString> Affected;
   TArray<FString> NoComponent;
   for (AActor* Actor : Actors)
   {
@@ -169,6 +170,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     if (OnActor == 0)
     {
       NoComponent.Add(McpActorRef(Actor));
+    }
+    else
+    {
+      Affected.Add(McpActorRef(Actor));
     }
     Updated += OnActor;
   }
@@ -194,14 +199,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Collision setting updated"), Data);
     return true;
   }
-  Data->SetNumberField(TEXT("updatedActors"), Actors.Num() - NoComponent.Num());
+  // The actors with a primitive component this call updated: the receipt lists them as changes, as
+  // it lists the single form's actorName.
+  Data->SetNumberField(TEXT("updatedActors"), Affected.Num());
+  Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
   Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
   if (NoComponent.Num() > 0)
   {
     Data->SetArrayField(TEXT("noPrimitiveComponents"), McpHandlerUtils::ToJsonStringArray(NoComponent));
   }
   SendStandardSuccessResponse(this, Socket, RequestId,
-      FString::Printf(TEXT("Collision set on %d actor(s); %d not found"), Actors.Num() - NoComponent.Num(),
+      FString::Printf(TEXT("Collision set on %d actor(s); %d not found"), Affected.Num(),
                       Missing.Num()),
       Data);
   return true;

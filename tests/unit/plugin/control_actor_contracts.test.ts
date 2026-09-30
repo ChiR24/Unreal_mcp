@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
+import { extractChanges } from '../../../src/tools/catalog/capabilities/semantic/receipt-outcome.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
@@ -211,7 +212,7 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
     expect(open).toBeLessThan(write);
     expect(undoSet).toContain('Add(Actor);');
     expect(undoSet).toContain('Add(Prim);');
-    expect(source).toMatch(/Undoable\);\s*TArray<FString> Mismatched;/u);
+    expect(source).toMatch(/Undoable\);\s*TArray<FString> Affected;\s*TArray<FString> Mismatched;/u);
   });
 
   // set_visibility on a Blueprint actor's BillboardComponent answered undoable:false: the transaction
@@ -228,7 +229,7 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
   it('a mismatch on any actor fails the call naming it; the single-actor replies keep their shape', () => {
     const source = visibility();
 
-    expect(source).toMatch(/if \(!McpApplyActorVisibility\(Actor, bVisible\)\) \{\s*Mismatched\.Add\(McpActorRef\(Actor\)\);/u);
+    expect(source).toMatch(/if \(McpApplyActorVisibility\(Actor, bVisible\)\) \{\s*Affected\.Add\(McpActorRef\(Actor\)\);\s*\} else \{\s*Mismatched\.Add\(McpActorRef\(Actor\)\);/u);
     expect(source).toContain('TEXT("VISIBILITY_MISMATCH")');
     expect(source).toContain('Data->SetStringField(TEXT("actorName"), McpActorRef(Actors[0]));');
     expect(source).toContain('McpHandlerUtils::AddVerification(Data, Actors[0]);');
@@ -312,5 +313,55 @@ describe('set_actor_collision is one undoable step over every actor it changes, 
     const actorNames = isRecord(input?.properties) ? input.properties.actorNames : undefined;
 
     expect(isRecord(actorNames) ? actorNames.description : '').toMatch(/one call and one undo step/u);
+  });
+});
+
+// The receipt lists a call's changes from its reply: a single form names actorName and actorPath, but the
+// actorNames form named no actor, so its receipt's changes[] came back empty although updatedActors, missing
+// and the undo block were right. Both doors' extractors already read an affectedActors array.
+describe('the many forms of set_visibility and set_actor_collision name the actors they changed, for the receipt', () => {
+  const from = (file: string, marker: string): string => {
+    const source = read(file);
+    return source.slice(source.indexOf(marker));
+  };
+  const visibility = (): string => from('McpAutomationBridge_ControlActorTransform.cpp', 'HandleControlActorSetVisibility(');
+  const collision = (): string => from('McpAutomationBridge_ControlActorPhysics.cpp', 'HandleControlActorSetCollision(');
+  const nativeOutcome = readFileSync(
+    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'MCP', 'Execute', 'McpNativeReceiptOutcome.cpp'),
+    'utf8',
+  );
+
+  it('set_visibility lists the actors that read back as asked, each by name, in the many form only', () => {
+    const source = visibility();
+    const many = sliceBetween(source, 'if (bMany) {', '} else {');
+
+    expect(many).toContain('Data->SetNumberField(TEXT("updatedActors"), Affected.Num());');
+    expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
+    expect(source.match(/TEXT\("affectedActors"\)/gu)).toHaveLength(1);
+  });
+
+  it('set_actor_collision lists the actors with a primitive component it updated, and updatedActors counts that same list', () => {
+    const source = collision();
+    const single = sliceBetween(source, 'if (!bMany)', 'Data->SetNumberField(TEXT("updatedActors")');
+
+    expect(source).toMatch(/if \(OnActor == 0\)\s*\{\s*NoComponent\.Add\(McpActorRef\(Actor\)\);\s*\}\s*else\s*\{\s*Affected\.Add\(McpActorRef\(Actor\)\);\s*\}/u);
+    expect(source).toContain('Data->SetNumberField(TEXT("updatedActors"), Affected.Num());');
+    expect(source).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
+    expect(single, 'the single form returns before the many branch').not.toContain('affectedActors');
+  });
+
+  it('a reply shaped like the many form lists the changed actors, and only them, as the receipt\'s changes on both doors', () => {
+    expect(extractChanges({ success: true, visible: false, updatedActors: 2, missing: ['Gone'], affectedActors: ['Sign_1', 'Sign_2'], undo: { undoable: true } }))
+      .toEqual(['Sign_1', 'Sign_2']);
+    expect(nativeOutcome).toMatch(/CHANGE_ARRAYS\[\] = \{[^}]*TEXT\("affectedActors"\)/u);
+  });
+
+  it('the records say where the changed actors come back', () => {
+    for (const id of ['control_actor.set_visibility', 'control_actor.set_actor_collision']) {
+      const properties = capabilityIndex().byId.get(id)?.schemas.input.properties;
+      const actorNames = isRecord(properties) ? properties.actorNames : undefined;
+
+      expect(isRecord(actorNames) ? actorNames.description : '', id).toMatch(/the actors changed under affectedActors/u);
+    }
   });
 });

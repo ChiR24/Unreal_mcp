@@ -11,7 +11,7 @@ const FAMILY_QUERY = 'query';
 const COMPONENT_NAMES = { type: 'array', items: { type: 'string' }, description: 'Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents.' };
 const MISSING_COMPONENTS = { type: 'array', items: { type: 'string' }, description: 'componentNames that matched no component.' };
 // set_visibility and its alias share one handler, so both declare the many-actor form.
-const VISIBILITY_ACTOR_NAMES = { type: 'array', items: { type: 'string' }, description: 'Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing.' };
+const VISIBILITY_ACTOR_NAMES = { type: 'array', items: { type: 'string' }, description: 'Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes).' };
 // The listed rows of control_actor.list: the shared matched-actor row, plus the distance near adds.
 const LISTED_ACTORS = {
   ...P.actors,

@@ -3434,7 +3434,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing."
+              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes)."
             },
             {
               "type": "array",
@@ -3448,7 +3448,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing."
+              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes)."
             }
           ],
           "description": "Actor names to act on (batch delete)."

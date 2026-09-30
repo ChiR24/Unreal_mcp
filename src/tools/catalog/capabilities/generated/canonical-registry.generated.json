@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3d0272961fa2815f",
+  "catalogRevision": "1ad0b0160168d78c",
   "recordCount": 389,
   "records": [
     {
@@ -32821,7 +32821,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing."
+              "description": "Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes)."
             },
             "collisionEnabled": {
               "type": "boolean",
@@ -32901,8 +32901,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "562bb0bc13f6f5c891474f183480ea8c07f15b5aa0872d7640f18d05d7950fe7",
-        "content": "c1c454efbbee65a05944d44149c5cae1ed00d4799e9969eaa62d0b1552f8456b"
+        "schema": "cfcad0d9520cd3c99f926b816b9510952d932c546141aa6dc6672aa0b552fff6",
+        "content": "7a320df2dee3db0a31688b26136c5a4344b811827bd173c86c9e60f1dec5635f"
       }
     },
     {
@@ -33628,7 +33628,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing."
+              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes)."
             },
             "visible": {
               "type": "boolean",
@@ -33708,8 +33708,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0a076952267aafedd7e8479b41a4d7b4976d29f03012e7d4042062c536c97b32",
-        "content": "c25e6e1703e35075421fdcfe26287dad29f298ecbb4cffa0faf01a83c950cfc8"
+        "schema": "faf4dfabe924508e45a9d168348ea030fb67c43e0a2ffdf217fbeb04ba0fadb5",
+        "content": "8f81468190d0ae390decfc5891c4e52d2a6c149f393c0ea74a422918272e6a47"
       }
     },
     {

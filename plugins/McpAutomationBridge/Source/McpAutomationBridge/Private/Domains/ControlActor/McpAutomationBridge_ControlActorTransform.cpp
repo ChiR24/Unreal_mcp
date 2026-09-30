@@ -249,9 +249,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
       FText::FromString(TEXT("Set Actor Visibility")),
       EMcpMutationDurability::EditorStateOnly, Undoable);
 
+  // The actors that read back as asked are the ones this call changed: the many form names them
+  // (affectedActors), which the receipt lists as changes as it lists the single form's actorName.
+  TArray<FString> Affected;
   TArray<FString> Mismatched;
   for (AActor *Actor : Actors) {
-    if (!McpApplyActorVisibility(Actor, bVisible)) {
+    if (McpApplyActorVisibility(Actor, bVisible)) {
+      Affected.Add(McpActorRef(Actor));
+    } else {
       Mismatched.Add(McpActorRef(Actor));
     }
   }
@@ -259,7 +264,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   if (bMany) {
     Data->SetBoolField(TEXT("visible"), bVisible);
-    Data->SetNumberField(TEXT("updatedActors"), Actors.Num() - Mismatched.Num());
+    Data->SetNumberField(TEXT("updatedActors"), Affected.Num());
+    Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
     Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
   } else {
     Data->SetBoolField(TEXT("visible"), !Actors[0]->IsHidden());
@@ -282,7 +288,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
   }
   SendAutomationResponse(
       Socket, RequestId, true,
-      bMany ? FString::Printf(TEXT("Visibility set on %d actor(s); %d not found"), Actors.Num(),
+      bMany ? FString::Printf(TEXT("Visibility set on %d actor(s); %d not found"), Affected.Num(),
                               Missing.Num())
             : FString(TEXT("Actor visibility updated")),
       Data);

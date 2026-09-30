@@ -91,7 +91,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Per-component collision is required (use set_component_property).'],
     inputProps: {
       actorName: P.actorName,
-      actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing.' },
+      actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes).' },
       collisionEnabled: P.collisionEnabled,
     },
     required: [],
