@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1a54d4e552323e02",
+  "catalogRevision": "82bc5879e239a3ae",
   "recordCount": 389,
   "records": [
     {
@@ -33113,7 +33113,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Several actors to give the same material in one call, in place of actorName; each is reported, and the call fails naming any that did not take it."
+              "description": "Several actors to give the same material in one call, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it."
             },
             "materialPath": {
               "type": "string",
@@ -33211,8 +33211,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4fff4b4893cdd8f01a246f76f783af2463169f368fe0a0ca5b4016465343bcbe",
-        "content": "149d240fe16e8cf264cca887f78d60dc523d75967bddd21b1d055c3ba7d628ab"
+        "schema": "46eaab0f8c20592be92a24ec00131860aa87ab4af7e45204c7889d4eab35d7ea",
+        "content": "a63acf9c4b660beb021179c0f33660bbfe18be6b5dc243c7c618431c6822ec71"
       }
     },
     {

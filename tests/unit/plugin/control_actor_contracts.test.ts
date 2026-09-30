@@ -319,7 +319,7 @@ describe('set_actor_collision is one undoable step over every actor it changes, 
 // The receipt lists a call's changes from its reply: a single form names actorName and actorPath, but the
 // actorNames form named no actor, so its receipt's changes[] came back empty although updatedActors, missing
 // and the undo block were right. Both doors' extractors already read an affectedActors array.
-describe('the many forms of set_visibility, set_actor_collision and add_tag name the actors they changed, for the receipt', () => {
+describe('the many forms of set_visibility, set_actor_collision, add_tag and set_material name the actors they changed, for the receipt', () => {
   const from = (file: string, marker: string): string => {
     const source = read(file);
     return source.slice(source.indexOf(marker));
@@ -361,6 +361,21 @@ describe('the many forms of set_visibility, set_actor_collision and add_tag name
     expect(read('McpAutomationBridge_ControlActorTags.cpp').match(/TEXT\("affectedActors"\)/gu)).toHaveLength(1);
   });
 
+  // set_material's many form runs the one-actor handler per name under a captured reply and answered only
+  // {results, applied}, so its receipt had no change and no handle.
+  it('set_material lists the actors that took the material, each by the name its one-actor run replied, once each', () => {
+    const source = read('McpAutomationBridge_ControlActorMaterials.cpp');
+    const many = sliceBetween(source, 'TEXT("actorNames")', 'FString TargetName;');
+
+    expect(many).toMatch(/TArray<FString> Failures;\s*TArray<FString> Affected;\s*for \(int32 Index = 0;/u);
+    expect(many).toMatch(
+      /if \(Reply\.bSuccess\) \{\s*FString Changed;\s*if \(!Reply\.Result\.IsValid\(\) \|\| !Reply\.Result->TryGetStringField\(TEXT\("actorName"\), Changed\) \|\| Changed\.IsEmpty\(\)\) \{\s*Changed = Name;\s*\}\s*Affected\.AddUnique\(Changed\);\s*\} else \{/u
+    );
+    expect(many).toContain('Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));');
+    expect(many.indexOf('TEXT("affectedActors")'), 'the list rides on the incomplete reply too').toBeLessThan(many.indexOf('if (Failures.Num() > 0)'));
+    expect(source.match(/TEXT\("affectedActors"\)/gu), 'the single form names actorName instead').toHaveLength(1);
+  });
+
   it('a reply shaped like the many form lists the changed actors, and only them, as the receipt\'s changes on both doors', () => {
     expect(extractChanges({ success: true, visible: false, updatedActors: 2, missing: ['Gone'], affectedActors: ['Sign_1', 'Sign_2'], undo: { undoable: true } }))
       .toEqual(['Sign_1', 'Sign_2']);
@@ -370,7 +385,7 @@ describe('the many forms of set_visibility, set_actor_collision and add_tag name
   });
 
   it('the records say where the changed actors come back', () => {
-    for (const id of ['control_actor.set_visibility', 'control_actor.set_actor_collision', 'control_actor.add_tag']) {
+    for (const id of ['control_actor.set_visibility', 'control_actor.set_actor_collision', 'control_actor.add_tag', 'control_actor.set_material']) {
       const properties = capabilityIndex().byId.get(id)?.schemas.input.properties;
       const actorNames = isRecord(properties) ? properties.actorNames : undefined;
 

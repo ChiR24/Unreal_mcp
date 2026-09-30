@@ -198,7 +198,8 @@ bool HandleSetNodePosition(UMcpAutomationBridgeSubsystem* Bridge, const FString&
 bool HandleSetMaterialParameter(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 // Runs each {parameterName, parameterType, value | texturePath} entry through set_material_parameter
 // on AssetPath under a captured reply; one result per entry, "name: why" for each that failed.
-void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed);
+// OutChangedAssetPath, when given, takes the assetPath the first entry that applied replied with.
+void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath = nullptr);
 // build_material_graph: runs each additive step through RunStep (the subsystem's
 // own manage_material_authoring entry) with its reply captured, then compiles and saves once.
 bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, TFunctionRef<void(const FString&, const TSharedPtr<FJsonObject>&)> RunStep);

@@ -3,7 +3,7 @@
 
 namespace McpMaterialAuthoringHandlers
 {
-void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed)
+void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath)
 {
   FMcpResponseCaptureRegistry& Capture = FMcpResponseCaptureRegistry::Get();
   for (int32 Index = 0; Index < Entries.Num(); ++Index) {
@@ -22,7 +22,13 @@ void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetStringField(TEXT("parameterName"), Name);
     Entry->SetBoolField(TEXT("applied"), Reply.bSuccess);
-    if (!Reply.bSuccess) {
+    if (Reply.bSuccess) {
+      // The setter names the asset it wrote (the package path) the way a single parameter's reply does, so the
+      // caller's reply can name it too and the receipt lists it.
+      if (OutChangedAssetPath && OutChangedAssetPath->IsEmpty() && Reply.Result.IsValid()) {
+        Reply.Result->TryGetStringField(TEXT("assetPath"), *OutChangedAssetPath);
+      }
+    } else {
       const FString Why = Reply.bCaptured ? Reply.Message : FString(TEXT("the parameter setter gave no answer"));
       Entry->SetStringField(TEXT("error"), Why);
       OutFailed.Add(FString::Printf(TEXT("%s: %s"), *Name, *Why));
@@ -40,10 +46,15 @@ bool HandleSetMaterialParameter(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     if (Payload->TryGetArrayField(TEXT("parameters"), Entries) && Entries->Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> Results;
       TArray<FString> Failed;
-      ApplyMaterialParameterList(Bridge, RequestId, GetJsonStringField(Payload, TEXT("assetPath")), *Entries, Socket, Results, Failed);
+      FString ChangedAsset;
+      ApplyMaterialParameterList(Bridge, RequestId, GetJsonStringField(Payload, TEXT("assetPath")), *Entries, Socket, Results, Failed, &ChangedAsset);
       TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
       Data->SetArrayField(TEXT("parameters"), Results);
       Data->SetNumberField(TEXT("applied"), Results.Num() - Failed.Num());
+      // Without it the reply named no asset, so the receipt's changes and handles were empty for a call that wrote one.
+      if (!ChangedAsset.IsEmpty()) {
+        Data->SetStringField(TEXT("assetPath"), ChangedAsset);
+      }
       if (Failed.Num() > 0) {
         Bridge->SendAutomationResponse(Socket, RequestId, false,
             FString::Printf(TEXT("Set %d of %d parameters; %s"), Results.Num() - Failed.Num(), Results.Num(),

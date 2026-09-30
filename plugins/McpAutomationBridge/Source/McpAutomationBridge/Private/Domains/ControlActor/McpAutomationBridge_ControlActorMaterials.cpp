@@ -18,6 +18,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failures;
+    // The actors that took the material, each by the name its one-actor run replied with (the label unless
+    // another actor shares it), once each: what the receipt lists as changes and gives an actor handle apiece.
+    TArray<FString> Affected;
     for (int32 Index = 0; Index < Names->Num(); ++Index) {
       const FString Name = (*Names)[Index].IsValid() ? (*Names)[Index]->AsString() : FString();
       TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
@@ -31,7 +34,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
       TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
       Entry->SetStringField(TEXT("actorName"), Name);
       Entry->SetBoolField(TEXT("applied"), Reply.bSuccess);
-      if (!Reply.bSuccess) {
+      if (Reply.bSuccess) {
+        FString Changed;
+        if (!Reply.Result.IsValid() || !Reply.Result->TryGetStringField(TEXT("actorName"), Changed) || Changed.IsEmpty()) {
+          Changed = Name;
+        }
+        Affected.AddUnique(Changed);
+      } else {
         Entry->SetStringField(TEXT("error"), Reply.Message);
         Failures.Add(FString::Printf(TEXT("%s: %s"), *Name, *Reply.Message));
       }
@@ -41,6 +50,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetArrayField(TEXT("results"), Results);
     Data->SetNumberField(TEXT("applied"), Applied);
+    Data->SetArrayField(TEXT("affectedActors"), McpHandlerUtils::ToJsonStringArray(Affected));
     if (Failures.Num() > 0) {
       SendAutomationResponse(Socket, RequestId, false,
                              FString::Printf(TEXT("Material set on %d of %d actors; %s"), Applied,
