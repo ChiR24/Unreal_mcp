@@ -5854,6 +5854,7 @@
         "clearExisting",
         "code",
         "columnTypes",
+        "combineMeshes",
         "compileOp",
         "compressionSettings",
         "constA",
@@ -6217,6 +6218,10 @@
               "type": "string"
             },
             "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the name column plus \"/Script/Fab.FabObjectColumn\", which carries AssetId, ListingType, Seller and Source. Selecting a column is also the row filter, so naming one Fab does not write for every row will hide rows. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
+          },
+          "combineMeshes": {
+            "type": "boolean",
+            "description": "Only for source mesh formats (fbx, obj, gltf, glb, usdz) that Fab imports itself; ignored for Megascans and unreal-engine packs. Omit to leave Fab's behaviour alone: every mesh of a file is merged into ONE static mesh. false imports each mesh as its own asset: the adapter switches off Interchange's mesh combining on the pipelines Fab generated for this import, and the status read's combineMeshesApplied says whether that landed in time (COMBINE_UNSUPPORTED refuses the call when this engine gives no way to). true accepts the single merged mesh explicitly, which a scene-sized file (one mesh file of 50 MB or more) requires."
           },
           "compileOp": {
             "type": "string",

@@ -3,6 +3,7 @@
 #include "McpFabImportWatcher.h"
 
 #include "McpFabImportOperations.h"
+#include "McpFabInterchange.h"
 #include "McpFabLogCapture.h"
 
 #include "AssetRegistry/AssetData.h"
@@ -159,6 +160,16 @@ void WatchForImport(
 			else if (Count > 0) { Watch->QuietFor += Delta; }
 			McpFabImportOperations::SetAssetsSoFar(OperationId, Count);
 
+			// Fab's generic importer merges every mesh of a file into one static mesh. When the caller asked for
+			// them separate, that setting is switched off on the pipelines Fab generated for this import. It
+			// must land while Interchange is still translating the file, which for a scene-sized one takes
+			// minutes with the game thread free, so it is tried on every tick until it takes.
+			if (Accepted.MeshesSeparated.IsSet() && !Accepted.MeshesSeparated.GetValue() && McpFabInterchange::SeparateMeshes() > 0)
+			{
+				Accepted.MeshesSeparated = true;
+				McpFabImportOperations::SetMeshesSeparated(OperationId, true);
+			}
+
 			// Fab logs a failed download, unzip or import and then cancels without another word, so
 			// without the log an import that died looks like one that is merely slow.
 			TArray<FString> FabLines;
@@ -224,6 +235,6 @@ void WatchForImport(
 			McpFabLogCapture::Stop();
 			McpFabImportOperations::Finish(OperationId, Accepted);
 			return false;
-		}), 0.5f);
+		}), 0.25f);
 }
 } // namespace McpFabImportWatcher

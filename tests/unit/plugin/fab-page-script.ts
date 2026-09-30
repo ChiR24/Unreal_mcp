@@ -24,14 +24,14 @@ export function rawScript(file: string): string {
   return blocks.join('');
 }
 
-/** Fills the printf `%s` slots in order, refusing a count mismatch so a new slot cannot go unfilled. */
-export function fillSlots(script: string, values: readonly string[]): string {
-  const slots = script.match(/%s/gu)?.length ?? 0;
+/** Fills the printf `%s` and `%d` slots in order, refusing a count mismatch so a new slot cannot go unfilled. */
+export function fillSlots(script: string, values: readonly (string | number)[]): string {
+  const slots = script.match(/%[sd]/gu)?.length ?? 0;
   if (slots !== values.length) {
-    throw new Error(`script has ${slots} %s slot(s), ${values.length} value(s) given`);
+    throw new Error(`script has ${slots} printf slot(s), ${values.length} value(s) given`);
   }
   let index = 0;
-  return script.replace(/%s/gu, () => values[index++] ?? '');
+  return script.replace(/%[sd]/gu, () => String(values[index++] ?? ''));
 }
 
 export type FakeResponse = { readonly status?: number; readonly body?: unknown; readonly text?: string };

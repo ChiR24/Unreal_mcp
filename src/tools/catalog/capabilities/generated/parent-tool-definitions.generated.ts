@@ -7604,6 +7604,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Column struct paths to read, for example \"/Script/Fab.FabObjectNameColumn\". Defaults to the name column plus \"/Script/Fab.FabObjectColumn\", which carries AssetId, ListingType, Seller and Source. Selecting a column is also the row filter, so naming one Fab does not write for every row will hide rows. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call."
         },
+        "combineMeshes": {
+          "type": "boolean",
+          "description": "Only for source mesh formats (fbx, obj, gltf, glb, usdz) that Fab imports itself; ignored for Megascans and unreal-engine packs. Omit to leave Fab's behaviour alone: every mesh of a file is merged into ONE static mesh. false imports each mesh as its own asset: the adapter switches off Interchange's mesh combining on the pipelines Fab generated for this import, and the status read's combineMeshesApplied says whether that landed in time (COMBINE_UNSUPPORTED refuses the call when this engine gives no way to). true accepts the single merged mesh explicitly, which a scene-sized file (one mesh file of 50 MB or more) requires."
+        },
         "compileOp": {
           "type": "string",
           "enum": [
@@ -9001,6 +9005,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "canAddToProject": {
           "type": "boolean",
           "description": "True when add_fab_asset_to_project can actually import this listing. unreal-engine, gltf, glb and fbx are importable through the pack and Interchange workflows. Quixel/Megascans listings are the exception: Fab will not serve their download until the listing is claimed, and the claim is CSRF-protected with no token exposed to the page, so this reports false and addBlockedReason says so. Check this rather than hasUnrealBuild before adding."
+        },
+        "combineMeshesApplied": {
+          "type": "boolean",
+          "description": "Present only when the add passed combineMeshes=false for a listing Fab merges meshes for: true once Interchange's mesh combining was switched off before it ran, false while that has not happened yet or could not (the import then yields the single merged mesh)."
+        },
+        "combinesMeshes": {
+          "type": "boolean",
+          "description": "True when Fab's importer merges every mesh of a file into ONE static mesh for this listing."
         },
         "compileErrors": {
           "oneOf": [

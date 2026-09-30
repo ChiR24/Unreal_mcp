@@ -34,9 +34,10 @@ inline TSharedPtr<FJsonObject> MakeStatusNextCall(const FString& OperationId)
 	return Next;
 }
 
-/** What the page decided for an add: format, quality tier, file, size and engine version. */
+/** What the page decided for an add: format, quality tier, file, size, engine version and whether meshes merge. */
 inline void SetAddFacts(const TSharedPtr<FJsonObject>& Data, const FMcpFabAddResult& Result)
 {
+	Data->SetBoolField(TEXT("combinesMeshes"), Result.bMergesMeshes);
 	if (!Result.FormatCode.IsEmpty()) { Data->SetStringField(TEXT("formatCode"), Result.FormatCode); }
 	if (!Result.Quality.IsEmpty()) { Data->SetStringField(TEXT("quality"), Result.Quality); }
 	if (!Result.FileName.IsEmpty()) { Data->SetStringField(TEXT("fileName"), Result.FileName); }

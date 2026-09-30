@@ -85,6 +85,10 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
   Data->SetBoolField(TEXT("finished"), bFinished);
   Data->SetNumberField(TEXT("elapsedSeconds"), FMath::RoundToInt(Status.ElapsedSeconds));
   McpFabImportJson::SetAddFacts(Data, Result);
+  // Present only when the add asked for separate meshes and Fab merges them for this listing.
+  if (Result.MeshesSeparated.IsSet()) {
+    Data->SetBoolField(TEXT("combineMeshesApplied"), Result.MeshesSeparated.GetValue());
+  }
   // Only what is known: a download nobody can observe has no byte count, and zero would be a claim.
   if (Status.DownloadedBytes >= 0) {
     Data->SetNumberField(TEXT("downloadedBytes"), static_cast<double>(Status.DownloadedBytes));

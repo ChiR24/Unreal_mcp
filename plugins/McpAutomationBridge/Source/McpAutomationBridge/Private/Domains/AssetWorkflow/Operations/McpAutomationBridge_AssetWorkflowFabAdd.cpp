@@ -48,9 +48,15 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
     return true;
   }
 
+  FMcpFabAddOptions Options;
+  bool bCombineMeshes = false;
+  if (Payload->TryGetBoolField(TEXT("combineMeshes"), bCombineMeshes)) {
+    Options.CombineMeshes = bCombineMeshes;
+  }
+
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
   const bool bStarted = Provider->AddToProject(
-      ListingId, [WeakThis, RequestId, Socket, ListingId](const FMcpFabAddResult &Result) {
+      ListingId, Options, [WeakThis, RequestId, Socket, ListingId](const FMcpFabAddResult &Result) {
         AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, Socket, ListingId, Result]() {
           UMcpAutomationBridgeSubsystem *Self = WeakThis.Get();
           if (Self == nullptr) {

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b7d769b096c678f6",
+  "catalogRevision": "e57cb0a8470c543b",
   "recordCount": 389,
   "records": [
     {
@@ -7735,6 +7735,10 @@
               "type": "string",
               "description": "Fab listing uid, as it appears in a fab.com/listings/<uid> URL. Restricted to [A-Za-z0-9_-], 64 characters max, because it is used to build an API path."
             },
+            "combineMeshes": {
+              "type": "boolean",
+              "description": "Only for source mesh formats (fbx, obj, gltf, glb, usdz) that Fab imports itself; ignored for Megascans and unreal-engine packs. Omit to leave Fab's behaviour alone: every mesh of a file is merged into ONE static mesh. false imports each mesh as its own asset: the adapter switches off Interchange's mesh combining on the pipelines Fab generated for this import, and the status read's combineMeshesApplied says whether that landed in time (COMBINE_UNSUPPORTED refuses the call when this engine gives no way to). true accepts the single merged mesh explicitly, which a scene-sized file (one mesh file of 50 MB or more) requires."
+            },
             "assetId": {
               "type": "string",
               "description": "Fab asset id, used as the cache key."
@@ -7849,6 +7853,10 @@
               "type": "boolean",
               "description": "False when no listing version declared the running engine and the first version was used instead."
             },
+            "combinesMeshes": {
+              "type": "boolean",
+              "description": "True when Fab's importer merges every mesh of a file into ONE static mesh for this listing: a source mesh format that is not Megascans. False for Megascans and unreal-engine packs."
+            },
             "note": {
               "type": "string",
               "description": "What to do next: poll the status read, do not add again."
@@ -7944,6 +7952,9 @@
             "listingId": [
               "fab_listing"
             ],
+            "combineMeshes": [
+              "fab_listing"
+            ],
             "assetId": [
               "fab_download",
               "megascans"
@@ -7980,8 +7991,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "39d086973509955c418cb7bd0f7d29a7f4d20b05dc8115345684d51acb17a305",
-        "content": "6efd47781a03a4fcf8b14b31e8540a34e0293ac3d3abe9a5db00711bb043ef1f"
+        "schema": "b909b64649b37bd1681b4f19ff44275d162c1ddf3c11f02171fa34f0d7d35092",
+        "content": "8dc6cebf816ee486fba9009a28d31d90ad2bebdfb5fc7167213b2c48fe0c1751"
       }
     },
     {
@@ -10259,6 +10270,14 @@
               "type": "boolean",
               "description": "False when no listing version declared the running engine and the first version was used instead."
             },
+            "combinesMeshes": {
+              "type": "boolean",
+              "description": "True when Fab's importer merges every mesh of a file into ONE static mesh for this listing."
+            },
+            "combineMeshesApplied": {
+              "type": "boolean",
+              "description": "Present only when the add passed combineMeshes=false for a listing Fab merges meshes for: true once Interchange's mesh combining was switched off before it ran, false while that has not happened yet or could not (the import then yields the single merged mesh)."
+            },
             "downloadedBytes": {
               "type": "number",
               "description": "Bytes fetched so far, when the download folder shows them. Absent when the download cannot be observed (a unreal-engine pack, or a download that has not begun)."
@@ -10380,8 +10399,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e353ad39829802c1c0a112ee6bbce704352bcab36431f395bfbef089852eacc5",
-        "content": "d49849a3a3ddaae1971372aeb159a5eff45e5661ebb84d08eefe0ac91e261971"
+        "schema": "0387f30f70c5191349a9257226a73d9627d2d3be64282cbf9d8d11c906ee5754",
+        "content": "57546ccdd55d6434ec0713eaba78553ba313f2e3a8023d53c0023c111ac26f01"
       }
     },
     {

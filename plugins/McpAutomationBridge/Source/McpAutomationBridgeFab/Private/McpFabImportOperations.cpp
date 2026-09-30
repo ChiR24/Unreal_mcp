@@ -161,6 +161,14 @@ void AddFabError(const FString& OperationId, const FString& Line)
 	}
 }
 
+void SetMeshesSeparated(const FString& OperationId, bool bSeparated)
+{
+	if (FOperation* Op = FindById(OperationId))
+	{
+		Op->Result.MeshesSeparated = bSeparated;
+	}
+}
+
 void Finish(const FString& OperationId, const FMcpFabAddResult& Outcome)
 {
 	if (FOperation* Op = FindById(OperationId))

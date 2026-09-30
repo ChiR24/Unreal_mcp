@@ -116,3 +116,35 @@ describe('the Fab log capture', () => {
     expect(code(fab('McpAutomationBridgeFabModule.cpp'))).toContain('McpFabLogCapture::Stop();');
   });
 });
+
+describe('the Fab mesh-merging guard', () => {
+  const guard = code(fab('McpFabInterchange.cpp'));
+
+  it('reaches Interchange by reflection only, so the module takes no build dependency on it', () => {
+    expect(guard).toContain('FindObject<UClass>(nullptr, AssetsPipelinePath)');
+    expect(guard).not.toMatch(/#include\s+"Interchange/u);
+    const build = readFileSync(resolve(plugin, 'McpAutomationBridgeFab/McpAutomationBridgeFab.Build.cs'), 'utf8');
+    expect(build).not.toMatch(/Interchange/u);
+  });
+
+  it('edits only the pipelines Fab generated for one import, never a project setting or an asset', () => {
+    expect(guard).toMatch(/!Pipeline->IsRooted\(\)/u);
+    for (const banned of ['GetMutableDefault', 'SaveConfig', 'SavePackage', 'SaveObject', 'ProjectSettings']) {
+      expect(guard, `${banned} would change more than one import`).not.toContain(banned);
+    }
+  });
+
+  it('works only when the caller asked for separate meshes, and says whether it took', () => {
+    const watcher = code(fab('McpFabImportWatcher.cpp'));
+    expect(watcher).toMatch(/MeshesSeparated\.IsSet\(\) && !Accepted\.MeshesSeparated\.GetValue\(\) && McpFabInterchange::SeparateMeshes\(\) > 0/u);
+    expect(watcher).toContain('McpFabImportOperations::SetMeshesSeparated(OperationId, true);');
+  });
+
+  it('refuses separate meshes before claiming or downloading anything when the engine cannot do it', () => {
+    const add = code(fab('McpFabAddOperation.cpp'));
+    const unsupported = add.indexOf('COMBINE_UNSUPPORTED');
+    expect(unsupported).toBeGreaterThan(-1);
+    expect(unsupported).toBeLessThan(add.indexOf('McpFabImportOperations::Begin('));
+    expect(add).toContain('McpFabInterchange::CanSeparateMeshes()');
+  });
+});

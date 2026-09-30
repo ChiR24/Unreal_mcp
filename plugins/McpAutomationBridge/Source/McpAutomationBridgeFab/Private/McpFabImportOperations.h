@@ -31,6 +31,9 @@ void SetAssetsSoFar(const FString& OperationId, int32 Count);
 /** Keeps one scrubbed error line Fab logged while the import ran. */
 void AddFabError(const FString& OperationId, const FString& Line);
 
+/** Records that the adapter switched Interchange's mesh combining off for this import. */
+void SetMeshesSeparated(const FString& OperationId, bool bSeparated);
+
 /** The import ended, either way. Outcome replaces the stored result; an ErrorCode marks it failed. */
 void Finish(const FString& OperationId, const FMcpFabAddResult& Outcome);
 

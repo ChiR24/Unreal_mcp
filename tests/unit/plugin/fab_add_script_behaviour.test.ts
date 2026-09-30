@@ -13,8 +13,9 @@ const LISTING = 'ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1';
 const CSRF = 'csrf-value-that-must-never-be-reported';
 const SIGNED_URL = 'https://cdn.example.invalid/signed?sig=must-never-be-reported';
 
-const addScript = (engine = '5.8'): string =>
-  fillSlots(rawScript('McpFabAddToProject.cpp'), ['req-1', LISTING, engine, rawScript('McpFabSelectionScript.cpp')]);
+/** combine mirrors the C++ side: -1 when the caller said nothing about merging meshes, 0 for false, 1 for true. */
+const addScript = (engine = '5.8', combine = -1): string =>
+  fillSlots(rawScript('McpFabAddToProject.cpp'), ['req-1', LISTING, engine, combine, rawScript('McpFabSelectionScript.cpp')]);
 
 const listing = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
   title: 'Concrete Barrier',
@@ -107,6 +108,56 @@ describe('the add script: a listing with nothing importable', () => {
 
     expect(run.results[0]).toMatchObject({ error: 'NO_IMPORTABLE_FORMAT', formatCodes: ['weird-format'] });
     expect(run.addToProject).toHaveLength(0);
+  });
+});
+
+describe('the add script: a scene-sized mesh file', () => {
+  // Fab's own importer merges every mesh in the file into one static mesh; a 189 MB city became one
+  // mesh that needed 14 GB to build and held the editor for many minutes.
+  const scene = (bytes: number | null) => ({ files: [{ name: 'modern_city.zip', uid: 'u-city', fileSize: bytes, fileType: 'fbx' }] });
+  const cityListing = listing({ user: { sellerName: 'Some Studio' }, assetFormats: [{ assetFormatType: { code: 'fbx' } }] });
+  const city = (bytes: number | null): Route[] => routes(scene(bytes), 'fbx', cityListing);
+
+  it('is refused before anything is downloaded unless the caller chose a way to import it', async () => {
+    const run = await runPageScript(addScript('5.8', -1), city(189_000_000), `fab_csrftoken=${CSRF}`);
+
+    expect(run.results[0]).toMatchObject({ error: 'LARGE_SCENE_FILE', formatCode: 'fbx', downloadBytes: 189_000_000, combinesMeshes: true });
+    expect(run.addToProject).toHaveLength(0);
+    expect(run.fetches.some((line) => line.includes('/download-info'))).toBe(false);
+  });
+
+  it('goes ahead when the caller asks for separate meshes, or explicitly accepts one merged mesh', async () => {
+    for (const combine of [0, 1]) {
+      const run = await runPageScript(addScript('5.8', combine), city(189_000_000), `fab_csrftoken=${CSRF}`);
+
+      expect(run.results[0], `combine=${combine}`).toMatchObject({ accepted: true, combinesMeshes: true, downloadBytes: 189_000_000 });
+      expect(run.addToProject).toHaveLength(1);
+    }
+  });
+
+  it('is not held back when the file is small or its size is unknown', async () => {
+    for (const bytes of [12_000_000, null]) {
+      const run = await runPageScript(addScript('5.8', -1), city(bytes), `fab_csrftoken=${CSRF}`);
+
+      expect(run.results[0], `size ${String(bytes)}`).toMatchObject({ accepted: true, combinesMeshes: true });
+    }
+  });
+
+  it('never applies to Megascans, which has its own importer, or to a packaged build', async () => {
+    const megascans = await runPageScript(
+      addScript('5.8', -1),
+      routes({ files: tiers({ high: 900_000_000 }) }, 'gltf'),
+      `fab_csrftoken=${CSRF}`,
+    );
+    expect(megascans.results[0]).toMatchObject({ accepted: true, combinesMeshes: false });
+
+    const pack = await runPageScript(
+      addScript('5.8', -1),
+      routes({ versions: [{ name: 'Pack', uid: 'v', engineVersions: ['UE_5.8'], fileSize: 900_000_000 }] }, 'unreal-engine',
+        listing({ user: { sellerName: 'Someone' }, assetFormats: [{ assetFormatType: { code: 'unreal-engine' } }] })),
+      `fab_csrftoken=${CSRF}`,
+    );
+    expect(pack.results[0]).toMatchObject({ accepted: true, combinesMeshes: false });
   });
 });
 

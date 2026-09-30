@@ -48,11 +48,12 @@ bool IsSafeListingId(const FString& Value)
  * through encodeURIComponent as well; the format and file segments come from
  * Fab's own response, not from any caller.
  */
-FString BuildAddScript(const FString& RequestId, const FString& ListingId, const FString& EngineVersion)
+FString BuildAddScript(const FString& RequestId, const FString& ListingId, const FString& EngineVersion,
+	const TOptional<bool>& CombineMeshes)
 {
 	return FString::Printf(TEXT(R"JS(
 (function () {
-  var id = "%s", listing = "%s", engine = "%s";
+  var id = "%s", listing = "%s", engine = "%s", combine = %d;
 %s
   function shape(v, d) {
     if (v === null) return "null";
@@ -125,6 +126,9 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
       // workflow. The archive we hand over is unchanged -- the workflow
       // identifies content by file extension, not by this label.
       out.dispatchType = ["unreal-engine","gltf","glb","fbx"].indexOf(code) >= 0 ? code : "fbx";
+      // Fab's generic importer merges every mesh in a source file into ONE static mesh; Megascans goes
+      // through its own importer, and a packaged unreal-engine build is already assets.
+      out.combinesMeshes = !out.isQuixel && ["gltf", "glb", "fbx", "obj", "usdz"].indexOf(code) >= 0;
 
       // Entitlement first. download-info answers 404 for a listing the account
       // does not own, which is why an unowned Quixel asset failed at that step
@@ -266,6 +270,14 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
       // when Fab publishes one (a pack does not, and unknown is not zero).
       out.quality = tierOf(chosen.name);
       if (fileBytes(chosen) >= 0) { out.downloadBytes = fileBytes(chosen); }
+      // A large single file is almost always a whole scene, and merging one was ruinous: a 189 MB city
+      // became a single static mesh that needed 14 GB to build and held the editor for many minutes.
+      // So it is not downloaded until the caller has said which way to import it (combine is -1 when
+      // they have not).
+      if (out.combinesMeshes && combine < 0 && fileBytes(chosen) >= 52428800) {
+        out.error = "LARGE_SCENE_FILE";
+        send(out); return null;
+      }
 )JS") TEXT(R"JS(      // ?platform=Windows suits a packaged per-platform build; a source zip
       // has no platform and the filter 404s. Try the platform form, then the
       // bare one, and report both statuses so a future 404 says which shape
@@ -335,6 +347,7 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
     })
     .catch(fail);
 })();
-)JS"), *RequestId, *ListingId, *EngineVersion, McpFabSelection::Script());
+)JS"), *RequestId, *ListingId, *EngineVersion,
+		CombineMeshes.IsSet() ? (CombineMeshes.GetValue() ? 1 : 0) : -1, McpFabSelection::Script());
 }
 } // namespace McpFabAddOperation

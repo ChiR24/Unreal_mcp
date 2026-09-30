@@ -21,7 +21,7 @@ bool Start(const FString& Query, bool bFreeOnly, int32 Limit,
 namespace McpFabAddOperation
 {
 bool Start(const FString& ListingId, const FString& EngineVersion, const FString& CacheLocation,
-	TFunction<void(const FMcpFabAddResult&)> OnAccepted);
+	const FMcpFabAddOptions& Options, TFunction<void(const FMcpFabAddResult&)> OnAccepted);
 }
 #include "Misc/EngineVersion.h"
 #include "Runtime/Launch/Resources/Version.h"
@@ -133,13 +133,14 @@ public:
 
 	virtual bool AddToProject(
 		const FString& ListingId,
+		const FMcpFabAddOptions& Options,
 		TFunction<void(const FMcpFabAddResult&)> OnAccepted) override
 	{
 #if MCP_FAB_ADAPTER_HAS_FAB_API
 		const FEngineVersion& Version = FEngineVersion::Current();
 		return McpFabAddOperation::Start(ListingId,
 			FString::Printf(TEXT("%u.%u"), Version.GetMajor(), Version.GetMinor()), GetCacheLocation(),
-			MoveTemp(OnAccepted));
+			Options, MoveTemp(OnAccepted));
 #else
 		return false;
 #endif

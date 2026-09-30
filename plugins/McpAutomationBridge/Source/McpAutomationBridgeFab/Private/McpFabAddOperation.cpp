@@ -22,6 +22,7 @@
 #include "McpFabBridgeDispatch.h"
 #include "McpFabImportOperations.h"
 #include "McpFabImportWatcher.h"
+#include "McpFabInterchange.h"
 
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -82,6 +83,7 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 		Root->TryGetStringField(TEXT("versionName"), Result.VersionName);
 		Root->TryGetStringField(TEXT("formatCode"), Result.FormatCode);
 		Root->TryGetStringField(TEXT("quality"), Result.Quality);
+		Root->TryGetBoolField(TEXT("combinesMeshes"), Result.bMergesMeshes);
 		double Bytes = 0.0;
 		if (Root->TryGetNumberField(TEXT("downloadBytes"), Bytes) && Bytes >= 0.0)
 		{
@@ -130,6 +132,12 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 			TEXT("Fab did not accept the listing.%s Fab imports unreal-engine, gltf, glb and fbx; this listing ships none of them."),
 			*FormatList);
 	}
+	else if (Result.ErrorCode == TEXT("LARGE_SCENE_FILE"))
+	{
+		Result.Error = FString::Printf(
+			TEXT("This listing ships one %s file of %.0f MB. Fab's importer merges every mesh in a file into a single static mesh, so a scene that size becomes one unplaceable mesh that can need gigabytes to build and holds the editor for many minutes. Nothing was downloaded. Pass combineMeshes=false to import each mesh separately, or combineMeshes=true to accept the single merged mesh."),
+			*Result.FormatCode, static_cast<double>(Result.DownloadBytes) / 1.0e6);
+	}
 	else if (Result.ErrorCode == TEXT("NO_VERSION"))
 	{
 		Result.Error = FString::Printf(
@@ -148,7 +156,7 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 
 /** Shared entry point used by the provider implementation. */
 bool Start(const FString& ListingId, const FString& EngineVersion, const FString& CacheLocation,
-	TFunction<void(const FMcpFabAddResult&)> OnAccepted)
+	const FMcpFabAddOptions& Options, TFunction<void(const FMcpFabAddResult&)> OnAccepted)
 {
 	// Fail closed where ListingId is interpolated into a JS string literal inside
 	// Fab's authenticated page: an id that cannot reach the page cannot steer the path.
@@ -158,6 +166,17 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		Rejected.ErrorCode = TEXT("INVALID_LISTING_ID");
 		Rejected.Error = TEXT("A listing id must be [A-Za-z0-9_-] and at most 64 characters.");
 		OnAccepted(Rejected);
+		return true;
+	}
+
+	// Asking for separate meshes when the engine gives no way to switch merging off would fuse the
+	// import anyway; refusing before anything is claimed or downloaded is the honest answer.
+	if (Options.CombineMeshes.IsSet() && !Options.CombineMeshes.GetValue() && !McpFabInterchange::CanSeparateMeshes())
+	{
+		FMcpFabAddResult Unsupported;
+		Unsupported.ErrorCode = TEXT("COMBINE_UNSUPPORTED");
+		Unsupported.Error = TEXT("This engine's Interchange has no mesh-combining setting the adapter can reach, so it cannot import meshes separately. Omit combineMeshes, or pass combineMeshes=true to accept Fab's single merged mesh.");
+		OnAccepted(Unsupported);
 		return true;
 	}
 
@@ -189,11 +208,11 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 	FString Error;
 	FString ErrorCode;
 	const bool bDispatched = McpFabBridgeDispatch::Dispatch(
-		[&ListingId, &EngineVersion](const FString& RequestId)
+		[&ListingId, &EngineVersion, &Options](const FString& RequestId)
 		{
-			return BuildAddScript(RequestId, ListingId, EngineVersion);
+			return BuildAddScript(RequestId, ListingId, EngineVersion, Options.CombineMeshes);
 		},
-		[Before = MoveTemp(Before), OperationId, OnAccepted](bool bSuccess, const FString& Payload) mutable
+		[Before = MoveTemp(Before), OperationId, OnAccepted, Options](bool bSuccess, const FString& Payload) mutable
 		{
 			FMcpFabAddResult Result = ParseAddReply(bSuccess, Payload);
 			Result.OperationId = OperationId;
@@ -202,6 +221,11 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 				McpFabImportOperations::Finish(OperationId, Result);
 				OnAccepted(Result);
 				return;
+			}
+			// Only a listing Fab merges meshes for has anything to separate; the watcher works at it.
+			if (Options.CombineMeshes.IsSet() && !Options.CombineMeshes.GetValue() && Result.bMergesMeshes)
+			{
+				Result.MeshesSeparated = false;
 			}
 			// Accepted only means the URL was handed over. Unreal decides success, later, and the
 			// watcher records it under the operation id.

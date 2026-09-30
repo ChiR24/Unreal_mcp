@@ -33,6 +33,17 @@ struct FMcpFabDownloadResult
 	FString Error;
 };
 
+/** What the caller asked the add to do beyond importing the listing. */
+struct FMcpFabAddOptions
+{
+	/**
+	 * Unset leaves Fab's own behaviour, which merges every mesh in a source file into ONE static mesh.
+	 * false imports each mesh as its own asset; true accepts the single merged mesh explicitly, which a
+	 * scene-sized mesh file requires before it is downloaded at all.
+	 */
+	TOptional<bool> CombineMeshes;
+};
+
 /**
  * What one add-to-project request learned from Fab's page, and later how the import ended.
  *
@@ -64,6 +75,10 @@ struct FMcpFabAddResult
 	FString FileName;
 	/** Bytes of that file, or -1 when Fab publishes no size for it (unreal-engine packs). */
 	int64 DownloadBytes = -1;
+	/** True when Fab's importer for this listing merges every mesh of a file into ONE static mesh. */
+	bool bMergesMeshes = false;
+	/** Set only when the add asked for separate meshes: whether Interchange's combining was switched off in time. */
+	TOptional<bool> MeshesSeparated;
 };
 
 /** Where one background import stands. Read-only: assembled from the operation store on demand. */
@@ -162,6 +177,7 @@ public:
 	 */
 	virtual bool AddToProject(
 		const FString& ListingId,
+		const FMcpFabAddOptions& Options,
 		TFunction<void(const FMcpFabAddResult&)> OnAccepted) = 0;
 
 	/**
