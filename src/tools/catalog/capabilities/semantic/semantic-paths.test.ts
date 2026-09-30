@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
+import { clearEditorContentRoots, setEditorContentRoots } from '../../../../utils/paths/path-security.js';
 import { SemanticBoundaryError } from './errors.js';
 import { AssetPathSchema, ClassPathSchema, ObjectPathSchema, parseAssetPath } from './paths.js';
 
@@ -183,4 +184,47 @@ describe('valid single-colon :Property suffix is preserved (suffix splitting sup
     );
   });
 
+});
+
+describe('editor-reported content roots at the semantic path boundary', () => {
+  afterEach(() => {
+    clearEditorContentRoots();
+  });
+
+  it('accepts an asset path under a reported mount only while it is reported', () => {
+    expect(() => parseAssetPath('/ShooterCore/X')).toThrow(SemanticBoundaryError);
+    expect(AssetPathSchema.safeParse('/ShooterCore/X').success).toBe(false);
+
+    setEditorContentRoots(['/Game', '/ShooterCore']);
+    expect(parseAssetPath('/ShooterCore/X')).toBe('/ShooterCore/X');
+    expect(AssetPathSchema.safeParse('/ShooterCore/X').success).toBe(true);
+
+    clearEditorContentRoots();
+    expect(AssetPathSchema.safeParse('/ShooterCore/X').success).toBe(false);
+  });
+
+  it('matches asset-path roots case-insensitively, like sanitizePath, and keeps the root boundary', () => {
+    expect(parseAssetPath('/game/Foo')).toBe('/game/Foo');
+
+    setEditorContentRoots(['/Game', '/ShooterCore']);
+    expect(parseAssetPath('/shootercore/X')).toBe('/shootercore/X');
+    expect(AssetPathSchema.safeParse('/SHOOTERCORE').success).toBe(true);
+    expect(() => parseAssetPath('/shootercorex/X')).toThrow(SemanticBoundaryError);
+    expect(() => parseAssetPath('/gamex/Foo')).toThrow(SemanticBoundaryError);
+  });
+
+  it('names the configured roots, not every reported mount, in INVALID_PATH_ROOT', () => {
+    setEditorContentRoots(['/ShooterCore']);
+    expect(() => parseAssetPath('/Nope/X')).toThrow(
+      'Invalid path: must start with one of [/Game, /Engine, /Script, /Temp, /Niagara] or a content mount the connected editor reports',
+    );
+  });
+
+  it('accepts an object path under a reported mount only while it is reported', () => {
+    expect(ObjectPathSchema.safeParse('/ShooterCore/X.X').success).toBe(false);
+
+    setEditorContentRoots(['/Game', '/ShooterCore']);
+    expect(ObjectPathSchema.parse('/ShooterCore/X.X')).toBe('/ShooterCore/X.X');
+    expect(ObjectPathSchema.parse('/shootercore/X.X')).toBe('/ShooterCore/X.X');
+  });
 });

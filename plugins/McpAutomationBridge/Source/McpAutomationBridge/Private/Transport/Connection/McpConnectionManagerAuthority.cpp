@@ -87,6 +87,11 @@ void FMcpConnectionManager::SendBridgeAck(
 	Ack->SetStringField(TEXT("sessionId"), ActiveSessionId);
 	Ack->SetNumberField(TEXT("protocolVersion"), 1);
 
+	// The editor's mount table, so the TypeScript path allowlist has plugin and
+	// game-feature roots before the first request. Updates follow as
+	// content_roots_changed events (McpConnectionManagerContentRoots.cpp).
+	Ack->SetArrayField(TEXT("contentRoots"), McpBuildContentRootValues());
+
 	// Additive and secret-free: the resolved profile, its granted scopes, and
 	// boolean flags only. The token, the path prefixes and the numeric limits are
 	// never emitted.

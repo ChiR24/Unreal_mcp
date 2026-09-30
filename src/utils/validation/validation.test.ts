@@ -1,12 +1,12 @@
 /**
  * Unit tests for validation utility functions
  */
-import { describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import {
     sanitizeAssetName,
     normalizeAndSanitizeAssetPath
 } from './validation.js';
-import { sanitizePath } from '../paths/path-security.js';
+import { clearEditorContentRoots, sanitizePath, setEditorContentRoots } from '../paths/path-security.js';
 
 describe('sanitizeAssetName', () => {
     it('removes invalid characters', () => {
@@ -83,5 +83,24 @@ describe('sanitizePath', () => {
 
     it('preserves Niagara root paths', () => {
         expect(normalizeAndSanitizeAssetPath('/Niagara/Modules/EmitterState')).toBe('/Niagara/Modules/EmitterState');
+    });
+});
+
+describe('normalizeAndSanitizeAssetPath with editor-reported content roots', () => {
+    afterEach(() => {
+        clearEditorContentRoots();
+    });
+
+    it('treats a reported mount as a root instead of a folder under /Game', () => {
+        // Called before the roots are set, so the asset-root cache is warm and
+        // the test proves the update invalidates it.
+        expect(normalizeAndSanitizeAssetPath('/ShooterCore/Maps')).toBe('/Game/ShooterCore/Maps');
+
+        setEditorContentRoots(['/Game', '/ShooterCore']);
+        expect(normalizeAndSanitizeAssetPath('/ShooterCore/Maps')).toBe('/ShooterCore/Maps');
+        expect(normalizeAndSanitizeAssetPath('/shootercore/Maps')).toBe('/ShooterCore/Maps');
+
+        clearEditorContentRoots();
+        expect(normalizeAndSanitizeAssetPath('/ShooterCore/Maps')).toBe('/Game/ShooterCore/Maps');
     });
 });

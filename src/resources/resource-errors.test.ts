@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { MAX_BOUNDED_BYTES as MAX_RESOURCE_BYTES } from '../utils/paths/content-path-policy.js';
+import { clearEditorContentRoots, setEditorContentRoots } from '../utils/paths/path-security.js';
 import {
   RESOURCE_ERROR_CODES,
   ResourceError,
@@ -77,5 +78,29 @@ describe('resource-errors', () => {
     expect(redactProjectName('C:\\Users\\me\\MyGame.uproject')).toBe('MyGame');
     expect(redactProjectName('MyGame')).toBe('MyGame');
     expect(redactProjectName('/home/me/Proj/')).toBeUndefined();
+  });
+});
+
+describe('resource paths under editor-reported content roots', () => {
+  afterEach(() => {
+    clearEditorContentRoots();
+  });
+
+  it('accepts a reported mount only while the editor reports it', () => {
+    const expectInvalid = (): void => {
+      try {
+        normalizeContentPath('ue://asset/x', '/ShooterCore/X');
+        throw new Error('expected rejection for /ShooterCore/X');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ResourceError);
+        expect((error as ResourceError).code).toBe('RESOURCE_INVALID_URI');
+      }
+    };
+
+    expectInvalid();
+    setEditorContentRoots(['/Game', '/ShooterCore']);
+    expect(normalizeContentPath('ue://asset/x', '/ShooterCore/X')).toBe('/ShooterCore/X');
+    clearEditorContentRoots();
+    expectInvalid();
   });
 });

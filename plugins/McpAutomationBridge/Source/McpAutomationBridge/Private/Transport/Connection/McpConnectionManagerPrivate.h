@@ -14,6 +14,10 @@
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 
+// The editor's mounted content roots, no trailing slash, sorted
+// (McpConnectionManagerContentRoots.cpp). Sent in bridge_ack and content_roots_changed.
+TArray<TSharedPtr<FJsonValue>> McpBuildContentRootValues();
+
 // "key=value ..." log preview of Obj: strings quoted and cut to MaxString, arrays as [n], objects as {...},
 // image payload fields omitted. bRequest also drops type/requestId and redacts code.
 inline FString PreviewJsonFields(const TSharedPtr<FJsonObject>& Obj, int32 MaxString, bool bRequest) {

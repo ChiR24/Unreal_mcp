@@ -2,7 +2,7 @@
 
 WebSocket automation bridge only. The native `/mcp` HTTP/SSE transport is a SEPARATE lifecycle under `../MCP/Transport/` (see `../MCP/AGENTS.md`). Do not document or edit it here; do not route around either boundary.
 
-Two subdirs, 21 source files (`WebSocket/` 12, `Connection/` 9). The plugin only listens; it never dials out. `WebSocket/` owns sockets, framing, TLS, handshakes. `Connection/` owns the connection manager: auth, per-socket rate limits, request/socket correlation, cancellation, telemetry.
+Two subdirs, 22 source files (`WebSocket/` 12, `Connection/` 10). The plugin only listens; it never dials out. `WebSocket/` owns sockets, framing, TLS, handshakes. `Connection/` owns the connection manager: auth, per-socket rate limits, request/socket correlation, cancellation, telemetry.
 
 ## STRUCTURE
 
@@ -24,12 +24,13 @@ Connection/
 - `McpConnectionManagerCancellation.cpp` — request cancellation (scoped, advisory).
 - `McpConnectionManagerResponses.cpp` — response correlation back to the originating socket.
 - `McpConnectionManagerTelemetry.cpp` — connection telemetry.
+- `McpConnectionManagerContentRoots.cpp` — the editor's content roots for the TypeScript path allowlist (`bridge_ack.contentRoots`, `content_roots_changed`).
 
 ## CONNECTION LIFECYCLE
 
 1. **Bind gate** — `McpBridgeWebSocketServer.cpp` computes `bIsLoopback` (127.0.0.1 / ::1; `localhost` normalizes to 127.0.0.1). Loopback binds. Non-loopback binds ONLY if `bAllowNonLoopback` AND `bRequireCapabilityToken` both set; else destroys the listen socket and returns 0. No implicit `0.0.0.0` fallback.
 2. **Upgrade / origin** — `ServerHandshake` validates the HTTP upgrade. Any non-empty `Origin` header is rejected with close 4403 BEFORE `101 Switching Protocols`.
-3. **bridge_hello** — client MUST send `bridge_hello` first. Missing `capabilityToken` when required => `INVALID_CAPABILITY_TOKEN`, close 4005. Socket joins `AuthenticatedSockets`.
+3. **bridge_hello** — client MUST send `bridge_hello` first. Missing `capabilityToken` when required => `INVALID_CAPABILITY_TOKEN`, close 4005. Socket joins `AuthenticatedSockets`. The `bridge_ack` also carries `contentRoots` (the editor's mount table); mounts and dismounts are pushed as a `content_roots_changed` automation_event from the ticker, never from inside the engine's mount callback.
 4. **Token** — compared with `McpConstantTimeTokenEquals` (full UTF-8 span, XOR-accumulate, length folded in, no early exit).
 5. **Request** — `automation_request` before auth => `HANDSHAKE_REQUIRED`, close 4004. RequestId/Action mapped to socket for routing.
 6. **Response / heartbeat** — responses routed ONLY to the originating socket (never broadcast). Heartbeats cleaned up on disconnect.

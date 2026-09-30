@@ -8,6 +8,8 @@
 #include "Foundation/McpCapabilityPrincipal.h"
 #include "Foundation/McpLiveStateRevisions.h"
 
+#include <atomic>
+
 class FMcpBridgeWebSocket;
 class UMcpAutomationBridgeSettings;
 
@@ -50,6 +52,17 @@ public:
      * @param bStillWorking True if operation is still in progress (prevents stale detection)
      */
     void SendProgressUpdate(const FString& RequestId, float Percent = -1.0f, const FString& Message = TEXT(""), bool bStillWorking = true);
+
+	/**
+	 * Content-root reporting for the TypeScript path allowlist. bridge_ack carries the
+	 * snapshot (McpBuildContentRootValues); a mount or dismount marks it stale and the
+	 * next Tick sends one content_roots_changed automation_event to authenticated sockets.
+	 * Public so the automation tests can drive them without opening sockets.
+	 */
+	void SubscribeContentRootChanges();
+	void UnsubscribeContentRootChanges();
+	bool HasPendingContentRootsUpdate() const;
+	void FlushContentRootsUpdate();
 
 	void SetOnMessageReceived(FMcpMessageReceivedCallback InCallback);
 	void SetOnAutomationRequestCancelled(FMcpRequestCancelledCallback InCallback);
@@ -132,6 +145,10 @@ private:
 	TMap<FMcpBridgeWebSocket*, FMcpCapabilityPrincipal> SocketPrincipals;
 	TSet<FMcpBridgeWebSocket*> LogSubscriberSockets;
 	FTSTicker::FDelegateHandle TickerHandle;
+	void HandleContentPathChanged(const FString& RootPath, const FString& ContentPath);
+	FDelegateHandle ContentPathMountedHandle;
+	FDelegateHandle ContentPathDismountedHandle;
+	std::atomic<bool> bContentRootsDirty{false};
 	FMcpMessageReceivedCallback OnMessageReceived;
 	FMcpRequestCancelledCallback OnAutomationRequestCancelled;
 
