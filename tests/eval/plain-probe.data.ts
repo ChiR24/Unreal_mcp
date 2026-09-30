@@ -377,4 +377,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'create blueprint parent class', accepted: ['blueprint.create'] },
   { query: 'which meshes use this material', accepted: ['asset.inspect_asset'] },
   { query: 'look at the data table', accepted: ['datatable.inspect_data_table'] },
+  { query: 'animate widget scale', accepted: ['blueprint.edit_widget_animation'] },
+  { query: 'read live widget property', accepted: ['inspect.get_property'] },
+  { query: 'create camera shake', accepted: ['blueprint.create'] },
 ];

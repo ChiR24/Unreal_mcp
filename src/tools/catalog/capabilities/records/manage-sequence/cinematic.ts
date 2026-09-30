@@ -34,13 +34,13 @@ const sectionNameOutput = {
 
 // `spec` keeps the required list and the example values that satisfy it in one
 // place, so a track that requires an extra parameter cannot ship an example without it.
-function trackRecord(id: string, action: string, summary: string, extraProps: Record<string, unknown> = {}, spec: { required: string[]; example: JsonObject; requiredOneOf?: string[] } = { required: ['path'], example: {} }): CapabilityRecordSource {
-  const { required, example, requiredOneOf } = spec;
+function trackRecord(id: string, action: string, summary: string, extraProps: Record<string, unknown> = {}, spec: { required: string[]; example: JsonObject; requiredOneOf?: string[]; notFor?: string } = { required: ['path'], example: {} }): CapabilityRecordSource {
+  const { required, example, requiredOneOf, notFor } = spec;
   return buildRecord({
     id, action, family: F, domain: D,
     summary,
     whenToUse: [`${summary}`],
-    whenNotToUse: ['The track is not needed for this sequence.'],
+    whenNotToUse: ['The track is not needed for this sequence.', ...(notFor === undefined ? [] : [notFor])],
     inputProps: { path: P.path, save: A.save, ...extraProps },
     required,
     ...(requiredOneOf === undefined ? {} : { requiredOneOf }),
@@ -169,7 +169,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     id: 'sequence.cinematic.add_camera_shake_track', action: 'add_camera_shake_track', family: F, domain: D,
     summary: 'Add a camera shake track to a cinematic sequence.',
     whenToUse: ['Camera shake must be animated along the sequence.'],
-    whenNotToUse: ['No camera shake is needed.'],
+    whenNotToUse: ['No camera shake is needed.', 'The shake is gameplay feedback during play (a hit, a landing): create a Blueprint with parentClass /Script/EngineCameras.LegacyCameraShake (blueprint.create) and call PlayerCameraManager StartCameraShake from a graph (blueprint.edit_graph).'],
     // Native HandleAddCameraShakeTrack (CameraTracks.cpp) binds the track to
     // the cameraName actor, as Sequencer does; without it the track is unbound.
     inputProps: { path: P.path, cameraShakeClass: P.cameraShakeClass, cameraShakePath: A.cameraShakePath, cameraName: { type: 'string', description: 'Level actor with a camera component that the shake track is bound to.' }, ...SECTION_RANGE, save: A.save },
@@ -199,7 +199,8 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   trackRecord('sequence.cinematic.add_fade_track', 'add_fade_track',
     'Add a fade track for cinematic fade-in/fade-out transitions.',
-    { from: A.from, to: A.to, ...SECTION_RANGE }),
+    { from: A.from, to: A.to, ...SECTION_RANGE },
+    { required: ['path'], example: {}, notFor: 'The fade happens during play (level start, death, level change): call PlayerCameraManager StartCameraFade from a graph (blueprint.edit_graph).' }),
   trackRecord('sequence.cinematic.add_level_visibility_track', 'add_level_visibility_track',
     'Add a level visibility track to control level streaming during cinematic.',
     { levelNames: P.levelNames, visibility: A.visibility, ...SECTION_RANGE }),

@@ -127,7 +127,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_widget_animation', selector: 'edit',
     summary: 'Create a widget animation or add tracks and keyframes to it.',
-    topics: ['widget animation', 'animation track', 'animation keyframe', 'animate widget', 'slide in menu'],
+    topics: ['widget animation', 'animation track', 'animation keyframe', 'animate widget', 'slide in menu', 'animate widget scale', 'widget scale animation', 'pulse widget', 'pop a widget'],
     members: { create: 'create_widget_animation', add_track: 'add_animation_track', add_keyframe: 'add_animation_keyframe' },
   },
   {

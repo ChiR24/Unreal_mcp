@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fbe48b864b6054b5",
+  "catalogRevision": "08a1d070fb2cb4e3",
   "recordCount": 389,
   "records": [
     {
@@ -13151,6 +13151,8 @@
           "parent class",
           "blueprint from parent class",
           "child blueprint",
+          "camera shake class",
+          "camera shake blueprint",
           "get or create blueprint",
           "idempotent create",
           "create if missing"
@@ -13330,7 +13332,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8112f090ea714ad21412abd3693dda7805eb1c2b2e7645916731e3b9c2e807a0",
-        "content": "1ca5a33507b8761f65f0c8919ad330c227f7eb8c612d4ddcb8cd1d23360197c4"
+        "content": "8b4bdcc03d2133b4e542291c022b3ea0277bd4607563129c6e2484d307f07c4f"
       }
     },
     {
@@ -15734,7 +15736,11 @@
           "animation track",
           "animation keyframe",
           "animate widget",
-          "slide in menu"
+          "slide in menu",
+          "animate widget scale",
+          "widget scale animation",
+          "pulse widget",
+          "pop a widget"
         ],
         "summary": "Create a widget animation or add tracks and keyframes to it.",
         "whenToUse": [
@@ -15988,7 +15994,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "08e559dd30be22e0c4b263ced1391950bd64107b28ffd2df484106b88e3f3154",
-        "content": "ff8343132689bffd671e019ca54f78ba91bd9ff3b02c6fcae2737edefb9db705"
+        "content": "cc75ba085884985b69544d39960bf11aec395e7ba484c2e9f5fd54586e3f90bc"
       }
     },
     {
@@ -39649,7 +39655,9 @@
           "read field",
           "actor property",
           "object property",
-          "game instance variable"
+          "game instance variable",
+          "read live widget property",
+          "widget value during play"
         ],
         "summary": "Read a property value from a world actor, asset, or Blueprint CDO.",
         "whenToUse": [
@@ -39772,7 +39780,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "722ee319a0e5863f5e7673f7aea9afc0feafb484991b586736d064635a35564a",
-        "content": "48f352efc436b46666e028192a6f750960f2719bf338d8b1b61b7682e4d4fc27"
+        "content": "dfa42a6977b08b795533b6207efaf24a8f5537672e04f68195be43cb99011930"
       }
     },
     {
@@ -77663,7 +77671,9 @@
         "whenNotToUse": [
           "trackKind=camera_cut: The sequence already has a camera cut track.",
           "trackKind=camera_shake: No camera shake is needed.",
+          "trackKind=camera_shake: The shake is gameplay feedback during play (a hit, a landing): create a Blueprint with parentClass /Script/EngineCameras.LegacyCameraShake (blueprint.create) and call PlayerCameraManager StartCameraShake from a graph (blueprint.edit_graph).",
           "trackKind=transform|property|skeletal_animation|material_parameter|particle|event|fade|level_visibility: The track is not needed for this sequence.",
+          "trackKind=fade: The fade happens during play (level start, death, level change): call PlayerCameraManager StartCameraFade from a graph (blueprint.edit_graph).",
           "trackKind=shot: The master sequence already has a shot track.",
           "trackKind=subsequence: The sequence should remain flat."
         ]
@@ -78052,7 +78062,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "59c8648242c2d3b60b256b4b026b6439e7d56194c06a16ca4b1da178e050102a",
-        "content": "5fd753771e1769d12cb7881ce7570254f9d22bfa22794113cc5b014ec27f8ace"
+        "content": "9445f602b6d3538a5f19a58dd56ee783f793e66fbc47afa4c2ed5a5685feac7d"
       }
     },
     {
