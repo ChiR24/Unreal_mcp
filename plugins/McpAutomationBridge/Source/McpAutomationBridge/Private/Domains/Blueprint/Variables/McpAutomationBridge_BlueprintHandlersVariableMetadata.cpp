@@ -160,6 +160,8 @@ bool HandleBlueprintSetVariableMetadata(const FBlueprintActionContext &Context) 
       Resp->SetObjectField(TEXT("metadata"),
                            Snapshot->GetObjectField(TEXT("metadata")));
     }
+    // Without assetPath the receipt listed no change though the Blueprint was modified and saved.
+    McpHandlerUtils::AddVerification(Resp, Blueprint);
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Variable metadata applied"), Resp, FString());

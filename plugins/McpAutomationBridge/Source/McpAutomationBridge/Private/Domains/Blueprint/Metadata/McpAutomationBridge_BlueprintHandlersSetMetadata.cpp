@@ -96,6 +96,7 @@ bool HandleBlueprintSetMetadata(const FBlueprintActionContext &Context) {
     }
     Resp->SetArrayField(TEXT("metadataSet"), MetaArray);
     Resp->SetBoolField(TEXT("saved"), bSaved);
+    McpHandlerUtils::AddVerification(Resp, BP);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                            TEXT("Metadata set"), Resp, FString());
     return true;

@@ -342,3 +342,14 @@ describe('arrange_nodes moves listed nodes beside what they are wired to', () =>
     expect(read('Core', 'Subsystem', 'McpAutomationBridgeSubsystemHandlerRegistration.cpp')).toContain('TEXT("arrange_nodes")');
   });
 });
+
+// set_variable_metadata (ExposeOnSpawn on BP_FloatText.Tint) saved the Blueprint but replied without assetPath,
+// so the receipt listed no change; set_metadata had the same gap.
+describe('Blueprint metadata writes name the Blueprint they changed', () => {
+  it('both metadata handlers add the asset verification fields', () => {
+    expect(read('Domains', 'Blueprint', 'Variables', 'McpAutomationBridge_BlueprintHandlersVariableMetadata.cpp'))
+      .toContain('McpHandlerUtils::AddVerification(Resp, Blueprint);');
+    expect(read('Domains', 'Blueprint', 'Metadata', 'McpAutomationBridge_BlueprintHandlersSetMetadata.cpp'))
+      .toContain('McpHandlerUtils::AddVerification(Resp, BP);');
+  });
+});
