@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7624174eaedad58e",
+  "catalogRevision": "f082122c9f5cfc39",
   "recordCount": 389,
   "records": [
     {
@@ -35404,7 +35404,10 @@
           "close editor",
           "exit editor",
           "unsaved packages",
-          "list unsaved changes"
+          "list unsaved changes",
+          "list unsaved assets",
+          "list dirty packages",
+          "what is unsaved"
         ],
         "summary": "Restart the editor process, relaunching the same project, or close it (relaunch false). validateOnly lists the unsaved packages without doing either.",
         "whenToUse": [
@@ -35561,7 +35564,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "86e93b77400f13ec76559419d592f30ee502196699f3d988013baf52f87f22cf",
-        "content": "eb4f6a11503ee6bdf0e5b4a8066780b8a835906285b5fdb136c75d51a1fe9cfb"
+        "content": "208ae8ee97c853c3f1835d0bef5e3e6a24b4517865b91f170ca429651bc67543"
       }
     },
     {
