@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
+import { inferSelector, unreadVariantParams } from '../../../src/server/gateway/gateway-dispatch-by.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 import { sliceBetween } from './plugin-contract-fixtures.js';
@@ -517,5 +518,59 @@ describe('an edit_scs add takes its class from componentType as well as componen
 
   it('the record lists componentType beside componentClass for an add', () => {
     expect(paramDescription('blueprint.edit_scs', 'operations')).toContain('componentClass (or componentType)');
+  });
+});
+
+// A top-level componentType on edit=modify worked (the promotion of a single-component payload reads it) but the
+// record declared it only for the add variants, so the receipt warned that the call "did not use it".
+describe('the edit_scs record names every variant that reads a class or attach parameter, so the unread warning is true', () => {
+  const scs = (file: string): string => read('Domains', 'Blueprint', 'Components', file);
+  const record = () => {
+    const found = capabilityIndex().byId.get('blueprint.edit_scs');
+    if (found === undefined) throw new Error('blueprint.edit_scs is not in the catalogue');
+    return found;
+  };
+  const owners = (name: string): readonly string[] | undefined => record().routing.dispatchBy?.declaredBy?.[name];
+  const unread = (sent: readonly string[], edit: string): readonly string[] => unreadVariantParams(record(), sent, { edit });
+
+  it('componentClass, componentType and attachTo are declared by both adds and by modify, whose top-level payload can be an add', () => {
+    for (const name of ['componentClass', 'componentType', 'attachTo']) {
+      expect(owners(name), name).toEqual(['add_scs_component', 'add_component', 'modify']);
+    }
+    expect(owners('parentComponent')).toEqual(['add_scs_component', 'add_component']);
+  });
+
+  it('a call that used them draws no warning, whichever of those variants ran', () => {
+    for (const edit of ['add_scs_component', 'add_component', 'modify']) {
+      expect(unread(['componentClass', 'componentType', 'attachTo'], edit), edit).toEqual([]);
+    }
+    for (const edit of ['add_scs_component', 'add_component']) {
+      expect(unread(['parentComponent'], edit), edit).toEqual([]);
+    }
+  });
+
+  it('a variant that reads none of them still gets the warning', () => {
+    for (const edit of ['reparent', 'set_property', 'set_transform']) {
+      expect(unread(['componentType'], edit), edit).toEqual([
+        expect.stringMatching(/^componentType is read only when edit is add_scs_component or add_component or modify; this edit=\w+ call did not use it\.$/u),
+      ]);
+    }
+    expect(unread(['parentComponent'], 'modify')).toHaveLength(1);
+  });
+
+  it('a call that leaves edit out and sends operations beside a class runs the batch variant; a plain add stays on the default', () => {
+    expect(inferSelector(record(), { blueprintPath: '/Game/BP_X', componentType: 'SceneComponent', operations: [] }).edit).toBe('modify');
+    expect(inferSelector(record(), { blueprintPath: '/Game/BP_X', componentName: 'C', componentType: 'SceneComponent' })).not.toHaveProperty('edit');
+  });
+
+  it('the handlers read what the record declares for those variants', () => {
+    const single = scs('McpAutomationBridge_BlueprintHandlersScsAddComponent.cpp');
+    const batchAdd = sliceBetween(scs('McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp'), 'void ApplyModifyScsAddComponent(', 'void ApplyModifyScsComponentOperation(');
+
+    expect(single).toContain('const FString ComponentClass = ScsOpComponentClass(Payload);');
+    expect(single).toContain('ScsFirstOf(Payload, TEXT("parent_component"), TEXT("parentComponent"))');
+    expect(single).toContain('ParentName = ScsFieldOrEmpty(Payload, TEXT("attachTo"));');
+    expect(scs('McpAutomationBridge_BlueprintHandlersModifyScsState.cpp')).toContain('const bool bIsAdd = !ScsOpComponentClass(Op).IsEmpty();');
+    expect(batchAdd).toContain('Op->TryGetStringField(TEXT("attachTo"), AttachToName);');
   });
 });

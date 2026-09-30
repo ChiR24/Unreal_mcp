@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "39cd9aaab53b680d",
+  "catalogRevision": "3d0272961fa2815f",
   "recordCount": 389,
   "records": [
     {
@@ -15529,6 +15529,10 @@
               "type": "string",
               "description": "Component class path for SCS node creation."
             },
+            "componentType": {
+              "type": "string",
+              "description": "Component class name to add."
+            },
             "componentName": {
               "type": "string",
               "description": "Name for the SCS component node."
@@ -15536,6 +15540,10 @@
             "parentComponent": {
               "type": "string",
               "description": "Parent SCS node name for reparenting."
+            },
+            "attachTo": {
+              "type": "string",
+              "description": "Socket or parent component to attach to."
             },
             "meshPath": {
               "type": "string",
@@ -15568,14 +15576,6 @@
               "description": "Property bag applied to the CDO, component template, or node.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
-            },
-            "componentType": {
-              "type": "string",
-              "description": "Component class name to add."
-            },
-            "attachTo": {
-              "type": "string",
-              "description": "Socket or parent component to attach to."
             },
             "compile": {
               "type": "boolean",
@@ -15746,10 +15746,22 @@
           "declaredBy": {
             "componentClass": [
               "add_scs_component",
-              "add_component"
+              "add_component",
+              "modify"
+            ],
+            "componentType": [
+              "add_scs_component",
+              "add_component",
+              "modify"
             ],
             "parentComponent": [
-              "add_scs_component"
+              "add_scs_component",
+              "add_component"
+            ],
+            "attachTo": [
+              "add_scs_component",
+              "add_component",
+              "modify"
             ],
             "meshPath": [
               "add_scs_component",
@@ -15784,12 +15796,6 @@
               "add_component",
               "modify"
             ],
-            "componentType": [
-              "add_component"
-            ],
-            "attachTo": [
-              "add_component"
-            ],
             "compile": [
               "modify"
             ],
@@ -15817,7 +15823,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ad67dcc837765774e687efa88982897a2e0d3e277b6806980cb32a6b3c50c7ec",
-        "content": "8524fde6b25b0b3e44af34db866771c58014480ca142ee32a9f214f136f4138f"
+        "content": "0561c08b7fae860b9a08bc5c9b38ac83bf3546775d398f3bad0586fc6d4b46b4"
       }
     },
     {

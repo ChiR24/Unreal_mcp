@@ -25,12 +25,14 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     // One native implementation serves add_component and add_scs_component
     // (ScsAddComponent.cpp): both add an SCS-owned template and read the same
-    // fields, so both declare them.
+    // fields (the class as componentClass or componentType, the parent as
+    // parentComponent or attachTo), so both declare them. A field one of them
+    // left out drew the receipt's "did not use it" warning for a call that used it.
     summary: 'Add a component to a Blueprint (the same SCS template add_scs_component adds), optionally attached, placed, meshed and configured.',
     whenToUse: ['A component must be added to a Blueprint under the add_component verb.'],
     whenNotToUse: ['Several components or other SCS edits must be batched (use modify_scs).'],
     inputProps: {
-      blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, attachTo: P.attachTo, properties: P.properties,
+      blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, parentComponent: P.parentComponent, attachTo: P.attachTo, properties: P.properties,
       meshPath: P.meshPath, materialPath: P.materialPath, location: P.location, rotation: P.rotation, scale: P.scale,
     },
     required: ['blueprintPath', 'componentClass', 'componentName'],
@@ -54,7 +56,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: ['A component template must be owned by the SCS tree for instanced property overrides.'],
     whenNotToUse: ['A non-template component instance is sufficient (use add_component).'],
     inputProps: {
-      blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentName: P.componentName, parentComponent: P.parentComponent, meshPath: P.meshPath, materialPath: P.materialPath,
+      blueprintPath: P.blueprintPath, componentClass: P.componentClass, componentType: P.componentType, componentName: P.componentName, parentComponent: P.parentComponent, attachTo: P.attachTo, meshPath: P.meshPath, materialPath: P.materialPath,
       location: P.location, rotation: P.rotation, scale: P.scale, properties: P.properties,
     },
     required: ['blueprintPath', 'componentClass', 'componentName'],
@@ -84,8 +86,13 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['Only a single property is needed (use set_scs_property).'],
     // Either an operations batch, or one component described at the top level
     // (componentName plus location, rotation, scale, meshPath, materialPath or
-    // properties), which the handler runs as a single modify op.
+    // properties), which the handler runs as a single modify op, or as an add
+    // when it also names its class (componentClass or componentType) and, under
+    // a parent, attachTo. The handler reads those three for that add, so they
+    // are declared here too: left out, the receipt warned that a call which
+    // used them "did not use it".
     inputProps: {
+      componentClass: P.componentClass, componentType: P.componentType, attachTo: P.attachTo,
       location: P.location, rotation: P.rotation, scale: P.scale, properties: P.properties, meshPath: P.meshPath, materialPath: P.materialPath,
       compile: { type: 'boolean', description: 'Compile the Blueprint after the operations (default false; applyAndSave also compiles).' },
       save: { type: 'boolean', description: 'Save the Blueprint after the operations (default true, so the edit survives an editor restart); applyAndSave overrides it.' },
