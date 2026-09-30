@@ -83,7 +83,7 @@ bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const F
     if (Payload->TryGetArrayField(TEXT("parameters"), Entries) && Entries->Num() > 0) {
       TArray<TSharedPtr<FJsonValue>> Results;
       TArray<FString> Failed;
-      ApplyMaterialParameterList(Bridge, RequestId, NewInstance->GetOutermost()->GetName(), *Entries, Socket, Results, Failed);
+      ApplyMaterialParameterList(Bridge, RequestId, NewInstance->GetOutermost()->GetName(), *Entries, Payload, Socket, Results, Failed);
       Result->SetArrayField(TEXT("parameters"), Results);
       if (Failed.Num() > 0) {
         Bridge->SendAutomationResponse(Socket, RequestId, false,

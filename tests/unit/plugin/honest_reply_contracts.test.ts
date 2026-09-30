@@ -175,6 +175,21 @@ describe('handlers answer what they did', () => {
     expect(setter.split('McpHandlerUtils::AddVerification(Result,'), 'the instance branch and the base material branch').toHaveLength(3);
   });
 
+  // The parameter setter reads save from its own payload and a list entry carries only its own fields, so a
+  // save:false given once for the call was dropped and every entry saved the asset.
+  it('a parameters list gives every entry the call\'s own save flag unless the entry names one', () => {
+    const list = code('MaterialAuthoring', 'Parameters', 'McpAutomationBridge_MaterialAuthoringHandlersSetMaterialParameter.cpp');
+    const create = code('MaterialAuthoring', 'Creation', 'McpAutomationBridge_MaterialAuthoringHandlersCreateMaterialInstance.cpp');
+    const setter = code('MaterialAuthoring', 'Parameters', 'McpAutomationBridge_MaterialAuthoringParameterValue.cpp');
+
+    expect(setter).toContain('Payload->TryGetBoolField(TEXT("save"), bSave);');
+    expect(list).toMatch(
+      /One->SetStringField\(TEXT\("assetPath"\), AssetPath\);\s*if \(Shared\.IsValid\(\) && !One->HasField\(TEXT\("save"\)\) && Shared->HasField\(TEXT\("save"\)\)\) \{\s*One->SetField\(TEXT\("save"\), Shared->TryGetField\(TEXT\("save"\)\)\);\s*\}/u
+    );
+    expect(list).toMatch(/ApplyMaterialParameterList\(Bridge, RequestId, GetJsonStringField\(Payload, TEXT\("assetPath"\)\), \*Entries, Payload, Socket,/u);
+    expect(create).toMatch(/ApplyMaterialParameterList\(Bridge, RequestId, NewInstance->GetOutermost\(\)->GetName\(\), \*Entries, Payload, Socket,/u);
+  });
+
   // disconnect_nodes answered "Disconnect operation completed." with nothing unplugged.
   it('disconnect_nodes fails when no pin matched and unplugs a custom node input by label', () => {
     const source = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersDisconnectNodes.cpp');

@@ -3,7 +3,7 @@
 
 namespace McpMaterialAuthoringHandlers
 {
-void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath)
+void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& AssetPath, const TArray<TSharedPtr<FJsonValue>>& Entries, const TSharedPtr<FJsonObject>& Shared, TSharedPtr<FMcpBridgeWebSocket> Socket, TArray<TSharedPtr<FJsonValue>>& OutResults, TArray<FString>& OutFailed, FString* OutChangedAssetPath)
 {
   FMcpResponseCaptureRegistry& Capture = FMcpResponseCaptureRegistry::Get();
   for (int32 Index = 0; Index < Entries.Num(); ++Index) {
@@ -14,6 +14,11 @@ void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FSt
     }
     One->RemoveField(TEXT("parameters"));
     One->SetStringField(TEXT("assetPath"), AssetPath);
+    // The setter reads save from its own payload, so a save:false given once for the whole call has to be
+    // copied in; every entry saved the asset whatever the caller said.
+    if (Shared.IsValid() && !One->HasField(TEXT("save")) && Shared->HasField(TEXT("save"))) {
+      One->SetField(TEXT("save"), Shared->TryGetField(TEXT("save")));
+    }
     const FString Name = GetJsonStringField(One, TEXT("parameterName"));
     const FString ItemId = FString::Printf(TEXT("%s#param%d"), *RequestId, Index);
     Capture.Begin(ItemId);
@@ -47,7 +52,7 @@ bool HandleSetMaterialParameter(UMcpAutomationBridgeSubsystem* Bridge, const FSt
       TArray<TSharedPtr<FJsonValue>> Results;
       TArray<FString> Failed;
       FString ChangedAsset;
-      ApplyMaterialParameterList(Bridge, RequestId, GetJsonStringField(Payload, TEXT("assetPath")), *Entries, Socket, Results, Failed, &ChangedAsset);
+      ApplyMaterialParameterList(Bridge, RequestId, GetJsonStringField(Payload, TEXT("assetPath")), *Entries, Payload, Socket, Results, Failed, &ChangedAsset);
       TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
       Data->SetArrayField(TEXT("parameters"), Results);
       Data->SetNumberField(TEXT("applied"), Results.Num() - Failed.Num());
