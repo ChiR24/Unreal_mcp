@@ -77,7 +77,9 @@ FMcpCapturedResponse RunPlacedStep(const FActionContext& Parent, FBatchState& St
                                    const FString& StepId, FString& OutPins)
 {
     const bool bCreates = Edit == TEXT("create_node") || Edit == TEXT("create_reroute_node");
-    const bool bAuto = bCreates && !Payload->HasField(TEXT("posX")) && !Payload->HasField(TEXT("x"));
+    // add_event reads posX/posY too: without them its node landed on the graph origin, over whatever sat there.
+    const bool bAuto = (bCreates || Edit == TEXT("add_event")) && !Payload->HasField(TEXT("posX")) &&
+                       !Payload->HasField(TEXT("x"));
     if (bAuto)
     {
         PlaceOnGrid(State, Payload);

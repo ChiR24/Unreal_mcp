@@ -100,7 +100,8 @@ static TArray<TSharedPtr<FJsonValue>> McpExecChain(UEdGraphNode* Start, int32 Li
                 TSharedPtr<FJsonObject> Inputs = McpHandlerUtils::CreateResultObject();
                 for (UEdGraphPin* In : Next->Pins)
                 {
-                    if (!In || In->Direction != EGPD_Input || In->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+                    // Hidden pins (a library call's self, LatentInfo, WorldContextObject) are plumbing, not inputs.
+                    if (!In || In->bHidden || In->Direction != EGPD_Input || In->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
                     {
                         continue;
                     }

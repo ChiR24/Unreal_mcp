@@ -253,3 +253,15 @@ describe('an add_event batch step lists the pins of the event it made', () => {
       .toContain('DescribeNodePins(Step.TargetGraph ? Step.FindNode(Guid) : FindBatchNode(Parent.Blueprint, Guid))');
   });
 });
+
+// A HitStop event added by a batch sat at (0, 0), over whatever the graph had at its origin.
+describe('an add_event batch step without a position takes an auto grid slot', () => {
+  it('places add_event like a create step', () => {
+    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp'))
+      .toContain('(bCreates || Edit == TEXT("add_event")) && !Payload->HasField(TEXT("posX"))');
+  });
+
+  it('keeps hidden pins (a library call\'s self, LatentInfo) out of a chain\'s inputs', () => {
+    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersDetails.cpp')).toContain('In->bHidden');
+  });
+});
