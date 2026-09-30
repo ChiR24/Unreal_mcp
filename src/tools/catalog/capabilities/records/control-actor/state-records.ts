@@ -10,6 +10,8 @@ const FAMILY_VISIBILITY = 'visibility';
 const FAMILY_QUERY = 'query';
 const COMPONENT_NAMES = { type: 'array', items: { type: 'string' }, description: 'Return only these components, by name (case-insensitive); a name that matches none is listed under missingComponents.' };
 const MISSING_COMPONENTS = { type: 'array', items: { type: 'string' }, description: 'componentNames that matched no component.' };
+// set_visibility and its alias share one handler, so both declare the many-actor form.
+const VISIBILITY_ACTOR_NAMES = { type: 'array', items: { type: 'string' }, description: 'Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing.' };
 // The listed rows of control_actor.list: the shared matched-actor row, plus the distance near adds.
 const LISTED_ACTORS = {
   ...P.actors,
@@ -37,11 +39,12 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_VISIBILITY,
     topics: ['hide actor', 'show actor', 'toggle visibility', 'hidden in game', 'make actor invisible', 'unhide actor'],
     aliases: ['control_actor.hide_actor', 'control_actor.show_actor'],
-    summary: 'Toggle the visibility of an actor in the level.',
-    whenToUse: ['An actor must be shown or hidden without being deleted.'],
+    summary: 'Toggle the visibility of an actor in the level, or of many actors at once with actorNames.',
+    whenToUse: ['An actor must be shown or hidden without being deleted.', 'Many actors must be shown or hidden together (actorNames does them in one call).'],
     whenNotToUse: ['The actor should be removed (use delete).'],
-    inputProps: { actorName: P.actorName, visible: P.visible },
-    required: ['actorName'],
+    inputProps: { actorName: P.actorName, actorNames: VISIBILITY_ACTOR_NAMES, visible: P.visible },
+    required: [],
+    requiredOneOf: ['actorName', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_visibility', actorName: 'Cube1', visible: false },
@@ -54,8 +57,9 @@ export const STATE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Alias of set_visibility. The bridge dispatches both names to the same handler.',
     whenToUse: ['Preferred when callers use the explicit set_actor_visible verb.'],
     whenNotToUse: ['Use set_visibility to avoid alias normalization.'],
-    inputProps: { actorName: P.actorName, visible: P.visible },
-    required: ['actorName'],
+    inputProps: { actorName: P.actorName, actorNames: VISIBILITY_ACTOR_NAMES, visible: P.visible },
+    required: [],
+    requiredOneOf: ['actorName', 'actorNames'],
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     exampleInput: { action: 'set_actor_visible', actorName: 'Cube1', visible: true },

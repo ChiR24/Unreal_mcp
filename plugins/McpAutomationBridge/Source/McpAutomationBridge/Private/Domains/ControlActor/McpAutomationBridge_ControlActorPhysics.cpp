@@ -107,51 +107,88 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetCollision(
     bCollisionEnabled = GetJsonBoolField(Payload, TEXT("collision_enabled"), true);
   }
 
-  if (ActorName.IsEmpty()) {
-    SendAutomationError(Socket, RequestId, TEXT("actorName is required"), TEXT("MISSING_PARAM"));
+  // actorNames: many actors in one call (a level's trigger volumes took one call each). Names that
+  // matched nothing are listed back, as add_tag lists them; the single-actor replies are unchanged.
+  TArray<AActor*> Actors;
+  TArray<FString> Missing;
+  const bool bMany = McpResolveActorNames(
+      Payload, [this](const FString& Name) { return FindActorByName(Name); }, Actors, Missing);
+  if (bMany && Actors.Num() == 0) {
+    McpSendNoActorNamesFound(this, Socket, RequestId, Missing);
     return true;
   }
-
-  AActor* Actor = FindActorByName(ActorName);
-  if (!Actor) {
-    SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
-    return true;
+  if (!bMany) {
+    if (ActorName.IsEmpty()) {
+      SendAutomationError(Socket, RequestId, TEXT("actorName (or actorNames) is required"), TEXT("MISSING_PARAM"));
+      return true;
+    }
+    AActor* Found = FindActorByName(ActorName);
+    if (!Found) {
+      SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
+      return true;
+    }
+    Actors.Add(Found);
   }
 
   // Two-part fix: (1) flip the authoritative actor-level switch, (2) apply the
   // collision mode to EVERY primitive component, not just the root. The old
   // root-only loop silently skipped attached components (e.g. a DynamicMesh
   // actor's component chain) and reported success while nothing changed.
-  Actor->SetActorEnableCollision(bCollisionEnabled);
-
-  TInlineComponentArray<UPrimitiveComponent*> PrimComponents(Actor);
   int32 Updated = 0;
-  for (UPrimitiveComponent* PrimComp : PrimComponents)
+  TArray<FString> NoComponent;
+  for (AActor* Actor : Actors)
   {
-    if (!PrimComp)
+    Actor->SetActorEnableCollision(bCollisionEnabled);
+    TInlineComponentArray<UPrimitiveComponent*> PrimComponents(Actor);
+    int32 OnActor = 0;
+    for (UPrimitiveComponent* PrimComp : PrimComponents)
     {
-      continue;
+      if (!PrimComp)
+      {
+        continue;
+      }
+      PrimComp->SetCollisionEnabled(
+          bCollisionEnabled ? ECollisionEnabled::QueryAndPhysics
+                            : ECollisionEnabled::NoCollision);
+      PrimComp->MarkRenderStateDirty();
+      ++OnActor;
     }
-    PrimComp->SetCollisionEnabled(
-        bCollisionEnabled ? ECollisionEnabled::QueryAndPhysics
-                          : ECollisionEnabled::NoCollision);
-    PrimComp->MarkRenderStateDirty();
-    ++Updated;
+    if (OnActor == 0)
+    {
+      NoComponent.Add(McpActorRef(Actor));
+    }
+    Updated += OnActor;
   }
 
   if (Updated == 0)
   {
     SendAutomationError(Socket, RequestId,
-        FString::Printf(TEXT("Actor '%s' has no primitive components to configure"), *ActorName),
+        bMany ? FString::Printf(TEXT("No named actor has a primitive component to configure: %s"),
+                                *FString::Join(NoComponent, TEXT(", ")))
+              : FString::Printf(TEXT("Actor '%s' has no primitive components to configure"), *ActorName),
         TEXT("NO_COMPONENT"));
     return true;
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetBoolField(TEXT("collisionEnabled"), bCollisionEnabled);
   Data->SetNumberField(TEXT("componentsUpdated"), Updated);
-  McpHandlerUtils::AddVerification(Data, Actor);
-  SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Collision setting updated"), Data);
+  if (!bMany)
+  {
+    Data->SetStringField(TEXT("actorName"), ActorName);
+    McpHandlerUtils::AddVerification(Data, Actors[0]);
+    SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Collision setting updated"), Data);
+    return true;
+  }
+  Data->SetNumberField(TEXT("updatedActors"), Actors.Num() - NoComponent.Num());
+  Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  if (NoComponent.Num() > 0)
+  {
+    Data->SetArrayField(TEXT("noPrimitiveComponents"), McpHandlerUtils::ToJsonStringArray(NoComponent));
+  }
+  SendStandardSuccessResponse(this, Socket, RequestId,
+      FString::Printf(TEXT("Collision set on %d actor(s); %d not found"), Actors.Num() - NoComponent.Num(),
+                      Missing.Num()),
+      Data);
   return true;
 }

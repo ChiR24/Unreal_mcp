@@ -108,6 +108,63 @@ inline bool McpActorMatchesListFilters(const AActor *Actor, const FString &Tag,
          ActorFolder.StartsWith(Folder + TEXT("/"), ESearchCase::IgnoreCase);
 }
 
+// The many-actor form of an action: the actors an `actorNames` array names, each once and in order,
+// and the names that matched no actor. False, with nothing filled, when the payload has no
+// non-empty actorNames. Find is the subsystem's FindActorByName (a private member, so each handler
+// hands it in). add_tag, set_visibility and set_actor_collision all take the list through this.
+inline bool McpResolveActorNames(const TSharedPtr<FJsonObject> &Payload,
+                                 TFunctionRef<AActor *(const FString &)> Find,
+                                 TArray<AActor *> &OutActors, TArray<FString> &OutMissing) {
+  const TArray<FString> Names = McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames"));
+  for (const FString &Name : Names) {
+    if (AActor *Actor = Find(Name)) {
+      OutActors.AddUnique(Actor);
+    } else {
+      OutMissing.Add(Name);
+    }
+  }
+  return Names.Num() > 0;
+}
+
+// The refusal for an actorNames list none of whose names matched an actor; they go back in `missing`.
+inline void McpSendNoActorNamesFound(UMcpAutomationBridgeSubsystem *Bridge,
+                                     TSharedPtr<FMcpBridgeWebSocket> Socket, const FString &RequestId,
+                                     const TArray<FString> &Missing) {
+  TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
+  Details->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  SendStandardErrorResponse(Bridge, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                            FString::Printf(TEXT("None of actorNames was found: %s"),
+                                            *FString::Join(Missing, TEXT(", "))),
+                            Details);
+}
+
+// set_visibility, one actor: its own flags, then every primitive component's. True when the actor
+// reads back as asked.
+inline bool McpApplyActorVisibility(AActor *Actor, bool bVisible) {
+  Actor->SetActorHiddenInGame(!bVisible);
+  Actor->SetActorEnableCollision(bVisible);
+  for (UActorComponent *Comp : Actor->GetComponents()) {
+    if (UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Comp)) {
+      Prim->SetVisibility(bVisible, true);
+      Prim->SetHiddenInGame(!bVisible);
+    }
+  }
+  Actor->MarkComponentsRenderStateDirty();
+  Actor->MarkPackageDirty();
+  return Actor->IsHidden() == !bVisible;
+}
+
+// What that change mutates, for the undo transaction: the actor and each primitive component.
+// Capturing only the actor would let undo restore half the change.
+inline void McpAddVisibilityUndoSet(AActor *Actor, TArray<UObject *> &Undoable) {
+  Undoable.Add(Actor);
+  for (UActorComponent *Comp : Actor->GetComponents()) {
+    if (UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Comp)) {
+      Undoable.Add(Prim);
+    }
+  }
+}
+
 // sample_motion's timeline (McpAutomationBridge_ControlActorMotionInputs.cpp).
 // A caller timing a jump over two calls lost 1-2 game seconds to its own delay
 // between them, so the timing has to live inside the run: keys pressed at game

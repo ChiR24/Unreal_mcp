@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
+import { sliceBetween } from './plugin-contract-fixtures.js';
+
 const DOMAIN = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'ControlActor');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -155,5 +157,91 @@ describe('find_by_name offers similar labels when nothing matches', () => {
     expect(source).toContain('if (Matches.Num() == 0) {');
     expect(source).toContain('FChar::IsAlnum(In[I]) && !bLeadingZero');
     expect(source).toContain('Data->SetArrayField(TEXT("similar"), SimilarValues);');
+  });
+});
+
+// Hiding seventeen actors took thirty-four calls: set_visibility and set_actor_collision took one actorName
+// each, while add_tag already took actorNames and listed the names it could not find.
+describe('set_visibility and set_actor_collision take many actors in one call, as add_tag does', () => {
+  const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
+  const from = (file: string, marker: string): string => {
+    const source = read(file);
+    return source.slice(source.indexOf(marker));
+  };
+  const visibility = (): string => from('McpAutomationBridge_ControlActorTransform.cpp', 'HandleControlActorSetVisibility(');
+  const collision = (): string => from('McpAutomationBridge_ControlActorPhysics.cpp', 'HandleControlActorSetCollision(');
+  const addTag = (): string => sliceBetween(read('McpAutomationBridge_ControlActorTags.cpp'), 'HandleControlActorAddTag(', 'HandleControlActorRemoveTag(');
+
+  it('one helper resolves the list, once per actor, and names what matched nothing; add_tag shares it', () => {
+    const helper = sliceBetween(support(), 'inline bool McpResolveActorNames(', 'inline void McpSendNoActorNamesFound(');
+
+    expect(helper).toContain('McpHandlerUtils::GetStringArrayField(Payload, TEXT("actorNames"))');
+    expect(helper).toContain('OutActors.AddUnique(Actor);');
+    expect(helper).toContain('OutMissing.Add(Name);');
+    expect(helper).toContain('return Names.Num() > 0;');
+    for (const [name, source] of [['add_tag', addTag()], ['set_visibility', visibility()], ['set_actor_collision', collision()]] as const) {
+      expect(source, name).toMatch(/McpResolveActorNames\(\s*(?:Payload|Payload, \[this\])/u);
+      expect(source, name).toMatch(/\[this\]\(const FString ?& ?Name\) \{ return FindActorByName\(Name\); \}/u);
+    }
+    expect(read('McpAutomationBridge_ControlActorTags.cpp'), 'add_tag no longer carries its own copy of the list').not.toContain('TryGetArrayField(TEXT("actorNames")');
+  });
+
+  it('names none found ACTOR_NOT_FOUND with the names listed back; some found is a success that lists the rest under missing', () => {
+    const refusal = sliceBetween(support(), 'inline void McpSendNoActorNamesFound(', 'inline bool McpApplyActorVisibility(');
+
+    expect(refusal).toContain('TEXT("ACTOR_NOT_FOUND")');
+    expect(refusal).toContain('Details->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));');
+    for (const source of [visibility(), collision()]) {
+      expect(source).toMatch(/if \(bMany && Actors\.Num\(\) == 0\) \{\s*McpSendNoActorNamesFound\(this, Socket, RequestId, Missing\);\s*return true;/u);
+      expect(source).toContain('Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));');
+    }
+  });
+
+  it('set_visibility holds every named actor and its primitive components in ONE transaction, opened before the first write', () => {
+    const source = visibility();
+    const collect = source.indexOf('McpAddVisibilityUndoSet(Actor, Undoable);');
+    const open = source.indexOf('FMcpScopedEditorTransaction Transaction(');
+    const write = source.indexOf('McpApplyActorVisibility(Actor, bVisible)');
+    const undoSet = sliceBetween(support(), 'inline void McpAddVisibilityUndoSet(', 'struct FMcpMotionInput');
+
+    expect(source.match(/FMcpScopedEditorTransaction Transaction\(/gu)).toHaveLength(1);
+    expect(source).toMatch(/for \(AActor \*Actor : Actors\) \{\s*McpAddVisibilityUndoSet\(Actor, Undoable\);\s*\}/u);
+    expect(collect).toBeGreaterThan(-1);
+    expect(collect).toBeLessThan(open);
+    expect(open).toBeLessThan(write);
+    expect(undoSet).toContain('Undoable.Add(Actor);');
+    expect(undoSet).toContain('Undoable.Add(Prim);');
+    expect(source).toMatch(/Undoable\);\s*TArray<FString> Mismatched;/u);
+  });
+
+  it('a mismatch on any actor fails the call naming it; the single-actor replies keep their shape', () => {
+    const source = visibility();
+
+    expect(source).toMatch(/if \(!McpApplyActorVisibility\(Actor, bVisible\)\) \{\s*Mismatched\.Add\(McpActorRef\(Actor\)\);/u);
+    expect(source).toContain('TEXT("VISIBILITY_MISMATCH")');
+    expect(source).toContain('Data->SetStringField(TEXT("actorName"), McpActorRef(Actors[0]));');
+    expect(source).toContain('McpHandlerUtils::AddVerification(Data, Actors[0]);');
+    expect(source).toContain('FString(TEXT("Actor visibility updated"))');
+    expect(collision()).toContain('SendStandardSuccessResponse(this, Socket, RequestId, TEXT("Collision setting updated"), Data);');
+  });
+
+  it('set_actor_collision toggles every named actor and each of its primitive components, and lists the actors that have none', () => {
+    const source = collision();
+
+    expect(source).toMatch(/for \(AActor\* Actor : Actors\)\s*\{\s*Actor->SetActorEnableCollision\(bCollisionEnabled\);\s*TInlineComponentArray<UPrimitiveComponent\*> PrimComponents\(Actor\);/u);
+    expect(source).toContain('Updated += OnActor;');
+    expect(source).toContain('NoComponent.Add(McpActorRef(Actor));');
+    expect(source).toContain('Data->SetArrayField(TEXT("noPrimitiveComponents")');
+    expect(source).toContain('TEXT("NO_COMPONENT")');
+  });
+
+  it('both records declare actorNames and take one of actorName or actorNames', () => {
+    for (const id of ['control_actor.set_visibility', 'control_actor.set_actor_collision']) {
+      const input = capabilityIndex().byId.get(id)?.schemas.input;
+
+      expect(isRecord(input?.properties) ? input.properties.actorNames : undefined, id).toMatchObject({ type: 'array', items: { type: 'string' } });
+      expect(input?.requiredOneOf, id).toEqual(['actorName', 'actorNames']);
+      expect(input?.required, id).not.toContain('actorName');
+    }
   });
 });

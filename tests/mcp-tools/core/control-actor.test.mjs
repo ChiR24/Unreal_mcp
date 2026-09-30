@@ -95,6 +95,9 @@ const testCases = [
   { scenario: 'ERROR: sample_motion with startWhen refuses the editor world', toolName: 'control_actor', arguments: actorArgs('sample_motion', { durationSeconds: 0.2, startWhen: { actorName: MAIN_ACTOR, propertyName: 'bHidden', equals: false, waitForChange: false, maxWaitSeconds: 1 } }), expected: 'error|NOT_SIMULATING' },
   { scenario: 'CONFIG: set_visibility', toolName: 'control_actor', arguments: actorArgs('set_visibility', { visible: true }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_visible', toolName: 'control_actor', arguments: actorArgs('set_actor_visible', { visible: true }), expected: 'success' },
+  // actorNames: hiding seventeen actors took thirty-four calls; now one call, one undo step, and the misses come back.
+  { scenario: 'CONFIG: set_visibility on several actors at once, listing names not found', toolName: 'control_actor', arguments: { action: 'set_visibility', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, `MCP_MissingActor_${ts}`], visible: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.updatedActors', equals: 2, label: 'both actors that exist took the change' }, { path: 'structuredContent.result.missing.0', equals: `MCP_MissingActor_${ts}`, label: 'the name that matched no actor is listed back' }] },
+  { scenario: 'ERROR: set_visibility with none of actorNames found', toolName: 'control_actor', arguments: { action: 'set_visibility', actorNames: [`MCP_MissingActor_${ts}`], visible: true }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ACTION: apply_force', toolName: 'control_actor', arguments: actorArgs('apply_force', { force: { x: 0, y: 0, z: 2500 } }), expected: 'success' },
   { scenario: 'CONFIG: set_material', toolName: 'control_actor', arguments: actorArgs('set_material', { materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0 }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_material', toolName: 'control_actor', arguments: actorArgs('set_actor_material', { materialPath: ENGINE_BASIC_MATERIAL, materialIndex: 0 }), expected: 'success' },
@@ -165,6 +168,8 @@ const testCases = [
   { scenario: 'ACTION: attach_actor', toolName: 'control_actor', arguments: { action: 'attach_actor', childActor: CHILD_ACTOR, parentActor: PARENT_ACTOR }, expected: 'success' },
   { scenario: 'ACTION: detach_actor', toolName: 'control_actor', arguments: { action: 'detach_actor', actorName: CHILD_ACTOR }, expected: 'success' },
   { scenario: 'CONFIG: set_actor_collision', toolName: 'control_actor', arguments: actorArgs('set_actor_collision', { collisionEnabled: true }), expected: 'success' },
+  { scenario: 'CONFIG: set_actor_collision on several actors at once, listing names not found', toolName: 'control_actor', arguments: { action: 'set_actor_collision', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, `MCP_MissingActor_${ts}`], collisionEnabled: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.updatedActors', equals: 2, label: 'both actors that exist took the change' }, { path: 'structuredContent.result.missing.0', equals: `MCP_MissingActor_${ts}`, label: 'the name that matched no actor is listed back' }] },
+  { scenario: 'ERROR: set_actor_collision with none of actorNames found', toolName: 'control_actor', arguments: { action: 'set_actor_collision', actorNames: [`MCP_MissingActor_${ts}`], collisionEnabled: true }, expected: 'error|ACTOR_NOT_FOUND' },
   { scenario: 'ACTION: call_actor_function', toolName: 'control_actor', arguments: actorArgs('call_actor_function', { functionName: 'SetActorTickEnabled', arguments: [true] }), expected: 'success|FUNCTION_NOT_FOUND' },
 
   // === CLEANUP ===

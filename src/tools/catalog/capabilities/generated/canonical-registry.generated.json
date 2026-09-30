@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a7d1ab24c59bea97",
+  "catalogRevision": "87db23cde1cdf9d6",
   "recordCount": 389,
   "records": [
     {
@@ -32343,9 +32343,10 @@
         "topics": [
           "set_actor_collision"
         ],
-        "summary": "Enable or disable collision on an actor; normalizes to set_collision.",
+        "summary": "Enable or disable collision on an actor, or on many actors at once with actorNames; normalizes to set_collision.",
         "whenToUse": [
-          "Actor collision must be toggled."
+          "Actor collision must be toggled.",
+          "Many actors must have collision toggled together (actorNames does them in one call)."
         ],
         "whenNotToUse": [
           "Per-component collision is required (use set_component_property)."
@@ -32364,16 +32365,26 @@
               "type": "string",
               "description": "Target actor name in the current level."
             },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actors to toggle in one call, in place of actorName; names not found are listed back under missing."
+            },
             "collisionEnabled": {
               "type": "boolean",
               "description": "Desired collision enabled state."
             }
           },
           "required": [
-            "action",
-            "actorName"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "actorNames"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -32401,7 +32412,7 @@
       },
       "examples": [
         {
-          "title": "Enable or disable collision on an actor; normalizes to set_collision.",
+          "title": "Enable or disable collision on an actor, or on many actors at once with actorNames; normalizes to set_collision.",
           "input": {
             "action": "set_actor_collision",
             "actorName": "Cube1",
@@ -32439,8 +32450,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "eed7d44edb87ef95f5b3c03956810da4ebd745c15f6551d61dc83b54a0b7ce03",
-        "content": "2781fb42582fb854829e2ed42f15f2b4d1537226d2780cd7b2aa035a88693db1"
+        "schema": "6bf10acc91433f10d1db9ec4f8803398e20cef58a992bd4d461a8d0ad8dfece4",
+        "content": "7ed80b697346ba007aa64545f26e4128472d9e75b34959934e3679828f8b23ca"
       }
     },
     {
@@ -33138,9 +33149,10 @@
           "make actor invisible",
           "unhide actor"
         ],
-        "summary": "Show or hide an actor.",
+        "summary": "Show or hide an actor, or many at once with actorNames.",
         "whenToUse": [
           "An actor must be shown or hidden without being deleted.",
+          "Many actors must be shown or hidden together (actorNames does them in one call).",
           "Preferred when callers use the explicit set_actor_visible verb."
         ],
         "whenNotToUse": [
@@ -33160,16 +33172,26 @@
               "type": "string",
               "description": "Target actor name in the current level."
             },
+            "actorNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing."
+            },
             "visible": {
               "type": "boolean",
               "description": "Desired visibility state."
             }
           },
           "required": [
-            "action",
-            "actorName"
+            "action"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "actorName",
+            "actorNames"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -33197,7 +33219,7 @@
       },
       "examples": [
         {
-          "title": "Show or hide an actor.",
+          "title": "Show or hide an actor, or many at once with actorNames.",
           "input": {
             "action": "set_visibility",
             "actorName": "Cube1",
@@ -33235,8 +33257,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "32d982e8179a960bb228d289201411a3b7efdb8c52b2af3c9e28f6819d27a55b",
-        "content": "bc14aa08225998a97a0870a2042eb4b8353035ae01b10fc06de2383b6220ad29"
+        "schema": "0a076952267aafedd7e8479b41a4d7b4976d29f03012e7d4042062c536c97b32",
+        "content": "c25e6e1703e35075421fdcfe26287dad29f298ecbb4cffa0faf01a83c950cfc8"
       }
     },
     {

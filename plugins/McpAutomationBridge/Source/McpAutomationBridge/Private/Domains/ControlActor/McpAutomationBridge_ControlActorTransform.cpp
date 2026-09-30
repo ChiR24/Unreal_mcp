@@ -208,69 +208,83 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetTransform(
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetVisibility(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString TargetName;
-  Payload->TryGetStringField(TEXT("actorName"), TargetName);
-  if (TargetName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
-    return true;
-  }
-
   bool bVisible = true;
   Payload->TryGetBoolField(TEXT("visible"), bVisible);
 
-  AActor *Found = FindActorByName(TargetName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              TEXT("Actor not found"), nullptr);
+  // actorNames: many actors in one call and one undo step (hiding seventeen took thirty-four
+  // calls, each actor with its own set_actor_collision). Names that matched nothing are listed
+  // back, as add_tag lists them; the single-actor replies are unchanged.
+  TArray<AActor *> Actors;
+  TArray<FString> Missing;
+  const bool bMany = McpResolveActorNames(
+      Payload, [this](const FString &Name) { return FindActorByName(Name); }, Actors, Missing);
+  if (bMany && Actors.Num() == 0) {
+    McpSendNoActorNamesFound(this, Socket, RequestId, Missing);
     return true;
   }
-
-  // Every primitive component below is mutated too, so each one has to be in the
-  // transaction; capturing only the actor would let undo restore half the change.
-  TArray<UObject *> Undoable{Found};
-  for (UActorComponent *Comp : Found->GetComponents()) {
-    if (UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Comp)) {
-      Undoable.Add(Prim);
+  if (!bMany) {
+    FString TargetName;
+    Payload->TryGetStringField(TEXT("actorName"), TargetName);
+    if (TargetName.IsEmpty()) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
+                                TEXT("actorName (or actorNames) required"), nullptr);
+      return true;
     }
+    AActor *Found = FindActorByName(TargetName);
+    if (!Found) {
+      SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
+                                TEXT("Actor not found"), nullptr);
+      return true;
+    }
+    Actors.Add(Found);
+  }
+
+  // Every primitive component is mutated too, so each one has to be in the one transaction.
+  TArray<UObject *> Undoable;
+  for (AActor *Actor : Actors) {
+    McpAddVisibilityUndoSet(Actor, Undoable);
   }
 
   FMcpScopedEditorTransaction Transaction(
       FText::FromString(TEXT("Set Actor Visibility")),
       EMcpMutationDurability::EditorStateOnly, Undoable);
 
-  Found->SetActorHiddenInGame(!bVisible);
-  Found->SetActorEnableCollision(bVisible);
-
-  for (UActorComponent *Comp : Found->GetComponents()) {
-    if (!Comp)
-      continue;
-    if (UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Comp)) {
-      Prim->SetVisibility(bVisible, true);
-      Prim->SetHiddenInGame(!bVisible);
+  TArray<FString> Mismatched;
+  for (AActor *Actor : Actors) {
+    if (!McpApplyActorVisibility(Actor, bVisible)) {
+      Mismatched.Add(McpActorRef(Actor));
     }
   }
 
-  Found->MarkComponentsRenderStateDirty();
-  Found->MarkPackageDirty();
-
-  const bool bIsHidden = Found->IsHidden();
-  const bool bStateMatches = (bIsHidden == !bVisible);
-
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-  Data->SetBoolField(TEXT("visible"), !bIsHidden);
-  Data->SetStringField(TEXT("actorName"), McpActorRef(Found));
+  if (bMany) {
+    Data->SetBoolField(TEXT("visible"), bVisible);
+    Data->SetNumberField(TEXT("updatedActors"), Actors.Num() - Mismatched.Num());
+    Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
+  } else {
+    Data->SetBoolField(TEXT("visible"), !Actors[0]->IsHidden());
+    Data->SetStringField(TEXT("actorName"), McpActorRef(Actors[0]));
+  }
   Transaction.DescribeInto(Data);
 
-  if (!bStateMatches) {
-    SendStandardErrorResponse(this, Socket, RequestId,
-                              TEXT("VISIBILITY_MISMATCH"),
-                              TEXT("Failed to set actor visibility"), Data);
+  if (Mismatched.Num() > 0) {
+    SendStandardErrorResponse(
+        this, Socket, RequestId, TEXT("VISIBILITY_MISMATCH"),
+        bMany ? FString::Printf(TEXT("Failed to set visibility on: %s"),
+                                *FString::Join(Mismatched, TEXT(", ")))
+              : FString(TEXT("Failed to set actor visibility")),
+        Data);
     return true;
   }
 
-	McpHandlerUtils::AddVerification(Data, Found);
-
-	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor visibility updated"), Data);
+  if (!bMany) {
+    McpHandlerUtils::AddVerification(Data, Actors[0]);
+  }
+  SendAutomationResponse(
+      Socket, RequestId, true,
+      bMany ? FString::Printf(TEXT("Visibility set on %d actor(s); %d not found"), Actors.Num(),
+                              Missing.Num())
+            : FString(TEXT("Actor visibility updated")),
+      Data);
   return true;
 }

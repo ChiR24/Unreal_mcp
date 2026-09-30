@@ -3390,7 +3390,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
+              "description": "Several actors to show or hide in one call and one undo step, in place of actorName; names not found are listed back under missing."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
               "description": "Several actors to tag in one call, in place of actorName; names not found are listed back."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Several actors to toggle in one call, in place of actorName; names not found are listed back under missing."
             }
           ],
           "description": "Actor names to act on (batch delete)."

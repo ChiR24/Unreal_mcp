@@ -59,5 +59,5 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
     members: { class: 'find_by_class', name: 'find_by_name' },
     aliasMembers: { class: 'find_actors_by_class', name: 'find_actors_by_name' },
   },
-  { primary: 'set_visibility', summary: 'Show or hide an actor.', members: ['set_actor_visible'] },
+  { primary: 'set_visibility', summary: 'Show or hide an actor, or many at once with actorNames.', members: ['set_actor_visible'] },
 ];

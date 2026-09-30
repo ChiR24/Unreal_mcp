@@ -65,38 +65,29 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddTag(
   // Many actors at once: a level built programmatically is full of deliberate
   // compositions (a cloud of three spheres, a castle bedded into its base), and
   // marking each one mcp.placement.ok took one call per actor.
-  const TArray<TSharedPtr<FJsonValue>> *NameValues = nullptr;
-  if (!TagValue.IsEmpty() && Payload->TryGetArrayField(TEXT("actorNames"), NameValues) &&
-      NameValues && NameValues->Num() > 0) {
+  TArray<AActor *> Actors;
+  TArray<FString> Missing;
+  if (!TagValue.IsEmpty() &&
+      McpResolveActorNames(Payload, [this](const FString &Name) { return FindActorByName(Name); }, Actors, Missing)) {
     const FName TagName(*TagValue);
     TArray<UObject *> Targets;
-    TArray<TSharedPtr<FJsonValue>> Missing;
-    for (const TSharedPtr<FJsonValue> &Value : *NameValues) {
-      FString Name;
-      if (!Value.IsValid() || !Value->TryGetString(Name)) {
-        continue;
-      }
-      if (AActor *Actor = FindActorByName(Name)) {
-        Targets.AddUnique(Actor);
-      } else {
-        Missing.Add(MakeShared<FJsonValueString>(Name));
-      }
+    for (AActor *Actor : Actors) {
+      Targets.Add(Actor);
     }
     FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Add Actor Tag")),
                                             EMcpMutationDurability::EditorStateOnly, Targets);
-    for (UObject *Target : Targets) {
-      AActor *Actor = CastChecked<AActor>(Target);
+    for (AActor *Actor : Actors) {
       Actor->Tags.AddUnique(TagName);
       Actor->MarkPackageDirty();
     }
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
     Data->SetStringField(TEXT("tag"), TagName.ToString());
-    Data->SetNumberField(TEXT("taggedCount"), Targets.Num());
-    Data->SetArrayField(TEXT("missing"), Missing);
+    Data->SetNumberField(TEXT("taggedCount"), Actors.Num());
+    Data->SetArrayField(TEXT("missing"), McpHandlerUtils::ToJsonStringArray(Missing));
     Transaction.DescribeInto(Data);
     SendAutomationResponse(Socket, RequestId, true,
                            FString::Printf(TEXT("Tag applied to %d actor(s); %d not found"),
-                                           Targets.Num(), Missing.Num()),
+                                           Actors.Num(), Missing.Num()),
                            Data);
     return true;
   }
