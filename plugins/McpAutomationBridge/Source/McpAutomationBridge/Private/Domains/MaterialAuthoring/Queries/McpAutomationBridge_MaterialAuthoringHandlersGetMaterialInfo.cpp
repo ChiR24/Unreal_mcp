@@ -1,10 +1,29 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 #include "Domains/MaterialAuthoring/Queries/McpAutomationBridge_MaterialAuthoringFunctionIO.h"
+#include "Materials/MaterialExpressionRuntimeVirtualTextureSampleParameter.h"
+#include "Materials/MaterialExpressionTextureBase.h"
+#include "VT/RuntimeVirtualTexture.h"
 
 namespace McpMaterialAuthoringHandlers
 {
 namespace
 {
+// A texture parameter also says what it samples by default and how: the default texture's path ("" while none
+// is set) and the sampler type (Color, Normal, Masks...). A runtime virtual texture parameter names its virtual
+// texture. Any other parameter kind adds nothing.
+void AddTextureParameterFields(UMaterialExpression* Expr, const TSharedPtr<FJsonObject>& Row)
+{
+  if (const UMaterialExpressionTextureBase* Sampled = Cast<UMaterialExpressionTextureBase>(Expr))
+  {
+    Row->SetStringField(TEXT("texture"), Sampled->Texture ? Sampled->Texture->GetPathName() : FString());
+    Row->SetStringField(TEXT("samplerType"), MaterialEnumShortName(StaticEnum<EMaterialSamplerType>(), Sampled->SamplerType));
+  }
+  else if (const UMaterialExpressionRuntimeVirtualTextureSampleParameter* Rvt = Cast<UMaterialExpressionRuntimeVirtualTextureSampleParameter>(Expr))
+  {
+    Row->SetStringField(TEXT("texture"), Rvt->VirtualTexture ? Rvt->VirtualTexture->GetPathName() : FString());
+  }
+}
+
 // An instance has no node graph of its own, so get_material_info on one used to
 // answer ASSET_NOT_FOUND. It reports the parent it overrides and each override.
 void SendMaterialInstanceInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
@@ -116,11 +135,15 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       TArray<TSharedPtr<FJsonValue>> ParamsArray;
       for (UMaterialExpression *Expr : AllExpressions) {
         if (!Expr) continue;
-        if (UMaterialExpressionParameter *Param = Cast<UMaterialExpressionParameter>(Expr)) {
+        // HasAParameterName is the engine's own test for a parameter: texture, font and virtual-texture sample
+        // parameters carry a ParameterName but derive from the sample nodes, not UMaterialExpressionParameter,
+        // so a cast to that class listed only the scalars, vectors and switches.
+        if (Expr->HasAParameterName()) {
           TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject();
-          ParamObj->SetStringField(TEXT("name"), Param->ParameterName.ToString());
+          ParamObj->SetStringField(TEXT("name"), Expr->GetParameterName().ToString());
           ParamObj->SetStringField(TEXT("type"), Expr->GetClass()->GetName());
           ParamObj->SetStringField(TEXT("nodeId"), MCP_NODE_ID(Expr));
+          AddTextureParameterFields(Expr, ParamObj);
           ParamsArray.Add(MakeShared<FJsonValueObject>(ParamObj));
         }
       }
@@ -143,8 +166,8 @@ bool HandleGetMaterialInfo(UMcpAutomationBridgeSubsystem* Bridge, const FString&
         ExprObj->SetStringField(TEXT("desc"), Expr->GetDescription());
         ExprObj->SetNumberField(TEXT("x"), Expr->MaterialExpressionEditorX);
         ExprObj->SetNumberField(TEXT("y"), Expr->MaterialExpressionEditorY);
-        if (UMaterialExpressionParameter *P = Cast<UMaterialExpressionParameter>(Expr)) {
-          ExprObj->SetStringField(TEXT("name"), P->ParameterName.ToString());
+        if (Expr->HasAParameterName()) {
+          ExprObj->SetStringField(TEXT("name"), Expr->GetParameterName().ToString());
         } else if (UMaterialExpressionFunctionInput *FI = Cast<UMaterialExpressionFunctionInput>(Expr)) {
           ExprObj->SetStringField(TEXT("name"), FI->InputName.ToString());
         } else if (UMaterialExpressionFunctionOutput *FO = Cast<UMaterialExpressionFunctionOutput>(Expr)) {

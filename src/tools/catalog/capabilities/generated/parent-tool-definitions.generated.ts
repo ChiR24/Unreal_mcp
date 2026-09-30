@@ -9666,7 +9666,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "object",
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Material parameters (name, type, nodeId)."
+              "description": "Material parameters of every kind (name, type, nodeId). A texture parameter also carries texture (its default texture path, empty while none is set) and samplerType (Color, Normal, Masks, ...); a runtime virtual texture parameter carries its virtual texture under texture."
             },
             {
               "type": "array",

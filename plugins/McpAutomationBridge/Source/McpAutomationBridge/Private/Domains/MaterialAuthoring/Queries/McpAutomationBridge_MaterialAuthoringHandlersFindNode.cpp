@@ -52,8 +52,9 @@ bool HandleFindNode(UMcpAutomationBridgeSubsystem* Bridge, const FString& Reques
 
       if (!SearchName.IsEmpty()) {
         bool bNameMatch = false;
-        if (UMaterialExpressionParameter *P = Cast<UMaterialExpressionParameter>(Expr)) {
-          bNameMatch = P->ParameterName.ToString().Contains(SearchName);
+        // Every parameter kind by its ParameterName: a texture parameter is no UMaterialExpressionParameter.
+        if (Expr->HasAParameterName()) {
+          bNameMatch = Expr->GetParameterName().ToString().Contains(SearchName);
         } else if (UMaterialExpressionFunctionInput *FI = Cast<UMaterialExpressionFunctionInput>(Expr)) {
           bNameMatch = FI->InputName.ToString().Contains(SearchName);
         } else if (UMaterialExpressionFunctionOutput *FO = Cast<UMaterialExpressionFunctionOutput>(Expr)) {

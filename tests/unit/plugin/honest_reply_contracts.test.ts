@@ -7,6 +7,9 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
+import { isRecord } from '../../../src/utils/validation/type-guards.js';
+
 const DOMAINS = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
@@ -188,6 +191,25 @@ describe('handlers answer what they did', () => {
     );
     expect(list).toMatch(/ApplyMaterialParameterList\(Bridge, RequestId, GetJsonStringField\(Payload, TEXT\("assetPath"\)\), \*Entries, Payload, Socket,/u);
     expect(create).toMatch(/ApplyMaterialParameterList\(Bridge, RequestId, NewInstance->GetOutermost\(\)->GetName\(\), \*Entries, Payload, Socket,/u);
+  });
+
+  // get_material_info listed the UMaterialExpressionParameter kinds only, so a material built from
+  // TextureObjectParameters (BaseColor, Normal, ORM) answered its scalars and vectors and no textures.
+  it('get_material_info lists texture parameters with their default texture and sampler type, and find_node matches them by name', () => {
+    const info = code('MaterialAuthoring', 'Queries', 'McpAutomationBridge_MaterialAuthoringHandlersGetMaterialInfo.cpp');
+    const find = code('MaterialAuthoring', 'Queries', 'McpAutomationBridge_MaterialAuthoringHandlersFindNode.cpp');
+
+    expect(info).toMatch(/if \(Expr->HasAParameterName\(\)\) \{\s*TSharedPtr<FJsonObject> ParamObj = McpHandlerUtils::CreateResultObject\(\);\s*ParamObj->SetStringField\(TEXT\("name"\), Expr->GetParameterName\(\)\.ToString\(\)\);[\s\S]*?AddTextureParameterFields\(Expr, ParamObj\);/u);
+    expect(info).toMatch(/if \(Expr->HasAParameterName\(\)\) \{\s*ExprObj->SetStringField\(TEXT\("name"\), Expr->GetParameterName\(\)\.ToString\(\)\);/u);
+    expect(info).toContain('Row->SetStringField(TEXT("texture"), Sampled->Texture ? Sampled->Texture->GetPathName() : FString());');
+    expect(info).toContain('Row->SetStringField(TEXT("samplerType"), MaterialEnumShortName(StaticEnum<EMaterialSamplerType>(), Sampled->SamplerType));');
+    expect(info).toContain('Row->SetStringField(TEXT("texture"), Rvt->VirtualTexture ? Rvt->VirtualTexture->GetPathName() : FString());');
+    expect(info, 'the cast that skipped the texture kinds is gone').not.toContain('Cast<UMaterialExpressionParameter>');
+    expect(find).toMatch(/if \(Expr->HasAParameterName\(\)\) \{\s*bNameMatch = Expr->GetParameterName\(\)\.ToString\(\)\.Contains\(SearchName\);/u);
+
+    const properties = capabilityIndex().byId.get('material.get_material_info')?.schemas.output.properties;
+    const parameters = isRecord(properties) ? properties.parameters : undefined;
+    expect(isRecord(parameters) ? parameters.description : '').toMatch(/texture parameter also carries texture .* and samplerType/u);
   });
 
   // disconnect_nodes answered "Disconnect operation completed." with nothing unplugged.

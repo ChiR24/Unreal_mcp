@@ -48,7 +48,7 @@ const MATERIAL_INFO_OK = schema({
   twoSided: bool('Whether the material renders two-sided.'),
   description: str('Material function description.'),
   exposeToLibrary: bool('Whether a material function is exposed to the library.'),
-  parameters: arrObj('Material parameters (name, type, nodeId).'),
+  parameters: arrObj('Material parameters of every kind (name, type, nodeId). A texture parameter also carries texture (its default texture path, empty while none is set) and samplerType (Color, Normal, Masks, ...); a runtime virtual texture parameter carries its virtual texture under texture.'),
   inputs: arrObj('Material function inputs (name, type, nodeId).'),
 }, ['success']);
 

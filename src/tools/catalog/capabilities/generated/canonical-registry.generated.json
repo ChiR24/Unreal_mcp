@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "43792b36e4de73c4",
+  "catalogRevision": "93cd2f9952ab61c6",
   "recordCount": 389,
   "records": [
     {
@@ -77292,7 +77292,7 @@
                 "type": "object",
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Material parameters (name, type, nodeId)."
+              "description": "Material parameters of every kind (name, type, nodeId). A texture parameter also carries texture (its default texture path, empty while none is set) and samplerType (Color, Normal, Masks, ...); a runtime virtual texture parameter carries its virtual texture under texture."
             },
             "inputs": {
               "type": "array",
@@ -77498,8 +77498,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c76ef6b0f275aa51142b8a3da742e9595dbd85d660f5a39c1b159058aeaf0752",
-        "content": "5b37095419330ec52f5b42ee52fb5da8ddafadc88faef9952ba6a5c50706bb1c"
+        "schema": "fe03bf2e3cedf8ee643ab9f0c6326d4eb86ef233d0da4903342b825deb5b3c30",
+        "content": "f909db4a06295746552bc093eb464a15bde4ae8c48517905def0db79fc8b9e05"
       }
     },
     {
