@@ -247,7 +247,11 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
       }
       if (Property) {
         void *ValuePtr = Property->ContainerPtrToValuePtr<void>(CDO);
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
         if (Property->ImportText_Direct(*Value, ValuePtr, CDO, PPF_None)) {
+#else
+        if (Property->ImportText(*Value, ValuePtr, PPF_None, CDO)) {
+#endif
           bAppliedToObject = true;
           // A per-user class (EditorPerProjectUserSettings) is saved to the user's config, as the settings
           // editor saves it; only a defaultconfig class belongs in the project's Default<Config>.ini.

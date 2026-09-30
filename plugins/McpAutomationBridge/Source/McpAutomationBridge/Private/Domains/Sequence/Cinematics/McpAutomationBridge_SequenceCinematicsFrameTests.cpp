@@ -22,17 +22,17 @@ bool FMcpSequenceCinematicsTrackRollbackTest::RunTest(
         return false;
     }
     UMovieSceneFadeTrack* Track =
-        MovieScene->AddTrack<UMovieSceneFadeTrack>();
+        Cast<UMovieSceneFadeTrack>(MCP_ADD_MOVIESCENE_TRACK(MovieScene, UMovieSceneFadeTrack::StaticClass()));
     if (!TestNotNull(TEXT("Track exists"), Track))
     {
         return false;
     }
     TestTrue(TEXT("Track belongs to MovieScene"),
-             MovieScene->ContainsTrack(*Track));
+             MCP_GET_MOVIESCENE_TRACKS(MovieScene).Contains(Track));
     McpSequenceCinematics::RemoveTrackAfterSectionFailure(
         MovieScene, Track, true);
     TestFalse(TEXT("Created track is removed after section failure"),
-              MovieScene->ContainsTrack(*Track));
+              MCP_GET_MOVIESCENE_TRACKS(MovieScene).Contains(Track));
     return true;
 }
 

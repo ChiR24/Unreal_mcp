@@ -5,8 +5,10 @@
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
-#if PLATFORM_UNIX
+#if PLATFORM_UNIX || PLATFORM_MAC
 #include <sys/stat.h>
+#elif PLATFORM_WINDOWS
+#include "Windows/WindowsHWrapper.h"
 #endif
 
 namespace McpSequencePathSecurity {
@@ -78,10 +80,13 @@ bool IsUnderRoot(const FString &Path, const FString &Root) {
 }
 
 bool IsSymlink(const FString &Path) {
-#if PLATFORM_UNIX
+#if PLATFORM_UNIX || PLATFORM_MAC
   struct stat FileInfo;
   return lstat(TCHAR_TO_UTF8(*Path), &FileInfo) == 0 &&
          S_ISLNK(FileInfo.st_mode);
+#elif PLATFORM_WINDOWS
+  const uint32 Attributes = GetFileAttributesW(*Path);
+  return Attributes != 0xFFFFFFFF && (Attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
 #else
   return FPlatformFileManager::Get().GetPlatformFile().IsSymlink(*Path) ==
          ESymlinkResult::Symlink;

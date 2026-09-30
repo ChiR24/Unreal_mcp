@@ -194,7 +194,9 @@ bool HandleStartTakeRecording(UMcpAutomationBridgeSubsystem* Subsystem, const FS
     Parameters.bOpenSequencer = false;
 #endif
     Parameters.TakeRecorderMode = Panel->GetMode() == ETakeRecorderPanelMode::RecordingInto ? ETakeRecorderMode::RecordIntoSequence : ETakeRecorderMode::RecordNewSequence;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
     Parameters.StartFrame = LevelSequence->GetMovieScene()->GetPlaybackRange().GetLowerBoundValue();
+#endif
     UTakeRecorder* Recorder = UTakeRecorderBlueprintLibrary::StartRecording(LevelSequence, Sources, Panel->GetTakeMetaData(), Parameters);
     if (!Recorder)
     {

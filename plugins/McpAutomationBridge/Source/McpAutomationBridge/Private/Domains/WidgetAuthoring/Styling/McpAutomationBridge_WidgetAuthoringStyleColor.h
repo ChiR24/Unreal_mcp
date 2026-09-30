@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "Components/Border.h"
 #include "Components/Button.h"
@@ -77,14 +78,14 @@ inline bool McpApplyWidgetCornerRadius(UWidget *Widget, float Radius,
                                        float OutlineWidth,
                                        FString &OutPropertyName) {
   if (UImage *Image = Cast<UImage>(Widget)) {
-    FSlateBrush Brush = Image->GetBrush();
+    FSlateBrush Brush = MCP_UIMAGE_GET_BRUSH(Image);
     McpApplyBrushRounding(Brush, Radius, OutlineColor, OutlineWidth);
     Image->SetBrush(Brush);
     OutPropertyName = TEXT("Brush");
     return true;
   }
   if (UButton *Button = Cast<UButton>(Widget)) {
-    FButtonStyle Style = Button->GetStyle();
+    FButtonStyle Style = MCP_UBUTTON_GET_STYLE(Button);
     McpApplyBrushRounding(Style.Normal, Radius, OutlineColor, OutlineWidth);
     McpApplyBrushRounding(Style.Hovered, Radius, OutlineColor, OutlineWidth);
     McpApplyBrushRounding(Style.Pressed, Radius, OutlineColor, OutlineWidth);
@@ -117,7 +118,7 @@ inline bool McpApplyWidgetBrushTexture(UWidget *Widget, UObject *Texture,
     return true;
   }
   if (UButton *Button = Cast<UButton>(Widget)) {
-    FButtonStyle Style = Button->GetStyle();
+    FButtonStyle Style = MCP_UBUTTON_GET_STYLE(Button);
     Style.Normal.SetResourceObject(Texture);
     Style.Hovered.SetResourceObject(Texture);
     Style.Pressed.SetResourceObject(Texture);
@@ -157,7 +158,7 @@ inline bool McpApplyButtonSound(UWidget *Widget, const TCHAR *Field, const FStri
                                TEXT("MetaSound path such as /Game/Audio/SC_Click."), Field, *SoundPath);
     return false;
   }
-  FButtonStyle Style = Button->GetStyle();
+  FButtonStyle Style = MCP_UBUTTON_GET_STYLE(Button);
   (FCString::Strcmp(Field, TEXT("hoverSoundPath")) == 0 ? Style.HoveredSlateSound
                                                          : Style.PressedSlateSound)
       .SetResourceObject(Sound);

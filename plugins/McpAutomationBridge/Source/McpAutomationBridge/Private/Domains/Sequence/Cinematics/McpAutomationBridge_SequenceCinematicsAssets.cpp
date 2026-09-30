@@ -149,7 +149,7 @@ bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
   UMovieSceneSubTrack *Track = MovieScene->FindTrack<UMovieSceneSubTrack>();
   const bool bCreatedTrack = !Track;
   if (!Track) {
-    Track = MovieScene->AddTrack<UMovieSceneSubTrack>();
+    Track = Cast<UMovieSceneSubTrack>(MCP_ADD_MOVIESCENE_TRACK(MovieScene, UMovieSceneSubTrack::StaticClass()));
   }
   double Row = INDEX_NONE;
   Params->TryGetNumberField(TEXT("rowIndex"), Row);
@@ -197,7 +197,7 @@ bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
       MovieScene->FindTrack<UMovieSceneCinematicShotTrack>();
   const bool bCreatedTrack = !Track;
   if (!Track)
-    Track = MovieScene->AddTrack<UMovieSceneCinematicShotTrack>();
+    Track = Cast<UMovieSceneCinematicShotTrack>(MCP_ADD_MOVIESCENE_TRACK(MovieScene, UMovieSceneCinematicShotTrack::StaticClass()));
   double Row = INDEX_NONE;
   Params->TryGetNumberField(TEXT("rowIndex"), Row);
   UMovieSceneCinematicShotSection *Shot =

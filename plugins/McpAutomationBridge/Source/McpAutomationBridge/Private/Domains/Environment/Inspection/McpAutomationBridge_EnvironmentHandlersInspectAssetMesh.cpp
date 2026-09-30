@@ -60,7 +60,7 @@ void McpDescribeStaticMesh(UStaticMesh *Mesh, TSharedPtr<FJsonObject> Resp)
     Resp->SetArrayField(TEXT("materialSlots"), Slots);
     Resp->SetNumberField(TEXT("materialSlotCount"), Slots.Num());
     Resp->SetObjectField(TEXT("bounds"), McpMakeBoundsObject(Mesh->GetBounds().GetBox()));
-#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1)
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
     Resp->SetBoolField(TEXT("naniteEnabled"), Mesh->IsNaniteEnabled());
 #else
     Resp->SetBoolField(TEXT("naniteEnabled"), Mesh->NaniteSettings.bEnabled);

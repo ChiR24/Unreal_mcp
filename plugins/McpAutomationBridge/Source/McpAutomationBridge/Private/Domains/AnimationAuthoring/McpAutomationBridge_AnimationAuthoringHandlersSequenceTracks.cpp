@@ -55,8 +55,8 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             );
         }
 
-#if ENGINE_MINOR_VERSION >= 1
-        // UE 5.1+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
+#if ENGINE_MINOR_VERSION >= 2
+        // UE 5.2+ uses IAnimationDataController with IsValidBoneTrackName and AddBoneCurve
         IAnimationDataController& Controller = Sequence->GetController();
 
         // Validate the controller model is available
@@ -85,6 +85,20 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             {
                 ANIM_ERROR_RESPONSE(
                     FString::Printf(TEXT("Bone track '%s' was not found after AddBoneCurve succeeded - internal inconsistency"), *BoneName),
+                    TEXT("BONE_TRACK_ADD_FAILED")
+                );
+            }
+        }
+#elif ENGINE_MINOR_VERSION == 1
+        // UE 5.1: AddBoneTrack/FindBoneTrackByName (AddBoneCurve is 5.2+, AddNewRawTrack is 5.0-only)
+        IAnimationDataController& Controller = Sequence->GetController();
+        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+        {
+            Controller.AddBoneTrack(BoneFName);
+            if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+            {
+                ANIM_ERROR_RESPONSE(
+                    FString::Printf(TEXT("Failed to add bone track '%s' - the bone may not be valid for this animation"), *BoneName),
                     TEXT("BONE_TRACK_ADD_FAILED")
                 );
             }
@@ -157,8 +171,8 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
             );
         }
 
-#if ENGINE_MINOR_VERSION >= 1
-        // UE 5.1+ API
+#if ENGINE_MINOR_VERSION >= 2
+        // UE 5.2+ API
         IAnimationDataController& Controller = Sequence->GetController();
         FName BoneFName(*BoneName);
 
@@ -193,6 +207,29 @@ TSharedPtr<FJsonObject> HandleSequenceTrackActions(const FString& SubAction, con
         }
 
         // UpdateBoneTrackKeys preserves other frames; SetBoneTrackKeys would replace the entire track
+        FInt32Range KeyRange(Frame, Frame + 1);
+        if (!Controller.UpdateBoneTrackKeys(BoneFName, KeyRange, {Location}, {Rotation}, {Scale}))
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Failed to set bone key at frame %d"), Frame),
+                TEXT("BONE_KEY_SET_FAILED")
+            );
+        }
+#elif ENGINE_MINOR_VERSION == 1
+        // UE 5.1: AddBoneTrack/FindBoneTrackByName, then UpdateBoneTrackKeys (present since 5.0)
+        IAnimationDataController& Controller = Sequence->GetController();
+        FName BoneFName(*BoneName);
+        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+        {
+            Controller.AddBoneTrack(BoneFName);
+        }
+        if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr)
+        {
+            ANIM_ERROR_RESPONSE(
+                FString::Printf(TEXT("Bone track '%s' not found in animation sequence. Add the track first using add_bone_track."), *BoneName),
+                TEXT("BONE_TRACK_NOT_FOUND")
+            );
+        }
         FInt32Range KeyRange(Frame, Frame + 1);
         if (!Controller.UpdateBoneTrackKeys(BoneFName, KeyRange, {Location}, {Rotation}, {Scale}))
         {

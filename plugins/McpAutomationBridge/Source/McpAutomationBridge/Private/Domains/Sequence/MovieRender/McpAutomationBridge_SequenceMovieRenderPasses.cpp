@@ -6,7 +6,9 @@
 
 #include "Dom/JsonValue.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#if __has_include("MaterialDomain.h")
 #include "MaterialDomain.h"
+#endif
 #include "Materials/Material.h"
 #include "Materials/MaterialInterface.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -124,7 +126,9 @@ bool ApplySinglePass(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config,
       OutCode = TEXT("RENDER_PASS_UNAVAILABLE");
       return false;
     }
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
     Deferred->bRenderMainPass = true;
+#endif
     return true;
   }
   if (Pass == TEXT("object_id")) {

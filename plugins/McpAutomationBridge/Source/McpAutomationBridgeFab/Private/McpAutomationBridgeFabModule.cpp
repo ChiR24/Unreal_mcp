@@ -24,9 +24,13 @@ bool Start(const FString& ListingId, const FString& EngineVersion,
 #include "Misc/EngineVersion.h"
 #include "Modules/ModuleManager.h"
 
-#if MCP_FAB_ADAPTER_HAS_FAB
+// FabDownloader.h / FabAssetsCache.h are Private (not includable) until UE 5.7.
+#if MCP_FAB_ADAPTER_HAS_FAB && __has_include("FabDownloader.h") && __has_include("Utilities/FabAssetsCache.h")
+#define MCP_FAB_ADAPTER_HAS_FAB_API 1
 #include "FabDownloader.h"
 #include "Utilities/FabAssetsCache.h"
+#else
+#define MCP_FAB_ADAPTER_HAS_FAB_API 0
 #endif
 #if MCP_FAB_ADAPTER_HAS_MEGASCANS
 #include "AssetsImportController.h"
@@ -50,7 +54,7 @@ public:
 	// "available: false" an answer instead of a crash.
 	virtual bool IsFabAvailable() const override
 	{
-#if MCP_FAB_ADAPTER_HAS_FAB
+#if MCP_FAB_ADAPTER_HAS_FAB_API
 		return FModuleManager::Get().IsModuleLoaded(TEXT("Fab"));
 #else
 		return false;
@@ -68,7 +72,7 @@ public:
 
 	virtual FString GetCacheLocation() const override
 	{
-#if MCP_FAB_ADAPTER_HAS_FAB
+#if MCP_FAB_ADAPTER_HAS_FAB_API
 		return FFabAssetsCache::GetCacheLocation();
 #else
 		return FString();
@@ -77,7 +81,7 @@ public:
 
 	virtual void GetCachedAssets(TArray<FMcpFabCachedAsset>& OutAssets) const override
 	{
-#if MCP_FAB_ADAPTER_HAS_FAB
+#if MCP_FAB_ADAPTER_HAS_FAB_API
 		for (const FString& AssetId : FFabAssetsCache::GetCachedAssets())
 		{
 			FMcpFabCachedAsset& Entry = OutAssets.AddDefaulted_GetRef();
@@ -94,7 +98,7 @@ public:
 		bool bUseBuildPatch,
 		TFunction<void(const FMcpFabDownloadResult&)> OnComplete) override
 	{
-#if MCP_FAB_ADAPTER_HAS_FAB
+#if MCP_FAB_ADAPTER_HAS_FAB_API
 		const EFabDownloadType Type =
 			bUseBuildPatch ? EFabDownloadType::BuildPatchRequest : EFabDownloadType::HTTP;
 
@@ -108,7 +112,9 @@ public:
 			{
 				FMcpFabDownloadResult Result;
 				Result.bSuccess = Stats.bIsSuccess;
+#if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 8)
 				Result.bServedFromCache = Stats.bIsCached;
+#endif
 				Result.CompletedBytes = Stats.CompletedBytes;
 				Result.TotalBytes = Stats.TotalBytes;
 				Result.DownloadedFiles = Stats.DownloadedFiles;
@@ -126,7 +132,7 @@ public:
 		const FString& ListingId,
 		TFunction<void(const FMcpFabAddResult&)> OnComplete) override
 	{
-#if MCP_FAB_ADAPTER_HAS_FAB
+#if MCP_FAB_ADAPTER_HAS_FAB_API
 		const FEngineVersion& Version = FEngineVersion::Current();
 		return McpFabAddOperation::Start(ListingId,
 			FString::Printf(TEXT("%u.%u"), Version.GetMajor(), Version.GetMinor()), MoveTemp(OnComplete));
@@ -139,7 +145,7 @@ public:
 		const FString& ListingId,
 		TFunction<void(bool, const FString&)> OnComplete) override
 	{
-#if MCP_FAB_ADAPTER_HAS_FAB
+#if MCP_FAB_ADAPTER_HAS_FAB_API
 		return McpFabDetailsOperation::Start(ListingId, MoveTemp(OnComplete));
 #else
 		return false;
@@ -152,7 +158,7 @@ public:
 		int32 Limit,
 		TFunction<void(const FMcpFabSearchResult&)> OnComplete) override
 	{
-#if MCP_FAB_ADAPTER_HAS_FAB
+#if MCP_FAB_ADAPTER_HAS_FAB_API
 		return McpFabSearchOperation::Start(Query, bFreeOnly, Limit, MoveTemp(OnComplete));
 #else
 		return false;

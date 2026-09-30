@@ -49,7 +49,9 @@ inline void ApplyStructMemberTooltipAndMetadata(UUserDefinedStruct* S, const FGu
     const TSharedPtr<FJsonObject>* MetaObj = nullptr;
     if (Payload->TryGetObjectField(TEXT("metadata"), MetaObj) && MetaObj && (*MetaObj).IsValid())
     {
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
         for (const auto& Pair : (*MetaObj)->Values) { FStructureEditorUtils::SetMetaData(S, G, *Pair.Key, Pair.Value->AsString()); }
+#endif
     }
     const FString Tooltip = GetJsonStringField(Payload, TEXT("tooltip"));
     if (!Tooltip.IsEmpty()) { FStructureEditorUtils::ChangeVariableTooltip(S, G, Tooltip); }

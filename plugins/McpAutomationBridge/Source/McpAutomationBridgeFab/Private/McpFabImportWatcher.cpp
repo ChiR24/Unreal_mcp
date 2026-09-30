@@ -101,7 +101,11 @@ void WatchForImport(
 	Watch->AddedHandle = Registry.OnAssetAdded().AddLambda(
 		[Before, Watch](const FAssetData& AssetData)
 		{
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
 			const FString Path = AssetData.GetObjectPathString();
+#else
+			const FString Path = AssetData.ObjectPath.ToString();
+#endif
 			// Skip the baseline and sub-objects: a map contributes entries like
 			// Map.Map:PersistentLevel.ActorFolder_UID_..., which are parts of
 			// one asset rather than assets.

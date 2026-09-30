@@ -49,7 +49,9 @@ public class McpAutomationBridge : ModuleRules {
         PublicDefinitions.Add(bHasPCG ? "MCP_HAS_PCG=1" : "MCP_HAS_PCG=0");
         bool bHasCinematicCamera = AddOptionalModuleGroup(EngineDir, "CinematicCamera", new string[] { "CinematicCamera" });
         bool bHasMediaAssets = AddOptionalModuleGroup(EngineDir, "MediaAssets", new string[] { "MediaAssets" });
-        bool bHasMovieRenderPipeline = AddOptionalModuleGroup(EngineDir, "Movie Render Pipeline", new string[] {
+        // UE 5.0's MRQ job has no IsEnabled/SetIsEnabled, no OnIndividualJobFinished and no bRenderMainPass,
+        // all of which the Movie Render Queue handlers need; 5.0 takes the existing NOT_SUPPORTED path instead.
+        bool bHasMovieRenderPipeline = (Target.Version.MajorVersion > 5 || Target.Version.MinorVersion >= 1) && AddOptionalModuleGroup(EngineDir, "Movie Render Pipeline", new string[] {
             "MovieRenderPipelineCore", "MovieRenderPipelineRenderPasses",
             "MovieRenderPipelineSettings", "MovieRenderPipelineEditor"
         });
@@ -168,13 +170,8 @@ public class McpAutomationBridge : ModuleRules {
         if (legacyProperty != null && legacyProperty.CanWrite) {
             legacyProperty.SetValue(this, level); return;
         }
-        // Fully qualified: LogWarning is an extension method on ILogger, so a bare
-        // Logger.LogWarning needs a `using Microsoft.Extensions.Logging` this file
-        // does not have — without it the module fails to compile with CS1061 and
-        // takes the whole target down as a RulesError before any C++ is built.
-        // Qualifying keeps the fix without adding a line to a file that sits on
-        // the 250-pure-line ceiling.
-        Microsoft.Extensions.Logging.LoggerExtensions.LogWarning(Logger, $"McpAutomationBridge: could not set UBT warning level {warningName}; UBT renamed the setting.");
+        // ModuleRules.Logger only exists from UE 5.3; Console works on every UBT.
+        Console.WriteLine(string.Format("McpAutomationBridge: could not set UBT warning level {0}; UBT renamed the setting.", warningName));
     }
 
     private static bool FileContains(string path, string text) {

@@ -27,7 +27,11 @@ bool AssignReflectedValue(FProperty* Prop, void* Container, UObject* Owner,
         ObjectProp->SetObjectPropertyValue(Address, Loaded);
         return true;
     }
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
     return Prop->ImportText_Direct(*Value, Address, Owner, PPF_None) != nullptr;
+#else
+    return Prop->ImportText(*Value, Address, PPF_None, Owner) != nullptr;
+#endif
 }
 } // namespace
 

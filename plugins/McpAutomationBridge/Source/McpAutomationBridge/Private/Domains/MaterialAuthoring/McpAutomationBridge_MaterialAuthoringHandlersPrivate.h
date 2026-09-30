@@ -32,8 +32,8 @@
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Engine/Texture.h"
 
-// UE 5.1+ MaterialDomain
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+// MaterialDomain.h is split out in UE 5.2; earlier engines declare it via Materials/Material.h
+#if __has_include("MaterialDomain.h")
 #include "MaterialDomain.h"
 #endif
 
@@ -311,7 +311,15 @@ inline void EstimateMaterialNodeExtent(UMaterialExpression *Expr, float &OutWidt
   }
   // CountInputs/GetOutputs are the stable accessors across the 5.0-5.8 range the
   // plugin supports; GetInputs() does not exist on UMaterialExpression.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
   const int32 InputCount = Expr->CountInputs();
+#else
+  // CountInputs arrives in UE 5.5; GetInput returns null past the last input.
+  int32 InputCount = 0;
+  while (Expr->GetInput(InputCount) != nullptr) {
+    ++InputCount;
+  }
+#endif
   const int32 OutputCount = Expr->GetOutputs().Num();
   const int32 Rows = FMath::Max(InputCount, OutputCount);
   OutHeight = 48.0f + Rows * 26.0f;

@@ -112,10 +112,10 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
                 *Name,
                 BPTYPE_Normal,
                 UControlRigBlueprint::StaticClass(),
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
                 URigVMBlueprintGeneratedClass::StaticClass(),
 #else
-                // UE 5.0 uses UControlRigBlueprintGeneratedClass instead
+                // UE 5.0-5.1 use UControlRigBlueprintGeneratedClass instead
                 UControlRigBlueprintGeneratedClass::StaticClass(),
 #endif
                 NAME_None));

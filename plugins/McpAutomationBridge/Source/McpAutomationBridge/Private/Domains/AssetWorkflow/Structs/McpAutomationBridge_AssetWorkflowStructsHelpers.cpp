@@ -138,6 +138,7 @@ int32 ApplyParsedStructMembers(
             {
                 FStructureEditorUtils::ChangeVariableTooltip(S, G, V.Tooltip);
             }
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
             if (V.Metadata.IsValid())
             {
                 for (const auto& Pair : V.Metadata->Values)
@@ -145,6 +146,7 @@ int32 ApplyParsedStructMembers(
                     FStructureEditorUtils::SetMetaData(S, G, *Pair.Key, Pair.Value->AsString());
                 }
             }
+#endif
         }
         ++Applied;
     }
@@ -189,10 +191,12 @@ TSharedPtr<FJsonObject> VariableDescriptionToJson(const FStructVariableDescripti
         StaticEnum<EPinContainerType>()->GetNameStringByValue(static_cast<int64>(Var.ContainerType)));
 
     TSharedPtr<FJsonObject> MetaObj = MakeShared<FJsonObject>();
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
     for (const TPair<FName, FString>& Meta : Var.MetaData)
     {
         MetaObj->SetStringField(Meta.Key.ToString(), Meta.Value);
     }
+#endif
     Member->SetObjectField(TEXT("metaData"), MetaObj);
 
     return Member;

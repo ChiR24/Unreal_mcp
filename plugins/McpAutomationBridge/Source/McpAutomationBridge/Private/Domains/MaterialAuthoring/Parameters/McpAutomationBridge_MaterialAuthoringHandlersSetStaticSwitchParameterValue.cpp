@@ -26,10 +26,16 @@ bool HandleSetStaticSwitchParameterValue(UMcpAutomationBridgeSubsystem* Bridge, 
 #else
     StaticParams = Instance->GetStaticParameters();
 #endif
-    FStaticSwitchParameter* Switch = StaticParams.StaticSwitchParameters.FindByPredicate(
+    // UE 5.1 keeps the switch list in FStaticParameterSet::EditorOnly; 5.0 and 5.2+ hold it directly.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 1
+    TArray<FStaticSwitchParameter>& Switches = StaticParams.EditorOnly.StaticSwitchParameters;
+#else
+    TArray<FStaticSwitchParameter>& Switches = StaticParams.StaticSwitchParameters;
+#endif
+    FStaticSwitchParameter* Switch = Switches.FindByPredicate(
         [Name](const FStaticSwitchParameter& Entry) { return Entry.ParameterInfo.Name == Name; });
     if (!Switch) {
-      Switch = &StaticParams.StaticSwitchParameters.AddDefaulted_GetRef();
+      Switch = &Switches.AddDefaulted_GetRef();
       Switch->ParameterInfo.Name = Name;
     }
     Switch->Value = Value;

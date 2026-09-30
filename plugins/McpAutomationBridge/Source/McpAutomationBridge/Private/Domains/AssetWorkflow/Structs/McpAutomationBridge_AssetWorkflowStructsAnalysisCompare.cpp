@@ -159,6 +159,7 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
             DiffArr.Add(MakeShared<FJsonValueObject>(Diff));
         }
 
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
         if (!A.MetaData.OrderIndependentCompareEqual(B.MetaData))
         {
             auto MapToJson = [](const TMap<FName, FString>& M)
@@ -177,6 +178,7 @@ bool HandleStructAnalysisCompare(UMcpAutomationBridgeSubsystem& Bridge, const FS
             Diff->SetObjectField(TEXT("metadataB"), MapToJson(B.MetaData));
             DiffArr.Add(MakeShared<FJsonValueObject>(Diff));
         }
+#endif
     };
 
     TSet<FGuid> VisitedB;

@@ -32,7 +32,7 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
     }
 
 #if ENGINE_MINOR_VERSION >= 1
-    if (!Definition->IsValidSlotIndex(SlotIndex))
+    if (!Definition->GetSlots().IsValidIndex(SlotIndex))
     {
         Self->SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Invalid slot index: %d"), SlotIndex), TEXT("INVALID_PARAMS"));
@@ -40,7 +40,7 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
     }
 
     // Get the slot and configure it
-    FSmartObjectSlotDefinition& Slot = Definition->GetMutableSlot(SlotIndex);
+    FSmartObjectSlotDefinition& Slot = Definition->GetMutableSlots()[SlotIndex];
 
     // Configure activity tags if provided. Resolve every tag first: an unregistered one used
     // to be dropped while the call still reported success.
@@ -66,10 +66,12 @@ bool HandleConfigureSmartObjectSlotBehavior(UMcpAutomationBridgeSubsystem* Self,
     }
 
     // Configure enabled state
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
     if (Payload->HasField(TEXT("enabled")))
     {
         Slot.bEnabled = GetJsonBoolField(Payload, TEXT("enabled"), true);
     }
+#endif
 
     // Save
     McpSafeAssetSave(Definition);

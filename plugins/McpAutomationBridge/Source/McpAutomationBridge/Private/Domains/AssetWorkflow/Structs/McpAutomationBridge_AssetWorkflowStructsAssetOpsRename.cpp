@@ -32,7 +32,9 @@ static void CopyStructMembers(UUserDefinedStruct* Dst, UUserDefinedStruct* Src)
                 NewVar->FriendlyName = Var.FriendlyName;
                 NewVar->DefaultValue = Var.DefaultValue;
                 NewVar->ToolTip = Var.ToolTip;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
                 NewVar->MetaData = Var.MetaData;
+#endif
             }
         }
     }

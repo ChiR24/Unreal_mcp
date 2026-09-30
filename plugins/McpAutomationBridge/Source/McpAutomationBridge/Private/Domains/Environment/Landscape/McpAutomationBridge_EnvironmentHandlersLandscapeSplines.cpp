@@ -210,6 +210,11 @@ bool McpCreateLandscapeStreamingProxy(const TSharedPtr<FJsonObject> &Payload, TS
     Proxy->SetLandscapeActor(Landscape);
     Proxy->CopySharedProperties(Landscape);
     Proxy->CreateLandscapeInfo(false, false);
+#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 2
+    Proxy->SetLandscapeGuid(Landscape->GetLandscapeGuid());
+    Proxy->SetLandscapeActor(Landscape);
+    Proxy->GetSharedProperties(Landscape);
+    Proxy->CreateLandscapeInfo(false);
 #else
     Proxy->SetLandscapeGuid(Landscape->GetLandscapeGuid());
     Proxy->LandscapeActor = Landscape;

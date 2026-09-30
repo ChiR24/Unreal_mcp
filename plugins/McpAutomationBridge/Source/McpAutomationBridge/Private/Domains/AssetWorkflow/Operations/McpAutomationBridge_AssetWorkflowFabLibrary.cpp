@@ -8,7 +8,15 @@
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
-#if MCP_HAS_TEDS
+// The ICoreProvider / DataStorage::Features API used below first ships in UE 5.7; the
+// TypedElementFramework module exists from 5.0, so MCP_HAS_TEDS alone is not enough.
+#if MCP_HAS_TEDS && __has_include("DataStorage/Features.h")
+#define MCP_FAB_LIBRARY_HAS_TEDS_API 1
+#else
+#define MCP_FAB_LIBRARY_HAS_TEDS_API 0
+#endif
+
+#if MCP_FAB_LIBRARY_HAS_TEDS_API
 #include "DataStorage/Features.h"
 #include "Elements/Framework/TypedElementQueryBuilder.h"
 #include "Elements/Interfaces/TypedElementDataStorageInterface.h"
@@ -64,7 +72,7 @@ TSharedPtr<FJsonObject> ReadStructAsJson(const UScriptStruct* Type, const void* 
 bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-#if MCP_HAS_TEDS
+#if MCP_FAB_LIBRARY_HAS_TEDS_API
   using namespace UE::Editor::DataStorage;
   using namespace UE::Editor::DataStorage::Queries;
 
@@ -178,7 +186,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
 #else
   SendAutomationResponse(
       Socket, RequestId, false,
-      TEXT("This build has no TypedElementFramework module, so the Fab library cannot be read."),
+      TEXT("This engine version has no editor data storage (TEDS) query API, so the Fab library cannot be read."),
       nullptr, TEXT("NOT_SUPPORTED"));
   return true;
 #endif
