@@ -63,6 +63,13 @@ constexpr int32 McpSearchActionCoveredBonus = 50;
  */
 constexpr int32 McpSearchFullCoverageBonus = 100;
 /**
+ * When a topic holds a multi-word query as written: the record's author named that very request,
+ * which beats the same words matched one by one elsewhere. "tag an asset" went to query_asset (its
+ * find_by_tag and query_asset names) over set_metadata's own topic, "connect blueprint nodes" to
+ * edit_level_blueprint over edit_graph's.
+ */
+constexpr int32 McpSearchPhraseTopicBonus = 50;
+/**
  * When the query opens with a read word ("get actor location", "what is in this
  * folder"), a matching record whose effect is read ranks ahead: set_transform used
  * to answer "get actor location". Only reorders records that already matched.

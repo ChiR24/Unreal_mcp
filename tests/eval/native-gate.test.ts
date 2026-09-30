@@ -11,8 +11,8 @@ import { describe, expect, it } from 'vitest';
 import { RETRIEVAL_FUNCTION_WORDS } from '../../src/tools/catalog/capabilities/retrieval/constants.js';
 import { measureRetrieval } from './measure-retrieval.js';
 import {
-  NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_READ_INTENT_BONUS, NATIVE_RULE_WEIGHTS,
-  NATIVE_WORD_COVERAGE_BONUS, nativeSearchRanker,
+  NATIVE_ACTION_COVERED_BONUS, NATIVE_DELETE_INTENT_BONUS, NATIVE_FULL_COVERAGE_BONUS, NATIVE_PHRASE_TOPIC_BONUS, NATIVE_READ_INTENT_BONUS,
+  NATIVE_RULE_WEIGHTS, NATIVE_WORD_COVERAGE_BONUS, nativeSearchRanker,
 } from './native-ranker.js';
 
 const GATEWAY = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'MCP', 'Gateway');
@@ -33,6 +33,8 @@ describe('the TypeScript copy matches the native source', () => {
     expect(headerConstant('McpSearchWordCoverageBonus')).toBe(NATIVE_WORD_COVERAGE_BONUS);
     expect(headerConstant('McpSearchActionCoveredBonus')).toBe(NATIVE_ACTION_COVERED_BONUS);
     expect(headerConstant('McpSearchFullCoverageBonus')).toBe(NATIVE_FULL_COVERAGE_BONUS);
+    expect(headerConstant('McpSearchPhraseTopicBonus')).toBe(NATIVE_PHRASE_TOPIC_BONUS);
+    expect(nativeMatch).toContain('Score += MatchRules[RuleTopic].Weight + McpSearchPhraseTopicBonus;');
     expect(headerConstant('McpSearchReadIntentBonus')).toBe(NATIVE_READ_INTENT_BONUS);
     expect(headerConstant('McpSearchDeleteIntentBonus')).toBe(NATIVE_DELETE_INTENT_BONUS);
   });

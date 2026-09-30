@@ -234,7 +234,7 @@ bool McpSearchScoreRecord(
 		if (AnyTopicContainsPhrase(Record.Topics, Query))
 		{
 			Fired[RuleTopic] = true;
-			Score += MatchRules[RuleTopic].Weight;
+			Score += MatchRules[RuleTopic].Weight + McpSearchPhraseTopicBonus;
 		}
 		if (Record.Summary.ToLower().Contains(Query, ESearchCase::CaseSensitive))
 		{

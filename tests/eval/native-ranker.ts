@@ -17,6 +17,7 @@ export const NATIVE_RULE_WEIGHTS = {
 export const NATIVE_WORD_COVERAGE_BONUS = 5;
 export const NATIVE_ACTION_COVERED_BONUS = 50;
 export const NATIVE_FULL_COVERAGE_BONUS = 100;
+export const NATIVE_PHRASE_TOPIC_BONUS = 50;
 export const NATIVE_READ_INTENT_BONUS = 40;
 export const NATIVE_DELETE_INTENT_BONUS = 40;
 
@@ -73,7 +74,10 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
   const fire = (rule: keyof typeof NATIVE_RULE_WEIGHTS): void => { score += NATIVE_RULE_WEIGHTS[rule]; fired = true; };
   if (record.id.toLowerCase() === query || actionEquals(record, all.join('_')) || actionEquals(record, content.join('_'))) fire('id-exact');
   if (all.length >= 2) {
-    if (record.topics.some((topic) => topic.toLowerCase().includes(query))) fire('topic');
+    if (record.topics.some((topic) => topic.toLowerCase().includes(query))) {
+      fire('topic');
+      score += NATIVE_PHRASE_TOPIC_BONUS;
+    }
     if (record.summary.toLowerCase().includes(query)) fire('summary');
   }
   let matched = 0;

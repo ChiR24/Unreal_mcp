@@ -392,4 +392,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'set movie resolution', accepted: ['sequence.mrq.configure_render_job'] },
   { query: 'find nodes in blueprint', accepted: ['blueprint.inspect_graph'] },
   { query: 'filter graph nodes', accepted: ['blueprint.inspect_graph'] },
+  { query: 'tag an asset', accepted: ['asset.set_metadata'] },
+  { query: 'add a landscape', accepted: ['build_environment.create_landscape'] },
 ];
