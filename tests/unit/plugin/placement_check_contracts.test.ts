@@ -20,3 +20,18 @@ describe('audit_placement finds the floor under an actor, not what it holds up',
     expect(placementCheck()).toContain('if (HitBottomZ >= Origin.Z) {');
   });
 });
+
+// Stage 9's blimps "intersected" the mountain peak by 270 and 340 units: the cone's box is mostly
+// air. The engine's shape overlap skips trimesh pieces, so a complex-as-simple mesh must keep the
+// box verdict instead of always reading "apart".
+describe('audit_placement confirms a box overlap on the real shapes', () => {
+  it('drops a pair whose collision shapes do not touch', () => {
+    const source = placementCheck();
+    expect(source).toContain('if (McpShapesApart(Actor, Other)) {');
+    expect(source).toContain('B->ComponentOverlapComponent(A, A->GetComponentLocation(), A->GetComponentQuat(), Params)');
+  });
+
+  it('only trusts shapes the engine test can move', () => {
+    expect(placementCheck()).toContain('Setup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple');
+  });
+});

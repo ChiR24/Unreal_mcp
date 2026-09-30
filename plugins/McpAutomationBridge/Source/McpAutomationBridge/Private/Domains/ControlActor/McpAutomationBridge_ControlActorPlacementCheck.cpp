@@ -2,6 +2,9 @@
 
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 
+#include "Components/InstancedStaticMeshComponent.h"
+#include "PhysicsEngine/BodySetup.h"
+
 // A spawn or a transform write used to answer nothing but "success" and the
 // coordinates it was handed back, so an actor buried to the waist in the floor,
 // or intersecting a wall, or hanging in mid-air, read exactly like a correct
@@ -94,6 +97,42 @@ double McpPenetrationDepth(const FBox &A, const FBox &B) {
   return FMath::Min3(Size.X, Size.Y, Size.Z);
 }
 
+// Only a plain static mesh with convex simple collision can be checked shape to
+// shape: the engine's overlap test skips trimesh pieces, so a complex-as-simple
+// mesh would always read "apart", and instanced or skeletal bodies need other paths.
+bool McpHasConvexBody(UPrimitiveComponent *Comp) {
+  const UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(Comp);
+  if (!Mesh || Mesh->IsA<UInstancedStaticMeshComponent>() || !Mesh->GetStaticMesh() ||
+      !Comp->GetBodyInstance() || !Comp->GetBodyInstance()->IsValidBodyInstance()) {
+    return false;
+  }
+  const UBodySetup *Setup = Mesh->GetStaticMesh()->GetBodySetup();
+  return Setup && Setup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple &&
+         Setup->AggGeom.GetElementCount() > 0;
+}
+
+// Boxes only say where an actor could be. A cone's box is mostly air, so a blimp
+// flying past a mountain peak read "intersects by 340 units". Apart only when
+// every colliding component pair was checked on its real shapes and none touch;
+// a pair that cannot be checked keeps the box verdict.
+bool McpShapesApart(AActor *Actor, AActor *Other) {
+  TInlineComponentArray<UPrimitiveComponent *> Mine(Actor), Theirs(Other);
+  const FCollisionQueryParams Params(SCENE_QUERY_STAT(McpPlacementShapes), false);
+  for (UPrimitiveComponent *A : Mine) {
+    for (UPrimitiveComponent *B : Theirs) {
+      if (!A->IsCollisionEnabled() || !B->IsCollisionEnabled() ||
+          !A->Bounds.GetBox().Intersect(B->Bounds.GetBox())) {
+        continue;
+      }
+      if (!McpHasConvexBody(A) || !McpHasConvexBody(B) ||
+          B->ComponentOverlapComponent(A, A->GetComponentLocation(), A->GetComponentQuat(), Params)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 } // namespace
 
 /**
@@ -176,6 +215,9 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     // call it a fault once one has swallowed the other's whole thickness.
     if (bSelfSlab && McpIsSlab(OtherExtent) &&
         Depth <= 2.0 * FMath::Min(Extent.Z, OtherExtent.Z)) {
+      continue;
+    }
+    if (McpShapesApart(Actor, Other)) {
       continue;
     }
 
