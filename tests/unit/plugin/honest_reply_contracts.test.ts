@@ -136,6 +136,7 @@ describe('handlers answer what they did', () => {
     const settings = code('Render', 'McpAutomationBridge_RenderSupportSettings.h');
     expect(settings).toMatch(/if \(Unknown\.Num\(\) > 0 && OutApplied\.Num\(\) == AppliedBefore\)[\s\S]*?return false;/u);
     expect(settings).toContain('It->GetName().Contains(Key)');
+    expect(settings, 'bOverride_ flags are no suggestion').toContain('!It->GetName().StartsWith(TEXT("bOverride_"))');
   });
 
   // A custom node got its input before the wire feeding it; that mid-batch compile's

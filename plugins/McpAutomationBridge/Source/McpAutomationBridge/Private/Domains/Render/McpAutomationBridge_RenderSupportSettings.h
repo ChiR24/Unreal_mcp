@@ -81,10 +81,13 @@ inline bool ApplyJsonSettings(
     // {"saturation": 1.1} read as applied. Refuse, and name the fields the keys come close to.
     if (Unknown.Num() > 0 && OutApplied.Num() == AppliedBefore)
     {
+        // bOverride_ flags are set with their field, so they are no suggestion: they crowded
+        // ColorSaturation out of the eight names for {"saturation": 1.1}.
         TArray<FString> Near;
         for (TFieldIterator<FProperty> It(StructType); It && Near.Num() < 8; ++It)
         {
-            if (Unknown.ContainsByPredicate([&It](const FString& Key) { return It->GetName().Contains(Key); }))
+            if (!It->GetName().StartsWith(TEXT("bOverride_")) &&
+                Unknown.ContainsByPredicate([&It](const FString& Key) { return It->GetName().Contains(Key); }))
             {
                 Near.Add(It->GetName());
             }
