@@ -363,3 +363,12 @@ describe('Blueprint metadata writes name the Blueprint they changed', () => {
       .toContain('McpHandlerUtils::AddVerification(Resp, BP);');
   });
 });
+
+// Seeing where a graph's nodes sit took one inspect_graph info=node read per node.
+describe('graph details list each node position', () => {
+  it('get_graph_details adds x and y to every node row', () => {
+    const queries = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersQueries.cpp');
+    expect(queries).toContain('NodeObject->SetNumberField(TEXT("x"), Node->NodePosX);');
+    expect(queries).toContain('NodeObject->SetNumberField(TEXT("y"), Node->NodePosY);');
+  });
+});

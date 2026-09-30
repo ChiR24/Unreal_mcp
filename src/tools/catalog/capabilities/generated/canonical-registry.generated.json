@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "106558f28182eeae",
+  "catalogRevision": "7972afdedd0573d5",
   "recordCount": 389,
   "records": [
     {
@@ -17322,7 +17322,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Node descriptors (nodeId, nodeName, nodeTitle; pins if includePins=true).",
+              "description": "Node descriptors (nodeId, nodeName, nodeTitle, and position x and y; pins if includePins=true).",
               "x-unreal-reflection-boundary": true
             },
             "totalCount": {
@@ -17501,8 +17501,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9e5d9d523e289be0eed41b4a457ae50b79488bd1d645714b945de48d124a6207",
-        "content": "1e594cf5c6860af643fd3f5d0b4d3e7367b7020af9679074170632059eb2aafd"
+        "schema": "4788f44fec3a4e699bd30b98126e0e97d93f2b63259fce370a4f211f436182d4",
+        "content": "fb6a625609aac9937dde6b5ab94cbdde0d9c74013a3ed5d281c52378c00d06ba"
       }
     },
     {

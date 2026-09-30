@@ -12088,7 +12088,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Node descriptors (nodeId, nodeName, nodeTitle; pins if includePins=true).",
+          "description": "Node descriptors (nodeId, nodeName, nodeTitle, and position x and y; pins if includePins=true).",
           "x-unreal-reflection-boundary": true
         },
         "note": {

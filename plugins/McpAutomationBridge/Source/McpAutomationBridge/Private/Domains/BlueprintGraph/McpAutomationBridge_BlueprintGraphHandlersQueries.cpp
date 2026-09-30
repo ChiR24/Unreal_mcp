@@ -154,6 +154,9 @@ static bool GetGraphDetails(FActionContext& Context)
             Node->NodeGuid.ToString());
         NodeObject->SetStringField(TEXT("nodeName"), Node->GetName());
         NodeObject->SetStringField(TEXT("nodeTitle"), Title);
+        // The layout in one read: placing or tidying nodes took one node read per position.
+        NodeObject->SetNumberField(TEXT("x"), Node->NodePosX);
+        NodeObject->SetNumberField(TEXT("y"), Node->NodePosY);
 
         if (bIncludePins)
         {

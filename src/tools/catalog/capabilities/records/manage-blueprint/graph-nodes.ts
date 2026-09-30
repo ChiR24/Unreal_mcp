@@ -172,7 +172,7 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['blueprintPath'],
     outputProps: {
-      nodes: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Node descriptors (nodeId, nodeName, nodeTitle; pins if includePins=true).', 'x-unreal-reflection-boundary': true },
+      nodes: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Node descriptors (nodeId, nodeName, nodeTitle, and position x and y; pins if includePins=true).', 'x-unreal-reflection-boundary': true },
       totalCount: { type: 'number', description: 'Nodes matching filter, before offset/limit.' },
       hasMore: { type: 'boolean', description: 'More matching nodes lie past this page.' },
     },
