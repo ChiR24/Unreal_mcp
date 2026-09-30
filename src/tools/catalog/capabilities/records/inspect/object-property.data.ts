@@ -148,11 +148,28 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Write a property value on a world actor, asset, or Blueprint CDO.',
     whenToUse: ['A single property value must be written.'],
     whenNotToUse: ['The property is read-only or the target is a packed asset.'],
-    inputProps: { objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath, value: P.value, markDirty: P.markDirty },
+    inputProps: {
+      objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath, value: P.value, markDirty: P.markDirty,
+      // A UMG pop set off by a write ran on real time and ended between two calls; LivesPop was only
+      // provable by slowing the asset 50x.
+      watch: {
+        type: 'object',
+        description: 'Sample a property right after the write, in the same call, to see what the write sets off before it ends: a HUD pop or fade runs on real time, even with PIE paused, and is over before a later call can read it. The reply lists each value the property took with its time t in seconds (Lives on GameInstance with watch {objectPath: "WBP_HUD", propertyName: "LivesBox.RenderTransform"}).',
+        properties: {
+          propertyName: { type: 'string', description: 'The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform).' },
+          objectPath: { type: 'string', description: 'The object to sample, as objectPath takes it (GameInstance, a live widget such as WBP_HUD); omitted, the object written.' },
+          durationSeconds: { type: 'number', description: 'Real seconds to sample (default 0.5, at most 20).' },
+          intervalSeconds: { type: 'number', description: 'Seconds between samples (default 0: every frame); a sample is kept only when the value changed.' },
+        },
+        required: ['propertyName'],
+        additionalProperties: false,
+      },
+    },
     required: [],
     requiredOneOf: ['propertyName', 'propertyPath'],
     effect: 'write', costLatency: 'interactive',
     outputProps: {
+      watch: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With watch: objectPath, propertyName, samples ({t, value}, kept when the value changed), sampleCount, changed (it took more than one value) and frames.' },
       // Writing a Blueprint CDO only reaches instances spawned later once the
       // class is rebuilt, so the caller is told whether that recompile happened.
       blueprintCompiled: { type: 'boolean', description: 'True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved.' },

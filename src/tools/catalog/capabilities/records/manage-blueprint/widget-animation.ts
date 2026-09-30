@@ -35,7 +35,10 @@ export const WIDGET_ANIMATION_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     summary: 'Create a new widget animation timeline in a Widget Blueprint.',
     whenToUse: ['A new UMG widget animation must be created for property keyframing.'],
-    whenNotToUse: ['A Blueprint graph animation is needed (use animation_physics).'],
+    whenNotToUse: [
+      'A Blueprint graph animation is needed (use animation_physics).',
+      'An animation must be seen playing in PIE: write the value that sets it off with inspect.set_property and watch (a short pop ends before a later call can read it).',
+    ],
     inputProps: { widgetPath: P.widgetPath, animationName: P.animationName, duration: P.duration },
     required: ['widgetPath', 'animationName'],
     outputProps: {

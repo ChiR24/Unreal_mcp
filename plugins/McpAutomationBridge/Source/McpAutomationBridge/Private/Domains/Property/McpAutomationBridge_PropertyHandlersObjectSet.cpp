@@ -2,6 +2,7 @@
 
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersActorAccess.h"
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoComponents.h"
+#include "Domains/Property/McpAutomationBridge_PropertyHandlersObjectWatch.h"
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersTarget.h"
 
 #include "Dom/JsonObject.h"
@@ -45,9 +46,25 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       return true;
   }
 
+  // A watch is resolved before anything is written, so a bad one leaves the target untouched.
+  McpPropertyWatch::FWatch Watch;
+  bool bWatch = false;
+  if (!McpPropertyWatch::ParseWatch(*this, RequestId, Payload, RequestingSocket, RootObject, Watch, bWatch)) {
+      return true;
+  }
+
   const bool bIsClassDefaultObject = RootObject->HasAnyFlags(RF_ClassDefaultObject);
   if (AActor *Actor = Cast<AActor>(RootObject))
   {
+      if (bWatch && (McpPropertyActorAccess::IsActorTransformProperty(PropertyName) ||
+                     PropertyName.Equals(TEXT("bHidden"), ESearchCase::IgnoreCase)))
+      {
+          SendAutomationError(RequestingSocket, RequestId,
+              TEXT("watch samples after a reflected property write; an actor's transform and bHidden are set directly "
+                   "(control_actor.get_transform readMode motion samples an actor over time)."),
+              TEXT("INVALID_ARGUMENT"));
+          return true;
+      }
       if (McpPropertyActorAccess::TryHandleSetActorProperty(
               *this, RequestId, PropertyName, Payload, ValueField, Actor,
               bIsClassDefaultObject, RequestingSocket))
@@ -204,6 +221,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       ResultPayload->SetField(TEXT("value"), CurrentValue);
   }
 
+  if (bWatch) {
+      McpPropertyWatch::SendAfterWatch(*this, RequestId, RequestingSocket, ResultPayload, Watch);
+      return true;
+  }
   SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property value updated."), ResultPayload);
   return true;
 }

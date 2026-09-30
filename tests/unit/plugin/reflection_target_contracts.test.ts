@@ -209,3 +209,16 @@ describe('the reflection surface refuses /Script targets', () => {
     }
   });
 });
+
+// set_property's watch reads a property on any objectPath after the write: the same boundary holds there,
+// or a write-scoped caller could sample the plugin's own settings object.
+describe('set_property watch stays inside the reflection boundary', () => {
+  it('checks the watched object and is resolved before anything is written', () => {
+    const watch = privateSource('Domains', 'Property', 'McpAutomationBridge_PropertyHandlersObjectWatch.cpp');
+    expect(watch).toContain('McpSafeReflectionTarget::IsAddressable(Object)');
+    const set = objectSet();
+    const parse = set.indexOf('McpPropertyWatch::ParseWatch(');
+    expect(parse).toBeGreaterThan(-1);
+    expect(parse).toBeLessThan(set.indexOf('RootObject->Modify();'));
+  });
+});

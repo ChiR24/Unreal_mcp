@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7972afdedd0573d5",
+  "catalogRevision": "d4006f314fde05a9",
   "recordCount": 389,
   "records": [
     {
@@ -15798,6 +15798,7 @@
         ],
         "whenNotToUse": [
           "edit=create: A Blueprint graph animation is needed (use animation_physics).",
+          "edit=create: An animation must be seen playing in PIE: write the value that sets it off with inspect.set_property and watch (a short pop ends before a later call can read it).",
           "edit=add_track: The animation has enough tracks.",
           "edit=add_keyframe: The track should be removed rather than keyframed."
         ]
@@ -16042,7 +16043,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "08e559dd30be22e0c4b263ced1391950bd64107b28ffd2df484106b88e3f3154",
-        "content": "c2c23331a3aa42dd9b44a7d18549ea6995b0990c3955493390281cbdb80175a7"
+        "content": "23bdc34359079352f1db6cb1a22c73cb0e4a99bcd019bd70e17143d7f173f872"
       }
     },
     {
@@ -41576,6 +41577,32 @@
             "markDirty": {
               "type": "boolean",
               "description": "Default true: mark the package dirty and save an asset package. false leaves the package untouched and unsaved, so the change lives in memory only."
+            },
+            "watch": {
+              "type": "object",
+              "description": "Sample a property right after the write, in the same call, to see what the write sets off before it ends: a HUD pop or fade runs on real time, even with PIE paused, and is over before a later call can read it. The reply lists each value the property took with its time t in seconds (Lives on GameInstance with watch {objectPath: \"WBP_HUD\", propertyName: \"LivesBox.RenderTransform\"}).",
+              "properties": {
+                "propertyName": {
+                  "type": "string",
+                  "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform)."
+                },
+                "objectPath": {
+                  "type": "string",
+                  "description": "The object to sample, as objectPath takes it (GameInstance, a live widget such as WBP_HUD); omitted, the object written."
+                },
+                "durationSeconds": {
+                  "type": "number",
+                  "description": "Real seconds to sample (default 0.5, at most 20)."
+                },
+                "intervalSeconds": {
+                  "type": "number",
+                  "description": "Seconds between samples (default 0: every frame); a sample is kept only when the value changed."
+                }
+              },
+              "required": [
+                "propertyName"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
@@ -41603,6 +41630,12 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "watch": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With watch: objectPath, propertyName, samples ({t, value}, kept when the value changed), sampleCount, changed (it took more than one value) and frames."
             },
             "blueprintCompiled": {
               "type": "boolean",
@@ -41656,8 +41689,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "088a4c8eaf9b11cd6e5422e5ca748dd7ec923fca1bd7eaf81858d37f543a6420",
-        "content": "9002a51c5b7f63d25835ad2755f9c66e84995bb3ca393ab5d81cbc2807b055cc"
+        "schema": "4da0606bfc52d0e3f2d6b4a585c64502eadd332ce6ae726b74ef5b949d9a0062",
+        "content": "382045a45748881d279198d659c747d46f1267c273b39d9464e412416fd157ad"
       }
     },
     {
