@@ -23,6 +23,9 @@ bool IsPlainKey(const FString &Key) {
 }
 
 FString NextStep(const FMcpFabImportStatus &Status) {
+  if (Status.Phase == TEXT("done") && Status.Result.UnsavedPackages.Num() > 0) {
+    return TEXT("The import finished, but some packages could not be saved (unsavedPackages): they exist only in memory until control_editor save_all writes them. importedRoot and sampleAssetPaths say where it landed.");
+  }
   if (Status.Phase == TEXT("done")) {
     return TEXT("The import finished: importedRoot and sampleAssetPaths say where it landed, the meshes first. asset.move relocates a folder and fixes redirectors.");
   }
@@ -104,6 +107,17 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
       Samples.Add(MakeShared<FJsonValueString>(Path));
     }
     Data->SetArrayField(TEXT("sampleAssetPaths"), Samples);
+  }
+  if (Result.bSaveRan) {
+    Data->SetBoolField(TEXT("saved"), Result.UnsavedPackages.Num() == 0);
+    Data->SetNumberField(TEXT("savedCount"), Result.SavedCount);
+    if (Result.UnsavedPackages.Num() > 0) {
+      TArray<TSharedPtr<FJsonValue>> Unsaved;
+      for (const FString &Name : Result.UnsavedPackages) {
+        Unsaved.Add(MakeShared<FJsonValueString>(Name));
+      }
+      Data->SetArrayField(TEXT("unsavedPackages"), Unsaved);
+    }
   }
   if (Status.Phase == TEXT("failed")) {
     Data->SetStringField(TEXT("failureCode"), Result.ErrorCode);

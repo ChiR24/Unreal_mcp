@@ -34,7 +34,7 @@ describe('the Fab add answers when Fab accepts, not when the import ends', () =>
   it('gives the watcher no completion callback for the caller to wait on', () => {
     const header = code(fab('McpFabImportWatcher.h'));
     expect(header).toMatch(/void WatchForImport\(/u);
-    expect(header).not.toMatch(/TFunction/u);
+    expect(header).not.toMatch(/OnComplete|OnAccepted/u);
     // The outcome goes to the store instead.
     expect(code(fab('McpFabImportWatcher.cpp'))).toContain('McpFabImportOperations::Finish(OperationId, Accepted);');
   });
@@ -146,5 +146,35 @@ describe('the Fab mesh-merging guard', () => {
     expect(unsupported).toBeGreaterThan(-1);
     expect(unsupported).toBeLessThan(add.indexOf('McpFabImportOperations::Begin('));
     expect(add).toContain('McpFabInterchange::CanSeparateMeshes()');
+  });
+});
+
+describe('the post-import save', () => {
+  const post = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabPostImport.cpp'));
+
+  it('saves through the safe wrapper, and only what the import left dirty', () => {
+    expect(post).toContain('McpSafeOperations::McpSafeAssetSave(Package)');
+    expect(post).toContain('!Package->IsDirty()');
+    expect(post).not.toContain('SavePackage');
+  });
+
+  it('names the packages it could not save', () => {
+    expect(post).toContain('Result.UnsavedPackages.Add(PackageName)');
+  });
+
+  it('runs after the registry hook is off and before the outcome is stored', () => {
+    const watcher = code(fab('McpFabImportWatcher.cpp'));
+    const hookOff = watcher.indexOf('RegistryRef.OnAssetAdded().Remove(Watch->AddedHandle);');
+    const ran = watcher.indexOf('PostImport(Accepted, Added);');
+    const stored = watcher.indexOf('McpFabImportOperations::Finish(OperationId, Accepted);');
+    expect(hookOff).toBeGreaterThan(-1);
+    expect(ran).toBeGreaterThan(hookOff);
+    expect(stored).toBeGreaterThan(ran);
+  });
+
+  it('is what the add hands the adapter', () => {
+    expect(code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp')))
+      .toContain('Options.PostImport = &McpFabPostImport::Run;');
+    expect(code(fab('McpFabAddOperation.cpp'))).toContain('Options.PostImport');
   });
 });

@@ -9551,7 +9551,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Whether the asset was saved."
+          "description": "Present once the import settled and any assets landed: true when every package the import left dirty was saved, false when some could not be (see unsavedPackages). Fab leaves what it imports unsaved in memory, so a Megascans add would otherwise be lost when the editor closes."
+        },
+        "savedCount": {
+          "type": "number",
+          "description": "Packages that were saved. A unreal-engine pack arrives on disk already and is not dirty, so it counts none."
         },
         "scalarDefault": {
           "type": "number",
@@ -9671,6 +9675,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Requested column paths that do not exist in this build — usually a Fab schema change."
+        },
+        "unsavedPackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Packages that could not be saved, by name; control_editor save_all writes them once whatever blocked the save is fixed."
         },
         "usePreviewValueAsDefault": {
           "type": "boolean",

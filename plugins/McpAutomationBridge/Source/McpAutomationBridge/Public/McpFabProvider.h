@@ -33,17 +33,6 @@ struct FMcpFabDownloadResult
 	FString Error;
 };
 
-/** What the caller asked the add to do beyond importing the listing. */
-struct FMcpFabAddOptions
-{
-	/**
-	 * Unset leaves Fab's own behaviour, which merges every mesh in a source file into ONE static mesh.
-	 * false imports each mesh as its own asset; true accepts the single merged mesh explicitly, which a
-	 * scene-sized mesh file requires before it is downloaded at all.
-	 */
-	TOptional<bool> CombineMeshes;
-};
-
 /**
  * What one add-to-project request learned from Fab's page, and later how the import ended.
  *
@@ -79,6 +68,30 @@ struct FMcpFabAddResult
 	bool bMergesMeshes = false;
 	/** Set only when the add asked for separate meshes: whether Interchange's combining was switched off in time. */
 	TOptional<bool> MeshesSeparated;
+	/** True once the post-import step ran: it saves the packages the import left dirty. */
+	bool bSaveRan = false;
+	/** Packages that step saved. One that arrived on disk already (a unreal-engine pack) is not dirty and not counted. */
+	int32 SavedCount = 0;
+	/** Packages that step could not save, by name. */
+	TArray<FString> UnsavedPackages;
+};
+
+/** What the caller asked the add to do beyond importing the listing. */
+struct FMcpFabAddOptions
+{
+	/**
+	 * Unset leaves Fab's own behaviour, which merges every mesh in a source file into ONE static mesh.
+	 * false imports each mesh as its own asset; true accepts the single merged mesh explicitly, which a
+	 * scene-sized mesh file requires before it is downloaded at all.
+	 */
+	TOptional<bool> CombineMeshes;
+
+	/**
+	 * Runs once, on the game thread, when the import has settled and before its outcome is stored, with
+	 * every asset path the import created. The adapter module cannot save or move assets itself -- the
+	 * safe wrappers live in the core -- so the core does it here and reports what it did by editing Result.
+	 */
+	TFunction<void(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)> PostImport;
 };
 
 /** Where one background import stands. Read-only: assembled from the operation store on demand. */

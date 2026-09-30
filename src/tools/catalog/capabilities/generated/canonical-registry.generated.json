@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "e57cb0a8470c543b",
+  "catalogRevision": "acf418b261cb1dbc",
   "recordCount": 389,
   "records": [
     {
@@ -10297,6 +10297,21 @@
               },
               "description": "Up to ten imported asset paths, the static and skeletal meshes first."
             },
+            "saved": {
+              "type": "boolean",
+              "description": "Present once the import settled and any assets landed: true when every package the import left dirty was saved, false when some could not be (see unsavedPackages). Fab leaves what it imports unsaved in memory, so a Megascans add would otherwise be lost when the editor closes."
+            },
+            "savedCount": {
+              "type": "number",
+              "description": "Packages that were saved. A unreal-engine pack arrives on disk already and is not dirty, so it counts none."
+            },
+            "unsavedPackages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Packages that could not be saved, by name; control_editor save_all writes them once whatever blocked the save is fixed."
+            },
             "failureCode": {
               "type": "string",
               "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), or the add's own refusal code."
@@ -10399,8 +10414,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0387f30f70c5191349a9257226a73d9627d2d3be64282cbf9d8d11c906ee5754",
-        "content": "57546ccdd55d6434ec0713eaba78553ba313f2e3a8023d53c0023c111ac26f01"
+        "schema": "8033b6d7712ed5bc95cd8e2189b6012126c68e26943cd5b17912bd059a8ab530",
+        "content": "9f5c4d923fc7461595e431becf013ba4726dd1b514bd0a0432175e8ffd92e758"
       }
     },
     {

@@ -3,6 +3,7 @@
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h"
+#include "Domains/AssetWorkflow/Fab/McpAutomationBridge_FabPostImport.h"
 #include "McpFabProvider.h"
 
 #include "Async/Async.h"
@@ -49,6 +50,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
   }
 
   FMcpFabAddOptions Options;
+  // Once the import settles the packages it left dirty are saved; the status read reports how that went.
+  Options.PostImport = &McpFabPostImport::Run;
   bool bCombineMeshes = false;
   if (Payload->TryGetBoolField(TEXT("combineMeshes"), bCombineMeshes)) {
     Options.CombineMeshes = bCombineMeshes;

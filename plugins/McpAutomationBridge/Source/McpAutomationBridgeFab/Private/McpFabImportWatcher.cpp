@@ -113,7 +113,8 @@ struct FImportWatch
 void WatchForImport(
 	const FString& OperationId,
 	TSet<FString> Before,
-	FMcpFabAddResult Accepted)
+	FMcpFabAddResult Accepted,
+	TFunction<void(FMcpFabAddResult&, const TArray<FString>&)> PostImport)
 {
 	TSharedRef<FImportWatch> Watch = MakeShared<FImportWatch>();
 	McpFabLogCapture::Start();
@@ -147,7 +148,7 @@ void WatchForImport(
 
 	const double Ceiling = CeilingSeconds(Accepted.DownloadBytes);
 	FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
-		[Accepted, OperationId, Ceiling, Watch](float Delta) mutable
+		[Accepted, OperationId, Ceiling, PostImport, Watch](float Delta) mutable
 		{
 			Watch->Elapsed += Delta;
 
@@ -229,10 +230,16 @@ void WatchForImport(
 					Ceiling, Count);
 			}
 
+			// The hooks come off before the post-import step: moving or saving assets raises registry
+			// events of its own, and none of them are this import.
 			IAssetRegistry& RegistryRef = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 				TEXT("AssetRegistry")).Get();
 			RegistryRef.OnAssetAdded().Remove(Watch->AddedHandle);
 			McpFabLogCapture::Stop();
+			if (PostImport && Count > 0)
+			{
+				PostImport(Accepted, Added);
+			}
 			McpFabImportOperations::Finish(OperationId, Accepted);
 			return false;
 		}), 0.25f);
