@@ -74,7 +74,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_render_job', selector: 'setting',
     summary: 'Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables.',
-    topics: ['render output settings', 'anti aliasing', 'render pass', 'burn in', 'console variables', 'movie output resolution', 'set render resolution'],
+    topics: ['render output settings', 'anti aliasing', 'render pass', 'burn in', 'console variables', 'movie output resolution'],
     members: { output: 'configure_output_settings', anti_aliasing: 'configure_anti_aliasing', add_render_pass: 'add_render_pass', burn_ins: 'configure_burn_ins', console_variables: 'configure_console_variables' },
   },
   {

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "049dc29913696eee",
+  "catalogRevision": "d4d8e5da6cb1d24c",
   "recordCount": 389,
   "records": [
     {
@@ -81293,8 +81293,7 @@
           "render pass",
           "burn in",
           "console variables",
-          "movie output resolution",
-          "set render resolution"
+          "movie output resolution"
         ],
         "summary": "Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables.",
         "whenToUse": [
@@ -81622,7 +81621,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ff6c31979c043d5a35f22657cc6294415f5db0af8457e8d0bf105371309c423d",
-        "content": "aecf39f5aaa0a2b89d174b8b8f1ab1509a220475636d20861dedc305b78dcac9"
+        "content": "76480fdf6a768e8458a7a159dc23b990709c201ebf9af8359c2760e491ecaa5d"
       }
     },
     {
