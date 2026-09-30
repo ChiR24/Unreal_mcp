@@ -152,6 +152,8 @@ public:
   TArray<FString> EndErrorCapture();
   bool HasCapturedErrors() const;
   TArray<FString> GetCapturedErrorMessages() const;
+  // Drops captured log lines a later step supersedes; that step logs again if it still fails.
+  void ForgetCapturedMessages(TFunctionRef<bool(const FString&)> Matches);
 
   friend class FMcpRequestErrorDevice;
 

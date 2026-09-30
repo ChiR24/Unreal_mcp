@@ -1,6 +1,7 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Misc/PackageName.h"
 
 // build_material_graph: one call that adds a material's nodes, wires them and
 // sets its properties. A small gradient used to cost a describe + execute pair
@@ -233,6 +234,14 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
       return true;
     }
   }
+
+  // A step that recompiles logs the half-built graph ("missing input 11 (OB)" before the connect
+  // feeding it) and the receipt showed that as current. The compile below is the verdict, and it
+  // logs again if the material still fails.
+  const FString PackageName = FPackageName::ObjectPathToPackageName(AssetPath);
+  Bridge->ForgetCapturedMessages([&PackageName](const FString& Line) {
+    return Line.StartsWith(TEXT("[LogMaterial]")) && Line.Contains(PackageName);
+  });
 
   // One recompile and save for the whole graph, through compile_material itself.
   TSharedPtr<FJsonObject> Compile = MakeShared<FJsonObject>();

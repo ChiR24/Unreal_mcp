@@ -137,4 +137,12 @@ describe('handlers answer what they did', () => {
     expect(settings).toMatch(/if \(Unknown\.Num\(\) > 0 && OutApplied\.Num\(\) == AppliedBefore\)[\s\S]*?return false;/u);
     expect(settings).toContain('It->GetName().Contains(Key)');
   });
-});
+
+  // A custom node got its input before the wire feeding it; that mid-batch compile's
+  // "missing input" stayed on a receipt whose final compile was clean.
+  it('build_material_graph drops compile lines its final compile supersedes', () => {
+    const batch = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp');
+    expect(batch.indexOf('Bridge->ForgetCapturedMessages(')).toBeGreaterThan(-1);
+    expect(batch.indexOf('Bridge->ForgetCapturedMessages(')).toBeLessThan(batch.indexOf('RunStep(CompileId, Compile);'));
+  });
+});

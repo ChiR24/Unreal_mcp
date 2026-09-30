@@ -155,6 +155,13 @@ bool UMcpAutomationBridgeSubsystem::HasCapturedErrors() const
     return CurrentErrorCapture.ErrorCount > 0;
 }
 
+void UMcpAutomationBridgeSubsystem::ForgetCapturedMessages(TFunctionRef<bool(const FString&)> Matches)
+{
+    FScopeLock Lock(&ErrorCaptureMutex);
+    CurrentErrorCapture.ErrorCount -= CurrentErrorCapture.ErrorMessages.RemoveAll(Matches);
+    CurrentErrorCapture.WarningCount -= CurrentErrorCapture.WarningMessages.RemoveAll(Matches);
+}
+
 TArray<FString> UMcpAutomationBridgeSubsystem::GetCapturedErrorMessages() const
 {
     FScopeLock Lock(&ErrorCaptureMutex);
