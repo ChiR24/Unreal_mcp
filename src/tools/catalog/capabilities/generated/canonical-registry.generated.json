@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "339b33f05189b00d",
+  "catalogRevision": "6be4ecfd1bfe956b",
   "recordCount": 389,
   "records": [
     {
@@ -16811,7 +16811,7 @@
           "slot layout",
           "widget children"
         ],
-        "summary": "Read a Widget Blueprint: its tree summary, or one slot layout (padding, alignment, size rule).",
+        "summary": "Read a Widget Blueprint: its widget tree (each widget with its class and parent, so a panel's children), or one slot layout (padding, alignment, size rule).",
         "whenToUse": [
           "info=widget: The widget tree of a Widget Blueprint must be inspected before modifying widgets.",
           "info=slot: The layout of a single widget must be inspected before adjusting it."
@@ -17080,7 +17080,7 @@
       },
       "examples": [
         {
-          "title": "Read a Widget Blueprint: its tree summary, or one slot layout (padding, alignment, size rule).",
+          "title": "Read a Widget Blueprint: its widget tree (each widget with its class and parent, so a panel's children), or one slot layout (padding, alignment, size rule).",
           "input": {
             "action": "get_widget_info",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -17159,7 +17159,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b9aa334dfde18107695d6157528909655eec8b061466888a0145a924d7922a46",
-        "content": "15d196c6e3c4e00cff1b7ac0fe345110daf65406f0346f32976ba60505ab3c44"
+        "content": "e213d44965e8163d1b60a43cd5712e447fd48a13bf97a783903f7604e64f0c94"
       }
     },
     {
@@ -81291,7 +81291,8 @@
           "render pass",
           "burn in",
           "console variables",
-          "movie output resolution"
+          "movie output resolution",
+          "set render resolution"
         ],
         "summary": "Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables.",
         "whenToUse": [
@@ -81619,7 +81620,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ff6c31979c043d5a35f22657cc6294415f5db0af8457e8d0bf105371309c423d",
-        "content": "76480fdf6a768e8458a7a159dc23b990709c201ebf9af8359c2760e491ecaa5d"
+        "content": "aecf39f5aaa0a2b89d174b8b8f1ab1509a220475636d20861dedc305b78dcac9"
       }
     },
     {

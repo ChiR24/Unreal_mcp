@@ -388,4 +388,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'fade in widget', accepted: ['blueprint.edit_widget_animation'] },
   { query: 'screen shake', accepted: ['blueprint.create'] },
   { query: 'screenshot game view', accepted: ['control_editor.screenshot', 'system_control.screenshot'] },
+  { query: 'list widget children', accepted: ['blueprint.get_widget_info'] },
+  { query: 'set movie resolution', accepted: ['sequence.mrq.configure_render_job'] },
 ];

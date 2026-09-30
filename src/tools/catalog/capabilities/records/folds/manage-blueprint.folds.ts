@@ -132,7 +132,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_widget_info', selector: 'info',
-    summary: 'Read a Widget Blueprint: its tree summary, or one slot layout (padding, alignment, size rule).',
+    summary: 'Read a Widget Blueprint: its widget tree (each widget with its class and parent, so a panel\'s children), or one slot layout (padding, alignment, size rule).',
     topics: ['read widget layout', 'widget layout', 'slot layout', 'widget children'],
     members: { widget: 'get_widget_info', slot: 'get_widget_slot_info' },
   },
