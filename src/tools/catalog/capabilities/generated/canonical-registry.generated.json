@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d06fd50d990ecc2d",
+  "catalogRevision": "a08d02adc95f0959",
   "recordCount": 389,
   "records": [
     {
@@ -8032,7 +8032,10 @@
           "asset report",
           "asset used",
           "show asset details",
-          "look at asset"
+          "look at asset",
+          "meshes using a material",
+          "which assets use this",
+          "what uses this material"
         ],
         "summary": "Inspect an asset: metadata, what it uses or what uses it (referencers), its dependency graph, an exists-and-loads check, or a directory report.",
         "whenToUse": [
@@ -8229,7 +8232,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "145428ec6e63a6f611f13febd5d124ecbb5682b042c63fe1c3c71c67066513d1",
-        "content": "be5fb453e8f14c34fe884cb090c89c423b55f5702fdc9f9f2d6ba6d82d194cd4"
+        "content": "5eb963d85cd1d4c3f3e12042d99c518d613fcea01c397f4162b4da41c1b275d4"
       }
     },
     {
@@ -37616,7 +37619,9 @@
           "inspect_data_table",
           "data table row",
           "list rows",
-          "row struct"
+          "row struct",
+          "look at data table",
+          "view data table rows"
         ],
         "summary": "Read a data table: one row, all rows, or its row struct.",
         "whenToUse": [
@@ -37736,7 +37741,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "440c5c932cbc2ff3d969f8d54e137f873821a1e2b6d519b05cd769edb7f6ff6e",
-        "content": "313ee35af28b8663f6ad4b1a323e3b728157f537fca1a76a0c73988449a1057c"
+        "content": "4e8f81ec7363828aadb9b91b9ff279d42f12984af89ac92b4406b272374673ee"
       }
     },
     {

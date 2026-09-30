@@ -375,4 +375,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'read game mode settings', accepted: ['manage_networking.get_game_framework_info'] },
   { query: 'add a reflection capture', accepted: ['build_environment.create_capture_actor'] },
   { query: 'create blueprint parent class', accepted: ['blueprint.create'] },
+  { query: 'which meshes use this material', accepted: ['asset.inspect_asset'] },
+  { query: 'look at the data table', accepted: ['datatable.inspect_data_table'] },
 ];
