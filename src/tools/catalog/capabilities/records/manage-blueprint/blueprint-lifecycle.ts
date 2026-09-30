@@ -63,7 +63,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     aliases: ['blueprint.list_variables', 'blueprint.list_blueprint_variables'],
     summary: 'Retrieve metadata for one Blueprint asset.',
     whenToUse: ['Blueprint parent class, components, or variables must be inspected.'],
-    whenNotToUse: ['The full graph or node details are needed (use get_graph_details).'],
+    whenNotToUse: ['The full graph or node details are needed (use blueprint.inspect_graph).'],
     inputProps: { blueprintPath: P.blueprintPath },
     required: ['blueprintPath'],
     outputProps: {

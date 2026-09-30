@@ -21,7 +21,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     },
   },
   {
-    primary: 'set_metadata', topics: ['tag asset'], selector: 'kind',
+    primary: 'set_metadata', topics: ['tag asset', 'tag an asset', 'asset metadata', 'add asset tag'], selector: 'kind',
     summary: 'Set asset metadata key/values or asset tags.',
     members: { metadata: 'set_metadata', tags: 'set_tags' },
   },

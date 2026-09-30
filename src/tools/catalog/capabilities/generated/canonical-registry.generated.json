@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bb9099d0d0217b0c",
+  "catalogRevision": "56ce3f0f65453fd4",
   "recordCount": 389,
   "records": [
     {
@@ -10418,7 +10418,10 @@
         "family": "lifecycle",
         "topics": [
           "set_metadata",
-          "tag asset"
+          "tag asset",
+          "tag an asset",
+          "asset metadata",
+          "add asset tag"
         ],
         "summary": "Set asset metadata key/values or asset tags.",
         "whenToUse": [
@@ -10551,7 +10554,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "017fb775355b2f930ddcd44a77e116483d8977bfcd1d2e3a167bf88ecdd095b2",
-        "content": "586829cd5e6750c6cd9c7955c3ad3b555c3d3e704f56bbb0f4b652e80e949a81"
+        "content": "f57585bb4aa8ccc1b16b9a539a9f921649fec5453dbd9baefea68187854e34da"
       }
     },
     {
@@ -13418,6 +13421,7 @@
           "title screen",
           "settings screen",
           "start screen",
+          "make a start screen",
           "build menu"
         ],
         "summary": "Create a new Widget Blueprint holding a ready-made screen: main menu, pause menu, settings menu, loading screen, HUD, dialog box, inventory, radial menu, credits or shop.",
@@ -13738,7 +13742,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "be3004b8e6e5b1eed58270b5f427da76875741c9118bc61cc6f89ffe26fa033c",
-        "content": "d2252a8049a052c0a0f4ac02b716fef18c62185ed2336d29a3f7732b463a1d27"
+        "content": "6e9e08acd91853427301c6bd1794d3c53412e61c809535386b241312aa75eb61"
       }
     },
     {
@@ -13932,7 +13936,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Existing node identifier returned by create_node or get_graph_details."
+              "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
             },
             "nodeGuid": {
               "type": "string",
@@ -14066,8 +14070,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cff9dee86a5fe462ffc902ac81a0314499b57a83b48fcfce80407ff11efc11b3",
-        "content": "8965d93e70fdbc81429832a537074c13c7380883e1a9e2716e31792afebb1750"
+        "schema": "f712852d4f1423e3bbe408a6d3122533b45ecb472cc5e3462c69fc68387a3e63",
+        "content": "6d6e614b2fa705d45bdd2f91118acb75fce2b5be26c73a5f8f21919357951bab"
       }
     },
     {
@@ -14514,7 +14518,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Existing node identifier returned by create_node or get_graph_details."
+              "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
             },
             "propertyName": {
               "type": "string",
@@ -14717,7 +14721,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Existing node identifier returned by create_node or get_graph_details."
+              "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
             },
             "pinName": {
               "type": "string",
@@ -14945,8 +14949,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b2988f99a20a6ec59229890c1b773ebddc98b6a7f30bc8e20af6ab1c19cb495f",
-        "content": "6f92d71f07be14e71b35d0c8c819b839403a1fb54bee9ca30d8e2e84e2d88f4d"
+        "schema": "07ef17a6a15b7ac9c11a01bda5b9cf93211d551c78509be362238c6c207f25ef",
+        "content": "9613109e68794ecf56afcf0d6ee0ba6a9e5edd047ed003871a3f257f4dc5938f"
       }
     },
     {
@@ -16293,7 +16297,7 @@
           "info=property: One default of a Blueprint component must be read, for example Shield.bVisible."
         ],
         "whenNotToUse": [
-          "info=blueprint: The full graph or node details are needed (use get_graph_details)."
+          "info=blueprint: The full graph or node details are needed (use blueprint.inspect_graph)."
         ]
       },
       "schemas": {
@@ -16494,7 +16498,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
-        "content": "494cd240011396f60d523444482f497662a1c1b89d26d85b2698b8e2b989b36d"
+        "content": "03fc0a396061d7a383077b247990f51d42b94bd4e5d10e68b9d4342d26f9c0b1"
       }
     },
     {
@@ -17175,7 +17179,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Existing node identifier returned by create_node or get_graph_details."
+              "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
             },
             "nodeGuid": {
               "type": "string",
@@ -17239,7 +17243,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Existing node identifier returned by create_node or get_graph_details."
+              "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
             },
             "nodeName": {
               "type": "string",
@@ -17385,8 +17389,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cf8a011d182a22fc0a06185b43677876c4df7b3a194e41e3f072d14fc54baf11",
-        "content": "c767c819e465fef81493c7c7ba038c096a2090b53bab14c04feb4d22ba45331c"
+        "schema": "24a7dd17b5920c51c06a80c2cd4b1518fa48d4cfc1c3cb2b498ef65625fe3163",
+        "content": "21258fb089623c90dfd2c08522b1dc848f45e7b9dd3ff12db8a3efd6b52b6e8c"
       }
     },
     {
@@ -17736,7 +17740,7 @@
             },
             "nodeId": {
               "type": "string",
-              "description": "Existing node identifier returned by create_node or get_graph_details."
+              "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
             },
             "graphName": {
               "type": "string",
@@ -17850,8 +17854,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ceb20df2b24b4ee29f09d23e508b600b9635fa41169b48d066242c6b2705d1e2",
-        "content": "99a933daab4adfe99f20a41163ae70b03f54a0f920610cf76e1bf18c69e6cab1"
+        "schema": "304494047febc1ac2c28d2476ccbebc002a248de59a68769fa18a6741128db67",
+        "content": "510867a890b1cf2d10840b7dfb21a6d7100508c1de1c7aea8f73cd94736db5b7"
       }
     },
     {
@@ -21205,6 +21209,7 @@
           "vignette",
           "add bloom",
           "screen tint",
+          "change screen tint",
           "add bloom or depth of field"
         ],
         "summary": "Configure a post-process setting on a volume or camera: bloom, exposure, depth of field, motion blur, tonemapper, color grading, LUT, white balance, vignette, grain, chromatic aberration, lens flare, SSAO/GTAO, SSR, screen percentage, blend.",
@@ -21590,7 +21595,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ab3cdce3549e4cd37ab9221e8438cdc2a03919c804bda5eb83e1cf7879611391",
-        "content": "d700b88fe5419c8749606b2ab25595681cf256c0e36fc16c83fe9f694328947f"
+        "content": "1295edbe6538c1badf0ea6da1abb67468beabe920ad7a424bdcbf663c553eb7c"
       }
     },
     {
@@ -23263,7 +23268,8 @@
           "reflection capture",
           "planar reflection",
           "render target capture",
-          "place a reflection capture"
+          "place a reflection capture",
+          "add a reflection capture"
         ],
         "summary": "Create a scene capture (2D or cube) or a reflection capture (sphere, box or planar).",
         "whenToUse": [
@@ -23434,7 +23440,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "fe77fba6a4f30b30a70c29b5c3fdc24fa5243daf941ef5b2a7f04acadfe39ed2",
-        "content": "632663697b0d9e56f7e77054350476411b30e51c5aded23e2e98703cf64f76f5"
+        "content": "30db59f34396c500a1e6a0e7c9124a59a8e0532872f196e2ec2fc623f144662f"
       }
     },
     {
@@ -68872,7 +68878,9 @@
         "whenToUse": [
           "Use it to set the PlayerStartTag of a PlayerStart in the open level: an explicit tag, or TeamN for teamIndex N. The engine only matches the tag against a ?Portal=<tag> travel option; team spawning needs a game mode that reads it. Undoable; the level is left modified, not saved."
         ],
-        "whenNotToUse": []
+        "whenNotToUse": [
+          "A PlayerStart must be placed in the level first (use control_actor.spawn with the PlayerStart class)."
+        ]
       },
       "schemas": {
         "input": {
@@ -68988,7 +68996,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "0944b6ddf7de293f887bfded50c802f6a033ddb557795699e4194d09abaeb494",
-        "content": "8850c95e725956d7c2b44ee888cb3f3d57d9d9ff971e94393cac1afb081ec812"
+        "content": "41c0474cfd6c817055581b2e2c08d6e799c24c6a5ee82e4a2d537074ee9c8908"
       }
     },
     {
@@ -70687,7 +70695,8 @@
           "which mode is used",
           "default pawn class",
           "default classes",
-          "read game mode"
+          "read game mode",
+          "game mode settings"
         ],
         "summary": "Read which game mode is in use and its default classes (pawn, player controller, game state, player state, HUD), from a game mode Blueprint or from the live world, the level override or the project default.",
         "whenToUse": [
@@ -70795,7 +70804,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "41f9bed5d32982418a3eaf081163a7cbb4e1ca1a319d93371f59d5307b5951b9",
-        "content": "eee8e1ff1e1acd9445d1f8043beb9c926f490249b8f5e6f532b29f81c3475ca0"
+        "content": "9bfadbcbdac66667dea95dd4b4660f6446a9f110887e8f592c61137b35636b6f"
       }
     },
     {

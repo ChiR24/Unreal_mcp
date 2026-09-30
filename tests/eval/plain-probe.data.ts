@@ -370,4 +370,8 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'find broken assets', accepted: ['system_control.validate_assets'] },
   { query: 'verify assets are not broken', accepted: ['system_control.validate_assets'] },
   { query: 'make a render target', accepted: ['asset.create_render_target'] },
+  { query: 'make a start screen', accepted: ['blueprint.create_widget_template'] },
+  { query: 'change screen tint', accepted: ['build_environment.configure_post_process'] },
+  { query: 'read game mode settings', accepted: ['manage_networking.get_game_framework_info'] },
+  { query: 'add a reflection capture', accepted: ['build_environment.create_capture_actor'] },
 ];

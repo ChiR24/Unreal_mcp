@@ -10843,7 +10843,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "Existing node identifier returned by create_node or get_graph_details."
+          "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
         },
         "nodeIds": {
           "type": "array",
@@ -11879,7 +11879,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeId": {
           "type": "string",
-          "description": "Existing node identifier returned by create_node or get_graph_details."
+          "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
         },
         "nodeIds": {
           "type": "object",

@@ -22,6 +22,7 @@ export type UtilityRecordSpec = {
   readonly family: string;
   readonly summary: string;
   readonly topics?: readonly string[];
+  readonly whenNotToUse?: readonly string[];
   readonly params?: readonly string[];
   readonly required?: readonly string[];
   readonly requiredOneOf?: readonly string[];
@@ -58,7 +59,7 @@ export function utilityRecord(spec: UtilityRecordSpec): CapabilityRecordSource {
       // Every utility summary opens with an imperative verb, so this reads "Use it to create a sound cue...".
       // Only the first letter is lowered: MetaSound, Enhanced Input and PIE keep their capitals.
       whenToUse: [`Use it to ${spec.summary.charAt(0).toLowerCase()}${spec.summary.slice(1)}`],
-      whenNotToUse: [],
+      whenNotToUse: [...(spec.whenNotToUse ?? [])],
     },
     schemas: {
       input: inputSchema(inputFields, required, spec.requiredOneOf),

@@ -117,7 +117,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_widget_template', selector: 'screen',
     summary: 'Create a new Widget Blueprint holding a ready-made screen: main menu, pause menu, settings menu, loading screen, HUD, dialog box, inventory, radial menu, credits or shop.',
-    topics: ['main menu', 'pause menu', 'settings menu', 'loading screen', 'hud', 'dialog box', 'inventory ui', 'radial menu', 'credits screen', 'shop ui', 'title screen', 'settings screen', 'start screen', 'build menu'],
+    topics: ['main menu', 'pause menu', 'settings menu', 'loading screen', 'hud', 'dialog box', 'inventory ui', 'radial menu', 'credits screen', 'shop ui', 'title screen', 'settings screen', 'start screen', 'make a start screen', 'build menu'],
     members: {
       main_menu: 'create_main_menu', pause_menu: 'create_pause_menu', settings_menu: 'create_settings_menu', loading_screen: 'create_loading_screen',
       hud: 'create_hud_widget', dialog: 'create_dialog_widget', inventory: 'create_inventory_ui', radial_menu: 'create_radial_menu',
