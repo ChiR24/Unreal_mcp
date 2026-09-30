@@ -188,3 +188,13 @@ describe('set_size sizes a box child by rule, and the record declares what the h
     }
   });
 });
+
+// set_style propertyName "Font.OutlineSettings.OutlineSize" answered PROPERTY_NOT_FOUND: the writer looked
+// the name up flat, so no struct member (a text outline) could be written.
+describe('set_style propertyName walks a dotted path into a struct', () => {
+  it('resolves through the shared property path resolver and writes into the resolved container', () => {
+    const source = read('Styling', 'McpAutomationBridge_WidgetAuthoringStyleClipping.cpp');
+    expect(source).toContain('McpResolvePropertyPath(Widget, PropertyName, Container, ResolvedPath, ResolveError)');
+    expect(source).toContain('Prop->ContainerPtrToValuePtr<void>(Container)');
+  });
+});

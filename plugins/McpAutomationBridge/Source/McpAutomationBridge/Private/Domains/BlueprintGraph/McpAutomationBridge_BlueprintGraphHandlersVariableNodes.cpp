@@ -61,7 +61,13 @@ bool TryCreateVariableNode(
 
     if (!MemberClassName.IsEmpty())
     {
-        if (UClass* OwnerClass = ResolveUClass(MemberClassName))
+        // A Blueprint asset path (/Game/UI/WBP_Pop) names the Blueprint, not its class.
+        UClass* OwnerClass = ResolveUClass(MemberClassName);
+        if (!OwnerClass)
+        {
+            OwnerClass = ResolveTargetClassFromString(MemberClassName);
+        }
+        if (OwnerClass)
         {
             FoundProperty = OwnerClass->FindPropertyByName(VariableFName);
             if (FoundProperty)

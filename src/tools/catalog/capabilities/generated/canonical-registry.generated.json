@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "08a1d070fb2cb4e3",
+  "catalogRevision": "d2d50e3001e102c9",
   "recordCount": 389,
   "records": [
     {
@@ -14551,7 +14551,7 @@
               "description": "Node GUID accepted in place of nodeId."
             },
             "propertyValue": {
-              "description": "Value to write: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field."
+              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
             },
             "pinName": {
               "type": "string",
@@ -14972,8 +14972,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2cb8d4499d4cef32b79cf45ca147cfd3231279f41608cd83670073e91fcedcee",
-        "content": "787f589b9b886a452090006b6a7fad954342f8903d1dca3f5d211d80c15e097d"
+        "schema": "de5f8ebb1b88e1731ae5699dd7949476508d8ef8dc198047548a7defe3e6e280",
+        "content": "562394ca3c1ff3a245a13e00084a7e1c53b51d70d590bcc051f630897a4900e3"
       }
     },
     {
@@ -18658,7 +18658,10 @@
           "make text red",
           "align widget",
           "bring widget to front",
-          "rounded corners"
+          "rounded corners",
+          "text outline",
+          "outline text",
+          "add outline to text"
         ],
         "summary": "Set a widget slot layout property (anchor, position, size (canvas {x,y}; box child sizeRule Auto/Fill and fillValue weight), alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.",
         "whenToUse": [
@@ -18815,7 +18818,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Any other widget property, by reflection (such as WidgetStyle or Brush): read without value, written with it."
+              "description": "Any other widget property, by reflection (such as WidgetStyle or Brush): read without value, written with it. A dotted path reaches into a struct: Font.OutlineSettings.OutlineSize (a number) outlines the text of a TextBlock and Font.OutlineSettings.OutlineColor colors that outline."
             },
             "value": {
               "description": "New value for propertyName: a string, number or bool, or an object or array for a struct property."
@@ -19094,8 +19097,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d70a937d2c12b094355681ce2528329e623602277c6a79fa44c5e1243840372e",
-        "content": "e8e9dd1338c8a4f61fecd99a1bdb3224642f93cccbad42e01ebb06ad590777a1"
+        "schema": "1d8bfda53155cde126521926fa3c7a0240475306517d0ca5c18e8c6e7bed928f",
+        "content": "32bab62379e650912e0fbc76f8adc4a87b5b317cc42d78fe45b060f44fdcff55"
       }
     },
     {
@@ -74941,6 +74944,10 @@
               "type": "string",
               "description": "Human-readable overlap warning, present only when overlappingNodes is non-empty."
             },
+            "assetPath": {
+              "type": "string",
+              "description": "The material the batch edited, compiled and saved."
+            },
             "results": {
               "type": "array",
               "items": {
@@ -75248,8 +75255,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3d2bd26bb14011b013238389d522be4376566eac76e8f90569c0a66d8d39c42a",
-        "content": "d3807315761099778ca9bb0182ae4c4705626cac1d62ea84dec13e8d7a1ab609"
+        "schema": "61ca511d593ec2627113119beb6125826cfed5623059558d155be2442f38fae6",
+        "content": "5049a98e24a029012a1f19d7a43857ac7b4028090b48eda04e7e9e83e6076f25"
       }
     },
     {

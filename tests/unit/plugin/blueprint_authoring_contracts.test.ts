@@ -290,3 +290,16 @@ describe('an add_event batch step without a position takes an auto grid slot', (
     expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersDetails.cpp')).toContain('In->bHidden');
   });
 });
+
+// A Cast step with targetClass /Game/NarioRider/Blueprints/BP_RiderGI stopped a batch with
+// "Class not found": the documented Blueprint path names the Blueprint, not its class.
+describe('a Blueprint asset path resolves wherever a graph node takes a class', () => {
+  it('Cast, VariableGet/Set memberClass and event memberClass fall back to the class-pin resolver', () => {
+    const special = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersSpecialNodes.cpp');
+    expect(special).toContain('TargetClass = ResolveTargetClassFromString(TargetClassName);');
+    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersVariableNodes.cpp'))
+      .toContain('OwnerClass = ResolveTargetClassFromString(MemberClassName);');
+    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersFunctionEventNodes.cpp'))
+      .toContain('TargetClass = ResolveTargetClassFromString(MemberClass);');
+  });
+});

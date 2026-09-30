@@ -380,4 +380,6 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'animate widget scale', accepted: ['blueprint.edit_widget_animation'] },
   { query: 'read live widget property', accepted: ['inspect.get_property'] },
   { query: 'create camera shake', accepted: ['blueprint.create'] },
+  { query: 'outline text', accepted: ['blueprint.set_widget_layout'] },
+  { query: 'button outline', accepted: ['blueprint.set_widget_layout'] },
 ];

@@ -189,21 +189,28 @@ bool HandleWidgetAuthoringStyleClipping(
                 return true;
             }
 
-            FProperty* Prop = Widget->GetClass()->FindPropertyByName(FName(*PropertyName));
-            if (!Prop && PropertyName.Equals(TEXT("Style"), ESearchCase::IgnoreCase) && Widget)
+            // A dotted path reaches into a struct (Font.OutlineSettings.OutlineSize) through the resolver the
+            // object and component property writers share; a flat lookup refused every struct member.
+            void* Container = Widget;
+            FString ResolvedPath;
+            FString ResolveError;
+            FProperty* Prop = McpResolvePropertyPath(Widget, PropertyName, Container, ResolvedPath, ResolveError);
+            if (!Prop && PropertyName.Equals(TEXT("Style"), ESearchCase::IgnoreCase))
             {
                 Prop = FindWidgetStyleProperty(Widget->GetClass());
-                PropertyName = Prop ? Prop->GetName() : PropertyName;
+                Container = Widget;
+                ResolvedPath = Prop ? Prop->GetName() : PropertyName;
             }
             if (!Prop)
             {
                 Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                    FString::Printf(TEXT("Property '%s' not found on widget '%s' (class %s)"), *PropertyName, *SlotName, *Widget->GetClass()->GetName()),
+                    FString::Printf(TEXT("Property '%s' not found on widget '%s' (class %s): %s"), *PropertyName, *SlotName, *Widget->GetClass()->GetName(), *ResolveError),
                     TEXT("PROPERTY_NOT_FOUND"));
                 return true;
             }
+            PropertyName = ResolvedPath;
 
-            void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(Widget);
+            void* ValuePtr = Prop->ContainerPtrToValuePtr<void>(Container);
 
             if (!bHasValueField)
             {

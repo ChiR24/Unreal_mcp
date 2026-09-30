@@ -153,6 +153,11 @@ static bool TryCreateEventNode(
         if (!MemberClass.IsEmpty())
         {
             TargetClass = ResolveUClass(MemberClass);
+            if (!TargetClass)
+            {
+                // A Blueprint asset path names the Blueprint, not its class.
+                TargetClass = ResolveTargetClassFromString(MemberClass);
+            }
             if (TargetClass)
             {
                 EventFunction = TargetClass->FindFunctionByName(*Candidate);

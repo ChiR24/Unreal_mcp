@@ -71,7 +71,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A pin default value is the target (use set_pin_default_value).'],
     inputProps: {
       blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, propertyName: P.propertyName, nodeGuid: P.nodeGuid,
-      propertyValue: { ...P.propertyValue, description: 'Value to write: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field.' },
+      propertyValue: { ...P.propertyValue, description: "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path." },
     },
     required: ['blueprintPath', 'propertyName', 'propertyValue'],
     requiredOneOf: ['nodeId', 'nodeGuid'],
@@ -90,7 +90,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Set the default value of a data pin on a graph node; a read-only (const reference) pin gets it through a MakeLiteral node wired into it.',
     whenToUse: ['A pin\'s default literal value must be set when it has no incoming link.', 'A read-only text, string, name or number pin (TextRender Set Text\'s Value) needs a literal.'],
     whenNotToUse: ['The pin should receive its value from a linked node (use connect_pins).'],
-    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, propertyValue: P.propertyValue, nodeGuid: P.nodeGuid },
+    inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, pinName: P.pinName, propertyValue: { ...P.propertyValue, description: "set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path." }, nodeGuid: P.nodeGuid },
     required: ['blueprintPath', 'pinName'],
     requiredOneOf: ['nodeId', 'nodeGuid'],
     // appliedValue is read back off the pin after the schema has had its say, so

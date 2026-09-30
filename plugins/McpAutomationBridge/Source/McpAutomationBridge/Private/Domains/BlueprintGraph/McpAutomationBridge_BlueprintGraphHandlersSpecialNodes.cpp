@@ -31,6 +31,12 @@ bool TryCreateSpecialNode(
         UClass* TargetClass = ResolveUClass(TargetClassName);
         if (!TargetClass)
         {
+            // A Blueprint asset path (/Game/X/BP_Door) names the Blueprint, not its class, which is
+            // what targetClass is documented to take; the shared class-pin resolver maps it.
+            TargetClass = ResolveTargetClassFromString(TargetClassName);
+        }
+        if (!TargetClass)
+        {
             Context.SendError(
                 FString::Printf(
                     TEXT("Class '%s' not found"),

@@ -94,7 +94,7 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
     summary: 'Set a widget slot layout property (anchor, position, size (canvas {x,y}; box child sizeRule Auto/Fill and fillValue weight), alignment, padding, z-order, visibility, clipping, render transform) or its style: the text of a text block or button label, text justification, color, font size, font face, family and letter spacing (or the look of another text block), image texture, opacity, rounded corners, button hover/press sounds.',
     topics: ['widget anchor', 'widget position', 'move widget', 'widget size', 'resize widget', 'make widget bigger', 'widget padding', 'widget visibility', 'z order', 'render transform', 'widget style',
       'change widget text', 'button label', 'widget image', 'widget color', 'button sound', 'click sound', 'hover sound', 'center text', 'text alignment',
-      'bold text', 'make text bold', 'change button text', 'hide widget', 'show widget', 'font face', 'letter spacing', 'copy text style', 'fill the screen', 'expand to fill', 'stretch widget', 'tint image', 'make text red', 'align widget', 'bring widget to front', 'rounded corners'],
+      'bold text', 'make text bold', 'change button text', 'hide widget', 'show widget', 'font face', 'letter spacing', 'copy text style', 'fill the screen', 'expand to fill', 'stretch widget', 'tint image', 'make text red', 'align widget', 'bring widget to front', 'rounded corners', 'text outline', 'outline text', 'add outline to text'],
     members: byTarget('set_', ['set_anchor', 'set_position', 'set_size', 'set_alignment', 'set_padding', 'set_z_order', 'set_visibility',
       'set_clipping', 'set_render_transform', 'set_style']),
   },

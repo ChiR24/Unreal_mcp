@@ -252,6 +252,8 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
   }
 
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  // Named so the receipt carries the material as its handle and change; it listed neither.
+  Result->SetStringField(TEXT("assetPath"), AssetPath);
   Result->SetArrayField(TEXT("results"), Results);
   Result->SetObjectField(TEXT("nodeIds"), NodeIds);
   Result->SetNumberField(TEXT("succeeded"), Results.Num());
