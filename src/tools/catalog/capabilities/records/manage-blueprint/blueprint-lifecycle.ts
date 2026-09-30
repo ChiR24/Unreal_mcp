@@ -24,7 +24,7 @@ export const BLUEPRINT_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'create',
     family: FAMILY,
     domain: DOMAIN,
-    topics: ['new blueprint', 'blueprint class', 'actor blueprint', 'make blueprint', 'blueprint asset', 'subclass', 'derive from'],
+    topics: ['new blueprint', 'blueprint class', 'actor blueprint', 'make blueprint', 'blueprint asset', 'subclass', 'derive from', 'parent class', 'blueprint from parent class', 'child blueprint'],
     aliases: ['blueprint.make_blueprint', 'blueprint.new_blueprint'],
     summary: 'Create a new Blueprint asset from a parent class.',
     whenToUse: ['A new Blueprint of a known parent class is needed.'],

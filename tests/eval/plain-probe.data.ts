@@ -374,4 +374,5 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'change screen tint', accepted: ['build_environment.configure_post_process'] },
   { query: 'read game mode settings', accepted: ['manage_networking.get_game_framework_info'] },
   { query: 'add a reflection capture', accepted: ['build_environment.create_capture_actor'] },
+  { query: 'create blueprint parent class', accepted: ['blueprint.create'] },
 ];

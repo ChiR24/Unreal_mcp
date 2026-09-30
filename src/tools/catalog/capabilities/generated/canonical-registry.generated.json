@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2476c0e8fca6aeee",
+  "catalogRevision": "d06fd50d990ecc2d",
   "recordCount": 389,
   "records": [
     {
@@ -13145,6 +13145,9 @@
           "blueprint asset",
           "subclass",
           "derive from",
+          "parent class",
+          "blueprint from parent class",
+          "child blueprint",
           "get or create blueprint",
           "idempotent create",
           "create if missing"
@@ -13324,7 +13327,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "8112f090ea714ad21412abd3693dda7805eb1c2b2e7645916731e3b9c2e807a0",
-        "content": "a434060696fb77dc81c0a09e81cfb0dd4a3531c445459ec3832d6cbaf52414b7"
+        "content": "1ca5a33507b8761f65f0c8919ad330c227f7eb8c612d4ddcb8cd1d23360197c4"
       }
     },
     {
