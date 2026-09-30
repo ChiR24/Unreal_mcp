@@ -75,6 +75,26 @@ describe('AutomationBridge editor content roots', () => {
     }
   });
 
+  it('applies a content_roots_changed that arrives in the same read as bridge_ack', async () => {
+    // ws emits every frame of one read in the same tick, so the message handler has to be
+    // on the socket when bridge_ack is dispatched; otherwise the second frame is dropped.
+    const { server, port } = await startAckServer({ contentRoots: ['/Game'] }, undefined, [{
+      type: 'automation_event',
+      event: 'content_roots_changed',
+      payload: { contentRoots: ['/Game', '/ShooterCore'] }
+    }]);
+    const bridge = connectedBridge(port);
+    const received = nextMessage(bridge);
+    try {
+      expect(await bridge.connect()).toBe(true);
+      await Promise.race([received, new Promise(resolve => setTimeout(resolve, 1000))]);
+      expect(getEditorContentRoots()).toEqual(['/Game', '/ShooterCore']);
+    } finally {
+      bridge.stop();
+      await closeServer(server);
+    }
+  });
+
   it('clears them when a socket error unregisters the socket before it closes', async () => {
     const { server, port } = await startAckServer({ contentRoots: ['/Game', '/ShooterCore'] });
     const bridge = connectedBridge(port);

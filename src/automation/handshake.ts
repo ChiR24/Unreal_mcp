@@ -18,7 +18,17 @@ export class HandshakeHandler {
     ) {
     }
 
-    public async initiateHandshake(socket: AutomationSocket, timeoutMs: number = this.DEFAULT_HANDSHAKE_TIMEOUT_MS): Promise<Record<string, unknown>> {
+    /**
+     * Send bridge_hello and resolve with the bridge_ack metadata. `onAcknowledged` runs inside the
+     * bridge_ack 'message' dispatch, right after the handshake listener is removed: ws emits every
+     * frame of one read in the same tick, so a listener added there sees the frame that follows
+     * bridge_ack, and one added after `await` can miss it. If it throws, the handshake rejects.
+     */
+    public async initiateHandshake(
+        socket: AutomationSocket,
+        timeoutMs: number = this.DEFAULT_HANDSHAKE_TIMEOUT_MS,
+        onAcknowledged?: (metadata: Record<string, unknown>) => void
+    ): Promise<Record<string, unknown>> {
         return new Promise((resolve, reject) => {
             let settled = false;
             const timeout = setTimeout(() => {
@@ -49,6 +59,12 @@ export class HandshakeHandler {
                 if (settled) return;
                 settled = true;
                 cleanup();
+                try {
+                    onAcknowledged?.(metadata);
+                } catch (error) {
+                    reject(error instanceof Error ? error : new Error(String(error)));
+                    return;
+                }
                 resolve(metadata);
             };
 

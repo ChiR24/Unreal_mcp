@@ -105,10 +105,13 @@ export class AutomationBridgeClient {
         socket.on('open', async () => {
             this.deps.log.info('Automation bridge client connected, starting handshake');
             try {
-                const metadata = await this.deps.handshakeHandler.initiateHandshake(socket, this.deps.config.connectionTimeoutMs);
-                this.clearPendingConnection(socket);
-                this.recordHandshakeSuccess(socket, metadata);
-                this.installMessageHandler(socket);
+                // Registered inside the bridge_ack dispatch (see initiateHandshake), so a frame that
+                // shares its read, such as content_roots_changed, reaches the message handler.
+                await this.deps.handshakeHandler.initiateHandshake(socket, this.deps.config.connectionTimeoutMs, (metadata) => {
+                    this.clearPendingConnection(socket);
+                    this.recordHandshakeSuccess(socket, metadata);
+                    this.installMessageHandler(socket);
+                });
             } catch (error) {
                 this.clearPendingConnection(socket);
                 const err = this.redactPeerError(error);

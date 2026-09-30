@@ -28,7 +28,7 @@ automation/
 
 ## DATA FLOW
 1. `AutomationRequestDispatcher` lazily starts the client and waits for `connected`.
-2. `HandshakeHandler` sends `bridge_hello`; only a validated `bridge_ack` registers the socket. The bridge_ack's `contentRoots` and later `content_roots_changed` events feed the path allowlist; the socket closing clears them.
+2. `HandshakeHandler` sends `bridge_hello`; only a validated `bridge_ack` registers the socket. The bridge_ack's `contentRoots` and later `content_roots_changed` events feed the path allowlist; the socket closing clears them. The message handler is installed inside the bridge_ack dispatch, so a frame in the same read is not dropped.
 3. `RequestTracker` allocates the request id before `send()`. Gateway controls (`correlationId`, `consent`, `expectedRevisions`, `timeoutMs`) arrive as explicit send options and ride the envelope, never handler params.
 4. Inbound frames are size-checked, rate-checked, parsed, schema-validated, then correlated by `MessageHandler`.
 5. Completion, timeout, disconnect, cancel or `stop()` rejects work exactly once and clears timers.
