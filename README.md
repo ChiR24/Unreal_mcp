@@ -302,7 +302,7 @@ Most setups touch one setting: **Enable Native MCP Server** for Route A, or `UE_
 | `MCP_AUTOMATION_PORT` | the project's first Listen Ports entry, else `8090` | Editor WebSocket port |
 | `MCP_AUTOMATION_HOST` | `127.0.0.1` | A LAN address also needs `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` |
 | `MCP_AUTOMATION_CAPABILITY_TOKEN` | read from the token file | Token to present, when the server can't read the project folder |
-| `MCP_ADDITIONAL_PATH_PREFIXES` | empty | Extra content roots such as `/MyPluginContent/`, comma-separated; the connected editor reports its mounts, so this is only needed for mounts the editor does not report, or with no editor connected |
+| `MCP_ADDITIONAL_PATH_PREFIXES` | empty | Extra content roots such as `/MyPluginContent/`, comma-separated; most content-path arguments also accept the mounts the connected editor reports, so this is needed only with no editor connected, for a mount the editor does not report or the server ignores, and for arguments the server treats as files (`filePath`, `outputPath` and a few others), even where `outputPath` names an asset |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`; logs go to stderr |
 
 ## Security
@@ -310,7 +310,7 @@ Most setups touch one setting: **Enable Native MCP Server** for Route A, or `UE_
 - **Local by default.** Both routes listen on `127.0.0.1` only. LAN access needs **Allow Non Loopback**, and the native server refuses to bind off-loopback unless **Require Capability Token** is on.
 - **Capability token.** Generated per project at `<Project>/Saved/MCP/capability-token` (a value typed into **Capability Token** overrides it) and compared in constant time. Delete the file and restart the editor to rotate it.
 - **Consent for destructive work.** Deletes and some other writes need a per-call consent grant, which the plugin checks itself.
-- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara`, the content mounts the connected editor reports, plus configured prefixes; console commands that chain or quit the editor are blocked; the plugin's own settings are out of reach of automation.
+- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` plus configured prefixes, and a content path may also sit under a mount the connected editor reports; arguments the server treats as files (such as `filePath`, and `outputPath` even where it names an asset) never use the reported mounts; console commands that chain or quit the editor are blocked; the plugin's own settings are out of reach of automation.
 
 Details: [Security](https://github.com/ChiR24/Unreal_mcp/wiki/Security). Please report vulnerabilities privately through [GitHub security advisories](https://github.com/ChiR24/Unreal_mcp/security/advisories/new).
 
