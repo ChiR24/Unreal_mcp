@@ -71,7 +71,9 @@ bool HandleFindByMetadataTag(
     Result->SetNumberField(TEXT("count"), AssetsArray.Num());
 
     Bridge->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Assets found by tag"), Result);
+        AssetsArray.Num() == 0 ? FString(TEXT("No assets carry that tag."))
+                               : FString::Printf(TEXT("Found %d assets by tag."), AssetsArray.Num()),
+        Result);
     return true;
 }
 }

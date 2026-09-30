@@ -269,8 +269,11 @@ bool HandleSearchAssets(
     Result->SetNumberField(TEXT("offset"), Offset);
     Result->SetNumberField(TEXT("limit"), Limit);
 
+    // "Assets found." also answered a search that matched nothing.
     Bridge->SendAutomationResponse(Socket, RequestId, true,
-        TEXT("Assets found."), Result);
+        TotalCount == 0 ? FString(TEXT("No assets matched."))
+                        : FString::Printf(TEXT("Found %d assets; %d on this page."), TotalCount, AssetsArray.Num()),
+        Result);
     return true;
 }
 }
