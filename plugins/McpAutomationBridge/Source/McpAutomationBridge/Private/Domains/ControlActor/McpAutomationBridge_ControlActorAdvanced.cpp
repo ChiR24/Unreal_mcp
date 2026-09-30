@@ -116,7 +116,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetBlueprintVariables(
   TArray<FString> Missing;
   for (const auto &Pair : (*VariablesPtr)->Values) {
     if (!ActorClass->FindPropertyByName(*Pair.Key))
-      Missing.Add(Pair.Key);
+      Missing.Emplace(*Pair.Key);
   }
   if (Missing.Num() > 0 && Missing.Num() == (*VariablesPtr)->Values.Num()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("PROPERTY_NOT_FOUND"),
