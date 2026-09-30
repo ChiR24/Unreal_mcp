@@ -4,162 +4,108 @@
 [![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.0--5.8-orange)](https://www.unrealengine.com/)
 [![GitHub](https://img.shields.io/badge/GitHub-ChiR24/Unreal__mcp-blueviolet?logo=github)](https://github.com/ChiR24/Unreal_mcp)
 
-An Unreal Engine editor plugin that enables AI assistants (Claude, Cursor, Windsurf, etc.) to control Unreal Engine through the Model Context Protocol (MCP).
+An Unreal Editor plugin that lets AI assistants (Claude, Cursor, VS Code, Windsurf and any other MCP client) drive the editor through the Model Context Protocol. It exposes **one** MCP tool, `unreal`, that reaches nearly 400 editor capabilities, and it does all the work itself, on the editor's game thread.
+
+Clients reach it in one of two ways:
+
+- **Native HTTP:** the plugin's own Streamable HTTP server at `http://127.0.0.1:3000/mcp`. No Node.js.
+- **stdio:** the `unreal-engine-mcp-server` Node.js package, which talks to the plugin over a WebSocket on `127.0.0.1:8090`.
+
+📖 Full documentation: the [wiki](https://github.com/ChiR24/Unreal_mcp/wiki), starting with [Quick Start](https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start).
 
 ---
 
 ## Features
 
-| Category | Capabilities |
-|----------|-------------|
-| **Asset Management** | Browse, import, duplicate, rename, delete assets; create materials |
-| **Actor Control** | Spawn, delete, transform, physics, tags, components |
-| **Editor Control** | PIE sessions, camera, viewport, screenshots, bookmarks |
-| **Level Management** | Load/save levels, streaming, lighting |
-| **Animation & Physics** | Animation BPs, state machines, ragdolls, vehicles, constraints |
-| **Visual Effects** | Niagara particles, GPU simulations, procedural effects |
-| **Sequencer** | Cinematics, timeline control, Movie Render Queue, media, Take Recorder, replay |
-| **Graph Editing** | Blueprint, Niagara, Material, Behavior Tree graphs |
-| **Audio** | Sound cues, audio components, MetaSounds |
-| **System** | Console commands, UBT, tests, logs, project settings, Python execution |
+| Area | Capabilities |
+|------|-------------|
+| **Levels and actors** | Spawn, place, attach and inspect actors, in batches; load, stream and save levels |
+| **Blueprints and UI** | Blueprints, variables, components and whole event graphs; UMG widgets with preview images |
+| **Materials and worlds** | Material graphs and instances, textures, lighting, landscapes, foliage, Niagara, PCG |
+| **Gameplay** | Characters, animation, Control Rig, Gameplay Ability System, AI (Behavior Trees, State Trees, EQS), Enhanced Input, networking |
+| **Cinematics and audio** | Level Sequences, cameras, Movie Render Queue, Take Recorder, Sound Cues, MetaSounds |
+| **Play and verify** | Play-In-Editor with synthetic input, screenshots, logs, profiling, Python, packaging |
+
+The full list is the generated [Action Reference](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/action-reference.generated.md).
 
 ---
 
 ## Requirements
 
-- **Unreal Engine**: 5.0 - 5.8 — all versions in the range are supported and working.
-- **Platforms**: Win64, Mac, Linux
-- **Node.js**: 20.19.0+ (only for TypeScript bridge transport — not needed for Native MCP)
+- **Unreal Engine** 5.0 to 5.8
+- **Platforms:** Win64, macOS and Linux editors. The plugin is editor-only and never ships in a packaged game.
+- **A project with C++ code**, so the plugin can compile. Blueprint-only projects can use [prebuilt binaries](https://github.com/ChiR24/Unreal_mcp/wiki/Installation#option-c-prebuilt-binaries).
+- **Node.js 20.19+**, only for the stdio route
 
 ---
 
 ## Installation
 
-### Method 1: Copy to Project
+1. Copy this `McpAutomationBridge` folder into your project:
 
-1. Copy the `McpAutomationBridge` folder to your project's `Plugins/` directory:
-   ```
+   ```text
    YourProject/Plugins/McpAutomationBridge/
    ```
 
-2. Regenerate project files:
-   - Right-click `.uproject` → "Generate Visual Studio project files"
-   - Or run: `GenerateProjectFiles.bat`
+   Using a clone of the repository instead? You can reference the plugin in place, so `git pull` updates it, by adding the repository's `plugins` folder to your `.uproject`:
 
-3. Open your project in Unreal Editor
+   ```json
+   "AdditionalPluginDirectories": ["C:/Path/To/Unreal_mcp/plugins"]
+   ```
 
-4. Enable required plugins in **Edit → Plugins**:
+2. Open the project. When Unreal asks to rebuild the missing modules, answer **Yes**. If it says *"Engine modules cannot be compiled at runtime"*, generate project files (right-click the `.uproject`), build the Editor target once in Visual Studio, Rider or Xcode, and reopen.
+3. Check the status bar at the bottom-right of the level editor: **`MCP off`** means the plugin is loaded, with the native HTTP server off.
 
-<details>
-<summary><b>Core Plugins (Required)</b></summary>
+The plugin declares the engine plugins it uses, so Unreal enables them with it:
 
-   - ✅ MCP Automation Bridge
-   - ✅ Python Editor Script Plugin
-   - ✅ Editor Scripting Utilities
-   - ✅ Niagara
-   - ✅ Gameplay Abilities (for `manage_gas`)
-   - ✅ Smart Objects (for AI smart objects)
+- **Always enabled:** Python Editor Script Plugin, Editor Scripting Utilities, Niagara, Gameplay Abilities, Smart Objects
+- **Optional**, used when present: Sequencer, Movie Render Queue, Takes, Control Rig, IK Rig, Niagara Editor, Behavior Tree and EQS editors, StateTree, MetaSound, Enhanced Input, Geometry Scripting, PCG, Interchange, Online Subsystem, Fab and others. The full table is in [Installation](https://github.com/ChiR24/Unreal_mcp/wiki/Installation#engine-plugins-it-uses).
 
-</details>
-
-<details>
-<summary><b>Optional Plugins (Auto-enabled)</b></summary>
-
-   - ✅ Level Sequence Editor (for `manage_sequence`)
-   - ✅ Movie Render Pipeline (for `manage_sequence` Movie Render Queue)
-   - ✅ Movie Pipeline Mask Render Pass (for the object-ID render pass)
-   - ✅ Takes (for `manage_sequence` Take Recorder)
-   - ✅ Electra Player (for `manage_sequence` file-backed media playback)
-   - ✅ Control Rig (for `animation_physics`)
-   - ✅ RigVM (for Control Rig and graph authoring support)
-   - ✅ GeometryScripting (for `manage_geometry`)
-   - ✅ GeometryProcessing (for geometry processing support)
-   - ✅ Behavior Tree Editor (for `manage_ai` Behavior Trees)
-   - ✅ Niagara Editor (for Niagara authoring)
-   - ✅ MetaSound (for `manage_audio` MetaSounds)
-   - ✅ StateTree (for `manage_ai` State Trees)
-   - ✅ Enhanced Input (for `manage_networking` input mappings)
-   - ✅ Environment Query Editor (for AI/EQS)
-   - ✅ Chaos Cloth (for cloth simulation)
-   - ✅ Interchange (for asset import/export)
-   - ✅ Data Validation (for data validation)
-   - ✅ PCG (for `manage_pcg` graph authoring and execution when enabled for the build)
-   - ✅ Procedural Mesh Component (for procedural geometry)
-   - ✅ OnlineSubsystem (for sessions/networking)
-   - ✅ OnlineSubsystemUtils (for sessions/networking)
-
-</details>
-
-   > 💡 Optional plugins are auto-enabled by the MCP Automation Bridge plugin. PCG support is compiled for source projects when the project explicitly enables PCG; versioned release packages for UE 5.2+ include it.
-
-5. Restart the editor
-
-### Method 2: Add in Editor
-
-1. Open Unreal Editor → **Edit → Plugins**
-2. Click **"Add"** button
-3. Browse to and select the `McpAutomationBridge` folder
-4. Enable the plugin and restart
+A capability whose engine plugin is missing returns an error; everything else keeps working.
 
 ---
 
-## Quick Start
+## Connect a client
 
-### Option A: Native MCP Transport (no Node.js needed)
+### Route A: native HTTP (no Node.js)
 
-The plugin includes a built-in MCP Streamable HTTP server. AI clients connect directly — no TypeScript bridge required.
-**Note:** the `bAllowNonLoopback` setting applies to **both** the WebSocket bridge and the native MCP transport. Enabling it binds both surfaces to non-loopback addresses. Capability token auth is on by default (0.5.30+) — the plugin auto-generates a per-install token at `<Project>/Saved/MCP/capability-token` (a manual `CapabilityToken` in Project Settings overrides it), so both transports require authentication automatically.
+1. In **Edit › Project Settings › Plugins › MCP Automation Bridge**, tick **Enable Native MCP Server** (port `3000` by default) and restart the editor. The status bar now reads **`MCP :3000 (0)`**.
+2. Read the capability token the plugin generated at `<YourProject>/Saved/MCP/capability-token`. Treat it like a password.
+3. Add the server to your client, sending the token in the `X-MCP-Capability-Token` header.
 
-1. Enable in **Edit → Project Settings → Plugins → MCP Automation Bridge**:
-   - Check **Enable Native MCP**
-   - Set port (default: `3000`)
-2. Restart the editor
-3. Configure your AI client for Streamable HTTP at `http://localhost:3000/mcp`
+   **Claude Code:**
 
-**Claude Code:**
-```bash
-claude mcp add unreal-engine --transport http http://localhost:3000/mcp
-```
+   ```bash
+   claude mcp add --transport http unreal-engine http://127.0.0.1:3000/mcp --header "X-MCP-Capability-Token: <token>"
+   ```
 
-**Cursor** (`.cursor/mcp.json`):
-```json
-{
-  "mcpServers": {
-    "unreal-engine": {
-      "url": "http://localhost:3000/mcp"
-    }
-  }
-}
-```
+   **Cursor** (`.cursor/mcp.json`):
 
-### Native Gateway & Protocol
+   ```json
+   {
+     "mcpServers": {
+       "unreal-engine": {
+         "url": "http://127.0.0.1:3000/mcp",
+         "headers": { "X-MCP-Capability-Token": "<token>" }
+       }
+     }
+   }
+   ```
 
-The native MCP transport permanently exposes a single `unreal` gateway tool on the `/mcp` surface; there is no opt-out and no legacy 23-tool listing to restore. This matches the TypeScript stdio transport, so both transports behave consistently. A direct `tools/call` for a canonical tool name returns a bounded, executable `DIRECT_TOOL_CALL_REMOVED` migration receipt whose `nextCall` re-runs the request through `unreal` (`search` → `describe` → `execute`).
+   Other clients: [Connecting Clients](https://github.com/ChiR24/Unreal_mcp/wiki/Connecting-Clients).
 
-Supports MCP protocol versions `2025-11-25` (latest), `2025-06-18`, and `2025-03-26`, and deliberately excludes the later `2026-07-28` RC. The TypeScript bridge transport additionally accepts the legacy `2024-11-05` and `2024-10-07` versions. See [docs/protocol.md](docs/protocol.md) (or the server README [Gateway Protocol & Transport](https://github.com/ChiR24/Unreal_mcp#gateway-protocol--transport)) for the full negotiation and transport contract.
+4. When the client connects, the count in the status bar goes up: **`MCP :3000 (1)`**.
 
-### Option B: TypeScript Bridge (classic setup)
+### Route B: stdio (Node.js)
 
-### Step 1: Install MCP Server
-
-```bash
-# Using npx (recommended)
-npx unreal-engine-mcp-server
-
-# Or install globally
-npm install -g unreal-engine-mcp-server
-```
-
-### Step 2: Configure AI Client
-
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+Add this to your client's MCP configuration, for example Claude Desktop's `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "unreal-engine": {
       "command": "npx",
-      "args": ["unreal-engine-mcp-server"],
+      "args": ["-y", "unreal-engine-mcp-server@beta"],
       "env": {
         "UE_PROJECT_PATH": "C:/Path/To/YourProject"
       }
@@ -168,17 +114,99 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 }
 ```
 
-### Step 3: Start Automating
+`UE_PROJECT_PATH` (the project folder or its `.uproject`) is how the server finds the capability token and the WebSocket port. The npm package and this plugin must come from the same release; the `@beta` tag is the 0.6 line.
 
-1. Open your Unreal project
-2. Start your AI client (Claude Desktop, Cursor, etc.)
-3. The MCP server will automatically connect to the Automation Bridge
+### Try it
 
-Example prompts:
-- "List all assets in /Game/Characters"
-- "Spawn a point light at (100, 200, 300)"
-- "Create a new material called M_Glow"
-- "Take a screenshot of the current viewport"
+With the editor open, ask your assistant to *"list the actors in the current level"* or *"spawn a point light 300 units above the origin"*.
+
+---
+
+## The `unreal` tool
+
+Both routes expose the same single tool with four operations: `search` finds capabilities from a few plain words, `describe` returns one capability's exact contract, `execute` runs it, and `configure` enables or disables groups of internal tools. Only the contract the model is about to use gets loaded, instead of hundreds of tool schemas. A direct `tools/call` to one of the 0.5 tool names returns `DIRECT_TOOL_CALL_REMOVED` with a `nextCall` that runs the same request through `unreal`.
+
+Native HTTP negotiates MCP protocol versions `2025-11-25`, `2025-06-18` and `2025-03-26`; the stdio server also accepts `2024-11-05` and `2024-10-07`. Details: [Using the Gateway](https://github.com/ChiR24/Unreal_mcp/wiki/Using-the-Gateway) and [protocol.md](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md).
+
+---
+
+## Configuration
+
+### Plugin settings
+
+**Edit › Project Settings › Plugins › MCP Automation Bridge**, saved in `Config/DefaultGame.ini`. Restart the editor after changing connection or security settings.
+
+| Setting | Default | |
+|---------|---------|---|
+| **Enable Native MCP Server** | off | Serve MCP over Streamable HTTP at `/mcp` |
+| **Native MCP Port** | `3000` | Must differ from the WebSocket ports. The `MCP_NATIVE_PORT` environment variable of the editor process overrides it, for example to run several editors at once. |
+| **Load All Tools on Start** | on | When off, only the `core` internal tools start enabled; `configure` can enable the rest |
+| **Server Instructions** | empty | Text appended to the instructions native clients receive when they connect |
+| **Listen Host** | `127.0.0.1` | Bind address for both listeners |
+| **Listen Ports** | `8090,8091` | WebSocket ports; the stdio server dials the first |
+| **Require Capability Token** | on | Both routes refuse clients without the token |
+| **Capability Token** | empty | Your own token. When empty, the plugin generates one in `Saved/MCP/capability-token`. |
+| **Allow Non Loopback** | off | Let **Listen Host** be a LAN address |
+| **Enable TLS** | off | `wss://` for the WebSocket listener, from PEM certificate and key files |
+| **Max Client Requests / Tool Calls Per Minute** | `600` / `120` | Native HTTP limits per session; `0` disables |
+| **Max Messages / Automation Requests Per Minute** | `0` (off) | WebSocket limits per client |
+
+Every setting, including the Movie Render Queue and Take Recorder limits: [Configuration](https://github.com/ChiR24/Unreal_mcp/wiki/Configuration).
+
+### stdio server environment variables
+
+| Variable | Default | |
+|----------|---------|---|
+| `UE_PROJECT_PATH` | unset | Project folder or `.uproject`; used to find the token and the port |
+| `MCP_AUTOMATION_PORT` | the first **Listen Ports** entry, else `8090` | Editor WebSocket port |
+| `MCP_AUTOMATION_HOST` | `127.0.0.1` | A LAN address also needs `MCP_AUTOMATION_ALLOW_NON_LOOPBACK=true` |
+| `MCP_AUTOMATION_CAPABILITY_TOKEN` | read from the token file | Token to present, when the server can't read the project folder |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error`; logs go to stderr |
+
+---
+
+## Security
+
+- **Loopback by default.** Both listeners, the WebSocket bridge and the native HTTP server, bind `127.0.0.1`. A LAN address needs **Allow Non Loopback**, and neither listener binds off-loopback unless **Require Capability Token** is also on.
+- **Capability token, on by default.** The plugin generates a random 32-byte token per project at `<Project>/Saved/MCP/capability-token` and compares it in constant time on both routes. A token typed into **Capability Token** overrides the file. Delete the file and restart the editor to rotate it.
+- **Consent for destructive work.** Deletes and some other writes need a per-call consent grant, which the plugin checks itself.
+- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` and configured prefixes; console commands that chain or quit the editor are blocked; file paths are checked for traversal and symbolic links; the plugin's own settings are out of reach of automation.
+- **TLS** for the WebSocket listener, and **rate limits** on both routes.
+
+Local file paths are checked for traversal and symbolic-link components when accepted and again immediately before media open or render start. The trusted boundary is the editor's operating-system user: a process that can change that user's project files is already able to alter editor inputs, and is outside the threat model of a remote client.
+
+More: [Security](https://github.com/ChiR24/Unreal_mcp/wiki/Security). Report vulnerabilities privately through [GitHub security advisories](https://github.com/ChiR24/Unreal_mcp/security/advisories/new).
+
+---
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| *"Plugin 'McpAutomationBridge' failed to load"* on the very first open | Close the editor and open the project again. It loads once the first build has finished. |
+| *"Engine modules cannot be compiled at runtime"* | Build the Editor target once in your IDE, then reopen the project |
+| Status bar reads **`MCP off`** | The native HTTP server is off: tick **Enable Native MCP Server** and restart the editor |
+| **401** from the native server | The `X-MCP-Capability-Token` header is missing or wrong. Copy `Saved/MCP/capability-token` again, without a trailing newline. |
+| stdio server reports *not connected* | Keep the editor open with the plugin loaded, point `UE_PROJECT_PATH` at the project, and use the same release for the npm package and the plugin |
+| Build errors after an update | Close the editor, delete the plugin's `Binaries/` and `Intermediate/` folders, regenerate project files and rebuild |
+
+More cases: [Troubleshooting](https://github.com/ChiR24/Unreal_mcp/wiki/Troubleshooting).
+
+### Python execution crash recovery
+
+`execute_python` writes temporary files to `<Project>/Saved/Temp/MCP_Python/` for each run:
+
+- `mcp_exec_<executionId>.py`: the generated wrapper script
+- `code_<executionId>.py`: the submitted code (inline `code` parameter only)
+- `output_<executionId>.txt`, `error_<executionId>.txt`, `status_<executionId>.txt`: the captured streams
+
+They are removed after a normal run. If the editor dies during a run (for example an engine assertion in native code called from Python), they stay behind. To find the script that was running, look in the editor log for the line written **before** execution starts:
+
+```text
+LogMcpAutomationBridgeSubsystem: execute_python begin: executionId=<guid> requestId=<id> origin=WebSocket mode=ExecuteFile scope=Private codeSha256=<sha256> codePath=<path> wrapperPath=<path>
+```
+
+`executionId` matches the leftover file names, and `codeSha256` identifies the code without logging it. Delete the leftovers from `Saved/Temp/MCP_Python/` once you're done.
 
 ---
 
@@ -186,7 +214,7 @@ Example prompts:
 
 Tools & Plugins
 ---------------------
-- **Features:** Editor automation bridge for Model Context Protocol clients. Includes native HTTP/SSE MCP transport, WebSocket bridge transport, dynamic MCP tool management, asset/actor/editor/level automation, Blueprint and graph authoring, Niagara/material/audio/AI/PCG/sequencer helpers, project/system controls, and security settings for loopback, TLS, capability tokens, and rate limits.
+- **Features:** Editor automation bridge for Model Context Protocol clients. Includes a native MCP Streamable HTTP server, a WebSocket bridge for the optional Node.js stdio server, a single gateway tool with search, describe, execute and configure, asset/actor/editor/level automation, Blueprint and graph authoring, Niagara/material/audio/AI/PCG/Sequencer helpers, project and system controls, and security settings for loopback binding, capability tokens, consent, TLS and rate limits.
 - **Code Modules:** `McpAutomationBridge` - Editor module; `McpAutomationBridgeFab` - Editor module (delay-loaded Fab asset-store adapter, optional).
 - **Number of Blueprints:** 0.
 - **Network Replicated:** No. This is an editor-only automation and MCP transport plugin; it does not add gameplay replication.
@@ -194,107 +222,16 @@ Tools & Plugins
 - **Supported Target Build Platforms:** Editor-only plugin for Win64, Mac, and Linux editor targets. It is not intended to be included in packaged game runtime builds.
 - **Documentation Link:** https://github.com/ChiR24/Unreal_mcp/tree/main/plugins/McpAutomationBridge#readme
 - **Example Project:** Not included. The plugin can be enabled in any Unreal Engine C++ project; see the documentation link for setup steps.
-- **Important/Additional Notes:** Requires Unreal Engine 5.0-5.8; all versions in the range are supported and working. Required engine plugins are `PythonScriptPlugin`, `EditorScriptingUtilities`, `Niagara`, `GameplayAbilities`, and `SmartObjects`. Other integration references are enabled but marked optional so compatible installed engine plugins can support their matching features without becoming hard distribution dependencies. These integrations include `LevelSequenceEditor`, `MovieRenderPipeline`, `MoviePipelineMaskRenderPass`, `Takes`, `ElectraPlayer`, `NiagaraEditor`, `BehaviorTreeEditor`, `EnvironmentQueryEditor`, `ControlRig`, `RigVM`, `IKRig`, `ChaosVehiclesPlugin`, `AnimationData`, `ProceduralMeshComponent`, `Interchange`, `InterchangeOpenUSD`, `DataValidation`, `EnhancedInput`, `GeometryScripting`, `GeometryProcessing`, `ChaosCloth`, `StructUtils`, `Metasound`, `StateTree`, `MassGameplay`, `OnlineSubsystem`, `OnlineSubsystemUtils`, `Synthesis`, and `PCG`. Native MCP transport does not require Node.js. The optional TypeScript bridge transport uses the separately distributed `unreal-engine-mcp-server` Node.js package.
-
----
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `UE_PROJECT_PATH` | - | Path to your `.uproject` file |
-| `MCP_AUTOMATION_HOST` | `127.0.0.1` | Bridge host address |
-| `MCP_AUTOMATION_PORT` | `8091` | Bridge WebSocket port |
-| `MCP_NATIVE_PORT` | (`Native MCP Port` setting) | Overrides the native MCP HTTP/SSE port at startup without editing ini — pick a per-editor port (e.g. to run several editors at once). Falls back to the project setting when unset/invalid. |
-| `LOG_LEVEL` | `info` | Logging level (debug/info/warn/error) |
-
-### Plugin Settings
-
-Configure in **Edit → Project Settings → Plugins → MCP Automation Bridge**:
-
-- **Listen Ports**: WebSocket ports (default: 8090, 8091)
-- **Enable TLS**: Enable secure WebSocket connections
-- **Allow Non-Loopback**: Enable LAN access for both the WebSocket bridge listen socket and the native MCP HTTP/SSE transport (requires `Require Capability Token`)
-- **Enable Native MCP**: Enable built-in HTTP/SSE MCP server (default: off)
-- **Native MCP Port**: HTTP port for native MCP transport (default: 3000; override at startup with the `MCP_NATIVE_PORT` environment variable)
-- **Listen Host**: Bind address (default: 127.0.0.1)
-- **Load All Tools on Start**: Load all 23 canonical tools at startup (default: on)
-- **Native MCP Instructions**: Custom instructions for AI clients
-- **Require Capability Token**: Enforce token authentication on WS and HTTP transports (on by default since 0.5.30; the plugin auto-generates `<Project>/Saved/MCP/capability-token` — a manual `CapabilityToken` in Project Settings overrides it)
-
----
-
-## Security
-
-- **Fail-closed listener binding** — both plugin-owned server-side listeners (the WebSocket bridge listen socket and the native MCP HTTP/SSE transport) bind loopback-first by default. Non-loopback requires explicit `bAllowNonLoopback`; the native transport additionally refuses to bind non-loopback unless `bRequireCapabilityToken` is enabled, so a LAN-exposed surface can never start without auth.
-- **WebSocket loopback-only by default**; LAN binding on either surface requires explicit opt-in
-- **Capability token authentication** — enforced on both WebSocket and Native MCP transports. On by default since 0.5.30: the plugin auto-generates a 32-byte secret at `<Project>/Saved/MCP/capability-token`; a manual `CapabilityToken` in Project Settings overrides it. Disabling `Require Capability Token` restores the pre-0.5.30 (insecure) default.
-- **TLS/SSL support** for the WebSocket transport
-- **Rate limiting** support (disabled by default; configurable via Project Settings)
-- **Handshake required** before automation requests
-- **Command validation** blocks dangerous console commands
-- **Path sanitization** — blocks directory traversal in file operations
-- **Python execution security** — 1 MB code limit, symlink resolution, temp file scope guard cleanup
-
-Local filesystem paths are checked for traversal and symbolic-link components
-when accepted and again immediately before media open or render start. The
-trusted boundary is the editor's operating-system user: a process that can
-mutate that user's project files concurrently is already able to alter editor
-inputs and is outside the transport's remote-client threat model.
-
----
-
-## Troubleshooting
-
-### Plugin Failed to Load
-
-If you see *"Plugin 'McpAutomationBridge' failed to load"* on first open:
-1. Close Unreal Editor
-2. Reopen the project
-3. The plugin should load correctly
-
-This is a known UE behavior when plugins are rebuilt on first load.
-
-### Connection Refused
-
-1. Verify the plugin is enabled in **Edit → Plugins**
-2. Check port 8091 is not blocked by firewall
-3. Ensure MCP server is running: `npx unreal-engine-mcp-server`
-
-### Build Errors
-
-The plugin uses `PCHUsageMode.NoPCHs` to prevent memory issues during compilation. If you encounter build errors:
-1. Close Visual Studio
-2. Delete `Intermediate/`, `Binaries/`, `Saved/` folders
-3. Regenerate project files
-4. Rebuild
-
-### Python Execution Crash Recovery
-
-`execute_python` writes temporary artifacts to `<Project>/Saved/Temp/MCP_Python/` before each run:
-
-- `mcp_exec_<executionId>.py` — generated wrapper script
-- `code_<executionId>.py` — user-provided code (inline `code` parameter only)
-- `output_<executionId>.txt`, `error_<executionId>.txt`, `status_<executionId>.txt` — captured streams
-
-On success these files are cleaned up automatically. If the editor is terminated by a fatal error during Python execution (e.g. an Engine-side assertion or access violation in native code called from Python), the cleanup does not run and the temp files remain on disk.
-
-To identify the script that was active when a crash occurred, check the editor log for the `execute_python begin:` line emitted **before** native execution:
-
-```
-LogMcpAutomationBridgeSubsystem: execute_python begin: executionId=<guid> requestId=<id> origin=WebSocket mode=ExecuteFile scope=Private codeSha256=<sha256> codePath=<path> wrapperPath=<path>
-```
-
-The `executionId` matches the suffix of the leftover `mcp_exec_<executionId>.py` / `code_<executionId>.py` files. The `codeSha256` is the SHA-256 of the executed code bytes, so the active script is identifiable without logging raw source. Crash-leftover temp files can be safely deleted manually from `<Project>/Saved/Temp/MCP_Python/` once diagnosed.
+- **Important/Additional Notes:** Requires Unreal Engine 5.0-5.8. Required engine plugins are `PythonScriptPlugin`, `EditorScriptingUtilities`, `Niagara`, `GameplayAbilities`, and `SmartObjects`. Other integration references are enabled but marked optional so compatible installed engine plugins can support their matching features without becoming hard distribution dependencies. These integrations include `LevelSequenceEditor`, `MovieRenderPipeline`, `MoviePipelineMaskRenderPass`, `Takes`, `ElectraPlayer`, `NiagaraEditor`, `BehaviorTreeEditor`, `EnvironmentQueryEditor`, `ControlRig`, `RigVM`, `IKRig`, `ChaosVehiclesPlugin`, `AnimationData`, `ProceduralMeshComponent`, `Interchange`, `InterchangeOpenUSD`, `DataValidation`, `EnhancedInput`, `GeometryScripting`, `GeometryProcessing`, `ChaosCloth`, `StructUtils`, `Metasound`, `StateTree`, `MassGameplay`, `OnlineSubsystem`, `OnlineSubsystemUtils`, `Synthesis`, `PCG`, `Fab`, and `Bridge`. The native MCP server does not require Node.js. The optional stdio route uses the separately distributed `unreal-engine-mcp-server` Node.js package.
 
 ---
 
 ## Documentation
 
-- **Full Documentation**: [GitHub README](https://github.com/ChiR24/Unreal_mcp#readme)
-- **Action Reference**: [docs/action-reference.generated.md](https://github.com/ChiR24/Unreal_mcp/blob/main/docs/action-reference.generated.md)
+- **Wiki:** [github.com/ChiR24/Unreal_mcp/wiki](https://github.com/ChiR24/Unreal_mcp/wiki)
+- **Repository README:** [github.com/ChiR24/Unreal_mcp](https://github.com/ChiR24/Unreal_mcp#readme)
+- **Action Reference:** [docs/action-reference.generated.md](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/action-reference.generated.md)
+- **Plugin changelog:** [CHANGELOG.md](CHANGELOG.md)
 
 ---
 

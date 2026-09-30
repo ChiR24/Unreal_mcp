@@ -377,6 +377,7 @@ Use `-i` without `-t`: a TTY corrupts the MCP stream on stdout.
 | 📡 [Protocol](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/protocol.md) | Transports, version negotiation, cancellation |
 | 🔐 [Security and receipts](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/security-and-receipts.md) | Scopes, consent, path gating, idempotency, refusal codes |
 | 🧪 [Testing guide](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/testing-guide.md) | Test suites and how to add cases |
+| 🧩 [Extending the plugin](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/editor-plugin-extension.md) | Adding an editor action: record, handler, route and tests, plus the rules for plugin code |
 | 🗺️ [Roadmap](https://github.com/ChiR24/Unreal_mcp/blob/dev/docs/Roadmap.md) | Development roadmap |
 | 📝 [Changelog](https://github.com/ChiR24/Unreal_mcp/blob/dev/CHANGELOG.md) | What changed in each release |
 
