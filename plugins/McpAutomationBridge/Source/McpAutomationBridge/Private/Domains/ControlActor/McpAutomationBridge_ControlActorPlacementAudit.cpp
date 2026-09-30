@@ -59,6 +59,7 @@ struct FMcpPlacementFinding {
   bool bHasSuggestedZ = false;
   double SuggestedZ = 0.0;
   TArray<TSharedPtr<FJsonValue>> CoplanarFaces;
+  TArray<TSharedPtr<FJsonValue>> Overlaps;
 };
 
 /**
@@ -171,6 +172,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
         Finding.bHasSuggestedZ =
             (*Suggested)->TryGetNumberField(TEXT("z"), Finding.SuggestedZ);
       }
+      // "intersects 4 actor(s)" named only the deepest, and no read call
+      // describes an actor's placement, so the other three were unfindable.
+      const TArray<TSharedPtr<FJsonValue>> *Overlaps = nullptr;
+      if (Entry->TryGetArrayField(TEXT("overlappingActors"), Overlaps) && Overlaps) {
+        Finding.Overlaps = *Overlaps;
+      }
     }
     // One finding per actor, so `flagged` counts actors rather than complaints.
     // A tipped actor that is also clipping something reports whichever moved it
@@ -225,6 +232,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
     }
     if (Finding.CoplanarFaces.Num() > 0) {
       Object->SetArrayField(TEXT("coplanarFaces"), Finding.CoplanarFaces);
+    }
+    if (Finding.Overlaps.Num() > 0) {
+      Object->SetArrayField(TEXT("overlappingActors"), Finding.Overlaps);
     }
     Problems.Add(MakeShared<FJsonValueObject>(Object));
   }

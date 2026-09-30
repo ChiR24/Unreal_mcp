@@ -35,3 +35,17 @@ describe('audit_placement confirms a box overlap on the real shapes', () => {
     expect(placementCheck()).toContain('Setup->GetCollisionTraceFlag() != CTF_UseComplexAsSimple');
   });
 });
+
+// "intersects 4 actor(s)" named only the deepest, and no read call describes one actor's placement.
+describe('audit_placement rows list every actor a finding intersects', () => {
+  it('carries overlappingActors from the placement check into the row', () => {
+    const audit = readFileSync(
+      resolve(
+        process.cwd(),
+        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorPlacementAudit.cpp',
+      ),
+      'utf8',
+    );
+    expect(audit).toContain('Object->SetArrayField(TEXT("overlappingActors"), Finding.Overlaps);');
+  });
+});

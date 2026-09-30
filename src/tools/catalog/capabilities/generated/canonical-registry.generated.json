@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "18dd3b8c75b729fa",
+  "catalogRevision": "65ec67dd1f3e2c82",
   "recordCount": 389,
   "records": [
     {
@@ -29520,7 +29520,7 @@
             },
             "problems": {
               "type": "array",
-              "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor. Call get_actor_transform on one for its full detail.",
+              "description": "Findings worst-first: actorName, kind, severity in world units, the issue in words, suggestedZ when a resting height can be computed, overlappingActors when it intersects others (up to 8, each with actorName, actorClass and penetrationDepth), and coplanarFaces when faces z-fight: one entry per pair with direction (the axis both faces point along, e.g. -Y), component, otherActor, otherComponent, gap and overlapU x overlapV. Fix a pair by moving the face about 2 units along direction (this piece shows) or against it (the other shows, right for a piece sunk into it, such as a ramp in the floor), by moving or scaling the actor.",
               "items": {
                 "type": "object",
                 "additionalProperties": true,
@@ -29584,8 +29584,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5e403cd2e228d067d50b4be8b3cb0c0635e2bf8e7f2279d68bb399c5f9ef36a2",
-        "content": "0cab3c370a5c86135be06a7a1ddd004f5ee2995cd5d2c06702cedba35a2f2088"
+        "schema": "9e2ffcf24e5b2daeceb4ae5f88599f419dfabd38265f851a5d21ac7a0c57767c",
+        "content": "9838799731b162c1a4d4b3f060c740e5603fed1dd38c34830b1cc3e7b555b344"
       }
     },
     {
