@@ -20,6 +20,10 @@
 </p>
 
 <p align="center">
+  <sub>🧭 One tool, nearly 400 capabilities &nbsp;·&nbsp; ⚙️ Native C++ editor plugin &nbsp;·&nbsp; 🌐 HTTP or stdio &nbsp;·&nbsp; 🔐 Local and token-protected by default &nbsp;·&nbsp; 🎮 Unreal Engine 5.0 – 5.8</sub>
+</p>
+
+<p align="center">
   <a href="https://github.com/ChiR24/Unreal_mcp/wiki/Quick-Start"><b>🚀 Quick Start</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/wiki"><b>📖 Wiki</b></a> &nbsp;·&nbsp;
   <a href="https://github.com/ChiR24/Unreal_mcp/releases"><b>📦 Releases</b></a> &nbsp;·&nbsp;
@@ -85,6 +89,10 @@ Nearly 400 capabilities in all, behind a single MCP tool. The assistant finds th
 </p>
 
 ## How it works
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/diagrams/architecture.svg" alt="Architecture: an AI client reaches the MCP Automation Bridge plugin inside the Unreal Editor either over Streamable HTTP on port 3000 (Route A) or through the Node.js server over stdio and a WebSocket on port 8090 (Route B); the plugin drives the editor APIs on the game thread" width="100%">
+</p>
 
 The **MCP Automation Bridge** plugin runs inside the editor and does all the work, on the editor's game thread. Clients reach it in one of two ways, and both expose the same single tool, `unreal`:
 
@@ -161,6 +169,10 @@ This writes `build/McpAutomationBridge-v<version>-UE5.7-<Platform>.zip`, where `
 
    Cursor (`.cursor/mcp.json`) takes the same `url` and `headers` without `type`. VS Code, Windsurf and others: [Connecting Clients](https://github.com/ChiR24/Unreal_mcp/wiki/Connecting-Clients).
 
+4. **Check it:** when the client connects, the count in the status bar goes up.
+
+   <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/screenshots/status-bar.png" alt="Unreal Editor status bar showing MCP :3000 (1): the native MCP server on port 3000 with one client connected" width="520">
+
 **Route B · stdio (Node.js 20.19+)**
 
 Add this to your client's MCP configuration, for example Claude Desktop's `claude_desktop_config.json`:
@@ -195,6 +207,10 @@ Both routes expose exactly **one** MCP tool, `unreal`, with four operations. Onl
 | `describe` | Returns one capability's exact contract: parameters, schemas, an example, and the consent grant when one is needed |
 | `execute` | Runs one capability with validated parameters and returns the data plus a receipt of what changed |
 | `configure` | Enables or disables groups of internal tools; never touches the editor |
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/diagrams/gateway.svg" alt="The gateway flow: search with a query returns rows with a nextCall; describe with tool and action returns the contract; execute with params, and consent when needed, returns data and a receipt listing changes, handles and warnings" width="100%">
+</p>
 
 A typical exchange:
 
