@@ -2,6 +2,8 @@
 
 #include "McpFabAddScript.h"
 #include "McpFabProvider.h"
+#include "McpFabImportOperations.h"
+#include "McpFabLogCapture.h"
 
 #include "Features/IModularFeatures.h"
 
@@ -18,8 +20,8 @@ bool Start(const FString& Query, bool bFreeOnly, int32 Limit,
 
 namespace McpFabAddOperation
 {
-bool Start(const FString& ListingId, const FString& EngineVersion,
-	TFunction<void(const FMcpFabAddResult&)> OnComplete);
+bool Start(const FString& ListingId, const FString& EngineVersion, const FString& CacheLocation,
+	TFunction<void(const FMcpFabAddResult&)> OnAccepted);
 }
 #include "Misc/EngineVersion.h"
 #include "Runtime/Launch/Resources/Version.h"
@@ -131,15 +133,21 @@ public:
 
 	virtual bool AddToProject(
 		const FString& ListingId,
-		TFunction<void(const FMcpFabAddResult&)> OnComplete) override
+		TFunction<void(const FMcpFabAddResult&)> OnAccepted) override
 	{
 #if MCP_FAB_ADAPTER_HAS_FAB_API
 		const FEngineVersion& Version = FEngineVersion::Current();
 		return McpFabAddOperation::Start(ListingId,
-			FString::Printf(TEXT("%u.%u"), Version.GetMajor(), Version.GetMinor()), MoveTemp(OnComplete));
+			FString::Printf(TEXT("%u.%u"), Version.GetMajor(), Version.GetMinor()), GetCacheLocation(),
+			MoveTemp(OnAccepted));
 #else
 		return false;
 #endif
+	}
+
+	virtual bool GetImportStatus(const FString& OperationOrListingId, FMcpFabImportStatus& OutStatus) override
+	{
+		return McpFabImportOperations::Find(OperationOrListingId, GetCacheLocation(), OutStatus);
 	}
 
 	virtual bool GetListingDetails(
@@ -197,6 +205,7 @@ public:
 
 	virtual void ShutdownModule() override
 	{
+		McpFabLogCapture::Stop();
 		IModularFeatures::Get().UnregisterModularFeature(IMcpFabProvider::FeatureName(), &GProvider);
 	}
 };

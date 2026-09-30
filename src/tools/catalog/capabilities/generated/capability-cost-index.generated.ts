@@ -605,6 +605,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::get_data_table_row": "instant|low",
   "manage_asset::get_dependencies": "interactive|medium",
   "manage_asset::get_enum": "instant|low",
+  "manage_asset::get_fab_import_status": "interactive|medium",
   "manage_asset::get_fab_listing_details": "interactive|medium",
   "manage_asset::get_instanced_struct_property": "interactive|medium",
   "manage_asset::get_material_function_info": "instant|low",
@@ -1523,4 +1524,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1510;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1511;

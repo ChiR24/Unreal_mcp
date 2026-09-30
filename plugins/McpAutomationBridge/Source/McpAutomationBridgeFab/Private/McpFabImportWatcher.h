@@ -7,20 +7,15 @@
 
 namespace McpFabImportWatcher
 {
-/** True while an add's post-accept import is still being observed. */
-bool IsBusy();
-
-/** Marks the whole add busy, not just the page call: the import outlives the dispatch slot. */
-void SetBusy(bool bBusy);
-
 /**
- * Watches the asset registry until it stops growing, then reports the difference.
+ * Watches the asset registry for the import an accepted add started, then records how it ended.
  *
- * Completion runs once, on the game thread, after the registry settles or the
- * wait times out. Clears the busy flag itself.
+ * The caller has already been answered by the time this runs: it works on its own ticker, reports
+ * progress to McpFabImportOperations as it goes, and stores the outcome there under OperationId once
+ * the registry settles, Fab logs a failure, or the ceiling is reached.
  */
 void WatchForImport(
+	const FString& OperationId,
 	TSet<FString> Before,
-	FMcpFabAddResult Partial,
-	TFunction<void(const FMcpFabAddResult&)> OnComplete);
+	FMcpFabAddResult Accepted);
 } // namespace McpFabImportWatcher

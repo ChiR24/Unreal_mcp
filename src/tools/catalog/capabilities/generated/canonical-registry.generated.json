@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "656ac3f1033b19c1",
+  "catalogRevision": "b7d769b096c678f6",
   "recordCount": 389,
   "records": [
     {
@@ -7710,7 +7710,7 @@
           "download asset",
           "quixel"
         ],
-        "summary": "Bring a marketplace asset into the project: add a Fab listing, download a Fab asset, or import a Megascans asset.",
+        "summary": "Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), download a Fab asset, or import a Megascans asset.",
         "whenToUse": [
           "marketplace=fab_listing: A Fab listing id is known and its content must be added to the project through the signed-in Fab tab.",
           "marketplace=fab_download: A signed Fab download URL is in hand and the pack must be fetched to disk; it lands in the Fab cache, not in /Game.",
@@ -7718,6 +7718,7 @@
         ],
         "whenNotToUse": [
           "marketplace=fab_listing: The listing must first be found or judged (use asset.query_marketplace).",
+          "marketplace=fab_listing: An import is already running and only its progress is wanted (use asset.query_marketplace with lookup=fab_import_status).",
           "marketplace=fab_listing: The pack is already downloaded on disk and only needs copying in (use asset.maintain_content with maintenance=migrate).",
           "marketplace=fab_download: Only a listing id is known, with no signed URL (use marketplace=fab_listing, which adds the listing directly).",
           "marketplace=fab_download: Downloads already on disk must be listed, not fetched again (use asset.query_marketplace).",
@@ -7802,7 +7803,7 @@
           "properties": {
             "success": {
               "type": "boolean",
-              "description": "True only when assets actually appeared in the registry."
+              "description": "True when Fab accepted the download. It does not mean content exists: poll fab_import_status for that."
             },
             "listingId": {
               "type": "string",
@@ -7812,32 +7813,45 @@
               "type": "boolean",
               "description": "True when Fab accepted the workflow. Not the same as content existing."
             },
-            "assetCount": {
-              "type": "number",
-              "description": "New assets the registry gained during the import."
-            },
-            "importedRoot": {
+            "operationId": {
               "type": "string",
-              "description": "Where the pack landed, chosen by Fab (typically /Game/<PackName>)."
+              "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On ALREADY_IN_FLIGHT it names the import that is running instead."
             },
-            "engineExactMatch": {
+            "alreadyRunning": {
               "type": "boolean",
-              "description": "False when no listing version declared the running engine and the first version was used instead."
+              "description": "True when this listing was already being imported and this call returned that same operation instead of starting another."
+            },
+            "phase": {
+              "type": "string",
+              "description": "downloading right after Fab accepts. Absent when alreadyRunning: the status read has the current phase."
+            },
+            "formatCode": {
+              "type": "string",
+              "description": "Format Fab was asked to import: unreal-engine, gltf, glb, fbx, obj or usdz."
+            },
+            "quality": {
+              "type": "string",
+              "description": "Quality tier of the chosen file (raw, high, mid or low) when the listing publishes tiers, as Megascans does; absent otherwise."
+            },
+            "fileName": {
+              "type": "string",
+              "description": "The file Fab downloads. Source formats only: a unreal-engine pack has a version name, not a file."
+            },
+            "downloadBytes": {
+              "type": "number",
+              "description": "Size of that file in bytes. Absent when Fab publishes none (a unreal-engine pack): absent means unknown, never zero."
             },
             "versionName": {
               "type": "string",
               "description": "Listing version selected for this engine."
             },
-            "sampleAssetPaths": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "description": "Up to ten imported asset paths, as registry evidence."
+            "engineExactMatch": {
+              "type": "boolean",
+              "description": "False when no listing version declared the running engine and the first version was used instead."
             },
             "note": {
               "type": "string",
-              "description": "How to relocate the imported tree."
+              "description": "What to do next: poll the status read, do not add again."
             },
             "downloadSucceeded": {
               "type": "boolean",
@@ -7879,14 +7893,17 @@
       },
       "examples": [
         {
-          "title": "Bring a marketplace asset into the project: add a Fab listing, download a Fab asset, or import a Megascans asset.",
+          "title": "Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), download a Fab asset, or import a Megascans asset.",
           "input": {
             "listingId": "ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1",
             "action": "import_marketplace_asset",
             "marketplace": "fab_listing"
           },
           "output": {
-            "success": false
+            "success": true,
+            "accepted": true,
+            "operationId": "fab-3f9a1c2e40",
+            "phase": "downloading"
           }
         }
       ],
@@ -7963,8 +7980,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "43fd9358475f6aa203c831a71022824655045917b070a379c239ece6619cb111",
-        "content": "a0f1d9803fd8a2119555fe136d06f26d0e0f5034116907b92f925dbb4027b0e1"
+        "schema": "39d086973509955c418cb7bd0f7d29a7f4d20b05dc8115345684d51acb17a305",
+        "content": "6efd47781a03a4fcf8b14b31e8540a34e0293ac3d3abe9a5db00711bb043ef1f"
       }
     },
     {
@@ -9886,7 +9903,8 @@
         "asset.list_fab_downloads",
         "asset.list_fab_library",
         "asset.search_fab_listings",
-        "asset.list_megascans_library"
+        "asset.list_megascans_library",
+        "asset.get_fab_import_status"
       ],
       "legacyIds": [
         {
@@ -9927,6 +9945,13 @@
           "folded": {
             "lookup": "megascans_library"
           }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "get_fab_import_status",
+          "folded": {
+            "lookup": "fab_import_status"
+          }
         }
       ],
       "discovery": {
@@ -9940,22 +9965,26 @@
           "megascans library",
           "marketplace",
           "my fab downloads",
-          "browse marketplace"
+          "browse marketplace",
+          "fab import status",
+          "is the fab import done"
         ],
-        "summary": "Query marketplace libraries: Fab listing details, Fab downloads, Fab library, Fab search, Megascans library.",
+        "summary": "Query marketplace libraries: Fab listing details, Fab downloads, Fab library, Fab search, Megascans library, and the status of a Fab import that is running.",
         "whenToUse": [
           "lookup=fab_listing_details: A Fab search hit must be judged before adding it: description, seller, file formats and whether the project can import it.",
           "lookup=fab_downloads: It must be known which Fab packs are already downloaded to this machine and where they are cached.",
           "lookup=fab_library: The Fab listings the signed-in account owns must be listed, each with an id for adding to the project (needs a prior library sync).",
           "lookup=fab_search: Content must be found on Fab by keyword, optionally free listings only, to get listing ids.",
-          "lookup=megascans_library: The Megascans packs downloaded by Bridge on this machine must be listed before one is imported."
+          "lookup=megascans_library: The Megascans packs downloaded by Bridge on this machine must be listed before one is imported.",
+          "lookup=fab_import_status: A Fab add has returned an operationId and it must be known whether the import is downloading, importing, done or failed, and where the content landed."
         ],
         "whenNotToUse": [
           "lookup=fab_listing_details: The listing is chosen and must be added to the project (use asset.import_marketplace_asset with marketplace=fab_listing).",
           "lookup=fab_downloads: A downloaded pack must be copied into the project (use asset.maintain_content with maintenance=migrate).",
           "lookup=fab_library: A listing from the library is ready to add to the project (use asset.import_marketplace_asset with marketplace=fab_listing).",
           "lookup=fab_search: Content already installed in an engine template, plugin or Bridge folder is wanted (use asset.list with kind=content_sources).",
-          "lookup=megascans_library: A listed pack should be imported into the project (use asset.import_marketplace_asset with marketplace=megascans)."
+          "lookup=megascans_library: A listed pack should be imported into the project (use asset.import_marketplace_asset with marketplace=megascans).",
+          "lookup=fab_import_status: The listing has not been added yet (use asset.import_marketplace_asset with marketplace=fab_listing)."
         ]
       },
       "schemas": {
@@ -9965,7 +9994,7 @@
           "properties": {
             "listingId": {
               "type": "string",
-              "description": "Fab listing uid. Restricted to [A-Za-z0-9_-], 64 characters max."
+              "description": "Fab listing uid. Restricted to [A-Za-z0-9_-], 64 characters max. fab_import_status also takes it, in place of operationId, to report the newest import of that listing."
             },
             "columnTypes": {
               "type": "array",
@@ -9993,6 +10022,10 @@
               "default": false,
               "description": "Restrict to free listings."
             },
+            "operationId": {
+              "type": "string",
+              "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId."
+            },
             "lookup": {
               "type": "string",
               "enum": [
@@ -10000,7 +10033,8 @@
                 "fab_downloads",
                 "fab_library",
                 "fab_search",
-                "megascans_library"
+                "megascans_library",
+                "fab_import_status"
               ],
               "description": "Which query marketplace variant to run."
             }
@@ -10184,6 +10218,80 @@
             "importAvailable": {
               "type": "boolean",
               "description": "True when this build links the MegascansPlugin module, so import_megascans_asset can run."
+            },
+            "operationId": {
+              "type": "string",
+              "description": "The import reported."
+            },
+            "phase": {
+              "type": "string",
+              "description": "resolving, downloading, importing, done or failed."
+            },
+            "finished": {
+              "type": "boolean",
+              "description": "True once phase is done or failed; stop polling."
+            },
+            "elapsedSeconds": {
+              "type": "number",
+              "description": "Seconds since the add was requested; frozen once the import finished."
+            },
+            "formatCode": {
+              "type": "string",
+              "description": "Format Fab was asked to import."
+            },
+            "quality": {
+              "type": "string",
+              "description": "Quality tier of the chosen file, when the listing has tiers."
+            },
+            "fileName": {
+              "type": "string",
+              "description": "The file Fab downloads (source formats only)."
+            },
+            "downloadBytes": {
+              "type": "number",
+              "description": "Expected size of that file, when Fab publishes one; unknown, never zero, when absent."
+            },
+            "versionName": {
+              "type": "string",
+              "description": "Listing version selected for this engine."
+            },
+            "engineExactMatch": {
+              "type": "boolean",
+              "description": "False when no listing version declared the running engine and the first version was used instead."
+            },
+            "downloadedBytes": {
+              "type": "number",
+              "description": "Bytes fetched so far, when the download folder shows them. Absent when the download cannot be observed (a unreal-engine pack, or a download that has not begun)."
+            },
+            "assetsSoFar": {
+              "type": "number",
+              "description": "New assets the asset registry has gained so far."
+            },
+            "importedRoot": {
+              "type": "string",
+              "description": "Where the content landed, chosen by Fab (typically /Game/Fab/... or /Game/<PackName>). Present once finished and any landed."
+            },
+            "sampleAssetPaths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Up to ten imported asset paths, the static and skeletal meshes first."
+            },
+            "failureCode": {
+              "type": "string",
+              "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), or the add's own refusal code."
+            },
+            "failure": {
+              "type": "string",
+              "description": "Present when phase is failed: why, in words."
+            },
+            "fabErrors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Error lines Fab logged while the import ran, with URLs and anything credential-shaped masked."
             }
           },
           "required": [
@@ -10194,7 +10302,7 @@
       },
       "examples": [
         {
-          "title": "Query marketplace libraries: Fab listing details, Fab downloads, Fab library, Fab search, Megascans library.",
+          "title": "Query marketplace libraries: Fab listing details, Fab downloads, Fab library, Fab search, Megascans library, and the status of a Fab import that is running.",
           "input": {
             "listingId": "ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1",
             "action": "query_marketplace",
@@ -10239,11 +10347,13 @@
             "fab_downloads": "list_fab_downloads",
             "fab_library": "list_fab_library",
             "fab_search": "search_fab_listings",
-            "megascans_library": "list_megascans_library"
+            "megascans_library": "list_megascans_library",
+            "fab_import_status": "get_fab_import_status"
           },
           "declaredBy": {
             "listingId": [
-              "fab_listing_details"
+              "fab_listing_details",
+              "fab_import_status"
             ],
             "columnTypes": [
               "fab_library"
@@ -10261,14 +10371,17 @@
             ],
             "freeOnly": [
               "fab_search"
+            ],
+            "operationId": [
+              "fab_import_status"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8a35408887119c92f9c7f7747d276dd2374d58535126b60e473a226389fda9a4",
-        "content": "5b7a613a478c8276755b2e135ab0638200d96019bc59eb23820e38a12ced99d4"
+        "schema": "e353ad39829802c1c0a112ee6bbce704352bcab36431f395bfbef089852eacc5",
+        "content": "d49849a3a3ddaae1971372aeb159a5eff45e5661ebb84d08eefe0ac91e261971"
       }
     },
     {

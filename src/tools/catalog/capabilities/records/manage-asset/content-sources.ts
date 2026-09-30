@@ -129,7 +129,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
 
   r('get_fab_listing_details', 'asset',
     'Describe one Fab listing — description, tags, seller, preview image and the asset formats it ships — so a caller can choose between search hits rather than guess from a title. Requires the Fab tab open and signed in. canAddToProject answers what search cannot: whether add_fab_asset_to_project can import this listing, true for unreal-engine, gltf, glb and fbx alike; hasUnrealBuild is narrower and covers only the packaged case. The preview comes back as imageBase64, promoted into a real MCP image block rather than a URL, and is omitted rather than truncated past the reply cap. When a field cannot be read the response names the keys it did see, so a Fab schema change reports itself.',
-    schema({ listingId: str('Fab listing uid. Restricted to [A-Za-z0-9_-], 64 characters max.') }, ['listingId']),
+    schema({ listingId: str('Fab listing uid. Restricted to [A-Za-z0-9_-], 64 characters max. fab_import_status also takes it, in place of operationId, to report the newest import of that listing.') }, ['listingId']),
     schema({
       success: bool('Listing was described.'),
       listingId: str('Listing that was described.'),
@@ -178,29 +178,70 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('add_fab_asset_to_project', 'asset',
-    'Add one Fab listing to this project through the signed-in Fab tab, which must be open. Claims the listing first: Fab answers 404 for a download the account does not own, so this posts add-to-library exactly as the Fab UI does when you press Add to Project — a real change to your Fab library, free to claim and harmless to repeat on a listing you already own. Then it picks the format the Fab importer accepts (unreal-engine, else gltf/glb/fbx) and hands over the download. Supply only a listing id; the signed URL, EOS token and session cookie stay inside the page and reach no response or log. Fab chooses the destination, so this reports importedRoot — use asset.migrate_assets to relocate. Success is decided by the asset registry, not by Fab: IMPORT_TIMED_OUT when nothing appears.',
+    'Start importing one Fab listing into this project through the signed-in Fab tab, which must be open, and return as soon as Fab accepts the download. The content does NOT exist yet when this replies: downloading and importing take minutes and hold the editor, far longer than a client waits, so poll asset.query_marketplace with lookup=fab_import_status and the returned operationId until phase is done or failed. Never call this again to see progress: a repeat for the listing that is running only hands back the same operation (alreadyRunning), and any other listing is refused with ALREADY_IN_FLIGHT, which names the running import and returns the status call as its nextCall. It claims the listing first: Fab answers 404 for a download the account does not own, so this posts add-to-library exactly as the Fab UI does when you press Add to Project — a real change to your Fab library, free to claim and harmless to repeat on a listing you already own. Then it picks the format the Fab importer accepts (unreal-engine, else gltf, glb, fbx, obj or usdz) and hands over the download; the reply names the format, the file and its quality tier, and the file size when Fab publishes one. Supply only a listing id; the signed URL, EOS token and session cookie stay inside the page and reach no response or log. Fab chooses the destination folder: the status read reports importedRoot once the import is done.',
     schema({
       listingId: str('Fab listing uid, as it appears in a fab.com/listings/<uid> URL. Restricted to [A-Za-z0-9_-], 64 characters max, because it is used to build an API path.')
     }, ['listingId']),
     schema({
-      success: bool('True only when assets actually appeared in the registry.'),
+      success: bool('True when Fab accepted the download. It does not mean content exists: poll fab_import_status for that.'),
       listingId: str('Listing that was requested.'),
       accepted: bool('True when Fab accepted the workflow. Not the same as content existing.'),
-      assetCount: num('New assets the registry gained during the import.'),
-      importedRoot: str('Where the pack landed, chosen by Fab (typically /Game/<PackName>).'),
-      engineExactMatch: bool('False when no listing version declared the running engine and the first version was used instead.'),
+      operationId: str('The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On ALREADY_IN_FLIGHT it names the import that is running instead.'),
+      alreadyRunning: bool('True when this listing was already being imported and this call returned that same operation instead of starting another.'),
+      phase: str('downloading right after Fab accepts. Absent when alreadyRunning: the status read has the current phase.'),
+      formatCode: str('Format Fab was asked to import: unreal-engine, gltf, glb, fbx, obj or usdz.'),
+      quality: str('Quality tier of the chosen file (raw, high, mid or low) when the listing publishes tiers, as Megascans does; absent otherwise.'),
+      fileName: str('The file Fab downloads. Source formats only: a unreal-engine pack has a version name, not a file.'),
+      downloadBytes: num('Size of that file in bytes. Absent when Fab publishes none (a unreal-engine pack): absent means unknown, never zero.'),
       versionName: str('Listing version selected for this engine.'),
-      sampleAssetPaths: arr('Up to ten imported asset paths, as registry evidence.'),
-      note: str('How to relocate the imported tree.')
+      engineExactMatch: bool('False when no listing version declared the running engine and the first version was used instead.'),
+      note: str('What to do next: poll the status read, do not add again.')
     }, ['success']),
-    MIGRATE_BEHAVIOR, WRITE_POLICY, HIGH,
+    { effect: 'write', idempotency: 'idempotent', longRunning: true, safeToRetry: true }, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'add_fab_asset_to_project',
       whenToUse: ['A Fab listing id is known and its content must be added to the project through the signed-in Fab tab.'],
       whenNotToUse: [
         'The listing must first be found or judged (use asset.query_marketplace).',
+        'An import is already running and only its progress is wanted (use asset.query_marketplace with lookup=fab_import_status).',
         'The pack is already downloaded on disk and only needs copying in (use asset.maintain_content with maintenance=migrate).',
       ],
-      examples: [ex('Add a Fab listing to the project', { listingId: 'ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1' }, { success: false })] }
+      examples: [ex('Add a Fab listing to the project', { listingId: 'ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1' }, { success: true, accepted: true, operationId: 'fab-3f9a1c2e40', phase: 'downloading' })] }
+  ),
+
+  r('get_fab_import_status', 'asset',
+    'Report a Fab import that asset.import_marketplace_asset (marketplace=fab_listing) started, by operationId (from the add reply) or by listingId (its newest import). It reads the adapter\'s own record, never Fab\'s page, so it needs no sign-in and answers at once — except while Fab is importing: the import holds the editor for minutes and every call, this one included, then answers EDITOR_BLOCKED. That is the import working, not a failure: retry every 20 to 30 seconds. phase is resolving (asking Fab for the download), downloading (downloadedBytes of downloadBytes when Fab\'s download folder shows them; a unreal-engine pack installs through Fab\'s own downloader and shows no bytes), importing (Fab\'s importer is running; assetsSoFar counts what the asset registry has gained), done (importedRoot, assetCount and sampleAssetPaths, meshes first) or failed (failureCode, failure, and fabErrors quoting what Fab logged). Stop polling when finished is true. The editor keeps the last 16 imports of the session and forgets them on restart. Do not call add again to look at progress.',
+    schema({
+      operationId: str('Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId.'),
+      listingId: str('Fab listing uid, to report the newest import of that listing. Used only when operationId is not given.')
+    }, []),
+    schema({
+      success: bool('The import was found and reported. Read phase for how it is going: success does not mean the import worked.'),
+      operationId: str('The import reported.'),
+      listingId: str('The listing it imports.'),
+      phase: str('resolving, downloading, importing, done or failed.'),
+      finished: bool('True once phase is done or failed; stop polling.'),
+      elapsedSeconds: num('Seconds since the add was requested; frozen once the import finished.'),
+      formatCode: str('Format Fab was asked to import.'),
+      quality: str('Quality tier of the chosen file, when the listing has tiers.'),
+      fileName: str('The file Fab downloads (source formats only).'),
+      downloadBytes: num('Expected size of that file, when Fab publishes one; unknown, never zero, when absent.'),
+      versionName: str('Listing version selected for this engine.'),
+      engineExactMatch: bool('False when no listing version declared the running engine and the first version was used instead.'),
+      downloadedBytes: num('Bytes fetched so far, when the download folder shows them. Absent when the download cannot be observed (a unreal-engine pack, or a download that has not begun).'),
+      assetsSoFar: num('New assets the asset registry has gained so far.'),
+      assetCount: num('New assets the registry gained during the import. Present once finished and any landed.'),
+      importedRoot: str('Where the content landed, chosen by Fab (typically /Game/Fab/... or /Game/<PackName>). Present once finished and any landed.'),
+      sampleAssetPaths: arr('Up to ten imported asset paths, the static and skeletal meshes first.'),
+      failureCode: str('Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), or the add\'s own refusal code.'),
+      failure: str('Present when phase is failed: why, in words.'),
+      fabErrors: arr('Error lines Fab logged while the import ran, with URLs and anything credential-shaped masked.'),
+      note: str('What to do next, given the phase.')
+    }, ['success']),
+    READ, READ_POLICY, LOW,
+    { dispatchAction: 'get_fab_import_status',
+      whenToUse: ['A Fab add has returned an operationId and it must be known whether the import is downloading, importing, done or failed, and where the content landed.'],
+      whenNotToUse: ['The listing has not been added yet (use asset.import_marketplace_asset with marketplace=fab_listing).'],
+      examples: [ex('Check on a Fab import', { operationId: 'fab-3f9a1c2e40' }, { success: true, phase: 'downloading', finished: false })] }
   ),
 
   r('list_megascans_library', 'asset',

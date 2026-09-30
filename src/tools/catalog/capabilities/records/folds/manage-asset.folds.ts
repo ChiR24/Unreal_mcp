@@ -6,7 +6,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   // lifecycle (action-mode writes)
   {
     primary: 'import_marketplace_asset', selector: 'marketplace',
-    summary: 'Bring a marketplace asset into the project: add a Fab listing, download a Fab asset, or import a Megascans asset.',
+    summary: 'Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), download a Fab asset, or import a Megascans asset.',
     topics: ['fab', 'megascans', 'marketplace', 'download asset', 'quixel'],
     members: { fab_listing: 'add_fab_asset_to_project', fab_download: 'download_fab_asset', megascans: 'import_megascans_asset' },
   },
@@ -44,11 +44,11 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   // lifecycle (action-mode reads)
   {
     primary: 'query_marketplace', selector: 'lookup',
-    summary: 'Query marketplace libraries: Fab listing details, Fab downloads, Fab library, Fab search, Megascans library.',
-    topics: ['fab library', 'fab listing', 'search fab', 'megascans library', 'marketplace', 'my fab downloads', 'browse marketplace'],
+    summary: 'Query marketplace libraries: Fab listing details, Fab downloads, Fab library, Fab search, Megascans library, and the status of a Fab import that is running.',
+    topics: ['fab library', 'fab listing', 'search fab', 'megascans library', 'marketplace', 'my fab downloads', 'browse marketplace', 'fab import status', 'is the fab import done'],
     members: {
       fab_listing_details: 'get_fab_listing_details', fab_downloads: 'list_fab_downloads', fab_library: 'list_fab_library',
-      fab_search: 'search_fab_listings', megascans_library: 'list_megascans_library',
+      fab_search: 'search_fab_listings', megascans_library: 'list_megascans_library', fab_import_status: 'get_fab_import_status',
     },
   },
   {

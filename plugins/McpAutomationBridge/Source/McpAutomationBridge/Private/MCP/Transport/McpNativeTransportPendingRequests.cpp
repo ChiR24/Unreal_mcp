@@ -27,6 +27,25 @@ void AddActorNotFoundGuidance(const TSharedPtr<FJsonObject>& Receipt, const TSha
 		TEXT("No actor in the world is labeled or named '%s'; control_actor find by name lists near labels under similar."), *Name))});
 	Receipt->SetObjectField(TEXT("nextCall"), Next);
 }
+
+// A handler that refuses a call because another call settles it can name that call in its own reply:
+// the Fab add turns a second import away while one runs and hands back the read that reports the first.
+// Only an executable gateway call is passed on. Mirrors handlerNextCall in
+// src/server/gateway/gateway-execute-dispatch.ts.
+void AddHandlerNextCall(const TSharedPtr<FJsonObject>& Receipt, const TSharedPtr<FJsonObject>& Result)
+{
+	const TSharedPtr<FJsonObject>* Next = nullptr;
+	const TSharedPtr<FJsonObject>* Params = nullptr;
+	FString Operation, Tool, Action;
+	if (!Receipt.IsValid() || !Result.IsValid() || !Result->TryGetObjectField(TEXT("nextCall"), Next) || Next == nullptr ||
+		!(*Next)->TryGetStringField(TEXT("operation"), Operation) || Operation != TEXT("execute") ||
+		!(*Next)->TryGetStringField(TEXT("tool"), Tool) || !(*Next)->TryGetStringField(TEXT("action"), Action) ||
+		!(*Next)->TryGetObjectField(TEXT("params"), Params))
+	{
+		return;
+	}
+	Receipt->SetObjectField(TEXT("nextCall"), *Next);
+}
 }
 
 bool FMcpNativeTransport::CompletePendingRequest(
@@ -116,6 +135,10 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		ReportedResult = McpBuildGatewayExecuteReceipt(
 			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
 		AddActorNotFoundGuidance(ReportedResult, Conn->Arguments);
+		if (!bSuccess)
+		{
+			AddHandlerNextCall(ReportedResult, Result);
+		}
 		bReportedSuccess = McpReceiptSucceeded(ReportedResult);
 		ReportedMessage = McpReceiptMessage(ReportedResult);
 		ReportedErrorCode.Reset();

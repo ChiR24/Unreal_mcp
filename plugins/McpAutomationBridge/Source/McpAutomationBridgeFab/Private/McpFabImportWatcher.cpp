@@ -2,6 +2,9 @@
 
 #include "McpFabImportWatcher.h"
 
+#include "McpFabImportOperations.h"
+#include "McpFabLogCapture.h"
+
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Runtime/Launch/Resources/Version.h"
@@ -13,10 +16,18 @@ namespace McpFabImportWatcher
 {
 namespace
 {
-/** A pack can be gigabytes; this is a ceiling, not an expectation. */
-constexpr double MaxWaitSeconds = 600.0;
 /** How long the registry must stay quiet before the import is called done. */
 constexpr double SettleSeconds = 6.0;
+/** Every import gets this long; a larger download gets a second more per megabyte on top. */
+constexpr double BaseCeilingSeconds = 600.0;
+constexpr double LongestCeilingSeconds = 7200.0;
+
+/** A pack can be gigabytes; this is a ceiling, not an expectation. */
+double CeilingSeconds(int64 DownloadBytes)
+{
+	const double Extra = DownloadBytes > 0 ? static_cast<double>(DownloadBytes) / 1.0e6 : 0.0;
+	return FMath::Clamp(BaseCeilingSeconds + Extra, BaseCeilingSeconds, LongestCeilingSeconds);
+}
 
 // Fab's import raises modal dialogs mid-flight -- FGenericImportWorkflow asks
 // "Do you want to open the file to manually Extract and Import?" whenever it
@@ -41,9 +52,6 @@ struct FUnattendedDuringImport
 	bool bPrevious;
 };
 
-/** Guards the whole add, not just the page call. */
-bool bOperationInFlight = false;
-
 /** Longest shared /Game/<folder> prefix of everything that appeared. */
 FString CommonRoot(const TArray<FString>& Paths)
 {
@@ -66,17 +74,26 @@ FString CommonRoot(const TArray<FString>& Paths)
 	}
 	return Root.IsEmpty() ? TEXT("/Game") : Root;
 }
+
+/** Up to ten paths, the static and skeletal meshes first: they are what a caller came for. */
+TArray<FString> PickSamples(TArray<FString> Meshes, TArray<FString> Others)
+{
+	Meshes.Sort();
+	Others.Sort();
+	TArray<FString> Samples;
+	for (const TArray<FString>* Group : {&Meshes, &Others})
+	{
+		for (const FString& Path : *Group)
+		{
+			if (Samples.Num() < 10)
+			{
+				Samples.Add(Path);
+			}
+		}
+	}
+	return Samples;
+}
 } // namespace
-
-bool IsBusy()
-{
-	return bOperationInFlight;
-}
-
-void SetBusy(bool bBusy)
-{
-	bOperationInFlight = bBusy;
-}
 
 // State one watch shares between the registry hook and the ticker; it lives until the ticker stops.
 struct FImportWatch
@@ -85,18 +102,20 @@ struct FImportWatch
 	double QuietFor = 0.0;
 	int32 LastCount = 0;
 	TSet<FString> AddedSet;
+	TSet<FString> MeshSet;
 	FCriticalSection AddedLock;
 	FDelegateHandle AddedHandle;
-	FTSTicker::FDelegateHandle TickerHandle;
+	FString FabFailure;
 	FUnattendedDuringImport Unattended;
 };
 
 void WatchForImport(
+	const FString& OperationId,
 	TSet<FString> Before,
-	FMcpFabAddResult Partial,
-	TFunction<void(const FMcpFabAddResult&)> OnComplete)
+	FMcpFabAddResult Accepted)
 {
 	TSharedRef<FImportWatch> Watch = MakeShared<FImportWatch>();
+	McpFabLogCapture::Start();
 
 	IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 		TEXT("AssetRegistry")).Get();
@@ -105,8 +124,10 @@ void WatchForImport(
 		{
 #if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
 			const FString Path = AssetData.GetObjectPathString();
+			const FName ClassName = AssetData.AssetClassPath.GetAssetName();
 #else
 			const FString Path = AssetData.ObjectPath.ToString();
+			const FName ClassName = AssetData.AssetClass;
 #endif
 			// Skip the baseline and sub-objects: a map contributes entries like
 			// Map.Map:PersistentLevel.ActorFolder_UID_..., which are parts of
@@ -117,10 +138,15 @@ void WatchForImport(
 			}
 			FScopeLock Lock(&Watch->AddedLock);
 			Watch->AddedSet.Add(Path);
+			if (ClassName == FName(TEXT("StaticMesh")) || ClassName == FName(TEXT("SkeletalMesh")))
+			{
+				Watch->MeshSet.Add(Path);
+			}
 		});
 
-	Watch->TickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
-		[Partial, OnComplete, Watch](float Delta) mutable
+	const double Ceiling = CeilingSeconds(Accepted.DownloadBytes);
+	FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+		[Accepted, OperationId, Ceiling, Watch](float Delta) mutable
 		{
 			Watch->Elapsed += Delta;
 
@@ -131,54 +157,73 @@ void WatchForImport(
 			}
 			if (Count != Watch->LastCount) { Watch->LastCount = Count; Watch->QuietFor = 0.0; }
 			else if (Count > 0) { Watch->QuietFor += Delta; }
+			McpFabImportOperations::SetAssetsSoFar(OperationId, Count);
 
+			// Fab logs a failed download, unzip or import and then cancels without another word, so
+			// without the log an import that died looks like one that is merely slow.
+			TArray<FString> FabLines;
+			McpFabLogCapture::Take(FabLines);
+			for (const FString& Line : FabLines)
+			{
+				McpFabImportOperations::AddFabError(OperationId, Line);
+				if (Watch->FabFailure.IsEmpty() && McpFabLogCapture::IsWorkflowFailure(Line))
+				{
+					Watch->FabFailure = Line;
+				}
+			}
+
+			const bool bFabFailed = Count == 0 && !Watch->FabFailure.IsEmpty();
 			const bool bSettled = Count > 0 && Watch->QuietFor >= SettleSeconds;
-			const bool bExpired = Watch->Elapsed >= MaxWaitSeconds;
-			if (!bSettled && !bExpired)
+			const bool bExpired = Watch->Elapsed >= Ceiling;
+			if (!bSettled && !bExpired && !bFabFailed)
 			{
 				return true; // keep ticking
 			}
 
 			TArray<FString> Added;
+			TArray<FString> Meshes;
 			{
 				FScopeLock Lock(&Watch->AddedLock);
 				Added = Watch->AddedSet.Array();
+				Meshes = Watch->MeshSet.Array();
 			}
 			Added.Sort();
-			Partial.AssetCount = Count;
-			Partial.RootPath = CommonRoot(Added);
-			Partial.SamplePaths.Reset();
-			for (int32 Index = 0; Index < Count && Index < 10; ++Index)
+			TArray<FString> Others = Added.FilterByPredicate(
+				[&Meshes](const FString& Path) { return !Meshes.Contains(Path); });
+			Accepted.AssetCount = Count;
+			Accepted.RootPath = CommonRoot(Added);
+			Accepted.SamplePaths = PickSamples(Meshes, Others);
+			if (bFabFailed)
 			{
-				Partial.SamplePaths.Add(Added[Index]);
+				Accepted.bTimedOut = false;
+				Accepted.ErrorCode = TEXT("FAB_IMPORT_FAILED");
+				Accepted.Error = FString::Printf(TEXT("Fab stopped the import and logged: %s"), *Watch->FabFailure);
 			}
-			if (Count == 0)
+			else if (Count == 0)
 			{
-				Partial.bTimedOut = true;
-				Partial.ErrorCode = TEXT("IMPORT_TIMED_OUT");
-				Partial.Error = FString::Printf(
-					TEXT("Fab accepted the workflow but no new asset appeared within %.0f seconds."),
-					MaxWaitSeconds);
+				Accepted.bTimedOut = true;
+				Accepted.ErrorCode = TEXT("IMPORT_TIMED_OUT");
+				Accepted.Error = FString::Printf(
+					TEXT("Fab accepted the workflow but no new asset appeared within %.0f seconds."), Ceiling);
 			}
 			else if (bExpired)
 			{
 				// The ceiling was reached while packages were still streaming:
 				// report what landed but mark it, so the caller does not mistake
 				// a partial import for a settled one.
-				Partial.bTimedOut = true;
-				Partial.ErrorCode = TEXT("IMPORT_PARTIAL");
-				Partial.Error = FString::Printf(
+				Accepted.bTimedOut = true;
+				Accepted.ErrorCode = TEXT("IMPORT_PARTIAL");
+				Accepted.Error = FString::Printf(
 					TEXT("The import was still streaming when the %.0f-second ceiling was reached; %d asset(s) landed."),
-					MaxWaitSeconds, Count);
+					Ceiling, Count);
 			}
 
 			IAssetRegistry& RegistryRef = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(
 				TEXT("AssetRegistry")).Get();
 			RegistryRef.OnAssetAdded().Remove(Watch->AddedHandle);
-			FTSTicker::GetCoreTicker().RemoveTicker(Watch->TickerHandle);
-			bOperationInFlight = false;
-			OnComplete(Partial);
+			McpFabLogCapture::Stop();
+			McpFabImportOperations::Finish(OperationId, Accepted);
 			return false;
-		}), 1.0f);
+		}), 0.5f);
 }
 } // namespace McpFabImportWatcher

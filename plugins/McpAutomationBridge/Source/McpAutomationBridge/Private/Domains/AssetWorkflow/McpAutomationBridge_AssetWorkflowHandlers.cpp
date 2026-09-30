@@ -73,6 +73,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleSearchFabListings(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("get_fab_listing_details"))
     return HandleGetFabListingDetails(RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("get_fab_import_status"))
+    return HandleGetFabImportStatus(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("list_megascans_library"))
     return HandleListMegascansLibrary(RequestId, Payload, RequestingSocket);
   if (Lower == TEXT("import_megascans_asset"))

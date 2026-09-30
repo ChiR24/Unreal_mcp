@@ -164,6 +164,22 @@ export function actorNotFoundGuidance(
   };
 }
 
+// A handler that refuses a call because another call settles it can name that call in its own reply:
+// the Fab add turns a second import away while one runs and hands back the read that reports the first.
+// Only an executable gateway call is passed on, so a malformed value never reaches a caller as guidance.
+// Mirrors AddHandlerNextCall in McpNativeTransportPendingRequests.cpp.
+export function handlerNextCall(result: unknown): { readonly nextCall?: Record<string, unknown> } {
+  if (!isRecord(result)) return {};
+  for (const source of [result, result.data, result.result]) {
+    const next = isRecord(source) ? source.nextCall : undefined;
+    if (isRecord(next) && next.operation === 'execute' && typeof next.tool === 'string'
+      && typeof next.action === 'string' && isRecord(next.params)) {
+      return { nextCall: { operation: 'execute', tool: next.tool, action: next.action, params: next.params } };
+    }
+  }
+  return {};
+}
+
 // Every capability runs the way the native gateway runs it: the record's parent
 // tool receives {action, ...params} and the plugin's parent routing picks the
 // domain handler. Only manage_tools records are served in process.
@@ -251,6 +267,7 @@ export async function dispatchAndValidate(
       message: failureMessage(result),
       ...(handlerCode === undefined ? {} : { handlerCode }),
       ...actorNotFoundGuidance(handlerCode, params),
+      ...handlerNextCall(result),
       ...(staleState && currentRevision !== undefined ? { currentRevision } : {}),
       ...(staleState && expectedRevision !== undefined ? { expectedRevision } : {}),
       // The code and message stay - they are small and are the actionable part.

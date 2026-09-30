@@ -135,7 +135,7 @@ Every automation request is gated **before it reaches the editor queue**. The Ty
 - **No knip / ts-prune** (evaluated 2026-09-19, rejected): integration cases load at run time and source-contract tests read files as text, so its findings are noise. Dead code is found by reading; `noUnusedLocals`/`noUnusedParameters` are on.
 
 ## UNIQUE STYLES
-- 23 canonical parent tools hide their actions behind action enums; 389 records (235 of them folded families) keep 1,454 `{tool, action}` pairs callable.
+- 23 canonical parent tools hide their actions behind action enums; 389 records (235 of them folded families) keep 1,455 `{tool, action}` pairs callable.
 - Dynamic tool management exists in both TS and native MCP; `manage_tools` and `inspect` are protected, the `core` category is fixed.
 - The plugin is responsibility-split: `Core` routes, `Domains` implement, `Foundation` shares primitives, `Safety` wraps hazardous editor ops, `Transport` owns sockets.
 - Discovery is progressive and never dumps full schemas; invalid calls return `suggestions` plus an executable `nextCall`. A direct call to a canonical tool name returns a `DIRECT_TOOL_CALL_REMOVED` receipt whose `nextCall` re-runs it through `unreal`.

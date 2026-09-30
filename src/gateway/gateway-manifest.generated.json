@@ -5957,6 +5957,7 @@
         "offset",
         "opacity",
         "operation",
+        "operationId",
         "operations",
         "order",
         "orphansOnly",
@@ -6659,6 +6660,7 @@
               "fab_library",
               "fab_search",
               "megascans_library",
+              "fab_import_status",
               "metadata",
               "dependencies",
               "validate",
@@ -6883,6 +6885,10 @@
           "operation": {
             "type": "string",
             "description": "Math operation (Add, Multiply, etc.)."
+          },
+          "operationId": {
+            "type": "string",
+            "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId."
           },
           "operations": {
             "type": "array",

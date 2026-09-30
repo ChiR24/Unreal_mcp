@@ -2,6 +2,7 @@
 
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h"
 #include "McpFabProvider.h"
 
 #include "Async/Async.h"
@@ -16,15 +17,17 @@
  * importer. Nothing in this process ever sees the URL, the EOS token or a
  * cookie, so no receipt or log can carry them.
  *
- * Success is decided by the asset registry, not by Fab's reply. Fab accepting a
- * workflow only means a download started; the response below is emitted after
- * new packages actually appear and the registry goes quiet.
+ * This answers as soon as Fab accepts the download, not when the import ends.
+ * The download and Fab's importer take minutes and hold the game thread, far
+ * past the client's request timeout, and while they do every call answers
+ * EDITOR_BLOCKED, so no reply could be sent then. The import runs in the
+ * background under an operation id; get_fab_import_status reports it, and it
+ * is the asset registry there, not Fab's word, that decides whether content
+ * arrived.
  *
  * Fab chooses the destination folder -- FPackImportWorkflow imports to the
- * pack's own name under /Game and honours no caller path -- so the result
- * reports where the content landed instead of pretending to place it. Use
- * asset.migrate_assets afterwards to relocate, accepting the referenceIntegrity
- * warning that capability documents.
+ * pack's own name under /Game and honours no caller path -- so the status read
+ * reports where the content landed instead of pretending to place it.
  */
 bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -56,26 +59,34 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
           TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
           Data->SetStringField(TEXT("listingId"), ListingId);
           Data->SetBoolField(TEXT("accepted"), Result.bAccepted);
-          Data->SetNumberField(TEXT("assetCount"), Result.AssetCount);
-          Data->SetStringField(TEXT("importedRoot"), Result.RootPath);
-          Data->SetBoolField(TEXT("engineExactMatch"), Result.bEngineExactMatch);
-          Data->SetStringField(TEXT("versionName"), Result.VersionName);
-          TArray<TSharedPtr<FJsonValue>> Samples;
-          for (const FString &Path : Result.SamplePaths) {
-            Samples.Add(MakeShared<FJsonValueString>(Path));
+          if (!Result.OperationId.IsEmpty()) {
+            Data->SetStringField(TEXT("operationId"), Result.OperationId);
           }
-          Data->SetArrayField(TEXT("sampleAssetPaths"), Samples);
+          if (!Result.bAccepted) {
+            // A refusal for a running import names it, and the call that reads it.
+            if (Result.ErrorCode == TEXT("ALREADY_IN_FLIGHT") && !Result.OperationId.IsEmpty()) {
+              Data->SetObjectField(TEXT("nextCall"), McpFabImportJson::MakeStatusNextCall(Result.OperationId));
+            }
+            Self->SendAutomationResponse(Socket, RequestId, false, Result.Error, Data, Result.ErrorCode);
+            return;
+          }
+          McpFabImportJson::SetAddFacts(Data, Result);
+          // The phase of an import this call joined is not known here; the status read says.
+          if (!Result.bAlreadyRunning) {
+            Data->SetStringField(TEXT("phase"), TEXT("downloading"));
+          }
+          Data->SetBoolField(TEXT("alreadyRunning"), Result.bAlreadyRunning);
+          Data->SetObjectField(TEXT("task"), McpFabImportJson::MakeTask(Result.OperationId, TEXT("running")));
           Data->SetStringField(
               TEXT("note"),
-              TEXT("Fab chooses the destination folder; use asset.migrate_assets to relocate the tree."));
-
-          const bool bOk = Result.bAccepted && Result.AssetCount > 0;
+              TEXT("Not imported yet. Poll asset.query_marketplace with lookup=fab_import_status and this operationId until phase is done or failed; do not call this add again. "
+                   "While Fab imports, the editor is held and every call, the status read included, answers EDITOR_BLOCKED: keep polling. "
+                   "Fab chooses the destination folder; the status read reports importedRoot, and asset.move relocates a folder."));
           Self->SendAutomationResponse(
-              Socket, RequestId, bOk,
-              bOk ? FString::Printf(TEXT("Imported %d asset(s) into %s."), Result.AssetCount,
-                                    *Result.RootPath)
-                  : Result.Error,
-              Data, bOk ? TEXT("") : Result.ErrorCode);
+              Socket, RequestId, true,
+              FString::Printf(TEXT("Fab accepted the download of %s; operation %s continues in the background."),
+                              *ListingId, *Result.OperationId),
+              Data, FString());
         });
       });
 

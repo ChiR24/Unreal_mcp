@@ -34,7 +34,7 @@ struct FMcpFabDownloadResult
 };
 
 /**
- * Outcome of a whole add-to-project run.
+ * What one add-to-project request learned from Fab's page, and later how the import ended.
  *
  * Deliberately carries no URL and no credential: the signed URL is minted and
  * consumed inside Fab's page, so nothing here can leak it into a receipt.
@@ -52,6 +52,37 @@ struct FMcpFabAddResult
 	TArray<FString> SamplePaths;
 	bool bEngineExactMatch = false;
 	FString VersionName;
+	/** The background import this add started; for ALREADY_IN_FLIGHT, the one still running. */
+	FString OperationId;
+	/** True when the same listing was already being imported and this add joined that operation. */
+	bool bAlreadyRunning = false;
+	/** The format Fab was asked to import: unreal-engine, gltf, glb, fbx, obj or usdz. */
+	FString FormatCode;
+	/** Quality tier of the chosen file (raw, high, mid, low); empty when the listing has none. */
+	FString Quality;
+	/** The file Fab downloads. */
+	FString FileName;
+	/** Bytes of that file, or -1 when Fab publishes no size for it (unreal-engine packs). */
+	int64 DownloadBytes = -1;
+};
+
+/** Where one background import stands. Read-only: assembled from the operation store on demand. */
+struct FMcpFabImportStatus
+{
+	FString OperationId;
+	FString ListingId;
+	/** resolving, downloading, importing, done or failed. */
+	FString Phase;
+	/** Seconds since the add was requested; frozen once the import finished. */
+	double ElapsedSeconds = 0.0;
+	/** Bytes fetched so far, or -1 when the download cannot be observed. */
+	int64 DownloadedBytes = -1;
+	/** New assets seen in the registry so far. */
+	int32 AssetsSoFar = 0;
+	/** What the add reported, completed with the outcome once the import is done or failed. */
+	FMcpFabAddResult Result;
+	/** Error lines Fab logged while the import ran, scrubbed. */
+	TArray<FString> FabErrors;
 };
 
 /** One catalog hit. Carries an id and labels only -- never a URL. */
@@ -121,16 +152,24 @@ public:
 	virtual bool ImportMegascansEnvelope(const FString& SerializedJson, FString& OutError) = 0;
 
 	/**
-	 * Resolves and imports one Fab listing using the signed-in Fab page.
+	 * Starts importing one Fab listing through the signed-in Fab page and reports as soon as Fab has
+	 * accepted the download, or refused it.
 	 *
-	 * Returns false when the adapter cannot even start (Fab absent, page not
-	 * ready), in which case OnComplete never runs. Otherwise OnComplete fires
-	 * once, on the game thread, after the asset registry settles or the wait
-	 * times out.
+	 * The download and the import take minutes and hold the game thread, far past any client's request
+	 * timeout, so OnAccepted fires once, on the game thread, with OperationId set; the import then
+	 * continues in the background and GetImportStatus reports how it is going. Returns false when the
+	 * adapter cannot even start (Fab absent), in which case OnAccepted never runs.
 	 */
 	virtual bool AddToProject(
 		const FString& ListingId,
-		TFunction<void(const FMcpFabAddResult&)> OnComplete) = 0;
+		TFunction<void(const FMcpFabAddResult&)> OnAccepted) = 0;
+
+	/**
+	 * Reports one background import, found by its operation id or by the listing it imports (the
+	 * newest operation for that listing). Returns false when no such operation is known; the store
+	 * holds the last few operations of this editor session.
+	 */
+	virtual bool GetImportStatus(const FString& OperationOrListingId, FMcpFabImportStatus& OutStatus) = 0;
 
 	/**
 	 * Queries the Fab catalog through the signed-in page.

@@ -8046,6 +8046,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "fab_library",
             "fab_search",
             "megascans_library",
+            "fab_import_status",
             "metadata",
             "dependencies",
             "validate",
@@ -8270,6 +8271,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "operation": {
           "type": "string",
           "description": "Math operation (Add, Multiply, etc.)."
+        },
+        "operationId": {
+          "type": "string",
+          "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId."
         },
         "operations": {
           "type": "array",
@@ -8921,6 +8926,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Present when canAddToProject is false: why this listing cannot be imported."
         },
+        "alreadyRunning": {
+          "type": "boolean",
+          "description": "True when this listing was already being imported and this call returned that same operation instead of starting another."
+        },
         "assetClass": {
           "type": "string",
           "description": "Concrete UClass name of the analyzed asset."
@@ -8964,6 +8973,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Indexed library entries, verbatim from uassetsData.json."
+        },
+        "assetsSoFar": {
+          "type": "number",
+          "description": "New assets the asset registry has gained so far."
         },
         "baseMaterial": {
           "type": "string",
@@ -9075,6 +9088,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Material domain, e.g. Surface, PostProcess, UI."
         },
+        "downloadBytes": {
+          "type": "number",
+          "description": "Expected size of that file, when Fab publishes one; unknown, never zero, when absent."
+        },
         "downloadCount": {
           "type": "number",
           "description": "Number of cached downloads."
@@ -9082,6 +9099,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "downloadSucceeded": {
           "type": "boolean",
           "description": "Downloader-reported success."
+        },
+        "downloadedBytes": {
+          "type": "number",
+          "description": "Bytes fetched so far, when the download folder shows them. Absent when the download cannot be observed (a unreal-engine pack, or a download that has not begun)."
         },
         "downloadedFiles": {
           "type": "array",
@@ -9101,6 +9122,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "dryRun": {
           "type": "boolean",
           "description": "True when nothing was written."
+        },
+        "elapsedSeconds": {
+          "type": "number",
+          "description": "Seconds since the add was requested; frozen once the import finished."
         },
         "engineExactMatch": {
           "type": "boolean",
@@ -9130,6 +9155,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether a material function is exposed to the library."
         },
+        "fabErrors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Error lines Fab logged while the import ran, with URLs and anything credential-shaped masked."
+        },
         "fabModuleAvailable": {
           "type": "boolean",
           "description": "True when the plugin was built against the Fab module and read the cache through its own API rather than scanning the directory."
@@ -9149,12 +9181,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Index of the step that stopped the batch (failures only)."
         },
+        "failure": {
+          "type": "string",
+          "description": "Present when phase is failed: why, in words."
+        },
+        "failureCode": {
+          "type": "string",
+          "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), or the add's own refusal code."
+        },
+        "fileName": {
+          "type": "string",
+          "description": "The file Fab downloads (source formats only)."
+        },
+        "finished": {
+          "type": "boolean",
+          "description": "True once phase is done or failed; stop polling."
+        },
         "folders": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "description": "Subfolder paths."
+        },
+        "formatCode": {
+          "type": "string",
+          "description": "Format Fab was asked to import."
         },
         "graph": {
           "type": "object",
@@ -9207,7 +9259,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "importedRoot": {
           "type": "string",
-          "description": "Where the pack landed, chosen by Fab (typically /Game/<PackName>)."
+          "description": "Where the content landed, chosen by Fab (typically /Game/Fab/... or /Game/<PackName>). Present once finished and any landed."
         },
         "indexExists": {
           "type": "boolean",
@@ -9363,6 +9415,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Applied zero-based offset."
         },
+        "operationId": {
+          "type": "string",
+          "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On ALREADY_IN_FLIGHT it names the import that is running instead."
+        },
         "outputName": {
           "type": "string",
           "description": "Pin name, for a function output."
@@ -9433,6 +9489,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "MaterialInstance: the material or instance it overrides."
         },
+        "phase": {
+          "type": "string",
+          "description": "downloading right after Fab accepts. Absent when alreadyRunning: the status read has the current phase."
+        },
         "placementWarning": {
           "type": "string",
           "description": "Human-readable overlap warning, present only when overlappingNodes is non-empty."
@@ -9444,6 +9504,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "posY": {
           "type": "number",
           "description": "Y coordinate the node now sits at."
+        },
+        "quality": {
+          "type": "string",
+          "description": "Quality tier of the chosen file (raw, high, mid or low) when the listing publishes tiers, as Megascans does; absent otherwise."
         },
         "query": {
           "type": "string",
@@ -9471,7 +9535,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Up to ten imported asset paths, as registry evidence."
+          "description": "Up to ten imported asset paths, the static and skeletal meshes first."
         },
         "saved": {
           "type": "boolean",

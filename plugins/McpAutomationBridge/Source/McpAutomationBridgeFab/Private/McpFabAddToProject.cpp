@@ -14,6 +14,7 @@
 // FFabAssetMetadata belongs to the Quixel branch.
 
 #include "McpFabAddScript.h"
+#include "McpFabSelectionScript.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpFabAdd, Log, All);
 
@@ -52,6 +53,7 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
 	return FString::Printf(TEXT(R"JS(
 (function () {
   var id = "%s", listing = "%s", engine = "%s";
+%s
   function shape(v, d) {
     if (v === null) return "null";
     if (Array.isArray(v)) return d <= 0 ? "array[" + v.length + "]" : { array: v.length, first: v.length ? shape(v[0], d - 1) : "empty" };
@@ -234,23 +236,9 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
     .then(function (r) { if (!r) return null; out.formatsStatus = r.status; return r.json(); })
     .then(function (fmt) {
       if (!fmt) return null;
-      var versions = fmt.versions || [];
-      var chosen = null;
-      // Exact major.minor comparison, not substring: "5.1" must not match a
-      // listing pinned to "5.10" by containment.
-      function sameEngine(v) {
-        var parts = String(v).split(".");
-        return parts.length >= 2 && parts[0] + "." + parts[1] === engine;
-      }
-      for (var i = 0; i < versions.length; i++) {
-        var evs = versions[i].engineVersions || [];
-        for (var j = 0; j < evs.length; j++) {
-          if (sameEngine(evs[j])) { chosen = versions[i]; break; }
-        }
-        if (chosen) break;
-      }
-      out.engineExactMatch = !!chosen;
-      if (!chosen && versions.length) { chosen = versions[0]; }
+      var picked = pickVersion(fmt.versions || [], engine);
+      out.engineExactMatch = !!(picked && picked.exact);
+      var chosen = picked ? picked.version : null;
 
       // A source format publishes no versions array at all: its downloadable
       // units sit directly under files, each carrying the uid the
@@ -259,38 +247,14 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
       // field that went missing -- treating it as missing is what produced
       // NO_VERSION for every gltf and fbx listing.
       if (!chosen) {
-        var files = fmt.files || [];
-        var ready = files.filter(function (f) {
-          return f && f.uid && String(f.status || "").toUpperCase() !== "FAILED";
-        });
+        var ready = readyFiles(fmt);
         out.fileChoices = ready.slice(0, 6).map(function (f) {
           return String(f.name || "") + "|" + String(f.fileType || "") + "|" +
-                 String(f.artifactTag || "") + "|" + String(f.size || 0);
+                 String(f.artifactTag || "") + "|" + String(fileBytes(f));
         });
-        // Prefer the file whose own type names the chosen format; several
-        // entries can share a format and only one is the model itself.
-        // Megascans publishes one file per quality tier -- raw, high, mid, low
-        // -- all typed "source", so matching fileType to the format picks
-        // nothing and falling through to files[0] grabs raw: the unprocessed
-        // scan, 323 MB for a campfire, rather than the game-ready asset.
-        // Preference order is therefore explicit, and raw stays last.
-        var tiers = ["_high", "_mid", "_low", "_raw"];
-        for (var t = 0; t < tiers.length && !chosen; t++) {
-          for (var k = 0; k < ready.length; k++) {
-            if (String(ready[k].name || "").toLowerCase().indexOf(tiers[t]) !== -1) {
-              chosen = ready[k]; break;
-            }
-          }
-        }
         // out.formatCode, not code: `code` is a local of the previous then()
         // callback and is out of scope here.
-        var want = String(out.formatCode || "").toLowerCase();
-        for (var m = 0; m < ready.length && !chosen; m++) {
-          var ft = String(ready[m].fileType || "").toLowerCase();
-          var nm = String(ready[m].name || "").toLowerCase();
-          if (want && (ft.indexOf(want) !== -1 || nm.indexOf("." + want) !== -1)) { chosen = ready[m]; }
-        }
-        if (!chosen && ready.length) { chosen = ready[0]; }
+        chosen = pickFile(ready, out.formatCode);
       }
       if (!chosen) {
         out.error = "NO_VERSION";
@@ -298,6 +262,10 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
         send(out); return null;
       }
       out.versionName = chosen.name || "";
+      // What the caller is told about the download it just started: the tier, and the size
+      // when Fab publishes one (a pack does not, and unknown is not zero).
+      out.quality = tierOf(chosen.name);
+      if (fileBytes(chosen) >= 0) { out.downloadBytes = fileBytes(chosen); }
 )JS") TEXT(R"JS(      // ?platform=Windows suits a packaged per-platform build; a source zip
       // has no platform and the filter 404s. Try the platform form, then the
       // bare one, and report both statuses so a future 404 says which shape
@@ -367,6 +335,6 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
     })
     .catch(fail);
 })();
-)JS"), *RequestId, *ListingId, *EngineVersion);
+)JS"), *RequestId, *ListingId, *EngineVersion, McpFabSelection::Script());
 }
 } // namespace McpFabAddOperation
