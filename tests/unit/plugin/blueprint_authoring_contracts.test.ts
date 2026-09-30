@@ -228,3 +228,28 @@ describe('get_scs scans a folder for a component class', () => {
     expect(paramDescription('blueprint.get_scs', 'componentClass')).toContain('TextRender');
   });
 });
+
+// Reading what an event does (Bounce, TakeHit, an enemy's stomp test) took one pin call per hop.
+describe('get_node_details followExec lists what runs after a node', () => {
+  const source = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersDetails.cpp');
+
+  it('walks exec outputs only, once per node, capped at 50', () => {
+    expect(source).toContain('Out->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec');
+    expect(source).toContain('Seen.Contains(Next)');
+    expect(source).toContain('McpExecChain(TargetNode, FMath::Min(static_cast<int32>(FollowExec), 50))');
+  });
+
+  it('gives each input its value or its source, and the record says so', () => {
+    expect(source).toContain('TEXT("<- ")');
+    expect(paramDescription('blueprint.inspect_graph', 'followExec')).toContain('chain');
+  });
+});
+
+// A HitStop custom event made by an add_event step came back with "pins": "", so its Duration
+// input had to be guessed before a later step could wire it.
+describe('an add_event batch step lists the pins of the event it made', () => {
+  it('looks the node up across the Blueprint when the step prepared no graph', () => {
+    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp'))
+      .toContain('DescribeNodePins(Step.TargetGraph ? Step.FindNode(Guid) : FindBatchNode(Parent.Blueprint, Guid))');
+  });
+});

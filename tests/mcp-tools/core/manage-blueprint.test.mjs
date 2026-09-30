@@ -184,6 +184,7 @@ const testCases = [
 
   // === VERIFY: native-field connected pin state ===
   { scenario: 'VERIFY: native-field connected pin state', toolName: 'manage_blueprint', arguments: { action: 'get_pin_details', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', pinName: 'then_0', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.pins', includesObject: { pinName: 'then_0', linkedTo: { length: 1 } }, label: 'then_0 has one real graph link after native-field connect_pins' }] },
+  { scenario: 'INFO: get_node_details followExec walks the exec wires', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:seqNodeId}', graphName: 'EventGraph', followExec: 3 }, expected: 'success', assertions: [{ path: 'structuredContent.result.chain', includesObject: { nodeTitle: 'Print String' }, label: 'the Sequence reaches Print String through then_0' }] },
 
   // === ACTION: break_pin_links via nodeId alias ===
   { scenario: 'ACTION: break_pin_links via nodeId', toolName: 'manage_blueprint', arguments: { action: 'break_pin_links', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', pinName: 'then_0', graphName: 'EventGraph' }, expected: 'success' },
@@ -191,7 +192,7 @@ const testCases = [
   // === CONFIG: set_node_property (blueprintPath + nodeGuid + propertyName + propertyValue) ===
   // Uses the real nodeId captured from the first Sequence node.
   { scenario: 'CONFIG: set_node_property', toolName: 'manage_blueprint', arguments: { action: 'set_node_property', blueprintPath: BP_PATH, nodeGuid: '${captured:seqNodeId}', propertyName: 'Comment', propertyValue: 'Test comment', graphName: 'EventGraph' }, expected: 'success' },
-  { scenario: 'VERIFY: set_node_property wrote the comment', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:seqNodeId}', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.comment', equals: 'Test comment', label: 'propertyValue reached the node' }] },
+  { scenario: 'VERIFY: set_node_property wrote the comment', toolName: 'manage_blueprint', arguments: { action: 'get_node_details', blueprintPath: BP_PATH, nodeGuid: '${captured:seqNodeId}', graphName: 'EventGraph' }, expected: 'success', assertions: [{ path: 'structuredContent.result.nodeComment', equals: 'Test comment', label: 'propertyValue reached the node' }] },
   { scenario: 'CONFIG: set_node_property numeric position', toolName: 'manage_blueprint', arguments: { action: 'set_node_property', blueprintPath: BP_PATH, nodeId: '${captured:seqNodeId}', propertyName: 'NodePosY', propertyValue: 160, graphName: 'EventGraph' }, expected: 'success' },
 
   // === CREATE: create_reroute_node (blueprintPath + graphName) ===

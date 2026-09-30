@@ -8249,6 +8249,7 @@
         "fillValue",
         "filter",
         "folder",
+        "followExec",
         "font",
         "fontFamily",
         "fontSize",
@@ -8713,6 +8714,12 @@
           "folder": {
             "type": "string",
             "description": "Destination /Game folder for a Widget Blueprint."
+          },
+          "followExec": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 50,
+            "description": "Also walk this many nodes (1-50) along the exec wires leaving the node, depth-first (a Branch's then side before its else), and list each under chain with its inputs."
           },
           "font": {
             "type": "string",

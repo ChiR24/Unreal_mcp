@@ -10555,6 +10555,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Destination /Game folder for a Widget Blueprint."
         },
+        "followExec": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 50,
+          "description": "Also walk this many nodes (1-50) along the exec wires leaving the node, depth-first (a Branch's then side before its else), and list each under chain with its inputs."
+        },
         "font": {
           "type": "string",
           "description": "Font asset path. Omitted keeps the current font; fontSize alone resizes it."
@@ -11595,13 +11601,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "zOrder"
           ]
         },
+        "chain": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "With followExec: each node the exec wires reach, in walk order: nodeId, nodeTitle, via (the \"Title.Pin\" exec output that led to it) and inputs (each input pin as its literal value, or \"<- Title.Pin\" for the node feeding it)."
+        },
         "channelCount": {
           "type": "number",
           "description": "Channels that received a key."
-        },
-        "comment": {
-          "type": "string",
-          "description": "Node comment if present."
         },
         "compileStatus": {
           "type": "string",
@@ -11876,6 +11887,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "nodeClass": {
           "type": "string",
           "description": "Resolved UK2Node class name."
+        },
+        "nodeComment": {
+          "type": "string",
+          "description": "Node comment, empty when it has none."
         },
         "nodeGuid": {
           "type": "string",
@@ -12295,6 +12310,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "width": {
           "type": "number",
           "description": "Image width in pixels."
+        },
+        "x": {
+          "type": "number",
+          "description": "Node X position in the graph."
+        },
+        "y": {
+          "type": "number",
+          "description": "Node Y position in the graph."
         }
       },
       "additionalProperties": true

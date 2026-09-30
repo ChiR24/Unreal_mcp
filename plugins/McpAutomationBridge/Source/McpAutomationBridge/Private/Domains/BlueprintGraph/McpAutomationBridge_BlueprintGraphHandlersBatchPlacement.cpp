@@ -59,10 +59,11 @@ FMcpCapturedResponse RunStep(const FActionContext& Parent, const TSharedPtr<FJso
     }
     FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(StepId);
     FString Guid;
-    if (Reply.bSuccess && Reply.Result.IsValid() && Step.TargetGraph &&
-        Reply.Result->TryGetStringField(TEXT("nodeGuid"), Guid))
+    if (Reply.bSuccess && Reply.Result.IsValid() && Reply.Result->TryGetStringField(TEXT("nodeGuid"), Guid))
     {
-        OutPins = DescribeNodePins(Step.FindNode(Guid));
+        // A member step (add_event: its parameter pins are what later steps wire) prepares no
+        // graph, so its node is found across the Blueprint; it used to report no pins at all.
+        OutPins = DescribeNodePins(Step.TargetGraph ? Step.FindNode(Guid) : FindBatchNode(Parent.Blueprint, Guid));
     }
     return Reply;
 }

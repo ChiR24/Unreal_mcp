@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
+#include "EdGraphSchema_K2.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -69,6 +70,60 @@ static TSharedPtr<FJsonObject> MakeDetailedPin(UEdGraphPin* Pin)
     return PinObject;
 }
 
+// followExec: the nodes the exec wires leaving Start reach, depth-first (a Branch's
+// then side before its else), each with its inputs as a value or "<- Title.Pin".
+// Reading what an event does took one pin call per hop before.
+static TArray<TSharedPtr<FJsonValue>> McpExecChain(UEdGraphNode* Start, int32 Limit)
+{
+    TArray<TSharedPtr<FJsonValue>> Chain;
+    TSet<UEdGraphNode*> Seen = {Start};
+    TFunction<void(UEdGraphNode*)> Walk = [&](UEdGraphNode* From)
+    {
+        for (UEdGraphPin* Out : From->Pins)
+        {
+            if (!Out || Out->Direction != EGPD_Output || Out->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec)
+            {
+                continue;
+            }
+            for (UEdGraphPin* Link : Out->LinkedTo)
+            {
+                UEdGraphNode* Next = Link ? Link->GetOwningNode() : nullptr;
+                if (!Next || Chain.Num() >= Limit || Seen.Contains(Next))
+                {
+                    continue;
+                }
+                Seen.Add(Next);
+                TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+                Entry->SetStringField(TEXT("nodeId"), Next->NodeGuid.ToString());
+                Entry->SetStringField(TEXT("nodeTitle"), Next->GetNodeTitle(ENodeTitleType::ListView).ToString());
+                Entry->SetStringField(TEXT("via"), From->GetNodeTitle(ENodeTitleType::ListView).ToString() + TEXT(".") + Out->PinName.ToString());
+                TSharedPtr<FJsonObject> Inputs = McpHandlerUtils::CreateResultObject();
+                for (UEdGraphPin* In : Next->Pins)
+                {
+                    if (!In || In->Direction != EGPD_Input || In->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+                    {
+                        continue;
+                    }
+                    const UEdGraphPin* Source = In->LinkedTo.Num() > 0 ? In->LinkedTo[0] : nullptr;
+                    const FString Value = Source && Source->GetOwningNode()
+                        ? TEXT("<- ") + Source->GetOwningNode()->GetNodeTitle(ENodeTitleType::ListView).ToString() + TEXT(".") + Source->PinName.ToString()
+                        : !In->DefaultValue.IsEmpty() ? In->DefaultValue
+                        : In->DefaultObject ? In->DefaultObject->GetPathName() : In->DefaultTextValue.ToString();
+                    if (!Value.IsEmpty())
+                    {
+                        Inputs->SetStringField(In->PinName.ToString(), Value);
+                    }
+                }
+                Entry->SetObjectField(TEXT("inputs"), Inputs);
+                Chain.Add(MakeShared<FJsonValueObject>(Entry));
+                Walk(Next);
+            }
+        }
+    };
+    Walk(Start);
+    return Chain;
+}
+
 static bool GetNodeDetails(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("get_node_details"))
@@ -107,6 +162,11 @@ static bool GetNodeDetails(FActionContext& Context)
     }
     Result->SetArrayField(TEXT("pins"), Pins);
     Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
+    double FollowExec = 0.0;
+    if (Context.Payload->TryGetNumberField(TEXT("followExec"), FollowExec) && FollowExec >= 1.0)
+    {
+        Result->SetArrayField(TEXT("chain"), McpExecChain(TargetNode, FMath::Min(static_cast<int32>(FollowExec), 50)));
+    }
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Node details retrieved."), Result);
     return true;
