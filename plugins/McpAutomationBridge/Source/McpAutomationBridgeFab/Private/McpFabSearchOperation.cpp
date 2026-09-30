@@ -157,13 +157,20 @@ bool Start(const FString& Query, bool bFreeOnly, int32 Limit,
 		// search that found nothing, which is the one answer a caller cannot
 		// tell from a real empty result.
 		FString PageError;
-		if (bJson) { Root->TryGetStringField(TEXT("error"), PageError); }
+		FString PageMessage;
+		if (bJson)
+		{
+			Root->TryGetStringField(TEXT("error"), PageError);
+			Root->TryGetStringField(TEXT("message"), PageMessage);
+		}
 		if (!bSuccess || !bJson || !PageError.IsEmpty())
 		{
 			Result.ErrorCode = PageError.IsEmpty() ? TEXT("SEARCH_FAILED") : PageError;
-			Result.Error = PageError == TEXT("PAGE_NAVIGATING")
-				? TEXT("The Fab tab had not finished loading fab.com. It has been sent there; retry in a few seconds.")
-				: TEXT("The Fab page did not return a usable result.");
+			// The dispatcher words its own failures (page not ready, page busy, timed out).
+			Result.Error = !PageMessage.IsEmpty() ? PageMessage
+				: PageError == TEXT("PAGE_NAVIGATING")
+					? FString(TEXT("The Fab tab had not finished loading fab.com. It has been sent there; retry in a few seconds."))
+					: FString(TEXT("The Fab page did not return a usable result."));
 			OnComplete(Result);
 			return;
 		}

@@ -202,6 +202,19 @@ TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic)
 
 namespace McpFabBrowserSession
 {
+bool ReadPageState(FString& OutUrl, bool& bOutLoading, FString& OutDiagnostic)
+{
+	const TSharedPtr<SWidget> Widget = FindFabBrowserWidget(OutDiagnostic);
+	if (!Widget.IsValid() || Widget->GetTypeAsString() != TEXT("SWebBrowser"))
+	{
+		return false;
+	}
+	const TSharedRef<SWebBrowser> Browser = StaticCastSharedRef<SWebBrowser>(Widget.ToSharedRef());
+	OutUrl = Browser->GetUrl();
+	bOutLoading = Browser->IsLoading();
+	return true;
+}
+
 /**
  * Binds the caller's callback into the live page and runs Script against it.
  *

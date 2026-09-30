@@ -147,7 +147,7 @@ bool Start(const FString& ListingId, TFunction<void(bool, const FString&)> OnCom
 
 	if (!bDispatched)
 	{
-		OnComplete(false, FString::Printf(TEXT("{\"error\":\"%s\"}"), *ErrorCode));
+		OnComplete(false, McpFabBridgeDispatch::FailurePayload(*ErrorCode, Error));
 	}
 	return true;
 }

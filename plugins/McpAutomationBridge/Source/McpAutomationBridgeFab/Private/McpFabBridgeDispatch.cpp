@@ -3,6 +3,7 @@
 #include "McpFabBridgeDispatch.h"
 
 #include "McpFabBridgeCallback.h"
+#include "McpFabPageReadiness.h"
 
 #include "Containers/Ticker.h"
 #include "HAL/PlatformTime.h"
@@ -30,38 +31,63 @@ UMcpFabBridgeCallback* GCallback = nullptr;
 /** When the outstanding call was dispatched, for the abandonment check below. */
 double GDispatchedAt = 0.0;
 
-/**
- * How long an unanswered call keeps the slot.
- *
- * Every operation's script settles as soon as Fab's API answers -- the long
- * waits elsewhere are the asset-registry poll on this side, not the page -- so
- * a reply that has not arrived by now is not late, it is never coming. Without
- * this, a single page error or a tab closed mid-call would make every later
- * Fab request return ALREADY_IN_FLIGHT until the editor restarted.
- *
- * Set below the MCP client's default per-request timeout (120s) so the abandon
- * fires and tells the caller before the client gives up on its own; a window
- * longer than the client timeout would abandon nothing the caller still hears.
- */
+// How long an unanswered call keeps the slot.
+//
+// Every operation's script settles as soon as Fab's API answers -- the long
+// waits elsewhere are the asset-registry poll on this side, not the page -- so
+// a reply that has not arrived by now is not late, it is never coming. Without
+// this, a single page error or a tab closed mid-call would make every later
+// Fab request wait on a slot that never frees, until the editor restarted.
+//
+// Set below the MCP client's default per-request timeout (120s) so the abandon
+// fires and tells the caller before the client gives up on its own; a window
+// longer than the client timeout would abandon nothing the caller still hears.
 constexpr double AbandonAfterSeconds = 90.0;
 
-/**
- * Wraps an operation script in an origin guard that repairs a stalled page.
- *
- * Fab's tab boots from a local file that asks the editor for the real URL and
- * replaces itself with it. That bootstrap is one-shot: it tries once, retries
- * once 500ms later, and both attempts are skipped entirely if window.ue is not
- * bound yet, after which nothing ever tries again and the tab sits on file://
- * for the life of the editor. Every fetch from that origin is cross-origin to
- * fab.com and fails, which looked like a broken bridge rather than a page that
- * never finished loading.
- *
- * So the guard finishes the bootstrap the page abandoned, using the page's own
- * geturl binding, and reports NAVIGATING so the caller retries rather than
- * reading a silent empty result. The reply is sent before the navigation is
- * scheduled, because location.replace tears down the JS context and would take
- * the pending answer with it.
- */
+// A request whose page is not ready, or whose turn on the one callback has not come, waits on a ticker
+// rather than fail: the first call after the tab auto-opens used to answer PAGE_NAVIGATING, and a search
+// during an add answered ALREADY_IN_FLIGHT. The game thread is never blocked by the wait.
+constexpr float WaiterTickSeconds = 0.5f;
+// How long a request waits for a page that is not on fab.com yet.
+constexpr double PageBudgetSeconds = 15.0;
+// How long it waits for its turn on the one page callback.
+constexpr double SlotBudgetSeconds = 60.0;
+// A page that is still not on fab.com after this long is nudged: its own bootstrap only tries once.
+constexpr double KickAfterSeconds = 2.0;
+// A page on fab.com that still reports loading after this long is treated as loaded.
+constexpr double LoadingGraceSeconds = 6.0;
+
+struct FWaiter
+{
+	FString RequestId;
+	FString Script;
+	TFunction<void(bool, const FString&)> OnComplete;
+	double PageWaited = 0.0;
+	double SlotWaited = 0.0;
+	double LoadingFor = 0.0;
+	bool bKicked = false;
+};
+
+/** In arrival order; only the front is served, so requests keep their order. */
+TArray<FWaiter> GWaiters;
+bool bWaiterTickerActive = false;
+
+// Wraps an operation script in an origin guard that repairs a stalled page.
+//
+// Fab's tab boots from a local file that asks the editor for the real URL and
+// replaces itself with it. That bootstrap is one-shot: it tries once, retries
+// once 500ms later, and both attempts are skipped entirely if window.ue is not
+// bound yet, after which nothing ever tries again and the tab sits on file://
+// for the life of the editor. Every fetch from that origin is cross-origin to
+// fab.com and fails, which looked like a broken bridge rather than a page that
+// never finished loading.
+//
+// So the guard finishes the bootstrap the page abandoned, using the page's own
+// geturl binding, and reports NAVIGATING so the caller retries rather than
+// reading a silent empty result. The reply is sent before the navigation is
+// scheduled, because location.replace tears down the JS context and would take
+// the pending answer with it. The dispatcher only runs a script once the page is
+// on fab.com, so this is the safety net for a page that navigates away meanwhile.
 FString WrapWithOriginGuard(const FString& RequestId, const FString& Inner)
 {
 	return FString::Printf(TEXT(R"JS(
@@ -107,36 +133,27 @@ UMcpFabBridgeCallback* EnsureCallback()
 	}
 	return GCallback;
 }
-} // namespace
 
-bool Dispatch(
-	TFunctionRef<FString(const FString& RequestId)> BuildScript,
-	TFunction<void(bool, const FString&)> OnComplete,
-	FString& OutError,
-	FString& OutErrorCode)
+/** True while an earlier request still holds the one page callback and has not yet been given up on. */
+bool SlotBusy()
+{
+	return GCallback != nullptr && !GCallback->IsSettled() &&
+		(FPlatformTime::Seconds() - GDispatchedAt) < AbandonAfterSeconds;
+}
+
+/** Arms the reply, starts the abandonment timer and runs the script. The slot must be free or stale. */
+void Run(FWaiter Waiter)
 {
 	UMcpFabBridgeCallback* Callback = EnsureCallback();
-
 	if (!Callback->IsSettled())
 	{
-		const double Elapsed = FPlatformTime::Seconds() - GDispatchedAt;
-		if (Elapsed < AbandonAfterSeconds)
-		{
-			OutErrorCode = TEXT("ALREADY_IN_FLIGHT");
-			OutError = FString::Printf(
-				TEXT("Another Fab request is still outstanding; the page exposes one callback, so calls run one at a time. Retry in up to %d second(s)."),
-				FMath::CeilToInt(AbandonAfterSeconds - Elapsed));
-			return false;
-		}
 		UE_LOG(LogMcpFabDispatch, Warning,
 			TEXT("Abandoning a Fab request unanswered after %.0f seconds; the page never replied."),
-			Elapsed);
-		Callback->Abandon(TEXT("{\"error\":\"ABANDONED\"}"));
+			FPlatformTime::Seconds() - GDispatchedAt);
+		Callback->Abandon(FailurePayload(TEXT("ABANDONED"), TEXT("An earlier Fab request never got an answer from the page.")));
 	}
-
-	const FString RequestId = FGuid::NewGuid().ToString(EGuidFormats::Digits);
-	TSharedRef<FTSTicker::FDelegateHandle> TickerHandle = MakeShared<FTSTicker::FDelegateHandle>();
 	GDispatchedAt = FPlatformTime::Seconds();
+	TSharedRef<FTSTicker::FDelegateHandle> TickerHandle = MakeShared<FTSTicker::FDelegateHandle>();
 
 	// Armed actively, not just checked on the next call. Freeing the slot
 	// lazily still leaves the CURRENT caller waiting on a page that has stopped
@@ -146,14 +163,15 @@ bool Dispatch(
 	// kept so a fast reply can cancel the timer instead of letting it fire a
 	// no-op later.
 	*TickerHandle = FTSTicker::GetCoreTicker().AddTicker(
-		FTickerDelegate::CreateLambda([RequestId, TickerHandle](float) -> bool
+		FTickerDelegate::CreateLambda([RequestId = Waiter.RequestId, TickerHandle](float) -> bool
 		{
 			if (GCallback != nullptr && GCallback->IsAwaiting(RequestId))
 			{
 				UE_LOG(LogMcpFabDispatch, Warning,
 					TEXT("No reply from the Fab page after %.0f seconds; failing the request."),
 					AbandonAfterSeconds);
-				GCallback->Abandon(TEXT("{\"error\":\"PAGE_TIMED_OUT\"}"));
+				GCallback->Abandon(FailurePayload(TEXT("PAGE_TIMED_OUT"),
+					TEXT("The Fab page did not answer within 90 seconds; it may have closed or hit an error. Retry.")));
 			}
 			FTSTicker::GetCoreTicker().RemoveTicker(*TickerHandle);
 			return false;
@@ -163,24 +181,132 @@ bool Dispatch(
 	// A settled request no longer needs the abandonment timer: it either got its
 	// answer or was abandoned, and the timer would only fire a no-op later.
 	Callback->Expect(
-		RequestId,
-		[TickerHandle, OnComplete = MoveTemp(OnComplete)](bool bSuccess, const FString& Payload) mutable
+		Waiter.RequestId,
+		[TickerHandle, OnComplete = MoveTemp(Waiter.OnComplete)](bool bSuccess, const FString& Payload) mutable
 		{
 			FTSTicker::GetCoreTicker().RemoveTicker(*TickerHandle);
 			OnComplete(bSuccess, Payload);
 		});
 
 	FString Diagnostic;
-	if (!McpFabBrowserSession::RunScriptWithCallback(
-			WrapWithOriginGuard(RequestId, BuildScript(RequestId)), Callback, Diagnostic))
+	if (!McpFabBrowserSession::RunScriptWithCallback(Waiter.Script, Callback, Diagnostic))
 	{
-		// Disarm rather than wait: no reply can arrive for a script that was
-		// never dispatched, and leaving the slot armed would block the next call
-		// for the full abandonment window.
-		Callback->Expect(FString(), nullptr);
+		// No reply can arrive for a script that was never dispatched: settle it now rather than
+		// hold the slot for the whole abandonment window.
+		Callback->Abandon(FailurePayload(TEXT("FAB_NOT_READY"), Diagnostic));
+	}
+}
+
+/** Fails a waiter that will never get its turn, telling its caller why. */
+void FailWaiter(int32 Index, const FString& Payload)
+{
+	TFunction<void(bool, const FString&)> Done = MoveTemp(GWaiters[Index].OnComplete);
+	GWaiters.RemoveAt(Index);
+	Done(false, Payload);
+}
+
+bool TickWaiters(float Delta)
+{
+	const bool bSlotFree = !SlotBusy();
+	for (int32 Index = GWaiters.Num() - 1; Index >= 0; --Index)
+	{
+		GWaiters[Index].SlotWaited += Delta;
+		if (GWaiters[Index].SlotWaited >= SlotBudgetSeconds && !(Index == 0 && bSlotFree))
+		{
+			FailWaiter(Index, FailurePayload(TEXT("PAGE_BUSY"),
+				FString::Printf(TEXT("Another Fab request held the page for %.0f seconds and this one never got its turn. Retry."), SlotBudgetSeconds),
+				SlotBudgetSeconds));
+		}
+	}
+	if (GWaiters.Num() > 0 && bSlotFree)
+	{
+		FWaiter& Front = GWaiters[0];
+		const McpFabPageReadiness::FPageState Page = McpFabPageReadiness::Probe();
+		if (!Page.bTabFound)
+		{
+			FailWaiter(0, FailurePayload(TEXT("FAB_NOT_READY"), Page.Diagnostic));
+		}
+		else if (Page.bUrlIsFab && (!Page.bLoading || Front.LoadingFor >= LoadingGraceSeconds))
+		{
+			FWaiter Ready = MoveTemp(Front);
+			GWaiters.RemoveAt(0);
+			Run(MoveTemp(Ready));
+		}
+		else
+		{
+			Front.PageWaited += Delta;
+			if (Page.bUrlIsFab)
+			{
+				Front.LoadingFor += Delta;
+			}
+			else if (!Front.bKicked && Front.PageWaited >= KickAfterSeconds)
+			{
+				// Only the origin guard runs: it navigates a page that is off fab.com and does nothing
+				// to one that has just arrived, so this can never act for a request nobody is awaiting.
+				Front.bKicked = true;
+				FString Ignored;
+				McpFabBrowserSession::RunScriptWithCallback(
+					WrapWithOriginGuard(TEXT("repair"), FString()), EnsureCallback(), Ignored);
+			}
+			if (Front.PageWaited >= PageBudgetSeconds)
+			{
+				FailWaiter(0, FailurePayload(TEXT("PAGE_NOT_READY"), DescribePageNotReady(PageBudgetSeconds), PageBudgetSeconds));
+			}
+		}
+	}
+	bWaiterTickerActive = GWaiters.Num() > 0;
+	return bWaiterTickerActive;
+}
+} // namespace
+
+FString FailurePayload(const TCHAR* Code, const FString& Message, double WaitedSeconds)
+{
+	FString Safe = Message.Replace(TEXT("\\"), TEXT("/")).Replace(TEXT("\""), TEXT("'"));
+	Safe = Safe.Replace(TEXT("\r"), TEXT(" ")).Replace(TEXT("\n"), TEXT(" "));
+	FString Json = FString::Printf(TEXT("{\"error\":\"%s\",\"message\":\"%s\""), Code, *Safe);
+	if (WaitedSeconds >= 0.0)
+	{
+		Json += FString::Printf(TEXT(",\"waitedSeconds\":%.0f"), WaitedSeconds);
+	}
+	return Json + TEXT("}");
+}
+
+FString DescribePageNotReady(double WaitedSeconds)
+{
+	return FString::Printf(
+		TEXT("The Fab tab was not on fab.com after %.0f seconds. It was opened and pointed there; if it shows a sign-in page, sign in and retry."),
+		WaitedSeconds);
+}
+
+bool Dispatch(
+	TFunctionRef<FString(const FString& RequestId)> BuildScript,
+	TFunction<void(bool, const FString&)> OnComplete,
+	FString& OutError,
+	FString& OutErrorCode)
+{
+	EnsureCallback();
+	const McpFabPageReadiness::FPageState Page = McpFabPageReadiness::Probe();
+	if (!Page.bTabFound)
+	{
 		OutErrorCode = TEXT("FAB_NOT_READY");
-		OutError = Diagnostic;
+		OutError = Page.Diagnostic;
 		return false;
+	}
+
+	FWaiter Waiter;
+	Waiter.RequestId = FGuid::NewGuid().ToString(EGuidFormats::Digits);
+	Waiter.Script = WrapWithOriginGuard(Waiter.RequestId, BuildScript(Waiter.RequestId));
+	Waiter.OnComplete = MoveTemp(OnComplete);
+	if (GWaiters.Num() == 0 && !SlotBusy() && Page.bUrlIsFab && !Page.bLoading)
+	{
+		Run(MoveTemp(Waiter));
+		return true;
+	}
+	GWaiters.Add(MoveTemp(Waiter));
+	if (!bWaiterTickerActive)
+	{
+		bWaiterTickerActive = true;
+		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&TickWaiters), WaiterTickSeconds);
 	}
 	return true;
 }

@@ -150,6 +150,12 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 			TEXT("Fab did not accept the listing (%s).%s"),
 			*Result.ErrorCode, *FormatList);
 	}
+	// The dispatcher words its own failures (page not ready, page busy, timed out).
+	FString PageMessage;
+	if (bJson && Root->TryGetStringField(TEXT("message"), PageMessage) && !PageMessage.IsEmpty())
+	{
+		Result.Error = PageMessage;
+	}
 	return Result;
 }
 } // namespace

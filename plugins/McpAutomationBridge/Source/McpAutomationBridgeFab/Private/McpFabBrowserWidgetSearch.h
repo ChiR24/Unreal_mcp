@@ -15,4 +15,11 @@ void WalkWidget(const TSharedRef<SWidget>& Widget, int32 Depth, int32& InOutVisi
 	TSharedPtr<SWidget>& OutBrowser, FString& OutTree);
 
 TSharedPtr<SWidget> FindFabBrowserInAnyWindow(FString& OutTree);
+
+// Defined in McpFabBrowserSessionBridge.cpp: the Fab tab's browser, opening the tab when there is none.
+TSharedPtr<SWidget> FindFabBrowserWidget(FString& OutDiagnostic);
+
+// Where the Fab tab's page is and whether it is still loading. False, with OutDiagnostic saying why,
+// when there is no browser to ask.
+bool ReadPageState(FString& OutUrl, bool& bOutLoading, FString& OutDiagnostic);
 } // namespace McpFabBrowserSession

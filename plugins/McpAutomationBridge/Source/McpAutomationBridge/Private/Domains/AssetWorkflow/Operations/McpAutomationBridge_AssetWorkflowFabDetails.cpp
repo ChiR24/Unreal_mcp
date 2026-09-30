@@ -52,14 +52,19 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabListingDetails(
           // page that had said exactly what was wrong.
           const bool bJson = FJsonSerializer::Deserialize(Reader, Parsed) && Parsed.IsValid();
           FString PageError;
+          FString PageMessage;
           if (bJson) {
             Parsed->TryGetStringField(TEXT("error"), PageError);
+            Parsed->TryGetStringField(TEXT("message"), PageMessage);
           }
           const bool bParsed = bSuccess && bJson && PageError.IsEmpty();
           if (!bParsed) {
             const FString Code = PageError.IsEmpty() ? TEXT("DETAILS_FAILED") : PageError;
-            Self->SendAutomationResponse(Socket, RequestId, false,
-                                         TEXT("Could not describe that listing."), nullptr, Code);
+            // The adapter words its own failures (page not ready, page busy, timed out).
+            Self->SendAutomationResponse(
+                Socket, RequestId, false,
+                PageMessage.IsEmpty() ? FString(TEXT("Could not describe that listing.")) : PageMessage,
+                nullptr, Code);
             return;
           }
 
