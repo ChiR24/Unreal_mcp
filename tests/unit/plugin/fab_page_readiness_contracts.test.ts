@@ -74,7 +74,7 @@ describe('the page readiness probe', () => {
 describe('failures the dispatcher words itself reach the caller', () => {
   it('search, add and details use the dispatcher message when there is one', () => {
     expect(code(fab('McpFabSearchOperation.cpp'))).toContain('TryGetStringField(TEXT("message"), PageMessage)');
-    expect(code(fab('McpFabAddOperation.cpp'))).toContain('TryGetStringField(TEXT("message"), PageMessage)');
+    expect(code(fab('McpFabAddReply.cpp'))).toContain('TryGetStringField(TEXT("message"), PageMessage)');
     expect(code(readFileSync(resolve(process.cwd(),
       'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabDetails.cpp'), 'utf8')))
       .toContain('TryGetStringField(TEXT("message"), PageMessage)');

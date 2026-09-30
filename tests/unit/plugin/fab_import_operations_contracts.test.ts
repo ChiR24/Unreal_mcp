@@ -51,7 +51,7 @@ describe('the Fab add answers when Fab accepts, not when the import ends', () =>
   });
 
   it('answers a full queue with the import at its head and the call that reads it', () => {
-    expect(add).toMatch(/It is working on %s \(operation %s, %s%s, %\.0f s in\)\. Poll asset\.query_marketplace with lookup=fab_import_status/u);
+    expect(code(fab('McpFabAddReply.cpp'))).toMatch(/It is working on %s \(operation %s, %s%s, %\.0f s in\)\. Poll asset\.query_marketplace with lookup=fab_import_status/u);
     const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
     expect(handler).toMatch(/QUEUE_FULL[\s\S]*MakeStatusNextCall\(Result\.OperationId\)/u);
     const json = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h'));
@@ -218,5 +218,32 @@ describe('the Fab add queue', () => {
     expect(status).toContain('Provider->GetImportQueue(Queue);');
     expect(status).toContain('TEXT("queue")');
     expect(code(fab('McpAutomationBridgeFabModule.cpp'))).toContain('McpFabImportOperations::ListQueue(');
+  });
+});
+
+describe('a refused download says which step failed', () => {
+  const reply = code(fab('McpFabAddReply.cpp'));
+  const script = code(fab('McpFabDownloadScript.cpp'));
+
+  it('names the step, Fab\'s status and Fab\'s own words in the reply', () => {
+    for (const step of ['license', 'claim', 'download-info']) {
+      expect(reply).toContain(`TEXT("${step}")`);
+    }
+    expect(reply).toMatch(/the claim step failed \(HTTP %\.0f: %s\)/u);
+    expect(reply).toMatch(/the download-info step failed \(HTTP %\.0f: %s\)/u);
+    expect(reply).toContain('The file lookup step found no downloadable file');
+  });
+
+  it('records the step on every path that ends in NO_DOWNLOAD_URL', () => {
+    const exits = script.match(/out\.error = "NO_DOWNLOAD_URL";/gu)?.length ?? 0;
+    const explained = script.match(/explainNoDownload\(\);|out\.failedStep = "download-info";\s*out\.stepStatus = r\.status;/gu)?.length ?? 0;
+    expect(exits).toBe(2);
+    expect(explained).toBe(2);
+  });
+
+  it('never takes a picture address for a download, and never reports a value from the reply', () => {
+    expect(script).toMatch(/!\/thumb\|preview\|image\|icon\|media\/i\.test\(k\)/u);
+    // Only key names of an unfamiliar reply are reported, never their values.
+    expect(script).toContain('Object.keys(info).slice(0, 12).join(", ")');
   });
 });

@@ -15,7 +15,9 @@ const SIGNED_URL = 'https://cdn.example.invalid/signed?sig=must-never-be-reporte
 
 /** combine mirrors the C++ side: -1 when the caller said nothing about merging meshes, 0 for false, 1 for true. */
 const addScript = (engine = '5.8', combine = -1): string =>
-  fillSlots(rawScript('McpFabAddToProject.cpp'), ['req-1', LISTING, engine, combine, rawScript('McpFabSelectionScript.cpp')]);
+  fillSlots(rawScript('McpFabAddToProject.cpp'), [
+    'req-1', LISTING, engine, combine, rawScript('McpFabSelectionScript.cpp'), rawScript('McpFabDownloadScript.cpp'),
+  ]);
 
 const listing = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
   title: 'Concrete Barrier',
@@ -158,6 +160,66 @@ describe('the add script: a scene-sized mesh file', () => {
       `fab_csrftoken=${CSRF}`,
     );
     expect(pack.results[0]).toMatchObject({ accepted: true, combinesMeshes: false });
+  });
+});
+
+describe('the add script: a listing Fab will not hand a download for', () => {
+  const files = { files: tiers({ high: 64_000_000 }) };
+  const withOffers = (licenses: unknown[]) => listing({ licenses });
+  const refuseDownloads = (status: number, detail: string): Route => [/\/download-info/u, { status, body: { detail } }];
+  const claim = (status: number, text: string): Route => [/\/add-to-library$/u, { status, text }];
+  const run = (listingBody: unknown, extra: Route[], format: unknown = files) =>
+    runPageScript(
+      addScript(),
+      [...extra, ...routes(format, 'gltf', listingBody)],
+      `fab_csrftoken=${CSRF}`,
+    );
+  const detailOf = (reply: unknown): string => String((reply as { stepDetail?: string }).stepDetail);
+
+  it('names the claim as the step that failed, with the words Fab used', async () => {
+    const result = await run(withOffers([{ offerId: 'o1', isCc0: true }]), [
+      claim(403, '{"detail":"This listing requires the seller licence"}'),
+      refuseDownloads(404, 'Not found'),
+    ]);
+
+    expect(result.results[0]).toMatchObject({ error: 'NO_DOWNLOAD_URL', failedStep: 'claim', stepStatus: 403 });
+    expect(detailOf(result.results[0])).toContain('requires the seller licence');
+  });
+
+  it('names the license step when the listing publishes no offer to claim', async () => {
+    const result = await run({ ...listing(), licenses: [] }, [refuseDownloads(404, 'Not found')]);
+
+    expect(result.results[0]).toMatchObject({ error: 'NO_DOWNLOAD_URL', failedStep: 'license' });
+  });
+
+  it('names download-info, with its status and words, when the claim went through', async () => {
+    const result = await run(listing(), [refuseDownloads(404, 'No such file for this account')]);
+
+    expect(result.results[0]).toMatchObject({ error: 'NO_DOWNLOAD_URL', failedStep: 'download-info', stepStatus: 404 });
+    expect(detailOf(result.results[0])).toContain('No such file for this account');
+  });
+
+  it('tries the next free offer when Fab refuses the first, and carries on once one is accepted', async () => {
+    let claims = 0;
+    const result = await run(
+      withOffers([{ offerId: 'paid', priceTier: { price: 10 } }, { offerId: 'free-a', isCc0: true }, { offerId: 'free-b', priceTier: { price: 0 } }]),
+      [[/\/add-to-library$/u, () => (claims++ === 0 ? { status: 403, text: 'no' } : { status: 200 })]],
+    );
+
+    expect(result.posts.map((post) => post.form.offer_id)).toEqual(['free-a', 'free-b']);
+    expect(result.results[0]).toMatchObject({ accepted: true, entitleStatus: 200 });
+  });
+
+  it('finds the address under an unfamiliar key, but never takes a preview or thumbnail', async () => {
+    const odd = await run(listing(), [[/\/download-info/u, { body: { downloadInfo: [{ signedDownloadLink: SIGNED_URL }] } }]]);
+    expect(odd.results[0]).toMatchObject({ accepted: true });
+    expect(odd.addToProject[0]?.url).toBe(SIGNED_URL);
+
+    const pictures = { downloadInfo: [{ previewUrl: 'https://cdn.example.invalid/p.png', thumbnailUrl: 'https://cdn.example.invalid/t.png' }] };
+    const previewOnly = await run(listing(), [[/\/download-info/u, { body: pictures }]]);
+    expect(previewOnly.results[0]).toMatchObject({ error: 'NO_DOWNLOAD_URL', failedStep: 'download-info' });
+    expect(previewOnly.addToProject).toHaveLength(0);
+    expect(detailOf(previewOnly.results[0])).toContain('previewUrl');
   });
 });
 

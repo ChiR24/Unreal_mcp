@@ -14,6 +14,7 @@
 // FFabAssetMetadata belongs to the Quixel branch.
 
 #include "McpFabAddScript.h"
+#include "McpFabDownloadScript.h"
 #include "McpFabSelectionScript.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMcpFabAdd, Log, All);
@@ -54,6 +55,7 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
 	return FString::Printf(TEXT(R"JS(
 (function () {
   var id = "%s", listing = "%s", engine = "%s", combine = %d;
+%s
 %s
   function shape(v, d) {
     if (v === null) return "null";
@@ -160,7 +162,15 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
         return null;
       }
       var found = findOffer(listingJson, 0, "listing");
-      out.offerIds = found ? [String(found.id)] : [];
+      // A listing can carry several licenses, each with its own offer. The free ones come first --
+      // add-to-library can claim a free offer without checkout, and each is tried until Fab accepts
+      // one -- then the offer the walk found, which is the only candidate when prices are not published.
+      var licensed = ((listingJson && listingJson.licenses) || []).filter(function (l) {
+        return l && l.offerId && (l.isCc0 || (l.priceTier && l.priceTier.price === 0));
+      }).map(function (l) { return String(l.offerId); });
+      out.offerIds = licensed.concat(found ? [String(found.id)] : []).filter(function (v, i, all) {
+        return all.indexOf(v) === i;
+      }).slice(0, 3);
       out.offerFoundAt = found ? found.at : "";
       if (!found) {
         out.offerShape = Object.keys(listingJson).slice(0, 40);
@@ -213,13 +223,13 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
       // A source name, never the value.
       out.csrfSource = csrfFrom;
 
-      var claim = Promise.resolve(null);
-      if (out.offerIds.length) {
+      function claimOffer(i) {
+        if (i >= out.offerIds.length) { return Promise.resolve(null); }
         var form = new FormData();
-        form.append("offer_id", out.offerIds[0]);
+        form.append("offer_id", out.offerIds[i]);
         if (csrf) { form.append("csrfmiddlewaretoken", csrf); }
         var headers = csrf ? { "X-CSRFToken": csrf } : {};
-        claim = fetch(base + "/add-to-library", { method: "POST", credentials: "include", headers: headers, body: form })
+        return fetch(base + "/add-to-library", { method: "POST", credentials: "include", headers: headers, body: form })
           .then(function (r) {
             out.entitleStatus = r.status;
             if (r.ok) { return null; }
@@ -229,12 +239,12 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
             // them apart. Reading it costs one field and saves a guess.
             return r.text().then(function (t) {
               out.entitleDetail = scrub(t);
-              return null;
-            }).catch(function () { return null; });
+              return claimOffer(i + 1);
+            }).catch(function () { return claimOffer(i + 1); });
           })
           .catch(function (e) { out.entitleError = String(e).slice(0, 120); return null; });
       }
-      return claim.then(function () {
+      return claimOffer(0).then(function () {
         return fetch(base + "/asset-formats/" + encodeURIComponent(code), { credentials: "include" });
       });
     })
@@ -279,68 +289,20 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
         out.error = "LARGE_SCENE_FILE";
         send(out); return null;
       }
-)JS") TEXT(R"JS(      // ?platform=Windows suits a packaged per-platform build; a source zip
-      // has no platform and the filter 404s. Try the platform form, then the
-      // bare one, and report both statuses so a future 404 says which shape
-      // the endpoint actually wanted.
-      // Both the platform-filtered and bare forms 404 for a source format, so
-      // the failing segment is an identifier rather than the query. A file
-      // entry carries both uid and artifactTag; which one the download-info
-      // path wants is the open question, so try each and record every status.
-      // Fab returns its reason in `detail`, which shape() hides because it
-      // reports types -- that message is the thing worth reading.
-      var attempts = [];
-      var fmtSeg = encodeURIComponent(out.formatCode);
-      [chosen.uid, chosen.artifactTag].forEach(function (ident) {
-        if (!ident) { return; }
-        var b = base + "/asset-formats/" + fmtSeg + "/files/" + encodeURIComponent(ident) + "/download-info";
-        attempts.push({ id: String(ident), url: b + "?platform=Windows" });
-        attempts.push({ id: String(ident), url: b });
-      });
-      out.attempts = [];
-      var step = function (i) {
-        if (i >= attempts.length) { return Promise.resolve(null); }
-        return fetch(attempts[i].url, { credentials: "include" }).then(function (r) {
-          return (r.ok ? Promise.resolve(null) : r.json().catch(function () { return {}; }))
-            .then(function (body) {
-              out.attempts.push(attempts[i].id + "|" + (attempts[i].url.indexOf("platform=") !== -1 ? "platform" : "bare") +
-                                "|" + r.status + (body && body.detail ? "|" + scrub(body.detail) : ""));
-              if (r.ok) { return r; }
-              return step(i + 1);
-            });
-        });
-      };
-      // Every exit must answer. When the ladder exhausts, step() resolves null
-      // and the handlers below simply return, so the page fell silent and the
-      // caller waited out its own timeout instead of being told the download
-      // could not be resolved.
-      return step(0).then(function (r) {
-        if (!r) { out.error = "NO_DOWNLOAD_URL"; send(out); }
-        return r;
-      });
+)JS") TEXT(R"JS(      return resolveDownload(chosen);
     })
-    .then(function (r) { if (!r) return null; out.downloadStatus = r.status; return r.json(); })
-    .then(function (dl) {
-      if (!dl) return;
-      // download-info answers {downloadInfo:[{...}]}, not a flat object -- the
-      // first live run reported NO_DOWNLOAD_URL with downloadInfo present, which
-      // is exactly the correction a shape-only diagnostic is for.
-      out.downloadShape = shape(dl, 3);
-      var info = (dl.downloadInfo && dl.downloadInfo.length) ? dl.downloadInfo[0] : dl;
-      var url = info.url || info.downloadUrl || info.signedUrl || info.href;
-      var bases = info.distributionPointBaseUrls || info.baseUrls
-               || dl.distributionPointBaseUrls || [];
-      if (!url) { out.error = "NO_DOWNLOAD_URL"; send(out); return; }
+    .then(function (got) {
+      if (!got) return;
       // AssetType carries the resolved format, because it is the value the
       // plugin switches on. Sending a constant "unreal-engine" for a gltf
       // download would hand a Megascans archive to the pack workflow.
-      window.ue.fab.addtoproject(url, {
+      window.ue.fab.addtoproject(got.url, {
         AssetId: listing,
         AssetName: out.versionName || listing,
         AssetType: out.dispatchType,
         ListingType: out.dispatchType,
         AssetNamespace: "",
-        DistributionPointBaseUrls: bases,
+        DistributionPointBaseUrls: got.bases,
         IsQuixel: out.isQuixel
       });
       out.accepted = true;
@@ -349,6 +311,7 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
     .catch(fail);
 })();
 )JS"), *RequestId, *ListingId, *EngineVersion,
-		CombineMeshes.IsSet() ? (CombineMeshes.GetValue() ? 1 : 0) : -1, McpFabSelection::Script());
+		CombineMeshes.IsSet() ? (CombineMeshes.GetValue() ? 1 : 0) : -1, McpFabSelection::Script(),
+		McpFabDownload::Script());
 }
 } // namespace McpFabAddOperation
