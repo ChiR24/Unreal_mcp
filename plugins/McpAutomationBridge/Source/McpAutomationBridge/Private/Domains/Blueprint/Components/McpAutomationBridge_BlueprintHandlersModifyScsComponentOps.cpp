@@ -77,8 +77,7 @@ if (!bAnySuccess) {
 void ApplyModifyScsAddComponent(UBlueprint *LocalBP, USimpleConstructionScript *LocalSCS, const TSharedPtr<FJsonObject> &Op, TSharedPtr<FJsonObject> OpSummary) {
 FString ComponentName;
 Op->TryGetStringField(TEXT("componentName"), ComponentName);
-FString ComponentClassPath;
-Op->TryGetStringField(TEXT("componentClass"), ComponentClassPath);
+const FString ComponentClassPath = ScsOpComponentClass(Op);
 FString AttachToName;
 Op->TryGetStringField(TEXT("attachTo"), AttachToName);
 // Each add compiles the Blueprint, which replaces its SCS - so by op 2 the
@@ -99,7 +98,9 @@ if (!ComponentClass && ComponentClassPath.Contains(TEXT("/"))) {
 }
 if (!ComponentClass) {
   OpSummary->SetBoolField(TEXT("success"), false);
-  OpSummary->SetStringField(TEXT("warning"), TEXT("Component class not found"));
+  OpSummary->SetStringField(TEXT("warning"), ComponentClassPath.IsEmpty()
+      ? FString(TEXT("add_component needs a componentClass (or componentType)"))
+      : FString::Printf(TEXT("Component class not found: '%s'"), *ComponentClassPath));
 } else {
   USCS_Node *ExistingNode = FindScsNodeByName(LocalSCS, ComponentName);
   if (ExistingNode) {

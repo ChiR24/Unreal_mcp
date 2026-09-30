@@ -483,3 +483,39 @@ describe('an edit_scs add_component operation applies the mesh and material it n
     expect(paramDescription('blueprint.edit_scs', 'operations')).toMatch(/as is a meshPath or materialPath that does not load or that its component cannot take/u);
   });
 });
+
+// A payload naming its class as componentType was promoted to an add (the promotion counted
+// componentType), then answered "Component class not found": the add operation read only componentClass.
+describe('an edit_scs add takes its class from componentType as well as componentClass, wherever one decides or reads it', () => {
+  const scs = (file: string): string => read('Domains', 'Blueprint', 'Components', file);
+  const fields = (): string => scs('McpAutomationBridge_BlueprintHandlersScsOpFields.h');
+  const state = (): string => scs('McpAutomationBridge_BlueprintHandlersModifyScsState.cpp');
+  const single = (): string => scs('McpAutomationBridge_BlueprintHandlersScsAddComponent.cpp');
+  const batchAdd = (): string => sliceBetween(scs('McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp'), 'void ApplyModifyScsAddComponent(', 'void ApplyModifyScsComponentOperation(');
+
+  it('one reader takes componentClass, component_class and componentType, in that order', () => {
+    expect(fields()).toMatch(/inline FString ScsOpComponentClass\(const TSharedPtr<FJsonObject> &Op\)\s*\{\s*return McpGetFirstStringField\(Op, \{TEXT\("componentClass"\), TEXT\("component_class"\), TEXT\("componentType"\)\}\);/u);
+  });
+
+  it('the promotion, the batch add and the single add_scs_component route all read the class through it', () => {
+    expect(state()).toContain('const bool bIsAdd = !ScsOpComponentClass(Op).IsEmpty();');
+    expect(batchAdd()).toContain('const FString ComponentClassPath = ScsOpComponentClass(Op);');
+    expect(single()).toContain('const FString ComponentClass = ScsOpComponentClass(Payload);');
+  });
+
+  it('none of them keeps a spelling list of its own for the class', () => {
+    for (const [name, source] of [['promotion', state()], ['batch add', batchAdd()], ['single add', single()]] as const) {
+      expect(source, name).not.toContain('TEXT("componentType")');
+      expect(source, name).not.toMatch(/TEXT\("componentClass"\)/u);
+      expect(source, name).not.toMatch(/TEXT\("component_class"\)/u);
+    }
+  });
+
+  it('a class that does not resolve is named in the warning, and an add with none says what it needs', () => {
+    expect(batchAdd()).toMatch(/OpSummary->SetStringField\(TEXT\("warning"\), ComponentClassPath\.IsEmpty\(\)\s*\?\s*FString\(TEXT\("[^"]*componentClass[^"]*componentType[^"]*"\)\)\s*:\s*FString::Printf\([^;]*\*ComponentClassPath\)\);/u);
+  });
+
+  it('the record lists componentType beside componentClass for an add', () => {
+    expect(paramDescription('blueprint.edit_scs', 'operations')).toContain('componentClass (or componentType)');
+  });
+});

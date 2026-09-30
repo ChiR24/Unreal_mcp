@@ -1,4 +1,5 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsOpFields.h"
 #include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
@@ -30,10 +31,7 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
   }
 
   const FString BlueprintPath = ResolveBlueprintRequestedPath();
-  FString ComponentClass = ScsFirstOf(Payload, TEXT("component_class"), TEXT("componentClass"));
-  if (ComponentClass.IsEmpty()) {
-    ComponentClass = ScsFieldOrEmpty(Payload, TEXT("componentType"));
-  }
+  const FString ComponentClass = ScsOpComponentClass(Payload);
   const FString ComponentName = ScsFirstOf(Payload, TEXT("component_name"), TEXT("componentName"));
   // `attachTo` is the spelling the contract publishes and the one the batch
   // operations[] path reads; this single-add path only ever looked for

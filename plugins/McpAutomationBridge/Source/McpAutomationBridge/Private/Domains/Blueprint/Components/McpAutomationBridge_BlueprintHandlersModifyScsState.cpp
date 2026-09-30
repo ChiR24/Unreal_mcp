@@ -1,5 +1,6 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
+#include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsOpFields.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -61,8 +62,8 @@ bool PrepareModifyScsPayload(const FBlueprintActionContext &Context,
       }
       // location, rotation and scale stay on the op; ApplyModifyScsComponentOperation
       // folds them into `transform` for this op as for every other.
-      const bool bIsAdd = Op->HasField(TEXT("componentClass")) ||
-                          Op->HasField(TEXT("componentType"));
+      // An add is a payload that names its class, read the way the add reads it.
+      const bool bIsAdd = !ScsOpComponentClass(Op).IsEmpty();
       Op->SetStringField(TEXT("type"), bIsAdd ? TEXT("add_component")
                                               : TEXT("modify_component"));
       TArray<TSharedPtr<FJsonValue>> Synthesized;

@@ -6,11 +6,21 @@
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 // What an edit_scs operation names, under the spellings the single-op actions take
-// (add_scs_component reads meshPath and mesh_path, materialPath and material_path). One reading
-// for everything that asks what an operation is or carries, so the callers cannot disagree about
-// a spelling again.
+// (add_scs_component reads component_class, componentClass and componentType, meshPath and
+// mesh_path, materialPath and material_path). One reading for everything that asks what an
+// operation is or carries, so the callers cannot disagree about a spelling again.
 namespace McpBlueprintHandlers
 {
+/**
+ * The component class an add names. The single-component payload of modify_scs is an add when this
+ * is not empty, and the add operation takes its class from it: the promotion counted componentType
+ * while the add read only componentClass, and answered "Component class not found".
+ */
+inline FString ScsOpComponentClass(const TSharedPtr<FJsonObject> &Op)
+{
+  return McpGetFirstStringField(Op, {TEXT("componentClass"), TEXT("component_class"), TEXT("componentType")});
+}
+
 inline FString ScsOpMeshPath(const TSharedPtr<FJsonObject> &Op)
 {
   return McpGetFirstStringField(Op, {TEXT("meshPath"), TEXT("mesh_path"), TEXT("staticMesh")});
