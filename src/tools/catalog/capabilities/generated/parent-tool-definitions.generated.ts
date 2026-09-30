@@ -3699,7 +3699,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nameFilter": {
           "type": "string",
-          "description": "Only examine actors whose label contains this text. Omit to sweep the whole level."
+          "description": "Only examine actors whose label or object name contains this text (an actor that shares its label with another is reported by object name, e.g. StaticMeshActor_75). Omit to sweep the whole level."
         },
         "near": {
           "type": "array",

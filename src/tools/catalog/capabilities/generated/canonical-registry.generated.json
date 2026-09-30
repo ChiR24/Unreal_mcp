@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "65ec67dd1f3e2c82",
+  "catalogRevision": "3d57d2af56963448",
   "recordCount": 389,
   "records": [
     {
@@ -29448,7 +29448,7 @@
             },
             "nameFilter": {
               "type": "string",
-              "description": "Only examine actors whose label contains this text. Omit to sweep the whole level."
+              "description": "Only examine actors whose label or object name contains this text (an actor that shares its label with another is reported by object name, e.g. StaticMeshActor_75). Omit to sweep the whole level."
             },
             "limit": {
               "type": "number",
@@ -29584,8 +29584,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9e2ffcf24e5b2daeceb4ae5f88599f419dfabd38265f851a5d21ac7a0c57767c",
-        "content": "9838799731b162c1a4d4b3f060c740e5603fed1dd38c34830b1cc3e7b555b344"
+        "schema": "17a976a492e39c5a9d6b0a8ffe34463a970fda6d0bdc240bb55b5d511f869225",
+        "content": "06756d4bf1bcff8a07481d11a8a348b4541981211339a56674a1ad3d79c9dccc"
       }
     },
     {
@@ -30949,7 +30949,7 @@
             },
             "nameFilter": {
               "type": "string",
-              "description": "Only fix pairs where either actor label contains this text. Omit for the whole level."
+              "description": "Only fix pairs where the label or object name of either actor contains this text. Omit for the whole level."
             },
             "distance": {
               "type": "number",
@@ -31080,8 +31080,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "43fec18db289bcfef863f2cbca3beff58072867167db44cfc1cc6304909286ef",
-        "content": "d88c0df56508e2d57715301e55a68fc85b5116abd752488b70e67a8818810b1e"
+        "schema": "04f7a4e8e53f386cdeb211934a93996020eb867569578fa7fb1f6aa11f34245e",
+        "content": "91bb89bd607b8ff4d158d5b25714d41130cbd0c3906c7b7482475a5aab5ea5f2"
       }
     },
     {

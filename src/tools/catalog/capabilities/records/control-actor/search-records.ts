@@ -175,7 +175,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
       'A finding is a deliberate composition (a keep bedding its towers into its platform, an island meant to hang in the air, a signpost leaning by design): tag that actor mcp.placement.ok with control_actor.add_tag and it drops out of the sweep entirely -- as tilt subject, and as both subject and target for overlap -- rather than being re-reported every time. Coplanar faces are still reported for tagged actors, because they flicker whatever the intent.',
     ],
     inputProps: {
-      nameFilter: { type: 'string', description: 'Only examine actors whose label contains this text. Omit to sweep the whole level.' },
+      nameFilter: { type: 'string', description: 'Only examine actors whose label or object name contains this text (an actor that shares its label with another is reported by object name, e.g. StaticMeshActor_75). Omit to sweep the whole level.' },
       limit: { type: 'number', description: 'Maximum problem entries to return (1-200, default 25). Entries come worst-first, so a small limit still shows the placements that matter; flagged is always the true total.' },
       minSeverity: { type: 'number', description: 'Drop findings whose severity (worst penetration, ground error, tilt displacement, or the side of the largest z-fighting patch, in world units) is below this. Use it to skip cosmetic grazes on a large level.' },
       kinds: { type: 'array', items: { type: 'string', enum: ['sunk', 'floating', 'overlapping', 'unsupported', 'tilted', 'coplanar'] }, description: 'Report only these problem kinds, e.g. ["coplanar"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. Omit for every kind.' },
@@ -222,7 +222,7 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
       'Only some actors may move: limit the call with nameFilter. A tag of mcp.placement.ok does not exempt an actor, because no two faces flicker on purpose.',
     ],
     inputProps: {
-      nameFilter: { type: 'string', description: 'Only fix pairs where either actor label contains this text. Omit for the whole level.' },
+      nameFilter: { type: 'string', description: 'Only fix pairs where the label or object name of either actor contains this text. Omit for the whole level.' },
       distance: { type: 'number', description: 'How far each face moves, in world units (0.1-20, default 1): far enough for the depth buffer, too little to see.' },
       dryRun: { type: 'boolean', description: 'List the moves without making them (default false).' },
     },

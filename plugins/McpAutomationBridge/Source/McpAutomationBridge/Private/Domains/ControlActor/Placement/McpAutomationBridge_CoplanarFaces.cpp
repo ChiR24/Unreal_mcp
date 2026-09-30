@@ -173,7 +173,9 @@ TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameF
         {
             continue;
         }
-        const bool bNamed = NameFilter.IsEmpty() || Actor->GetActorLabel().Contains(NameFilter);
+        // Also the object name: actors sharing a label are reported by it.
+        const bool bNamed = NameFilter.IsEmpty() || Actor->GetActorLabel().Contains(NameFilter) ||
+                            Actor->GetName().Contains(NameFilter);
         TArray<UStaticMeshComponent*> Components;
         Actor->GetComponents<UStaticMeshComponent>(Components);
         for (const UStaticMeshComponent* Component : Components)

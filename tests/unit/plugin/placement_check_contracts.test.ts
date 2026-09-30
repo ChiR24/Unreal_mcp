@@ -48,4 +48,16 @@ describe('audit_placement rows list every actor a finding intersects', () => {
     );
     expect(audit).toContain('Object->SetArrayField(TEXT("overlappingActors"), Finding.Overlaps);');
   });
+
+  // Actors sharing a label are reported by object name, so nameFilter must match that name too.
+  it('filters by the object name it reports as well as the label', () => {
+    const audit = readFileSync(
+      resolve(
+        process.cwd(),
+        'plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Domains/ControlActor/McpAutomationBridge_ControlActorPlacementAudit.cpp',
+      ),
+      'utf8',
+    );
+    expect(audit).toContain('!Actor->GetName().Contains(NameFilter)');
+  });
 });

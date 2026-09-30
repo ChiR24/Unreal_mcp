@@ -142,7 +142,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
       continue;
     }
     const FString Label = Actor->GetActorLabel();
-    if (!NameFilter.IsEmpty() && !Label.Contains(NameFilter)) {
+    // Actors sharing a label are reported by object name (McpActorRef), so the
+    // filter has to find them by it: 24 shelf legs labelled "Cube" read
+    // StaticMeshActor_75 in a row, and nameFilter "StaticMeshActor_75" matched 0.
+    if (!NameFilter.IsEmpty() && !Label.Contains(NameFilter) &&
+        !Actor->GetName().Contains(NameFilter)) {
       continue;
     }
     ++Examined;
