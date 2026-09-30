@@ -8,7 +8,7 @@ TSharedPtr<FJsonObject> HandleTextureColorAction(const FString& SubAction, const
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
     FString AssetPath;
     FString Error;
-    UTexture2D* Texture = LoadSourceTexture(GetJsonStringField(Params, TEXT("assetPath")), TEXT("assetPath"), AssetPath, Error);
+    UTexture2D* Texture = LoadSourceTexture(GetJsonStringField(Params, TEXT("assetPath")), TEXT("assetPath"), AssetPath, Error, /*bConvertToBGRA8=*/true);
     if (!Texture)
     {
         TEXTURE_ERROR_RESPONSE(Error);

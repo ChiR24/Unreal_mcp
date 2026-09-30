@@ -30,8 +30,8 @@ TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObjec
     NormalMap->PostEditChange();
     NormalMap->UpdateResource();
 
-    const uint8* HeightPixels = HeightMap->Source.LockMipReadOnly(0);
-    if (!HeightPixels)
+    const TArray<uint8> HeightPixels = ReadSourceBGRA(HeightMap);
+    if (HeightPixels.IsEmpty())
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock height map pixel data"));
     }
@@ -41,10 +41,9 @@ TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObjec
     HeightData.SetNum(Width * Height);
     for (int32 Index = 0; Index < Width * Height; ++Index)
     {
-        const uint8* Pixel = HeightPixels + Index * 4;
+        const uint8* Pixel = HeightPixels.GetData() + Index * 4;
         HeightData[Index] = (0.2126f * Pixel[2] + 0.7152f * Pixel[1] + 0.0722f * Pixel[0]) / 255.0f;
     }
-    HeightMap->Source.UnlockMip(0);
 
     uint8* NormalData = NormalMap->Source.LockMip(0);
     for (int32 Y = 0; Y < Height; ++Y)

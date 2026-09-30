@@ -15,7 +15,7 @@ export const NETWORKING_INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   withTopics(i('create_input_mapping_context', 'Create an Enhanced Input Mapping Context asset; its priority is chosen when it is enabled (enable_input_mapping).', ['name', 'path'], ['name', 'path'], ['assetPath'], ['assetPath']), ['input mapping', 'mapping context', 'imc', 'key mapping', 'enhanced input mapping']),
   i('add_mapping', 'Add an Enhanced Input mapping with optional trigger and modifier types.', ['contextPath', 'actionPath', 'key', 'triggerType', 'modifierType'], ['contextPath', 'actionPath', 'key']),
   // Enhanced Input has no per-action enable flag, so unbinding the action's keys is how an action is disabled.
-  withTopics(i('remove_mapping', 'Remove an Enhanced Input mapping; removing an action\'s keys is how an input action is disabled.', ['contextPath', 'actionPath', 'key'], ['contextPath', 'actionPath'], [], [], true, 'destructive'), ['disable input action', 'unbind key']),
+  withTopics(i('remove_mapping', 'Remove an Enhanced Input mapping; removing an action\'s keys is how an input action is disabled.', ['contextPath', 'actionPath', 'key'], ['contextPath', 'actionPath'], [], [], true, 'destructive'), ['disable input action', 'unbind key', 'remove key binding']),
   i('add_legacy_action_mapping', 'Add a legacy action mapping.', ['name', 'actionName', 'key', 'shift', 'ctrl', 'alt', 'cmd'], ['key'], [], [], false),
   i('remove_legacy_action_mapping', 'Remove a legacy action mapping.', ['name', 'actionName', 'key', 'shift', 'ctrl', 'alt', 'cmd'], ['key'], [], [], false, 'destructive'),
   i('add_legacy_axis_mapping', 'Add a legacy axis mapping.', ['name', 'axisName', 'key', 'scale'], ['key'], [], [], false),
@@ -28,5 +28,5 @@ export const NETWORKING_INPUT_RECORDS: readonly CapabilityRecordSource[] = [
   // The mapping list comes back under details.mappings; searches for "key bindings" used to land on configure_input.
   withTopics(i('get_input_info', 'Read an input asset: every key mapping of an Input Mapping Context (details.mappings: key, action, triggers, modifiers) or an Input Action\'s value type and consume flag.', ['assetPath'], ['assetPath'],
     ['assetPath', 'assetClass', 'assetName', 'existsAfter', 'type', 'valueType', 'consumeInput', 'mappingCount'],
-    ['assetPath', 'assetClass', 'assetName', 'existsAfter'], true, 'read'), ['key bindings', 'input mappings', 'which keys', 'game controls', 'mapping context keys']),
+    ['assetPath', 'assetClass', 'assetName', 'existsAfter'], true, 'read'), ['key bindings', 'input mappings', 'which keys', 'game controls', 'mapping context keys', 'keys bound']),
 ];

@@ -6,7 +6,7 @@ export const MANAGE_CHARACTER_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_character', selector: 'setting',
     summary: 'Configure a Character Blueprint: movement speeds, jump, crouch, rotation, capsule, mesh, camera, nav movement.',
-    topics: ['character movement', 'jump', 'crouch', 'capsule', 'character camera'],
+    topics: ['character movement', 'jump', 'crouch', 'capsule', 'character camera', 'assign anim blueprint'],
     members: {
       ...byTarget('configure_', ['configure_movement_speeds', 'configure_jump', 'configure_crouch', 'configure_rotation', 'configure_capsule_component',
         'configure_mesh_component', 'configure_camera_component', 'configure_nav_movement']),

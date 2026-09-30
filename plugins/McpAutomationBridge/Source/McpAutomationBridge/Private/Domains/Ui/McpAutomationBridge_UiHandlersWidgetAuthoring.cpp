@@ -100,7 +100,7 @@ bool HandleWidgetAuthoringAction(
     }
     UClass *ParentUClass = UUserWidget::StaticClass();
     if (!WidgetType.IsEmpty() && !WidgetType.Equals(TEXT("UserWidget"), ESearchCase::IgnoreCase)) {
-      UClass *Requested = FindFirstObject<UClass>(*WidgetType, EFindFirstObjectOptions::None);
+      UClass *Requested = McpFindTypeQuiet(WidgetType);
       if (!Requested) {
         Requested = LoadClass<UUserWidget>(nullptr, *WidgetType);
       }

@@ -19,7 +19,7 @@ const PLUGIN = ['PCG'] as const;
 
 export const PCG_ASYNC_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
-    parentTool: 'manage_pcg', action: 'execute_pcg_graph', plugins: PLUGIN,
+    parentTool: 'manage_pcg', action: 'execute_pcg_graph', topics: ['run pcg graph', 'generate pcg'], plugins: PLUGIN,
     family: F, summary: 'Execute a PCG graph asynchronously, returning a numeric task identifier.', whenToUse: ['A PCG graph must be generated and the caller needs the scheduling task id.'], whenNotToUse: ['Graph authoring is needed; use add_pcg_node or connect_pcg_pins.'],
     inputProps: {
       graphPath: P.graphPath, actorName: P.actorName, componentName: P.componentName,

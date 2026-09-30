@@ -10,7 +10,10 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'add_loot_entry',
     summary: 'Add an entry to a loot table asset.',
-    whenToUse: ['A loot table needs another item entry with a drop weight and a quantity range.'],
+    whenToUse: [
+      'A loot table needs another item entry with a drop weight and a quantity range.',
+      'The entry is stored under the key LootEntry_<n>, one past the highest n in use, and n comes back as entryIndex; an earlier removal never makes a new entry overwrite a surviving one.',
+    ],
     whenNotToUse: [
       'The loot table asset does not exist yet (use manage_inventory.create_inventory_asset).',
       'The table only needs to be read (use manage_inventory.get_inventory_info).',
@@ -34,7 +37,10 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   inventoryRecord({
     action: 'add_recipe_ingredient',
     summary: 'Add an ingredient to a crafting recipe asset.',
-    whenToUse: ['A recipe needs one more ingredient item with the quantity it consumes.'],
+    whenToUse: [
+      'A recipe needs one more ingredient item with the quantity it consumes.',
+      'The ingredient is stored under the key Ingredient_<n>, one past the highest n in use (the first is Ingredient_0).',
+    ],
     whenNotToUse: [
       'The recipe asset does not exist yet (use manage_inventory.create_inventory_asset).',
       'The recipe is a custom class, not one made by manage_inventory.create_inventory_asset (use inspect.set_property).',
@@ -79,7 +85,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
     ],
     whenNotToUse: [
       'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
-      'The item is a custom class with no stacking properties such as bStackable or MaxStackSize, so nothing is written (use inspect.set_property).',
+      'The item is a custom class with no stacking properties such as bStackable or MaxStackSize: the call fails with PROPERTY_NOT_FOUND and writes nothing (use inspect.set_property).',
     ],
     inputProps: {
       itemPath: IP.itemPath,
@@ -215,7 +221,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
       replication: { type: 'string', description: 'Replication condition applied to inventory state.' },
       lootEntries: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Loot table entries.' },
       tiers: IP.tiers,
-      entryCount: { type: 'number', description: 'Number of loot entries.' },
+      lootEntryCount: { type: 'number', description: 'Number of loot entries.' },
       ingredients: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Recipe ingredients.' },
       outputItem: { type: 'string', description: 'Recipe output item asset path.' },
       outputQuantity: IP.outputQuantity,
@@ -253,10 +259,12 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   inventoryRecord({
     action: 'set_inventory_replication',
+    topics: ['replicate inventory'],
     summary: 'Set inventory component replication metadata.',
     whenToUse: [
       'A Blueprint with InventorySlots, MaxSlots, CurrentWeight and MaxWeight variables must replicate them to clients, or stop (replicated defaults to false).',
       'Those variables need a replication condition such as OwnerOnly, SkipOwner, SimulatedOnly or InitialOnly.',
+      'A RepNotify function already set on those variables is kept: replicated=true sets only the replication flag and condition, and replicated=false clears the flag and condition and leaves the function name in place.',
     ],
     whenNotToUse: [
       'The Blueprint keeps inventory state in differently named variables (use manage_networking.configure_replication).',
@@ -282,6 +290,7 @@ export const INVENTORY_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: [
       'The item asset does not exist yet (use manage_inventory.create_inventory_asset).',
       'The icon image is not in the project yet (use asset.import).',
+      'The item is a custom class with none of the properties Icon, ItemIcon, Thumbnail, DisplayIcon or InventoryIcon, so the call fails and names the missing property (use inspect.set_property on the class\'s own icon property).',
     ],
     inputProps: { itemPath: IP.itemPath, iconPath: IP.iconPath, save: IP.save },
     required: ['itemPath'],

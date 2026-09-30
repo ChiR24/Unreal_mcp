@@ -30,6 +30,10 @@
 UPackage* CreateValidatedInventoryAssetPackage(const FString& Path, const FString& Name, FString& OutError);
 UPackage* CreateInventoryAssetPackage(const FString& Path, const FString& Name);
 
+// The number after the highest "<Prefix><n>" key in Properties (0 when none). Properties.Num() is not
+// that number once a key has been removed, and using it as the next key overwrote a surviving entry.
+int32 NextIndexedPropertyIndex(const TMap<FString, FString>& Properties, const FString& Prefix);
+
 // Twelve inventory actions opened with the same seventeen lines: read
 // blueprintPath, refuse when it is absent, load the Blueprint, refuse when it
 // does not resolve. Changing either refusal meant editing all twelve.

@@ -16,9 +16,24 @@ bool HandleGetMeshInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("vertexCount"), UGeometryScriptLibrary_MeshQueryFunctions::GetVertexCount(Mesh));
     Result->SetNumberField(TEXT("triangleCount"), Mesh->GetTriangleCount());
+    // GetHasTriangleNormals/GetHasVertexColors arrive in UE 5.2; read the mesh directly before that.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
     Result->SetBoolField(TEXT("hasNormals"), UGeometryScriptLibrary_MeshQueryFunctions::GetHasTriangleNormals(Mesh));
+#else
+    bool bHasNormals = false;
+    bool bHasColors = false;
+    Mesh->ProcessMesh([&](const UE::Geometry::FDynamicMesh3& EditMesh) {
+      bHasNormals = EditMesh.HasAttributes() && EditMesh.Attributes()->PrimaryNormals() != nullptr;
+      bHasColors = EditMesh.HasAttributes() && EditMesh.Attributes()->HasPrimaryColors();
+    });
+    Result->SetBoolField(TEXT("hasNormals"), bHasNormals);
+#endif
     Result->SetBoolField(TEXT("hasUVs"), UGeometryScriptLibrary_MeshQueryFunctions::GetNumUVSets(Mesh) > 0);
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
     Result->SetBoolField(TEXT("hasColors"), UGeometryScriptLibrary_MeshQueryFunctions::GetHasVertexColors(Mesh));
+#else
+    Result->SetBoolField(TEXT("hasColors"), bHasColors);
+#endif
     Result->SetBoolField(TEXT("hasPolygroups"), UGeometryScriptLibrary_MeshQueryFunctions::GetHasMaterialIDs(Mesh));
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Mesh info retrieved"), Result);
     return true;

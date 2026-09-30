@@ -62,7 +62,7 @@ export const P = {
   },
   // Graph
   graphName: S('Target graph name (Event Graph, Construction Script, etc.).'),
-  nodeType: S('Blueprint node type string for creation.'),
+  nodeType: S('The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break.'),
   nodeId: S('Existing node identifier returned by create_node or get_graph_details.'),
   nodeName: S('Human-readable node name.'),
   memberName: S('Member (function/variable/event) name the node represents.'),

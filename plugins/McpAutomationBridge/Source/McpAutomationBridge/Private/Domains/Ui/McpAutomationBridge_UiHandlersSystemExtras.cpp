@@ -79,8 +79,10 @@ bool HandleSystemExtrasAction(UMcpAutomationBridgeSubsystem &Bridge,
     Child->SetStringField(TEXT("subAction"), TEXT("add_widget_component"));
     Child->SetStringField(TEXT("widgetPath"), ReadFirstString(Payload, {TEXT("widgetPath")}));
     Child->SetStringField(TEXT("componentType"), ReadFirstString(Payload, {TEXT("childClass")}));
-    Child->SetStringField(TEXT("componentName"), ReadFirstString(Payload, {TEXT("name")}));
-    Child->SetStringField(TEXT("parentName"), ReadFirstString(Payload, {TEXT("parentName")}));
+    // add_widget_component reads slotName and parentSlot; componentName and parentName were
+    // ignored, so the child got a generated name and landed under the root.
+    Child->SetStringField(TEXT("slotName"), ReadFirstString(Payload, {TEXT("name")}));
+    Child->SetStringField(TEXT("parentSlot"), ReadFirstString(Payload, {TEXT("parentName")}));
     Child->SetStringField(TEXT("text"), ReadFirstString(Payload, {TEXT("text")}));
     return FMcpUiHandlerAccess::WidgetAuthoring(Bridge, RequestId, Child, Socket);
   }

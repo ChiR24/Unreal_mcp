@@ -35,7 +35,7 @@ bool HandleEnumLifecycleActions(
         FString EnumPath = GetJsonStringField(Params, TEXT("enumPath"));
         FString Name = GetJsonStringField(Params, TEXT("name"));
         FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Enums"));
-        bool bSave = GetJsonBoolField(Params, TEXT("save"), false);
+        bool bSave = EnumSaveRequested(Params);
 
         if (Name.IsEmpty() && !EnumPath.IsEmpty())
         {
@@ -117,12 +117,12 @@ bool HandleEnumLifecycleActions(
 
         Package->MarkPackageDirty();
         FAssetRegistryModule::AssetCreated(Enum);
-        FinalizeEnum(Enum, bSave);
+        const bool bSaved = FinalizeEnum(Enum, bSave);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("enumPath"), PackageName + TEXT(".") + SanitizedName);
         Result->SetStringField(TEXT("enumName"), SanitizedName);
-        Result->SetBoolField(TEXT("saved"), bSave);
+        Result->SetBoolField(TEXT("saved"), bSaved);
         OutResult = Result;
         return true;
     }

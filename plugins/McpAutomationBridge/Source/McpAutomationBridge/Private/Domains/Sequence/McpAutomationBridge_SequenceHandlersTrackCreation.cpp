@@ -62,15 +62,8 @@ bool HandleAddTrack(UMcpAutomationBridgeSubsystem *Subsystem,
     if (BindingGuid.IsValid()) {
       NewTrack = MovieScene->AddTrack(TrackClass, BindingGuid);
     } else {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-      NewTrack = MovieScene->AddTrack(TrackClass);
-#else
-      Subsystem->SendAutomationError(
-          RequestingSocket, RequestId,
-          TEXT("Adding tracks without binding is not supported in UE 5.0. Please provide an actor or object binding."),
-          TEXT("NOT_SUPPORTED"));
-      return true;
-#endif
+      // An unbound track (an Audio track for cutscene music) is a master track before 5.2.
+      NewTrack = MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass);
     }
   } else if (TrackClass) {
     Subsystem->SendAutomationError(

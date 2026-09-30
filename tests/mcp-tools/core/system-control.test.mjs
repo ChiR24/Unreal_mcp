@@ -142,8 +142,8 @@ const testCases = [
   // === ACTION ===
   { scenario: 'ACTION: show_widget', toolName: 'system_control', arguments: { action: 'show_widget', widgetId: 'notification', message: 'System control smoke', duration: 0.1 }, expected: 'success' },
   // === ADD ===
-  { scenario: 'ADD: add_widget_child', toolName: 'system_control', arguments: { action: 'add_widget_child', widgetPath: WIDGET_PATH, childClass: 'TextBlock', name: 'SystemControlText', text: 'System control child' }, expected: 'success' },
-  { scenario: 'ADD: add_widget_child parentName', toolName: 'system_control', arguments: { action: 'add_widget_child', widgetPath: WIDGET_PATH, childClass: 'TextBlock', name: 'SystemControlNestedText', parentName: 'RootCanvas', text: 'System control nested child' }, expected: 'success' },
+  { scenario: 'ADD: add_widget_child', toolName: 'system_control', arguments: { action: 'add_widget_child', widgetPath: WIDGET_PATH, childClass: 'TextBlock', name: 'SystemControlText', text: 'System control child' }, expected: 'success', assertions: [{ path: 'structuredContent.result.componentName', equals: 'SystemControlText', label: 'the child keeps the requested name' }] },
+  { scenario: 'ADD: add_widget_child parentName', toolName: 'system_control', arguments: { action: 'add_widget_child', widgetPath: WIDGET_PATH, childClass: 'TextBlock', name: 'SystemControlNestedText', parentName: 'RootCanvas', text: 'System control nested child' }, expected: 'success', assertions: [{ path: 'structuredContent.result.parentName', equals: 'RootCanvas', label: 'the child lands under the named panel' }] },
   // === CONFIG ===
   { scenario: 'CONFIG: set_cvar', toolName: 'system_control', arguments: { action: 'set_cvar', name: 'r.ScreenPercentage', value: '100' }, expected: 'success' },
   { scenario: 'OPTIONAL: set_cvar via cvar alias', toolName: 'system_control', arguments: { action: 'set_cvar', cvar: 'r.ScreenPercentage', value: '100' }, expected: 'success' },

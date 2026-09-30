@@ -1,15 +1,16 @@
 /**
  * Exact per-action schema vocabulary for manage_interaction.
  *
- * Every parameter name below is read by an editor-authoring handler under
- * plugins/McpAutomationBridge/.../Private/Domains/Interaction/. The
- * world-actor variants in *RuntimeActors.cpp / *RuntimeComponents.cpp
- * (doorName, switchName, chestName, isLocked, requiredKey, maxItems, location,
- * interactionDistance, traceChannel, widgetText, offsetZ, ...) are deliberately
- * NOT declared: McpAutomationBridge_InteractionHandlers.cpp consults the
- * authoring handlers first and each of them returns true for its sub-action, so
- * those payload fields are unreachable through manage_interaction and declaring
- * them would advertise a contract the tool cannot honour.
+ * Every parameter name below is read by a handler under
+ * plugins/McpAutomationBridge/.../Private/Domains/Interaction/: the
+ * McpAutomationBridge_InteractionHandlers{Components,Interface,Door,Switch,
+ * Chest,Lever,Triggers}.cpp files author Blueprint assets, and ...Info.cpp
+ * reads one back (or a placed actor, by actorName). McpAutomationBridge_
+ * InteractionHandlers.cpp calls each in turn. No handler changes a placed world
+ * actor, so the world-actor fields (doorName, switchName, chestName, isLocked,
+ * requiredKey, maxItems, location, interactionDistance, traceChannel,
+ * widgetText, offsetZ, ...) are deliberately NOT declared: declaring them would
+ * advertise a contract the tool cannot honour.
  *
  * `path` and `properties` are likewise absent — this parent folders assets with
  * `folder` and exposes no reflection property bag.
@@ -35,8 +36,8 @@ export const NP: PropertyMap = {
   folder: str('Canonical /Game folder that receives the created asset.'),
   componentName: str('Name for the component added to the Blueprint.'),
   traceDistance: num('Interaction trace distance in world units.'),
-  traceType: str('Interaction trace shape (line, sphere, or box).'),
-  traceRadius: num('Interaction trace radius in world units.'),
+  traceType: str('Free-text name stored in the TraceType Name variable of the Blueprint (default sphere). It does not choose or change a trace shape: the shape comes from the sphere and box components, which traceDistance and traceRadius resize.'),
+  traceRadius: num('Cross-section of each box component in world units (default 50): a box gets extent traceDistance by traceRadius. Sphere components ignore it.'),
   openAngle: num('Open angle in degrees.'),
   openTime: num('Open animation duration in seconds.'),
   autoClose: bool('Whether the door closes automatically.'),

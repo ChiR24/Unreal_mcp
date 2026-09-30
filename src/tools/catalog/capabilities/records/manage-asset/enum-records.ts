@@ -7,7 +7,7 @@ import { schema } from '../shared/record-presets.js';
 
 const ENUM_PATH = str('Asset path of the UserDefinedEnum (e.g. /Game/Enums/E_MyEnum).');
 const VALUE_NAME = str('Enum value (entry) name.');
-const SAVE = bool('Save the enum asset after the operation.');
+const SAVE = bool('Persist the enum asset to disk. Defaults to true; pass false to keep the change in memory only.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 
 const E = '/Game/Enums/E_WeaponType';
@@ -16,14 +16,14 @@ const DONE = { success: true };
 export const ENUM_RECORDS: readonly RecordSpec[] = [
   r('create_enum', 'enum', 'Create a new UserDefinedEnum asset.', schema({ name: str('Enum name.'), path: str('Package path.'), enumPath: ENUM_PATH, values: arr('Initial enum value names.'), save: SAVE }, [], ['name', 'enumPath']), OK, WRITE, WRITE_POLICY, MEDIUM,
     { examples: [ex('Create a weapon-type enum', { name: 'E_WeaponType', path: '/Game/Enums', values: ['Melee', 'Ranged', 'Thrown'] }, DONE)],
-      whenToUse: ['A new Blueprint enum is needed for a fixed set of named choices; pass values for its entries and save to keep it.'],
+      whenToUse: ['A new Blueprint enum is needed for a fixed set of named choices; pass values for its entries. It is saved unless save is false.'],
       whenNotToUse: ['A group of typed fields is needed rather than a list of names (use struct.edit_struct).'] }),
   r('delete_enum', 'enum', 'Delete a UserDefinedEnum asset.', schema({ enumPath: ENUM_PATH }, ['enumPath']), OK, { ...DESTRUCTIVE, longRunning: false }, DESTRUCTIVE_POLICY, LOW,
     { examples: [ex('Delete an obsolete enum', { enumPath: '/Game/Enums/E_Deprecated' }, DONE)],
       whenToUse: ['An obsolete enum asset must be deleted from the project; a blocked delete is reported as DELETE_FAILED.'],
       whenNotToUse: ['Assets that still use the enum must be found first (use asset.inspect_asset with lookup=dependencies and referencers=true).', 'The enum should be renamed or moved, not deleted (use asset.rename).'] }),
   r('get_enum', 'enum', 'Read a Blueprint enum (UserDefinedEnum): every entry with its name and numeric value, plus the value count.', schema({ enumPath: ENUM_PATH }, ['enumPath']), OK, READ, READ_POLICY, LOW,
-    { topics: ['entry names and values', 'list entries'], examples: [ex('Read an enum\'s values', { enumPath: E }, DONE)],
+    { topics: ['entry names and values', 'list entries', 'show enum values'], examples: [ex('Read an enum\'s values', { enumPath: E }, DONE)],
       whenToUse: ['The current entries of an enum, with their exact names and numeric values, must be read before any edit that names an entry.','An enum must be checked after an edit: its entries, numeric values and entry count.'],
       whenNotToUse: ['An enum must be changed rather than read (use enum.edit_enum).', 'The enum asset must be found by name first (use asset.query_asset).'] }),
   r('add_enum_value', 'enum', 'Add a new value to a UserDefinedEnum.', schema({ enumPath: ENUM_PATH, valueName: VALUE_NAME, save: SAVE }, ['enumPath', 'valueName']), OK, WRITE, WRITE_POLICY, LOW,

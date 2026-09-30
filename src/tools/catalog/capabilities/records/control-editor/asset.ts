@@ -67,6 +67,7 @@ const COMPENSATION: JsonObject = {
 export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'open_asset', domain: D, family: F,
+    topics: ['open blueprint editor', 'open asset editor', 'open in editor'],
     summary: 'Open an asset in the appropriate editor by asset path.',
     whenToUse: ['An asset must be opened for editing or inspection.'],
     whenNotToUse: ['The asset is already open.'],

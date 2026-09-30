@@ -6,7 +6,7 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_display', selector: 'setting',
     summary: 'Configure display and rendering variables: resolution, fullscreen, quality, a console variable, FPS counter, profiling overlay.',
-    topics: ['set cvar', 'console variable', 'resolution', 'fullscreen', 'quality settings', 'show fps', 'profile'],
+    topics: ['set cvar', 'console variable', 'resolution', 'fullscreen', 'quality settings', 'show fps', 'profile', 'change quality settings'],
     members: { resolution: 'set_resolution', fullscreen: 'set_fullscreen', quality: 'set_quality', cvar: 'set_cvar', fps: 'show_fps', profile: 'profile' },
   },
   {
@@ -52,12 +52,13 @@ export const SYSTEM_CONTROL_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_widget', selector: 'widgetOp',
     summary: 'Create a runtime widget, add a child to it, or show it.',
+    topics: ['show widget on screen', 'add widget to viewport', 'display widget'],
     members: { create: 'create_widget', add_child: 'add_widget_child', show: 'show_widget' },
   },
   {
     primary: 'subscribe', selector: 'control',
     summary: 'Stream the editor log to this connection (subscribe, unsubscribe), or turn a Gameplay Debugger category on or off.',
-    topics: ['log channels', 'subscribe logs', 'log category'],
+    topics: ['log channels', 'subscribe logs', 'log category', 'watch game logs live', 'log stream'],
     members: { subscribe: 'subscribe', unsubscribe: 'unsubscribe', spawn_category: 'spawn_category' },
   },
 ];

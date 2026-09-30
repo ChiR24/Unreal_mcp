@@ -204,7 +204,13 @@ bool ReadAllowedConsoleVariables(UMoviePipelineConsoleVariableSetting *CVars,
                                  FString &OutCode) {
   if (!CVars)
     return true;
-  if (CVars->ConsoleVariablePresets.Num() > 0 ||
+  // Presets and the entry array arrive in UE 5.2; 5.0-5.1 keep a plain name->value map.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+  const bool bHasPresets = CVars->ConsoleVariablePresets.Num() > 0;
+#else
+  const bool bHasPresets = false;
+#endif
+  if (bHasPresets ||
       CVars->StartConsoleCommands.Num() > 0 ||
       CVars->EndConsoleCommands.Num() > 0) {
     OutMessage =
@@ -212,11 +218,15 @@ bool ReadAllowedConsoleVariables(UMoviePipelineConsoleVariableSetting *CVars,
     OutCode = TEXT("MRQ_CONSOLE_COMMANDS_NOT_ALLOWED");
     return false;
   }
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
   for (const FMoviePipelineConsoleVariableEntry &Entry :
        CVars->GetConsoleVariables()) {
     if (Entry.bIsEnabled)
       Out.Add(Entry.Name, Entry.Value);
   }
+#else
+  Out.Append(CVars->ConsoleVariables);
+#endif
   return true;
 }
 

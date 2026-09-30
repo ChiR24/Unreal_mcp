@@ -20,7 +20,7 @@ UMovieSceneCinematicShotSection *FindShotSection(UMovieScene *MovieScene,
   // Gather every cinematic shot section across all shot tracks (a sequence
   // may hold more than one, and FindTrack only returned the first).
   TArray<UMovieSceneSection *> Sections;
-  for (UMovieSceneTrack *Candidate : MovieScene->GetTracks()) {
+  for (UMovieSceneTrack *Candidate : MCP_GET_MOVIESCENE_TRACKS(MovieScene)) {
     if (UMovieSceneCinematicShotTrack *ShotTrack =
             Cast<UMovieSceneCinematicShotTrack>(Candidate)) {
       Sections.Append(ShotTrack->GetAllSections());

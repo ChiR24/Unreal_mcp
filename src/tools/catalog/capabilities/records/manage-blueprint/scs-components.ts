@@ -172,7 +172,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'set_scs_transform',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Set the transform (location, rotation, scale) of an SCS-owned component template. Placed actors that still had the old transform take the new one (instancesUpdated); an actor whose component was changed by hand keeps its own.',
+    summary: 'Set the transform (location, rotation, scale) of an SCS-owned component template. Placed actors that still had the old transform take the new one (instancesUpdated); an actor whose component was changed by hand keeps its own. instancesUpdated counts copies in loaded levels only: a copy in a level that is not loaded keeps the transform saved with it, so move it with control_actor.edit_component once its level is open.',
     whenToUse: ['An SCS component template transform must be updated.'],
     whenNotToUse: ['A non-SCS component transform is needed (use set_node_property or add_component).'],
     inputProps: { blueprintPath: P.blueprintPath, componentName: P.componentName, location: P.location, rotation: P.rotation, scale: P.scale },

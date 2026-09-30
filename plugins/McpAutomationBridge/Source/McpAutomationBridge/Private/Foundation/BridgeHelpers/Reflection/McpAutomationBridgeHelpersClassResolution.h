@@ -5,6 +5,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "UObject/UObjectIterator.h"
 
+#include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/Blueprint.h"
 #include "EditorAssetLibrary.h"

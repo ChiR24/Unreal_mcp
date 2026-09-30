@@ -204,7 +204,11 @@ bool HandleConfigureConsoleVariables(UMcpAutomationBridgeSubsystem *Subsystem,
                      TEXT("MRQ_CVAR_UNAVAILABLE")),
            true;
   for (const TPair<FString, float> &Entry : ParsedValues)
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
     CVars->AddOrUpdateConsoleVariable(Entry.Key, Entry.Value);
+#else
+    CVars->ConsoleVariables.Add(Entry.Key, Entry.Value);
+#endif
   Config->Modify();
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
   TSharedPtr<FJsonObject> Result = BuildJobResult(Job, Queue);

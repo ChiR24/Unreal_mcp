@@ -35,13 +35,13 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_framework_class', selector: 'kind',
     summary: 'Create a game framework Blueprint: game mode, game state, game instance, player controller, player state, HUD.',
-    topics: ['game mode', 'game state', 'game instance', 'player controller', 'player state', 'hud class'],
+    topics: ['game mode', 'game state', 'game instance', 'player controller', 'player state', 'hud class', 'make a game mode'],
     members: { game_mode: 'create_game_mode', game_state: 'create_game_state', game_instance: 'create_game_instance', player_controller: 'create_player_controller', player_state: 'create_player_state', hud: 'create_hud_class' },
   },
   {
     primary: 'configure_game_mode', selector: 'setting',
     summary: 'Configure a game mode: default classes (pawn, controller, state, HUD), rules, respawn, spectating.',
-    topics: ['default pawn', 'game rules', 'respawn', 'spectating'],
+    topics: ['default pawn', 'game rules', 'respawn', 'spectating', 'set game mode', 'change game mode', 'respawn time', 'enable spectator mode'],
     members: {
       default_pawn_class: 'set_default_pawn_class', player_controller_class: 'set_player_controller_class', game_state_class: 'set_game_state_class', player_state_class: 'set_player_state_class',
       hud_class: 'set_hud_class', rules: 'configure_game_rules', respawn: 'set_respawn_rules', spectating: 'configure_spectating',
@@ -69,7 +69,7 @@ export const MANAGE_NETWORKING_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_input', selector: 'setting',
     summary: 'Enhanced Input: create an input action or mapping context, add or map keys, set triggers and modifiers, enable a context.',
-    topics: ['input action', 'input mapping context', 'enhanced input', 'key mapping', 'input trigger', 'input modifier'],
+    topics: ['input action', 'input mapping context', 'enhanced input', 'key mapping', 'input trigger', 'input modifier', 'bind space to jump', 'wasd movement input'],
     members: {
       create_action: 'create_input_action', create_mapping_context: 'create_input_mapping_context', add_mapping: 'add_mapping', map_action: 'map_input_action',
       set_trigger: 'set_input_trigger', set_modifier: 'set_input_modifier', enable_mapping: 'enable_input_mapping',

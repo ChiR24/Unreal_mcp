@@ -46,9 +46,12 @@ UObject *CreateOrReuseAnimAsset(UClass *AssetClass, UFactory *Factory, const FSt
 }
 
 void SetAnimSequenceFrames(UAnimSequence *Sequence, int32 NumFrames, int32 FrameRate) {
-#if ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 2
   Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
   Sequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
+#elif ENGINE_MINOR_VERSION == 1
+  Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
+  Sequence->GetController().SetPlayLength(static_cast<float>(NumFrames) / static_cast<float>(FrameRate));
 #else
   // SequenceLength is deprecated in UE 5.1+ but is the only length on 5.0.
   PRAGMA_DISABLE_DEPRECATION_WARNINGS
@@ -93,9 +96,13 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
       continue;
     }
 
-#if ENGINE_MINOR_VERSION >= 1
+#if ENGINE_MINOR_VERSION >= 2
     if (!Controller.GetModel()->IsValidBoneTrackName(BoneFName)) {
       Controller.AddBoneCurve(BoneFName);
+    }
+#elif ENGINE_MINOR_VERSION == 1
+    if (Controller.GetModel()->FindBoneTrackByName(BoneFName) == nullptr) {
+      Controller.AddBoneTrack(BoneFName);
     }
 #else
     const FBoneAnimationTrack *ExistingTrack =

@@ -19,6 +19,8 @@ const ACTOR_A = `SeqActorA_${ts}`;
 const ACTOR_B = `SeqActorB_${ts}`;
 const TRACK_TYPE = '/Script/MovieSceneTracks.MovieSceneEventTrack';
 const TRACK_NAME = 'MovieSceneEventTrack';
+const AUDIO_TRACK_NAME = 'SeqMusic';
+const SOUND_WAVE = '/Engine/VREditor/Sounds/VR_click1.VR_click1';
 const FOLDER_DELETE_TEST_FOLDER = `${TEST_FOLDER}/LevelSequenceFolderDelete_${ts}`;
 const FOLDER_DELETE_SEQUENCE_NAME = `SEQ_FolderDelete_${ts}`;
 const FOLDER_DELETE_SEQUENCE_PATH = `${FOLDER_DELETE_TEST_FOLDER}/${FOLDER_DELETE_SEQUENCE_NAME}`;
@@ -92,6 +94,11 @@ const testCases = [
   { scenario: 'ADD: add_track', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: TRACK_TYPE, trackName: TRACK_NAME }, expected: 'success|already exists' },
   { scenario: 'ADD: add_section', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, start: 0, end: 48 }, expected: 'success|already exists' },
   { scenario: 'ADD: add_section refuses an empty range', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, actorName: ACTOR_A, start: 48, end: 48 }, expected: 'error' },
+  { scenario: 'ADD: add_track Audio (music or sound)', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: 'Audio', trackName: AUDIO_TRACK_NAME }, expected: 'success', assertions: [{ path: 'structuredContent.result.trackClass', equals: 'MovieSceneAudioTrack', label: 'Audio resolves to the audio track' }] },
+  { scenario: 'ADD: add_section soundPath puts the sound in the audio track, as long as the sound', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 24, soundPath: SOUND_WAVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.soundName', equals: 'VR_click1', label: 'reply names the sound' }] },
+  { scenario: 'ADD: add_section soundPath with an explicit end', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 0, end: 48, soundPath: SOUND_WAVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.endFrame', equals: 48, label: 'the given end is kept' }] },
+  { scenario: 'ADD: add_section with a missing sound is refused', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 0, soundPath: `/Game/MCPTest/NoSuchSound_${ts}` }, expected: 'error|ASSET_NOT_FOUND' },
+  { scenario: 'ADD: add_section soundPath on a non-audio track is refused', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, start: 0, end: 48, soundPath: SOUND_WAVE }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: set_track_muted', toolName: 'manage_sequence', arguments: { action: 'set_track_muted', path: SEQUENCE_PATH, trackName: TRACK_NAME, muted: true }, expected: 'success' },
   { scenario: 'CONFIG: set_track_solo', toolName: 'manage_sequence', arguments: { action: 'set_track_solo', path: SEQUENCE_PATH, trackName: TRACK_NAME, solo: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.solo', equals: true, label: 'set_track_solo reports enabled state' }] },
   { scenario: 'CONFIG: set_track_locked', toolName: 'manage_sequence', arguments: { action: 'set_track_locked', path: SEQUENCE_PATH, trackName: TRACK_NAME, locked: true }, expected: 'success' },

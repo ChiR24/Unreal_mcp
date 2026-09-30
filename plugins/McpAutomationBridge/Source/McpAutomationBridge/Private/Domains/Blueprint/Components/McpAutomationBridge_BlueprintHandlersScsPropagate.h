@@ -110,7 +110,11 @@ struct FDefaults
         // An instanced subobject must not be shared with the template, so those
         // still go through text (which resolves to a reference, as before).
         if (Prop->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference))
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
           Prop->ImportText_Direct(*NewText, Prop->ContainerPtrToValuePtr<void>(Container), Component, PPF_None);
+#else
+          Prop->ImportText(*NewText, Prop->ContainerPtrToValuePtr<void>(Container), PPF_None, Component);
+#endif
         else
           Prop->CopyCompleteValue_InContainer(Container, TemplateContainer);
         Written.Emplace(Entry.Key, NewText);

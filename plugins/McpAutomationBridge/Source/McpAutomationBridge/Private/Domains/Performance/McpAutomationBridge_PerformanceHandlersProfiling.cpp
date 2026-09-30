@@ -11,7 +11,9 @@
 #include "Misc/DateTime.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
+#if __has_include("ViewportClient.h")
 #include "ViewportClient.h"
+#endif
 
 #include "Editor/UnrealEd/Public/Editor.h"
 

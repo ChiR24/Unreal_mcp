@@ -48,7 +48,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('import', 'asset', 'Import an asset from a filesystem source into the project content hierarchy.',
     schema({ sourcePath: SOURCE_PATH, destinationPath: DEST_PATH, overwrite: bool('Replace an asset already sitting at the destination. Needed for an FBX animation import, which otherwise refuses rather than let the editor reimport the old asset with its own stored settings.'), save: bool('Save the imported asset. Defaults to true; pass false to keep it in memory only.'), importAnimations: bool('Import animation takes from an FBX. Off by default, which imports mesh only.'), skeletonPath: str('Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations.') }, ['sourcePath', 'destinationPath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence'],
+    { aliases: ['asset.import_asset'], topics: ['import fbx', 'import file', 'import mesh', 'import texture', 'import obj', 'import png', 'import wav', 'import sound file', 'import audio file', 'bring file into project', 'import animation', 'import mocap', 'fbx animation', 'import anim sequence', 'import mp3', 'import 3d model', 'add file to project', 'import image'],
       whenToUse: [
         'A source file inside the project folder (FBX, OBJ, PNG, WAV) must become an asset at a /Game path.',
         'An FBX animation take must be imported onto an existing skeleton without importing the mesh again.',
@@ -63,7 +63,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('duplicate', 'asset', 'Duplicate an existing asset to a new path.',
     schema({ sourcePath: str('Source /Game asset path.'), destinationPath: DEST_PATH, newName: str('New asset name.') }, ['sourcePath']),
     OK_OUTPUT, WRITE, WRITE_POLICY, MEDIUM,
-    { topics: ['copy asset', 'clone asset'],
+    { topics: ['copy asset', 'clone asset', 'copy material', 'copy texture', 'duplicate material', 'duplicate blueprint', 'duplicate data table', 'make copy of asset', 'copy asset to another folder'],
       whenToUse: [
         'An asset needs a copy to edit safely while the original stays unchanged.',
         'A whole folder must be copied with its sub-folders and every asset in it.',
@@ -150,7 +150,8 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   r('create_folder', 'asset', 'Create a new content-browser folder under a /Game path.',
     schema({ path: str('Folder path (must start with /).') }, ['path']),
     OK_OUTPUT, WRITE, WRITE_POLICY, LOW,
-    { whenToUse: [
+    { topics: ['make folder', 'new folder', 'create directory'],
+      whenToUse: [
         'A new empty folder is wanted in the content browser, for example to organise assets before moving them in.',
         'A folder must be ensured at a path without knowing whether it exists; alreadyExisted in the reply says which it was.',
       ],
@@ -181,7 +182,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   // search_assets matches asset names only; this reads what the assets and the open level contain.
-  r('find_text', 'asset', 'Find where a piece of text appears: Blueprint graph literals and comments, variable and component defaults, widget texts, DataTable rows, String Table entries, and the actors of the open level.',
+  r('find_text', 'asset', 'Find where a piece of text appears: Blueprint graph literals and comments, variable and component defaults (a reference to another asset matches by its path, so a sound name finds the component that plays it), widget texts, DataTable rows, String Table entries, and the actors of the open level.',
     schema({
       searchText: str('Text to search for.'),
       packagePaths: arr('Package paths to search within.'),

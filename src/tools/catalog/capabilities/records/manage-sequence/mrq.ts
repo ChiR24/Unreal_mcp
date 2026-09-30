@@ -13,8 +13,8 @@
  *   executor, starts the render, and blocks until completion/fatal/timeout.
  *   Only start_render supports advisory cancellation (notifications/cancelled
  *   -> CancelStartRender) and forwards timeoutMs to Unreal.
- * - Timeout tiers: DEFAULT 300000ms (5min), MAX 3600000ms (1hr),
- *   TRANSPORT_GRACE 35000ms (cancel wait clamped to 30000ms).
+ * - Timeout: timeoutMs defaults to and is capped at 300000ms (5min) by the
+ *   record; TRANSPORT_GRACE 35000ms (cancel wait clamped to 30000ms).
  * - MRQ cancellation is ADVISORY: it requests executor stop but cannot
  *   interrupt an already-executing render frame. A second concurrent render
  *   is rejected with MRQ_ALREADY_RENDERING.
@@ -141,7 +141,7 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.mrq.start_render', action: 'start_render', family: F, domain: D,
-    summary: 'Start MRQ render execution. Blocks until completion, fatal error, or timeout. Supports advisory cancellation. Default timeout 300000ms, max 3600000ms, transport grace 35000ms.',
+    summary: 'Start MRQ render execution. Blocks until completion, fatal error, or timeout. Supports advisory cancellation. timeoutMs defaults to and is capped at 300000 (5 minutes); the transport waits 35000ms longer for the reply.',
     whenToUse: ['The MRQ queue must be executed to produce rendered output files.'],
     whenNotToUse: ['A render is already in progress (MRQ_ALREADY_RENDERING).'],
     // ExecuteStartRender (Execution.cpp) selects the job by jobId or

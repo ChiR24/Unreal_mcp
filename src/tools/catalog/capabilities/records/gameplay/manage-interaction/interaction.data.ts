@@ -123,7 +123,7 @@ export const INTERACTION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   interactionRecord({
     action: 'create_door_actor',
-    topics: ['door', 'new door', 'door actor', 'openable door'],
+    topics: ['door', 'new door', 'door actor', 'openable door', 'door that opens'],
     summary: 'Create a door actor Blueprint asset.',
     whenToUse: ['A door Blueprint is needed with a pivot, a door mesh and a trigger box, plus open-angle, timing, lock and key variables.'],
     whenNotToUse: [

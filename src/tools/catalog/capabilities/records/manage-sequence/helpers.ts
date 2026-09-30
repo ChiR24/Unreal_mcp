@@ -17,7 +17,7 @@ export const P = {
   actorName: str('Actor name in the current level.'),
   actorNames: { type: 'array', items: str('Actor name.'), description: 'Actor names.' },
   className: str('Unreal class path for the spawnable.'),
-  trackType: str('MovieScene track type string.'),
+  trackType: str('Track type: "Audio" (music or sound, then add_section with soundPath), "Transform", or a MovieScene track class name such as MovieSceneEventTrack.'),
   trackName: str('Name of the track to modify.'),
   property: str('Property name to keyframe (Transform, Location, Rotation, Scale).'),
   frame: int('Frame number for the keyframe.'),

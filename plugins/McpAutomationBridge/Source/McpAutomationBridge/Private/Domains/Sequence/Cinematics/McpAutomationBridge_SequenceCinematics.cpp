@@ -198,14 +198,14 @@ UMovieSceneTrack *AddTrackForBinding(UMovieScene *MovieScene, UClass *TrackClass
     return nullptr;
   }
   return BindingGuid.IsValid() ? MovieScene->AddTrack(TrackClass, BindingGuid)
-                               : MovieScene->AddTrack(TrackClass);
+                               : MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass);
 }
 
 void RemoveTrackAfterSectionFailure(UMovieScene *MovieScene,
                                     UMovieSceneTrack *Track,
                                     bool bTrackCreated) {
   if (MovieScene && Track && bTrackCreated)
-    MovieScene->RemoveTrack(*Track);
+    MCP_REMOVE_MOVIESCENE_TRACK(MovieScene, *Track);
 }
 
 UMovieSceneSection *AddTrackSection(UMovieScene *MovieScene, UMovieSceneTrack *Track, bool bTrackCreated) {

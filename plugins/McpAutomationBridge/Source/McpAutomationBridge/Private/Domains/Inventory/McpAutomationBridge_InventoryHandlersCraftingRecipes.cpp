@@ -90,7 +90,7 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
     GenericRecipe->Properties.Add(TEXT("RequiredStation"), RequiredStation);
     GenericRecipe->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(GenericRecipe);
     }
 
@@ -142,13 +142,14 @@ bool HandleInventoryCraftingRecipeActions(UMcpAutomationBridgeSubsystem& Bridge,
           TEXT("UNSUPPORTED_RECIPE_CLASS"));
       return true;
     }
-    const int32 IngredientIndex = GenericRecipe->Properties.Num();
+    // One past the highest Ingredient_<n>: the map size also counts the recipe's other fields and repeats a live key after a removal.
+    const int32 IngredientIndex = NextIndexedPropertyIndex(GenericRecipe->Properties, TEXT("Ingredient_"));
     GenericRecipe->Properties.Add(FString::Printf(TEXT("Ingredient_%d"), IngredientIndex),
                                   FString::Printf(TEXT("ItemPath=%s;Quantity=%d"), *IngredientItemPath, Quantity));
 
     RecipeAsset->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(RecipeAsset);
     }
 

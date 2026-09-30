@@ -1,6 +1,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtilsJson.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "UObject/UnrealType.h"
 #include "EditorModeManager.h"
 #include "McpAutomationBridgeSettings.h"
@@ -24,8 +25,7 @@ UObject *ResolveSettingsObjectForMcp(const FString &Category) {
                                 Category + TEXT("Settings"),
                                 FString(TEXT("U")) + Category + TEXT("Settings")};
   for (const FString &Name : Candidates) {
-    UClass *SettingsClass =
-        FindFirstObject<UClass>(*Name, EFindFirstObjectOptions::NativeFirst);
+    UClass *SettingsClass = McpFindTypeQuiet(Name);
     // The plugin's own settings: a write here could switch its token auth off.
     if (SettingsClass && SettingsClass->HasAnyClassFlags(CLASS_Config) &&
         !UMcpAutomationBridgeSettings::IsAutomationTarget(Category, SettingsClass)) {
@@ -65,7 +65,11 @@ bool ApplySettingsPropertyForMcp(UObject *Settings, const FString &Name,
       }
       Text = LexToString(NumVal);
     }
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
     if (Prop->ImportText_Direct(*Text, Address, Settings, PPF_None) == nullptr) {
+#else
+    if (Prop->ImportText(*Text, Address, PPF_None, Settings) == nullptr) {
+#endif
       return false;
     }
   }

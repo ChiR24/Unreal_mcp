@@ -262,7 +262,11 @@ TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObjec
 			FString::Printf(TEXT("Graph input '%s' not found (pass nodeId to set a node's input instead)"), *InputName));
 #if MCP_HAS_METASOUND_FRONTEND_V2
 		TArray<TSharedPtr<FJsonValue>> InputArray;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 6
 		for (const FMetasoundFrontendClassInput& Input : Builder.GetConstDocumentChecked().RootGraph.GetDefaultInterface().Inputs)
+#else
+		for (const FMetasoundFrontendClassInput& Input : Builder.GetConstDocumentChecked().RootGraph.Interface.Inputs)
+#endif
 		{
 			InputArray.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%s (%s)"), *Input.Name.ToString(), *Input.TypeName.ToString())));
 		}

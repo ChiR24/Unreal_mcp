@@ -29,9 +29,6 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     return true;
   }
 
-  bool bShowConfirmation = false;
-  Payload->TryGetBoolField(TEXT("showConfirmation"), bShowConfirmation);
-
   bool bFixupRedirectors = true;
   Payload->TryGetBoolField(TEXT("fixupRedirectors"), bFixupRedirectors);
 
@@ -69,8 +66,11 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
     return true;
   }
 
+  // Never the engine's confirmation dialog: it is modal on the game thread and
+  // nobody can answer it over MCP, so the call would hang the editor. The consent
+  // grant on this destructive capability is the confirmation.
   int32 DeletedCount =
-      ObjectTools::DeleteObjects(ObjectsToDelete, bShowConfirmation);
+      ObjectTools::DeleteObjects(ObjectsToDelete, /*bShowConfirmation=*/false);
 
   // Scoped to the folders this call actually deleted from. Unscoped, the
   // fixup matched EVERY redirector in the project, so deleting one folder

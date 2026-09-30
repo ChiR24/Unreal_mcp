@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `866c50862b4ac519`
+Catalog revision: `bb9099d0d0217b0c`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -341,7 +341,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_audio.get_metasound_graph` | `manage_audio` | `manage_audio` | read | read | none | `manage_audio.get_metasound_graph` |
 | `manage_audio.play_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.play_sound` `manage_audio.play_sound_2d` `manage_audio.play_sound_at_location` `manage_audio.spawn_sound_at_location` `manage_audio.play_sound_attached` `manage_audio.prime_sound` |
 | `manage_audio.set_dialogue_context` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.set_dialogue_context` |
-| `manage_audio.stop_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.stop_sound` |
+| `manage_audio.stop_sound` | `manage_audio` | `manage_audio` | write | write | none | `manage_audio.stop_sound` `manage_audio.pause_sound` `manage_audio.resume_sound` |
 | `manage_character.build_metahuman` | `manage_character` | `build_metahuman` | write | write | none | `manage_character.build_metahuman` |
 | `manage_character.configure_character` | `manage_character` | `configure_movement_speeds` | write | write | none | `manage_character.configure_character` `manage_character.configure_movement_speeds` `manage_character.configure_jump` `manage_character.configure_crouch` `manage_character.configure_rotation` `manage_character.configure_capsule_component` `manage_character.configure_mesh_component` `manage_character.configure_camera_component` `manage_character.configure_nav_movement` |
 | `manage_character.create_character_blueprint` | `manage_character` | `create_character_blueprint` | write | write | none | `manage_character.create_character_blueprint` |

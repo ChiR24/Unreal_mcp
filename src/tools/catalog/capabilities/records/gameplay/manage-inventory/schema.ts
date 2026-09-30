@@ -23,7 +23,7 @@ import { str, num, bool } from '../../shared/schema-props.js';
 export const IP: PropertyMap = {
   name: P.name,
   path: P.path,
-  save: P.save,
+  save: bool('Save the asset to disk after the change (default true, for every inventory action). With false the change stays in memory only and is lost when the editor restarts.'),
   properties: P.properties,
   blueprintPath: P.blueprintPath,
   itemPath: P.itemPath,
@@ -35,7 +35,7 @@ export const IP: PropertyMap = {
   lootWeight: num('Relative selection weight for the loot entry.'),
   minQuantity: num('Minimum quantity granted by the loot entry.'),
   maxQuantity: num('Maximum quantity granted by the loot entry.'),
-  entryIndex: num('Zero-based loot entry index to remove.'),
+  entryIndex: num('Number n of the LootEntry_<n> key of the entry to remove: the entryIndex add_loot_entry returned, or the n in a LootEntry_<n> key of get_inventory_info properties. It is a key suffix, not a position: removing an entry renumbers nothing, and a new entry takes one past the highest suffix in use.'),
   tiers: {
     type: 'array',
     items: {

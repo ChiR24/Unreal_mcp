@@ -11,7 +11,7 @@ export const MANAGE_LEVEL_FOLDS: readonly FoldSpec[] = [
     aliasMembers: ['save_level', 'save_level_as'],
   },
   {
-    primary: 'duplicate_level', selector: 'levelOp',
+    primary: 'duplicate_level', topics: ['copy level', 'copy map'], selector: 'levelOp',
     summary: 'Duplicate a level to a new path, or rename it.',
     members: { duplicate: 'duplicate_level', rename: 'rename_level' },
   },
@@ -23,7 +23,7 @@ export const MANAGE_LEVEL_FOLDS: readonly FoldSpec[] = [
     members: { summary: 'get_summary', current_level: 'get_current_level' },
   },
   {
-    primary: 'stream', selector: 'streamOp',
+    primary: 'stream', topics: ['load sublevel', 'unload sublevel'], selector: 'streamOp',
     summary: 'Stream a sublevel in or out, or unload it.',
     members: { stream: 'stream', unload: 'unload' },
   },

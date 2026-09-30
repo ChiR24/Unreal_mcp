@@ -17,23 +17,23 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_sequence_bindings', selector: 'edit',
     summary: 'Edit sequence bindings: add one or more actors, a camera, or a spawnable from a class; remove actors.',
-    topics: ['sequence binding', 'add actor to sequence', 'spawnable', 'sequence camera'],
+    topics: ['sequence binding', 'add actor to sequence', 'spawnable', 'sequence camera', 'spawn actor in sequence'],
     members: { add_actor: 'add_actor', add_actors: 'add_actors', add_camera: 'add_camera', add_spawnable: 'add_spawnable_from_class', remove_actors: 'remove_actors' },
   },
   {
     primary: 'edit_sequence_tracks', selector: 'edit',
     summary: 'Edit sequence tracks: add a track, section or keyframe; lock, mute or solo a track.',
-    topics: ['sequence track', 'add track', 'add section', 'keyframe', 'mute track', 'solo track', 'lock track'],
+    topics: ['sequence track', 'add track', 'add section', 'keyframe', 'mute track', 'solo track', 'lock track', 'keyframe actor location'],
     members: { add_track: 'add_track', add_section: 'add_section', add_keyframe: 'add_keyframe', set_locked: 'set_track_locked', set_muted: 'set_track_muted', set_solo: 'set_track_solo' },
   },
   {
     primary: 'set_properties', selector: 'sequenceProperty',
     summary: 'Set sequence properties: playback range and frame rate, display rate, tick resolution, playback speed, view range, work range.',
-    topics: ['frame rate', 'playback range', 'display rate', 'tick resolution', 'playback speed', 'work range', 'view range'],
+    topics: ['frame rate', 'playback range', 'display rate', 'tick resolution', 'playback speed', 'work range', 'view range', 'cutscene length', 'level sequence length'],
     members: { properties: 'set_properties', display_rate: 'set_display_rate', tick_resolution: 'set_tick_resolution', playback_speed: 'set_playback_speed', view_range: 'set_view_range', work_range: 'set_work_range' },
   },
   {
-    primary: 'delete', selector: 'deleteScope',
+    primary: 'delete', topics: ['delete level sequence', 'delete cutscene'], selector: 'deleteScope',
     summary: 'Delete a level sequence, remove one of its tracks, or remove keyframes from a track.',
     members: { sequence: 'delete', track: 'remove_track', keyframe: 'remove_keyframe' },
   },
@@ -46,7 +46,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'add_cinematic_track', selector: 'trackKind',
     summary: 'Add a cinematic track: camera cut, camera shake, transform, property, skeletal animation, material parameter, particle, event, fade, level visibility, shot, or subsequence.',
-    topics: ['camera cut track', 'camera shake', 'transform track', 'property track', 'animation track', 'fade track', 'shot track', 'subsequence'],
+    topics: ['camera cut track', 'camera shake', 'transform track', 'property track', 'animation track', 'fade track', 'shot track', 'subsequence', 'fade to black', 'add skeletal animation to sequence'],
     members: {
       ...byTarget('add_', ['add_camera_cut_track', 'add_camera_shake_track', 'add_transform_track', 'add_property_track', 'add_skeletal_animation_track',
         'add_material_parameter_track', 'add_particle_track', 'add_event_track', 'add_fade_track', 'add_level_visibility_track', 'add_shot_track'], '_track'),
@@ -56,7 +56,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_cinematic', selector: 'setting',
     summary: 'Configure cinematic cameras and shots: camera settings, crane or rail rigs, shot settings.',
-    topics: ['cine camera settings', 'camera rig crane', 'camera rig rail', 'shot settings', 'focal length', 'aperture'],
+    topics: ['cine camera settings', 'camera rig crane', 'camera rig rail', 'shot settings', 'focal length', 'aperture', 'set camera focal length'],
     members: { camera: 'configure_camera_settings', rig_crane: 'configure_camera_rig_crane', rig_rail: 'configure_camera_rig_rail', shot: 'configure_shot_settings' },
   },
   {
@@ -68,13 +68,13 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_render_job', selector: 'control',
     summary: 'Movie Render Queue: create a render job, queue it, or start rendering.',
-    topics: ['movie render queue', 'render job', 'queue render', 'start render', 'mrq'],
+    topics: ['movie render queue', 'render job', 'queue render', 'start render', 'mrq', 'render video'],
     members: { create: 'create_render_job', queue: 'queue_render', start: 'start_render' },
   },
   {
     primary: 'configure_render_job', selector: 'setting',
     summary: 'Configure a Movie Render Queue job: output settings, anti-aliasing, render passes, burn-ins, console variables.',
-    topics: ['render output settings', 'anti aliasing', 'render pass', 'burn in', 'console variables'],
+    topics: ['render output settings', 'anti aliasing', 'render pass', 'burn in', 'console variables', 'movie output resolution'],
     members: { output: 'configure_output_settings', anti_aliasing: 'configure_anti_aliasing', add_render_pass: 'add_render_pass', burn_ins: 'configure_burn_ins', console_variables: 'configure_console_variables' },
   },
   {
@@ -84,7 +84,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
     members: byTarget('create_media_', ['create_media_source', 'create_media_player', 'create_media_playlist', 'create_media_texture', 'create_media_sound_component']),
   },
   {
-    primary: 'play_media', selector: 'control',
+    primary: 'play_media', topics: ['play video file'], selector: 'control',
     summary: 'Play, pause or seek a media player.',
     members: { play: 'play_media', pause: 'pause_media', seek: 'seek_media' },
   },
@@ -102,7 +102,7 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_take_recorder', selector: 'setting',
     summary: 'Take Recorder: configure sources and recorded tracks, open the panel, start or stop recording.',
-    topics: ['take recorder', 'take sources', 'recorded tracks', 'start take recording'],
+    topics: ['take recorder', 'take sources', 'recorded tracks', 'start take recording', 'record actor animation'],
     members: { sources: 'configure_take_sources', recorded_tracks: 'configure_recorded_tracks', panel: 'create_take_recorder_panel', start_recording: 'start_recording', stop_recording: 'stop_recording' },
   },
 ];

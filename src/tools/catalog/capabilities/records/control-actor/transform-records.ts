@@ -268,6 +268,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'apply_force',
+    topics: ['push actor', 'apply impulse'],
     domain: DOMAIN,
     family: FAMILY_PHYSICS,
     summary: 'Apply a physics force vector to an actor, auto-enabling simulation on failure.',

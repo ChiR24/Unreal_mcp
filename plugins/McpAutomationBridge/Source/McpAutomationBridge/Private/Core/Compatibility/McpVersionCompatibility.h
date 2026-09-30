@@ -369,9 +369,24 @@
     (EnumPtr)->SetEnums((Names), (CppForm))
 #endif
 
-// UMovieScene::GetMasterTracks was renamed GetTracks in 5.1.
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
+// UImage::GetBrush and UButton::GetStyle arrive in 5.2; earlier engines expose the UPROPERTYs directly.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
+#define MCP_UIMAGE_GET_BRUSH(Image) (Image)->GetBrush()
+#define MCP_UBUTTON_GET_STYLE(Button) (Button)->GetStyle()
+#else
+#define MCP_UIMAGE_GET_BRUSH(Image) (Image)->Brush
+#define MCP_UBUTTON_GET_STYLE(Button) (Button)->WidgetStyle
+#endif
+
+// UMovieScene master tracks became plain root tracks in 5.2: GetMasterTracks -> GetTracks, AddMasterTrack ->
+// AddTrack(Class), and RemoveTrack removes root tracks too (on 5.0 and 5.1 it only searches bindings). Checked in
+// the 5.0/5.7/5.8 headers and the 5.1.1-5.6.1 tags: 5.1 still has only the Master spellings.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
 #define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetTracks()
+#define MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->AddTrack(TrackClass)
+#define MCP_REMOVE_MOVIESCENE_TRACK(MovieScene, Track) (MovieScene)->RemoveTrack(Track)
 #else
 #define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetMasterTracks()
+#define MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->AddMasterTrack(TrackClass)
+#define MCP_REMOVE_MOVIESCENE_TRACK(MovieScene, Track) ((MovieScene)->RemoveMasterTrack(Track) || (MovieScene)->RemoveTrack(Track))
 #endif

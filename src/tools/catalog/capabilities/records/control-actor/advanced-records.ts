@@ -19,7 +19,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'attach',
     domain: DOMAIN,
     family: FAMILY_ATTACH,
-    topics: ['attach actor', 'parent actor', 'attach to actor', 'child actor', 'attach to socket'],
+    topics: ['attach actor', 'parent actor', 'attach to actor', 'child actor', 'attach to socket', 'set actor parent'],
     summary: 'Attach a child actor to a parent actor in the scene hierarchy.',
     whenToUse: ['An actor must follow another actor transform.'],
     whenNotToUse: ['The actor should remain independent (use detach).'],
@@ -47,6 +47,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
     action: 'set_blueprint_variables',
+    topics: ['actor variable'],
     domain: DOMAIN,
     family: FAMILY_BLUEPRINT,
     summary: 'Set one or more Blueprint instance variables on a spawned actor, or on many actors in one call with actors.',

@@ -50,7 +50,7 @@ bool HandleEnumValueActions(
         Names.Emplace(*FullNameStr, 0);
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
         MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
-        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
@@ -82,7 +82,7 @@ bool HandleEnumValueActions(
         }
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
         MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
-        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
@@ -122,7 +122,7 @@ bool HandleEnumValueActions(
         }
         for (int32 i = 0; i < Names.Num(); ++i) { Names[i].Value = i; }
         MCP_SET_ENUMS(Enum, Names, Enum->GetCppForm());
-        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), NewValueName);
@@ -183,7 +183,7 @@ bool HandleEnumValueActions(
 
         for (int32 i = 0; i < NewNames.Num(); ++i) { NewNames[i].Value = i; }
         MCP_SET_ENUMS(Enum, NewNames, Enum->GetCppForm());
-        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetBoolField(TEXT("reordered"), true);
@@ -205,7 +205,7 @@ bool HandleEnumValueActions(
 
         const FString MetaKey = FString::Printf(TEXT("Value_%s_%s"), *ValueName, *Key);
         Enum->SetMetaData(*MetaKey, *Value);
-        FinalizeEnum(Enum, GetJsonBoolField(Params, TEXT("save"), false));
+        FinalizeEnum(Enum, EnumSaveRequested(Params));
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
         Result->SetStringField(TEXT("valueName"), ValueName);
@@ -264,7 +264,7 @@ bool HandleEnumValueActions(
             NewNames.Emplace(*NewEnum->GenerateFullEnumName(*KeepShortNames[i]), static_cast<int64>(i));
         }
         MCP_SET_ENUMS(NewEnum, NewNames, NewEnum->GetCppForm());
-        FinalizeEnum(NewEnum, GetJsonBoolField(Params, TEXT("save"), false));
+        FinalizeEnum(NewEnum, EnumSaveRequested(Params));
         FAssetRegistryModule::AssetCreated(NewEnum);
 
         TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

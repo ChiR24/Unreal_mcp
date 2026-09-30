@@ -79,7 +79,7 @@ export const OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   ...OPERATIONS_IO_RECORDS,
   buildCoreRecord({
-    parentTool: 'manage_level', action: 'add_sublevel', dispatchAction: 'add_sublevel',
+    parentTool: 'manage_level', action: 'add_sublevel', topics: ['add streaming level'], dispatchAction: 'add_sublevel',
     domain: D, family: 'sublevel',
     summary: 'Add a sub-level as a streaming child of the level open in the editor.',
     whenToUse: ['A streaming child level must be associated with a parent.'],

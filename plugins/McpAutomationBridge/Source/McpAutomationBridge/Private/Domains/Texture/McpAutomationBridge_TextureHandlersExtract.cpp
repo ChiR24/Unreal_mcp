@@ -30,11 +30,10 @@ TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Para
     }
     NewTexture->Source.Init(Width, Height, 1, 1, TSF_G8);
 
-    const uint8* SrcData = SourceTexture->Source.LockMipReadOnly(0);
+    const TArray<uint8> SrcData = ReadSourceBGRA(SourceTexture);
     uint8* DestData = NewTexture->Source.LockMip(0);
-    if (!SrcData || !DestData)
+    if (SrcData.IsEmpty() || !DestData)
     {
-        if (SrcData) SourceTexture->Source.UnlockMip(0);
         if (DestData) NewTexture->Source.UnlockMip(0);
         TEXTURE_ERROR_RESPONSE(TEXT("Failed to lock texture data"));
     }
@@ -43,7 +42,6 @@ TSharedPtr<FJsonObject> HandleChannelExtract(const TSharedPtr<FJsonObject>& Para
         DestData[i] = SrcData[i * 4 + Offset];
     }
     NewTexture->Source.UnlockMip(0);
-    SourceTexture->Source.UnlockMip(0);
 
     NewTexture->SRGB = false;
     NewTexture->CompressionSettings = TC_Grayscale;

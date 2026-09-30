@@ -32,7 +32,7 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { whenToUse: ['A variation of a base material is needed with new parameter values and no second node graph.', 'An instance should start with scalar, vector or texture overrides already applied (pass parameters).'],
       whenNotToUse: ['The material needs its own node graph (use material.create_material).', 'An existing instance needs new values (use material.set_material_parameter); the parent must be a base material, not another instance.'],
-      topics: ['material instance', 'mi', 'instance material', 'child material'], dispatchAction: 'create_material_instance',
+      topics: ['material instance', 'mi', 'instance material', 'child material', 'make material instance'], dispatchAction: 'create_material_instance',
       examples: [ex('Instance a base material', { name: 'MI_Base_Rusty', parentMaterial: '/Game/Materials/M_Base', savePath: '/Game/Materials' }, { success: true })] }
   ),
   r('create_material_function', 'material', 'Create a new material function asset.',

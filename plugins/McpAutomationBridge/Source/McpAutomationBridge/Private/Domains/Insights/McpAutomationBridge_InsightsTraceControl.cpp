@@ -13,7 +13,7 @@ namespace McpInsights
 {
 namespace
 {
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 1
 using FMcpTraceOptions = FTraceAuxiliary::Options;
 #else
 using FMcpTraceOptions = FTraceAuxiliary::FOptions;

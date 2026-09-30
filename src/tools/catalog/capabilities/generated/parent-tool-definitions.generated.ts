@@ -4654,7 +4654,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "key": {
           "type": "string",
-          "description": "Input key name for simulate_input."
+          "description": "Key name: SpaceBar, D, Left, Enter, P. Escape is the editor stop-play key: in Play In Editor it ends the session instead of reaching the game, so test an action bound to Escape through another key mapped to it."
         },
         "levelPath": {
           "type": "string",
@@ -7321,7 +7321,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "alphaTexture": {
           "type": "string",
-          "description": "Alpha channel source."
+          "description": "Alpha channel source: an 8-bit BGRA8 or G8 texture."
         },
         "amount": {
           "type": "number",
@@ -7386,7 +7386,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "baseTexture": {
           "type": "string",
-          "description": "Base texture path."
+          "description": "Base texture path; its source must be an 8-bit BGRA8 or single-channel G8 texture (a channel_extract result, read as gray in R, G and B with alpha 255). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
         },
         "blendMode": {
           "type": "string",
@@ -7394,7 +7394,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blendTexture": {
           "type": "string",
-          "description": "Blend texture path."
+          "description": "Blend texture path; it must have the width and height of baseTexture. Its source can be BGRA8 or G8 whichever baseTexture is. Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
         },
         "blendType": {
           "type": "string",
@@ -7402,7 +7402,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueTexture": {
           "type": "string",
-          "description": "Blue channel source."
+          "description": "Blue channel source: an 8-bit BGRA8 or G8 texture."
         },
         "brickRatio": {
           "type": "number",
@@ -7533,7 +7533,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "destinationName": {
           "type": "string",
-          "description": "New asset name."
+          "description": "Name of the new asset. With destinationPath it is placed in that folder; on its own the copy stays beside the source."
         },
         "destinationPath": {
           "oneOf": [
@@ -7548,7 +7548,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
-              "description": "Destination /Game path."
+              "description": "Folder for the copy, e.g. /Game/Structs, when destinationName is given, the path ends in \"/\" or the folder exists; the copy is destinationPath/destinationName, or keeps the source name without one. Otherwise the full new asset path, e.g. /Game/Structs/S_WeaponRow_V2. A copy onto an existing struct is refused with ALREADY_EXISTS."
             }
           ],
           "description": "Destination /Game asset path."
@@ -7649,7 +7649,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "fixupRedirectors": {
           "type": "boolean",
-          "description": "Fix up redirectors left behind by the deletion."
+          "description": "Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones."
         },
         "folderName": {
           "type": "string",
@@ -7686,7 +7686,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "greenTexture": {
           "type": "string",
-          "description": "Green channel source."
+          "description": "Green channel source: an 8-bit BGRA8 or G8 texture."
         },
         "group": {
           "type": "string",
@@ -8320,7 +8320,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "before",
             "after"
           ],
-          "description": "Reorder anchor position."
+          "description": "Where the moved member goes: first or last of the struct, or before or after the member named in relativeTo."
         },
         "prefix": {
           "type": "string",
@@ -8371,7 +8371,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "redTexture": {
           "type": "string",
-          "description": "Red channel source."
+          "description": "Red channel source: an 8-bit BGRA8 or G8 texture."
         },
         "referencers": {
           "type": "boolean",
@@ -8379,7 +8379,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "relativeTo": {
           "type": "string",
-          "description": "Target member GUID or name."
+          "description": "Name or GUID of the member to place the moved member next to. Required for before and after; ignored for first and last."
         },
         "renames": {
           "type": "array",
@@ -8490,10 +8490,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Shading model."
         },
-        "showConfirmation": {
-          "type": "boolean",
-          "description": "Show confirmation prompt."
-        },
         "skeletonPath": {
           "type": "string",
           "description": "Existing skeleton to import the take against, e.g. /Game/Chars/SK_Hero_Skeleton. Set it to import the animation ALONE; omit it to import mesh and animation together. Implies importAnimations."
@@ -8531,7 +8527,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourceTexture": {
           "type": "string",
-          "description": "Source heightmap texture path."
+          "description": "Source heightmap texture path; its source must be an 8-bit BGRA8 or single-channel G8 texture, read as its luminance (a G8 source is its gray). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
         },
         "speed": {
           "type": "number",
@@ -8579,14 +8575,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "tag": {
           "type": "string",
-          "description": "Tag name to search for."
+          "description": "Asset-registry tag name, for example ParentClass, which every Blueprint carries."
         },
         "tags": {
           "type": "array",
           "items": {
             "type": "string"
           },
-          "description": "Tags to set."
+          "description": "Tag names to set; each is written as package metadata with the value \"true\"."
         },
         "targetNodeId": {
           "type": "string",
@@ -8666,7 +8662,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
-              "description": "Optional tag value."
+              "description": "Optional tag value to match, ignoring case."
             }
           ],
           "description": "Metadata value."
@@ -9154,7 +9150,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "metadata": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
-          "description": "Custom package metadata (key-value)."
+          "description": "Package metadata (key-value): what set_metadata wrote, and each set_tags tag as its name with the value \"true\"."
         },
         "mimeType": {
           "type": "string",
@@ -9391,10 +9387,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "object",
               "x-unreal-reflection-boundary": true,
-              "description": "Asset Registry tags (key-value)."
+              "description": "Asset Registry tags (key-value). A tag written by set_tags appears here only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry."
             }
           ],
-          "description": "Asset Registry tags (key-value)."
+          "description": "Asset Registry tags (key-value). A tag written by set_tags appears here only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry."
         },
         "textureSampleCount": {
           "type": "number",
@@ -9487,7 +9483,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "all": {
           "type": "boolean",
-          "description": "Also stop every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started)."
+          "description": "Also act on every sound the editor and a running Play In Editor game play, game music included (default false: only the 2D sounds play_sound started). Stop silences every audio device; pause and resume take soundPath to narrow it to one sound."
         },
         "applyEQ": {
           "type": "boolean",
@@ -9929,6 +9925,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Actor label/name or AudioComponent name of the playing sound."
         },
+        "soundOp": {
+          "type": "string",
+          "enum": [
+            "stop",
+            "pause",
+            "resume"
+          ],
+          "description": "Which stop sound variant to run; omit for 'stop'.",
+          "default": "stop"
+        },
         "soundPath": {
           "type": "string",
           "description": "Canonical /Game sound asset path (SoundWave, SoundCue or MetaSound)."
@@ -10153,6 +10159,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Path of the parent Sound Class the inspected Sound Class inherits from."
         },
+        "paused": {
+          "type": "number",
+          "description": "Playing sounds this call paused (0 when none was playing)."
+        },
         "pitch": {
           "type": "number",
           "description": "Pitch multiplier declared by the inspected Sound Class."
@@ -10176,6 +10186,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Per-step outcome of a batch: index, edit, id, success, nodeId, appliedValue."
+        },
+        "resumed": {
+          "type": "number",
+          "description": "Paused sounds this call resumed (0 when none was paused)."
         },
         "rootNodeClass": {
           "type": "string",
@@ -10846,7 +10860,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "nodeType": {
           "type": "string",
-          "description": "Blueprint node type string for creation."
+          "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct, BreakStruct, SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
         },
         "offset": {
           "type": "number",
@@ -15098,11 +15112,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "traceRadius": {
           "type": "number",
-          "description": "Interaction trace radius in world units."
+          "description": "Cross-section of each box component in world units (default 50): a box gets extent traceDistance by traceRadius. Sphere components ignore it."
         },
         "traceType": {
           "type": "string",
-          "description": "Interaction trace shape (line, sphere, or box)."
+          "description": "Free-text name stored in the TraceType Name variable of the Blueprint (default sphere). It does not choose or change a trace shape: the shape comes from the sphere and box components, which traceDistance and traceRadius resize."
         },
         "triggerPath": {
           "type": "string",
@@ -15208,7 +15222,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "entryIndex": {
           "type": "number",
-          "description": "Zero-based loot entry index to remove."
+          "description": "Number n of the LootEntry_<n> key of the entry to remove: the entryIndex add_loot_entry returned, or the n in a LootEntry_<n> key of get_inventory_info properties. It is a key suffix, not a position: removing an entry renumbers nothing, and a new entry takes one past the highest suffix in use."
         },
         "iconPath": {
           "type": "string",
@@ -15305,7 +15319,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "save": {
           "type": "boolean",
-          "description": "Persist the created/modified asset to disk."
+          "description": "Save the asset to disk after the change (default true, for every inventory action). With false the change stays in memory only and is lost when the editor restarts."
         },
         "setting": {
           "type": "string",
@@ -15415,10 +15429,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
-        "entryCount": {
-          "type": "number",
-          "description": "Number of loot entries."
-        },
         "icon": {
           "type": "string",
           "description": "Canonical /Game texture or material path used as the item icon."
@@ -15444,6 +15454,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Loot table entries."
+        },
+        "lootEntryCount": {
+          "type": "number",
+          "description": "Number of loot entries."
         },
         "lootTablePath": {
           "type": "string",
@@ -18381,6 +18395,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether to solo."
         },
+        "soundPath": {
+          "type": "string",
+          "description": "Audio track only: /Game path of the SoundWave, SoundCue or MetaSound the section plays. Without end the section is as long as the sound (one second for a looping one)."
+        },
         "sourceActors": {
           "type": "array",
           "items": {
@@ -18508,7 +18526,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "trackType": {
           "type": "string",
-          "description": "MovieScene track type string."
+          "description": "Track type: \"Audio\" (music or sound, then add_section with soundPath), \"Transform\", or a MovieScene track class name such as MovieSceneEventTrack."
         },
         "tracks": {
           "type": "array",
@@ -18958,7 +18976,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "trackType": {
           "type": "string",
-          "description": "MovieScene track type string."
+          "description": "Track type: \"Audio\" (music or sound, then add_section with soundPath), \"Transform\", or a MovieScene track class name such as MovieSceneEventTrack."
         },
         "tracks": {
           "type": "array",
@@ -19377,7 +19395,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "launchViewer": {
           "type": "boolean",
-          "description": "Also open the Unreal Insights application on the new trace (default false)."
+          "description": "Open the Unreal Insights application on the trace: default true for control=launch_viewer (start_unreal_insights), false for the other variants."
         },
         "level": {
           "type": "number",
@@ -19465,7 +19483,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parentName": {
           "type": "string",
-          "description": "Optional parent panel name."
+          "description": "Panel to add the child under (get_widget_info lists the panels); omitted, the root panel. A name that is not a panel fails with PARENT_NOT_FOUND."
         },
         "path": {
           "type": "string",
@@ -19759,6 +19777,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The UAT command line this job launched."
         },
+        "componentName": {
+          "type": "string",
+          "description": "Name the new widget got."
+        },
         "configName": {
           "type": "string",
           "description": "Config file family (Engine, Game, Input, ...)."
@@ -19923,6 +19945,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           ],
           "description": "Bounded console output captured from the command."
+        },
+        "parentName": {
+          "type": "string",
+          "description": "Panel it was added under."
         },
         "path": {
           "type": "string",

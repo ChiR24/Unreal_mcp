@@ -214,15 +214,9 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
   if (Package) {
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 6
-    bool bHasMeta = FMetaData::GetMapForObject(Asset) != nullptr;
-    Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
-
     const TMap<FName, FString> *ObjectMeta = FMetaData::GetMapForObject(Asset);
 #else
     UMetaData* Meta = Package->GetMetaData();
-    bool bHasMeta = Meta->GetMapForObject(Asset) != nullptr;
-    Resp->SetBoolField(TEXT("debug_has_meta"), bHasMeta);
-
     const TMap<FName, FString> *ObjectMeta = Meta->GetMapForObject(Asset);
 #endif
     if (ObjectMeta) {

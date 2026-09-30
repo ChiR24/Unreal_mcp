@@ -4,7 +4,7 @@
 
 namespace McpAudioHandlers
 {
-// The 2D sounds play_sound started, for stop_sound.
+// The 2D sounds play_sound started, for stop_sound, pause_sound and resume_sound.
 TArray<TWeakObjectPtr<UAudioComponent>> &McpPreviewSounds()
 {
   static TArray<TWeakObjectPtr<UAudioComponent>> Sounds;

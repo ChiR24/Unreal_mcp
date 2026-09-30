@@ -30,7 +30,7 @@ The mock smoke test is `scripts/smoke-test.ts`, not under this directory. It imp
 | Integration per-case | **5s** | `UNREAL_MCP_TEST_CASE_TIMEOUT_MS`, or per-case `timeoutMs` (cleanup cases use 30s) |
 | Per-call server | 60s | `UNREAL_MCP_TEST_CALL_TIMEOUT_MS` |
 | Client / progress | 300s | `UNREAL_MCP_TEST_CLIENT_TIMEOUT_MS` |
-| Bridge port wait | 5s/port | `UNREAL_MCP_WAIT_PORT_MS` (client-level wait is 10s) |
+| Bridge port wait | 10s | none; `createConnectedClient` is passed 10000 |
 | Inter-case throttle | 100ms | `UNREAL_MCP_TEST_THROTTLE_MS` |
 
 Other runner env: `MCP_AUTOMATION_WS_HOST` (127.0.0.1), `MCP_AUTOMATION_WS_PORTS` (8090,8091), `UNREAL_MCP_SERVER_CMD/ARGS/CWD`, `UNREAL_MCP_FORCE_DIST`, `UNREAL_MCP_AUTO_BUILD` / `UNREAL_MCP_NO_AUTO_BUILD`, `UNREAL_MCP_ALLOW_TS_FALLBACK`, `UNREAL_MCP_TEST_LOG_RESPONSES`.

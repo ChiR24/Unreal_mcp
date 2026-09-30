@@ -102,7 +102,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
   utilityRecord({
     tool: T, action: 'get_audio_info', family: 'authoring',
     summary: 'Read an audio asset: Sound Wave duration, sample rate and channel count; Sound Cue duration, node count and attenuation; Sound Class volume, pitch and parent; Sound Mix modifier count; Attenuation falloff.',
-    topics: ['sound length', 'duration', 'sample rate', 'channel count'],
+    topics: ['sound length', 'duration', 'sample rate', 'channel count', 'how long is a sound', 'wav sample rate', 'how many nodes in a sound cue'],
     params: ['assetPath'], required: ['assetPath'], effect: 'read',
     outputs: ['assetPath', 'assetClass', 'type', 'duration', 'nodeCount', 'attenuationPath', 'sampleRate',
       'numChannels', 'volume', 'pitch', 'parentClass', 'modifierCount', 'falloffDistance', 'spatialize'],
@@ -118,6 +118,6 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     ['assetPath', 'dopplerIntensity', 'smoothing', 'save'], ['assetPath'], ['nodeName', 'inserted', 'dopplerIntensity', 'smoothing', 'rootNodeClass', 'drivesNode', 'saved'], ['inserted']),
     ['doppler effect', 'pitch shift moving sound']),
   a('set_cue_concurrency', 'Assign concurrency settings to a Sound Cue.', ['assetPath', 'concurrencyPath', 'save'], ['assetPath']),
-  a('set_dialogue_context', 'Add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays.', ['assetPath', 'speakerPath', 'targetVoices', 'soundWavePath', 'localizationKeyFormat', 'replace', 'save'], ['assetPath']),
+  withTopics(a('set_dialogue_context', 'Add a context mapping to a Dialogue Wave: who speaks it, to whom, and which SoundWave plays.', ['assetPath', 'speakerPath', 'targetVoices', 'soundWavePath', 'localizationKeyFormat', 'replace', 'save'], ['assetPath']), ['link sound to speaker']),
   a('set_sound_attenuation', 'Create or update sound attenuation settings.', ['name', 'path', 'innerRadius', 'falloffDistance', 'attenuationShape', 'falloffMode', 'save'], ['name'], ['assetPath'], ['assetPath']),
 ];

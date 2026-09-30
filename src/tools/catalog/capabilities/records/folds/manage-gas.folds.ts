@@ -5,7 +5,7 @@ export const MANAGE_GAS_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_gas_asset', selector: 'kind',
     summary: 'Create a Gameplay Ability System asset: gameplay ability, gameplay effect, attribute set, gameplay cue notify, execution calculation.',
-    topics: ['gameplay ability', 'gameplay effect', 'attribute set', 'gameplay cue', 'execution calculation'],
+    topics: ['gameplay ability', 'gameplay effect', 'attribute set', 'gameplay cue', 'execution calculation', 'make an ability'],
     members: {
       gameplay_ability: 'create_gameplay_ability', gameplay_effect: 'create_gameplay_effect', attribute_set: 'create_attribute_set',
       gameplay_cue_notify: 'create_gameplay_cue_notify', execution_calculation: 'create_execution_calculation',
@@ -32,7 +32,7 @@ export const MANAGE_GAS_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'configure_attribute_set', selector: 'setting',
     summary: 'Configure an attribute set: add an attribute or set its base value.',
-    topics: ['attribute', 'attribute base value'],
+    topics: ['attribute', 'attribute base value', 'add health attribute', 'health attribute'],
     members: { add_attribute: 'add_attribute', base_value: 'set_attribute_base_value' },
   },
   {

@@ -74,14 +74,15 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
     }
 
     // Entries live in the generic asset's property map (LootEntry_<n> = "ItemPath=...;Weight=...").
-    const int32 EntryIndex = LootTable->Properties.Num();
+    // n is one past the highest existing suffix: the map size repeats a live key after a removal.
+    const int32 EntryIndex = NextIndexedPropertyIndex(LootTable->Properties, TEXT("LootEntry_"));
     LootTable->Properties.Add(FString::Printf(TEXT("LootEntry_%d"), EntryIndex),
         FString::Printf(TEXT("ItemPath=%s;Weight=%s;MinQuantity=%d;MaxQuantity=%d"),
                         *ItemPath, *FString::SanitizeFloat(Weight), MinQuantity, MaxQuantity));
 
     LootTable->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(LootTable);
     }
 
@@ -176,7 +177,7 @@ bool HandleInventoryLootTableActions(UMcpAutomationBridgeSubsystem& Bridge, cons
 
     LootTable->MarkPackageDirty();
 
-    if (GetJsonBoolField(Payload, TEXT("save"), false)) {
+    if (GetJsonBoolField(Payload, TEXT("save"), true)) {
       McpSafeAssetSave(LootTable);
     }
 

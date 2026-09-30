@@ -15,6 +15,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
     schema({ name: str('Render target name.'), packagePath: str('Package path (default /Game/Textures).'), renderTargetPath: str('Full asset path, e.g. /Game/RenderTargets/RT_Capture; replaces name and packagePath.'), width: num('Width in pixels.'), height: num('Height in pixels.'), format: str('Pixel format.'), save: bool('Save after creation. Defaults to true.') }, [], ['name', 'renderTargetPath']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { dispatchAction: 'manage_texture',
+      topics: ['make render target'],
       whenToUse: [
         'A scene capture, or a Blueprint that draws to a texture, needs a render target asset to render into.',
         'A render target of a chosen size and pixel format must exist at a /Game path; one already there is reported, not replaced.',
@@ -105,7 +106,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Re-prefix every mesh in a folder', { folderPath: '/Game/Meshes', searchText: 'Mesh_', replaceText: 'SM_', checkoutFiles: true }, { success: true })] }
   ),
   r('bulk_delete', 'asset', 'Delete multiple assets by folder or explicit paths.',
-    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths to delete.'), showConfirmation: bool('Show confirmation prompt.'), fixupRedirectors: bool('Fix up redirectors left behind by the deletion.') }, [], ['assetPaths', 'folderPath']),
+    schema({ folderPath: str('Folder path for bulk operation.'), assetPaths: arr('Explicit asset paths to delete.'), fixupRedirectors: bool('Default true. After a delete that removed something, resolve the redirectors that already exist in the folders the assets were deleted from, subfolders included: their referencers are re-pointed and re-saved, then the redirectors nothing points at any more are removed. Deleting creates no redirectors, so this only cleans older ones.') }, [], ['assetPaths', 'folderPath']),
     OK, DESTRUCTIVE, DESTRUCTIVE_POLICY, HIGH,
     { dispatchAction: 'bulk_delete',
       whenToUse: [
@@ -116,7 +117,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
         'Assets that other assets still use must be kept, with the blocked ones reported (use asset.delete).',
         'The folder itself must be removed as well as its assets (use asset.delete with the folder path).',
       ],
-      examples: [ex('Delete two obsolete assets and clean redirectors', { assetPaths: ['/Game/MCPTest/OldA', '/Game/MCPTest/OldB'], showConfirmation: false, fixupRedirectors: true }, { success: true })] }
+      examples: [ex('Delete two obsolete assets and clean redirectors', { assetPaths: ['/Game/MCPTest/OldA', '/Game/MCPTest/OldB'], fixupRedirectors: true }, { success: true })] }
   ),
   r('source_control_checkout', 'asset', 'Check out assets in source control.',
     schema({ assetPath: ASSET_PATH, paths: arr('Asset paths to check out.') }, []),

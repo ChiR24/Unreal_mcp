@@ -1,6 +1,7 @@
 // Asset query/analysis records: dependency graphs, source control state,
-// metadata, tags, validation, redirectors, thumbnails, reports, and the
-// analyze_graph/get_asset_graph transport divergence.
+// metadata, tags, validation, redirectors, thumbnails, reports, and the two
+// graph capabilities (analyze_graph reads the nodes inside one asset,
+// get_asset_graph walks package references).
 
 import type { RecordSpec } from './builder.js';
 import { arr, arrObj, bool, ex, LOW, MEDIUM, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
@@ -74,8 +75,7 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
   r('analyze_graph', 'asset', 'Analyze the node graph inside a material or Blueprint asset.',
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
     ANALYZE_GRAPH_OK, READ, READ_POLICY, MEDIUM,
-    { dispatchAction: 'get_asset_graph',
-      whenToUse: ['A material or Blueprint must be summarised: node counts, parameters, blend mode or graph count.'],
+    { whenToUse: ['A material or Blueprint must be summarised: node counts, parameters, blend mode or graph count.'],
       whenNotToUse: ['One Blueprint\'s variables, functions or components are wanted (use blueprint.get_blueprint).'],
       examples: [ex('Inspect a material\'s expression graph', { assetPath: '/Game/Materials/M_Base' },
         { success: true, graphType: 'Material', nodeCount: 4, parameterCount: 2, blendMode: 'BLEND_Opaque' })] }
@@ -101,23 +101,24 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Render a 256x256 thumbnail', { assetPath: '/Game/Meshes/SM_Crate', width: 256, height: 256 }, { success: true })] }
   ),
 
-  r('set_tags', 'asset', 'Set tags on an asset.',
-    schema({ assetPath: ASSET_PATH, tags: arr('Tags to set.') }, ['assetPath', 'tags']),
+  r('set_tags', 'asset', 'Set tags on an asset, stored as package metadata: each tag name is written with the value "true".',
+    schema({ assetPath: ASSET_PATH, tags: arr('Tag names to set; each is written as package metadata with the value "true".') }, ['assetPath', 'tags']),
     OK, WRITE, WRITE_POLICY, LOW,
     { dispatchAction: 'set_tags',
       whenToUse: ['Simple labels such as Reviewed or Prop must be attached to an asset as package metadata; the change stays unsaved until the asset is saved.'],
       whenNotToUse: [
         'Actors in a level need a tag (use control_actor.add_tag).',
-        'Assets carrying the tag must be found afterwards (asset.query_asset lookup=by_tag sees it only if the tag is registered in project settings).',
+        'Assets must be found by the tag afterwards. asset.query_asset lookup=by_tag reads the asset registry, which carries a package-metadata tag only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry and the asset has been saved; otherwise it finds nothing.',
+        'The tags on an asset must be read back (use asset.inspect_asset lookup=metadata, which lists them under metadata at once).',
       ],
-      examples: [ex('Tag an asset for review', { assetPath: '/Game/Meshes/SM_Crate', tags: ['Reviewed', 'Prop'] }, { success: true })] }
+      examples: [ex('Tag an asset for review, as package metadata', { assetPath: '/Game/Meshes/SM_Crate', tags: ['Reviewed', 'Prop'] }, { success: true })] }
   ),
 
   r('get_metadata', 'asset', 'Retrieve metadata and tags for an asset.',
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
-    schema({ success: bool('Operation succeeded.'), assetPath: ASSET_PATH, tags: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Asset Registry tags (key-value).' }, metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Custom package metadata (key-value).' } }, ['success']),
+    schema({ success: bool('Operation succeeded.'), assetPath: ASSET_PATH, tags: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Asset Registry tags (key-value). A tag written by set_tags appears here only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry.' }, metadata: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Package metadata (key-value): what set_metadata wrote, and each set_tags tag as its name with the value "true".' } }, ['success']),
     READ, READ_POLICY, LOW,
-    { whenToUse: ['What was recorded on an asset must be read back: its registry tags and the package metadata that asset.set_metadata writes.'],
+    { whenToUse: ['What was recorded on an asset must be read back: its registry tags and the package metadata that asset.set_metadata writes, tags included (a tag set with kind=tags shows under metadata as "true").'],
       whenNotToUse: ['The asset\'s own values are wanted, such as a texture size or material parameters (use texture.get_texture_info or material.get_material_info).'],
       examples: [ex('Read metadata for a mesh', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true, assetPath: '/Game/Meshes/SM_Crate', metadata: { Author: 'ArtTeam' } })] }
   ),
@@ -134,12 +135,12 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Record authoring provenance', { assetPath: '/Game/Meshes/SM_Crate', metadata: { Author: 'ArtTeam', Revision: '3' } }, { success: true })] }
   ),
 
-  r('validate', 'asset', 'Validate an asset for errors.',
+  r('validate', 'asset', 'Confirm an asset exists and loads. It runs no content, reference or data checks.',
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
     OK, READ, READ_POLICY, MEDIUM,
-    { whenToUse: ['An asset must be confirmed to exist and load before other calls rely on it.'],
+    { whenToUse: ['An asset must be confirmed to exist and load before other calls rely on it (no content, reference or data checks are run).'],
       whenNotToUse: ['Every asset in a folder must be checked for load errors (use system_control.validate_assets).'],
-      examples: [ex('Validate a material before submit', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
+      examples: [ex('Confirm a material exists and loads', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
   ),
 
   r('fixup_redirectors', 'asset', 'Fix up redirector assets in a directory.',
@@ -160,12 +161,12 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Refresh the Blueprints after a class rename', { folderPath: '/Game/Blueprints' }, { success: true })] }
   ),
 
-  r('find_by_tag', 'asset', 'Find /Game assets whose asset-registry tag matches (optionally a value).',
-    schema({ tag: str('Tag name to search for.'), value: str('Optional tag value.') }, ['tag']),
+  r('find_by_tag', 'asset', 'Find /Game assets that carry an asset-registry tag, optionally with a given value (compared ignoring case).',
+    schema({ tag: str('Asset-registry tag name, for example ParentClass, which every Blueprint carries.'), value: str('Optional tag value to match, ignoring case.') }, ['tag']),
     OK, READ, READ_POLICY, LOW,
-    { whenToUse: ['Assets must be found across the project by name, class, folder or asset-registry tag.'],
+    { whenToUse: ['Assets under /Game must be found by an asset-registry tag, optionally with one value, such as the ParentClass tag every Blueprint carries. A tag written by asset.set_metadata with kind=tags is in the registry only when its name is listed under Project Settings > Asset Manager > Metadata Tags For Asset Registry and the asset has been saved; otherwise nothing matches (asset.inspect_asset lookup=metadata reads one asset).'],
       whenNotToUse: ['Actors placed in the open level must be found (use control_actor.find).'],
-      examples: [ex('Find every asset tagged Reviewed', { tag: 'Reviewed' }, { success: true })] }
+      examples: [ex('Find every Blueprint by its ParentClass registry tag', { tag: 'ParentClass' }, { success: true })] }
   ),
 
   r('generate_report', 'asset', 'Generate an asset report for a directory.',

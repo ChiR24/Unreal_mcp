@@ -68,16 +68,20 @@ inline void SetEnumResultFields(TSharedPtr<FJsonObject>& OutResult, bool bSucces
     OutResult = Result;
 }
 
+// Enum edits save unless the caller passes save:false, like DataTable and struct edits: an
+// unsaved enum change is gone after the next editor restart.
+inline bool EnumSaveRequested(const TSharedPtr<FJsonObject>& Params)
+{
+    return GetJsonBoolField(Params, TEXT("save"), true);
+}
+
 // Commit a UUserDefinedEnum mutation: refresh editor state, mark the package
-// dirty, and persist through the safe save wrapper when bSave is set.
-inline void FinalizeEnum(UUserDefinedEnum* Enum, bool bSave)
+// dirty, and persist through the safe save wrapper when bSave is set. True when it was saved.
+inline bool FinalizeEnum(UUserDefinedEnum* Enum, bool bSave)
 {
     Enum->PostEditChange();
     Enum->GetOutermost()->MarkPackageDirty();
-    if (bSave)
-    {
-        McpSafeAssetSave(Enum);
-    }
+    return bSave && McpSafeAssetSave(Enum);
 }
 
 // Resolve the enum from Params; on failure populate OutResult and set bHandled

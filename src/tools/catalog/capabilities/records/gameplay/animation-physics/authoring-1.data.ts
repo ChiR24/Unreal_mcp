@@ -137,7 +137,7 @@ export const ANIM_AUTHORED_1: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'low', plugins: ESU,
     exampleInput: { action: 'add_slot_node', blueprintPath: '/Game/ABP_Char', slotName: 'DefaultSlot' },
     exampleOutput: { success: true, message: 'Slot node added' } }),
-  buildRecord({ parentTool: T, id: `${T}.create_control_rig`, action: 'create_control_rig', family: F,
+  buildRecord({ parentTool: T, id: `${T}.create_control_rig`, action: 'create_control_rig', topics: ['control rig blueprint'], family: F,
     summary: 'Create a Control Rig asset.', whenToUse: ['Procedural rigging/IK needed (ControlRig).'], whenNotToUse: ['Use create_ik_rig.'],
     inputProps: { name: P.name, path: P.path, skeletonPath: P.skeletonPath, skeletalMeshPath: str('Skeletal mesh to build the rig from; wins over skeletonPath.'), modularRig: bool('Create a Modular Rig (UE 5.5+; older engines report modularRig false).'), save: A.save }, required: ['name'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: ['ControlRig', 'RigVM', 'EditorScriptingUtilities'],

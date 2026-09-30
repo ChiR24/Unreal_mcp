@@ -190,7 +190,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'read_log',
     domain: 'logs',
     family: 'logs',
-    topics: ['compile errors', 'build output', 'previous run', 'editor output'],
+    topics: ['compile errors', 'build output', 'previous run', 'editor output', 'check for errors', 'show errors', 'see game messages', 'what did the game print'],
     summary: 'Read the newest editor log lines (kept since editor start), filtered by text, category or minimum severity, or read the build (UnrealBuildTool), Live Coding or previous-run log instead; returns the lines and a match count.',
     whenToUse: [
       'A one-shot historical log read is needed: Live Coding or compile results, PIE warnings such as Accessed None, or the output of a console command that only logs (au.DumpActiveSounds).',
@@ -411,7 +411,7 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'validate_assets',
     domain: 'project',
     family: 'project',
-    topics: ['check they load', 'broken', 'fail to load', 'content folder'],
+    topics: ['check they load', 'broken', 'fail to load', 'content folder', 'find broken assets', 'verify assets'],
     summary: 'Check that assets load without error: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results (asset, directory or missing, with a message) and the checked and invalid counts.',
     whenToUse: ['Asset references must be validated before use.'],
     whenNotToUse: ['A single asset must be imported or created (use manage_asset).'],
