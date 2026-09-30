@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9825df0d8cd4eb3a",
+  "catalogRevision": "7624174eaedad58e",
   "recordCount": 389,
   "records": [
     {
@@ -31488,7 +31488,7 @@
           "watch actor move",
           "jump height"
         ],
-        "summary": "Read an actor's transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
+        "summary": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
         "whenToUse": [
           "readMode=transform: The current transform of an actor must be inspected.",
           "readMode=motion: A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.",
@@ -31738,7 +31738,7 @@
       },
       "examples": [
         {
-          "title": "Read an actor's transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
+          "title": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
           "input": {
             "action": "get_transform",
             "actorName": "Cube1",
@@ -31820,7 +31820,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "46cdf548307c9f6fa9e6ee8aebe6e251b695738b8fd665993b397e5855170f66",
-        "content": "aeab8e2e692b31e11165bc388d10861c1f592dff0d8dc7c23cc423f527c3a5b3"
+        "content": "3aa2af8deb614962c55eea4bb243ed7722a0a85b6d6e9d0ba0c635eb6dafed7c"
       }
     },
     {
