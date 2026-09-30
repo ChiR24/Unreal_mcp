@@ -1,3 +1,4 @@
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/Cinematics/McpAutomationBridge_SequenceCinematics.h"
 
 #if WITH_DEV_AUTOMATION_TESTS

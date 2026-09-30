@@ -22,6 +22,7 @@ bool Start(const FString& ListingId, const FString& EngineVersion,
 	TFunction<void(const FMcpFabAddResult&)> OnComplete);
 }
 #include "Misc/EngineVersion.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "Modules/ModuleManager.h"
 
 // FabDownloader.h / FabAssetsCache.h are Private (not includable) until UE 5.7.

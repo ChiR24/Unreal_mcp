@@ -2,7 +2,9 @@
 
 #include "McpFabImportWatcher.h"
 
+#include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Containers/Ticker.h"
 #include "Misc/ScopeLock.h"

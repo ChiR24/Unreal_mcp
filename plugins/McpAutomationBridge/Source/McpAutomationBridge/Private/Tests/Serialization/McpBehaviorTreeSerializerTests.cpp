@@ -15,6 +15,8 @@
 #if WITH_DEV_AUTOMATION_TESTS
 #include "BehaviorTree/BTNode.h"
 #include "BehaviorTree/Decorators/BTDecorator_DoesPathExist.h"
+#include "Dom/JsonObject.h"
+#include "Dom/JsonValue.h"
 #include "Misc/AutomationTest.h"
 
 namespace
