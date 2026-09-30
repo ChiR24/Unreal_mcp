@@ -44,7 +44,17 @@ function foldWord(word: string): string {
   return folded === 'remove' || folded === 'destroy' || folded === 'erase' ? 'delete' : folded;
 }
 
-const searchWords = (text: string): string[] => (text.toLowerCase().match(/[a-z0-9]+/gu) ?? []).map(foldWord);
+// Record text repeats across every query of a probe; re-tokenizing it per query word took the
+// 364-case plain probe past vitest's 10 s budget.
+const wordCache = new Map<string, string[]>();
+const searchWords = (text: string): string[] => {
+  let words = wordCache.get(text);
+  if (words === undefined) {
+    words = (text.toLowerCase().match(/[a-z0-9]+/gu) ?? []).map(foldWord);
+    wordCache.set(text, words);
+  }
+  return words;
+};
 const lastSegment = (id: string): string => id.slice(id.lastIndexOf('.') + 1);
 const containsWord = (text: string, word: string): boolean => searchWords(text).includes(word);
 const actionKey = (id: string): string => searchWords(lastSegment(id)).join('_');
@@ -103,8 +113,9 @@ function scoreRecord(record: NativeRecord, query: string, all: readonly string[]
   return score;
 }
 
+let records: readonly NativeRecord[] | undefined;
 function nativeRecords(): readonly NativeRecord[] {
-  return finalRegistryRecords().map((record: CapabilityRecord) => ({
+  return records ??= finalRegistryRecords().map((record: CapabilityRecord) => ({
     id: String(record.id),
     aliases: record.aliases.map(String),
     family: record.discovery.family,
