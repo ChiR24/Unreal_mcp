@@ -44,6 +44,8 @@ describe('handlers answer what they did', () => {
 
   // UEditorAssetLibrary's reads answer false or null for every path while Play In Editor runs, so
   // play_sound, a Blueprint class path, exists and the asset graph called a real asset missing.
+  // One pass over every plugin source file: 0.1 s alone, but over the 10 s default on a loaded
+  // machine (the suite's other whole-tree tests carry 60 s for the same reason).
   it('no handler reads an asset through UEditorAssetLibrary, which refuses every call during Play', () => {
     const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
       entry.isDirectory() ? walk(join(dir, entry.name)) : /\.(?:cpp|h)$/u.test(entry.name) ? [join(dir, entry.name)] : []);
@@ -53,7 +55,7 @@ describe('handlers answer what they did', () => {
     expect(offenders).toEqual([]);
     expect(code('AssetWorkflow', 'Analysis', 'McpAutomationBridge_AssetWorkflowMaterialGraph.cpp'))
       .toContain('McpAssetExists(SafeAssetPath, &AssetData)');
-  });
+  }, 60_000);
 
   // A GameMode whose Audio component plays MS_Music gave 0 matches for "MS_Music": object
   // references were skipped outright.

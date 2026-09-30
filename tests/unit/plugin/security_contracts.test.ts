@@ -205,11 +205,13 @@ describe('plugin security contracts', () => {
     expect(renderTargetSource).not.toContain('Width > 16384');
   });
 
+  // One pass over every plugin source file: 0.1 s alone, but over the 10 s default on a loaded
+  // machine (the suite's other whole-tree tests carry 60 s for the same reason).
   it('never calls UPackage::SavePackage outside the Safety wrappers', () => {
     const root = resolve(process.cwd(), 'plugins/McpAutomationBridge/Source');
     const offenders = readdirSync(root, { recursive: true, encoding: 'utf8' })
       .filter((file) => file.endsWith('.cpp') || file.endsWith('.h'))
       .filter((file) => readFileSync(resolve(root, file), 'utf8').includes('UPackage::SavePackage'));
     expect(offenders).toEqual([]);
-  });
+  }, 60_000);
 });

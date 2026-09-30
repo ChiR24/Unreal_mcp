@@ -226,6 +226,8 @@ describe('Task 40 Blocker 2 — path confinement canonicalizes before it checks'
     expect(pathScan()).not.toMatch(/StartsWith\(\s*TEXT\("\/Game\/"\)\s*\)/u);
   });
 
+  // One pass over every plugin source file: 0.1 s alone, but over the 10 s default on a loaded
+  // machine (the suite's other whole-tree tests carry 60 s for the same reason).
   it('the /Content alias mapping lives in exactly one shared place', () => {
     const canonical = readFileSync(
       resolve(PRIVATE_ROOT, 'Foundation/BridgeHelpers/Security', CANONICAL_HEADER),
@@ -242,7 +244,7 @@ describe('Task 40 Blocker 2 — path confinement canonicalizes before it checks'
       offenders,
       `these files still carry their own /Content alias literal: ${offenders.join(', ')}`
     ).toEqual([]);
-  });
+  }, 60_000);
 
   it('every converged site routes through the shared canonicalizer', () => {
     for (const rel of [...CONVERGED_EXECUTORS, ...CONVERGED_ALIAS_SITES]) {
