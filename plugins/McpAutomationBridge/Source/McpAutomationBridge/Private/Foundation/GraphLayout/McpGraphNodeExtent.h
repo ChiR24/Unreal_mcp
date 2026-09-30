@@ -166,35 +166,56 @@ inline FString AddNodePlacementFields(const TSharedPtr<FJsonObject>& Result, con
 // The free slot nearest (X, Y), tried on a lattice ring by ring (Chebyshev rings, so a ring's
 // corner can lose to the next ring's edge by a little). "Right of the pile" alone walked a node
 // placed in a crowded event row 24 piles along, then to the far right edge of the graph.
+// PreferDX (+1 right, -1 left, 0 either): a slot on the other side is taken only when the preferred
+// side has none within 4 more rings; a node run by a Branch landed up-left of it in a zig-zag chain.
 inline bool FindNearestFreeSlot(const UEdGraph* Graph, float X, float Y, float W, float H,
-	const UEdGraphNode* IgnoreNode, float& OutX, float& OutY)
+	const UEdGraphNode* IgnoreNode, float& OutX, float& OutY, int32 PreferDX = 0)
 {
 	constexpr float Step = 48.0f;
 	constexpr int32 MaxRings = 40;
+	constexpr int32 OtherSideGraceRings = 4;
+	struct FPick { int32 Distance = MAX_int32; float PosX = 0.0f; float PosY = 0.0f; };
 	TArray<FGraphNodeOccupant> Scratch;
+	FPick Fallback;
+	int32 FallbackRing = 0;
 	for (int32 Ring = 1; Graph != nullptr && Ring <= MaxRings; ++Ring)
 	{
-		int32 Best = MAX_int32;
+		FPick Same, Other;
 		for (int32 DX = -Ring; DX <= Ring; ++DX)
 		{
 			for (int32 DY = -Ring; DY <= Ring; ++DY)
 			{
 				const int32 Distance = DX * DX + DY * DY;
-				if (FMath::Max(FMath::Abs(DX), FMath::Abs(DY)) == Ring && Distance < Best &&
+				FPick& Pick = PreferDX * DX < 0 ? Other : Same;
+				if (FMath::Max(FMath::Abs(DX), FMath::Abs(DY)) == Ring && Distance < Pick.Distance &&
 					!CheckGraphNodeOverlap(Graph, X + DX * Step, Y + DY * Step, W, H, Scratch, NodeOverlapPadding, IgnoreNode))
 				{
-					Best = Distance;
-					OutX = X + DX * Step;
-					OutY = Y + DY * Step;
+					Pick = FPick{Distance, X + DX * Step, Y + DY * Step};
 				}
 			}
 		}
-		if (Best != MAX_int32)
+		if (Same.Distance != MAX_int32)
 		{
+			OutX = Same.PosX;
+			OutY = Same.PosY;
 			return true;
 		}
+		if (Other.Distance != MAX_int32 && FallbackRing == 0)
+		{
+			Fallback = Other;
+			FallbackRing = Ring;
+		}
+		if (FallbackRing != 0 && Ring >= FallbackRing + OtherSideGraceRings)
+		{
+			break;
+		}
 	}
-	return false;
+	if (FallbackRing != 0)
+	{
+		OutX = Fallback.PosX;
+		OutY = Fallback.PosY;
+	}
+	return FallbackRing != 0;
 }
 
 // Packs the refusal payload for NODE_OVERLAP: the requested slot, every

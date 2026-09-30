@@ -310,7 +310,7 @@ describe('build_graph settles auto-placed nodes beside what they are wired to', 
   it('records each auto-placed node and settles them after the last step, before the compile', () => {
     const placement = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
     expect(placement).toContain('State.AutoPlacedGuids.Add(CreatedGuid)');
-    expect(placement).toContain('FindNearestFreeSlot(Node->GetGraph(), Anchor.X, Anchor.Y, Width, Height, Node, X, Y)');
+    expect(placement).toContain('FindNearestFreeSlot(Node->GetGraph(), Anchor.X, Anchor.Y, Width, Height, Node, X, Y, PreferDX)');
     const batch = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
     const settle = batch.indexOf('SettleAutoPlacedNodes(Context.Blueprint, State)');
     expect(settle).toBeGreaterThan(-1);
@@ -323,6 +323,16 @@ describe('build_graph settles auto-placed nodes beside what they are wired to', 
     expect(placement).toContain('Best.bBetterPending = PendingRank < Best.Rank;');
     expect(placement).toContain('if (Anchor.bBetterPending && !bRelax)');
     expect(placement).toContain('Index < Pending.Num() && !(bRelax && bMoved)');
+  });
+
+  // In the HUD's zig-zag Tick chain, PlayAnimation run by a new Branch took the nearest free slot up-left of it.
+  it('a taken spot is replaced on the anchor side, the other side only when that side has none nearby', () => {
+    const placement = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchPlacement.cpp');
+    expect(placement).toContain('const int32 PreferDX = Anchor.Rank == 0 || Anchor.Rank == 3 ? 1 : -1;');
+    const layout = read('Foundation', 'GraphLayout', 'McpGraphNodeExtent.h');
+    expect(layout).toContain('const UEdGraphNode* IgnoreNode, float& OutX, float& OutY, int32 PreferDX = 0)');
+    expect(layout).toContain('FPick& Pick = PreferDX * DX < 0 ? Other : Same;');
+    expect(layout).toContain('Ring >= FallbackRing + OtherSideGraceRings');
   });
 
   it('the batch description says where an auto-placed node goes', () => {

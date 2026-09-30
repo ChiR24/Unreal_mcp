@@ -237,11 +237,14 @@ TArray<UEdGraphNode*> SettleAutoPlacedNodes(UBlueprint* Blueprint, const FBatchS
             McpGraphLayout::EstimateNodeExtent(*Node, Width, Height);
             float X = Anchor.X;
             float Y = Anchor.Y;
+            // A taken spot stays on the anchor's side: right of what runs or feeds the node, left of what
+            // reads it or what it runs.
+            const int32 PreferDX = Anchor.Rank == 0 || Anchor.Rank == 3 ? 1 : -1;
             TArray<McpGraphLayout::FGraphNodeOccupant> Occupants;
             if (Anchor.Rank == MAX_int32 ||
                 (McpGraphLayout::CheckGraphNodeOverlap(Node->GetGraph(), X, Y, Width, Height, Occupants,
                                                        McpGraphLayout::NodeOverlapPadding, Node) &&
-                 !McpGraphLayout::FindNearestFreeSlot(Node->GetGraph(), Anchor.X, Anchor.Y, Width, Height, Node, X, Y)))
+                 !McpGraphLayout::FindNearestFreeSlot(Node->GetGraph(), Anchor.X, Anchor.Y, Width, Height, Node, X, Y, PreferDX)))
             {
                 continue;
             }
