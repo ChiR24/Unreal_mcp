@@ -1,5 +1,6 @@
 
 #include "Domains/AssetWorkflow/Structs/McpAutomationBridge_AssetWorkflowStructsShared.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "UObject/ObjectRedirector.h"
 #include "AssetToolsModule.h"
 #include "IAssetTools.h"
@@ -102,7 +103,7 @@ static bool HandleStructAssetAction_Rename(UMcpAutomationBridgeSubsystem& Bridge
         if (!DestPath.IsEmpty())
         {
             const bool bIsFolder = DestPath.EndsWith(TEXT("/")) || UEditorAssetLibrary::DoesDirectoryExist(DestPath) ||
-                (!DestName.IsEmpty() && !UEditorAssetLibrary::DoesAssetExist(DestPath));
+                (!DestName.IsEmpty() && !McpAssetExists(DestPath));
             DupParentFolder = bIsFolder ? DestPath : FPaths::GetPath(DestPath);
             DupParentFolder.RemoveFromEnd(TEXT("/"));
             if (FinalName.IsEmpty())

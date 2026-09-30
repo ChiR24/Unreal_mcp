@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "Domains/Sequence/Metadata/McpAutomationBridge_SequenceMetadata.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
@@ -31,7 +32,7 @@ bool HandleGetMetadata(UMcpAutomationBridgeSubsystem *Subsystem,
         TEXT("INVALID_SEQUENCE"));
     return true;
   }
-  UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
+  UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!SeqObj) {
     Subsystem->SendAutomationResponse(Socket, RequestId, false,
                                       TEXT("Sequence not found"), nullptr,

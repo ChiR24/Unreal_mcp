@@ -86,7 +86,9 @@ inline bool McpActorMatchesListFilters(const AActor *Actor, const FString &Tag,
   if (!Tag.IsEmpty() && !Actor->ActorHasTag(FName(*Tag)))
     return false;
   if (!ClassName.IsEmpty()) {
-    FString Wanted = FPackageName::ObjectPathToObjectName(ClassName);
+    // GetShortName: a package path (/Game/Enemies/BP_Bug) has no object part, and
+    // ObjectPathToObjectName hands the whole path back, which matched no class.
+    FString Wanted = FPackageName::GetShortName(FPackageName::ObjectPathToObjectName(ClassName));
     Wanted.RemoveFromEnd(TEXT("_C"));
     bool bClassMatch = false;
     for (const UClass *Class = Actor->GetClass(); Class && !bClassMatch; Class = Class->GetSuperClass()) {

@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
 namespace McpAnimationAuthoring {
@@ -32,9 +33,9 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
 
     // Check if an asset already exists at the target path to prevent modal dialog
         FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
-        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+        if (McpAssetExists(ObjectPath))
         {
-            UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
+            UObject* ExistingAsset = McpLoadAsset(ObjectPath);
             if (ExistingAsset)
             {
                 if (Cast<UBlendSpace1D>(ExistingAsset))
@@ -139,9 +140,9 @@ TSharedPtr<FJsonObject> HandleBlendSpaceAssetActions(const FString& SubAction, c
 
     // Check if an asset already exists at the target path to prevent modal dialog
         FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
-        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+        if (McpAssetExists(ObjectPath))
         {
-            UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
+            UObject* ExistingAsset = McpLoadAsset(ObjectPath);
             if (ExistingAsset)
             {
                 if (Cast<UBlendSpace>(ExistingAsset))

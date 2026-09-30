@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/McpCompensationReceipt.h"
 #include "Misc/PackageName.h"
 
@@ -34,13 +35,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  if (!McpAssetExists(AssetPath)) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("ASSET_NOT_FOUND"),
                               TEXT("Asset not found"), nullptr);
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  UObject *Asset = McpLoadAsset(AssetPath);
   if (!Asset) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("LOAD_FAILED"),
                               TEXT("Failed to load asset"), nullptr);

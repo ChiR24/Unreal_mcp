@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
 FString McpSequence::ResolvePath(const TSharedPtr<FJsonObject> &Payload) {
@@ -12,8 +13,8 @@ FString McpSequence::ResolvePath(const TSharedPtr<FJsonObject> &Payload) {
     }
   }
   if (!Path.IsEmpty()) {
-    if (UEditorAssetLibrary::DoesAssetExist(Path)) {
-      UObject *Obj = UEditorAssetLibrary::LoadAsset(Path);
+    if (McpAssetExists(Path)) {
+      UObject *Obj = McpLoadAsset(Path);
       if (Obj) {
         return Obj->GetPathName();
       }

@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/Metadata/McpAutomationBridge_SequenceMetadata.h"
 
@@ -98,7 +99,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDuplicate(
   const bool bDestinationIsFolder =
       UEditorAssetLibrary::DoesDirectoryExist(DestinationPath) ||
       DestinationPath.EndsWith(TEXT("/")) ||
-      (!NewName.IsEmpty() && !UEditorAssetLibrary::DoesAssetExist(DestinationPath) &&
+      (!NewName.IsEmpty() && !McpAssetExists(DestinationPath) &&
        !FPaths::GetBaseFilename(DestinationPath).Equals(NewName, ESearchCase::IgnoreCase));
   if (!NewName.IsEmpty()) {
     DestinationPath = (bDestinationIsFolder ? DestinationPath : FPaths::GetPath(DestinationPath)) / NewName;
@@ -106,7 +107,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDuplicate(
     DestinationPath = DestinationPath / FPaths::GetBaseFilename(SourcePath);
   }
 
-  UObject *SourceSeq = UEditorAssetLibrary::LoadAsset(SourcePath);
+  UObject *SourceSeq = McpLoadAsset(SourcePath);
   if (!SourceSeq) {
     SendAutomationResponse(
         Socket, RequestId, false,
@@ -182,7 +183,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDelete(
                            TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  if (!UEditorAssetLibrary::DoesAssetExist(Path)) {
+  if (!McpAssetExists(Path)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("deletedPath"), Path);
     // A destructive call must say whether it removed anything (dogfood #119).
@@ -195,7 +196,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDelete(
   if (UEditorAssetLibrary::DeleteAsset(Path)) {
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("deletedPath"), Path);
-    Resp->SetBoolField(TEXT("existsAfter"), UEditorAssetLibrary::DoesAssetExist(Path));
+    Resp->SetBoolField(TEXT("existsAfter"), McpAssetExists(Path));
     SendAutomationResponse(Socket, RequestId, true,
                            TEXT("Sequence deleted successfully"), Resp,
                            FString());

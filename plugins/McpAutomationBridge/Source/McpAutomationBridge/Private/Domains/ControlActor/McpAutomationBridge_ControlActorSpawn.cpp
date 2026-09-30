@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Misc/PackageName.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
@@ -51,7 +52,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
       !ClassPath.StartsWith(TEXT("/Script/")) && !ClassPath.EndsWith(TEXT("_C"))) {
     const FString SafeClassPath = SanitizeProjectRelativePath(ClassPath);
     if (!SafeClassPath.IsEmpty()) {
-      if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(SafeClassPath)) {
+      if (UObject *Loaded = McpLoadAsset(SafeClassPath)) {
         if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
           ResolvedClass = BP->GeneratedClass;
         else if (UClass *C = Cast<UClass>(Loaded))
@@ -67,7 +68,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     ResolvedClass = ResolveClassByName(ClassPath);
 
   // If explicit mesh path provided for a general spawn request. Try a robust
-  // resolution chain: UEditorAssetLibrary::LoadAsset first, then a completed
+  // resolution chain: the asset registry (McpLoadAsset) first, then a completed
   // LoadObject with the short-name object path ("/pkg/path.AssetName"), then
   // FSoftObjectPath::TryLoad — engine content such as
   // /Engine/BasicShapes/Cube.Cube has been observed to fail the first path
@@ -75,7 +76,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   if (!ResolvedStaticMesh && !ResolvedSkeletalMesh && !MeshPath.IsEmpty()) {
     const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
     if (!SafeMeshPath.IsEmpty()) {
-      UObject *MeshObj = UEditorAssetLibrary::LoadAsset(SafeMeshPath);
+      UObject *MeshObj = McpLoadAsset(SafeMeshPath);
       if (!MeshObj) {
         MeshObj = LoadObject<UObject>(nullptr, *SafeMeshPath);
       }

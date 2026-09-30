@@ -48,8 +48,8 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
 
   for (const FString &AssetPath : AssetPaths) {
     const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
-    if (!SafeAssetPath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
-      if (UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath)) {
+    if (!SafeAssetPath.IsEmpty() && McpAssetExists(SafeAssetPath)) {
+      if (UObject *Asset = McpLoadAsset(SafeAssetPath)) {
         ObjectsToDelete.Add(Asset);
         ValidPaths.Add(SafeAssetPath);
       }
@@ -98,7 +98,7 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkDeleteAssets(
   TArray<TSharedPtr<FJsonValue>> DeletedArray;
   TArray<TSharedPtr<FJsonValue>> RemainingArray;
   for (const FString &Path : ValidPaths) {
-    const bool bGone = !UEditorAssetLibrary::DoesAssetExist(Path);
+    const bool bGone = !McpAssetExists(Path);
     (bGone ? DeletedArray : RemainingArray)
         .Add(MakeShared<FJsonValueString>(Path));
   }

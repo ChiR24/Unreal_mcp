@@ -60,7 +60,7 @@ TAsset* LoadPCGAsset(const FString& RawPath, const TCHAR* Label, FString& OutPat
         return nullptr;
     }
     OutPath = Normalized.Path;
-    UObject* Loaded = UEditorAssetLibrary::LoadAsset(OutPath);
+    UObject* Loaded = McpLoadAsset(OutPath);
     TAsset* Asset = Cast<TAsset>(Loaded ? Loaded : StaticLoadObject(TAsset::StaticClass(), nullptr, *ToObjectPath(OutPath)));
     if (!Asset)
     {

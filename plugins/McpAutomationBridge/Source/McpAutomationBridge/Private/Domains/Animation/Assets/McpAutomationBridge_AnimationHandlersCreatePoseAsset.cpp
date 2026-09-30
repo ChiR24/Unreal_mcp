@@ -22,7 +22,7 @@ bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context, const TShar
     return false;
   }
   const FString AssetPath = Folder / SanitizeAssetName(Name);
-  if (UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  if (McpAssetExists(AssetPath)) {
     Context.Fail(TEXT("ASSET_EXISTS"), FString::Printf(TEXT("'%s' already exists; pick another name or delete it first."), *AssetPath));
     return false;
   }

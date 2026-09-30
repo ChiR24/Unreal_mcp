@@ -86,7 +86,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetSourceControlState(
     }
 
     // Check if asset exists
-    if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+    if (!McpAssetExists(SafeAssetPath)) {
       StateObj->SetBoolField(TEXT("exists"), false);
       StateObj->SetStringField(TEXT("state"), TEXT("not_found"));
       StatesArray.Add(MakeShared<FJsonValueObject>(StateObj));

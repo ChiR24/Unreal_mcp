@@ -79,8 +79,8 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
       continue;
     }
 
-    if (UEditorAssetLibrary::DoesAssetExist(SafePath)) {
-      UObject* Asset = UEditorAssetLibrary::LoadAsset(SafePath);
+    if (McpAssetExists(SafePath)) {
+      UObject* Asset = McpLoadAsset(SafePath);
       AddValidationResult(
           SafePath, Asset != nullptr, TEXT("asset"),
           Asset ? TEXT("Asset loaded successfully")
@@ -95,7 +95,7 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
           UEditorAssetLibrary::ListAssets(SafePath, bRecursive, false);
       TArray<FString> Failed;
       for (const FString& AssetPath : Assets) {
-        if (!UEditorAssetLibrary::LoadAsset(AssetPath)) {
+        if (!McpLoadAsset(AssetPath)) {
           Failed.Add(AssetPath);
         }
       }

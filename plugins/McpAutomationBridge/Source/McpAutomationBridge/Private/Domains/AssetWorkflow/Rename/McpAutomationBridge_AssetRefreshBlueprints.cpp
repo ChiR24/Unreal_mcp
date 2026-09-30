@@ -5,6 +5,7 @@
 // cached node titles keep the old class. The editor's Refresh All Nodes fixes one Blueprint at a time.
 
 #include "Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowBulkSelection.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/AssetWorkflow/Rename/McpAutomationBridge_AssetRenameGuard.h"
 #include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetSaveRegistry.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintDiagnostics.h"
@@ -31,7 +32,7 @@ bool HandleRefreshBlueprints(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
     {
         const FString Safe = SanitizeProjectRelativePath(Path);
         // Widget and Animation Blueprints are Blueprints too; every other asset has no nodes.
-        UBlueprint* Blueprint = Safe.IsEmpty() ? nullptr : Cast<UBlueprint>(UEditorAssetLibrary::LoadAsset(Safe));
+        UBlueprint* Blueprint = Safe.IsEmpty() ? nullptr : Cast<UBlueprint>(McpLoadAsset(Safe));
         if (!Blueprint)
         {
             continue;

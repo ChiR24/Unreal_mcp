@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Foliage/McpAutomationBridge_FoliageHandlersPrivate.h"
 
 namespace McpFoliageHandlers {
@@ -37,13 +38,13 @@ AInstancedFoliageActor* GetOrCreateFoliageActorForWorldSafe(UWorld* World, bool 
 UFoliageType* ResolveFoliageTypeOrMesh(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
                                        TSharedPtr<FMcpBridgeWebSocket> Socket, FString& InOutPath)
 {
-  UFoliageType* Type = UEditorAssetLibrary::DoesAssetExist(InOutPath)
+  UFoliageType* Type = McpAssetExists(InOutPath)
                            ? LoadObject<UFoliageType>(nullptr, *InOutPath) : nullptr;
   UStaticMesh* Mesh = Type ? nullptr : LoadObject<UStaticMesh>(nullptr, *InOutPath, nullptr, LOAD_NoWarn);
   if (Mesh) {
     // The asset shares its package's name, so the next call finds and reuses it.
     const FString AutoPath = FString::Printf(TEXT("/Game/Foliage/Auto_%s"), *FPaths::GetBaseFilename(InOutPath));
-    Type = UEditorAssetLibrary::DoesAssetExist(AutoPath) ? LoadObject<UFoliageType>(nullptr, *AutoPath) : nullptr;
+    Type = McpAssetExists(AutoPath) ? LoadObject<UFoliageType>(nullptr, *AutoPath) : nullptr;
     if (!Type) {
       UFoliageType_InstancedStaticMesh* AutoType = NewObject<UFoliageType_InstancedStaticMesh>(
           CreatePackage(*AutoPath), FName(*FPackageName::GetShortName(AutoPath)), RF_Public | RF_Standalone);

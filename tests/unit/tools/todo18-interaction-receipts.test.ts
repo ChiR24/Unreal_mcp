@@ -98,9 +98,9 @@ describe('todo18 BB-009a: duplicate create_interactable_interface refuses before
   const iface = (): string =>
     code(nativeSource('Domains', 'Interaction', 'McpAutomationBridge_InteractionHandlersInterface.cpp'));
 
-  it('checks DoesAssetExist BEFORE CreatePackage', () => {
+  it('checks McpAssetExists BEFORE CreatePackage', () => {
     const source = iface();
-    const doesExist = source.indexOf('DoesAssetExist');
+    const doesExist = source.indexOf('McpAssetExists(');
     const createPackage = source.indexOf('CreatePackage');
 
     expect(doesExist).toBeGreaterThan(-1);

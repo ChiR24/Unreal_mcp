@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Domains/GAS/McpAutomationBridge_GASAssetValidation.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/GAS/McpAutomationBridge_GASRequestContext.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
@@ -42,9 +43,9 @@ static inline UBlueprint* CreateGASBlueprint(
     }
 
     const FString FullAssetPath = PackageName + TEXT(".") + SanitizedName;
-    if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath))
+    if (McpAssetExists(FullAssetPath))
     {
-        UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+        UObject* ExistingAsset = McpLoadAsset(FullAssetPath);
         if (!ExistingAsset)
         {
             OutError = FString::Printf(TEXT("Failed to load existing asset: %s"), *FullAssetPath);

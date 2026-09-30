@@ -2,7 +2,7 @@
 // echoed the request, a debug field, a modal dialog nobody can answer. Wiring contracts only;
 // behaviour needs an editor (tests/mcp-tools/**).
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -42,12 +42,17 @@ describe('handlers answer what they did', () => {
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersCombine.cpp')).toContain('OutputTexture->SRGB = BaseTex->SRGB;');
   });
 
-  // UEditorAssetLibrary::DoesAssetExist answers false for every path while Play In Editor runs, so
-  // exists, dependencies and the asset graph called a real asset missing during play.
-  it('asset exists, dependencies and graph read the asset registry, which works during Play', () => {
-    const source = code('AssetWorkflow', 'Analysis', 'McpAutomationBridge_AssetWorkflowDependencies.cpp');
-    expect(source).not.toContain('UEditorAssetLibrary');
-    expect(source.match(/McpAssetExists\(/gu)?.length ?? 0).toBeGreaterThanOrEqual(4);
+  // UEditorAssetLibrary's reads answer false or null for every path while Play In Editor runs, so
+  // play_sound, a Blueprint class path, exists and the asset graph called a real asset missing.
+  it('no handler reads an asset through UEditorAssetLibrary, which refuses every call during Play', () => {
+    const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory() ? walk(join(dir, entry.name)) : /\.(?:cpp|h)$/u.test(entry.name) ? [join(dir, entry.name)] : []);
+    const offenders = walk(join(DOMAINS, '..'))
+      .filter((file) => /UEditorAssetLibrary::(?:DoesAssetExist|LoadAsset|FindAssetData|LoadBlueprintClass)\(/u
+        .test(readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ')));
+    expect(offenders).toEqual([]);
+    expect(code('AssetWorkflow', 'Analysis', 'McpAutomationBridge_AssetWorkflowMaterialGraph.cpp'))
+      .toContain('McpAssetExists(SafeAssetPath, &AssetData)');
   });
 
   // A GameMode whose Audio component plays MS_Music gave 0 matches for "MS_Music": object

@@ -39,6 +39,13 @@ const DECLARING_HEADERS: readonly string[] = [
   'Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h',
 ];
 
+/** The asset registry reads that replaced UEditorAssetLibrary's, which refuse every call during Play. */
+const ASSET_HELPERS = /\b(?:McpAssetExists|McpLoadAsset)\s*\(/u;
+const ASSET_HEADERS: readonly string[] = [
+  'Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h',
+  'Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h',
+];
+
 const INCLUDE = /#include\s+"([^"]+)"/gu;
 
 const collectSources = (directory: string, out: Map<string, string>): void => {
@@ -58,14 +65,18 @@ const sources = new Map<string, string>();
 collectSources(privateRoot, sources);
 
 /** Walks a file's include graph, resolving only includes rooted at Private/. */
-const reachesDeclaringHeader = (path: string, seen = new Set<string>()): boolean => {
+const reachesDeclaringHeader = (
+  path: string,
+  headers: readonly string[] = DECLARING_HEADERS,
+  seen = new Set<string>(),
+): boolean => {
   if (seen.has(path)) return false;
   seen.add(path);
   const body = sources.get(path);
   if (body === undefined) return false;
   for (const [, included] of body.matchAll(INCLUDE)) {
-    if (DECLARING_HEADERS.includes(included)) return true;
-    if (sources.has(included) && reachesDeclaringHeader(included, seen)) return true;
+    if (headers.includes(included)) return true;
+    if (sources.has(included) && reachesDeclaringHeader(included, headers, seen)) return true;
   }
   return false;
 };
@@ -90,5 +101,11 @@ describe('plugin translation units do not borrow declarations from unity-blob ne
       'these compile only while a unity-blob neighbour includes the helpers for them; ' +
         `include one of ${DECLARING_HEADERS.join(' or ')} from the file or its domain prelude`,
     ).toEqual([]);
+  });
+
+  it('every user of the asset registry reads includes the header that declares them', () => {
+    const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && ASSET_HELPERS.test(body));
+    expect(users.length).toBeGreaterThan(50);
+    expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, ASSET_HEADERS)).sort()).toEqual([]);
   });
 });

@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -39,7 +40,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
                          BlueprintPath.Contains(TEXT("/")))) {
     const FString SafeBlueprintPath = SanitizeProjectRelativePath(BlueprintPath);
     if (!SafeBlueprintPath.IsEmpty()) {
-      if (UObject *Loaded = UEditorAssetLibrary::LoadAsset(SafeBlueprintPath)) {
+      if (UObject *Loaded = McpLoadAsset(SafeBlueprintPath)) {
         if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
           ResolvedClass = BP->GeneratedClass;
         else if (UClass *C = Cast<UClass>(Loaded))

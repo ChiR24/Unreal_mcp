@@ -30,6 +30,15 @@ static inline bool McpAssetExists(const FString &Path, FAssetData *OutData = nul
   return true;
 }
 
+// The asset at this path, loaded when it is not in memory yet; nullptr when there
+// is none. UEditorAssetLibrary::LoadAsset refuses the same way during PIE, so a
+// sound, class or Blueprint path used while the game ran read as missing.
+static inline UObject *McpLoadAsset(const FString &Path) {
+  FAssetData Data;
+  UObject *Asset = McpAssetExists(Path, &Data) ? Data.GetAsset() : nullptr;
+  return IsValid(Asset) ? Asset : nullptr;
+}
+
 static inline bool FindBlueprintNormalizedPath(const FString &Req,
                                                FString &OutNormalized) {
   OutNormalized.Empty();

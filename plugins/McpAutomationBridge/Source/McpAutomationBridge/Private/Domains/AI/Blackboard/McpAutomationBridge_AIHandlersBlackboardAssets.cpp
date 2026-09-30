@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "BehaviorTree/BlackboardData.h"
@@ -73,7 +74,7 @@ bool HandleCreateBlackboard(UMcpAutomationBridgeSubsystem* Self, const FString& 
         return true;
     }
 
-    if (UEditorAssetLibrary::DoesAssetExist(SanitizedPath))
+    if (McpAssetExists(SanitizedPath))
     {
         TSharedPtr<FJsonObject> ExistResult = McpHandlerUtils::CreateResultObject();
         // dogfood #66: object path like create_behavior_tree, plus the package path

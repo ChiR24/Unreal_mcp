@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #if MCP_HAS_MOVIE_RENDER_PIPELINE
 
@@ -43,7 +44,7 @@ bool HandleCreateRenderJob(UMcpAutomationBridgeSubsystem *Subsystem,
   const FString SequencePath =
       GetCreationString(Payload, TEXT("sequencePath"), TEXT("path"));
   ULevelSequence *Sequence =
-      Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SequencePath));
+      Cast<ULevelSequence>(McpLoadAsset(SequencePath));
   if (!Sequence)
     return SendError(Subsystem, RequestId, Socket,
                      TEXT("create_render_job requires a valid sequencePath."),
@@ -62,7 +63,7 @@ bool HandleCreateRenderJob(UMcpAutomationBridgeSubsystem *Subsystem,
   const FString MapPath = GetCreationString(Payload, TEXT("mapPath"));
   if (!MapPath.IsEmpty()) {
     UWorld *MapAsset =
-        Cast<UWorld>(UEditorAssetLibrary::LoadAsset(MapPath));
+        Cast<UWorld>(McpLoadAsset(MapPath));
     if (!MapAsset)
       return SendError(Subsystem, RequestId, Socket,
                        FString::Printf(TEXT("Map is not a valid UWorld: %s"),

@@ -1,4 +1,5 @@
 #include "Domains/Sequence/Cinematics/McpAutomationBridge_SequenceCinematics.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceFrameRate.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
@@ -66,8 +67,8 @@ bool HandleCreateMasterSequence(const TSharedPtr<FJsonObject> &Params,
   }
   FullPath = WritablePath;
   Folder = FPackageName::GetLongPackagePath(FullPath);
-  if (UEditorAssetLibrary::DoesAssetExist(FullPath)) {
-    UObject *Existing = UEditorAssetLibrary::LoadAsset(FullPath);
+  if (McpAssetExists(FullPath)) {
+    UObject *Existing = McpLoadAsset(FullPath);
     ULevelSequence *ExistingSequence = Cast<ULevelSequence>(Existing);
     if (!ExistingSequence || !ExistingSequence->GetMovieScene()) {
       OutResult = MakeResult(

@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
@@ -75,7 +76,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
       NormalizeSequenceTransformAlias(LocalPayload, PropertyName, TEXT("Scale"),
                                       TEXT("scale"));
 
-  UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
+  UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
                            nullptr, TEXT("INVALID_SEQUENCE"));

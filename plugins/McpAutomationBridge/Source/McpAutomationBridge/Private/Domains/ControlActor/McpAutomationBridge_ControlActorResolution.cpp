@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath,
                                        FString &OutResolvedPath,
@@ -13,7 +14,7 @@ UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath,
   }
 
   OutResolvedPath = SafeMaterialPath;
-  UObject *Loaded = UEditorAssetLibrary::LoadAsset(SafeMaterialPath);
+  UObject *Loaded = McpLoadAsset(SafeMaterialPath);
   UMaterialInterface *Material = Cast<UMaterialInterface>(Loaded);
   if (!Material) {
     Material = LoadObject<UMaterialInterface>(nullptr, *SafeMaterialPath);

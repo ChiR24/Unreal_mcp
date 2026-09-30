@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
 
@@ -148,10 +149,10 @@ bool AuthorProceduralNiagaraSystem(
     bool bCreated = false;
     FString EmitterName;
     UNiagaraSystem* System = nullptr;
-    if (UEditorAssetLibrary::DoesAssetExist(PackageName))
+    if (McpAssetExists(PackageName))
     {
         // Re-running the creator reuses the authored asset instead of colliding with it.
-        System = Cast<UNiagaraSystem>(UEditorAssetLibrary::LoadAsset(PackageName));
+        System = Cast<UNiagaraSystem>(McpLoadAsset(PackageName));
         if (!System)
         {
             OutError = FString::Printf(TEXT("%s exists and is not a Niagara system"), *PackageName);

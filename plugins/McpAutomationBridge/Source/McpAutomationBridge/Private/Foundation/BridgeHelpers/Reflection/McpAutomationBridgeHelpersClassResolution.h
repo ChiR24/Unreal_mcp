@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Misc/PackageName.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "UObject/UObjectIterator.h"
@@ -83,7 +84,7 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   if (ClassNameOrPath.EndsWith(TEXT("_C")) && ClassNameOrPath.Contains(TEXT("/"))) {
     if (UClass *Generated = FindObject<UClass>(nullptr, *ClassNameOrPath))
       return Generated;
-    if (UObject *Asset = UEditorAssetLibrary::LoadAsset(ClassNameOrPath.LeftChop(2))) {
+    if (UObject *Asset = McpLoadAsset(ClassNameOrPath.LeftChop(2))) {
       if (UBlueprint *BP = Cast<UBlueprint>(Asset))
         return BP->GeneratedClass;
     }
@@ -93,7 +94,7 @@ static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   if ((ClassNameOrPath.StartsWith(TEXT("/")) ||
        ClassNameOrPath.Contains(TEXT("/"))) &&
       !ClassNameOrPath.StartsWith(TEXT("/Script/"))) {
-    UObject *Loaded = UEditorAssetLibrary::LoadAsset(ClassNameOrPath);
+    UObject *Loaded = McpLoadAsset(ClassNameOrPath);
     if (Loaded) {
       if (UBlueprint *BP = Cast<UBlueprint>(Loaded))
         return BP->GeneratedClass;

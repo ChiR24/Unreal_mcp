@@ -5,7 +5,7 @@
 #include "Domains/AssetWorkflow/Analysis/Shared.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "EditorAssetLibrary.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Materials/Material.h"
 
 TSharedPtr<FJsonObject> McpTryBuildMaterialGraphResponse(
@@ -13,8 +13,8 @@ TSharedPtr<FJsonObject> McpTryBuildMaterialGraphResponse(
     int32 MaxDepth,
     bool& bTruncated)
 {
-    FAssetData AssetData = UEditorAssetLibrary::FindAssetData(SafeAssetPath);
-    if (!AssetData.IsValid()) { return nullptr; }
+    FAssetData AssetData;
+    if (!McpAssetExists(SafeAssetPath, &AssetData)) { return nullptr; }
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
     const bool bIsMaterialClass =

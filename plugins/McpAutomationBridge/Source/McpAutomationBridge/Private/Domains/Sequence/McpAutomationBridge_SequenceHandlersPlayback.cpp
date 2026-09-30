@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "EngineUtils.h"
 #include "LevelSequenceActor.h"
@@ -49,7 +50,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
   }
 
   ULevelSequence *LevelSeq =
-      Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
+      Cast<ULevelSequence>(McpLoadAsset(SeqPath));
   UMovieScene *MovieScene = LevelSeq ? LevelSeq->GetMovieScene() : nullptr;
   if (MovieScene && ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq)) {
     TSharedPtr<ISequencer> Sequencer = McpFindOpenSequencer(LevelSeq);
@@ -123,7 +124,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetPlaybackSpeed(
     return true;
   }
 
-  UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
+  UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!Cast<ULevelSequence>(SeqObj)) {
     SendAutomationResponse(Socket, RequestId, false,
                                       TEXT("Sequence not found"), nullptr,
@@ -186,7 +187,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(
     return true;
   }
   ULevelSequence *LevelSeq =
-      Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
+      Cast<ULevelSequence>(McpLoadAsset(SeqPath));
   if (LevelSeq) {
     if (ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() ==
         LevelSeq) {
@@ -216,7 +217,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(
     return true;
   }
   ULevelSequence *LevelSeq =
-      Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SeqPath));
+      Cast<ULevelSequence>(McpLoadAsset(SeqPath));
   if (LevelSeq) {
     if (ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() ==
         LevelSeq) {

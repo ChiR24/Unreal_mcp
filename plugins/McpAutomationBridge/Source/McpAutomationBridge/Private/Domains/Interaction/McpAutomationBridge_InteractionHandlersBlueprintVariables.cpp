@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 #include "EditorAssetLibrary.h"
@@ -96,7 +97,7 @@ UBlueprint* CreateInteractableBlueprint(
         return nullptr;
     }
     // A package that is not loaded is recreated empty by CreatePackage, so the save below would overwrite the asset.
-    if (UEditorAssetLibrary::DoesAssetExist(PackageName))
+    if (McpAssetExists(PackageName))
     {
         Subsystem->SendAutomationError(Socket, RequestId,
             FString::Printf(TEXT("A %s asset already exists at %s. Choose a different name or folder."), Noun, *PackageName),

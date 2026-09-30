@@ -1,4 +1,5 @@
 #include "Domains/Animation/Assets/McpAutomationBridge_AnimationHandlersProceduralTracks.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
@@ -17,8 +18,8 @@ UObject *CreateOrReuseAnimAsset(UClass *AssetClass, UFactory *Factory, const FSt
                                 FString &OutError) {
   bOutExisting = false;
   const FString PackagePath = Path / Name;
-  if (UEditorAssetLibrary::DoesAssetExist(PackagePath)) {
-    UObject *Existing = UEditorAssetLibrary::LoadAsset(PackagePath);
+  if (McpAssetExists(PackagePath)) {
+    UObject *Existing = McpLoadAsset(PackagePath);
     if (Existing && Existing->IsA(AssetClass)) {
       bOutExisting = true;
       return Existing;

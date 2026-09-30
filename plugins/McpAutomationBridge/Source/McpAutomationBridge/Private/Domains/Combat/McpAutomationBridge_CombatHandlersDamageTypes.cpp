@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "Domains/Combat/McpAutomationBridge_CombatHandlersPrivate.h"
 
@@ -30,7 +31,7 @@ bool FCombatActionContext::HandleDamageTypes() const
                 return true;
             }
 
-            if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+            if (McpAssetExists(FullPath))
             {
                 SendAutomationError(RequestingSocket, RequestId,
                     FString::Printf(TEXT("Asset already exists at path: %s"), *FullPath),

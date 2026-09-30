@@ -28,7 +28,7 @@ inline UBlueprint* CreateActorBlueprint(
         return nullptr;
     }
 
-    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+    if (McpAssetExists(FullPath))
     {
         OutError = FString::Printf(TEXT("Asset already exists at path: %s"), *FullPath);
         return nullptr;

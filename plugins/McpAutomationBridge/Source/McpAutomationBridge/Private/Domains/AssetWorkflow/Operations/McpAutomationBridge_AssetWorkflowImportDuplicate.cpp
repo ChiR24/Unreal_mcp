@@ -152,7 +152,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
               Resp->SetBoolField(TEXT("renameWarning"), true);
             }
             // Add verification data
-            UObject *ImportedAsset = UEditorAssetLibrary::LoadAsset(FinalAssetPath);
+            UObject *ImportedAsset = McpLoadAsset(FinalAssetPath);
             if (ImportedAsset) {
               McpHandlerUtils::AddVerification(Resp, ImportedAsset);
             }
@@ -209,7 +209,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
   // segment and land the copy in "/Game/X". Only an existing asset there means a full asset path.
   const bool bDestinationIsFolder =
       UEditorAssetLibrary::DoesDirectoryExist(DestinationPath) || DestinationPath.EndsWith(TEXT("/")) ||
-      (!NewName.IsEmpty() && !UEditorAssetLibrary::DoesAssetExist(DestinationPath));
+      (!NewName.IsEmpty() && !McpAssetExists(DestinationPath));
   if (!NewName.IsEmpty()) {
     const FString Folder = bDestinationIsFolder
                                ? DestinationPath
@@ -299,7 +299,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
   }
 
   // Fallback: single-asset duplication
-  if (!UEditorAssetLibrary::DoesAssetExist(SourcePath)) {
+  if (!McpAssetExists(SourcePath)) {
     SendAutomationResponse(
         Socket, RequestId, false,
         FString::Printf(TEXT("Source asset not found: %s"), *SourcePath),
@@ -307,7 +307,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     return true;
   }
 
-  if (UEditorAssetLibrary::DoesAssetExist(DestinationPath)) {
+  if (McpAssetExists(DestinationPath)) {
     SendAutomationResponse(
         Socket, RequestId, false,
         FString::Printf(TEXT("Destination asset already exists: %s"),

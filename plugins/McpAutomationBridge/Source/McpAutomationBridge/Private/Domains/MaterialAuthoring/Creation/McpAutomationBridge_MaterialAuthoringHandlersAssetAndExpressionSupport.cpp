@@ -1,4 +1,5 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -55,8 +56,8 @@ bool PrepareNewMaterialAsset(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
   }
   // Creating over an existing asset of another class is a fatal engine error.
   const FString FullAssetPath = OutPackagePath + TEXT(".") + OutName;
-  if (UEditorAssetLibrary::DoesAssetExist(FullAssetPath)) {
-    const UObject* Existing = UEditorAssetLibrary::LoadAsset(FullAssetPath);
+  if (McpAssetExists(FullAssetPath)) {
+    const UObject* Existing = McpLoadAsset(FullAssetPath);
     Bridge->SendAutomationError(Socket, RequestId,
         FString::Printf(TEXT("Asset '%s' already exists as %s. Cannot create %s with the same name."),
                         *FullAssetPath, Existing ? *Existing->GetClass()->GetName() : TEXT("Unknown"), Noun),

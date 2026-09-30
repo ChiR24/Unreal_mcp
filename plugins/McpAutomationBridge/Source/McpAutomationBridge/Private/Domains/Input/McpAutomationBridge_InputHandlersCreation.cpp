@@ -122,9 +122,9 @@ bool HandleCreateInputAction(
     }
 
     const FString FullPath = FString::Printf(TEXT("%s/%s"), *SanitizedPath, *Name);
-    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+    if (McpAssetExists(FullPath))
     {
-        UInputAction* ExistingAction = Cast<UInputAction>(UEditorAssetLibrary::LoadAsset(FullPath));
+        UInputAction* ExistingAction = Cast<UInputAction>(McpLoadAsset(FullPath));
         if (!ExistingAction)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,
@@ -181,9 +181,9 @@ bool HandleCreateInputMappingContext(
     }
 
     const FString FullPath = FString::Printf(TEXT("%s/%s"), *SanitizedPath, *Name);
-    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+    if (McpAssetExists(FullPath))
     {
-        UInputMappingContext* ExistingContext = Cast<UInputMappingContext>(UEditorAssetLibrary::LoadAsset(FullPath));
+        UInputMappingContext* ExistingContext = Cast<UInputMappingContext>(McpLoadAsset(FullPath));
         if (!ExistingContext)
         {
             Bridge.SendAutomationError(RequestingSocket, RequestId,

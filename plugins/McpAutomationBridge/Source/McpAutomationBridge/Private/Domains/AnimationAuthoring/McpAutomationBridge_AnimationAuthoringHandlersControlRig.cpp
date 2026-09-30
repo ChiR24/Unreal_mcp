@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
 namespace McpAnimationAuthoring {
@@ -65,7 +66,7 @@ TSharedPtr<FJsonObject> HandleControlRigActions(const FString& SubAction, const 
             const FString OldObjectPath = ControlRigBP->GetPathName();
             if (UEditorAssetLibrary::RenameAsset(OldObjectPath, FullPath))
             {
-                if (UControlRigBlueprint* Moved = Cast<UControlRigBlueprint>(UEditorAssetLibrary::LoadAsset(FullPath)))
+                if (UControlRigBlueprint* Moved = Cast<UControlRigBlueprint>(McpLoadAsset(FullPath)))
                 {
                     ControlRigBP = Moved;
                 }

@@ -43,13 +43,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMaterialStats(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  if (!McpAssetExists(AssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  UObject *Asset = McpLoadAsset(AssetPath);
   UMaterialInterface *Material = Cast<UMaterialInterface>(Asset);
 
   if (!Material) {

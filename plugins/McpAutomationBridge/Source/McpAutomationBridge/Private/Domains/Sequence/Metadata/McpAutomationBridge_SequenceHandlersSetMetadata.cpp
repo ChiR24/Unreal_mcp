@@ -4,6 +4,7 @@
 // Private/Domains/Sequence/ is at the 25-file folder limit.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/Metadata/McpAutomationBridge_SequenceMetadata.h"
@@ -51,7 +52,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetMetadata(
         nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
+  UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
                            nullptr, TEXT("INVALID_SEQUENCE"));

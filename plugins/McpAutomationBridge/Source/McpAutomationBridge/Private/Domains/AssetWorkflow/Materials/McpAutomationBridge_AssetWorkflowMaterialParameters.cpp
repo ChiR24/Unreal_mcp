@@ -57,7 +57,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  if (!McpAssetExists(AssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
@@ -303,13 +303,13 @@ bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  if (!McpAssetExists(AssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  UObject *Asset = McpLoadAsset(AssetPath);
   UMaterialInstanceConstant *MIC = Cast<UMaterialInstanceConstant>(Asset);
 
   if (!MIC) {

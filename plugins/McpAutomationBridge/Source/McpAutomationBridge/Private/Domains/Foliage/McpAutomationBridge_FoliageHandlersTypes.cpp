@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Foliage/McpAutomationBridge_FoliageHandlersPrivate.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
@@ -116,7 +117,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
   }
 
   UFoliageType_InstancedStaticMesh *FoliageType = nullptr;
-  if (UEditorAssetLibrary::DoesAssetExist(FullPackagePath)) {
+  if (McpAssetExists(FullPackagePath)) {
     FoliageType =
         LoadObject<UFoliageType_InstancedStaticMesh>(Package, *AssetName);
   }

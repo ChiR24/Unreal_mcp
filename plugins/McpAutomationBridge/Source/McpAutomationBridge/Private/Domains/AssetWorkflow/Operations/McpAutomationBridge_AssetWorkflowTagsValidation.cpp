@@ -57,13 +57,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+  if (!McpAssetExists(SafeAssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+  UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Failed to load asset"), nullptr,
@@ -126,13 +126,13 @@ bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+  if (!McpAssetExists(SafeAssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+  UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Failed to load asset"), nullptr,

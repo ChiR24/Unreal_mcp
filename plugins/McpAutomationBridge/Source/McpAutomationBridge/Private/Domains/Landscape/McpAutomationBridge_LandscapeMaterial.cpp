@@ -44,7 +44,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
       StaticLoadObject(UMaterialInterface::StaticClass(), nullptr,
                        *MaterialPath, nullptr, LOAD_NoWarn));
   if (!Mat) {
-    if (!UEditorAssetLibrary::DoesAssetExist(MaterialPath)) {
+    if (!McpAssetExists(MaterialPath)) {
       SendAutomationError(
           RequestingSocket, RequestId,
           FString::Printf(TEXT("Material asset not found: %s"),

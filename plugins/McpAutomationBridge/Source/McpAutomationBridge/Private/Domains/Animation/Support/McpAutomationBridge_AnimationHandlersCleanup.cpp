@@ -1,4 +1,5 @@
 #include "Domains/Animation/McpAutomationBridge_AnimationHandlersActionContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
@@ -34,7 +35,7 @@ bool HandleAnimationCleanupAction(FActionContext &Context,
           continue;
         }
 
-        if (UEditorAssetLibrary::DoesAssetExist(ArtifactPath)) {
+        if (McpAssetExists(ArtifactPath)) {
 // Close editors to ensure asset can be deleted
           if (GEditor) {
             UObject *Asset = LoadObject<UObject>(nullptr, *ArtifactPath);

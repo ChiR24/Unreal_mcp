@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Dom/JsonObject.h"
 
 #include "Components/SceneComponent.h"
@@ -85,7 +86,7 @@ AddAssetVerificationNested(TSharedPtr<FJsonObject> Response,
 
 static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response,
                                      const FString &AssetPath) {
-  const bool bExists = UEditorAssetLibrary::DoesAssetExist(AssetPath);
+  const bool bExists = McpAssetExists(AssetPath);
   if (Response) {
     Response->SetStringField(TEXT("verifiedPath"), AssetPath);
     Response->SetBoolField(TEXT("existsAfter"), bExists);

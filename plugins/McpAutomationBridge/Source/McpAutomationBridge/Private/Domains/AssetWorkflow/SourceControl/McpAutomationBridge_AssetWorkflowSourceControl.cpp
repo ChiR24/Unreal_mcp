@@ -56,7 +56,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlCheckout(
   TArray<FString> ValidPaths;
   for (const FString &Path : AssetPaths) {
     const FString SafePath = SanitizeProjectRelativePath(Path);
-    if (!SafePath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(SafePath)) {
+    if (!SafePath.IsEmpty() && McpAssetExists(SafePath)) {
       ValidPaths.Add(SafePath);
       FString PackageName = FPackageName::ObjectPathToPackageName(SafePath);
       PackageNames.Add(PackageName);
@@ -144,7 +144,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSourceControlSubmit(
   TArray<FString> PackageNames;
   for (const FString &Path : AssetPaths) {
     const FString SafePath = SanitizeProjectRelativePath(Path);
-    if (!SafePath.IsEmpty() && UEditorAssetLibrary::DoesAssetExist(SafePath)) {
+    if (!SafePath.IsEmpty() && McpAssetExists(SafePath)) {
       FString PackageName = FPackageName::ObjectPathToPackageName(SafePath);
       PackageNames.Add(PackageName);
     }

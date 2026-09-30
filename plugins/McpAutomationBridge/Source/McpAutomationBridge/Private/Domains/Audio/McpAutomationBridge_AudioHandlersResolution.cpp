@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
 
 namespace McpAudioHandlers
@@ -10,8 +11,8 @@ USoundBase *ResolveSoundAsset(const FString &SoundPath) {
 	USoundBase *Sound = nullptr;
 	if (SoundPath.Contains(TEXT("/Game/")) || SoundPath.Contains(TEXT("/Engine/")))
 	{
-		if (UEditorAssetLibrary::DoesAssetExist(SoundPath)) {
-			Sound = Cast<USoundBase>(UEditorAssetLibrary::LoadAsset(SoundPath));
+		if (McpAssetExists(SoundPath)) {
+			Sound = Cast<USoundBase>(McpLoadAsset(SoundPath));
 		}
 		if (Sound)
 			return Sound;
@@ -73,8 +74,8 @@ USoundMix *ResolveSoundMix(const FString &MixPath) {
 	// Bare names like "TestSoundMix" would cause DoesAssetExist errors and need asset registry search
 	if (MixPath.Contains(TEXT("/Game/")) || MixPath.Contains(TEXT("/Engine/")))
 	{
-		if (UEditorAssetLibrary::DoesAssetExist(MixPath)) {
-			Mix = Cast<USoundMix>(UEditorAssetLibrary::LoadAsset(MixPath));
+		if (McpAssetExists(MixPath)) {
+			Mix = Cast<USoundMix>(McpLoadAsset(MixPath));
 		}
 		if (Mix)
 			return Mix;
@@ -132,8 +133,8 @@ USoundClass *ResolveSoundClass(const FString &ClassPath) {
 	USoundClass *Class = nullptr;
 	if (ClassPath.Contains(TEXT("/Game/")) || ClassPath.Contains(TEXT("/Engine/")))
 	{
-		if (UEditorAssetLibrary::DoesAssetExist(ClassPath)) {
-			Class = Cast<USoundClass>(UEditorAssetLibrary::LoadAsset(ClassPath));
+		if (McpAssetExists(ClassPath)) {
+			Class = Cast<USoundClass>(McpLoadAsset(ClassPath));
 		}
 		if (Class)
 			return Class;

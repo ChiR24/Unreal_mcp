@@ -66,7 +66,7 @@ bool HandleCreateRenderTarget(
     }
 
     const FString FullPath = PackagePath / Name;
-    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+    if (McpAssetExists(FullPath))
     {
         Subsystem->SendAutomationError(
             RequestingSocket, RequestId,

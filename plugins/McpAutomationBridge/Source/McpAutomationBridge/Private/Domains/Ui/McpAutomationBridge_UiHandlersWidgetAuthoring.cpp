@@ -61,9 +61,9 @@ bool HandleWidgetAuthoringAction(
     const FString NormalizedPath = SavePath.TrimStartAndEnd();
     const FString TargetPath =
         FString::Printf(TEXT("%s/%s"), *NormalizedPath, *WidgetName);
-    if (UEditorAssetLibrary::DoesAssetExist(TargetPath)) {
+    if (McpAssetExists(TargetPath)) {
       // An existing asset of another kind is not a widget that "already exists".
-      if (!Cast<UWidgetBlueprint>(UEditorAssetLibrary::LoadAsset(TargetPath))) {
+      if (!Cast<UWidgetBlueprint>(McpLoadAsset(TargetPath))) {
         Message = FString::Printf(TEXT("An asset that is not a Widget Blueprint already exists at %s"), *TargetPath);
         ErrorCode = TEXT("ASSET_TYPE_MISMATCH");
         Resp->SetStringField(TEXT("error"), Message);

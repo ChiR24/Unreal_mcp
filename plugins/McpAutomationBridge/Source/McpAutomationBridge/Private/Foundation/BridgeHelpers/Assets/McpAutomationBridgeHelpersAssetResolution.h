@@ -7,6 +7,7 @@
 // - Returns the normalized path and whether it's valid
 // - Reference: Engine/Source/Runtime/CoreUObject/Public/Misc/PackageName.h
 #include "Misc/PackageName.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 // UEditorAssetLibrary is used below. It reached this header only through the
 // PCH, which an installed-engine build does not guarantee; include it here with
 // the same guard the PCH uses so the header is self-contained.
@@ -85,7 +86,7 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
     return FString();
 
   // 1. Exact match check
-  if (UEditorAssetLibrary::DoesAssetExist(InputPath)) {
+  if (McpAssetExists(InputPath)) {
     return InputPath;
   }
 
@@ -93,7 +94,7 @@ static inline FString ResolveAssetPath(const FString &InputPath) {
   // missing root
   if (!InputPath.StartsWith(TEXT("/"))) {
     FString GamePath = TEXT("/Game/") + InputPath;
-    if (UEditorAssetLibrary::DoesAssetExist(GamePath)) {
+    if (McpAssetExists(GamePath)) {
       return GamePath;
     }
   }

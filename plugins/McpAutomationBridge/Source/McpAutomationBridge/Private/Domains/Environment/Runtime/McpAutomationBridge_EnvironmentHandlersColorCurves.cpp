@@ -1,4 +1,5 @@
 #include "Domains/Environment/Runtime/McpAutomationBridge_EnvironmentAssetValidation.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 
 #include "Misc/PackageName.h"
@@ -66,7 +67,7 @@ bool McpCreateLinearColorCurve(const TSharedPtr<FJsonObject> &Payload, const FSt
     }
     if (bCreated)
     {
-        if (UEditorAssetLibrary::DoesAssetExist(PackagePath))
+        if (McpAssetExists(PackagePath))
         {
             return McpFailEnvironmentAction(OutMessage, OutErrorCode,
                 FString::Printf(TEXT("%s exists and is not a linear color curve"), *PackagePath), TEXT("INVALID_ARGUMENT"));

@@ -47,7 +47,7 @@ bool HandleCreate(UMcpAutomationBridgeSubsystem* Subsystem,
     return true;
   }
 
-  if (UEditorAssetLibrary::DoesAssetExist(PackagePath)) {
+  if (McpAssetExists(PackagePath)) {
     Subsystem->SendAutomationError(
         Context.RequestingSocket,
         Context.RequestId,

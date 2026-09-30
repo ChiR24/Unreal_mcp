@@ -42,7 +42,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
 
   const FString SafeAssetPath = AssetPath;
 
-  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+  if (!McpAssetExists(SafeAssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
@@ -62,7 +62,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetMetadata(
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+  UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Failed to load asset"), nullptr,
@@ -183,13 +183,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetMetadata(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+  if (!McpAssetExists(AssetPath)) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Asset not found"),
                            nullptr, TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+  UObject *Asset = McpLoadAsset(AssetPath);
   if (!Asset) {
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Failed to load asset"), nullptr,

@@ -1,4 +1,5 @@
 #include "Domains/Sequence/RecordReplay/McpAutomationBridge_SequenceTakeRecorderInternal.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsActionsPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceFrameRate.h"
 
@@ -133,7 +134,7 @@ bool ConfigurePanel(
         // A preset seeds a new take from its own template sequence, so it
         // cannot be combined with a sequence to record into or from.
         UTakePreset* Preset =
-            Cast<UTakePreset>(UEditorAssetLibrary::LoadAsset(PresetPath));
+            Cast<UTakePreset>(McpLoadAsset(PresetPath));
         if (!SequencePath.IsEmpty() || bRecordInto || !Preset)
         {
             OutErrorCode = Preset ? TEXT("INVALID_ARGUMENT") : TEXT("TAKE_PRESET_NOT_FOUND");
@@ -148,7 +149,7 @@ bool ConfigurePanel(
     else if (!SequencePath.IsEmpty())
     {
         ULevelSequence* Sequence =
-            Cast<ULevelSequence>(UEditorAssetLibrary::LoadAsset(SequencePath));
+            Cast<ULevelSequence>(McpLoadAsset(SequencePath));
         if (!Sequence)
         {
             OutErrorCode = TEXT("INVALID_SEQUENCE");

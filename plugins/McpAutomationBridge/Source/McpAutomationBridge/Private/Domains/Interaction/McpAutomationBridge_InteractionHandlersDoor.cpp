@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "EditorAssetLibrary.h"
 
@@ -35,7 +36,7 @@ bool HandleDoorAction(
             !Name.IsEmpty() &&
                     ValidateAssetCreationPath(GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/Interactables")),
                                               Name, PackageName, PathError) &&
-                    UEditorAssetLibrary::DoesAssetExist(PackageName)
+                    McpAssetExists(PackageName)
                 ? LoadObject<UBlueprint>(nullptr, *(PackageName + TEXT(".") + FPackageName::GetShortName(PackageName)))
                 : nullptr;
         if (ExistingDoorBP)

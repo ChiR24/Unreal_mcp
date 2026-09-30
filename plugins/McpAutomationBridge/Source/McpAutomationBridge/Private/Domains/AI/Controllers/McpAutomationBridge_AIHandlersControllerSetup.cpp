@@ -1,4 +1,5 @@
 #include "Domains/AI/McpAutomationBridge_AIHandlerContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "AIController.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -29,7 +30,7 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
     // The FindObject check alone is insufficient because:
     // 1. It checks for exact object path format
     // 2. The package may exist even if the blueprint object doesn't
-    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+    if (McpAssetExists(FullPath))
     {
         OutError = FString::Printf(TEXT("Asset already exists: %s"), *FullPath);
         return nullptr;
@@ -37,7 +38,7 @@ static UBlueprint* CreateAIControllerBlueprint(const FString& Path, const FStrin
 
     // Also check with .AssetName suffix (blueprint object path format)
     FString ObjectPath = FullPath + TEXT(".") + Name;
-    if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+    if (McpAssetExists(ObjectPath))
     {
         OutError = FString::Printf(TEXT("Blueprint already exists: %s"), *ObjectPath);
         return nullptr;

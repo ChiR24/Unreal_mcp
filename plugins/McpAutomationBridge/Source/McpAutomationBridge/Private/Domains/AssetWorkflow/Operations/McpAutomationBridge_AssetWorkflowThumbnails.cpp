@@ -68,14 +68,14 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
   SendProgressUpdate(RequestId, 0.0f,
       FString::Printf(TEXT("Starting thumbnail generation for: %s"), *SafeAssetPath), true);
 
-  if (!UEditorAssetLibrary::DoesAssetExist(SafeAssetPath)) {
+  if (!McpAssetExists(SafeAssetPath)) {
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("Asset not found"), nullptr,
                            TEXT("ASSET_NOT_FOUND"));
     return true;
   }
 
-  UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeAssetPath);
+  UObject *Asset = McpLoadAsset(SafeAssetPath);
   if (!Asset) {
     SendAutomationResponse(RequestingSocket, RequestId, false,
                            TEXT("Failed to load asset"), nullptr,

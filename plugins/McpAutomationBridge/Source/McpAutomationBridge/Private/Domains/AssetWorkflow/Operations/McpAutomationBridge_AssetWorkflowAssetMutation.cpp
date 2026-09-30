@@ -63,7 +63,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
   // A folder moves with everything under it: rename {sourcePath: "/Game/Old", newName: "New"}.
   FString SourceFolder = SanitizeProjectRelativePath(SourcePath);
   SourceFolder.RemoveFromEnd(TEXT("/"));
-  if (!SourceFolder.IsEmpty() && !UEditorAssetLibrary::DoesAssetExist(SourceFolder) &&
+  if (!SourceFolder.IsEmpty() && !McpAssetExists(SourceFolder) &&
       UEditorAssetLibrary::DoesDirectoryExist(SourceFolder)) {
     FString DestinationFolder = DestinationPath;
     DestinationFolder.RemoveFromEnd(TEXT("/"));
@@ -85,7 +85,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     return true;
   }
 
-  if (!UEditorAssetLibrary::DoesAssetExist(ResolvedSourcePath)) {
+  if (!McpAssetExists(ResolvedSourcePath)) {
     SendAutomationResponse(
         Socket, RequestId, false,
         FString::Printf(TEXT("Source asset not found: %s"), *SourcePath),
@@ -93,7 +93,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     return true;
   }
 
-  if (UEditorAssetLibrary::DoesAssetExist(DestinationPath)) {
+  if (McpAssetExists(DestinationPath)) {
     SendAutomationResponse(Socket, RequestId, false,
                            FString::Printf(TEXT("'%s' already exists"), *DestinationPath),
                            nullptr, TEXT("DESTINATION_EXISTS"));
@@ -103,7 +103,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
   // engine rename refused silently whenever one did.
   const FString DestinationPackage = FPackageName::ObjectPathToPackageName(DestinationPath);
   TArray<FAssetRenameData> RenameData;
-  RenameData.Emplace(UEditorAssetLibrary::LoadAsset(ResolvedSourcePath),
+  RenameData.Emplace(McpLoadAsset(ResolvedSourcePath),
                      FPackageName::GetLongPackagePath(DestinationPackage),
                      FPackageName::GetShortName(DestinationPackage));
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -111,7 +111,7 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
   if (RenameData[0].Asset.IsValid() && McpAssetRename::RenameWithSettingsFollow(RenameData, Resp, Failure)) {
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetStringField(TEXT("assetPath"), DestinationPackage);
-    if (UObject* RenamedAsset = UEditorAssetLibrary::LoadAsset(DestinationPackage)) {
+    if (UObject* RenamedAsset = McpLoadAsset(DestinationPackage)) {
       McpHandlerUtils::AddVerification(Resp, RenamedAsset);
     }
     SendAutomationResponse(Socket, RequestId, true, TEXT("Asset renamed"), Resp, FString());
@@ -216,7 +216,7 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       } else {
         FailedToDeletePaths.Add(SafePath);
       }
-    } else if (UEditorAssetLibrary::DoesAssetExist(SafePath) ||
+    } else if (McpAssetExists(SafePath) ||
                FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(SafePath))) {
       // The file counts as the asset too: a delete that left the .uasset behind
       // had already dropped it from the registry, so a retry answered "not
@@ -226,13 +226,13 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       if (Referencers.Num() > 0) {
         ReferencedPaths.Add(FString::Printf(TEXT("%s (referenced by %s)"), *SafePath, *FString::Join(Referencers, TEXT(", "))));
       } else if (McpSafeOperations::McpDeleteAssetAndFile(SafePath) ||
-                 (!UEditorAssetLibrary::DoesAssetExist(SafePath) &&
+                 (!McpAssetExists(SafePath) &&
                   !FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(SafePath)))) {
         // The file fallback can answer false after the asset is already gone (a level did): what is left decides.
         DeletedCount++;
       } else {
         // Say what is left: a file kept on disk under a still-loaded package returns on the next editor start.
-        FailedToDeletePaths.Add(UEditorAssetLibrary::DoesAssetExist(SafePath) ? SafePath
+        FailedToDeletePaths.Add(McpAssetExists(SafePath) ? SafePath
             : SafePath + TEXT(" (gone from the Content Browser, but its file is still on disk because the package is still loaded; delete it again after an editor restart)"));
       }
     } else {

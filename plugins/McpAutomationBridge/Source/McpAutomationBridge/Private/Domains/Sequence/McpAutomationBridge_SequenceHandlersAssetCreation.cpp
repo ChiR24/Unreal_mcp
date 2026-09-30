@@ -1,4 +1,5 @@
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/McpAutomationBridge_SequencePathSecurity.h"
@@ -44,7 +45,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
   // result to schema-declared names, so it must be present on every success.
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("sequencePath"), FullPath);
-  if (UEditorAssetLibrary::DoesAssetExist(FullPath)) {
+  if (McpAssetExists(FullPath)) {
     VerifyAssetExists(Resp, FullPath);
     SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence already exists"), Resp, FString());
     return true;
@@ -78,7 +79,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceOpen(
   }
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
+  UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false,
                                       TEXT("Sequence not found"), nullptr,

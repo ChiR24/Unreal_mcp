@@ -55,9 +55,9 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
       const FString NewName = Item ? GetJsonStringField(*Item, TEXT("newName")).TrimStartAndEnd() : FString();
       const FString Resolved = Source.IsEmpty() ? FString() : ResolveAssetPath(Source);
       const FString Safe = SanitizeProjectRelativePath(Resolved.IsEmpty() ? Source : Resolved);
-      UObject *Asset = Safe.IsEmpty() || NewName.IsEmpty() || !UEditorAssetLibrary::DoesAssetExist(Safe) ? nullptr : UEditorAssetLibrary::LoadAsset(Safe);
+      UObject *Asset = Safe.IsEmpty() || NewName.IsEmpty() || !McpAssetExists(Safe) ? nullptr : McpLoadAsset(Safe);
       const FString Folder = Asset ? FPackageName::GetLongPackagePath(Asset->GetOutermost()->GetName()) : FString();
-      if (!Asset || UEditorAssetLibrary::DoesAssetExist(Folder / NewName)) {
+      if (!Asset || McpAssetExists(Folder / NewName)) {
         MissingAssets.Add(Asset ? FString::Printf(TEXT("%s (%s is taken)"), *Source, *NewName)
                                 : Source.IsEmpty() ? FString(TEXT("(entry without sourcePath)")) : Source);
         continue;
@@ -88,12 +88,12 @@ bool UMcpAutomationBridgeSubsystem::HandleBulkRenameAssets(
       continue;
     }
 
-    if (!UEditorAssetLibrary::DoesAssetExist(AssetPath)) {
+    if (!McpAssetExists(AssetPath)) {
       MissingAssets.Add(AssetPath);
       continue;
     }
 
-    UObject *Asset = UEditorAssetLibrary::LoadAsset(AssetPath);
+    UObject *Asset = McpLoadAsset(AssetPath);
     if (!Asset) {
       continue;
     }

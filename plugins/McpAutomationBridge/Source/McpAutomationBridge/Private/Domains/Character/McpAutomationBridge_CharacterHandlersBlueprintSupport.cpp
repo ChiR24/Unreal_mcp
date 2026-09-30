@@ -1,4 +1,5 @@
 #include "Domains/Character/McpAutomationBridge_CharacterHandlers.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 namespace McpCharacterHandlers
 {
@@ -10,7 +11,7 @@ UBlueprint* CreateCharacterBlueprintAsset(const FString& Path, const FString& Na
         OutError = FString::Printf(TEXT("Invalid asset path: '%s'. Path must start with '/', cannot contain '..' or '//'."), *FullPath);
         return nullptr;
     }
-    if (UEditorAssetLibrary::DoesAssetExist(FullPath))
+    if (McpAssetExists(FullPath))
     {
         OutError = FString::Printf(TEXT("Asset already exists at path: %s"), *FullPath);
         return nullptr;

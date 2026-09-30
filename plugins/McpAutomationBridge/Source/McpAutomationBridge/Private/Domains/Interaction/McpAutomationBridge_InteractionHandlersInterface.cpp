@@ -1,4 +1,5 @@
 #include "Domains/Interaction/McpAutomationBridge_InteractionHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersMutationEvidence.h"
 
 namespace McpInteractionHandlers
@@ -34,7 +35,7 @@ bool HandleInteractableInterfaceAction(
         Subsystem->SendAutomationError(RequestingSocket, RequestId, PathError, TEXT("INVALID_PATH"));
         return true;
     }
-    if (UEditorAssetLibrary::DoesAssetExist(InterfacePath))
+    if (McpAssetExists(InterfacePath))
     {
         Subsystem->SendAutomationError(RequestingSocket, RequestId,
             FString::Printf(TEXT("Interactable interface already exists at %s. Choose a different name or folder."), *InterfacePath),

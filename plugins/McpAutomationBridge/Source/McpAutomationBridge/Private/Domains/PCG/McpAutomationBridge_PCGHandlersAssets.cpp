@@ -1,4 +1,5 @@
 #include "Domains/PCG/McpAutomationBridge_PCGHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #if MCP_HAS_PCG
 namespace McpPCGHandlers
@@ -85,7 +86,7 @@ UPCGGraph* CreateOrReusePCGGraph(const FString& GraphPath, bool bOverwrite, bool
     bOutCreated = false;
     bOutSaved = false;
 
-    if (UEditorAssetLibrary::DoesAssetExist(GraphPath))
+    if (McpAssetExists(GraphPath))
     {
         FString LoadedPath;
         UPCGGraph* Existing = LoadPCGAsset<UPCGGraph>(GraphPath, TEXT("PCG graph"), LoadedPath, OutError);

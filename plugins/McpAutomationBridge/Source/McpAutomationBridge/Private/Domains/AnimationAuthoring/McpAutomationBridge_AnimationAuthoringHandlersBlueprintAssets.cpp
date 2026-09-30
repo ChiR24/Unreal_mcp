@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
 
 namespace McpAnimationAuthoring {
@@ -53,9 +54,9 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
 
     // Check if an asset already exists at the target path to prevent assertion failure in Kismet2.cpp
         FString ObjectPath = FString::Printf(TEXT("%s/%s"), *Path, *Name);
-        if (UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+        if (McpAssetExists(ObjectPath))
         {
-            UObject* ExistingAsset = UEditorAssetLibrary::LoadAsset(ObjectPath);
+            UObject* ExistingAsset = McpLoadAsset(ObjectPath);
             if (ExistingAsset)
             {
                 if (Cast<UAnimBlueprint>(ExistingAsset))
@@ -82,7 +83,7 @@ TSharedPtr<FJsonObject> HandleBlueprintAssetActions(const FString& SubAction, co
                             *ExistingParentClassName);
 
                         const bool bDeletedLegacyAsset = UEditorAssetLibrary::DeleteAsset(ObjectPath);
-                        if (!bDeletedLegacyAsset || UEditorAssetLibrary::DoesAssetExist(ObjectPath))
+                        if (!bDeletedLegacyAsset || McpAssetExists(ObjectPath))
                         {
                             ANIM_ERROR_RESPONSE(
                                 FString::Printf(TEXT("Failed to replace legacy plain Blueprint at '%s' before creating AnimBlueprint"), *ObjectPath),

@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
@@ -80,7 +81,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAddComponent(
     UStaticMeshComponent *SMC = Cast<UStaticMeshComponent>(NewComponent);
     const FString SafeMeshPath = SanitizeProjectRelativePath(MeshPath);
     UStaticMesh *Mesh = (SMC && !SafeMeshPath.IsEmpty())
-                            ? Cast<UStaticMesh>(UEditorAssetLibrary::LoadAsset(SafeMeshPath))
+                            ? Cast<UStaticMesh>(McpLoadAsset(SafeMeshPath))
                             : nullptr;
     if (Mesh) {
       SMC->SetStaticMesh(Mesh);
@@ -146,7 +147,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorGetComponents(
   if (!Found) {
     const FString SafeTargetPath = SanitizeProjectRelativePath(TargetName);
     if (!SafeTargetPath.IsEmpty()) {
-      if (UObject *Asset = UEditorAssetLibrary::LoadAsset(SafeTargetPath)) {
+      if (UObject *Asset = McpLoadAsset(SafeTargetPath)) {
         if (UBlueprint *BP = Cast<UBlueprint>(Asset)) {
           if (BP->GeneratedClass) {
             Found = Cast<AActor>(BP->GeneratedClass->GetDefaultObject());

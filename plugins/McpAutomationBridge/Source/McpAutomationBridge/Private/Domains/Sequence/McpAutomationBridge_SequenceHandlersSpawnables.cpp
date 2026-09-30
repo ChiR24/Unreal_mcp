@@ -1,4 +1,5 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSpawnable(
@@ -22,7 +23,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSpawnable(
     return true;
   }
 
-  UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
+  UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
                            nullptr, TEXT("INVALID_SEQUENCE"));
@@ -82,7 +83,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceGetBindings(
     return true;
   }
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  UObject *SeqObj = UEditorAssetLibrary::LoadAsset(SeqPath);
+  UObject *SeqObj = McpLoadAsset(SeqPath);
   if (!SeqObj) {
     SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not found"),
                            nullptr, TEXT("INVALID_SEQUENCE"));

@@ -61,6 +61,13 @@ describe('control_actor.list near and radius: what is close to a point, nearest 
     expect(source).toMatch(/OutBoundsSize = Extent\.Size\(\);/u);
   });
 
+  // className /Game/Enemies/BP_Bug listed 0 actors: ObjectPathToObjectName hands a path without a
+  // '.' back whole, and no class is named after a whole path.
+  it('className matches a Blueprint by package path, as well as by name or object path', () => {
+    expect(read('McpAutomationBridge_ControlActorSupport.h'))
+      .toContain('FString Wanted = FPackageName::GetShortName(FPackageName::ObjectPathToObjectName(ClassName));');
+  });
+
   it('a row carries its distance only when near was given', () => {
     expect(list()).toMatch(/if \(bNear\)\s*Entry->SetNumberField\(TEXT\("distance"\), FMath::RoundToDouble\(Item\.Distance \* 10\.0\) \/ 10\.0\);/u);
   });

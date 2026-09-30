@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 
 AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bool bExactMatchOnly) {
@@ -66,7 +67,7 @@ AActor *UMcpAutomationBridgeSubsystem::FindActorByName(const FString &Target, bo
   if (Target.StartsWith(TEXT("/"))) {
     const FString SafeTargetPath = SanitizeProjectRelativePath(Target);
     if (!SafeTargetPath.IsEmpty()) {
-      if (UObject *Obj = UEditorAssetLibrary::LoadAsset(SafeTargetPath)) {
+      if (UObject *Obj = McpLoadAsset(SafeTargetPath)) {
         return Cast<AActor>(Obj);
       }
     }

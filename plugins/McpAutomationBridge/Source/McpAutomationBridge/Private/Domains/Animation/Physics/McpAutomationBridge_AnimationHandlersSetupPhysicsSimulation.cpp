@@ -1,4 +1,5 @@
 #include "Domains/Animation/McpAutomationBridge_AnimationHandlersActionContext.h"
+#include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Core/Module/McpAutomationBridgeGlobals.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Safety/McpSafeOperations.h"
@@ -92,8 +93,8 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
     }
 
     if (!TargetMesh && bSkeletalMeshProvided) {
-      if (UEditorAssetLibrary::DoesAssetExist(SkeletalMeshPath)) {
-        UObject *Asset = UEditorAssetLibrary::LoadAsset(SkeletalMeshPath);
+      if (McpAssetExists(SkeletalMeshPath)) {
+        UObject *Asset = McpLoadAsset(SkeletalMeshPath);
         TargetMesh = Cast<USkeletalMesh>(Asset);
         if (!TargetMesh && Asset) {
           bSkeletalMeshTypeMismatch = true;
@@ -114,7 +115,7 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
 
     USkeleton *TargetSkeleton = nullptr;
     if (!TargetMesh && bSkeletonProvided) {
-      if (UEditorAssetLibrary::DoesAssetExist(SkeletonPath)) {
+      if (McpAssetExists(SkeletonPath)) {
         TargetSkeleton = LoadObject<USkeleton>(nullptr, *SkeletonPath);
         if (TargetSkeleton) {
           TargetMesh = TargetSkeleton->GetPreviewMesh();
@@ -207,7 +208,7 @@ bool HandleAnimationSetupPhysicsSimulationAction(FActionContext &Context,
 
         const FString PhysicsAssetObjectPath = FString::Printf(TEXT("%s/%s"), *SavePath, *PhysicsAssetName);
 
-        if (UEditorAssetLibrary::DoesAssetExist(PhysicsAssetObjectPath)) {
+        if (McpAssetExists(PhysicsAssetObjectPath)) {
           bSuccess = true;
           Message = TEXT("Physics simulation already configured - existing asset reused");
           Resp->SetStringField(TEXT("physicsAssetPath"),
