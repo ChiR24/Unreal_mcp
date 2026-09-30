@@ -154,13 +154,23 @@ inline bool McpApplyActorVisibility(AActor *Actor, bool bVisible) {
   return Actor->IsHidden() == !bVisible;
 }
 
-// What that change mutates, for the undo transaction: the actor and each primitive component.
-// Capturing only the actor would let undo restore half the change.
+// What that change mutates, for the undo transaction: the actor and each primitive component (only
+// the actor would let undo restore half the change), each flagged RF_Transactional when it is not.
+// A component the engine made without the flag (a Blueprint actor's BillboardComponent) never
+// reaches the undo buffer, so the transaction gate refused the whole set and the receipt said
+// undoable:false; flagging it first (as add_component does for the components it makes) lets
+// Modify() record it.
 inline void McpAddVisibilityUndoSet(AActor *Actor, TArray<UObject *> &Undoable) {
-  Undoable.Add(Actor);
+  const auto Add = [&Undoable](UObject *Object) {
+    if (!Object->HasAnyFlags(RF_Transactional)) {
+      Object->SetFlags(RF_Transactional);
+    }
+    Undoable.Add(Object);
+  };
+  Add(Actor);
   for (UActorComponent *Comp : Actor->GetComponents()) {
     if (UPrimitiveComponent *Prim = Cast<UPrimitiveComponent>(Comp)) {
-      Undoable.Add(Prim);
+      Add(Prim);
     }
   }
 }

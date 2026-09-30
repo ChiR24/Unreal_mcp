@@ -209,9 +209,20 @@ describe('set_visibility and set_actor_collision take many actors in one call, a
     expect(collect).toBeGreaterThan(-1);
     expect(collect).toBeLessThan(open);
     expect(open).toBeLessThan(write);
-    expect(undoSet).toContain('Undoable.Add(Actor);');
-    expect(undoSet).toContain('Undoable.Add(Prim);');
+    expect(undoSet).toContain('Add(Actor);');
+    expect(undoSet).toContain('Add(Prim);');
     expect(source).toMatch(/Undoable\);\s*TArray<FString> Mismatched;/u);
+  });
+
+  // set_visibility on a Blueprint actor's BillboardComponent answered undoable:false: the transaction
+  // gate refuses an object without RF_Transactional, and that component has none.
+  it('flags each actor and primitive component that lacks RF_Transactional before the transaction opens, so its undo is recorded', () => {
+    const undoSet = sliceBetween(support(), 'inline void McpAddVisibilityUndoSet(', 'struct FMcpMotionInput');
+    const source = visibility();
+
+    expect(undoSet).toMatch(/if \(!Object->HasAnyFlags\(RF_Transactional\)\) \{\s*Object->SetFlags\(RF_Transactional\);\s*\}\s*Undoable\.Add\(Object\);/u);
+    expect(undoSet).toMatch(/Add\(Actor\);\s*for \(UActorComponent \*Comp : Actor->GetComponents\(\)\) \{\s*if \(UPrimitiveComponent \*Prim = Cast<UPrimitiveComponent>\(Comp\)\) \{\s*Add\(Prim\);/u);
+    expect(source.indexOf('McpAddVisibilityUndoSet(Actor, Undoable);')).toBeLessThan(source.indexOf('FMcpScopedEditorTransaction Transaction('));
   });
 
   it('a mismatch on any actor fails the call naming it; the single-actor replies keep their shape', () => {

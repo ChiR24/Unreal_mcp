@@ -46,6 +46,8 @@ const actorArgs = (action, extra = {}) => ({ action, actorName: MAIN_ACTOR, ...e
 const testCases = [
   // === SETUP ===
   { scenario: 'Setup: create actor blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: BP_NAME, savePath: TEST_FOLDER, parentClass: 'Actor' }, expected: 'success|already exists' },
+  // A billboard is a primitive component a Blueprint actor makes without RF_Transactional: set_visibility below must still be undoable.
+  { scenario: 'Setup: give the actor blueprint a billboard component', toolName: 'manage_blueprint', arguments: { action: 'add_scs_component', blueprintPath: BP_PATH, componentClass: 'BillboardComponent', componentName: `MCPBillboard_${ts}` }, expected: 'success|already exists' },
   cubeSpawn('Setup: spawn main test actor', MAIN_ACTOR, { x: 0, y: 0, z: 100 }),
   cubeSpawn('Setup: spawn delete test actor', DELETE_ACTOR, { x: 120, y: 0, z: 100 }),
   cubeSpawn('Setup: spawn destroy test actor', DESTROY_ACTOR, { x: 240, y: 0, z: 100 }),
@@ -98,6 +100,7 @@ const testCases = [
   // actorNames: hiding seventeen actors took thirty-four calls; now one call, one undo step, and the misses come back.
   { scenario: 'CONFIG: set_visibility on several actors at once, listing names not found', toolName: 'control_actor', arguments: { action: 'set_visibility', actorNames: [MAIN_ACTOR, DUPLICATE_ACTOR, `MCP_MissingActor_${ts}`], visible: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.updatedActors', equals: 2, label: 'both actors that exist took the change' }, { path: 'structuredContent.result.missing.0', equals: `MCP_MissingActor_${ts}`, label: 'the name that matched no actor is listed back' }] },
   { scenario: 'ERROR: set_visibility with none of actorNames found', toolName: 'control_actor', arguments: { action: 'set_visibility', actorNames: [`MCP_MissingActor_${ts}`], visible: true }, expected: 'error|ACTOR_NOT_FOUND' },
+  { scenario: 'CONFIG: set_visibility on a Blueprint actor with a billboard is undoable', toolName: 'control_actor', arguments: { action: 'set_visibility', actorName: BP_ACTOR, visible: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.undo.undoable', equals: true, label: 'the billboard was flagged transactional, so the change reaches the undo buffer' }] },
   { scenario: 'ACTION: apply_force', toolName: 'control_actor', arguments: actorArgs('apply_force', { force: { x: 0, y: 0, z: 2500 } }), expected: 'success' },
   { scenario: 'CONFIG: set_material', toolName: 'control_actor', arguments: actorArgs('set_material', { materialPath: ENGINE_BASIC_MATERIAL, materialSlot: 0 }), expected: 'success' },
   { scenario: 'CONFIG: set_actor_material', toolName: 'control_actor', arguments: actorArgs('set_actor_material', { materialPath: ENGINE_BASIC_MATERIAL, materialIndex: 0 }), expected: 'success' },
