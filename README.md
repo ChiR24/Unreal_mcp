@@ -310,7 +310,7 @@ Most setups touch one setting: **Enable Native MCP Server** for Route A, or `UE_
 - **Local by default.** Both routes listen on `127.0.0.1` only. LAN access needs **Allow Non Loopback**, and the native server refuses to bind off-loopback unless **Require Capability Token** is on.
 - **Capability token.** Generated per project at `<Project>/Saved/MCP/capability-token` (a value typed into **Capability Token** overrides it) and compared in constant time. Delete the file and restart the editor to rotate it.
 - **Consent for destructive work.** Deletes and some other writes need a per-call consent grant, which the plugin checks itself.
-- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara` plus configured prefixes; console commands that chain or quit the editor are blocked; the plugin's own settings are out of reach of automation.
+- **Guard rails.** Asset paths are limited to `/Game`, `/Engine`, `/Script`, `/Temp`, `/Niagara`, the content mounts the connected editor reports, plus configured prefixes; console commands that chain or quit the editor are blocked; the plugin's own settings are out of reach of automation.
 
 Details: [Security](https://github.com/ChiR24/Unreal_mcp/wiki/Security). Please report vulnerabilities privately through [GitHub security advisories](https://github.com/ChiR24/Unreal_mcp/security/advisories/new).
 
