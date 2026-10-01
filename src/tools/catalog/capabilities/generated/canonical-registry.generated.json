@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6612ea5c62bc8839",
+  "catalogRevision": "84d0b19aac949cfe",
   "recordCount": 389,
   "records": [
     {
@@ -30976,6 +30976,8 @@
       "aliases": [
         "control_actor.find_by_class",
         "control_actor.find_by_name",
+        "control_actor.find_by_mesh",
+        "control_actor.find_by_material",
         "control_actor.find_actors_by_class",
         "control_actor.find_actors_by_name"
       ],
@@ -30996,6 +30998,20 @@
           "action": "find_by_name",
           "folded": {
             "findBy": "name"
+          }
+        },
+        {
+          "tool": "control_actor",
+          "action": "find_by_mesh",
+          "folded": {
+            "findBy": "mesh"
+          }
+        },
+        {
+          "tool": "control_actor",
+          "action": "find_by_material",
+          "folded": {
+            "findBy": "material"
           }
         },
         {
@@ -31027,18 +31043,31 @@
           "all actors of type",
           "lookup actor by name",
           "search actor",
-          "get actor by name"
+          "get actor by name",
+          "actors drawing a static mesh",
+          "actors with a mesh",
+          "instances of a mesh",
+          "foliage of a mesh",
+          "actors showing a material",
+          "actors with a material in a slot"
         ],
-        "summary": "Find actors by class or by name.",
+        "summary": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material); the mesh and material finds name the matching components.",
         "whenToUse": [
           "findBy=class: All instances of a class must be located.",
           "findBy=name: One or more actors must be located by name or substring.",
+          "findBy=mesh: All the actors showing one static mesh must be located, to move, swap, tag or delete them.",
+          "findBy=mesh: A mesh is about to change or go away and its users must be known first.",
+          "findBy=material: Every actor that shows one material must be located, to restyle, retarget or audit them.",
+          "findBy=material: A material is about to change or go away and its users must be known first.",
           "findBy=class: Preferred when callers use the explicit find_actors_by_class verb.",
           "findBy=name: Preferred when callers use the explicit find_actors_by_name verb."
         ],
         "whenNotToUse": [
           "findBy=class: A tag-based lookup is more appropriate (use find_by_tag).",
-          "findBy=name: Actors should be located by tag (use find_by_tag)."
+          "findBy=name: Actors should be located by tag (use find_by_tag).",
+          "findBy=mesh: The meshes and materials of one known actor are wanted (use get_components).",
+          "findBy=material: The materials of one known actor are wanted (use get_components).",
+          "findBy=material: The assets that reference a material are wanted, not the actors placed in the level (use asset.inspect_asset with lookup=dependencies and referencers=true)."
         ]
       },
       "schemas": {
@@ -31066,11 +31095,27 @@
               "type": "string",
               "description": "Actor name or search query."
             },
+            "meshPath": {
+              "type": "string",
+              "description": "Static mesh asset path, with or without the object name: /Game/Meshes/SM_Rock or /Engine/BasicShapes/Cube. An actor matches when a StaticMeshComponent of it (an instanced or hierarchical one too) draws exactly this mesh."
+            },
+            "limit": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount."
+            },
+            "materialPath": {
+              "type": "string",
+              "description": "Material or material instance asset path, with or without the object name: /Game/Materials/M_Rock. A component matches when a slot of it, an override or the mesh's own default, is exactly this asset or a dynamic instance made from it. Instances of a material are not followed: ask for each instance by its own path."
+            },
             "findBy": {
               "type": "string",
               "enum": [
                 "class",
-                "name"
+                "name",
+                "mesh",
+                "material"
               ],
               "description": "Which find variant to run."
             }
@@ -31100,8 +31145,10 @@
             },
             "actors": {
               "type": "array",
+              "description": "Matched actors.",
               "items": {
                 "type": "object",
+                "x-unreal-reflection-boundary": true,
                 "properties": {
                   "label": {
                     "type": "string",
@@ -31119,11 +31166,8 @@
                     "type": "string",
                     "description": "Actor class."
                   }
-                },
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true
-              },
-              "description": "Matched actors."
+                }
+              }
             },
             "count": {
               "type": "number",
@@ -31135,6 +31179,18 @@
                 "type": "string"
               },
               "description": "Only when nothing matched: up to 10 labels that contain the query once case, separators and leading zeros are ignored (\"Bug1\" finds Bug_01 and Bug_10)."
+            },
+            "totalCount": {
+              "type": "number",
+              "description": "Present only when limit cut the list: how many actors matched in all."
+            },
+            "truncated": {
+              "type": "boolean",
+              "description": "True when limit cut the list short; totalCount says how many matched."
+            },
+            "worldSearched": {
+              "type": "string",
+              "description": "The world searched: the Play-In-Editor world while a session runs, else the editor world."
             }
           },
           "required": [
@@ -31145,7 +31201,7 @@
       },
       "examples": [
         {
-          "title": "Find actors by class or by name.",
+          "title": "Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material); the mesh and material finds name the matching components.",
           "input": {
             "action": "find",
             "className": "PointLight",
@@ -31182,7 +31238,7 @@
         "dataAccess": "project-read"
       },
       "cost": {
-        "latency": "instant",
+        "latency": "interactive",
         "resources": "low"
       },
       "routing": {
@@ -31192,7 +31248,9 @@
           "param": "findBy",
           "actions": {
             "class": "find_by_class",
-            "name": "find_by_name"
+            "name": "find_by_name",
+            "mesh": "find_by_mesh",
+            "material": "find_by_material"
           },
           "declaredBy": {
             "className": [
@@ -31206,14 +31264,24 @@
             ],
             "name": [
               "name"
+            ],
+            "meshPath": [
+              "mesh"
+            ],
+            "limit": [
+              "mesh",
+              "material"
+            ],
+            "materialPath": [
+              "material"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "249f1c0b83a77f3a19726bc26db87e9310f13a48ed04e9fb3cdab0e0eb2ae6a2",
-        "content": "77ba9ce997396cf4857117959abce8441ca034cf66fb3ddbb222b03571c02ca6"
+        "schema": "a74fc566936c1ac461a59d28e1d4c5bc99501b80db9428527271108d4730e3d3",
+        "content": "46bd6700be03efdc322e0d5c2a73f4f07028e20dafaa3ed433046e7ee55e72e4"
       }
     },
     {

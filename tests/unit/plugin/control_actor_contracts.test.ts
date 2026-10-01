@@ -8,6 +8,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
+import { unreadVariantParams } from '../../../src/server/gateway/gateway-dispatch-by.js';
+import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
 import { extractChanges, extractHandles } from '../../../src/tools/catalog/capabilities/semantic/receipt-outcome.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
@@ -512,5 +514,91 @@ describe('set_material is one undoable step, single and many, as set_visibility 
     const actorNames = isRecord(properties) ? properties.actorNames : undefined;
 
     expect(isRecord(actorNames) ? actorNames.description : '').toMatch(/one call and one undo step/u);
+  });
+});
+
+// find had findBy class and name only: the actors drawing one mesh, or showing one material in any slot, could not be asked for.
+describe('control_actor find asks which actors use a static mesh or a material', () => {
+  const find = (): string => read('Find', 'McpAutomationBridge_FindByAsset.cpp');
+  const record = () => {
+    const found = capabilityIndex().byId.get('control_actor.find');
+    if (found === undefined) throw new Error('control_actor.find is not in the catalogue');
+    return found;
+  };
+
+  it('findBy takes mesh and material beside class and name, and the old names run them too', () => {
+    const dispatchBy = record()?.routing.dispatchBy;
+
+    expect(dispatchBy?.actions).toEqual({ class: 'find_by_class', name: 'find_by_name', mesh: 'find_by_mesh', material: 'find_by_material' });
+    expect(dispatchBy?.declaredBy?.meshPath).toEqual(['mesh']);
+    expect(dispatchBy?.declaredBy?.materialPath).toEqual(['material']);
+    expect(dispatchBy?.declaredBy?.limit, 'limit is read by the two asset finds only').toEqual(['mesh', 'material']);
+    const folded = Object.fromEntries((record()?.legacyIds ?? []).map((entry) => [entry.action, entry.folded]));
+    expect(folded.find_by_mesh).toEqual({ findBy: 'mesh' });
+    expect(folded.find_by_material).toEqual({ findBy: 'material' });
+    expect(unreadVariantParams(record(), ['limit'], { findBy: 'class' })).toHaveLength(1);
+    expect(unreadVariantParams(record(), ['limit', 'meshPath'], { findBy: 'mesh' })).toEqual([]);
+  });
+
+  it('the schema takes a path and a limit for each, and refuses an empty limit or a key nothing reads', () => {
+    const input = record()?.schemas.input;
+    const mesh = { action: 'find', findBy: 'mesh', meshPath: '/Engine/BasicShapes/Cube' };
+
+    expect(validateAgainstCapabilitySchema(mesh, input)).toBeUndefined();
+    expect(validateAgainstCapabilitySchema({ action: 'find', findBy: 'material', materialPath: '/Game/Materials/M_Rock', limit: 5 }, input)).toBeUndefined();
+    expect(validateAgainstCapabilitySchema({ ...mesh, limit: 0 }, input)?.pointer).toBe('/limit');
+    expect(validateAgainstCapabilitySchema({ ...mesh, bogus: 1 }, input)).toBeDefined();
+  });
+
+  it('the dispatcher sends both to their handlers, which live in their own folder', () => {
+    const dispatch = read('McpAutomationBridge_ControlActorDispatch.cpp');
+
+    expect(dispatch).toContain('#include "Domains/ControlActor/Find/McpAutomationBridge_FindByAsset.h"');
+    expect(dispatch).toMatch(/LowerSub == TEXT\("find_by_mesh"\)\)\s*return McpFindByAsset::HandleFindByMesh\(this, RequestId, Payload, RequestingSocket\);/u);
+    expect(dispatch).toMatch(/LowerSub == TEXT\("find_by_material"\)\)\s*return McpFindByAsset::HandleFindByMaterial\(this, RequestId, Payload, RequestingSocket\);/u);
+  });
+
+  it('the scan reads the world find_by_class reads, answers count and actors, and says when the limit cut the list', () => {
+    const source = find();
+
+    expect(source).toMatch(/UWorld\* World = GEditor->PlayWorld \? GEditor->PlayWorld\.Get\(\) : GEditor->GetEditorWorldContext\(\)\.World\(\);/u);
+    expect(source).toContain('constexpr int32 DefaultLimit = 200;');
+    expect(source).toContain('constexpr int32 MaxLimit = 1000;');
+    expect(source).toMatch(/Payload->TryGetNumberField\(TEXT\("limit"\), Requested\)\s*\? FMath::Clamp\(static_cast<int32>\(Requested\), 1, MaxLimit\) : DefaultLimit;/u);
+    expect(source).toContain('Data->SetNumberField(TEXT("count"), Actors.Num());');
+    expect(source).toContain('Data->SetArrayField(TEXT("actors"), Actors);');
+    expect(source).toMatch(/if \(Total > Actors\.Num\(\)\)\s*\{\s*Data->SetBoolField\(TEXT\("truncated"\), true\);\s*Data->SetNumberField\(TEXT\("totalCount"\), Total\);\s*\}/u);
+    for (const field of ['label', 'name', 'path', 'class', 'components']) {
+      expect(source, field).toContain(`Row->Set${field === 'components' ? 'Array' : 'String'}Field(TEXT("${field}")`);
+    }
+  });
+
+  it('a mesh matches by what a StaticMeshComponent draws, instanced and foliage components included, and says how many instances', () => {
+    const mesh = sliceBetween(find(), 'bool HandleFindByMesh(', 'bool HandleFindByMaterial(');
+
+    expect(mesh).toMatch(/const UStaticMeshComponent\* MeshComponent = Cast<UStaticMeshComponent>\(Component\);\s*if \(!MeshComponent \|\| MeshComponent->GetStaticMesh\(\) != Mesh\)\s*\{\s*return false;\s*\}/u);
+    expect(mesh).toContain('Cast<UInstancedStaticMeshComponent>(Component)');
+    expect(mesh).toContain('Entry->SetNumberField(TEXT("instances"), Instanced->GetInstanceCount());');
+    expect(mesh).toMatch(/Cast<UStaticMesh>\(McpLoadAsset\(SafePath\)\)/u);
+  });
+
+  it('a material matches by the slots that use it, an override or the mesh default, looking through a dynamic instance', () => {
+    const source = find();
+    const material = source.slice(source.indexOf('bool HandleFindByMaterial('));
+
+    expect(material).toMatch(/for \(int32 Slot = 0; Slot < Component->GetNumMaterials\(\); \+\+Slot\)\s*\{\s*if \(AssetBehind\(Component->GetMaterial\(Slot\)\) == Material\)/u);
+    expect(material).toContain('Entry->SetArrayField(TEXT("slots"), Slots);');
+    expect(material).toContain('LoadMaterialForMcp(MaterialPath, ResolvedPath, LoadError);');
+    expect(source).toMatch(/while \(UMaterialInstanceDynamic\* Dynamic = Cast<UMaterialInstanceDynamic>\(Material\)\)\s*\{\s*Material = Dynamic->Parent;\s*\}/u);
+  });
+
+  it('a missing path or an asset that does not load is an error naming it, not an empty list', () => {
+    const source = find();
+
+    expect(source).toContain('TEXT("meshPath is required.")');
+    expect(source).toContain('TEXT("materialPath is required.")');
+    expect(source.split('TEXT("INVALID_ARGUMENT")')).toHaveLength(3);
+    expect(source).toContain('TEXT("MESH_NOT_FOUND")');
+    expect(source).toContain('Bridge->SendAutomationError(Socket, RequestId, LoadError, TEXT("MATERIAL_NOT_FOUND"));');
   });
 });

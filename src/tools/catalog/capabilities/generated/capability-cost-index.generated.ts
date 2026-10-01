@@ -306,12 +306,14 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "control_actor::detach_actor": "interactive|low",
   "control_actor::duplicate": "interactive|low",
   "control_actor::edit_component": "interactive|low",
-  "control_actor::find": "instant|low",
-  "control_actor::find_actors_by_class": "instant|low",
-  "control_actor::find_actors_by_name": "instant|low",
+  "control_actor::find": "interactive|low",
+  "control_actor::find_actors_by_class": "interactive|low",
+  "control_actor::find_actors_by_name": "interactive|low",
   "control_actor::find_actors_by_tag": "instant|low",
-  "control_actor::find_by_class": "instant|low",
-  "control_actor::find_by_name": "instant|low",
+  "control_actor::find_by_class": "interactive|low",
+  "control_actor::find_by_material": "interactive|low",
+  "control_actor::find_by_mesh": "interactive|low",
+  "control_actor::find_by_name": "interactive|low",
   "control_actor::find_by_tag": "instant|low",
   "control_actor::fix_coplanar": "interactive|medium",
   "control_actor::get_actor_bounds": "instant|low",
@@ -1525,4 +1527,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1512;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1514;

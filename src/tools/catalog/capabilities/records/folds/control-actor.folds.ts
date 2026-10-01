@@ -54,9 +54,11 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'find', selector: 'findBy',
-    summary: 'Find actors by class or by name.',
+    // The summary says "in any slot", not "use": a plain "which meshes use this material" is the asset lookup, and a use word
+    // here counts toward this record on the native door.
+    summary: 'Find actors by class, by name, by the static mesh they draw (mesh) or by a material in any of their slots (material); the mesh and material finds name the matching components.',
     topics: ['find actor', 'find actor by name', 'find actors by class', 'search actors'],
-    members: { class: 'find_by_class', name: 'find_by_name' },
+    members: { class: 'find_by_class', name: 'find_by_name', mesh: 'find_by_mesh', material: 'find_by_material' },
     aliasMembers: { class: 'find_actors_by_class', name: 'find_actors_by_name' },
   },
   { primary: 'set_visibility', summary: 'Show or hide an actor, or many at once with actorNames.', members: ['set_actor_visible'] },

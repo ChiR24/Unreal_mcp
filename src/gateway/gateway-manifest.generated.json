@@ -3562,7 +3562,9 @@
             "type": "string",
             "enum": [
               "class",
-              "name"
+              "name",
+              "mesh",
+              "material"
             ],
             "description": "Which find variant to run."
           },
@@ -3637,7 +3639,22 @@
             "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. Omit for every kind."
           },
           "limit": {
-            "type": "number",
+            "oneOf": [
+              {
+                "type": "number",
+                "description": "Maximum number of actors to return in a list."
+              },
+              {
+                "type": "number",
+                "description": "Maximum problem entries to return (1-200, default 25). Entries come worst-first, so a small limit still shows the placements that matter; flagged is always the true total."
+              },
+              {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 1000,
+                "description": "Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount."
+              }
+            ],
             "description": "Maximum number of actors to return in a list."
           },
           "location": {

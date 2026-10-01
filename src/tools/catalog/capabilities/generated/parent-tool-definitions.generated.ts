@@ -3659,7 +3659,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "class",
-            "name"
+            "name",
+            "mesh",
+            "material"
           ],
           "description": "Which find variant to run."
         },
@@ -3734,7 +3736,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. Omit for every kind."
         },
         "limit": {
-          "type": "number",
+          "oneOf": [
+            {
+              "type": "number",
+              "description": "Maximum number of actors to return in a list."
+            },
+            {
+              "type": "number",
+              "description": "Maximum problem entries to return (1-200, default 25). Entries come worst-first, so a small limit still shows the placements that matter; flagged is always the true total."
+            },
+            {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 1000,
+              "description": "Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount."
+            }
+          ],
           "description": "Maximum number of actors to return in a list."
         },
         "location": {
@@ -4046,6 +4063,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "actors": {
           "oneOf": [
+            {
+              "type": "array",
+              "description": "Matched actors.",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true,
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Actor label."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Actor name."
+                  },
+                  "path": {
+                    "type": "string",
+                    "description": "Actor path."
+                  },
+                  "class": {
+                    "type": "string",
+                    "description": "Actor class."
+                  }
+                }
+              }
+            },
             {
               "type": "array",
               "items": {
@@ -4590,6 +4633,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Listable actors matching the filter, before the limit is applied."
         },
+        "truncated": {
+          "type": "boolean",
+          "description": "True when limit cut the list short; totalCount says how many matched."
+        },
         "truncationNote": {
           "type": "string",
           "description": "Present when the limit cut the list short; says how to reach the rest."
@@ -4615,6 +4662,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "worldName": {
           "type": "string",
           "description": "Name of the active world (or PIE world) the actors were listed from."
+        },
+        "worldSearched": {
+          "type": "string",
+          "description": "The world searched: the Play-In-Editor world while a session runs, else the editor world."
         }
       },
       "additionalProperties": true

@@ -1,4 +1,5 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Domains/ControlActor/Find/McpAutomationBridge_FindByAsset.h"
 #include "Domains/ControlActor/Placement/McpAutomationBridge_CoplanarFaces.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
@@ -122,6 +123,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAction(
     return HandleControlActorGet(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("find_by_class") || LowerSub == TEXT("find_actors_by_class"))
     return HandleControlActorFindByClass(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("find_by_mesh"))
+    return McpFindByAsset::HandleFindByMesh(this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("find_by_material"))
+    return McpFindByAsset::HandleFindByMaterial(this, RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("remove_component"))
     return HandleControlActorRemoveComponent(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("get_component_property"))

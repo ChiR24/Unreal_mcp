@@ -1,6 +1,7 @@
 /**
  * Tag and search records: add_tag, remove_tag, find_by_tag/find_actors_by_tag,
- * find_by_name/find_actors_by_name, find_by_class/find_actors_by_class.
+ * find_by_name/find_actors_by_name, find_by_class/find_actors_by_class,
+ * find_by_mesh and find_by_material (the actors that use an asset).
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
@@ -15,6 +16,36 @@ const FIND_BY_NAME_OUTPUT = {
   ...FIND_OUTPUT,
   similar: { type: 'array', items: { type: 'string' }, description: 'Only when nothing matched: up to 10 labels that contain the query once case, separators and leading zeros are ignored ("Bug1" finds Bug_01 and Bug_10).' },
 };
+
+// The actors that use a mesh or a material: the usual identity fields plus the components that matched, and a cap on
+// the list (a foliage level can hold thousands of actors that draw one rock).
+const FIND_BY_ASSET_OUTPUT = {
+  actors: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', description: 'Actor label.' },
+        name: { type: 'string', description: 'Actor name.' },
+        path: { type: 'string', description: 'Actor path.' },
+        class: { type: 'string', description: 'Actor class.' },
+        components: {
+          type: 'array',
+          items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+          description: 'The actor\'s components that matched, each {name, class}; a mesh find adds instances (how many instances an instanced or foliage component holds), a material find adds slots (the indexes of the material slots using it).',
+        },
+      },
+      additionalProperties: true,
+      'x-unreal-reflection-boundary': true,
+    },
+    description: 'Matched actors, each with the components that matched.',
+  },
+  count: P.count,
+  totalCount: { type: 'number', description: 'Present only when limit cut the list: how many actors matched in all.' },
+  truncated: { type: 'boolean', description: 'True when limit cut the list short; totalCount says how many matched.' },
+  worldSearched: { type: 'string', description: 'The world searched: the Play-In-Editor world while a session runs, else the editor world.' },
+};
+const FIND_LIMIT = { type: 'number', minimum: 1, maximum: 1000, description: 'Most actors to return (1-1000, default 200); a longer match list is cut and reports truncated and totalCount.' };
 
 export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -156,6 +187,62 @@ export const SEARCH_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     exampleInput: { action: 'find_actors_by_class', className: 'PointLight' },
     exampleOutput: { success: true, message: 'Found 2 actors by class', actors: [{ label: 'Light1', name: 'Light1' }], count: 2 },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_actor',
+    action: 'find_by_mesh',
+    domain: DOMAIN,
+    family: FAMILY_FIND,
+    // No "use" in these: a plain "which meshes use this material" is the asset lookup (referencers), and a topic naming use
+    // beside mesh and material gave this record every word of it.
+    topics: ['actors drawing a static mesh', 'actors with a mesh', 'instances of a mesh', 'foliage of a mesh'],
+    summary: 'Find the actors in the level that draw a static mesh (instanced and foliage components included), each with the components that do.',
+    whenToUse: [
+      'All the actors showing one static mesh must be located, to move, swap, tag or delete them.',
+      'A mesh is about to change or go away and its users must be known first.',
+    ],
+    whenNotToUse: [
+      'Actors of one class or name are wanted (use find_by_class or find_by_name).',
+      'The meshes and materials of one known actor are wanted (use get_components).',
+    ],
+    inputProps: {
+      meshPath: { type: 'string', description: 'Static mesh asset path, with or without the object name: /Game/Meshes/SM_Rock or /Engine/BasicShapes/Cube. An actor matches when a StaticMeshComponent of it (an instanced or hierarchical one too) draws exactly this mesh.' },
+      limit: FIND_LIMIT,
+    },
+    required: ['meshPath'],
+    outputProps: FIND_BY_ASSET_OUTPUT,
+    outputRequired: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'find_by_mesh', meshPath: '/Game/Meshes/SM_Rock' },
+    exampleOutput: { success: true, message: 'Found 1 actors using the mesh', actors: [{ label: 'Rock1', name: 'Rock1', path: '/Game/Maps/L.L:PersistentLevel.Rock1', class: '/Script/Engine.StaticMeshActor', components: [{ name: 'StaticMeshComponent0', class: 'StaticMeshComponent' }] }], count: 1 },
+  }),
+  buildCoreRecord({
+    parentTool: 'control_actor',
+    action: 'find_by_material',
+    domain: DOMAIN,
+    family: FAMILY_FIND,
+    topics: ['actors showing a material', 'actors with a material in a slot'],
+    summary: 'Find the actors in the level with a component that uses a material in any slot, as an override or as its mesh\'s default, each with the components and slots that do.',
+    whenToUse: [
+      'Every actor that shows one material must be located, to restyle, retarget or audit them.',
+      'A material is about to change or go away and its users must be known first.',
+    ],
+    whenNotToUse: [
+      'The materials of one known actor are wanted (use get_components).',
+      'The assets that reference a material are wanted, not the actors placed in the level (use asset.inspect_asset with lookup=dependencies and referencers=true).',
+    ],
+    inputProps: {
+      materialPath: { type: 'string', description: 'Material or material instance asset path, with or without the object name: /Game/Materials/M_Rock. A component matches when a slot of it, an override or the mesh\'s own default, is exactly this asset or a dynamic instance made from it. Instances of a material are not followed: ask for each instance by its own path.' },
+      limit: FIND_LIMIT,
+    },
+    required: ['materialPath'],
+    outputProps: FIND_BY_ASSET_OUTPUT,
+    outputRequired: [],
+    effect: 'read',
+    costLatency: 'interactive',
+    exampleInput: { action: 'find_by_material', materialPath: '/Game/Materials/M_Rock' },
+    exampleOutput: { success: true, message: 'Found 1 actors using the material', actors: [{ label: 'Rock1', name: 'Rock1', path: '/Game/Maps/L.L:PersistentLevel.Rock1', class: '/Script/Engine.StaticMeshActor', components: [{ name: 'StaticMeshComponent0', class: 'StaticMeshComponent', slots: [0] }] }], count: 1 },
   }),
   buildCoreRecord({
     parentTool: 'control_actor',
