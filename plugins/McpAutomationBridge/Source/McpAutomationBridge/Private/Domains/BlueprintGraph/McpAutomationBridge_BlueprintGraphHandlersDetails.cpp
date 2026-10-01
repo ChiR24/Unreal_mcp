@@ -2,6 +2,7 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "EdGraphSchema_K2.h"
 
+#include "Animation/AnimationAsset.h"
 #include "AnimGraphNode_Base.h"
 
 namespace McpBlueprintGraphHandlers
