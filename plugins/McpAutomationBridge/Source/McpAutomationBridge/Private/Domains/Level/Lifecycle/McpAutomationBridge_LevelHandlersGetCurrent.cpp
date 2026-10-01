@@ -1,6 +1,7 @@
 #include "Domains/Level/McpAutomationBridge_LevelHandlersActions.h"
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDirtyPackageLoad.h"
 
+#include "Algo/Count.h"
 #include "Editor.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
@@ -41,7 +42,8 @@ bool HandleGetCurrentLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const
     Result->SetStringField(TEXT("editorWorldName"), EditorWorld->GetName());
     Result->SetStringField(TEXT("editorWorldPath"), WorldPackage ? WorldPackage->GetPathName() : TEXT(""));
     Result->SetStringField(TEXT("worldType"), LexToString(EditorWorld->WorldType));
-    Result->SetNumberField(TEXT("actorCount"), CurrentLevel->Actors.Num());
+    // Actors.Num() also counted the empty slots a Blueprint recompile leaves behind (36 extra after one).
+    Result->SetNumberField(TEXT("actorCount"), static_cast<int32>(Algo::CountIf(CurrentLevel->Actors, [](const AActor *A) { return IsValid(A); })));
     Result->SetBoolField(TEXT("isPersistentLevel"), CurrentLevel == EditorWorld->PersistentLevel);
     // The capability's declared contract promises `loaded`; the current level is
     // loaded by definition, so it is stated rather than left absent.

@@ -2,6 +2,7 @@
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDirtyPackageLoad.h"
 #include "Domains/Level/World/McpAutomationBridge_LevelHandlersWorldAccess.h"
 
+#include "Algo/Count.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
 #include "Engine/Level.h"
@@ -81,7 +82,8 @@ bool HandleGetLevelInfoAction(UMcpAutomationBridgeSubsystem& Subsystem, const FS
       const FString AssetName = FPackageName::GetShortName(PackageName);
       Result->SetStringField(TEXT("levelPath"), PackageName);
       Result->SetStringField(TEXT("levelName"), AssetName);
-      Result->SetNumberField(TEXT("actorCount"), TargetLevel->Actors.Num());
+      // Valid actors only: Actors.Num() also counted the empty slots a Blueprint recompile leaves behind.
+      Result->SetNumberField(TEXT("actorCount"), static_cast<int32>(Algo::CountIf(TargetLevel->Actors, [](const AActor *A) { return IsValid(A); })));
       Result->SetBoolField(TEXT("loaded"), true);
       AddUnsavedState(Result, TargetLevel);
 
