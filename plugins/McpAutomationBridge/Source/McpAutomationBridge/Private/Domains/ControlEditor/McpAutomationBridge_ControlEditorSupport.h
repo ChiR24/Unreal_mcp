@@ -56,6 +56,14 @@
 bool IsSafeConsoleArgumentToken(const FString &Value);
 FString MakeSafeConsoleName(const FString &RawName, const TCHAR *Prefix);
 FEditorViewportClient *GetActiveEditorViewportClientForMcp();
+// The editor viewport that draws the play world while the player is ejected from its pawn (Simulate in Editor);
+// null when Play In Editor is not running or the player still possesses a pawn.
+FEditorViewportClient *GetEjectedPieViewportClientForMcp();
+// Play In Editor runs and the player is still in its pawn: the game draws that pawn's camera, so no editor viewport
+// camera can be moved. Sends the refusal (PIE_VIEW_NOT_EJECTED, naming the fix) and returns true; false otherwise.
+bool RefuseCameraMoveWhilePieFollowsPawnForMcp(UMcpAutomationBridgeSubsystem *Bridge,
+                                               TSharedPtr<FMcpBridgeWebSocket> Socket,
+                                               const FString &RequestId, const TCHAR *What);
 FString NormalizeSimulatedInputTypeForMcp(
     const TSharedPtr<FJsonObject> &Payload);
 void SimulateEditorInputForMcp(const FString &InputType, const FString &Key,

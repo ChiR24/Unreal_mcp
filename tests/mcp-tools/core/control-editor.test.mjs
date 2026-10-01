@@ -25,7 +25,9 @@ const testCases = [
   { scenario: 'ACTION: set_view_target', toolName: 'control_editor', arguments: { action: 'set_view_target', actorName: FOCUS_ACTOR, blendTime: 0 }, expected: 'success' },
   { scenario: 'ACTION: set_game_view_target objectPath', toolName: 'control_editor', arguments: { action: 'set_game_view_target', objectPath: FOCUS_ACTOR, blendTime: 0.1 }, expected: 'success' },
   { scenario: 'ACTION: possess', toolName: 'control_editor', arguments: { action: 'possess', actorName: PIE_PAWN }, expected: 'success|NOT_IN_PIE' },
-  { scenario: 'ACTION: eject', toolName: 'control_editor', arguments: { action: 'eject' }, expected: 'success|NO_ACTIVE_SESSION|not active' },
+  // The game draws its view target's camera until the player is ejected: there is no free camera to move, and the refusal names the fix.
+  { scenario: 'ERROR: set_camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'set_camera', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
+  { scenario: 'ERROR: screenshot from a camera while the player is not ejected', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'editor_viewport', resolution: '320x180', location: cameraLocation, rotation: cameraRotation }, expected: 'error|PIE_VIEW_NOT_EJECTED' },
   // Replays record the running game, so they are exercised while PIE runs.
   { scenario: 'ACTION: start_recording', toolName: 'control_editor', arguments: { action: 'start_recording', name: `Recording_${ts}` }, expected: 'success' },
   { scenario: 'PLAYBACK: stop_recording', toolName: 'control_editor', arguments: { action: 'stop_recording' }, expected: 'success' },
@@ -39,6 +41,11 @@ const testCases = [
   { scenario: 'CONFIG: set_game_speed back to normal', toolName: 'control_editor', arguments: { action: 'set_game_speed', speed: 1 }, expected: 'success' },
   { scenario: 'ACTION: step_frame', toolName: 'control_editor', arguments: { action: 'step_frame', steps: 1 }, expected: 'success' },
   { scenario: 'ACTION: single_frame_step', toolName: 'control_editor', arguments: { action: 'single_frame_step', steps: 1 }, expected: 'success' },
+  // Ejecting is the editor's own Eject button: the player leaves its pawn and the view is a free camera, which set_camera
+  // moves and the screenshot photographs. It runs last in the PIE block because the game no longer drives the pawn after it.
+  { scenario: 'ACTION: eject', toolName: 'control_editor', arguments: { action: 'eject' }, expected: 'success', assertions: [{ path: 'structuredContent.result.view', equals: 'pie_ejected', label: 'the view is now a free camera' }] },
+  { scenario: 'CONFIG: set_camera places the ejected view', toolName: 'control_editor', arguments: { action: 'set_camera', location: { x: 0, y: -600, z: 300 }, rotation: { pitch: -15, yaw: 90, roll: 0 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.view', equals: 'pie_ejected', label: 'the move says which view it moved' }, { path: 'structuredContent.result.cameraLocation.y', approximately: -600, tolerance: 1, label: 'the camera is where it was put' }] },
+  { scenario: 'OPTIONAL: screenshot of the ejected game view from a camera placed in the same call', toolName: 'control_editor', arguments: { action: 'screenshot', mode: 'game_viewport', resolution: '320x180', location: { x: 0, y: -700, z: 300 }, rotation: { pitch: -15, yaw: 90, roll: 0 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.view', equals: 'pie_ejected', label: 'the picture is of the ejected view' }, { path: 'structuredContent.result.cameraLocation.y', approximately: -700, tolerance: 1, label: 'it was taken from the given place' }] },
   { scenario: 'PLAYBACK: stop', toolName: 'control_editor', arguments: { action: 'stop' }, expected: 'success' },
   { scenario: 'PLAYBACK: stop_pie', toolName: 'control_editor', arguments: { action: 'stop_pie' }, expected: 'success' },
 

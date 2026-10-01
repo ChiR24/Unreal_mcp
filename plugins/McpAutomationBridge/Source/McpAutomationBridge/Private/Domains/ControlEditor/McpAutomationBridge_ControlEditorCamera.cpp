@@ -164,6 +164,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewTarget(
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  // While Play In Editor runs, the level viewport is hidden behind the game view, so moving it changed nothing on screen
+  // and still answered success. Only an ejected player is drawn by an editor viewport; a pawn's camera cannot be moved.
+  if (RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId, TEXT("set_camera"))) {
+    return true;
+  }
+
   // Move the SAME viewport client the screenshot handler captures. Routing the
   // camera through UUnrealEditorSubsystem::SetLevelViewportCameraInfo used to
   // target the first PERSPECTIVE client in GEditor->GetLevelViewportClients(),
@@ -209,8 +215,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
   const bool bLocationApplied = AppliedLocation.Equals(RequestedLocation, 1.0);
   const bool bRotationApplied = AppliedRotation.Equals(RequestedRotation, 1.0);
 
+  // Past the refusal above, Play In Editor running means the ejected view; say which view moved.
+  const bool bPieView = GEditor->PlayWorld != nullptr;
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), bLocationApplied && bRotationApplied);
+  Resp->SetStringField(TEXT("view"), bPieView ? TEXT("pie_ejected") : TEXT("editor_viewport"));
   Resp->SetObjectField(TEXT("requestedLocation"),
                        McpHandlerUtils::VectorToJson(RequestedLocation));
   Resp->SetObjectField(TEXT("requestedRotation"),
@@ -235,7 +244,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCamera(
     return true;
   }
 
-  SendAutomationResponse(Socket, RequestId, true, TEXT("Camera set"), Resp,
+  SendAutomationResponse(Socket, RequestId, true,
+                         bPieView ? TEXT("Camera set (the ejected Play In Editor view)") : TEXT("Camera set"), Resp,
                          FString());
   return true;
 }

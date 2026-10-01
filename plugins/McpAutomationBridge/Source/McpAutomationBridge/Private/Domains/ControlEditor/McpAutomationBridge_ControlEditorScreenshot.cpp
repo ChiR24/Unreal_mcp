@@ -28,7 +28,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     Mode = TEXT("editor_viewport");
   }
 
-  if (Mode == TEXT("game_viewport")) {
+  // location/rotation place the camera the picture is taken from. While Play In Editor runs that is only possible once
+  // the player is ejected; a pawn's camera cannot be moved, and a picture from somewhere else is not what was asked for.
+  if ((Mode == TEXT("editor_viewport") || Mode == TEXT("game_viewport")) &&
+      (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation"))) &&
+      RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId,
+                                                TEXT("screenshot with location or rotation"))) {
+    return true;
+  }
+
+  // An ejected player no longer feeds the game viewport: the picture of the game is the editor viewport that draws it.
+  const bool bEjectedView = GetEjectedPieViewportClientForMcp() != nullptr;
+  if (Mode == TEXT("game_viewport") && !bEjectedView) {
     // The UI handler gates on the payload's own subAction, which still carries
     // whichever ALIAS the caller used. `take_screenshot` therefore fell past
     // the screenshot branch and answered "System control action
@@ -38,7 +49,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     return HandleUiAction(RequestId, TEXT("system_control"), Payload, Socket);
   }
 
-  if (Mode != TEXT("editor_viewport") && Mode != TEXT("full_editor_window")) {
+  // game_viewport gets here only for an ejected player, and is then the same picture as editor_viewport.
+  if (Mode != TEXT("editor_viewport") && Mode != TEXT("full_editor_window") && Mode != TEXT("game_viewport")) {
     SendStandardErrorResponse(
         this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
         TEXT("Invalid screenshot mode. Supported modes: editor_viewport, game_viewport, full_editor_window"),
@@ -149,7 +161,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
   FViewport* Viewport = nullptr;
   FEditorViewportClient* CaptureClient = nullptr;
-  if (GEditor->PlayWorld != nullptr && GEditor->GetPIEViewport() != nullptr) {
+  if (GEditor->PlayWorld != nullptr && !bEjectedView && GEditor->GetPIEViewport() != nullptr) {
     Viewport = GEditor->GetPIEViewport();
   }
   if (!Viewport) {
@@ -273,8 +285,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   if (Payload->HasField(TEXT("_levelEditorFronted"))) {
     Resp->SetBoolField(TEXT("levelEditorBroughtToFront"), true);
   }
-  if (!CaptureClient && (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")))) {
-    Resp->SetStringField(TEXT("cameraNote"), TEXT("Play In Editor is running, so this is the game camera; location and rotation move the level viewport camera."));
+  // Which view the picture is of: the level viewport, the game as its pawn sees it, or the free camera of an ejected player.
+  if (GEditor->PlayWorld == nullptr) {
+    Resp->SetStringField(TEXT("view"), TEXT("editor_viewport"));
+  } else {
+    Resp->SetStringField(TEXT("view"), bEjectedView ? TEXT("pie_ejected") : TEXT("pie_game"));
   }
   SendScreenshotReceiptForMcp(this, Socket, RequestId, Payload, Resp,
                               PngData.GetData(), PngData.Num(), FullPath,

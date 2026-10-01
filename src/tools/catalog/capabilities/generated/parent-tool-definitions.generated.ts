@@ -4939,7 +4939,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "description": "z"
                 }
               },
-              "description": "editor_viewport: put the level viewport camera here first, in the same call ({x, y, z}); it stays there. Ignored while Play In Editor runs (the game camera is captured).",
+              "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
               "additionalProperties": false
             }
           ],
@@ -5026,7 +5026,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                   "description": "roll"
                 }
               },
-              "description": "editor_viewport: turn the level viewport camera to this first ({pitch, yaw, roll}), in the same call.",
+              "description": "editor_viewport (and game_viewport while the player is ejected): turn that camera to this first ({pitch, yaw, roll}), in the same call. Refused like location while Play In Editor runs and the player is not ejected.",
               "additionalProperties": false
             }
           ],
@@ -5151,17 +5151,55 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "alreadyEjected": {
+          "type": "boolean",
+          "description": "True when the player was already ejected, so nothing changed."
+        },
         "cameraLocation": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "editor_viewport: where the camera was for this picture."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Where the camera is after the call, {x, y, z}."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Where the free camera starts, {x, y, z}: where the pawn's camera was."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "editor_viewport and an ejected game view: where the camera was for this picture."
+            }
+          ],
+          "description": "Where the camera is after the call, {x, y, z}."
         },
         "cameraRotation": {
-          "type": "object",
-          "additionalProperties": true,
-          "x-unreal-reflection-boundary": true,
-          "description": "editor_viewport: how the camera was turned for this picture."
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "How the camera is turned after the call, {pitch, yaw, roll}."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "How the free camera starts out turned, {pitch, yaw, roll}."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "editor_viewport and an ejected game view: how the camera was turned for this picture."
+            }
+          ],
+          "description": "How the camera is turned after the call, {pitch, yaw, roll}."
         },
         "className": {
           "type": "string",
@@ -5309,6 +5347,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Unsaved packages discarded by this restart."
         },
+        "ejected": {
+          "type": "boolean",
+          "description": "True once the player has left its pawn and the view is a free camera; false (with EJECT_FAILED) when the session did not switch within 5 seconds, which happens when Play In Editor runs in a window of its own instead of a level viewport."
+        },
         "filename": {
           "type": "string",
           "description": "Screenshot or recording filename."
@@ -5389,6 +5431,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when only the CDO existed, which usually means the owning window has never been opened."
         },
+        "locationApplied": {
+          "type": "boolean",
+          "description": "Whether the viewport took the requested location; false (with CAMERA_NOT_APPLIED) when it is locked to an actor, piloting or orthographic."
+        },
         "mainWindow": {
           "type": "boolean",
           "description": "full_editor_window: true when the captured window is the main editor frame."
@@ -5429,6 +5475,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "restored": {
           "type": "boolean",
           "description": "Whether the window is on screen after the call."
+        },
+        "rotationApplied": {
+          "type": "boolean",
+          "description": "Whether the viewport took the requested rotation."
         },
         "routedToPIE": {
           "type": "boolean",
@@ -5490,6 +5540,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "validateOnly": {
           "type": "boolean",
           "description": "True when this call only reported what a restart would do."
+        },
+        "view": {
+          "type": "string",
+          "description": "Which view moved: editor_viewport (the level viewport), or pie_ejected (the free camera of an ejected player while Play In Editor runs)."
         },
         "viewportHeight": {
           "type": "number",

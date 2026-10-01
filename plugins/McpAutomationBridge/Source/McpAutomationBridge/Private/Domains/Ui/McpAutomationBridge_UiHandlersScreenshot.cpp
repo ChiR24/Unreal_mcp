@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
+#include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 #include "Domains/Ui/McpAutomationBridge_UiHandlersPrivate.h"
 
 #include "Camera/PlayerCameraManager.h"
@@ -43,6 +44,12 @@ bool HandleScreenshotAction(
     return ScreenshotFallback();
   }
   if (Mode == TEXT("full_editor_window") || Mode == TEXT("editor_viewport")) {
+    bResponseSent = true;
+    return ScreenshotFallback();
+  }
+  // An ejected player no longer feeds the game viewport read below: the picture of the game is the editor viewport that
+  // draws it, which the editor capture takes (and which does not send an ejected player back here).
+  if (Mode == TEXT("game_viewport") && GetEjectedPieViewportClientForMcp()) {
     bResponseSent = true;
     return ScreenshotFallback();
   }

@@ -411,3 +411,43 @@ describe('handlers answer what they did', () => {
     });
   });
 });
+
+// The camera of a running game: the level viewport is hidden behind the game view, so a camera moved there changed
+// nothing on screen while the call said success, and `Exec("Eject")` (no such console command) ejected nobody.
+describe('the view of a running game', () => {
+  const editorControl = (...segments: readonly string[]): string => code('ControlEditor', ...segments);
+  const outputNames = (id: string): readonly string[] => Object.keys(capabilityIndex().byId.get(id)?.schemas.output.properties ?? {});
+
+  it('eject switches the session the way the editor\'s Eject button does, and answers once the view has switched', () => {
+    const source = editorControl('Session', 'McpAutomationBridge_ControlEditorEject.cpp');
+    expect(source).toContain('GEditor->RequestToggleBetweenPIEandSIE();');
+    expect(source, 'there is no Eject console command').not.toMatch(/Exec\([^)]*Eject/u);
+    expect(source).toContain('GetEjectedPieViewportClientForMcp()');
+    expect(source).toContain('TEXT("EJECT_FAILED")');
+    expect(editorControl('McpAutomationBridge_ControlEditorPlay.cpp')).not.toContain('HandleControlEditorEject');
+    expect(outputNames('control_editor.play')).toEqual(expect.arrayContaining(['ejected', 'alreadyEjected', 'view']));
+  });
+
+  it('set_camera refuses until the player is ejected, and says which view it moved', () => {
+    const camera = editorControl('McpAutomationBridge_ControlEditorCamera.cpp');
+    const setCamera = camera.slice(camera.indexOf('HandleControlEditorSetCamera('));
+    const refusal = setCamera.indexOf('RefuseCameraMoveWhilePieFollowsPawnForMcp(');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(refusal, 'the refusal comes before a viewport is picked').toBeLessThan(setCamera.indexOf('GetActiveEditorViewportClientForMcp()'));
+    expect(setCamera).toContain('TEXT("pie_ejected")');
+    const support = editorControl('McpAutomationBridge_ControlEditorViewportSupport.cpp');
+    expect(support).toContain('TEXT("PIE_VIEW_NOT_EJECTED")');
+    expect(support, 'the shared viewport lookup answers the ejected view first').toContain('if (FEditorViewportClient *Ejected = GetEjectedPieViewportClientForMcp()) {');
+    expect(outputNames('control_editor.set_camera')).toEqual(expect.arrayContaining(['view', 'cameraLocation', 'cameraRotation']));
+  });
+
+  it('a screenshot of an ejected game is taken from the editor viewport that draws it, and a camera it cannot move is refused', () => {
+    const shot = editorControl('McpAutomationBridge_ControlEditorScreenshot.cpp');
+    expect(shot).toContain('Mode == TEXT("game_viewport") && !bEjectedView');
+    expect(shot).toContain('GEditor->PlayWorld != nullptr && !bEjectedView && GEditor->GetPIEViewport() != nullptr');
+    expect(shot).toContain('RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId,');
+    expect(shot, 'the note that said location and rotation were ignored is gone').not.toContain('cameraNote');
+    expect(code('Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp')).toContain('Mode == TEXT("game_viewport") && GetEjectedPieViewportClientForMcp()');
+    expect(outputNames('control_editor.screenshot')).toContain('view');
+  });
+});

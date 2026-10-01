@@ -71,13 +71,20 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'eject', domain: D, family: F,
-    summary: 'Eject from the currently possessed pawn in PIE.',
-    whenToUse: ['The player must detach from the possessed pawn.'],
-    whenNotToUse: ['PIE is not running or no pawn is possessed.'],
+    summary: 'Eject the player from its pawn in PIE, as the editor\'s Eject button does: the session switches to Simulate in Editor and the view becomes a free camera that set_camera moves and screenshot photographs. Answers once the view has switched.',
+    whenToUse: ['The player must detach from the possessed pawn.', 'The view of a running game must be placed for a screenshot: eject, then set_camera.'],
+    whenNotToUse: ['PIE is not running (NO_ACTIVE_SESSION).', 'The game must keep playing from the pawn: an ejected player no longer drives it.'],
     inputProps: {},
     required: [],
     effect: 'write',
-   
+    outputProps: {
+      ejected: { type: 'boolean', description: 'True once the player has left its pawn and the view is a free camera; false (with EJECT_FAILED) when the session did not switch within 5 seconds, which happens when Play In Editor runs in a window of its own instead of a level viewport.' },
+      alreadyEjected: { type: 'boolean', description: 'True when the player was already ejected, so nothing changed.' },
+      view: { type: 'string', description: 'pie_ejected: the view that set_camera moves and screenshot photographs.' },
+      cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the free camera starts, {x, y, z}: where the pawn\'s camera was.' },
+      cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'How the free camera starts out turned, {pitch, yaw, roll}.' },
+    },
+    costLatency: 'interactive',
     exampleInput: { action: 'eject' },
   }),
   buildCoreRecord({

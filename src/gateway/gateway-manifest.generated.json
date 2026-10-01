@@ -4253,7 +4253,7 @@
                     "description": "z"
                   }
                 },
-                "description": "editor_viewport: put the level viewport camera here first, in the same call ({x, y, z}); it stays there. Ignored while Play In Editor runs (the game camera is captured).",
+                "description": "editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.",
                 "additionalProperties": false
               }
             ],
@@ -4340,7 +4340,7 @@
                     "description": "roll"
                   }
                 },
-                "description": "editor_viewport: turn the level viewport camera to this first ({pitch, yaw, roll}), in the same call.",
+                "description": "editor_viewport (and game_viewport while the player is ejected): turn that camera to this first ({pitch, yaw, roll}), in the same call. Refused like location while Play In Editor runs and the player is not ejected.",
                 "additionalProperties": false
               }
             ],

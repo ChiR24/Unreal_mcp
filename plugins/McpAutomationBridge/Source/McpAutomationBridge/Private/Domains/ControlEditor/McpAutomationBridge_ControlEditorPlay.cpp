@@ -67,29 +67,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
   return true;
 }
 
-bool UMcpAutomationBridgeSubsystem::HandleControlEditorEject(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  if (!GEditor->PlayWorld) {
-    TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-    ErrorDetails->SetBoolField(TEXT("notInPIE"), true);
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("NO_ACTIVE_SESSION"),
-                              TEXT("Cannot eject: Play session not active"), ErrorDetails);
-    return true;
-  }
-
-  // Use Eject console command instead of RequestEndPlayMap
-  // This ejects the player from the possessed pawn without stopping PIE
-  GEditor->Exec(GEditor->PlayWorld, TEXT("Eject"));
-
-  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), true);
-  Resp->SetBoolField(TEXT("ejected"), true);
-  SendAutomationResponse(Socket, RequestId, true,
-                         TEXT("Ejected from possessed actor"), Resp, FString());
-  return true;
-}
-
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

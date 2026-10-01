@@ -24,7 +24,7 @@ const SCREENSHOT_PROPS = {
   mode: {
     type: 'string',
     enum: ['editor_viewport', 'game_viewport', 'full_editor_window'],
-    description: 'Screenshot source: editor_viewport (default, the level viewport), game_viewport (the running game frame WITHOUT any UMG widgets) or full_editor_window (the editor window as displayed: the only mode that shows game UI and asset editors).'
+    description: 'Screenshot source: editor_viewport (default, the level viewport), game_viewport (the running game frame WITHOUT any UMG widgets) or full_editor_window (the editor window as displayed: the only mode that shows game UI and asset editors). While Play In Editor runs with the player ejected (control_editor play control=eject), the game is drawn by the editor viewport, so editor_viewport and game_viewport are then the same picture: the ejected view.'
   },
   // An asset editor (Widget Blueprint designer, material graph) is its own
   // window, so full_editor_window on the main frame alone could never show it.
@@ -33,8 +33,8 @@ const SCREENSHOT_PROPS = {
     description: 'With mode full_editor_window, which window to capture: a list index (2, or "2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one.'
   },
   // Camera and capture in one call: set_camera followed by a screenshot could return a frame drawn before the move.
-  location: { ...P.location, description: 'editor_viewport: put the level viewport camera here first, in the same call ({x, y, z}); it stays there. Ignored while Play In Editor runs (the game camera is captured).' },
-  rotation: { ...P.rotation, description: 'editor_viewport: turn the level viewport camera to this first ({pitch, yaw, roll}), in the same call.' },
+  location: { ...P.location, description: 'editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.' },
+  rotation: { ...P.rotation, description: 'editor_viewport (and game_viewport while the player is ejected): turn that camera to this first ({pitch, yaw, roll}), in the same call. Refused like location while Play In Editor runs and the player is not ejected.' },
   returnBase64: P.returnBase64,
   keepFile: {
     type: 'boolean',
@@ -70,8 +70,9 @@ const SCREENSHOT_OUTPUT = {
     description: 'Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input.'
   },
   windowCount: { type: 'number', description: 'Number of visible editor windows.' },
-  cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport: where the camera was for this picture.' },
-  cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport: how the camera was turned for this picture.' },
+  cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport and an ejected game view: where the camera was for this picture.' },
+  cameraRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport and an ejected game view: how the camera was turned for this picture.' },
+  view: { type: 'string', description: 'Which view the picture is of: editor_viewport (the level viewport), pie_game (the running game as its possessed pawn sees it) or pie_ejected (the free camera of an ejected player). Absent for full_editor_window and for the game_viewport capture of a possessed game.' },
 };
 
 export const SCREENSHOT_RECORDS: readonly CapabilityRecordSource[] = [
