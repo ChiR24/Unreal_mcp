@@ -35,6 +35,23 @@ describe('handlers answer what they did', () => {
     expect(code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowMetadata.cpp')).not.toContain('debug_has_meta');
   });
 
+  // A folder of 391 unsaved imported assets took minutes (one engine delete per asset) and two of them
+  // survived while the reply said the folder was deleted.
+  it('a folder delete runs one engine pass and names what survived', () => {
+    const safety = (file: string): string =>
+      readFileSync(join(DOMAINS, '..', 'Safety', file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+    const batch = safety('McpSafeOperationsFolderDeleteAssets.h');
+    expect(batch).toContain('const int32 DeletedByEngine = ObjectTools::ForceDeleteObjects(Objects, false);');
+    expect(batch.split('ObjectTools::ForceDeleteObjects('), 'one pass, not one per asset').toHaveLength(2);
+    expect(safety('McpSafeOperationsAnimationDelete.h')).toContain('ForceDeleteBatch(InMemoryStillLoaded, TEXT("InMemoryOnlyLeftovers"))');
+    const verify = safety('McpSafeOperationsFolderDeleteVerify.h');
+    expect(verify).toContain('IsValid(FindObject<UObject>(nullptr, *ObjectPath))');
+    expect(verify).toContain('if (OutRemaining) { OutRemaining->Add(SurvivorPath); }');
+    expect(verify).not.toContain('without backing files remain');
+    expect(code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowAssetMutation.cpp'))
+      .toContain('FailedToDeletePaths.Add(Left + TEXT(" (left in the deleted folder)"));');
+  });
+
   it('bulk_delete never asks the engine for a confirmation dialog', () => {
     const source = code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowBulkDelete.cpp');
     expect(source).not.toContain('showConfirmation');

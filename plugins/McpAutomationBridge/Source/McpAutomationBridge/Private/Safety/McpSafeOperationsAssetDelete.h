@@ -16,18 +16,12 @@ namespace McpSafeOperations
  * left the registry until the next editor start and then came back.
  * (ObjectTools::CleanupAfterSuccessfulDelete skips the file of any package it
  * still finds referenced, and leaves that package loaded.)
- * This runs the engine delete and, when the package file survives it, finishes
- * the job the way DeleteWorldPackagesByPath does: unload the package, and only
- * once it really is unloaded, remove the file. True only when the file is gone.
+ * McpRemoveLeftoverPackageFile finishes such a delete the way
+ * DeleteWorldPackagesByPath does: unload the package, and only once it really
+ * is unloaded, remove the file. True only when the file is gone.
  */
-inline bool McpDeleteAssetAndFile(const FString& AssetPath)
+inline bool McpRemoveLeftoverPackageFile(const FString& PackageName)
 {
-    const FString PackageName = FPackageName::ObjectPathToPackageName(AssetPath);
-    if (!UEditorAssetLibrary::DeleteAsset(AssetPath))
-    {
-        return false;
-    }
-
     FString Filename;
     if (!FPackageName::DoesPackageExist(PackageName, &Filename))
     {
@@ -35,7 +29,7 @@ inline bool McpDeleteAssetAndFile(const FString& AssetPath)
     }
 
     UE_LOG(LogMcpSafeOperations, Warning,
-        TEXT("McpDeleteAssetAndFile: '%s' was deleted in memory but its file remained; unloading the package and removing the file"),
+        TEXT("McpRemoveLeftoverPackageFile: '%s' was deleted in memory but its file remained; unloading the package and removing the file"),
         *PackageName);
     if (UPackage* Leftover = FindObject<UPackage>(nullptr, *PackageName))
     {
@@ -45,7 +39,7 @@ inline bool McpDeleteAssetAndFile(const FString& AssetPath)
     if (FindObject<UPackage>(nullptr, *PackageName))
     {
         UE_LOG(LogMcpSafeOperations, Warning,
-            TEXT("McpDeleteAssetAndFile: '%s' is still loaded, so its file was kept"), *PackageName);
+            TEXT("McpRemoveLeftoverPackageFile: '%s' is still loaded, so its file was kept"), *PackageName);
         return false;
     }
 
@@ -56,6 +50,13 @@ inline bool McpDeleteAssetAndFile(const FString& AssetPath)
     IFileManager::Get().Delete(*FPaths::ConvertRelativePathToFull(Filename), false, true, false);
     ScanPathSynchronous(FPaths::GetPath(PackageName), false);
     return !FPackageName::DoesPackageExist(PackageName);
+}
+
+/** Runs the engine delete, then removes a file it left behind. */
+inline bool McpDeleteAssetAndFile(const FString& AssetPath)
+{
+    return UEditorAssetLibrary::DeleteAsset(AssetPath)
+        && McpRemoveLeftoverPackageFile(FPackageName::ObjectPathToPackageName(AssetPath));
 }
 
 

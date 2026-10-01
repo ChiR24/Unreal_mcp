@@ -190,37 +190,39 @@ inline bool DeleteSafeAssets(const TArray<FAssetData>& SafeAssets)
         return true;
     }
 
-    UE_LOG(LogMcpSafeOperations, Log,
-        TEXT("McpSafeDeleteFolder: Deleting %d safe assets via UEditorAssetLibrary::DeleteAsset"),
-        SafeAssets.Num());
+    // One engine pass for the whole set: a delete per asset ran a referencer scan, a slow task and a
+    // garbage collection each, so a 391-asset import took minutes with the game thread blocked.
+    TArray<UObject*> Objects;
+    for (const FAssetData& SafeAsset : SafeAssets)
+    {
+        if (UObject* Object = SafeAsset.GetAsset())
+        {
+            Objects.Add(Object);
+        }
+    }
+    if (Objects.Num() > 0)
+    {
+        McpQuiesceBeforeBatchDelete(Objects);
+        const int32 DeletedByEngine = ObjectTools::ForceDeleteObjects(Objects, false);
+        McpQuiesceAfterBatchDelete(Objects);
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("McpSafeDeleteFolder: Deleted %d/%d safe assets in one batch"), DeletedByEngine, Objects.Num());
+    }
 
-    int32 DeletedSafeAssets = 0;
+    // What the batch left (an asset that would not load, a file an open linker kept) goes one by one.
     for (const FAssetData& SafeAsset : SafeAssets)
     {
         const FString SafeAssetPath = SafeAsset.PackageName.ToString();
-        if (SafeAssetPath.IsEmpty())
-        {
-            continue;
-        }
-
-        const bool bDeletedSafeAsset = McpDeleteAssetAndFile(SafeAssetPath);
-        const bool bExistsAfterDelete = McpAssetExists(SafeAssetPath);
-        if (bDeletedSafeAsset && !bExistsAfterDelete)
-        {
-            ++DeletedSafeAssets;
-        }
-        else
+        const bool bGone = McpAssetExists(SafeAssetPath)
+            ? McpDeleteAssetAndFile(SafeAssetPath) && !McpAssetExists(SafeAssetPath)
+            : McpRemoveLeftoverPackageFile(SafeAssetPath);
+        if (!bGone)
         {
             UE_LOG(LogMcpSafeOperations, Error,
-                TEXT("McpSafeDeleteFolder: Failed to delete safe asset '%s' (deleteResult=%d existsAfter=%d)"),
-                *SafeAssetPath, bDeletedSafeAsset ? 1 : 0, bExistsAfterDelete ? 1 : 0);
+                TEXT("McpSafeDeleteFolder: Failed to delete safe asset '%s'"), *SafeAssetPath);
             return false;
         }
     }
-
-    UE_LOG(LogMcpSafeOperations, Log,
-        TEXT("McpSafeDeleteFolder: Deleted %d/%d safe assets"),
-        DeletedSafeAssets, SafeAssets.Num());
     return true;
 }
 

@@ -7,7 +7,7 @@ namespace McpSafeOperations
 {
 
 
-inline bool McpSafeDeleteFolder(const FString& FolderPath)
+inline bool McpSafeDeleteFolder(const FString& FolderPath, TArray<FString>* OutRemaining = nullptr)
 {
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Starting deletion of '%s'"), *FolderPath);
 
@@ -26,7 +26,7 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath)
     {
         UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: No assets found in '%s'"), *FolderPath);
         FolderDeleteInternal::RemoveRegistryPathsAndDirectory(FolderPath, AssetRegistry);
-        return FolderDeleteInternal::VerifyFolderDeleted(FolderPath, AssetRegistry);
+        return FolderDeleteInternal::VerifyFolderDeleted(FolderPath, AssetRegistry, OutRemaining);
     }
 
     UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Found %d assets in '%s'"), AllAssets.Num(), *FolderPath);
@@ -86,7 +86,7 @@ inline bool McpSafeDeleteFolder(const FString& FolderPath)
     }
 
     FolderDeleteInternal::RemoveRegistryPathsAndDirectory(FolderPath, AssetRegistry);
-    return FolderDeleteInternal::VerifyFolderDeleted(FolderPath, AssetRegistry);
+    return FolderDeleteInternal::VerifyFolderDeleted(FolderPath, AssetRegistry, OutRemaining);
 }
 
 

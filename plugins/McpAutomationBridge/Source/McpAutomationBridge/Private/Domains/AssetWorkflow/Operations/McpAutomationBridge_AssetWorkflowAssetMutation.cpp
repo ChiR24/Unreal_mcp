@@ -211,12 +211,15 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       // CRITICAL for UE 5.7+: Use McpSafeDeleteFolder instead of UEditorAssetLibrary::DeleteDirectory
       // to prevent crashes during UWorld::CleanupWorld when deleting folders containing
       // AnimBlueprints, IKRigs, IKRetargeters, etc.
-      if (McpSafeOperations::McpSafeDeleteFolder(SafePath))
+      TArray<FString> Remaining;
+      if (McpSafeOperations::McpSafeDeleteFolder(SafePath, &Remaining))
       {
         // McpSafeDeleteFolder performs registry and filesystem verification itself.
         DeletedCount++;
       } else {
+        // Name what survived, so a caller never has to list the folder again to find out.
         FailedToDeletePaths.Add(SafePath);
+        for (const FString &Left : Remaining) { FailedToDeletePaths.Add(Left + TEXT(" (left in the deleted folder)")); }
       }
     } else if (McpAssetExists(SafePath) ||
                FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(SafePath))) {

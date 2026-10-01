@@ -44,7 +44,10 @@ inline void RemoveRegistryPathsAndDirectory(const FString& FolderPath, IAssetReg
     }
 }
 
-inline bool VerifyFolderDeleted(const FString& FolderPath, IAssetRegistry& AssetRegistry)
+// A registry entry left in the folder is a survivor when its file is still on disk or its asset is
+// still loaded and alive (an unsaved one counted as deleted before, and the caller was told success);
+// an entry whose object is already marked for collection is only stale. OutRemaining names survivors.
+inline bool VerifyFolderDeleted(const FString& FolderPath, IAssetRegistry& AssetRegistry, TArray<FString>* OutRemaining = nullptr)
 {
     FARFilter RemainingFilter;
     RemainingFilter.PackagePaths.Add(FName(*FolderPath));
@@ -53,12 +56,14 @@ inline bool VerifyFolderDeleted(const FString& FolderPath, IAssetRegistry& Asset
     TArray<FAssetData> RemainingAssets;
     AssetRegistry.GetAssets(RemainingFilter, RemainingAssets);
 
-    TArray<FAssetData> RemainingFileBackedAssets;
+    TArray<FAssetData> Survivors;
     for (const FAssetData& RemainingAsset : RemainingAssets)
     {
-        if (McpPackageHasBackingFile(RemainingAsset.PackageName.ToString()))
+        const FString ObjectPath = MCP_ASSET_DATA_GET_SOFT_PATH(RemainingAsset);
+        if (McpPackageHasBackingFile(RemainingAsset.PackageName.ToString())
+            || (!ObjectPath.IsEmpty() && IsValid(FindObject<UObject>(nullptr, *ObjectPath))))
         {
-            RemainingFileBackedAssets.Add(RemainingAsset);
+            Survivors.Add(RemainingAsset);
         }
     }
 
@@ -72,29 +77,24 @@ inline bool VerifyFolderDeleted(const FString& FolderPath, IAssetRegistry& Asset
         bDirectoryExistsOnDisk = FPlatformFileManager::Get().GetPlatformFile().DirectoryExists(*VerifyLocalPath);
     }
 
-    if (RemainingAssets.Num() == 0 && RemainingSubPaths.Num() == 0 && !bDirectoryExistsOnDisk)
+    if (Survivors.Num() == 0 && RemainingSubPaths.Num() == 0 && !bDirectoryExistsOnDisk)
     {
-        UE_LOG(LogMcpSafeOperations, Log, TEXT("McpSafeDeleteFolder: Successfully deleted '%s'"), *FolderPath);
-        return true;
-    }
-
-    if (RemainingFileBackedAssets.Num() == 0 && RemainingSubPaths.Num() == 0 && !bDirectoryExistsOnDisk)
-    {
-        UE_LOG(LogMcpSafeOperations, Warning,
-            TEXT("McpSafeDeleteFolder: Physical folder '%s' deleted; only %d in-memory package(s) without backing files remain"),
+        UE_LOG(LogMcpSafeOperations, Log,
+            TEXT("McpSafeDeleteFolder: Successfully deleted '%s' (%d stale registry entries for objects pending collection)"),
             *FolderPath, RemainingAssets.Num());
         return true;
     }
 
     UE_LOG(LogMcpSafeOperations, Warning,
-        TEXT("McpSafeDeleteFolder: Directory still exists after deletion attempt (remainingAssets=%d remainingFileBackedAssets=%d remainingSubPaths=%d existsOnDisk=%d)"),
-        RemainingAssets.Num(), RemainingFileBackedAssets.Num(), RemainingSubPaths.Num(), bDirectoryExistsOnDisk ? 1 : 0);
+        TEXT("McpSafeDeleteFolder: Directory still exists after deletion attempt (remainingAssets=%d survivors=%d remainingSubPaths=%d existsOnDisk=%d)"),
+        RemainingAssets.Num(), Survivors.Num(), RemainingSubPaths.Num(), bDirectoryExistsOnDisk ? 1 : 0);
 
-    for (const FAssetData& RemainingAsset : RemainingAssets)
+    for (const FAssetData& Survivor : Survivors)
     {
+        const FString SurvivorPath = MCP_ASSET_DATA_GET_SOFT_PATH(Survivor);
         UE_LOG(LogMcpSafeOperations, Warning, TEXT("McpSafeDeleteFolder: Remaining asset: %s (%s)"),
-            *MCP_ASSET_DATA_GET_SOFT_PATH(RemainingAsset),
-            *MCP_ASSET_DATA_GET_CLASS_PATH(RemainingAsset));
+            *SurvivorPath, *MCP_ASSET_DATA_GET_CLASS_PATH(Survivor));
+        if (OutRemaining) { OutRemaining->Add(SurvivorPath); }
     }
 
     for (const FString& RemainingSubPath : RemainingSubPaths)
@@ -102,6 +102,7 @@ inline bool VerifyFolderDeleted(const FString& FolderPath, IAssetRegistry& Asset
         UE_LOG(LogMcpSafeOperations, Warning,
             TEXT("McpSafeDeleteFolder: Remaining subpath: %s"),
             *RemainingSubPath);
+        if (OutRemaining) { OutRemaining->Add(RemainingSubPath + TEXT("/")); }
     }
     return false;
 }

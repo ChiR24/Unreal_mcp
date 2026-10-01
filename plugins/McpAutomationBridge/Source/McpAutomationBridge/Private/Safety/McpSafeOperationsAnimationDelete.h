@@ -66,24 +66,25 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
         }
     }
 
+    // An unsaved asset the unload could not take (another one still held it) used to stay behind
+    // while the folder delete answered success; it is force-deleted with the rest below.
+    TArray<FAssetData> InMemoryStillLoaded;
     for (const FAssetData& AssetData : InMemoryOnlyAssets)
     {
         const FString PackagePath = AssetData.PackageName.ToString();
         const FString ObjectPath = MCP_ASSET_DATA_GET_SOFT_PATH(AssetData);
-        const bool bPackageStillLoaded = FindObject<UPackage>(nullptr, *PackagePath) != nullptr;
-        const bool bObjectStillLoaded = !ObjectPath.IsEmpty() && FindObject<UObject>(nullptr, *ObjectPath) != nullptr;
-
-        if (!bPackageStillLoaded && !bObjectStillLoaded)
+        if (!ObjectPath.IsEmpty() && IsValid(FindObject<UObject>(nullptr, *ObjectPath)))
         {
-            ++DeletedCount;
-            UE_LOG(LogMcpSafeOperations, Log,
-                TEXT("DeleteAnimationRigClusterOrdered: Unloaded in-memory-only asset package cleanly: %s"),
+            InMemoryStillLoaded.Add(AssetData);
+            UE_LOG(LogMcpSafeOperations, Warning,
+                TEXT("DeleteAnimationRigClusterOrdered: In-memory-only package still loaded after unload attempt: %s"),
                 *PackagePath);
         }
         else
         {
-            UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("DeleteAnimationRigClusterOrdered: In-memory-only package still loaded after unload attempt: %s"),
+            ++DeletedCount;
+            UE_LOG(LogMcpSafeOperations, Log,
+                TEXT("DeleteAnimationRigClusterOrdered: Unloaded in-memory-only asset package cleanly: %s"),
                 *PackagePath);
         }
     }
@@ -228,6 +229,11 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
         {
             return INDEX_NONE;
         }
+    }
+
+    if (!ForceDeleteBatch(InMemoryStillLoaded, TEXT("InMemoryOnlyLeftovers")))
+    {
+        return INDEX_NONE;
     }
 
     McpSafePostDeleteGC();
