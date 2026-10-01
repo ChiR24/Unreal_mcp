@@ -8,9 +8,11 @@
 #include "Core/Errors/McpRequestErrorDevice.h"
 #include "Foundation/Diagnostics/McpDiagnosticsSnapshot.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 #include "Domains/Log/McpAutomationBridge_LogHistory.h"
 #include "Foundation/McpLiveStateRevisionTracker.h"
 #include "Foundation/McpReadinessState.h"
+#include "Misc/Parse.h"
 
 void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -78,6 +80,24 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
     TickHandle = FTSTicker::GetCoreTicker().AddTicker(
         FTickerDelegate::CreateUObject(this, &UMcpAutomationBridgeSubsystem::Tick),
         0.0f);
+
+    // -McpStartMinimized: a launch for an automated session sat in the foreground, rendering flat out, until a caller
+    // could minimize it over the bridge. The main window goes away, without taking focus, as soon as it exists.
+    if (FParse::Param(FCommandLine::Get(), TEXT("McpStartMinimized")))
+    {
+        // Bounded: a ticker left registered would outlive a Live Coding module unload (see Deinitialize).
+        const double GiveUpAt = FPlatformTime::Seconds() + 120.0;
+        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([GiveUpAt](float)
+        {
+            const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
+            if (!Root.IsValid() || !Root->GetNativeWindow().IsValid())
+            {
+                return FPlatformTime::Seconds() < GiveUpAt;
+            }
+            MinimizeWindowForMcp(Root.ToSharedRef());
+            return false;
+        }), 0.25f);
+    }
 
     // Published only here, at the END of a non-commandlet initialization that
     // registered handlers and installed the ticker. Readiness is a POSITIVE
