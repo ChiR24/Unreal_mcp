@@ -7,7 +7,11 @@ import { arr, arrObj, bool, ex, LOW, MATERIAL_PARAMETER_LIST, num, READ, READ_PO
 import { schema } from '../shared/record-presets.js';
 
 const MAT = str('Material /Game asset path.');
-const SOURCE_PIN = str('Source output: its name, its index, or channel letters of the default output ("G", "RG"; X/Y/Z/W work too). Omit for the default output.');
+// Every material read takes the path under either spelling (LOAD_MATERIAL_OR_FUNCTION_OR_RETURN reads
+// assetPath, then materialPath). A read that declared one spelling only made the other look like a
+// parameter of the sibling variants, so a folded info call was told it ignored a path it had read.
+const MAT_ALIAS = str('Material asset path (accepted in place of materialPath).');
+const SOURCE_PIN =str('Source output: its name, its index, or channel letters of the default output ("G", "RG"; X/Y/Z/W work too). Omit for the default output.');
 const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to keep the change in memory only.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 // set_node_position echoes the applied coordinates and re-runs the same overlap
@@ -103,11 +107,11 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['A node id is unknown and the node must be found by expression class, parameter name, function pin name or Custom node title.'],
       whenNotToUse: ['The material asset itself must be located by name or class (use asset.query_asset).'],
       examples: [ex('Locate every texture sample', { materialPath: M, nodeType: 'TextureSample' }, DONE)] }),
-  r('get_node_connections', 'material', 'Retrieve connections for a node in a material graph.', schema({ materialPath: MAT, nodeId: str('Node ID.'), direction: str('Connection direction to report (inputs or outputs).'), depth: num('Traversal depth; -1 walks the whole graph.'), upstream: bool('Walk every upstream producer, overriding direction and depth.'), downstream: bool('Report downstream connections instead of upstream.') }, ['materialPath', 'nodeId']), CONNECTIONS_OUT, READ, READ_POLICY, LOW,
+  r('get_node_connections', 'material', 'Retrieve connections for a node in a material graph.', schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: str('Node ID.'), direction: str('Connection direction to report (inputs or outputs).'), depth: num('Traversal depth; -1 walks the whole graph.'), upstream: bool('Walk every upstream producer, overriding direction and depth.'), downstream: bool('Report downstream connections instead of upstream.') }, ['nodeId'], ['materialPath', 'assetPath']), CONNECTIONS_OUT, READ, READ_POLICY, LOW,
     { whenToUse: ['The wiring of a node must be traced across the graph, for example to see where its result ends up at the material output.'],
       whenNotToUse: ['A wire must be added, cut or rerouted, not traced (use material.connect_nodes or material.disconnect_nodes).'],
       examples: [ex('List what feeds a multiply node', { materialPath: M, nodeId: MULTIPLY, direction: 'inputs', downstream: false }, DONE)] }),
-  r('get_node_properties', 'material', 'Retrieve properties of a node in a material graph.', schema({ materialPath: MAT, nodeId: str('Node ID.') }, ['materialPath', 'nodeId']), OK, READ, READ_POLICY, LOW,
+  r('get_node_properties', 'material', 'Retrieve properties of a node in a material graph.', schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: str('Node ID.') }, ['nodeId'], ['materialPath', 'assetPath']), OK, READ, READ_POLICY, LOW,
     { whenToUse: ['The settings of one node must be read back, such as a scalar or vector parameter default or a function input or output pin.'],
       whenNotToUse: ['A parameter value or Custom node code must change, not be read (use material.set_material_parameter or material.update_custom_expression).', 'Any other property of a node must change, such as the Texture or SamplerType of a texture parameter (use inspect.set_property with objectPath "<material path>.<material name>:<nodeId>").'],
       examples: [ex('Read a texture sample node\'s properties', { materialPath: M, nodeId: SAMPLE }, DONE)] }),
@@ -124,11 +128,11 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
       whenToUse: ['The HLSL code of an existing Custom node must be rewritten without rebuilding its wiring.', 'Inputs, output type, extra outputs or the title of a Custom node must change; inputs that keep their name keep their wire.'],
       whenNotToUse: ['A new Custom node is needed (use material.add_material_node with nodeKind=custom_expression).', 'The node is a parameter or any other non-Custom expression; only Custom nodes are accepted (parameter values use material.set_material_parameter).'],
       examples: [ex('Rewrite a custom node\'s HLSL', { materialPath: M, nodeId: 'MaterialExpressionCustom_0', code: 'return saturate(A * 3.0f);' }, DONE)] }),
-  r('get_node_chain', 'material', 'Retrieve the chain of nodes connected to a starting node.', schema({ materialPath: MAT, nodeId: str('Starting node ID.'), startNodeId: str('Starting node ID accepted by the handler in place of nodeId.'), endPin: str('Terminal pin name to stop the chain walk at.') }, ['materialPath', 'nodeId']), OK, READ, READ_POLICY, LOW,
+  r('get_node_chain', 'material', 'Retrieve the chain of nodes connected to a starting node.', schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: str('Starting node ID.'), startNodeId: str('Starting node ID accepted by the handler in place of nodeId.'), endPin: str('Terminal pin name to stop the chain walk at.') }, ['nodeId'], ['materialPath', 'assetPath']), OK, READ, READ_POLICY, LOW,
     { whenToUse: ['The wiring of a node must be traced across the graph, for example to see where its result ends up at the material output.'],
       whenNotToUse: ['A wire must be added, cut or rerouted, not traced (use material.connect_nodes or material.disconnect_nodes).'],
       examples: [ex('Walk the chain feeding BaseColor', { materialPath: M, nodeId: SAMPLE, endPin: 'BaseColor' }, DONE)] }),
-  r('get_connected_subgraph', 'material', 'Retrieve the connected subgraph from a starting node.', schema({ materialPath: MAT, nodeId: str('Starting node ID.'), orphansOnly: bool('Report only orphaned nodes; accepted in place of nodeId.') }, ['materialPath', 'nodeId']), OK, READ, READ_POLICY, LOW,
+  r('get_connected_subgraph', 'material', 'Retrieve the connected subgraph from a starting node.', schema({ materialPath: MAT, assetPath: MAT_ALIAS, nodeId: str('Starting node ID.'), orphansOnly: bool('Report only orphaned nodes; accepted in place of nodeId.') }, ['nodeId'], ['materialPath', 'assetPath']), OK, READ, READ_POLICY, LOW,
     { whenToUse: ['Nodes not wired to any output (orphans) must be found, or the connected island around one node listed.'],
       whenNotToUse: ['Orphaned nodes are to be removed (use material.delete_node once their ids are known).'],
       examples: [ex('Collect the subgraph under a node', { materialPath: M, nodeId: SAMPLE, orphansOnly: false }, DONE)] }),
@@ -136,7 +140,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['An expression is needed by class name with no dedicated adder, such as Constant, Constant3Vector (with defaultValue), ComponentMask or Saturate.', 'A texture object must feed a Custom node or a material function input (nodeType TextureObjectParameter with name and texturePath).'],
       whenNotToUse: ['The node already exists and only needs wiring or moving (use material.connect_nodes or material.set_node_position).'],
       examples: [ex('Add a Constant3Vector by type name', { materialPath: M, nodeType: 'Constant3Vector', x: -300, y: 100 }, DONE)] }),
-  r('rebuild_material', 'material', 'Rebuild and compile a material (alias of compile_material).', schema({ materialPath: MAT, save: SAVE }, ['materialPath']), OK, WRITE, WRITE_POLICY, LOW,
+  r('rebuild_material', 'material', 'Rebuild and compile a material (alias of compile_material).', schema({ materialPath: MAT, assetPath: MAT_ALIAS, save: SAVE }, [], ['materialPath', 'assetPath']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['The shader must be regenerated after graph edits; the compile, error check and save are identical to a plain compile.'],
       whenNotToUse: ['A property or parameter was just set (material.set_material_property and material.set_material_parameter already recompile).'],
       dispatchAction: 'rebuild_material', examples: [ex('Rebuild after graph edits', { materialPath: M }, DONE)] }),

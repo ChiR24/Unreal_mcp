@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d8201952ee42b02e",
+  "catalogRevision": "f4c342fa0d566b8a",
   "recordCount": 389,
   "records": [
     {
@@ -55462,7 +55462,12 @@
             }
           },
           "required": [],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "assetPath",
+            "systemPath",
+            "system"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -55556,21 +55561,13 @@
           "actions": {
             "info": "get_niagara_info",
             "validate": "validate_niagara_system"
-          },
-          "declaredBy": {
-            "systemPath": [
-              "validate"
-            ],
-            "system": [
-              "validate"
-            ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fee55de6076abf44bef894f140bff1c0db710ab50f1a41cbfb67e8866dbf8e61",
-        "content": "8172b478c54ad8cbe843fc937fc972acd0fca09da39c418b24e9e1f9fe954fe1"
+        "schema": "f251d6730117cacc98a9d93652b954b98783c723b82c220ea2341c17eb9ba984",
+        "content": "f89caf9b24cb6f21dd21a5c84cda6255e15b4899bf9fedcaa4cc7219393bbaa3"
       }
     },
     {
@@ -76055,13 +76052,13 @@
               "type": "string",
               "description": "Material /Game asset path."
             },
+            "materialPath": {
+              "type": "string",
+              "description": "Material asset path (accepted in place of assetPath)."
+            },
             "save": {
               "type": "boolean",
               "description": "Save the asset afterwards. Defaults to true; pass false to keep the change in memory only."
-            },
-            "materialPath": {
-              "type": "string",
-              "description": "Material /Game asset path."
             },
             "compileOp": {
               "type": "string",
@@ -76074,7 +76071,11 @@
             }
           },
           "required": [],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "assetPath",
+            "materialPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -76163,21 +76164,13 @@
           "actions": {
             "compile": "compile_material",
             "rebuild": "rebuild_material"
-          },
-          "declaredBy": {
-            "assetPath": [
-              "compile"
-            ],
-            "materialPath": [
-              "rebuild"
-            ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dc844aaaf8ec8633e552ab04d9b221af9cba2e0e9a3ef855a43b388fd79da4e4",
-        "content": "2c7d859749c79082be4abc7b28e2847bcb2cdbb8297e8c6db5ce518cb212e286"
+        "schema": "f5654053c0c6ffaf8d17ddc969d229b06ae8d035832c125a77e906f0c14493c0",
+        "content": "723e0e7a713fe1b6873136ca9a97734eb7081473611ce5f482f6dc9b27620061"
       }
     },
     {
@@ -77204,6 +77197,10 @@
               "type": "string",
               "description": "Material /Game asset path."
             },
+            "materialPath": {
+              "type": "string",
+              "description": "Material asset path (accepted in place of assetPath)."
+            },
             "filter": {
               "type": "string",
               "description": "Which sections to return: parameters, expressions, connections, or all (default)."
@@ -77218,10 +77215,6 @@
                 "type": "string"
               },
               "description": "Only report connections touching these nodes."
-            },
-            "materialPath": {
-              "type": "string",
-              "description": "Material /Game asset path."
             },
             "nodeType": {
               "type": "string",
@@ -77280,7 +77273,11 @@
             }
           },
           "required": [],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "assetPath",
+            "materialPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -77480,12 +77477,6 @@
             "subgraph": "get_connected_subgraph"
           },
           "declaredBy": {
-            "assetPath": [
-              "material",
-              "function",
-              "find_node",
-              "node_details"
-            ],
             "filter": [
               "material",
               "function"
@@ -77502,14 +77493,6 @@
             "nodeIds": [
               "material",
               "function"
-            ],
-            "materialPath": [
-              "find_node",
-              "node_details",
-              "node_properties",
-              "node_connections",
-              "node_chain",
-              "subgraph"
             ],
             "nodeType": [
               "find_node"
@@ -77546,8 +77529,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fe03bf2e3cedf8ee643ab9f0c6326d4eb86ef233d0da4903342b825deb5b3c30",
-        "content": "f909db4a06295746552bc093eb464a15bde4ae8c48517905def0db79fc8b9e05"
+        "schema": "c3a8ea1d029f8faaa5fdb3288e8a06568fbac33c9c96d8b3fffd8f729f34fc27",
+        "content": "ced4b71976eaa3899a0e85afd041144c5d439486fc286c82a56751c58274fd3c"
       }
     },
     {

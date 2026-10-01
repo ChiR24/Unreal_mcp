@@ -313,7 +313,10 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_simulation_stage', systemPath: '/Game/NS_Fire', emitterName: 'Spark', stageName: 'Stage_0', stageIterationSource: 'Particles' } }),
   buildRecord({ parentTool: T, id: `${T}.get_niagara_info`, action: 'get_niagara_info', family: F,
     summary: 'Read Niagara system metadata.', whenToUse: ['Inspect a Niagara system.'], whenNotToUse: ['Mutate the system.'],
-    inputProps: { assetPath: P.assetPath }, required: ['assetPath'],
+    // The handler resolves the asset from assetPath, systemPath or system (the same chain validate_niagara_system
+    // reads), so all three are declared: declaring only assetPath made systemPath look like a validate-only
+    // parameter, which sent a bare systemPath call to validate and warned an info call it was not read.
+    inputProps: { assetPath: P.assetPath, systemPath: E.systemPath, system: E.system }, required: [], requiredOneOf: ['assetPath', 'systemPath', 'system'],
     effect: 'read', latency: 'instant', resources: 'low', plugins: NIAGARA,
     outputProps: { emitterCount: P.num_ }, outputRequired: [],
     exampleInput: { action: 'get_niagara_info', assetPath: '/Game/NS_Fire' }, exampleOutput: { success: true, message: 'Niagara info', emitterCount: 2 } }),

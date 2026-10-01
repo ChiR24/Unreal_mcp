@@ -1,6 +1,7 @@
 // Material parameter, property, function, and instance records.
 // Path param names mirror the field the native handler reads, which is assetPath for some
 // actions and materialPath for others; the split is deliberate, not an inconsistency to tidy.
+// The material reads and the compile read BOTH (assetPath, then materialPath), so they declare both.
 
 import type { RecordSpec } from './builder.js';
 import { arr, arrObj, bool, ex, LOW, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
@@ -9,6 +10,9 @@ import { schema } from '../shared/record-presets.js';
 const MAT = str('Material /Game asset path.');
 const MATFN = str('Material function /Game asset path.');
 const MINST = str('Material instance /Game asset path.');
+// The other spelling of the path a read takes (see the header): declared so the folded info/compile
+// variants, which spell it differently, do not each look like the only reader of one of the two.
+const MAT_ALIAS = str('Material asset path (accepted in place of assetPath).');
 // Every material edit below reads `save` and defaults it to true.
 const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to keep the change in memory only.');
 // A material info read can narrow its output: which sections, and which nodes' connections.
@@ -70,11 +74,11 @@ export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['A material must change domain, for example between Surface, DeferredDecal, PostProcess and UI.'],
       whenNotToUse: ['The target is a material instance; only a base material can be edited here (find it with material.get_material_info).', 'A new material is being created with the domain already known (use material.create_material with materialDomain).'],
       examples: [ex('Keep a material in the surface domain', { assetPath: M, materialDomain: 'Surface' }, DONE)] }),
-  r('compile_material', 'material', 'Compile a material and report its compile errors.', schema({ assetPath: MAT, save: SAVE }, ['assetPath']), COMPILE_OK, WRITE, WRITE_POLICY, LOW,
+  r('compile_material', 'material', 'Compile a material and report its compile errors.', schema({ assetPath: MAT, materialPath: MAT_ALIAS, save: SAVE }, [], ['assetPath', 'materialPath']), COMPILE_OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['The compile errors of an edited graph must be read; a material that fails to compile renders as the default material.', 'Graph edits left the asset unsaved, so it must be compiled and saved.'],
       whenNotToUse: ['A property or parameter was just set (material.set_material_property and material.set_material_parameter already recompile).', 'Domain, blend mode or node counts are wanted rather than compile errors (use material.get_material_info).'],
       examples: [ex('Compile after editing the graph', { assetPath: M }, DONE)] }),
-  r('get_material_info', 'material', 'Read a material or material function (domain, blend mode, parameters, node count), or a material instance (its parent and parameter overrides).', schema({ assetPath: MAT, ...INFO_FILTERS }, ['assetPath']), MATERIAL_INFO_OK, READ, READ_POLICY, LOW,
+  r('get_material_info', 'material', 'Read a material or material function (domain, blend mode, parameters, node count), or a material instance (its parent and parameter overrides).', schema({ assetPath: MAT, materialPath: MAT_ALIAS, ...INFO_FILTERS }, [], ['assetPath', 'materialPath']), MATERIAL_INFO_OK, READ, READ_POLICY, LOW,
     { whenToUse: ['An existing material must be understood before editing: node ids, parameter names, wiring, domain and blend mode, or the parent and overrides of an instance.'],
       whenNotToUse: ['Shading model, sampler counts or the instances of a parent are wanted (use asset.query_asset lookup=material_stats or asset.list kind=material_instances).'],
       examples: [ex('Read a material\'s configuration', { assetPath: M }, { success: true, assetType: 'Material', nodeCount: 4, domain: 'Surface', blendMode: 'Opaque', twoSided: false })] }),
@@ -94,7 +98,7 @@ export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['A reusable material function must be called from a material or another function as a single node.'],
       whenNotToUse: ['The function does not exist yet (use material.create_material with kind=function).', 'The function needs another input or output pin (use material.add_function_io).'],
       examples: [ex('Reference a blend function from a material', { materialPath: M, functionPath: MF, x: -200, y: 500 }, DONE)] }),
-  r('get_material_function_info', 'material', 'Retrieve information about a material function.', schema({ assetPath: MATFN, ...INFO_FILTERS }, ['assetPath']), OK, READ, READ_POLICY, LOW,
+  r('get_material_function_info', 'material', 'Retrieve information about a material function.', schema({ assetPath: MATFN, materialPath: MAT_ALIAS, ...INFO_FILTERS }, [], ['assetPath', 'materialPath']), OK, READ, READ_POLICY, LOW,
     { whenToUse: ['A material function must be understood before calling or editing it: its inputs, outputs, description and library exposure.'],
       whenNotToUse: ['The materials that call the function must be found (use asset.inspect_asset with lookup=dependencies and referencers=true).'],
       examples: [ex('Read a function\'s inputs and outputs', { assetPath: MF }, DONE)] }),
