@@ -57,7 +57,7 @@ inline int32 Num() { return 23; }
 inline const FMcpCapabilityShard& At(int32 Index)
 {
 	static const FMcpCapabilityShard Table[] = {
-		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 32, 26 },
+		{ TEXT("animation_physics"), Detail::MCP_CAP_SHARD_ANIMATION_PHYSICS_CHUNKS, 33, 26 },
 		{ TEXT("build_environment"), Detail::MCP_CAP_SHARD_BUILD_ENVIRONMENT_CHUNKS, 46, 40 },
 		{ TEXT("control_actor"), Detail::MCP_CAP_SHARD_CONTROL_ACTOR_CHUNKS, 25, 24 },
 		{ TEXT("control_editor"), Detail::MCP_CAP_SHARD_CONTROL_EDITOR_CHUNKS, 20, 21 },
@@ -87,5 +87,5 @@ inline const FMcpCapabilityShard& At(int32 Index)
 
 inline int32 TotalRecordCount() { return 389; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("83872b5570531ce6"); }
+inline const TCHAR* CatalogRevision() { return TEXT("f4b6eb2abee2f0e0"); }
 }

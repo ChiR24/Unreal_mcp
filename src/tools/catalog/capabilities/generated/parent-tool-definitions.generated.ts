@@ -595,6 +595,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Replacement bone name."
         },
+        "nodeId": {
+          "type": "string",
+          "description": "The node GUID; an alternative to nodeName."
+        },
         "nodeName": {
           "type": "string",
           "description": "Graph node name."
@@ -672,7 +676,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "propertyName": {
           "type": "string",
-          "description": "Property name."
+          "description": "The property: a member of the node's settings struct (Alpha, PlayRate, bLoopAnimation, Sequence) or of the graph node (NodeComment), with dots for a nested one (Node.PlayRate). On an asset player the asset property (Sequence, BlendSpace) is written through the node's own setter and read back, and fails when the node did not take it; any other property is written by reflection and its stored value read back."
         },
         "radius": {
           "type": "number",
@@ -988,6 +992,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Comment/name for the blend node (alias of name)."
         },
         "value": {
+          "oneOf": [
+            {
+              "description": "Property value (any type)."
+            },
+            {
+              "description": "The value: a number, boolean or string, an {x,y,z} or {r,g,b,a} object for a struct, or for an asset property the asset path (/Game/Anims/A_Idle)."
+            }
+          ],
           "description": "Property value (any type)."
         },
         "vehicleType": {
@@ -1437,6 +1449,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Render-only morph targets (made by create_morph_target or set_morph_target_deltas) the rebuild removed, only with dropRenderOnlyMorphs true; import_morph_targets writes morphs that survive."
         },
+        "nodeId": {
+          "type": "string",
+          "description": "GUID of the node that was set."
+        },
+        "nodeName": {
+          "type": "string",
+          "description": "Object name of the node that was set."
+        },
         "numBodies": {
           "type": "number",
           "description": "Number of physics bodies in the asset."
@@ -1471,6 +1491,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Pose names read back from the asset."
+        },
+        "propertyName": {
+          "type": "string",
+          "description": "Echoes propertyName."
         },
         "ragdollActive": {
           "type": "boolean",
@@ -1584,8 +1608,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Destination-side vertices with no mirror partner; they kept their weights."
         },
         "value": {
-          "type": "number",
-          "description": "Weight applied to the morph target."
+          "type": [
+            "number",
+            "string"
+          ],
+          "description": "The value now stored, read back from the node: the asset path for an asset property."
         },
         "verticesChanged": {
           "type": "number",

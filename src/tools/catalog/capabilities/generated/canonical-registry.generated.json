@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "83872b5570531ce6",
+  "catalogRevision": "f4b6eb2abee2f0e0",
   "recordCount": 389,
   "records": [
     {
@@ -315,7 +315,8 @@
         "summary": "Configure an AnimGraph node: add a layered-blend-per-bone node or set a node property value.",
         "whenToUse": [
           "edit=add_layered_blend_per_bone: Partial-skeleton layering needed.",
-          "edit=set_value: A graph node property must change."
+          "edit=set_value: A graph node property must change.",
+          "edit=set_value: A Sequence Player or Blend Space Player must play a different animation."
         ],
         "whenNotToUse": [
           "Use add_blend_node."
@@ -357,14 +358,18 @@
             },
             "nodeName": {
               "type": "string",
-              "description": "Graph node name."
+              "description": "The node: its object name (AnimGraphNode_SequencePlayer_0), its GUID (the nodeId create_node, add_state and inspect_graph report), or a custom name set in its NodeComment or its title when one node has it. Looks in the AnimGraph and in the state machines and states under it; a name that matches nothing answers NODE_NOT_FOUND listing every node (nodes), and one that matches several AMBIGUOUS_NODE listing them (candidates)."
+            },
+            "nodeId": {
+              "type": "string",
+              "description": "The node GUID; an alternative to nodeName."
             },
             "propertyName": {
               "type": "string",
-              "description": "Property name."
+              "description": "The property: a member of the node's settings struct (Alpha, PlayRate, bLoopAnimation, Sequence) or of the graph node (NodeComment), with dots for a nested one (Node.PlayRate). On an asset player the asset property (Sequence, BlendSpace) is written through the node's own setter and read back, and fails when the node did not take it; any other property is written by reflection and its stored value read back."
             },
             "value": {
-              "description": "Property value (any type)."
+              "description": "The value: a number, boolean or string, an {x,y,z} or {r,g,b,a} object for a struct, or for an asset property the asset path (/Game/Anims/A_Idle)."
             },
             "edit": {
               "type": "string",
@@ -397,6 +402,22 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "nodeName": {
+              "type": "string",
+              "description": "Object name of the node that was set."
+            },
+            "nodeId": {
+              "type": "string",
+              "description": "GUID of the node that was set."
+            },
+            "propertyName": {
+              "type": "string",
+              "description": "Echoes propertyName."
+            },
+            "value": {
+              "type": "string",
+              "description": "The value now stored, read back from the node: the asset path for an asset property."
             }
           },
           "required": [
@@ -476,6 +497,9 @@
             "nodeName": [
               "set_value"
             ],
+            "nodeId": [
+              "set_value"
+            ],
             "propertyName": [
               "set_value"
             ],
@@ -487,8 +511,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a655840a33e296533270e38b2cc90ed88b7db94df7118e244aa385de1ee6a787",
-        "content": "5986c99a9d85dec5672c77a1e5fdc623706e5ce2caab320e78baadb287d8c96f"
+        "schema": "ca04dba7da327667c2f9759d4a91abf57ef3c59ac9939056b27b2ad40adc9c12",
+        "content": "3f4c8c39e5ed1d68b730bc29ddcbd24204fe094c66af5fc4e55d39ca2ea90fef"
       }
     },
     {

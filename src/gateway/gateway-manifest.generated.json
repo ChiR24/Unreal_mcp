@@ -132,6 +132,7 @@
         "morphTargets",
         "name",
         "newBoneName",
+        "nodeId",
         "nodeName",
         "notifyClass",
         "notifyName",
@@ -795,6 +796,10 @@
             "type": "string",
             "description": "Replacement bone name."
           },
+          "nodeId": {
+            "type": "string",
+            "description": "The node GUID; an alternative to nodeName."
+          },
           "nodeName": {
             "type": "string",
             "description": "Graph node name."
@@ -872,7 +877,7 @@
           },
           "propertyName": {
             "type": "string",
-            "description": "Property name."
+            "description": "The property: a member of the node's settings struct (Alpha, PlayRate, bLoopAnimation, Sequence) or of the graph node (NodeComment), with dots for a nested one (Node.PlayRate). On an asset player the asset property (Sequence, BlendSpace) is written through the node's own setter and read back, and fails when the node did not take it; any other property is written by reflection and its stored value read back."
           },
           "radius": {
             "type": "number",
@@ -1188,6 +1193,14 @@
             "description": "Comment/name for the blend node (alias of name)."
           },
           "value": {
+            "oneOf": [
+              {
+                "description": "Property value (any type)."
+              },
+              {
+                "description": "The value: a number, boolean or string, an {x,y,z} or {r,g,b,a} object for a struct, or for an asset property the asset path (/Game/Anims/A_Idle)."
+              }
+            ],
             "description": "Property value (any type)."
           },
           "vehicleType": {

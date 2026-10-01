@@ -184,6 +184,17 @@ UAnimStateTransitionNode* FindTransitionNode(UAnimationStateMachineGraph* SMGrap
 // Fills a state's BoundGraph with sequence players and wires the first to the
 // state Result, writing animationsApplied / animationsFailed into Response.
 void ApplyStateAnimations(UAnimStateNode* StateNode, const TArray<FString>& AnimPaths, TSharedPtr<FJsonObject> Response);
+// set_anim_graph_node_value (Domains/Animation/Blueprints/...AnimationGraphNodeLookup.cpp). FindAnimGraphNode looks in the
+// AnimGraph and every graph under it for a node by object name or GUID, else by a custom name or title; a name several nodes
+// share comes back in OutAmbiguous with a null node. ResolveAnimNodeProperty gives the property a dotted path names AND the
+// memory it lives in (OutContainer is the embedded Node struct for a setting such as Sequence or PlayRate, not the graph
+// node). An asset player's asset property is written with SetAnimPlayerAsset: the node's own setter, read back.
+TSharedPtr<FJsonValue> DescribeAnimGraphNode(const UEdGraphNode* Node);
+TArray<TSharedPtr<FJsonValue>> ListAnimGraphNodes(UAnimBlueprint* AnimBP, int32 Max);
+UEdGraphNode* FindAnimGraphNode(UAnimBlueprint* AnimBP, const FString& Requested, TArray<UEdGraphNode*>& OutAmbiguous);
+FProperty* ResolveAnimNodeProperty(UEdGraphNode* Node, const FString& Path, void*& OutContainer, FString& OutMissing);
+bool IsAnimPlayerAssetProperty(UEdGraphNode* Node, const FProperty* Property);
+bool SetAnimPlayerAsset(UEdGraphNode* Node, const TSharedPtr<FJsonValue>& Value, FString& OutAssetPath, FString& OutError, FString& OutErrorCode);
 // Wires the state machine's Entry node to StateNode when nothing else claims it;
 // an entry-less machine compiles but never runs a single frame.
 void EnsureStateMachineEntry(UAnimationStateMachineGraph* SMGraph, UAnimStateNode* StateNode, TSharedPtr<FJsonObject> Response);
