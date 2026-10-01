@@ -10,6 +10,7 @@
 #include "Safety/McpSafeOperationsWorldDelete.h"
 
 using McpSafeOperations::McpLoadMaterialWithFallback;
+using McpSafeOperations::McpRefuseLoadOverUnsavedLevels;
 using McpSafeOperations::McpSafeAssetSave;
 using McpSafeOperations::McpSafeLevelSave;
 using McpSafeOperations::McpSafeLoadMap;

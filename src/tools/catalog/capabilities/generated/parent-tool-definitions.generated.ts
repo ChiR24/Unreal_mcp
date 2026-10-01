@@ -16572,6 +16572,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Destination path for move/copy."
         },
+        "discardUnsaved": {
+          "type": "boolean",
+          "description": "Load even though open levels have unsaved changes, dropping them. Without this or saveDirtyPackages, a load that would drop unsaved level changes is refused with DIRTY_PACKAGES, which lists them (the editor loaded over them without a word)."
+        },
         "enableWorldBoundsChecks": {
           "type": "boolean",
           "description": "Whether actors leaving the world bounds are culled."
@@ -16691,7 +16695,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saveDirtyPackages": {
           "type": "boolean",
-          "description": "Save dirty packages before the operation."
+          "description": "Save every dirty level and asset package first, in every mode (an interactive editor used to ignore it); the load fails DIRTY_PACKAGES when one cannot be saved, and a headless run refuses to load over dirty packages unless this is true. Done even when the level is already open and nothing is loaded."
         },
         "saveMode": {
           "type": "string",
@@ -17260,7 +17264,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "loadAfterCreate": {
           "type": "boolean",
-          "description": "Open the new level in the editor after creating it (default false)."
+          "description": "Open the new level in the editor after creating it (default false). When open levels have unsaved changes the load would drop, the call is refused with DIRTY_PACKAGES (listing them in unsavedPackages) before anything is created."
         },
         "loadingDistance": {
           "type": "number",

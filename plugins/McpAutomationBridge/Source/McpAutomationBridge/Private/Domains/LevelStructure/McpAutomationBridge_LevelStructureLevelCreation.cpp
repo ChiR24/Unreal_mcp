@@ -108,6 +108,18 @@ bool HandleCreateLevel(
         }
         return bLoaded;
     };
+    // The load at the end would drop unsaved level work; refused here, nothing is created.
+    if (bLoadAfterCreate)
+    {
+        TSharedPtr<FJsonObject> LossDetails;
+        const FString Loss = McpRefuseLoadOverUnsavedLevels(
+            FullPath, TEXT("Save them first (manage_level save), or create the level without loadAfterCreate."), LossDetails);
+        if (!Loss.IsEmpty())
+        {
+            Subsystem->SendAutomationResponse(Socket, RequestId, false, Loss, LossDetails, TEXT("DIRTY_PACKAGES"));
+            return true;
+        }
+    }
 
     // IDEMPOTENT: Check if level already exists and return success if so
     // This makes create_level idempotent - calling it multiple times with the same path succeeds

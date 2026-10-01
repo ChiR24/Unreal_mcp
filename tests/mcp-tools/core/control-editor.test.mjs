@@ -126,6 +126,8 @@ const testCases = [
 
   // === CLEANUP ===
   { scenario: 'Cleanup: delete spawned actors', toolName: 'control_actor', arguments: { action: 'delete', actorNames: [FOCUS_ACTOR, PIE_PAWN] }, expected: 'success|not found' },
+  // open_level refuses to drop unsaved level changes (DIRTY_PACKAGES), and the delete above made some.
+  { scenario: 'Setup: save the cleanup before leaving the level', toolName: 'control_editor', arguments: { action: 'save_all' }, expected: 'success' },
   { scenario: 'ACTION: open_level via path alias', toolName: 'control_editor', arguments: { action: 'open_level', path: '/Game/MCPTest/MainLevel' }, expected: 'success' },
   { scenario: 'ACTION: open_level', toolName: 'control_editor', arguments: { action: 'open_level', levelPath: '/Game/MCPTest/MainLevel' }, expected: 'success' },
 ];

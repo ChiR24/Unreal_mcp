@@ -211,9 +211,19 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
         bool bUnsaved = false;
         Resp->TryGetBoolField(TEXT("unsaved"), bUnsaved);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-            bUnsaved ? TEXT("Level already open: nothing was reloaded, and its unsaved changes were kept (save them with manage_level save, or load another level first to drop them)")
+            bUnsaved ? TEXT("Level already open: nothing was reloaded, and its unsaved changes were kept (save them with manage_level save, or load another level with discardUnsaved true to drop them)")
                      : TEXT("Level already open: nothing was reloaded"),
             Resp, FString());
+        return true;
+      }
+
+      bool bDiscardUnsaved = false;
+      Payload->TryGetBoolField(TEXT("discardUnsaved"), bDiscardUnsaved);
+      TSharedPtr<FJsonObject> LossDetails;
+      const FString Loss = bDiscardUnsaved ? FString() : McpSafeOperations::McpRefuseLoadOverUnsavedLevels(
+          ResolvedFileToLoad, TEXT("Pass saveDirtyPackages true to save them first, or discardUnsaved true to drop them."), LossDetails);
+      if (!Loss.IsEmpty()) {
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, Loss, LossDetails, TEXT("DIRTY_PACKAGES"));
         return true;
       }
 

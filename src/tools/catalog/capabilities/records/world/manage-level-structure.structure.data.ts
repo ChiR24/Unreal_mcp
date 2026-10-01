@@ -21,9 +21,9 @@ const SAVE_LEVEL = { type: 'boolean', description: 'Save the open level (default
 export const LEVEL_STRUCTURE_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_level_structure', action: 'create_level', dispatchAction: 'create_level',
-    family: F, summary: 'Create a new level asset and load it into the editor.',
+    family: F, summary: 'Create a new level asset; loadAfterCreate opens it in the editor.',
     whenToUse: ['A brand-new level must be created and opened.'], whenNotToUse: ['An existing level should be loaded instead.'],
-    inputProps: { levelName: P.levelName, levelPath: P.levelPath, bCreateWorldPartition: P.bCreateWorldPartition, bUseExternalActors: P.bUseExternalActors, save: P.save, loadAfterCreate: { type: 'boolean', description: 'Open the new level in the editor after creating it (default false).' } },
+    inputProps: { levelName: P.levelName, levelPath: P.levelPath, bCreateWorldPartition: P.bCreateWorldPartition, bUseExternalActors: P.bUseExternalActors, save: P.save, loadAfterCreate: { type: 'boolean', description: 'Open the new level in the editor after creating it (default false). When open levels have unsaved changes the load would drop, the call is refused with DIRTY_PACKAGES (listing them in unsavedPackages) before anything is created.' } },
     required: ['levelName'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'create_level', levelName: 'NewMap', bCreateWorldPartition: false },
   }),

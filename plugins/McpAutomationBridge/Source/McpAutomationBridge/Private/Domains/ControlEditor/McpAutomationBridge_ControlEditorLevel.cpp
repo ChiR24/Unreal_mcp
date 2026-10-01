@@ -134,6 +134,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     }
   }
 
+  TSharedPtr<FJsonObject> LossDetails;
+  const FString Loss = McpSafeOperations::McpRefuseLoadOverUnsavedLevels(
+      MapPathToLoad, TEXT("Save them first (manage_level save), or open the level with manage_level load, which takes saveDirtyPackages or discardUnsaved."), LossDetails);
+  if (!Loss.IsEmpty()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("DIRTY_PACKAGES"), Loss, LossDetails);
+    return true;
+  }
+
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
   FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda([WeakThis, Socket, RequestId, LevelPath,

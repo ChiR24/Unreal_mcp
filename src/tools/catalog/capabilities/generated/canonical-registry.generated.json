@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "acc0352dcdc4e507",
+  "catalogRevision": "db91f55731cdd44b",
   "recordCount": 389,
   "records": [
     {
@@ -35846,7 +35846,8 @@
           "A different level must be loaded into the editor."
         ],
         "whenNotToUse": [
-          "The level is already loaded."
+          "The level is already loaded.",
+          "Open levels have unsaved changes: opening another level would drop them, so the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages. Save first (manage_level save), or use manage_level load, which takes saveDirtyPackages or discardUnsaved."
         ]
       },
       "schemas": {
@@ -35941,7 +35942,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "bc2f400ba7bac656485752017f4a2af9de08a6784b442884dfcb66743112a1f3",
-        "content": "e1bde08c0b5f8688b6a5ab9dc9fa6593d33c2c2493547a56f3953ae2836d187f"
+        "content": "04ebbcdbcbed9d78e877758f9f6b78f21e4d3d130b57c3c615f7b87c5ce416e4"
       }
     },
     {
@@ -64491,7 +64492,7 @@
             },
             "saveDirtyPackages": {
               "type": "boolean",
-              "description": "Save dirty packages before the operation."
+              "description": "Save every dirty level and asset package first: the new level replaces the open one. Without it, open levels with unsaved changes refuse the call with DIRTY_PACKAGES (listing them in unsavedPackages) and nothing is created."
             }
           },
           "required": [
@@ -64564,8 +64565,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "077a4ed403469de80a98c20bf5526551cdf46894032c200a04b865f1c5a88b66",
-        "content": "4cebda62ce308d7036f892653f706e31124289c31c52b107d28e2beac3ce3531"
+        "schema": "88414c84fe898f6a49385262e748a2a8c542d5404a04ba8dd6ae3d461e833488",
+        "content": "c3dc324f7c2a86ccfbfb4d178e9600a34a07bbf18573be4e000121ba1f86cb2b"
       }
     },
     {
@@ -65734,7 +65735,8 @@
           "A level must be opened or streamed into the current session."
         ],
         "whenNotToUse": [
-          "The level is already the open one: the call reloads nothing and keeps its unsaved changes (the reply says alreadyLoaded and reports the unsaved state); to drop them, open another level first, to keep them use save."
+          "The level is already the open one: the call reloads nothing and keeps its unsaved changes (the reply says alreadyLoaded and reports the unsaved state); to drop them, open another level with discardUnsaved true, to keep them use save.",
+          "Open levels have unsaved changes that opening another level would drop: the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages, until saveDirtyPackages or discardUnsaved says what to do with them."
         ]
       },
       "schemas": {
@@ -65757,6 +65759,10 @@
             "saveDirtyPackages": {
               "type": "boolean",
               "description": "Save every dirty level and asset package first, in every mode (an interactive editor used to ignore it); the load fails DIRTY_PACKAGES when one cannot be saved, and a headless run refuses to load over dirty packages unless this is true. Done even when the level is already open and nothing is loaded."
+            },
+            "discardUnsaved": {
+              "type": "boolean",
+              "description": "Load even though open levels have unsaved changes, dropping them. Without this or saveDirtyPackages, a load that would drop unsaved level changes is refused with DIRTY_PACKAGES, which lists them (the editor loaded over them without a word)."
             }
           },
           "required": [
@@ -65864,8 +65870,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9fe13af056769bc8e07995d23d8288e1fde9bc7d6f01a04e215ff018d7a4213f",
-        "content": "ee759f9074c49527abc7b3fc6a443f672bc15edbd1d33854b4747018a7f68ba3"
+        "schema": "01c967d5b1478b0a75813057cd836db2a5c50d59bcda2b3fdfa05500cfda3634",
+        "content": "4976bab29713355cc69a289d39a78119983398a5ad7747eafda88f1ef837996d"
       }
     },
     {
@@ -67253,7 +67259,7 @@
             },
             "loadAfterCreate": {
               "type": "boolean",
-              "description": "Open the new level in the editor after creating it (default false)."
+              "description": "Open the new level in the editor after creating it (default false). When open levels have unsaved changes the load would drop, the call is refused with DIRTY_PACKAGES (listing them in unsavedPackages) before anything is created."
             },
             "sublevelName": {
               "type": "string",
@@ -67633,8 +67639,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c28841c75554fdb86e0c805fb39061463e869ea91a41949aa46f9f8933d02ed3",
-        "content": "af2ad25a8f3e368efd2f8e7af7f4e87c439d8a1ef6d6bcf009f0840f7ba55b29"
+        "schema": "74a72acbeef5243a4cfda4dbfd5ce468b410a2c8b34d82f89e6e559c5f22ab96",
+        "content": "cd6f389dce571923911b057ffe248c59611295c57ebe35180a3e7767098a8816"
       }
     },
     {

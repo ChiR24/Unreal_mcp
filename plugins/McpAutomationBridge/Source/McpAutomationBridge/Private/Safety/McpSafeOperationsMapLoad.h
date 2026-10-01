@@ -5,6 +5,8 @@
 #include "PackageTools.h"
 
 #include "Components/ActorComponent.h"
+#include "Dom/JsonObject.h"
+#include "Dom/JsonValue.h"
 #include "Editor.h"
 #include "Engine/Level.h"
 #include "Engine/World.h"
@@ -42,6 +44,40 @@ inline bool ResolveExpectedMapPackageName(const FString& MapPath, FString& OutPa
     return FPackageName::TryConvertFilenameToLongPackageName(
         AbsoluteMapFilename,
         OutPackageName);
+}
+
+// Loading another map over levels with unsaved changes drops that work without a word: FEditorFileUtils::LoadMap never
+// asks (only the editor's Open Level dialog does), so one session's load threw away another's edits. Empty when the
+// load loses nothing; otherwise the refusal text ending in WayOut, with the packages in OutDetails.
+inline FString McpRefuseLoadOverUnsavedLevels(const FString& MapPath, const TCHAR* WayOut, TSharedPtr<FJsonObject>& OutDetails)
+{
+    UWorld* OpenWorld = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+    FString Target;
+    if (!OpenWorld || (ResolveExpectedMapPackageName(MapPath, Target)
+                       && OpenWorld->GetOutermost()->GetName().Equals(Target, ESearchCase::IgnoreCase)))
+    {
+        return FString(); // the open map is not loaded again, so nothing is replaced
+    }
+    TArray<UPackage*> Dirty;
+    FEditorFileUtils::GetDirtyWorldPackages(Dirty);
+    TArray<TSharedPtr<FJsonValue>> Names;
+    for (UPackage* Package : Dirty)
+    {
+        if (Package && !Package->GetName().StartsWith(TEXT("/Temp/"))) // an untitled map: LoadMap asks about it itself
+        {
+            Names.Add(MakeShared<FJsonValueString>(Package->GetName()));
+        }
+    }
+    if (Names.Num() == 0)
+    {
+        return FString();
+    }
+    OutDetails = MakeShared<FJsonObject>();
+    OutDetails->SetStringField(TEXT("levelPath"), MapPath);
+    OutDetails->SetArrayField(TEXT("unsavedPackages"), Names);
+    OutDetails->SetNumberField(TEXT("unsavedPackageCount"), Names.Num());
+    return FString::Printf(TEXT("Loading %s would discard the unsaved changes of %d level package(s), %s first. %s"),
+                           *MapPath, Names.Num(), *Names[0]->AsString(), WayOut);
 }
 
 inline bool McpSafeLoadMap(const FString& MapPath, bool bForceCleanup = true)

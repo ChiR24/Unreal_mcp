@@ -115,6 +115,14 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
         return true;
       }
     }
+    // Both branches below end in a load; refused here, nothing is created.
+    TSharedPtr<FJsonObject> LossDetails;
+    const FString Loss = McpSafeOperations::McpRefuseLoadOverUnsavedLevels(
+        SavePath, TEXT("Pass saveDirtyPackages true to save them first, or save them with manage_level save."), LossDetails);
+    if (!Loss.IsEmpty()) {
+      Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, Loss, LossDetails, TEXT("DIRTY_PACKAGES"));
+      return true;
+    }
 
     // Check if map already exists
     if (FPackageName::DoesPackageExist(SavePath)) {

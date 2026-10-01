@@ -429,6 +429,45 @@ describe('handlers answer what they did', () => {
   });
 });
 
+// One session's level load dropped another session's unsaved stage edits: FEditorFileUtils::LoadMap never asks about
+// unsaved levels (only the editor's Open Level dialog does), and only a headless editor was ever refused.
+describe('opening another level over unsaved level changes', () => {
+  // Each caller, and the call that loads there: the check has to answer before it.
+  const callers: readonly (readonly [readonly string[], string])[] = [
+    [['Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersLoad.cpp'], 'const bool bLoaded = McpSafeLoadMap('],
+    [['Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersCreate.cpp'], 'McpSafeLoadMap(SavePath, true)'],
+    [['ControlEditor', 'McpAutomationBridge_ControlEditorLevel.cpp'], 'McpSafeLoadMap(MapPathToLoad)'],
+    [['LevelStructure', 'McpAutomationBridge_LevelStructureLevelCreation.cpp'], 'LoadIfRequested(Result,'],
+  ];
+
+  it('is refused in every mode by one shared check, which lists what would be lost', () => {
+    const safety = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Safety', 'McpSafeOperationsMapLoad.h'), 'utf8');
+    expect(safety).toContain('inline FString McpRefuseLoadOverUnsavedLevels(const FString& MapPath, const TCHAR* WayOut, TSharedPtr<FJsonObject>& OutDetails)');
+    expect(safety).toContain('FEditorFileUtils::GetDirtyWorldPackages(Dirty);');
+    expect(safety).toContain('OutDetails->SetArrayField(TEXT("unsavedPackages"), Names);');
+
+    for (const [segments, loadCall] of callers) {
+      const file = segments[segments.length - 1];
+      const source = code(...segments);
+      const check = source.indexOf('McpRefuseLoadOverUnsavedLevels(');
+      expect(check, file).toBeGreaterThan(-1);
+      expect(check, `${file}: the check answers before the load`).toBeLessThan(source.indexOf(loadCall));
+      expect(source.slice(check, check + 600), file).toContain('TEXT("DIRTY_PACKAGES")');
+    }
+  });
+
+  it('manage_level load gets past it only with discardUnsaved or a save, and says so', () => {
+    const source = code('Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersLoad.cpp').split(/\s+/u).join(' ');
+    expect(source).toContain('Payload->TryGetBoolField(TEXT("discardUnsaved"), bDiscardUnsaved);');
+    expect(source).toContain('const FString Loss = bDiscardUnsaved ? FString() : McpSafeOperations::McpRefuseLoadOverUnsavedLevels(');
+    expect(source.indexOf('if (bSaveDirtyPackages) {'), 'a save asked for runs first, so nothing is left to refuse').toBeLessThan(source.indexOf('McpRefuseLoadOverUnsavedLevels('));
+
+    const record = capabilityIndex().byId.get('manage_level.load');
+    expect(Object.keys(record?.schemas.input.properties ?? {})).toContain('discardUnsaved');
+    expect(record?.discovery.whenNotToUse.join(' '), 'the fold keeps the line').toMatch(/refused with DIRTY_PACKAGES/u);
+  });
+});
+
 // The camera of a running game: the level viewport is hidden behind the game view, so a camera moved there changed
 // nothing on screen while the call said success, and `Exec("Eject")` (no such console command) ejected nobody.
 describe('the view of a running game', () => {

@@ -15,10 +15,12 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Load a level into the editor, or with streaming=true stream it into the open level as a sub-level.',
     whenToUse: ['A level must be opened or streamed into the current session.'],
     // No standalone "load" here: the fold drops a line that names its own action.
-    whenNotToUse: ['The level is already the open one: the call reloads nothing and keeps its unsaved changes (the reply says alreadyLoaded and reports the unsaved state); to drop them, open another level first, to keep them use save.'],
+    whenNotToUse: ['The level is already the open one: the call reloads nothing and keeps its unsaved changes (the reply says alreadyLoaded and reports the unsaved state); to drop them, open another level with discardUnsaved true, to keep them use save.',
+      'Open levels have unsaved changes that opening another level would drop: the call is refused with DIRTY_PACKAGES, listing them in unsavedPackages, until saveDirtyPackages or discardUnsaved says what to do with them.'],
     inputProps: {
       levelPath: P.levelPath, streaming: P.streaming,
       saveDirtyPackages: { ...P.saveDirtyPackages, description: 'Save every dirty level and asset package first, in every mode (an interactive editor used to ignore it); the load fails DIRTY_PACKAGES when one cannot be saved, and a headless run refuses to load over dirty packages unless this is true. Done even when the level is already open and nothing is loaded.' },
+      discardUnsaved: { type: 'boolean', description: 'Load even though open levels have unsaved changes, dropping them. Without this or saveDirtyPackages, a load that would drop unsaved level changes is refused with DIRTY_PACKAGES, which lists them (the editor loaded over them without a word).' },
     },
     required: ['levelPath'],
     outputProps: {
@@ -81,7 +83,8 @@ export const LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       levelName: P.levelName,
       levelPath: { ...P.levelPath, description: 'Folder the new level goes in (e.g. /Game/Maps, combined with levelName), or its full path; omitted, the level lands in /Game/Maps.' },
       savePath: { ...P.savePath, description: 'Alias of levelPath.' },
-      useWorldPartition: P.useWorldPartition, saveDirtyPackages: P.saveDirtyPackages,
+      useWorldPartition: P.useWorldPartition,
+      saveDirtyPackages: { ...P.saveDirtyPackages, description: 'Save every dirty level and asset package first: the new level replaces the open one. Without it, open levels with unsaved changes refuse the call with DIRTY_PACKAGES (listing them in unsavedPackages) and nothing is created.' },
     },
     required: ['levelName'],
     effect: 'write', costLatency: 'interactive', costResources: 'medium',
