@@ -60,7 +60,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('list_fab_downloads', 'asset',
-    'Report what the Fab plugin has already downloaded to this machine, with the cache directory it used. Pair with list_content_sources(sourceRoot="fabLibrary") and asset.migrate_assets to bring a downloaded pack into the project. This reads local state only: Fab\'s catalog is not on disk — the plugin\'s browser is an authenticated web view that fetches listings and short-lived signed download URLs — so browsing and purchasing stay in the editor\'s Fab tab, and this reports what that leaves behind.',
+    'Report what the Fab plugin has already downloaded to this machine, with the cache directory it used. Pair with list_content_sources(sourceRoot="fabLibrary") and asset.migrate_assets to bring a downloaded pack into the project. This reads local state only: the archives Fab has finished fetching into its cache. Finding a listing is search_fab_listings and adding one is asset.import_marketplace_asset; a download that is still running is not listed until it ends (the add\'s import status shows its progress), and a unreal-engine pack is installed by Fab straight into the project, so it never appears here.',
     schema({}, []),
     schema({
       success: bool('Operation succeeded.'),
@@ -329,7 +329,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('list_megascans_library', 'asset',
-    'List the Quixel Bridge / Megascans library index on this machine. Unlike Fab — whose catalog exists only inside an authenticated web view — Bridge writes a plain uassetsData.json next to the downloaded packs, so the inventory is an ordinary local read. Pair with import_megascans_asset to bring an entry into the project.',
+    'List the Quixel Bridge / Megascans library index on this machine. This reads the packs a Quixel Bridge install has already downloaded: Bridge writes a plain uassetsData.json next to them, so the inventory is an ordinary local read. Megascans listings that are not downloaded yet are found with search_fab_listings (seller Quixel Megascans) and imported straight from Fab with import_marketplace_asset (marketplace=fab_listing). Pair this with import_megascans_asset to bring a downloaded entry into the project.',
     schema({ filter: str('Case-sensitive substring matched against each serialized index entry.') }, []),
     schema({
       success: bool('Operation succeeded.'),
@@ -348,7 +348,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('import_megascans_asset', 'asset',
-    'Import a downloaded Megascans pack through the Bridge plugin\'s own importer, headlessly — no Bridge window, no drag, no sign-in. Calls FAssetsImportController::DataReceived, the exported entry point the Bridge desktop app drives over its local TCP socket, so quality tiers, master materials and the MSPresets setup all apply exactly as they would from the UI. This imports content ALREADY on disk: downloading remains the Bridge app\'s job, since no download or catalog-search API is exported. Assets land under /Game/Megascans.',
+    'Import a downloaded Megascans pack through the Bridge plugin\'s own importer, headlessly — no Bridge window, no drag, no sign-in. Calls FAssetsImportController::DataReceived, the exported entry point the Bridge desktop app drives over its local TCP socket, so quality tiers, master materials and the MSPresets setup all apply exactly as they would from the UI. This imports content ALREADY on disk, downloaded by the Bridge app. A Megascans listing that is not downloaded yet is fetched and imported by marketplace=fab_listing instead, which needs no Bridge window. Assets land under /Game/Megascans.',
     schema({
       payload: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'A complete Bridge export envelope: { exportPayload: [ { assetId, assetType, exportMode, exportType, folderName, name, assetPaths[] } ] }. Use this to pass through exactly what Bridge would have sent.' },
       assetPaths: arr('Absolute paths of the downloaded pack files. Used with folderName to synthesize a single-entry envelope when payload is omitted.'),

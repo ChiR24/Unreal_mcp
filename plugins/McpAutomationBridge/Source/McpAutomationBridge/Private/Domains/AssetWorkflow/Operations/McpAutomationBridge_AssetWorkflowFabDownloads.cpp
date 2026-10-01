@@ -13,13 +13,10 @@
 /**
  * Reports what the Fab plugin has already downloaded to this machine.
  *
- * This deliberately reads only local state. Fab's catalog is not on disk — the
- * plugin's browser is an authenticated web view that fetches listings and
- * short-lived signed download URLs, then calls back into C++ with them. Listing
- * what is *purchasable* would therefore mean re-implementing that web API
- * against a private, undocumented surface; listing what is *downloaded* is a
- * directory read, and it is the half that lets an agent find and migrate an
- * asset after the operator pulls it down through the Fab UI.
+ * This deliberately reads only local state: what Fab has finished downloading
+ * into its cache. Finding a listing is the catalog search and adding one is the
+ * add; listing what is *downloaded* is a directory read, and it is the half that
+ * lets an agent find and migrate a pack that has already been pulled down.
  *
  * Unlike the other Fab actions this one still answers without the adapter: the
  * cache directory is a plain path, so a scan of it beats claiming there is
@@ -74,7 +71,7 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabDownloads(
       TEXT("note"),
       Downloads.Num() > 0
           ? TEXT("Downloaded packs land under the fabLibrary source root; migrate them with asset.migrate_assets.")
-          : TEXT("Nothing downloaded yet. Browsing and purchasing happen in the editor's Fab tab; this reports what that leaves on disk."));
+          : TEXT("Nothing downloaded yet. Add a listing with asset.import_marketplace_asset (marketplace=fab_listing) and follow it with lookup=fab_import_status; this reports the archives Fab has finished downloading into its cache."));
   SendAutomationResponse(
       Socket, RequestId, true,
       FString::Printf(TEXT("Found %d Fab download(s) in %s."), Downloads.Num(), *CacheDir),

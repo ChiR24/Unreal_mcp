@@ -192,6 +192,26 @@ describe('the details script: an unreal-engine pack', () => {
     expect(String((out.addWarnings as string[])[0])).toMatch(/newer/u);
   });
 
+  it('names MS_Hornbeam_UE51_V2 for a 5.8 editor, and every engine the three builds declare', async () => {
+    // European Hornbeam, read live from Fab: the first version listed is the 5.0 pack, which is not the right one.
+    const hornbeam = [
+      { name: 'MS_Hornbeam_UE5', uid: 'v5', engineVersions: ['UE_5.0'] },
+      { name: 'MS_Hornbeam_UE51_V2', uid: 'v51', engineVersions: ['UE_5.1', 'UE_5.2', 'UE_5.3', 'UE_5.4', 'UE_5.5', 'UE_5.6'] },
+      { name: 'MS_Hornbeam_UE4', uid: 'v4', engineVersions: ['UE_4.25', 'UE_4.26', 'UE_4.27'] },
+    ];
+    const out = await reply(detailsScript('5.8'), routes(packListing({ user: { sellerName: 'Quixel Megascans' } }), [pack(hornbeam)]));
+
+    expect(out).toMatchObject({
+      canAddToProject: true,
+      versionName: 'MS_Hornbeam_UE51_V2',
+      pickedEngineVersion: 'UE_5.6',
+      engineMatch: 'older',
+      supportsRunningEngine: false,
+      engineVersions: ['UE_4.25', 'UE_4.26', 'UE_4.27', 'UE_5.0', 'UE_5.1', 'UE_5.2', 'UE_5.3', 'UE_5.4', 'UE_5.5', 'UE_5.6'],
+    });
+    expect(String((out.addWarnings as string[])[0])).toContain('UE_5.6');
+  });
+
   it('says nothing about a match when no version declares an engine', async () => {
     const out = await reply(detailsScript('5.8'), routes(packListing(), [pack([{ name: 'Pack', uid: 'v', engineVersions: [] }])]));
 

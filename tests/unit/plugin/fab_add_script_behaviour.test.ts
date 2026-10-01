@@ -161,6 +161,24 @@ describe('the add script: an unreal-engine pack', () => {
     });
   });
 
+  it('takes MS_Hornbeam_UE51_V2 on 5.8, where the first version listed is the 5.0 pack', async () => {
+    // European Hornbeam, read live from Fab: three builds, none of which declares 5.8.
+    const hornbeam = [
+      { name: 'MS_Hornbeam_UE5', uid: 'v5', engineVersions: ['UE_5.0'] },
+      { name: 'MS_Hornbeam_UE51_V2', uid: 'v51', engineVersions: ['UE_5.1', 'UE_5.2', 'UE_5.3', 'UE_5.4', 'UE_5.5', 'UE_5.6'] },
+      { name: 'MS_Hornbeam_UE4', uid: 'v4', engineVersions: ['UE_4.25', 'UE_4.26', 'UE_4.27'] },
+    ];
+    const run = await runPageScript(
+      addScript('5.8'),
+      routes({ distributionMethod: 'asset_pack', versions: hornbeam }, 'unreal-engine', packListing),
+      `fab_csrftoken=${CSRF}`,
+    );
+
+    expect(run.results[0]).toMatchObject({
+      accepted: true, versionName: 'MS_Hornbeam_UE51_V2', engineMatch: 'older', engineVersion: 'UE_5.6', engineExactMatch: false,
+    });
+  });
+
   it('reports no match at all when no version declares an engine', async () => {
     const run = await runPageScript(
       addScript('5.8'), routes({ versions: [{ name: 'Pack', uid: 'v', engineVersions: [] }] }, 'unreal-engine', packListing), `fab_csrftoken=${CSRF}`,
