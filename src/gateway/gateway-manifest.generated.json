@@ -5991,6 +5991,7 @@
         "process",
         "propertyName",
         "provider",
+        "quality",
         "query",
         "radius",
         "rayDistance",
@@ -7129,6 +7130,16 @@
           "provider": {
             "type": "string",
             "description": "Provider name as the editor registers it, e.g. Git or Perforce. Omit to report the current provider without changing it."
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "raw",
+              "high",
+              "mid",
+              "low"
+            ],
+            "description": "Quality tier of the file to fetch, for a listing that publishes one file per tier, as Megascans does: raw (the unprocessed scan, hundreds of MB), high, mid or low. Omit to take the best game-ready tier: high, else mid, low, raw. A tier the listing does not publish is refused with QUALITY_NOT_AVAILABLE, naming the tiers it does. Ignored for a listing that publishes no tiers and for a unreal-engine pack. The reply's quality, fileName and downloadBytes say which file was chosen."
           },
           "query": {
             "type": "string",

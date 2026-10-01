@@ -44,17 +44,23 @@ bool IsSafeListingId(const FString& Value)
 	return true;
 }
 
+/** The four tiers Megascans publishes, or empty for none: the only values that ever reach the page. */
+bool IsKnownQuality(const FString& Value)
+{
+	return Value.IsEmpty() || Value == TEXT("raw") || Value == TEXT("high") || Value == TEXT("mid") || Value == TEXT("low");
+}
+
 /**
  * Composed entirely in native code. ListingId is validated above and passed
  * through encodeURIComponent as well; the format and file segments come from
  * Fab's own response, not from any caller.
  */
 FString BuildAddScript(const FString& RequestId, const FString& ListingId, const FString& EngineVersion,
-	const TOptional<bool>& CombineMeshes)
+	const TOptional<bool>& CombineMeshes, const FString& Quality)
 {
 	return FString::Printf(TEXT(R"JS(
 (function () {
-  var id = "%s", listing = "%s", engine = "%s", combine = %d;
+  var id = "%s", listing = "%s", engine = "%s", combine = %d, quality = "%s";
 %s
 %s
   function shape(v, d) {
@@ -282,9 +288,20 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
           return String(f.name || "") + "|" + String(f.fileType || "") + "|" +
                  String(f.artifactTag || "") + "|" + String(fileBytes(f));
         });
+        // A quality the caller named is taken exactly or refused with what the listing offers; asking for
+        // none takes the best game-ready tier. A listing that publishes no tiers at all has one file, and
+        // a tier cannot apply to it.
+        var offered = qualitiesOf(ready);
+        if (quality) { chosen = pickTier(ready, quality); }
+        if (quality && !chosen && offered.length) {
+          out.error = "QUALITY_NOT_AVAILABLE";
+          out.qualityAsked = quality;
+          out.qualities = offered;
+          send(out); return null;
+        }
         // out.formatCode, not code: `code` is a local of the previous then()
         // callback and is out of scope here.
-        chosen = pickFile(ready, out.formatCode);
+        chosen = chosen || pickFile(ready, out.formatCode);
       }
       if (!chosen) {
         out.error = "NO_VERSION";
@@ -326,7 +343,7 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
     .catch(fail);
 })();
 )JS"), *RequestId, *ListingId, *EngineVersion,
-		CombineMeshes.IsSet() ? (CombineMeshes.GetValue() ? 1 : 0) : -1, McpFabSelection::Script(),
+		CombineMeshes.IsSet() ? (CombineMeshes.GetValue() ? 1 : 0) : -1, *Quality, McpFabSelection::Script(),
 		McpFabDownload::Script());
 }
 } // namespace McpFabAddOperation

@@ -73,7 +73,7 @@ void Launch(const FString& OperationId, const FString& ListingId, const FString&
 	const bool bDispatched = McpFabBridgeDispatch::Dispatch(
 		[&ListingId, &EngineVersion, &Options](const FString& RequestId)
 		{
-			return BuildAddScript(RequestId, ListingId, EngineVersion, Options.CombineMeshes);
+			return BuildAddScript(RequestId, ListingId, EngineVersion, Options.CombineMeshes, Options.Quality);
 		},
 		[Before = MoveTemp(Before), OperationId, OnResolved, Options](bool bSuccess, const FString& Payload) mutable
 		{
@@ -123,6 +123,16 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		Rejected.ErrorCode = TEXT("INVALID_LISTING_ID");
 		Rejected.Error = TEXT("A listing id must be [A-Za-z0-9_-] and at most 64 characters.");
 		OnAccepted(Rejected);
+		return true;
+	}
+
+	// The tier goes into the page script as text, so only a known one may.
+	if (!IsKnownQuality(Options.Quality))
+	{
+		FMcpFabAddResult Unknown;
+		Unknown.ErrorCode = TEXT("INVALID_QUALITY");
+		Unknown.Error = TEXT("quality is one of raw, high, mid or low.");
+		OnAccepted(Unknown);
 		return true;
 	}
 

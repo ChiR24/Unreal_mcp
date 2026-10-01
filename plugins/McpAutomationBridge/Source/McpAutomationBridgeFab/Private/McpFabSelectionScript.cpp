@@ -69,17 +69,20 @@ const TCHAR* Script()
       return f && f.uid && String(f.status || "").toUpperCase() !== "FAILED";
     });
   }
-  // The file of a source format the add downloads. Megascans publishes one file per quality tier --
-  // raw, high, mid, low -- all typed "source", so matching fileType to the format picks nothing and
-  // taking the first grabs raw: the unprocessed scan, 323 MB for a campfire, rather than the
-  // game-ready asset. The tier order is therefore explicit, and raw stays last.
+  // The file of a source format that carries exactly this quality tier, or null.
+  function pickTier(ready, tier) {
+    for (var k = 0; k < ready.length; k++) {
+      if (tierOf(ready[k].name) === tier) { return ready[k]; }
+    }
+    return null;
+  }
+  // The file of a source format the add downloads when the caller named no quality. Megascans publishes
+  // one file per quality tier -- raw, high, mid, low -- all typed "source", so matching fileType to the
+  // format picks nothing and taking the first grabs raw: the unprocessed scan, 323 MB for a campfire,
+  // rather than the game-ready asset. The tier order is therefore explicit, and raw stays last.
   function pickFile(ready, code) {
     var order = ["high", "mid", "low", "raw"], chosen = null;
-    for (var t = 0; t < order.length && !chosen; t++) {
-      for (var k = 0; k < ready.length; k++) {
-        if (tierOf(ready[k].name) === order[t]) { chosen = ready[k]; break; }
-      }
-    }
+    for (var t = 0; t < order.length && !chosen; t++) { chosen = pickTier(ready, order[t]); }
     // Several entries can share a format and only one is the model itself.
     var want = String(code || "").toLowerCase();
     for (var m = 0; m < ready.length && !chosen; m++) {

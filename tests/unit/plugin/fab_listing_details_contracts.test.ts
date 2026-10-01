@@ -74,7 +74,7 @@ describe('the refusals the details predict', () => {
     const json = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h'));
     expect(json).toContain('TEXT("engineMatch")');
     expect(json).toContain('TEXT("engineVersion")');
-    const provider = code(core('Public/McpFabProvider.h'));
+    const provider = code(core('Public/McpFabTypes.h'));
     expect(provider).toContain('FString EngineMatch;');
     expect(provider).toContain('FString EngineVersion;');
   });
@@ -106,7 +106,7 @@ describe('the catalog search request', () => {
     for (const guarded of ['AverageRating', 'RatingCount', 'Price', 'bIsCc0']) {
       expect(handler, guarded).toContain(`Listing.${guarded}.IsSet()`);
     }
-    expect(code(core('Public/McpFabProvider.h'))).not.toContain('bRawIsFree');
+    expect(code(core('Public/McpFabTypes.h'))).not.toContain('bRawIsFree');
   });
 });
 

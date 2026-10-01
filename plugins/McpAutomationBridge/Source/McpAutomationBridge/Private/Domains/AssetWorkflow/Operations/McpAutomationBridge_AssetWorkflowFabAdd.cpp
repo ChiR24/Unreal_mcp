@@ -56,6 +56,20 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
   if (Payload->TryGetBoolField(TEXT("combineMeshes"), bCombineMeshes)) {
     Options.CombineMeshes = bCombineMeshes;
   }
+  // The tier a Megascans listing is fetched at; anything but the four tiers is refused here, before the
+  // adapter is asked, so no other text ever reaches the page.
+  FString Quality;
+  if (Payload->TryGetStringField(TEXT("quality"), Quality) && !Quality.IsEmpty()) {
+    Quality = Quality.ToLower();
+    if (Quality != TEXT("raw") && Quality != TEXT("high") && Quality != TEXT("mid") &&
+        Quality != TEXT("low")) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("'quality' is one of raw, high, mid or low."), nullptr,
+                             TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+    Options.Quality = Quality;
+  }
 
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
   const bool bStarted = Provider->AddToProject(

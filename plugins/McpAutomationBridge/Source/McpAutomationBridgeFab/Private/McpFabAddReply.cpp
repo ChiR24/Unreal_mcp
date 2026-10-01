@@ -114,6 +114,27 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 			TEXT("Fab did not accept the listing.%s Fab imports unreal-engine, gltf, glb and fbx; this listing ships none of them."),
 			*FormatList);
 	}
+	else if (Result.ErrorCode == TEXT("QUALITY_NOT_AVAILABLE"))
+	{
+		FString Asked;
+		TArray<FString> Offered;
+		if (bJson)
+		{
+			Root->TryGetStringField(TEXT("qualityAsked"), Asked);
+			const TArray<TSharedPtr<FJsonValue>>* Tiers = nullptr;
+			if (Root->TryGetArrayField(TEXT("qualities"), Tiers) && Tiers != nullptr)
+			{
+				for (const TSharedPtr<FJsonValue>& Tier : *Tiers)
+				{
+					FString Name;
+					if (Tier.IsValid() && Tier->TryGetString(Name)) { Offered.Add(Name); }
+				}
+			}
+		}
+		Result.Error = FString::Printf(
+			TEXT("This listing publishes no '%s' quality for %s. It offers: %s. Pass one of those as quality, or omit quality to take the best game-ready tier. Nothing was downloaded."),
+			*Asked, *Result.FormatCode, *FString::Join(Offered, TEXT(", ")));
+	}
 	else if (Result.ErrorCode == TEXT("METAHUMAN_FORMAT"))
 	{
 		Result.Error = FString::Printf(

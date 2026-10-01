@@ -88,7 +88,7 @@ describe('the Fab import status read', () => {
 });
 
 describe('what an import record can carry', () => {
-  const provider = code(core('Public/McpFabProvider.h'));
+  const provider = code(core('Public/McpFabTypes.h'));
   for (const struct of ['FMcpFabAddResult', 'FMcpFabImportStatus']) {
     it(`${struct} has no credential-shaped field`, () => {
       const body = new RegExp(`struct ${struct}\\s*\\{([\\s\\S]*?)\\n\\};`, 'u').exec(provider)?.[1] ?? '';
@@ -246,5 +246,38 @@ describe('a refused download says which step failed', () => {
     expect(script).toMatch(/!\/thumb\|preview\|image\|icon\|media\/i\.test\(k\)/u);
     // Only key names of an unfamiliar reply are reported, never their values.
     expect(script).toContain('Object.keys(info).slice(0, 12).join(", ")');
+  });
+});
+
+describe('a quality tier named by the caller', () => {
+  const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
+  const add = code(fab('McpFabAddOperation.cpp'));
+  const script = code(fab('McpFabAddToProject.cpp'));
+
+  it('reaches the page only as one of the four known tiers, checked twice', () => {
+    // The handler refuses anything else before the adapter is asked...
+    expect(handler).toMatch(/Quality != TEXT\("raw"\) && Quality != TEXT\("high"\) && Quality != TEXT\("mid"\) &&\s*Quality != TEXT\("low"\)/u);
+    expect(handler.indexOf('Options.Quality = Quality;')).toBeLessThan(handler.indexOf('Provider->AddToProject('));
+    // ...and the adapter checks again, before anything is claimed, because the tier is spliced into script text.
+    expect(script).toMatch(/Value\.IsEmpty\(\) \|\| Value == TEXT\("raw"\) \|\| Value == TEXT\("high"\) \|\| Value == TEXT\("mid"\) \|\| Value == TEXT\("low"\)/u);
+    expect(add.indexOf('!IsKnownQuality(Options.Quality)')).toBeGreaterThan(-1);
+    expect(add.indexOf('!IsKnownQuality(Options.Quality)')).toBeLessThan(add.indexOf('McpFabImportOperations::Begin('));
+    expect(add).toContain('BuildAddScript(RequestId, ListingId, EngineVersion, Options.CombineMeshes, Options.Quality)');
+  });
+
+  it('is compared to the tiers of the listing\'s own files and never placed in a request', () => {
+    const page = script.slice(script.indexOf('(function () {'));
+    expect(page).toContain('quality = "%s"');
+    expect(page).toContain('pickTier(ready, quality)');
+    expect(page).not.toMatch(/fetch\([^)]*quality/u);
+    expect(page).not.toMatch(/form\.append\([^)]*quality/u);
+  });
+
+  it('refuses a tier the listing lacks with what it offers, in words', () => {
+    expect(script).toContain('out.error = "QUALITY_NOT_AVAILABLE";');
+    const reply = code(fab('McpFabAddReply.cpp'));
+    expect(reply).toContain('TEXT("QUALITY_NOT_AVAILABLE")');
+    expect(reply).toMatch(/publishes no '%s' quality for %s\. It offers: %s\./u);
+    expect(reply).toMatch(/Nothing was downloaded\./u);
   });
 });

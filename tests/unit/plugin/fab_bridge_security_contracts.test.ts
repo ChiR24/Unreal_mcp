@@ -188,7 +188,7 @@ describe('Fab bridge: credentials cannot reach a response or a log', () => {
     const providerHeader = readFileSync(
       resolve(
         here,
-        '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpFabProvider.h',
+        '../../../plugins/McpAutomationBridge/Source/McpAutomationBridge/Public/McpFabTypes.h',
       ),
       'utf8',
     );

@@ -8513,6 +8513,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Provider name as the editor registers it, e.g. Git or Perforce. Omit to report the current provider without changing it."
         },
+        "quality": {
+          "type": "string",
+          "enum": [
+            "raw",
+            "high",
+            "mid",
+            "low"
+          ],
+          "description": "Quality tier of the file to fetch, for a listing that publishes one file per tier, as Megascans does: raw (the unprocessed scan, hundreds of MB), high, mid or low. Omit to take the best game-ready tier: high, else mid, low, raw. A tier the listing does not publish is refused with QUALITY_NOT_AVAILABLE, naming the tiers it does. Ignored for a listing that publishes no tiers and for a unreal-engine pack. The reply's quality, fileName and downloadBytes say which file was chosen."
+        },
         "query": {
           "type": "string",
           "description": "Free-text search. At most 128 characters, and no quotes, backslashes or control characters."
@@ -9278,7 +9288,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "failureCode": {
           "type": "string",
-          "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code (COMPLETE_PROJECT, METAHUMAN_FORMAT, LARGE_SCENE_FILE, NO_IMPORTABLE_FORMAT, NO_DOWNLOAD_URL)."
+          "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code (COMPLETE_PROJECT, METAHUMAN_FORMAT, LARGE_SCENE_FILE, QUALITY_NOT_AVAILABLE, NO_IMPORTABLE_FORMAT, NO_DOWNLOAD_URL)."
         },
         "fileName": {
           "type": "string",

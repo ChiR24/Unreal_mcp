@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a90d253e8824e72d",
+  "catalogRevision": "edb71e2398350d75",
   "recordCount": 389,
   "records": [
     {
@@ -7748,6 +7748,16 @@
               "type": "string",
               "description": "Fab listing uid, as it appears in a fab.com/listings/<uid> URL. Restricted to [A-Za-z0-9_-], 64 characters max, because it is used to build an API path."
             },
+            "quality": {
+              "type": "string",
+              "enum": [
+                "raw",
+                "high",
+                "mid",
+                "low"
+              ],
+              "description": "Quality tier of the file to fetch, for a listing that publishes one file per tier, as Megascans does: raw (the unprocessed scan, hundreds of MB), high, mid or low. Omit to take the best game-ready tier: high, else mid, low, raw. A tier the listing does not publish is refused with QUALITY_NOT_AVAILABLE, naming the tiers it does. Ignored for a listing that publishes no tiers and for a unreal-engine pack. The reply's quality, fileName and downloadBytes say which file was chosen."
+            },
             "combineMeshes": {
               "type": "boolean",
               "description": "Only for source mesh formats (fbx, obj, gltf, glb, usdz) that Fab imports itself; ignored for Megascans and unreal-engine packs. Omit to leave Fab's behaviour alone: every mesh of a file is merged into ONE static mesh. false imports each mesh as its own asset: the adapter switches off Interchange's mesh combining on the pipelines Fab generated for this import, and the status read's combineMeshesApplied says whether that landed in time (COMBINE_UNSUPPORTED refuses the call when this engine gives no way to). true accepts the single merged mesh explicitly, which a scene-sized file (one mesh file of 50 MB or more) requires."
@@ -7861,7 +7871,7 @@
             },
             "quality": {
               "type": "string",
-              "description": "Quality tier of the chosen file (raw, high, mid or low) when the listing publishes tiers, as Megascans does; absent otherwise."
+              "description": "Quality tier of the chosen file (raw, high, mid or low) when the listing publishes tiers, as Megascans does: the one asked for in quality, else the best game-ready one. Absent otherwise."
             },
             "fileName": {
               "type": "string",
@@ -7991,6 +8001,9 @@
             "listingId": [
               "fab_listing"
             ],
+            "quality": [
+              "fab_listing"
+            ],
             "combineMeshes": [
               "fab_listing"
             ],
@@ -8033,8 +8046,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0794ad780e4bdebae33cd36ac72351ffa72b011a8ee9d5216890b69362b28752",
-        "content": "2bf73d2d7cc6e783eac2816b6cbb3e0fd61ca1f2f0199b21c1a4f0409ba02a11"
+        "schema": "dda0613525a725ec505b21f3a4ff34bee531e20a53988f7e730da9c6e7372934",
+        "content": "b30bcfdcdc7c1e779eab4ca423cd4f52c295f2b4fee48050a31656de337322d0"
       }
     },
     {
@@ -10516,7 +10529,7 @@
             },
             "failureCode": {
               "type": "string",
-              "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code (COMPLETE_PROJECT, METAHUMAN_FORMAT, LARGE_SCENE_FILE, NO_IMPORTABLE_FORMAT, NO_DOWNLOAD_URL)."
+              "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code (COMPLETE_PROJECT, METAHUMAN_FORMAT, LARGE_SCENE_FILE, QUALITY_NOT_AVAILABLE, NO_IMPORTABLE_FORMAT, NO_DOWNLOAD_URL)."
             },
             "failure": {
               "type": "string",
@@ -10623,8 +10636,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2c28eb8d631f94b17e9c365e682c3a9a6a8fa230512d437cee756374bfe3399a",
-        "content": "138d18414343c556a2d5a0f33f876330ca79621f1cfac3ef85f6c10706357ef3"
+        "schema": "012ebe138fb0169ccd796a62a444b1a6220fd49c8cd054f49a4cb7f8beb2e5a4",
+        "content": "3ff6e4039da8c64b980d64129ba1810fb28e0a50a0929d9c6fece7ee95756561"
       }
     },
     {

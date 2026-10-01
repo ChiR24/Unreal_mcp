@@ -13,10 +13,13 @@ const LISTING = 'ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1';
 const CSRF = 'csrf-value-that-must-never-be-reported';
 const SIGNED_URL = 'https://cdn.example.invalid/signed?sig=must-never-be-reported';
 
-/** combine mirrors the C++ side: -1 when the caller said nothing about merging meshes, 0 for false, 1 for true. */
-const addScript = (engine = '5.8', combine = -1): string =>
+/**
+ * combine mirrors the C++ side: -1 when the caller said nothing about merging meshes, 0 for false, 1 for
+ * true. quality is the tier the caller named, or empty for none.
+ */
+const addScript = (engine = '5.8', combine = -1, quality = ''): string =>
   fillSlots(rawScript('McpFabAddToProject.cpp'), [
-    'req-1', LISTING, engine, combine, rawScript('McpFabSelectionScript.cpp'), rawScript('McpFabDownloadScript.cpp'),
+    'req-1', LISTING, engine, combine, quality, rawScript('McpFabSelectionScript.cpp'), rawScript('McpFabDownloadScript.cpp'),
   ]);
 
 const listing = (over: Record<string, unknown> = {}): Record<string, unknown> => ({
@@ -58,6 +61,53 @@ describe('the add script: a Megascans listing', () => {
     });
     expect(run.addToProject).toHaveLength(1);
     expect(run.addToProject[0]?.metadata).toMatchObject({ AssetType: 'gltf', IsQuixel: true });
+  });
+
+  describe('a quality named by the caller', () => {
+    const asked = (quality: string, table: Route[] = routes({ files: tiers(sizes) }, 'gltf')) =>
+      runPageScript(addScript('5.8', -1, quality), table, `fab_csrftoken=${CSRF}`);
+
+    it('takes exactly that tier, whatever the default would have been', async () => {
+      for (const [quality, bytes] of [['raw', 268_000_000], ['mid', 16_000_000], ['low', 700_000], ['high', 64_000_000]] as const) {
+        const run = await asked(quality);
+
+        expect(run.results[0], quality).toMatchObject({
+          accepted: true, quality, downloadBytes: bytes, versionName: `concrete_barrier_ubitfhtfa_ue_${quality}.zip`,
+        });
+      }
+    });
+
+    it('is refused, before anything is downloaded, when the listing does not publish it', async () => {
+      const run = await asked('raw', routes({ files: tiers({ high: 64_000_000 }).filter((f) => !f.name.endsWith('_raw.zip') && !f.name.endsWith('_mid.zip')) }, 'gltf'));
+
+      expect(run.results[0]).toMatchObject({ error: 'QUALITY_NOT_AVAILABLE', qualityAsked: 'raw', qualities: ['high', 'low'], formatCode: 'gltf' });
+      expect(run.addToProject).toHaveLength(0);
+      expect(run.fetches.some((line) => line.includes('/download-info'))).toBe(false);
+    });
+
+    it('does not apply to a listing that publishes no tiers: its one file is taken', async () => {
+      const plain = routes({ files: [{ name: 'prop.zip', uid: 'u-prop', fileSize: 4_000_000, fileType: 'fbx' }] }, 'fbx', listing({ user: { sellerName: 'Some Studio' }, assetFormats: [{ assetFormatType: { code: 'fbx' } }] }));
+      const run = await asked('raw', plain);
+
+      // The page reports no tier, and the reply leaves an empty one out.
+      expect(run.results[0]).toMatchObject({ accepted: true, versionName: 'prop.zip', quality: '' });
+    });
+
+    it('is ignored for an unreal-engine pack', async () => {
+      const run = await asked(
+        'raw',
+        routes({ versions: [{ name: 'Pack', uid: 'v', engineVersions: ['UE_5.8'] }] }, 'unreal-engine',
+          listing({ user: { sellerName: 'Epic Games' }, assetFormats: [{ assetFormatType: { code: 'unreal-engine' } }] })),
+      );
+
+      expect(run.results[0]).toMatchObject({ accepted: true, versionName: 'Pack' });
+    });
+
+    it('asks for the best game-ready tier when none is named', async () => {
+      const run = await asked('');
+
+      expect(run.results[0]).toMatchObject({ accepted: true, quality: 'high' });
+    });
   });
 
   it('leaves the size out when Fab publishes none, rather than reporting zero', async () => {
@@ -286,12 +336,13 @@ describe('the add script: a listing Fab will not hand a download for', () => {
 
 describe('the shared selection functions', () => {
   const selection = vm.runInNewContext(
-    `${rawScript('McpFabSelectionScript.cpp')}; ({ engineNum, tierOf, pickFile, fileBytes, pickVersion, engineList, qualitiesOf, SCENE_BYTES })`,
+    `${rawScript('McpFabSelectionScript.cpp')}; ({ engineNum, tierOf, pickFile, pickTier, fileBytes, pickVersion, engineList, qualitiesOf, SCENE_BYTES })`,
   ) as {
     engineNum: (value: string) => number;
     tierOf: (name: string) => string;
     pickFile: (files: unknown[], code: string) => { name: string } | null;
     fileBytes: (file: unknown) => number;
+    pickTier: (files: unknown[], tier: string) => { name: string } | null;
     pickVersion: (versions: unknown[], engine: string) => { version: { name: string }; engine: string; match: string } | null;
     engineList: (versions: unknown[]) => string[];
     qualitiesOf: (files: unknown[]) => string[];
@@ -317,6 +368,16 @@ describe('the shared selection functions', () => {
     expect(selection.pickFile([file('a_raw.zip'), file('a_low.zip'), file('a_mid.zip')], 'gltf')?.name).toBe('a_mid.zip');
     expect(selection.pickFile([file('a_raw.zip')], 'gltf')?.name).toBe('a_raw.zip');
     expect(selection.pickFile([], 'gltf')).toBeNull();
+  });
+
+  it('takes exactly the tier asked for, or nothing', () => {
+    const file = (name: string) => ({ name, uid: name });
+    const files = [file('a_raw.zip'), file('a_high.zip'), file('a_low.zip')];
+
+    expect(selection.pickTier(files, 'low')?.name).toBe('a_low.zip');
+    expect(selection.pickTier(files, 'raw')?.name).toBe('a_raw.zip');
+    expect(selection.pickTier(files, 'mid')).toBeNull();
+    expect(selection.pickTier([file('plain.zip')], 'high')).toBeNull();
   });
 
   it('reports size only when Fab gives one', () => {
