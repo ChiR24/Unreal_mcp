@@ -89,6 +89,44 @@ FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName
     UClass* HintClass = ResolvedClass ? ResolvedClass : (Blueprint ? Blueprint->GeneratedClass.Get() : nullptr);
     return FString::Printf(TEXT("Function '%s' not found.%s"), *MemberName, *SuggestMemberFix(HintClass, MemberName));
 }
+
+// The name may be exactly right and live on another class: a function library
+// (RemoveAllWidgets is on UWidgetLayoutLibrary while every neighbouring widget
+// helper is on UWidgetBlueprintLibrary) or a component class. Only libraries were
+// searched, so SetScalarParameterValueOnMaterials asked of PrimitiveComponent came
+// back a bare "not found" although MeshComponent declares it.
+FString DescribeDeclaringClasses(UClass* Class, const FString& Wanted)
+{
+    const FName WantedName(*Wanted);
+    TArray<UClass*> Declarers;
+    for (TObjectIterator<UClass> It; It && Declarers.Num() < 4; ++It)
+    {
+        const FString Name = It->GetName();
+        if (*It == Class || It->HasAnyClassFlags(CLASS_NewerVersionExists | CLASS_Deprecated) ||
+            Name.StartsWith(TEXT("SKEL_")) || Name.StartsWith(TEXT("REINST_")) || Name.StartsWith(TEXT("TRASHCLASS_")))
+        {
+            continue;
+        }
+        const UFunction* Found = It->FindFunctionByName(WantedName, EIncludeSuperFlag::ExcludeSuper);
+        if (Found && Found->HasAnyFunctionFlags(FUNC_BlueprintCallable))
+        {
+            Declarers.Add(*It);
+        }
+    }
+    if (Declarers.Num() == 1)
+    {
+        return FString::Printf(TEXT(" '%s' is not on %s, but %s declares it - retry with memberClass '%s'."),
+                               *Wanted, *Class->GetName(), *Declarers[0]->GetName(), *Declarers[0]->GetPathName());
+    }
+    TArray<FString> Paths;
+    for (const UClass* Declarer : Declarers)
+    {
+        Paths.Add(Declarer->GetPathName());
+    }
+    return Paths.Num() == 0 ? FString() : FString::Printf(
+        TEXT(" '%s' is not on %s, but these declare it: %s - retry with the memberClass of the object the node acts on."),
+        *Wanted, *Class->GetName(), *FString::Join(Paths, TEXT(", ")));
+}
 }
 
 bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(

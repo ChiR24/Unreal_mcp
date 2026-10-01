@@ -56,6 +56,22 @@ describe('get_graph_details filter reads what a node\'s pins hold', () => {
   });
 });
 
+describe('a function the memberClass lacks names the classes that do declare it', () => {
+  it('searches every loaded class, not only the function libraries', () => {
+    const search = sliceBetween(
+      read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlers.cpp'),
+      'FString DescribeDeclaringClasses(',
+      'bool UMcpAutomationBridgeSubsystem::HandleBlueprintGraphAction(',
+    );
+
+    expect(search).toContain('It->FindFunctionByName(WantedName, EIncludeSuperFlag::ExcludeSuper)');
+    expect(search).not.toContain('UBlueprintFunctionLibrary');
+    expect(search).toContain("retry with memberClass '%s'");
+    expect(read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersPrivate.h'))
+      .toContain('return DescribeDeclaringClasses(Class, Wanted);');
+  });
+});
+
 describe('variableType: the description lists what the type resolver accepts', () => {
   const baseTypes = (): string => read('Foundation', 'Blueprint', 'McpBlueprintUtilsBaseTypes.cpp');
   const resolver = (): string => read('Foundation', 'Blueprint', 'McpBlueprintUtilsTypeResolver.cpp');
