@@ -95,10 +95,41 @@ FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
     return FString();
 }
 
-// Each triangle belongs to the shape whose surface is nearest: polygroup index+1 and that
-// shape's materialId, so a later edit or a material slot can pick out a part.
+// Splits every edge whose ends belong to different shapes at the point where ownership
+// changes (bisection along the edge), so the part boundary runs through those points as a
+// smooth line instead of stepping from whole triangle to whole triangle.
+void SplitAtPartBoundaries(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FShape>& Shapes)
+{
+    TArray<int32> Crossing;
+    for (const int32 Eid : Mesh.EdgeIndicesItr())
+    {
+        const UE::Geometry::FIndex2i V = Mesh.GetEdgeV(Eid);
+        if (McpGeometrySdf::FieldOwner(Shapes, Mesh.GetVertex(V.A)) != McpGeometrySdf::FieldOwner(Shapes, Mesh.GetVertex(V.B))) Crossing.Add(Eid);
+    }
+    // Splitting an edge leaves the other listed edges' ends untouched, so each is split once, end to end.
+    for (const int32 Eid : Crossing)
+    {
+        const UE::Geometry::FIndex2i V = Mesh.GetEdgeV(Eid);
+        const FVector3d A = Mesh.GetVertex(V.A);
+        const FVector3d B = Mesh.GetVertex(V.B);
+        const int32 OwnerA = McpGeometrySdf::FieldOwner(Shapes, A);
+        double Lo = 0.0, Hi = 1.0;
+        for (int32 Step = 0; Step < 8; ++Step)
+        {
+            const double Mid = 0.5 * (Lo + Hi);
+            if (McpGeometrySdf::FieldOwner(Shapes, FMath::Lerp(A, B, Mid)) == OwnerA) Lo = Mid;
+            else Hi = Mid;
+        }
+        UE::Geometry::FDynamicMesh3::FEdgeSplitInfo Info;
+        Mesh.SplitEdge(Eid, Info, 0.5 * (Lo + Hi));
+    }
+}
+
+// Each triangle belongs to the shape that decides the surface at its centre: polygroup
+// index+1 and that shape's materialId, so a later edit or a material slot can pick out a part.
 void AssignParts(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FShape>& Shapes, TArray<int32>& OutTriangles)
 {
+    SplitAtPartBoundaries(Mesh, Shapes);
     Mesh.EnableTriangleGroups();
     Mesh.EnableAttributes();
     Mesh.Attributes()->EnableMaterialID();
@@ -106,14 +137,7 @@ void AssignParts(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FShape>& Shapes
     OutTriangles.SetNumZeroed(Shapes.Num());
     for (const int32 Tid : Mesh.TriangleIndicesItr())
     {
-        const FVector3d Centroid = Mesh.GetTriCentroid(Tid);
-        int32 Owner = 0;
-        double Best = TNumericLimits<double>::Max();
-        for (int32 Index = 0; Index < Shapes.Num(); ++Index)
-        {
-            const double Ds = FMath::Abs(McpGeometrySdf::LocalDistance(Shapes[Index], Centroid));
-            if (Ds < Best) { Best = Ds; Owner = Index; }
-        }
+        const int32 Owner = McpGeometrySdf::FieldOwner(Shapes, Mesh.GetTriCentroid(Tid));
         Mesh.SetTriangleGroup(Tid, Owner + 1);
         MaterialIds->SetValue(Tid, Shapes[Owner].MaterialId);
         ++OutTriangles[Owner];
@@ -134,7 +158,8 @@ bool HandleCreateSdf(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     FString Name = GetJsonStringField(Payload, TEXT("name"));
     if (Name.IsEmpty()) Name = TEXT("GeneratedSdf");
     const int32 Resolution = FMath::Clamp(GetJsonIntField(Payload, TEXT("resolution"), 128), 16, 256);
-    if (!GuardMeshBudget(Self, RequestId, Socket, 8LL * Resolution * Resolution, TEXT("SDF meshing"))) return true;
+    // Memory now; the triangle count is only known once the surface is meshed.
+    if (!GuardMeshBudget(Self, RequestId, Socket, 0, TEXT("SDF meshing"))) return true;
 
     // Only unions add volume; subtract and intersect shapes stay inside these bounds.
     UE::Geometry::FAxisAlignedBox3d Bounds = UE::Geometry::FAxisAlignedBox3d::Empty();
@@ -165,6 +190,7 @@ bool HandleCreateSdf(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         Self->SendAutomationError(Socket, RequestId, TEXT("The shapes enclose no volume: a subtract or intersect removed everything."), TEXT("SDF_EMPTY"));
         return true;
     }
+    if (!GuardMeshBudget(Self, RequestId, Socket, Mesh.TriangleCount(), TEXT("SDF meshing at this resolution"))) return true;
     TArray<int32> PartTriangles;
     AssignParts(Mesh, Shapes, PartTriangles);
     const int32 VertexCount = Mesh.VertexCount();

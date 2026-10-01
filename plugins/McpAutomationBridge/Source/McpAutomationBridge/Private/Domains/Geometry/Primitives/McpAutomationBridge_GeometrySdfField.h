@@ -81,9 +81,14 @@ inline double LocalDistance(const FShape& S, const FVector3d& Pt)
 }
 
 // Shapes apply in order onto the first; each Blend is the smooth-min radius of its join.
-inline double FieldDistance(const TArray<FShape>& Shapes, const FVector3d& Pt)
+// OutOwner receives the shape whose field decides the surface at Pt: a union where it is
+// the nearer surface, a subtract where its carve wins, an intersect where it is the tighter
+// bound. That switches on the centre line of each fillet, so a part's material ends there
+// instead of wherever another shape's surface happens to pass close by.
+inline double FieldDistance(const TArray<FShape>& Shapes, const FVector3d& Pt, int32* OutOwner = nullptr)
 {
     double D = LocalDistance(Shapes[0], Pt);
+    int32 Owner = 0;
     for (int32 Index = 1; Index < Shapes.Num(); ++Index)
     {
         const FShape& S = Shapes[Index];
@@ -92,20 +97,31 @@ inline double FieldDistance(const TArray<FShape>& Shapes, const FVector3d& Pt)
         if (S.Op == EOp::Union)
         {
             const double H = FMath::Clamp(0.5 + 0.5 * (D - Ds) / K, 0.0, 1.0);
+            if (Ds < D) Owner = Index;
             D = FMath::Lerp(D, Ds, H) - K * H * (1.0 - H);
         }
         else if (S.Op == EOp::Subtract)
         {
             const double H = FMath::Clamp(0.5 - 0.5 * (D + Ds) / K, 0.0, 1.0);
+            if (-Ds > D) Owner = Index;
             D = FMath::Lerp(D, -Ds, H) + K * H * (1.0 - H);
         }
         else
         {
             const double H = FMath::Clamp(0.5 - 0.5 * (Ds - D) / K, 0.0, 1.0);
+            if (Ds > D) Owner = Index;
             D = FMath::Lerp(Ds, D, H) + K * H * (1.0 - H);
         }
     }
+    if (OutOwner) *OutOwner = Owner;
     return D;
+}
+
+inline int32 FieldOwner(const TArray<FShape>& Shapes, const FVector3d& Pt)
+{
+    int32 Owner = 0;
+    FieldDistance(Shapes, Pt, &Owner);
+    return Owner;
 }
 
 inline double BoundRadius(const FShape& S)
