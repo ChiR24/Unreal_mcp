@@ -148,3 +148,95 @@ describe('a path the handlers read under either spelling is declared by every va
     expect(info).toContain('const FString TargetPath = Context.AssetPath.IsEmpty() ? Context.SystemPath : Context.AssetPath;');
   });
 });
+
+// The same defect in two more families. The Niagara system edits and modules resolve the system from systemPath, else assetPath
+// (FActionContext::SystemPath; the graph route reads assetPath, then systemPath), and the Behavior Tree graph route reads
+// assetPath, else behaviorTreePath (ReadBehaviorTreePath), while each record declared one spelling per variant, so a call that
+// used the other was told it ignored a path it had read, and the schema refused it for the one it did not declare.
+describe('the Niagara system edits and the Behavior Tree graph route declare the spellings of the path they read', () => {
+  const record = (id: string) => {
+    const found = capabilityIndex().byId.get(id);
+    if (found === undefined) throw new Error(`${id} is not in the catalogue`);
+    return found;
+  };
+  const code = (...segments: readonly string[]): string =>
+    readFileSync(join(PRIVATE, 'Domains', ...segments), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+  const variants = (id: string): readonly string[] => Object.keys(record(id).routing.dispatchBy?.actions ?? {});
+
+  it('no Niagara edit or module variant is the only reader of systemPath or assetPath, so none is warned', () => {
+    for (const [id, count] of [['manage_effect.edit_niagara_system', 9], ['manage_effect.add_niagara_module', 21]] as const) {
+      const family = record(id);
+      const selector = family.routing.dispatchBy?.param ?? '';
+      const declaredBy = family.routing.dispatchBy?.declaredBy ?? {};
+
+      expect(variants(id), id).toHaveLength(count);
+      expect(declaredBy, id).not.toHaveProperty('systemPath');
+      expect(declaredBy, id).not.toHaveProperty('assetPath');
+      for (const variant of variants(id)) {
+        expect(unreadVariantParams(family, ['systemPath', 'assetPath'], { [selector]: variant }), `${id} ${variant}`).toEqual([]);
+      }
+    }
+  });
+
+  it('every variant takes either spelling, and the warning stays for a parameter one variant alone reads', () => {
+    for (const id of ['manage_effect.edit_niagara_system', 'manage_effect.add_niagara_module']) {
+      const properties = record(id).schemas.input.properties;
+      expect(Object.keys(isRecord(properties) ? properties : {}), id).toEqual(expect.arrayContaining(['systemPath', 'assetPath']));
+    }
+    const edit = record('manage_effect.edit_niagara_system');
+    expect(unreadVariantParams(edit, ['assetPath', 'emitterPath'], { edit: 'set_parameter_value' })).toEqual([
+      'emitterPath is read only when edit is add_emitter; this edit=set_parameter_value call did not use it.',
+    ]);
+  });
+
+  it('the Niagara handlers read both spellings on both routes, and a miss names both', () => {
+    const context = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp');
+    const graph = code('NiagaraGraph', 'McpAutomationBridge_NiagaraGraphHandlers.cpp');
+
+    expect(context).toContain('Context.AssetPath = GetJsonStringField(Payload, TEXT("assetPath"));');
+    expect(context).toMatch(/Context\.SystemPath = GetJsonStringField\(Payload, TEXT\("systemPath"\)\);\s*if \(Context\.SystemPath\.IsEmpty\(\)\)\s*\{\s*Context\.SystemPath = GetJsonStringField\(Payload, TEXT\("system"\)\);\s*\}\s*if \(Context\.SystemPath\.IsEmpty\(\)\)\s*\{\s*Context\.SystemPath = Context\.AssetPath;\s*\}/u);
+    expect(graph).toMatch(/Payload->TryGetStringField\(TEXT\("assetPath"\), AssetPath\);[\s\S]*?Payload->TryGetStringField\(TEXT\("systemPath"\), AssetPath\);/u);
+    expect(context.split("Missing 'systemPath' (or 'assetPath'): the Niagara System.")).toHaveLength(3);
+    for (const file of ['DynamicInput', 'Parameters']) {
+      expect(code('NiagaraAuthoring', `McpAutomationBridge_NiagaraAuthoringHandlers${file}.cpp`), file).toContain("Missing 'systemPath' (or 'assetPath'): the Niagara System.");
+    }
+  });
+
+  it('edit_behavior_tree: behaviorTreePath belongs to every variant, assetPath only to the graph route that reads it', () => {
+    const edit = record('manage_ai.edit_behavior_tree');
+    const declaredBy = edit.routing.dispatchBy?.declaredBy ?? {};
+    const graphRoute = ['add_node', 'add_subnode', 'connect', 'break_connections', 'set_node_properties', 'remove_node'];
+
+    expect(declaredBy).not.toHaveProperty('behaviorTreePath');
+    expect(declaredBy.assetPath).toEqual(graphRoute);
+    for (const variant of graphRoute) {
+      expect(unreadVariantParams(edit, ['assetPath', 'behaviorTreePath'], { edit: variant }), variant).toEqual([]);
+    }
+    for (const variant of ['add_composite', 'add_task', 'add_decorator', 'add_service', 'configure_node']) {
+      expect(unreadVariantParams(edit, ['behaviorTreePath'], { edit: variant }), variant).toEqual([]);
+    }
+    expect(unreadVariantParams(edit, ['assetPath'], { edit: 'add_task' })[0]).toMatch(/^assetPath is read only when edit is add_node .*; this edit=add_task call did not use it\.$/u);
+  });
+
+  it('the Behavior Tree handlers read what the records declare: the graph route both spellings, the asset route behaviorTreePath', () => {
+    const helper = code('BehaviorTree', 'McpAutomationBridge_BehaviorTreeHandlersPrivate.h');
+    const dispatch = code('BehaviorTree', 'McpAutomationBridge_BehaviorTreeHandlers.cpp');
+
+    expect(helper).toMatch(/inline FString ReadBehaviorTreePath\(const TSharedPtr<FJsonObject>& Payload\)\s*\{\s*FString Path;\s*if \(!Payload->TryGetStringField\(TEXT\("assetPath"\), Path\) \|\| Path\.IsEmpty\(\)\) \{\s*Payload->TryGetStringField\(TEXT\("behaviorTreePath"\), Path\);\s*\}\s*return Path;\s*\}/u);
+    expect(code('BehaviorTree', 'McpAutomationBridge_BehaviorTreeHandlersGraph.cpp')).toContain('const FString AssetPath = ReadBehaviorTreePath(Context.Payload);');
+    expect(dispatch.split('LoadBehaviorTreeForGraph(').length - 1, 'one loader for add_node, connect_nodes, remove_node, break_connections, set_node_properties and add_subnode').toBe(1);
+    for (const file of ['Assets', 'Decorators', 'NodeConfig']) {
+      const source = code('AI', 'BehaviorTree', `McpAutomationBridge_AIHandlersBehaviorTree${file}.cpp`);
+      expect(source, file).toContain('TEXT("behaviorTreePath")');
+      expect(source, `${file} reads no assetPath`).not.toContain('TEXT("assetPath")');
+    }
+  });
+
+  it('get_tree already declares both spellings on the one variant that reads a tree', () => {
+    const tree = record('manage_ai.get_tree');
+
+    expect(tree.routing.dispatchBy?.declaredBy?.assetPath).toEqual(['tree']);
+    expect(tree.routing.dispatchBy?.declaredBy?.behaviorTreePath).toEqual(['tree']);
+    expect(tree.routing.dispatchBy?.declaredBy?.blackboardPath, 'the blackboard read takes no tree').toEqual(['blackboard_value']);
+  });
+});

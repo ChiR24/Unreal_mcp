@@ -11,7 +11,7 @@ const MAT = str('Material /Game asset path.');
 // assetPath, then materialPath). A read that declared one spelling only made the other look like a
 // parameter of the sibling variants, so a folded info call was told it ignored a path it had read.
 const MAT_ALIAS = str('Material asset path (accepted in place of materialPath).');
-const SOURCE_PIN =str('Source output: its name, its index, or channel letters of the default output ("G", "RG"; X/Y/Z/W work too). Omit for the default output.');
+const SOURCE_PIN = str('Source output: its name, its index, or channel letters of the default output ("G", "RG"; X/Y/Z/W work too). Omit for the default output.');
 const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to keep the change in memory only.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
 // set_node_position echoes the applied coordinates and re-runs the same overlap

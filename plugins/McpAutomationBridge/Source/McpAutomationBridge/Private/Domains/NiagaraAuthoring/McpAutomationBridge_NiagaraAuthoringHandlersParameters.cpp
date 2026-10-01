@@ -39,7 +39,7 @@ static bool BindParameterToSource(FActionContext& Context)
     const FString SourceBinding = GetJsonStringField(Context.Payload, TEXT("sourceBinding"));
     if (Context.SystemPath.IsEmpty() || ParamName.IsEmpty() || SourceBinding.IsEmpty())
     {
-        Context.SendError(Context.SystemPath.IsEmpty() ? TEXT("Missing 'systemPath'.") : TEXT("Missing 'parameterName' or 'sourceBinding'."), TEXT("INVALID_ARGUMENT"));
+        Context.SendError(Context.SystemPath.IsEmpty() ? TEXT("Missing 'systemPath' (or 'assetPath'): the Niagara System.") : TEXT("Missing 'parameterName' or 'sourceBinding'."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
     if (!ValidateNiagaraIdentifier(Context, ParamName, TEXT("parameterName"), true) || !ValidateNiagaraIdentifier(Context, SourceBinding, TEXT("sourceBinding"), true))

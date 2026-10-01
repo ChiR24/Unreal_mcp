@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c761bce1f424e9e6",
+  "catalogRevision": "9f0c3fbd399a368b",
   "recordCount": 389,
   "records": [
     {
@@ -43903,14 +43903,6 @@
             "remove_node": "remove_node"
           },
           "declaredBy": {
-            "behaviorTreePath": [
-              "add_composite",
-              "add_task",
-              "add_decorator",
-              "add_service",
-              "add_subnode",
-              "configure_node"
-            ],
             "compositeType": [
               "add_composite"
             ],
@@ -43979,7 +43971,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "38033c07cf28e73a9264761aa23843caad7e4fc03d924b5ec467bc1b04a23e98",
-        "content": "20f171c9314e9e0e4b2d59b5fd8ebcaddc846aa2047408c99a7530e125452946"
+        "content": "dd7ae2fb6a62b8308e50c40b44bb8b243dd0dd2a98496a73d7691871bdda01fd"
       }
     },
     {
@@ -53984,7 +53976,11 @@
             }
           },
           "required": [],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "systemPath",
+            "assetPath"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -54084,9 +54080,6 @@
             "event_receiver": "add_event_receiver"
           },
           "declaredBy": {
-            "assetPath": [
-              "module"
-            ],
             "modulePath": [
               "module"
             ],
@@ -54136,8 +54129,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dfb50ff75119df54fef1b8056baa2082953c3a69b1166d76fd5bf8a535294a5b",
-        "content": "c18e4c80f4727c55a813696d61235d33cb13b2c41c9758fe33d2d98ed06d1515"
+        "schema": "5e065e681d6e06b8ad3a9ec19791fd28a71eb5db6b2295b87a96a3f73d6ab187",
+        "content": "963bf7b17e551cc4bfb12f4a459b8584a8828b28a76625912dfb4fd0e8e752f3"
       }
     },
     {
@@ -55369,7 +55362,14 @@
           "required": [
             "edit"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "systemPath",
+            "assetPath",
+            "parameterName",
+            "parameters",
+            "actorName"
+          ]
         },
         "output": {
           "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -55480,20 +55480,6 @@
             "connect_pins": "connect_niagara_pins"
           },
           "declaredBy": {
-            "assetPath": [
-              "add_emitter",
-              "set_parameter",
-              "connect_pins"
-            ],
-            "systemPath": [
-              "add_emitter",
-              "add_user_parameter",
-              "bind_parameter",
-              "set_parameter_value",
-              "set_dynamic_input",
-              "set_emitter_properties",
-              "enable_gpu_simulation"
-            ],
             "emitterPath": [
               "add_emitter"
             ],
@@ -55589,8 +55575,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5fe76e3cfc77cfd6d8203267499ec9ef741adb0d97805cf382027c4b4aadcfc6",
-        "content": "227c77647d7e65b0e924c6d70be6c81589524c1726e5c4e5f0bd94c0296c92be"
+        "schema": "86fc99636989a7818035f4ed913e7c9d9f17522d923b72563178bae8f8f36e35",
+        "content": "56da2a5a10e9212f09c1a723c82929852e000b6951b9c0e58fd2c2d0f48d7d4e"
       }
     },
     {

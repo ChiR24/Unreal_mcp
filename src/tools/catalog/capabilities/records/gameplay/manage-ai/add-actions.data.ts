@@ -113,10 +113,10 @@ export const AI_ADD_RECORDS: readonly CapabilityRecordSource[] = [
     use: 'A Behavior Tree graph needs a node placed at explicit coordinates.',
     avoid: 'Use add_task_node or add_composite_node for the asset-level route.',
     props: {
-      assetPath: A.assetPath, nodeType: A.nodeType,
+      assetPath: A.assetPath, behaviorTreePath: A.behaviorTreePath, nodeType: A.nodeType,
       nodeId: A.nodeId, x: A.x, y: A.y,
     },
-    required: ['assetPath'], plugins: BT,
+    requiredOneOf: ['assetPath', 'behaviorTreePath'], plugins: BT,
     out: { nodeId: A.nodeId },
     example: { assetPath: '/Game/AI/BT_Enemy', nodeType: 'Sequence', x: 0, y: 0 },
     result: 'Graph node added',

@@ -15,7 +15,7 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
     if (Context.SystemPath.IsEmpty() || InputName.IsEmpty() || DynamicInputScriptPath.IsEmpty())
     {
         Context.SendError(
-            Context.SystemPath.IsEmpty() ? TEXT("Missing 'systemPath'.") :
+            Context.SystemPath.IsEmpty() ? TEXT("Missing 'systemPath' (or 'assetPath'): the Niagara System.") :
             InputName.IsEmpty() ? TEXT("Missing 'inputName'.") :
             TEXT("Missing 'dynamicInputScriptPath'."), TEXT("INVALID_ARGUMENT"));
         return true;

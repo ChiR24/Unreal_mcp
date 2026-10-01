@@ -237,6 +237,18 @@ const testCases = [
       },
       expected: 'success'
     },
+    // The graph route reads the tree as assetPath or behaviorTreePath (ReadBehaviorTreePath); every variant declares both.
+    {
+      scenario: 'CONFIG: set_node_properties names the tree as behaviorTreePath',
+      toolName: 'manage_ai',
+      arguments: {
+        action: 'set_node_properties',
+        behaviorTreePath: '${captured:behaviorTreePath}',
+        nodeId: '${captured:waitNodeId}',
+        comment: 'MCP behavior tree test node, named by behaviorTreePath'
+      },
+      expected: 'success'
+    },
     // === ACTION ===
     {
       scenario: 'ACTION: break_connections',
