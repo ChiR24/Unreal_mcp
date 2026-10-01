@@ -6,6 +6,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringMainInputs.h"
 
 // JSON & Serialization
@@ -283,12 +284,16 @@ bool HandleSetTwoSided(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     (Material ? FindExpressionByIdOrName(Material, (NodeIdOrName))             \
               : FindExpressionByIdOrNameInFunction(Function, (NodeIdOrName)))
 
+// Recompiles an edited material or function and marks it dirty, unless the edit is a step of build_material_graph (its
+// reply is captured): that batch ends with one compile_material, and a recompile per step translated the half-built
+// graph and logged it as a failure on the receipt ("Custom material X missing input 20 (OP)" before the connect feeding it).
+inline void McpFinishMaterialEdit(const FString &RequestId, UObject *Host) {
+  if (Host && !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) { Host->PostEditChange(); }
+  if (Host) { Host->MarkPackageDirty(); }
+}
+
 // Finalize edits for either container.
-#define FINALIZE_HOST()                                                      \
-    do {                                                                       \
-      if (Material) { Material->PostEditChange(); Material->MarkPackageDirty(); } \
-      else if (Function) { Function->PostEditChange(); Function->MarkPackageDirty(); } \
-    } while (0)
+#define FINALIZE_HOST() McpFinishMaterialEdit(RequestId, Material ? static_cast<UObject *>(Material) : static_cast<UObject *>(Function))
 
 // The reply to an edit of the loaded material or function. It names the host, so the receipt
 // lists it as changed; update_custom_expression and connect_nodes answered with changes: [].

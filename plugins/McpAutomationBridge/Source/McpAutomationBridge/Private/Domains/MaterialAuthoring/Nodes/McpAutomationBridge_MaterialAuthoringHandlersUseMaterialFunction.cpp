@@ -52,8 +52,7 @@ bool HandleUseMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const FStr
 
     AddExpressionToContainer(Material, Function, FuncCall);
 
-    HostOuter->PostEditChange();
-    HostOuter->MarkPackageDirty();
+    McpFinishMaterialEdit(RequestId, HostOuter);
 
     TSharedPtr<FJsonObject> Result = McpMaterialHostResult(HostOuter);
     Result->SetStringField(TEXT("nodeId"),

@@ -103,8 +103,7 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       }
     }
 
-    HostOuter->PostEditChange();
-    HostOuter->MarkPackageDirty();
+    McpFinishMaterialEdit(RequestId, HostOuter);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"), MCP_NODE_ID(NewExpr));

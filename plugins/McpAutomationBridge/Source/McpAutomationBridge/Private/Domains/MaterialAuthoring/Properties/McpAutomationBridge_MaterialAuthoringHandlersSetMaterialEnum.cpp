@@ -108,8 +108,7 @@ bool HandleSetMaterialEnumProperty(UMcpAutomationBridgeSubsystem* Bridge, const 
     return true;
   }
 
-  Material->PostEditChange();
-  Material->MarkPackageDirty();
+  McpFinishMaterialEdit(RequestId, Material);
   if (GetJsonBoolField(Payload, TEXT("save"), true)) {
     McpSafeAssetSave(Material);
   }

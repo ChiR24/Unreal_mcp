@@ -219,6 +219,8 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     Entry->SetBoolField(TEXT("success"), Error.IsEmpty());
     if (!Error.IsEmpty()) {
       Entry->SetStringField(TEXT("error"), Error);
+      // The steps before it were applied without a recompile of their own (the batch compiles once, at its end): compile what is there.
+      if (Index > 0) { McpFinishMaterialEdit(RequestId, HostOuter); }
       TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
       Data->SetArrayField(TEXT("results"), Results);
       Data->SetObjectField(TEXT("nodeIds"), NodeIds);
@@ -235,9 +237,10 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     }
   }
 
-  // A step that recompiles logs the half-built graph ("missing input 11 (OB)" before the connect
-  // feeding it) and the receipt showed that as current. The compile below is the verdict, and it
-  // logs again if the material still fails. The engine names the asset in that line by the file it is
+  // A step's own recompile logged the half-built graph ("missing input 11 (OB)" before the connect
+  // feeding it) and the receipt showed that as current. Steps now leave the recompile to the compile
+  // below (McpFinishMaterialEdit); this forgets what any other compile of the material logged meanwhile.
+  // The compile below is the verdict, and it logs again if the material still fails. The engine names the asset in that line by the file it is
   // saved in ("[AssetLog] ...\Content\Dir\M_X.uasset: Failed to compile Material ...") and by its
   // object path only while no file exists, so both are matched: the object path alone left every
   // line of a saved material on the receipt, in warnings and in engineWarnings.

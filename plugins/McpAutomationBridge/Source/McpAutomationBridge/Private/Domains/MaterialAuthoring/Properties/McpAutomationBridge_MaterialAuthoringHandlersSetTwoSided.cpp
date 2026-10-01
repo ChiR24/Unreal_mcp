@@ -35,8 +35,7 @@ bool HandleSetTwoSided(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
     Material->Modify();
     Material->TwoSided = bTwoSided ? 1 : 0;
     // Recompile like the other property setters, and persist unless save=false.
-    Material->PostEditChange();
-    Material->MarkPackageDirty();
+    McpFinishMaterialEdit(RequestId, Material);
     const bool bSaved = GetJsonBoolField(Payload, TEXT("save"), true) && McpSafeAssetSave(Material);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();

@@ -83,8 +83,7 @@ bool HandleFunctionInputsOutputs(UMcpAutomationBridgeSubsystem* Bridge, const FS
     NewExpr->MaterialExpressionEditorY = (int32)Y;
 
     AddExpressionToContainer(nullptr, Func, NewExpr);
-    Func->PostEditChange();
-    Func->MarkPackageDirty();
+    McpFinishMaterialEdit(RequestId, Func);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("nodeId"),

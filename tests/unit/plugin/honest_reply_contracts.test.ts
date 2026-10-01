@@ -174,6 +174,33 @@ describe('handlers answer what they did', () => {
     expect(fold?.actions.batch).toBe('build_material_graph');
   });
 
+  // Each step of a batch recompiled the material: a Custom node that got its inputs from update_custom_expression and its
+  // wires two steps later was translated half-built ("Custom material X missing input 20 (OP)") once per step, and the lines
+  // stood on a receipt whose final compile was clean, on top of N compiles for one edit.
+  it('a step of build_material_graph leaves the recompile to the batch, and every batchable edit finishes through the one helper', () => {
+    const header = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringHandlersPrivate.h');
+    const batch = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp');
+    const compile = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringHandlersCompileMaterial.cpp');
+
+    expect(header).toMatch(/inline void McpFinishMaterialEdit\(const FString &RequestId, UObject \*Host\) \{\s*if \(Host && !FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{ Host->PostEditChange\(\); \}\s*if \(Host\) \{ Host->MarkPackageDirty\(\); \}\s*\}/u);
+    expect(header).toContain('#define FINALIZE_HOST() McpFinishMaterialEdit(RequestId, Material ? static_cast<UObject *>(Material) : static_cast<UObject *>(Function))');
+    for (const file of [
+      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersAddMaterialNode.cpp'],
+      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersUseMaterialFunction.cpp'],
+      ['Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersFunctionInputsOutputs.cpp'],
+      ['Properties', 'McpAutomationBridge_MaterialAuthoringHandlersSetMaterialEnum.cpp'],
+      ['Properties', 'McpAutomationBridge_MaterialAuthoringHandlersSetTwoSided.cpp'],
+    ] as const) {
+      const source = code('MaterialAuthoring', ...file);
+      expect(source, file[1]).toContain('McpFinishMaterialEdit(RequestId, ');
+      expect(source, `${file[1]} recompiles only through the helper`).not.toMatch(/(?:HostOuter|Material|Func|Function)->PostEditChange\(\)/u);
+    }
+    expect(compile, 'the compile that ends the batch always recompiles').toContain('Host->PostEditChange();');
+    expect(compile).not.toContain('McpFinishMaterialEdit');
+    expect(batch, 'the steps before a failing one were applied without a compile of their own').toContain('if (Index > 0) { McpFinishMaterialEdit(RequestId, HostOuter); }');
+    expect(batch.indexOf('if (Index > 0) { McpFinishMaterialEdit(RequestId, HostOuter); }')).toBeLessThan(batch.indexOf('TEXT("build_material_graph stopped at operations[%d]'));
+  });
+
   // update_custom_expression and connect_nodes answered with changes: [] for the material they edited.
   it('a material graph edit names the material it changed', () => {
     for (const file of [
