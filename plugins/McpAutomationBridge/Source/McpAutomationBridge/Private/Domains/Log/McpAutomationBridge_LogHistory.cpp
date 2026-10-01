@@ -154,7 +154,7 @@ FString FMcpLogHistory::PreviousRunLogPath(int32 RunsBack)
     // Only this editor's own runs: the Fab browser rotates its cef3-backup-*.log into the same folder,
     // so "*-backup-*.log" counted browser logs as editor runs.
     TArray<FString> Backups;
-    const FString Pattern = FPaths::GetBaseFilename(FPlatformOutputDevices::GetAbsoluteLog()) + TEXT("-backup-*.log");
+    const FString Pattern = FPaths::GetBaseFilename(FPlatformOutputDevices::GetAbsoluteLogFilename()) + TEXT("-backup-*.log");
     IFileManager::Get().FindFiles(Backups, *FPaths::Combine(FPaths::ProjectLogDir(), Pattern), true, false);
     TArray<TPair<FDateTime, FString>> Runs;
     for (const FString& Name : Backups)
