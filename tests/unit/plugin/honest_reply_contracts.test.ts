@@ -467,6 +467,29 @@ describe('the view of a running game', () => {
     expect(code('Ui', 'McpAutomationBridge_UiHandlersScreenshot.cpp')).toContain('Mode == TEXT("game_viewport") && GetEjectedPieViewportClientForMcp()');
     expect(outputNames('control_editor.screenshot')).toContain('view');
   });
+
+  it('possess hands the player controller the pawn, and with no pawn brings an ejected player back', () => {
+    const session = editorControl('Session', 'McpAutomationBridge_ControlEditorEject.cpp');
+    const possess = session.slice(session.indexOf('HandleControlEditorPossess('));
+    expect(possess).toContain('Controller->Possess(Pawn);');
+    expect(possess, 'the way back from eject is the same toggle').toContain('GEditor->RequestToggleBetweenPIEandSIE();');
+    expect(possess, 'there is no POSSESS console command').not.toMatch(/Exec\([^)]*POSSESS/u);
+    expect(editorControl('McpAutomationBridge_ControlEditorPlay.cpp')).not.toContain('HandleControlEditorPossess(');
+    expect(outputNames('control_editor.play')).toEqual(expect.arrayContaining(['possessed', 'returnedFromEject']));
+  });
+
+  it('the other level-viewport moves refuse while the player plays, and the view settings reach the game on screen', () => {
+    expect(editorControl('Camera', 'McpAutomationBridge_ControlEditorCameraFocus.cpp'))
+      .toContain('RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId, TEXT("focus_actor"))');
+    const toggles = editorControl('McpAutomationBridge_ControlEditorViewportToggles.cpp');
+    const gameView = toggles.slice(toggles.indexOf('HandleControlEditorSetGameView('));
+    const refusal = gameView.indexOf('TEXT("PIE_VIEW_NOT_EJECTED")');
+    expect(refusal).toBeGreaterThan(-1);
+    expect(refusal, 'refused before the hidden level viewport is toggled').toBeLessThan(gameView.indexOf('Client->SetGameView('));
+    const viewMode = editorControl('McpAutomationBridge_ControlEditorViewMode.cpp');
+    expect(viewMode).toMatch(/ApplyViewMode\(ViewModeIndex,\s*true,\s*GEditor->GameViewport->EngineShowFlags\)/u);
+    expect(viewMode).toContain('Controller->PlayerCameraManager->SetFOV(static_cast<float>(Fov));');
+  });
 });
 
 // A mesh ASSET's material slots: what each one holds, and which part of the mesh it covers.

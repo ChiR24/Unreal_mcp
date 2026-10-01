@@ -5468,6 +5468,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Return value and out parameters, keyed by parameter name."
         },
+        "possessed": {
+          "type": "string",
+          "description": "The pawn the player controller holds after the call, by object name."
+        },
         "projectPath": {
           "type": "string",
           "description": "Project the editor relaunches with."
@@ -5483,6 +5487,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "restored": {
           "type": "boolean",
           "description": "Whether the window is on screen after the call."
+        },
+        "returnedFromEject": {
+          "type": "boolean",
+          "description": "True when the player was ejected and is now back in the game."
         },
         "rotationApplied": {
           "type": "boolean",

@@ -89,13 +89,18 @@ export const SESSION_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'possess', domain: D, family: F,
-    summary: 'Possess a specific actor by name in PIE.',
-    whenToUse: ['The player must take control of a specific actor.'],
-    whenNotToUse: ['PIE is not running or the target actor does not exist.'],
-    inputProps: { actorName: P.actorName },
-    required: ['actorName'],
+    summary: 'Possess a pawn in PIE: the player controller takes the pawn named by actorName. Without actorName it brings an ejected player back to its own pawn, as the editor\'s Possess button does (the way back from eject). Answers once the player is back in the game.',
+    whenToUse: ['The player must take control of a specific pawn.', 'An ejected player must return to the game (no actorName).'],
+    whenNotToUse: ['PIE is not running (NOT_IN_PIE).', 'The actor is not a pawn (INVALID_TARGET).'],
+    inputProps: { actorName: { type: 'string', description: 'Pawn to possess, in the running game. Omit it to bring an ejected player back to its own pawn.' } },
+    required: [],
     effect: 'write',
-   
+    outputProps: {
+      possessed: { type: 'string', description: 'The pawn the player controller holds after the call, by object name.' },
+      returnedFromEject: { type: 'boolean', description: 'True when the player was ejected and is now back in the game.' },
+      view: { type: 'string', description: 'pie_game: the game draws through the possessed pawn\'s camera again.' },
+    },
+    costLatency: 'interactive',
     exampleInput: { action: 'possess', actorName: 'BP_PlayerCharacter' },
   }),
   buildCoreRecord({

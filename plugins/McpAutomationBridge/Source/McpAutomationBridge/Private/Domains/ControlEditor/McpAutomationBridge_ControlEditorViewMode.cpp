@@ -1,5 +1,10 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
+#include "Camera/PlayerCameraManager.h"
+#include "Engine/GameViewportClient.h"
+#include "GameFramework/PlayerController.h"
+#include "ShowFlags.h"
+
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -70,6 +75,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetViewMode(
     return true;
   }
 
+  // While the player plays, the game viewport is the one on screen, so the mode goes there. The level viewport hidden
+  // behind it took the mode before, and the reply said it was set while the game looked the same.
+  if (GEditor->PlayWorld && !GetEjectedPieViewportClientForMcp() && GEditor->GameViewport) {
+    if (bHasNativeViewMode) {
+      GEditor->GameViewport->ViewModeIndex = ViewModeIndex;
+      ApplyViewMode(ViewModeIndex, /*bPerspective=*/true, GEditor->GameViewport->EngineShowFlags);
+    } else {
+      GEditor->GameViewport->ConsoleCommand(FString::Printf(TEXT("viewmode %s"), *Chosen));
+    }
+    TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    Resp->SetBoolField(TEXT("success"), true);
+    Resp->SetStringField(TEXT("viewMode"), Chosen);
+    Resp->SetStringField(TEXT("method"), TEXT("game_viewport"));
+    SendAutomationResponse(Socket, RequestId, true, TEXT("View mode set on the running game's view"), Resp, FString());
+    return true;
+  }
+
   if (bHasNativeViewMode) {
     if (FEditorViewportClient* ViewportClient = GetActiveEditorViewportClientForMcp()) {
       ViewportClient->SetViewMode(ViewModeIndex);
@@ -108,6 +130,22 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetCameraFov(
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
                               TEXT("fov must be between 1 and 179 degrees"), nullptr);
     return true;
+  }
+
+  // While the player plays, the camera on screen is the game's: its field of view is locked to the value until play
+  // stops. The level viewport hidden behind it took the value before and nothing on screen changed.
+  if (GEditor->PlayWorld && !GetEjectedPieViewportClientForMcp()) {
+    APlayerController *Controller = GEditor->PlayWorld->GetFirstPlayerController();
+    if (Controller && Controller->PlayerCameraManager) {
+      Controller->PlayerCameraManager->SetFOV(static_cast<float>(Fov));
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      Resp->SetBoolField(TEXT("success"), true);
+      Resp->SetNumberField(TEXT("fov"), Fov);
+      Resp->SetStringField(TEXT("method"), TEXT("player_camera_manager"));
+      SendAutomationResponse(Socket, RequestId, true, TEXT("The running game's camera FOV is locked to the value"), Resp,
+                             FString());
+      return true;
+    }
   }
 
   if (FEditorViewportClient* ViewportClient = GetActiveEditorViewportClientForMcp()) {

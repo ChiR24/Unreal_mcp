@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "74090069c7337f5d",
+  "catalogRevision": "acc0352dcdc4e507",
   "recordCount": 389,
   "records": [
     {
@@ -34753,6 +34753,7 @@
           "setting=view_mode: The default Lit mode is acceptable.",
           "setting=editor_mode: The default mode is acceptable.",
           "setting=game_view: The current game view state is acceptable.",
+          "setting=game_view: Play In Editor runs and the player is not ejected: the game on screen draws no editor icons anyway, so this is refused with PIE_VIEW_NOT_EJECTED.",
           "setting=immersive_mode: The current immersive state is acceptable.",
           "setting=realtime: The current realtime state is acceptable.",
           "setting=show_stats: The stat is already shown.",
@@ -34905,7 +34906,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "60a97085918a840db26b8580e532b49bf142c40a1a65c99f1aac3672b78d4620",
-        "content": "7ee190ec21561aadf051a6acaa727e007a4f12f51f5231b8df84e57a69adb5c0"
+        "content": "66103416f1221cfd569159874f70a042f9c3d3c7060305c23c2a34ca6a076637"
       }
     },
     {
@@ -35346,12 +35347,13 @@
         "topics": [
           "focus_actor"
         ],
-        "summary": "Focus the viewport camera on a specific actor by name.",
+        "summary": "Focus the viewport camera on a specific actor by name: the level viewport, or the free view of an ejected player.",
         "whenToUse": [
           "The viewport must frame a specific actor."
         ],
         "whenNotToUse": [
-          "The actor does not exist in the current level."
+          "The actor does not exist in the current level.",
+          "Play In Editor runs and the player is not ejected: the level viewport is hidden behind the game, so this is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target)."
         ]
       },
       "schemas": {
@@ -35404,7 +35406,7 @@
       },
       "examples": [
         {
-          "title": "Focus the viewport camera on a specific actor by name.",
+          "title": "Focus the viewport camera on a specific actor by name: the level viewport, or the free view of an ejected player.",
           "input": {
             "action": "focus_actor",
             "actorName": "BP_PlayerStart"
@@ -35442,7 +35444,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "b1b75636a4d680203817bf0e5caddb24c8438e0df1b586dad7f913cd1f42a631",
-        "content": "20aea7cd3f4a07b8cef68143c0ce3980920b43d3824b7b18002fb6ddbbc3b51f"
+        "content": "4ae01a03f7b53bd14cb6b9329384e51376a0a640fb89310bb4d20d50f6a2a874"
       }
     },
     {
@@ -36035,7 +36037,8 @@
           "control=stop: The PIE session must be terminated.",
           "control=eject: The player must detach from the possessed pawn.",
           "control=eject: The view of a running game must be placed for a screenshot: eject, then set_camera.",
-          "control=possess: The player must take control of a specific actor.",
+          "control=possess: The player must take control of a specific pawn.",
+          "control=possess: An ejected player must return to the game (no actorName).",
           "control=stop: The PIE session must be terminated using the stop_pie alias."
         ],
         "whenNotToUse": [
@@ -36045,7 +36048,8 @@
           "control=stop: PIE should only be paused.",
           "control=eject: PIE is not running (NO_ACTIVE_SESSION).",
           "control=eject: The game must keep playing from the pawn: an ejected player no longer drives it.",
-          "control=possess: PIE is not running or the target actor does not exist."
+          "control=possess: PIE is not running (NOT_IN_PIE).",
+          "control=possess: The actor is not a pawn (INVALID_TARGET)."
         ]
       },
       "schemas": {
@@ -36059,7 +36063,7 @@
             },
             "actorName": {
               "type": "string",
-              "description": "Name of the actor to target."
+              "description": "Pawn to possess, in the running game. Omit it to bring an ejected player back to its own pawn."
             },
             "control": {
               "type": "string",
@@ -36120,6 +36124,14 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
               "description": "How the free camera starts out turned, {pitch, yaw, roll}."
+            },
+            "possessed": {
+              "type": "string",
+              "description": "The pawn the player controller holds after the call, by object name."
+            },
+            "returnedFromEject": {
+              "type": "boolean",
+              "description": "True when the player was ejected and is now back in the game."
             }
           },
           "required": [
@@ -36183,8 +36195,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d7f2f84cb94bf23411d94b99d3d611553aa169fb415d4b0fefb3622f65461e5a",
-        "content": "47fb2670c7ac8b77c0918cfc4f46d38bca9a161ecfb531cf7f1b8a939f7a0a9c"
+        "schema": "040bda4df71df7d9cdfb38b17b9e3051309169741a0a1d4548787ad80c1dfe4b",
+        "content": "5e5e18869db3c4acccbd7bc0c72623326f3fd064349b233c9703c8c64145747e"
       }
     },
     {

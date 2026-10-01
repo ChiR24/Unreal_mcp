@@ -58,7 +58,7 @@ export const CAMERA_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_camera_fov', domain: D, family: F,
-    summary: 'Set the editor viewport camera field of view.',
+    summary: 'Set the camera field of view of the view on screen: the level viewport, the free view of an ejected player, or while the player plays the running game\'s camera (method player_camera_manager; locked to the value until play stops).',
     whenToUse: ['The camera FOV must be adjusted for the viewport.'],
     whenNotToUse: ['The default FOV is acceptable.'],
     inputProps: { fov: P.fov },

@@ -119,6 +119,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
     return true;
   }
 
+  // While the player plays, the game viewport on screen never draws editor icons and the level viewport this toggles
+  // is hidden behind it. An ejected player's free view is a level viewport, so the toggle works there.
+  if (GEditor->PlayWorld && !GetEjectedPieViewportClientForMcp()) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("PIE_VIEW_NOT_EJECTED"),
+                              TEXT("set_game_view: Play In Editor is running and the game viewport on screen never draws "
+                                   "editor icons; game view toggles the level viewport hidden behind it. Eject first "
+                                   "(control_editor play control=eject) to toggle it on the free view."),
+                              nullptr);
+    return true;
+  }
   // "ToggleGameView" is not an editor console command, so Exec did nothing and
   // this answered "Game view enabled" over a viewport still drawing icons.
   // Drive the viewport the screenshot photographs and report what it shows.

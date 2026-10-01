@@ -67,49 +67,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStop(
   return true;
 }
 
-bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
-    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
-    TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString ActorName;
-  Payload->TryGetStringField(TEXT("actorName"), ActorName);
-
-  // Also try "objectPath" as fallback since schema might use that
-  if (ActorName.IsEmpty()) { Payload->TryGetStringField(TEXT("objectPath"), ActorName); }
-
-  if (ActorName.IsEmpty()) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_ARGUMENT"),
-                              TEXT("actorName required"), nullptr);
-    return true;
-  }
-
-  AActor *Found = FindActorByName(ActorName);
-  if (!Found) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ACTOR_NOT_FOUND"),
-                              FString::Printf(TEXT("Actor not found: %s"), *ActorName), nullptr);
-    return true;
-  }
-
-  // Only pawns can be possessed; POSSESS silently ignores anything else (dogfood #140).
-  if (!Found->IsA<APawn>()) { SendStandardErrorResponse(this, Socket, RequestId, TEXT("INVALID_TARGET"), FString::Printf(TEXT("Actor '%s' is a %s, not a Pawn; only pawns can be possessed"), *ActorName, *Found->GetClass()->GetName()), nullptr); return true; }
-  if (GEditor) {
-    GEditor->SelectNone(true, true, false);
-    GEditor->SelectActor(Found, true, true, true);
-    // 'POSSESS' command works on selected actor in PIE
-    if (GEditor->PlayWorld) {
-      GEditor->Exec(GEditor->PlayWorld, TEXT("POSSESS"));
-      SendAutomationResponse(Socket, RequestId, true, TEXT("Possessed actor"),
-                             nullptr);
-    } else {
-      SendStandardErrorResponse(this, Socket, RequestId, TEXT("NOT_IN_PIE"),
-                              TEXT("Cannot possess actor while not in PIE"), nullptr);
-    }
-    return true;
-  }
-
-  SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_NOT_AVAILABLE"),
-                              TEXT("Editor not available"), nullptr);
-  return true;
-}
+// possess lives in Session/McpAutomationBridge_ControlEditorEject.cpp, beside eject: one switch, two directions.
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameSpeed(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

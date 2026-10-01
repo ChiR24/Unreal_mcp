@@ -26,6 +26,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorFocusActor(
                               TEXT("Editor not available"), nullptr);
     return true;
   }
+  // The running game draws through its pawn's camera: the level viewport this moves is hidden behind it.
+  if (RefuseCameraMoveWhilePieFollowsPawnForMcp(this, Socket, RequestId, TEXT("focus_actor"))) {
+    return true;
+  }
 
   AActor *Target = FindActorByNameInWorldForMcp(
       GEditor->GetEditorWorldContext().World(), ActorName, true);

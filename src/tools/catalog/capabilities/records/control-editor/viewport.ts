@@ -13,7 +13,7 @@ const D = 'editor';
 export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_view_mode', domain: D, family: F,
-    summary: 'Set the viewport rendering view mode (Lit, Unlit, Wireframe, etc.).',
+    summary: 'Set the rendering view mode (Lit, Unlit, Wireframe, etc.) of the view on screen: the level viewport, or while the player plays the running game\'s view (method game_viewport).',
     whenToUse: ['The viewport render mode must be changed for debugging or visualization.'],
     whenNotToUse: ['The default Lit mode is acceptable.'],
     inputProps: { viewMode: P.viewMode },
@@ -71,9 +71,10 @@ export const VIEWPORT_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'set_game_view', domain: D, family: F,
-    summary: 'Toggle game view in the editor viewport.',
+    summary: 'Toggle game view (no editor icons) in the level viewport, or in the free view of an ejected player.',
     whenToUse: ['The viewport must show or hide the game view.'],
-    whenNotToUse: ['The current game view state is acceptable.'],
+    whenNotToUse: ['The current game view state is acceptable.',
+      'Play In Editor runs and the player is not ejected: the game on screen draws no editor icons anyway, so this is refused with PIE_VIEW_NOT_EJECTED.'],
     inputProps: { enabled: P.enabled },
     required: [],
     effect: 'read',

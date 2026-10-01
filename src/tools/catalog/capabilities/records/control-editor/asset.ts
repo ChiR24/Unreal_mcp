@@ -103,9 +103,10 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_editor', action: 'focus_actor', domain: D, family: F,
     aliases: ['control_editor.move_camera_to_actor'],
-    summary: 'Focus the viewport camera on a specific actor by name.',
+    summary: 'Focus the viewport camera on a specific actor by name: the level viewport, or the free view of an ejected player.',
     whenToUse: ['The viewport must frame a specific actor.'],
-    whenNotToUse: ['The actor does not exist in the current level.'],
+    whenNotToUse: ['The actor does not exist in the current level.',
+      'Play In Editor runs and the player is not ejected: the level viewport is hidden behind the game, so this is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target).'],
     inputProps: { actorName: P.actorName, name: P.name },
     required: ['actorName'],
     effect: 'read',
