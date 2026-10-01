@@ -9638,6 +9638,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Listing was described."
         },
+        "syncSkipped": {
+          "type": "string",
+          "description": "Why the sync was not run on an empty table: this editor registers no Fab sync command. Present only then."
+        },
+        "syncTriggered": {
+          "type": "boolean",
+          "description": "True when the table held no rows and Fab's library sync was run for this call."
+        },
+        "syncWaitedSeconds": {
+          "type": "number",
+          "description": "How long this call waited for rows after starting the sync. Present only when the sync ran."
+        },
         "tags": {
           "oneOf": [
             {

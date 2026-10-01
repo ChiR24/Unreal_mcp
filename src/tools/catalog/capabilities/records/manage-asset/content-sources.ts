@@ -79,7 +79,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('list_fab_library', 'asset',
-    'List your Fab "My Library" entries that the Fab plugin has synced into the editor\'s data storage (TEDS). This is the searchable inventory of what your Fab account owns — distinct from list_fab_downloads, which only reports packs already downloaded to disk. Each row carries the listing AssetId, so a row can be handed straight to add_fab_asset_to_project instead of being a name you have to search for again. Being signed in is not sufficient: the library is readable only after `Fab.TEDS.MyFolderIntegration <batchSize>` runs via control_editor.console_command, and `Fab.Login` is needed only when the Fab tab shows you signed out (it opens Epic\'s account portal; no credential ever passes through this tool). A synced library is mostly engine versions and plugins carrying Source "uem", so filter for "fab" to see actual content. Columns are resolved by path, and the data storage is reached through the modular-features registry, so this never links the Fab module and keeps working when Fab changes its schema.',
+    'List your Fab "My Library" entries that the Fab plugin has synced into the editor\'s data storage (TEDS). This is the searchable inventory of what your Fab account owns — distinct from list_fab_downloads, which only reports packs already downloaded to disk. Each row carries the listing AssetId, so a row can be handed straight to add_fab_asset_to_project instead of being a name you have to search for again. A table with no rows has never been synced, so this runs Fab\'s own sync itself (the Fab.TEDS.MyFolderIntegration console command, a thousand rows a page) and waits for rows, up to about 12 seconds and until their count has held still for a moment: syncTriggered and syncWaitedSeconds say that it happened. The remaining pages keep loading in the background, so a very large library may need a second call. A table that already holds rows is read as it is, because the sync first removes every row; to refresh one, run Fab.TEDS.MyFolderIntegration through control_editor.console_command. When no rows arrive the account\'s library is empty or the Fab tab is signed out: Fab.Login opens Epic\'s account portal, and no credential ever passes through this tool. A synced library is mostly engine versions and plugins carrying Source "uem", so filter for "fab" to see actual content. Columns are resolved by path, and the data storage is reached through the modular-features registry, so this never links the Fab module and keeps working when Fab changes its schema.',
     schema({
       columnTypes: arr('Column struct paths to read, for example "/Script/Fab.FabObjectNameColumn". Defaults to the name column plus "/Script/Fab.FabObjectColumn", which carries AssetId, ListingType, Seller and Source. Selecting a column is also the row filter, so naming one Fab does not write for every row will hide rows. Override this when a Fab update renames or adds columns; unresolved paths are reported rather than failing the call.'),
       filter: str('Case-sensitive substring matched against each serialized row. Use "fab" to drop the legacy "uem" engine and plugin entries that otherwise fill the row limit.'),
@@ -90,11 +90,14 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
       entries: arrObj('Library rows. Each entry maps column struct name to that column\'s properties, read by reflection. FabObjectColumn.AssetId is the listing id add_fab_asset_to_project takes.'),
       entryCount: num('Rows returned.'),
       unresolvedColumnTypes: arr('Requested column paths that do not exist in this build — usually a Fab schema change.'),
-      note: str('Guidance on refreshing or paging the sync.')
+      syncTriggered: bool('True when the table held no rows and Fab\'s library sync was run for this call.'),
+      syncWaitedSeconds: num('How long this call waited for rows after starting the sync. Present only when the sync ran.'),
+      syncSkipped: str('Why the sync was not run on an empty table: this editor registers no Fab sync command. Present only then.'),
+      note: str('What the read found and what to do next: refresh the table, sign in, or call again for later pages.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
     { dispatchAction: 'list_fab_library',
-      whenToUse: ['The Fab listings the signed-in account owns must be listed, each with an id for adding to the project (needs a prior library sync).'],
+      whenToUse: ['The Fab listings the signed-in account owns must be listed, each with an id for adding to the project (an empty table is synced by the call itself).'],
       whenNotToUse: ['A listing from the library is ready to add to the project (use asset.import_marketplace_asset with marketplace=fab_listing).'],
       examples: [ex('List the synced Fab library, skipping legacy engine entries', { limit: 50, filter: 'fab' }, { success: true, entryCount: 0 })] }
   ),

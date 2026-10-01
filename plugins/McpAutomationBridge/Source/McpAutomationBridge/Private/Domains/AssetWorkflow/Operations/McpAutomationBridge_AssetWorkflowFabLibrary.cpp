@@ -4,7 +4,10 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
+#include "Containers/Ticker.h"
 #include "Dom/JsonObject.h"
+#include "HAL/IConsoleManager.h"
+#include "Misc/OutputDeviceRedirector.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
 
@@ -42,6 +45,26 @@ const TCHAR* DefaultFabColumns[] = {
 	TEXT("/Script/Fab.FabObjectColumn"),
 };
 
+// Fab's own command that loads My Library into the table. It takes a page size and nothing else, and the
+// text below is fixed: no caller text ever reaches a console, so there is nothing for the command
+// validator to judge. The sync it starts is HTTP, a page at a time, answered over the following seconds.
+const TCHAR* const FabSyncCommand = TEXT("Fab.TEDS.MyFolderIntegration");
+constexpr int32 FabSyncPageSize = 1000;
+// How long an empty table is given to fill, and how long its row count must hold still to call it done.
+constexpr double FabSyncBudgetSeconds = 12.0;
+constexpr double FabSyncQuietSeconds = 1.5;
+constexpr float FabSyncPollSeconds = 0.5f;
+
+/** What one library read asks for. Shared by value with the ticker that finishes a read after a sync. */
+struct FFabLibraryRead
+{
+	TArray<const UScriptStruct *> Columns;
+	TArray<TSharedPtr<FJsonValue>> Unresolved;
+	FString Filter;
+	int32 MaxRows = 200;
+	uint64 Handle = 0;
+};
+
 /** Reads one struct instance into JSON via reflection, property by property. */
 TSharedPtr<FJsonObject> ReadStructAsJson(const UScriptStruct* Type, const void* Element)
 {
@@ -53,6 +76,63 @@ TSharedPtr<FJsonObject> ReadStructAsJson(const UScriptStruct* Type, const void* 
 		Out->SetStringField(It->GetName(), Text);
 	}
 	return Out;
+}
+
+/** Runs the query over the table once and returns how many rows it holds, before the filter and limit. */
+int32 ReadFabLibraryRows(UE::Editor::DataStorage::ICoreProvider& Storage, const FFabLibraryRead& Read,
+               TArray<TSharedPtr<FJsonValue>>& Entries)
+{
+	using namespace UE::Editor::DataStorage;
+	Entries.Reset();
+	int32 Total = 0;
+	Storage.RunQuery(Read.Handle, DirectQueryCallbackRef(
+		[&](const FQueryDescription &, IDirectQueryContext &Context) {
+			const uint32 Count = Context.GetRowCount();
+			Total += static_cast<int32>(Count);
+			for (uint32 Index = 0; Index < Count && Entries.Num() < Read.MaxRows; ++Index) {
+				TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
+				for (const UScriptStruct *Column : Read.Columns) {
+					const void *Base = Context.GetColumn(Column);
+					if (Base == nullptr) {
+						continue;
+					}
+					// GetColumn returns the batch array for this column, one packed
+					// element per row, so the row index strides by the struct size.
+					const void *Element = static_cast<const uint8 *>(Base) + (Index * Column->GetStructureSize());
+					Entry->SetObjectField(Column->GetName(), ReadStructAsJson(Column, Element));
+				}
+				if (!Read.Filter.IsEmpty()) {
+					FString Flat;
+					const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Flat);
+					FJsonSerializer::Serialize(Entry.ToSharedRef(), Writer);
+					if (!Flat.Contains(Read.Filter, ESearchCase::CaseSensitive)) {
+						continue;
+					}
+				}
+				Entries.Add(MakeShared<FJsonValueObject>(Entry));
+			}
+		}));
+	return Total;
+}
+
+/** Runs Fab's sync command. False, with the reason, when this editor does not register it. */
+bool StartFabSync(FString& OutWhy)
+{
+	IConsoleObject* Object = IConsoleManager::Get().FindConsoleObject(FabSyncCommand);
+	IConsoleCommand* Command = Object != nullptr ? Object->AsCommand() : nullptr;
+	if (Command == nullptr)
+	{
+		OutWhy = TEXT("This editor registers no Fab.TEDS.MyFolderIntegration command, so the library cannot be synced.");
+		return false;
+	}
+	TArray<FString> Args;
+	Args.Add(FString::FromInt(FabSyncPageSize));
+	if (!Command->Execute(Args, nullptr, *GLog))
+	{
+		OutWhy = TEXT("Fab's library sync command declined to run.");
+		return false;
+	}
+	return true;
 }
 } // namespace
 #endif
@@ -66,8 +146,10 @@ TSharedPtr<FJsonObject> ReadStructAsJson(const UScriptStruct* Type, const void* 
  * are resolved by path, so nothing here depends on the Fab module — the same
  * reflection approach describe_reflected_api uses.
  *
- * Run `Fab.Login` then `Fab.TEDS.MyFolderIntegration <batchSize>` first; the
- * sync is paginated, so a large library needs several passes.
+ * A table with no rows has simply never been synced, so this runs the sync itself
+ * and answers once the rows have stopped arriving, or when the wait is spent. The
+ * sync removes every row before it starts, which is why it is never run over a table
+ * that already holds some.
  */
 bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -97,17 +179,16 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
     }
   }
 
-  TArray<const UScriptStruct *> Columns;
-  TArray<TSharedPtr<FJsonValue>> Unresolved;
+  TSharedRef<FFabLibraryRead> Read = MakeShared<FFabLibraryRead>();
   for (const FString &Path : ColumnPaths) {
     const UScriptStruct *Resolved = Type(FTopLevelAssetPath(Path));
     if (Resolved != nullptr) {
-      Columns.Add(Resolved);
+      Read->Columns.Add(Resolved);
     } else {
-      Unresolved.Add(MakeShared<FJsonValueString>(Path));
+      Read->Unresolved.Add(MakeShared<FJsonValueString>(Path));
     }
   }
-  if (Columns.Num() == 0) {
+  if (Read->Columns.Num() == 0) {
     SendAutomationResponse(
         Socket, RequestId, false,
         TEXT("No requested column type resolved. Fab writes its columns only after a successful Fab.TEDS.MyFolderIntegration sync."),
@@ -120,68 +201,90 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
   // TEDS asserts ("Duplicated requirements are not supported"). Selecting the
   // columns IS the filter: only rows carrying all of them match.
   Select Builder;
-  for (const UScriptStruct *Column : Columns) {
+  for (const UScriptStruct *Column : Read->Columns) {
     Builder.ReadOnly(Column);
   }
   FQueryDescription Description = Builder.Compile();
-  const QueryHandle Handle = Storage->RegisterQuery(MoveTemp(Description));
+  Read->Handle = Storage->RegisterQuery(MoveTemp(Description));
 
   // A real library is mostly engine versions and plugins (Source "uem"), which
   // crowd the genuine content out of any row limit. `filter` is already in this
   // capability's contract with exactly this meaning for the Megascans lookup;
   // honouring it here lets a caller ask for "fab" and get an inventory worth
   // reading, instead of paging past eleven rows called "Unreal Engine".
-  FString Filter;
-  Payload->TryGetStringField(TEXT("filter"), Filter);
-
+  Payload->TryGetStringField(TEXT("filter"), Read->Filter);
   double Limit = 200;
   Payload->TryGetNumberField(TEXT("limit"), Limit);
-  const int32 MaxRows = FMath::Clamp(static_cast<int32>(Limit), 1, 1000);
+  Read->MaxRows = FMath::Clamp(static_cast<int32>(Limit), 1, 1000);
+
+  // The answer, once the rows to report are in hand. WaitedSeconds is negative when no sync ran.
+  const auto Reply = [](UMcpAutomationBridgeSubsystem *Self, const TSharedPtr<FMcpBridgeWebSocket> &Sock,
+                        const FString &Id, const FFabLibraryRead &Done, const TArray<TSharedPtr<FJsonValue>> &Entries,
+                        double WaitedSeconds, const FString &SkippedWhy) {
+    TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+    Result->SetArrayField(TEXT("entries"), Entries);
+    Result->SetNumberField(TEXT("entryCount"), Entries.Num());
+    Result->SetArrayField(TEXT("unresolvedColumnTypes"), Done.Unresolved);
+    Result->SetBoolField(TEXT("syncTriggered"), WaitedSeconds >= 0.0);
+    if (WaitedSeconds >= 0.0) {
+      Result->SetNumberField(TEXT("syncWaitedSeconds"), FMath::RoundToInt(WaitedSeconds * 10.0) / 10.0);
+    }
+    if (!SkippedWhy.IsEmpty()) {
+      Result->SetStringField(TEXT("syncSkipped"), SkippedWhy);
+    }
+    FString Note = TEXT("Rows come from the last Fab.TEDS.MyFolderIntegration sync; re-run it to refresh the table.");
+    if (Entries.Num() == 0 && WaitedSeconds >= 0.0) {
+      Note = TEXT("The library sync ran and no rows arrived. Either the account's library is empty or the editor's Fab tab is signed out: Fab.Login (control_editor console_command) opens Epic's sign-in, and a repeat call syncs again.");
+    } else if (Entries.Num() == 0 && !SkippedWhy.IsEmpty()) {
+      Note = TEXT("The table is empty and Fab's library sync could not be run: syncSkipped says why.");
+    } else if (Entries.Num() == 0) {
+      Note = TEXT("No rows matched: the table holds rows that the filter, or the columns asked for, left out.");
+    } else if (WaitedSeconds >= 0.0) {
+      Note = TEXT("The table was empty, so Fab's library sync was run and waited for. It keeps loading pages in the background: call again for rows that arrive later.");
+    }
+    Result->SetStringField(TEXT("note"), Note);
+    Self->SendAutomationResponse(Sock, Id, true,
+        FString::Printf(TEXT("Fab library holds %d synced row(s)."), Entries.Num()), Result);
+  };
 
   TArray<TSharedPtr<FJsonValue>> Entries;
-  Storage->RunQuery(Handle, DirectQueryCallbackRef(
-      [&Entries, &Columns, MaxRows, &Filter](const FQueryDescription &, IDirectQueryContext &Context) {
-        const uint32 Count = Context.GetRowCount();
-        for (uint32 Index = 0; Index < Count && Entries.Num() < MaxRows; ++Index) {
-          TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-          for (const UScriptStruct *Column : Columns) {
-            const void *Base = Context.GetColumn(Column);
-            if (Base == nullptr) {
-              continue;
-            }
-            // GetColumn returns the batch array for this column, one packed
-            // element per row, so the row index strides by the struct size.
-            const void *Element =
-                static_cast<const uint8 *>(Base) + (Index * Column->GetStructureSize());
-            Entry->SetObjectField(Column->GetName(), ReadStructAsJson(Column, Element));
-          }
-          if (!Filter.IsEmpty()) {
-            FString Flat;
-            const TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Flat);
-            FJsonSerializer::Serialize(Entry.ToSharedRef(), Writer);
-            if (!Flat.Contains(Filter, ESearchCase::CaseSensitive)) {
-              continue;
-            }
-          }
-          Entries.Add(MakeShared<FJsonValueObject>(Entry));
-        }
-      }));
+  const int32 Total = ReadFabLibraryRows(*Storage, *Read, Entries);
+  FString SkippedWhy;
+  if (Total > 0 || !StartFabSync(SkippedWhy)) {
+    Storage->UnregisterQuery(Read->Handle);
+    Reply(this, Socket, RequestId, *Read, Entries, -1.0, Total > 0 ? FString() : SkippedWhy);
+    return true;
+  }
 
-  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
-  Result->SetArrayField(TEXT("entries"), Entries);
-  Result->SetNumberField(TEXT("entryCount"), Entries.Num());
-  Result->SetArrayField(TEXT("unresolvedColumnTypes"), Unresolved);
-  Result->SetStringField(
-      TEXT("note"),
-      Entries.Num() > 0
-          ? TEXT("Rows come from the last Fab.TEDS.MyFolderIntegration sync; re-run it to refresh or page further.")
-          : TEXT("No rows. Being signed in is not enough: the library is readable "
-                 "only after a sync, so run Fab.TEDS.MyFolderIntegration <batchSize> "
-                 "through control_editor.console_command and retry. Fab.Login is "
-                 "needed only when the editor's Fab tab shows you signed out."));
-  SendAutomationResponse(
-      Socket, RequestId, true,
-      FString::Printf(TEXT("Fab library holds %d synced row(s)."), Entries.Num()), Result);
+  // The sync answers over the next seconds, so the reply waits on the core ticker, never on the game thread.
+  struct FWait { double Elapsed = 0.0; double Quiet = 0.0; int32 LastTotal = 0; };
+  const TSharedRef<FWait> Wait = MakeShared<FWait>();
+  TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+  FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+      [WeakThis, Wait, Read, Socket, RequestId, Reply](float Delta) {
+        ICoreProvider *Live = GetMutableDataStorageFeature<ICoreProvider>(StorageFeatureName);
+        UMcpAutomationBridgeSubsystem *Self = WeakThis.Get();
+        if (Self == nullptr) {
+          return false;
+        }
+        if (Live == nullptr) {
+          Self->SendAutomationResponse(Socket, RequestId, false,
+                                       TEXT("Editor data storage (TEDS) went away while the library synced."),
+                                       nullptr, TEXT("NOT_SUPPORTED"));
+          return false;
+        }
+        Wait->Elapsed += Delta;
+        TArray<TSharedPtr<FJsonValue>> Rows;
+        const int32 Now = ReadFabLibraryRows(*Live, *Read, Rows);
+        Wait->Quiet = Now == Wait->LastTotal ? Wait->Quiet + Delta : 0.0;
+        Wait->LastTotal = Now;
+        if ((Now == 0 || Wait->Quiet < FabSyncQuietSeconds) && Wait->Elapsed < FabSyncBudgetSeconds) {
+          return true;
+        }
+        Live->UnregisterQuery(Read->Handle);
+        Reply(Self, Socket, RequestId, *Read, Rows, Wait->Elapsed, FString());
+        return false;
+      }), FabSyncPollSeconds);
   return true;
 #else
   SendAutomationResponse(

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f646919c5c4c730f",
+  "catalogRevision": "b1532bdf9746a008",
   "recordCount": 389,
   "records": [
     {
@@ -10018,7 +10018,7 @@
         "whenToUse": [
           "lookup=fab_listing_details: A Fab search hit must be judged before adding it: description, seller, file formats and whether the project can import it.",
           "lookup=fab_downloads: It must be known which Fab packs are already downloaded to this machine and where they are cached.",
-          "lookup=fab_library: The Fab listings the signed-in account owns must be listed, each with an id for adding to the project (needs a prior library sync).",
+          "lookup=fab_library: The Fab listings the signed-in account owns must be listed, each with an id for adding to the project (an empty table is synced by the call itself).",
           "lookup=fab_search: Content must be found on Fab by keyword, optionally free listings only, to get listing ids.",
           "lookup=megascans_library: The Megascans packs downloaded by Bridge on this machine must be listed before one is imported.",
           "lookup=fab_import_status: A Fab add has returned an operationId and it must be known whether the import is downloading, importing, done or failed, and where the content landed."
@@ -10219,6 +10219,18 @@
                 "type": "string"
               },
               "description": "Requested column paths that do not exist in this build — usually a Fab schema change."
+            },
+            "syncTriggered": {
+              "type": "boolean",
+              "description": "True when the table held no rows and Fab's library sync was run for this call."
+            },
+            "syncWaitedSeconds": {
+              "type": "number",
+              "description": "How long this call waited for rows after starting the sync. Present only when the sync ran."
+            },
+            "syncSkipped": {
+              "type": "string",
+              "description": "Why the sync was not run on an empty table: this editor registers no Fab sync command. Present only then."
             },
             "listings": {
               "type": "array",
@@ -10472,8 +10484,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "077800fbfda0c0cb9852c09648af4d05cff6f67743072c803270a9571fe6f9ef",
-        "content": "35da868c99bf2e0152a88078acb8b52a3c28d7d9b93d527ab9f35a0048d0d367"
+        "schema": "4fee4f2aea3bb9d77ee6bb3d152ef5b4dbda66860d0ec5f447900b628c9d3fb1",
+        "content": "092a595f75bf9ce056b7f30b67146550830996db10c8fe187a37e38826a9fa30"
       }
     },
     {
