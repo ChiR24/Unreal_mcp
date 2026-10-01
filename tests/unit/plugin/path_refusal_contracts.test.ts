@@ -141,6 +141,16 @@ describe('a reply keeps a registered content mount readable', () => {
     expect(redact).toContain('IsAllowedUnrealMountPath(Input, Index, bNameMounts)');
   });
 
+  // "Loading <dir>/L_Stage01.umap would discard the unsaved changes of 1 level package(s), ..." came back as
+  // "Loading ..[path redacted], ...": a spaced path ran on through the sentence to the next comma.
+  it('ends a path that may hold spaces at a file name, so the words after it are kept', () => {
+    const extension = sanitization.slice(sanitization.indexOf('inline bool SegmentHasFileExtension'));
+    expect(extension).toContain("Input[Dot] == '.' && End - Dot >= 2 && End - Dot <= 6");
+    const redact = sanitization.slice(sanitization.indexOf('inline FString RedactFilesystemPathsForResponse'));
+    expect(redact).toContain('if (!bAllowSpaces || SegmentHasFileExtension(Input, SegmentStart, Scan)) break;');
+    expect(redact).toContain("else if (Input[End] == ' ' && SegmentHasFileExtension(Input, DriveSegment, End))");
+  });
+
   it('asks the engine only where a reply is built, never inline in the log device', () => {
     // The log device runs on whichever thread logged, which can be the one holding the engine's mount lock.
     expect(code(PRIVATE, 'Domains', 'Log', 'McpAutomationBridge_LogHandlers.cpp')).toMatch(

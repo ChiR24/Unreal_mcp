@@ -104,6 +104,15 @@ inline bool IsPathContinuationChar(TCHAR Character)
            Character == '(' || Character == ')';
 }
 
+// True when Input[Start, End) ends in a file extension ('.' and 1-5 letters or digits). A space after a file name ends
+// the path: "<dir>/L_Stage01.umap would discard ..." ran on to the next comma and the sentence was redacted with it.
+inline bool SegmentHasFileExtension(const FString& Input, int32 Start, int32 End)
+{
+    int32 Dot = End - 1;
+    while (Dot > Start && End - Dot <= 6 && FChar::IsAlnum(Input[Dot])) --Dot;
+    return Dot > Start && Input[Dot] == '.' && End - Dot >= 2 && End - Dot <= 6;
+}
+
 inline bool IsUnrealMountPathChar(TCHAR Character)
 {
     return FChar::IsAlnum(Character) || Character == '/' || Character == '.' ||
@@ -132,13 +141,14 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input, bool bName
         {
             int32 Scan = Index + 1;
             int32 Separators = 1;
+            int32 SegmentStart = Index + 1;
             bool bAllowSpaces = false;
             while (Scan < Input.Len())
             {
                 const TCHAR ScanChar = Input[Scan];
                 if (ScanChar == ' ' || ScanChar == '(' || ScanChar == ')')
                 {
-                    if (!bAllowSpaces) break;
+                    if (!bAllowSpaces || SegmentHasFileExtension(Input, SegmentStart, Scan)) break;
                 }
                 else if (!IsResponsePathChar(ScanChar))
                 {
@@ -148,6 +158,7 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input, bool bName
                 {
                     ++Separators;
                     bAllowSpaces = Separators >= 2;
+                    SegmentStart = Scan + 1;
                 }
                 ++Scan;
             }
@@ -181,8 +192,11 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input, bool bName
             // A drive or UNC root is unambiguous from its first character, so its
             // run consumes spaces/parentheses as well ("Program Files (x86)").
             int32 End = bUnixPath ? UnixEnd : Index;
+            int32 DriveSegment = Index;
             while (!bUnixPath && End < Input.Len() && IsPathContinuationChar(Input[End]))
             {
+                if (Input[End] == '/' || Input[End] == '\\') DriveSegment = End + 1;
+                else if (Input[End] == ' ' && SegmentHasFileExtension(Input, DriveSegment, End)) break;
                 ++End;
             }
             // A package file under mounted content is named by its package path instead.
