@@ -1,6 +1,7 @@
 // Fold specs for build_environment. Data only; see ../shared/fold.ts.
 import { byName, byTarget } from '../shared/fold-spec.js';
 import type { FoldSpec } from '../shared/fold-types.js';
+import { LIGHT_SUMMARY, LIGHT_WHEN_NOT_TO_USE, LIGHT_WHEN_TO_USE } from '../shared/light-text.js';
 
 export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // landscape
@@ -51,7 +52,11 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   },
   { primary: 'remove_foliage', topics: ['remove trees or grass'], summary: 'Remove foliage instances of a type, all foliage, or only those inside an area box (a pit or a path).', members: ['remove_foliage_instances'] },
   // lighting
-  { primary: 'create_light', summary: 'Create a light actor of a given type.', topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight'], members: ['create_dynamic_light', 'spawn_light'] },
+  {
+    primary: 'create_light', summary: LIGHT_SUMMARY, whenToUse: LIGHT_WHEN_TO_USE, whenNotToUse: LIGHT_WHEN_NOT_TO_USE,
+    topics: ['add point light', 'add spot light', 'add a light', 'place a light', 'rect light', 'spotlight', 'street lamp light', 'light intensity', 'light color'],
+    members: ['create_dynamic_light', 'spawn_light'],
+  },
   {
     primary: 'create_sky_light', selector: 'skyLightOp',
     summary: 'Create a sky light, or ensure the level has exactly one.',

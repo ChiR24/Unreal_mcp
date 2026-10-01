@@ -53,7 +53,11 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
     domain: D, family: 'lighting',
     summary: 'Create a light actor in the current level.',
     whenToUse: ['A Point, Directional, Spot, Sky, or Rect light must be added.'],
-    whenNotToUse: ['A generic actor spawn is needed; use control_actor.'],
+    whenNotToUse: [
+      'A generic actor spawn is needed; use control_actor.',
+      'build_environment.create_light runs this same handler; prefer it, which carries the full light documentation.',
+      'The light must exist in the running PIE world; manage_effect.create_dynamic_light spawns into the active world.',
+    ],
     inputProps: {
       lightType: P.lightType, lightClass: P.lightClass, name: P.name, intensity: P.intensity, color: P.color,
       location: P.location, rotation: P.rotation, properties: P.lightProperties,
@@ -61,7 +65,10 @@ export const OPERATIONS_POWER_RECORDS: readonly CapabilityRecordSource[] = [
     required: [],
     requiredOneOf: ['lightType', 'lightClass'],
     effect: 'write', costLatency: 'interactive',
-    exampleInput: { action: 'create_light', lightType: 'Point', name: 'KeyLight', location: { x: 0, y: 0, z: 200 } },
+    exampleInput: {
+      action: 'create_light', lightType: 'Spot', name: 'KeyLight', location: { x: 0, y: 0, z: 200 },
+      color: [1, 0.7, 0.42], properties: { castShadows: true, outerConeAngle: 40 },
+    },
   }),
   buildCoreRecord({
     parentTool: 'manage_level', action: 'build_lighting', dispatchAction: 'manage_lighting',

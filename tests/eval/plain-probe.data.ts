@@ -393,4 +393,7 @@ export const PLAIN_PROBE: readonly PlainProbeCase[] = [
   { query: 'filter graph nodes', accepted: ['blueprint.inspect_graph'] },
   { query: 'tag an asset', accepted: ['asset.set_metadata'] },
   { query: 'add a landscape', accepted: ['build_environment.create_landscape'] },
+  // A light with the settings a caller names (2026-10-01): the native door listed no light capability for the first.
+  { query: 'add spot light intensity color', accepted: ['build_environment.create_light'] },
+  { query: 'street lamp light', accepted: ['build_environment.create_light'] },
 ];

@@ -8,6 +8,7 @@ import { buildRecord } from '../helpers.js';
 import { P } from '../properties.js';
 import { E } from './effect-properties.js';
 import { bool } from '../../shared/schema-props.js';
+import { LIGHT_COLOR_TEXT } from '../../shared/light-text.js';
 
 const T = 'manage_effect';
 // Every Niagara asset edit here saves unless told not to.
@@ -42,8 +43,11 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', editorStates: ['edit', 'pie', 'simulate'], behavior: {  }, latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'spawn_niagara', system: '/Game/NS_Explosion', location: [0, 0, 100] } }),
   buildRecord({ parentTool: T, id: `${T}.create_dynamic_light`, action: 'create_dynamic_light', topics: ['add a dynamic light'], family: F,
-    summary: 'Create a dynamic light actor.', whenToUse: ['Runtime light needed.'], whenNotToUse: ['Use build_environment lights.'],
-    inputProps: { name: P.name, location: P.location, lightType: E.lightType, intensity: E.intensity, color: E.color }, required: ['name'],
+    summary: 'Create a dynamic light actor.',
+    whenToUse: ['A light must appear in the running game (PIE), or a point, spot, directional or rect light with just an intensity and a color is enough.'],
+    whenNotToUse: ['A rotation, a sky light, or settings such as castShadows, attenuationRadius or the cone angles are needed: use build_environment.create_light, which takes them and spawns into the level being edited.'],
+    inputProps: { name: P.name, location: P.location, lightType: E.lightType, intensity: E.intensity,
+      color: { ...E.color, description: `Light color as an {r, g, b, a} object or an [r, g, b, a] array. ${LIGHT_COLOR_TEXT}` } }, required: ['name'],
     effect: 'write', editorStates: ['edit', 'pie'], latency: 'interactive', resources: 'low',
     exampleInput: { action: 'create_dynamic_light', name: 'Light_1', lightType: 'Point', intensity: 750 } }),
   buildRecord({ parentTool: T, id: `${T}.create_niagara_system`, action: 'create_niagara_system', family: F,

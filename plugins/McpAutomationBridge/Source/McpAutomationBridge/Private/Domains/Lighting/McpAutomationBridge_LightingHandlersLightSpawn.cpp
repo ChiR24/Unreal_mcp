@@ -118,6 +118,8 @@ bool HandleSpawnLight(
     const FString Name = GetJsonStringField(Payload, TEXT("name"));
     NewLight->SetActorLabel(Name.IsEmpty() ? LightClass->GetName() : Name);
 
+    // What was written, for the reply: the settings below and in `properties` each say here that they took.
+    FLightPropertyReport Report;
     if (ULightComponent* BaseLightComp = NewLight->FindComponentByClass<ULightComponent>())
     {
         BaseLightComp->SetMobility(EComponentMobility::Movable);
@@ -130,11 +132,13 @@ bool HandleSpawnLight(
         if (Payload->TryGetNumberField(TEXT("intensity"), TopLevelIntensity))
         {
             BaseLightComp->SetIntensity(static_cast<float>(TopLevelIntensity));
+            Report.Applied.AddUnique(TEXT("intensity"));
         }
         // A properties.color below still wins.
         if (Payload->HasField(TEXT("color")))
         {
             BaseLightComp->SetLightColor(ExtractLinearColorField(Payload, TEXT("color"), FLinearColor(0.f, 0.f, 0.f, 1.f)));
+            Report.Applied.AddUnique(TEXT("color"));
         }
     }
     // A sky light's component is no ULightComponent, so intensity and color were dropped for lightType sky.
@@ -144,17 +148,19 @@ bool HandleSpawnLight(
         if (Payload->TryGetNumberField(TEXT("intensity"), TopLevelIntensity))
         {
             SkyComp->SetIntensity(static_cast<float>(TopLevelIntensity));
+            Report.Applied.AddUnique(TEXT("intensity"));
         }
         if (Payload->HasField(TEXT("color")))
         {
             SkyComp->SetLightColor(ExtractLinearColorField(Payload, TEXT("color"), FLinearColor(0.f, 0.f, 0.f, 1.f)));
+            Report.Applied.AddUnique(TEXT("color"));
         }
     }
 
     const TSharedPtr<FJsonObject>* Props;
     if (Payload->TryGetObjectField(TEXT("properties"), Props))
     {
-        ApplyLightProperties(*NewLight, *Props);
+        ApplyLightProperties(*NewLight, *Props, Report);
     }
 
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
@@ -166,8 +172,25 @@ bool HandleSpawnLight(
     Resp->SetStringField(TEXT("actorName"), McpActorRef(NewLight));
     Resp->SetStringField(TEXT("actorLabel"), NewLight->GetActorLabel());
     Resp->SetStringField(TEXT("objectName"), NewLight->GetName());
+    // Which settings took, which were refused and why, which were written with another value: a light spawned with
+    // a setting dropped on the floor answered "Light spawned" and nothing else.
+    FString Message = TEXT("Light spawned");
+    const auto Say = [&Resp, &Message](const TCHAR* Field, const TArray<FString>& Names)
+    {
+        if (Names.Num() > 0)
+        {
+            Resp->SetArrayField(Field, McpHandlerUtils::ToJsonStringArray(Names));
+            if (FCString::Strcmp(Field, TEXT("applied")) != 0)
+            {
+                Message += FString::Printf(TEXT("; %s: %s"), Field, *FString::Join(Names, TEXT(", ")));
+            }
+        }
+    };
+    Say(TEXT("applied"), Report.Applied);
+    Say(TEXT("refused"), Report.Refused);
+    Say(TEXT("adjusted"), Report.Adjusted);
     McpHandlerUtils::AddVerification(Resp, NewLight);
-    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Light spawned"), Resp);
+    Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, Message, Resp);
     return true;
 }
 

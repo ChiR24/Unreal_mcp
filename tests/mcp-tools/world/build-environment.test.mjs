@@ -187,6 +187,8 @@ const testCases = [
     { scenario: 'CREATE: spawn_light by class', toolName: 'build_environment', arguments: {"action": "spawn_light", "lightClass": "PointLight", "location": {"x": 0, "y": 0, "z": 200}}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_light', toolName: 'build_environment', arguments: {"action": "create_light", "lightType": "Point", "name": "Testlight", "color": {"r": 1, "g": 0.8, "b": 0.6}, "properties": {"attenuationRadius": 800}}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_light sky with intensity and color', toolName: 'build_environment', arguments: { action: 'create_light', lightType: 'sky', name: `TestSkyLightType_${ts}`, intensity: 2, color: { r: 0.8, g: 0.9, b: 1 } }, expected: 'success' },
+    // The reply lists details.applied and details.refused: outerConeAngle does not fit a point light, so it is named, not dropped.
+    { scenario: 'CREATE: create_light names the setting that does not fit', toolName: 'build_environment', arguments: { action: 'create_light', lightType: 'Point', name: `TestLightRefuses_${ts}`, properties: { attenuationRadius: 900, outerConeAngle: 30 } }, expected: 'success' },
     { scenario: 'CREATE: spawn_sky_light', toolName: 'build_environment', arguments: {"action": "spawn_sky_light", "location": {"x": 0, "y": 0, "z": 100}}, expected: 'success|already exists' },
     { scenario: 'CREATE: create_sky_light', toolName: 'build_environment', arguments: {"action": "create_sky_light", "name": "Testsky_light", "rotation": {"pitch": 0, "yaw": 90, "roll": 0}, "cubemapPath": "/Engine/MapTemplates/Sky/DaylightAmbientCubemap.DaylightAmbientCubemap", "recapture": true}, expected: 'success|already exists' },
     // === ACTION ===

@@ -5,6 +5,10 @@ import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord } from './helpers.js';
 import { P } from './properties.js';
 import { str } from '../shared/schema-props.js';
+import {
+  LIGHT_AIM_TEXT, LIGHT_CLASS_TEXT, LIGHT_COLOR_WITH_PROPERTIES_TEXT, LIGHT_INTENSITY_TEXT, LIGHT_LOCATION_TEXT, LIGHT_PROPERTIES_TEXT,
+  LIGHT_SUMMARY, LIGHT_TYPE_TEXT, LIGHT_WHEN_NOT_TO_USE, LIGHT_WHEN_TO_USE,
+} from '../shared/light-text.js';
 
 const F = 'lighting';
 const WU = ['A light actor or lighting setting must be created or configured.'];
@@ -12,13 +16,32 @@ const WU = ['A light actor or lighting setting must be created or configured.'];
 export const LIGHTING_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.create_light', action: 'create_light', family: F,
-    summary: 'Create a light actor in the current level.',
-    whenToUse: WU, whenNotToUse: ['An existing light should be reconfigured.', 'A static light is sufficient.'],
-    inputProps: { lightType: P.lightType, lightClass: P.lightClass, name: P.name, location: P.location,
-      rotation: P.rotation, intensity: P.intensity, color: P.color, properties: P.properties },
+    summary: LIGHT_SUMMARY,
+    whenToUse: LIGHT_WHEN_TO_USE, whenNotToUse: LIGHT_WHEN_NOT_TO_USE,
+    inputProps: {
+      lightType: { ...P.lightType, description: LIGHT_TYPE_TEXT },
+      lightClass: { ...P.lightClass, description: LIGHT_CLASS_TEXT },
+      name: P.name,
+      location: { ...P.location, description: LIGHT_LOCATION_TEXT },
+      rotation: { ...P.rotation, description: `Rotation {pitch, yaw, roll} in degrees. ${LIGHT_AIM_TEXT}` },
+      intensity: { ...P.intensity, description: LIGHT_INTENSITY_TEXT },
+      color: { ...P.color, description: `Light color {r, g, b, a}. ${LIGHT_COLOR_WITH_PROPERTIES_TEXT}` },
+      properties: { ...P.properties, description: LIGHT_PROPERTIES_TEXT },
+    },
     requiredOneOf: ['lightClass', 'lightType'],
     effect: 'write', latency: 'interactive', resources: 'low',
-    exampleInput: { action: 'create_light', lightType: 'PointLight', name: 'Light_1' },
+    exampleInput: {
+      action: 'create_light', lightType: 'Spot', name: 'StreetLamp', location: { x: 0, y: 0, z: 400 },
+      rotation: { pitch: -90, yaw: 0, roll: 0 }, intensity: 5000, color: { r: 1, g: 0.7, b: 0.42 },
+      properties: { castShadows: true, outerConeAngle: 50, attenuationRadius: 1200 },
+    },
+    exampleOutput: {
+      success: true, message: 'Light spawned',
+      details: {
+        actorName: 'StreetLamp', actorLabel: 'StreetLamp', objectName: 'SpotLight_0',
+        applied: ['intensity', 'color', 'castShadows', 'outerConeAngle', 'attenuationRadius'],
+      },
+    },
   }),
   buildRecord({
     id: 'build_environment.create_sky_light', action: 'create_sky_light', family: F,

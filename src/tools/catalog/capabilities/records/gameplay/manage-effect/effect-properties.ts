@@ -63,7 +63,7 @@ export const E: PropertyMap = {
   preset: str('Particle preset name or canonical /Game particle asset path.'),
   shapeType: str('Debug shape type (Sphere, Box, Line, Capsule).'),
   intensity: num('Light intensity.'),
-  lightType: str('Dynamic light type (Point, Spot, Directional, Rect).'),
+  lightType: str('Dynamic light type: Point (the default, and what any other value gives), Spot, Directional or Rect, in any case; there is no sky light here.'),
   density: num('Volumetric fog density.'),
   scattering: num('Volumetric fog scattering distribution.'),
   extinction: num('Volumetric fog extinction scale.'),

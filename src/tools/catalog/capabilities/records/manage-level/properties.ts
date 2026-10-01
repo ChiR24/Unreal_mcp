@@ -7,6 +7,10 @@
  */
 import type { JsonObject } from '../../model.js';
 import { str, bool, num } from '../shared/schema-props.js';
+import {
+  LIGHT_AIM_TEXT, LIGHT_CLASS_TEXT, LIGHT_COLOR_WITH_PROPERTIES_TEXT, LIGHT_INTENSITY_TEXT, LIGHT_LOCATION_TEXT, LIGHT_PROPERTIES_TEXT,
+  LIGHT_TYPE_TEXT,
+} from '../shared/light-text.js';
 
 type Prop = JsonObject;
 
@@ -34,14 +38,14 @@ export const P = {
   saveDirtyPackages: bool('Save dirty packages before the operation.'),
   newName: str('New name for the level asset.'),
   overwrite: bool('Overwrite if the destination already exists.'),
-  lightClass: str('Light actor class to spawn instead of a lightType: a class name or path, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C).'),
-  lightProperties: { type: 'object', description: 'Light component settings: intensity, color, castShadows, useAsAtmosphereSunLight, attenuationRadius, innerConeAngle, outerConeAngle, sourceWidth, sourceHeight.', additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
-  lightType: str('Light type: Point, Directional, Spot, Sky, or Rect (short/class/lowercase accepted).'),
+  lightClass: str(LIGHT_CLASS_TEXT),
+  lightProperties: { type: 'object', description: LIGHT_PROPERTIES_TEXT, additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
+  lightType: str(LIGHT_TYPE_TEXT),
   name: str('Light actor name.'),
-  intensity: num('Light intensity.'),
-  color: { type: 'array', items: { type: 'number' }, description: 'Linear color [r, g, b] or [r, g, b, a].' } as Prop,
-  location: { type: 'object', description: 'Actor world location {x, y, z}.', additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
-  rotation: { type: 'object', description: 'Actor rotation {pitch, yaw, roll} or {x, y, z, w}.', additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
+  intensity: num(LIGHT_INTENSITY_TEXT),
+  color: { type: 'array', items: { type: 'number' }, description: `Light color [r, g, b] or [r, g, b, a]. ${LIGHT_COLOR_WITH_PROPERTIES_TEXT}` } as Prop,
+  location: { type: 'object', description: LIGHT_LOCATION_TEXT, additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
+  rotation: { type: 'object', description: `Actor rotation {pitch, yaw, roll} or {x, y, z, w}. ${LIGHT_AIM_TEXT}`, additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,
   quality: str('Lighting build quality: Preview, Medium, High, or Production.'),
   useWorldPartition: bool('Create the level with World Partition enabled.'),
   metadata: { type: 'object', description: 'Metadata key/value pairs to write.', additionalProperties: true, 'x-unreal-reflection-boundary': true } as Prop,

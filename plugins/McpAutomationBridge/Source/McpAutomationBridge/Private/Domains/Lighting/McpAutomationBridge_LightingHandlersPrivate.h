@@ -20,7 +20,15 @@ bool HandleSpawnLight(
     const FString& RequestId,
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-void ApplyLightProperties(AActor& NewLight, const TSharedPtr<FJsonObject>& PropertiesPayload);
+// What a light's settings did, for the reply: the names written, the ones refused ("name: why"), and the ones
+// written with another value because the request's was out of range ("name: what changed").
+struct FLightPropertyReport
+{
+    TArray<FString> Applied;
+    TArray<FString> Refused;
+    TArray<FString> Adjusted;
+};
+void ApplyLightProperties(AActor& NewLight, const TSharedPtr<FJsonObject>& PropertiesPayload, FLightPropertyReport& Report);
 bool HandleSpawnSkyLight(
     UMcpAutomationBridgeSubsystem& Subsystem,
     const FString& RequestId,

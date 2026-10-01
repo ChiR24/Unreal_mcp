@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1e5d86d85b4a66b1",
+  "catalogRevision": "8a81481a409e6fcf",
   "recordCount": 389,
   "records": [
     {
@@ -24796,15 +24796,20 @@
           "add a light",
           "place a light",
           "rect light",
-          "spotlight"
+          "spotlight",
+          "street lamp light",
+          "light intensity",
+          "light color"
         ],
-        "summary": "Create a light actor of a given type.",
+        "summary": "Create a light actor: point, spot, directional, rect or sky (or any light class), with intensity, color and, in properties, shadow, radius and cone settings.",
         "whenToUse": [
-          "A light actor or lighting setting must be created or configured."
+          "A point, spot, directional, rect or sky light must be added to the level being edited, with its intensity, color or shadow settings."
         ],
         "whenNotToUse": [
-          "An existing light should be reconfigured.",
-          "A static light is sufficient."
+          "An existing light should be reconfigured: control_actor.edit_component sets its component values.",
+          "The light must exist in the running PIE world: manage_effect.create_dynamic_light spawns into the active world, this one into the level being edited.",
+          "manage_level.create_light runs this same handler; use this one, which documents every property.",
+          "The light is always created Movable; a static or stationary light needs its mobility changed afterwards with control_actor.edit_component."
         ]
       },
       "schemas": {
@@ -24818,11 +24823,11 @@
             },
             "lightType": {
               "type": "string",
-              "description": "Light type string."
+              "description": "Light kind: point, spot, directional, rect or sky (any case), or the class name PointLight, SpotLight, DirectionalLight, RectLight or SkyLight. A light class of your own goes in lightClass."
             },
             "lightClass": {
               "type": "string",
-              "description": "Light class string."
+              "description": "Light class name or path, for a class lightType does not name, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C); build_environment list_light_types lists the loaded ones. Wins over lightType."
             },
             "name": {
               "type": "string",
@@ -24830,7 +24835,7 @@
             },
             "location": {
               "type": "object",
-              "description": "World-space location {x, y, z}.",
+              "description": "World location {x, y, z}; 0, 0, 300 when omitted.",
               "properties": {
                 "x": {
                   "type": "number",
@@ -24849,7 +24854,7 @@
             },
             "rotation": {
               "type": "object",
-              "description": "Rotation {pitch, yaw, roll}.",
+              "description": "Rotation {pitch, yaw, roll} in degrees. A spot or directional light shines along its forward axis, so pitch -90 points it straight down.",
               "properties": {
                 "pitch": {
                   "type": "number",
@@ -24868,11 +24873,11 @@
             },
             "intensity": {
               "type": "number",
-              "description": "Light intensity."
+              "description": "Brightness: the light component's Intensity, set as given, in the component's own units (a directional light is in lux). Left out, the engine default stays. properties.intensity wins over it."
             },
             "color": {
               "type": "object",
-              "description": "Light color {r, g, b, a} in 0-1 (a missing channel reads 0, alpha 1).",
+              "description": "Light color {r, g, b, a}. Linear 0-1 channels, stored by the engine as the 8-bit sRGB color: {r: 1, g: 0.7, b: 0.42} reads back as (255, 218, 173). A missing channel reads 0 (alpha 1). properties.color wins over it.",
               "properties": {
                 "r": {
                   "type": "number",
@@ -24895,7 +24900,7 @@
             },
             "properties": {
               "type": "object",
-              "description": "Light component values for point, spot, rect and directional lights: intensity, color, attenuationRadius, castShadows and the like; a properties.color wins over color.",
+              "description": "Light component settings, applied to the lights they fit; the reply lists what went in as details.applied, what did not as details.refused (\"name: why\") and any value replaced for being out of range as details.adjusted. Keys: intensity (0 or more; a negative reads 0), color (as above), castShadows (true or false), useAsAtmosphereSunLight (true or false; a directional light given properties is the atmosphere sun unless this says false), attenuationRadius (above 0, point and spot lights; an invalid value reads 1000), innerConeAngle and outerConeAngle (0 to 180 degrees, spot lights; clamped), sourceWidth and sourceHeight (above 0, rect lights; an invalid value reads 100). A sky light takes only the top-level intensity and color. Any other key, or one that does not fit the light, is refused by name.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             }
@@ -24935,14 +24940,48 @@
       },
       "examples": [
         {
-          "title": "Create a light actor of a given type.",
+          "title": "Create a light actor: point, spot, directional, rect or sky (or any light class), with intensity, color and, in properties, shadow, radius and cone settings.",
           "input": {
             "action": "create_light",
-            "lightType": "PointLight",
-            "name": "Light_1"
+            "lightType": "Spot",
+            "name": "StreetLamp",
+            "location": {
+              "x": 0,
+              "y": 0,
+              "z": 400
+            },
+            "rotation": {
+              "pitch": -90,
+              "yaw": 0,
+              "roll": 0
+            },
+            "intensity": 5000,
+            "color": {
+              "r": 1,
+              "g": 0.7,
+              "b": 0.42
+            },
+            "properties": {
+              "castShadows": true,
+              "outerConeAngle": 50,
+              "attenuationRadius": 1200
+            }
           },
           "output": {
-            "success": true
+            "success": true,
+            "message": "Light spawned",
+            "details": {
+              "actorName": "StreetLamp",
+              "actorLabel": "StreetLamp",
+              "objectName": "SpotLight_0",
+              "applied": [
+                "intensity",
+                "color",
+                "castShadows",
+                "outerConeAngle",
+                "attenuationRadius"
+              ]
+            }
           }
         }
       ],
@@ -24978,8 +25017,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7c03d2a2a60294ce92d89a1f1c39a3af5e0fcf47f25bd6e6b5fcec879714f534",
-        "content": "17122129c4e726deb803bad09020861a7d63f1e219a3d7af4143d38b1ab5b739"
+        "schema": "9b6d84190c55a5e3cb18427d985a4bec0689dcf9f8e749e3d86228e7b65f785d",
+        "content": "03b922ab0913749793c2faa16afa81f3e27c4c19b1e5a188c66a0f87cc59a430"
       }
     },
     {
@@ -54161,10 +54200,10 @@
         ],
         "summary": "Create a dynamic light actor.",
         "whenToUse": [
-          "Runtime light needed."
+          "A light must appear in the running game (PIE), or a point, spot, directional or rect light with just an intensity and a color is enough."
         ],
         "whenNotToUse": [
-          "Use build_environment lights."
+          "A rotation, a sky light, or settings such as castShadows, attenuationRadius or the cone angles are needed: use build_environment.create_light, which takes them and spawns into the level being edited."
         ]
       },
       "schemas": {
@@ -54187,14 +54226,14 @@
             },
             "lightType": {
               "type": "string",
-              "description": "Dynamic light type (Point, Spot, Directional, Rect)."
+              "description": "Dynamic light type: Point (the default, and what any other value gives), Spot, Directional or Rect, in any case; there is no sky light here."
             },
             "intensity": {
               "type": "number",
               "description": "Light intensity."
             },
             "color": {
-              "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
+              "description": "Light color as an {r, g, b, a} object or an [r, g, b, a] array. Linear 0-1 channels, stored by the engine as the 8-bit sRGB color: {r: 1, g: 0.7, b: 0.42} reads back as (255, 218, 173). A missing channel reads 0 (alpha 1)."
             }
           },
           "required": [
@@ -54268,8 +54307,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d55055a2a7e9931974518d6819b59d9745df7605484dd651f3ff50d94cbe0c34",
-        "content": "556d27f7770da668eb10e59993d9fae2ec740b30b0894d9a6f5262db5c9039a9"
+        "schema": "ccc2e3617e8544095e128b46cbc67aa49aacac5bb8d7b17c776cc1aa90ae2370",
+        "content": "0ab1bd9d436115ba27dd10abe7a3a8dc77fff11ac632fd5973983adb2512451f"
       }
     },
     {
@@ -64096,7 +64135,9 @@
           "A Point, Directional, Spot, Sky, or Rect light must be added."
         ],
         "whenNotToUse": [
-          "A generic actor spawn is needed; use control_actor."
+          "A generic actor spawn is needed; use control_actor.",
+          "build_environment.create_light runs this same handler; prefer it, which carries the full light documentation.",
+          "The light must exist in the running PIE world; manage_effect.create_dynamic_light spawns into the active world."
         ]
       },
       "schemas": {
@@ -64110,11 +64151,11 @@
             },
             "lightType": {
               "type": "string",
-              "description": "Light type: Point, Directional, Spot, Sky, or Rect (short/class/lowercase accepted)."
+              "description": "Light kind: point, spot, directional, rect or sky (any case), or the class name PointLight, SpotLight, DirectionalLight, RectLight or SkyLight. A light class of your own goes in lightClass."
             },
             "lightClass": {
               "type": "string",
-              "description": "Light actor class to spawn instead of a lightType: a class name or path, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C)."
+              "description": "Light class name or path, for a class lightType does not name, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C); build_environment list_light_types lists the loaded ones. Wins over lightType."
             },
             "name": {
               "type": "string",
@@ -64122,30 +64163,30 @@
             },
             "intensity": {
               "type": "number",
-              "description": "Light intensity."
+              "description": "Brightness: the light component's Intensity, set as given, in the component's own units (a directional light is in lux). Left out, the engine default stays. properties.intensity wins over it."
             },
             "color": {
               "type": "array",
               "items": {
                 "type": "number"
               },
-              "description": "Linear color [r, g, b] or [r, g, b, a]."
+              "description": "Light color [r, g, b] or [r, g, b, a]. Linear 0-1 channels, stored by the engine as the 8-bit sRGB color: {r: 1, g: 0.7, b: 0.42} reads back as (255, 218, 173). A missing channel reads 0 (alpha 1). properties.color wins over it."
             },
             "location": {
               "type": "object",
-              "description": "Actor world location {x, y, z}.",
+              "description": "World location {x, y, z}; 0, 0, 300 when omitted.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
             "rotation": {
               "type": "object",
-              "description": "Actor rotation {pitch, yaw, roll} or {x, y, z, w}.",
+              "description": "Actor rotation {pitch, yaw, roll} or {x, y, z, w}. A spot or directional light shines along its forward axis, so pitch -90 points it straight down.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
             "properties": {
               "type": "object",
-              "description": "Light component settings: intensity, color, castShadows, useAsAtmosphereSunLight, attenuationRadius, innerConeAngle, outerConeAngle, sourceWidth, sourceHeight.",
+              "description": "Light component settings, applied to the lights they fit; the reply lists what went in as details.applied, what did not as details.refused (\"name: why\") and any value replaced for being out of range as details.adjusted. Keys: intensity (0 or more; a negative reads 0), color (as above), castShadows (true or false), useAsAtmosphereSunLight (true or false; a directional light given properties is the atmosphere sun unless this says false), attenuationRadius (above 0, point and spot lights; an invalid value reads 1000), innerConeAngle and outerConeAngle (0 to 180 degrees, spot lights; clamped), sourceWidth and sourceHeight (above 0, rect lights; an invalid value reads 100). A sky light takes only the top-level intensity and color. Any other key, or one that does not fit the light, is refused by name.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             }
@@ -64188,12 +64229,21 @@
           "title": "Create a light actor in the current level.",
           "input": {
             "action": "create_light",
-            "lightType": "Point",
+            "lightType": "Spot",
             "name": "KeyLight",
             "location": {
               "x": 0,
               "y": 0,
               "z": 200
+            },
+            "color": [
+              1,
+              0.7,
+              0.42
+            ],
+            "properties": {
+              "castShadows": true,
+              "outerConeAngle": 40
             }
           },
           "output": {
@@ -64228,8 +64278,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4af408ddb3eb6db4e495f42d0ff5582964ac25d089c9e82d2cf7b041764e4ded",
-        "content": "a6532c7278d38c4f7a4207ef09ff675ba8cbe690fe9d9d3a275e19f47debf639"
+        "schema": "dc3386fc6182707c1181823c45efc9e4b1e4cd4ca8219829ed660ef13eebdcf7",
+        "content": "7df3128b9b589e57757e4fadf4aa262c601bafbdd1a1a5f2872edac30fb0e984"
       }
     },
     {

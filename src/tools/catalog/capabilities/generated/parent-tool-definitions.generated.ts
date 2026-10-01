@@ -1933,7 +1933,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "color": {
           "type": "object",
-          "description": "Light color {r, g, b, a} in 0-1 (a missing channel reads 0, alpha 1).",
+          "description": "Light color {r, g, b, a}. Linear 0-1 channels, stored by the engine as the 8-bit sRGB color: {r: 1, g: 0.7, b: 0.42} reads back as (255, 218, 173). A missing channel reads 0 (alpha 1). properties.color wins over it.",
           "properties": {
             "r": {
               "type": "number",
@@ -2310,11 +2310,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lightClass": {
           "type": "string",
-          "description": "Light class string."
+          "description": "Light class name or path, for a class lightType does not name, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C); build_environment list_light_types lists the loaded ones. Wins over lightType."
         },
         "lightType": {
           "type": "string",
-          "description": "Light type string."
+          "description": "Light kind: point, spot, directional, rect or sky (any case), or the class name PointLight, SpotLight, DirectionalLight, RectLight or SkyLight. A light class of your own goes in lightClass."
         },
         "limit": {
           "type": "number",
@@ -2383,6 +2383,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "object",
               "description": "Where the actor is spawned when the level has none; an existing actor is not moved.",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "X"
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Y"
+                },
+                "z": {
+                  "type": "number",
+                  "description": "Z"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "description": "World location {x, y, z}; 0, 0, 300 when omitted.",
               "properties": {
                 "x": {
                   "type": "number",
@@ -2717,7 +2736,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "properties": {
           "type": "object",
-          "description": "Light component values for point, spot, rect and directional lights: intensity, color, attenuationRadius, castShadows and the like; a properties.color wins over color.",
+          "description": "Light component settings, applied to the lights they fit; the reply lists what went in as details.applied, what did not as details.refused (\"name: why\") and any value replaced for being out of range as details.adjusted. Keys: intensity (0 or more; a negative reads 0), color (as above), castShadows (true or false), useAsAtmosphereSunLight (true or false; a directional light given properties is the atmosphere sun unless this says false), attenuationRadius (above 0, point and spot lights; an invalid value reads 1000), innerConeAngle and outerConeAngle (0 to 180 degrees, spot lights; clamped), sourceWidth and sourceHeight (above 0, rect lights; an invalid value reads 100). A sky light takes only the top-level intensity and color. Any other key, or one that does not fit the light, is refused by name.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -2820,6 +2839,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             {
               "type": "object",
               "description": "Proxy rotation (default the landscape's).",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "description": "Rotation {pitch, yaw, roll} in degrees. A spot or directional light shines along its forward axis, so pitch -90 points it straight down.",
               "properties": {
                 "pitch": {
                   "type": "number",
@@ -13700,6 +13738,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "default": "effects"
         },
         "color": {
+          "oneOf": [
+            {
+              "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
+            },
+            {
+              "description": "Light color as an {r, g, b, a} object or an [r, g, b, a] array. Linear 0-1 channels, stored by the engine as the 8-bit sRGB color: {r: 1, g: 0.7, b: 0.42} reads back as (255, 218, 173). A missing channel reads 0 (alpha 1)."
+            }
+          ],
           "description": "Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light."
         },
         "control": {
@@ -13877,7 +13923,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lightType": {
           "type": "string",
-          "description": "Dynamic light type (Point, Spot, Directional, Rect)."
+          "description": "Dynamic light type: Point (the default, and what any other value gives), Spot, Directional or Rect, in any case; there is no sky light here."
         },
         "location": {
           "type": "array",
@@ -16119,7 +16165,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "number"
           },
-          "description": "Linear color [r, g, b] or [r, g, b, a]."
+          "description": "Light color [r, g, b] or [r, g, b, a]. Linear 0-1 channels, stored by the engine as the 8-bit sRGB color: {r: 1, g: 0.7, b: 0.42} reads back as (255, 218, 173). A missing channel reads 0 (alpha 1). properties.color wins over it."
         },
         "destinationPath": {
           "type": "string",
@@ -16152,7 +16198,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "intensity": {
           "type": "number",
-          "description": "Light intensity."
+          "description": "Brightness: the light component's Intensity, set as given, in the component's own units (a directional light is in lux). Left out, the engine default stays. properties.intensity wins over it."
         },
         "killZ": {
           "type": "number",
@@ -16184,15 +16230,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "lightClass": {
           "type": "string",
-          "description": "Light actor class to spawn instead of a lightType: a class name or path, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C)."
+          "description": "Light class name or path, for a class lightType does not name, including a Blueprint light (/Game/Lights/BP_Lamp.BP_Lamp_C); build_environment list_light_types lists the loaded ones. Wins over lightType."
         },
         "lightType": {
           "type": "string",
-          "description": "Light type: Point, Directional, Spot, Sky, or Rect (short/class/lowercase accepted)."
+          "description": "Light kind: point, spot, directional, rect or sky (any case), or the class name PointLight, SpotLight, DirectionalLight, RectLight or SkyLight. A light class of your own goes in lightClass."
         },
         "location": {
           "type": "object",
-          "description": "Actor world location {x, y, z}.",
+          "description": "World location {x, y, z}; 0, 0, 300 when omitted.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -16228,7 +16274,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "properties": {
           "type": "object",
-          "description": "Light component settings: intensity, color, castShadows, useAsAtmosphereSunLight, attenuationRadius, innerConeAngle, outerConeAngle, sourceWidth, sourceHeight.",
+          "description": "Light component settings, applied to the lights they fit; the reply lists what went in as details.applied, what did not as details.refused (\"name: why\") and any value replaced for being out of range as details.adjusted. Keys: intensity (0 or more; a negative reads 0), color (as above), castShadows (true or false), useAsAtmosphereSunLight (true or false; a directional light given properties is the atmosphere sun unless this says false), attenuationRadius (above 0, point and spot lights; an invalid value reads 1000), innerConeAngle and outerConeAngle (0 to 180 degrees, spot lights; clamped), sourceWidth and sourceHeight (above 0, rect lights; an invalid value reads 100). A sky light takes only the top-level intensity and color. Any other key, or one that does not fit the light, is refused by name.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -16238,7 +16284,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "rotation": {
           "type": "object",
-          "description": "Actor rotation {pitch, yaw, roll} or {x, y, z, w}.",
+          "description": "Actor rotation {pitch, yaw, roll} or {x, y, z, w}. A spot or directional light shines along its forward axis, so pitch -90 points it straight down.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
