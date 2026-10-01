@@ -53,39 +53,20 @@ inline int32 DeleteAnimationRigClusterOrdered(const TArray<FAssetData>& ClusterA
         (McpPackageHasBackingFile(AssetData.PackageName.ToString()) ? FileBackedAssets : InMemoryOnlyAssets).Add(AssetData);
     }
 
-    if (InMemoryOnlyAssets.Num() > 0)
-    {
-        UE_LOG(LogMcpSafeOperations, Log,
-            TEXT("DeleteAnimationRigClusterOrdered: Unloading %d in-memory-only packages individually before delete"),
-            InMemoryOnlyAssets.Num());
-
-        if (!UnloadLoadedPackagesForAssets(InMemoryOnlyAssets, TEXT("DeleteAnimationRigClusterOrdered[InMemoryOnly]")))
-        {
-            UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("DeleteAnimationRigClusterOrdered: One or more in-memory-only packages remained loaded before delete; continuing with filesystem-backed cleanup"));
-        }
-    }
-
-    // An unsaved asset the unload could not take (another one still held it) used to stay behind
-    // while the folder delete answered success; it is force-deleted with the rest below.
+    // Unsaved assets go through the engine's force delete with the rest below. Unloading their packages
+    // first could not take one another asset still held (it stayed behind while the folder delete answered
+    // success), and unloading a package something still references can leave stale pointers behind.
     TArray<FAssetData> InMemoryStillLoaded;
     for (const FAssetData& AssetData : InMemoryOnlyAssets)
     {
-        const FString PackagePath = AssetData.PackageName.ToString();
         const FString ObjectPath = MCP_ASSET_DATA_GET_SOFT_PATH(AssetData);
         if (!ObjectPath.IsEmpty() && IsValid(FindObject<UObject>(nullptr, *ObjectPath)))
         {
             InMemoryStillLoaded.Add(AssetData);
-            UE_LOG(LogMcpSafeOperations, Warning,
-                TEXT("DeleteAnimationRigClusterOrdered: In-memory-only package still loaded after unload attempt: %s"),
-                *PackagePath);
         }
         else
         {
-            ++DeletedCount;
-            UE_LOG(LogMcpSafeOperations, Log,
-                TEXT("DeleteAnimationRigClusterOrdered: Unloaded in-memory-only asset package cleanly: %s"),
-                *PackagePath);
+            ++DeletedCount; // only an object already marked for collection is left
         }
     }
 
