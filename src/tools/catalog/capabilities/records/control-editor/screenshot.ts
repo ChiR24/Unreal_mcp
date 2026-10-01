@@ -29,8 +29,8 @@ const SCREENSHOT_PROPS = {
   // An asset editor (Widget Blueprint designer, material graph) is its own
   // window, so full_editor_window on the main frame alone could never show it.
   window: {
-    type: 'string',
-    description: 'With mode full_editor_window, which window to capture: a list index ("2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one.'
+    type: ['integer', 'string'],
+    description: 'With mode full_editor_window, which window to capture: a list index (2, or "2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one.'
   },
   // Camera and capture in one call: set_camera followed by a screenshot could return a frame drawn before the move.
   location: { ...P.location, description: 'editor_viewport: put the level viewport camera here first, in the same call ({x, y, z}); it stays there. Ignored while Play In Editor runs (the game camera is captured).' },

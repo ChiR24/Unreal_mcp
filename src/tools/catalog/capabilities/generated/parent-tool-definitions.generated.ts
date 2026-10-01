@@ -4950,8 +4950,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Viewport width in pixels."
         },
         "window": {
-          "type": "string",
-          "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one."
+          "type": [
+            "integer",
+            "string"
+          ],
+          "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one."
         },
         "x": {
           "type": "number",
@@ -20312,8 +20315,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Width in pixels."
         },
         "window": {
-          "type": "string",
-          "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."
+          "type": [
+            "integer",
+            "string"
+          ],
+          "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."
         },
         "windowed": {
           "type": "boolean",

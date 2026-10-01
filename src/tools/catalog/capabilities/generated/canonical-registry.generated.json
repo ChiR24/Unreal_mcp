@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "51c11b48c1f9db39",
+  "catalogRevision": "c9effd99ec8f38f7",
   "recordCount": 389,
   "records": [
     {
@@ -36398,8 +36398,11 @@
               "description": "Screenshot source: editor_viewport (default, the level viewport), game_viewport (the running game frame WITHOUT any UMG widgets) or full_editor_window (the editor window as displayed: the only mode that shows game UI and asset editors)."
             },
             "window": {
-              "type": "string",
-              "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one."
+              "type": [
+                "integer",
+                "string"
+              ],
+              "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one."
             },
             "location": {
               "type": "object",
@@ -36598,8 +36601,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f54a46b58bb8182e69755c35d351d29e09744148e6ce65071c05a5a35308875c",
-        "content": "beda5068a71f94babc9b4488f88ff31c9ebe4ef3f326919efc0907d58885d52f"
+        "schema": "711b2b4c4f20ebd8dcb1ad0e973207d73abeb9a6472a54f94276a32a5372e505",
+        "content": "459b43c4070411b55b2c07a765051d4cd1c6d265077201c1e900f6dcfa4b0176"
       }
     },
     {
@@ -88695,8 +88698,11 @@
               "description": "Screenshot target mode."
             },
             "window": {
-              "type": "string",
-              "description": "With mode full_editor_window, which window to capture: a list index (\"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."
+              "type": [
+                "integer",
+                "string"
+              ],
+              "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame; responses list the open windows under windows[]."
             },
             "resolution": {
               "type": "string",
@@ -88802,8 +88808,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "10a302be395744507d80bb65c29c9ef7401d225b7815e6fb3cdf4839f9fbd47f",
-        "content": "2d0066a59f7f7b04f4a0d279cc5938343b2a9ee376c674f62f3c4ba7cec41497"
+        "schema": "5b93f6c35fe77e6014ada9a89cb88289d0382d368bb2a2be7edd27ec3f3efa6c",
+        "content": "5c7c3829cdcc552fd7b07e575719e77475d0c5f0adf7e6a52a8cf52f7632d81f"
       }
     },
     {
