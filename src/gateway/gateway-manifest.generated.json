@@ -5836,6 +5836,7 @@
         "amount",
         "angle",
         "assetId",
+        "assetName",
         "assetPath",
         "assetPaths",
         "assetType",
@@ -6107,6 +6108,10 @@
             "type": "string",
             "description": "Fab asset id, used as the cache key."
           },
+          "assetName": {
+            "type": "string",
+            "description": "The name for the import's one mesh: SM_<assetName>, or SK_ for a skeletal mesh, with its material instance and textures following (MI_<assetName>, T_<assetName>_<suffix>); a surface with no mesh is named by its one material instance. Letters, digits and underscores, not starting with a digit, 64 at most, for example ConcreteBarrier. Without destinationPath the assets are renamed where they are. Not applied when the import holds no single mesh or material instance to name; relocationNote says so."
+          },
           "assetPath": {
             "type": "string",
             "description": "Alias for path (accepted for compatibility)."
@@ -6320,6 +6325,10 @@
               },
               {
                 "type": "string",
+                "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
+              },
+              {
+                "type": "string",
                 "description": "Destination /Game asset path."
               },
               {
@@ -6327,7 +6336,7 @@
                 "description": "Folder for the copy, e.g. /Game/Structs, when destinationName is given, the path ends in \"/\" or the folder exists; the copy is destinationPath/destinationName, or keeps the source name without one. Otherwise the full new asset path, e.g. /Game/Structs/S_WeaponRow_V2. A copy onto an existing struct is refused with ALREADY_EXISTS."
               }
             ],
-            "description": "Destination /Game asset path."
+            "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
           },
           "direction": {
             "type": "string",

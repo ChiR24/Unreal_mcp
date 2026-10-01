@@ -15,8 +15,10 @@
 namespace McpFabPostImport
 {
 /**
- * Saves the packages the import left dirty, through McpSafeAssetSave, and records the count and the
- * names of any it could not save.
+ * Relocates the import when the add named a destinationPath or an assetName (McpFabRelocate), then saves
+ * the packages it left dirty, at the paths they have by then, through McpSafeAssetSave, and records the
+ * count and the names of any it could not save. DestinationFolder and AssetName are empty when not asked for.
  */
-void Run(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths);
+void Run(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths, const FString& DestinationFolder,
+	const FString& AssetName);
 } // namespace McpFabPostImport

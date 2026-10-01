@@ -159,6 +159,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
     }
     Data->SetArrayField(TEXT("sampleAssetPaths"), Samples);
   }
+  if (Result.bRelocateRan) {
+    Data->SetBoolField(TEXT("relocated"), Result.MovedCount > 0);
+    Data->SetNumberField(TEXT("movedCount"), Result.MovedCount);
+    if (!Result.RelocationNote.IsEmpty()) {
+      Data->SetStringField(TEXT("relocationNote"), Result.RelocationNote);
+    }
+  }
   if (Result.bSaveRan) {
     Data->SetBoolField(TEXT("saved"), Result.UnsavedPackages.Num() == 0);
     Data->SetNumberField(TEXT("savedCount"), Result.SavedCount);

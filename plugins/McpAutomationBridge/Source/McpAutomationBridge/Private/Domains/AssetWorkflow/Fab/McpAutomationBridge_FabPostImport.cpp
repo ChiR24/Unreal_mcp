@@ -1,6 +1,7 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
 #include "Domains/AssetWorkflow/Fab/McpAutomationBridge_FabPostImport.h"
+#include "Domains/AssetWorkflow/Fab/McpAutomationBridge_FabRelocate.h"
 #include "Safety/McpSafeOperations.h"
 
 #include "Misc/PackageName.h"
@@ -44,8 +45,15 @@ void SaveImported(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths
 }
 } // namespace
 
-void Run(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)
+void Run(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths, const FString& DestinationFolder,
+	const FString& AssetName)
 {
-	SaveImported(Result, ImportedPaths);
+	// Moved first, so what is saved is what is left at the new paths and not the redirectors behind it.
+	TArray<FString> Paths = ImportedPaths;
+	if (!DestinationFolder.IsEmpty() || !AssetName.IsEmpty())
+	{
+		McpFabRelocate::Apply(DestinationFolder, AssetName, Result, Paths);
+	}
+	SaveImported(Result, Paths);
 }
 } // namespace McpFabPostImport

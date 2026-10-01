@@ -7489,6 +7489,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Fab asset id, used as the cache key."
         },
+        "assetName": {
+          "type": "string",
+          "description": "The name for the import's one mesh: SM_<assetName>, or SK_ for a skeletal mesh, with its material instance and textures following (MI_<assetName>, T_<assetName>_<suffix>); a surface with no mesh is named by its one material instance. Letters, digits and underscores, not starting with a digit, 64 at most, for example ConcreteBarrier. Without destinationPath the assets are renamed where they are. Not applied when the import holds no single mesh or material instance to name; relocationNote says so."
+        },
         "assetPath": {
           "type": "string",
           "description": "Alias for path (accepted for compatibility)."
@@ -7702,6 +7706,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             {
               "type": "string",
+              "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
+            },
+            {
+              "type": "string",
               "description": "Destination /Game asset path."
             },
             {
@@ -7709,7 +7717,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Folder for the copy, e.g. /Game/Structs, when destinationName is given, the path ends in \"/\" or the folder exists; the copy is destinationPath/destinationName, or keeps the source name without one. Otherwise the full new asset path, e.g. /Game/Structs/S_WeaponRow_V2. A copy onto an existing struct is refused with ALREADY_EXISTS."
             }
           ],
-          "description": "Destination /Game asset path."
+          "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
         },
         "direction": {
           "type": "string",
@@ -9368,7 +9376,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "importedRoot": {
           "type": "string",
-          "description": "Where the content landed, chosen by Fab (typically /Game/Fab/... or /Game/<PackName>). Present once finished and any landed."
+          "description": "Where the content landed: the folder Fab chose (typically /Game/Fab/... or /Game/<PackName>), or the destinationPath the add asked for once the import was moved there. Present once finished and any landed."
         },
         "indexExists": {
           "type": "boolean",
@@ -9496,6 +9504,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Root tokens whose directory does not exist on this machine."
+        },
+        "movedCount": {
+          "type": "number",
+          "description": "Assets moved or renamed by that relocation."
         },
         "nextCursor": {
           "type": [
@@ -9684,6 +9696,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "\"preserved\" when the source layout was reproduced under /Game, \"at-risk\" when destinationPath relocated it."
         },
+        "relocated": {
+          "type": "boolean",
+          "description": "Present when the add asked for destinationPath or assetName: true when assets were moved or renamed."
+        },
+        "relocationNote": {
+          "type": "string",
+          "description": "What the relocation did not do, and why: a folder or name already taken (nothing moves then), an assetName with no single asset to name, or content left where Fab put it. Absent when everything asked for was done."
+        },
         "results": {
           "type": "array",
           "items": {
@@ -9706,7 +9726,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "items": {
             "type": "string"
           },
-          "description": "Up to ten imported asset paths, the static and skeletal meshes first."
+          "description": "Up to ten imported asset paths, the static and skeletal meshes first, at their final paths when the add asked for destinationPath or assetName."
         },
         "saved": {
           "type": "boolean",

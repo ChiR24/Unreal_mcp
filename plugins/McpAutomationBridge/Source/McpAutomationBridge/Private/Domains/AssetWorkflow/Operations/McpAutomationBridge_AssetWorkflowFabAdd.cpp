@@ -1,9 +1,11 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h"
 #include "Domains/AssetWorkflow/Fab/McpAutomationBridge_FabPostImport.h"
+#include "Domains/AssetWorkflow/Fab/McpAutomationBridge_FabRelocate.h"
 #include "McpFabProvider.h"
 
 #include "Async/Async.h"
@@ -49,9 +51,40 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
     return true;
   }
 
+  // Where the import should end up and what it should be called, applied once it has settled. The folder
+  // goes through the shared path canonicalizer and must be under /Game; the name must be one an asset can take.
+  FString Destination;
+  if (Payload->TryGetStringField(TEXT("destinationPath"), Destination) && !Destination.TrimStartAndEnd().IsEmpty()) {
+    Destination = SanitizeProjectRelativePath(Destination.TrimStartAndEnd());
+    Destination.RemoveFromEnd(TEXT("/"));
+    if (Destination != TEXT("/Game") && !Destination.StartsWith(TEXT("/Game/"))) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("'destinationPath' must be a /Game folder, for example /Game/Props/Barriers."),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+  } else {
+    Destination.Reset();
+  }
+  FString AssetName;
+  if (Payload->TryGetStringField(TEXT("assetName"), AssetName) && !AssetName.TrimStartAndEnd().IsEmpty()) {
+    AssetName = AssetName.TrimStartAndEnd();
+    if (!McpFabRelocate::IsValidAssetName(AssetName)) {
+      SendAutomationResponse(Socket, RequestId, false,
+                             TEXT("'assetName' is letters, digits and underscores, not starting with a digit, 64 characters at most: ConcreteBarrier."),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+  } else {
+    AssetName.Reset();
+  }
+
   FMcpFabAddOptions Options;
-  // Once the import settles the packages it left dirty are saved; the status read reports how that went.
-  Options.PostImport = &McpFabPostImport::Run;
+  // Once the import settles it is relocated if asked, and the packages it left dirty are saved; the status
+  // read reports how both went.
+  Options.PostImport = [Destination, AssetName](FMcpFabAddResult &Result, const TArray<FString> &Paths) {
+    McpFabPostImport::Run(Result, Paths, Destination, AssetName);
+  };
   bool bCombineMeshes = false;
   if (Payload->TryGetBoolField(TEXT("combineMeshes"), bCombineMeshes)) {
     Options.CombineMeshes = bCombineMeshes;
@@ -109,7 +142,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
               TEXT("Not imported yet. Poll asset.query_marketplace with lookup=fab_import_status and this operationId until phase is done or failed; do not call this add again. "
                    "One import runs at a time: an add made while another runs is queued and starts by itself, in order, and that read lists the queue. "
                    "While Fab imports, the editor is held and every call, the status read included, answers EDITOR_BLOCKED: keep polling. "
-                   "Fab chooses the destination folder; the status read reports importedRoot, and asset.move relocates a folder."));
+                   "Fab chooses the destination folder unless destinationPath names one; the status read reports importedRoot, and asset.move relocates a folder later."));
           Self->SendAutomationResponse(
               Socket, RequestId, true,
               bQueued

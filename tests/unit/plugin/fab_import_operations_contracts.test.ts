@@ -178,7 +178,7 @@ describe('the post-import save', () => {
 
   it('is what the add hands the adapter', () => {
     expect(code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp')))
-      .toContain('Options.PostImport = &McpFabPostImport::Run;');
+      .toContain('McpFabPostImport::Run(Result, Paths, Destination, AssetName);');
     expect(code(fab('McpFabAddOperation.cpp'))).toContain('Options.PostImport');
   });
 });

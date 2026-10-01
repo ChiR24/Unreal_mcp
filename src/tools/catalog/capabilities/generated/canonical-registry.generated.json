@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "edb71e2398350d75",
+  "catalogRevision": "2e7514526b0b47a1",
   "recordCount": 389,
   "records": [
     {
@@ -7748,6 +7748,14 @@
               "type": "string",
               "description": "Fab listing uid, as it appears in a fab.com/listings/<uid> URL. Restricted to [A-Za-z0-9_-], 64 characters max, because it is used to build an API path."
             },
+            "destinationPath": {
+              "type": "string",
+              "description": "A /Game folder to move what the import created to, for example /Game/Props/Barriers. The layout beneath the import's own folder (StaticMeshes, Materials, Textures) is kept under it. Omit to leave the import where Fab put it. The shared master materials in /Game/Fab/Materials, MaterialFunctions and Textures never move, and a unreal-engine pack is left where Fab put it."
+            },
+            "assetName": {
+              "type": "string",
+              "description": "The name for the import's one mesh: SM_<assetName>, or SK_ for a skeletal mesh, with its material instance and textures following (MI_<assetName>, T_<assetName>_<suffix>); a surface with no mesh is named by its one material instance. Letters, digits and underscores, not starting with a digit, 64 at most, for example ConcreteBarrier. Without destinationPath the assets are renamed where they are. Not applied when the import holds no single mesh or material instance to name; relocationNote says so."
+            },
             "quality": {
               "type": "string",
               "enum": [
@@ -8001,6 +8009,12 @@
             "listingId": [
               "fab_listing"
             ],
+            "destinationPath": [
+              "fab_listing"
+            ],
+            "assetName": [
+              "fab_listing"
+            ],
             "quality": [
               "fab_listing"
             ],
@@ -8046,8 +8060,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dda0613525a725ec505b21f3a4ff34bee531e20a53988f7e730da9c6e7372934",
-        "content": "b30bcfdcdc7c1e779eab4ca423cd4f52c295f2b4fee48050a31656de337322d0"
+        "schema": "978071e44d44d85745f0eb0e3772b5d43ef770fc0fda762f9d522d1bce47d3a5",
+        "content": "b442dd428b68d0a73520f431b0ff184a28567378cca1c87ccd8e739646804294"
       }
     },
     {
@@ -10503,14 +10517,26 @@
             },
             "importedRoot": {
               "type": "string",
-              "description": "Where the content landed, chosen by Fab (typically /Game/Fab/... or /Game/<PackName>). Present once finished and any landed."
+              "description": "Where the content landed: the folder Fab chose (typically /Game/Fab/... or /Game/<PackName>), or the destinationPath the add asked for once the import was moved there. Present once finished and any landed."
             },
             "sampleAssetPaths": {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Up to ten imported asset paths, the static and skeletal meshes first."
+              "description": "Up to ten imported asset paths, the static and skeletal meshes first, at their final paths when the add asked for destinationPath or assetName."
+            },
+            "relocated": {
+              "type": "boolean",
+              "description": "Present when the add asked for destinationPath or assetName: true when assets were moved or renamed."
+            },
+            "movedCount": {
+              "type": "number",
+              "description": "Assets moved or renamed by that relocation."
+            },
+            "relocationNote": {
+              "type": "string",
+              "description": "What the relocation did not do, and why: a folder or name already taken (nothing moves then), an assetName with no single asset to name, or content left where Fab put it. Absent when everything asked for was done."
             },
             "saved": {
               "type": "boolean",
@@ -10636,8 +10662,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "012ebe138fb0169ccd796a62a444b1a6220fd49c8cd054f49a4cb7f8beb2e5a4",
-        "content": "3ff6e4039da8c64b980d64129ba1810fb28e0a50a0929d9c6fece7ee95756561"
+        "schema": "b74e6bf6071ec1e6ed8fbe10846b2d5b9ec7cc9b183c54eb7b0d46952e2c13eb",
+        "content": "022dbe7af7d1b48efcb63b7ff28cddff58abe21fb0d26baf959ce8afc8ebd6b5"
       }
     },
     {

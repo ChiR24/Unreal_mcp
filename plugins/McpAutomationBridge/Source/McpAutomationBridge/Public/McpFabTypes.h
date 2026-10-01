@@ -69,6 +69,12 @@ struct FMcpFabAddResult
 	int32 SavedCount = 0;
 	/** Packages that step could not save, by name. */
 	TArray<FString> UnsavedPackages;
+	/** True once the relocation ran: the add asked for a destinationPath or an assetName. */
+	bool bRelocateRan = false;
+	/** Assets it moved or renamed. */
+	int32 MovedCount = 0;
+	/** What it did not do, and why, in words; empty when everything asked for was done. */
+	FString RelocationNote;
 };
 
 /** What the caller asked the add to do beyond importing the listing. */
