@@ -6687,6 +6687,7 @@
             "type": "string",
             "enum": [
               "fab_listing",
+              "fab_cancel",
               "fab_download",
               "megascans"
             ],
@@ -6893,7 +6894,7 @@
           },
           "operationId": {
             "type": "string",
-            "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId, or neither to list the queue."
+            "description": "Operation id from the add reply (or the status read's queue). Restricted to [A-Za-z0-9_-], 64 characters max."
           },
           "operations": {
             "type": "array",

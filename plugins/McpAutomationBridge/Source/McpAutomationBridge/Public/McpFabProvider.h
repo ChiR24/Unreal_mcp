@@ -105,7 +105,7 @@ struct FMcpFabImportStatus
 {
 	FString OperationId;
 	FString ListingId;
-	/** queued, resolving, downloading, importing, done or failed. */
+	/** queued, resolving, downloading, importing, cancelling, done or failed. */
 	FString Phase;
 	/** 1-based place in the queue while queued, else 0. */
 	int32 QueuePosition = 0;
@@ -113,6 +113,10 @@ struct FMcpFabImportStatus
 	double ElapsedSeconds = 0.0;
 	/** Bytes fetched so far, or -1 when the download cannot be observed. */
 	int64 DownloadedBytes = -1;
+	/** The percent Fab's own "Downloading ..." notification shows (0-100), or -1 when there is none. */
+	float DownloadPercent = -1.0f;
+	/** True while CancelImport would stop this import right now. */
+	bool bCancellable = false;
 	/** New assets seen in the registry so far. */
 	int32 AssetsSoFar = 0;
 	/** What the add reported, completed with the outcome once the import is done or failed. */
@@ -211,6 +215,14 @@ public:
 
 	/** The import that is running, then every add waiting behind it, in the order they will start. */
 	virtual void GetImportQueue(TArray<FMcpFabImportStatus>& OutQueue) = 0;
+
+	/**
+	 * Cancels one import where Fab gives a way to: an add still waiting in the queue is dropped, a
+	 * unreal-engine pack download is stopped by pressing Fab's own Cancel button, and an import Interchange
+	 * is translating is told to cancel its tasks. A download of a source format has no cancel and is
+	 * refused. Returns false with OutErrorCode and OutMessage saying why; on success OutMessage says what was done.
+	 */
+	virtual bool CancelImport(const FString& OperationId, FString& OutMessage, FString& OutErrorCode) = 0;
 
 	/**
 	 * Queries the Fab catalog through the signed-in page.

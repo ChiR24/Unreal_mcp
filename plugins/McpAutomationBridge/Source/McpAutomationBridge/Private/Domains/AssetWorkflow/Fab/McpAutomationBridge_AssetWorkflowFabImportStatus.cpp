@@ -9,20 +9,13 @@
 
 namespace
 {
-/** An operation id or a listing id: the characters both use, so nothing else is ever looked up. */
-bool IsPlainKey(const FString &Key) {
-  if (Key.IsEmpty() || Key.Len() > 64) {
-    return false;
-  }
-  for (const TCHAR Ch : Key) {
-    if (!FChar::IsAlnum(Ch) && Ch != TEXT('-') && Ch != TEXT('_')) {
-      return false;
-    }
-  }
-  return true;
-}
-
 FString NextStep(const FMcpFabImportStatus &Status) {
+  if (Status.Phase == TEXT("cancelling")) {
+    return TEXT("Cancel was requested and Fab has been told to stop; the next read says failed with CANCELLED, listing anything that had already landed.");
+  }
+  if (Status.Result.ErrorCode == TEXT("CANCELLED")) {
+    return TEXT("The import was cancelled. Anything that had already landed is listed under importedRoot and was left unsaved and unmoved: asset.delete removes it. Add the listing again to retry.");
+  }
   if (Status.Phase == TEXT("done") && Status.Result.UnsavedPackages.Num() > 0) {
     return TEXT("The import finished, but some packages could not be saved (unsavedPackages): they exist only in memory until control_editor save_all writes them. importedRoot and sampleAssetPaths say where it landed.");
   }
@@ -53,6 +46,9 @@ TSharedPtr<FJsonValue> QueueRow(const FMcpFabImportStatus &Entry) {
   Row->SetNumberField(TEXT("elapsedSeconds"), FMath::RoundToInt(Entry.ElapsedSeconds));
   if (Entry.DownloadedBytes >= 0) {
     Row->SetNumberField(TEXT("downloadedBytes"), static_cast<double>(Entry.DownloadedBytes));
+  }
+  if (Entry.DownloadPercent >= 0.0f) {
+    Row->SetNumberField(TEXT("downloadPercent"), FMath::RoundToInt(Entry.DownloadPercent));
   }
   return MakeShared<FJsonValueObject>(Row);
 }
@@ -85,7 +81,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
   if (Key.IsEmpty()) {
     Payload->TryGetStringField(TEXT("listingId"), Key);
   }
-  if (!Key.IsEmpty() && !IsPlainKey(Key)) {
+  if (!Key.IsEmpty() && !McpFabImportJson::IsPlainKey(Key)) {
     SendAutomationResponse(
         Socket, RequestId, false,
         TEXT("'operationId' (from the add's reply) and 'listingId' (its newest import is reported) are each [A-Za-z0-9_-], 64 characters at most."),
@@ -143,6 +139,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
   // Only what is known: a download nobody can observe has no byte count, and zero would be a claim.
   if (Status.DownloadedBytes >= 0) {
     Data->SetNumberField(TEXT("downloadedBytes"), static_cast<double>(Status.DownloadedBytes));
+  }
+  // The percent Fab's own download notification shows; absent when there is no notification to read.
+  if (Status.DownloadPercent >= 0.0f) {
+    Data->SetNumberField(TEXT("downloadPercent"), FMath::RoundToInt(Status.DownloadPercent));
+  }
+  if (!bFinished) {
+    Data->SetBoolField(TEXT("cancellable"), Status.bCancellable);
   }
   if (Status.AssetsSoFar > 0) {
     Data->SetNumberField(TEXT("assetsSoFar"), Status.AssetsSoFar);

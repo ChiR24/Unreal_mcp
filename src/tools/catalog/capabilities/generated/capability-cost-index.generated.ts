@@ -544,6 +544,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::build_material_graph": "instant|low",
   "manage_asset::bulk_delete": "long-running|high",
   "manage_asset::bulk_rename": "long-running|high",
+  "manage_asset::cancel_fab_import": "long-running|high",
   "manage_asset::channel_extract": "long-running|high",
   "manage_asset::channel_pack": "long-running|high",
   "manage_asset::clear_data_table_rows": "instant|low",
@@ -1524,4 +1525,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1511;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1512;

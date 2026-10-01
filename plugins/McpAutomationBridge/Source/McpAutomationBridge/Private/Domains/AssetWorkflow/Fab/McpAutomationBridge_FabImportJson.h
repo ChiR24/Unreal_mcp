@@ -8,9 +8,26 @@
 #include "Dom/JsonObject.h"
 #include "Dom/JsonValue.h"
 
-// Reply pieces the Fab add and its status read share.
+// Reply pieces the Fab add, its status read and its cancel share.
 namespace McpFabImportJson
 {
+/** An operation id or a listing id: the characters both use, so nothing else is ever looked up. */
+inline bool IsPlainKey(const FString& Key)
+{
+	if (Key.IsEmpty() || Key.Len() > 64)
+	{
+		return false;
+	}
+	for (const TCHAR Ch : Key)
+	{
+		if (!FChar::IsAlnum(Ch) && Ch != TEXT('-') && Ch != TEXT('_'))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
 /** The receipt's task: which operation this is and whether it is still going (running, completed, failed). */
 inline TSharedPtr<FJsonObject> MakeTask(const FString& OperationId, const TCHAR* State)
 {

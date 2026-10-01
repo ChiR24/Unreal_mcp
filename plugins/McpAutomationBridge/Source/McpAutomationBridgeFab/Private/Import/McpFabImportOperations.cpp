@@ -17,11 +17,6 @@ constexpr int32 MaxFabErrors = 6;
 
 bool bPumpScheduled = false;
 
-FOperation* FindById(const FString& Id)
-{
-	return Operations().FindByPredicate([&Id](const FOperation& Op) { return Op.Id == Id; });
-}
-
 // Starts the oldest queued add once nothing is running.
 void StartNext()
 {
@@ -68,6 +63,11 @@ TArray<FOperation>& Operations()
 {
 	static TArray<FOperation> All;
 	return All;
+}
+
+FOperation* FindById(const FString& Id)
+{
+	return Operations().FindByPredicate([&Id](const FOperation& Op) { return Op.Id == Id; });
 }
 
 FString Begin(const FString& ListingId)
@@ -151,8 +151,16 @@ void Finish(const FString& OperationId, const FMcpFabAddResult& Outcome)
 		Op->State = Outcome.ErrorCode.IsEmpty() ? EState::Done : EState::Failed;
 		Op->FinishedAt = FPlatformTime::Seconds();
 		Op->AssetsSoFar = FMath::Max(Op->AssetsSoFar, Outcome.AssetCount);
+		// A queued add that is finished before its turn (cancelled) must never start.
+		Op->Launch = nullptr;
 	}
 	SchedulePump();
+}
+
+bool IsCancelRequested(const FString& OperationId)
+{
+	const FOperation* Op = FindById(OperationId);
+	return Op != nullptr && Op->bCancelRequested;
 }
 
 bool FindRunning(const FString& CacheLocation, FMcpFabImportStatus& OutStatus)

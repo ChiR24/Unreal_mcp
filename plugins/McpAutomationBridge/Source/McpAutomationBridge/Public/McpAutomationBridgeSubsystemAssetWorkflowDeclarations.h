@@ -9,6 +9,7 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleAddFabAssetToProject); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSearchFabListings); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleGetFabListingDetails); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleGetFabImportStatus); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleCancelFabImport); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleListMegascansLibrary); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleImportMegascansAsset); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleOpenEditorTab); \

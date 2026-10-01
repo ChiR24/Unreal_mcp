@@ -156,6 +156,11 @@ public:
 		McpFabImportOperations::ListQueue(GetCacheLocation(), OutQueue);
 	}
 
+	virtual bool CancelImport(const FString& OperationId, FString& OutMessage, FString& OutErrorCode) override
+	{
+		return McpFabImportOperations::RequestCancel(OperationId, OutMessage, OutErrorCode);
+	}
+
 	virtual bool GetListingDetails(
 		const FString& ListingId,
 		TFunction<void(bool, const FString&)> OnComplete) override

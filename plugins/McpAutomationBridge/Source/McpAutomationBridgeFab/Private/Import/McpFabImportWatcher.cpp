@@ -185,9 +185,10 @@ void WatchForImport(
 			}
 
 			const bool bFabFailed = Count == 0 && !Watch->FabFailure.IsEmpty();
+			const bool bCancelled = McpFabImportOperations::IsCancelRequested(OperationId);
 			const bool bSettled = Count > 0 && Watch->QuietFor >= SettleSeconds;
 			const bool bExpired = Watch->Elapsed >= Ceiling;
-			if (!bSettled && !bExpired && !bFabFailed)
+			if (!bSettled && !bExpired && !bFabFailed && !bCancelled)
 			{
 				return true; // keep ticking
 			}
@@ -205,7 +206,17 @@ void WatchForImport(
 			Accepted.AssetCount = Count;
 			Accepted.RootPath = CommonRoot(Added);
 			Accepted.SamplePaths = PickSamples(Meshes, Others);
-			if (bFabFailed)
+			if (bCancelled)
+			{
+				// What had landed stays where it is, unsaved and unmoved: the caller stopped this import, so
+				// it is theirs to keep or delete.
+				Accepted.bTimedOut = false;
+				Accepted.ErrorCode = TEXT("CANCELLED");
+				Accepted.Error = Count > 0
+					? FString::Printf(TEXT("Cancelled on request. %d asset(s) had already landed under %s and were left as they are."), Count, *Accepted.RootPath)
+					: FString(TEXT("Cancelled on request before any asset landed."));
+			}
+			else if (bFabFailed)
 			{
 				Accepted.bTimedOut = false;
 				Accepted.ErrorCode = TEXT("FAB_IMPORT_FAILED");
@@ -236,7 +247,7 @@ void WatchForImport(
 				TEXT("AssetRegistry")).Get();
 			RegistryRef.OnAssetAdded().Remove(Watch->AddedHandle);
 			McpFabLogCapture::Stop();
-			if (PostImport && Count > 0)
+			if (PostImport && Count > 0 && !bCancelled)
 			{
 				PostImport(Accepted, Added);
 			}

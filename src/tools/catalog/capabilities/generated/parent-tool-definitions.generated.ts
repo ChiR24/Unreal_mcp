@@ -8072,6 +8072,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "fab_listing",
+            "fab_cancel",
             "fab_download",
             "megascans"
           ],
@@ -8278,7 +8279,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "operationId": {
           "type": "string",
-          "description": "Operation id from the add reply. Restricted to [A-Za-z0-9_-], 64 characters max. Give this or listingId, or neither to list the queue."
+          "description": "Operation id from the add reply (or the status read's queue). Restricted to [A-Za-z0-9_-], 64 characters max."
         },
         "operations": {
           "type": "array",
@@ -9006,6 +9007,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when add_fab_asset_to_project can actually import this listing. unreal-engine, gltf, glb and fbx are importable through the pack and Interchange workflows. Quixel/Megascans listings are the exception: Fab will not serve their download until the listing is claimed, and the claim is CSRF-protected with no token exposed to the page, so this reports false and addBlockedReason says so. Check this rather than hasUnrealBuild before adding."
         },
+        "cancellable": {
+          "type": "boolean",
+          "description": "Present while the import is not finished: true when a cancel would stop it right now (queued, a unreal-engine pack that is downloading, or an import Interchange is translating); false for a source-format download, which Fab gives no cancel for."
+        },
+        "cancelled": {
+          "type": "boolean",
+          "description": "True when the cancel was accepted."
+        },
         "combineMeshesApplied": {
           "type": "boolean",
           "description": "Present only when the add passed combineMeshes=false for a listing Fab merges meshes for: true once Interchange's mesh combining was switched off before it ran, false while that has not happened yet or could not (the import then yields the single merged mesh)."
@@ -9108,6 +9117,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Number of cached downloads."
         },
+        "downloadPercent": {
+          "type": "number",
+          "description": "0-100, as Fab's own download notification shows it, for a unreal-engine pack and a source format alike. Absent when that notification cannot be read: before the download starts, after it ends, or when Fab shows none."
+        },
         "downloadSucceeded": {
           "type": "boolean",
           "description": "Downloader-reported success."
@@ -9199,7 +9212,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "failureCode": {
           "type": "string",
-          "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), or the add's own refusal code."
+          "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code."
         },
         "fileName": {
           "type": "string",
@@ -9531,7 +9544,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "object",
             "x-unreal-reflection-boundary": true
           },
-          "description": "The import that is running, then every add waiting behind it in the order they start: operationId, listingId, title, phase, queuePosition, elapsedSeconds and downloadedBytes when known. Absent when nothing is running or queued."
+          "description": "The import that is running, then every add waiting behind it in the order they start: operationId, listingId, title, phase, queuePosition, elapsedSeconds, and downloadedBytes and downloadPercent when known. Absent when nothing is running or queued."
         },
         "queueLength": {
           "type": "number",

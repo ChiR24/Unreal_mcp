@@ -75,8 +75,9 @@ describe('the Fab import status read', () => {
   });
 
   it('only looks up a plain id, so nothing path-shaped is ever matched', () => {
-    expect(status).toMatch(/IsPlainKey\(Key\)/u);
-    expect(status).toMatch(/FChar::IsAlnum\(Ch\)/u);
+    expect(status).toMatch(/McpFabImportJson::IsPlainKey\(Key\)/u);
+    expect(code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabImportJson.h')))
+      .toMatch(/FChar::IsAlnum\(Ch\)/u);
   });
 
   it('is dispatched and declared like every other asset action', () => {

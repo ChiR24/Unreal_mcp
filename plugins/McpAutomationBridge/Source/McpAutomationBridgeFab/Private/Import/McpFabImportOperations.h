@@ -46,6 +46,15 @@ void SetMeshesSeparated(const FString& OperationId, bool bSeparated);
 /** The import ended, either way. Outcome replaces the stored result; an ErrorCode marks it failed. */
 void Finish(const FString& OperationId, const FMcpFabAddResult& Outcome);
 
+/**
+ * Stops one import where Fab gives a way to (McpFabImportCancel.cpp). A queued add is dropped at once; a
+ * running one is told to stop, and the watcher ends it as CANCELLED on its next tick. False says why not.
+ */
+bool RequestCancel(const FString& OperationId, FString& OutMessage, FString& OutErrorCode);
+
+/** True when a cancel was accepted for this import; the watcher reads it to end the import as CANCELLED. */
+bool IsCancelRequested(const FString& OperationId);
+
 /** The operation running now (resolving, downloading or importing), if any. There is at most one. */
 bool FindRunning(const FString& CacheLocation, FMcpFabImportStatus& OutStatus);
 

@@ -14,6 +14,7 @@ namespace
 {
 const TCHAR* const AssetsPipelinePath = TEXT("/Script/InterchangePipelines.InterchangeGenericAssetsPipeline");
 const TCHAR* const MeshPipelinePath = TEXT("/Script/InterchangePipelines.InterchangeGenericMeshPipeline");
+const TCHAR* const ManagerPath = TEXT("/Script/InterchangeEngine.InterchangeManager");
 
 /** UE 5.8 names the setting CombineStaticMeshesBehavior (an enum); earlier engines have bCombineStaticMeshes. */
 const FEnumProperty* FindBehaviorProperty(const UClass* MeshPipeline)
@@ -24,6 +25,22 @@ const FEnumProperty* FindBehaviorProperty(const UClass* MeshPipeline)
 const FBoolProperty* FindFlagProperty(const UClass* MeshPipeline)
 {
 	return CastField<FBoolProperty>(MeshPipeline->FindPropertyByName(TEXT("bCombineStaticMeshes")));
+}
+
+// The Interchange manager, through its own BlueprintCallable accessor, so InterchangeEngine is never linked.
+UObject* FindManager()
+{
+	const UClass* ManagerClass = FindObject<UClass>(nullptr, ManagerPath);
+	UFunction* GetManager = ManagerClass != nullptr ? ManagerClass->FindFunctionByName(TEXT("GetInterchangeManagerScripted")) : nullptr;
+	if (GetManager == nullptr)
+	{
+		return nullptr;
+	}
+	TArray<uint8> Params;
+	Params.SetNumZeroed(GetManager->ParmsSize);
+	ManagerClass->GetDefaultObject()->ProcessEvent(GetManager, Params.GetData());
+	const FObjectProperty* Returned = CastField<FObjectProperty>(GetManager->GetReturnProperty());
+	return Returned != nullptr ? Returned->GetObjectPropertyValue_InContainer(Params.GetData()) : nullptr;
 }
 
 /** Turns combining off on one mesh pipeline; false when it was already off or has no such setting. */
@@ -94,5 +111,32 @@ int32 SeparateMeshes()
 		}
 	}
 	return Changed;
+}
+
+bool CancelTasks()
+{
+	UObject* Manager = FindManager();
+	UFunction* CancelAll = Manager != nullptr ? Manager->FindFunction(TEXT("CancelAllTasks")) : nullptr;
+	if (CancelAll == nullptr)
+	{
+		return false;
+	}
+	Manager->ProcessEvent(CancelAll, nullptr);
+	return true;
+}
+
+bool IsActive()
+{
+	UObject* Manager = FindManager();
+	UFunction* Query = Manager != nullptr ? Manager->FindFunction(TEXT("IsInterchangeActive")) : nullptr;
+	if (Query == nullptr)
+	{
+		return false;
+	}
+	TArray<uint8> Params;
+	Params.SetNumZeroed(Query->ParmsSize);
+	Manager->ProcessEvent(Query, Params.GetData());
+	const FBoolProperty* Answer = CastField<FBoolProperty>(Query->GetReturnProperty());
+	return Answer != nullptr && Answer->GetPropertyValue_InContainer(Params.GetData());
 }
 } // namespace McpFabInterchange

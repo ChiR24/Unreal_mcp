@@ -6,9 +6,9 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   // lifecycle (action-mode writes)
   {
     primary: 'import_marketplace_asset', selector: 'marketplace',
-    summary: 'Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), download a Fab asset, or import a Megascans asset.',
-    topics: ['fab', 'megascans', 'marketplace', 'download asset', 'quixel'],
-    members: { fab_listing: 'add_fab_asset_to_project', fab_download: 'download_fab_asset', megascans: 'import_megascans_asset' },
+    summary: 'Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), cancel a Fab import that is queued or downloading, download a Fab asset, or import a Megascans asset.',
+    topics: ['fab', 'megascans', 'marketplace', 'download asset', 'quixel', 'cancel fab import', 'stop fab import'],
+    members: { fab_listing: 'add_fab_asset_to_project', fab_cancel: 'cancel_fab_import', fab_download: 'download_fab_asset', megascans: 'import_megascans_asset' },
   },
   {
     primary: 'source_control', selector: 'sourceControlOp',

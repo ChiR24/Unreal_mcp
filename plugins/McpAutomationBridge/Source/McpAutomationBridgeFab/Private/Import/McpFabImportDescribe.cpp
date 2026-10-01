@@ -69,6 +69,7 @@ void Describe(const FOperation& Op, const FString& CacheLocation, FMcpFabImportS
 	Out.Result = Op.Result;
 	Out.FabErrors = Op.FabErrors;
 	Out.DownloadedBytes = -1;
+	Out.DownloadPercent = -1.0f;
 	Out.QueuePosition = PositionOf(Op);
 	Out.ElapsedSeconds = (IsOpen(Op) ? FPlatformTime::Seconds() : Op.FinishedAt) - Op.StartedAt;
 
@@ -108,6 +109,19 @@ void Describe(const FOperation& Op, const FString& CacheLocation, FMcpFabImportS
 			}
 		}
 		break;
+	}
+
+	// Fab's own notification is the one place a download's percent shows, for a pack and a source format alike.
+	McpFabDownloadProgress::FNotification Toast;
+	if (Op.State == EState::Active && Out.Phase == TEXT("downloading"))
+	{
+		Toast = McpFabDownloadProgress::Read(ToastName(Op));
+		Out.DownloadPercent = Toast.Percent;
+	}
+	Out.bCancellable = IsOpen(Op) && !Op.bCancelRequested && RouteFor(Op, Toast) != ECancelRoute::None;
+	if (IsOpen(Op) && Op.bCancelRequested)
+	{
+		Out.Phase = TEXT("cancelling");
 	}
 }
 } // namespace McpFabImportOperations

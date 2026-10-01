@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `80f60b249066d6a1`
+Catalog revision: `f646919c5c4c730f`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -166,7 +166,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.duplicate` | `manage_asset` | `duplicate` | write | write | explicit | `manage_asset.duplicate` `manage_asset.duplicate_asset` |
 | `asset.edit_material_instance` | `manage_asset` | `add_material_parameter` | write | write | explicit | `manage_asset.edit_material_instance` `manage_asset.add_material_parameter` `manage_asset.reset_instance_parameters` |
 | `asset.import` | `manage_asset` | `import` | write | write | explicit | `manage_asset.import` |
-| `asset.import_marketplace_asset` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.import_marketplace_asset` `manage_asset.add_fab_asset_to_project` `manage_asset.download_fab_asset` `manage_asset.import_megascans_asset` |
+| `asset.import_marketplace_asset` | `manage_asset` | `add_fab_asset_to_project` | write | write | explicit | `manage_asset.import_marketplace_asset` `manage_asset.add_fab_asset_to_project` `manage_asset.cancel_fab_import` `manage_asset.download_fab_asset` `manage_asset.import_megascans_asset` |
 | `asset.inspect_asset` | `manage_asset` | `get_metadata` | read | read | none | `manage_asset.inspect_asset` `manage_asset.get_metadata` `manage_asset.get_dependencies` `manage_asset.get_asset_graph` `manage_asset.validate` `manage_asset.generate_report` |
 | `asset.list` | `manage_asset` | `list` | read | read | none | `manage_asset.list` `manage_asset.list_content_sources` `manage_asset.list_instances` |
 | `asset.maintain_content` | `manage_asset` | `bulk_rename` | write | write | explicit | `manage_asset.maintain_content` `manage_asset.bulk_rename` `manage_asset.fixup_redirectors` `manage_asset.refresh_blueprints` `manage_asset.migrate_assets` |

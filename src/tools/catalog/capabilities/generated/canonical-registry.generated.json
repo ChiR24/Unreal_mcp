@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "80f60b249066d6a1",
+  "catalogRevision": "f646919c5c4c730f",
   "recordCount": 389,
   "records": [
     {
@@ -7669,6 +7669,7 @@
       "id": "asset.import_marketplace_asset",
       "aliases": [
         "asset.add_fab_asset_to_project",
+        "asset.cancel_fab_import",
         "asset.download_fab_asset",
         "asset.import_megascans_asset"
       ],
@@ -7682,6 +7683,13 @@
           "action": "add_fab_asset_to_project",
           "folded": {
             "marketplace": "fab_listing"
+          }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "cancel_fab_import",
+          "folded": {
+            "marketplace": "fab_cancel"
           }
         },
         {
@@ -7708,11 +7716,14 @@
           "megascans",
           "marketplace",
           "download asset",
-          "quixel"
+          "quixel",
+          "cancel fab import",
+          "stop fab import"
         ],
-        "summary": "Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), download a Fab asset, or import a Megascans asset.",
+        "summary": "Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), cancel a Fab import that is queued or downloading, download a Fab asset, or import a Megascans asset.",
         "whenToUse": [
           "marketplace=fab_listing: A Fab listing id is known and its content must be added to the project through the signed-in Fab tab.",
+          "marketplace=fab_cancel: A Fab import that is queued, or a unreal-engine pack that is downloading, must be stopped: a wrong listing, or one taking too long.",
           "marketplace=fab_download: A signed Fab download URL is in hand and the pack must be fetched to disk; it lands in the Fab cache, not in /Game.",
           "marketplace=megascans: A Megascans pack already downloaded by Bridge must be imported with its master materials and presets applied."
         ],
@@ -7720,6 +7731,8 @@
           "marketplace=fab_listing: The listing must first be found or judged (use asset.query_marketplace).",
           "marketplace=fab_listing: An import is already running and only its progress is wanted (use asset.query_marketplace with lookup=fab_import_status).",
           "marketplace=fab_listing: The pack is already downloaded on disk and only needs copying in (use asset.maintain_content with maintenance=migrate).",
+          "marketplace=fab_cancel: Only the progress of the import is wanted (use asset.query_marketplace with lookup=fab_import_status).",
+          "marketplace=fab_cancel: Assets an import already created must be removed (use asset.delete).",
           "marketplace=fab_download: Only a listing id is known, with no signed URL (use marketplace=fab_listing, which adds the listing directly).",
           "marketplace=fab_download: Downloads already on disk must be listed, not fetched again (use asset.query_marketplace).",
           "marketplace=megascans: The Megascans library index must be browsed first (use asset.query_marketplace).",
@@ -7738,6 +7751,10 @@
             "combineMeshes": {
               "type": "boolean",
               "description": "Only for source mesh formats (fbx, obj, gltf, glb, usdz) that Fab imports itself; ignored for Megascans and unreal-engine packs. Omit to leave Fab's behaviour alone: every mesh of a file is merged into ONE static mesh. false imports each mesh as its own asset: the adapter switches off Interchange's mesh combining on the pipelines Fab generated for this import, and the status read's combineMeshesApplied says whether that landed in time (COMBINE_UNSUPPORTED refuses the call when this engine gives no way to). true accepts the single merged mesh explicitly, which a scene-sized file (one mesh file of 50 MB or more) requires."
+            },
+            "operationId": {
+              "type": "string",
+              "description": "Operation id from the add reply (or the status read's queue). Restricted to [A-Za-z0-9_-], 64 characters max."
             },
             "assetId": {
               "type": "string",
@@ -7790,6 +7807,7 @@
               "type": "string",
               "enum": [
                 "fab_listing",
+                "fab_cancel",
                 "fab_download",
                 "megascans"
               ],
@@ -7869,6 +7887,10 @@
               "type": "string",
               "description": "What to do next: poll the status read, do not add again."
             },
+            "cancelled": {
+              "type": "boolean",
+              "description": "True when the cancel was accepted."
+            },
             "downloadSucceeded": {
               "type": "boolean",
               "description": "Downloader-reported success."
@@ -7909,7 +7931,7 @@
       },
       "examples": [
         {
-          "title": "Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), download a Fab asset, or import a Megascans asset.",
+          "title": "Bring a marketplace asset into the project: add a Fab listing (it returns at once with an operationId; poll query_marketplace lookup=fab_import_status), cancel a Fab import that is queued or downloading, download a Fab asset, or import a Megascans asset.",
           "input": {
             "listingId": "ac2818b3-7d35-4cf5-a1af-cbf8ff5c61c1",
             "action": "import_marketplace_asset",
@@ -7953,6 +7975,7 @@
           "param": "marketplace",
           "actions": {
             "fab_listing": "add_fab_asset_to_project",
+            "fab_cancel": "cancel_fab_import",
             "fab_download": "download_fab_asset",
             "megascans": "import_megascans_asset"
           },
@@ -7962,6 +7985,9 @@
             ],
             "combineMeshes": [
               "fab_listing"
+            ],
+            "operationId": [
+              "fab_cancel"
             ],
             "assetId": [
               "fab_download",
@@ -7999,8 +8025,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "78b3b1667447856ff95cae87f05e76cdc57d2865faa3851b17b04f8351c636ca",
-        "content": "20ecf05cc9f2979096e8cebb13cf47b8d16fe425f7b6b799f2027678af1ffd05"
+        "schema": "b47e28115e985fbccbf2910883bc63a92950f63ad865db53297d364a18e5b27d",
+        "content": "2bf6889052b4d8993c28ca020a5bf6d3fe3f6fbeb0a63389e5f5b6e0e8a94687"
       }
     },
     {
@@ -10244,7 +10270,7 @@
             },
             "phase": {
               "type": "string",
-              "description": "queued, resolving, downloading, importing, done or failed."
+              "description": "queued, resolving, downloading, importing, cancelling, done or failed."
             },
             "finished": {
               "type": "boolean",
@@ -10260,7 +10286,7 @@
                 "type": "object",
                 "x-unreal-reflection-boundary": true
               },
-              "description": "The import that is running, then every add waiting behind it in the order they start: operationId, listingId, title, phase, queuePosition, elapsedSeconds and downloadedBytes when known. Absent when nothing is running or queued."
+              "description": "The import that is running, then every add waiting behind it in the order they start: operationId, listingId, title, phase, queuePosition, elapsedSeconds, and downloadedBytes and downloadPercent when known. Absent when nothing is running or queued."
             },
             "queueLength": {
               "type": "number",
@@ -10306,6 +10332,14 @@
               "type": "number",
               "description": "Bytes fetched so far, when the download folder shows them. Absent when the download cannot be observed (a unreal-engine pack, or a download that has not begun)."
             },
+            "downloadPercent": {
+              "type": "number",
+              "description": "0-100, as Fab's own download notification shows it, for a unreal-engine pack and a source format alike. Absent when that notification cannot be read: before the download starts, after it ends, or when Fab shows none."
+            },
+            "cancellable": {
+              "type": "boolean",
+              "description": "Present while the import is not finished: true when a cancel would stop it right now (queued, a unreal-engine pack that is downloading, or an import Interchange is translating); false for a source-format download, which Fab gives no cancel for."
+            },
             "assetsSoFar": {
               "type": "number",
               "description": "New assets the asset registry has gained so far."
@@ -10338,7 +10372,7 @@
             },
             "failureCode": {
               "type": "string",
-              "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), or the add's own refusal code."
+              "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code."
             },
             "failure": {
               "type": "string",
@@ -10438,8 +10472,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b1da7486e0c4b8a5d9600cbe73f08b1baca7c17cca552c9e1234592aa9d5e065",
-        "content": "69d06d6c3faae7db3bfc04128c20e9bdb7d58fefd9181bbc12104723165c8073"
+        "schema": "077800fbfda0c0cb9852c09648af4d05cff6f67743072c803270a9571fe6f9ef",
+        "content": "35da868c99bf2e0152a88078acb8b52a3c28d7d9b93d527ab9f35a0048d0d367"
       }
     },
     {

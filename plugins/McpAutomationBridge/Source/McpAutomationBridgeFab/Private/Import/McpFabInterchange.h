@@ -26,4 +26,14 @@ bool CanSeparateMeshes();
  * returning how many it changed. Fab's pipelines are the rooted ones; the project's own are assets.
  */
 int32 SeparateMeshes();
+
+/**
+ * Asks Interchange to cancel every import task it is running, through the manager's own cancel.
+ * It stops a translation that is under way; a mesh build already holding the game thread cannot be
+ * reached. Returns false when this engine has no Interchange manager to ask.
+ */
+bool CancelTasks();
+
+/** True while Interchange reports an import in flight, asked through the manager's own IsInterchangeActive. */
+bool IsActive();
 } // namespace McpFabInterchange
