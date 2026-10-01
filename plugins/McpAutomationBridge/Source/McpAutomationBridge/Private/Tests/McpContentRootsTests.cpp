@@ -5,6 +5,7 @@
 #include "Misc/AutomationTest.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
+#include "Core/Subsystem/McpAutomationBridgeSubsystemResponseSanitization.h"
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 
@@ -148,6 +149,68 @@ bool FMcpContentRootsPathAcceptanceTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("the unmounted root is named"), Message.Contains(TEXT("'McpContentRootsProbe' is not a mounted content root")));
 	TestTrue(TEXT("the mounted roots are listed"), Message.Contains(TEXT("Mounted roots: /Game")));
 	TestTrue(TEXT("the field is named"), Message.Contains(TEXT("Invalid packagePaths '/McpContentRootsProbe'")));
+	TestFalse(TEXT("the list ends the message, with no full stop for a redactor to read as part of a path"), Message.EndsWith(TEXT(".")));
+
+	// A mounted root that starts like the mistyped one is listed next to /Game, where a caller looks first.
+	FPackageName::RegisterMountPoint(ProbeRoot, Dir);
+	const FString Near = McpPathRefusalMessage(TEXT("path"), TEXT("/McpContentRootsProbeX/Props"));
+	FPackageName::UnRegisterMountPoint(ProbeRoot, Dir);
+	TestTrue(TEXT("the closest mounted root follows /Game"), Near.Contains(TEXT("Mounted roots: /Game, /McpContentRootsProbe")));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FMcpContentRootsRedactionTest,
+	"McpAutomationBridge.Transport.ContentRoots.ReplyRedaction",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpContentRootsRedactionTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+	using namespace McpContentRootsTestsLocal;
+	using McpAutomationBridgeSubsystemResponse::SanitizeEngineErrorForResponse;
+	const FString Dir = ProbeDir();
+	FPackageName::RegisterMountPoint(ProbeRoot, Dir);
+
+	// A mount that is registered stays readable in a reply, bare or with a path below it, as /Game does.
+	const TCHAR* Kept[] = {
+		TEXT("Invalid package path '/McpContentRootsProbe/Props/Rocks': no such folder"),
+		TEXT("Invalid package path '/McpContentRootsProbe': nothing there"),
+		TEXT("roots: /McpContentRootsProbe, /Game")};
+	for (const TCHAR* Text : Kept)
+	{
+		TestEqual(FString::Printf(TEXT("'%s' is kept"), Text), SanitizeEngineErrorForResponse(Text), FString(Text));
+	}
+
+	// A host path is hidden, and so is a root nothing has mounted. A root that is not mounted any more is hidden too.
+	const TCHAR* Hidden[] = {
+		TEXT("failed at /etc/passwd now"),		   TEXT("failed at /home/alice/project now"),
+		TEXT("failed at /Users/alice/project now"), TEXT("failed at C:/Users/alice/project now"),
+		TEXT("failed at \\\\server\\share\\alice now"), TEXT("failed at /NotMountedAnywhere/alice now")};
+	for (const TCHAR* Text : Hidden)
+	{
+		const FString Reply = SanitizeEngineErrorForResponse(Text);
+		TestTrue(FString::Printf(TEXT("'%s' is hidden"), Text), Reply.Contains(TEXT("[path redacted]")) && !Reply.Contains(TEXT("alice")) && !Reply.Contains(TEXT("passwd")) && !Reply.Contains(TEXT("NotMounted")));
+	}
+
+	// A host root never counts, whatever is mounted under that name.
+	const FString UsersRoot = TEXT("/Users/");
+	FPackageName::RegisterMountPoint(UsersRoot, Dir);
+	TestTrue(TEXT("a mount named like a host root is still hidden"),
+		SanitizeEngineErrorForResponse(TEXT("failed at /Users/alice/project now")).Contains(TEXT("[path redacted]")));
+	FPackageName::UnRegisterMountPoint(UsersRoot, Dir);
+
+	// The log device does not ask the engine which mounts exist, so there a mount reads as it always did.
+	TestTrue(TEXT("without mounts the probe is hidden"),
+		SanitizeEngineErrorForResponse(TEXT("failed at /McpContentRootsProbe/Props now"), /*bNameMounts=*/false).Contains(TEXT("[path redacted]")));
+
+	// The refusal for a root that is not mounted reaches the caller whole: the root named, the mounted roots readable.
+	FString Reply = SanitizeEngineErrorForResponse(McpPathRefusalMessage(TEXT("packagePaths"), TEXT("/McpContentRootsProbeX/Props")));
+	TestTrue(TEXT("the unmounted root is still named"), Reply.Contains(TEXT("'McpContentRootsProbeX' is not a mounted content root")));
+	TestTrue(TEXT("the mounted roots are readable"), Reply.Contains(TEXT("Mounted roots: /Game, /McpContentRootsProbe")));
+	TestEqual(TEXT("only what the caller sent is hidden"), Reply.ReplaceInline(TEXT("[path redacted]"), TEXT("")), 1);
+
+	FPackageName::UnRegisterMountPoint(ProbeRoot, Dir);
 	return true;
 }
 

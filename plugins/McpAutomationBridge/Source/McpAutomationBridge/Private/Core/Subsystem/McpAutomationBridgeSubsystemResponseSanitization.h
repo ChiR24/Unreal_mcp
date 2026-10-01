@@ -63,13 +63,16 @@ inline bool IsAllowedUnrealMountPrefixAt(
              || Next == TEXT('.') || Next == TEXT('\\'));
 }
 
-inline bool IsAllowedUnrealMountPath(const FString& Value, int32 Index)
+// The five engine roots, and a content mount registered right now when bNameMounts: a plugin or Fab pack mount is
+// as public as /Game. Not from a log device, which can run while the engine holds its mount lock.
+inline bool IsAllowedUnrealMountPath(const FString& Value, int32 Index, bool bNameMounts = true)
 {
     return IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Game")) ||
            IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Engine")) ||
            IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Script")) ||
            IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Temp")) ||
-           IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Niagara"));
+           IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("/Niagara")) ||
+           (bNameMounts && IsRegisteredContentMountAt(Value, Index));
 }
 
 // Characters that may appear INSIDE a bare path segment. Space, '(' and ')'
@@ -107,7 +110,7 @@ inline bool IsUnrealMountPathChar(TCHAR Character)
            Character == '_' || Character == '-' || Character == ':';
 }
 
-inline FString RedactFilesystemPathsForResponse(const FString& Input)
+inline FString RedactFilesystemPathsForResponse(const FString& Input, bool bNameMounts = true)
 {
     FString Output;
     Output.Reserve(Input.Len());
@@ -115,7 +118,7 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input)
     for (int32 Index = 0; Index < Input.Len();)
     {
         const bool bAllowedUnrealPath =
-            Input[Index] == '/' && IsAllowedUnrealMountPath(Input, Index);
+            Input[Index] == '/' && IsAllowedUnrealMountPath(Input, Index, bNameMounts);
         // A lone '/' in prose is a separator, not a path root: require a
         // plausible path character next, then either a second separator or a
         // known host root as the first segment. Spaces and parentheses only
@@ -185,7 +188,7 @@ inline FString RedactFilesystemPathsForResponse(const FString& Input)
             // A package file under mounted content is named by its package path instead.
             FString Package, Rest;
             Output += MapContentPathForResponse(Input.Mid(Index, End - Index), Package, Rest)
-                ? Package + RedactFilesystemPathsForResponse(Rest) : FString(TEXT("[path redacted]"));
+                ? Package + RedactFilesystemPathsForResponse(Rest, bNameMounts) : FString(TEXT("[path redacted]"));
             Index = End;
             continue;
         }
@@ -273,11 +276,11 @@ inline void RedactKeyedValueForResponse(FString& Text, const TCHAR* Key)
     }
 }
 
-inline FString SanitizeEngineErrorForResponse(const FString& In)
+inline FString SanitizeEngineErrorForResponse(const FString& In, bool bNameMounts = true)
 {
     // The receipt masker first (passwd/pwd/api-key, quoted JSON and Bearer forms), then
     // this path's own markers, which also swallow a whole header value ("Authorization: Basic a b").
-    FString Out = McpMaskSecrets(RedactFilesystemPathsForResponse(SanitizeForLog(In)));
+    FString Out = McpMaskSecrets(RedactFilesystemPathsForResponse(SanitizeForLog(In), bNameMounts));
     for (const TCHAR* Key : {TEXT("userid"), TEXT("accountid"), TEXT("loginid")})
     {
         RedactKeyedValueForResponse(Out, Key);

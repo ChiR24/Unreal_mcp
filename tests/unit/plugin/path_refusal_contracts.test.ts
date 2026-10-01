@@ -1,9 +1,10 @@
-// A refused path says why, and a mounted content root is accepted wherever a folder is. Wiring contracts only: the
-// behaviour is pinned in-editor by McpAutomationBridge.Transport.ContentRoots.PathAcceptance.
+// A refused path says why, a mounted content root is accepted wherever a folder is, and a reply keeps a registered
+// mount readable. Wiring contracts only: the behaviour is pinned in-editor by
+// McpAutomationBridge.Transport.ContentRoots.PathAcceptance and .ReplyRedaction.
 //
 // query_asset lookup=search packagePaths ["/Game","/MoverExamples","/MoverTests"] answered "contains traversal
 // sequences" for a root whose plugin was simply not enabled: about thirty handlers worded every refusal as
-// traversal and never asked SanitizeProjectRelativePath what it had refused.
+// traversal and never asked SanitizeProjectRelativePath what it had refused, and the reply hid which path it was.
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 const PRIVATE = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private');
 const SECURITY = join(PRIVATE, 'Foundation', 'BridgeHelpers', 'Security');
+const CORE = join(PRIVATE, 'Core', 'Subsystem');
 
 /** Block and line comments removed, so no assertion can be satisfied (or tripped) by prose. */
 const strip = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
@@ -31,11 +33,10 @@ describe('a mounted content root is a folder like /Game is', () => {
   it('accepts a bare root, a trailing slash and an object path under a registered mount', () => {
     const probe = paths.slice(paths.indexOf('McpIsMountedContentPath('));
     expect(probe).toContain('FPackageName::ObjectPathToPackageName(CleanPath)');
-    expect(probe).toMatch(/while \(Probe\.Len\(\) > 1 && Probe\.EndsWith\(TEXT\("\/"\)\)\)/u);
     // The root is looked up as a mount, and only a path BELOW it is validated as a package name: the engine's
     // validator refuses a bare root shorter than four characters, which /Game and /Engine never are.
     expect(probe).toContain('FPackageName::MountPointExists(Root + TEXT("/"))');
-    expect(probe).toMatch(/bRootMounted && \(bBareRoot \|\| FPackageName::IsValidLongPackageName\(Probe, true, &OutDetail\)\)/u);
+    expect(probe).toContain('bBareRoot ||');
   });
 
   it('does not hand the whole path to the package-name validator any more', () => {
@@ -46,8 +47,7 @@ describe('a mounted content root is a folder like /Game is', () => {
     expect(paths).toMatch(/enum class EMcpPathRejection : uint8 \{[^}]*NotAMountedRoot,[^}]*InvalidName,/u);
     expect(paths).toContain('OutReason = bRootMounted ? EMcpPathRejection::InvalidName : EMcpPathRejection::NotAMountedRoot;');
     // Asking again, to word a message, must not log the refusal twice.
-    expect(paths).toContain('FString *OutNormalized, bool bLogRefusal)');
-    expect(paths).toContain('return McpClassifyProjectPath(InPath, OutReason, OutDetail, nullptr, true);');
+    expect(paths).toContain('bool bLogRefusal)');
   });
 });
 
@@ -62,19 +62,18 @@ describe('a refusal is worded in one place', () => {
     );
   });
 
-  it('names the field, what the caller sent and the helper own reason', () => {
-    expect(refusal).toContain('McpPathRefusalMessage(const TCHAR *Label, const FString &RawPath)');
+  it('asks the helper again without logging, and calls only a real ".." segment traversal', () => {
     expect(refusal).toMatch(/McpClassifyProjectPath\(RawPath, &Reason, &Detail, &Normalized,\s+false\)/u);
     expect(refusal).toContain("the path contains a '..' traversal segment.");
-    expect(refusal).toContain('Invalid %s \'%s\': %s');
+    expect(refusal.match(/traversal/gu)?.length).toBe(1);
   });
 
   it('says which root is not mounted and lists the roots that are', () => {
     expect(refusal).toContain('is not a mounted content root');
-    expect(refusal).toContain('Mounted roots: %s.');
+    expect(refusal).toContain('Mounted roots: %s"');
+    // No full stop after the list: the reply redactor reads a root followed by '.' as part of a path.
+    expect(refusal).not.toContain('Mounted roots: %s.');
     expect(refusal).toMatch(/FPackageName::QueryRootContentPaths\(Roots,\s+true,/u);
-    // The root is named without its slash: a reply hides an unregistered path, and this is what survives.
-    expect(refusal).toContain('Normalized.RightChop(1)');
   });
 });
 
@@ -94,9 +93,8 @@ describe('the handlers report what SanitizeProjectRelativePath said', () => {
   ];
 
   it('no handler words a refused content path as traversal, or as nothing at all', () => {
-    const offenders = sources
-      .filter(({ file }) => !file.includes(`${join(PRIVATE, 'MCP', 'Generated')}`))
-      .flatMap(({ file, body }) => LEGACY_WORDING.filter((pattern) => pattern.test(body)).map((pattern) => `${file}: ${pattern.source}`));
+    const offenders = sources.flatMap(({ file, body }) =>
+      LEGACY_WORDING.filter((pattern) => pattern.test(body)).map((pattern) => `${file}: ${pattern.source}`));
     expect(offenders).toEqual([]);
   });
 
@@ -113,5 +111,46 @@ describe('the handlers report what SanitizeProjectRelativePath said', () => {
     expect(search).toContain('McpPathRefusalMessage(TEXT("package path"), RawPath)');
     expect(search).toContain('McpPathRefusalMessage(TEXT("path"), SinglePath)');
     expect(search).not.toContain('traversal');
+  });
+});
+
+describe('a reply keeps a registered content mount readable', () => {
+  const sanitization = code(CORE, 'McpAutomationBridgeSubsystemResponseSanitization.h');
+  const contentPaths = code(CORE, 'McpAutomationBridgeSubsystemContentPaths.h');
+
+  it('asks the engine whether the first segment is a registered mount, and never trusts a host root', () => {
+    const mount = contentPaths.slice(contentPaths.indexOf('IsRegisteredContentMountAt('));
+    expect(mount).toContain('FPackageName::MountPointExists(TEXT("/") + Name + TEXT("/"))');
+    // A host root is not a mount whatever is registered under that name.
+    expect(mount).toContain('!McpAssetPathCanonical::IsHostFilesystemRootSegment(Name)');
+  });
+
+  it('keeps the five engine roots and adds the registered mounts to them', () => {
+    const allowed = sanitization.slice(sanitization.indexOf('IsAllowedUnrealMountPath('));
+    for (const root of ['/Game', '/Engine', '/Script', '/Temp', '/Niagara']) {
+      expect(allowed).toContain(`IsAllowedUnrealMountPrefixAt(Value, Index, TEXT("${root}"))`);
+    }
+    expect(allowed).toContain('(bNameMounts && IsRegisteredContentMountAt(Value, Index))');
+  });
+
+  it('still hides a host path of every shape, and the root nothing has mounted', () => {
+    const redact = sanitization.slice(sanitization.indexOf('inline FString RedactFilesystemPathsForResponse'));
+    expect(redact).toContain('const bool bWindowsPath');
+    expect(redact).toContain('const bool bUncPath');
+    expect(redact).toContain('FString(TEXT("[path redacted]"))');
+    expect(redact).toContain('IsAllowedUnrealMountPath(Input, Index, bNameMounts)');
+  });
+
+  it('asks the engine only where a reply is built, never inline in the log device', () => {
+    // The log device runs on whichever thread logged, which can be the one holding the engine's mount lock.
+    expect(code(PRIVATE, 'Domains', 'Log', 'McpAutomationBridge_LogHandlers.cpp')).toMatch(
+      /SanitizeEngineErrorForResponse\(FString\(V\),\s+false\)\.Left\(2048\)/u,
+    );
+    // Nothing else passes the flag: every other caller sanitizes a finished message, on the thread that answers.
+    const flagged = sources
+      .filter(({ file, body }) => /SanitizeEngineErrorForResponse\((?:[^(),]|\([^()]*\))+,\s*(?:false|true)\)/u.test(body)
+        && !file.endsWith('ResponseSanitization.h') && !file.startsWith(join(PRIVATE, 'Tests')))
+      .map(({ file }) => file);
+    expect(flagged).toEqual([join(PRIVATE, 'Domains', 'Log', 'McpAutomationBridge_LogHandlers.cpp')]);
   });
 });

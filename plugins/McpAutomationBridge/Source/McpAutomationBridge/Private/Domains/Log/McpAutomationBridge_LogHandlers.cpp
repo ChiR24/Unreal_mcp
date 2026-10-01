@@ -81,8 +81,10 @@ public:
         const FString VerbosityString =
             ToString(static_cast<ELogVerbosity::Type>(Verbosity & ELogVerbosity::VerbosityMask));
 
+        // Runs inline on whichever thread logged, which can be the one holding the engine's mount lock (a failed
+        // dismount logs under it), so it never asks the engine which content mounts are registered.
         const FString Message =
-            SanitizeEngineErrorForResponse(FString(V)).Left(2048);
+            SanitizeEngineErrorForResponse(FString(V), /*bNameMounts=*/false).Left(2048);
         TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakSubsystem(Subsystem);
 
         AsyncTask(ENamedThreads::GameThread,
