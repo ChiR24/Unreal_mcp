@@ -717,4 +717,13 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     expect(description('results')).toMatch(/with a placementWarning under report: failures/u);
     expect(description('results')).toMatch(/measured after the item took its tags, variables and material/u);
   });
+
+  // A fin whose pivot is a corner, sunk into a hull on purpose, was told "z=2545 would rest on it": the bounds centre's
+  // height, with the bounds centre's x and y, which would have moved it sideways.
+  it('suggests the actor location that rests it on the surface, whatever its pivot', () => {
+    const check = read('McpAutomationBridge_ControlActorPlacementCheck.cpp');
+    expect(check).toContain('const double SuggestedZ = ActorLocation.Z - Clearance;');
+    expect(check).toContain('Suggested->SetNumberField(TEXT("x"), ActorLocation.X);');
+    expect(check, 'no claim that every location is a bounds centre').not.toContain('is its bounds centre, not its base');
+  });
 });

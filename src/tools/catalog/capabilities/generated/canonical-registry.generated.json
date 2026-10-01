@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "db91f55731cdd44b",
+  "catalogRevision": "fec3ea74d852df97",
   "recordCount": 389,
   "records": [
     {
@@ -34149,7 +34149,7 @@
             },
             "placementWarning": {
               "type": "string",
-              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor's location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
             },
             "mountedOn": {
               "type": "string",
@@ -34169,7 +34169,7 @@
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "x, y, z that would rest the actor on the surface under it; present only when it is sunk."
+              "description": "The actor location (x, y, z) that rests the actor on the surface under it: its own location raised by the depth it is sunk, whatever its pivot. Present only when it is sunk."
             },
             "spawned": {
               "type": "number",
@@ -34318,8 +34318,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7f26423d55f2858a4a30dcddc8c15d87d0f55459033bf817ece6bb872746ee4f",
-        "content": "c91a63cece95c2f304b69f15d7810812529027dbf362ff942fe8396821a75982"
+        "schema": "d4df3bdf7eb72c3caa38ebff0ed2499104309d72490a45a5a7ac12c28d2d9f98",
+        "content": "e1e0c7bd214436ccd7a3bf30a670dd4d3e58a5dfc236b1d1e95ddd094c49a055"
       }
     },
     {

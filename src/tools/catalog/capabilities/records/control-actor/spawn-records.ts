@@ -23,7 +23,7 @@ const SPAWN_UNDO = {
 const SPAWN_PLACEMENT = {
   groundZ: num('Z of the solid surface under the actor; absent when nothing is below it.'),
   groundClearance: num('How far the bottom of the actor\'s bounds sits above that surface; negative means it is sunk into it.'),
-  placementWarning: str('Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor\'s location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported.'),
+  placementWarning: str('Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported.'),
   mountedOn: str('The actor this one hangs on from the side (a window band flush on a hall, an awning on a facade): its bounds touch or overlap that actor\'s vertical face, so it is held up and is not reported floating or without a surface below. Present only then.'),
   overlappingActors: {
     type: 'array',
@@ -35,7 +35,7 @@ const SPAWN_PLACEMENT = {
     type: 'object',
     additionalProperties: true,
     'x-unreal-reflection-boundary': true,
-    description: 'x, y, z that would rest the actor on the surface under it; present only when it is sunk.',
+    description: 'The actor location (x, y, z) that rests the actor on the surface under it: its own location raised by the depth it is sunk, whatever its pivot. Present only when it is sunk.',
   },
 } as const;
 

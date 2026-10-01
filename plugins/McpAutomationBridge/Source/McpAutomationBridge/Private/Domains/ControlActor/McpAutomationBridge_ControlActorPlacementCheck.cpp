@@ -278,16 +278,18 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     if (Clearance < -SunkFloor) {
       // The exact trap that buried a Character: its location is the capsule
       // CENTRE, so reusing a StaticMeshActor's feet-relative Z sinks it by half
-      // its height. Hand back the Z that actually rests on the surface.
-      const double SuggestedZ = GroundZ + Extent.Z;
+      // its height. Hand back the actor location that rests it on the surface: its own location raised by the depth,
+      // whatever its pivot (the bounds centre was right for a capsule and moved a corner-pivot mesh sideways).
+      const FVector ActorLocation = Actor->GetActorLocation();
+      const double SuggestedZ = ActorLocation.Z - Clearance;
       TSharedPtr<FJsonObject> Suggested = MakeShared<FJsonObject>();
-      Suggested->SetNumberField(TEXT("x"), Origin.X);
-      Suggested->SetNumberField(TEXT("y"), Origin.Y);
+      Suggested->SetNumberField(TEXT("x"), ActorLocation.X);
+      Suggested->SetNumberField(TEXT("y"), ActorLocation.Y);
       Suggested->SetNumberField(TEXT("z"), FMath::RoundToDouble(SuggestedZ));
       Data->SetObjectField(TEXT("suggestedLocation"), Suggested);
       Notes.Add(FString::Printf(
-          TEXT("sunk %.0f units below the surface under it; an actor's location "
-               "is its bounds centre, not its base -- z=%.0f would rest on it"),
+          TEXT("sunk %.0f units below the surface under it (the bottom of its bounds); z=%.0f would rest it on the "
+               "surface"),
           -Clearance, SuggestedZ));
     } else if (Clearance > 50.0) {
       // Only support from below was looked for, so a window band flush on a hall or an awning on a facade

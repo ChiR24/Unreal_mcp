@@ -4546,7 +4546,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "placementWarning": {
           "type": "string",
-          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor's location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
         },
         "placementWarnings": {
           "type": "number",
@@ -4690,7 +4690,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
-          "description": "x, y, z that would rest the actor on the surface under it; present only when it is sunk."
+          "description": "The actor location (x, y, z) that rests the actor on the surface under it: its own location raised by the depth it is sunk, whatever its pivot. Present only when it is sunk."
         },
         "totalCount": {
           "type": "number",
