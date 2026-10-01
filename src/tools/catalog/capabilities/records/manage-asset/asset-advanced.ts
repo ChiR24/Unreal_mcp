@@ -1,14 +1,38 @@
-// Asset advanced records: render targets, LODs, material parameters,
-// instances, nanite, bulk operations, and source-control workflow.
+// Asset advanced records: render targets, LODs, mesh material slots, material
+// parameters, instances, nanite, bulk operations, and source-control workflow.
 // Models transport divergences for create_render_target (manage_texture)
 // and nanite_rebuild_mesh (manage_render).
 
+import type { JsonObject } from '../../model.js';
 import type { RecordSpec } from './builder.js';
-import { arr, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, r, READ, READ_POLICY, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arr, arrObj, bool, DESTRUCTIVE, DESTRUCTIVE_POLICY, ex, HIGH, LOW, MEDIUM, NON_IDEMPOTENT, num, r, READ, READ_POLICY, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const ASSET_PATH = str('Canonical /Game asset path.');
 const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+
+const MESH_MATERIAL_ENTRY: JsonObject = {
+  type: 'object',
+  properties: {
+    slot: { type: ['integer', 'string'], description: 'The slot to set: its 0-based index (9) or its slot name ("hull"), as inspect_object objectKind=mesh lists them under materialSlots.' },
+    materialPath: str('Material or material instance asset path, e.g. /Game/Materials/M_Hull. It must load: a path that does not is refused, never swapped for a default material.'),
+  },
+  required: ['slot', 'materialPath'],
+  additionalProperties: false,
+};
+
+const MESH_MATERIALS_OUT = schema({
+  success: bool('Operation succeeded.'),
+  assetPath: ASSET_PATH,
+  assetType: str('StaticMesh or SkeletalMesh.'),
+  materialSlots: arrObj('Every slot of the mesh after the call, each {slotIndex, slotName, material (the asset path the slot holds, empty for none), changed (true when this call changed it)}.'),
+  applied: num('Entries that were valid and applied.'),
+  changed: num('Slots whose material this call changed; an entry that names the material a slot already holds changes nothing.'),
+  refused: arrObj('Entries that were refused, each {index (its position in materials), slot (as given), materialPath, code, reason}: a slot index out of range, an unknown slot name, a material that does not load. A refused entry changes nothing, the call fails (MATERIAL_SLOTS_PARTIAL, or MATERIAL_SLOTS_REFUSED when no entry was valid) and the valid entries stay applied.'),
+  saved: bool('Whether the mesh was saved.'),
+  saveSkippedReason: str('Why nothing was saved: save was false, or the mesh is engine content, which is never written.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
 
 export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
   r('create_render_target', 'asset', 'Create a render target texture asset.',
@@ -35,6 +59,27 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
         'The mesh should use Nanite instead of discrete LODs (use asset.nanite_rebuild_mesh).',
       ],
       examples: [ex('Generate four LODs for a prop', { assetPath: '/Game/Meshes/SM_Crate', lodCount: 4 }, { success: true })] }
+  ),
+  r('set_mesh_materials', 'asset', 'Set the materials in the slots of a static or skeletal mesh asset, by slot index or slot name, so every placement of the mesh shows them.',
+    schema({
+      assetPath: ASSET_PATH,
+      materials: {
+        type: 'array', minItems: 1, items: MESH_MATERIAL_ENTRY,
+        description: 'The slots to set, one entry per slot: [{slot, materialPath}]. slot is a 0-based index or a slot name (inspect_object objectKind=mesh lists both under materialSlots). Every entry is checked first. One that is refused (index out of range, unknown slot name, a material that does not load) is named under refused and fails the call, while the valid entries are applied together in a single rebuild of the mesh.',
+      },
+      save: bool('Save the mesh after the change. Defaults to true.'),
+    }, ['assetPath', 'materials']),
+    MESH_MATERIALS_OUT, WRITE, WRITE_POLICY, MEDIUM,
+    { topics: ['set mesh materials', 'assign materials to a static mesh', 'mesh material slots', 'skeletal mesh materials', 'imported mesh grid material', 'materials on a mesh asset'],
+      whenToUse: [
+        'An imported mesh came in with every slot on the default grid material and each slot needs its own material, once for every placement of the mesh.',
+        'Several slots of a static or skeletal mesh asset get their materials in one call, by index or by slot name.',
+      ],
+      whenNotToUse: [
+        'Only one placed actor must look different from its mesh (use control_actor.set_material, which overrides a component and leaves the asset alone).',
+        'It is not known yet which slot holds which part of the mesh (inspect.inspect_object with objectKind=mesh lists every slot with the triangle count and bounds of its geometry).',
+      ],
+      examples: [ex('Give an imported mesh its own materials, one slot by name and one by index', { assetPath: '/Game/Meshes/SM_Rider', materials: [{ slot: 'hull', materialPath: '/Game/Materials/M_Hull' }, { slot: 9, materialPath: '/Game/Materials/M_Claw' }] }, { success: true, assetPath: '/Game/Meshes/SM_Rider', assetType: 'StaticMesh', applied: 2, changed: 2, refused: [], saved: true })] }
   ),
   r('add_material_parameter', 'asset', 'Add a parameter to a material.',
     schema({ assetPath: str('Material asset path.'), parameterName: str('Parameter name.'), parameterType: str('Parameter type.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']),

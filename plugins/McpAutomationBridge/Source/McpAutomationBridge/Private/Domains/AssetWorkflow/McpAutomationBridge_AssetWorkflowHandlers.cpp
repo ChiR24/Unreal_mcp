@@ -5,6 +5,7 @@
 #include "Dom/JsonObject.h"
 #include "MCP/Routing/McpConsolidatedActionRouting.h"
 #include "Domains/AssetQuery/McpAutomationBridge_AssetQueryHandlersPrivate.h"
+#include "Domains/AssetWorkflow/Materials/McpAutomationBridge_AssetWorkflowMeshMaterials.h"
 #include "Domains/AssetWorkflow/Rename/McpAutomationBridge_AssetRenameGuard.h"
 
 // Struct ecosystem (issue #struct-ecosystem) — Wave 1 handler shard headers.
@@ -140,6 +141,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleGenerateLODs(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("nanite_rebuild_mesh"))
     return HandleNaniteRebuildMesh(RequestId, Lower, Payload, RequestingSocket);
+  if (Lower == TEXT("set_mesh_materials"))
+    return McpMeshMaterials::HandleSetMeshMaterials(this, RequestId, Payload, RequestingSocket);
 
   // Source Control
   if (Lower == TEXT("source_control_checkout"))

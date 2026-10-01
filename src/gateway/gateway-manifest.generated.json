@@ -6008,6 +6008,7 @@
         "materialDomain",
         "materialPath",
         "materialProperty",
+        "materials",
         "maxDepth",
         "maxPackages",
         "memberName",
@@ -6803,6 +6804,32 @@
             ],
             "description": "Which set material property variant to run."
           },
+          "materials": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "slot": {
+                  "type": [
+                    "integer",
+                    "string"
+                  ],
+                  "description": "The slot to set: its 0-based index (9) or its slot name (\"hull\"), as inspect_object objectKind=mesh lists them under materialSlots."
+                },
+                "materialPath": {
+                  "type": "string",
+                  "description": "Material or material instance asset path, e.g. /Game/Materials/M_Hull. It must load: a path that does not is refused, never swapped for a default material."
+                }
+              },
+              "required": [
+                "slot",
+                "materialPath"
+              ],
+              "additionalProperties": false
+            },
+            "description": "The slots to set, one entry per slot: [{slot, materialPath}]. slot is a 0-based index or a slot name (inspect_object objectKind=mesh lists both under materialSlots). Every entry is checked first. One that is refused (index out of range, unknown slot name, a material that does not load) is named under refused and fails the call, while the valid entries are applied together in a single rebuild of the mesh."
+          },
           "maxDepth": {
             "type": "number",
             "description": "Maximum traversal depth (clamped to 8)."
@@ -7204,7 +7231,8 @@
             "type": "string",
             "enum": [
               "thumbnail",
-              "lods"
+              "lods",
+              "mesh_materials"
             ],
             "description": "Which process asset variant to run."
           },

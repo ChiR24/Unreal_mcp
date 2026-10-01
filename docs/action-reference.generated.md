@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `b1d31c3c8cbfc4b2`
+Catalog revision: `4162b3b9fb829746`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -172,7 +172,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `asset.maintain_content` | `manage_asset` | `bulk_rename` | write | write | explicit | `manage_asset.maintain_content` `manage_asset.bulk_rename` `manage_asset.fixup_redirectors` `manage_asset.refresh_blueprints` `manage_asset.migrate_assets` |
 | `asset.move` | `manage_asset` | `move` | write | write | explicit | `manage_asset.move` `manage_asset.move_asset` |
 | `asset.nanite_rebuild_mesh` | `manage_asset` | `manage_render` | write | write | explicit | `manage_asset.nanite_rebuild_mesh` |
-| `asset.process_asset` | `manage_asset` | `generate_thumbnail` | write | write | explicit | `manage_asset.process_asset` `manage_asset.create_thumbnail` `manage_asset.generate_lods` |
+| `asset.process_asset` | `manage_asset` | `generate_thumbnail` | write | write | explicit | `manage_asset.process_asset` `manage_asset.create_thumbnail` `manage_asset.generate_lods` `manage_asset.set_mesh_materials` |
 | `asset.query_asset` | `manage_asset` | `exists` | read | read | none | `manage_asset.query_asset` `manage_asset.exists` `manage_asset.search_assets` `manage_asset.find_by_tag` `manage_asset.find_text` `manage_asset.analyze_graph` `manage_asset.get_material_stats` `manage_asset.get_source_control_state` |
 | `asset.query_marketplace` | `manage_asset` | `get_fab_listing_details` | read | read | none | `manage_asset.query_marketplace` `manage_asset.get_fab_listing_details` `manage_asset.list_fab_downloads` `manage_asset.list_fab_library` `manage_asset.search_fab_listings` `manage_asset.list_megascans_library` `manage_asset.get_fab_import_status` |
 | `asset.rename` | `manage_asset` | `rename` | write | write | explicit | `manage_asset.rename` `manage_asset.rename_asset` |

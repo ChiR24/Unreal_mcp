@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b1d31c3c8cbfc4b2",
+  "catalogRevision": "4162b3b9fb829746",
   "recordCount": 389,
   "records": [
     {
@@ -9323,7 +9323,8 @@
       "id": "asset.process_asset",
       "aliases": [
         "asset.create_thumbnail",
-        "asset.generate_lods"
+        "asset.generate_lods",
+        "asset.set_mesh_materials"
       ],
       "legacyIds": [
         {
@@ -9343,6 +9344,13 @@
           "folded": {
             "process": "lods"
           }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "set_mesh_materials",
+          "folded": {
+            "process": "mesh_materials"
+          }
         }
       ],
       "discovery": {
@@ -9352,17 +9360,27 @@
           "process_asset",
           "thumbnail",
           "generate lods",
-          "material thumbnail"
+          "material thumbnail",
+          "set mesh materials",
+          "assign materials to a static mesh",
+          "mesh material slots",
+          "skeletal mesh materials",
+          "imported mesh grid material",
+          "materials on a mesh asset"
         ],
-        "summary": "Post-process an asset: render a thumbnail or generate mesh LODs.",
+        "summary": "Process an asset: render a thumbnail, generate mesh LODs, or set the materials in the slots of a static or skeletal mesh asset (mesh_materials) so every placement shows them.",
         "whenToUse": [
           "process=thumbnail: An asset needs a preview image, optionally written as a PNG file inside the project.",
-          "process=lods: One or several static meshes need LOD levels generated so distant copies render cheaper."
+          "process=lods: One or several static meshes need LOD levels generated so distant copies render cheaper.",
+          "process=mesh_materials: An imported mesh came in with every slot on the default grid material and each slot needs its own material, once for every placement of the mesh.",
+          "process=mesh_materials: Several slots of a static or skeletal mesh asset get their materials in one call, by index or by slot name."
         ],
         "whenNotToUse": [
           "process=thumbnail: The image should show the editor viewport or a level camera view (use control_editor.screenshot).",
           "process=lods: LOD reduction settings or screen sizes must be tuned by hand (use manage_geometry.configure_mesh_lods).",
-          "process=lods: The mesh should use Nanite instead of discrete LODs (use asset.nanite_rebuild_mesh)."
+          "process=lods: The mesh should use Nanite instead of discrete LODs (use asset.nanite_rebuild_mesh).",
+          "process=mesh_materials: Only one placed actor must look different from its mesh (use control_actor.set_material, which overrides a component and leaves the asset alone).",
+          "process=mesh_materials: It is not known yet which slot holds which part of the mesh (inspect.inspect_object with objectKind=mesh lists every slot with the triangle count and bounds of its geometry)."
         ]
       },
       "schemas": {
@@ -9397,11 +9415,42 @@
               "type": "number",
               "description": "Number of LOD levels to generate (1-50, default 4)."
             },
+            "materials": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slot": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "description": "The slot to set: its 0-based index (9) or its slot name (\"hull\"), as inspect_object objectKind=mesh lists them under materialSlots."
+                  },
+                  "materialPath": {
+                    "type": "string",
+                    "description": "Material or material instance asset path, e.g. /Game/Materials/M_Hull. It must load: a path that does not is refused, never swapped for a default material."
+                  }
+                },
+                "required": [
+                  "slot",
+                  "materialPath"
+                ],
+                "additionalProperties": false
+              },
+              "description": "The slots to set, one entry per slot: [{slot, materialPath}]. slot is a 0-based index or a slot name (inspect_object objectKind=mesh lists both under materialSlots). Every entry is checked first. One that is refused (index out of range, unknown slot name, a material that does not load) is named under refused and fails the call, while the valid entries are applied together in a single rebuild of the mesh."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Save the mesh after the change. Defaults to true."
+            },
             "process": {
               "type": "string",
               "enum": [
                 "thumbnail",
-                "lods"
+                "lods",
+                "mesh_materials"
               ],
               "description": "Which process asset variant to run."
             }
@@ -9423,6 +9472,46 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Operation details."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "Canonical /Game asset path."
+            },
+            "assetType": {
+              "type": "string",
+              "description": "StaticMesh or SkeletalMesh."
+            },
+            "materialSlots": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Every slot of the mesh after the call, each {slotIndex, slotName, material (the asset path the slot holds, empty for none), changed (true when this call changed it)}."
+            },
+            "applied": {
+              "type": "number",
+              "description": "Entries that were valid and applied."
+            },
+            "changed": {
+              "type": "number",
+              "description": "Slots whose material this call changed; an entry that names the material a slot already holds changes nothing."
+            },
+            "refused": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Entries that were refused, each {index (its position in materials), slot (as given), materialPath, code, reason}: a slot index out of range, an unknown slot name, a material that does not load. A refused entry changes nothing, the call fails (MATERIAL_SLOTS_PARTIAL, or MATERIAL_SLOTS_REFUSED when no entry was valid) and the valid entries stay applied."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the mesh was saved."
+            },
+            "saveSkippedReason": {
+              "type": "string",
+              "description": "Why nothing was saved: save was false, or the mesh is engine content, which is never written."
             }
           },
           "required": [
@@ -9433,7 +9522,7 @@
       },
       "examples": [
         {
-          "title": "Post-process an asset: render a thumbnail or generate mesh LODs.",
+          "title": "Process an asset: render a thumbnail, generate mesh LODs, or set the materials in the slots of a static or skeletal mesh asset (mesh_materials) so every placement shows them.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "width": 256,
@@ -9476,7 +9565,8 @@
           "param": "process",
           "actions": {
             "thumbnail": "create_thumbnail",
-            "lods": "generate_lods"
+            "lods": "generate_lods",
+            "mesh_materials": "set_mesh_materials"
           },
           "declaredBy": {
             "width": [
@@ -9493,14 +9583,20 @@
             ],
             "lodCount": [
               "lods"
+            ],
+            "materials": [
+              "mesh_materials"
+            ],
+            "save": [
+              "mesh_materials"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6c63660b6fd9ce40463aa93b0c3c8560b535ae79899bb368f73658b51bd5a7f0",
-        "content": "6d8249e54c3a6a48c092dcc04f1a7cf2420f0db73cb454f9f2dbefaa55e649ee"
+        "schema": "f909c34df8351b37d6498d0dd04be41955421d5b3f13e16556628791352eb1d3",
+        "content": "d19fc7ab94de0c4db052f160fc8c8a6c0e0a8c211f7d6541e7af060f7363032d"
       }
     },
     {

@@ -8333,6 +8333,32 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which set material property variant to run."
         },
+        "materials": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "slot": {
+                "type": [
+                  "integer",
+                  "string"
+                ],
+                "description": "The slot to set: its 0-based index (9) or its slot name (\"hull\"), as inspect_object objectKind=mesh lists them under materialSlots."
+              },
+              "materialPath": {
+                "type": "string",
+                "description": "Material or material instance asset path, e.g. /Game/Materials/M_Hull. It must load: a path that does not is refused, never swapped for a default material."
+              }
+            },
+            "required": [
+              "slot",
+              "materialPath"
+            ],
+            "additionalProperties": false
+          },
+          "description": "The slots to set, one entry per slot: [{slot, materialPath}]. slot is a 0-based index or a slot name (inspect_object objectKind=mesh lists both under materialSlots). Every entry is checked first. One that is refused (index out of range, unknown slot name, a material that does not load) is named under refused and fails the call, while the valid entries are applied together in a single rebuild of the mesh."
+        },
         "maxDepth": {
           "type": "number",
           "description": "Maximum traversal depth (clamped to 8)."
@@ -8734,7 +8760,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "enum": [
             "thumbnail",
-            "lods"
+            "lods",
+            "mesh_materials"
           ],
           "description": "Which process asset variant to run."
         },
@@ -9201,6 +9228,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when this listing was already queued or being imported and this call returned that same operation instead of starting another."
         },
+        "applied": {
+          "type": "number",
+          "description": "Entries that were valid and applied."
+        },
         "assetClass": {
           "type": "string",
           "description": "Concrete UClass name of the analyzed asset."
@@ -9292,6 +9323,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "categoryPath": {
           "type": "string",
           "description": "Category path, slash-joined, when Fab publishes one."
+        },
+        "changed": {
+          "type": "number",
+          "description": "Slots whose material this call changed; an entry that names the material a slot already holds changes nothing."
         },
         "combineMeshesApplied": {
           "type": "boolean",
@@ -9694,6 +9729,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Each match: asset, where (graph and node title, widget, row, string key or actor label), field, the full text, and nodeId for a graph literal."
         },
+        "materialSlots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every slot of the mesh after the call, each {slotIndex, slotName, material (the asset path the slot holds, empty for none), changed (true when this call changed it)}."
+        },
         "maxDepth": {
           "type": "number",
           "description": "Traversal depth actually used after clamping."
@@ -9921,6 +9964,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "\"preserved\" when the source layout was reproduced under /Game, \"at-risk\" when destinationPath relocated it."
         },
+        "refused": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Entries that were refused, each {index (its position in materials), slot (as given), materialPath, code, reason}: a slot index out of range, an unknown slot name, a material that does not load. A refused entry changes nothing, the call fails (MATERIAL_SLOTS_PARTIAL, or MATERIAL_SLOTS_REFUSED when no entry was valid) and the valid entries stay applied."
+        },
         "relocated": {
           "type": "boolean",
           "description": "Present when the add asked for destinationPath or assetName: true when assets were moved or renamed."
@@ -9952,6 +10003,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Up to ten imported asset paths, the static and skeletal meshes first, at their final paths when the add asked for destinationPath or assetName."
+        },
+        "saveSkippedReason": {
+          "type": "string",
+          "description": "Why nothing was saved: save was false, or the mesh is engine content, which is never written."
         },
         "saved": {
           "type": "boolean",

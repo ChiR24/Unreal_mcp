@@ -679,6 +679,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::set_material_domain": "instant|low",
   "manage_asset::set_material_parameter": "instant|low",
   "manage_asset::set_material_property": "instant|low",
+  "manage_asset::set_mesh_materials": "long-running|high",
   "manage_asset::set_metadata": "instant|low",
   "manage_asset::set_node_position": "instant|low",
   "manage_asset::set_scalar_parameter_value": "instant|low",
@@ -1527,4 +1528,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1514;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1515;

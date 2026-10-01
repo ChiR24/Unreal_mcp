@@ -93,9 +93,9 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'process_asset', selector: 'process',
-    summary: 'Post-process an asset: render a thumbnail or generate mesh LODs.',
+    summary: 'Process an asset: render a thumbnail, generate mesh LODs, or set the materials in the slots of a static or skeletal mesh asset (mesh_materials) so every placement shows them.',
     topics: ['thumbnail', 'generate lods', 'material thumbnail'],
-    members: { thumbnail: 'create_thumbnail', lods: 'generate_lods' },
+    members: { thumbnail: 'create_thumbnail', lods: 'generate_lods', mesh_materials: 'set_mesh_materials' },
   },
   {
     primary: 'inspect_asset', selector: 'lookup',
