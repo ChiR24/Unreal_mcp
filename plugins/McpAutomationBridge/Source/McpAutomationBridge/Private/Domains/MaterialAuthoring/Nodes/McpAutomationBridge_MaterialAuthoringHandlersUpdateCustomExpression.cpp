@@ -1,5 +1,8 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
+#include "MaterialShared.h"
+#include "RHI.h"
+
 namespace McpMaterialAuthoringHandlers
 {
 bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
@@ -52,7 +55,30 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
     Result->SetStringField(TEXT("code"), CustomExpr->Code);
     Result->SetNumberField(TEXT("inputCount"), CustomExpr->Inputs.Num());
     Result->SetNumberField(TEXT("additionalOutputCount"), CustomExpr->AdditionalOutputs.Num());
-    Bridge->SendAutomationResponse(Socket, RequestId, true, TEXT("Custom expression updated."), Result);
+    FString Message = TEXT("Custom expression updated.");
+    // A step of build_material_graph leaves the compile and the save to the batch, which does both once at its end.
+    // A call of its own does both here, as compile_material does: it used to leave the material unsaved and say
+    // nothing of a compile error. Translation ran inside PostEditChange, so its errors are known now.
+    if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
+      TArray<FString> CompileErrors;
+      if (Material) {
+        if (const FMaterialResource *Resource = MCP_GET_MATERIAL_RESOURCE(Material)) {
+          CompileErrors = Resource->GetCompileErrors();
+        }
+      }
+      TArray<TSharedPtr<FJsonValue>> ErrorValues;
+      for (const FString &Error : CompileErrors) {
+        ErrorValues.Add(MakeShared<FJsonValueString>(Error));
+      }
+      Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);
+      Result->SetArrayField(TEXT("compileErrors"), ErrorValues);
+      Result->SetBoolField(TEXT("saved"), Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));
+      if (CompileErrors.Num() > 0) {
+        Message += FString::Printf(TEXT(" WARNING: the material does not compile (the default material renders in its place): %s"),
+                                   *CompileErrors[0]);
+      }
+    }
+    Bridge->SendAutomationResponse(Socket, RequestId, true, Message, Result);
     return true;
   }
 

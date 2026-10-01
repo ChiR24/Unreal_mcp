@@ -9434,6 +9434,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string"
               },
               "description": "Compile errors reported by the material translator, empty when it compiles."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Compile errors the material translator reported after the edit, empty when it compiles."
             }
           ],
           "description": "Compile errors after the batch, empty when the material compiles."

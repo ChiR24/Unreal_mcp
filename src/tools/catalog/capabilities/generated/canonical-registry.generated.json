@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fd175555bfd1ad3b",
+  "catalogRevision": "94211561f31f8a1b",
   "recordCount": 389,
   "records": [
     {
@@ -78560,7 +78560,7 @@
           "edit shader code",
           "custom hlsl code"
         ],
-        "summary": "Update a custom expression node: its HLSL code, inputs, output type, additional outputs or title. An input that keeps its name keeps its wire.",
+        "summary": "Update a custom expression node: its HLSL code, inputs, output type, additional outputs or title. An input that keeps its name keeps its wire. The material is then compiled and saved, and compiled, compileErrors and saved in the reply say how that went (a step of build_material_graph leaves both to the batch).",
         "whenToUse": [
           "The HLSL code of an existing Custom node must be rewritten without rebuilding its wiring.",
           "Inputs, output type, extra outputs or the title of a Custom node must change; inputs that keep their name keep their wire."
@@ -78627,6 +78627,21 @@
               "type": "boolean",
               "description": "Operation succeeded."
             },
+            "compiled": {
+              "type": "boolean",
+              "description": "False when the material does not compile after the edit (the default material renders in its place); compileErrors says why. A material function has no translation of its own to read, so this is true for one."
+            },
+            "compileErrors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Compile errors the material translator reported after the edit, empty when it compiles."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the material or function was saved after the edit."
+            },
             "details": {
               "type": "object",
               "x-unreal-reflection-boundary": true,
@@ -78681,8 +78696,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8d80283f912b9f0196766ce89c94d0bd9830cecbd2e539b3492b4d5c67138d5b",
-        "content": "9566ee6a648d314abb2137394f9e19263ba4f4868ebf5dd3185c767cb83a940e"
+        "schema": "3e57e4ccf0b2c8a51b87861d52fbf76c3f29602defb4fd3e493b1740e7544d93",
+        "content": "65ed7393854b6596ddcfea9db2b805d988215b3d5d1fbb8c24a38445b24e9f82"
       }
     },
     {

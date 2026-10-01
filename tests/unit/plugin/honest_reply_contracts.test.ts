@@ -230,6 +230,23 @@ describe('handlers answer what they did', () => {
     expect(code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp').split('McpMaterialHostResult(HostOuter)').length).toBe(5);
   });
 
+  // update_custom_expression ended in the edit helper (a recompile and a dirty mark) and answered "Custom expression updated.":
+  // live, the material stayed in unsavedPackages and a broken edit went unseen. Called on its own it compiles, saves and
+  // reports as compile_material does; as a step of build_material_graph it leaves both to the batch.
+  it('update_custom_expression on its own saves the material and says whether it compiles, as compile_material does', () => {
+    const source = code('MaterialAuthoring', 'Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersUpdateCustomExpression.cpp');
+    const own = source.slice(source.indexOf('if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {'));
+
+    expect(source.indexOf('FINALIZE_HOST();'), 'after the edit').toBeLessThan(source.indexOf('IsCapturing(RequestId)'));
+    expect(own).toContain('CompileErrors = Resource->GetCompileErrors();');
+    expect(own).toContain('Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);');
+    expect(own).toContain('Result->SetBoolField(TEXT("saved"), Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));');
+    expect(own).toContain('WARNING: the material does not compile');
+    expect(own.indexOf('Message +='), 'the warning is in the message the reply carries').toBeLessThan(own.indexOf('SendAutomationResponse(Socket, RequestId, true, Message, Result);'));
+    const properties = capabilityIndex().byId.get('material.update_custom_expression')?.schemas.output.properties;
+    expect(Object.keys(isRecord(properties) ? properties : {})).toEqual(expect.arrayContaining(['compiled', 'compileErrors', 'saved']));
+  });
+
   // set_material_parameter with a parameters list answered {parameters, applied} and no assetPath, so the receipt
   // named nothing for a call that wrote an instance; every single-parameter setter answers it through AddVerification.
   it('set_material_parameter names the asset its parameters list wrote, as the single-parameter setters do', () => {

@@ -84,6 +84,16 @@ const BATCH_OUT = schema({
   compileErrors: arr('Compile errors after the batch, empty when the material compiles.'),
   saved: bool('Whether the material was saved after the batch.'),
 }, ['success']);
+// update_custom_expression compiles and saves the material when it is called on its own, as compile_material does; as a
+// step of build_material_graph it leaves both to the batch, so these three are absent there. `details` takes the rest
+// (nodeId, code, inputCount, additionalOutputCount, assetPath).
+const CUSTOM_UPDATE_OUT = schema({
+  success: bool('Operation succeeded.'),
+  compiled: bool('False when the material does not compile after the edit (the default material renders in its place); compileErrors says why. A material function has no translation of its own to read, so this is true for one.'),
+  compileErrors: arr('Compile errors the material translator reported after the edit, empty when it compiles.'),
+  saved: bool('Whether the material or function was saved after the edit.'),
+  details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+}, ['success']);
 
 const M = '/Game/Materials/M_Base';
 const SAMPLE = 'MaterialExpressionTextureSample_0';
@@ -123,7 +133,7 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['An unused or wrong node must leave a material or function graph, taking its wires with it.', 'Several stray nodes must go in one call (nodeIds).'],
       whenNotToUse: ['Only the wire to a node must be cleared while the node stays (use material.disconnect_nodes).', 'Unused nodes must be found first (use material.get_material_info with info=subgraph and orphansOnly=true).'],
       examples: [ex('Delete an unused multiply node', { materialPath: M, nodeId: MULTIPLY }, DONE)] }),
-  r('update_custom_expression', 'material', 'Update a custom expression node: its HLSL code, inputs, output type, additional outputs or title. An input that keeps its name keeps its wire.', schema({ materialPath: MAT, nodeId: str('Node ID.'), code: str('Updated HLSL code.'), inputs: arrObj('Replacement input list, each {name}; inputs whose names stay keep their connections.'), outputType: str('Output type: Float1, Float2, Float3, Float4 or MaterialAttributes.'), description: str('Node title shown in the material editor.'), additionalOutputs: arrObj('Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as "$node.Name".') }, ['materialPath', 'nodeId', 'code']), OK, WRITE, WRITE_POLICY, LOW,
+  r('update_custom_expression', 'material', 'Update a custom expression node: its HLSL code, inputs, output type, additional outputs or title. An input that keeps its name keeps its wire. The material is then compiled and saved, and compiled, compileErrors and saved in the reply say how that went (a step of build_material_graph leaves both to the batch).', schema({ materialPath: MAT, nodeId: str('Node ID.'), code: str('Updated HLSL code.'), inputs: arrObj('Replacement input list, each {name}; inputs whose names stay keep their connections.'), outputType: str('Output type: Float1, Float2, Float3, Float4 or MaterialAttributes.'), description: str('Node title shown in the material editor.'), additionalOutputs: arrObj('Extra output pins after the return value, each {name, type}: type Float1 (default), Float2, Float3, Float4 or MaterialAttributes. Assign each by name in the HLSL (Emis = ...;) and wire it as "$node.Name".') }, ['materialPath', 'nodeId', 'code']), CUSTOM_UPDATE_OUT, WRITE, WRITE_POLICY, LOW,
     { topics: ['edit shader code', 'custom hlsl code'],
       whenToUse: ['The HLSL code of an existing Custom node must be rewritten without rebuilding its wiring.', 'Inputs, output type, extra outputs or the title of a Custom node must change; inputs that keep their name keep their wire.'],
       whenNotToUse: ['A new Custom node is needed (use material.add_material_node with nodeKind=custom_expression).', 'The node is a parameter or any other non-Custom expression; only Custom nodes are accepted (parameter values use material.set_material_parameter).'],
