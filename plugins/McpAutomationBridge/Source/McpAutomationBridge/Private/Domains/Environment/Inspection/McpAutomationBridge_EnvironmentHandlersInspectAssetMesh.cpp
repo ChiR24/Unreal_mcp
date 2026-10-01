@@ -25,12 +25,109 @@ TSharedPtr<FJsonValue> McpMakeLodEntry(int32 Index, int32 Triangles, int32 Verti
     return MakeShared<FJsonValueObject>(Entry);
 }
 
-TSharedPtr<FJsonValue> McpMakeMaterialSlotEntry(int32 Index, const FName &SlotName, const UMaterialInterface *Material)
+// What one material slot draws in LOD0: its triangles, how many render sections carry them, and where they are in mesh space.
+struct FSlotGeometry
+{
+    int32 Triangles = 0;
+    int32 Sections = 0;
+    FBox Bounds = FBox(ForceInit);
+};
+
+void McpAddSlotPoint(FSlotGeometry &Slot, const FVector3f &Point)
+{
+    Slot.Bounds += FVector(Point.X, Point.Y, Point.Z);
+}
+
+// Static mesh: every LOD0 section draws the slot its MaterialIndex names; its bounds come from the vertices its triangles use.
+TArray<FSlotGeometry> McpCollectStaticSlotGeometry(UStaticMesh *Mesh, bool &bOutHasBounds)
+{
+    TArray<FSlotGeometry> Slots;
+    Slots.SetNum(Mesh->GetStaticMaterials().Num());
+    bOutHasBounds = false;
+    const FStaticMeshRenderData *RenderData = Mesh->GetRenderData();
+    if (!RenderData || RenderData->LODResources.Num() == 0)
+    {
+        return Slots;
+    }
+    const FStaticMeshLODResources &Lod = RenderData->LODResources[0];
+    const FPositionVertexBuffer &Positions = Lod.VertexBuffers.PositionVertexBuffer;
+    const FRawStaticIndexBuffer &Indices = Lod.IndexBuffer;
+    // The CPU copy of the buffers is kept in the editor; without it only the triangle counts can be read.
+    bOutHasBounds = Positions.GetVertexData() != nullptr && Positions.GetNumVertices() > 0 && Indices.GetNumIndices() > 0;
+    for (const FStaticMeshSection &Section : Lod.Sections)
+    {
+        if (!Slots.IsValidIndex(Section.MaterialIndex))
+        {
+            continue;
+        }
+        FSlotGeometry &Slot = Slots[Section.MaterialIndex];
+        Slot.Triangles += static_cast<int32>(Section.NumTriangles);
+        ++Slot.Sections;
+        if (!bOutHasBounds)
+        {
+            continue;
+        }
+        const uint32 End = Section.FirstIndex + Section.NumTriangles * 3;
+        for (uint32 At = Section.FirstIndex; At < End && At < static_cast<uint32>(Indices.GetNumIndices()); ++At)
+        {
+            const uint32 Vertex = Indices.GetIndex(At);
+            if (Vertex < Positions.GetNumVertices())
+            {
+                McpAddSlotPoint(Slot, Positions.VertexPosition(Vertex));
+            }
+        }
+    }
+    return Slots;
+}
+
+// Skeletal mesh: a LOD0 render section owns the vertex range BaseVertexIndex..+NumVertices, in the reference pose.
+TArray<FSlotGeometry> McpCollectSkeletalSlotGeometry(USkeletalMesh *Mesh, bool &bOutHasBounds)
+{
+    TArray<FSlotGeometry> Slots;
+    Slots.SetNum(Mesh->GetMaterials().Num());
+    bOutHasBounds = false;
+    const FSkeletalMeshRenderData *RenderData = Mesh->GetResourceForRendering();
+    if (!RenderData || RenderData->LODRenderData.Num() == 0)
+    {
+        return Slots;
+    }
+    const FSkeletalMeshLODRenderData &Lod = RenderData->LODRenderData[0];
+    const FPositionVertexBuffer &Positions = Lod.StaticVertexBuffers.PositionVertexBuffer;
+    bOutHasBounds = Positions.GetVertexData() != nullptr && Positions.GetNumVertices() > 0;
+    for (const FSkelMeshRenderSection &Section : Lod.RenderSections)
+    {
+        if (!Slots.IsValidIndex(Section.MaterialIndex))
+        {
+            continue;
+        }
+        FSlotGeometry &Slot = Slots[Section.MaterialIndex];
+        Slot.Triangles += static_cast<int32>(Section.NumTriangles);
+        ++Slot.Sections;
+        for (uint32 Offset = 0; bOutHasBounds && Offset < Section.NumVertices; ++Offset)
+        {
+            const uint32 Vertex = Section.BaseVertexIndex + Offset;
+            if (Vertex < Positions.GetNumVertices())
+            {
+                McpAddSlotPoint(Slot, Positions.VertexPosition(Vertex));
+            }
+        }
+    }
+    return Slots;
+}
+
+TSharedPtr<FJsonValue> McpMakeMaterialSlotEntry(int32 Index, const FName &SlotName, const UMaterialInterface *Material,
+                                                const FSlotGeometry &Geometry)
 {
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetNumberField(TEXT("slotIndex"), Index);
     Entry->SetStringField(TEXT("slotName"), SlotName.ToString());
     Entry->SetStringField(TEXT("material"), Material ? Material->GetPathName() : TEXT(""));
+    Entry->SetNumberField(TEXT("triangles"), Geometry.Triangles);
+    Entry->SetNumberField(TEXT("sections"), Geometry.Sections);
+    if (Geometry.Bounds.IsValid != 0)
+    {
+        Entry->SetObjectField(TEXT("bounds"), McpMakeBoundsObject(Geometry.Bounds));
+    }
     return MakeShared<FJsonValueObject>(Entry);
 }
 
@@ -52,13 +149,16 @@ void McpDescribeStaticMesh(UStaticMesh *Mesh, TSharedPtr<FJsonObject> Resp)
     Resp->SetArrayField(TEXT("lods"), Lods);
     Resp->SetNumberField(TEXT("triangleCount"), Lod0Triangles);
     TArray<TSharedPtr<FJsonValue>> Slots;
+    bool bHasSlotBounds = false;
+    const TArray<FSlotGeometry> Geometry = McpCollectStaticSlotGeometry(Mesh, bHasSlotBounds);
     const TArray<FStaticMaterial> &Materials = Mesh->GetStaticMaterials();
     for (int32 Index = 0; Index < Materials.Num(); ++Index)
     {
-        Slots.Add(McpMakeMaterialSlotEntry(Index, Materials[Index].MaterialSlotName, Materials[Index].MaterialInterface));
+        Slots.Add(McpMakeMaterialSlotEntry(Index, Materials[Index].MaterialSlotName, Materials[Index].MaterialInterface, Geometry[Index]));
     }
     Resp->SetArrayField(TEXT("materialSlots"), Slots);
     Resp->SetNumberField(TEXT("materialSlotCount"), Slots.Num());
+    Resp->SetBoolField(TEXT("slotBoundsAvailable"), bHasSlotBounds);
     Resp->SetObjectField(TEXT("bounds"), McpMakeBoundsObject(Mesh->GetBounds().GetBox()));
 #if ENGINE_MAJOR_VERSION > 5 || (ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3)
     Resp->SetBoolField(TEXT("naniteEnabled"), Mesh->IsNaniteEnabled());
@@ -88,13 +188,16 @@ void McpDescribeSkeletalMesh(USkeletalMesh *Mesh, TSharedPtr<FJsonObject> Resp)
     }
     Resp->SetArrayField(TEXT("lods"), Lods);
     TArray<TSharedPtr<FJsonValue>> Slots;
+    bool bHasSlotBounds = false;
+    const TArray<FSlotGeometry> Geometry = McpCollectSkeletalSlotGeometry(Mesh, bHasSlotBounds);
     const TArray<FSkeletalMaterial> &Materials = Mesh->GetMaterials();
     for (int32 Index = 0; Index < Materials.Num(); ++Index)
     {
-        Slots.Add(McpMakeMaterialSlotEntry(Index, Materials[Index].MaterialSlotName, Materials[Index].MaterialInterface));
+        Slots.Add(McpMakeMaterialSlotEntry(Index, Materials[Index].MaterialSlotName, Materials[Index].MaterialInterface, Geometry[Index]));
     }
     Resp->SetArrayField(TEXT("materialSlots"), Slots);
     Resp->SetNumberField(TEXT("materialSlotCount"), Slots.Num());
+    Resp->SetBoolField(TEXT("slotBoundsAvailable"), bHasSlotBounds);
     Resp->SetObjectField(TEXT("bounds"), McpMakeBoundsObject(Mesh->GetBounds().GetBox()));
     Resp->SetBoolField(TEXT("naniteEnabled"), false);
     const USkeleton *Skeleton = Mesh->GetSkeleton();

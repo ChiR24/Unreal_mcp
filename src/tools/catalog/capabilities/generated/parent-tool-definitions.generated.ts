@@ -6164,6 +6164,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when the target lives inside a material or material function (a material expression such as a TextureObjectParameter, as <material>.<material>:<nodeName>) and that material was rebuilt, so its parameter lists, which every material instance reads, show the write at once (a new ParameterName, a new default Texture). Absent for any other target."
         },
+        "materialSlotCount": {
+          "type": "number",
+          "description": "Mesh assets: how many material slots the mesh has."
+        },
+        "materialSlots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Mesh assets: every material slot as {slotIndex, slotName, material (asset path, empty for none), triangles and sections (what LOD0 draws with the slot), bounds (where that geometry is, in mesh space: origin is its center, extent its half size, with min, max, size and radius)}. bounds is absent for a slot LOD0 draws nothing with, and for every slot when slotBoundsAvailable is false. A Nanite mesh reports its fallback mesh. A skeletal mesh is read in its reference pose."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
@@ -6304,6 +6317,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "shadersCompiling": {
           "type": "number",
           "description": "Every get_editor_state variant: shader compile jobs still outstanding. Above 0 the viewport, and a screenshot of it, shows the engine default material (black foliage, grey ground) for what they cover; a warning says so."
+        },
+        "slotBoundsAvailable": {
+          "type": "boolean",
+          "description": "Mesh assets: false when the render data keeps no CPU copy of its vertices, so each slot has its triangle count but no bounds."
         },
         "startInVR": {
           "type": "boolean",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4162b3b9fb829746",
+  "catalogRevision": "dd527ed6f72d6c24",
   "recordCount": 389,
   "records": [
     {
@@ -41351,15 +41351,18 @@
           "object details",
           "actor properties",
           "dump object",
-          "all properties"
+          "all properties",
+          "material slot bounds",
+          "which slot is which part"
         ],
-        "summary": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots).",
+        "summary": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots, each with the triangles and bounds of the geometry it covers).",
         "whenToUse": [
           "objectKind=object: An object's properties and structure must be read.",
           "objectKind=actor: A world actor's details must be read using the get_actor_details verb.",
           "objectKind=level: The current level's world settings summary must be read.",
           "objectKind=material: A material asset's details must be read.",
           "objectKind=mesh: A mesh asset's details must be read.",
+          "objectKind=mesh: It is not known which material slot holds which part of a mesh (legs, hull, claws): each slot lists the triangles and mesh-space bounds of its LOD0 geometry.",
           "objectKind=texture: A texture asset's details must be read."
         ],
         "whenNotToUse": [
@@ -41532,6 +41535,23 @@
             "worldName": {
               "type": "string",
               "description": "Current world name."
+            },
+            "materialSlots": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Mesh assets: every material slot as {slotIndex, slotName, material (asset path, empty for none), triangles and sections (what LOD0 draws with the slot), bounds (where that geometry is, in mesh space: origin is its center, extent its half size, with min, max, size and radius)}. bounds is absent for a slot LOD0 draws nothing with, and for every slot when slotBoundsAvailable is false. A Nanite mesh reports its fallback mesh. A skeletal mesh is read in its reference pose."
+            },
+            "materialSlotCount": {
+              "type": "number",
+              "description": "Mesh assets: how many material slots the mesh has."
+            },
+            "slotBoundsAvailable": {
+              "type": "boolean",
+              "description": "Mesh assets: false when the render data keeps no CPU copy of its vertices, so each slot has its triangle count but no bounds."
             }
           },
           "required": [
@@ -41542,7 +41562,7 @@
       },
       "examples": [
         {
-          "title": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots).",
+          "title": "Deep-inspect an actor or asset, or read a typed detail view of an actor, level, material, texture or mesh (its size, bounds, pivot, LODs and material slots, each with the triangles and bounds of the geometry it covers).",
           "input": {
             "action": "inspect_object",
             "objectPath": "/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1",
@@ -41641,8 +41661,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bc9f79152924826dd5f9be393f518260a036580fc3f26c64d4b8178fbc2f9745",
-        "content": "57e823e3e6dde32db7766aeb3cd075c1ba630535d545da13deb92a263be914fb"
+        "schema": "89424d46990a7df4469a65d88b2fd3bb11ab44cfd0cfe7325357c17fe7a1857b",
+        "content": "054d6bc47f90e2d69100eaacfabe5adbf3373e50e26aac5457d49e706bb7ce39"
       }
     },
     {

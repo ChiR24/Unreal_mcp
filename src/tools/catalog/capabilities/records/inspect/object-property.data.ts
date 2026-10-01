@@ -41,6 +41,22 @@ const INSPECT_OBJECT_OUTPUT = {
   tags: { type: 'array', items: { type: 'string' }, description: 'Actor tags.' },
 };
 
+/**
+ * What a static or skeletal mesh asset adds
+ * (Private/Domains/Environment/Inspection/McpAutomationBridge_EnvironmentHandlersInspectAssetMesh.cpp):
+ * the slot table, with what LOD0 draws in each slot.
+ */
+const MESH_DETAILS_OUTPUT = {
+  ...INSPECT_OBJECT_OUTPUT,
+  materialSlots: {
+    type: 'array',
+    items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+    description: 'Mesh assets: every material slot as {slotIndex, slotName, material (asset path, empty for none), triangles and sections (what LOD0 draws with the slot), bounds (where that geometry is, in mesh space: origin is its center, extent its half size, with min, max, size and radius)}. bounds is absent for a slot LOD0 draws nothing with, and for every slot when slotBoundsAvailable is false. A Nanite mesh reports its fallback mesh. A skeletal mesh is read in its reference pose.',
+  },
+  materialSlotCount: { type: 'number', description: 'Mesh assets: how many material slots the mesh has.' },
+  slotBoundsAvailable: { type: 'boolean', description: 'Mesh assets: false when the render data keeps no CPU copy of its vertices, so each slot has its triangle count but no bounds.' },
+};
+
 export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'inspect_object', dispatchAction: 'inspect_object', domain: D, family: 'object',
@@ -81,15 +97,19 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_mesh_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
-    summary: 'Inspect a static or skeletal mesh asset: size, bounds, pivot, LODs and material slots. Any other object is refused with TYPE_MISMATCH.',
-    whenToUse: ['A mesh asset\'s details must be read.'],
+    summary: 'Inspect a static or skeletal mesh asset: size, bounds, pivot, LODs, and every material slot with the triangles and bounds of the geometry it covers. Any other object is refused with TYPE_MISMATCH.',
+    topics: ['material slot bounds', 'which slot is which part'],
+    whenToUse: ['A mesh asset\'s details must be read.', 'It is not known which material slot holds which part of a mesh (legs, hull, claws): each slot lists the triangles and mesh-space bounds of its LOD0 geometry.'],
     whenNotToUse: ['Prefer the canonical inspect_object verb.'],
     inputProps: { objectPath: P.objectPath, actorName: P.actorName, name: P.name, detailed: P.detailed, propertyNames: P.propertyNames },
     required: [],
-    outputProps: INSPECT_OBJECT_OUTPUT,
+    outputProps: MESH_DETAILS_OUTPUT,
     effect: 'read',
     exampleInput: { action: 'get_mesh_details', objectPath: '/Game/Meshes/SM_Cube' },
-    exampleOutput: { success: true, message: 'Object inspected', objectName: 'SM_Cube', isStaticMesh: true },
+    exampleOutput: {
+      success: true, message: 'Object inspected', objectName: 'SM_Cube', isStaticMesh: true, materialSlotCount: 1, slotBoundsAvailable: true,
+      materialSlots: [{ slotIndex: 0, slotName: 'Cube', material: '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial', triangles: 12, sections: 1, bounds: { origin: { x: 0, y: 0, z: 50 }, extent: { x: 50, y: 50, z: 50 } } }],
+    },
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'get_texture_details', dispatchAction: 'inspect_object', domain: D, family: 'object',

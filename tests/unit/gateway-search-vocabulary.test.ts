@@ -137,7 +137,8 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   // The mesh ASSET's slots; a placed actor's component slot is control_actor.set_material.
   ['set mesh materials', 'asset.process_asset'],
   ['assign materials to a static mesh', 'asset.process_asset'],
-  ['mesh material slots', 'asset.process_asset']
+  ['mesh material slots', 'asset.process_asset'],
+  ['which material slot is which part of a mesh', 'inspect.inspect_object']
 ];
 
 describe('plain-language task phrasings rank the intended capability first', () => {
@@ -168,7 +169,8 @@ const DECLARED_TOPICS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['blueprint.edit_graph', ['connect blueprint nodes', 'connect nodes', 'wire pins', 'print string', 'print to screen']],
   ['blueprint.get_widget_info', ['read widget layout', 'widget layout', 'slot layout']],
   ['material.get_material_info', ['get material parameters', 'material parameters']],
-  ['asset.process_asset', ['set mesh materials', 'mesh material slots', 'assign materials to a static mesh']]
+  ['asset.process_asset', ['set mesh materials', 'mesh material slots', 'assign materials to a static mesh']],
+  ['inspect.inspect_object', ['material slot bounds', 'which slot is which part']]
 ];
 
 describe('phrasings a name cannot carry are declared as topics', () => {

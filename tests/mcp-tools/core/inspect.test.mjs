@@ -31,7 +31,8 @@ const testCases = [
   { scenario: 'INFO: get_actor_details', toolName: 'inspect', arguments: inspectActor('get_actor_details'), expected: 'success' },
   { scenario: 'INFO: get_bounding_box falls back from empty actorName to name', toolName: 'inspect', arguments: { action: 'get_bounding_box', actorName: '', name: ACTOR }, expected: 'success' },
   { scenario: 'INFO: get_blueprint_details', toolName: 'inspect', arguments: { action: 'get_blueprint_details', objectPath: BP_PATH, blueprintPath: BP_PATH }, expected: 'success' },
-  { scenario: 'INFO: get_mesh_details', toolName: 'inspect', arguments: { action: 'get_mesh_details', objectPath: TEST_MESH }, expected: 'success' },
+  // Each slot says what LOD0 draws with it (triangles, and where in mesh space), so a slot can be matched to a part of the mesh.
+  { scenario: 'INFO: get_mesh_details', toolName: 'inspect', arguments: { action: 'get_mesh_details', objectPath: TEST_MESH }, expected: 'success', assertions: [{ path: 'structuredContent.result.materialSlots.0.triangles', gte: 1, label: 'slot 0 draws triangles in LOD0' }] },
   { scenario: 'INFO: get_texture_details', toolName: 'inspect', arguments: { action: 'get_texture_details', objectPath: ENGINE_DEFAULT_TEXTURE }, expected: 'success' },
   { scenario: 'INFO: get_material_details', toolName: 'inspect', arguments: { action: 'get_material_details', objectPath: TEST_MATERIAL }, expected: 'success' },
   { scenario: 'INFO: get_level_details', toolName: 'inspect', arguments: { action: 'get_level_details' }, expected: 'success' },
