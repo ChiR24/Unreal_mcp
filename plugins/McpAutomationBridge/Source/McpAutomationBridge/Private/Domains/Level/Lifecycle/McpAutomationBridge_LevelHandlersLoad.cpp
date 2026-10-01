@@ -220,8 +220,9 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       bool bDiscardUnsaved = false;
       Payload->TryGetBoolField(TEXT("discardUnsaved"), bDiscardUnsaved);
       TSharedPtr<FJsonObject> LossDetails;
+      // The level's /Game path, which the reply names: the file path it loads from is not the caller's to see.
       const FString Loss = bDiscardUnsaved ? FString() : McpSafeOperations::McpRefuseLoadOverUnsavedLevels(
-          ResolvedFileToLoad, TEXT("Pass saveDirtyPackages true to save them first, or discardUnsaved true to drop them."), LossDetails);
+          ExpectedLoadedPath, TEXT("Pass saveDirtyPackages true to save them first, or discardUnsaved true to drop them."), LossDetails);
       if (!Loss.IsEmpty()) {
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false, Loss, LossDetails, TEXT("DIRTY_PACKAGES"));
         return true;

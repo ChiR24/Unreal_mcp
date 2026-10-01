@@ -460,6 +460,7 @@ describe('opening another level over unsaved level changes', () => {
     const source = code('Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersLoad.cpp').split(/\s+/u).join(' ');
     expect(source).toContain('Payload->TryGetBoolField(TEXT("discardUnsaved"), bDiscardUnsaved);');
     expect(source).toContain('const FString Loss = bDiscardUnsaved ? FString() : McpSafeOperations::McpRefuseLoadOverUnsavedLevels(');
+    expect(source, 'the refusal names the /Game level, never the file it loads from').toContain('McpRefuseLoadOverUnsavedLevels( ExpectedLoadedPath,');
     expect(source.indexOf('if (bSaveDirtyPackages) {'), 'a save asked for runs first, so nothing is left to refuse').toBeLessThan(source.indexOf('McpRefuseLoadOverUnsavedLevels('));
 
     const record = capabilityIndex().byId.get('manage_level.load');
