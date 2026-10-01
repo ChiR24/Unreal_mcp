@@ -451,3 +451,28 @@ describe('the view of a running game', () => {
     expect(outputNames('control_editor.screenshot')).toContain('view');
   });
 });
+
+// A mesh ASSET's material slots: what each one holds, and which part of the mesh it covers.
+describe('the material slots of a mesh asset', () => {
+  const outputNames = (id: string): readonly string[] => Object.keys(capabilityIndex().byId.get(id)?.schemas.output.properties ?? {});
+
+  it('set_mesh_materials loads each material strictly, fails on a refused entry and never saves engine content', () => {
+    const slots = code('AssetWorkflow', 'Materials', 'McpAutomationBridge_AssetWorkflowMeshMaterialSlots.h');
+    expect(slots).toContain('McpLoadAsset(SafePath)');
+    expect(slots, 'a material that does not load is refused, never replaced by a default').not.toContain('McpLoadMaterialWithFallback');
+    const handler = code('AssetWorkflow', 'Materials', 'McpAutomationBridge_AssetWorkflowMeshMaterials.cpp');
+    expect(handler).toContain('TEXT("MATERIAL_SLOTS_PARTIAL")');
+    expect(handler).toContain('TEXT("MATERIAL_SLOTS_REFUSED")');
+    expect(handler).toContain('TEXT("engine content is not saved")');
+    expect(code('AssetWorkflow', 'McpAutomationBridge_AssetWorkflowHandlers.cpp')).toContain('McpMeshMaterials::HandleSetMeshMaterials(');
+    expect(outputNames('asset.process_asset')).toEqual(expect.arrayContaining(['materialSlots', 'applied', 'refused', 'saved']));
+  });
+
+  it('mesh details attribute each LOD0 section to the slot its MaterialIndex names', () => {
+    const mesh = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectAssetMesh.cpp');
+    expect(mesh).toContain('Slots[Section.MaterialIndex]');
+    expect(mesh).toContain('TEXT("slotBoundsAvailable")');
+    expect(mesh).toContain('TEXT("triangles")');
+    expect(outputNames('inspect.inspect_object')).toEqual(expect.arrayContaining(['materialSlots', 'slotBoundsAvailable']));
+  });
+});
