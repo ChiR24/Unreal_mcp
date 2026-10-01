@@ -10,6 +10,14 @@ import { DOMAIN, P } from './properties.js';
 const FAMILY_SPAWN = 'spawn';
 const FAMILY_LIFECYCLE = 'lifecycle';
 
+// Every spawn is one undo step opened before it touches the level; a batch holds one for all its items.
+const SPAWN_UNDO = {
+  type: 'object',
+  additionalProperties: true,
+  'x-unreal-reflection-boundary': true,
+  description: 'Whether editor undo takes the spawn back: {undoable: true, transactionScope: "Spawn Actors"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}.',
+} as const;
+
 export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -34,7 +42,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     requiredOneOf: ['classPath', 'actorClass'],
-    outputProps: { name: P.actorName },
+    outputProps: { name: P.actorName, undo: SPAWN_UNDO },
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
@@ -79,7 +87,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     // classPath/actorClass, so a bare spawn is refused by the schema instead
     // of by the handler.
     requiredOneOf: ['blueprintPath'],
-    outputProps: { name: P.actorName },
+    outputProps: { name: P.actorName, undo: SPAWN_UNDO },
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
@@ -156,6 +164,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
           + 'the receipt lists them as changes, with an actor handle each (the first 20).',
       },
       report: { type: 'string', description: 'Echoes report when it narrowed results.' },
+      undo: SPAWN_UNDO,
     },
     outputRequired: [],
     effect: 'write',

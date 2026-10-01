@@ -60,6 +60,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   Payload->TryGetObjectField(TEXT("defaults"), DefaultsPtr);
   const TSharedPtr<FJsonObject> Defaults = DefaultsPtr ? *DefaultsPtr : nullptr;
 
+  // One undo step for the whole batch: each item's spawn, material and variables below run captured, and leave
+  // the step to this one.
+  const TUniquePtr<FMcpScopedEditorTransaction> Transaction = McpBeginSpawnTransaction(RequestId);
   FMcpResponseCaptureRegistry &Capture = FMcpResponseCaptureRegistry::Get();
   TArray<TSharedPtr<FJsonValue>> Results;
   // An item without actorName is labelled after its mesh ("Cube" for 300 of them), so its
@@ -200,6 +203,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   }
   Data->SetNumberField(TEXT("spawned"), SpawnedCount);
   Data->SetNumberField(TEXT("failed"), Failures.Num());
+  if (Transaction) {
+    Transaction->DescribeInto(Data);
+  }
   if (Failures.Num() > 0) {
     // Actors that did spawn stay in the level; the results say which.
     SendAutomationResponse(

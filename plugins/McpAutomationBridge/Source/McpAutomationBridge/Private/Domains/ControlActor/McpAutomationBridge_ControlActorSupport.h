@@ -9,6 +9,8 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Foundation/McpScopedEditorTransaction.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 
@@ -174,6 +176,18 @@ inline void McpAddActorUndoSet(AActor *Actor, TArray<UObject *> &Undoable) {
       Add(Prim);
     }
   }
+}
+
+// The undo step of a spawn, "Spawn Actors": a spawn ran outside any transaction, so undo answered
+// NOTHING_TO_UNDO and the actors stayed. A single spawn opens it before it touches the level and
+// describes it in its reply; a run inside spawn_batch (captured) gets none, because the batch holds
+// one for every item.
+inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction(const FString &RequestId) {
+  if (FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
+    return nullptr;
+  }
+  return MakeUnique<FMcpScopedEditorTransaction>(FText::FromString(TEXT("Spawn Actors")),
+                                                  EMcpMutationDurability::EditorStateOnly, TArray<UObject *>());
 }
 
 // sample_motion's timeline (McpAutomationBridge_ControlActorMotionInputs.cpp).

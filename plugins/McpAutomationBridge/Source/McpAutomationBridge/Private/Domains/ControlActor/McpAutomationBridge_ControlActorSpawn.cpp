@@ -167,6 +167,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     return true;
   }
 
+  // One undo step for what this spawn makes, opened before the level is touched; null inside spawn_batch.
+  const TUniquePtr<FMcpScopedEditorTransaction> Transaction = McpBeginSpawnTransaction(RequestId);
+
   FActorSpawnParameters SpawnParams;
   SpawnParams.SpawnCollisionHandlingOverride =
       ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
@@ -299,6 +302,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Data->SetStringField(TEXT("meshPath"), ResolvedSkeletalMesh->GetPathName());
 
   Data->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Spawned->GetActorScale3D()));
+  if (Transaction) {
+    Transaction->DescribeInto(Data);
+  }
 
 	McpHandlerUtils::AddVerification(Data, Spawned);
 	McpPlacement::DescribePlacement(Spawned, Data);

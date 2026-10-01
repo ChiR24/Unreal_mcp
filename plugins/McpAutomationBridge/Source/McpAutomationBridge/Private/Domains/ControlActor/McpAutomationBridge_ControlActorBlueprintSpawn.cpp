@@ -71,6 +71,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
     return true;
   }
 
+  // One undo step for what this spawn makes, opened before the level is touched.
+  const TUniquePtr<FMcpScopedEditorTransaction> Transaction = McpBeginSpawnTransaction(RequestId);
+
   FActorSpawnParameters SpawnParams;
   SpawnParams.SpawnCollisionHandlingOverride =
       ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
@@ -114,6 +117,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
   Resp->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Spawned->GetActorScale3D()));
+  if (Transaction) {
+    Transaction->DescribeInto(Resp);
+  }
 
 	McpHandlerUtils::AddVerification(Resp, Spawned);
 

@@ -602,3 +602,44 @@ describe('control_actor find asks which actors use a static mesh or a material',
     expect(source).toContain('Bridge->SendAutomationError(Socket, RequestId, LoadError, TEXT("MATERIAL_NOT_FOUND"));');
   });
 });
+
+// A spawn ran outside any transaction, so after six actors were placed control_editor.undo answered NOTHING_TO_UNDO.
+describe('every spawn is one undo step, "Spawn Actors", and the reply says so', () => {
+  const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
+
+  it('the helper opens it, and leaves it to the batch when the run is captured', () => {
+    expect(support()).toMatch(/inline TUniquePtr<FMcpScopedEditorTransaction> McpBeginSpawnTransaction\(const FString &RequestId\) \{\s*if \(FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*return nullptr;\s*\}\s*return MakeUnique<FMcpScopedEditorTransaction>\(FText::FromString\(TEXT\("Spawn Actors"\)\),\s*EMcpMutationDurability::EditorStateOnly, TArray<UObject \*>\(\)\);\s*\}/u);
+  });
+
+  it('spawn and spawn_blueprint open it before the level is touched and describe it after the actor exists', () => {
+    for (const [file, reply] of [['McpAutomationBridge_ControlActorSpawn.cpp', 'Data'], ['McpAutomationBridge_ControlActorBlueprintSpawn.cpp', 'Resp']] as const) {
+      const source = read(file);
+      const opened = source.indexOf('McpBeginSpawnTransaction(RequestId);');
+
+      expect(opened, file).toBeGreaterThan(-1);
+      expect(opened, `${file}: before the world is modified`).toBeLessThan(source.indexOf('TargetWorld->Modify();'));
+      expect(opened, `${file}: before the spawn`).toBeLessThan(source.indexOf('TargetWorld->SpawnActor('));
+      expect(source.split(/\s+/u).join(' '), file).toContain(`if (Transaction) { Transaction->DescribeInto(${reply}); }`);
+      expect(source.indexOf(`Transaction->DescribeInto(${reply});`), `${file}: after the spawn`).toBeGreaterThan(source.indexOf('TargetWorld->SpawnActor('));
+    }
+  });
+
+  it('spawn_batch holds one step for every item and describes it whether or not every item spawned', () => {
+    const source = read('McpAutomationBridge_ControlActorSpawnBatch.cpp');
+    const opened = source.indexOf('McpBeginSpawnTransaction(RequestId);');
+
+    expect(opened).toBeGreaterThan(-1);
+    expect(opened, 'before the first item runs').toBeLessThan(source.indexOf('Capture.Begin(SpawnId);'));
+    expect(source).toMatch(/if \(Transaction\) \{\s*Transaction->DescribeInto\(Data\);\s*\}/u);
+    expect(source.indexOf('Transaction->DescribeInto(Data);'), 'before either reply goes out').toBeLessThan(source.indexOf('SendAutomationResponse('));
+  });
+
+  it('the records declare the undo block of every spawn form', () => {
+    for (const id of ['control_actor.spawn']) {
+      const properties = capabilityIndex().byId.get(id)?.schemas.output.properties;
+      const undo = isRecord(properties) ? properties.undo : undefined;
+
+      expect(isRecord(undo) ? undo.description : '', id).toMatch(/undoable: true, transactionScope: "Spawn Actors"/u);
+    }
+  });
+});

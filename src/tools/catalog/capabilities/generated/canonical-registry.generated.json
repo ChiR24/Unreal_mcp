@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "84d0b19aac949cfe",
+  "catalogRevision": "dae564e7b49958de",
   "recordCount": 389,
   "records": [
     {
@@ -33999,6 +33999,12 @@
               "type": "string",
               "description": "Target actor name in the current level."
             },
+            "undo": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
+            },
             "spawned": {
               "type": "number",
               "description": "Actors spawned."
@@ -34142,8 +34148,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b6f3fcc5ef063ff10306a5c6f7fce584d3eea4c81616ad63c07524c84378de5f",
-        "content": "d91b1b124b9881013e0ebb17a0cc87fe73d4d47bb703ad78619506a4c20583a7"
+        "schema": "e71658f7f762e0db326d17102cbfc426433a9b70213487e29f0d87e77f91b65e",
+        "content": "6e812513bb8dc9b1a761d12f5fdf0dd4274ca5a2b18b9ffa3c14daac5fe30972"
       }
     },
     {
