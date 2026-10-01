@@ -68,5 +68,7 @@ inline void SetAddFacts(const TSharedPtr<FJsonObject>& Data, const FMcpFabAddRes
 	if (Result.DownloadBytes >= 0) { Data->SetNumberField(TEXT("downloadBytes"), static_cast<double>(Result.DownloadBytes)); }
 	if (!Result.VersionName.IsEmpty()) { Data->SetStringField(TEXT("versionName"), Result.VersionName); }
 	Data->SetBoolField(TEXT("engineExactMatch"), Result.bEngineExactMatch);
+	if (!Result.EngineMatch.IsEmpty()) { Data->SetStringField(TEXT("engineMatch"), Result.EngineMatch); }
+	if (!Result.EngineVersion.IsEmpty()) { Data->SetStringField(TEXT("engineVersion"), Result.EngineVersion); }
 }
 } // namespace McpFabImportJson

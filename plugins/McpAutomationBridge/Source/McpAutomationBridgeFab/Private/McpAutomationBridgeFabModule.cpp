@@ -9,7 +9,7 @@
 
 namespace McpFabDetailsOperation
 {
-bool Start(const FString& ListingId, TFunction<void(bool, const FString&)> OnComplete);
+bool Start(const FString& ListingId, const FString& EngineVersion, TFunction<void(bool, const FString&)> OnComplete);
 }
 
 namespace McpFabSearchOperation
@@ -166,7 +166,9 @@ public:
 		TFunction<void(bool, const FString&)> OnComplete) override
 	{
 #if MCP_FAB_ADAPTER_HAS_FAB_API
-		return McpFabDetailsOperation::Start(ListingId, MoveTemp(OnComplete));
+		const FEngineVersion& Version = FEngineVersion::Current();
+		return McpFabDetailsOperation::Start(ListingId,
+			FString::Printf(TEXT("%u.%u"), Version.GetMajor(), Version.GetMinor()), MoveTemp(OnComplete));
 #else
 		return false;
 #endif

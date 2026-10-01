@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b1532bdf9746a008",
+  "catalogRevision": "f94788f9e78b32aa",
   "recordCount": 389,
   "records": [
     {
@@ -7877,7 +7877,15 @@
             },
             "engineExactMatch": {
               "type": "boolean",
-              "description": "False when no listing version declared the running engine and the first version was used instead."
+              "description": "False when no build of the pack declares the running engine; engineMatch says which build was taken instead."
+            },
+            "engineMatch": {
+              "type": "string",
+              "description": "exact, older or newer: the pack build taken against the running engine. older is the newest build for an earlier engine, newer the oldest build for a later one. Absent for a source format, or when no version declares an engine."
+            },
+            "engineVersion": {
+              "type": "string",
+              "description": "The engine version that build declares, for example UE_5.4."
             },
             "combinesMeshes": {
               "type": "boolean",
@@ -8025,8 +8033,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b47e28115e985fbccbf2910883bc63a92950f63ad865db53297d364a18e5b27d",
-        "content": "2bf6889052b4d8993c28ca020a5bf6d3fe3f6fbeb0a63389e5f5b6e0e8a94687"
+        "schema": "0794ad780e4bdebae33cd36ac72351ffa72b011a8ee9d5216890b69362b28752",
+        "content": "2bf73d2d7cc6e783eac2816b6cbb3e0fd61ca1f2f0199b21c1a4f0409ba02a11"
       }
     },
     {
@@ -10016,7 +10024,7 @@
         ],
         "summary": "Query marketplace libraries: Fab listing details, Fab downloads, Fab library, Fab search, Megascans library, and the status of a Fab import that is running.",
         "whenToUse": [
-          "lookup=fab_listing_details: A Fab search hit must be judged before adding it: description, seller, file formats and whether the project can import it.",
+          "lookup=fab_listing_details: A Fab search hit must be judged before adding it: description, seller, rating, price, file formats, sizes, and whether the project can import it.",
           "lookup=fab_downloads: It must be known which Fab packs are already downloaded to this machine and where they are cached.",
           "lookup=fab_library: The Fab listings the signed-in account owns must be listed, each with an id for adding to the project (an empty table is synced by the call itself).",
           "lookup=fab_search: Content must be found on Fab by keyword, optionally free listings only, to get listing ids.",
@@ -10117,6 +10125,53 @@
               "type": "string",
               "description": "Publisher name."
             },
+            "category": {
+              "type": "string",
+              "description": "Category name."
+            },
+            "categoryPath": {
+              "type": "string",
+              "description": "Category path, slash-joined, when Fab publishes one."
+            },
+            "averageRating": {
+              "type": "number",
+              "description": "Average rating as Fab reports it. Absent when the listing has none."
+            },
+            "ratingCount": {
+              "type": "number",
+              "description": "How many ratings the average rests on. Absent when Fab publishes no count."
+            },
+            "licenseNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Names of the licenses the listing is offered under."
+            },
+            "isCc0": {
+              "type": "boolean",
+              "description": "True when any license of the listing is CC0. Absent when the listing publishes no licenses."
+            },
+            "price": {
+              "type": "number",
+              "description": "Starting price in Fab's own units; 0 is free. Absent when the price field has a shape this does not know (see priceShape)."
+            },
+            "currency": {
+              "type": "string",
+              "description": "Currency code of price, when Fab publishes one."
+            },
+            "isFree": {
+              "type": "boolean",
+              "description": "True when price is 0. Derived from price: the listing's own isFree flag disagrees with it and is never reported. When the price cannot be read this falls back to that flag and priceShape says so."
+            },
+            "priceShape": {
+              "type": "string",
+              "description": "Key names of a price field this does not recognise, so a Fab change reports itself. Present only then."
+            },
+            "publishedAt": {
+              "type": "string",
+              "description": "When the listing was published, as Fab states it."
+            },
             "tags": {
               "type": "array",
               "items": {
@@ -10165,13 +10220,90 @@
               "type": "boolean",
               "description": "True when the listing ships a packaged unreal-engine build, which Fab imports through its pack workflow."
             },
+            "formats": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Every format the listing ships: code, and files each with name, bytes (left out when Fab publishes no size) and quality when the name carries a tier."
+            },
+            "addFormat": {
+              "type": "string",
+              "description": "The format add_fab_asset_to_project would import: unreal-engine, else gltf, glb, fbx, obj or usdz. Absent when none is importable."
+            },
+            "distributionMethod": {
+              "type": "string",
+              "description": "How Fab distributes a unreal-engine listing: asset_pack (content for a project) or complete_project (a whole project). Present only for a listing that ships unreal-engine."
+            },
+            "runningEngine": {
+              "type": "string",
+              "description": "The editor's engine version, major.minor, that supportsRunningEngine and engineMatch are judged against."
+            },
+            "engineVersions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every engine version a unreal-engine pack declares, lowest first, as Fab spells them (UE_5.4)."
+            },
+            "supportsRunningEngine": {
+              "type": "boolean",
+              "description": "True when a build of the pack declares exactly the running engine. Present only for a unreal-engine listing that publishes versions."
+            },
+            "engineMatch": {
+              "type": "string",
+              "description": "exact, older or newer: the build the add would take against the running engine. older is the newest build for an earlier engine, newer the oldest build for a later one. Absent when no version declares an engine."
+            },
+            "versionName": {
+              "type": "string",
+              "description": "Name of the pack build the add would take."
+            },
+            "pickedEngineVersion": {
+              "type": "string",
+              "description": "The engine version that build declares, for example UE_5.4."
+            },
+            "downloadFile": {
+              "type": "string",
+              "description": "The file of a source format the add would download."
+            },
+            "quality": {
+              "type": "string",
+              "description": "Quality tier of that file (raw, high, mid or low), when the listing publishes tiers."
+            },
+            "qualities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The quality tiers the source format offers, best first. add_fab_asset_to_project takes the highest of high, mid, low, raw that exists."
+            },
+            "downloadBytes": {
+              "type": "number",
+              "description": "Size in bytes of exactly the file or build the add would fetch. Absent when Fab publishes no size, which is every pack: unknown, never zero."
+            },
+            "downloadSizeKnown": {
+              "type": "boolean",
+              "description": "False when downloadBytes is absent because Fab publishes no size for what the add would fetch."
+            },
             "canAddToProject": {
               "type": "boolean",
-              "description": "True when add_fab_asset_to_project can actually import this listing. unreal-engine, gltf, glb and fbx are importable through the pack and Interchange workflows. Quixel/Megascans listings are the exception: Fab will not serve their download until the listing is claimed, and the claim is CSRF-protected with no token exposed to the page, so this reports false and addBlockedReason says so. Check this rather than hasUnrealBuild before adding."
+              "description": "True when add_fab_asset_to_project can import this listing: it ships unreal-engine as an asset pack, or gltf, glb, fbx, obj or usdz. False for a complete project, a MetaHuman listing and a listing with no importable format (addBlockedCode says which). Megascans listings are importable: the add claims the listing itself. Check this rather than hasUnrealBuild before adding."
+            },
+            "addBlockedCode": {
+              "type": "string",
+              "description": "Present when canAddToProject is false: COMPLETE_PROJECT, METAHUMAN_FORMAT or NO_IMPORTABLE_FORMAT, the code the add would answer with."
             },
             "addBlockedReason": {
               "type": "string",
               "description": "Present when canAddToProject is false: why this listing cannot be imported."
+            },
+            "addWarnings": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "What would surprise the caller about adding this listing: a pack with no build for the running engine, or a mesh file large enough that the add refuses it until combineMeshes is chosen."
             },
             "downloads": {
               "type": "array",
@@ -10312,25 +10444,17 @@
               "type": "string",
               "description": "Format Fab was asked to import."
             },
-            "quality": {
-              "type": "string",
-              "description": "Quality tier of the chosen file, when the listing has tiers."
-            },
             "fileName": {
               "type": "string",
               "description": "The file Fab downloads (source formats only)."
             },
-            "downloadBytes": {
-              "type": "number",
-              "description": "Expected size of that file, when Fab publishes one; unknown, never zero, when absent."
-            },
-            "versionName": {
-              "type": "string",
-              "description": "Listing version selected for this engine."
-            },
             "engineExactMatch": {
               "type": "boolean",
-              "description": "False when no listing version declared the running engine and the first version was used instead."
+              "description": "False when no build of the pack declares the running engine; engineMatch says which build was taken instead."
+            },
+            "engineVersion": {
+              "type": "string",
+              "description": "The engine version that build declares, for example UE_5.4."
             },
             "combinesMeshes": {
               "type": "boolean",
@@ -10384,7 +10508,7 @@
             },
             "failureCode": {
               "type": "string",
-              "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code."
+              "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code (COMPLETE_PROJECT, METAHUMAN_FORMAT, LARGE_SCENE_FILE, NO_IMPORTABLE_FORMAT, NO_DOWNLOAD_URL)."
             },
             "failure": {
               "type": "string",
@@ -10414,7 +10538,8 @@
           },
           "output": {
             "success": true,
-            "hasImage": true
+            "hasImage": true,
+            "canAddToProject": true
           }
         }
       ],
@@ -10484,8 +10609,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4fee4f2aea3bb9d77ee6bb3d152ef5b4dbda66860d0ec5f447900b628c9d3fb1",
-        "content": "092a595f75bf9ce056b7f30b67146550830996db10c8fe187a37e38826a9fa30"
+        "schema": "60e13f4ecc129379a25c2e9bc76780ef149a3640809a52d93884e5f6b6aed375",
+        "content": "e002566c85c7ee5a6fd35f5307296c5f8d8bf716f5f9f13547cbd5a45e5e4758"
       }
     },
     {

@@ -8927,9 +8927,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when Fab accepted the workflow. Not the same as content existing."
         },
+        "addBlockedCode": {
+          "type": "string",
+          "description": "Present when canAddToProject is false: COMPLETE_PROJECT, METAHUMAN_FORMAT or NO_IMPORTABLE_FORMAT, the code the add would answer with."
+        },
         "addBlockedReason": {
           "type": "string",
           "description": "Present when canAddToProject is false: why this listing cannot be imported."
+        },
+        "addFormat": {
+          "type": "string",
+          "description": "The format add_fab_asset_to_project would import: unreal-engine, else gltf, glb, fbx, obj or usdz. Absent when none is importable."
+        },
+        "addWarnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "What would surprise the caller about adding this listing: a pack with no build for the running engine, or a mesh file large enough that the add refuses it until combineMeshes is chosen."
         },
         "alreadyRunning": {
           "type": "boolean",
@@ -8983,6 +8998,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "New assets the asset registry has gained so far."
         },
+        "averageRating": {
+          "type": "number",
+          "description": "Average rating as Fab reports it. Absent when the listing has none."
+        },
         "baseMaterial": {
           "type": "string",
           "description": "MaterialInstance: the material at the root of its parent chain, which owns the node graph."
@@ -9005,7 +9024,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "canAddToProject": {
           "type": "boolean",
-          "description": "True when add_fab_asset_to_project can actually import this listing. unreal-engine, gltf, glb and fbx are importable through the pack and Interchange workflows. Quixel/Megascans listings are the exception: Fab will not serve their download until the listing is claimed, and the claim is CSRF-protected with no token exposed to the page, so this reports false and addBlockedReason says so. Check this rather than hasUnrealBuild before adding."
+          "description": "True when add_fab_asset_to_project can import this listing: it ships unreal-engine as an asset pack, or gltf, glb, fbx, obj or usdz. False for a complete project, a MetaHuman listing and a listing with no importable format (addBlockedCode says which). Megascans listings are importable: the add claims the listing itself. Check this rather than hasUnrealBuild before adding."
         },
         "cancellable": {
           "type": "boolean",
@@ -9014,6 +9033,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "cancelled": {
           "type": "boolean",
           "description": "True when the cancel was accepted."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category name."
+        },
+        "categoryPath": {
+          "type": "string",
+          "description": "Category path, slash-joined, when Fab publishes one."
         },
         "combineMeshesApplied": {
           "type": "boolean",
@@ -9074,6 +9101,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Asset count on this page."
         },
+        "currency": {
+          "type": "string",
+          "description": "Currency code of price, when Fab publishes one."
+        },
         "cursor": {
           "type": [
             "string",
@@ -9105,21 +9136,33 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Operation details."
         },
+        "distributionMethod": {
+          "type": "string",
+          "description": "How Fab distributes a unreal-engine listing: asset_pack (content for a project) or complete_project (a whole project). Present only for a listing that ships unreal-engine."
+        },
         "domain": {
           "type": "string",
           "description": "Material domain, e.g. Surface, PostProcess, UI."
         },
         "downloadBytes": {
           "type": "number",
-          "description": "Expected size of that file, when Fab publishes one; unknown, never zero, when absent."
+          "description": "Size in bytes of exactly the file or build the add would fetch. Absent when Fab publishes no size, which is every pack: unknown, never zero."
         },
         "downloadCount": {
           "type": "number",
           "description": "Number of cached downloads."
         },
+        "downloadFile": {
+          "type": "string",
+          "description": "The file of a source format the add would download."
+        },
         "downloadPercent": {
           "type": "number",
           "description": "0-100, as Fab's own download notification shows it, for a unreal-engine pack and a source format alike. Absent when that notification cannot be read: before the download starts, after it ends, or when Fab shows none."
+        },
+        "downloadSizeKnown": {
+          "type": "boolean",
+          "description": "False when downloadBytes is absent because Fab publishes no size for what the add would fetch."
         },
         "downloadSucceeded": {
           "type": "boolean",
@@ -9154,7 +9197,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "engineExactMatch": {
           "type": "boolean",
-          "description": "False when no listing version declared the running engine and the first version was used instead."
+          "description": "False when no build of the pack declares the running engine; engineMatch says which build was taken instead."
+        },
+        "engineMatch": {
+          "type": "string",
+          "description": "exact, older or newer: the build the add would take against the running engine. older is the newest build for an earlier engine, newer the oldest build for a later one. Absent when no version declares an engine."
+        },
+        "engineVersion": {
+          "type": "string",
+          "description": "The engine version that build declares, for example UE_5.4."
+        },
+        "engineVersions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every engine version a unreal-engine pack declares, lowest first, as Fab spells them (UE_5.4)."
         },
         "entries": {
           "type": "array",
@@ -9212,7 +9270,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "failureCode": {
           "type": "string",
-          "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code."
+          "description": "Present when phase is failed: FAB_IMPORT_FAILED (Fab logged that it gave up), IMPORT_TIMED_OUT (nothing appeared before the ceiling), IMPORT_PARTIAL (still streaming at the ceiling; what landed is reported), CANCELLED (cancel_fab_import stopped it; whatever had landed is listed and left unsaved), or the add's own refusal code (COMPLETE_PROJECT, METAHUMAN_FORMAT, LARGE_SCENE_FILE, NO_IMPORTABLE_FORMAT, NO_DOWNLOAD_URL)."
         },
         "fileName": {
           "type": "string",
@@ -9232,6 +9290,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "formatCode": {
           "type": "string",
           "description": "Format Fab was asked to import."
+        },
+        "formats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Every format the listing ships: code, and files each with name, bytes (left out when Fab publishes no size) and quality when the name carries a tier."
         },
         "graph": {
           "type": "object",
@@ -9310,6 +9376,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Material function inputs (name, type, nodeId)."
         },
+        "isCc0": {
+          "type": "boolean",
+          "description": "True when any license of the listing is CC0. Absent when the listing publishes no licenses."
+        },
+        "isFree": {
+          "type": "boolean",
+          "description": "True when price is 0. Derived from price: the listing's own isFree flag disagrees with it and is never reported. When the price cannot be read this falls back to that flag and priceShape says so."
+        },
         "isMasked": {
           "type": "boolean",
           "description": "True when the material uses masked blending."
@@ -9325,6 +9399,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "libraryDirectory": {
           "type": "string",
           "description": "Resolved Megascans library directory."
+        },
+        "licenseNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Names of the licenses the listing is offered under."
         },
         "limit": {
           "type": "number",
@@ -9518,6 +9599,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "queued when another import is running, else downloading right after Fab accepts. For alreadyRunning, the phase the operation was in."
         },
+        "pickedEngineVersion": {
+          "type": "string",
+          "description": "The engine version that build declares, for example UE_5.4."
+        },
         "placementWarning": {
           "type": "string",
           "description": "Human-readable overlap warning, present only when overlappingNodes is non-empty."
@@ -9530,9 +9615,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Y coordinate the node now sits at."
         },
+        "price": {
+          "type": "number",
+          "description": "Starting price in Fab's own units; 0 is free. Absent when the price field has a shape this does not know (see priceShape)."
+        },
+        "priceShape": {
+          "type": "string",
+          "description": "Key names of a price field this does not recognise, so a Fab change reports itself. Present only then."
+        },
+        "publishedAt": {
+          "type": "string",
+          "description": "When the listing was published, as Fab states it."
+        },
+        "qualities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The quality tiers the source format offers, best first. add_fab_asset_to_project takes the highest of high, mid, low, raw that exists."
+        },
         "quality": {
           "type": "string",
-          "description": "Quality tier of the chosen file (raw, high, mid or low) when the listing publishes tiers, as Megascans does; absent otherwise."
+          "description": "Quality tier of that file (raw, high, mid or low), when the listing publishes tiers."
         },
         "query": {
           "type": "string",
@@ -9554,6 +9658,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "1-based place in the queue while phase is queued; absent otherwise."
         },
+        "ratingCount": {
+          "type": "number",
+          "description": "How many ratings the average rests on. Absent when Fab publishes no count."
+        },
         "referenceIntegrity": {
           "type": "string",
           "description": "\"preserved\" when the source layout was reproduced under /Game, \"at-risk\" when destinationPath relocated it."
@@ -9570,6 +9678,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Absolute directory each root token resolved to, so an operator can confirm where the Bridge library was found."
+        },
+        "runningEngine": {
+          "type": "string",
+          "description": "The editor's engine version, major.minor, that supportsRunningEngine and engineMatch are judged against."
         },
         "sampleAssetPaths": {
           "type": "array",
@@ -9637,6 +9749,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Listing was described."
+        },
+        "supportsRunningEngine": {
+          "type": "boolean",
+          "description": "True when a build of the pack declares exactly the running engine. Present only for a unreal-engine listing that publishes versions."
         },
         "syncSkipped": {
           "type": "string",

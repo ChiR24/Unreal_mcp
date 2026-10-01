@@ -88,15 +88,76 @@ describe('the add script: an unreal-engine pack', () => {
   it('matches the running engine even though Fab spells its versions UE_5.x', async () => {
     const run = await runPageScript(addScript('5.8'), routes({ versions }, 'unreal-engine', packListing), `fab_csrftoken=${CSRF}`);
 
-    expect(run.results[0]).toMatchObject({ accepted: true, engineExactMatch: true, versionName: 'Pack 5.8', formatCode: 'unreal-engine' });
+    expect(run.results[0]).toMatchObject({
+      accepted: true, engineExactMatch: true, engineMatch: 'exact', engineVersion: 'UE_5.8', versionName: 'Pack 5.8', formatCode: 'unreal-engine',
+    });
     // A pack publishes no size: unknown is not zero.
     expect(run.results[0]).not.toHaveProperty('downloadBytes');
   });
 
-  it('falls back to the first version and says the engine did not match', async () => {
+  it('takes the highest build at or below the running engine, and says it is an older one', async () => {
     const run = await runPageScript(addScript('5.9'), routes({ versions }, 'unreal-engine', packListing), `fab_csrftoken=${CSRF}`);
 
-    expect(run.results[0]).toMatchObject({ accepted: true, engineExactMatch: false, versionName: 'Pack 5.0' });
+    expect(run.results[0]).toMatchObject({
+      accepted: true, engineExactMatch: false, engineMatch: 'older', engineVersion: 'UE_5.8', versionName: 'Pack 5.8',
+    });
+  });
+
+  it('takes the lowest build above the running engine when none is at or below it, and says it is a newer one', async () => {
+    const run = await runPageScript(addScript('4.27'), routes({ versions }, 'unreal-engine', packListing), `fab_csrftoken=${CSRF}`);
+
+    expect(run.results[0]).toMatchObject({
+      accepted: true, engineExactMatch: false, engineMatch: 'newer', engineVersion: 'UE_5.0', versionName: 'Pack 5.0',
+    });
+  });
+
+  it('reports no match at all when no version declares an engine', async () => {
+    const run = await runPageScript(
+      addScript('5.8'), routes({ versions: [{ name: 'Pack', uid: 'v', engineVersions: [] }] }, 'unreal-engine', packListing), `fab_csrftoken=${CSRF}`,
+    );
+
+    expect(run.results[0]).toMatchObject({ accepted: true, engineExactMatch: false, versionName: 'Pack' });
+    expect(run.results[0]).not.toHaveProperty('engineMatch');
+  });
+});
+
+describe('the add script: a listing that is not content for a project', () => {
+  it('refuses a complete project after the claim and before anything is downloaded', async () => {
+    const project = { distributionMethod: 'complete_project', versions: [{ name: 'Project', uid: 'v', engineVersions: ['UE_5.8'] }] };
+    const run = await runPageScript(
+      addScript(),
+      routes(project, 'unreal-engine', listing({ user: { sellerName: 'Epic Games' }, assetFormats: [{ assetFormatType: { code: 'unreal-engine' } }] })),
+      `fab_csrftoken=${CSRF}`,
+    );
+
+    expect(run.results[0]).toMatchObject({ error: 'COMPLETE_PROJECT', formatCode: 'unreal-engine' });
+    expect(run.addToProject).toHaveLength(0);
+    expect(run.fetches.some((line) => line.includes('/download-info'))).toBe(false);
+    // The claim ran first, so the listing is in the library for Fab to create the project from.
+    expect(run.posts).toHaveLength(1);
+  });
+
+  it('still adds an asset pack, whatever else the distribution says', async () => {
+    const asset = { distributionMethod: 'asset_pack', versions: [{ name: 'Pack', uid: 'v', engineVersions: ['UE_5.8'] }] };
+    const run = await runPageScript(
+      addScript(),
+      routes(asset, 'unreal-engine', listing({ user: { sellerName: 'Epic Games' }, assetFormats: [{ assetFormatType: { code: 'unreal-engine' } }] })),
+      `fab_csrftoken=${CSRF}`,
+    );
+
+    expect(run.results[0]).toMatchObject({ accepted: true });
+  });
+
+  it('refuses a MetaHuman listing as itself, before anything is claimed', async () => {
+    const run = await runPageScript(
+      addScript(),
+      routes({}, 'none', listing({ title: 'Mason', assetFormats: [{ assetFormatType: { code: 'metahuman' } }] })),
+      `fab_csrftoken=${CSRF}`,
+    );
+
+    expect(run.results[0]).toMatchObject({ error: 'METAHUMAN_FORMAT', formatCodes: ['metahuman'] });
+    expect(run.posts).toHaveLength(0);
+    expect(run.addToProject).toHaveLength(0);
   });
 });
 
@@ -225,12 +286,16 @@ describe('the add script: a listing Fab will not hand a download for', () => {
 
 describe('the shared selection functions', () => {
   const selection = vm.runInNewContext(
-    `${rawScript('McpFabSelectionScript.cpp')}; ({ engineNum, tierOf, pickFile, fileBytes })`,
+    `${rawScript('McpFabSelectionScript.cpp')}; ({ engineNum, tierOf, pickFile, fileBytes, pickVersion, engineList, qualitiesOf, SCENE_BYTES })`,
   ) as {
     engineNum: (value: string) => number;
     tierOf: (name: string) => string;
     pickFile: (files: unknown[], code: string) => { name: string } | null;
     fileBytes: (file: unknown) => number;
+    pickVersion: (versions: unknown[], engine: string) => { version: { name: string }; engine: string; match: string } | null;
+    engineList: (versions: unknown[]) => string[];
+    qualitiesOf: (files: unknown[]) => string[];
+    SCENE_BYTES: number;
   };
 
   it('reads engine strings in every spelling Fab uses', () => {
@@ -258,5 +323,47 @@ describe('the shared selection functions', () => {
     expect(selection.fileBytes({ fileSize: 64 })).toBe(64);
     expect(selection.fileBytes({ fileSize: null })).toBe(-1);
     expect(selection.fileBytes({})).toBe(-1);
+  });
+
+  describe('the version of a pack it imports', () => {
+    const build = (name: string, ...engineVersions: string[]) => ({ name, engineVersions });
+    const builds = [build('five-zero', 'UE_5.0', 'UE_5.1'), build('five-four', 'UE_5.4'), build('five-eight', 'UE_5.8')];
+
+    it('prefers the build that declares the running engine', () => {
+      expect(selection.pickVersion(builds, '5.4')).toMatchObject({ version: { name: 'five-four' }, engine: 'UE_5.4', match: 'exact' });
+      expect(selection.pickVersion(builds, '5.8.3')).toMatchObject({ version: { name: 'five-eight' }, match: 'exact' });
+    });
+
+    it('otherwise takes the highest build below it', () => {
+      expect(selection.pickVersion(builds, '5.6')).toMatchObject({ version: { name: 'five-four' }, engine: 'UE_5.4', match: 'older' });
+      expect(selection.pickVersion(builds, '5.9')).toMatchObject({ version: { name: 'five-eight' }, match: 'older' });
+    });
+
+    it('and only when nothing is below it, the lowest build above it', () => {
+      expect(selection.pickVersion(builds, '4.27')).toMatchObject({ version: { name: 'five-zero' }, engine: 'UE_5.0', match: 'newer' });
+    });
+
+    it('falls back to the first build, unmatched, when none declares an engine, and to nothing when there are none', () => {
+      expect(selection.pickVersion([build('only')], '5.8')).toMatchObject({ version: { name: 'only' }, engine: '', match: 'unknown' });
+      expect(selection.pickVersion([], '5.8')).toBeNull();
+    });
+
+    it('lists every declared engine once, lowest first', () => {
+      expect(selection.engineList([...builds, build('again', 'UE_5.4', 'UE_4.27')])).toEqual(['UE_4.27', 'UE_5.0', 'UE_5.1', 'UE_5.4', 'UE_5.8']);
+      expect(selection.engineList([build('none')])).toEqual([]);
+    });
+  });
+
+  it('lists the tiers a format offers, best first', () => {
+    const file = (name: string) => ({ name });
+    expect(selection.qualitiesOf([file('a_low.zip'), file('a_raw.zip'), file('a_high.zip')])).toEqual(['raw', 'high', 'low']);
+    expect(selection.qualitiesOf([file('plain.zip')])).toEqual([]);
+  });
+
+  it('shares one scene-size threshold between the add and the details', () => {
+    expect(selection.SCENE_BYTES).toBe(52_428_800);
+    expect(rawScript('McpFabAddToProject.cpp')).toContain('>= SCENE_BYTES');
+    expect(rawScript('McpFabAddToProject.cpp')).not.toContain('52428800');
+    expect(rawScript('McpFabDetailsOperation.cpp')).toContain('>= SCENE_BYTES');
   });
 });

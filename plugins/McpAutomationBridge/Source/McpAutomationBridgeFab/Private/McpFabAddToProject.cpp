@@ -113,7 +113,14 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
           if (out.formatCodes[i] === preferred[p]) { code = preferred[p]; break; }
         }
       }
-      if (!code) { out.error = "NO_IMPORTABLE_FORMAT"; send(out); return null; }
+      if (!code) {
+        // A MetaHuman listing has its own workflow inside Fab, which this add does not drive: that is a
+        // different refusal from a listing that ships nothing Fab can import, and it says so.
+        var mh = /metahuman/i;
+        var isMetaHuman = out.formatCodes.some(function (c) { return mh.test(c); }) || mh.test(String(listingJson.listingType || ""));
+        out.error = isMetaHuman ? "METAHUMAN_FORMAT" : "NO_IMPORTABLE_FORMAT";
+        send(out); return null;
+      }
       out.formatCode = code;
       // Fab's AddToProject switches on four strings -- unreal-engine,
       // IsQuixel, gltf/glb/fbx -- and an obj listing matches none, so it
@@ -251,8 +258,16 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
     .then(function (r) { if (!r) return null; out.formatsStatus = r.status; return r.json(); })
     .then(function (fmt) {
       if (!fmt) return null;
+      // A complete project is not content for an existing project: Fab creates a new project from it. The
+      // listing was claimed above, so it is in the library for that.
+      if (out.formatCode === "unreal-engine" && String(fmt.distributionMethod || "") === "complete_project") {
+        out.error = "COMPLETE_PROJECT"; send(out); return null;
+      }
       var picked = pickVersion(fmt.versions || [], engine);
-      out.engineExactMatch = !!(picked && picked.exact);
+      out.engineExactMatch = !!picked && picked.match === "exact";
+      // exact, older or newer: which build the add takes when none declares the running engine.
+      if (picked && picked.match !== "unknown") { out.engineMatch = picked.match; }
+      if (picked && picked.engine) { out.engineVersion = picked.engine; }
       var chosen = picked ? picked.version : null;
 
       // A source format publishes no versions array at all: its downloadable
@@ -285,7 +300,7 @@ FString BuildAddScript(const FString& RequestId, const FString& ListingId, const
       // became a single static mesh that needed 14 GB to build and held the editor for many minutes.
       // So it is not downloaded until the caller has said which way to import it (combine is -1 when
       // they have not).
-      if (out.combinesMeshes && combine < 0 && fileBytes(chosen) >= 52428800) {
+      if (out.combinesMeshes && combine < 0 && fileBytes(chosen) >= SCENE_BYTES) {
         out.error = "LARGE_SCENE_FILE";
         send(out); return null;
       }

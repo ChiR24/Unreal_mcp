@@ -57,6 +57,8 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 	{
 		Root->TryGetBoolField(TEXT("accepted"), Result.bAccepted);
 		Root->TryGetBoolField(TEXT("engineExactMatch"), Result.bEngineExactMatch);
+		Root->TryGetStringField(TEXT("engineMatch"), Result.EngineMatch);
+		Root->TryGetStringField(TEXT("engineVersion"), Result.EngineVersion);
 		Root->TryGetStringField(TEXT("versionName"), Result.VersionName);
 		Root->TryGetStringField(TEXT("formatCode"), Result.FormatCode);
 		Root->TryGetStringField(TEXT("quality"), Result.Quality);
@@ -110,6 +112,18 @@ FMcpFabAddResult ParseAddReply(bool bSuccess, const FString& Payload)
 	{
 		Result.Error = FString::Printf(
 			TEXT("Fab did not accept the listing.%s Fab imports unreal-engine, gltf, glb and fbx; this listing ships none of them."),
+			*FormatList);
+	}
+	else if (Result.ErrorCode == TEXT("METAHUMAN_FORMAT"))
+	{
+		Result.Error = FString::Printf(
+			TEXT("This is a MetaHuman listing.%s Fab hands MetaHuman content to its own MetaHuman import workflow, which this add does not drive, so it cannot be imported here. Nothing was claimed or downloaded."),
+			*FormatList);
+	}
+	else if (Result.ErrorCode == TEXT("COMPLETE_PROJECT"))
+	{
+		Result.Error = FString::Printf(
+			TEXT("Complete project: this listing is a whole Unreal project, which cannot be added to an existing one. Create it as a new project from Fab, then migrate its content (asset.migrate_assets or the editor's Migrate). The listing is in your Fab library now, so Fab offers it as a project to create.%s"),
 			*FormatList);
 	}
 	else if (Result.ErrorCode == TEXT("LARGE_SCENE_FILE"))

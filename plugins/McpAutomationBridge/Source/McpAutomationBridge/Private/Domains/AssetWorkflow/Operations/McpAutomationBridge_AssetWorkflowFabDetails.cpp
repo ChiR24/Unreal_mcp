@@ -69,24 +69,44 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabListingDetails(
           }
 
           TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+          // Only what the page reported: a field Fab did not carry is left out, never filled with a
+          // default, so absent means unknown rather than zero, false or empty.
           for (const TCHAR *Field : {TEXT("listingId"), TEXT("title"), TEXT("listingType"),
                                      TEXT("description"), TEXT("seller"), TEXT("mimeType"),
                                      TEXT("imageBase64"), TEXT("imageOmitted"),
+                                     TEXT("category"), TEXT("categoryPath"), TEXT("currency"),
+                                     TEXT("publishedAt"), TEXT("priceShape"),
+                                     TEXT("distributionMethod"), TEXT("runningEngine"),
+                                     TEXT("versionName"), TEXT("pickedEngineVersion"),
+                                     TEXT("engineMatch"), TEXT("addFormat"), TEXT("downloadFile"),
+                                     TEXT("quality"), TEXT("addBlockedCode"),
                                      TEXT("addBlockedReason")}) {
             FString Value;
             if (Parsed->TryGetStringField(Field, Value) && !Value.IsEmpty()) {
               Data->SetStringField(Field, Value);
             }
           }
-          for (const TCHAR *List : {TEXT("tags"), TEXT("assetFormats")}) {
+          for (const TCHAR *Field : {TEXT("averageRating"), TEXT("ratingCount"), TEXT("price"),
+                                     TEXT("downloadBytes")}) {
+            double Number = 0.0;
+            if (Parsed->TryGetNumberField(Field, Number)) {
+              Data->SetNumberField(Field, Number);
+            }
+          }
+          for (const TCHAR *List : {TEXT("tags"), TEXT("assetFormats"), TEXT("licenseNames"),
+                                    TEXT("engineVersions"), TEXT("qualities"), TEXT("addWarnings"),
+                                    TEXT("formats")}) {
             const TArray<TSharedPtr<FJsonValue>> *Rows = nullptr;
             if (Parsed->TryGetArrayField(List, Rows) && Rows != nullptr) {
               Data->SetArrayField(List, *Rows);
             }
           }
           // Reported even when false: "this listing has no Unreal build" is the
-          // answer a caller needs before choosing between search hits.
-          for (const TCHAR *Flag : {TEXT("hasUnrealBuild"), TEXT("canAddToProject")}) {
+          // answer a caller needs before choosing between search hits. The rest are
+          // present only when the page could tell.
+          for (const TCHAR *Flag : {TEXT("hasUnrealBuild"), TEXT("canAddToProject"), TEXT("isFree"),
+                                    TEXT("isCc0"), TEXT("supportsRunningEngine"),
+                                    TEXT("downloadSizeKnown")}) {
             bool bValue = false;
             if (Parsed->TryGetBoolField(Flag, bValue)) {
               Data->SetBoolField(Flag, bValue);

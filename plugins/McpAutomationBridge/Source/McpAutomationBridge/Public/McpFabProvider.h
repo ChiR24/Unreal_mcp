@@ -51,6 +51,10 @@ struct FMcpFabAddResult
 	int32 AssetCount = 0;
 	TArray<FString> SamplePaths;
 	bool bEngineExactMatch = false;
+	/** Which build of a unreal-engine pack was taken: exact, older or newer than the running engine; empty when unknown. */
+	FString EngineMatch;
+	/** The engine version that build declares (UE_5.4), empty when none was declared. */
+	FString EngineVersion;
 	FString VersionName;
 	/** The background import this add started; for QUEUE_FULL, the one still running. */
 	FString OperationId;
