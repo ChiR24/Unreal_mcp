@@ -119,8 +119,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSetGameView(
     return true;
   }
 
-  GEditor->Exec(GEditor->GetEditorWorldContext().World(),
-                bEnabled ? TEXT("ToggleGameView 1") : TEXT("ToggleGameView 0"));
+  // "ToggleGameView" is not an editor console command, so Exec did nothing and
+  // this answered "Game view enabled" over a viewport still drawing icons.
+  // Drive the viewport the screenshot photographs and report what it shows.
+  FEditorViewportClient *Client = GetActiveEditorViewportClientForMcp();
+  if (!Client) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("VIEWPORT_NOT_AVAILABLE"),
+                              TEXT("No level viewport to set game view on"), nullptr);
+    return true;
+  }
+  Client->SetGameView(bEnabled);
+  Client->Invalidate();
+  bEnabled = Client->IsInGameView();
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
