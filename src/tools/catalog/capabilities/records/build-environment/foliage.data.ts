@@ -51,7 +51,7 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.get_foliage_instances', action: 'get_foliage_instances', family: F,
     topics: ['count per type', 'vegetation count', 'positions and scale', 'count trees', 'how many trees'],
-    summary: 'Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale. The summary flag drops the list; limit caps it.',
+    summary: 'Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.',
     whenToUse: ['Existing foliage instances must be inspected.', 'What foliage a level holds must be counted before removing it (summary).'],
     whenNotToUse: ['Foliage should be removed rather than inspected.'],
     inputProps: {

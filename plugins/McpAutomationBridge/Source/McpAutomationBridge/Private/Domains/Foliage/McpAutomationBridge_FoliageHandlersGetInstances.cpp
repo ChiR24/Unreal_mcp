@@ -73,7 +73,12 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFoliageInstances(
         InstObj->SetNumberField(TEXT("pitch"), Inst.Rotation.Pitch);
         InstObj->SetNumberField(TEXT("yaw"), Inst.Rotation.Yaw);
         InstObj->SetNumberField(TEXT("roll"), Inst.Rotation.Roll);
-        InstObj->SetNumberField(TEXT("scale"), Inst.DrawScale3D.X);
+        // The whole scale: one number (the X axis) hid a non-uniform scale (a tall thin tree read as uniform).
+        TSharedPtr<FJsonObject> Scale = MakeShared<FJsonObject>();
+        Scale->SetNumberField(TEXT("x"), Inst.DrawScale3D.X);
+        Scale->SetNumberField(TEXT("y"), Inst.DrawScale3D.Y);
+        Scale->SetNumberField(TEXT("z"), Inst.DrawScale3D.Z);
+        InstObj->SetObjectField(TEXT("scale"), Scale);
       }
       InstancesArray.Add(MakeShared<FJsonValueObject>(InstObj));
     }

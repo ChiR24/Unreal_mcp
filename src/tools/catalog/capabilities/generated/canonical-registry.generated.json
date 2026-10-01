@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fc03bf431ee0522f",
+  "catalogRevision": "d8201952ee42b02e",
   "recordCount": 389,
   "records": [
     {
@@ -27894,7 +27894,7 @@
           "count trees",
           "how many trees"
         ],
-        "summary": "Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale. The summary flag drops the list; limit caps it.",
+        "summary": "Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.",
         "whenToUse": [
           "Existing foliage instances must be inspected.",
           "What foliage a level holds must be counted before removing it (summary)."
@@ -27961,7 +27961,7 @@
       },
       "examples": [
         {
-          "title": "Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale. The summary flag drops the list; limit caps it.",
+          "title": "Count foliage instances in the level, in total and per foliage type (byType), and list their positions; one type also returns rotation and scale ({x, y, z}: the whole scale, so a non-uniform one shows). The summary flag drops the list; limit caps it.",
           "input": {
             "action": "get_foliage_instances",
             "foliageType": "Bush_Type"
@@ -27999,7 +27999,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "15dd7086f7a2646b1b69660bf433f9dadea56bf1b2b4ca362671c56dc78b4265",
-        "content": "0f54954bc4bc9c1508dac8282e23e597eb4efb3834a5a6e8e6749149108b381c"
+        "content": "3abead6bc1772d147267c9e05ee8ab52ae3716dac06f04e894e06b13af3bd291"
       }
     },
     {

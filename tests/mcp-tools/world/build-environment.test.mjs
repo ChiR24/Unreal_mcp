@@ -58,10 +58,12 @@ const testCases = [
   // === ADD ===
   { scenario: 'ADD: add_foliage_instances', toolName: 'build_environment', arguments: {"action": "add_foliage_instances", "foliageTypePath": FOLIAGE_TYPE_PATH_ALIAS, "locations": [{"x": 100, "y": 0, "z": 100}], "transforms": [{"location": {"x": 100, "y": 0, "z": 100}, "rotation": {"pitch": 0, "yaw": 45, "roll": 0}, "scale": {"x": 1.1, "y": 1.1, "z": 1.1}}]}, expected: 'success|already exists' },
   { scenario: 'ADD: add_foliage_instances from a mesh path', toolName: 'build_environment', arguments: { action: 'add_foliage_instances', meshPath: TEST_MESH_ALIAS, locations: [{ x: 120, y: 0, z: 100 }] }, expected: 'success' },
+  { scenario: 'ADD: add_foliage_instances with a non-uniform scale', toolName: 'build_environment', arguments: { action: 'add_foliage_instances', foliageTypePath: FOLIAGE_TYPE_PATH_ALIAS, transforms: [{ location: { x: 140, y: 0, z: 100 }, scale: { x: 2, y: 1, z: 0.5 } }] }, expected: 'success' },
   // === INFO ===
   { scenario: 'INFO: get_foliage_instances', toolName: 'build_environment', arguments: {"action": "get_foliage_instances"}, expected: 'success' },
   { scenario: 'INFO: get_foliage_instances counts per type only', toolName: 'build_environment', arguments: {"action": "get_foliage_instances", "summary": true}, expected: 'success' },
   { scenario: 'INFO: get_foliage_instances capped list', toolName: 'build_environment', arguments: {"action": "get_foliage_instances", "limit": 5}, expected: 'success' },
+  { scenario: 'INFO: get_foliage_instances of one type reports the whole scale', toolName: 'build_environment', arguments: { action: 'get_foliage_instances', foliageTypePath: FOLIAGE_TYPE_PATH_ALIAS }, expected: 'success', assertions: [{ path: 'structuredContent.result.instances', includesObject: { scale: { x: 2, y: 1, z: 0.5 } }, label: 'a non-uniform scale shows per axis, not as its X alone' }] },
   // === DELETE ===
   { scenario: 'ERROR: remove_foliage with nothing named', toolName: 'build_environment', arguments: {"action": "remove_foliage"}, expected: 'error' },
   { scenario: 'ERROR: remove_foliage of an unknown type', toolName: 'build_environment', arguments: { action: 'remove_foliage', foliageType: `Missing_${ts}` }, expected: 'error' },

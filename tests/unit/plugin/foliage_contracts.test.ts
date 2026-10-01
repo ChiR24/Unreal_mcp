@@ -55,3 +55,20 @@ describe('configure_foliage names what it wrote and what became of the placed in
     }
   });
 });
+
+// get_foliage_instances answered one `scale` number per instance, the X axis alone, so a tall thin tree
+// (2, 1, 0.5) read as uniform. It now answers the whole scale.
+describe('get_foliage_instances reports the whole scale of an instance', () => {
+  it('writes scale as {x, y, z}, and no longer as the X axis alone', () => {
+    const source = read('Foliage', 'McpAutomationBridge_FoliageHandlersGetInstances.cpp');
+
+    expect(source).toMatch(/TSharedPtr<FJsonObject> Scale = MakeShared<FJsonObject>\(\);\s*Scale->SetNumberField\(TEXT\("x"\), Inst\.DrawScale3D\.X\);\s*Scale->SetNumberField\(TEXT\("y"\), Inst\.DrawScale3D\.Y\);\s*Scale->SetNumberField\(TEXT\("z"\), Inst\.DrawScale3D\.Z\);\s*InstObj->SetObjectField\(TEXT\("scale"\), Scale\);/u);
+    expect(source).not.toContain('SetNumberField(TEXT("scale")');
+  });
+
+  it('the record says what the list carries for one type', () => {
+    const summary = capabilityIndex().byId.get('build_environment.get_foliage_instances')?.discovery.summary ?? '';
+
+    expect(summary).toMatch(/rotation and scale \(\{x, y, z\}: the whole scale/u);
+  });
+});
