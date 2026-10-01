@@ -3,6 +3,7 @@
 #include "Algo/Reverse.h"
 #include "CoreGlobals.h"
 #include "HAL/FileManager.h"
+#include "HAL/PlatformOutputDevices.h"
 #include "HAL/PlatformTime.h"
 #include "Logging/LogVerbosity.h"
 #include "Misc/DateTime.h"
@@ -150,8 +151,11 @@ TArray<FString> FMcpLogHistory::ReadFileTail(const FString& Path, int32 MaxLines
 
 FString FMcpLogHistory::PreviousRunLogPath(int32 RunsBack)
 {
+    // Only this editor's own runs: the Fab browser rotates its cef3-backup-*.log into the same folder,
+    // so "*-backup-*.log" counted browser logs as editor runs.
     TArray<FString> Backups;
-    IFileManager::Get().FindFiles(Backups, *FPaths::Combine(FPaths::ProjectLogDir(), TEXT("*-backup-*.log")), true, false);
+    const FString Pattern = FPaths::GetBaseFilename(FPlatformOutputDevices::GetAbsoluteLog()) + TEXT("-backup-*.log");
+    IFileManager::Get().FindFiles(Backups, *FPaths::Combine(FPaths::ProjectLogDir(), Pattern), true, false);
     TArray<TPair<FDateTime, FString>> Runs;
     for (const FString& Name : Backups)
     {
