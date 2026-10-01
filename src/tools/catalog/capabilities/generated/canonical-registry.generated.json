@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "94211561f31f8a1b",
+  "catalogRevision": "74090069c7337f5d",
   "recordCount": 389,
   "records": [
     {
@@ -34524,7 +34524,7 @@
             },
             "unthrottle": {
               "type": "boolean",
-              "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true; ignored with minimize."
+              "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground) for this editor session; it is not saved, so the next launch throttles again. Default true; ignored with minimize."
             },
             "setting": {
               "type": "string",
@@ -34656,8 +34656,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "406380109c4cfedd6f2484700dcac219dc18780159e9a6635a19b6984f1f887e",
-        "content": "7c0b89ae321d7b6ee71bd607aa48582396d4fea6c6099ead172e64390552e1e3"
+        "schema": "f01bacaf3907b8a4284120670a7a23fd9b92f2ce08a97224b269f8c1c3b7793d",
+        "content": "c8bc0bb67268c621f454db914164e34fe55e6a4a24e0540ec737ef17e0c38bde"
       }
     },
     {

@@ -253,10 +253,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestoreWindow(
     RestoreWindowForCaptureForMcp(Root.ToSharedRef());
   }
   UEditorPerformanceSettings *Performance = GetMutableDefault<UEditorPerformanceSettings>();
-  // minimize wants the throttle on, a restore with unthrottle wants it off; nothing else touches it.
+  // minimize wants the throttle on and saves it; a restore with unthrottle turns it off for this editor
+  // session only. Saved, it left every later launch running flat out in the background.
   if (Performance && (bMinimize || bUnthrottle) && Performance->bThrottleCPUWhenNotForeground != bMinimize) {
     Performance->bThrottleCPUWhenNotForeground = bMinimize;
-    Performance->SaveConfig();
+    if (bMinimize) {
+      Performance->SaveConfig();
+    }
   }
   const bool bMinimizedNow = Native->IsMinimized();
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();

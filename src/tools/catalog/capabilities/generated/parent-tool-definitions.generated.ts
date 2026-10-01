@@ -5074,7 +5074,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "unthrottle": {
           "type": "boolean",
-          "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true; ignored with minimize."
+          "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground) for this editor session; it is not saved, so the next launch throttles again. Default true; ignored with minimize."
         },
         "validateOnly": {
           "type": "boolean",

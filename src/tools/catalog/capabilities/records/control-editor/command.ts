@@ -147,7 +147,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A screenshot or a sample_motion run is all that needs the window on screen (each restores a minimized editor by itself and minimizes it again afterwards).'],
     inputProps: {
       minimize: { type: 'boolean', description: 'Minimize the main editor window instead of restoring it, without taking focus, and turn Use Less CPU when in Background back on (saved). unthrottle is ignored. Default false.' },
-      unthrottle: { type: 'boolean', description: 'Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true; ignored with minimize.' },
+      unthrottle: { type: 'boolean', description: 'Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground) for this editor session; it is not saved, so the next launch throttles again. Default true; ignored with minimize.' },
     },
     outputProps: {
       wasMinimized: { type: 'boolean', description: 'Whether the main window was minimized before the call.' },
