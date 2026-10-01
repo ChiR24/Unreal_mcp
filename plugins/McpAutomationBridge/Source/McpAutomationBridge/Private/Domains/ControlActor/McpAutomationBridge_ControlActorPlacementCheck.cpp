@@ -1,6 +1,7 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Domains/ControlActor/Placement/McpAutomationBridge_PlacementMount.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
 #include "PhysicsEngine/BodySetup.h"
@@ -24,34 +25,6 @@ namespace {
 /** Actors with no meaningful volume would report a bogus overlap against everything. */
 bool McpHasUsableBounds(const FVector &Extent) {
   return Extent.X > 1.0 && Extent.Y > 1.0 && Extent.Z > 1.0;
-}
-
-/**
- * Volume-only actors (post-process, trigger, audio, kill-Z) legitimately enclose
- * everything inside them, so reporting those as overlaps would bury the real
- * signal under noise.
- */
-bool McpIsBoundsOnlyActor(const AActor *Actor) {
-  if (!Actor) {
-    return true;
-  }
-  const FString ClassName = Actor->GetClass()->GetName();
-  return ClassName.Contains(TEXT("Volume")) ||
-         ClassName.Contains(TEXT("Trigger")) ||
-         ClassName.Contains(TEXT("Fog")) ||
-         ClassName.Contains(TEXT("Light")) ||
-         ClassName.Contains(TEXT("PlayerStart")) ||
-         ClassName.Contains(TEXT("WorldSettings")) ||
-         ClassName.Contains(TEXT("Brush")) ||
-         // Subsystem debug-draw proxies (SmartObject, navigation, mass entity)
-         // carry bounds spanning the whole level, so without this every actor
-         // reports an overlap against them and the real findings drown.
-         ClassName.Contains(TEXT("RenderingActor")) ||
-         ClassName.Contains(TEXT("Subsystem")) ||
-         // PIE spawns one per player; every teleport in a play session read
-         // "intersects GameplayDebuggerCategoryReplicator0 by 64 units".
-         ClassName.Contains(TEXT("GameplayDebugger")) ||
-         ClassName.EndsWith(TEXT("SubsystemRenderingActor"));
 }
 
 /**
@@ -165,7 +138,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   // The same actors that make useless overlap TARGETS make useless subjects: a
   // level-spanning debug-draw proxy reported itself as sunk into the geometry it
   // was drawn over, and led the list every time.
-  if (McpIsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor)) {
+  if (IsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor)) {
     return;
   }
 
@@ -191,7 +164,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   for (TActorIterator<AActor> It(World); It; ++It) {
     AActor *Other = *It;
     if (!Other || Other == Actor || Other->IsHidden() ||
-        McpIsBoundsOnlyActor(Other) || McpPlacementAccepted(Other)) {
+        IsBoundsOnlyActor(Other) || McpPlacementAccepted(Other)) {
       continue;
     }
     // An attached child sharing its parent's space is structural, not a mistake.
@@ -317,9 +290,17 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
                "is its bounds centre, not its base -- z=%.0f would rest on it"),
           -Clearance, SuggestedZ));
     } else if (Clearance > 50.0) {
-      Notes.Add(FString::Printf(
-          TEXT("floating %.0f units above the surface under it"), Clearance));
+      // Only support from below was looked for, so a window band flush on a hall or an awning on a facade
+      // read "floating" by the height of the wall it hangs on. Held from the side, it is mounted.
+      if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) {
+        Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount));
+      } else {
+        Notes.Add(FString::Printf(
+            TEXT("floating %.0f units above the surface under it"), Clearance));
+      }
     }
+  } else if (AActor *Mount = FindMount(World, Actor, SelfBox, IgnoreBelow)) {
+    Data->SetStringField(TEXT("mountedOn"), McpActorRef(Mount));
   } else {
     Notes.Add(TEXT("nothing below it - it may be outside the playable area"));
   }

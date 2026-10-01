@@ -30,8 +30,9 @@ double McpPlacementSeverity(const TSharedPtr<FJsonObject> &Entry) {
       }
     }
   }
+  // The floor far below is not what holds a mounted actor up (mountedOn), so its distance is no error.
   double Clearance = 0.0;
-  if (Entry->TryGetNumberField(TEXT("groundClearance"), Clearance)) {
+  if (!Entry->HasField(TEXT("mountedOn")) && Entry->TryGetNumberField(TEXT("groundClearance"), Clearance)) {
     Severity = FMath::Max(Severity, FMath::Abs(Clearance));
   }
   return Severity;

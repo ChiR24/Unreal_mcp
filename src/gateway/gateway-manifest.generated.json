@@ -3649,7 +3649,7 @@
                 "coplanar"
               ]
             },
-            "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. Omit for every kind."
+            "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Omit for every kind."
           },
           "limit": {
             "oneOf": [

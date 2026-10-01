@@ -3760,7 +3760,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "coplanar"
             ]
           },
-          "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. Omit for every kind."
+          "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Omit for every kind."
         },
         "limit": {
           "oneOf": [
@@ -4475,6 +4475,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "propertyNames the actor's class does not have."
         },
+        "mountedOn": {
+          "type": "string",
+          "description": "The actor this one hangs on from the side (a window band flush on a hall, an awning on a facade): its bounds touch or overlap that actor's vertical face, so it is held up and is not reported floating or without a surface below. Present only then."
+        },
         "moved": {
           "type": "array",
           "description": "One entry per actor: actorName, offset {x, y, z} it moved by, resized when both of its faces on one axis moved (for example \"grew 2.0 units along X\"), and pairs, each face with the other actor and whether it was brought forward or pulled back.",
@@ -4542,7 +4546,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "placementWarning": {
           "type": "string",
-          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor's location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it. Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor's location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
         },
         "placementWarnings": {
           "type": "number",

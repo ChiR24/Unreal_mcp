@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9f0c3fbd399a368b",
+  "catalogRevision": "b1d31c3c8cbfc4b2",
   "recordCount": 389,
   "records": [
     {
@@ -29972,7 +29972,7 @@
                   "coplanar"
                 ]
               },
-              "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. Omit for every kind."
+              "description": "Report only these problem kinds, e.g. [\"coplanar\"] to list z-fighting alone in a platformer full of platforms that float on purpose. An actor whose worst problem is another kind still counts for coplanar when it has coplanarFaces. An actor whose bounds touch or overlap another actor's vertical face (a window band on a hall, an awning on a facade) is mounted, never floating or unsupported. Omit for every kind."
             },
             "maxTilt": {
               "type": "number",
@@ -30085,8 +30085,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "17a976a492e39c5a9d6b0a8ffe34463a970fda6d0bdc240bb55b5d511f869225",
-        "content": "06756d4bf1bcff8a07481d11a8a348b4541981211339a56674a1ad3d79c9dccc"
+        "schema": "9406aeb5d2ed74d92449fa16df44f71602a9358887e590038fefe0de554eb357",
+        "content": "5007003a27c5009378110c7bed40be4f20d3ec95e6699516dd42f15aff96fe2e"
       }
     },
     {
@@ -34053,7 +34053,11 @@
             },
             "placementWarning": {
               "type": "string",
-              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor's location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it. Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor's location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+            },
+            "mountedOn": {
+              "type": "string",
+              "description": "The actor this one hangs on from the side (a window band flush on a hall, an awning on a facade): its bounds touch or overlap that actor's vertical face, so it is held up and is not reported floating or without a surface below. Present only then."
             },
             "overlappingActors": {
               "type": "array",
@@ -34218,8 +34222,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0b791e7d216a02e736b98e19b4cf1b0da460a0defab3ffd608b5dde7b6cdef99",
-        "content": "79b9a82a70fdc288aa35ffde68f689d51230a2afab88629c67a590a2d3f1e7d1"
+        "schema": "7f26423d55f2858a4a30dcddc8c15d87d0f55459033bf817ece6bb872746ee4f",
+        "content": "c91a63cece95c2f304b69f15d7810812529027dbf362ff942fe8396821a75982"
       }
     },
     {

@@ -686,11 +686,16 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
       return isRecord(entry) && typeof entry.description === 'string' ? entry.description : '';
     };
 
-    for (const name of ['groundZ', 'groundClearance', 'placementWarning', 'overlappingActors', 'suggestedLocation', 'placementWarnings']) {
+    for (const name of ['groundZ', 'groundClearance', 'placementWarning', 'mountedOn', 'overlappingActors', 'suggestedLocation', 'placementWarnings']) {
       expect(isRecord(properties) ? Object.keys(properties) : [], name).toContain(name);
     }
     expect(description('placementWarning')).toMatch(/sunk below the surface under it .* mcp\.placement\.ok/u);
     expect(description('placementWarnings')).toMatch(/A warning is not a failure/u);
+    expect(description('mountedOn')).toMatch(/touch or overlap that actor's vertical face, so it is held up and is not reported floating/u);
+    expect(description('placementWarning')).toMatch(/held up from the side is mounted, never floating: see mountedOn/u);
+    const audit = capabilityIndex().byId.get('control_actor.audit_placement')?.schemas.input.properties;
+    const kinds = isRecord(audit) ? audit.kinds : undefined;
+    expect(isRecord(kinds) ? kinds.description : '').toMatch(/vertical face .* is mounted, never floating or unsupported/u);
     expect(description('results')).toMatch(/with a placementWarning under report: failures/u);
     expect(description('results')).toMatch(/measured after the item took its tags, variables and material/u);
   });
