@@ -80,6 +80,15 @@ describe('the details script: what the listing says about itself', () => {
     });
   });
 
+  // A free CC-BY spider pack came back isCc0: true, Fab's own flag on its license: read as "no credit needed".
+  it('reads CC0 and attribution from the license names, not from Fab\'s isCc0 flag', async () => {
+    const ccBy = await reply(detailsScript(), routes(listing({ licenses: [{ name: 'CC-BY', isCc0: true }] }), []));
+    expect(ccBy).toMatchObject({ licenseNames: ['CC-BY'], isCc0: false, attributionRequired: true });
+
+    const both = await reply(detailsScript(), routes(listing(), []));
+    expect(both).toMatchObject({ isCc0: true, attributionRequired: false });
+  });
+
   it('derives isFree from the price, whatever the listing flag says, and never reports the flag', async () => {
     const free = await reply(detailsScript(), routes(listing({ isFree: false, startingPrice: { price: 0 } }), []));
     expect(free.isFree).toBe(true);

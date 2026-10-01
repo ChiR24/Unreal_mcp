@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f61da9d39a19ea66",
+  "catalogRevision": "0f69a34672218b88",
   "recordCount": 389,
   "records": [
     {
@@ -10305,7 +10305,11 @@
             },
             "isCc0": {
               "type": "boolean",
-              "description": "True when any license of the listing is CC0. Absent when the listing publishes no licenses."
+              "description": "True when a license of the listing is CC0 (public domain, no credit needed), read from the license names: Fab's own flag is also set on CC-BY licenses. Absent when the listing publishes no licenses."
+            },
+            "attributionRequired": {
+              "type": "boolean",
+              "description": "True when a license of the listing is Creative Commons Attribution (CC BY, CC BY-SA ...): an asset used under it needs a credit line in the project naming its title, author, source and license, and saying what was changed. Absent when the listing publishes no licenses."
             },
             "price": {
               "type": "number",
@@ -10782,8 +10786,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1faf54edc6a4dd6d0b3c0985932854abd458d653b9b43e75d6350996f161e6bf",
-        "content": "be51baf873e812db0d720126d78ef7d299e721bcdc290d17500e2f81611e0bc6"
+        "schema": "c63e47ba4582f2141dacc3ceca3bbd86600dd7784e41d4cf2e560672306b3f2b",
+        "content": "da6c37f9f4fc51b18ac595cdd31b34beb1046f74d894d53833c786dacd610c90"
       }
     },
     {

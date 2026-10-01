@@ -26,7 +26,7 @@ describe('the details handler', () => {
       'category', 'categoryPath', 'currency', 'publishedAt', 'distributionMethod', 'runningEngine', 'versionName',
       'pickedEngineVersion', 'engineMatch', 'addFormat', 'downloadFile', 'quality', 'addBlockedCode', 'addBlockedReason',
       'averageRating', 'ratingCount', 'price', 'downloadBytes', 'licenseNames', 'engineVersions', 'qualities',
-      'addWarnings', 'formats', 'canAddToProject', 'isFree', 'isCc0', 'supportsRunningEngine', 'downloadSizeKnown',
+      'addWarnings', 'formats', 'canAddToProject', 'isFree', 'isCc0', 'attributionRequired', 'supportsRunningEngine', 'downloadSizeKnown',
     ]) {
       expect(handler, field).toContain(`TEXT("${field}")`);
     }

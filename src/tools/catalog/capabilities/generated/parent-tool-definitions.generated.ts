@@ -9371,6 +9371,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "New assets the asset registry has gained so far."
         },
+        "attributionRequired": {
+          "type": "boolean",
+          "description": "True when a license of the listing is Creative Commons Attribution (CC BY, CC BY-SA ...): an asset used under it needs a credit line in the project naming its title, author, source and license, and saying what was changed. Absent when the listing publishes no licenses."
+        },
         "averageRating": {
           "type": "number",
           "description": "Average rating as Fab reports it. Absent when the listing has none."
@@ -9762,7 +9766,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "isCc0": {
           "type": "boolean",
-          "description": "True when any license of the listing is CC0. Absent when the listing publishes no licenses."
+          "description": "True when a license of the listing is CC0 (public domain, no credit needed), read from the license names: Fab's own flag is also set on CC-BY licenses. Absent when the listing publishes no licenses."
         },
         "isFree": {
           "type": "boolean",

@@ -105,7 +105,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabListingDetails(
           // answer a caller needs before choosing between search hits. The rest are
           // present only when the page could tell.
           for (const TCHAR *Flag : {TEXT("hasUnrealBuild"), TEXT("canAddToProject"), TEXT("isFree"),
-                                    TEXT("isCc0"), TEXT("supportsRunningEngine"),
+                                    TEXT("isCc0"), TEXT("attributionRequired"), TEXT("supportsRunningEngine"),
                                     TEXT("downloadSizeKnown")}) {
             bool bValue = false;
             if (Parsed->TryGetBoolField(Flag, bValue)) {

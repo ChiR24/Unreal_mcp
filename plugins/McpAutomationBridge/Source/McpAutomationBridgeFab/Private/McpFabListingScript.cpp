@@ -47,7 +47,11 @@ const TCHAR* Script()
     var licenses = Array.isArray(x.licenses) ? x.licenses : [];
     var names = licenses.map(function (l) { return labelOf(l); }).filter(Boolean);
     if (names.length) { o.licenseNames = names.slice(0, 6); }
-    if (licenses.length) { o.isCc0 = licenses.some(function (l) { return !!(l && l.isCc0); }); }
+    // Fab sets its own isCc0 on a CC-BY license too, which read as "no credit needed": the license names decide.
+    if (licenses.length) {
+      o.isCc0 = names.some(function (n) { return /\bCC-?0\b|public domain/i.test(n); });
+      o.attributionRequired = names.some(function (n) { return /\bCC[- ]?BY\b|creative commons attribution/i.test(n); });
+    }
     var price = priceOf(x);
     if (price.resolved) {
       o.price = price.value;
