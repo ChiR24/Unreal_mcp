@@ -82,20 +82,27 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
         0.0f);
 
     // -McpStartMinimized: a launch for an automated session sat in the foreground, rendering flat out, until a caller
-    // could minimize it over the bridge. The main window goes away, without taking focus, as soon as it exists.
+    // could minimize it over the bridge. The editor adds its main window hidden and shows it, maximized, at the end of
+    // startup (FMainFrameHandler::ShowMainFrameWindow), which undid a minimize made before that. So this waits until
+    // the window is on screen, puts it away without taking focus, and keeps it down for 10 s in case startup brings it
+    // back. Bounded, because a ticker left registered would outlive a Live Coding module unload (see Deinitialize).
     if (FParse::Param(FCommandLine::Get(), TEXT("McpStartMinimized")))
     {
-        // Bounded: a ticker left registered would outlive a Live Coding module unload (see Deinitialize).
-        const double GiveUpAt = FPlatformTime::Seconds() + 120.0;
-        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([GiveUpAt](float)
+        const double GiveUpAt = FPlatformTime::Seconds() + 600.0;
+        const TSharedRef<double> HoldUntil = MakeShared<double>(0.0);
+        FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([GiveUpAt, HoldUntil](float)
         {
+            const double Now = FPlatformTime::Seconds();
             const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
-            if (!Root.IsValid() || !Root->GetNativeWindow().IsValid())
+            if (Root.IsValid() && Root->GetNativeWindow().IsValid() && Root->IsVisible() && !Root->IsWindowMinimized())
             {
-                return FPlatformTime::Seconds() < GiveUpAt;
+                MinimizeWindowForMcp(Root.ToSharedRef());
+                if (*HoldUntil == 0.0)
+                {
+                    *HoldUntil = Now + 10.0;
+                }
             }
-            MinimizeWindowForMcp(Root.ToSharedRef());
-            return false;
+            return *HoldUntil == 0.0 ? Now < GiveUpAt : Now < *HoldUntil;
         }), 0.25f);
     }
 
