@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c9effd99ec8f38f7",
+  "catalogRevision": "fc22db064cb6806b",
   "recordCount": 389,
   "records": [
     {
@@ -36450,6 +36450,10 @@
               "type": "boolean",
               "description": "false: hand the image back without leaving a file in Saved/Screenshots (refused with returnBase64 false, which would leave no output at all). Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file."
             },
+            "waitForShaders": {
+              "type": "boolean",
+              "description": "true: when shaders are still compiling (after a scalability or material change), wait for the queue to drain before capturing, polling without blocking the game thread, for at most 25 seconds; shaderWait in the reply says how long it waited and how many jobs were left. Default false: capture now and report shadersCompiling."
+            },
             "includeMetadata": {
               "type": "boolean",
               "description": "Attach caller-provided metadata to the response."
@@ -36482,6 +36486,16 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "shadersCompiling": {
+              "type": "number",
+              "description": "Shader compile jobs still outstanding when the picture was taken. Above 0, the surfaces they cover are drawn with the engine default material (black foliage, grey ground) and a warning says so; pass waitForShaders to capture after they finish."
+            },
+            "shaderWait": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With waitForShaders while shaders compiled: waitedSeconds, jobsLeft (still outstanding when the wait ended) and timedOut (true when jobs were left after the 25 second cap)."
             },
             "imageBase64": {
               "type": "string",
@@ -36601,8 +36615,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "711b2b4c4f20ebd8dcb1ad0e973207d73abeb9a6472a54f94276a32a5372e505",
-        "content": "459b43c4070411b55b2c07a765051d4cd1c6d265077201c1e900f6dcfa4b0176"
+        "schema": "9a95491ed847054f9a23823289ed9c350d98f541ed73ca316d12d5db2e739e20",
+        "content": "2ab928d5eccd62baa0b4c031f5a00bbed82eccbf3543abeaf8a8b0f1b33ba38e"
       }
     },
     {
@@ -39997,6 +40011,10 @@
               "type": "number",
               "description": "Active viewport height in pixels."
             },
+            "shadersCompiling": {
+              "type": "number",
+              "description": "Every get_editor_state variant: shader compile jobs still outstanding. Above 0 the viewport, and a screenshot of it, shows the engine default material (black foliage, grey ground) for what they cover; a warning says so."
+            },
             "worldName": {
               "type": "string",
               "description": "Current world name."
@@ -40187,8 +40205,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cecdbed843545266149c7c4b9ef736894e851a1e5f7b5ad81f3c0761f4699a8c",
-        "content": "43c417309c8cdac6d0fa6b058ab2aa2aa5406baa7aded2ba7fb04788983df618"
+        "schema": "d37a07ec51b5339bdd3b7f61de2bc30a17e239031fdd3a70facd1a823b64d132",
+        "content": "f03058945e0bf3d4ffa7430b9c24ff325279a092f23c9cb6fb3e007aa9949e07"
       }
     },
     {

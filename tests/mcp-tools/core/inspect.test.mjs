@@ -74,12 +74,12 @@ const testCases = [
   // === GLOBAL INSPECTION ===
   { scenario: 'INFO: get_project_settings', toolName: 'inspect', arguments: { action: 'get_project_settings' }, expected: 'success' },
   { scenario: 'INFO: get_world_settings', toolName: 'inspect', arguments: { action: 'get_world_settings' }, expected: 'success' },
-  { scenario: 'INFO: get_viewport_info', toolName: 'inspect', arguments: { action: 'get_viewport_info' }, expected: 'success' },
-  { scenario: 'INFO: get_selected_actors', toolName: 'inspect', arguments: { action: 'get_selected_actors' }, expected: 'success' },
+  { scenario: 'INFO: get_viewport_info', toolName: 'inspect', arguments: { action: 'get_viewport_info' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'the viewport read says how many shader jobs are still compiling' }] },
+  { scenario: 'INFO: get_selected_actors', toolName: 'inspect', arguments: { action: 'get_selected_actors' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'every editor-state read carries the shader count' }] },
   { scenario: 'INFO: get_scene_stats', toolName: 'inspect', arguments: { action: 'get_scene_stats' }, expected: 'success' },
   { scenario: 'INFO: get_performance_stats', toolName: 'inspect', arguments: { action: 'get_performance_stats' }, expected: 'success' },
   { scenario: 'INFO: get_memory_stats', toolName: 'inspect', arguments: { action: 'get_memory_stats' }, expected: 'success' },
-  { scenario: 'INFO: get_editor_settings', toolName: 'inspect', arguments: { action: 'get_editor_settings' }, expected: 'success' },
+  { scenario: 'INFO: get_editor_settings', toolName: 'inspect', arguments: { action: 'get_editor_settings' }, expected: 'success', assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'the editor settings read carries the shader count too' }] },
   { scenario: 'INFO: runtime_report', toolName: 'inspect', arguments: { action: 'runtime_report', actorName: ACTOR, componentNames: [COMPONENT], propertyNames: ['ActorLabel'] }, expected: 'success' },
   { scenario: 'INFO: pie_report', toolName: 'inspect', arguments: { action: 'pie_report', filter: ACTOR }, expected: 'success' },
 

@@ -86,6 +86,8 @@ void SendScreenshotReceiptForMcp(UMcpAutomationBridgeSubsystem *Subsystem,
     Resp->SetStringField(TEXT("screenshotPath"), FPaths::ConvertRelativePathToFull(FullPath));
   }
   AddScreenshotMetadataForMcp(Resp, Payload);
+  // Pixels drawn while shaders compile show the default material; say how many were still compiling.
+  McpAddShaderCompileState(Resp, Payload);
 
   FString Error;
   FString ErrorCode;

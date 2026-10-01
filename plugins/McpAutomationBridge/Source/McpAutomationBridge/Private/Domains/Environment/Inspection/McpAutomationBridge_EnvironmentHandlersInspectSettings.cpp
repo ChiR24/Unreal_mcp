@@ -1,5 +1,9 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
+#include "Foundation/McpScreenshotResample.h"
 
+// inspect get_editor_state: each of its five reads below (project, editor and world settings, viewport,
+// selection) carries the count of shader jobs still compiling, since the viewport and any picture of it show
+// the engine default material for what they cover until it reads 0.
 namespace McpEnvironmentHandlers {
 
 bool HandleInspectSettingsAction(
@@ -29,6 +33,7 @@ bool HandleInspectSettingsAction(
                 Resp->SetStringField(TEXT("projectID"), ProjectSettings->ProjectID.ToString());
                 Resp->SetBoolField(TEXT("startInVR"), ProjectSettings->bStartInVR);
             }
+            McpAddShaderCompileState(Resp, nullptr);
             Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Project settings retrieved"), Resp, FString());
@@ -53,6 +58,7 @@ bool HandleInspectSettingsAction(
             }
             Resp->SetBoolField(TEXT("isEditor"), GIsEditor);
             Resp->SetNumberField(TEXT("gRunningCommandlet"), IsRunningCommandlet() ? 1 : 0);
+            McpAddShaderCompileState(Resp, nullptr);
             Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Editor settings retrieved"), Resp, FString());
@@ -90,6 +96,7 @@ bool HandleInspectSettingsAction(
                 // lightingBuilt...) shared with get_level_details, which the
                 // TypeScript surface aliases to this action.
                 McpAppendLevelDetails(World, Resp);
+                McpAddShaderCompileState(Resp, nullptr);
                 Resp->SetBoolField(TEXT("success"), true);
                 Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                        TEXT("World settings retrieved"), Resp, FString());
@@ -108,6 +115,7 @@ bool HandleInspectSettingsAction(
             // type and (in PIE) the view target + camera manager — see
             // McpAutomationBridge_EnvironmentHandlersInspectViewport.cpp.
             McpAppendViewportInfo(Resp);
+            McpAddShaderCompileState(Resp, nullptr);
             Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Viewport info retrieved"), Resp, FString());
@@ -134,6 +142,7 @@ bool HandleInspectSettingsAction(
             }
             Resp->SetArrayField(TEXT("actors"), ActorsArray);
             Resp->SetNumberField(TEXT("count"), ActorsArray.Num());
+            McpAddShaderCompileState(Resp, nullptr);
             Resp->SetBoolField(TEXT("success"), true);
             Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                                    TEXT("Selected actors retrieved"), Resp, FString());

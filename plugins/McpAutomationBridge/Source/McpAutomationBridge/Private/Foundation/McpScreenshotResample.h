@@ -9,6 +9,7 @@
 
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
+#include "Templates/Function.h"
 
 /**
  * Resolve the payload's "resolution" into the size this capture should encode at.
@@ -51,3 +52,27 @@ void ResampleBitmapForMcp(const TArray<FColor> &SrcBitmap, FIntPoint SrcSize,
 bool ResolveScreenshotDirectoryForMcp(const TSharedPtr<FJsonObject> &Payload,
                                       const FString &DefaultDir, FString &OutDir,
                                       FString &OutError);
+
+/** Shader compile jobs still outstanding (GShaderCompilingManager); 0 when none, or when there is no manager. */
+int32 McpShaderJobsRemaining();
+
+/** The longest a waitForShaders capture waits: the bridge's client gives up on a call at 30 s. */
+constexpr double McpShaderWaitMaxSeconds = 25.0;
+
+/**
+ * Puts shadersCompiling (the outstanding shader jobs) on a capture or editor-state reply and, while some are, a
+ * warning: surfaces they cover are drawn with the engine's default material (black foliage, grey ground), which
+ * nothing in the picture says. A wait McpDeferForShaderCompile ran is reported as shaderWait. Payload may be null.
+ */
+void McpAddShaderCompileState(const TSharedPtr<FJsonObject> &Resp,
+                              const TSharedPtr<FJsonObject> &Payload);
+
+/**
+ * waitForShaders: when the payload asks for it and shaders are compiling, polls on the core ticker (the game
+ * thread keeps running, which is what lets the compiling finish) for at most McpShaderWaitMaxSeconds, then calls
+ * Resume with the payload carrying shaderWait {waitedSeconds, jobsLeft, timedOut}. True when it deferred: the
+ * caller returns at once and Resume captures. False when the capture should go ahead now (not asked for,
+ * nothing compiling, or already waited).
+ */
+bool McpDeferForShaderCompile(const TSharedPtr<FJsonObject> &Payload,
+                              TFunction<void(const TSharedPtr<FJsonObject> &)> Resume);

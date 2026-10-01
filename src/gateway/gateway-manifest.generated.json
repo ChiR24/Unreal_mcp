@@ -4020,6 +4020,7 @@
         "validateOnly",
         "value",
         "viewMode",
+        "waitForShaders",
         "widget",
         "width",
         "window",
@@ -4366,6 +4367,10 @@
           "viewMode": {
             "type": "string",
             "description": "Viewport view mode (e.g. Lit, Unlit, Wireframe)."
+          },
+          "waitForShaders": {
+            "type": "boolean",
+            "description": "true: when shaders are still compiling (after a scalability or material change), wait for the queue to drain before capturing, polling without blocking the game thread, for at most 25 seconds; shaderWait in the reply says how long it waited and how many jobs were left. Default false: capture now and report shadersCompiling."
           },
           "widget": {
             "type": "string",

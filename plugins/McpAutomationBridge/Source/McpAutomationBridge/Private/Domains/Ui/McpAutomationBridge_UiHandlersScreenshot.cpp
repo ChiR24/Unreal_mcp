@@ -253,6 +253,8 @@ bool HandleScreenshotAction(
   Resp->SetNumberField(TEXT("sizeBytes"), PngData.Num());
   Resp->SetStringField(TEXT("mimeType"), TEXT("image/png"));
   AddScreenshotMetadataForUiMcp(Resp, Payload);
+  // As the editor captures: pixels drawn while shaders compile show the default material.
+  McpAddShaderCompileState(Resp, Payload);
 
   if (!bKeepFile && !bReturnBase64) {
     bSuccess = false;

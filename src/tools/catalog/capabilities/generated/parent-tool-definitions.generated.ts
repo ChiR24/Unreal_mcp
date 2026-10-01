@@ -4941,6 +4941,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Viewport view mode (e.g. Lit, Unlit, Wireframe)."
         },
+        "waitForShaders": {
+          "type": "boolean",
+          "description": "true: when shaders are still compiling (after a scalability or material change), wait for the queue to drain before capturing, polling without blocking the game thread, for at most 25 seconds; shaderWait in the reply says how long it waited and how many jobs were left. Default false: capture now and report shadersCompiling."
+        },
         "widget": {
           "type": "string",
           "description": "For type widget_click: the live UMG widget to drive, by name (PlayButton), or Owner.Name (WBP_MainMenu.PlayButton) when several share it. widget_list shows both."
@@ -5290,6 +5294,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "screenshotPath": {
           "type": "string",
           "description": "Saved screenshot file path."
+        },
+        "shaderWait": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With waitForShaders while shaders compiled: waitedSeconds, jobsLeft (still outstanding when the wait ended) and timedOut (true when jobs were left after the 25 second cap)."
+        },
+        "shadersCompiling": {
+          "type": "number",
+          "description": "Shader compile jobs still outstanding when the picture was taken. Above 0, the surfaces they cover are drawn with the engine default material (black foliage, grey ground) and a warning says so; pass waitForShaders to capture after they finish."
         },
         "sizeBytes": {
           "type": "integer",
@@ -6143,6 +6157,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "World scale as {x, y, z}."
+        },
+        "shadersCompiling": {
+          "type": "number",
+          "description": "Every get_editor_state variant: shader compile jobs still outstanding. Above 0 the viewport, and a screenshot of it, shows the engine default material (black foliage, grey ground) for what they cover; a warning says so."
         },
         "startInVR": {
           "type": "boolean",

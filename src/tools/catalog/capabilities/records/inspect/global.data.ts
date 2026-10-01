@@ -91,6 +91,8 @@ export const GLOBAL_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       width: { type: 'number', description: 'Active viewport width in pixels.' },
       height: { type: 'number', description: 'Active viewport height in pixels.' },
+      // Every get_editor_state variant sends it (the five reads share one prelude), so it is declared once for the family.
+      shadersCompiling: { type: 'number', description: 'Every get_editor_state variant: shader compile jobs still outstanding. Above 0 the viewport, and a screenshot of it, shows the engine default material (black foliage, grey ground) for what they cover; a warning says so.' },
     },
   }),
   buildCoreRecord({

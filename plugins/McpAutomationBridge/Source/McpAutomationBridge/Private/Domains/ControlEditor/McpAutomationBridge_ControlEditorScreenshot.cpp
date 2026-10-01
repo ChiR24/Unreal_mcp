@@ -9,6 +9,18 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     return true;
   }
 
+  // waitForShaders: capture once the shader queue drains. The wait polls on the core ticker, so the game thread
+  // keeps running and the compiling can finish; the call resumes here with shaderWait in the payload.
+  if (McpDeferForShaderCompile(
+          Payload, [Weak = TWeakObjectPtr<UMcpAutomationBridgeSubsystem>(this), RequestId,
+                    Socket](const TSharedPtr<FJsonObject> &Waited) {
+            if (UMcpAutomationBridgeSubsystem *Self = Weak.Get()) {
+              Self->HandleControlEditorScreenshot(RequestId, Waited, Socket);
+            }
+          })) {
+    return true;
+  }
+
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
   Mode = Mode.TrimStartAndEnd().ToLower();

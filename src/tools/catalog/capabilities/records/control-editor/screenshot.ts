@@ -40,11 +40,19 @@ const SCREENSHOT_PROPS = {
     type: 'boolean',
     description: 'false: hand the image back without leaving a file in Saved/Screenshots (refused with returnBase64 false, which would leave no output at all). Default true. Files already written are listed by system_control list_output_files and removed by delete_output_file.'
   },
+  // Shaders recompile after a scalability or material change; until they finish the picture shows the engine's default
+  // material (black foliage, grey ground) and nothing in it says so.
+  waitForShaders: {
+    type: 'boolean',
+    description: 'true: when shaders are still compiling (after a scalability or material change), wait for the queue to drain before capturing, polling without blocking the game thread, for at most 25 seconds; shaderWait in the reply says how long it waited and how many jobs were left. Default false: capture now and report shadersCompiling.'
+  },
   includeMetadata: P.includeMetadata,
   metadata: P.metadata,
 };
 
 const SCREENSHOT_OUTPUT = {
+  shadersCompiling: { type: 'number', description: 'Shader compile jobs still outstanding when the picture was taken. Above 0, the surfaces they cover are drawn with the engine default material (black foliage, grey ground) and a warning says so; pass waitForShaders to capture after they finish.' },
+  shaderWait: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With waitForShaders while shaders compiled: waitedSeconds, jobsLeft (still outstanding when the wait ended) and timedOut (true when jobs were left after the 25 second cap).' },
   imageBase64: { type: 'string', description: 'Base64-encoded PNG image data.' },
   mimeType: { type: 'string', description: 'Image MIME type.' },
   width: { type: 'number', description: 'Width in pixels of the PNG actually returned.' },

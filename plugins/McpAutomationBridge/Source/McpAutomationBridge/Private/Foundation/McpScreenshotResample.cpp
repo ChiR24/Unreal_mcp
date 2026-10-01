@@ -2,6 +2,10 @@
 
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 
+#include "Containers/Ticker.h"
+#include "HAL/PlatformTime.h"
+#include "ShaderCompiler.h"
+
 namespace {
 bool IsAllDigitsForMcp(const FString &Value) {
   if (Value.IsEmpty()) {
@@ -152,4 +156,62 @@ bool ResolveScreenshotDirectoryForMcp(const TSharedPtr<FJsonObject> &Payload,
   // The shared project-file resolver: containment, traversal and reserved
   // device names are checked in one place for every file the plugin writes.
   return McpResolveProjectFilePath(Raw, OutDir, OutError);
+}
+
+int32 McpShaderJobsRemaining() {
+  return GShaderCompilingManager ? GShaderCompilingManager->GetNumRemainingJobs() : 0;
+}
+
+void McpAddShaderCompileState(const TSharedPtr<FJsonObject> &Resp,
+                              const TSharedPtr<FJsonObject> &Payload) {
+  if (!Resp.IsValid()) {
+    return;
+  }
+  const int32 Jobs = McpShaderJobsRemaining();
+  Resp->SetNumberField(TEXT("shadersCompiling"), Jobs);
+  const TSharedPtr<FJsonObject> *Waited = nullptr;
+  if (Payload.IsValid() && Payload->TryGetObjectField(TEXT("shaderWait"), Waited) && Waited) {
+    Resp->SetObjectField(TEXT("shaderWait"), *Waited);
+  }
+  if (Jobs > 0) {
+    // Added to whatever warnings the capture already carries (the game view's scene-only note).
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    const TArray<TSharedPtr<FJsonValue>> *Existing = nullptr;
+    if (Resp->TryGetArrayField(TEXT("warnings"), Existing) && Existing) {
+      Warnings = *Existing;
+    }
+    Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
+        TEXT("%d shader job(s) were still compiling, so surfaces they cover are drawn with the engine's default ")
+        TEXT("material (black or grey) and this picture may not show the final look. Retry with waitForShaders ")
+        TEXT("true, or once shadersCompiling reads 0."),
+        Jobs)));
+    Resp->SetArrayField(TEXT("warnings"), Warnings);
+  }
+}
+
+bool McpDeferForShaderCompile(const TSharedPtr<FJsonObject> &Payload,
+                              TFunction<void(const TSharedPtr<FJsonObject> &)> Resume) {
+  bool bWait = false;
+  if (!Payload.IsValid() || !Payload->TryGetBoolField(TEXT("waitForShaders"), bWait) || !bWait ||
+      Payload->HasField(TEXT("shaderWait")) || McpShaderJobsRemaining() == 0) {
+    return false;
+  }
+  const double Start = FPlatformTime::Seconds();
+  FTSTicker::GetCoreTicker().AddTicker(
+      FTickerDelegate::CreateLambda([Payload, Resume, Start](float) -> bool {
+        const int32 Left = McpShaderJobsRemaining();
+        const double Waited = FPlatformTime::Seconds() - Start;
+        if (Left > 0 && Waited < McpShaderWaitMaxSeconds) {
+          return true;
+        }
+        TSharedPtr<FJsonObject> Wait = MakeShared<FJsonObject>();
+        Wait->SetNumberField(TEXT("waitedSeconds"), FMath::RoundToDouble(Waited * 10.0) / 10.0);
+        Wait->SetNumberField(TEXT("jobsLeft"), Left);
+        Wait->SetBoolField(TEXT("timedOut"), Left > 0);
+        Payload->SetObjectField(TEXT("shaderWait"), Wait);
+        Resume(Payload);
+        return false;
+      }),
+      0.25f);
+  return true;
 }
