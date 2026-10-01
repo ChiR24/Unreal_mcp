@@ -37,7 +37,8 @@ bool UMcpAutomationBridgeSubsystem::HandleRenderAction(
     }
     if (SubAction == TEXT("nanite_rebuild_mesh"))
     {
-        return McpRenderHandlers::HandleNaniteRebuildMesh(this, RequestId, Payload, RequestingSocket);
+        // One implementation for both routes: manage_asset reaches the same handler.
+        return HandleNaniteRebuildMesh(RequestId, SubAction, Payload, RequestingSocket);
     }
     if (SubAction == TEXT("lumen_update_scene"))
     {

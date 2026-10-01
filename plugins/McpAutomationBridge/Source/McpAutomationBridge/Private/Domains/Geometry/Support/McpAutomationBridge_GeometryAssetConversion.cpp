@@ -53,6 +53,11 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     CreateOptions.bEnableRecomputeNormals = true;
     CreateOptions.bEnableRecomputeTangents = true;
     CreateOptions.bEnableNanite = bNanite;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+    // From 5.1 the new mesh takes these settings whole when Nanite is asked for, and their
+    // bEnabled defaults to false, so bEnableNanite alone baked every "Nanite" mesh without it.
+    CreateOptions.NaniteSettings.bEnabled = bNanite;
+#endif
 
     EGeometryScriptOutcomePins Outcome;
     UGeometryScriptLibrary_CreateNewAssetFunctions::CreateNewStaticMeshAssetFromMesh(
@@ -79,8 +84,8 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     // Built from explicit convex-hull vertices in body space via the
     // long-stable UBodySetup/FKAggregateGeom API rather than version-drifting
     // Geometry Script static-mesh collision helpers.
-    if (UStaticMesh* CreatedMesh = Cast<UStaticMesh>(
-            StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *AssetPath)))
+    UStaticMesh* CreatedMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *AssetPath));
+    if (CreatedMesh)
     {
         UBodySetup* BodySetup = CreatedMesh->GetBodySetup();
         if (!BodySetup)
@@ -126,10 +131,23 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
         }
     }
 
+    // Read back from the mesh: the reply used to echo the request.
+    bool bNaniteOn = false;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 3
+    bNaniteOn = CreatedMesh && CreatedMesh->IsNaniteEnabled();
+#else
+    bNaniteOn = CreatedMesh && CreatedMesh->NaniteSettings.bEnabled;
+#endif
+    if (bNanite && !bNaniteOn)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("%s was created, but Nanite is not enabled on it."), *AssetPath), TEXT("NANITE_NOT_ENABLED"));
+        return true;
+    }
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
-    Result->SetBoolField(TEXT("naniteEnabled"), bNanite);
+    Result->SetBoolField(TEXT("naniteEnabled"), bNaniteOn);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("StaticMesh created from DynamicMesh"), Result);
     return true;
 }

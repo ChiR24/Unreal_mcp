@@ -11,12 +11,6 @@ bool HandleCreateRenderTarget(
     const TSharedPtr<FJsonObject>& Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
-bool HandleNaniteRebuildMesh(
-    UMcpAutomationBridgeSubsystem* Subsystem,
-    const FString& RequestId,
-    const TSharedPtr<FJsonObject>& Payload,
-    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
-
 bool HandleLumenUpdateScene(
     UMcpAutomationBridgeSubsystem* Subsystem,
     const FString& RequestId,

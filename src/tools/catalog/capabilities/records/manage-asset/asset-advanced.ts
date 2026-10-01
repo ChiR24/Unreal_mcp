@@ -121,7 +121,7 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       whenNotToUse: ['The individual nodes of a material and their connections are needed (use material.get_material_info).'],
       examples: [ex('Read instruction counts for a material', { assetPath: '/Game/Materials/M_Base' }, { success: true })] }
   ),
-  r('nanite_rebuild_mesh', 'asset', 'Rebuild a Nanite mesh representation.',
+  r('nanite_rebuild_mesh', 'asset', 'Turn Nanite on for a static mesh asset and set the share of its triangles Nanite keeps; the mesh is rebuilt and saved, and the reply reads naniteEnabled and trianglePercent back from it.',
     schema({ assetPath: str('Static mesh asset path.'), trianglePercent: num('Percent of the source triangles Nanite keeps, 0-100 (default 100).') }, ['assetPath']),
     OK, { ...WRITE, longRunning: true }, WRITE_POLICY, HIGH,
     { dispatchAction: 'manage_render',

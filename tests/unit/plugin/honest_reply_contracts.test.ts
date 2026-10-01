@@ -592,3 +592,23 @@ describe('object and class references in a property bag', () => {
     expect(objects).toContain('CP ? !(AsClass && AsClass->IsChildOf(Wanted)) : !Res->IsA(Wanted)');
   });
 });
+
+describe('Nanite bakes and rebuilds', () => {
+  it('convert_to_nanite turns Nanite on in the settings the new mesh copies and replies with what the mesh holds', () => {
+    // From 5.1 the asset takes NaniteSettings whole and its bEnabled defaults to false, so bEnableNanite alone
+    // baked plain meshes while the reply echoed naniteEnabled: true.
+    const conversion = code('Geometry', 'Support', 'McpAutomationBridge_GeometryAssetConversion.cpp');
+    expect(conversion).toContain('CreateOptions.NaniteSettings.bEnabled = bNanite;');
+    expect(conversion).toContain('Result->SetBoolField(TEXT("naniteEnabled"), bNaniteOn);');
+    expect(conversion).toContain('TEXT("NANITE_NOT_ENABLED")');
+  });
+
+  it('nanite_rebuild_mesh rebuilds and saves on every version, reads the result back, and both routes share it', () => {
+    const nanite = code('AssetWorkflow', 'Optimization', 'McpAutomationBridge_AssetWorkflowNanite.cpp');
+    expect(nanite).toContain('StaticMesh->Build(true);');
+    expect(nanite).toMatch(/if \(!McpSafeAssetSave\(StaticMesh\)\) \{[\s\S]*?TEXT\("SAVE_FAILED"\)/u);
+    expect(nanite).toContain('Resp->SetBoolField(TEXT("naniteEnabled"), After.bEnabled);');
+    expect(nanite).not.toContain('PositionPrecision = 8');
+    expect(code('Render', 'McpAutomationBridge_RenderHandlers.cpp')).toContain('return HandleNaniteRebuildMesh(RequestId, SubAction, Payload, RequestingSocket);');
+  });
+});

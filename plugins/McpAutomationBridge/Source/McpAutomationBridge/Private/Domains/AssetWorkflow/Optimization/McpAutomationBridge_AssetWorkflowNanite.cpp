@@ -57,70 +57,47 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
     return true;
   }
 
-  // Check if mesh supports Nanite
-  bool bEnableNanite = true;
-
-  // Nanite settings
-  bool bPreserveArea = true;
+  // Percent of the source triangles Nanite keeps (the record's default: all of them).
   double TrianglePercent = 100.0;
-  double FallbackPercent = 0.0;
-
   Payload->TryGetNumberField(TEXT("trianglePercent"), TrianglePercent);
-
-  // Clamp values
   TrianglePercent = FMath::Clamp(TrianglePercent, 0.0, 100.0);
-  FallbackPercent = FMath::Clamp(FallbackPercent, 0.0, 100.0);
+
+  // Only bEnabled and the kept share change; the mesh's other Nanite settings stay as they are.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
+  FMeshNaniteSettings Settings = StaticMesh->GetNaniteSettings();
+  Settings.bEnabled = true;
+  Settings.KeepPercentTriangles = static_cast<float>(TrianglePercent / 100.0);
+  StaticMesh->SetNaniteSettings(Settings);
+#else
+  StaticMesh->NaniteSettings.bEnabled = true;
+  StaticMesh->NaniteSettings.KeepPercentTriangles = static_cast<float>(TrianglePercent / 100.0);
+#endif
+  // New settings do nothing until the render data is rebuilt, and are gone on the next load
+  // unless saved: this used to rebuild on 5.7+ only, save never, and echo the request back.
+  StaticMesh->Build(true);
+  StaticMesh->MarkPackageDirty();
+  if (!McpSafeAssetSave(StaticMesh)) {
+    SendAutomationError(Socket, RequestId,
+                        FString::Printf(TEXT("Nanite was turned on for %s, but the mesh could not be saved."), *MeshPath),
+                        TEXT("SAVE_FAILED"));
+    return true;
+  }
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 7
-  // UE 5.7+: Use accessor functions to avoid deprecation warnings
-  FMeshNaniteSettings Settings = StaticMesh->GetNaniteSettings();
-  Settings.bEnabled = bEnableNanite;
-  Settings.PositionPrecision = 8; // Default precision
-
-  // bPreserveArea replaced with ShapePreservation enum
-  if (bPreserveArea) {
-    Settings.ShapePreservation = ENaniteShapePreservation::PreserveArea;
-  } else {
-    Settings.ShapePreservation = ENaniteShapePreservation::None;
-  }
-  Settings.KeepPercentTriangles = static_cast<float>(TrianglePercent / 100.0);
-  Settings.FallbackPercentTriangles = static_cast<float>(FallbackPercent / 100.0);
-  if (FallbackPercent > 0.0) {
-    Settings.GenerateFallback = ENaniteGenerateFallback::Enabled;
-  } else {
-    Settings.GenerateFallback = ENaniteGenerateFallback::PlatformDefault;
-  }
-  StaticMesh->SetNaniteSettings(Settings);
-  StaticMesh->NotifyNaniteSettingsChanged();
-#elif ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-  // UE 5.1-5.6: Uses KeepPercentTriangles, FallbackPercentTriangles, and bPreserveArea
-  StaticMesh->NaniteSettings.bEnabled = bEnableNanite;
-  StaticMesh->NaniteSettings.PositionPrecision = 8;
-  StaticMesh->NaniteSettings.bPreserveArea = bPreserveArea;
-  StaticMesh->NaniteSettings.KeepPercentTriangles = static_cast<float>(TrianglePercent / 100.0);
-  StaticMesh->NaniteSettings.FallbackPercentTriangles = static_cast<float>(FallbackPercent / 100.0);
+  const FMeshNaniteSettings &After = StaticMesh->GetNaniteSettings();
 #else
-  // UE 5.0: Uses KeepPercentTriangles (no bPreserveArea)
-  StaticMesh->NaniteSettings.bEnabled = bEnableNanite;
-  StaticMesh->NaniteSettings.PositionPrecision = 8;
-  StaticMesh->NaniteSettings.KeepPercentTriangles = static_cast<float>(TrianglePercent / 100.0);
-  StaticMesh->NaniteSettings.FallbackPercentTriangles = static_cast<float>(FallbackPercent / 100.0);
+  const FMeshNaniteSettings &After = StaticMesh->NaniteSettings;
 #endif
-
-  // Mark mesh as modified
-  StaticMesh->MarkPackageDirty();
-
-  // Build response
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("meshPath"), MeshPath);
   Resp->SetStringField(TEXT("meshName"), StaticMesh->GetName());
-  Resp->SetBoolField(TEXT("naniteEnabled"), bEnableNanite);
-  Resp->SetBoolField(TEXT("preserveArea"), bPreserveArea);
-  Resp->SetNumberField(TEXT("trianglePercent"), TrianglePercent);
-  Resp->SetNumberField(TEXT("fallbackPercent"), FallbackPercent);
-
+  Resp->SetBoolField(TEXT("naniteEnabled"), After.bEnabled);
+  Resp->SetNumberField(TEXT("trianglePercent"), FMath::RoundToDouble(After.KeepPercentTriangles * 1000.0) / 10.0);
+  Resp->SetBoolField(TEXT("rebuilt"), true);
+  Resp->SetBoolField(TEXT("saved"), true);
   SendAutomationResponse(Socket, RequestId, true,
-                         FString::Printf(TEXT("Nanite settings updated for %s"), *StaticMesh->GetName()),
+                         FString::Printf(TEXT("Nanite on for %s, keeping %.1f%% of its triangles; rebuilt and saved"),
+                                         *StaticMesh->GetName(), After.KeepPercentTriangles * 100.0f),
                          Resp, FString());
   return true;
 }

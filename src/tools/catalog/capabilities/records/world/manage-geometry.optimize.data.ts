@@ -176,7 +176,7 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'convert_to_nanite', plugins: PLUGIN,
-    family: F, summary: 'Bake a dynamic mesh into a new Nanite-enabled static mesh asset.', whenToUse: ['A baked static mesh must use Nanite for virtualized geometry.'], whenNotToUse: ['The baked mesh must not use Nanite; use convert_to_static_mesh.'],
+    family: F, summary: 'Bake a dynamic mesh into a Nanite-enabled static mesh asset; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced and its material slots come back empty (set them with asset.process_asset process=mesh_materials).', whenToUse: ['A baked static mesh must use Nanite for virtualized geometry.'], whenNotToUse: ['The baked mesh must not use Nanite; use convert_to_static_mesh.'],
     inputProps: { actorName: P.actorName, outputPath: P.outputPath, targetActor: P.targetActor }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'convert_to_nanite', targetActor: 'SM_Rock' },
   }),
