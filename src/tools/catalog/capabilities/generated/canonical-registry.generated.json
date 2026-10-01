@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "93cd2f9952ab61c6",
+  "catalogRevision": "51c11b48c1f9db39",
   "recordCount": 389,
   "records": [
     {
@@ -42128,6 +42128,10 @@
             "blueprintCompiled": {
               "type": "boolean",
               "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved."
+            },
+            "materialRebuilt": {
+              "type": "boolean",
+              "description": "True when the target lives inside a material or material function (a material expression such as a TextureObjectParameter, as <material>.<material>:<nodeName>) and that material was rebuilt, so its parameter lists, which every material instance reads, show the write at once (a new ParameterName, a new default Texture). Absent for any other target."
             }
           },
           "required": [
@@ -42177,8 +42181,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4da0606bfc52d0e3f2d6b4a585c64502eadd332ce6ae726b74ef5b949d9a0062",
-        "content": "382045a45748881d279198d659c747d46f1267c273b39d9464e412416fd157ad"
+        "schema": "51e3ae0a6e024673d71dbca4092399f832f7fc778832e2384859cbe5c6e2e85a",
+        "content": "c24f0f42268e8b178e79e8736b0d489eb4d3499c3650e10105cb3468e3821d46"
       }
     },
     {

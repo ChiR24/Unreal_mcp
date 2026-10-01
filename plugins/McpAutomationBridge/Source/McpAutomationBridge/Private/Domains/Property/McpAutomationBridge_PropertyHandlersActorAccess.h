@@ -24,4 +24,9 @@ bool TryHandleSetActorProperty(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
 void RefreshK2NodeTitleCacheIfNeeded(UObject* RootObject);
+
+// A material expression (or any object inside a material or material function) was written: tells the
+// material or function it lives in that it changed, as compile_material does, so the parameter lists every
+// instance reads are rebuilt and the material recompiled now. False when the object is in neither.
+bool RefreshMaterialHostAfterEdit(UObject* Edited);
 }

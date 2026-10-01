@@ -6000,6 +6000,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "World location as {x, y, z}."
         },
+        "materialRebuilt": {
+          "type": "boolean",
+          "description": "True when the target lives inside a material or material function (a material expression such as a TextureObjectParameter, as <material>.<material>:<nodeName>) and that material was rebuilt, so its parameter lists, which every material instance reads, show the write at once (a new ParameterName, a new default Texture). Absent for any other target."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."

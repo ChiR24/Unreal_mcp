@@ -177,6 +177,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       bCompiledBlueprint = true;
   }
   McpPropertyActorAccess::RefreshK2NodeTitleCacheIfNeeded(RootObject);
+  const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit(RootObject);
 
   // `saved` used to be hard-coded true while nothing reached disk: the package
   // was only marked dirty, so an InputAction's bTriggerWhenPaused set here was
@@ -214,6 +215,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   // A Blueprint write only reaches future instances once the class is rebuilt,
   // so say whether that happened rather than leaving the caller to assume it.
   ResultPayload->SetBoolField(TEXT("blueprintCompiled"), bCompiledBlueprint);
+  // A material expression's write reaches material instances only once its material has rebuilt its parameter
+  // lists, so say that happened (a renamed ParameterName was invisible to instances until something else did).
+  if (bMaterialRebuilt) {
+      ResultPayload->SetBoolField(TEXT("materialRebuilt"), true);
+  }
   McpHandlerUtils::AddVerification(ResultPayload, RootObject);
 
   if (TSharedPtr<FJsonValue> CurrentValue = McpPropertyReflection::ExportPropertyToJsonValue(TargetContainer, Property))

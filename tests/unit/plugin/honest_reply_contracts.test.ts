@@ -212,6 +212,25 @@ describe('handlers answer what they did', () => {
     expect(isRecord(parameters) ? parameters.description : '').toMatch(/texture parameter also carries texture .* and samplerType/u);
   });
 
+  // set_property on a material expression (<material>.<material>:<nodeName>) ran only the expression's own PostEditChange,
+  // which never reaches its material: the cached expression data every instance reads kept the old ParameterName until
+  // some other call rebuilt the material.
+  it('set_property on an object inside a material or material function rebuilds that material, as compile_material does', () => {
+    const access = code('Property', 'McpAutomationBridge_PropertyHandlersActorAccess.cpp');
+    const set = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+    const compile = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringHandlersCompileMaterial.cpp');
+
+    expect(access).toMatch(/bool RefreshMaterialHostAfterEdit\(UObject\* Edited\)\s*\{\s*UObject\* Host = Edited \? Edited->GetTypedOuter<UMaterial>\(\) : nullptr;\s*if \(!Host && Edited\)\s*\{\s*Host = Edited->GetTypedOuter<UMaterialFunction>\(\);\s*\}\s*if \(!Host\)\s*\{\s*return false;\s*\}\s*Host->PreEditChange\(nullptr\);\s*Host->PostEditChange\(\);\s*return true;\s*\}/u);
+    expect(compile, 'the same two calls compile_material makes').toMatch(/Host->PreEditChange\(nullptr\);\s*Host->PostEditChange\(\);/u);
+    expect(set).toMatch(/RefreshK2NodeTitleCacheIfNeeded\(RootObject\);\s*const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit\(RootObject\);/u);
+    expect(set.indexOf('RefreshMaterialHostAfterEdit(RootObject)'), 'before the save, so the saved material is the rebuilt one').toBeLessThan(set.indexOf('McpSafeAssetSave(OwningPackage)'));
+    expect(set).toMatch(/if \(bMaterialRebuilt\) \{\s*ResultPayload->SetBoolField\(TEXT\("materialRebuilt"\), true\);\s*\}/u);
+
+    const properties = capabilityIndex().byId.get('inspect.set_property')?.schemas.output.properties;
+    const rebuilt = isRecord(properties) ? properties.materialRebuilt : undefined;
+    expect(isRecord(rebuilt) ? rebuilt.description : '').toMatch(/inside a material or material function .* that material was rebuilt/u);
+  });
+
   // disconnect_nodes answered "Disconnect operation completed." with nothing unplugged.
   it('disconnect_nodes fails when no pin matched and unplugs a custom node input by label', () => {
     const source = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersDisconnectNodes.cpp');

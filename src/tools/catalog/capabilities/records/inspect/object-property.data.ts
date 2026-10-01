@@ -173,6 +173,8 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       // Writing a Blueprint CDO only reaches instances spawned later once the
       // class is rebuilt, so the caller is told whether that recompile happened.
       blueprintCompiled: { type: 'boolean', description: 'True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved.' },
+      // A material expression's write reaches material instances only through the rebuilt material.
+      materialRebuilt: { type: 'boolean', description: 'True when the target lives inside a material or material function (a material expression such as a TextureObjectParameter, as <material>.<material>:<nodeName>) and that material was rebuilt, so its parameter lists, which every material instance reads, show the write at once (a new ParameterName, a new default Texture). Absent for any other target.' },
     },
     exampleInput: { action: 'set_property', objectPath: '/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1', propertyName: 'ActorLabel', value: 'Spawn_01' },
   }),

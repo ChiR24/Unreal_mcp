@@ -15,6 +15,9 @@
 #include "EdGraph/EdGraphSchema.h"
 #include "K2Node.h"
 
+#include "Materials/Material.h"
+#include "Materials/MaterialFunction.h"
+
 namespace McpPropertyActorAccess
 {
 namespace
@@ -138,5 +141,24 @@ void RefreshK2NodeTitleCacheIfNeeded(UObject* RootObject)
             }
         }
     }
+}
+
+bool RefreshMaterialHostAfterEdit(UObject* Edited)
+{
+    // An expression's own PostEditChange never reaches its material, and the parameter lists instances read
+    // come from the material's cached expression data, which only the material's PostEditChange rebuilds (and
+    // recompiles): a renamed parameter stayed invisible to every instance until some other call did this.
+    UObject* Host = Edited ? Edited->GetTypedOuter<UMaterial>() : nullptr;
+    if (!Host && Edited)
+    {
+        Host = Edited->GetTypedOuter<UMaterialFunction>();
+    }
+    if (!Host)
+    {
+        return false;
+    }
+    Host->PreEditChange(nullptr);
+    Host->PostEditChange();
+    return true;
 }
 }
