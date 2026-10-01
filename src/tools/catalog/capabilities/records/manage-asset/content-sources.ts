@@ -187,24 +187,31 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
   ),
 
   r('search_fab_listings', 'asset',
-    'Search the whole public Fab catalog through the signed-in Fab tab and get listing ids you can pass straight to add_fab_asset_to_project. Opens the Fab tab when it is closed and waits up to 15 seconds for its page to load (PAGE_NOT_READY after that) instead of failing on the first call; the account must be signed in there. A hit is a candidate, not a promise: no channel filter is applied, because pinning one hid the Quixel/Megascans library entirely. Whether a listing can be imported is resolved at add time, which reports NO_IMPORTABLE_FORMAT only when the listing ships none of unreal-engine, gltf, glb or fbx; call get_fab_listing_details first if you want canAddToProject up front. Results carry ids and labels only; no thumbnail, download URL or account field leaves the page.',
+    'Search the whole public Fab catalog through the signed-in Fab tab and get listing ids you can pass straight to add_fab_asset_to_project. Opens the Fab tab when it is closed and waits up to 15 seconds for its page to load (PAGE_NOT_READY after that) instead of failing on the first call; the account must be signed in there. seller narrows the search to one publisher by name (Quixel Megascans for the Megascans library) and listingType to one content kind (3d-model, material), so a Megascans surface is one call rather than a page of unrelated uploads. Every hit says who published it, which category it is in, how it is rated, what it costs and which formats it ships, as far as the search itself returned them; a fact the row did not carry is left out, never filled in, and nothing more is fetched per row. isFree is derived from price, because the listing\'s own isFree flag disagrees with it and is not reported. A hit is a candidate, not a promise: no channel filter is applied, because pinning one hid the Quixel/Megascans library entirely. Whether a listing can be imported is resolved at add time, which reports NO_IMPORTABLE_FORMAT only when the listing ships none of unreal-engine, gltf, glb, fbx, obj or usdz; call get_fab_listing_details first for canAddToProject, the engine build and the download size up front. Results carry ids and labels only; no thumbnail, download URL or account field leaves the page.',
     schema({
       query: str('Free-text search. At most 128 characters, and no quotes, backslashes or control characters.'),
+      seller: str('Only listings published by this seller, by name, for example Quixel Megascans. At most 128 characters, and no quotes, backslashes or control characters. Omit for every publisher.'),
+      listingType: str('Only this content kind, as a row\'s listingType names it, for example 3d-model or material. One token of [A-Za-z0-9_-], at most 40 characters. Omit for every kind.'),
       freeOnly: { type: 'boolean', default: false, description: 'Restrict to free listings.' },
       limit: { type: 'number', minimum: 1, maximum: 50, default: 12, description: 'Maximum listings to return (1-50).' }
     }, []),
     schema({
       success: bool('Search completed.'),
-      listings: arrObj('Matched listings: listingId, title, listingType, isFree (derived from price), rawIsFree (the listing flag, which disagrees), tags, and unresolvedPriceShape when price could not be read.'),
+      listings: arrObj('Matched listings: listingId, title, listingType, isFree (derived from price), tags, and, when the row carried them, seller, category, averageRating, ratingCount, price, currency, isCc0, publishedAt and formats (the format codes it ships). unresolvedPriceShape names the price field\'s keys when the price could not be read. The listing\'s own isFree flag is not reported.'),
       listingCount: num('Listings returned.'),
       query: str('Query that was run.'),
+      seller: str('The seller filter that was applied. Present only when one was given.'),
+      listingType: str('The content-kind filter that was applied. Present only when one was given.'),
       note: str('How to use a returned listingId, and what listingType does and does not guarantee.')
     }, ['success']),
     READ, READ_POLICY, MEDIUM,
     { dispatchAction: 'search_fab_listings',
-      whenToUse: ['Content must be found on Fab by keyword, optionally free listings only, to get listing ids.'],
+      whenToUse: ['Content must be found on Fab by keyword, optionally from one publisher or of one kind, or free listings only, to get listing ids and to tell a Megascans hit from a random upload.'],
       whenNotToUse: ['Content already installed in an engine template, plugin or Bridge folder is wanted (use asset.list with kind=content_sources).'],
-      examples: [ex('Find free Unreal rocks on Fab', { query: 'rock', freeOnly: true, limit: 5 }, { success: true, listingCount: 0 })] }
+      examples: [
+        ex('Find free Unreal rocks on Fab', { query: 'rock', freeOnly: true, limit: 5 }, { success: true, listingCount: 0 }),
+        ex('Find Megascans materials', { query: 'concrete', seller: 'Quixel Megascans', listingType: 'material', limit: 5 }, { success: true, listingCount: 0 })
+      ] }
   ),
 
   r('add_fab_asset_to_project', 'asset',

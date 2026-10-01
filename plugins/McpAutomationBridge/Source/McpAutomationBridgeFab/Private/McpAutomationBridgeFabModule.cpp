@@ -14,8 +14,7 @@ bool Start(const FString& ListingId, const FString& EngineVersion, TFunction<voi
 
 namespace McpFabSearchOperation
 {
-bool Start(const FString& Query, bool bFreeOnly, int32 Limit,
-	TFunction<void(const FMcpFabSearchResult&)> OnComplete);
+bool Start(const FMcpFabSearchRequest& Request, TFunction<void(const FMcpFabSearchResult&)> OnComplete);
 }
 
 namespace McpFabAddOperation
@@ -175,13 +174,11 @@ public:
 	}
 
 	virtual bool SearchListings(
-		const FString& Query,
-		bool bFreeOnly,
-		int32 Limit,
+		const FMcpFabSearchRequest& Request,
 		TFunction<void(const FMcpFabSearchResult&)> OnComplete) override
 	{
 #if MCP_FAB_ADAPTER_HAS_FAB_API
-		return McpFabSearchOperation::Start(Query, bFreeOnly, Limit, MoveTemp(OnComplete));
+		return McpFabSearchOperation::Start(Request, MoveTemp(OnComplete));
 #else
 		return false;
 #endif

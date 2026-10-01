@@ -18,7 +18,9 @@
  *
  * Results carry ids and labels only. No thumbnail URL, no download URL and no
  * account-scoped field is copied out of the page, so the response stays free of
- * anything transient or credential-derived.
+ * anything transient or credential-derived. A row says who published it, which
+ * category it is in, how it is rated and what it costs, as far as the search
+ * itself returned: a fact the row did not carry is left out, never filled in.
  */
 bool UMcpAutomationBridgeSubsystem::HandleSearchFabListings(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -32,21 +34,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSearchFabListings(
     return true;
   }
 
-  FString Query;
-  Payload->TryGetStringField(TEXT("query"), Query);
-
-  bool bFreeOnly = false;
-  Payload->TryGetBoolField(TEXT("freeOnly"), bFreeOnly);
-
+  FMcpFabSearchRequest Request;
+  Payload->TryGetStringField(TEXT("query"), Request.Query);
+  Payload->TryGetStringField(TEXT("seller"), Request.Seller);
+  Payload->TryGetStringField(TEXT("listingType"), Request.ListingType);
+  Payload->TryGetBoolField(TEXT("freeOnly"), Request.bFreeOnly);
   double Limit = 12;
   Payload->TryGetNumberField(TEXT("limit"), Limit);
-  const int32 Bounded = FMath::Clamp(static_cast<int32>(Limit), 1, 50);
+  Request.Limit = FMath::Clamp(static_cast<int32>(Limit), 1, 50);
 
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
   const bool bStarted = Provider->SearchListings(
-      Query, bFreeOnly, Bounded,
-      [WeakThis, RequestId, Socket, Query](const FMcpFabSearchResult &Result) {
-        AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, Socket, Query, Result]() {
+      Request,
+      [WeakThis, RequestId, Socket, Request](const FMcpFabSearchResult &Result) {
+        AsyncTask(ENamedThreads::GameThread, [WeakThis, RequestId, Socket, Request, Result]() {
           UMcpAutomationBridgeSubsystem *Self = WeakThis.Get();
           if (Self == nullptr) {
             return;
@@ -58,27 +59,61 @@ bool UMcpAutomationBridgeSubsystem::HandleSearchFabListings(
             Row->SetStringField(TEXT("listingId"), Listing.Uid);
             Row->SetStringField(TEXT("title"), Listing.Title);
             Row->SetStringField(TEXT("listingType"), Listing.ListingType);
+            // Derived from price. The listing's own flag disagrees with it, so it is not passed on.
             Row->SetBoolField(TEXT("isFree"), Listing.bIsFree);
-            // Surfaced deliberately: the listing's own isFree flag disagrees with
-            // its price, so a caller that cares can see both rather than trusting
-            // a single field that has already been observed to be wrong.
-            Row->SetBoolField(TEXT("rawIsFree"), Listing.bRawIsFree);
             if (!Listing.bPriceResolved) {
               Row->SetStringField(TEXT("unresolvedPriceShape"), Listing.PriceShape);
             }
-            TArray<TSharedPtr<FJsonValue>> Tags;
-            for (const FString &Tag : Listing.Tags) {
-              Tags.Add(MakeShared<FJsonValueString>(Tag));
+            if (!Listing.Seller.IsEmpty()) {
+              Row->SetStringField(TEXT("seller"), Listing.Seller);
             }
-            Row->SetArrayField(TEXT("tags"), Tags);
+            if (!Listing.Category.IsEmpty()) {
+              Row->SetStringField(TEXT("category"), Listing.Category);
+            }
+            if (Listing.AverageRating.IsSet()) {
+              Row->SetNumberField(TEXT("averageRating"), Listing.AverageRating.GetValue());
+            }
+            if (Listing.RatingCount.IsSet()) {
+              Row->SetNumberField(TEXT("ratingCount"), Listing.RatingCount.GetValue());
+            }
+            if (Listing.Price.IsSet()) {
+              Row->SetNumberField(TEXT("price"), Listing.Price.GetValue());
+            }
+            if (!Listing.Currency.IsEmpty()) {
+              Row->SetStringField(TEXT("currency"), Listing.Currency);
+            }
+            if (Listing.bIsCc0.IsSet()) {
+              Row->SetBoolField(TEXT("isCc0"), Listing.bIsCc0.GetValue());
+            }
+            if (!Listing.PublishedAt.IsEmpty()) {
+              Row->SetStringField(TEXT("publishedAt"), Listing.PublishedAt);
+            }
+            // tags is always present, as before; formats only when the row named some.
+            const auto AddStrings = [&Row](const TCHAR *Field, const TArray<FString> &Texts, bool bAlways) {
+              TArray<TSharedPtr<FJsonValue>> Values;
+              for (const FString &Text : Texts) {
+                Values.Add(MakeShared<FJsonValueString>(Text));
+              }
+              if (bAlways || Values.Num() > 0) {
+                Row->SetArrayField(Field, Values);
+              }
+            };
+            AddStrings(TEXT("formats"), Listing.Formats, false);
+            AddStrings(TEXT("tags"), Listing.Tags, true);
             Rows.Add(MakeShared<FJsonValueObject>(Row));
           }
           Data->SetArrayField(TEXT("listings"), Rows);
           Data->SetNumberField(TEXT("listingCount"), Rows.Num());
-          Data->SetStringField(TEXT("query"), Query);
+          Data->SetStringField(TEXT("query"), Request.Query);
+          if (!Request.Seller.IsEmpty()) {
+            Data->SetStringField(TEXT("seller"), Request.Seller);
+          }
+          if (!Request.ListingType.IsEmpty()) {
+            Data->SetStringField(TEXT("listingType"), Request.ListingType);
+          }
           Data->SetStringField(
               TEXT("note"),
-              TEXT("Searches the whole public Fab catalog, so a hit is a candidate rather than a promise: pass listingId to add_fab_asset_to_project, which resolves the real asset formats and imports unreal-engine, gltf, glb or fbx alike. Call get_fab_listing_details for canAddToProject up front. listingType is the content kind (3d-model, material), not that guarantee."));
+              TEXT("Searches the whole public Fab catalog, so a hit is a candidate rather than a promise: pass listingId to add_fab_asset_to_project, which resolves the real asset formats and imports unreal-engine, gltf, glb, fbx, obj or usdz alike. seller and listingType narrow the search; formats lists what a hit ships. Call get_fab_listing_details for canAddToProject, the engine build and the download size up front. listingType is the content kind (3d-model, material), not that guarantee."));
 
           Self->SendAutomationResponse(
               Socket, RequestId, Result.bSuccess,

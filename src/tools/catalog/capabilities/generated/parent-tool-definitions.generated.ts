@@ -8027,6 +8027,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Fab listing uid, as it appears in a fab.com/listings/<uid> URL. Restricted to [A-Za-z0-9_-], 64 characters max, because it is used to build an API path."
         },
+        "listingType": {
+          "type": "string",
+          "description": "Only this content kind, as a row's listingType names it, for example 3d-model or material. One token of [A-Za-z0-9_-], at most 40 characters. Omit for every kind."
+        },
         "lodBias": {
           "type": "number",
           "description": "LOD bias value."
@@ -8638,6 +8642,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "seed": {
           "type": "number",
           "description": "Random seed."
+        },
+        "seller": {
+          "type": "string",
+          "description": "Only listings published by this seller, by name, for example Quixel Megascans. At most 128 characters, and no quotes, backslashes or control characters. Omit for every publisher."
         },
         "setting": {
           "type": "string",
@@ -9429,7 +9437,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "object",
             "x-unreal-reflection-boundary": true
           },
-          "description": "Matched listings: listingId, title, listingType, isFree (derived from price), rawIsFree (the listing flag, which disagrees), tags, and unresolvedPriceShape when price could not be read."
+          "description": "Matched listings: listingId, title, listingType, isFree (derived from price), tags, and, when the row carried them, seller, category, averageRating, ratingCount, price, currency, isCc0, publishedAt and formats (the format codes it ships). unresolvedPriceShape names the price field's keys when the price could not be read. The listing's own isFree flag is not reported."
         },
         "matchCount": {
           "type": "number",

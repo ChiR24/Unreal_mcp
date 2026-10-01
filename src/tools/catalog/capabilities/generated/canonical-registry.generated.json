@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f94788f9e78b32aa",
+  "catalogRevision": "a90d253e8824e72d",
   "recordCount": 389,
   "records": [
     {
@@ -10027,7 +10027,7 @@
           "lookup=fab_listing_details: A Fab search hit must be judged before adding it: description, seller, rating, price, file formats, sizes, and whether the project can import it.",
           "lookup=fab_downloads: It must be known which Fab packs are already downloaded to this machine and where they are cached.",
           "lookup=fab_library: The Fab listings the signed-in account owns must be listed, each with an id for adding to the project (an empty table is synced by the call itself).",
-          "lookup=fab_search: Content must be found on Fab by keyword, optionally free listings only, to get listing ids.",
+          "lookup=fab_search: Content must be found on Fab by keyword, optionally from one publisher or of one kind, or free listings only, to get listing ids and to tell a Megascans hit from a random upload.",
           "lookup=megascans_library: The Megascans packs downloaded by Bridge on this machine must be listed before one is imported.",
           "lookup=fab_import_status: A Fab add has returned an operationId and it must be known whether the import is downloading, importing, done or failed, and where the content landed."
         ],
@@ -10069,6 +10069,14 @@
             "query": {
               "type": "string",
               "description": "Free-text search. At most 128 characters, and no quotes, backslashes or control characters."
+            },
+            "seller": {
+              "type": "string",
+              "description": "Only listings published by this seller, by name, for example Quixel Megascans. At most 128 characters, and no quotes, backslashes or control characters. Omit for every publisher."
+            },
+            "listingType": {
+              "type": "string",
+              "description": "Only this content kind, as a row's listingType names it, for example 3d-model or material. One token of [A-Za-z0-9_-], at most 40 characters. Omit for every kind."
             },
             "freeOnly": {
               "type": "boolean",
@@ -10370,7 +10378,7 @@
                 "type": "object",
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Matched listings: listingId, title, listingType, isFree (derived from price), rawIsFree (the listing flag, which disagrees), tags, and unresolvedPriceShape when price could not be read."
+              "description": "Matched listings: listingId, title, listingType, isFree (derived from price), tags, and, when the row carried them, seller, category, averageRating, ratingCount, price, currency, isCc0, publishedAt and formats (the format codes it ships). unresolvedPriceShape names the price field's keys when the price could not be read. The listing's own isFree flag is not reported."
             },
             "listingCount": {
               "type": "number",
@@ -10598,6 +10606,12 @@
             "query": [
               "fab_search"
             ],
+            "seller": [
+              "fab_search"
+            ],
+            "listingType": [
+              "fab_search"
+            ],
             "freeOnly": [
               "fab_search"
             ],
@@ -10609,8 +10623,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "60e13f4ecc129379a25c2e9bc76780ef149a3640809a52d93884e5f6b6aed375",
-        "content": "e002566c85c7ee5a6fd35f5307296c5f8d8bf716f5f9f13547cbd5a45e5e4758"
+        "schema": "2c28eb8d631f94b17e9c365e682c3a9a6a8fa230512d437cee756374bfe3399a",
+        "content": "138d18414343c556a2d5a0f33f876330ca79621f1cfac3ef85f6c10706357ef3"
       }
     },
     {

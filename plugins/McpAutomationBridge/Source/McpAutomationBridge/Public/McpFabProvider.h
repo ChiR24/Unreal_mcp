@@ -135,15 +135,38 @@ struct FMcpFabListing
 	FString Uid;
 	FString Title;
 	FString ListingType;
-	/** Derived from price, not from the listing's own isFree flag. */
+	/** Derived from price: the listing's own isFree flag disagrees with it and is not carried. */
 	bool bIsFree = false;
 	/** False when the price field could not be interpreted; see PriceShape. */
 	bool bPriceResolved = false;
 	/** Key names of an unrecognised price object, so the next run can be fixed. */
 	FString PriceShape;
-	/** The listing's raw isFree flag, kept because it disagrees with price. */
-	bool bRawIsFree = false;
+	/** The publisher's name; empty when the row carries none. */
+	FString Seller;
+	FString Category;
+	/** The facts below are set only when the row carried them: unset is unknown, not zero. */
+	TOptional<double> AverageRating;
+	TOptional<int32> RatingCount;
+	TOptional<double> Price;
+	FString Currency;
+	TOptional<bool> bIsCc0;
+	FString PublishedAt;
+	/** Format codes the listing ships (unreal-engine, gltf, fbx, ...). */
+	TArray<FString> Formats;
 	TArray<FString> Tags;
+};
+
+/** What a catalog query asks for. */
+struct FMcpFabSearchRequest
+{
+	/** Free text; empty for none. */
+	FString Query;
+	/** One publisher's name, such as Quixel Megascans; empty for every publisher. */
+	FString Seller;
+	/** One content kind, such as 3d-model or material; empty for every kind. */
+	FString ListingType;
+	bool bFreeOnly = false;
+	int32 Limit = 12;
 };
 
 /** Outcome of a catalog query. */
@@ -229,14 +252,7 @@ public:
 	virtual bool CancelImport(const FString& OperationId, FString& OutMessage, FString& OutErrorCode) = 0;
 
 	/**
-	 * Queries the Fab catalog through the signed-in page.
-	 *
-	 * The channel filter is fixed natively to unreal-engine so every hit is a
-	 * listing AddToProject can actually consume; a caller supplies only the free
-	 * text and paging.
-	 */
-	/**
-	 * Fetches one listing's description and preview image.
+	 * Fetches one listing's description, facts and preview image, and what adding it would do.
 	 *
 	 * OutJson carries imageBase64 rather than a URL, which McpJsonRpcImageContent
 	 * promotes into a real MCP image block, so the caller sees the asset.
@@ -245,10 +261,15 @@ public:
 		const FString& ListingId,
 		TFunction<void(bool /*bSuccess*/, const FString& /*Json*/)> OnComplete) = 0;
 
+	/**
+	 * Queries the Fab catalog through the signed-in page.
+	 *
+	 * No channel filter is applied -- pinning one hid the Quixel/Megascans library -- so a hit is a
+	 * candidate, not a promise. The request may narrow by publisher and by content kind; every row
+	 * carries the publisher, category, rating, price and formats the search itself returned.
+	 */
 	virtual bool SearchListings(
-		const FString& Query,
-		bool bFreeOnly,
-		int32 Limit,
+		const FMcpFabSearchRequest& Request,
 		TFunction<void(const FMcpFabSearchResult&)> OnComplete) = 0;
 };
 

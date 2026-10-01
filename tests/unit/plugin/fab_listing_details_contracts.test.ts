@@ -79,3 +79,39 @@ describe('the refusals the details predict', () => {
     expect(provider).toContain('FString EngineVersion;');
   });
 });
+
+describe('the catalog search request', () => {
+  const op = code(fab('McpFabSearchOperation.cpp'));
+  const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabSearch.cpp'));
+
+  it('refuses a publisher or a content kind that could break out of the script or ride along in the query', () => {
+    expect(op).toContain('TEXT("INVALID_SELLER")');
+    expect(op).toContain('TEXT("INVALID_LISTING_TYPE")');
+    // Every refusal comes before anything is composed or dispatched.
+    expect(op.indexOf('INVALID_LISTING_TYPE')).toBeLessThan(op.indexOf('McpFabBridgeDispatch::Dispatch('));
+    // The publisher gets the same text check as the free text; a content kind is one ASCII token.
+    expect(op).toContain('!IsSafeQuery(Request.Seller)');
+    expect(op).toMatch(/\(C >= TEXT\('a'\) && C <= TEXT\('z'\)\)[\s\S]*C == TEXT\('-'\) \|\| C == TEXT\('_'\)/u);
+  });
+
+  it('hands the page the filters only through printf slots, and the page encodes them', () => {
+    expect(op).toContain('*RequestId, *Request.Query, *Request.Seller, *Request.ListingType, Limit,');
+    const script = rawScript();
+    expect(script).toContain('encodeURIComponent(types)');
+    expect(script).toContain('encodeURIComponent(seller)');
+  });
+
+  it('reports a fact only when the row carried it, and never the listing flag that disagrees with price', () => {
+    expect(handler).not.toContain('rawIsFree');
+    for (const guarded of ['AverageRating', 'RatingCount', 'Price', 'bIsCc0']) {
+      expect(handler, guarded).toContain(`Listing.${guarded}.IsSet()`);
+    }
+    expect(code(core('Public/McpFabProvider.h'))).not.toContain('bRawIsFree');
+  });
+});
+
+/** The raw page script of the search, for pins on what it does with the filters. */
+function rawScript(): string {
+  const source = fab('McpFabSearchOperation.cpp').replace(/\r\n/gu, '\n');
+  return [...source.matchAll(/R"JS\(([\s\S]*?)\)JS"/gu)].map((match) => match[1] ?? '').join('');
+}
