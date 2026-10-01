@@ -237,10 +237,15 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
 
   // A step that recompiles logs the half-built graph ("missing input 11 (OB)" before the connect
   // feeding it) and the receipt showed that as current. The compile below is the verdict, and it
-  // logs again if the material still fails.
+  // logs again if the material still fails. The engine names the asset in that line by the file it is
+  // saved in ("[AssetLog] ...\Content\Dir\M_X.uasset: Failed to compile Material ...") and by its
+  // object path only while no file exists, so both are matched: the object path alone left every
+  // line of a saved material on the receipt, in warnings and in engineWarnings.
   const FString PackageName = FPackageName::ObjectPathToPackageName(AssetPath);
-  Bridge->ForgetCapturedMessages([&PackageName](const FString& Line) {
-    return Line.StartsWith(TEXT("[LogMaterial]")) && Line.Contains(PackageName);
+  const FString FileName = FPackageName::GetShortName(*PackageName) + FPackageName::GetAssetPackageExtension();
+  Bridge->ForgetCapturedMessages([&PackageName, &FileName](const FString& Line) {
+    return Line.StartsWith(TEXT("[LogMaterial]")) && (Line.Contains(PackageName)
+        || Line.Contains(TEXT("\\") + FileName) || Line.Contains(TEXT("/") + FileName));
   });
 
   // One recompile and save for the whole graph, through compile_material itself.

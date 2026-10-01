@@ -152,6 +152,27 @@ describe('handlers answer what they did', () => {
     expect(batch.indexOf('Bridge->ForgetCapturedMessages(')).toBeLessThan(batch.indexOf('RunStep(CompileId, Compile);'));
   });
 
+  // The engine names the asset in a compile failure by the file it is saved in ("[AssetLog] <disk path>.uasset: Failed to
+  // compile Material ..."), and by the object path only while no file exists. The forget matched the package name alone,
+  // so every line of a saved material stayed (live: M_Toon, three "missing input" lines in warnings and engineWarnings
+  // beside "compiles and was saved"); the receipt shows the disk path as its package path, which hid the mismatch.
+  it('the compile lines it forgets are found by the asset file the engine prints for a saved material, not only by its object path', () => {
+    const batch = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp');
+
+    expect(batch).toContain('const FString PackageName = FPackageName::ObjectPathToPackageName(AssetPath);');
+    expect(batch).toContain('const FString FileName = FPackageName::GetShortName(*PackageName) + FPackageName::GetAssetPackageExtension();');
+    expect(batch).toMatch(
+      /ForgetCapturedMessages\(\[&PackageName, &FileName\]\(const FString& Line\) \{\s*return Line\.StartsWith\(TEXT\("\[LogMaterial\]"\)\) && \(Line\.Contains\(PackageName\)\s*\|\| Line\.Contains\(TEXT\("\\\\"\) \+ FileName\) \|\| Line\.Contains\(TEXT\("\/"\) \+ FileName\)\);\s*\}\);/u
+    );
+  });
+
+  it('add_material_node nodeKind=batch is that same handler, so its receipt is pruned alike', () => {
+    const fold = capabilityIndex().byId.get('material.add_material_node')?.routing.dispatchBy;
+
+    expect(fold?.param).toBe('nodeKind');
+    expect(fold?.actions.batch).toBe('build_material_graph');
+  });
+
   // update_custom_expression and connect_nodes answered with changes: [] for the material they edited.
   it('a material graph edit names the material it changed', () => {
     for (const file of [
