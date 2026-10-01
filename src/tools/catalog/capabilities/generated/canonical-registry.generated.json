@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "35519ff2d0f77acf",
+  "catalogRevision": "99db8c355f4d2e25",
   "recordCount": 389,
   "records": [
     {
@@ -13711,7 +13711,7 @@
             },
             "properties": {
               "type": "object",
-              "description": "Property bag applied to the CDO, component template, or node.",
+              "description": "Property bag applied to the CDO, component template, or node: name to value. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -13851,8 +13851,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8112f090ea714ad21412abd3693dda7805eb1c2b2e7645916731e3b9c2e807a0",
-        "content": "bf8e3ad333605cb6acb6262bdb30d6791b7c31fe7560d2aa2b7b6614815271b5"
+        "schema": "1498de5046f8ae895f64f5a5519fb0da242abd4ef7acff90daa4d6e5be33318b",
+        "content": "f591b9150374acd5160c343f20ce780baa88e70b50b0d39d982e4ddde0de440b"
       }
     },
     {
@@ -15697,7 +15697,7 @@
             },
             "properties": {
               "type": "object",
-              "description": "Property bag applied to the CDO, component template, or node.",
+              "description": "Property bag applied to the CDO, component template, or node: name to value. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -15732,7 +15732,7 @@
               "description": "Property name to set on the CDO or component."
             },
             "propertyValue": {
-              "description": "Value to assign to the property."
+              "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
             },
             "edit": {
               "type": "string",
@@ -15798,7 +15798,7 @@
               "x-unreal-reflection-boundary": true
             },
             "verifiedValue": {
-              "description": "Value to assign to the property."
+              "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
             }
           },
           "required": [
@@ -15946,8 +15946,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ad67dcc837765774e687efa88982897a2e0d3e277b6806980cb32a6b3c50c7ec",
-        "content": "0561c08b7fae860b9a08bc5c9b38ac83bf3546775d398f3bad0586fc6d4b46b4"
+        "schema": "00c2828283c5aafefbaa96e8a18ba46ba98ee2b8d17a75a9df1e9c58bb74f77b",
+        "content": "3eaa8f167a0eee0f8ebe38d93303418f493e88af60434913f35a4689f3ea5824"
       }
     },
     {
@@ -16102,7 +16102,7 @@
               "description": "A member variable to put the metadata on (as set_variable_metadata does); omitted, the keys go on the Blueprint class."
             },
             "propertyValue": {
-              "description": "Value to assign to the property."
+              "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
             },
             "edit": {
               "type": "string",
@@ -16261,8 +16261,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7a66b63e5ad0386e098064cb9f3d64eee376666a44698cf840dbf8602b99fab8",
-        "content": "b6521fb754eaf0db2bde8033d1b9ce651604fede077248e433c47b3534682801"
+        "schema": "5aa1108f63eaa5c49834770ad04b3617fcc1f4ec4f668da9c5452bea38150042",
+        "content": "bd390a1520ca74b7c557f3728d63e73a97fdec3a41b0ff4236e47219de521677"
       }
     },
     {
@@ -17039,7 +17039,7 @@
               "description": "Blueprint metadata recorded by the bridge."
             },
             "propertyValue": {
-              "description": "Value to assign to the property."
+              "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
             }
           },
           "required": [
@@ -17106,8 +17106,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7e5297c757bddebbd203656ecc858443fd0c1934c612029df96ff5319b2ee0f3",
-        "content": "03fc0a396061d7a383077b247990f51d42b94bd4e5d10e68b9d4342d26f9c0b1"
+        "schema": "ac6b679c311f9fff3b019fa7ef2df177cbc89277fa30a491726d61d0b47cae05",
+        "content": "e7e5c125a076096c91245d1fcece128c7e038b16dca11188ec6370d49b034fe0"
       }
     },
     {

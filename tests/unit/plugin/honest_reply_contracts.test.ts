@@ -575,3 +575,20 @@ describe('the main inputs of a material', () => {
     expect(disconnect).toContain('*ListMainMaterialInputs(Material)');
   });
 });
+
+describe('object and class references in a property bag', () => {
+  const objects = readFileSync(
+    join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersPropertyApplyObjects.h'),
+    'utf8',
+  ).replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+
+  it('null, "" and "None" clear a hard or soft reference (edit_scs ChildActorClass "None" was refused)', () => {
+    expect(objects).toContain('ValueField->AsString().Equals(TEXT("None"), ESearchCase::IgnoreCase)');
+    expect(objects).toMatch(/if \(bClearReference\) \{\s*OP->SetObjectPropertyValue_InContainer\(TargetContainer, nullptr\);/u);
+    expect(objects).toMatch(/if \(bClearReference\) \{\s*\*SoftPtr = FSoftObjectPtr\(\);/u);
+  });
+
+  it('an object of the wrong class is refused, not stored; a class must derive from the property\'s meta class', () => {
+    expect(objects).toContain('CP ? !(AsClass && AsClass->IsChildOf(Wanted)) : !Res->IsA(Wanted)');
+  });
+});

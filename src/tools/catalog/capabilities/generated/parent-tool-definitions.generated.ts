@@ -11869,7 +11869,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "properties": {
           "type": "object",
-          "description": "Property bag applied to the CDO, component template, or node.",
+          "description": "Property bag applied to the CDO, component template, or node: name to value. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
@@ -11883,7 +11883,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "The key value, by trackType: opacity a number 0-1; color {r,g,b,a} or [r,g,b,a]; translation, scale or shear {x,y} or [x,y]; angle a number in degrees; transform any of {translation:{x,y}, scale:{x,y}, angle, shear:{x,y}}. A value of the wrong shape is refused before anything is added."
             },
             {
-              "description": "Value to assign to the property."
+              "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
             },
             {
               "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
@@ -12909,7 +12909,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Widget property driven by the track (RenderOpacity, ColorAndOpacity, RenderTransform)."
         },
         "propertyValue": {
-          "description": "Value to assign to the property."
+          "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
         },
         "reachable": {
           "type": "boolean",
@@ -13083,7 +13083,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           }
         },
         "verifiedValue": {
-          "description": "Value to assign to the property."
+          "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
         },
         "visibility": {
           "type": "string",

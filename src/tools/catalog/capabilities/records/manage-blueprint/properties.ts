@@ -47,7 +47,7 @@ export const P = {
   isPublic: B('Whether the variable is exposed to the editor/BP graph.'),
   // Metadata
   propertyName: S('Property name to set on the CDO or component.'),
-  propertyValue: { description: 'Value to assign to the property.' },
+  propertyValue: { description: 'Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or "None" clears it.' },
   metadata: {
     type: 'object',
     description: 'Arbitrary metadata key-value pairs.',
@@ -56,7 +56,7 @@ export const P = {
   },
   properties: {
     type: 'object',
-    description: 'Property bag applied to the CDO, component template, or node.',
+    description: 'Property bag applied to the CDO, component template, or node: name to value. An object or class reference takes a path (a Blueprint class path ends in _C); null or "None" clears it.',
     additionalProperties: true,
     'x-unreal-reflection-boundary': true,
   },

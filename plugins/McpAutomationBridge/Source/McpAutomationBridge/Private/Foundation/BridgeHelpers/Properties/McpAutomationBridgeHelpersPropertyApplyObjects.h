@@ -65,87 +65,62 @@ static inline bool ImportExportTextIntoValue(void *ValuePtr, FProperty *Property
 static inline bool ApplyJsonObjectValueToProperty(void *TargetContainer, FProperty *Property,
                                                   const TSharedPtr<FJsonValue> &ValueField,
                                                   FString &OutError) {
-  // Object reference
+  // null, "" and "None" (how get_property reads an empty reference back) clear a reference.
+  const bool bClearReference =
+      ValueField->Type == EJson::Null ||
+      (ValueField->Type == EJson::String &&
+       (ValueField->AsString().IsEmpty() ||
+        ValueField->AsString().Equals(TEXT("None"), ESearchCase::IgnoreCase)));
+
+  // Object reference (a class reference is one too)
   if (FObjectProperty *OP = CastField<FObjectProperty>(Property)) {
+    if (bClearReference) {
+      OP->SetObjectPropertyValue_InContainer(TargetContainer, nullptr);
+      return true;
+    }
     if (ValueField->Type == EJson::String) {
       const FString Path = ValueField->AsString();
-      UObject *Res = nullptr;
-      if (!Path.IsEmpty()) {
-        // Try LoadObject first
-        Res = LoadObject<UObject>(nullptr, *Path);
-        // If unsuccessful, try finding by object path if it's a short path or
-        // package path
-        if (!Res && !Path.Contains(TEXT("."))) {
-          // Fallback to StaticLoadObject which can sometimes handle vague paths
-          // better
-          Res = StaticLoadObject(UObject::StaticClass(), nullptr, *Path);
-        }
+      UObject *Res = LoadObject<UObject>(nullptr, *Path);
+      // Fall back to StaticLoadObject for a short or package path.
+      if (!Res && !Path.Contains(TEXT("."))) {
+        Res = StaticLoadObject(UObject::StaticClass(), nullptr, *Path);
       }
-      if (!Res && !Path.IsEmpty()) {
+      if (!Res) {
         OutError =
             FString::Printf(TEXT("Failed to load object at path: %s"), *Path);
+        return false;
+      }
+      // Stored as-is, an object of the wrong class crashes whatever reads it later.
+      const FClassProperty *CP = CastField<FClassProperty>(Property);
+      const UClass *Wanted = CP ? CP->MetaClass : OP->PropertyClass;
+      const UClass *AsClass = Cast<UClass>(Res);
+      if (CP ? !(AsClass && AsClass->IsChildOf(Wanted)) : !Res->IsA(Wanted)) {
+        OutError = FString::Printf(
+            TEXT("%s is a %s, but %s holds %s%s%s."), *Path,
+            *Res->GetClass()->GetName(), *Property->GetName(),
+            CP ? TEXT("a class derived from ") : TEXT("a "), *GetNameSafe(Wanted),
+            CP && !AsClass ? TEXT(" (a Blueprint's class path ends in _C)") : TEXT(""));
         return false;
       }
       OP->SetObjectPropertyValue_InContainer(TargetContainer, Res);
       return true;
     }
-    OutError = TEXT("Unsupported JSON type for object property");
+    OutError = TEXT("Object property requires a path string, or null / \"None\" to clear it");
     return false;
   }
 
-  // Soft object references (FSoftObjectPtr)
+  // Soft references; a soft class property is a soft object property, so this takes both.
   if (FSoftObjectProperty *SOP = CastField<FSoftObjectProperty>(Property)) {
-    if (ValueField->Type == EJson::String) {
-      const FString Path = ValueField->AsString();
-      void *ValuePtr = SOP->ContainerPtrToValuePtr<void>(TargetContainer);
-      FSoftObjectPtr *SoftObjPtr = static_cast<FSoftObjectPtr *>(ValuePtr);
-      if (SoftObjPtr) {
-        if (Path.IsEmpty()) {
-          *SoftObjPtr = FSoftObjectPtr();
-        } else {
-          *SoftObjPtr = FSoftObjectPath(Path);
-        }
-        return true;
-      }
-      OutError = TEXT("Failed to access soft object property");
-      return false;
-    } else if (ValueField->Type == EJson::Null) {
-      void *ValuePtr = SOP->ContainerPtrToValuePtr<void>(TargetContainer);
-      FSoftObjectPtr *SoftObjPtr = static_cast<FSoftObjectPtr *>(ValuePtr);
-      if (SoftObjPtr) {
-        *SoftObjPtr = FSoftObjectPtr();
-        return true;
-      }
+    FSoftObjectPtr *SoftPtr = SOP->ContainerPtrToValuePtr<FSoftObjectPtr>(TargetContainer);
+    if (bClearReference) {
+      *SoftPtr = FSoftObjectPtr();
+      return true;
     }
-    OutError = TEXT("Soft object property requires string path or null");
-    return false;
-  }
-
-  // Soft class references (FSoftClassPtr)
-  if (FSoftClassProperty *SCP = CastField<FSoftClassProperty>(Property)) {
     if (ValueField->Type == EJson::String) {
-      const FString Path = ValueField->AsString();
-      void *ValuePtr = SCP->ContainerPtrToValuePtr<void>(TargetContainer);
-      FSoftObjectPtr *SoftClassPtr = static_cast<FSoftObjectPtr *>(ValuePtr);
-      if (SoftClassPtr) {
-        if (Path.IsEmpty()) {
-          *SoftClassPtr = FSoftObjectPtr();
-        } else {
-          *SoftClassPtr = FSoftObjectPath(Path);
-        }
-        return true;
-      }
-      OutError = TEXT("Failed to access soft class property");
-      return false;
-    } else if (ValueField->Type == EJson::Null) {
-      void *ValuePtr = SCP->ContainerPtrToValuePtr<void>(TargetContainer);
-      FSoftObjectPtr *SoftClassPtr = static_cast<FSoftObjectPtr *>(ValuePtr);
-      if (SoftClassPtr) {
-        *SoftClassPtr = FSoftObjectPtr();
-        return true;
-      }
+      *SoftPtr = FSoftObjectPath(ValueField->AsString());
+      return true;
     }
-    OutError = TEXT("Soft class property requires string path or null");
+    OutError = TEXT("Soft reference property requires a path string, or null / \"None\" to clear it");
     return false;
   }
 
