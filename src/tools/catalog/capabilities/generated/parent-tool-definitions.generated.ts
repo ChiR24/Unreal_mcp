@@ -9730,7 +9730,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "saved": {
           "type": "boolean",
-          "description": "Present once the import settled and any assets landed: true when every package the import left dirty was saved, false when some could not be (see unsavedPackages). Fab leaves what it imports unsaved in memory, so a Megascans add would otherwise be lost when the editor closes."
+          "description": "Present once the import settled and any assets landed: true when every package the import left dirty was saved, false when some could not be (see unsavedPackages, and the message and note say so in capitals). Fab leaves what it imports unsaved in memory, so a Megascans add would otherwise be lost when the editor closes. The import is saved again 15 and 60 seconds after it ends, because Interchange marks packages dirty after the last asset has appeared; read again before saving by hand."
         },
         "savedCount": {
           "type": "number",

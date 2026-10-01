@@ -79,7 +79,7 @@ describe('how a relocation moves things', () => {
     expect(relocate).toContain('for (TArray<FString>* Paths : {&ImportedPaths, &Result.SamplePaths})');
     expect(relocate).toContain('Result.RootPath = Destination;');
     const post = code(read('McpAutomationBridge_FabPostImport.cpp'));
-    expect(post).toMatch(/McpFabRelocate::Apply\(DestinationFolder, AssetName, Result, Paths\);\s*\}\s*SaveImported\(Result, Paths\);/u);
+    expect(post).toMatch(/McpFabRelocate::Apply\(DestinationFolder, AssetName, Result, ImportedPaths\);\s*\}\s*SaveImported\(Result, ImportedPaths\);/u);
   });
 });
 

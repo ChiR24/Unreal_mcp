@@ -157,6 +157,15 @@ void Finish(const FString& OperationId, const FMcpFabAddResult& Outcome)
 	SchedulePump();
 }
 
+void Amend(const FString& OperationId, const FMcpFabAddResult& Outcome)
+{
+	FOperation* Op = FindById(OperationId);
+	if (Op != nullptr && (Op->State == EState::Done || Op->State == EState::Failed))
+	{
+		Op->Result = Outcome;
+	}
+}
+
 bool IsCancelRequested(const FString& OperationId)
 {
 	const FOperation* Op = FindById(OperationId);

@@ -46,6 +46,9 @@ void SetMeshesSeparated(const FString& OperationId, bool bSeparated);
 /** The import ended, either way. Outcome replaces the stored result; an ErrorCode marks it failed. */
 void Finish(const FString& OperationId, const FMcpFabAddResult& Outcome);
 
+/** Replaces the stored result of an import that has ended with a later one (the follow-up saves); nothing else changes. */
+void Amend(const FString& OperationId, const FMcpFabAddResult& Outcome);
+
 /**
  * Stops one import where Fab gives a way to (McpFabImportCancel.cpp). A queued add is dropped at once; a
  * running one is told to stop, and the watcher ends it as CANCELLED on its next tick. False says why not.

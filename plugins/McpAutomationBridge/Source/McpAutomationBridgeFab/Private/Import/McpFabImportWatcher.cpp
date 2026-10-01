@@ -17,8 +17,12 @@ namespace McpFabImportWatcher
 {
 namespace
 {
-/** How long the registry must stay quiet before the import is called done. */
+/** How long the registry must stay quiet, with Interchange idle, before the import is called done. */
 constexpr double SettleSeconds = 6.0;
+/** The most the settle waits on Interchange being busy. */
+constexpr double MaxInterchangeWaitSeconds = 300.0;
+/** How long after the outcome is stored each follow-up save runs. */
+constexpr double LateSaveDelays[] = {15.0, 60.0};
 /** Every import gets this long; a larger download gets a second more per megabyte on top. */
 constexpr double BaseCeilingSeconds = 600.0;
 constexpr double LongestCeilingSeconds = 7200.0;
@@ -94,6 +98,35 @@ TArray<FString> PickSamples(TArray<FString> Meshes, TArray<FString> Others)
 	}
 	return Samples;
 }
+
+/**
+ * Saves again at each of LateSaveDelays, counted from now, and stores the result after every run. The
+ * engine finishes an import after the registry went quiet (a mesh builds, a material compiles) and can
+ * mark a package dirty then; one saved at the settle would otherwise stay in memory until the next
+ * restart or crash lost it.
+ */
+void ScheduleLateSaves(const FString& OperationId, FMcpFabAddResult Result, TArray<FString> Paths,
+	TFunction<void(FMcpFabAddResult&, const TArray<FString>&)> SaveAgain)
+{
+	struct FLate
+	{
+		int32 Next = 0;
+		double Elapsed = 0.0;
+	};
+	const TSharedRef<FLate> Late = MakeShared<FLate>();
+	FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
+		[OperationId, Result, Paths, SaveAgain, Late](float Delta) mutable
+		{
+			Late->Elapsed += Delta;
+			if (Late->Elapsed < LateSaveDelays[Late->Next])
+			{
+				return true;
+			}
+			SaveAgain(Result, Paths);
+			McpFabImportOperations::Amend(OperationId, Result);
+			return ++Late->Next < static_cast<int32>(UE_ARRAY_COUNT(LateSaveDelays));
+		}), 1.0f);
+}
 } // namespace
 
 // State one watch shares between the registry hook and the ticker; it lives until the ticker stops.
@@ -101,6 +134,7 @@ struct FImportWatch
 {
 	double Elapsed = 0.0;
 	double QuietFor = 0.0;
+	double InterchangeWaited = 0.0;
 	int32 LastCount = 0;
 	TSet<FString> AddedSet;
 	TSet<FString> MeshSet;
@@ -114,7 +148,8 @@ void WatchForImport(
 	const FString& OperationId,
 	TSet<FString> Before,
 	FMcpFabAddResult Accepted,
-	TFunction<void(FMcpFabAddResult&, const TArray<FString>&)> PostImport)
+	TFunction<void(FMcpFabAddResult&, TArray<FString>&)> PostImport,
+	TFunction<void(FMcpFabAddResult&, const TArray<FString>&)> SaveAgain)
 {
 	TSharedRef<FImportWatch> Watch = MakeShared<FImportWatch>();
 	McpFabLogCapture::Start();
@@ -148,7 +183,7 @@ void WatchForImport(
 
 	const double Ceiling = CeilingSeconds(Accepted.DownloadBytes);
 	FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
-		[Accepted, OperationId, Ceiling, PostImport, Watch](float Delta) mutable
+		[Accepted, OperationId, Ceiling, PostImport, SaveAgain, Watch](float Delta) mutable
 		{
 			Watch->Elapsed += Delta;
 
@@ -159,6 +194,15 @@ void WatchForImport(
 			}
 			if (Count != Watch->LastCount) { Watch->LastCount = Count; Watch->QuietFor = 0.0; }
 			else if (Count > 0) { Watch->QuietFor += Delta; }
+			// Interchange finishes an import after it has announced the last asset: meshes build, materials
+			// compile, packages are marked. Settled before then, the save ran early and the late ones stayed in
+			// memory. So the registry is not quiet while Interchange works, for at most MaxInterchangeWaitSeconds
+			// in case it reports itself busy for good.
+			if (Count > 0 && Watch->InterchangeWaited < MaxInterchangeWaitSeconds && McpFabInterchange::IsActive())
+			{
+				Watch->QuietFor = 0.0;
+				Watch->InterchangeWaited += Delta;
+			}
 			McpFabImportOperations::SetAssetsSoFar(OperationId, Count);
 
 			// Fab's generic importer merges every mesh of a file into one static mesh. When the caller asked for
@@ -252,6 +296,10 @@ void WatchForImport(
 				PostImport(Accepted, Added);
 			}
 			McpFabImportOperations::Finish(OperationId, Accepted);
+			if (SaveAgain && Count > 0 && !bCancelled)
+			{
+				ScheduleLateSaves(OperationId, Accepted, Added, SaveAgain);
+			}
 			return false;
 		}), 0.25f);
 }

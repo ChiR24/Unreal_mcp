@@ -87,9 +87,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
 
   FMcpFabAddOptions Options;
   // Once the import settles it is relocated if asked, and the packages it left dirty are saved; the status
-  // read reports how both went.
-  Options.PostImport = [Destination, AssetName](FMcpFabAddResult &Result, const TArray<FString> &Paths) {
+  // read reports how both went. Saved again 15 and 60 seconds later, for what the engine finishes after
+  // the registry went quiet.
+  Options.PostImport = [Destination, AssetName](FMcpFabAddResult &Result, TArray<FString> &Paths) {
     McpFabPostImport::Run(Result, Paths, Destination, AssetName);
+  };
+  Options.SaveAgain = [](FMcpFabAddResult &Result, const TArray<FString> &Paths) {
+    McpFabPostImport::SaveAgain(Result, Paths);
   };
   bool bCombineMeshes = false;
   if (Payload->TryGetBoolField(TEXT("combineMeshes"), bCombineMeshes)) {
@@ -148,7 +152,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
               TEXT("Not imported yet. Poll asset.query_marketplace with lookup=fab_import_status and this operationId until phase is done or failed; do not call this add again. "
                    "One import runs at a time: an add made while another runs is queued and starts by itself, in order, and that read lists the queue. "
                    "While Fab imports, the editor is held and every call, the status read included, answers EDITOR_BLOCKED: keep polling. "
-                   "Fab chooses the destination folder unless destinationPath names one; the status read reports importedRoot, and asset.move relocates a folder later."));
+                   "Fab chooses the destination folder unless destinationPath names one; the status read reports importedRoot, and asset.move relocates a folder later. "
+                   "The packages the import creates are saved when it settles and again 15 and 60 seconds later; the status read reports saved, savedCount and unsavedPackages, so a package that could not be saved is named there."));
           Self->SendAutomationResponse(
               Socket, RequestId, true,
               bQueued

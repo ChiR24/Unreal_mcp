@@ -177,9 +177,52 @@ describe('the post-import save', () => {
   });
 
   it('is what the add hands the adapter', () => {
-    expect(code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp')))
-      .toContain('McpFabPostImport::Run(Result, Paths, Destination, AssetName);');
-    expect(code(fab('McpFabAddOperation.cpp'))).toContain('Options.PostImport');
+    const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
+    expect(handler).toContain('McpFabPostImport::Run(Result, Paths, Destination, AssetName);');
+    expect(handler).toContain('McpFabPostImport::SaveAgain(Result, Paths);');
+    expect(code(fab('McpFabAddOperation.cpp'))).toContain('Options.PostImport, Options.SaveAgain');
+  });
+});
+
+// A GLB brought in through Interchange left all five of its packages dirty: Interchange marks them after the
+// registry has stopped announcing assets, so a save made when the registry went quiet ran too early or was undone.
+describe('what the engine finishes after the registry went quiet', () => {
+  const watcher = code(fab('Import/McpFabImportWatcher.cpp'));
+  const post = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_FabPostImport.cpp'));
+
+  it('does not settle while Interchange is working, for a bounded time', () => {
+    expect(watcher).toMatch(/Count > 0 && Watch->InterchangeWaited < MaxInterchangeWaitSeconds && McpFabInterchange::IsActive\(\)/u);
+    expect(watcher).toMatch(/Watch->QuietFor = 0\.0;\s*Watch->InterchangeWaited \+= Delta;/u);
+    expect(watcher).toContain('constexpr double MaxInterchangeWaitSeconds = 300.0;');
+  });
+
+  it('saves again after the outcome is stored, and stores what that run found', () => {
+    expect(watcher).toContain('constexpr double LateSaveDelays[] = {15.0, 60.0};');
+    expect(watcher.indexOf('ScheduleLateSaves(OperationId, Accepted, Added, SaveAgain);'))
+      .toBeGreaterThan(watcher.indexOf('McpFabImportOperations::Finish(OperationId, Accepted);'));
+    expect(watcher).toMatch(/SaveAgain\(Result, Paths\);\s*McpFabImportOperations::Amend\(OperationId, Result\);/u);
+    // Nothing saves for an import the caller cancelled: what landed is theirs to keep or delete.
+    expect(watcher).toContain('if (SaveAgain && Count > 0 && !bCancelled)');
+  });
+
+  it('starts the unsaved list over, so a package that saved is no longer reported', () => {
+    expect(post).toMatch(/void SaveAgain\([^)]*\)\s*\{[\s\S]*?Result\.UnsavedPackages\.Reset\(\);\s*SaveImported\(Result, ImportedPaths\);/u);
+  });
+
+  it('amends only an import that has ended', () => {
+    const store = code(fab('Import/McpFabImportOperations.cpp'));
+    const amend = store.slice(store.indexOf('void Amend('), store.indexOf('bool IsCancelRequested('));
+    expect(amend).toContain('Op->State == EState::Done || Op->State == EState::Failed');
+    expect(amend).toContain('Op->Result = Outcome;');
+    expect(amend).not.toContain('SchedulePump');
+  });
+
+  it('says in capitals, in the line a caller reads first and in the note, which packages are not saved', () => {
+    const status = code(core('Private/Domains/AssetWorkflow/Fab/McpAutomationBridge_AssetWorkflowFabImportStatus.cpp'));
+    expect(status).toContain('package(s) are NOT SAVED (unsavedPackages)');
+    expect(status).toContain('TEXT(" %d package(s) are NOT SAVED."), Unsaved');
+    // Whatever the phase: a partial or failed import can leave packages in memory too.
+    expect(status).toMatch(/FString NextStep\([^)]*\)\s*\{\s*const FString Warning = UnsavedWarning\(Status\);/u);
   });
 });
 

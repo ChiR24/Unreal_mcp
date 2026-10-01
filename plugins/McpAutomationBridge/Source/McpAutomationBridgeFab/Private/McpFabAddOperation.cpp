@@ -94,7 +94,7 @@ void Launch(const FString& OperationId, const FString& ListingId, const FString&
 			// Accepted only means the URL was handed over. Unreal decides success, later, and the
 			// watcher records it under the operation id.
 			McpFabImportOperations::Accept(OperationId, Result);
-			McpFabImportWatcher::WatchForImport(OperationId, MoveTemp(Before), Result, Options.PostImport);
+			McpFabImportWatcher::WatchForImport(OperationId, MoveTemp(Before), Result, Options.PostImport, Options.SaveAgain);
 			if (OnResolved) { OnResolved(Result); }
 		},
 		Error, ErrorCode);

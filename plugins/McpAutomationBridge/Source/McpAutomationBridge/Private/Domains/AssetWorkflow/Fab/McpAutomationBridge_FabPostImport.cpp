@@ -45,15 +45,21 @@ void SaveImported(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths
 }
 } // namespace
 
-void Run(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths, const FString& DestinationFolder,
+void Run(FMcpFabAddResult& Result, TArray<FString>& ImportedPaths, const FString& DestinationFolder,
 	const FString& AssetName)
 {
 	// Moved first, so what is saved is what is left at the new paths and not the redirectors behind it.
-	TArray<FString> Paths = ImportedPaths;
 	if (!DestinationFolder.IsEmpty() || !AssetName.IsEmpty())
 	{
-		McpFabRelocate::Apply(DestinationFolder, AssetName, Result, Paths);
+		McpFabRelocate::Apply(DestinationFolder, AssetName, Result, ImportedPaths);
 	}
-	SaveImported(Result, Paths);
+	SaveImported(Result, ImportedPaths);
+}
+
+void SaveAgain(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)
+{
+	// A package that failed before and is dirty still fails again and is listed again; one that saved is not.
+	Result.UnsavedPackages.Reset();
+	SaveImported(Result, ImportedPaths);
 }
 } // namespace McpFabPostImport

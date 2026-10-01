@@ -98,8 +98,17 @@ struct FMcpFabAddOptions
 	 * Runs once, on the game thread, when the import has settled and before its outcome is stored, with
 	 * every asset path the import created. The adapter module cannot save or move assets itself -- the
 	 * safe wrappers live in the core -- so the core does it here and reports what it did by editing Result.
+	 * A relocation rewrites ImportedPaths to where the assets are afterwards, which is what SaveAgain gets.
 	 */
-	TFunction<void(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)> PostImport;
+	TFunction<void(FMcpFabAddResult& Result, TArray<FString>& ImportedPaths)> PostImport;
+
+	/**
+	 * Runs again on the game thread 15 and 60 seconds after the outcome is stored, with the paths PostImport
+	 * left. The engine finishes an import after the registry has gone quiet (a mesh builds, a material
+	 * compiles) and can mark a package dirty then; saved once at the settle, it would stay in memory. Result
+	 * is stored again after each run, so the status read shows how it ended.
+	 */
+	TFunction<void(FMcpFabAddResult& Result, const TArray<FString>& ImportedPaths)> SaveAgain;
 };
 
 /** Where one background import stands. Read-only: assembled from the operation store on demand. */

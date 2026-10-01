@@ -9,15 +9,12 @@
 
 namespace
 {
-FString NextStep(const FMcpFabImportStatus &Status) {
+FString StepFor(const FMcpFabImportStatus &Status) {
   if (Status.Phase == TEXT("cancelling")) {
     return TEXT("Cancel was requested and Fab has been told to stop; the next read says failed with CANCELLED, listing anything that had already landed.");
   }
   if (Status.Result.ErrorCode == TEXT("CANCELLED")) {
     return TEXT("The import was cancelled. Anything that had already landed is listed under importedRoot and was left unsaved and unmoved: asset.delete removes it. Add the listing again to retry.");
-  }
-  if (Status.Phase == TEXT("done") && Status.Result.UnsavedPackages.Num() > 0) {
-    return TEXT("The import finished, but some packages could not be saved (unsavedPackages): they exist only in memory until control_editor save_all writes them. importedRoot and sampleAssetPaths say where it landed.");
   }
   if (Status.Phase == TEXT("done")) {
     return TEXT("The import finished: importedRoot and sampleAssetPaths say where it landed, the meshes first. asset.move relocates a folder and fixes redirectors.");
@@ -29,6 +26,19 @@ FString NextStep(const FMcpFabImportStatus &Status) {
     return TEXT("Queued behind the import that is running: it starts by itself, in order, when that one ends. The queue lists what is ahead. Poll again in 20 to 30 seconds.");
   }
   return TEXT("Still running: poll again in 20 to 30 seconds. While Fab imports, the editor is held and every call, this read included, answers EDITOR_BLOCKED; that is the import working, not a failure.");
+}
+
+/** What a caller must not miss: packages the import left in memory only, which an editor restart or crash loses. */
+FString UnsavedWarning(const FMcpFabImportStatus &Status) {
+  const int32 Count = Status.Result.UnsavedPackages.Num();
+  return Count > 0 ? FString::Printf(TEXT("%d package(s) are NOT SAVED (unsavedPackages): they exist only in memory until control_editor save_all writes them. "
+                                          "The import is saved again 15 and 60 seconds after it ends, so read this once more before saving by hand."), Count)
+                   : FString();
+}
+
+FString NextStep(const FMcpFabImportStatus &Status) {
+  const FString Warning = UnsavedWarning(Status);
+  return Warning.IsEmpty() ? StepFor(Status) : Warning + TEXT(" ") + StepFor(Status);
 }
 
 /** One line of the queue: enough to tell the imports apart and see how far each has come. */
@@ -195,10 +205,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetFabImportStatus(
   Data->SetObjectField(TEXT("task"), McpFabImportJson::MakeTask(Status.OperationId, TaskState));
   Data->SetStringField(TEXT("note"), NextStep(Status));
 
+  // The line a caller reads first carries it too: a package that is not saved is lost by a restart or a crash.
+  const int32 Unsaved = Result.UnsavedPackages.Num();
   SendAutomationResponse(
       Socket, RequestId, true,
-      FString::Printf(TEXT("Fab import %s of %s is %s after %d s."), *Status.OperationId, *Status.ListingId,
-                      *Status.Phase, FMath::RoundToInt(Status.ElapsedSeconds)),
+      FString::Printf(TEXT("Fab import %s of %s is %s after %d s.%s"), *Status.OperationId, *Status.ListingId,
+                      *Status.Phase, FMath::RoundToInt(Status.ElapsedSeconds),
+                      Unsaved > 0 ? *FString::Printf(TEXT(" %d package(s) are NOT SAVED."), Unsaved) : TEXT("")),
       Data);
   return true;
 }

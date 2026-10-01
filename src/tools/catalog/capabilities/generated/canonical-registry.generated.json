@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2e7514526b0b47a1",
+  "catalogRevision": "1e5d86d85b4a66b1",
   "recordCount": 389,
   "records": [
     {
@@ -10540,7 +10540,7 @@
             },
             "saved": {
               "type": "boolean",
-              "description": "Present once the import settled and any assets landed: true when every package the import left dirty was saved, false when some could not be (see unsavedPackages). Fab leaves what it imports unsaved in memory, so a Megascans add would otherwise be lost when the editor closes."
+              "description": "Present once the import settled and any assets landed: true when every package the import left dirty was saved, false when some could not be (see unsavedPackages, and the message and note say so in capitals). Fab leaves what it imports unsaved in memory, so a Megascans add would otherwise be lost when the editor closes. The import is saved again 15 and 60 seconds after it ends, because Interchange marks packages dirty after the last asset has appeared; read again before saving by hand."
             },
             "savedCount": {
               "type": "number",
@@ -10662,8 +10662,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b74e6bf6071ec1e6ed8fbe10846b2d5b9ec7cc9b183c54eb7b0d46952e2c13eb",
-        "content": "022dbe7af7d1b48efcb63b7ff28cddff58abe21fb0d26baf959ce8afc8ebd6b5"
+        "schema": "1faf54edc6a4dd6d0b3c0985932854abd458d653b9b43e75d6350996f161e6bf",
+        "content": "be51baf873e812db0d720126d78ef7d299e721bcdc290d17500e2f81611e0bc6"
       }
     },
     {
