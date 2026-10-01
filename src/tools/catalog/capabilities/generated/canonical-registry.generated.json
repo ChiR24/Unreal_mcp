@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f9369794cc786cc9",
+  "catalogRevision": "fd175555bfd1ad3b",
   "recordCount": 389,
   "records": [
     {
@@ -32415,7 +32415,7 @@
             },
             "windowRestored": {
               "type": "boolean",
-              "description": "True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run."
+              "description": "True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run and is minimized again when the run ends. The background CPU throttle (Use Less CPU when in Background) is off for the run only, whatever the window did."
             }
           },
           "required": [
@@ -32507,8 +32507,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "46cdf548307c9f6fa9e6ee8aebe6e251b695738b8fd665993b397e5855170f66",
-        "content": "3aa2af8deb614962c55eea4bb243ed7722a0a85b6d6e9d0ba0c635eb6dafed7c"
+        "schema": "9de06ed93dc4b009bea234ed7b136be7dac5997634cce30f67636ceda805a6e6",
+        "content": "04bb749ea3861c525b36cc5f415de0139ea39fb7b971f4f2f92addb50279b25f"
       }
     },
     {
@@ -34476,21 +34476,23 @@
           "editor preferences",
           "open tab",
           "restore editor window",
+          "minimize editor window",
           "editor minimized",
           "pie slow 3 fps",
           "throttle"
         ],
-        "summary": "Open an editor tab, set editor preferences, or restore the minimized editor window without focus (unthrottles Play In Editor).",
+        "summary": "Open an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).",
         "whenToUse": [
           "setting=open_tab: A Quixel/Fab capability reported NOT_AUTHENTICATED and the owning window must be opened so the user can sign in.",
           "setting=open_tab: An editor panel registered by a plugin needs to be brought up.",
           "setting=preferences: Editor preferences must be configured for a category.",
-          "setting=window: Play In Editor crawls (about 3 fps) because the editor window is minimized or in the background."
+          "setting=window: Play In Editor crawls (about 3 fps) because the editor window is minimized or in the background.",
+          "setting=window: The editor should stay out of the way while automation runs that needs no frames on screen: minimize it, and restore it for a timed run."
         ],
         "whenNotToUse": [
           "setting=open_tab: An asset editor should be opened for a specific asset (use open_asset).",
           "setting=preferences: Project settings are needed (use system_control set_project_setting).",
-          "setting=window: A screenshot is needed (screenshot restores the window it captures by itself)."
+          "setting=window: A screenshot or a sample_motion run is all that needs the window on screen (each restores a minimized editor by itself and minimizes it again afterwards)."
         ]
       },
       "schemas": {
@@ -34516,9 +34518,13 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
+            "minimize": {
+              "type": "boolean",
+              "description": "Minimize the main editor window instead of restoring it, without taking focus, and turn Use Less CPU when in Background back on (saved). unthrottle is ignored. Default false."
+            },
             "unthrottle": {
               "type": "boolean",
-              "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true."
+              "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true; ignored with minimize."
             },
             "setting": {
               "type": "string",
@@ -34565,6 +34571,10 @@
               "type": "boolean",
               "description": "Whether the main window was minimized before the call."
             },
+            "minimized": {
+              "type": "boolean",
+              "description": "Whether the window is minimized after the call, read back from the native window."
+            },
             "restored": {
               "type": "boolean",
               "description": "Whether the window is on screen after the call."
@@ -34582,7 +34592,7 @@
       },
       "examples": [
         {
-          "title": "Open an editor tab, set editor preferences, or restore the minimized editor window without focus (unthrottles Play In Editor).",
+          "title": "Open an editor tab, set editor preferences, or restore or minimize the main editor window without focus (restoring unthrottles Play In Editor).",
           "input": {
             "action": "configure_editor",
             "tabId": "BridgeTab",
@@ -34635,6 +34645,9 @@
             "preferences": [
               "preferences"
             ],
+            "minimize": [
+              "window"
+            ],
             "unthrottle": [
               "window"
             ]
@@ -34643,8 +34656,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b3d23cb03ffba6621fda1db8198f5ec349666e877ebf08137631d04b8796bee6",
-        "content": "135b59de29e304dd1b2c8280312af1b0e842509d318e1ad07ec08cac11048294"
+        "schema": "406380109c4cfedd6f2484700dcac219dc18780159e9a6635a19b6984f1f887e",
+        "content": "7c0b89ae321d7b6ee71bd607aa48582396d4fea6c6099ead172e64390552e1e3"
       }
     },
     {
@@ -36695,7 +36708,7 @@
                 "integer",
                 "string"
               ],
-              "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one."
+              "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. A window restored for the capture is minimized again right after it. Every response lists the open windows under windows[], so read that to pick one."
             },
             "location": {
               "type": "object",
@@ -36834,6 +36847,10 @@
               "type": "boolean",
               "description": "full_editor_window: true when the captured window is the main editor frame."
             },
+            "windowRestored": {
+              "type": "boolean",
+              "description": "full_editor_window: true when the window was minimized and was put back on screen, without taking focus, for the capture. It is minimized again right after the capture, so windows[] shows it minimized."
+            },
             "windows": {
               "type": "array",
               "items": {
@@ -36841,7 +36858,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
+              "description": "Every visible editor window: index, title, x, y, width, height, isActive, isMinimized, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
             },
             "windowCount": {
               "type": "number",
@@ -36912,8 +36929,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "022d58fd44b99b70d6bbee9aee5fb14a70b1b39ca1ef1fb640df33085e4c3c4e",
-        "content": "114611466157f02a7220dd2a0b9dd2dc0ecc5910cf4e3eeb688ea4199f440e08"
+        "schema": "3ae292427b1b944580140d57a707ea1a2125458b43458519c7da8658288afe8d",
+        "content": "96edc50b3d68e0cb717e9c860bd07efe45154ec2467ceca4c57adc1cbd29637f"
       }
     },
     {

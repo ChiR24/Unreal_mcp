@@ -142,8 +142,26 @@ describe('sample_motion runs at full rate or says it did not', () => {
   const source = read('McpAutomationBridge_ControlActorMotionSample.cpp');
 
   it('puts a minimized editor back on screen without focus before the run', () => {
-    expect(source).toContain('Run->bWindowRestored = RestoreWindowForCaptureForMcp(Root.ToSharedRef());');
+    expect(source).toContain('Run->Hold = BeginEditorRunForMcp();');
+    expect(read('..', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotWindows.cpp'))
+      .toContain('Hold.bWindowRestored = RestoreWindowForCaptureForMcp(Root.ToSharedRef());');
     expect(source).toContain('Data->SetBoolField(TEXT("windowRestored"), true);');
+  });
+
+  // The person keeps the editor minimized while automation runs: whatever a capture or a timed run restores for itself
+  // goes back, on every way the run can end, and the throttle preference it switched off (in memory only) goes back too.
+  it('puts the window away again and the throttle preference back when a capture or a run that changed them is over', () => {
+    const windows = read('..', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshotWindows.cpp');
+    const begin = sliceBetween(windows, 'FMcpEditorRunHold BeginEditorRunForMcp()', 'void EndEditorRunForMcp');
+    const screenshot = read('..', 'ControlEditor', 'McpAutomationBridge_ControlEditorScreenshot.cpp');
+
+    expect(windows, 'minimizing never activates a window').toContain('Placement.showCmd = SW_SHOWMINNOACTIVE;');
+    expect(windows).toContain('Payload->TryGetBoolField(TEXT("minimize"), bMinimize);');
+    expect(begin, 'a run clears the preference in memory, it never saves it').toContain('Performance->bThrottleCPUWhenNotForeground = false;');
+    expect(begin).not.toContain('SaveConfig');
+    expect(windows).toContain('GetMutableDefault<UEditorPerformanceSettings>()->bThrottleCPUWhenNotForeground = true;');
+    expect(source.split('EndEditorRunForMcp(Run->Hold);'), 'the subsystem gone, and every run that ended').toHaveLength(3);
+    expect(screenshot).toMatch(/const bool bCaptured = CaptureSlateWindowPngForMcp\([^;]*\);\s*if \(bRestored\) \{\s*MinimizeWindowForMcp\(EditorWindow\.ToSharedRef\(\)\);\s*\}\s*if \(!bCaptured\) \{/u);
   });
 
   it('warns when the game advanced 0.1 s or more per frame', () => {

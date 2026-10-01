@@ -256,7 +256,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         min: { type: 'array', items: { type: 'number' }, description: 'Smallest x, y and z sampled (the lowest point is min[2]).' },
         max: { type: 'array', items: { type: 'number' }, description: 'Largest x, y and z sampled (the peak height is max[2]).' },
         missingProperties: { type: 'array', items: { type: 'string' }, description: 'propertyNames the actor\'s class does not have.' },
-        windowRestored: { type: 'boolean', description: 'True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run.' },
+        windowRestored: { type: 'boolean', description: 'True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run and is minimized again when the run ends. The background CPU throttle (Use Less CPU when in Background) is off for the run only, whatever the window did.' },
       },
       outputRequired: [],
       effect: 'read',

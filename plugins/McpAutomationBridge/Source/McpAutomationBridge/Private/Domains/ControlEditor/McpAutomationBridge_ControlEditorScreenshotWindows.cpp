@@ -177,10 +177,61 @@ bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window) {
   return false;
 }
 
-// restore_editor_window: a minimized editor runs PIE at about 3 fps however the
-// throttle preference is set, so timed tests need the frame back on screen.
-// Restoring it by hand from outside the editor is exactly the kind of side
-// channel the tool exists to replace; this does it without taking focus.
+void MinimizeWindowForMcp(const TSharedRef<SWindow> &Window) {
+  if (Window->IsWindowMinimized()) {
+    return;
+  }
+#if PLATFORM_WINDOWS
+  TSharedPtr<FGenericWindow> Native = Window->GetNativeWindow();
+  void *Handle = Native.IsValid() ? Native->GetOSWindowHandle() : nullptr;
+  if (Handle != nullptr) {
+    // SW_SHOWMINNOACTIVE, not SW_MINIMIZE (what SWindow::Minimize() sends): that one
+    // activates the next window in the Z order, so putting the editor away would move
+    // the focus of whoever is working beside it. Applied through the window placement,
+    // as the restore is.
+    const HWND Hwnd = static_cast<HWND>(Handle);
+    WINDOWPLACEMENT Placement = {};
+    Placement.length = sizeof(WINDOWPLACEMENT);
+    if (::GetWindowPlacement(Hwnd, &Placement)) {
+      Placement.showCmd = SW_SHOWMINNOACTIVE;
+      ::SetWindowPlacement(Hwnd, &Placement);
+    }
+    return;
+  }
+#endif
+  Window->Minimize();
+}
+
+FMcpEditorRunHold BeginEditorRunForMcp() {
+  FMcpEditorRunHold Hold;
+  if (const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow()) {
+    Hold.bWindowRestored = RestoreWindowForCaptureForMcp(Root.ToSharedRef());
+  }
+  UEditorPerformanceSettings *Performance = GetMutableDefault<UEditorPerformanceSettings>();
+  Hold.bThrottleWasOn = Performance && Performance->bThrottleCPUWhenNotForeground;
+  if (Hold.bThrottleWasOn) {
+    Performance->bThrottleCPUWhenNotForeground = false;
+  }
+  return Hold;
+}
+
+void EndEditorRunForMcp(const FMcpEditorRunHold &Hold) {
+  if (Hold.bThrottleWasOn) {
+    GetMutableDefault<UEditorPerformanceSettings>()->bThrottleCPUWhenNotForeground = true;
+  }
+  if (Hold.bWindowRestored) {
+    if (const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow()) {
+      MinimizeWindowForMcp(Root.ToSharedRef());
+    }
+  }
+}
+
+// configure_editor window: restores the main frame, or with `minimize` puts it away, never
+// taking focus. A minimized editor runs PIE at about 3 fps however the throttle preference
+// is set, so timed tests need the frame back on screen; restoring it by hand from outside
+// the editor is exactly the kind of side channel the tool exists to replace. The rest of the
+// time a minimized, throttled editor costs the machine next to nothing, so `minimize` also
+// turns the background throttle back on.
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestoreWindow(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
@@ -192,21 +243,35 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorRestoreWindow(
     return true;
   }
   const bool bWasMinimized = Native->IsMinimized();
-  RestoreWindowForCaptureForMcp(Root.ToSharedRef());
+  bool bMinimize = false;
+  Payload->TryGetBoolField(TEXT("minimize"), bMinimize);
   bool bUnthrottle = true;
   Payload->TryGetBoolField(TEXT("unthrottle"), bUnthrottle);
+  if (bMinimize) {
+    MinimizeWindowForMcp(Root.ToSharedRef());
+  } else {
+    RestoreWindowForCaptureForMcp(Root.ToSharedRef());
+  }
   UEditorPerformanceSettings *Performance = GetMutableDefault<UEditorPerformanceSettings>();
-  if (bUnthrottle && Performance && Performance->bThrottleCPUWhenNotForeground) {
-    Performance->bThrottleCPUWhenNotForeground = false;
+  // minimize wants the throttle on, a restore with unthrottle wants it off; nothing else touches it.
+  if (Performance && (bMinimize || bUnthrottle) && Performance->bThrottleCPUWhenNotForeground != bMinimize) {
+    Performance->bThrottleCPUWhenNotForeground = bMinimize;
     Performance->SaveConfig();
   }
+  const bool bMinimizedNow = Native->IsMinimized();
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetBoolField(TEXT("wasMinimized"), bWasMinimized);
-  Data->SetBoolField(TEXT("restored"), !Native->IsMinimized());
+  Data->SetBoolField(TEXT("minimized"), bMinimizedNow);
+  Data->SetBoolField(TEXT("restored"), !bMinimizedNow);
   Data->SetBoolField(TEXT("throttleOff"), Performance && !Performance->bThrottleCPUWhenNotForeground);
-  SendAutomationResponse(RequestingSocket, RequestId, true,
-                         bWasMinimized ? TEXT("Editor window restored without taking focus")
-                                       : TEXT("Editor window was already on screen"),
-                         Data);
+  const TCHAR *Message = TEXT("Editor window was already on screen");
+  if (bMinimize) {
+    Message = !bMinimizedNow ? TEXT("Editor window could not be minimized without taking focus")
+              : bWasMinimized ? TEXT("Editor window was already minimized")
+                              : TEXT("Editor window minimized without taking focus");
+  } else if (bWasMinimized) {
+    Message = TEXT("Editor window restored without taking focus");
+  }
+  SendAutomationResponse(RequestingSocket, RequestId, true, Message, Data);
   return true;
 }

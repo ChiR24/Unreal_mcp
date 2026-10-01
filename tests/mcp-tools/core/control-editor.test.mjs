@@ -80,6 +80,8 @@ const testCases = [
   { scenario: 'ACTION: jump_to_bookmark', toolName: 'control_editor', arguments: { action: 'jump_to_bookmark', id: 0 }, expected: 'success' },
   { scenario: 'ERROR: jump_to_bookmark out of range', toolName: 'control_editor', arguments: { action: 'jump_to_bookmark', id: 99 }, expected: 'error|INVALID_ARGUMENT' },
   { scenario: 'CONFIG: set_preferences', toolName: 'control_editor', arguments: { action: 'set_preferences', category: 'LevelEditor', preferences: { RealtimeAudio: false } }, expected: 'success' },
+  // Minimize first, so the restore case below leaves the editor on screen for the cases that follow.
+  { scenario: 'CONFIG: restore_editor_window with minimize puts the editor away without taking focus', toolName: 'control_editor', arguments: { action: 'restore_editor_window', minimize: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.minimized', equals: true, label: 'the main window reads minimized afterwards' }, { path: 'structuredContent.result.throttleOff', equals: false, label: 'background throttling is back on' }] },
   { scenario: 'CONFIG: restore_editor_window without taking focus', toolName: 'control_editor', arguments: { action: 'restore_editor_window', unthrottle: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.throttleOff', equals: true, label: 'background throttling is off' }] },
   { scenario: 'ACTION: open_asset', toolName: 'control_editor', arguments: { action: 'open_asset', assetPath: BP_PATH }, expected: 'success' },
   { scenario: 'ACTION: close_asset', toolName: 'control_editor', arguments: { action: 'close_asset', assetPath: BP_PATH }, expected: 'success' },

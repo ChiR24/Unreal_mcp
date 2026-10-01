@@ -34,7 +34,8 @@ struct FMcpMotionRun {
   TArray<FMcpMotionInput> Inputs;
   FMcpMotionTrigger Trigger;
   int32 Frames = 0;
-  bool bWaiting = false, bWindowRestored = false;
+  FMcpEditorRunHold Hold; // what the run changed in the editor, undone by EndEditorRunForMcp
+  bool bWaiting = false;
 };
 
 double McpRoundTo(double Value, double Scale) { return FMath::RoundToDouble(Value * Scale) / Scale; }
@@ -95,7 +96,7 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   if (Run.Waited >= 0.0) {
     Data->SetNumberField(TEXT("waitedSeconds"), McpRoundTo(Run.Waited, 1000.0));
   }
-  if (Run.bWindowRestored) {
+  if (Run.Hold.bWindowRestored) {
     Data->SetBoolField(TEXT("windowRestored"), true);
   }
   return Data;
@@ -248,11 +249,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
     McpTakeMotionSample(*Run, Found, Run->StartGame);
     Run->NextSample = Run->StartGame + Run->Interval;
   }
-  // A minimized editor runs PIE at about 3 fps whatever the throttle preference
-  // says; put it back on screen first, without taking focus, as a screenshot does.
-  if (const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow()) {
-    Run->bWindowRestored = RestoreWindowForCaptureForMcp(Root.ToSharedRef());
-  }
+  // A minimized editor runs PIE at about 3 fps whatever the throttle preference says, and so does one
+  // in the background with it on: put the window back on screen without taking focus, as a screenshot
+  // does, and switch the preference off in memory for this run. Every end of the run below undoes both.
+  Run->Hold = BeginEditorRunForMcp();
 
   const FString ActorName = McpActorRef(Found);
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
@@ -260,13 +260,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
       FTickerDelegate::CreateLambda([WeakThis, Run, RequestId, Socket, ActorName](float) -> bool {
         UMcpAutomationBridgeSubsystem *Self = WeakThis.Get();
         if (!Self) {
+          EndEditorRunForMcp(Run->Hold);
           return false;
         }
         const FString Ended = McpAdvanceMotionRun(*Run);
         if (Ended.IsEmpty()) {
           return true;
         }
+        // Duration, real-time or sample cap, actor destroyed, world ended, startWhen timeout: all end here.
         McpApplyMotionInputs(Run->Inputs, Run->LastGame - Run->StartGame, true);
+        EndEditorRunForMcp(Run->Hold);
         FString Message = FString::Printf(TEXT("%d samples of %s over %.2f game seconds (%s)"),
                                           Run->Samples.Num(), *ActorName, Run->LastGame - Run->StartGame, *Ended);
         // The envelope's own warnings list; a `warnings` field set on the data

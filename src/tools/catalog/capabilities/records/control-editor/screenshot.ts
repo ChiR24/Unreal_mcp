@@ -30,7 +30,7 @@ const SCREENSHOT_PROPS = {
   // window, so full_editor_window on the main frame alone could never show it.
   window: {
     type: ['integer', 'string'],
-    description: 'With mode full_editor_window, which window to capture: a list index (2, or "2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one.'
+    description: 'With mode full_editor_window, which window to capture: a list index (2, or "2") or a case-insensitive substring of its title ("WBP_HubUI"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. A window restored for the capture is minimized again right after it. Every response lists the open windows under windows[], so read that to pick one.'
   },
   // Camera and capture in one call: set_camera followed by a screenshot could return a frame drawn before the move.
   location: { ...P.location, description: 'editor_viewport (and game_viewport while the player is ejected): put the camera here first, in the same call ({x, y, z}); it stays there. That is the level viewport camera, or, while Play In Editor runs with the player ejected, the ejected view. While Play In Editor runs and the player is not ejected there is no free camera to move and the call is refused with PIE_VIEW_NOT_EJECTED (eject first, or point the game camera with set_camera cameraOp=view_target), exactly as set_camera is.' },
@@ -64,10 +64,11 @@ const SCREENSHOT_OUTPUT = {
   mode: { type: 'string', description: 'Screenshot source that was captured.' },
   window: { type: 'string', description: 'Title of the editor window that was actually captured.' },
   mainWindow: { type: 'boolean', description: 'full_editor_window: true when the captured window is the main editor frame.' },
+  windowRestored: { type: 'boolean', description: 'full_editor_window: true when the window was minimized and was put back on screen, without taking focus, for the capture. It is minimized again right after the capture, so windows[] shows it minimized.' },
   windows: {
     type: 'array',
     items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-    description: 'Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input.'
+    description: 'Every visible editor window: index, title, x, y, width, height, isActive, isMinimized, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input.'
   },
   windowCount: { type: 'number', description: 'Number of visible editor windows.' },
   cameraLocation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'editor_viewport and an ejected game view: where the camera was for this picture.' },

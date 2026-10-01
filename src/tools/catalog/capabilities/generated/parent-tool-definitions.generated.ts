@@ -4726,7 +4726,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "windowRestored": {
           "type": "boolean",
-          "description": "True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run."
+          "description": "True when the editor window was minimized: a minimized editor runs PIE at about 3 fps, so it was put back on screen, without taking focus, before the run and is minimized again when the run ends. The background CPU throttle (Use Less CPU when in Background) is off for the run only, whatever the window did."
         },
         "worldName": {
           "type": "string",
@@ -4951,6 +4951,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },
+        "minimize": {
+          "type": "boolean",
+          "description": "Minimize the main editor window instead of restoring it, without taking focus, and turn Use Less CPU when in Background back on (saved). unthrottle is ignored. Default false."
+        },
         "mode": {
           "type": "string",
           "description": "Editor mode id to activate: EM_Default, EM_Landscape, EM_Foliage, EM_MeshPaint or any registered mode id; a bare name (landscape) is tried as EM_<name>. The call fails when the mode is not active afterwards."
@@ -5070,7 +5074,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "unthrottle": {
           "type": "boolean",
-          "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true."
+          "description": "Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true; ignored with minimize."
         },
         "validateOnly": {
           "type": "boolean",
@@ -5101,7 +5105,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "integer",
             "string"
           ],
-          "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. Every response lists the open windows under windows[], so read that to pick one."
+          "description": "With mode full_editor_window, which window to capture: a list index (2, or \"2\") or a case-insensitive substring of its title (\"WBP_HubUI\"). Omit for the main editor frame, which is then always what is captured: a minimized main frame is restored without taking focus, and when that is not possible the call fails with EDITOR_WINDOW_MINIMIZED instead of capturing another window. A window restored for the capture is minimized again right after it. Every response lists the open windows under windows[], so read that to pick one."
         },
         "x": {
           "type": "number",
@@ -5447,6 +5451,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Image MIME type."
         },
+        "minimized": {
+          "type": "boolean",
+          "description": "Whether the window is minimized after the call, read back from the native window."
+        },
         "mode": {
           "type": "string",
           "description": "Screenshot source that was captured."
@@ -5586,6 +5594,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Number of visible editor windows."
         },
+        "windowRestored": {
+          "type": "boolean",
+          "description": "full_editor_window: true when the window was minimized and was put back on screen, without taking focus, for the capture. It is minimized again right after the capture, so windows[] shows it minimized."
+        },
         "windows": {
           "type": "array",
           "items": {
@@ -5593,7 +5605,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Every visible editor window: index, title, x, y, width, height, isActive, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
+          "description": "Every visible editor window: index, title, x, y, width, height, isActive, isMinimized, isModal. Pass an index or a title substring back as the window parameter to capture a different one; x/y are screen coordinates for simulate_input."
         },
         "wouldRestart": {
           "type": "boolean",

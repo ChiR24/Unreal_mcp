@@ -137,15 +137,21 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'restore_editor_window', domain: D, family: F,
-    summary: 'Un-minimize the main editor window without giving it focus, and optionally stop the editor throttling itself '
-      + 'while in the background: a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie.',
-    whenToUse: ['Play In Editor crawls (about 3 fps) because the editor window is minimized or in the background.'],
-    whenNotToUse: ['A screenshot is needed (screenshot restores the window it captures by itself).'],
+    summary: 'Restore or minimize the main editor window without giving it focus. Restoring also stops the editor throttling itself '
+      + 'while in the background (a minimized editor runs Play In Editor at about 3 fps, which makes every timed test lie); '
+      + 'minimize puts the window away and turns the throttle back on, so an editor kept out of the way costs the machine next to nothing.',
+    whenToUse: [
+      'Play In Editor crawls (about 3 fps) because the editor window is minimized or in the background.',
+      'The editor should stay out of the way while automation runs that needs no frames on screen: minimize it, and restore it for a timed run.',
+    ],
+    whenNotToUse: ['A screenshot or a sample_motion run is all that needs the window on screen (each restores a minimized editor by itself and minimizes it again afterwards).'],
     inputProps: {
-      unthrottle: { type: 'boolean', description: 'Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true.' },
+      minimize: { type: 'boolean', description: 'Minimize the main editor window instead of restoring it, without taking focus, and turn Use Less CPU when in Background back on (saved). unthrottle is ignored. Default false.' },
+      unthrottle: { type: 'boolean', description: 'Also turn off Use Less CPU when in Background (EditorPerformanceSettings.bThrottleCPUWhenNotForeground). Default true; ignored with minimize.' },
     },
     outputProps: {
       wasMinimized: { type: 'boolean', description: 'Whether the main window was minimized before the call.' },
+      minimized: { type: 'boolean', description: 'Whether the window is minimized after the call, read back from the native window.' },
       restored: { type: 'boolean', description: 'Whether the window is on screen after the call.' },
       throttleOff: { type: 'boolean', description: 'Whether background CPU throttling is off after the call.' },
     },

@@ -47,6 +47,20 @@ void EnumerateEditorSlateWindowsForMcp(TArray<TSharedRef<SWindow>> &OutWindows);
 // activating it: SWindow::Restore() routes to SW_RESTORE and would steal the
 // user's focus and cursor. Returns true when it had to un-minimize.
 bool RestoreWindowForCaptureForMcp(const TSharedRef<SWindow> &Window);
+// The other half: puts a window away again WITHOUT activating anything (a Win32 placement with
+// SW_SHOWMINNOACTIVE; SWindow::Minimize() elsewhere), for a caller that had to restore it.
+void MinimizeWindowForMcp(const TSharedRef<SWindow> &Window);
+// What a timed run (sample_motion) holds while it runs: the main frame restored if it was minimized, and the
+// Use Less CPU when in Background preference off in memory only (never saved), because a background editor
+// steps PIE at about 3 fps with it on. EndEditorRunForMcp minimizes the frame again and puts the preference back.
+// ponytail: with two runs overlapping, the first to end puts the preference back and the other may be throttled
+// again for the rest of its run; a shared count if that ever matters.
+struct FMcpEditorRunHold {
+  bool bWindowRestored = false;
+  bool bThrottleWasOn = false;
+};
+FMcpEditorRunHold BeginEditorRunForMcp();
+void EndEditorRunForMcp(const FMcpEditorRunHold &Hold);
 void AppendEditorWindowListForMcp(const TSharedPtr<FJsonObject> &Resp);
 // Resolves a window by list index or case-insensitive title substring.
 TSharedPtr<SWindow> FindEditorSlateWindowForMcp(const FString &Query,

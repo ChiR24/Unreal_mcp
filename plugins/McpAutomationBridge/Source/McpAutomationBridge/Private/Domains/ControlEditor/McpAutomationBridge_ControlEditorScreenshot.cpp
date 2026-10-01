@@ -130,8 +130,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     FIntVector ImageSize(0, 0, 0);
     FIntPoint SourceSize(0, 0);
     FString CaptureError;
-    if (!CaptureSlateWindowPngForMcp(EditorWindow.ToSharedRef(), Payload,
-                                     PngData, ImageSize, CaptureError, &SourceSize)) {
+    const bool bCaptured = CaptureSlateWindowPngForMcp(EditorWindow.ToSharedRef(), Payload,
+                                                       PngData, ImageSize, CaptureError, &SourceSize);
+    // A window that had to be restored for the picture goes back the way it was found,
+    // whether or not the picture was taken: minimized, still without taking focus.
+    if (bRestored) {
+      MinimizeWindowForMcp(EditorWindow.ToSharedRef());
+    }
+    if (!bCaptured) {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("CAPTURE_FAILED"),
                                 CaptureError, nullptr);
       return true;
