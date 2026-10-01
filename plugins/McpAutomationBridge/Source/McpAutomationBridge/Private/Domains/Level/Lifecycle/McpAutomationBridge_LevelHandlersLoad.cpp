@@ -2,6 +2,7 @@
 #include "Domains/Level/Lifecycle/McpAutomationBridge_LevelHandlersDirtyPackageLoad.h"
 
 #include "Editor.h"
+#include "Engine/Level.h"
 #include "Engine/World.h"
 #include "HAL/FileManager.h"
 #include "Misc/App.h"
@@ -132,48 +133,88 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
 
       FlushRenderingCommands();
 
-      bool bSavedDirtyPackagesBeforeLoad = false;
+      // The counts are the truth in every mode. They read 0 in an interactive editor, because only the headless path
+      // counted, while get_summary listed the open level under unsavedPackages.
       int32 DirtyWorldPackagesBeforeLoad = 0;
       int32 DirtyContentPackagesBeforeLoad = 0;
+      CountBlockingDirtyPackages(DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad);
+
+      // The level that is already open is not loaded again (McpSafeLoadMap skips it as "already loaded"). The reply used to
+      // say "Level loaded" for a call that did nothing, with the unsaved changes of that very level still pending.
+      UWorld* OpenWorld = GEditor->GetEditorWorldContext().World();
+      const bool bAlreadyOpen = OpenWorld && OpenWorld->GetOutermost()->GetName().Equals(ExpectedLoadedPath, ESearchCase::IgnoreCase);
+
+      bool bSavedDirtyPackagesBeforeLoad = false;
       int32 DirtyWorldPackagesAfterSave = 0;
       int32 DirtyContentPackagesAfterSave = 0;
       int32 FailedDirtyPackageSaves = 0;
-      if (FApp::IsUnattended() || IsRunningCommandlet() || FParse::Param(FCommandLine::Get(), TEXT("nullrhi"))) {
-        CountBlockingDirtyPackages(DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad);
-        if (DirtyWorldPackagesBeforeLoad + DirtyContentPackagesBeforeLoad > 0 && !bSaveDirtyPackages) {
+      const bool bHeadless = FApp::IsUnattended() || IsRunningCommandlet() || FParse::Param(FCommandLine::Get(), TEXT("nullrhi"));
+      if (bHeadless && !bAlreadyOpen && DirtyWorldPackagesBeforeLoad + DirtyContentPackagesBeforeLoad > 0 && !bSaveDirtyPackages) {
+        TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
+        ErrorDetails->SetNumberField(TEXT("dirtyWorldPackages"), DirtyWorldPackagesBeforeLoad);
+        ErrorDetails->SetNumberField(TEXT("dirtyContentPackages"), DirtyContentPackagesBeforeLoad);
+        ErrorDetails->SetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
+        ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
+        Subsystem.SendAutomationResponse(
+            RequestingSocket, RequestId, false,
+            TEXT("Cannot load a level in unattended/headless mode while packages are dirty. Pass saveDirtyPackages=true to save them before loading."),
+            ErrorDetails, TEXT("DIRTY_PACKAGES"));
+        return true;
+      }
+
+      // saveDirtyPackages is honoured in every mode: an interactive editor ignored it and loaded over the dirty packages.
+      if (bSaveDirtyPackages) {
+        bSavedDirtyPackagesBeforeLoad = SaveBlockingDirtyPackagesForLevelLoad(
+            DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad,
+            DirtyWorldPackagesAfterSave, DirtyContentPackagesAfterSave,
+            FailedDirtyPackageSaves);
+        if (!bSavedDirtyPackagesBeforeLoad) {
           TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-          ErrorDetails->SetNumberField(TEXT("dirtyWorldPackages"), DirtyWorldPackagesBeforeLoad);
-          ErrorDetails->SetNumberField(TEXT("dirtyContentPackages"), DirtyContentPackagesBeforeLoad);
-          ErrorDetails->SetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
+          ErrorDetails->SetNumberField(TEXT("dirtyWorldPackagesBeforeSave"), DirtyWorldPackagesBeforeLoad);
+          ErrorDetails->SetNumberField(TEXT("dirtyContentPackagesBeforeSave"), DirtyContentPackagesBeforeLoad);
+          ErrorDetails->SetNumberField(TEXT("dirtyWorldPackages"), DirtyWorldPackagesAfterSave);
+          ErrorDetails->SetNumberField(TEXT("dirtyContentPackages"), DirtyContentPackagesAfterSave);
+          ErrorDetails->SetNumberField(TEXT("failedPackageSaves"), FailedDirtyPackageSaves);
+          ErrorDetails->SetBoolField(TEXT("saveDirtyPackagesSucceeded"), bSavedDirtyPackagesBeforeLoad);
           ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
           Subsystem.SendAutomationResponse(
               RequestingSocket, RequestId, false,
-              TEXT("Cannot load a level in unattended/headless mode while packages are dirty. Pass saveDirtyPackages=true to save them before loading."),
+              TEXT("Cannot load a level while packages remain dirty after the save saveDirtyPackages asked for."),
               ErrorDetails, TEXT("DIRTY_PACKAGES"));
           return true;
         }
+      }
 
-        if (bSaveDirtyPackages) {
-          bSavedDirtyPackagesBeforeLoad = SaveBlockingDirtyPackagesForLevelLoad(
-              DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad,
-              DirtyWorldPackagesAfterSave, DirtyContentPackagesAfterSave,
-              FailedDirtyPackageSaves);
-          if (!bSavedDirtyPackagesBeforeLoad) {
-            TSharedPtr<FJsonObject> ErrorDetails = McpHandlerUtils::CreateResultObject();
-            ErrorDetails->SetNumberField(TEXT("dirtyWorldPackagesBeforeSave"), DirtyWorldPackagesBeforeLoad);
-            ErrorDetails->SetNumberField(TEXT("dirtyContentPackagesBeforeSave"), DirtyContentPackagesBeforeLoad);
-            ErrorDetails->SetNumberField(TEXT("dirtyWorldPackages"), DirtyWorldPackagesAfterSave);
-            ErrorDetails->SetNumberField(TEXT("dirtyContentPackages"), DirtyContentPackagesAfterSave);
-            ErrorDetails->SetNumberField(TEXT("failedPackageSaves"), FailedDirtyPackageSaves);
-            ErrorDetails->SetBoolField(TEXT("saveDirtyPackagesSucceeded"), bSavedDirtyPackagesBeforeLoad);
-            ErrorDetails->SetStringField(TEXT("levelPath"), LevelPath);
-            Subsystem.SendAutomationResponse(
-                RequestingSocket, RequestId, false,
-                TEXT("Cannot load a level in unattended/headless mode while packages remain dirty after non-interactive save."),
-                ErrorDetails, TEXT("DIRTY_PACKAGES"));
-            return true;
-        }
-        }
+      // What every success reply says about the paths and the dirty packages; reloaded tells a load from a no-op.
+      const auto LoadReply = [&](const bool bReloaded) {
+        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+        Resp->SetStringField(TEXT("requestedPath"), LevelPath);
+        Resp->SetStringField(TEXT("loadedPath"), ExpectedLoadedPath);
+        Resp->SetBoolField(TEXT("alreadyLoaded"), !bReloaded);
+        Resp->SetBoolField(TEXT("reloaded"), bReloaded);
+        Resp->SetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
+        Resp->SetBoolField(TEXT("savedDirtyPackagesBeforeLoad"), bSavedDirtyPackagesBeforeLoad);
+        Resp->SetNumberField(TEXT("dirtyWorldPackagesBeforeLoad"), DirtyWorldPackagesBeforeLoad);
+        Resp->SetNumberField(TEXT("dirtyContentPackagesBeforeLoad"), DirtyContentPackagesBeforeLoad);
+        Resp->SetNumberField(TEXT("dirtyWorldPackagesAfterSave"), DirtyWorldPackagesAfterSave);
+        Resp->SetNumberField(TEXT("dirtyContentPackagesAfterSave"), DirtyContentPackagesAfterSave);
+        Resp->SetNumberField(TEXT("failedDirtyPackageSaves"), FailedDirtyPackageSaves);
+        VerifyAssetExists(Resp, ExpectedLoadedPath);
+        return Resp;
+      };
+
+      if (bAlreadyOpen) {
+        // Nothing is reloaded and a running PIE session is left alone. The unsaved state is the open level's own, read after
+        // any save the caller asked for, so a caller that wants the changes gone loads another level first.
+        TSharedPtr<FJsonObject> Resp = LoadReply(false);
+        AddUnsavedState(Resp, OpenWorld->PersistentLevel);
+        bool bUnsaved = false;
+        Resp->TryGetBoolField(TEXT("unsaved"), bUnsaved);
+        Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
+            bUnsaved ? TEXT("Level already open: nothing was reloaded, and its unsaved changes were kept (save them with manage_level save, or load another level first to drop them)")
+                     : TEXT("Level already open: nothing was reloaded"),
+            Resp, FString());
+        return true;
       }
 
       const bool bLoaded = McpSafeLoadMap(ResolvedFileToLoad);
@@ -192,19 +233,8 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
           }
         }
 
-        TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-        Resp->SetStringField(TEXT("requestedPath"), LevelPath);
-        Resp->SetStringField(TEXT("loadedPath"), ExpectedLoadedPath);
-        Resp->SetBoolField(TEXT("saveDirtyPackages"), bSaveDirtyPackages);
-        Resp->SetBoolField(TEXT("savedDirtyPackagesBeforeLoad"), bSavedDirtyPackagesBeforeLoad);
-        Resp->SetNumberField(TEXT("dirtyWorldPackagesBeforeLoad"), DirtyWorldPackagesBeforeLoad);
-        Resp->SetNumberField(TEXT("dirtyContentPackagesBeforeLoad"), DirtyContentPackagesBeforeLoad);
-        Resp->SetNumberField(TEXT("dirtyWorldPackagesAfterSave"), DirtyWorldPackagesAfterSave);
-        Resp->SetNumberField(TEXT("dirtyContentPackagesAfterSave"), DirtyContentPackagesAfterSave);
-        Resp->SetNumberField(TEXT("failedDirtyPackageSaves"), FailedDirtyPackageSaves);
-        VerifyAssetExists(Resp, ExpectedLoadedPath);
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true,
-                               TEXT("Level loaded"), Resp, FString());
+                               TEXT("Level loaded"), LoadReply(true), FString());
         return true;
       } else {
         Subsystem.SendAutomationResponse(

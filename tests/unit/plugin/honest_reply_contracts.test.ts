@@ -319,4 +319,51 @@ describe('handlers answer what they did', () => {
       expect(isRecord(output) ? Object.keys(output) : [], name).toContain(name);
     }
   });
+
+  // manage_level load of the level that is already open answered "Level loaded" in 34 ms with dirtyWorldPackagesBeforeLoad 0, while
+  // get_summary listed that world under unsavedPackages: McpSafeLoadMap skips the open map, and only the headless path ever counted.
+  describe('manage_level load of the level that is already open', () => {
+    const load = (): string => code('Level', 'Lifecycle', 'McpAutomationBridge_LevelHandlersLoad.cpp');
+    const compact = (): string => load().split(/\s+/u).join(' ');
+
+    it('counts the dirty packages in every mode, before anything else decides', () => {
+      const source = load();
+
+      expect(source.split('CountBlockingDirtyPackages(DirtyWorldPackagesBeforeLoad, DirtyContentPackagesBeforeLoad);'), 'once, outside the headless branch').toHaveLength(2);
+      expect(source.indexOf('CountBlockingDirtyPackages('), 'before the refusal and the save').toBeLessThan(source.indexOf('const bool bHeadless ='));
+    });
+
+    it('answers a no-op as one: alreadyLoaded, not reloaded, the unsaved state, and it never calls McpSafeLoadMap', () => {
+      const source = load();
+      const noop = source.slice(source.indexOf('if (bAlreadyOpen) {'), source.indexOf('const bool bLoaded = McpSafeLoadMap('));
+
+      expect(source).toContain('const bool bAlreadyOpen = OpenWorld && OpenWorld->GetOutermost()->GetName().Equals(ExpectedLoadedPath, ESearchCase::IgnoreCase);');
+      expect(noop).toContain('TSharedPtr<FJsonObject> Resp = LoadReply(false);');
+      expect(noop).toContain('AddUnsavedState(Resp, OpenWorld->PersistentLevel);');
+      expect(noop).toContain('Level already open: nothing was reloaded');
+      expect(noop).toContain('its unsaved changes were kept');
+      expect(noop, 'a no-op neither stops a running PIE session nor loads').not.toContain('McpSafeLoadMap');
+      expect(source.indexOf('if (bAlreadyOpen) {'), 'decided before the load runs').toBeLessThan(source.indexOf('const bool bLoaded = McpSafeLoadMap('));
+      expect(compact()).toContain('Resp->SetBoolField(TEXT("alreadyLoaded"), !bReloaded); Resp->SetBoolField(TEXT("reloaded"), bReloaded);');
+      expect(compact()).toContain('TEXT("Level loaded"), LoadReply(true), FString());');
+    });
+
+    it('refuses the headless load over dirty packages only for a real load, and honours saveDirtyPackages in every mode', () => {
+      const source = compact();
+
+      expect(source).toContain('if (bHeadless && !bAlreadyOpen && DirtyWorldPackagesBeforeLoad + DirtyContentPackagesBeforeLoad > 0 && !bSaveDirtyPackages) {');
+      expect(source).toContain('if (bSaveDirtyPackages) { bSavedDirtyPackagesBeforeLoad = SaveBlockingDirtyPackagesForLevelLoad(');
+      expect(source, 'the save is no longer inside the headless branch').not.toContain('if (FApp::IsUnattended() || IsRunningCommandlet()');
+    });
+
+    it('the record says what the call does for the open level, and declares the fields that tell', () => {
+      const record = capabilityIndex().byId.get('manage_level.load');
+      const output = record?.schemas.output.properties;
+
+      expect(record?.discovery.whenNotToUse.join(' ')).toMatch(/already the open one: the call reloads nothing and keeps its unsaved changes/u);
+      for (const name of ['alreadyLoaded', 'reloaded', 'dirtyWorldPackagesBeforeLoad', 'dirtyContentPackagesBeforeLoad', 'unsaved', 'unsavedPackages', 'unsavedPackageCount']) {
+        expect(isRecord(output) ? Object.keys(output) : [], name).toContain(name);
+      }
+    });
+  });
 });

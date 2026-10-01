@@ -16583,6 +16583,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Number of map assets in the asset registry."
         },
+        "alreadyLoaded": {
+          "type": "boolean",
+          "description": "True when levelPath was already the open level: nothing was loaded or reloaded, its unsaved changes were kept and a running Play In Editor session was left alone."
+        },
         "appliedSettings": {
           "type": "array",
           "items": {
@@ -16653,6 +16657,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "dirtyContentPackagesBeforeLoad": {
+          "type": "number",
+          "description": "Asset packages with unsaved changes when the call began."
+        },
+        "dirtyWorldPackagesBeforeLoad": {
+          "type": "number",
+          "description": "Level packages with unsaved changes when the call began, counted in every mode (it read 0 in an interactive editor)."
+        },
         "exists": {
           "type": "boolean",
           "description": "Whether the level asset exists."
@@ -16693,6 +16705,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Package name (asset-registry lookup)."
         },
+        "reloaded": {
+          "type": "boolean",
+          "description": "Whether this call loaded the level from disk (false when alreadyLoaded)."
+        },
+        "savedDirtyPackagesBeforeLoad": {
+          "type": "boolean",
+          "description": "Whether saveDirtyPackages saved every dirty package before the load."
+        },
         "settingsApplied": {
           "type": "boolean",
           "description": "Whether any world setting was written."
@@ -16720,10 +16740,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "How many packages have unsaved changes."
         },
         "unsavedPackages": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every level and asset package with unsaved changes, levels first (the first 100)."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "alreadyLoaded only: the packages with unsaved changes (the first 100)."
+            }
+          ],
           "description": "Every level and asset package with unsaved changes, levels first (the first 100)."
         }
       },
