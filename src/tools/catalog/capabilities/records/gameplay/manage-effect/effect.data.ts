@@ -3,7 +3,7 @@
  * parameters, emitter props, modules, renderers, data interfaces, events, GPU
  * sim and validation. Niagara-gated via the Niagara plugin.
  */
-import type { CapabilityRecordSource } from '../../../model.js';
+import type { CapabilityRecordSource, JsonObject } from '../../../model.js';
 import { buildRecord } from '../helpers.js';
 import { P } from '../properties.js';
 import { E } from './effect-properties.js';
@@ -17,6 +17,12 @@ const F = 'effect';
 const W = ['A particle, Niagara or debug effect must be authored or run.'];
 const NIAGARA = ['Niagara'];
 const EMITTER_REQUIRED = ['systemPath', 'emitterName'];
+// Tuning one emitter took a call per value; set_parameter_value writes a list and saves the system once.
+const PARAMETER_LIST: JsonObject = {
+  type: 'array', minItems: 1, maxItems: 200,
+  items: { type: 'object', properties: { parameterName: E.parameterName, parameterValue: E.parameterValue }, required: ['parameterName', 'parameterValue'], additionalProperties: false },
+  description: 'Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter or a module input as get_niagara_info lists it (InitializeParticle.Lifetime), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written.',
+};
 
 export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({ parentTool: T, id: `${T}.particle`, action: 'particle', family: F,
@@ -217,9 +223,18 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_user_parameter', systemPath: '/Game/NS_Fire', parameterName: 'Intensity', parameterType: 'Float' } }),
   buildRecord({ parentTool: T, id: `${T}.set_parameter_value`, action: 'set_parameter_value', family: F,
-    summary: 'Set a user parameter value.', whenToUse: ['Param value must change.'], whenNotToUse: ['Use add_user_parameter.'],
-    inputProps: { systemPath: E.systemPath, emitterName: { type: 'string', description: 'Limit a module-input match to this emitter (user parameters are system-wide).' }, parameterName: E.parameterName, parameterValue: E.parameterValue, save: SAVE }, required: ['systemPath', 'parameterName'],
+    summary: 'Set Niagara parameter values: a user parameter, or a module input named as get_niagara_info lists it (InitializeParticle.Lifetime); one with parameterName and parameterValue, or several with parameters, written together and saved once.',
+    whenToUse: ['A user parameter or a module input value must change.', 'Several values of one system or emitter must change together (parameters): one call, one save.'],
+    whenNotToUse: ['The user parameter does not exist yet (use add_user_parameter).'],
+    inputProps: { systemPath: E.systemPath, emitterName: { type: 'string', description: 'Limit a module-input match to this emitter (user parameters are system-wide).' }, parameterName: E.parameterName, parameterValue: E.parameterValue, parameters: PARAMETER_LIST, save: SAVE }, required: ['systemPath'], requiredOneOf: ['parameterName', 'parameters'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low', plugins: NIAGARA,
+    outputProps: {
+      parameterName: E.parameterName,
+      moduleInputCopiesWritten: { type: 'number', description: 'Module input: how many copies of it (one per script that runs the module) took the value.' },
+      saved: bool('Whether the system was saved afterwards.'),
+      parameters: { type: 'array', items: { type: 'object', 'x-unreal-reflection-boundary': true }, description: 'A parameters call: each entry {parameterName, applied, error (when it did not apply), moduleInputCopiesWritten}.' },
+      applied: { type: 'number', description: 'A parameters call: how many entries were written.' },
+    }, outputRequired: [],
     exampleInput: { action: 'set_parameter_value', systemPath: '/Game/NS_Fire', parameterName: 'Intensity', parameterValue: 2 } }),
   buildRecord({ parentTool: T, id: `${T}.bind_parameter_to_source`, action: 'bind_parameter_to_source', family: F,
     summary: 'Bind a parameter to a data source.', whenToUse: ['Param driven externally.'], whenNotToUse: ['Use set_parameter_value.'],

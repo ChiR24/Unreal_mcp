@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { capabilityIndex } from '../../../src/server/gateway/gateway-capability-index.js';
+import { validateAgainstCapabilitySchema } from '../../../src/server/gateway/gateway-schema-validate.js';
 import { isRecord } from '../../../src/utils/validation/type-guards.js';
 
 const DOMAINS = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains');
@@ -278,5 +279,44 @@ describe('handlers answer what they did', () => {
     expect(source).toContain('ProfilePoints, RevolveOptions, Steps, bCap, nullptr);');
     expect(source).toContain('SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), Name, DynMesh, Result)');
     expect(source).toContain('Result->SetBoolField(TEXT("usedDefaultProfile"), bDefaultProfile);');
+  });
+
+  // Tuning one emitter took a call, a compile request and a save per value: twelve calls for one emitter.
+  it('set_parameter_value writes a parameters list in one pass, reports every entry and saves once', () => {
+    const source = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersParameterValues.cpp');
+    const between = (from: string, to?: string): string => source.slice(source.indexOf(from), to === undefined ? undefined : source.indexOf(to));
+    const writer = between('static FParameterWrite WriteParameter(', 'static bool SetParameterValueList(');
+    const list = between('static bool SetParameterValueList(', 'bool SetParameterValue(FActionContext& Context)');
+    const single = between('bool SetParameterValue(FActionContext& Context)');
+
+    expect(writer, 'one value written: no reply, no compile request, no save').not.toMatch(/SendError|SendSuccess|MarkDirtyAndVerify|RequestCompile/u);
+    expect(list).toContain('Write = WriteParameter(Context, System, Name, Entry);');
+    expect(list.split('MarkDirtyAndVerify(Context, System);'), 'one save for the whole list').toHaveLength(2);
+    expect(list.split('System->RequestCompile(false);'), 'and one compile request').toHaveLength(2);
+    expect(list).toMatch(/if \(Applied > 0\)\s*\{\s*MarkDirtyAndVerify\(Context, System\);\s*\}/u);
+    expect(list).toContain('Row->SetBoolField(TEXT("applied"), Write.bApplied);');
+    expect(list).toContain('Row->SetStringField(TEXT("error"), Write.Error);');
+    expect(list).toContain('Context.Result->SetArrayField(TEXT("parameters"), Results);');
+    expect(list).toMatch(/Context\.Subsystem->SendAutomationResponse\(Context\.RequestingSocket, Context\.RequestId, false,[\s\S]*?TEXT\("PARAMETER_BATCH_INCOMPLETE"\)\);/u);
+    expect(single).toMatch(/Context\.Payload->TryGetArrayField\(TEXT\("parameters"\), Entries\) && Entries->Num\(\) > 0\)/u);
+    expect(single).toMatch(/if \(!ParamName\.IsEmpty\(\)\)\s*\{\s*Context\.SendError\(TEXT\("Send parameters[^"]*not both\."\), TEXT\("INVALID_ARGUMENT"\)\);/u);
+    expect(single, 'one parameter keeps its own errors and its own compile request').toContain('Context.SendError(Write.Error, Write.ErrorCode);');
+    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersParameters.cpp')).toContain('if (SubAction == TEXT("set_parameter_value")) return SetParameterValue(Context);');
+  });
+
+  it('the record declares the list, one of the two ways to name a value, and what the reply carries', () => {
+    const record = capabilityIndex().byId.get('manage_effect.edit_niagara_system');
+    const input = record?.schemas.input;
+    const output = record?.schemas.output.properties;
+
+    expect(record?.routing.dispatchBy?.declaredBy?.parameters, 'a call that sends a list and no edit runs set_parameter_value').toEqual(['set_parameter_value']);
+    const ok = { edit: 'set_parameter_value', systemPath: '/Game/NS_Fire', parameters: [{ parameterName: 'InitializeParticle.Lifetime', parameterValue: 2 }, { parameterName: 'Size', parameterValue: [1, 2, 3] }] };
+    expect(validateAgainstCapabilitySchema(ok, input)).toBeUndefined();
+    expect(validateAgainstCapabilitySchema({ ...ok, parameters: [{ parameterName: 'Size' }] }, input)?.pointer, 'an entry without a value').toMatch(/^\/parameters\/0/u);
+    expect(validateAgainstCapabilitySchema({ ...ok, parameters: [{ parameterName: 'Size', parameterValue: 1, save: false }] }, input)?.pointer, 'an entry key nothing reads').toMatch(/^\/parameters\/0/u);
+    expect(validateAgainstCapabilitySchema({ ...ok, parameters: [] }, input)?.pointer, 'an empty list').toBe('/parameters');
+    for (const name of ['parameters', 'applied', 'moduleInputCopiesWritten', 'saved']) {
+      expect(isRecord(output) ? Object.keys(output) : [], name).toContain(name);
+    }
   });
 });

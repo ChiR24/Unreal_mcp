@@ -14064,6 +14064,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "parameterValue": {
           "description": "Niagara parameter value (any type)."
         },
+        "parameters": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "properties": {
+              "parameterName": {
+                "type": "string",
+                "description": "Niagara parameter name."
+              },
+              "parameterValue": {
+                "description": "Niagara parameter value (any type)."
+              }
+            },
+            "required": [
+              "parameterName",
+              "parameterValue"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter or a module input as get_niagara_info lists it (InitializeParticle.Lifetime), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
+        },
         "path": {
           "type": "string",
           "description": "Canonical /Game output path for the created asset."
@@ -14223,6 +14246,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "String parameter."
         },
+        "applied": {
+          "type": "number",
+          "description": "A parameters call: how many entries were written."
+        },
         "details": {
           "type": "object",
           "x-unreal-reflection-boundary": true,
@@ -14251,9 +14278,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Human-readable result message."
         },
+        "moduleInputCopiesWritten": {
+          "type": "number",
+          "description": "Module input: how many copies of it (one per script that runs the module) took the value."
+        },
         "nodeId": {
           "type": "string",
           "description": "Niagara graph node identifier."
+        },
+        "parameterName": {
+          "type": "string",
+          "description": "Niagara parameter name."
+        },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "A parameters call: each entry {parameterName, applied, error (when it did not apply), moduleInputCopiesWritten}."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the system was saved afterwards."
         },
         "shapes": {
           "type": "array",

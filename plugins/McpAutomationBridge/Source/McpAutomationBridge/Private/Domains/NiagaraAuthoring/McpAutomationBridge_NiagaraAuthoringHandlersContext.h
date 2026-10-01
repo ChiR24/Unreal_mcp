@@ -231,6 +231,8 @@ bool HandleSystemEmitterAction(FActionContext& Context, const FString& SubAction
 bool HandleFixedModuleAction(FActionContext& Context, const FString& SubAction);
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction);
 bool HandleParameterAction(FActionContext& Context, const FString& SubAction);
+// set_parameter_value: one parameter, or every entry of a parameters list. In ...HandlersParameterValues.cpp.
+bool SetParameterValue(FActionContext& Context);
 bool HandleDynamicInputAction(FActionContext& Context, const FString& SubAction);
 bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction);
 bool HandleEventAction(FActionContext& Context, const FString& SubAction);

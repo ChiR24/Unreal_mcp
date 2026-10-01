@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f4c342fa0d566b8a",
+  "catalogRevision": "6612ea5c62bc8839",
   "recordCount": 389,
   "records": [
     {
@@ -55064,7 +55064,8 @@
           "edit=add_emitter: System needs an emitter.",
           "edit=add_user_parameter: Expose a user param.",
           "edit=bind_parameter: Param driven externally.",
-          "edit=set_parameter_value: Param value must change.",
+          "edit=set_parameter_value: A user parameter or a module input value must change.",
+          "edit=set_parameter_value: Several values of one system or emitter must change together (parameters): one call, one save.",
           "edit=set_parameter: A parameter value must change.",
           "edit=set_dynamic_input: Expression-driven value needed.",
           "edit=set_emitter_properties: Emitter config must change.",
@@ -55116,6 +55117,29 @@
             },
             "parameterValue": {
               "description": "Niagara parameter value (any type)."
+            },
+            "parameters": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "parameterName": {
+                    "type": "string",
+                    "description": "Niagara parameter name."
+                  },
+                  "parameterValue": {
+                    "description": "Niagara parameter value (any type)."
+                  }
+                },
+                "required": [
+                  "parameterName",
+                  "parameterValue"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter or a module input as get_niagara_info lists it (InitializeParticle.Lifetime), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
             },
             "actorName": {
               "type": "string",
@@ -55223,6 +55247,30 @@
             "emitterName": {
               "type": "string",
               "description": "Emitter name within the target Niagara system."
+            },
+            "parameterName": {
+              "type": "string",
+              "description": "Niagara parameter name."
+            },
+            "moduleInputCopiesWritten": {
+              "type": "number",
+              "description": "Module input: how many copies of it (one per script that runs the module) took the value."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the system was saved afterwards."
+            },
+            "parameters": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "A parameters call: each entry {parameterName, applied, error (when it did not apply), moduleInputCopiesWritten}."
+            },
+            "applied": {
+              "type": "number",
+              "description": "A parameters call: how many entries were written."
             }
           },
           "required": [
@@ -55341,6 +55389,9 @@
             "parameterValue": [
               "set_parameter_value"
             ],
+            "parameters": [
+              "set_parameter_value"
+            ],
             "actorName": [
               "set_parameter"
             ],
@@ -55394,8 +55445,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4ca99c03c408274948e9e6cb6e45045af53f237d48171d4b5e25b9bf7b3eaa83",
-        "content": "b8dc529b53f5a2e06811cee9fe88242749afd1f853b0472c7fb9d887ceb73d54"
+        "schema": "5fe76e3cfc77cfd6d8203267499ec9ef741adb0d97805cf382027c4b4aadcfc6",
+        "content": "227c77647d7e65b0e924c6d70be6c81589524c1726e5c4e5f0bd94c0296c92be"
       }
     },
     {
