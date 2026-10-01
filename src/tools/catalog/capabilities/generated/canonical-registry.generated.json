@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "17ea79e627ccf5b4",
+  "catalogRevision": "c761bce1f424e9e6",
   "recordCount": 389,
   "records": [
     {
@@ -17794,6 +17794,20 @@
                 "x-unreal-reflection-boundary": true
               }
             },
+            "animationAsset": {
+              "type": "string",
+              "description": "An animation graph node that plays an asset (a Sequence Player, a Blend Space Player ...): the path of the animation it plays. Absent on other nodes and on a player with no asset."
+            },
+            "animationAssetClass": {
+              "type": "string",
+              "description": "The class of that animation asset (AnimSequence, BlendSpace ...)."
+            },
+            "settings": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "An animation graph node's editable settings, name to value (a Sequence Player: Sequence, PlayRate, StartPosition, bLoopAnimation ...; at most 24, lists left out). Absent on any other node. graphName is the AnimGraph, or the name of the state whose graph holds the node."
+            },
             "chain": {
               "type": "array",
               "items": {
@@ -17928,8 +17942,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4788f44fec3a4e699bd30b98126e0e97d93f2b63259fce370a4f211f436182d4",
-        "content": "fb6a625609aac9937dde6b5ab94cbdde0d9c74013a3ed5d281c52378c00d06ba"
+        "schema": "e55bddc00990792453a996ee471c167c2ff8923aac6eb7770c857069a62090c8",
+        "content": "5b24a48ca659f44d126dea0ffdf5560677faab4bb6a7618d49f6d32385b30db3"
       }
     },
     {

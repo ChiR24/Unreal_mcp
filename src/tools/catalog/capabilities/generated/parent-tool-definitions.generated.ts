@@ -12133,6 +12133,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Index shown first by a widget switcher."
         },
+        "animationAsset": {
+          "type": "string",
+          "description": "An animation graph node that plays an asset (a Sequence Player, a Blend Space Player ...): the path of the animation it plays. Absent on other nodes and on a player with no asset."
+        },
+        "animationAssetClass": {
+          "type": "string",
+          "description": "The class of that animation asset (AnimSequence, BlendSpace ...)."
+        },
         "animationName": {
           "type": "string",
           "description": "Animation created with the piece (the damage indicator's <slot>_Flash); play it on a hit."
@@ -12796,6 +12804,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "SCS node verification (exists, parent matches).",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "An animation graph node's editable settings, name to value (a Sequence Player: Sequence, PlayRate, StartPosition, bLoopAnimation ...; at most 24, lists left out). Absent on any other node. graphName is the AnimGraph, or the name of the state whose graph holds the node."
         },
         "sizeBytes": {
           "type": "number",

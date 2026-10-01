@@ -143,6 +143,10 @@ export const GRAPH_NODES_RECORDS: readonly CapabilityRecordSource[] = [
       x: { type: 'number', description: 'Node X position in the graph.' },
       y: { type: 'number', description: 'Node Y position in the graph.' },
       pins: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Pin descriptors (name, direction, type, links).', 'x-unreal-reflection-boundary': true },
+      // An animation node's pins say nothing of what it plays or how: those are settings of the node itself.
+      animationAsset: { type: 'string', description: 'An animation graph node that plays an asset (a Sequence Player, a Blend Space Player ...): the path of the animation it plays. Absent on other nodes and on a player with no asset.' },
+      animationAssetClass: { type: 'string', description: 'The class of that animation asset (AnimSequence, BlendSpace ...).' },
+      settings: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'An animation graph node\'s editable settings, name to value (a Sequence Player: Sequence, PlayRate, StartPosition, bLoopAnimation ...; at most 24, lists left out). Absent on any other node. graphName is the AnimGraph, or the name of the state whose graph holds the node.' },
       chain: {
         type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
         description: 'With followExec: each node the exec wires reach, in walk order: nodeId, nodeTitle, via (the "Title.Pin" exec output that led to it) and inputs (each input pin as its literal value, or "<- Title.Pin" for the node feeding it).',

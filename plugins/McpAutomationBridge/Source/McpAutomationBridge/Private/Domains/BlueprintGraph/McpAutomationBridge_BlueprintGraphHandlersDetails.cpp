@@ -1,5 +1,8 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
+#include "Foundation/Reflection/McpPropertyReflection.h"
 #include "EdGraphSchema_K2.h"
+
+#include "AnimGraphNode_Base.h"
 
 namespace McpBlueprintGraphHandlers
 {
@@ -125,6 +128,40 @@ static TArray<TSharedPtr<FJsonValue>> McpExecChain(UEdGraphNode* Start, int32 Li
     return Chain;
 }
 
+// An animation node's own settings, which its pins do not show: the asset an asset player plays (the Sequence of a
+// Sequence Player) and what its embedded `Node` struct holds for it (play rate, loop, start position ...), as typed values.
+static void AddAnimNodeSettings(UEdGraphNode* Node, const TSharedPtr<FJsonObject>& Result)
+{
+    const UAnimGraphNode_Base* AnimNode = Cast<UAnimGraphNode_Base>(Node);
+    FStructProperty* NodeStruct = AnimNode ? CastField<FStructProperty>(Node->GetClass()->FindPropertyByName(TEXT("Node"))) : nullptr;
+    if (!NodeStruct)
+    {
+        return;
+    }
+    if (const UAnimationAsset* Asset = AnimNode->GetAnimationAsset())
+    {
+        Result->SetStringField(TEXT("animationAsset"), Asset->GetPathName());
+        Result->SetStringField(TEXT("animationAssetClass"), Asset->GetClass()->GetName());
+    }
+    void* Settings = NodeStruct->ContainerPtrToValuePtr<void>(Node);
+    TSharedPtr<FJsonObject> Values = McpHandlerUtils::CreateResultObject();
+    for (TFieldIterator<FProperty> It(NodeStruct->Struct); It && Values->Values.Num() < 24; ++It)
+    {
+        // The settings a caller can edit; a pose link or a runtime counter is not one, and a list stays out of a summary.
+        if (It->HasAnyPropertyFlags(CPF_Edit) && !It->IsA<FArrayProperty>() && !It->IsA<FMapProperty>() && !It->IsA<FSetProperty>())
+        {
+            if (const TSharedPtr<FJsonValue> Value = McpPropertyReflection::ExportPropertyToJsonValue(Settings, *It))
+            {
+                Values->SetField(It->GetName(), Value);
+            }
+        }
+    }
+    if (Values->Values.Num() > 0)
+    {
+        Result->SetObjectField(TEXT("settings"), Values);
+    }
+}
+
 static bool GetNodeDetails(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("get_node_details"))
@@ -163,6 +200,7 @@ static bool GetNodeDetails(FActionContext& Context)
     }
     Result->SetArrayField(TEXT("pins"), Pins);
     Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString());
+    AddAnimNodeSettings(TargetNode, Result);
     double FollowExec = 0.0;
     if (Context.Payload->TryGetNumberField(TEXT("followExec"), FollowExec) && FollowExec >= 1.0)
     {

@@ -114,3 +114,45 @@ describe('the set_anim_graph_node_value record says how to name a node', () => {
     expect(description('propertyName')).toMatch(/asset property \(Sequence, BlendSpace\) is written through the node's own setter and read back/u);
   });
 });
+
+// inspect_graph info=node on an animation graph node listed its pins and nothing else: not the animation a Sequence Player
+// plays, nor its play rate or loop, which are settings of the node and not pins.
+describe('inspect_graph info=node shows what an animation node plays and how it is set', () => {
+  const details = (): string => code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersDetails.cpp');
+
+  it('an animation graph node adds the asset it plays and its editable settings to the node details', () => {
+    const source = details();
+    const flat = compact(sliceBetween(source, 'static void AddAnimNodeSettings(', 'static bool GetNodeDetails('));
+
+    expect(flat).toContain('const UAnimGraphNode_Base* AnimNode = Cast<UAnimGraphNode_Base>(Node);');
+    expect(flat).toContain('CastField<FStructProperty>(Node->GetClass()->FindPropertyByName(TEXT("Node")))');
+    expect(flat).toContain('if (const UAnimationAsset* Asset = AnimNode->GetAnimationAsset()) {');
+    expect(flat).toContain('Result->SetStringField(TEXT("animationAsset"), Asset->GetPathName());');
+    expect(flat).toContain('Result->SetStringField(TEXT("animationAssetClass"), Asset->GetClass()->GetName());');
+    expect(flat).toContain('void* Settings = NodeStruct->ContainerPtrToValuePtr<void>(Node);');
+    expect(flat, 'only what a caller can edit, no list, at most 24').toContain('It && Values->Values.Num() < 24');
+    expect(flat).toContain('It->HasAnyPropertyFlags(CPF_Edit) && !It->IsA<FArrayProperty>() && !It->IsA<FMapProperty>() && !It->IsA<FSetProperty>()');
+    expect(flat, 'typed values off the node struct, not the graph node').toContain('McpPropertyReflection::ExportPropertyToJsonValue(Settings, *It)');
+    expect(flat).toContain('Result->SetObjectField(TEXT("settings"), Values);');
+  });
+
+  it('get_node_details adds them after the pins and the node id, for every node', () => {
+    const flat = compact(details());
+
+    expect(flat).toContain('Result->SetStringField(TEXT("nodeId"), TargetNode->NodeGuid.ToString()); AddAnimNodeSettings(TargetNode, Result);');
+    expect(flat.indexOf('Result->SetArrayField(TEXT("pins"), Pins); Result->SetStringField(TEXT("nodeId")')).toBeGreaterThan(-1);
+  });
+
+  it('the record declares the asset, its class and the settings', () => {
+    const properties = capabilityIndex().byId.get('blueprint.inspect_graph')?.schemas.output.properties;
+    const description = (name: string): string => {
+      const entry = isRecord(properties) ? properties[name] : undefined;
+      return isRecord(entry) && typeof entry.description === 'string' ? entry.description : '';
+    };
+
+    expect(description('animationAsset')).toMatch(/the path of the animation it plays/u);
+    expect(description('animationAssetClass')).toMatch(/class of that animation asset/u);
+    expect(description('settings')).toMatch(/editable settings, name to value .* PlayRate, StartPosition, bLoopAnimation/u);
+    expect(description('settings')).toMatch(/graphName is the AnimGraph, or the name of the state whose graph holds the node/u);
+  });
+});
