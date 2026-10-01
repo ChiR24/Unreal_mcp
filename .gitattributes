@@ -18,3 +18,4 @@ scripts/*.bat text eol=crlf
 *.generated.* text eol=lf
 plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Generated/** text eol=lf
 plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/MCP/Tools/McpGeneratedParentRegistry.cpp text eol=lf
+plugins/McpAutomationBridge/Source/McpAutomationBridge/Private/Foundation/McpTelemetrySchema.h text eol=lf
