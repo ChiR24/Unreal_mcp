@@ -5,12 +5,15 @@
 #include "Misc/AutomationTest.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h"
 #include "Transport/Connection/McpConnectionManagerPrivate.h"
 
 namespace McpContentRootsTestsLocal
 {
 	const TCHAR* ProbeRoot = TEXT("/McpContentRootsProbe/");
 	const TCHAR* ProbeName = TEXT("/McpContentRootsProbe");
+	// Shorter than the four characters a package name needs: a root this short is still a root.
+	const TCHAR* ShortRoot = TEXT("/Zq/");
 
 	bool Reports(const FString& Name)
 	{
@@ -86,6 +89,65 @@ bool FMcpContentRootsSubscriptionTest::RunTest(const FString& Parameters)
 	FPackageName::RegisterMountPoint(ProbeRoot, Dir);
 	TestFalse(TEXT("no mark after unsubscribing"), Manager->HasPendingContentRootsUpdate());
 	FPackageName::UnRegisterMountPoint(ProbeRoot, Dir);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FMcpContentRootsPathAcceptanceTest,
+	"McpAutomationBridge.Transport.ContentRoots.PathAcceptance",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMcpContentRootsPathAcceptanceTest::RunTest(const FString& Parameters)
+{
+	(void)Parameters;
+	using namespace McpContentRootsTestsLocal;
+	const FString Dir = ProbeDir();
+	FPackageName::RegisterMountPoint(ProbeRoot, Dir);
+	FPackageName::RegisterMountPoint(ShortRoot, Dir);
+
+	// A mounted root is accepted wherever a folder is, however it is written: what holds for /Game holds for a plugin.
+	const TCHAR* Accepted[] = {
+		TEXT("/McpContentRootsProbe"), TEXT("/McpContentRootsProbe/"), TEXT("/McpContentRootsProbe/Props/Rocks"),
+		TEXT("/McpContentRootsProbe/Props/Rock.Rock"), TEXT("McpContentRootsProbe/Props"), TEXT("/Game"), TEXT("/Zq")};
+	for (const TCHAR* Path : Accepted)
+	{
+		TestFalse(FString::Printf(TEXT("'%s' is accepted"), Path), SanitizeProjectRelativePath(Path).IsEmpty());
+	}
+
+	// Each refusal says what it was: only a '..' segment is traversal.
+	struct FRefusal
+	{
+		const TCHAR* Path;
+		EMcpPathRejection Reason;
+	};
+	const FRefusal Refused[] = {
+		{TEXT("/Game/../Engine"), EMcpPathRejection::Traversal},
+		{TEXT("C:/Windows/system.ini"), EMcpPathRejection::WindowsAbsolutePath},
+		{TEXT(""), EMcpPathRejection::Empty},
+		{TEXT("/NotMountedAnywhere/Props"), EMcpPathRejection::NotAMountedRoot},
+		{TEXT("/etc/passwd"), EMcpPathRejection::NotAMountedRoot},
+		{TEXT("/McpContentRootsProbe/Bad Name"), EMcpPathRejection::InvalidName}};
+	for (const FRefusal& Case : Refused)
+	{
+		EMcpPathRejection Reason = EMcpPathRejection::None;
+		FText Detail;
+		TestTrue(FString::Printf(TEXT("'%s' is refused"), Case.Path),
+			McpClassifyProjectPath(Case.Path, &Reason, &Detail, nullptr, /*bLogRefusal=*/false).IsEmpty());
+		TestTrue(FString::Printf(TEXT("'%s' is refused for the right reason"), Case.Path), Reason == Case.Reason);
+		const FString Message = McpPathRefusalMessage(TEXT("path"), Case.Path);
+		TestTrue(FString::Printf(TEXT("'%s' is blamed on traversal only when it is"), Case.Path),
+			Message.Contains(TEXT("traversal")) == (Case.Reason == EMcpPathRejection::Traversal));
+		TestTrue(FString::Printf(TEXT("'%s' is called an unmounted root only when it is"), Case.Path),
+			Message.Contains(TEXT("not a mounted content root")) == (Case.Reason == EMcpPathRejection::NotAMountedRoot));
+	}
+
+	// An unmounted root names itself (without its slash, which a reply redacts) and the roots that are mounted.
+	FPackageName::UnRegisterMountPoint(ProbeRoot, Dir);
+	FPackageName::UnRegisterMountPoint(ShortRoot, Dir);
+	const FString Message = McpPathRefusalMessage(TEXT("packagePaths"), TEXT("/McpContentRootsProbe"));
+	TestTrue(TEXT("the unmounted root is named"), Message.Contains(TEXT("'McpContentRootsProbe' is not a mounted content root")));
+	TestTrue(TEXT("the mounted roots are listed"), Message.Contains(TEXT("Mounted roots: /Game")));
+	TestTrue(TEXT("the field is named"), Message.Contains(TEXT("Invalid packagePaths '/McpContentRootsProbe'")));
 	return true;
 }
 

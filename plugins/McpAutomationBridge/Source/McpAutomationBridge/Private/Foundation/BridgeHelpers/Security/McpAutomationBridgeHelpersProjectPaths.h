@@ -25,19 +25,51 @@ enum class EMcpPathRejection : uint8 {
   WindowsAbsolutePath,
   Traversal,
   NotAMountedRoot,
+  // Under a mounted root, but not a valid package path: a character a package name cannot carry.
+  InvalidName,
 };
+
+/**
+ * True when CleanPath is at or under a registered content mount, accepted the way /Game paths are: the bare
+ * root ("/MoverExamples"), a folder with a trailing slash, a package path, an object path
+ * ("/Plugin/Dir/Name.Name"). FPackageName::IsValidLongPackageName validates a package NAME, so on its own it
+ * refused a trailing slash, an object path and a root shorter than four characters, which /Game, /Engine and
+ * /Script never were. On a refusal OutReason and OutDetail say whether the root is not mounted or the rest is
+ * not a valid package path.
+ */
+static inline bool McpIsMountedContentPath(const FString &CleanPath,
+                                           EMcpPathRejection &OutReason,
+                                           FText &OutDetail) {
+  FString Probe = FPackageName::ObjectPathToPackageName(CleanPath);
+  while (Probe.Len() > 1 && Probe.EndsWith(TEXT("/"))) {
+    Probe.LeftChopInline(1);
+  }
+  int32 Slash = INDEX_NONE;
+  const bool bBareRoot = !Probe.RightChop(1).FindChar(TEXT('/'), Slash);
+  const FString Root = bBareRoot ? Probe : Probe.Left(Slash + 1);
+  const bool bRootMounted = FPackageName::MountPointExists(Root + TEXT("/"));
+  if (bRootMounted && (bBareRoot || FPackageName::IsValidLongPackageName(Probe, true, &OutDetail))) {
+    return true;
+  }
+  OutReason = bRootMounted ? EMcpPathRejection::InvalidName : EMcpPathRejection::NotAMountedRoot;
+  if (!bRootMounted) {
+    OutDetail = NSLOCTEXT("Mcp", "PathRootNotMounted", "No content root with that name is mounted.");
+  }
+  return false;
+}
 
 /**
  * Normalize a project-relative asset path, or return an empty string if it must be refused.
  *
- * Pass OutReason/OutDetail to learn WHY. Without them the four refusal paths are indistinguishable to the
- * caller, so an unmounted content root (a plugin that is not enabled, a typo'd root) gets reported to the user
- * as a path-traversal violation. OutDetail carries the engine's own explanation for the mount case, which was
- * previously computed and then dropped at the return.
+ * OutReason and OutDetail say WHY, without them the refusal paths are indistinguishable to the caller, so an
+ * unmounted content root (a plugin that is not enabled, a typo'd root) got reported to the user as a
+ * path-traversal violation. OutNormalized gets the path after normalization even when it is refused, so a
+ * message can name its root. A refusal is logged only when bLogRefusal: a caller that asks again, to word a
+ * message (McpPathRefusalMessage), must not log it twice.
  */
-static inline FString SanitizeProjectRelativePath(
-    const FString &InPath, EMcpPathRejection *OutReason = nullptr,
-    FText *OutDetail = nullptr) {
+static inline FString McpClassifyProjectPath(
+    const FString &InPath, EMcpPathRejection *OutReason, FText *OutDetail,
+    FString *OutNormalized, bool bLogRefusal) {
   const auto Refuse = [OutReason, OutDetail](EMcpPathRejection Reason,
                                              const FText &Detail) -> FString {
     if (OutReason)
@@ -57,10 +89,12 @@ static inline FString SanitizeProjectRelativePath(
 
   // Reject Windows absolute paths early (contain drive letter colon)
   if (CleanPath.Len() >= 2 && CleanPath[1] == TEXT(':')) {
-    UE_LOG(
-        LogMcpAutomationBridgeSubsystem, Warning,
-        TEXT("SanitizeProjectRelativePath: Rejected Windows absolute path: %s"),
-        *InPath);
+    if (bLogRefusal) {
+      UE_LOG(
+          LogMcpAutomationBridgeSubsystem, Warning,
+          TEXT("SanitizeProjectRelativePath: Rejected Windows absolute path: %s"),
+          *InPath);
+    }
     return Refuse(
         EMcpPathRejection::WindowsAbsolutePath,
         NSLOCTEXT("Mcp", "PathWindowsAbsolute",
@@ -74,10 +108,12 @@ static inline FString SanitizeProjectRelativePath(
 
   // Reject paths containing traversal
   if (CleanPath.Contains(TEXT(".."))) {
-    UE_LOG(
-        LogMcpAutomationBridgeSubsystem, Warning,
-        TEXT("SanitizeProjectRelativePath: Rejected path containing '..': %s"),
-        *InPath);
+    if (bLogRefusal) {
+      UE_LOG(
+          LogMcpAutomationBridgeSubsystem, Warning,
+          TEXT("SanitizeProjectRelativePath: Rejected path containing '..': %s"),
+          *InPath);
+    }
     return Refuse(EMcpPathRejection::Traversal,
                   NSLOCTEXT("Mcp", "PathTraversal",
                             "The path contains a '..' traversal segment."));
@@ -87,6 +123,8 @@ static inline FString SanitizeProjectRelativePath(
   if (!CleanPath.StartsWith(TEXT("/"))) {
     CleanPath = TEXT("/") + CleanPath;
   }
+  if (OutNormalized)
+    *OutNormalized = CleanPath;
 
   // Whitelist valid roots - MUST start with one of these
   const bool bValidRoot = CleanPath.StartsWith(TEXT("/Game/")) ||
@@ -98,17 +136,26 @@ static inline FString SanitizeProjectRelativePath(
   if (!bValidRoot) {
     // Validate against engine's registered mount points (covers all plugin
     // content mounts like /MyGameFeature/, /ShooterCore/, /ALS/, etc.)
-    FText MountReason;
-    if (!FPackageName::IsValidLongPackageName(CleanPath, true, &MountReason)) {
-      UE_LOG(
-          LogMcpAutomationBridgeSubsystem, Warning,
-          TEXT("SanitizeProjectRelativePath: Rejected path '%s': %s"),
-          *InPath, *MountReason.ToString());
-      return Refuse(EMcpPathRejection::NotAMountedRoot, MountReason);
+    EMcpPathRejection MountReason = EMcpPathRejection::NotAMountedRoot;
+    FText MountDetail;
+    if (!McpIsMountedContentPath(CleanPath, MountReason, MountDetail)) {
+      if (bLogRefusal) {
+        UE_LOG(
+            LogMcpAutomationBridgeSubsystem, Warning,
+            TEXT("SanitizeProjectRelativePath: Rejected path '%s': %s"),
+            *InPath, *MountDetail.ToString());
+      }
+      return Refuse(MountReason, MountDetail);
     }
   }
 
   return CleanPath;
+}
+
+static inline FString SanitizeProjectRelativePath(
+    const FString &InPath, EMcpPathRejection *OutReason = nullptr,
+    FText *OutDetail = nullptr) {
+  return McpClassifyProjectPath(InPath, OutReason, OutDetail, nullptr, true);
 }
 
 /** The project directory as a full path ending in '/'. */
@@ -271,3 +318,4 @@ static inline bool McpValidateProjectSnapshotFilePath(const FString &AbsolutePat
 }
 
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPathsResolve.h"
+#include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPathsRefusal.h"
