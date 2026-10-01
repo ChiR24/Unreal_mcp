@@ -104,7 +104,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreatePhysicsAsset(
     if (SanitizedOutputPath.IsEmpty())
     {
         SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Invalid outputPath '%s': contains traversal sequences"), *OutputPath), TEXT("INVALID_PATH"));
+            McpPathRefusalMessage(TEXT("outputPath"), OutputPath), TEXT("INVALID_PATH"));
         return true;
     }
 

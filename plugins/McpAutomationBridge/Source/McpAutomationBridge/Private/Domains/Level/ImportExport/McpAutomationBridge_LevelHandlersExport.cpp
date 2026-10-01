@@ -105,8 +105,9 @@ bool HandleExportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     FString SafeExportPath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(ExportPath));
     if (SafeExportPath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Invalid or unsafe exportPath: use a /Game package path for a map copy, or a project-relative .t3d file for a text export"), nullptr,
-                             TEXT("SECURITY_VIOLATION"));
+                             McpPathRefusalMessage(TEXT("exportPath"), ExportPath) +
+                                 TEXT(" Use a /Game package path for a map copy, or a project-relative .t3d file for a text export."),
+                             nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
     }
 

@@ -58,7 +58,7 @@ bool ValidateCommonFields(FActionContext& Context)
     if (SanitizedPath.IsEmpty() && !Context.Path.IsEmpty())
     {
         Context.SendError(
-            TEXT("Invalid path: path traversal or invalid characters detected. Path must start with /Game/, /Engine/, or /Script/"),
+            McpPathRefusalMessage(TEXT("path"), Context.Path),
             TEXT("SECURITY_VIOLATION"));
         return false;
     }
@@ -79,7 +79,7 @@ bool ValidateCommonFields(FActionContext& Context)
         if (SanitizedBPPath.IsEmpty())
         {
             Context.SendError(
-                TEXT("Invalid gameModeBlueprint path: path traversal or invalid characters detected"),
+                McpPathRefusalMessage(TEXT("gameModeBlueprint"), Context.GameModeBlueprint),
                 TEXT("SECURITY_VIOLATION"));
             return false;
         }

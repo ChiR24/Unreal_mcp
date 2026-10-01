@@ -14,19 +14,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceList(
   FString RequestedRoot;
   if (Payload.IsValid() && Payload->TryGetStringField(TEXT("path"), RequestedRoot) &&
       !RequestedRoot.TrimStartAndEnd().IsEmpty()) {
+    const FString RawRoot = RequestedRoot;
     RequestedRoot = McpCanonicalizeContentPath(RequestedRoot, /*bAssumeGameRoot=*/true);
     while (RequestedRoot.Len() > 1 && RequestedRoot.EndsWith(TEXT("/"))) {
       RequestedRoot.LeftChopInline(1);
     }
-    // The sanitizer wants a folder below a root, so the bare root is taken as is.
+    // /Game itself is taken as is; any other root goes through the sanitizer, which accepts a bare mounted root.
     Root = RequestedRoot.Equals(TEXT("/Game"), ESearchCase::IgnoreCase)
                ? FString(TEXT("/Game"))
            : RequestedRoot.IsEmpty() ? FString()
                                      : SanitizeProjectRelativePath(RequestedRoot);
     if (Root.IsEmpty()) {
       SendAutomationResponse(Socket, RequestId, false,
-                             TEXT("path must be a content folder under a mounted "
-                                  "root, for example the project Game folder"),
+                             McpPathRefusalMessage(TEXT("path"), RawRoot),
                              nullptr, TEXT("INVALID_ARGUMENT"));
       return true;
     }

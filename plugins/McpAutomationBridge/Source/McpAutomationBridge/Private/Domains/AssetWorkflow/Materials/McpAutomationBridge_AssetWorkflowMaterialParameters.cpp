@@ -49,10 +49,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
     return true;
   }
 
+  const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);
   if (AssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid assetPath"), nullptr,
+                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }
@@ -150,10 +151,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAddMaterialParameter(
       FString TexPath;
       if (Payload->TryGetStringField(TEXT("value"), TexPath) &&
           !TexPath.IsEmpty()) {
+        const FString TexPathAsGiven = TexPath;
         TexPath = SanitizeProjectRelativePath(TexPath);
         if (TexPath.IsEmpty()) {
           SendAutomationResponse(Socket, RequestId, false,
-                                 TEXT("Invalid texture path"), nullptr,
+                                 McpPathRefusalMessage(TEXT("texture path"), TexPathAsGiven), nullptr,
                                  TEXT("SECURITY_VIOLATION"));
           return true;
         }
@@ -216,10 +218,11 @@ bool UMcpAutomationBridgeSubsystem::HandleListMaterialInstances(
     return true;
   }
 
+  const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);
   if (AssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid assetPath"), nullptr,
+                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }
@@ -295,10 +298,11 @@ bool UMcpAutomationBridgeSubsystem::HandleResetInstanceParameters(
     return true;
   }
 
+  const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);
   if (AssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid assetPath"), nullptr,
+                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }

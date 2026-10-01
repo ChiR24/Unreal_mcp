@@ -14,7 +14,7 @@ TSharedPtr<FJsonObject> HandleTextureInfoAction(const FString& SubAction, const 
     const FString SanitizedAssetPath = SanitizeProjectRelativePath(AssetPath);
     if (SanitizedAssetPath.IsEmpty())
     {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid assetPath: contains traversal or invalid characters"));
+        TEXTURE_ERROR_RESPONSE(McpPathRefusalMessage(TEXT("assetPath"), AssetPath));
     }
     AssetPath = SanitizedAssetPath;
     if (AssetPath.IsEmpty())

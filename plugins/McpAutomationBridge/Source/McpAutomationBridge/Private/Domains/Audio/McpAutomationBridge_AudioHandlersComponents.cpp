@@ -7,11 +7,15 @@ namespace McpAudioHandlers
 {
 bool BuildSanitizedAssetPath(
     const FString& InDirectory, const FString& AssetName,
-    FString& OutDirectory, FString& OutFullPath)
+    FString& OutDirectory, FString& OutFullPath, FString& OutError)
 {
   // Reject empty or invalid UObject names
-  if (AssetName.IsEmpty()) return false;
+  if (AssetName.IsEmpty()) {
+    OutError = TEXT("Invalid name: the name is empty.");
+    return false;
+  }
   if (!FName::IsValidXName(AssetName, INVALID_OBJECTNAME_CHARACTERS)) {
+    OutError = FString::Printf(TEXT("Invalid name '%s': it contains a character an asset name cannot have."), *AssetName);
     return false;
   }
 
@@ -21,10 +25,17 @@ bool BuildSanitizedAssetPath(
   }
 
   OutDirectory = SanitizeProjectRelativePath(Directory);
-  if (OutDirectory.IsEmpty()) return false;
-  OutFullPath = SanitizeProjectRelativePath(
-      FString::Printf(TEXT("%s/%s"), *OutDirectory, *AssetName));
-  return !OutFullPath.IsEmpty();
+  if (OutDirectory.IsEmpty()) {
+    OutError = McpPathRefusalMessage(TEXT("path"), Directory);
+    return false;
+  }
+  const FString FullPath = FString::Printf(TEXT("%s/%s"), *OutDirectory, *AssetName);
+  OutFullPath = SanitizeProjectRelativePath(FullPath);
+  if (OutFullPath.IsEmpty()) {
+    OutError = McpPathRefusalMessage(TEXT("path"), FullPath);
+    return false;
+  }
+  return true;
 }
 
 /**

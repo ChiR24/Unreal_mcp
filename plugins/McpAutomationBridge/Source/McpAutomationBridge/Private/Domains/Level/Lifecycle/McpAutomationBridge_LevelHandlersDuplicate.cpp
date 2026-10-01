@@ -30,14 +30,14 @@ bool HandleDuplicateLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
     FString SanitizedSource = SanitizeProjectRelativePath(SourcePath);
     if (SanitizedSource.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             FString::Printf(TEXT("Invalid source path (traversal/security violation): %s"), *SourcePath),
+                             McpPathRefusalMessage(TEXT("source path"), SourcePath),
                              nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
     }
     FString SanitizedDest = SanitizeProjectRelativePath(DestinationPath);
     if (SanitizedDest.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             FString::Printf(TEXT("Invalid destination path (traversal/security violation): %s"), *DestinationPath),
+                             McpPathRefusalMessage(TEXT("destination path"), DestinationPath),
                              nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
     }

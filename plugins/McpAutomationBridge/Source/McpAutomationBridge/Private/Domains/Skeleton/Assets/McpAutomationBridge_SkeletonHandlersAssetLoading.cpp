@@ -23,7 +23,7 @@ USkeleton* LoadSkeletonFromPathSkel(const FString& SkeletonPath, FString& OutErr
     const FString SanitizedPath = SanitizeProjectRelativePath(SkeletonPath);
     if (SanitizedPath.IsEmpty())
     {
-        OutError = FString::Printf(TEXT("Invalid skeleton path '%s': contains traversal sequences"), *SkeletonPath);
+        OutError = McpPathRefusalMessage(TEXT("skeleton path"), SkeletonPath);
         return nullptr;
     }
 
@@ -54,7 +54,7 @@ USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FString& Ou
     const FString SanitizedPath = SanitizeProjectRelativePath(MeshPath);
     if (SanitizedPath.IsEmpty())
     {
-        OutError = FString::Printf(TEXT("Invalid skeletal mesh path '%s': contains traversal sequences"), *MeshPath);
+        OutError = McpPathRefusalMessage(TEXT("skeletal mesh path"), MeshPath);
         return nullptr;
     }
 
@@ -108,7 +108,7 @@ UPhysicsAsset* LoadPhysicsAssetFromPath(const FString& PhysicsPath, FString& Out
     const FString SanitizedPath = SanitizeProjectRelativePath(PhysicsPath);
     if (SanitizedPath.IsEmpty())
     {
-        OutError = FString::Printf(TEXT("Invalid physics asset path '%s': contains traversal sequences"), *PhysicsPath);
+        OutError = McpPathRefusalMessage(TEXT("physics asset path"), PhysicsPath);
         return nullptr;
     }
 

@@ -55,7 +55,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
   // goes through the shared path canonicalizer and must be under /Game; the name must be one an asset can take.
   FString Destination;
   if (Payload->TryGetStringField(TEXT("destinationPath"), Destination) && !Destination.TrimStartAndEnd().IsEmpty()) {
-    Destination = SanitizeProjectRelativePath(Destination.TrimStartAndEnd());
+    const FString RequestedDestination = Destination.TrimStartAndEnd();
+    Destination = SanitizeProjectRelativePath(RequestedDestination);
+    if (Destination.IsEmpty()) {
+      SendAutomationResponse(Socket, RequestId, false, McpPathRefusalMessage(TEXT("destinationPath"), RequestedDestination),
+                             nullptr, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
     Destination.RemoveFromEnd(TEXT("/"));
     if (Destination != TEXT("/Game") && !Destination.StartsWith(TEXT("/Game/"))) {
       SendAutomationResponse(Socket, RequestId, false,

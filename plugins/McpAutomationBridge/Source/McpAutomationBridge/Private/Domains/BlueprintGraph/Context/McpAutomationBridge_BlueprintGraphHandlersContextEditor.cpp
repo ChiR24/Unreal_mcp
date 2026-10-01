@@ -204,11 +204,12 @@ bool PrepareBlueprintAndGraph(FActionContext& Context)
     // blueprintPath is the declared name, so it wins over the legacy assetPath.
     FString AssetPath = McpGetFirstStringField(Context.Payload, {TEXT("blueprintPath"), TEXT("assetPath")});
 
+    const FString AssetPathAsGiven = AssetPath;
     AssetPath = SanitizeProjectRelativePath(AssetPath);
     if (AssetPath.IsEmpty())
     {
         Context.SendError(
-            TEXT("Invalid asset path: contains traversal sequences or invalid characters."),
+            McpPathRefusalMessage(TEXT("asset path"), AssetPathAsGiven),
             TEXT("INVALID_PATH"));
         return false;
     }

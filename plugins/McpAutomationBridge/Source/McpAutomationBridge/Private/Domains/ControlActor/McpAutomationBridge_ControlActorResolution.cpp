@@ -9,7 +9,7 @@ UMaterialInterface *LoadMaterialForMcp(const FString &MaterialPath,
 
   const FString SafeMaterialPath = SanitizeProjectRelativePath(MaterialPath);
   if (SafeMaterialPath.IsEmpty()) {
-    OutError = TEXT("Invalid materialPath");
+    OutError = McpPathRefusalMessage(TEXT("materialPath"), MaterialPath);
     return nullptr;
   }
 

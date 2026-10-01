@@ -93,7 +93,7 @@ bool HandleCreateSublevel(
         if (SafePath.IsEmpty())
         {
             Subsystem->SendAutomationResponse(Socket, RequestId, false,
-                FString::Printf(TEXT("Invalid or unsafe sublevel path: %s"), *SublevelPath),
+                McpPathRefusalMessage(TEXT("sublevel path"), SublevelPath),
                 nullptr, TEXT("SECURITY_VIOLATION"));
             return true;
         }

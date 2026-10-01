@@ -109,7 +109,7 @@ bool HandleCreateDataLayer(
     if (SafeAssetPath.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid or unsafe data layer asset path: %s"), *DataLayerAssetPath),
+            McpPathRefusalMessage(TEXT("data layer asset path"), DataLayerAssetPath),
             nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }

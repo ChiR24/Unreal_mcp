@@ -115,7 +115,7 @@ bool HandleGetTree(UMcpAutomationBridgeSubsystem* Subsystem,
     Subsystem->SendAutomationError(
         Context.RequestingSocket,
         Context.RequestId,
-        FString::Printf(TEXT("Invalid asset path: '%s'."), *AssetPath),
+        McpPathRefusalMessage(TEXT("asset path"), AssetPath.TrimStartAndEnd()),
         TEXT("INVALID_PATH"));
     return true;
   }

@@ -38,7 +38,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateProceduralFoliage(
                                                 : SanitizeProjectRelativePath(RequestedPath);
   if (PackagePath.IsEmpty()) {
     SendAutomationError(RequestingSocket, RequestId,
-                        FString::Printf(TEXT("Invalid or unsafe path: %s"), *RequestedPath),
+                        McpPathRefusalMessage(TEXT("path"), RequestedPath),
                         TEXT("INVALID_PATH"));
     return true;
   }

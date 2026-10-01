@@ -47,15 +47,16 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
   if ((SourcePath.Contains(TEXT("/")) || SourcePath.StartsWith(TEXT("/"))) &&
       SanitizeProjectRelativePath(SourcePath).IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid sourcePath"), nullptr,
+                           McpPathRefusalMessage(TEXT("sourcePath"), SourcePath), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }
 
+  const FString DestinationPathAsGiven = DestinationPath;
   DestinationPath = SanitizeProjectRelativePath(DestinationPath);
   if (DestinationPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid destinationPath"), nullptr,
+                           McpPathRefusalMessage(TEXT("destinationPath"), DestinationPathAsGiven), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }
@@ -77,10 +78,11 @@ bool UMcpAutomationBridgeSubsystem::HandleRenameAsset(
     ResolvedSourcePath = SourcePath;
   }
 
+  const FString ResolvedSourcePathAsGiven = ResolvedSourcePath;
   ResolvedSourcePath = SanitizeProjectRelativePath(ResolvedSourcePath);
   if (ResolvedSourcePath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid resolved sourcePath"), nullptr,
+                           McpPathRefusalMessage(TEXT("sourcePath"), ResolvedSourcePathAsGiven), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }

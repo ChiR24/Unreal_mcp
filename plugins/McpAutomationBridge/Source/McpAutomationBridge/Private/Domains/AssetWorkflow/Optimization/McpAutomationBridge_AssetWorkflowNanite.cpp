@@ -39,10 +39,11 @@ bool UMcpAutomationBridgeSubsystem::HandleNaniteRebuildMesh(
     return true;
   }
 
+  const FString MeshPathAsGiven = MeshPath;
   MeshPath = SanitizeProjectRelativePath(MeshPath);
   if (MeshPath.IsEmpty()) {
     SendAutomationError(Socket, RequestId,
-                        TEXT("Invalid meshPath"),
+                        McpPathRefusalMessage(TEXT("meshPath"), MeshPathAsGiven),
                         TEXT("SECURITY_VIOLATION"));
     return true;
   }

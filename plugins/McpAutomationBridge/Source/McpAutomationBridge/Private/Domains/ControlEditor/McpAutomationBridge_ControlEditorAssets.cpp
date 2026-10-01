@@ -14,10 +14,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenAsset(
     return true;
   }
 
+  const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);
   if (AssetPath.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SECURITY_VIOLATION"),
-                              TEXT("Invalid assetPath"), nullptr);
+                              McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr);
     return true;
   }
 
@@ -89,10 +90,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorCloseAsset(
     return true;
   }
 
+  const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);
   if (AssetPath.IsEmpty()) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SECURITY_VIOLATION"),
-                              TEXT("Invalid assetPath"), nullptr);
+                              McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr);
     return true;
   }
 

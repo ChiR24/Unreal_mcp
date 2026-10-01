@@ -46,6 +46,14 @@ const ASSET_HEADERS: readonly string[] = [
   'Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h',
 ];
 
+/** The wording of a refused path, declared where SanitizeProjectRelativePath is: every caller of one needs the other. */
+const PATH_REFUSAL_HELPERS = /\bMcpPathRefusalMessage\s*\(/u;
+const PATH_REFUSAL_HEADERS: readonly string[] = [
+  'Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h',
+  'Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPaths.h',
+  'Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersProjectPathsRefusal.h',
+];
+
 const INCLUDE = /#include\s+"([^"]+)"/gu;
 
 const collectSources = (directory: string, out: Map<string, string>): void => {
@@ -107,5 +115,15 @@ describe('plugin translation units do not borrow declarations from unity-blob ne
     const users = [...sources].filter(([path, body]) => path.endsWith('.cpp') && ASSET_HELPERS.test(body));
     expect(users.length).toBeGreaterThan(50);
     expect(users.map(([path]) => path).filter((path) => !reachesDeclaringHeader(path, ASSET_HEADERS)).sort()).toEqual([]);
+  });
+
+  it('every user of the path refusal wording includes the header that declares it', () => {
+    const users = [...sources].filter(([path, body]) => /\.(?:cpp|h)$/u.test(path) && PATH_REFUSAL_HELPERS.test(body));
+    expect(users.length).toBeGreaterThan(50);
+    const borrowed = users
+      .map(([path]) => path)
+      .filter((path) => !PATH_REFUSAL_HEADERS.includes(path) && !reachesDeclaringHeader(path, PATH_REFUSAL_HEADERS))
+      .sort();
+    expect(borrowed).toEqual([]);
   });
 });

@@ -25,7 +25,7 @@ inline bool SanitizeAIAssetPath(const FString& InputPath, FString& OutSanitizedP
     OutSanitizedPath = SanitizeProjectRelativePath(InputPath.TrimStartAndEnd());
     if (OutSanitizedPath.IsEmpty())
     {
-        OutError = FString::Printf(TEXT("Invalid asset path: %s"), *InputPath);
+        OutError = McpPathRefusalMessage(TEXT("asset path"), InputPath.TrimStartAndEnd());
         return false;
     }
     return true;

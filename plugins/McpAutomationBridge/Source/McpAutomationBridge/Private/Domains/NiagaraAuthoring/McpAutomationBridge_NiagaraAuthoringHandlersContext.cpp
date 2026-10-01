@@ -115,7 +115,7 @@ static bool ValidateAndSanitizePath(FActionContext& Context, FString& PathToChec
     if (SanitizedPath.IsEmpty())
     {
         Context.SendError(
-            FString::Printf(TEXT("'%s' has invalid format. Path must be a valid Unreal asset path without traversal or invalid roots."), *ParamName),
+            McpPathRefusalMessage(*ParamName, PathToCheck),
             TEXT("INVALID_ARGUMENT"));
         return false;
     }

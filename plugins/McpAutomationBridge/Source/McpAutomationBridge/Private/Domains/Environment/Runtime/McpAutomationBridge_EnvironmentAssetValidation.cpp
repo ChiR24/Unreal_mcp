@@ -20,7 +20,7 @@ bool McpBuildValidatedEnvironmentAssetPath(const FString &RequestedPath, const F
     if (SafePath.IsEmpty())
     {
         return McpFailEnvironmentAction(OutMessage, OutErrorCode,
-            FString::Printf(TEXT("Invalid %s path: %s"), AssetLabel, *RequestedPath), TEXT("SECURITY_VIOLATION"));
+            McpPathRefusalMessage(AssetLabel, RequestedPath), TEXT("SECURITY_VIOLATION"));
     }
 
     const FString TrimmedName = AssetName.TrimStartAndEnd();

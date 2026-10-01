@@ -40,7 +40,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetTags(
   const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
   if (SafeAssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid assetPath"), nullptr,
+                           McpPathRefusalMessage(TEXT("assetPath"), AssetPath), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }
@@ -121,7 +121,7 @@ bool UMcpAutomationBridgeSubsystem::HandleValidateAsset(
   const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
   if (SafeAssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid assetPath"), nullptr,
+                           McpPathRefusalMessage(TEXT("assetPath"), AssetPath), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }

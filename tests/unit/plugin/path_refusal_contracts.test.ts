@@ -77,3 +77,41 @@ describe('a refusal is worded in one place', () => {
     expect(refusal).toContain('Normalized.RightChop(1)');
   });
 });
+
+describe('the handlers report what SanitizeProjectRelativePath said', () => {
+  // The words that blamed traversal for every refusal, and the generic ones that named nothing. A real '..' check
+  // says so in its own words (the helper's Traversal case), and a name or a file path is not a content path.
+  const LEGACY_WORDING: readonly RegExp[] = [
+    /contains traversal sequences/u,
+    /traversal\/security violation/u,
+    /path traversal or invalid characters/u,
+    /contains traversal or invalid characters/u,
+    /traversal or invalid roots/u,
+    /contains path traversal \(\.\.\) or invalid characters/u,
+    /contains path traversal \(\.\.\), double slashes/u,
+    /Invalid or unsafe (?!output path|project-relative file path|file path)/u,
+    /Invalid (?:asset|source|destination) path"/u,
+  ];
+
+  it('no handler words a refused content path as traversal, or as nothing at all', () => {
+    const offenders = sources
+      .filter(({ file }) => !file.includes(`${join(PRIVATE, 'MCP', 'Generated')}`))
+      .flatMap(({ file, body }) => LEGACY_WORDING.filter((pattern) => pattern.test(body)).map((pattern) => `${file}: ${pattern.source}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it('every handler that refuses a content path words it with the shared helper', () => {
+    const users = sources.filter(({ body }) => /\bMcpPathRefusalMessage\s*\(/u.test(body) && !body.includes('static inline FString McpPathRefusalMessage'));
+    // About a hundred refusal sites went over; a handler that stops using it shows up as a drop here.
+    expect(users.length).toBeGreaterThan(70);
+    const calls = users.reduce((count, { body }) => count + (body.match(/\bMcpPathRefusalMessage\s*\(/gu)?.length ?? 0), 0);
+    expect(calls).toBeGreaterThan(100);
+  });
+
+  it('query_asset search names the field and the reason for a package path it refuses', () => {
+    const search = code(PRIVATE, 'Domains', 'AssetQuery', 'McpAutomationBridge_AssetQuerySearch.cpp');
+    expect(search).toContain('McpPathRefusalMessage(TEXT("package path"), RawPath)');
+    expect(search).toContain('McpPathRefusalMessage(TEXT("path"), SinglePath)');
+    expect(search).not.toContain('traversal');
+  });
+});

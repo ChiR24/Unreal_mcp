@@ -246,7 +246,7 @@ bool HandleFindText(
             const FString SanitizedPath = SanitizeProjectRelativePath(RawPath);
             if (SanitizedPath.IsEmpty())
             {
-                Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Invalid package path '%s'."), *RawPath), TEXT("INVALID_PATH"));
+                Bridge->SendAutomationError(Socket, RequestId, McpPathRefusalMessage(TEXT("package path"), RawPath), TEXT("INVALID_PATH"));
                 return true;
             }
             Filter.PackagePaths.Add(FName(*SanitizedPath));

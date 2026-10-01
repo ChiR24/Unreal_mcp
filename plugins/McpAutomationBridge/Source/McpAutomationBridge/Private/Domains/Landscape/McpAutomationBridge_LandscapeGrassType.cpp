@@ -32,8 +32,8 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateLandscapeGrassType(
   if (SafeMeshPath.IsEmpty() || PackagePath.IsEmpty()) {
     SendAutomationError(
         RequestingSocket, RequestId,
-        FString::Printf(TEXT("Invalid or unsafe path: %s"),
-                        SafeMeshPath.IsEmpty() ? *MeshPath : *RequestedPath),
+        SafeMeshPath.IsEmpty() ? McpPathRefusalMessage(TEXT("meshPath"), MeshPath)
+                               : McpPathRefusalMessage(TEXT("path"), RequestedPath),
         TEXT("SECURITY_VIOLATION"));
     return true;
   }

@@ -100,7 +100,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSection(
     SoundObjectPath = SanitizeProjectRelativePath(SoundObjectPath);
     if (SoundObjectPath.IsEmpty()) {
       SendAutomationResponse(Socket, RequestId, false,
-                             FString::Printf(TEXT("Invalid soundPath '%s': a /Game asset path is required"), *SoundPath),
+                             McpPathRefusalMessage(TEXT("soundPath"), SoundPath),
                              nullptr, TEXT("INVALID_PATH"));
       return true;
     }

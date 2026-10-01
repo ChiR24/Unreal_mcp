@@ -148,7 +148,7 @@ bool HandleSearchAssets(
             if (SanitizedPath.IsEmpty())
             {
                 Bridge->SendAutomationError(Socket, RequestId,
-                    FString::Printf(TEXT("Invalid package path '%s': contains traversal sequences"), *RawPath),
+                    McpPathRefusalMessage(TEXT("package path"), RawPath),
                     TEXT("INVALID_PATH"));
                 return true;
             }
@@ -164,7 +164,7 @@ bool HandleSearchAssets(
         if (SanitizedPath.IsEmpty())
         {
             Bridge->SendAutomationError(Socket, RequestId,
-                FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *SinglePath),
+                McpPathRefusalMessage(TEXT("path"), SinglePath),
                 TEXT("SECURITY_VIOLATION"));
             return true;
         }

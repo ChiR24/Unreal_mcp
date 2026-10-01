@@ -28,7 +28,7 @@ bool UMcpAutomationBridgeSubsystem::HandleCreateFolder(
   if (SafePath.IsEmpty()) {
     SendAutomationResponse(
         Socket, RequestId, false,
-        TEXT("Invalid path: must be project-relative and not contain '..'"),
+        McpPathRefusalMessage(TEXT("path"), Path),
         nullptr, TEXT("INVALID_PATH"));
     return true;
   }

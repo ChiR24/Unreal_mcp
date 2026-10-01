@@ -27,8 +27,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetLandscapeMaterial(
   if (SafeMaterialPath.IsEmpty()) {
     SendAutomationError(
         RequestingSocket, RequestId,
-        FString::Printf(TEXT("Invalid or unsafe material path: %s"),
-                        *MaterialPath),
+        McpPathRefusalMessage(TEXT("material path"), MaterialPath),
         TEXT("SECURITY_VIOLATION"));
     return true;
   }

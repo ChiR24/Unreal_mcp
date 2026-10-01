@@ -76,7 +76,7 @@ TSharedPtr<FJsonObject> HandleCreateRenderTarget(const TSharedPtr<FJsonObject>& 
     FString SanitizedPath = Path.Equals(TEXT("/Game")) ? Path : SanitizeProjectRelativePath(Path);
     if (SanitizedPath.IsEmpty())
     {
-        TEXTURE_ERROR_RESPONSE(TEXT("Invalid path: contains traversal or invalid characters"));
+        TEXTURE_ERROR_RESPONSE(McpPathRefusalMessage(TEXT("path"), Path));
     }
     Path = SanitizedPath;
     if (!Path.Equals(TEXT("/Game")) && !Path.StartsWith(TEXT("/Game/")))

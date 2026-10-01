@@ -15,10 +15,13 @@
 namespace McpAnimationHandlers {
 bool HandleAnimationCreatePoseLibraryAction(FActionContext &Context, const TSharedPtr<FJsonObject> &Payload) {
   const FString Name = GetJsonStringField(Payload, TEXT("name"));
-  const FString Folder = SanitizeProjectRelativePath(GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Animations")));
+  const FString RequestedFolder = GetJsonStringField(Payload, TEXT("path"), TEXT("/Game/Animations"));
+  const FString Folder = SanitizeProjectRelativePath(RequestedFolder);
   const FString SequencePath = GetJsonStringField(Payload, TEXT("sourceAnimationPath"));
   if (Name.IsEmpty() || Folder.IsEmpty()) {
-    Context.Fail(TEXT("INVALID_ARGUMENT"), TEXT("name and a /Game folder in path are required for create_pose_library."));
+    Context.Fail(TEXT("INVALID_ARGUMENT"),
+                 Name.IsEmpty() ? FString(TEXT("name is required for create_pose_library."))
+                                : McpPathRefusalMessage(TEXT("path"), RequestedFolder));
     return false;
   }
   const FString AssetPath = Folder / SanitizeAssetName(Name);

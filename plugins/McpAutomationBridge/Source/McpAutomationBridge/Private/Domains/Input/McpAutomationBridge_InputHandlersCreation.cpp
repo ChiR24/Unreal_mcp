@@ -33,7 +33,7 @@ bool ValidateInputAssetNameAndPath(
     if (SanitizedPath.IsEmpty())
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-            FString::Printf(TEXT("Invalid path: '%s' contains traversal or invalid characters."), *Path),
+            McpPathRefusalMessage(TEXT("path"), Path),
             TEXT("INVALID_PATH"));
         return false;
     }

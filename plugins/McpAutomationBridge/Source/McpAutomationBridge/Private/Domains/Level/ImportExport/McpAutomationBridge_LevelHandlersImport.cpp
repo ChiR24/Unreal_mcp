@@ -32,11 +32,14 @@ bool HandleImportLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
         return true;
       }
 
+      const FString SourcePathAsGiven = SourcePath;
+      const FString DestinationPathAsGiven = DestinationPath;
       SourcePath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(SourcePath));
       DestinationPath = NormalizeLevelPackagePath(SanitizeProjectRelativePath(DestinationPath));
       if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Invalid sourcePath or destinationPath"),
+                               SourcePath.IsEmpty() ? McpPathRefusalMessage(TEXT("sourcePath"), SourcePathAsGiven)
+                                                    : McpPathRefusalMessage(TEXT("destinationPath"), DestinationPathAsGiven),
                                nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
       }

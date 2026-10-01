@@ -22,11 +22,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorOpenLevel(
     LevelPath = FString::Printf(TEXT("/Game/%s"), *LevelPath);
   }
 
+  const FString LevelPathAsGiven = LevelPath;
   LevelPath = SanitizeProjectRelativePath(LevelPath);
   if (LevelPath.IsEmpty() ||
       !(LevelPath.StartsWith(TEXT("/Game/")) || LevelPath.StartsWith(TEXT("/Engine/")))) {
     SendStandardErrorResponse(this, Socket, RequestId, TEXT("SECURITY_VIOLATION"),
-                              TEXT("Invalid levelPath"), nullptr);
+                              LevelPath.IsEmpty()
+                                  ? McpPathRefusalMessage(TEXT("levelPath"), LevelPathAsGiven)
+                                  : FString::Printf(TEXT("Invalid levelPath '%s': only a level under /Game or /Engine can be used here."), *LevelPath),
+                              nullptr);
     return true;
   }
 

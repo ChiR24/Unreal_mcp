@@ -32,11 +32,12 @@ bool FBlueprintCreationHandlers::HandleBlueprintCreate(
     SavePath = TEXT("/Game");
 
   // Sanitize savePath to prevent traversal attacks
+  const FString SavePathAsGiven = SavePath;
   SavePath = SanitizeProjectRelativePath(SavePath);
   if (SavePath.IsEmpty())
   {
     Self->SendAutomationResponse(RequestingSocket, RequestId, false,
-                                 TEXT("Invalid savePath."), nullptr,
+                                 McpPathRefusalMessage(TEXT("savePath"), SavePathAsGiven), nullptr,
                                  TEXT("INVALID_PATH"));
     return true;
   }

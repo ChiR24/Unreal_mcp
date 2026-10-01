@@ -175,7 +175,8 @@ UWidgetBlueprint* McpCreateTemplateWidgetBlueprint(UMcpAutomationBridgeSubsystem
     if (Folder.IsEmpty() || Name.IsEmpty() || !FName(*Name).IsValidObjectName(NameProblem))
     {
         Subsystem.SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("'%s' in '%s' is not a usable asset name and folder."), *Name, *RawFolder),
+            Folder.IsEmpty() ? McpPathRefusalMessage(TEXT("path"), RawFolder)
+                             : FString::Printf(TEXT("'%s' in '%s' is not a usable asset name and folder."), *Name, *RawFolder),
             TEXT("INVALID_PATH"));
         return nullptr;
     }

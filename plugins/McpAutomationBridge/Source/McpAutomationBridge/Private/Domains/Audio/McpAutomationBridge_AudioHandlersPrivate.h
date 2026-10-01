@@ -46,7 +46,8 @@ bool BuildSanitizedAssetPath(
     const FString& InDirectory,
     const FString& AssetName,
     FString& OutDirectory,
-    FString& OutFullPath);
+    FString& OutFullPath,
+    FString& OutError);
 AActor* FindAudioActorByName(const FString& ActorName, UWorld* World);
 USceneComponent* EnsureAudioAttachRoot(AActor* Actor);
 UAudioComponent* CreateRegisteredAudioComponent(

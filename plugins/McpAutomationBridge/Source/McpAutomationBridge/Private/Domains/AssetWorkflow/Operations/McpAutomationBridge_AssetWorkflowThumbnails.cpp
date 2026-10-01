@@ -43,7 +43,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateThumbnail(
   FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
   if (SafeAssetPath.IsEmpty()) {
     SendAutomationError(RequestingSocket, RequestId,
-        FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *AssetPath),
+        McpPathRefusalMessage(TEXT("path"), AssetPath),
         TEXT("SECURITY_VIOLATION"));
     return true;
   }

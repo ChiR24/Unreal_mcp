@@ -38,7 +38,7 @@ bool HandleCreateLightingEnabledLevel(
         Subsystem.SendAutomationError(
             RequestingSocket,
             RequestId,
-            TEXT("Invalid path: contains traversal or invalid characters"),
+            McpPathRefusalMessage(TEXT("path"), Path),
             TEXT("INVALID_PATH"));
         return true;
     }

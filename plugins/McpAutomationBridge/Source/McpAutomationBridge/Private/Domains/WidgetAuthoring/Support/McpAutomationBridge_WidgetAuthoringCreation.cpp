@@ -131,7 +131,7 @@ bool HandleWidgetAuthoringCreation(
         if (SanitizedPath.IsEmpty())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Invalid widgetPath: path traversal or invalid characters detected"),
+                McpPathRefusalMessage(TEXT("widgetPath"), EffectivePath),
                 TEXT("SECURITY_VIOLATION"));
             return true;
         }
@@ -177,7 +177,7 @@ bool HandleWidgetAuthoringCreation(
         if (SanitizedWidgetPath.IsEmpty())
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                TEXT("Invalid widgetPath: path traversal or invalid characters detected"),
+                McpPathRefusalMessage(TEXT("widgetPath"), WidgetPath),
                 TEXT("SECURITY_VIOLATION"));
             return true;
         }

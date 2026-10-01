@@ -19,7 +19,7 @@ bool HandleUseMaterialFunction(UMcpAutomationBridgeSubsystem* Bridge, const FStr
     FString ValidatedFunctionPath = SanitizeProjectRelativePath(FunctionPath);
     if (ValidatedFunctionPath.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid functionPath '%s': contains traversal sequences or invalid root"), *FunctionPath),
+                          McpPathRefusalMessage(TEXT("functionPath"), FunctionPath),
                           TEXT("INVALID_PATH"));
       return true;
     }

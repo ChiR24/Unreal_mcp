@@ -45,7 +45,7 @@ bool HandleSpatialActions(
       FString ValidatedPath = SanitizeProjectRelativePath(SoundPath);
       if (ValidatedPath.IsEmpty()) {
         Self->SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Invalid sound path"), TEXT("INVALID_PATH"));
+                            McpPathRefusalMessage(TEXT("sound path"), SoundPath), TEXT("INVALID_PATH"));
         return true;
       }
 
@@ -156,9 +156,10 @@ bool HandleSpatialActions(
      Payload->TryGetBoolField(TEXT("save"), bSave);
 
      FString FullPath;
-     if (!BuildSanitizedAssetPath(PackagePath, Name, PackagePath, FullPath)) {
+     FString PathError;
+     if (!BuildSanitizedAssetPath(PackagePath, Name, PackagePath, FullPath, PathError)) {
        Self->SendAutomationError(RequestingSocket, RequestId,
-                           TEXT("Invalid path"), TEXT("INVALID_PATH"));
+                           PathError, TEXT("INVALID_PATH"));
        return true;
      }
 

@@ -17,10 +17,11 @@ bool HandleValidateLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const F
       return true;
     }
     LevelPath = NormalizeLevelPackagePath(LevelPath);
+    const FString LevelPathAsGiven = LevelPath;
     LevelPath = SanitizeProjectRelativePath(LevelPath);
     if (LevelPath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Invalid levelPath"), nullptr,
+                             McpPathRefusalMessage(TEXT("levelPath"), LevelPathAsGiven), nullptr,
                              TEXT("SECURITY_VIOLATION"));
       return true;
     }

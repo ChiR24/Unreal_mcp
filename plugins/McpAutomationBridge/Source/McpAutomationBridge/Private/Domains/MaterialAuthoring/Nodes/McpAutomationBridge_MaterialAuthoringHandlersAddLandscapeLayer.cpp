@@ -35,7 +35,7 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
     FString ValidatedPath = SanitizeProjectRelativePath(Path);
     if (ValidatedPath.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid characters"), *Path),
+                          McpPathRefusalMessage(TEXT("path"), Path),
                           TEXT("INVALID_PATH"));
       return true;
     }
@@ -58,7 +58,7 @@ bool HandleAddLandscapeLayer(UMcpAutomationBridgeSubsystem* Bridge, const FStrin
       FString ValidatedPhysMatPath = SanitizeProjectRelativePath(PhysMaterialPath);
       if (ValidatedPhysMatPath.IsEmpty()) {
         Bridge->SendAutomationError(Socket, RequestId,
-                            FString::Printf(TEXT("Invalid physicalMaterialPath '%s': contains traversal sequences or invalid root"), *PhysMaterialPath),
+                            McpPathRefusalMessage(TEXT("physicalMaterialPath"), PhysMaterialPath),
                             TEXT("INVALID_PATH"));
         return true;
       }

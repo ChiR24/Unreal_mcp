@@ -221,7 +221,7 @@ bool HandleSetTwoSided(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
   FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);         \
   if (ValidatedAssetPath.IsEmpty()) {                                          \
     Bridge->SendAutomationError(Socket, RequestId,                                     \
-                        FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath), \
+                        McpPathRefusalMessage(TEXT("path"), AssetPath), \
                         TEXT("INVALID_PATH"));                                \
     return true;                                                               \
   }                                                                            \
@@ -254,7 +254,7 @@ bool HandleSetTwoSided(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
   FString ValidatedAssetPath = SanitizeProjectRelativePath(AssetPath);         \
   if (ValidatedAssetPath.IsEmpty()) {                                          \
     Bridge->SendAutomationError(Socket, RequestId,                                     \
-                        FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath), \
+                        McpPathRefusalMessage(TEXT("path"), AssetPath), \
                         TEXT("INVALID_PATH"));                                 \
     return true;                                                               \
   }                                                                            \

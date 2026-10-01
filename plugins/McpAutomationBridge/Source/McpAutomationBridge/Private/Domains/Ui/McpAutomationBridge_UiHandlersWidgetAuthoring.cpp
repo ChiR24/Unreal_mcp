@@ -87,7 +87,7 @@ bool HandleWidgetAuthoringAction(
     // in StaticAllocateObject and took the editor down (crash #4).
     const FString SafeTargetPath = SanitizeProjectRelativePath(TargetPath);
     if (SafeTargetPath.IsEmpty()) {
-      Message = FString::Printf(TEXT("Invalid or unsafe savePath: %s"), *NormalizedPath);
+      Message = McpPathRefusalMessage(TEXT("savePath"), TargetPath);
       ErrorCode = TEXT("SECURITY_VIOLATION");
       Resp->SetStringField(TEXT("error"), Message);
       return true;

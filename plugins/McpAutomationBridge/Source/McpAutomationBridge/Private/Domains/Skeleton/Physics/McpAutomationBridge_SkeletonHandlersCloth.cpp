@@ -65,7 +65,7 @@ UClothingAssetBase* ResolveClothAsset(USkeletalMesh* Mesh, const FString& ClothA
         const FString SanitizedPath = SanitizeProjectRelativePath(ClothAssetPath);
         if (SanitizedPath.IsEmpty())
         {
-            OutError = FString::Printf(TEXT("Invalid clothAssetPath '%s': contains traversal sequences"), *ClothAssetPath);
+            OutError = McpPathRefusalMessage(TEXT("clothAssetPath"), ClothAssetPath);
             OutErrorCode = TEXT("INVALID_PATH");
             return nullptr;
         }

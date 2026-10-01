@@ -40,7 +40,7 @@ bool HandleDeleteLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
     FString SanitizedPath = SanitizeProjectRelativePath(LevelPath);
     if (SanitizedPath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *LevelPath),
+                             McpPathRefusalMessage(TEXT("levelPath"), LevelPath),
                              nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
     }

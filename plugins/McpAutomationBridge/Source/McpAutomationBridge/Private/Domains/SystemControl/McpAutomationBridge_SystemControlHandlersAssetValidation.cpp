@@ -75,7 +75,7 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
     const FString SafePath = SanitizeProjectRelativePath(Path);
     if (SafePath.IsEmpty()) {
       AddValidationResult(RawPath, false, TEXT("invalid"),
-                          TEXT("Invalid or unsafe asset path"));
+                          McpPathRefusalMessage(TEXT("asset path"), RawPath));
       continue;
     }
 

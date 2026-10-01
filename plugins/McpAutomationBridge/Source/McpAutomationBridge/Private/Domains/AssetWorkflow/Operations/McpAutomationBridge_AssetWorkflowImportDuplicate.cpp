@@ -52,7 +52,7 @@ bool UMcpAutomationBridgeSubsystem::HandleImportAsset(
   FString SafeDestPath = SanitizeProjectRelativePath(DestinationPath);
   if (SafeDestPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid destination path"), nullptr,
+                           McpPathRefusalMessage(TEXT("destinationPath"), DestinationPath), nullptr,
                            TEXT("INVALID_PATH"));
     return true;
   }
@@ -219,11 +219,14 @@ bool UMcpAutomationBridgeSubsystem::HandleDuplicateAsset(
     DestinationPath = DestinationPath / FPaths::GetBaseFilename(SourcePath);
   }
 
+  const FString SourcePathAsGiven = SourcePath;
+  const FString DestinationPathAsGiven = DestinationPath;
   SourcePath = SanitizeProjectRelativePath(SourcePath);
   DestinationPath = SanitizeProjectRelativePath(DestinationPath);
   if (SourcePath.IsEmpty() || DestinationPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid sourcePath or destinationPath"),
+                           SourcePath.IsEmpty() ? McpPathRefusalMessage(TEXT("sourcePath"), SourcePathAsGiven)
+                                                : McpPathRefusalMessage(TEXT("destinationPath"), DestinationPathAsGiven),
                            nullptr, TEXT("SECURITY_VIOLATION"));
     return true;
   }

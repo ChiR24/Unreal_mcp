@@ -27,10 +27,11 @@ bool HandleAddSublevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       return true;
     }
 
+    const FString SubLevelPathAsGiven = SubLevelPath;
     SubLevelPath = SanitizeProjectRelativePath(SubLevelPath);
     if (SubLevelPath.IsEmpty()) {
       Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                          TEXT("Invalid subLevelPath"),
+                          McpPathRefusalMessage(TEXT("subLevelPath"), SubLevelPathAsGiven),
                           TEXT("SECURITY_VIOLATION"));
       return true;
     }

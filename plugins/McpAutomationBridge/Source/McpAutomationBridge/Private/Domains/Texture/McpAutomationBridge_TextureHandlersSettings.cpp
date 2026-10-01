@@ -11,7 +11,7 @@ UTexture2D* LoadTextureChecked(const TSharedPtr<FJsonObject>& Params, TSharedPtr
     if (SanitizedAssetPath.IsEmpty())
     {
         Response->SetBoolField(TEXT("success"), false);
-        Response->SetStringField(TEXT("error"), TEXT("Invalid assetPath: contains traversal or invalid characters"));
+        Response->SetStringField(TEXT("error"), McpPathRefusalMessage(TEXT("assetPath"), AssetPath));
         return nullptr;
     }
     AssetPath = SanitizedAssetPath;

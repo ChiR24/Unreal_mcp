@@ -50,7 +50,7 @@ bool UMcpAutomationBridgeSubsystem::HandleFixupRedirectors(
   FString SanitizedPath = SanitizeProjectRelativePath(DirectoryPath);
   if (SanitizedPath.IsEmpty()) {
     SendAutomationError(RequestingSocket, RequestId,
-        FString::Printf(TEXT("Invalid path (traversal/security violation): %s"), *DirectoryPath),
+        McpPathRefusalMessage(TEXT("path"), DirectoryPath),
         TEXT("SECURITY_VIOLATION"));
     return true;
   }

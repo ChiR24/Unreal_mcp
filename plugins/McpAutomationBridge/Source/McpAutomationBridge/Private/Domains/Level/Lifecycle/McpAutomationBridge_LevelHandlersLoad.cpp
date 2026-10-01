@@ -39,7 +39,7 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       FString SanitizedLevelPath = SanitizeProjectRelativePath(LevelPath);
       if (SanitizedLevelPath.IsEmpty()) {
         Subsystem.SendAutomationError(RequestingSocket, RequestId,
-                            TEXT("Invalid levelPath: contains path traversal (..) or invalid characters"),
+                            McpPathRefusalMessage(TEXT("levelPath"), LevelPath),
                             TEXT("SECURITY_VIOLATION"));
         return true;
       }

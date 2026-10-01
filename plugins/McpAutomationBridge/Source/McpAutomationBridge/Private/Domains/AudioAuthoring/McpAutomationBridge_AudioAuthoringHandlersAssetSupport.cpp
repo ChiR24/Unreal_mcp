@@ -61,7 +61,7 @@ bool BuildAudioCreationPath(const FString& Directory, const FString& Name, FStri
 	OutPackagePath = SanitizeProjectRelativePath(SafeDirectory / TrimmedName);
 	if (OutPackagePath.IsEmpty())
 	{
-		OutError = FString::Printf(TEXT("Invalid asset path: %s"), *(SafeDirectory / TrimmedName));
+		OutError = McpPathRefusalMessage(TEXT("asset path"), SafeDirectory / TrimmedName);
 		return false;
 	}
 

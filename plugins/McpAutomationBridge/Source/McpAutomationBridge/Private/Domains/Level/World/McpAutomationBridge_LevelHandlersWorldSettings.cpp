@@ -15,10 +15,11 @@ bool HandleSetLevelWorldSettingsAction(UMcpAutomationBridgeSubsystem& Subsystem,
     }
 
     if (!RequestedLevelPath.IsEmpty()) {
+      const FString RequestedLevelPathAsGiven = RequestedLevelPath;
       RequestedLevelPath = SanitizeProjectRelativePath(RequestedLevelPath);
       if (RequestedLevelPath.IsEmpty()) {
         Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                               TEXT("Invalid levelPath"), nullptr,
+                               McpPathRefusalMessage(TEXT("levelPath"), RequestedLevelPathAsGiven), nullptr,
                                TEXT("SECURITY_VIOLATION"));
         return true;
       }

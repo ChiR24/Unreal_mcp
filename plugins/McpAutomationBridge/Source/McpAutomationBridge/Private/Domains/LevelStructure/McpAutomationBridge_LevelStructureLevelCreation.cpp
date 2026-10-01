@@ -73,7 +73,7 @@ bool HandleCreateLevel(
     if (SafeLevelPath.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid or unsafe level path: %s"), *LevelPath),
+            McpPathRefusalMessage(TEXT("level path"), LevelPath),
             nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }

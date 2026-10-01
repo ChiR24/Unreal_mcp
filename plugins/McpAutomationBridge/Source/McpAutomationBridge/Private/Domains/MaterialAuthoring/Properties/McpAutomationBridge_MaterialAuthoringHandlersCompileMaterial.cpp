@@ -25,7 +25,7 @@ bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     FString ValidatedPath = SanitizeProjectRelativePath(AssetPath);
     if (ValidatedPath.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid path '%s': contains traversal sequences or invalid root"), *AssetPath),
+                          McpPathRefusalMessage(TEXT("path"), AssetPath),
                           TEXT("INVALID_PATH"));
       return true;
     }

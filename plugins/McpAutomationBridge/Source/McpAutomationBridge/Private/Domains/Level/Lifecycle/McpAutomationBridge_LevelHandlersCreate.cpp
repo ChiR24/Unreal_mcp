@@ -55,7 +55,7 @@ bool HandleCreateNewLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const 
     if (!LevelPath.IsEmpty() && SanitizedLevelPath.IsEmpty()) {
       Subsystem.SendAutomationResponse(
           RequestingSocket, RequestId, false,
-          TEXT("Invalid levelPath: contains path traversal (..), double slashes, or invalid characters"),
+          McpPathRefusalMessage(TEXT("levelPath"), LevelPath),
           nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
     }

@@ -50,10 +50,11 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
     return true;
   }
 
+  const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);
   if (AssetPath.IsEmpty()) {
     SendAutomationError(Socket, RequestId,
-                        TEXT("Invalid assetPath"),
+                        McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven),
                         TEXT("SECURITY_VIOLATION"));
     return true;
   }

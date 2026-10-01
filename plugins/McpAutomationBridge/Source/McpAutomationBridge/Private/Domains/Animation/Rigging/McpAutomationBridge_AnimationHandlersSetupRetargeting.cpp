@@ -122,9 +122,10 @@ bool HandleAnimationSetupRetargetingAction(FActionContext &Context,
                    ? Converted
                    : FString();
   }
+  const FString SavePathAsGiven = SavePath;
   SavePath = SanitizeProjectRelativePath(SavePath);
   if (SavePath.IsEmpty()) {
-    Fail(Context, TEXT("savePath must be a content folder such as /Game/Retargeted"),
+    Fail(Context, McpPathRefusalMessage(TEXT("savePath"), SavePathAsGiven),
          TEXT("INVALID_PATH"));
     return false;
   }

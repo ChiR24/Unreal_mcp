@@ -57,7 +57,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     FString SafePath = SanitizeProjectRelativePath(LandscapePath);
     if (SafePath.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
+                          McpPathRefusalMessage(TEXT("landscape path"), LandscapePath),
                           TEXT("SECURITY_VIOLATION"));
       return true;
     }
@@ -69,7 +69,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGenerateLODs(
     FString SafePath = SanitizeProjectRelativePath(SingleAssetPath);
     if (SafePath.IsEmpty()) {
       SendAutomationError(RequestingSocket, RequestId,
-                          FString::Printf(TEXT("Invalid or unsafe asset path: %s"), *SingleAssetPath),
+                          McpPathRefusalMessage(TEXT("asset path"), SingleAssetPath),
                           TEXT("SECURITY_VIOLATION"));
       return true;
     }

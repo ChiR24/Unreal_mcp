@@ -24,7 +24,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetDependencies(
 
   const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
   if (SafeAssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid asset path"),
+    SendAutomationResponse(Socket, RequestId, false, McpPathRefusalMessage(TEXT("asset path"), AssetPath),
                            nullptr, TEXT("INVALID_PATH"));
     return true;
   }
@@ -89,7 +89,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGetAssetGraph(
 
   const FString SafeAssetPath = SanitizeProjectRelativePath(AssetPath);
   if (SafeAssetPath.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false, TEXT("Invalid asset path"),
+    SendAutomationResponse(Socket, RequestId, false, McpPathRefusalMessage(TEXT("asset path"), AssetPath),
                            nullptr, TEXT("INVALID_PATH"));
     return true;
   }
@@ -237,10 +237,11 @@ bool UMcpAutomationBridgeSubsystem::HandleDoesAssetExist(
     return true;
   }
 
+  const FString AssetPathAsGiven = AssetPath;
   AssetPath = SanitizeProjectRelativePath(AssetPath);
   if (AssetPath.IsEmpty()) {
     SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("Invalid assetPath"), nullptr,
+                           McpPathRefusalMessage(TEXT("assetPath"), AssetPathAsGiven), nullptr,
                            TEXT("SECURITY_VIOLATION"));
     return true;
   }

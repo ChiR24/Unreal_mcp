@@ -79,9 +79,10 @@ bool HandleAnimationSkinMeshToSkeletonAction(FActionContext &Context,
   // The same canonicalizer every other write path uses; without it an
   // outputPath with traversal, an unmounted root or stray whitespace reached
   // CreatePackage and the save wrapper unchecked.
+  const FString OutputPathAsGiven = OutputPath.TrimStartAndEnd();
   OutputPath = SanitizeProjectRelativePath(OutputPath.TrimStartAndEnd());
   if (OutputPath.IsEmpty()) {
-    Fail(TEXT("outputPath must be a canonical content path such as /Game/Chars/SKM_Coat"),
+    Fail(McpPathRefusalMessage(TEXT("outputPath"), OutputPathAsGiven),
          TEXT("INVALID_PATH"));
     return false;
   }

@@ -107,7 +107,9 @@ describe('the add and the status read', () => {
   const add = code(handlers('Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
 
   it('refuses a destination outside /Game, and a name that is not one, before Fab is asked', () => {
-    expect(add).toContain('SanitizeProjectRelativePath(Destination.TrimStartAndEnd())');
+    expect(add).toContain('SanitizeProjectRelativePath(RequestedDestination)');
+    // A refused folder says why, with the helper's own wording, before the /Game test below.
+    expect(add).toContain('McpPathRefusalMessage(TEXT("destinationPath"), RequestedDestination)');
     expect(add).toMatch(/Destination != TEXT\("\/Game"\) && !Destination\.StartsWith\(TEXT\("\/Game\/"\)\)/u);
     expect(add).toContain('!McpFabRelocate::IsValidAssetName(AssetName)');
     expect(add.indexOf('McpFabRelocate::IsValidAssetName(AssetName)')).toBeLessThan(add.indexOf('Provider->AddToProject('));

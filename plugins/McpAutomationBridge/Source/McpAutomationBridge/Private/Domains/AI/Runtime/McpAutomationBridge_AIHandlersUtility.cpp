@@ -65,7 +65,7 @@ bool HandleGetAIInfo(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         if (BlueprintPath.IsEmpty())
         {
             Self->SendAutomationError(RequestingSocket, RequestId,
-                FString::Printf(TEXT("Invalid %s: must be a valid project-relative path"), Field),
+                McpPathRefusalMessage(Field, RequestedPath),
                 TEXT("INVALID_PATH"));
             return true;
         }

@@ -52,7 +52,7 @@ bool HandleConfigureHlodLayer(
     if (SafePath.IsEmpty())
     {
         Subsystem->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid or unsafe HLOD layer path: %s"), *HlodLayerPath),
+            McpPathRefusalMessage(TEXT("HLOD layer path"), HlodLayerPath),
             nullptr, TEXT("SECURITY_VIOLATION"));
         return true;
     }

@@ -34,7 +34,7 @@ inline bool McpCollectBulkAssetPaths(UMcpAutomationBridgeSubsystem& Bridge, cons
     Folder = SanitizeProjectRelativePath(Folder);
     if (Folder.IsEmpty())
     {
-        Bridge.SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Invalid folderPath: %s"), *FolderPath), TEXT("SECURITY_VIOLATION"));
+        Bridge.SendAutomationError(Socket, RequestId, McpPathRefusalMessage(TEXT("folderPath"), FolderPath), TEXT("SECURITY_VIOLATION"));
         return false;
     }
     // Cached registry data only (no synchronous scan on the game thread): assets the

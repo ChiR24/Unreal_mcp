@@ -93,13 +93,13 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageType(
       PackagePath.IsEmpty()) {
     Payload->TryGetStringField(TEXT("savePath"), PackagePath);
   }
+  const FString RequestedPath = PackagePath;
   PackagePath = PackagePath.IsEmpty()
                     ? FString(TEXT("/Game/Foliage"))
                     : SanitizeProjectRelativePath(PackagePath);
   if (PackagePath.IsEmpty()) {
     SendAutomationError(RequestingSocket, RequestId,
-                        TEXT("Invalid 'path': contains traversal sequences or "
-                             "an unsupported content root"),
+                        McpPathRefusalMessage(TEXT("path"), RequestedPath),
                         TEXT("INVALID_PATH"));
     return true;
   }

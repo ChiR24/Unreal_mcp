@@ -37,10 +37,11 @@ bool HandleSaveLevelAsAction(UMcpAutomationBridgeSubsystem& Subsystem, const FSt
       return true;
     }
 
+    const FString SavePathAsGiven = SavePath;
     SavePath = SanitizeProjectRelativePath(SavePath);
     if (SavePath.IsEmpty()) {
       Subsystem.SendAutomationResponse(RequestingSocket, RequestId, false,
-                             TEXT("Invalid savePath: contains path traversal (..) or invalid characters"),
+                             McpPathRefusalMessage(TEXT("savePath"), SavePathAsGiven),
                              nullptr, TEXT("SECURITY_VIOLATION"));
       return true;
     }

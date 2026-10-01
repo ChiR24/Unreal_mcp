@@ -28,7 +28,7 @@ bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const F
     FString ValidatedParentPath = SanitizeProjectRelativePath(ParentMaterial);
     if (ValidatedParentPath.IsEmpty()) {
       Bridge->SendAutomationError(Socket, RequestId,
-                          FString::Printf(TEXT("Invalid parentMaterial path '%s': contains traversal sequences or invalid root"), *ParentMaterial),
+                          McpPathRefusalMessage(TEXT("parentMaterial"), ParentMaterial),
                           TEXT("INVALID_PATH"));
       return true;
     }

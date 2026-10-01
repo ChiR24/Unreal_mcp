@@ -52,7 +52,7 @@ static inline bool ValidateAssetCreationPath(
   // Sanitize and validate folder path
   FString SanitizedFolder = SanitizeProjectRelativePath(FolderPath);
   if (SanitizedFolder.IsEmpty()) {
-    OutError = TEXT("Invalid folder path: contains traversal or invalid characters");
+    OutError = McpPathRefusalMessage(TEXT("folder path"), FolderPath);
     return false;
   }
 

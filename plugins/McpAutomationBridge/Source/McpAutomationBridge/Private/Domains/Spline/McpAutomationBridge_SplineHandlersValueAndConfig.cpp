@@ -107,7 +107,7 @@ FString RequireSplineProjectPath(UMcpAutomationBridgeSubsystem* Self, const FStr
     if (Safe.IsEmpty())
     {
         Self->SendAutomationResponse(Socket, RequestId, false,
-            FString::Printf(TEXT("Invalid or unsafe %s: %s. Path must be relative to project (e.g., /Game/...)"), Field, *Path),
+            McpPathRefusalMessage(Field, Path),
             nullptr, TEXT("SECURITY_VIOLATION"));
     }
     return Safe;

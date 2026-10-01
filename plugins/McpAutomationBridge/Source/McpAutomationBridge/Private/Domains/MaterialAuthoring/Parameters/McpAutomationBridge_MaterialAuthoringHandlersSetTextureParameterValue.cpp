@@ -16,7 +16,7 @@ bool HandleSetTextureParameterValue(UMcpAutomationBridgeSubsystem* Bridge, const
   const FString ValidatedTexturePath = SanitizeProjectRelativePath(TexturePath);
   if (ValidatedTexturePath.IsEmpty()) {
     Bridge->SendAutomationError(Socket, RequestId,
-        FString::Printf(TEXT("Invalid texturePath '%s': contains traversal sequences or invalid root"), *TexturePath),
+        McpPathRefusalMessage(TEXT("texturePath"), TexturePath),
         TEXT("INVALID_PATH"));
     return true;
   }

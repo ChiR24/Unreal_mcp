@@ -59,7 +59,7 @@ inline bool ReadFoliageTypePath(UMcpAutomationBridgeSubsystem& Bridge, const FSt
     if (SafePath.IsEmpty())
     {
         Bridge.SendAutomationError(Socket, RequestId,
-            FString::Printf(TEXT("Invalid or unsafe foliage type path: %s"), *Requested), TEXT("SECURITY_VIOLATION"));
+            McpPathRefusalMessage(TEXT("foliage type path"), Requested), TEXT("SECURITY_VIOLATION"));
         return false;
     }
     OutPath = FPaths::GetPath(SafePath).IsEmpty() ? FString::Printf(TEXT("/Game/Foliage/%s"), *SafePath) : SafePath;

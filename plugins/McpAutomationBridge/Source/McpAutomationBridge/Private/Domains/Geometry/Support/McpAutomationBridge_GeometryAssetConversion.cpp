@@ -21,7 +21,7 @@ bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, const FS
     FString Sanitized = SanitizeProjectRelativePath(OutRequested);
     if (Sanitized.IsEmpty())
     {
-        OutError = TEXT("Invalid outputPath - rejected due to security validation");
+        OutError = McpPathRefusalMessage(TEXT("outputPath"), OutRequested);
         return false;
     }
     Sanitized = FPackageName::ObjectPathToPackageName(Sanitized);

@@ -143,7 +143,7 @@ bool TryCreateEnhancedInputNode(
     if (SanitizedPackagePath.IsEmpty())
     {
         Context.SendError(
-            TEXT("Invalid input action path"),
+            McpPathRefusalMessage(TEXT("input action path"), PackagePath),
             TEXT("INVALID_PATH"));
         return true;
     }

@@ -45,7 +45,7 @@ ALandscape *ResolveLandscapeOrReply(UMcpAutomationBridgeSubsystem &Bridge,
     if (SafePath.IsEmpty()) {
       Bridge.SendAutomationError(
           RequestingSocket, RequestId,
-          FString::Printf(TEXT("Invalid or unsafe landscape path: %s"), *LandscapePath),
+          McpPathRefusalMessage(TEXT("landscape path"), LandscapePath),
           TEXT("SECURITY_VIOLATION"));
       return nullptr;
     }

@@ -82,7 +82,7 @@ FString AddTemplateEmitter(UNiagaraSystem& System, UNiagaraEmitter& Template)
 #endif
 }
 
-FString ResolveSystemFolder(const FEffectActionContext& Context, const FString& Name)
+FString ResolveSystemFolder(const FEffectActionContext& Context, const FString& Name, FString& OutRefusal)
 {
     FString Folder;
     Context.Payload->TryGetStringField(TEXT("path"), Folder);
@@ -94,9 +94,11 @@ FString ResolveSystemFolder(const FEffectActionContext& Context, const FString& 
     {
         Folder = TEXT("/Game/Effects");
     }
+    const FString Requested = Folder;
     Folder = SanitizeProjectRelativePath(Folder);
     if (Folder.IsEmpty())
     {
+        OutRefusal = McpPathRefusalMessage(TEXT("path"), Requested);
         return Folder;
     }
     // A full object path in `path` ("/Game/FX/NS_Foo" or "/Game/FX/NS_Foo.NS_Foo") is the
@@ -137,10 +139,11 @@ bool AuthorProceduralNiagaraSystem(
         OutErrorCode = TEXT("INVALID_ARGUMENT");
         return false;
     }
-    const FString Folder = ResolveSystemFolder(Context, Name);
+    FString FolderRefusal;
+    const FString Folder = ResolveSystemFolder(Context, Name, FolderRefusal);
     if (Folder.IsEmpty())
     {
-        OutError = TEXT("path or savePath was rejected by project path validation");
+        OutError = FolderRefusal.IsEmpty() ? FString(TEXT("path or savePath names no folder to create the system in")) : FolderRefusal;
         OutErrorCode = TEXT("INVALID_PATH");
         return false;
     }
