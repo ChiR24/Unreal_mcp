@@ -190,7 +190,7 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
         } else {
           Bridge->SendAutomationError(
               Socket, RequestId,
-              FString::Printf(TEXT("Unknown input on main node: %s"), *InputName),
+              FString::Printf(TEXT("Unknown input on main node: %s. Main inputs: %s."), *InputName, *ListMainMaterialInputs(Material)),
               TEXT("INVALID_PIN"));
         }
         return true;

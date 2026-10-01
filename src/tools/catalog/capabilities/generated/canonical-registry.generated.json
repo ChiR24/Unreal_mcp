@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7e17945876b9ec5b",
+  "catalogRevision": "35519ff2d0f77acf",
   "recordCount": 389,
   "records": [
     {
@@ -77022,7 +77022,7 @@
             },
             "targetPin": {
               "type": "string",
-              "description": "Target pin name."
+              "description": "Target pin name. On the material output (targetNodeId Main): BaseColor, Metallic, Specular, Roughness, Anisotropy, EmissiveColor, Opacity, OpacityMask, Normal, Tangent, WorldPositionOffset, SubsurfaceColor, ClearCoat, ClearCoatRoughness, AmbientOcclusion, Refraction, PixelDepthOffset (and SurfaceThickness, Displacement on newer engines); a Cloth material's Cloth and FuzzColor, and CustomData0/CustomData1, name the clear-coat and subsurface pins they share."
             },
             "inputName": {
               "type": "string",
@@ -77104,8 +77104,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8ac4bf7bda722d849432d328b6782e95c6287ec70dd1ab16c25a328ca1ab7f6b",
-        "content": "6befb1b01d91d6ff4512533c45c13cfa071d963728a7a05ab69aae4629db4618"
+        "schema": "6a278a70fabbd1a137cb3e839c8ef834c0340d90c6413d013a8b68e1a5c84c39",
+        "content": "651529b835269c522ac6cecd276927e0aca90deeba204ce8be6a7f40a3de509f"
       }
     },
     {

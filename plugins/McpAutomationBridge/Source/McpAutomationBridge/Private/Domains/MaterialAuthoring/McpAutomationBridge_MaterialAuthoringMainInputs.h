@@ -47,16 +47,37 @@ inline void ForEachMainMaterialInput(UMaterial* Material, TVisitor&& Visit)
 #endif
 }
 
-// Main material input by pin name; nullptr when the name is not a main pin.
+// The names other shading models show for the same pins: a Cloth material's "Cloth" amount
+// and the engine's CustomData0/1 are the ClearCoat/ClearCoatRoughness inputs, and its "Fuzz
+// Color" is SubsurfaceColor. Only "ClearCoat" was accepted, so a Cloth material could be
+// wired only through the clear-coat name.
+inline FString CanonicalMainInputName(const FString& PinName)
+{
+  if (PinName == TEXT("Cloth") || PinName == TEXT("CustomData0")) return TEXT("ClearCoat");
+  if (PinName == TEXT("CustomData1")) return TEXT("ClearCoatRoughness");
+  if (PinName == TEXT("FuzzColor")) return TEXT("SubsurfaceColor");
+  return PinName;
+}
+
+// Main material input by pin name (or one of the names above); nullptr when it is not a main pin.
 inline FExpressionInput* GetMainMaterialInput(UMaterial* Material, const FString& PinName)
 {
   FExpressionInput* Found = nullptr;
+  const FString Canonical = CanonicalMainInputName(PinName);
   if (Material) {
     ForEachMainMaterialInput(Material, [&](const TCHAR* Name, FExpressionInput& Input) {
-      if (!Found && PinName == Name) { Found = &Input; }
+      if (!Found && Canonical == Name) { Found = &Input; }
     });
   }
   return Found;
+}
+
+// Every main pin name this engine accepts, for a refusal to list.
+inline FString ListMainMaterialInputs(UMaterial* Material)
+{
+  TArray<FString> Names;
+  ForEachMainMaterialInput(Material, [&](const TCHAR* Name, FExpressionInput&) { Names.Add(Name); });
+  return FString::Join(Names, TEXT(", ")) + TEXT(" (also Cloth and CustomData0 = ClearCoat, CustomData1 = ClearCoatRoughness, FuzzColor = SubsurfaceColor)");
 }
 
 // Visits every input of Expr as (FExpressionInput&, PinName): the reflected

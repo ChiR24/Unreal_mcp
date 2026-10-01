@@ -15,11 +15,10 @@ bool HandleDisconnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     // Disconnect from main / output node
     if (NodeId.IsEmpty() || NodeId == TEXT("Main")) {
       if (Material) {
-        FExpressionInput* MainInput = PinName.IsEmpty() ? nullptr : GetMainMaterialInput(Material, PinName);
+        FExpressionInput* MainInput = PinName.IsEmpty() ? nullptr : GetMainMaterialInput(Material, NormalizeMaterialInputName(PinName));
         if (!MainInput) {
           Bridge->SendAutomationError(Socket, RequestId,
-              FString::Printf(TEXT("'%s' is not a material output input: pass pinName as BaseColor, Metallic, Roughness, "
-                                   "Normal, EmissiveColor, Opacity, OpacityMask and so on."), *PinName),
+              FString::Printf(TEXT("'%s' is not a material output input. Main inputs: %s."), *PinName, *ListMainMaterialInputs(Material)),
               TEXT("PIN_NOT_FOUND"));
           return true;
         }

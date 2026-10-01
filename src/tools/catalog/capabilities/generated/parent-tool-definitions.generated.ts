@@ -9123,7 +9123,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "targetPin": {
           "type": "string",
-          "description": "Target pin name."
+          "description": "Target pin name. On the material output (targetNodeId Main): BaseColor, Metallic, Specular, Roughness, Anisotropy, EmissiveColor, Opacity, OpacityMask, Normal, Tangent, WorldPositionOffset, SubsurfaceColor, ClearCoat, ClearCoatRoughness, AmbientOcclusion, Refraction, PixelDepthOffset (and SurfaceThickness, Displacement on newer engines); a Cloth material's Cloth and FuzzColor, and CustomData0/CustomData1, name the clear-coat and subsurface pins they share."
         },
         "textureGroup": {
           "type": "string",

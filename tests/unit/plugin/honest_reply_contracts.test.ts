@@ -556,3 +556,22 @@ describe('the material slots of a mesh asset', () => {
     expect(outputNames('inspect.inspect_object')).toEqual(expect.arrayContaining(['materialSlots', 'slotBoundsAvailable']));
   });
 });
+
+describe('the main inputs of a material', () => {
+  const inputs = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringMainInputs.h');
+
+  it('take the names other shading models show for the same pins', () => {
+    expect(inputs).toContain('PinName == TEXT("Cloth") || PinName == TEXT("CustomData0")) return TEXT("ClearCoat");');
+    expect(inputs).toContain('PinName == TEXT("CustomData1")) return TEXT("ClearCoatRoughness");');
+    expect(inputs).toContain('PinName == TEXT("FuzzColor")) return TEXT("SubsurfaceColor");');
+    expect(inputs).toContain('const FString Canonical = CanonicalMainInputName(PinName);');
+  });
+
+  it('list every accepted pin when connect or disconnect does not know the one asked for', () => {
+    const connect = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp');
+    expect(connect).toContain('Unknown input on main node: %s. Main inputs: %s."), *InputName, *ListMainMaterialInputs(Material)');
+    const disconnect = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersDisconnectNodes.cpp');
+    expect(disconnect).toContain('GetMainMaterialInput(Material, NormalizeMaterialInputName(PinName))');
+    expect(disconnect).toContain('*ListMainMaterialInputs(Material)');
+  });
+});
