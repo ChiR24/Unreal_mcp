@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fc22db064cb6806b",
+  "catalogRevision": "fc03bf431ee0522f",
   "recordCount": 389,
   "records": [
     {
@@ -20820,6 +20820,29 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "configuredProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every setting this call wrote, by UFoliageType property name (Mesh, Density, ScaleX, CullDistance, ...), the reflected settings entries included."
+            },
+            "configuredPropertyCount": {
+              "type": "number",
+              "description": "How many properties configuredProperties lists."
+            },
+            "previousMesh": {
+              "type": "string",
+              "description": "Mesh assignment: the mesh the type used before this call (empty when it had none)."
+            },
+            "placedInstances": {
+              "type": "number",
+              "description": "Mesh assignment: instances of this type placed in the level (its foliage actor)."
+            },
+            "instancesShowingNewMesh": {
+              "type": "number",
+              "description": "Mesh assignment: how many of the placed instances now draw the new mesh, read back off their component; below placedInstances means some did not follow."
             }
           },
           "required": [
@@ -20911,8 +20934,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4798c2e38392b9e195268aaff674b1813a8053e93b1511b9cd2b94acc6384125",
-        "content": "f1f33110514550eb9ba9b47794fb2967b81db299be86a0376d7e202ad5ed64ee"
+        "schema": "c36aa7c88088a5919e5a17c9f7a4dd2f81d6069dc0e23ab40ddef7a8b1e9b88d",
+        "content": "c5d6251fa1c9d98e739ba9f78f9d14354ad46336c4f97503887e1b18b225e1f2"
       }
     },
     {

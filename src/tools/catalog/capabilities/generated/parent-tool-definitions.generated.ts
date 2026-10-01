@@ -3350,6 +3350,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
     "outputSchema": {
       "type": "object",
       "properties": {
+        "configuredProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every setting this call wrote, by UFoliageType property name (Mesh, Density, ScaleX, CullDistance, ...), the reflected settings entries included."
+        },
+        "configuredPropertyCount": {
+          "type": "number",
+          "description": "How many properties configuredProperties lists."
+        },
         "count": {
           "type": "number",
           "description": "Number of available light types."
@@ -3363,9 +3374,21 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Directional light actor path. As input, selects the light to snapshot; the first directional light in the level is used when omitted. As output, the resolved actor path."
         },
+        "instancesShowingNewMesh": {
+          "type": "number",
+          "description": "Mesh assignment: how many of the placed instances now draw the new mesh, read back off their component; below placedInstances means some did not follow."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
+        },
+        "placedInstances": {
+          "type": "number",
+          "description": "Mesh assignment: instances of this type placed in the level (its foliage actor)."
+        },
+        "previousMesh": {
+          "type": "string",
+          "description": "Mesh assignment: the mesh the type used before this call (empty when it had none)."
         },
         "skyLightActorPath": {
           "type": "string",

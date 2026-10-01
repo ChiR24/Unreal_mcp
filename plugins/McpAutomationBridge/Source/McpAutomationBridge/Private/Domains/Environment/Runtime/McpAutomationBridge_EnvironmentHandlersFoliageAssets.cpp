@@ -1,5 +1,8 @@
 #include "Domains/Environment/Runtime/McpAutomationBridge_EnvironmentAssetValidation.h"
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
+#include "Domains/Foliage/McpAutomationBridge_FoliageHandlersPrivate.h"
+
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -29,6 +32,12 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     }
     FoliageType->Modify();
 
+    // Every property this call wrote, by its UFoliageType name: the settings handled below were written but
+    // never named, so a mesh or density change answered configuredPropertyCount 0 and an empty list.
+    TArray<FString> Applied;
+    TArray<FString> Failed;
+    UStaticMesh *NewMesh = nullptr;
+
     // A mesh that did not load used to be skipped, keeping the old mesh behind a success.
     const FString MeshPath = McpGetFirstStringField(Payload, {TEXT("meshPath"), TEXT("staticMesh")});
     if (!MeshPath.IsEmpty())
@@ -42,7 +51,11 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
                           : FString(TEXT("This foliage type does not take a static mesh")),
                 Instanced ? TEXT("ASSET_NOT_FOUND") : TEXT("INVALID_ARGUMENT"));
         }
+        const UStaticMesh *Previous = Instanced->GetStaticMesh();
+        Resp->SetStringField(TEXT("previousMesh"), Previous ? Previous->GetPathName() : FString());
         Instanced->SetStaticMesh(Mesh);
+        NewMesh = Mesh;
+        Applied.Add(TEXT("Mesh"));
         Resp->SetStringField(TEXT("meshPath"), MeshPath);
     }
 
@@ -50,6 +63,7 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     if (Payload->TryGetNumberField(TEXT("density"), NumberValue))
     {
         FoliageType->Density = static_cast<float>(NumberValue);
+        Applied.Add(TEXT("Density"));
     }
 
     // Both bounds are read: a || here once skipped maxScale whenever minScale was given.
@@ -70,22 +84,29 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
         FoliageType->ScaleX = FFloatInterval(static_cast<float>(MinScale), static_cast<float>(MaxScale));
         FoliageType->ScaleY = FoliageType->ScaleX;
         FoliageType->ScaleZ = FoliageType->ScaleX;
+        for (const TCHAR *Written : {TEXT("Scaling"), TEXT("ScaleX"), TEXT("ScaleY"), TEXT("ScaleZ")})
+        {
+            Applied.Add(Written);
+        }
     }
 
     bool BoolValue = false;
     if (Payload->TryGetBoolField(TEXT("alignToNormal"), BoolValue))
     {
         FoliageType->AlignToNormal = BoolValue;
+        Applied.Add(TEXT("AlignToNormal"));
     }
     if (Payload->TryGetBoolField(TEXT("randomYaw"), BoolValue))
     {
         FoliageType->RandomYaw = BoolValue;
+        Applied.Add(TEXT("RandomYaw"));
     }
     // UFoliageType has no CollisionEnabled property; placed instances take BodyInstance's.
     if (Payload->TryGetBoolField(TEXT("collisionEnabled"), BoolValue))
     {
         FoliageType->BodyInstance.SetCollisionEnabled(BoolValue ? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::NoCollision);
         Resp->SetBoolField(TEXT("collisionEnabled"), BoolValue);
+        Applied.Add(TEXT("BodyInstance"));
     }
 
     // The cull distance; the fade start (Min) only moves when it would pass it.
@@ -95,6 +116,7 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
         FoliageType->CullDistance.Max = FMath::Max(CullDistance, 0);
         FoliageType->CullDistance.Min = FMath::Min(FoliageType->CullDistance.Min, FoliageType->CullDistance.Max);
         Resp->SetNumberField(TEXT("cullDistance"), FoliageType->CullDistance.Max);
+        Applied.Add(TEXT("CullDistance"));
     }
 
     // The keys handled above stay out of the reflection pass, which failed
@@ -105,9 +127,7 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
     {
         ReflectPayload->RemoveField(Handled);
     }
-    TArray<FString> Applied;
-    TArray<FString> Failed;
-    const int32 ReflectedCount = McpApplyPayloadSettings(FoliageType, ReflectPayload, Applied, Failed);
+    McpApplyPayloadSettings(FoliageType, ReflectPayload, Applied, Failed);
     if (Failed.Num() > 0)
     {
         return McpFailEnvironmentAction(OutMessage, OutErrorCode,
@@ -121,8 +141,26 @@ bool McpConfigureFoliageType(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<
             TEXT("Failed to save foliage type"), TEXT("SAVE_FAILED"));
     }
 
+    // The type's PostEditChange hands the new mesh to the placed instances; how many of the level's instances of this
+    // type draw it now is read back off their component, so a count below placedInstances says some did not follow.
+    if (NewMesh)
+    {
+        int32 Placed = 0;
+        int32 Showing = 0;
+        UWorld *World = McpHandlerUtils::GetEditorWorld();
+        AInstancedFoliageActor *Foliage = World ? McpFoliageHandlers::GetOrCreateFoliageActorForWorldSafe(World, false) : nullptr;
+        if (FFoliageInfo *Info = Foliage ? Foliage->FindInfo(FoliageType) : nullptr)
+        {
+            Placed = Info->Instances.Num();
+            const UHierarchicalInstancedStaticMeshComponent *Component = Info->GetComponent();
+            Showing = Component && Component->GetStaticMesh() == NewMesh ? Placed : 0;
+        }
+        Resp->SetNumberField(TEXT("placedInstances"), Placed);
+        Resp->SetNumberField(TEXT("instancesShowingNewMesh"), Showing);
+    }
+
     Resp->SetStringField(TEXT("foliageTypePath"), FoliagePath);
-    Resp->SetNumberField(TEXT("configuredPropertyCount"), ReflectedCount);
+    Resp->SetNumberField(TEXT("configuredPropertyCount"), Applied.Num());
     McpAddStringArrayField(Resp, TEXT("configuredProperties"), Applied);
     McpHandlerUtils::AddVerification(Resp, FoliageType);
     OutMessage = TEXT("Foliage type configured");

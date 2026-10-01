@@ -111,6 +111,14 @@ export const FOLIAGE_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A new foliage type should be created instead.'],
     inputProps: { foliageType: P.foliageType, foliageTypePath: P.foliageTypePath,
       meshPath: P.meshPath, staticMesh: P.staticMesh },
+    // The reply of every configure_foliage variant: what it wrote, and (mesh) what became of the placed instances.
+    outputProps: {
+      configuredProperties: { type: 'array', items: { type: 'string' }, description: 'Every setting this call wrote, by UFoliageType property name (Mesh, Density, ScaleX, CullDistance, ...), the reflected settings entries included.' },
+      configuredPropertyCount: { type: 'number', description: 'How many properties configuredProperties lists.' },
+      previousMesh: { type: 'string', description: 'Mesh assignment: the mesh the type used before this call (empty when it had none).' },
+      placedInstances: { type: 'number', description: 'Mesh assignment: instances of this type placed in the level (its foliage actor).' },
+      instancesShowingNewMesh: { type: 'number', description: 'Mesh assignment: how many of the placed instances now draw the new mesh, read back off their component; below placedInstances means some did not follow.' },
+    },
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_foliage_mesh', foliageType: 'Bush_Type', meshPath: '/Game/Meshes/SM_Bush_v2' },
   }),
