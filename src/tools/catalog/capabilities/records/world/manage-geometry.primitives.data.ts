@@ -1,7 +1,7 @@
 /**
- * Geometry primitive-creation family records (14 actions).
+ * Geometry primitive-creation family records (15 actions).
  */
-import type { CapabilityRecordSource } from '../../model.js';
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
 import { buildWorldRecord } from './builder.js';
 import { P } from './properties.js';
 
@@ -16,6 +16,32 @@ const PLUGIN = ['GeometryScripting'] as const;
 const IDENT = { name: P.name };
 // Read by the shared ReadTransformFromPayload helper on every create_* action.
 const XFORM = { location: P.location, rotation: P.rotation, scale: P.scale };
+
+const cm = (d: string): JsonObject => ({ type: 'number', description: d });
+const vec = (d: string): JsonObject => ({ type: 'object', description: d, properties: { x: cm('X'), y: cm('Y'), z: cm('Z') }, additionalProperties: false });
+const SDF_SHAPES: JsonObject = {
+  type: 'array', minItems: 1, maxItems: 64,
+  description: 'Shapes combined in order onto shapes[0] (which must be a union) as one signed distance field, then meshed. ' +
+    'Sizes are cm in the mesh\'s local space. Each joined shape takes a blend: the radius of the soft fillet where it meets what came before.',
+  items: {
+    type: 'object', required: ['type'], additionalProperties: false,
+    properties: {
+      type: { type: 'string', enum: ['sphere', 'ellipsoid', 'box', 'capsule', 'cylinder', 'torus', 'cone'], description: 'sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends).' },
+      operation: { type: 'string', enum: ['union', 'subtract', 'intersect'], description: 'union adds the shape (default), subtract carves it out of what came before (a recess, socket or groove), intersect keeps only the overlap.' },
+      center: vec('Shape centre in the mesh\'s local space, cm (default 0,0,0).'),
+      rotation: { type: 'object', description: 'Shape rotation {pitch, yaw, roll} in degrees; turns the shape\'s local Z axis for capsule, cylinder, cone and torus.', properties: { pitch: cm('Pitch'), yaw: cm('Yaw'), roll: cm('Roll') }, additionalProperties: false },
+      radius: cm('Radius in cm (sphere, capsule, cylinder, cone base; torus: distance to the tube centre). Default 50.'),
+      radii: vec('Ellipsoid radii along local X, Y, Z in cm.'),
+      extent: vec('Box half size along local X, Y, Z in cm.'),
+      rounding: cm('Box or cylinder edge rounding radius in cm (0 = sharp).'),
+      length: cm('Capsule straight length, cylinder or cone height, in cm (default 100).'),
+      topRadius: cm('Cone radius at the top in cm (0 = point; larger than radius widens upward).'),
+      thickness: cm('Torus tube radius in cm (default 10).'),
+      blend: cm('Smooth-join radius in cm with the shapes before it: 0 is a hard edge; a few cm reads as a soft fillet on a union and as a rounded rim on a subtract.'),
+      materialId: { type: 'integer', minimum: 0, maximum: 63, description: 'Material slot of the surface this shape forms (default 0). A subtract shape owns the surface it carves, so a carved visor can take its own slot.' },
+    },
+  },
+};
 
 export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -102,5 +128,34 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
     family: F, summary: 'Create a ramp dynamic mesh actor.', whenToUse: ['A ramp primitive must be created.'], whenNotToUse: ['A stair is needed; use create_stairs.'],
     inputProps: { ...IDENT, ...XFORM, width: P.width, length: P.length, height: P.height }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_ramp', width: 100, length: 200, height: 50 },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'create_sdf', plugins: PLUGIN,
+    topics: ['sdf', 'signed distance field', 'smooth union', 'blend shapes', 'organic mesh', 'fillet', 'metaball', 'rounded character part'],
+    family: F,
+    summary: 'Create one smooth organic mesh actor from blended shapes (a signed distance field): spheres, ellipsoids, rounded boxes, capsules, cylinders, tori and cones joined with soft fillets, carved with rounded recesses, or intersected, each shape with its own material slot.',
+    whenToUse: ['A smooth organic or toy-like form must be modelled from several parts that flow into each other: a helmet, a hand, a shoe, a character body, a rounded prop.', 'A recess, socket or groove with a soft rim must be carved into a rounded form (subtract with blend), for example a visor.'],
+    whenNotToUse: ['One plain primitive is enough; use that primitive.', 'Hard mechanical parts with exact flat faces; use primitives with bevel and booleans.'],
+    inputProps: { ...IDENT, ...XFORM, shapes: SDF_SHAPES, resolution: { type: 'integer', minimum: 16, maximum: 256, description: 'Grid cells along the longest side of the shapes\' bounds (default 128, 16-256): higher is finer and slower; 160-200 suits a hero part.' } },
+    outputProps: {
+      parts: {
+        type: 'array', description: 'One entry per shape, saying which surface it formed.',
+        items: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            shape: { type: 'integer', description: 'Index into shapes.' },
+            groupId: { type: 'integer', description: 'Polygroup of the surface this shape formed (index+1).' },
+            materialId: { type: 'integer', description: 'Material slot of that surface.' },
+            triangles: { type: 'integer', description: 'Triangles of that surface; 0 when another shape covered it entirely.' },
+          },
+        },
+      },
+      resolution: { type: 'integer', description: 'Grid cells along the longest side, as used.' },
+      cellSize: cm('Grid cell size in cm.'),
+      vertexCount: { type: 'integer', description: 'Vertices in the mesh.' },
+      triangleCount: { type: 'integer', description: 'Triangles in the mesh.' },
+    },
+    required: ['shapes'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    exampleInput: { action: 'create_sdf', name: 'Mitten', resolution: 160, shapes: [{ type: 'ellipsoid', radii: { x: 9, y: 4, z: 10 } }, { type: 'capsule', center: { x: 7, y: 0, z: -2 }, rotation: { pitch: 60, yaw: 0, roll: 0 }, radius: 3, length: 6, blend: 3 }] },
   }),
 ];

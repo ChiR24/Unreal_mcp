@@ -38,6 +38,18 @@ const testCases = [
   { scenario: 'CREATE: create_arch', toolName: 'manage_geometry', arguments: {"action": "create_arch", "name": `Testarch_${ts}`, "radius": 90, "innerRadius": 20, "radialSegments": 12, "numRings": 6}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_pipe', toolName: 'manage_geometry', arguments: {"action": "create_pipe", "name": `Testpipe_${ts}`, "radius": 55, "innerRadius": 35, "height": 110, "numSides": 18, "heightSegments": 2}, expected: 'success|already exists' },
   { scenario: 'CREATE: create_ramp', toolName: 'manage_geometry', arguments: {"action": "create_ramp", "name": "Testramp", "width": 100, "length": 200, "height": 50}, expected: 'success|already exists' },
+  { scenario: 'CREATE: create_sdf blends every shape kind into one mesh with per-shape slots', toolName: 'manage_geometry', arguments: {
+    action: 'create_sdf', name: `TestSdf_${ts}`, resolution: 64, location: { x: 0, y: 900, z: 100 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, scale: { x: 1, y: 1, z: 1 },
+    shapes: [
+      { type: 'ellipsoid', radii: { x: 30, y: 25, z: 28 } },
+      { type: 'box', operation: 'subtract', center: { x: 26, y: 0, z: 2 }, extent: { x: 8, y: 16, z: 9 }, rounding: 3, blend: 2, materialId: 1 },
+      { type: 'capsule', operation: 'union', center: { x: 0, y: 0, z: -30 }, radius: 10, length: 12, blend: 4, materialId: 2 },
+      { type: 'cylinder', center: { x: 0, y: 0, z: 30 }, radius: 6, length: 10, rounding: 2, blend: 3 },
+      { type: 'torus', center: { x: 0, y: 0, z: -20 }, rotation: { pitch: 0, yaw: 0, roll: 0 }, radius: 18, thickness: 3, blend: 2 },
+      { type: 'cone', center: { x: 0, y: 30, z: 0 }, rotation: { pitch: 0, yaw: 0, roll: 90 }, radius: 6, topRadius: 2, length: 14, blend: 3 },
+      { type: 'sphere', operation: 'intersect', radius: 60, blend: 1 },
+    ] }, expected: 'success' },
+  { scenario: 'ERROR: create_sdf refuses a subtract as the base shape', toolName: 'manage_geometry', arguments: { action: 'create_sdf', name: `TestSdfBad_${ts}`, shapes: [{ type: 'sphere', operation: 'subtract', radius: 10 }] }, expected: 'error' },
   // === ACTION ===
   { scenario: 'ACTION: boolean_union', toolName: 'manage_geometry', arguments: {"action": "boolean_union", "targetActor": EDIT_ACTOR, "toolActor": TOOL_ACTOR, "keepTool": true}, expected: 'success' },
   { scenario: 'ACTION: boolean_subtract', toolName: 'manage_geometry', arguments: {"action": "boolean_subtract", "targetActor": EDIT_ACTOR, "toolActor": TOOL_ACTOR, "keepTool": true}, expected: 'success' },

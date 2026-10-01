@@ -5,10 +5,11 @@ import type { FoldSpec } from '../shared/fold-types.js';
 export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'create_primitive', selector: 'primitive',
-    summary: 'Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs.',
-    topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus', 'make a cube or ramp'],
+    summary: 'Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet.',
+    topics: ['create box', 'create sphere', 'create cylinder', 'create plane', 'box mesh', 'primitive mesh', 'stairs', 'torus', 'make a cube or ramp',
+      'signed distance field', 'smooth blend shapes', 'organic mesh'],
     members: byTarget('create_', ['create_box', 'create_sphere', 'create_cylinder', 'create_cone', 'create_capsule', 'create_plane', 'create_disc',
-      'create_ring', 'create_torus', 'create_pipe', 'create_arch', 'create_ramp', 'create_stairs', 'create_spiral_stairs']),
+      'create_ring', 'create_torus', 'create_pipe', 'create_arch', 'create_ramp', 'create_stairs', 'create_spiral_stairs', 'create_sdf']),
   },
   {
     primary: 'boolean_mesh', selector: 'booleanOp',

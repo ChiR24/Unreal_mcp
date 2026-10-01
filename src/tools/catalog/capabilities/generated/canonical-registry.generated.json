@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0f69a34672218b88",
+  "catalogRevision": "7e17945876b9ec5b",
   "recordCount": 389,
   "records": [
     {
@@ -58979,7 +58979,8 @@
         "manage_geometry.create_arch",
         "manage_geometry.create_ramp",
         "manage_geometry.create_stairs",
-        "manage_geometry.create_spiral_stairs"
+        "manage_geometry.create_spiral_stairs",
+        "manage_geometry.create_sdf"
       ],
       "legacyIds": [
         {
@@ -59083,6 +59084,13 @@
           "folded": {
             "primitive": "spiral_stairs"
           }
+        },
+        {
+          "tool": "manage_geometry",
+          "action": "create_sdf",
+          "folded": {
+            "primitive": "sdf"
+          }
         }
       ],
       "discovery": {
@@ -59099,11 +59107,20 @@
           "stairs",
           "torus",
           "make a cube or ramp",
+          "signed distance field",
+          "smooth blend shapes",
+          "organic mesh",
           "cube mesh",
           "procedural box",
-          "geometry cube"
+          "geometry cube",
+          "sdf",
+          "smooth union",
+          "blend shapes",
+          "fillet",
+          "metaball",
+          "rounded character part"
         ],
-        "summary": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs.",
+        "summary": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet.",
         "whenToUse": [
           "primitive=box: A box primitive must be created.",
           "primitive=sphere: A sphere primitive must be created.",
@@ -59118,9 +59135,14 @@
           "primitive=arch: An arch primitive must be created.",
           "primitive=ramp: A ramp primitive must be created.",
           "primitive=stairs: A stair primitive must be created.",
-          "primitive=spiral_stairs: A spiral stair primitive must be created."
+          "primitive=spiral_stairs: A spiral stair primitive must be created.",
+          "primitive=sdf: A smooth organic or toy-like form must be modelled from several parts that flow into each other: a helmet, a hand, a shoe, a character body, a rounded prop.",
+          "primitive=sdf: A recess, socket or groove with a soft rim must be carved into a rounded form (subtract with blend), for example a visor."
         ],
-        "whenNotToUse": []
+        "whenNotToUse": [
+          "primitive=sdf: One plain primitive is enough; use that primitive.",
+          "primitive=sdf: Hard mechanical parts with exact flat faces; use primitives with bevel and booleans."
+        ]
       },
       "schemas": {
         "input": {
@@ -59303,6 +59325,155 @@
               "type": "number",
               "description": "Number of turns for spiral stairs (converted to a curve angle)."
             },
+            "shapes": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "description": "Shapes combined in order onto shapes[0] (which must be a union) as one signed distance field, then meshed. Sizes are cm in the mesh's local space. Each joined shape takes a blend: the radius of the soft fillet where it meets what came before.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "sphere",
+                      "ellipsoid",
+                      "box",
+                      "capsule",
+                      "cylinder",
+                      "torus",
+                      "cone"
+                    ],
+                    "description": "sphere (radius), ellipsoid (radii), box (extent = half size, rounding), capsule (radius, length of the straight part, along local Z), cylinder (radius, length, rounding, along local Z), torus (radius to the tube centre, thickness = tube radius, in local XY), cone (radius at the bottom, topRadius, length, along local Z, rounded ends)."
+                  },
+                  "operation": {
+                    "type": "string",
+                    "enum": [
+                      "union",
+                      "subtract",
+                      "intersect"
+                    ],
+                    "description": "union adds the shape (default), subtract carves it out of what came before (a recess, socket or groove), intersect keeps only the overlap."
+                  },
+                  "center": {
+                    "type": "object",
+                    "description": "Shape centre in the mesh's local space, cm (default 0,0,0).",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "rotation": {
+                    "type": "object",
+                    "description": "Shape rotation {pitch, yaw, roll} in degrees; turns the shape's local Z axis for capsule, cylinder, cone and torus.",
+                    "properties": {
+                      "pitch": {
+                        "type": "number",
+                        "description": "Pitch"
+                      },
+                      "yaw": {
+                        "type": "number",
+                        "description": "Yaw"
+                      },
+                      "roll": {
+                        "type": "number",
+                        "description": "Roll"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "radius": {
+                    "type": "number",
+                    "description": "Radius in cm (sphere, capsule, cylinder, cone base; torus: distance to the tube centre). Default 50."
+                  },
+                  "radii": {
+                    "type": "object",
+                    "description": "Ellipsoid radii along local X, Y, Z in cm.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "extent": {
+                    "type": "object",
+                    "description": "Box half size along local X, Y, Z in cm.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "rounding": {
+                    "type": "number",
+                    "description": "Box or cylinder edge rounding radius in cm (0 = sharp)."
+                  },
+                  "length": {
+                    "type": "number",
+                    "description": "Capsule straight length, cylinder or cone height, in cm (default 100)."
+                  },
+                  "topRadius": {
+                    "type": "number",
+                    "description": "Cone radius at the top in cm (0 = point; larger than radius widens upward)."
+                  },
+                  "thickness": {
+                    "type": "number",
+                    "description": "Torus tube radius in cm (default 10)."
+                  },
+                  "blend": {
+                    "type": "number",
+                    "description": "Smooth-join radius in cm with the shapes before it: 0 is a hard edge; a few cm reads as a soft fillet on a union and as a rounded rim on a subtract."
+                  },
+                  "materialId": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 63,
+                    "description": "Material slot of the surface this shape forms (default 0). A subtract shape owns the surface it carves, so a carved visor can take its own slot."
+                  }
+                }
+              }
+            },
+            "resolution": {
+              "type": "integer",
+              "minimum": 16,
+              "maximum": 256,
+              "description": "Grid cells along the longest side of the shapes' bounds (default 128, 16-256): higher is finer and slower; 160-200 suits a hero part."
+            },
             "primitive": {
               "type": "string",
               "enum": [
@@ -59319,7 +59490,8 @@
                 "arch",
                 "ramp",
                 "stairs",
-                "spiral_stairs"
+                "spiral_stairs",
+                "sdf"
               ],
               "description": "Which create primitive variant to run."
             }
@@ -59346,6 +59518,48 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "parts": {
+              "type": "array",
+              "description": "One entry per shape, saying which surface it formed.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "shape": {
+                    "type": "integer",
+                    "description": "Index into shapes."
+                  },
+                  "groupId": {
+                    "type": "integer",
+                    "description": "Polygroup of the surface this shape formed (index+1)."
+                  },
+                  "materialId": {
+                    "type": "integer",
+                    "description": "Material slot of that surface."
+                  },
+                  "triangles": {
+                    "type": "integer",
+                    "description": "Triangles of that surface; 0 when another shape covered it entirely."
+                  }
+                }
+              }
+            },
+            "resolution": {
+              "type": "integer",
+              "description": "Grid cells along the longest side, as used."
+            },
+            "cellSize": {
+              "type": "number",
+              "description": "Grid cell size in cm."
+            },
+            "vertexCount": {
+              "type": "integer",
+              "description": "Vertices in the mesh."
+            },
+            "triangleCount": {
+              "type": "integer",
+              "description": "Triangles in the mesh."
             }
           },
           "required": [
@@ -59356,7 +59570,7 @@
       },
       "examples": [
         {
-          "title": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs.",
+          "title": "Create a primitive mesh actor: box, sphere, cylinder, cone, capsule, plane, disc, ring, torus, pipe, arch, ramp, stairs, spiral stairs, or one smooth organic mesh from blended shapes (sdf) with soft fillets where they meet.",
           "input": {
             "action": "create_primitive",
             "dimensions": {
@@ -59392,7 +59606,7 @@
       },
       "cost": {
         "latency": "interactive",
-        "resources": "low"
+        "resources": "medium"
       },
       "routing": {
         "parentTool": "manage_geometry",
@@ -59413,7 +59627,8 @@
             "arch": "create_arch",
             "ramp": "create_ramp",
             "stairs": "create_stairs",
-            "spiral_stairs": "create_spiral_stairs"
+            "spiral_stairs": "create_spiral_stairs",
+            "sdf": "create_sdf"
           },
           "declaredBy": {
             "dimensions": [
@@ -59532,14 +59747,20 @@
             ],
             "numTurns": [
               "spiral_stairs"
+            ],
+            "shapes": [
+              "sdf"
+            ],
+            "resolution": [
+              "sdf"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "28bb87445a219f3f83084414deb4cf39b35a53eb693fed38dd5e313fe083df73",
-        "content": "3fd59b02b68a6c72f3250521a149a802df3c42d9f1d8645e0b457a6140a04059"
+        "schema": "45e8ff2e515e5e75f810d9b812495d28609b7f108783debe2d28dcd919e1008b",
+        "content": "7da76af75347533e1be41afad8b488d044e787737d95d30e190110cd409438b7"
       }
     },
     {
