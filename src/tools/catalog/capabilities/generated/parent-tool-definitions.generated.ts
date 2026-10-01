@@ -5839,7 +5839,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintCompiled": {
           "type": "boolean",
-          "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved."
+          "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint's current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved."
         },
         "blueprintPath": {
           "type": "string",

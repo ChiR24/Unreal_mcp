@@ -38,6 +38,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   const FString& BlueprintPath = Target.BlueprintPath;
   const FString& PropertyName = Target.PropertyName;
 
+  // What a Blueprint compile left behind is no target: a write there changes no default, is never saved, and used to
+  // answer success.
+  if (McpPropertyTarget::IsSupersededTarget(RootObject)) {
+    SendAutomationError(RequestingSocket, RequestId,
+        FString::Printf(TEXT("'%s' (class %s) is an object a Blueprint compile left behind: nothing reads it and nothing "
+                             "saves it, so a write there changes no default. Address the Blueprint itself with "
+                             "blueprintPath (its current default object), or the live actor or asset."),
+                        *ObjectPath, *RootObject->GetClass()->GetName()),
+        TEXT("STALE_TARGET"));
+    return true;
+  }
+
   const TSharedPtr<FJsonValue> ValueField = Payload->TryGetField(TEXT("value"));
   if (!ValueField.IsValid()) {
       SendAutomationError(RequestingSocket, RequestId,
@@ -157,6 +169,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       return true;
   }
 
+  // A Blueprint's default object is replaced by every compile, and a variable the Blueprint declares gets its value
+  // back from the text of its default: the write above alone was gone after the compile below, while the reply read
+  // the value off the replaced copy and said success.
+  const bool bDefaultObject = ResolvedBlueprint && RootObject->HasAnyFlags(RF_ClassDefaultObject);
+  const bool bCompare = bDefaultObject && !Property->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference);
+  FString WrittenText;
+  if (bDefaultObject)
+  {
+      McpPropertyTarget::KeepDeclaredDefault(ResolvedBlueprint, RootObject, ResolvedPath);
+      MCP_PROPERTY_EXPORT_TEXT(Property, WrittenText, Property->ContainerPtrToValuePtr<void>(TargetContainer), nullptr, nullptr, PPF_None);
+  }
+
   const bool bMarkDirty = GetJsonBoolField(Payload, TEXT("markDirty"), true);
   if (bMarkDirty)
   {
@@ -175,6 +199,32 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       // what the caller asked for.
       FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);
       bCompiledBlueprint = true;
+      if (bDefaultObject)
+      {
+          // Read the write back off the new default object: it is what a spawn gets, what the reply describes and
+          // what gets saved. A value the compile did not keep is an error, never a success.
+          UObject* Replaced = RootObject;
+          const FString PropertyLabel = Property->GetName();
+          FString KeptText;
+          const bool bFound = McpPropertyTarget::FindOnCurrentDefault(ResolvedBlueprint, ResolvedPath, RootObject, Property, TargetContainer);
+          if (bFound)
+          {
+              MCP_PROPERTY_EXPORT_TEXT(Property, KeptText, Property->ContainerPtrToValuePtr<void>(TargetContainer), nullptr, nullptr, PPF_None);
+              if (bWatch && Watch.Object.Get() == Replaced)
+              {
+                  Watch.Object = RootObject;
+              }
+          }
+          if (!bFound || (bCompare && KeptText != WrittenText))
+          {
+              SendAutomationError(RequestingSocket, RequestId,
+                  FString::Printf(TEXT("The Blueprint compile did not keep the write: '%s' reads '%s' on the Blueprint's default "
+                                       "object afterwards, not '%s'."),
+                                  *PropertyLabel, bFound ? *KeptText : TEXT("(property gone)"), *WrittenText),
+                  TEXT("PROPERTY_SET_FAILED"));
+              return true;
+          }
+      }
   }
   McpPropertyActorAccess::RefreshK2NodeTitleCacheIfNeeded(RootObject);
   const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit(RootObject);

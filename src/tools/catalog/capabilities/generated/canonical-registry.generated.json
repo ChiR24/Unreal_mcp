@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f4b6eb2abee2f0e0",
+  "catalogRevision": "cf003f16af181cd0",
   "recordCount": 389,
   "records": [
     {
@@ -42269,7 +42269,7 @@
             },
             "blueprintCompiled": {
               "type": "boolean",
-              "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. False for plain world actors and assets, where no compile is involved."
+              "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint's current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved."
             },
             "materialRebuilt": {
               "type": "boolean",
@@ -42323,8 +42323,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "51e3ae0a6e024673d71dbca4092399f832f7fc778832e2384859cbe5c6e2e85a",
-        "content": "c24f0f42268e8b178e79e8736b0d489eb4d3499c3650e10105cb3468e3821d46"
+        "schema": "6fe98316075c276b88500bcbe27079031e70711d2cc8d191cc97532e75a4b632",
+        "content": "184d913a884fe711fb2e18d5ba60bbc78eb5c9b1e66ad258efcc9aaf52349563"
       }
     },
     {

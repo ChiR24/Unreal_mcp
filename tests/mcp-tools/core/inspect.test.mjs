@@ -56,6 +56,21 @@ const testCases = [
   { scenario: 'INFO: inspect_class via classPath alias', toolName: 'inspect', arguments: { action: 'inspect_class', classPath: '/Script/Engine.StaticMeshActor' }, expected: 'success', assertions: [{ path: 'structuredContent.result.classPath', equals: '/Script/Engine.StaticMeshActor', label: 'classPath alias resolves inspected class' }] },
   { scenario: 'INFO: inspect_cdo', toolName: 'inspect', arguments: { action: 'inspect_cdo', blueprintPath: BP_PATH, detailed: true }, expected: 'success' },
   { scenario: 'INFO: inspect_cdo narrowed by componentNames', toolName: 'inspect', arguments: { action: 'inspect_cdo', blueprintPath: BP_PATH, componentNames: ['NoSuchComponent'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.missingComponents.0', equals: 'NoSuchComponent', label: 'a name no component has is reported' }] },
+  // A compile replaces a Blueprint's class and its default object and leaves the old pair in /Engine/Transient as REINST_*:
+  // the write, the reply and the save belong to the NEW default object, and a variable's default survives that compile.
+  { scenario: 'Setup: add an Int variable to the inspect blueprint', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'CdoCount', variableType: 'Int' }, expected: 'success|already exists' },
+  { scenario: 'CONFIG: set_property on a Blueprint variable through blueprintPath', toolName: 'inspect', arguments: { action: 'set_property', blueprintPath: BP_PATH, propertyName: 'CdoCount', value: 3 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.blueprintCompiled', equals: true, label: 'the Blueprint was recompiled' },
+    { path: 'structuredContent.result.actorClass', equals: `${BP_NAME}_C`, label: 'the reply names the current class, not a REINST_ copy' },
+    { path: 'structuredContent.result.saved', equals: true, label: 'the Blueprint package is saved: the write reached the live default object' },
+    { path: 'structuredContent.result.value', equals: 3, label: 'the value is read back off the recompiled default object' },
+  ] },
+  { scenario: 'VERIFY: the variable default kept the write through the compile', toolName: 'inspect', arguments: { action: 'get_property', blueprintPath: BP_PATH, propertyName: 'CdoCount' }, expected: 'success', assertions: [{ path: 'structuredContent.result.value', equals: 3, label: 'a Blueprint variable default survives the compile set_property ran' }] },
+  { scenario: 'CONFIG: a second set_property through the Default__ path lands on the new default object too', toolName: 'inspect', arguments: { action: 'set_property', objectPath: `${BP_PATH}.Default__${BP_NAME}_C`, propertyName: 'CdoCount', value: 4 }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.actorClass', equals: `${BP_NAME}_C`, label: 'the second write names the live class as well' },
+    { path: 'structuredContent.result.value', equals: 4, label: 'the second write is read back' },
+  ] },
+  { scenario: 'VERIFY: get_property through the Default__ path reads the second write', toolName: 'inspect', arguments: { action: 'get_property', objectPath: `${BP_PATH}.Default__${BP_NAME}_C`, propertyName: 'CdoCount' }, expected: 'success', assertions: [{ path: 'structuredContent.result.value', equals: 4, label: 'the default object a spawn gets holds the second write' }] },
   { scenario: 'INFO: list_objects', toolName: 'inspect', arguments: { action: 'list_objects' }, expected: 'success' },
   { scenario: 'INFO: list_objects second page', toolName: 'inspect', arguments: { action: 'list_objects', limit: 5, offset: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.offset', equals: 5, label: 'offset is honoured' }] },
   { scenario: 'INFO: get_metadata', toolName: 'inspect', arguments: inspectActor('get_metadata'), expected: 'success' },

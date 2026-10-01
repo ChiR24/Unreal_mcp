@@ -1,14 +1,63 @@
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersTarget.h"
 
+#include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Safety/McpSafeReflectionTarget.h"
 
+#include "Editor.h"
 #include "Engine/Blueprint.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "UObject/UnrealType.h"
 
 namespace McpPropertyTarget
 {
+bool IsSupersededTarget(const UObject* Object)
+{
+  const UClass* Class = Object->GetClass();
+  const FString ClassName = Class->GetName();
+  if (Class->HasAnyClassFlags(CLASS_NewerVersionExists) || ClassName.StartsWith(TEXT("REINST_")) ||
+      ClassName.StartsWith(TEXT("SKEL_")) || ClassName.StartsWith(TEXT("TRASHCLASS_"))) {
+    return true;
+  }
+  // A running game keeps its objects in the transient package (GameInstance, a widget); outside it, a Blueprint object
+  // there is what a compile moved aside.
+  return UBlueprint::GetBlueprintFromClass(Class) && Object->GetOutermost() == GetTransientPackage() &&
+         !(GEditor && GEditor->PlayWorld);
+}
+
+void KeepDeclaredDefault(UBlueprint* Blueprint, UObject* DefaultObject, const FString& PropertyPath)
+{
+  const int32 Dot = PropertyPath.Find(TEXT("."));
+  const FString Head = Dot == INDEX_NONE ? PropertyPath : PropertyPath.Left(Dot);
+  const FProperty* Variable = DefaultObject->GetClass()->FindPropertyByName(FName(*Head));
+  const int32 Index = Variable ? FBlueprintEditorUtils::FindNewVariableIndex(Blueprint, Variable->GetFName()) : INDEX_NONE;
+  if (Index == INDEX_NONE) {
+    return;
+  }
+  FString Text;
+  MCP_PROPERTY_EXPORT_TEXT(Variable, Text, Variable->ContainerPtrToValuePtr<void>(DefaultObject), nullptr, nullptr, PPF_None);
+  Blueprint->NewVariables[Index].DefaultValue = Text;
+}
+
+bool FindOnCurrentDefault(UBlueprint* Blueprint, const FString& PropertyPath, UObject*& OutObject,
+                          FProperty*& OutProperty, void*& OutContainer)
+{
+  UClass* Current = Blueprint->GeneratedClass;
+  UObject* Fresh = Current ? Current->GetDefaultObject() : nullptr;
+  void* Container = nullptr;
+  FString ResolvedPath, Error;
+  FProperty* Found = Fresh ? McpResolvePropertyPath(Fresh, PropertyPath, Container, ResolvedPath, Error) : nullptr;
+  if (!Found || !Container) {
+    return false;
+  }
+  OutObject = Fresh;
+  OutProperty = Found;
+  OutContainer = Container;
+  return true;
+}
+
 bool ResolvePropertyTarget(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,
                            FPropertyTarget& Out)
@@ -74,6 +123,13 @@ bool ResolvePropertyTarget(UMcpAutomationBridgeSubsystem& Bridge, const FString&
     // instance kept the stale default) and "Component.Property" resolves.
     if (Out.RootObject->HasAnyFlags(RF_ClassDefaultObject)) {
       Out.Blueprint = UBlueprint::GetBlueprintFromClass(Out.RootObject->GetClass());
+      // A compile replaces the class and its default object and leaves the old pair in /Engine/Transient as REINST_<Class>,
+      // still found by name: the Blueprint's current default object is the one a caller means.
+      UClass* Current = Out.Blueprint ? static_cast<UClass*>(Out.Blueprint->GeneratedClass) : nullptr;
+      if (Current && Current != Out.RootObject->GetClass()) {
+        Out.RootObject = Current->GetDefaultObject();
+        Out.ObjectPath = Out.RootObject->GetPathName();
+      }
     }
   }
 
