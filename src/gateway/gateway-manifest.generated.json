@@ -3816,7 +3816,7 @@
               "all",
               "failures"
             ],
-            "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables); spawned and failed still count every item. Use failures for big layouts."
+            "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Use failures for big layouts."
           },
           "rotation": {
             "type": "array",

@@ -307,7 +307,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
   }
 
 	McpHandlerUtils::AddVerification(Data, Spawned);
-	McpPlacement::DescribePlacement(Spawned, Data);
+	McpDescribeSpawnPlacement(RequestId, Spawned, Data);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Actor spawned"), Data);
   return true;

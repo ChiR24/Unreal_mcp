@@ -18,6 +18,26 @@ const SPAWN_UNDO = {
   description: 'Whether editor undo takes the spawn back: {undoable: true, transactionScope: "Spawn Actors"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}.',
 } as const;
 
+// Where the actor ended up: the placement check set_transform runs, so a mesh whose pivot is its bounds centre does not
+// sit half under the floor behind a bare success. Each fact is present only when the check could measure it.
+const SPAWN_PLACEMENT = {
+  groundZ: num('Z of the solid surface under the actor; absent when nothing is below it.'),
+  groundClearance: num('How far the bottom of the actor\'s bounds sits above that surface; negative means it is sunk into it.'),
+  placementWarning: str('Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor\'s location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it. Tag the actor mcp.placement.ok when that is deliberate and it is never reported.'),
+  overlappingActors: {
+    type: 'array',
+    items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+    'x-unreal-reflection-boundary': true,
+    description: 'The actors it intersects (up to 8): actorName, actorClass, penetrationDepth.',
+  },
+  suggestedLocation: {
+    type: 'object',
+    additionalProperties: true,
+    'x-unreal-reflection-boundary': true,
+    description: 'x, y, z that would rest the actor on the surface under it; present only when it is sunk.',
+  },
+} as const;
+
 export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'control_actor',
@@ -42,7 +62,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: [],
     requiredOneOf: ['classPath', 'actorClass'],
-    outputProps: { name: P.actorName, undo: SPAWN_UNDO },
+    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...SPAWN_PLACEMENT },
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
@@ -87,7 +107,7 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     // classPath/actorClass, so a bare spawn is refused by the schema instead
     // of by the handler.
     requiredOneOf: ['blueprintPath'],
-    outputProps: { name: P.actorName, undo: SPAWN_UNDO },
+    outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...SPAWN_PLACEMENT },
     outputRequired: [],
     effect: 'write',
     costLatency: 'interactive',
@@ -135,7 +155,8 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         type: 'string',
         enum: ['all', 'failures'],
         description: 'Which items results lists: all (default), or failures only (items that failed to spawn or to take '
-          + 'their material or variables); spawned and failed still count every item. Use failures for big layouts.',
+          + 'their material or variables, and items with a placementWarning); spawned and failed still count every item. '
+          + 'Use failures for big layouts.',
       },
     },
     required: ['actors'],
@@ -143,13 +164,16 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     outputProps: {
       spawned: num('Actors spawned.'),
       failed: num('Items that failed to spawn or to take their material.'),
+      placementWarnings: num('Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success.'),
       results: {
         type: 'array',
         items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
         'x-unreal-reflection-boundary': true,
-        description: 'Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, '
-          + 'variablesSet, variablesError, materialApplied, materialError. name is the label the item asked for, or the '
-          + 'unique actor name when it gave no actorName.',
+        description: 'Per item (only the failed ones and those with a placementWarning under report: failures): index, success, '
+          + 'name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, and the placement '
+          + 'facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), '
+          + 'measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never '
+          + 'reported. name is the label the item asked for, or the unique actor name when it gave no actorName.',
       },
       unnamedActors: {
         type: 'array',

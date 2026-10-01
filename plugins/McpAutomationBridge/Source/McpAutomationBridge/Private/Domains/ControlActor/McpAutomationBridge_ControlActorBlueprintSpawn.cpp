@@ -122,6 +122,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   }
 
 	McpHandlerUtils::AddVerification(Resp, Spawned);
+	McpDescribeSpawnPlacement(RequestId, Spawned, Resp);
 
 	SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned"),
                          Resp, FString());

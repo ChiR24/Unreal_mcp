@@ -3927,7 +3927,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "all",
             "failures"
           ],
-          "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables); spawned and failed still count every item. Use failures for big layouts."
+          "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Use failures for big layouts."
         },
         "rotation": {
           "type": "array",
@@ -4393,6 +4393,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Game time covered."
         },
+        "groundClearance": {
+          "type": "number",
+          "description": "How far the bottom of the actor's bounds sits above that surface; negative means it is sunk into it."
+        },
+        "groundZ": {
+          "type": "number",
+          "description": "Z of the solid surface under the actor; absent when nothing is below it."
+        },
         "hasMore": {
           "type": "boolean",
           "description": "More matching actors exist past this page."
@@ -4514,6 +4522,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "World-space centre of the bounding box as [x, y, z]."
         },
+        "overlappingActors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "The actors it intersects (up to 8): actorName, actorClass, penetrationDepth."
+        },
         "pairsFound": {
           "type": "number",
           "description": "Coplanar face pairs found before fixing."
@@ -4521,6 +4539,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "passes": {
           "type": "number",
           "description": "Passes made: a move can line an actor up with a neighbour that moved the same way, so the fix repeats (at most four passes; one under dryRun)."
+        },
+        "placementWarning": {
+          "type": "string",
+          "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor's location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it. Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+        },
+        "placementWarnings": {
+          "type": "number",
+          "description": "Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success."
         },
         "problems": {
           "type": "array",
@@ -4563,10 +4589,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError. name is the label the item asked for, or the unique actor name when it gave no actorName."
+              "description": "Per item (only the failed ones and those with a placementWarning under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
             }
           ],
-          "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError. name is the label the item asked for, or the unique actor name when it gave no actorName."
+          "description": "Per item (only the failed ones and those with a placementWarning under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
         },
         "returned": {
           "type": "number",
@@ -4655,6 +4681,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "suggestedLocation": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "x, y, z that would rest the actor on the surface under it; present only when it is sunk."
         },
         "totalCount": {
           "type": "number",

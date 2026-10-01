@@ -73,6 +73,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   // results: what the receipt lists as changes and gives an actor handle apiece.
   TArray<FString> Affected;
   int32 SpawnedCount = 0;
+  int32 PlacementWarnings = 0;
   for (int32 Index = 0; Index < Items->Num(); ++Index) {
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetNumberField(TEXT("index"), Index);
@@ -182,17 +183,25 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
         Failures.Add(FString::Printf(TEXT("#%d material: %s"), Index, *MaterialReply.Message));
       }
     }
+
+    // Where it ended up (set_transform's placement facts), now that it is tagged (mcp.placement.ok), furnished and
+    // coloured: a spawn run inside the batch leaves the check to this point, once per item.
+    if (Actor) {
+      McpPlacement::DescribePlacement(Actor, Entry);
+      PlacementWarnings += Entry->HasField(TEXT("placementWarning")) ? 1 : 0;
+    }
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   // report: "failures" keeps only the items that went wrong: a 130-actor
-  // layout echoed every path and name back, ~15K characters of "success".
+  // layout echoed every path and name back, ~15K characters of "success". An item that
+  // spawned but looks misplaced (sunk, floating, intersecting) stays: finding it is the point.
   FString Report;
   if (Payload->TryGetStringField(TEXT("report"), Report) && Report == TEXT("failures")) {
     Results.RemoveAll([](const TSharedPtr<FJsonValue> &Value) {
       const TSharedPtr<FJsonObject> Entry = Value->AsObject();
       return Entry->GetBoolField(TEXT("success")) && !Entry->HasField(TEXT("materialError")) &&
-             !Entry->HasField(TEXT("variablesError"));
+             !Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning"));
     });
     Data->SetStringField(TEXT("report"), Report);
   }
@@ -203,6 +212,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   }
   Data->SetNumberField(TEXT("spawned"), SpawnedCount);
   Data->SetNumberField(TEXT("failed"), Failures.Num());
+  Data->SetNumberField(TEXT("placementWarnings"), PlacementWarnings);
   if (Transaction) {
     Transaction->DescribeInto(Data);
   }
@@ -216,6 +226,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
     return true;
   }
   SendAutomationResponse(Socket, RequestId, true,
-                         FString::Printf(TEXT("Spawned %d actors"), SpawnedCount), Data);
+                         PlacementWarnings > 0
+                             ? FString::Printf(TEXT("Spawned %d actors; %d with a placement warning (results[].placementWarning)"),
+                                               SpawnedCount, PlacementWarnings)
+                             : FString::Printf(TEXT("Spawned %d actors"), SpawnedCount),
+                         Data);
   return true;
 }

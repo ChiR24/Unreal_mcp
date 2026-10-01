@@ -225,3 +225,11 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data);
 /** True when a caller has marked this actor's placement deliberate. */
 bool McpPlacementAccepted(const AActor *Actor);
 } // namespace McpPlacement
+
+// A spawn answers where the actor ended up, as set_transform does. A spawn run as an item of spawn_batch (captured) leaves
+// it to the batch: it checks after it has tagged the actor (mcp.placement.ok), and the check walks every actor in the level.
+inline void McpDescribeSpawnPlacement(const FString &RequestId, AActor *Spawned, const TSharedPtr<FJsonObject> &Data) {
+  if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
+    McpPlacement::DescribePlacement(Spawned, Data);
+  }
+}

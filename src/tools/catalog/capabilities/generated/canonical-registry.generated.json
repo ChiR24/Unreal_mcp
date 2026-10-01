@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cf003f16af181cd0",
+  "catalogRevision": "17ea79e627ccf5b4",
   "recordCount": 389,
   "records": [
     {
@@ -33978,7 +33978,7 @@
                 "all",
                 "failures"
               ],
-              "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables); spawned and failed still count every item. Use failures for big layouts."
+              "description": "Which items results lists: all (default), or failures only (items that failed to spawn or to take their material or variables, and items with a placementWarning); spawned and failed still count every item. Use failures for big layouts."
             },
             "spawnKind": {
               "type": "string",
@@ -34029,6 +34029,34 @@
               "x-unreal-reflection-boundary": true,
               "description": "Whether editor undo takes the spawn back: {undoable: true, transactionScope: \"Spawn Actors\"} (control_editor undo removes every actor the call made), or {undoable: false, reasonCode, reason}."
             },
+            "groundZ": {
+              "type": "number",
+              "description": "Z of the solid surface under the actor; absent when nothing is below it."
+            },
+            "groundClearance": {
+              "type": "number",
+              "description": "How far the bottom of the actor's bounds sits above that surface; negative means it is sunk into it."
+            },
+            "placementWarning": {
+              "type": "string",
+              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (an actor's location is its bounds centre, not its base), floats more than 50 units above it, or has nothing below it. Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+            },
+            "overlappingActors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "The actors it intersects (up to 8): actorName, actorClass, penetrationDepth."
+            },
+            "suggestedLocation": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "x, y, z that would rest the actor on the surface under it; present only when it is sunk."
+            },
             "spawned": {
               "type": "number",
               "description": "Actors spawned."
@@ -34036,6 +34064,10 @@
             "failed": {
               "type": "number",
               "description": "Items that failed to spawn or to take their material."
+            },
+            "placementWarnings": {
+              "type": "number",
+              "description": "Items that spawned but look misplaced (sunk into the surface under them, floating, intersecting other actors or with nothing below); each carries its placementWarning in results. A warning is not a failure: it changes neither failed nor success."
             },
             "results": {
               "type": "array",
@@ -34045,7 +34077,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item (only the failed ones under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError. name is the label the item asked for, or the unique actor name when it gave no actorName."
+              "description": "Per item (only the failed ones and those with a placementWarning under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
             },
             "unnamedActors": {
               "type": "array",
@@ -34172,8 +34204,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e71658f7f762e0db326d17102cbfc426433a9b70213487e29f0d87e77f91b65e",
-        "content": "6e812513bb8dc9b1a761d12f5fdf0dd4274ca5a2b18b9ffa3c14daac5fe30972"
+        "schema": "0b791e7d216a02e736b98e19b4cf1b0da460a0defab3ffd608b5dde7b6cdef99",
+        "content": "79b9a82a70fdc288aa35ffde68f689d51230a2afab88629c67a590a2d3f1e7d1"
       }
     },
     {

@@ -643,3 +643,55 @@ describe('every spawn is one undo step, "Spawn Actors", and the reply says so', 
     }
   });
 });
+
+// spawn_batch ran every item through the single spawn, whose reply carries the placement facts, and kept only its path and
+// name; spawn_blueprint never asked. A mesh whose pivot is its bounds centre spawned at z 0 sat half under the floor behind
+// a bare success, while set_transform on the same actor named the sunk depth and the z that rests on the floor.
+describe('every spawn says where the actor ended up, as set_transform does', () => {
+  const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
+  const flat = (source: string): string => source.split(/\s+/u).join(' ');
+
+  it('one helper asks, and leaves it to the batch when the run is one of its items', () => {
+    expect(support()).toMatch(/inline void McpDescribeSpawnPlacement\(const FString &RequestId, AActor \*Spawned, const TSharedPtr<FJsonObject> &Data\) \{\s*if \(!FMcpResponseCaptureRegistry::Get\(\)\.IsCapturing\(RequestId\)\) \{\s*McpPlacement::DescribePlacement\(Spawned, Data\);\s*\}\s*\}/u);
+  });
+
+  it('spawn and spawn_blueprint ask through it once the reply names the actor', () => {
+    const spawn = read('McpAutomationBridge_ControlActorSpawn.cpp');
+    const blueprint = read('McpAutomationBridge_ControlActorBlueprintSpawn.cpp');
+
+    expect(spawn).not.toContain('McpPlacement::DescribePlacement(');
+    expect(spawn.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Data);')).toBeGreaterThan(spawn.indexOf('McpHandlerUtils::AddVerification(Data, Spawned);'));
+    expect(blueprint.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Resp);')).toBeGreaterThan(blueprint.indexOf('McpHandlerUtils::AddVerification(Resp, Spawned);'));
+    expect(blueprint.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Resp);')).toBeLessThan(blueprint.indexOf('SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned")'));
+  });
+
+  it('spawn_batch measures each item once it is tagged, furnished and coloured, and keeps a flagged item under report: failures', () => {
+    const source = read('McpAutomationBridge_ControlActorSpawnBatch.cpp');
+    const measured = source.indexOf('McpPlacement::DescribePlacement(Actor, Entry);');
+
+    expect(flat(source)).toContain('if (Actor) { McpPlacement::DescribePlacement(Actor, Entry); PlacementWarnings += Entry->HasField(TEXT("placementWarning")) ? 1 : 0; }');
+    expect(measured, 'after the tags and folder').toBeGreaterThan(source.indexOf('ApplySpawnOrganisation(Actor, Item);'));
+    expect(measured, 'after the variables').toBeGreaterThan(source.indexOf('HandleControlActorSetBlueprintVariables('));
+    expect(measured, 'after the material').toBeGreaterThan(source.indexOf('HandleControlActorSetMaterial('));
+    expect(flat(source)).toContain('!Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning"));');
+    expect(source).toContain('Data->SetNumberField(TEXT("placementWarnings"), PlacementWarnings);');
+    expect(source, 'a warning is not a failure').not.toMatch(/Failures\.Add\([^;]*placement/iu);
+    expect(source).toContain('Spawned %d actors; %d with a placement warning (results[].placementWarning)');
+  });
+
+  it('the records declare the facts, the count and the tag that silences a deliberate placement', () => {
+    const properties = capabilityIndex().byId.get('control_actor.spawn')?.schemas.output.properties;
+    const description = (name: string): string => {
+      const entry = isRecord(properties) ? properties[name] : undefined;
+      return isRecord(entry) && typeof entry.description === 'string' ? entry.description : '';
+    };
+
+    for (const name of ['groundZ', 'groundClearance', 'placementWarning', 'overlappingActors', 'suggestedLocation', 'placementWarnings']) {
+      expect(isRecord(properties) ? Object.keys(properties) : [], name).toContain(name);
+    }
+    expect(description('placementWarning')).toMatch(/sunk below the surface under it .* mcp\.placement\.ok/u);
+    expect(description('placementWarnings')).toMatch(/A warning is not a failure/u);
+    expect(description('results')).toMatch(/with a placementWarning under report: failures/u);
+    expect(description('results')).toMatch(/measured after the item took its tags, variables and material/u);
+  });
+});
