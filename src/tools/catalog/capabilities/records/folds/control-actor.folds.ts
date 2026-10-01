@@ -25,8 +25,8 @@ export const CONTROL_ACTOR_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_component', selector: 'edit',
-    summary: 'Add or remove an actor component, or set one or more of its properties (a light\'s Intensity or LightColor, a TextRender\'s Text).',
-    topics: ['add component', 'remove component', 'component property', 'set component property value', 'actor component', 'text render text', 'change sign text', 'set light intensity', 'light color', 'light radius', 'change light color', '3d text', 'world text', 'floating text above actor', 'text above head'],
+    summary: 'Add or remove an actor component, or set one or more of its properties (a placed mesh\'s StaticMesh or OverrideMaterials, a light\'s Intensity or LightColor, a TextRender\'s Text).',
+    topics: ['add component', 'remove component', 'component property', 'set static mesh', 'change mesh', 'swap mesh', 'replace actor mesh', 'override materials', 'set component property value', 'actor component', 'text render text', 'change sign text', 'set light intensity', 'light color', 'light radius', 'change light color', '3d text', 'world text', 'floating text above actor', 'text above head'],
     members: { add: 'add_component', remove: 'remove_component', set_property: 'set_component_property', set_properties: 'set_component_properties' },
   },
   {

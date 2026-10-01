@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fec3ea74d852df97",
+  "catalogRevision": "f61da9d39a19ea66",
   "recordCount": 389,
   "records": [
     {
@@ -30923,6 +30923,11 @@
           "add component",
           "remove component",
           "component property",
+          "set static mesh",
+          "change mesh",
+          "swap mesh",
+          "replace actor mesh",
+          "override materials",
           "set component property value",
           "actor component",
           "text render text",
@@ -30938,7 +30943,7 @@
           "add component to actor",
           "attach component to actor"
         ],
-        "summary": "Add or remove an actor component, or set one or more of its properties (a light's Intensity or LightColor, a TextRender's Text).",
+        "summary": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor, a TextRender's Text).",
         "whenToUse": [
           "edit=add: A component must be attached to an existing actor.",
           "edit=remove: A component must be permanently detached and removed from an actor.",
@@ -31031,7 +31036,7 @@
       },
       "examples": [
         {
-          "title": "Add or remove an actor component, or set one or more of its properties (a light's Intensity or LightColor, a TextRender's Text).",
+          "title": "Add or remove an actor component, or set one or more of its properties (a placed mesh's StaticMesh or OverrideMaterials, a light's Intensity or LightColor, a TextRender's Text).",
           "input": {
             "action": "edit_component",
             "actorName": "Cube1",
@@ -31102,7 +31107,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "72207c12be52e975e72863ba37afdb4cf6a28537e006795855b30fad2abe5047",
-        "content": "4900b01a040da5883350685c5e2fe2e6e7afaac0eb816fa49349243a15fe1583"
+        "content": "42fd2c9fd08928ea296fb2e9d315ec59ac6c1d31e84ef12669d4f7e8f016ab77"
       }
     },
     {
