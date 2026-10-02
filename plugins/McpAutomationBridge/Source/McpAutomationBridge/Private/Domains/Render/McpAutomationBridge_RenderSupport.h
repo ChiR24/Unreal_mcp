@@ -133,13 +133,11 @@ inline APostProcessVolume* RequirePostProcessVolume(
     FString Reference;
     ReadActorReference(Payload, Reference);
     APostProcessVolume* Volume = Cast<APostProcessVolume>(FindRenderActor(Reference));
-    if (!Volume && Reference.IsEmpty())
+    if (!Volume)
     {
-        // No explicit reference: use the same deterministic resolver as the
-        // lens/exposure handlers (single unbound volume, persistent-level
-        // preference, spawn one when the level has none). Failing on an empty
-        // name split the post-process family into two behaviours for the same
-        // level: half AMBIGUOUS, half "PostProcessVolume not found".
+        // No volume by that name, or no name: the same deterministic resolver as the lens/exposure
+        // handlers (the level's one unbound volume, else a new one under the asked name). A name that
+        // matched nothing used to fail, so a level without a volume could never get one by name.
         FString ResolveError;
         FString ResolveErrorCode;
         Volume = McpResolvePostProcessVolume(GetRenderWorld(), Payload, true, ResolveError, ResolveErrorCode);
@@ -150,14 +148,6 @@ inline APostProcessVolume* RequirePostProcessVolume(
                 ResolveError.IsEmpty() ? FString(TEXT("PostProcessVolume not found.")) : ResolveError,
                 ResolveErrorCode.IsEmpty() ? FString(TEXT("ACTOR_NOT_FOUND")) : ResolveErrorCode);
         }
-        return Volume;
-    }
-    if (!Volume)
-    {
-        Subsystem->SendAutomationError(
-            Socket, RequestId,
-            FString::Printf(TEXT("PostProcessVolume not found: %s"), *Reference),
-            TEXT("ACTOR_NOT_FOUND"));
     }
     // Callers apply ApplyVolumeBlendFields after Volume->Modify() into their own Applied list:
     // applying it here wrote it before the undo snapshot and hid it from the reply.

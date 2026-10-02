@@ -95,6 +95,11 @@ APostProcessVolume* McpResolvePostProcessVolume(
         if (PPV)
         {
             PPV->bUnbound = true;
+            // A caller that named the volume gets it under that name, so its next call finds it.
+            if (!Reference.IsEmpty())
+            {
+                PPV->SetActorLabel(Reference);
+            }
             return PPV;
         }
         OutError = TEXT("Failed to spawn PostProcessVolume.");

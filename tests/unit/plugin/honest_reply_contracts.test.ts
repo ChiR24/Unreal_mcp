@@ -81,6 +81,16 @@ describe('handlers answer what they did', () => {
       .toContain('"BSPUtils"');
   });
 
+  // configure_exposure actorName "PostProcess" on a level with no volume failed ACTOR_NOT_FOUND,
+  // while the same call with no name spawned one: a name that matches nothing now resolves alike.
+  it('a post-process call naming a volume that does not exist resolves or creates one under that name', () => {
+    const support = code('Render', 'McpAutomationBridge_RenderSupport.h');
+    expect(support).not.toContain('PostProcessVolume not found: %s');
+    expect(support).toMatch(/if \(!Volume\)\s*\{\s*FString ResolveError;/u);
+    const resolver = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Foundation', 'Render', 'McpPostProcessVolumeResolution.cpp'), 'utf8');
+    expect(resolver).toContain('PPV->SetActorLabel(Reference);');
+  });
+
   it('a resized or combined texture keeps its source colour space', () => {
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersResize.cpp')).toContain('NewTexture->SRGB = SourceTexture->SRGB;');
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersCombine.cpp')).toContain('OutputTexture->SRGB = BaseTex->SRGB;');
