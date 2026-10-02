@@ -40,21 +40,22 @@ describe('AutomationBridge lazy connection recovery', () => {
 
     const port = await listenTcp(server);
 
+    // 50 ms was too short on a loaded machine: the attempt timed out before the server saw the connection.
     const bridge = new AutomationBridge({
       host: '127.0.0.1',
       port,
-      connectionTimeoutMs: 50,
+      connectionTimeoutMs: 250,
       heartbeatIntervalMs: 0
     });
     bridge.on('error', () => undefined);
 
     try {
-      await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 50 }))
+      await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 250 }))
         .rejects.toThrow(/timed out/);
       const firstConnectionCount = connectionCount;
       expect(firstConnectionCount).toBeGreaterThan(0);
 
-      await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 50 }))
+      await expect(bridge.sendAutomationRequest('list', {}, { timeoutMs: 250 }))
         .rejects.toThrow(/timed out/);
       expect(connectionCount).toBeGreaterThan(firstConnectionCount);
     } finally {
