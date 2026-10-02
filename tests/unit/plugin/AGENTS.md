@@ -6,7 +6,7 @@ Vitest tests that read C++/C# **source text** and assert required or forbidden p
 | Contract | Test file | What it enforces |
 |----------|-----------|-------------------|
 | 250 pure-line ceiling, no split artifacts, local includes resolve | `source_structure_contracts.test.ts` | Every plugin `.cpp/.cs/.h` ≤ 250 **pure** lines (non-blank, non-`#`/`//`); rejects `Common.*`, `Part\d+`, `.incl`; every `#include "Mcp..."` resolves |
-| ≤25 source files per folder | `source_structure.test.ts` | Any folder under `Private/`. At cap (25): `MCP/Gateway`, `Foundation`, `Domains/Sequence`, `Domains/ControlEditor`; at 24: `MCP/Transport`, `MCP/Generated`, `MCP/Execute`, `Domains/ControlActor`, `Domains/AnimationAuthoring` |
+| ≤25 source files per folder | `source_structure.test.ts` | Any folder under `Private/`. At cap (25): `MCP/Gateway`, `MCP/Transport`, `Foundation`, `Domains/Sequence`, `Domains/ControlEditor`; at 24: `MCP/Generated`, `MCP/Execute`, `Domains/ControlActor`, `Domains/AnimationAuthoring` |
 | Includes are self-sufficient | `source_include_self_sufficiency.test.ts` | Users of shared JSON helpers, the asset registry reads and the path refusal wording include a header that declares them (no unity-blob borrowing) |
 | Token, bind, socket, SavePackage | `security_contracts.test.ts` | Constant-time token compare on both transports; non-loopback bind refused without `RequireCapabilityToken`; replies never reach an unrelated socket; import sources stay inside the project; no `UPackage::SavePackage` outside the Safety wrappers |
 | Pre-queue gate | `prequeue-gate-contracts.test.ts` | Both transports authorize before enqueueing; the gate and the dispatcher resolve the same action |

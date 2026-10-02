@@ -153,6 +153,12 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		McpSettleIdempotency(Conn->IdempotencySlot, false, nullptr);
 	}
 	Conn->IdempotencySlot.Reset();
+	if (Conn->bAnsweredRunning.load())
+	{
+		// The client was already told it was still running (AnswerStillRunning); the outcome goes to the log.
+		UE_LOG(LogMcpNativeTransport, Log, TEXT("tools/call %s finished after its still-running answer (tool=%s, success=%s): %s"),
+			*RequestId, *Conn->ToolName, bReportedSuccess ? TEXT("true") : TEXT("false"), *ReportedMessage.Left(400));
+	}
 	TSharedPtr<FJsonObject> ToolResult = FMcpJsonRpc::BuildToolResult(
 		bReportedSuccess, ReportedMessage, ReportedResult, ReportedErrorCode);
 	FString ResponseBody = FMcpJsonRpc::BuildResponse(Conn->JsonRpcId, ToolResult);
@@ -207,7 +213,7 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 		FScopeLock Lock(&SSEConnectionsMutex);
 		TSharedPtr<FSSEConnection>* Found = SSEConnections.Find(RequestId);
 		if (!Found || !Found->IsValid() || !(*Found)->Socket
-			|| (*Found)->bMarkedForRemoval.load())
+			|| (*Found)->bMarkedForRemoval.load() || (*Found)->bAnsweredRunning.load())
 		{
 			return;
 		}

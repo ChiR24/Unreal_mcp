@@ -9,6 +9,9 @@
 namespace McpSafeOperations
 {
 
+/** What a folder delete is doing and how far through the folder it is (0-100), for the caller to pass on. */
+using FMcpDeleteProgress = TFunction<void(const FString& Message, float Percent)>;
+
 namespace FolderDeleteInternal
 {
 
@@ -183,31 +186,40 @@ inline bool DeleteRiskySpecialAssets(
     return true;
 }
 
-inline bool DeleteSafeAssets(const TArray<FAssetData>& SafeAssets)
+inline bool DeleteSafeAssets(const TArray<FAssetData>& SafeAssets, const FMcpDeleteProgress& Progress)
 {
     if (SafeAssets.Num() == 0)
     {
         return true;
     }
 
-    // One engine pass for the whole set: a delete per asset ran a referencer scan, a slow task and a
-    // garbage collection each, so a 391-asset import took minutes with the game thread blocked.
-    TArray<UObject*> Objects;
-    for (const FAssetData& SafeAsset : SafeAssets)
+    // Engine passes of up to a twentieth of the set each: a delete per asset ran a referencer scan, a slow task
+    // and a garbage collection each (a 391-asset import took minutes), while one pass for thousands of assets
+    // said nothing for a quarter of an hour. Each pass reports how far the delete has got.
+    const int32 PassSize = FMath::Max(100, SafeAssets.Num() / 20 + 1);
+    int32 DeletedByEngine = 0;
+    for (int32 First = 0; First < SafeAssets.Num(); First += PassSize)
     {
-        if (UObject* Object = SafeAsset.GetAsset())
+        const int32 Last = FMath::Min(First + PassSize, SafeAssets.Num());
+        Progress(FString::Printf(TEXT("deleting assets %d to %d of %d"), First + 1, Last, SafeAssets.Num()),
+            40.0f + 50.0f * First / SafeAssets.Num());
+        TArray<UObject*> Objects;
+        for (int32 Index = First; Index < Last; ++Index)
         {
-            Objects.Add(Object);
+            if (UObject* Object = SafeAssets[Index].GetAsset())
+            {
+                Objects.Add(Object);
+            }
+        }
+        if (Objects.Num() > 0)
+        {
+            McpQuiesceBeforeBatchDelete(Objects);
+            DeletedByEngine += ObjectTools::ForceDeleteObjects(Objects, false);
+            McpQuiesceAfterBatchDelete(Objects);
         }
     }
-    if (Objects.Num() > 0)
-    {
-        McpQuiesceBeforeBatchDelete(Objects);
-        const int32 DeletedByEngine = ObjectTools::ForceDeleteObjects(Objects, false);
-        McpQuiesceAfterBatchDelete(Objects);
-        UE_LOG(LogMcpSafeOperations, Log,
-            TEXT("McpSafeDeleteFolder: Deleted %d/%d safe assets in one batch"), DeletedByEngine, Objects.Num());
-    }
+    UE_LOG(LogMcpSafeOperations, Log,
+        TEXT("McpSafeDeleteFolder: Deleted %d/%d safe assets in passes of %d"), DeletedByEngine, SafeAssets.Num(), PassSize);
 
     // What the batch left (an asset that would not load, a file an open linker kept) goes one by one.
     for (const FAssetData& SafeAsset : SafeAssets)

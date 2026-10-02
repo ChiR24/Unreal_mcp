@@ -86,6 +86,10 @@ public:
 	// Dedicated-thread keepalive (immune to GameThread stalls).
 	void RunKeepaliveLoop();
 	void SweepNotificationKeepalives();
+	// Same thread: tells every open tools/call what the editor is doing, and answers one still open near the
+	// client's time limit with that and its progress instead of letting it time out.
+	void SweepRequestProgress();
+	void AnswerStillRunning(const FString& RequestId);
 
 	// FRunnable interface
 	virtual bool Init() override { return true; }

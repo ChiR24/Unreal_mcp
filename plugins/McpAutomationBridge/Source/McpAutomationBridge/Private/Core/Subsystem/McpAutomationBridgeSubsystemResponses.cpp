@@ -268,9 +268,15 @@ void UMcpAutomationBridgeSubsystem::DescribeQueueRejection(
             Message = TEXT("Automation request rejected: queue is full");
             break;
         case EAutomationQueueRejection::GameThreadStalled:
+        {
+            // Say what holds the editor and how far it has got (read off the game thread), not only that it is held.
             Code = TEXT("EDITOR_BLOCKED");
-            Message = TEXT("Automation request rejected: the editor game thread has not ticked for over 15 s (a modal dialog or a blocking operation is holding it); dismiss it and retry");
+            const FString Work = McpAutomationBridge::DescribeEditorWork();
+            Message = Work.IsEmpty()
+                ? FString(TEXT("Automation request rejected: the editor game thread has not ticked for over 15 s (a modal dialog or a blocking operation is holding it); dismiss it and retry"))
+                : FString::Printf(TEXT("Not run: Unreal is %s. Send this call again once that is done; until then every call answers with its progress."), *Work);
             break;
+        }
         case EAutomationQueueRejection::SessionQueueFull:
             Code = TEXT("AUTOMATION_SESSION_QUEUE_FULL");
             Message = TEXT("Automation request rejected: this session already has the maximum number of queued requests; retry after your queued work drains");
@@ -285,12 +291,14 @@ void UMcpAutomationBridgeSubsystem::SendProgressUpdate(
     float Percent,
     const FString& Message,
     bool bStillWorking,
-    ERequestOrigin Origin)
+    ERequestOrigin /*Origin*/)
 {
-    if (Origin == ERequestOrigin::NativeHTTP && NativeTransport)
+    McpAutomationBridge::ReportInFlightProgress(RequestId, Percent, Message);
+    // Each transport only writes to a request it holds, so both are told: routing by Origin starved a native
+    // client whenever a handler left Origin at its WebSocket default (the thumbnail and LOD handlers did).
+    if (NativeTransport)
     {
         NativeTransport->SendSSEProgressUpdate(RequestId, Percent, Message);
-        return;
     }
     if (ConnectionManager.IsValid())
     {

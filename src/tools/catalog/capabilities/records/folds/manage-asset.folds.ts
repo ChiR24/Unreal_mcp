@@ -87,7 +87,7 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
     members: ['rename_asset'],
   },
   {
-    primary: 'delete', summary: 'Delete one or more assets.',
+    primary: 'delete', summary: 'Delete one or more assets, or whole folders. A folder of thousands of assets can take minutes and reports how far it has got as it goes; when the call answers before the delete is done (task.state running), the delete carries on, so check the folder with asset.list instead of deleting again.',
     topics: ['delete asset', 'delete assets', 'remove asset', 'delete asset permanently', 'delete imported asset', 'delete texture', 'delete folder', 'delete mesh', 'delete asset from project'],
     members: ['delete_asset', 'delete_assets'],
   },

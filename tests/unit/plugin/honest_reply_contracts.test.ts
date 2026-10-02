@@ -37,12 +37,14 @@ describe('handlers answer what they did', () => {
 
   // A folder of 391 unsaved imported assets took minutes (one engine delete per asset) and two of them
   // survived while the reply said the folder was deleted.
-  it('a folder delete runs one engine pass and names what survived', () => {
+  it('a folder delete runs a few batched engine passes, never one per asset, and names what survived', () => {
     const safety = (file: string): string =>
       readFileSync(join(DOMAINS, '..', 'Safety', file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
     const batch = safety('McpSafeOperationsFolderDeleteAssets.h');
-    expect(batch).toContain('const int32 DeletedByEngine = ObjectTools::ForceDeleteObjects(Objects, false);');
-    expect(batch.split('ObjectTools::ForceDeleteObjects('), 'one pass, not one per asset').toHaveLength(2);
+    expect(batch).toContain('DeletedByEngine += ObjectTools::ForceDeleteObjects(Objects, false);');
+    expect(batch.split('ObjectTools::ForceDeleteObjects('), 'one call site, run per pass').toHaveLength(2);
+    // At most about twenty passes, each reporting progress: one pass for thousands of assets said nothing for minutes.
+    expect(batch).toContain('const int32 PassSize = FMath::Max(100, SafeAssets.Num() / 20 + 1);');
     expect(safety('McpSafeOperationsAnimationDelete.h')).toContain('ForceDeleteBatch(InMemoryStillLoaded, TEXT("InMemoryOnlyLeftovers"))');
     const verify = safety('McpSafeOperationsFolderDeleteVerify.h');
     expect(verify).toContain('IsValid(FindObject<UObject>(nullptr, *ObjectPath))');

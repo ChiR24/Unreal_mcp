@@ -8,6 +8,7 @@
 #include "EditorSubsystem.h"
 #include "Engine/DataAsset.h"
 #include "HAL/CriticalSection.h"
+#include "Misc/ScopeLock.h"
 #include "McpAutomationBridgeLog.h"
 #include "McpQueueFairness.h"
 #include "Runtime/Launch/Resources/Version.h"
@@ -27,6 +28,12 @@ namespace McpAutomationBridge
 // off-thread even while a handler blocks the game thread, so external tooling (e.g. a watchdog) can attribute
 // a stall to the tool in flight. Publisher lives in Core/Requests/McpAutomationBridge_ProcessRequest.cpp.
 MCPAUTOMATIONBRIDGE_API FString GetInFlightAction();
+// Records the latest progress of RequestId when it is the handler in flight; SendProgressUpdate calls it.
+MCPAUTOMATIONBRIDGE_API void ReportInFlightProgress(const FString& RequestId, float Percent, const FString& Message);
+// One line saying what Unreal is doing right now, for a reader off the game thread: the handler in flight, how long
+// it has run and its last progress ("working on" when it is ForRequestId's own handler, "busy with" otherwise), plus
+// shaders still compiling. Empty when nothing is known to be running.
+MCPAUTOMATIONBRIDGE_API FString DescribeEditorWork(const FString& ForRequestId = FString());
 }
 
 #define MCP_DECLARE_ACTION_HANDLER(Name) bool Name(const FString& RequestId, const FString& Action, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket)
@@ -217,6 +224,15 @@ public:
   TMap<FString, TFunction<void()>> AutomationRequestCancellationCallbacks;
   FCriticalSection PendingAutomationRequestsMutex;
   FCriticalSection AutomationRequestExecutionMutex;
+  // True while RequestId is queued and its handler has not started. Takes only the queue lock, never the
+  // execution lock a running handler holds, so it answers at once from any thread.
+  bool IsAutomationRequestWaiting(const FString& RequestId)
+  {
+    FScopeLock Lock(&PendingAutomationRequestsMutex);
+    return (InFlightAutomationRequestIds.Contains(RequestId) && !ActiveAutomationRequestIds.Contains(RequestId))
+        || PendingAutomationRequests.ContainsByPredicate(
+               [&RequestId](const FPendingAutomationRequest& Queued) { return Queued.RequestId == RequestId; });
+  }
   // Queue-time gate only. StopAcceptingAutomationRequests() prevents new
   // requests from entering the queue but does NOT interrupt requests that are
   // already executing inside ProcessAutomationRequest. To wait for in-flight

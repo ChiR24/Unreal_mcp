@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c8538995d2406c36",
+  "catalogRevision": "ddaaea1663330c4b",
   "recordCount": 389,
   "records": [
     {
@@ -7127,7 +7127,7 @@
           "delete asset from project",
           "destroy asset"
         ],
-        "summary": "Delete one or more assets.",
+        "summary": "Delete one or more assets, or whole folders. A folder of thousands of assets can take minutes and reports how far it has got as it goes; when the call answers before the delete is done (task.state running), the delete carries on, so check the folder with asset.list instead of deleting again.",
         "whenToUse": [
           "One or several assets, or a whole folder, must be removed from the project for good.",
           "An asset should go only if nothing else uses it; a still-referenced asset is kept and reported."
@@ -7187,7 +7187,7 @@
       },
       "examples": [
         {
-          "title": "Delete one or more assets.",
+          "title": "Delete one or more assets, or whole folders. A folder of thousands of assets can take minutes and reports how far it has got as it goes; when the call answers before the delete is done (task.state running), the delete carries on, so check the folder with asset.list instead of deleting again.",
           "input": {
             "paths": [
               "/Game/MCPTest/Disposable"
@@ -7229,7 +7229,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "a83863754d93c784d2b59577d1ceba43a4ca2d086c736b14c2e0bfde855d708d",
-        "content": "74fb8ae810647c597c5bfcaf9ef173f88d31b0788df77d3ba33da82cb8072237"
+        "content": "c626f6787bfeed8cc7c5d1d2b2e567d9ddbb365ec58cd22c5175bb94522df6f3"
       }
     },
     {

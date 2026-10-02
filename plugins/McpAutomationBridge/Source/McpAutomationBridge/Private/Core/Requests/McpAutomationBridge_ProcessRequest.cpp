@@ -10,24 +10,71 @@
 #include "Misc/ScopeExit.h"
 #include "Misc/ScopeLock.h"
 #include "Framework/Application/SlateApplication.h" // active-modal pre-flight (Slate is an editor dep)
+#include "Foundation/McpScreenshotResample.h" // McpShaderJobsRemaining
 
-// Publish the currently-executing automation action so external tooling (e.g. an off-thread watchdog) can attribute
-// a game-thread stall to the tool that was in flight. The lock is held ONLY for the brief set/get — never during
-// the handler — so a reader can observe the action off-thread even while a handler blocks the game thread. The
-// getter is declared in the public McpAutomationBridgeSubsystem.h so other modules can call it.
+// Publish the currently-executing automation action, when it started and its last progress, so a reader off the
+// game thread (the busy refusal, the per-request keep-alive) can say what Unreal is working on while a handler
+// blocks the game thread. The lock is held ONLY for the brief set/get — never during the handler. Declared in the
+// public McpAutomationBridgeSubsystem.h so other modules can call it.
 namespace McpAutomationBridge
 {
     static FCriticalSection GInFlightActionCS;
     static FString GInFlightAction;
-    static void SetInFlightAction(const FString& InAction)
+    static FString GInFlightRequestId;
+    static double GInFlightStart = 0.0;
+    static double GInFlightProgressTime = 0.0;
+    static float GInFlightPercent = -1.0f;
+    static FString GInFlightProgress;
+    static void SetInFlightAction(const FString& InRequestId, const FString& InAction)
     {
         FScopeLock Lock(&GInFlightActionCS);
         GInFlightAction = InAction;
+        GInFlightRequestId = InRequestId;
+        GInFlightStart = InAction.IsEmpty() ? 0.0 : FPlatformTime::Seconds();
+        GInFlightProgressTime = 0.0;
+        GInFlightPercent = -1.0f;
+        GInFlightProgress.Reset();
     }
     MCPAUTOMATIONBRIDGE_API FString GetInFlightAction()
     {
         FScopeLock Lock(&GInFlightActionCS);
         return GInFlightAction;
+    }
+    MCPAUTOMATIONBRIDGE_API void ReportInFlightProgress(const FString& RequestId, float Percent, const FString& Message)
+    {
+        FScopeLock Lock(&GInFlightActionCS);
+        if (GInFlightAction.IsEmpty() || RequestId != GInFlightRequestId) return;
+        GInFlightProgressTime = FPlatformTime::Seconds();
+        GInFlightPercent = Percent;
+        if (!Message.IsEmpty()) GInFlightProgress = Message;
+    }
+    MCPAUTOMATIONBRIDGE_API FString DescribeEditorWork(const FString& ForRequestId)
+    {
+        const double Now = FPlatformTime::Seconds();
+        FString Work;
+        {
+            FScopeLock Lock(&GInFlightActionCS);
+            if (!GInFlightAction.IsEmpty())
+            {
+                const bool bOwn = !ForRequestId.IsEmpty() && ForRequestId == GInFlightRequestId;
+                Work = FString::Printf(TEXT("%s %s for %.0f s"), bOwn ? TEXT("working on") : TEXT("busy with"),
+                    *GInFlightAction, Now - GInFlightStart);
+                if (!GInFlightProgress.IsEmpty())
+                {
+                    Work += GInFlightPercent >= 0.0f
+                        ? FString::Printf(TEXT(", %.0f%% done: %s"), GInFlightPercent, *GInFlightProgress)
+                        : FString::Printf(TEXT(": %s"), *GInFlightProgress);
+                    Work += FString::Printf(TEXT(" (reported %.0f s ago)"), Now - GInFlightProgressTime);
+                }
+            }
+        }
+        // The engine's own work, which blocks the game thread too (a delete or a material change recompiles shaders).
+        const int32 Shaders = McpShaderJobsRemaining();
+        if (Shaders > 0)
+        {
+            Work += FString::Printf(TEXT("%scompiling %d shaders"), Work.IsEmpty() ? TEXT("") : TEXT("; "), Shaders);
+        }
+        return Work;
     }
 }
 
@@ -123,7 +170,10 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
   TGuardValue<bool> UnattendedScriptGuard(GIsRunningUnattendedScript, true);
   // B11/K2b: record which action is now executing (cleared in the ON_SCOPE_EXIT below) so the off-thread watchdog
   // can name it if this handler freezes the game thread.
-  McpAutomationBridge::SetInFlightAction(Action);
+  {
+    const FString SubAction = Payload.IsValid() ? GetJsonStringField(Payload, TEXT("subAction")) : FString();
+    McpAutomationBridge::SetInFlightAction(RequestId, SubAction.IsEmpty() ? Action : Action + TEXT(" ") + SubAction);
+  }
   bool bDispatchHandled = false;
   bool bErrorCaptureStarted = false;
   const double DispatchStartSeconds = FPlatformTime::Seconds();
@@ -157,7 +207,7 @@ void UMcpAutomationBridgeSubsystem::ProcessAutomationRequest(
       }
 
       bProcessingAutomationRequest = false;
-      McpAutomationBridge::SetInFlightAction(FString()); // clear the in-flight action on every exit path
+      McpAutomationBridge::SetInFlightAction(FString(), FString()); // clear the in-flight action on every exit path
       CurrentRequestOrigin = ERequestOrigin::WebSocket;
       const double DispatchEndSeconds = FPlatformTime::Seconds();
       const double DurationMs =

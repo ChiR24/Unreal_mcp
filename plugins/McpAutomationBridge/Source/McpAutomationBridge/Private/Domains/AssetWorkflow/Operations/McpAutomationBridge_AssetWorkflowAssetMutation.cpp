@@ -198,7 +198,9 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
     return Outside;
   };
 
+  int32 PathIndex = -1;
   for (const FString &Path : PathsToDelete) {
+    ++PathIndex;
     const FString SafePath = SanitizeProjectRelativePath(Path);
     if (SafePath.IsEmpty()) {
       FailedToDeletePaths.Add(Path);
@@ -212,7 +214,13 @@ bool UMcpAutomationBridgeSubsystem::HandleDeleteAssets(
       // to prevent crashes during UWorld::CleanupWorld when deleting folders containing
       // AnimBlueprints, IKRigs, IKRetargeters, etc.
       TArray<FString> Remaining;
-      if (McpSafeOperations::McpSafeDeleteFolder(SafePath, &Remaining))
+      // A folder of thousands of assets takes minutes: say which folder and how far through it, so the
+      // caller (and a call refused meanwhile as EDITOR_BLOCKED) can tell the delete is moving.
+      const auto Report = [this, &RequestId, &SafePath, PathIndex, Total = PathsToDelete.Num()](const FString &What, float Percent) {
+        SendProgressUpdate(RequestId, (PathIndex + Percent / 100.0f) * 100.0f / Total,
+                           FString::Printf(TEXT("deleting %s (folder %d of %d): %s"), *SafePath, PathIndex + 1, Total, *What));
+      };
+      if (McpSafeOperations::McpSafeDeleteFolder(SafePath, &Remaining, Report, DeleteSet))
       {
         // McpSafeDeleteFolder performs registry and filesystem verification itself.
         DeletedCount++;

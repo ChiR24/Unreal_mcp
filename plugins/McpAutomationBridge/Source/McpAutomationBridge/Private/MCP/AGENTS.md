@@ -15,7 +15,7 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 | `Resources/` (8) | `ue://` resource catalog and readers |
 | `Routing/` (7) | Consolidated parent-tool action routing helpers |
 | `Tools/` (1) | `McpGeneratedParentRegistry.cpp`: **GENERATED** from the capability records; registers one `FMcpToolDefinition` per parent |
-| `Transport/` | Bind/listen, HTTP parsing, sessions, SSE, pending requests, shutdown |
+| `Transport/` (25, at cap) | Bind/listen, HTTP parsing, sessions, SSE, pending requests, the keepalive thread (`McpNativeTransportKeepalive.cpp`), shutdown |
 
 ## CANONICAL SURFACE
 `FMcpToolRegistry::Register()` accepts exactly these 23 names:
@@ -47,6 +47,7 @@ manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level
 - Client notifications receive HTTP 202 after validation. `tools/call` owns its socket until the streamed result completes.
 - Return JSON-RPC errors through `McpJsonRpc` and tool outcomes through MCP `content[]` plus `isError`; never leak raw handler JSON as the top-level response.
 - Do not block socket threads on Unreal work. Shutdown intentionally pumps game-thread tasks while draining active connections and async writes.
+- **Long calls answer before the client gives up** (native only; the TS stdio server has no twin yet). The keepalive thread (`McpNativeTransportKeepalive.cpp`, never the game thread) pings every open `tools/call` after 8 s of silence with `McpAutomationBridge::DescribeEditorWork` (the handler in flight, its running time and last progress, the shader queue) and at 27 s writes a success receipt whose `task.state` is `running` or `queued`; the work goes on, and `bAnsweredRunning` keeps the entry until its completion settles the idempotency slot. Nothing on that thread may take `AutomationRequestExecutionMutex` (a running handler holds it): no `CancelAutomationRequest` there. A handler that reports progress (`SendProgressUpdate`) is what makes these replies say how far it has got.
 
 ## SECURITY
 - Empty/`localhost` listen hosts normalize to loopback. A disallowed non-loopback host falls back to `127.0.0.1`.

@@ -32,12 +32,12 @@ void FMcpNativeTransport::CleanupStaleRequests()
 	const double Now = FPlatformTime::Seconds();
 	LastGameThreadHeartbeat.store(Now); // this pass runs on the GameThread (dogfood #79)
 
-	// Clean up timed-out SSE connections
-	// Reaching this line proves the game thread is alive, so every request
-	// still listed here is waiting on work rather than on a wedged editor.
-	constexpr double HeartbeatSeconds = 20.0;
+	// Clean up timed-out SSE connections. Live requests are kept fed by the
+	// keepalive thread (SweepRequestProgress), whose written pings refresh
+	// LastProgressTime, so the idle budget only runs out for a client that
+	// stopped reading. A call already answered as still running has no client
+	// left to feed; only its lifetime ends it, so its completion still lands.
 	TMap<FString, double> Expired;
-	TArray<FString> Heartbeat;
 	{
 		FScopeLock Lock(&SSEConnectionsMutex);
 		for (const auto& [RequestId, Conn] : SSEConnections)
@@ -48,24 +48,13 @@ void FMcpNativeTransport::CleanupStaleRequests()
 			}
 			const double LastSeen = Conn->LastProgressTime > 0.0
 				? Conn->LastProgressTime : Conn->StartTime;
-			if (Now - LastSeen > Conn->TimeoutSeconds
-				|| Now - Conn->StartTime > Conn->MaxLifetimeSeconds
-				|| Conn->bMarkedForRemoval.load())
+			if (Now - Conn->StartTime > Conn->MaxLifetimeSeconds
+				|| (!Conn->bAnsweredRunning.load()
+					&& (Now - LastSeen > Conn->TimeoutSeconds || Conn->bMarkedForRemoval.load())))
 			{
 				Expired.Add(RequestId, Conn->TimeoutSeconds);
 			}
-			else if (Now - LastSeen > HeartbeatSeconds && !Conn->bCancelled.load())
-			{
-				Conn->LastProgressTime = Now;
-				Heartbeat.Add(RequestId);
-			}
 		}
-	}
-
-	// Sent outside the lock: SendSSEProgressUpdate takes SSEConnectionsMutex.
-	for (const FString& RequestId : Heartbeat)
-	{
-		SendSSEProgressUpdate(RequestId, 0.0f, TEXT("still working"));
 	}
 
 	for (const TPair<FString, double>& Entry : Expired)
@@ -176,69 +165,6 @@ void FMcpNativeTransport::CleanupStaleRequests()
 	}
 }
 
-// ─── Keepalive Loop (dedicated thread) ──────────────────────────────────────
-//
-// The SSE notification-stream keepalive used to run from this GameThread cleanup
-// pass (driven by the subsystem ticker). When the GameThread stalls longer than
-// the keepalive interval, no keepalive is sent, the client's stream idles out,
-// and the MCP session is re-initialized. Running the sweep on its own thread
-// keeps keepalives flowing through GameThread stalls.
-
-void FMcpNativeTransport::RunKeepaliveLoop()
-{
-	// Tick faster than the keepalive interval so a stream is never more than one
-	// tick late. StopEvent is triggered by Stop(), waking us immediately on shutdown.
-	static constexpr uint32 TickMs = 5000;
-	while (!bStopping.load())
-	{
-		if (StopEvent)
-		{
-			StopEvent->Wait(TickMs);
-		}
-		else
-		{
-			FPlatformProcess::Sleep(TickMs / 1000.0f);
-		}
-		if (bStopping.load())
-		{
-			break;
-		}
-		SweepNotificationKeepalives();
-	}
-}
-
-void FMcpNativeTransport::SweepNotificationKeepalives()
-{
-	const double Now = FPlatformTime::Seconds();
-
-	// Snapshot living streams under the map lock, then write outside it — the socket
-	// write takes each stream's WriteMutex, so the two locks are never nested.
-	TArray<TSharedPtr<FNotificationStream>> AliveSnapshot;
-	{
-		FScopeLock Lock(&NotificationStreamsMutex);
-		for (auto& [StreamId, Stream] : NotificationStreams)
-		{
-			if (Stream.IsValid() && !Stream->bMarkedForRemoval.load()
-				&& Now - Stream->LastKeepaliveTime >= KeepaliveIntervalSeconds
-				&& Stream->bReady.load())
-			{
-				AliveSnapshot.Add(Stream);
-			}
-		}
-	}
-
-	for (const auto& Stream : AliveSnapshot)
-	{
-		if (!WriteNotificationKeepalive(*Stream))
-		{
-			Stream->bMarkedForRemoval.store(true);
-		}
-		else
-		{
-			Stream->LastKeepaliveTime = Now;
-			TouchSession(Stream->SessionId);
-		}
-	}
-}
+// The keepalive loop and the per-request progress sweep live in McpNativeTransportKeepalive.cpp.
 
 // ─── Session Validation ─────────────────────────────────────────────────────

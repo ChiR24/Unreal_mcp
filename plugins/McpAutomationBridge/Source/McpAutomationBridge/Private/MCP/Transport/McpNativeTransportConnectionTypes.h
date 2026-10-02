@@ -63,6 +63,9 @@ struct FSSEConnection
 	// before HandleCancelledNotification populated it.
 	std::atomic<bool> bCancelled{false};
 	std::atomic<bool> bProgressWritePending{false};
+	// Set once AnswerStillRunning has answered the client and closed its socket while the work goes on. The entry
+	// stays until the work completes, so that completion still settles the idempotency slot; nothing is written.
+	std::atomic<bool> bAnsweredRunning{false};
 	// Client-supplied _meta.progressToken, echoed verbatim (type-preserving)
 	// in notifications/progress so the client can correlate streamed progress.
 	TSharedPtr<FJsonValue> ProgressToken;
