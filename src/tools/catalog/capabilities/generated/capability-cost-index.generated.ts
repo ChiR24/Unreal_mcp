@@ -824,6 +824,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_blueprint::add_vertical_box": "interactive|low",
   "manage_blueprint::add_widget_component": "interactive|low",
   "manage_blueprint::add_widget_switcher": "interactive|low",
+  "manage_blueprint::add_widget_tree": "interactive|low",
   "manage_blueprint::add_wrap_box": "interactive|low",
   "manage_blueprint::arrange_nodes": "interactive|medium",
   "manage_blueprint::bind_color": "interactive|low",
@@ -1538,4 +1539,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1525;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1526;

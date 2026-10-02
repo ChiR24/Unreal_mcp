@@ -86,6 +86,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageWidgetAuthoringAction(
         HandleWidgetAuthoringAnimationQueries,
         HandleWidgetAuthoringLocalization,
         HandleWidgetAuthoringHudElements,
+        HandleWidgetAuthoringTreeBuild,
         HandleWidgetAuthoringScreens,
         HandleWidgetAuthoringPropertyBindings
     };

@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `8cc95e663a778c9f`
+Catalog revision: `f85ea873117866d4`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -182,7 +182,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `blueprint.add_content_widget` | `manage_blueprint` | `add_text_block` | write | write | none | `manage_blueprint.add_content_widget` `manage_blueprint.add_text_block` `manage_blueprint.add_rich_text_block` `manage_blueprint.add_image` `manage_blueprint.add_button` `manage_blueprint.add_check_box` `manage_blueprint.add_combo_box` `manage_blueprint.add_slider` `manage_blueprint.add_spin_box` `manage_blueprint.add_progress_bar` `manage_blueprint.add_text_input` `manage_blueprint.add_list_view` `manage_blueprint.add_tree_view` `manage_blueprint.add_widget_component` |
 | `blueprint.add_function` | `manage_blueprint` | `add_function` | write | write | none | `manage_blueprint.add_function` `manage_blueprint.add_event` |
 | `blueprint.add_game_widget` | `manage_blueprint` | `add_health_bar` | write | write | none | `manage_blueprint.add_game_widget` `manage_blueprint.add_health_bar` `manage_blueprint.add_ammo_counter` `manage_blueprint.add_crosshair` `manage_blueprint.add_minimap` `manage_blueprint.add_compass` `manage_blueprint.add_damage_indicator` `manage_blueprint.add_interaction_prompt` `manage_blueprint.add_objective_tracker` `manage_blueprint.add_quest_tracker` |
-| `blueprint.add_panel_widget` | `manage_blueprint` | `add_canvas_panel` | write | write | none | `manage_blueprint.add_panel_widget` `manage_blueprint.add_canvas_panel` `manage_blueprint.add_overlay` `manage_blueprint.add_vertical_box` `manage_blueprint.add_horizontal_box` `manage_blueprint.add_grid_panel` `manage_blueprint.add_uniform_grid` `manage_blueprint.add_wrap_box` `manage_blueprint.add_border` `manage_blueprint.add_scroll_box` `manage_blueprint.add_size_box` `manage_blueprint.add_scale_box` `manage_blueprint.add_spacer` `manage_blueprint.add_safe_zone` `manage_blueprint.add_widget_switcher` |
+| `blueprint.add_panel_widget` | `manage_blueprint` | `add_canvas_panel` | write | write | none | `manage_blueprint.add_panel_widget` `manage_blueprint.add_canvas_panel` `manage_blueprint.add_overlay` `manage_blueprint.add_vertical_box` `manage_blueprint.add_horizontal_box` `manage_blueprint.add_grid_panel` `manage_blueprint.add_uniform_grid` `manage_blueprint.add_wrap_box` `manage_blueprint.add_border` `manage_blueprint.add_scroll_box` `manage_blueprint.add_size_box` `manage_blueprint.add_scale_box` `manage_blueprint.add_spacer` `manage_blueprint.add_safe_zone` `manage_blueprint.add_widget_switcher` `manage_blueprint.add_widget_tree` |
 | `blueprint.bind_widget` | `manage_blueprint` | `bind_text` | write | write | none | `manage_blueprint.bind_widget` `manage_blueprint.bind_text` `manage_blueprint.bind_color` `manage_blueprint.bind_enabled` `manage_blueprint.bind_percent` `manage_blueprint.bind_visibility` `manage_blueprint.bind_on_clicked` `manage_blueprint.bind_on_hovered` `manage_blueprint.bind_on_value_changed` `manage_blueprint.bind_localized_text` `manage_blueprint.set_localization_key` |
 | `blueprint.compile` | `manage_blueprint` | `compile` | write | write | none | `manage_blueprint.compile` |
 | `blueprint.create` | `manage_blueprint` | `create` | write | write | none | `manage_blueprint.create` `manage_blueprint.create_blueprint` `manage_blueprint.ensure_exists` |

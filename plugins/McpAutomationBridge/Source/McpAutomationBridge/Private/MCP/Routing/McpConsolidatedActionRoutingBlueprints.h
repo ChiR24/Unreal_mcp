@@ -28,7 +28,7 @@ inline const TArray<FString>& WidgetAuthoring()
 		TEXT("add_animation_track"), TEXT("add_animation_keyframe"),
 		TEXT("get_widget_info"),
 		TEXT("preview_widget"), TEXT("add_safe_zone"), TEXT("add_spacer"),
-		TEXT("add_widget_component"), TEXT("add_widget_switcher"),
+		TEXT("add_widget_component"), TEXT("add_widget_switcher"), TEXT("add_widget_tree"),
 		TEXT("bind_localized_text"),
 		TEXT("delete_animation"), TEXT("get_widget_slot_info"),
 		TEXT("remove_widget"), TEXT("rename_widget"),

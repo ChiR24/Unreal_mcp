@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8cc95e663a778c9f",
+  "catalogRevision": "f85ea873117866d4",
   "recordCount": 393,
   "records": [
     {
@@ -12549,7 +12549,8 @@
         "blueprint.add_scale_box",
         "blueprint.add_spacer",
         "blueprint.add_safe_zone",
-        "blueprint.add_widget_switcher"
+        "blueprint.add_widget_switcher",
+        "blueprint.add_widget_tree"
       ],
       "legacyIds": [
         {
@@ -12653,6 +12654,13 @@
           "folded": {
             "widgetKind": "widget_switcher"
           }
+        },
+        {
+          "tool": "manage_blueprint",
+          "action": "add_widget_tree",
+          "folded": {
+            "widgetKind": "widget_tree"
+          }
         }
       ],
       "discovery": {
@@ -12670,9 +12678,13 @@
           "umg panel",
           "row of buttons",
           "stack buttons vertically",
-          "buttons side by side"
+          "buttons side by side",
+          "widget tree",
+          "whole hud layout",
+          "build ui in one call",
+          "hud panel with labels"
         ],
-        "summary": "Add a panel widget to a Widget Blueprint: canvas, overlay, boxes, grids, border, scroll/size/scale box, spacer, safe zone, switcher, wrap box.",
+        "summary": "Add a panel widget to a Widget Blueprint: canvas, overlay, boxes, grids, border, scroll/size/scale box, spacer, safe zone, switcher, wrap box, or a whole layout of panels, text and images with their looks in one call (widget_tree).",
         "whenToUse": [
           "widgetKind=canvas_panel: A new canvas panel must be added to a Widget Blueprint.",
           "widgetKind=overlay: A new overlay must be added to a Widget Blueprint.",
@@ -12687,13 +12699,17 @@
           "widgetKind=scale_box: A new scale box must be added to a Widget Blueprint.",
           "widgetKind=spacer: Fixed empty space must separate sibling widgets in a box or panel.",
           "widgetKind=safe_zone: HUD content must stay inside the title-safe area on console or TV output.",
-          "widgetKind=widget_switcher: Several pages or tabs must occupy one region with only one visible at a time."
+          "widgetKind=widget_switcher: Several pages or tabs must occupy one region with only one visible at a time.",
+          "widgetKind=widget_tree: A HUD, a panel of labels or any layout of several widgets must be built in one call instead of an add_* call per widget and a set_style call per look.",
+          "widgetKind=widget_tree: Text needs its face, letter spacing, outline or shadow, or a border its rounded corners and outline, as it is created."
         ],
         "whenNotToUse": [
           "widgetKind=canvas_panel|overlay|vertical_box|horizontal_box|grid_panel|uniform_grid|wrap_box|border|scroll_box|size_box|scale_box: A content widget (button, text, etc.) is needed instead.",
           "widgetKind=spacer: The gap should belong to an existing widget (set its padding instead).",
           "widgetKind=safe_zone: The layout is desktop-only and no safe-area inset applies.",
-          "widgetKind=widget_switcher: All children should be visible together (use an overlay or a box)."
+          "widgetKind=widget_switcher: All children should be visible together (use an overlay or a box).",
+          "widgetKind=widget_tree: One widget must be added (use the matching widgetKind).",
+          "widgetKind=widget_tree: A widget already in the tree must change (use set_widget_layout)."
         ]
       },
       "schemas": {
@@ -12862,6 +12878,12 @@
               "type": "number",
               "description": "Index shown first by a widget switcher."
             },
+            "tree": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). An unknown field is refused, not ignored; at most 200 widgets."
+            },
             "widgetKind": {
               "type": "string",
               "enum": [
@@ -12878,7 +12900,8 @@
                 "scale_box",
                 "spacer",
                 "safe_zone",
-                "widget_switcher"
+                "widget_switcher",
+                "widget_tree"
               ],
               "description": "Which add panel widget variant to run."
             }
@@ -12926,6 +12949,21 @@
             "activeIndex": {
               "type": "number",
               "description": "Index shown first by a widget switcher."
+            },
+            "widgets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every widget the tree made, by name, parents first."
+            },
+            "widgetCount": {
+              "type": "number",
+              "description": "How many widgets the tree made."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the Widget Blueprint was saved."
             }
           },
           "required": [
@@ -12937,7 +12975,7 @@
       },
       "examples": [
         {
-          "title": "Add a panel widget to a Widget Blueprint: canvas, overlay, boxes, grids, border, scroll/size/scale box, spacer, safe zone, switcher, wrap box.",
+          "title": "Add a panel widget to a Widget Blueprint: canvas, overlay, boxes, grids, border, scroll/size/scale box, spacer, safe zone, switcher, wrap box, or a whole layout of panels, text and images with their looks in one call (widget_tree).",
           "input": {
             "action": "add_panel_widget",
             "widgetPath": "/Game/UI/WBP_MainUI",
@@ -12993,9 +13031,26 @@
             "scale_box": "add_scale_box",
             "spacer": "add_spacer",
             "safe_zone": "add_safe_zone",
-            "widget_switcher": "add_widget_switcher"
+            "widget_switcher": "add_widget_switcher",
+            "widget_tree": "add_widget_tree"
           },
           "declaredBy": {
+            "slotName": [
+              "canvas_panel",
+              "overlay",
+              "vertical_box",
+              "horizontal_box",
+              "grid_panel",
+              "uniform_grid",
+              "wrap_box",
+              "border",
+              "scroll_box",
+              "size_box",
+              "scale_box",
+              "spacer",
+              "safe_zone",
+              "widget_switcher"
+            ],
             "positionX": [
               "canvas_panel",
               "overlay",
@@ -13008,7 +13063,8 @@
               "scroll_box",
               "size_box",
               "scale_box",
-              "spacer"
+              "spacer",
+              "widget_tree"
             ],
             "positionY": [
               "canvas_panel",
@@ -13022,7 +13078,8 @@
               "scroll_box",
               "size_box",
               "scale_box",
-              "spacer"
+              "spacer",
+              "widget_tree"
             ],
             "sizeX": [
               "canvas_panel",
@@ -13036,7 +13093,8 @@
               "scroll_box",
               "size_box",
               "scale_box",
-              "spacer"
+              "spacer",
+              "widget_tree"
             ],
             "sizeY": [
               "canvas_panel",
@@ -13050,7 +13108,8 @@
               "scroll_box",
               "size_box",
               "scale_box",
-              "spacer"
+              "spacer",
+              "widget_tree"
             ],
             "columnCount": [
               "grid_panel"
@@ -13123,14 +13182,17 @@
             ],
             "activeIndex": [
               "widget_switcher"
+            ],
+            "tree": [
+              "widget_tree"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d4b2bd1ded58362f36e640b699a38b14fb0913cb15dcb3f530b5b4575e5a2780",
-        "content": "0e5ed923749c48aec1f3e7021160d82b4333bcba0a90f449b3b835a8a528c5be"
+        "schema": "8405257cfaf43a2ab77562b51273c7cf0aa3b1696e110b7c06dadc711dbc2882",
+        "content": "4b443419132b3b8d23f93497dce9a81ea89f6b4e22f254bc637c863458cdaaea"
       }
     },
     {

@@ -12407,6 +12407,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Render translation offset."
         },
+        "tree": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). An unknown field is refused, not ignored; at most 200 widgets."
+        },
         "typeface": {
           "type": "string",
           "description": "Face of the TextBlock font: Regular, Bold, Italic, Light... A face the font lacks is refused with the list it has."
@@ -12474,6 +12480,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "spacer",
             "safe_zone",
             "widget_switcher",
+            "widget_tree",
             "health_bar",
             "ammo_counter",
             "crosshair",
@@ -13380,7 +13387,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "widgetCount": {
           "type": "number",
-          "description": "Widgets in the new tree."
+          "description": "How many widgets the tree made."
         },
         "widgetInfo": {
           "type": "object",
@@ -13463,10 +13470,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Canonical /Game Widget Blueprint asset path."
         },
         "widgets": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every widget created, root first; bind or restyle them by these names."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every widget the tree made, by name, parents first."
+            }
+          ],
           "description": "Every widget created, root first; bind or restyle them by these names."
         },
         "width": {

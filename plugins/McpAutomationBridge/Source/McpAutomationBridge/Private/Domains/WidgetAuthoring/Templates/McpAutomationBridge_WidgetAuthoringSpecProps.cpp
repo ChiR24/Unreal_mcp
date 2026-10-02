@@ -43,8 +43,15 @@ bool PropPair(const TSharedPtr<FJsonObject>& Node, const TCHAR* Field, FVector2D
     return true;
 }
 
-void ApplyTextProps(UTextBlock* Text, const TSharedPtr<FJsonObject>& Node)
+FString ApplyTextProps(UTextBlock* Text, const TSharedPtr<FJsonObject>& Node)
 {
+    // Face, family, spacing and a copied style first: the size and outline then edit whichever font they left.
+    TArray<TSharedPtr<FJsonValue>> Applied;
+    FString FontError;
+    if (!McpApplyTextFont(Text, Node, Applied, FontError))
+    {
+        return FontError;
+    }
     double FontSize = 0.0;
     if (Node->TryGetNumberField(TEXT("fontSize"), FontSize))
     {
@@ -67,6 +74,21 @@ void ApplyTextProps(UTextBlock* Text, const TSharedPtr<FJsonObject>& Node)
     {
         Text->SetAutoWrapText(bWrap);
     }
+    double Outline = 0.0;
+    if (Node->TryGetNumberField(TEXT("outline"), Outline))
+    {
+        FSlateFontInfo Font = McpTextBlockFont(Text);
+        Font.OutlineSettings.OutlineSize = static_cast<int32>(Outline);
+        Font.OutlineSettings.OutlineColor = ExtractLinearColorField(Node, TEXT("outlineColor"), FLinearColor::Black);
+        Text->SetFont(Font);
+    }
+    FVector2D Shadow;
+    if (PropPair(Node, TEXT("shadowOffset"), Shadow))
+    {
+        Text->SetShadowOffset(Shadow);
+        Text->SetShadowColorAndOpacity(ExtractLinearColorField(Node, TEXT("shadowColor"), FLinearColor(0.0f, 0.0f, 0.0f, 0.6f)));
+    }
+    return FString();
 }
 
 void ApplyPanelProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Node)
@@ -126,7 +148,7 @@ void ApplyInputProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Node)
 }
 }
 
-void McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Node)
+FString McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Node)
 {
     FString Text;
     if (Node->TryGetStringField(TEXT("text"), Text))
@@ -134,7 +156,12 @@ void McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Nod
         if (UTextBlock* TextBlock = Cast<UTextBlock>(Widget)) { TextBlock->SetText(FText::FromString(Text)); }
         if (URichTextBlock* Rich = Cast<URichTextBlock>(Widget)) { Rich->SetText(FText::FromString(Text)); }
     }
-    if (UTextBlock* TextBlock = Cast<UTextBlock>(Widget)) { ApplyTextProps(TextBlock, Node); }
+    UTextBlock* TextBlock = Cast<UTextBlock>(Widget);
+    const FString TextError = TextBlock ? ApplyTextProps(TextBlock, Node) : FString();
+    if (!TextError.IsEmpty())
+    {
+        return TextError;
+    }
     if (Node->HasField(TEXT("color")))
     {
         FString Ignored;
@@ -143,8 +170,12 @@ void McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Nod
     double Number = 0.0;
     if (Node->TryGetNumberField(TEXT("radius"), Number))
     {
+        // On a brush the outline rides with the rounding; on a text block outlineColor is the glyph outline.
+        const FLinearColor Outline = TextBlock ? FLinearColor::Transparent
+            : ExtractLinearColorField(Node, TEXT("outlineColor"), FLinearColor::Transparent);
         FString Ignored;
-        McpApplyWidgetCornerRadius(Widget, static_cast<float>(Number), FLinearColor::Transparent, 0.0f, Ignored);
+        McpApplyWidgetCornerRadius(Widget, static_cast<float>(Number), Outline,
+                                   static_cast<float>(GetJsonNumberField(Node, TEXT("outlineWidth"), 0.0)), Ignored);
     }
     if (Node->TryGetNumberField(TEXT("opacity"), Number)) { Widget->SetRenderOpacity(static_cast<float>(Number)); }
     const FString Visibility = GetJsonStringField(Node, TEXT("visibility"));
@@ -163,5 +194,6 @@ void McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Nod
     {
         Image->SetBrushFromTexture(Texture);
     }
+    return FString();
 }
 }

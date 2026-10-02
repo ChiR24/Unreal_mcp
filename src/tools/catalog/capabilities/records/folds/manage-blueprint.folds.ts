@@ -69,10 +69,10 @@ export const MANAGE_BLUEPRINT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'add_panel_widget', selector: 'widgetKind',
-    summary: 'Add a panel widget to a Widget Blueprint: canvas, overlay, boxes, grids, border, scroll/size/scale box, spacer, safe zone, switcher, wrap box.',
+    summary: 'Add a panel widget to a Widget Blueprint: canvas, overlay, boxes, grids, border, scroll/size/scale box, spacer, safe zone, switcher, wrap box, or a whole layout of panels, text and images with their looks in one call (widget_tree).',
     topics: ['canvas panel', 'vertical box', 'horizontal box', 'overlay', 'scroll box', 'grid panel', 'widget switcher', 'umg panel', 'row of buttons', 'stack buttons vertically', 'buttons side by side'],
     members: byTarget('add_', ['add_canvas_panel', 'add_overlay', 'add_vertical_box', 'add_horizontal_box', 'add_grid_panel', 'add_uniform_grid',
-      'add_wrap_box', 'add_border', 'add_scroll_box', 'add_size_box', 'add_scale_box', 'add_spacer', 'add_safe_zone', 'add_widget_switcher']),
+      'add_wrap_box', 'add_border', 'add_scroll_box', 'add_size_box', 'add_scale_box', 'add_spacer', 'add_safe_zone', 'add_widget_switcher', 'add_widget_tree']),
   },
   {
     primary: 'add_content_widget', selector: 'widgetKind',

@@ -18,7 +18,10 @@ class UWidgetBlueprint;
 // props:    text, fontSize, color [r,g,b,a], justify (left|center|right), autoWrap,
 //           percent, visibility, opacity, padding (number or [l,t,r,b]), radius,
 //           imageSize [w,h], value, checked, width, height, maxHeight, options [strings],
-//           selected, foreground [r,g,b,a] (combo text), slotPadding and minSlotSize [w,h] (grids).
+//           selected, foreground [r,g,b,a] (combo text), slotPadding and minSlotSize [w,h] (grids),
+//           texture; text blocks also typeface, fontFamily, letterSpacing, copyStyleFrom,
+//           outline + outlineColor (glyph outline), shadowOffset [x,y] + shadowColor; a rounded
+//           brush (radius) also outlineColor + outlineWidth.
 // slot:     canvas: anchors [4], alignment [2], position [2], size [2], offsets [4],
 //           autoSize, z; boxes: padding, hAlign, vAlign, fill; grids: row, column.
 namespace WidgetAuthoringHelpers
@@ -40,7 +43,12 @@ UWidget* McpBuildWidgetSpec(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonOb
                             const FString& SlotName, TArray<UWidget*>& OutCreated, FString& OutError);
 
 // Applies a node's widget props (text, colour, sizes, values; see the list above) to Widget.
-void McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Node);
+// Returns why a prop could not apply (a typeface the font lacks), or empty.
+FString McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& Node);
+
+// add_widget_tree's check of a caller's tree before anything is built: every node needs a
+// type and a name, and an unknown field (a typo such as "fontsize") is named instead of ignored.
+FString McpValidateWidgetTreeSpec(const TSharedPtr<FJsonObject>& Node, const FString& Where, int32& InOutCount);
 
 // Applies a node's "slot" object to a widget that is already seated in a panel.
 void McpApplySpecSlot(UWidget* Widget, const TSharedPtr<FJsonObject>& SlotSpec);

@@ -60,7 +60,12 @@ UWidget* BuildNode(UWidgetBlueprint* WidgetBP, const TSharedPtr<FJsonObject>& No
     Widget->bIsVariable = true;
     RegisterWidgetGuid(WidgetBP, Widget);
     OutCreated.Add(Widget);
-    McpApplySpecWidgetProps(Widget, Node);
+    const FString PropError = McpApplySpecWidgetProps(Widget, Node);
+    if (!PropError.IsEmpty())
+    {
+        OutError = FString::Printf(TEXT("'%s': %s"), *Name, *PropError);
+        return nullptr;
+    }
     const TArray<TSharedPtr<FJsonValue>>* Children = SpecChildren(Node);
     if (!Children)
     {
