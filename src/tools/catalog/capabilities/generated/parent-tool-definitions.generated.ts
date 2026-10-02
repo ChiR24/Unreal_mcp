@@ -15050,6 +15050,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Angle in degrees."
         },
+        "aoDistance": {
+          "type": "number",
+          "description": "How far an occluder can be, in cm (default 15% of the bounds diagonal); nearer geometry darkens R, farther geometry is ignored."
+        },
+        "aoRays": {
+          "type": "integer",
+          "description": "Hemisphere rays per vertex for occlusion (default 32, clamped to 8-256); the bake cuts them on a very dense mesh to keep the call short, and the reply says how many it used."
+        },
         "arrayMode": {
           "type": "string",
           "enum": [
@@ -15069,6 +15077,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "baseRadius": {
           "type": "number",
           "description": "Cone base radius; defaults to radius."
+        },
+        "blurIterations": {
+          "type": "integer",
+          "description": "Neighbour-averaging passes over R, G and B (default 1, 0 to 16); 0 keeps the masks per vertex and noisy."
         },
         "booleanOp": {
           "type": "string",
@@ -15141,6 +15153,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Count of repeated elements."
         },
+        "curvatureScale": {
+          "type": "number",
+          "description": "Strength of the G and B masks (default 1): a fold of a quarter turn (90 degrees) is a full edge or cavity at 1; use 2 to make a 45 degree fold full, 0 to switch both masks off."
+        },
         "deform": {
           "type": "string",
           "enum": [
@@ -15205,6 +15221,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "append_polygons",
             "set_vertex_position",
             "set_vertex_color",
+            "bake_vertex_colors",
             "set_material_id",
             "set_uvs",
             "split_normals",
@@ -16178,13 +16195,44 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Actor name in the level."
         },
+        "aoDistance": {
+          "type": "number",
+          "description": "Occlusion distance used, in cm."
+        },
+        "aoRays": {
+          "type": "integer",
+          "description": "Rays per vertex that were traced."
+        },
         "assetPath": {
           "type": "string",
           "description": "Path of the new static mesh asset."
         },
+        "averages": {
+          "type": "object",
+          "description": "Mean of each channel over the vertices, {r, g, b, a}, to see at a glance whether a mask did anything.",
+          "properties": {
+            "r": {
+              "type": "number"
+            },
+            "g": {
+              "type": "number"
+            },
+            "b": {
+              "type": "number"
+            },
+            "a": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
         "b": {
           "type": "number",
           "description": "Blue channel, 0-1."
+        },
+        "blurIterations": {
+          "type": "integer",
+          "description": "Blur passes that ran."
         },
         "cageFaces": {
           "type": "integer",
@@ -16194,6 +16242,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Grid cell size in cm."
         },
+        "channels": {
+          "type": "string",
+          "description": "What each channel holds."
+        },
         "class": {
           "type": "string",
           "description": "Class of the spawned actor."
@@ -16201,6 +16253,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "collision": {
           "type": "string",
           "description": "Collision the asset got."
+        },
+        "curvatureScale": {
+          "type": "number",
+          "description": "Curvature scale used."
         },
         "details": {
           "type": "object",

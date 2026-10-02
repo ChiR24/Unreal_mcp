@@ -140,6 +140,7 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   ['loop subdivision', 'manage_geometry.optimize_mesh'],
   ['fillet the seams', 'manage_geometry.optimize_mesh'],
   ['make a polygon cage', 'manage_geometry.edit_dynamic_mesh'],
+  ['cavity mask', 'manage_geometry.edit_dynamic_mesh'],
   ['extrude the top faces', 'manage_geometry.model_mesh'],
   // The mesh ASSET's slots; a placed actor's component slot is control_actor.set_material.
   ['set mesh materials', 'asset.process_asset'],
@@ -179,7 +180,7 @@ const DECLARED_TOPICS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['asset.process_asset', ['set mesh materials', 'mesh material slots', 'assign materials to a static mesh']],
   ['inspect.inspect_object', ['material slot bounds', 'which slot is which part']],
   ['manage_geometry.optimize_mesh', ['catmull clark', 'loop subdivision', 'smooth subdivision', 'fillet']],
-  ['manage_geometry.edit_dynamic_mesh', ['polygon cage', 'material ids']],
+  ['manage_geometry.edit_dynamic_mesh', ['polygon cage', 'material ids', 'cavity mask', 'ambient occlusion mask']],
   ['manage_geometry.model_mesh', ['select faces by region']]
 ];
 

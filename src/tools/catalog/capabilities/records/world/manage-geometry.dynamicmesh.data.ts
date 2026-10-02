@@ -1,5 +1,5 @@
 /**
- * DynamicMesh authoring records (12 actions), promoted from raw native routes.
+ * DynamicMesh authoring records (13 actions), promoted from raw native routes.
  *
  * These edit a UDynamicMeshComponent on a placed actor vertex by vertex, rather
  * than running a modeling operator over a whole mesh, so they address the mesh
@@ -232,6 +232,38 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
     outputRequired: ['actorName', 'materialId', 'trianglesSelected', 'triangleCount', 'materialIdsInUse'],
     exampleInput: { action: 'set_material_id', actorName: 'DM_Cage', materialId: 1, region: { normal: { x: 0, y: 0, z: 1 }, normalAngle: 30 } },
     exampleOutput: { success: true, actorName: 'DM_Cage', materialId: 1, trianglesSelected: 2, triangleCount: 12, materialIdsInUse: [0, 1] },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'bake_vertex_colors', plugins: PLUGIN,
+    topics: ['ambient occlusion mask', 'edge wear mask', 'cavity mask', 'height gradient mask', 'bake masks for materials'],
+    family: F,
+    summary: 'Bake ambient occlusion, convex-edge, concave-cavity and height masks into the vertex colours of a DynamicMesh actor, for a material to read through its VertexColor node.',
+    whenToUse: ['A material needs masks (dirt in crevices, wear on edges, a height gradient) without textures: bake once the shape is final, then convert_to_static_mesh or convert_to_nanite.',
+      'Channels: R is ambient occlusion (1 open, 0 occluded); G is 1 minus the convex edge (1 on flat or concave surface, lower along an outward fold such as a rim); B is 1 minus the concave cavity (1 on flat or convex surface, lower in a crease); A is height (0 at the bottom of the bounds, 1 at the top, along local Z).',
+      'White means no effect for every channel except height, so a mesh that was never baked, which reads (1, 1, 1, 1), behaves like one whose masks are all quiet.',
+      'The values reach the static mesh unchanged: the conversion cancels the sRGB encoding the static-mesh build applies (UE 5.1 and later), so a material\'s VertexColor node reads the baked value and a stored byte is the value times 255.'],
+    whenNotToUse: ['One flat colour on every vertex is wanted; use set_vertex_color.', 'The mesh will be rebuilt afterwards by morphology or remesh_voxel, which drop vertex colours; bake after them.'],
+    inputProps: {
+      actorName: P.actorName,
+      aoRays: { type: 'integer', description: 'Hemisphere rays per vertex for occlusion (default 32, clamped to 8-256); the bake cuts them on a very dense mesh to keep the call short, and the reply says how many it used.' },
+      aoDistance: { type: 'number', description: 'How far an occluder can be, in cm (default 15% of the bounds diagonal); nearer geometry darkens R, farther geometry is ignored.' },
+      curvatureScale: { type: 'number', description: 'Strength of the G and B masks (default 1): a fold of a quarter turn (90 degrees) is a full edge or cavity at 1; use 2 to make a 45 degree fold full, 0 to switch both masks off.' },
+      blurIterations: { type: 'integer', description: 'Neighbour-averaging passes over R, G and B (default 1, 0 to 16); 0 keeps the masks per vertex and noisy.' },
+    },
+    required: ['actorName'], effect: 'write', behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'medium',
+    outputProps: {
+      actorName: P.actorName,
+      vertexCount: OUT_VERTEX_COUNT,
+      aoRays: int('Rays per vertex that were traced.'),
+      aoDistance: { type: 'number', description: 'Occlusion distance used, in cm.' },
+      curvatureScale: { type: 'number', description: 'Curvature scale used.' },
+      blurIterations: int('Blur passes that ran.'),
+      averages: { type: 'object', description: 'Mean of each channel over the vertices, {r, g, b, a}, to see at a glance whether a mask did anything.', properties: { r: { type: 'number' }, g: { type: 'number' }, b: { type: 'number' }, a: { type: 'number' } }, additionalProperties: false },
+      channels: { type: 'string', description: 'What each channel holds.' },
+    },
+    outputRequired: ['actorName', 'vertexCount', 'aoRays', 'aoDistance'],
+    exampleInput: { action: 'bake_vertex_colors', actorName: 'DM_Cage', aoRays: 64, blurIterations: 2 },
+    exampleOutput: { success: true, actorName: 'DM_Cage', vertexCount: 386, aoRays: 64, aoDistance: 25.4, curvatureScale: 1, blurIterations: 2 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'difference', plugins: PLUGIN,

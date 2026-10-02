@@ -1041,6 +1041,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_geometry::array_mesh": "interactive|medium",
   "manage_geometry::array_radial": "interactive|medium",
   "manage_geometry::auto_uv": "interactive|low",
+  "manage_geometry::bake_vertex_colors": "interactive|medium",
   "manage_geometry::bend": "interactive|medium",
   "manage_geometry::bevel": "interactive|medium",
   "manage_geometry::boolean_intersection": "interactive|medium",
@@ -1532,4 +1533,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1519;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1520;

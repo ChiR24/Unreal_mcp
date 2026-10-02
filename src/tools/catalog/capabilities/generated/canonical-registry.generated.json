@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "1cbd58ce87cbfb16",
+  "catalogRevision": "c8538995d2406c36",
   "recordCount": 389,
   "records": [
     {
@@ -60243,6 +60243,7 @@
         "manage_geometry.append_polygons",
         "manage_geometry.set_vertex_position",
         "manage_geometry.set_vertex_color",
+        "manage_geometry.bake_vertex_colors",
         "manage_geometry.set_material_id",
         "manage_geometry.set_uvs",
         "manage_geometry.split_normals",
@@ -60298,6 +60299,13 @@
         },
         {
           "tool": "manage_geometry",
+          "action": "bake_vertex_colors",
+          "folded": {
+            "edit": "bake_vertex_colors"
+          }
+        },
+        {
+          "tool": "manage_geometry",
           "action": "set_material_id",
           "folded": {
             "edit": "set_material_id"
@@ -60347,18 +60355,24 @@
           "create a mesh from vertices",
           "polygon cage",
           "material ids",
+          "bake masks",
           "author a mesh from vertices and faces",
           "quad mesh",
           "hard surface cage",
           "low poly blockout mesh",
           "subdivision cage",
+          "ambient occlusion mask",
+          "edge wear mask",
+          "cavity mask",
+          "height gradient mask",
+          "bake masks for materials",
           "assign a material to faces",
           "material slots on a mesh",
           "multi material mesh",
           "material per face",
           "paint faces with a material"
         ],
-        "summary": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), give triangles material ids by region (set_material_id), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
+        "summary": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), give triangles material ids by region (set_material_id), bake AO, edge, cavity and height masks for materials to read (bake_vertex_colors), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
         "whenToUse": [
           "edit=create: A mesh must be built vertex by vertex rather than from a primitive.",
           "edit=append_vertex: A mesh is being authored point by point.",
@@ -60367,6 +60381,10 @@
           "edit=append_polygons: Faces must be built from an explicit vertex list, quads and larger polygons included, with polygroups or material ids set up front.",
           "edit=set_vertex_position: An authored vertex must be nudged without rebuilding the mesh.",
           "edit=set_vertex_color: Authored geometry must carry colour the material reads.",
+          "edit=bake_vertex_colors: A material needs masks (dirt in crevices, wear on edges, a height gradient) without textures: bake once the shape is final, then convert_to_static_mesh or convert_to_nanite.",
+          "edit=bake_vertex_colors: Channels: R is ambient occlusion (1 open, 0 occluded); G is 1 minus the convex edge (1 on flat or concave surface, lower along an outward fold such as a rim); B is 1 minus the concave cavity (1 on flat or convex surface, lower in a crease); A is height (0 at the bottom of the bounds, 1 at the top, along local Z).",
+          "edit=bake_vertex_colors: White means no effect for every channel except height, so a mesh that was never baked, which reads (1, 1, 1, 1), behaves like one whose masks are all quiet.",
+          "edit=bake_vertex_colors: The values reach the static mesh unchanged: the conversion cancels the sRGB encoding the static-mesh build applies (UE 5.1 and later), so a material's VertexColor node reads the baked value and a stored byte is the value times 255.",
           "edit=set_material_id: One mesh needs several materials: give each part an id (0 is the default), then bake with convert_to_static_mesh or convert_to_nanite and list one material per id in materials; entry i is the material of id i.",
           "edit=set_material_id: Triangles must be picked by where they are: region.box, region.normal (the top faces are {x:0,y:0,z:1}), region.groupIds or region.materialIds.",
           "edit=set_uvs: An authored vertex needs an exact UV rather than a generated one.",
@@ -60377,7 +60395,7 @@
         "whenNotToUse": [
           "edit=create|append_polygons: A parametric shape is enough; use a create_* primitive.",
           "edit=set_vertex_color: A material parameter is the right place for the colour.",
-          "edit=set_material_id: A smooth mask for a material to read is needed rather than a slot; use bake_vertex_colors.",
+          "edit=bake_vertex_colors: The mesh will be rebuilt afterwards by morphology or remesh_voxel, which drop vertex colours; bake after them.",
           "edit=set_uvs: The whole mesh needs unwrapping; use auto_uv or unwrap_uv.",
           "edit=split_normals: Normals only need recomputing; use recalculate_normals.",
           "edit=translate: The actor itself should move; set its transform instead.",
@@ -60572,6 +60590,22 @@
               "type": "boolean",
               "description": "Apply the colour to every vertex instead of one."
             },
+            "aoRays": {
+              "type": "integer",
+              "description": "Hemisphere rays per vertex for occlusion (default 32, clamped to 8-256); the bake cuts them on a very dense mesh to keep the call short, and the reply says how many it used."
+            },
+            "aoDistance": {
+              "type": "number",
+              "description": "How far an occluder can be, in cm (default 15% of the bounds diagonal); nearer geometry darkens R, farther geometry is ignored."
+            },
+            "curvatureScale": {
+              "type": "number",
+              "description": "Strength of the G and B masks (default 1): a fold of a quarter turn (90 degrees) is a full edge or cavity at 1; use 2 to make a 45 degree fold full, 0 to switch both masks off."
+            },
+            "blurIterations": {
+              "type": "integer",
+              "description": "Neighbour-averaging passes over R, G and B (default 1, 0 to 16); 0 keeps the masks per vertex and noisy."
+            },
             "materialId": {
               "type": "integer",
               "minimum": 0,
@@ -60734,6 +60768,7 @@
                 "append_polygons",
                 "set_vertex_position",
                 "set_vertex_color",
+                "bake_vertex_colors",
                 "set_material_id",
                 "set_uvs",
                 "split_normals",
@@ -60865,6 +60900,45 @@
               "type": "number",
               "description": "Alpha channel, 0-1."
             },
+            "aoRays": {
+              "type": "integer",
+              "description": "Rays per vertex that were traced."
+            },
+            "aoDistance": {
+              "type": "number",
+              "description": "Occlusion distance used, in cm."
+            },
+            "curvatureScale": {
+              "type": "number",
+              "description": "Curvature scale used."
+            },
+            "blurIterations": {
+              "type": "integer",
+              "description": "Blur passes that ran."
+            },
+            "averages": {
+              "type": "object",
+              "description": "Mean of each channel over the vertices, {r, g, b, a}, to see at a glance whether a mask did anything.",
+              "properties": {
+                "r": {
+                  "type": "number"
+                },
+                "g": {
+                  "type": "number"
+                },
+                "b": {
+                  "type": "number"
+                },
+                "a": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            },
+            "channels": {
+              "type": "string",
+              "description": "What each channel holds."
+            },
             "materialId": {
               "type": "integer",
               "description": "Material id that was set."
@@ -60928,7 +61002,7 @@
       },
       "examples": [
         {
-          "title": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), give triangles material ids by region (set_material_id), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
+          "title": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), give triangles material ids by region (set_material_id), bake AO, edge, cavity and height masks for materials to read (bake_vertex_colors), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
           "input": {
             "action": "edit_dynamic_mesh",
             "name": "DM_Authored",
@@ -60978,6 +61052,7 @@
             "append_polygons": "append_polygons",
             "set_vertex_position": "set_vertex_position",
             "set_vertex_color": "set_vertex_color",
+            "bake_vertex_colors": "bake_vertex_colors",
             "set_material_id": "set_material_id",
             "set_uvs": "set_uvs",
             "split_normals": "split_normals",
@@ -60995,6 +61070,7 @@
               "append_polygons",
               "set_vertex_position",
               "set_vertex_color",
+              "bake_vertex_colors",
               "set_material_id",
               "set_uvs",
               "split_normals",
@@ -61051,6 +61127,18 @@
             "setAll": [
               "set_vertex_color"
             ],
+            "aoRays": [
+              "bake_vertex_colors"
+            ],
+            "aoDistance": [
+              "bake_vertex_colors"
+            ],
+            "curvatureScale": [
+              "bake_vertex_colors"
+            ],
+            "blurIterations": [
+              "bake_vertex_colors"
+            ],
             "materialId": [
               "set_material_id"
             ],
@@ -61089,8 +61177,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "871706fc735e231ecdf7b71e7b8a421509bbc6d356f9b672bddf2246a1b66085",
-        "content": "ea8e0fc8f640ce8a3948947d2272e18634dd4b524822963898e6174fe30ebc8d"
+        "schema": "16958ede4d9c777af586e354f7c75897392fef752fcefa2b0763503dab8f4604",
+        "content": "513691b2a65d88ff7521b71d31442c8f6e61461d2a71e1458c5e47f8aa109f88"
       }
     },
     {

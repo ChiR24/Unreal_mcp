@@ -125,6 +125,7 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("transform_uvs")) return HandleTransformUVs(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("set_uvs")) return HandleSetUVs(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("set_vertex_color")) return HandleSetVertexColor(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("bake_vertex_colors")) return HandleBakeVertexColors(this, RequestId, Payload, RequestingSocket);
     if (SubAction == TEXT("set_material_id")) return HandleSetMaterialId(this, RequestId, Payload, RequestingSocket);
 
     // Tangent Operations
