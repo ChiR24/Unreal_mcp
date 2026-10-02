@@ -4886,6 +4886,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Attach caller-provided metadata to the response."
         },
+        "input": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The tool's arguments, shaped by the inputSchema list_editor_toolsets returned for toolName. Omit for a tool without arguments."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "The tool's arguments, shaped by the inputSchema list_editor_toolsets returned for toolName."
+            }
+          ],
+          "description": "The tool's arguments, shaped by the inputSchema list_editor_toolsets returned for toolName."
+        },
         "inputAction": {
           "type": "string",
           "description": "Enhanced Input action to inject directly, as an asset path such as /Game/Input/IA_Move. A raw key already reaches Enhanced Input through the active mapping contexts (key_down D moves a pawn whose context maps D); use inputAction when no key is mapped to the action, or to inject an analog value."
@@ -4905,6 +4922,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "levelPath": {
           "type": "string",
           "description": "Level asset path."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "description": "Most tools listed (default 50); matchedTools and hasMore tell what was left out."
         },
         "location": {
           "oneOf": [
@@ -4980,6 +5003,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Editor preferences key-value pairs.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
+        },
+        "query": {
+          "type": "string",
+          "description": "Words that must all appear in a tool's name or description (any case), e.g. \"state tree add\"."
         },
         "realtime": {
           "type": "boolean",
@@ -5072,6 +5099,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
         },
+        "toolName": {
+          "type": "string",
+          "description": "Full name of one tool, Toolset.Tool: returns its schema (description, inputSchema) and effect instead of the list."
+        },
+        "toolset": {
+          "type": "string",
+          "description": "List only the tools of this toolset, by the name the toolsets list shows."
+        },
         "type": {
           "type": "string",
           "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
@@ -5135,6 +5170,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "set_viewport_resolution",
             "invoke_reflected_function",
             "describe_reflected_api",
+            "list_editor_toolsets",
+            "call_editor_tool",
+            "call_editor_tool_destructive",
             "configure_editor",
             "console_command",
             "screenshot",
@@ -5355,6 +5393,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Unsaved packages discarded by this restart."
         },
+        "effect": {
+          "type": "string",
+          "description": "destructive, read or write, as judged from the tool's name."
+        },
         "ejected": {
           "type": "boolean",
           "description": "True once the player has left its pawn and the view is a free camera; false (with EJECT_FAILED) when the session did not switch within 5 seconds, which happens when Play In Editor runs in a window of its own instead of a level viewport."
@@ -5423,6 +5465,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Slate consumed the event (editor-level input)."
         },
+        "hasMore": {
+          "type": "boolean",
+          "description": "True when more tools matched than were listed."
+        },
         "height": {
           "type": "number",
           "description": "Height in pixels of the PNG actually returned."
@@ -5447,6 +5493,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "full_editor_window: true when the captured window is the main editor frame."
         },
+        "matchedTools": {
+          "type": "integer",
+          "description": "Tools that matched, before limit."
+        },
         "message": {
           "type": "string",
           "description": "Human-readable result message."
@@ -5466,6 +5516,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "opened": {
           "type": "boolean",
           "description": "True when the tab manager returned a live tab."
+        },
+        "output": {
+          "x-unreal-reflection-boundary": true,
+          "description": "The tool's own result: its JSON output parsed, or the raw text when it is not JSON."
         },
         "outputs": {
           "type": "object",
@@ -5537,6 +5591,36 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "throttleOff": {
           "type": "boolean",
           "description": "Whether background CPU throttling is off after the call."
+        },
+        "tool": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With toolName: that tool's schema as Epic publishes it (name, description, inputSchema) plus effect."
+        },
+        "toolName": {
+          "type": "string",
+          "description": "Tool that ran."
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Matching tools: name (Toolset.Tool), description, effect (read, write or destructive; blocked for a tool that would run scripts or console code, which is never called)."
+        },
+        "toolsets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Every registered toolset: name, description, toolCount."
         },
         "unsavedCount": {
           "type": "integer",

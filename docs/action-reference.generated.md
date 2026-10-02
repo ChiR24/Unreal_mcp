@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `9c93c7e253a3d23a`
+Catalog revision: `91ec7ba6f964e78d`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 389 capabilities across
+The catalog declares 392 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -39,7 +39,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `animation_physics` | 26 | 2 | 22 | 2 | animation physics |
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
 | `control_actor` | 24 | 8 | 14 | 2 | actor |
-| `control_editor` | 21 | 8 | 11 | 2 | editor |
+| `control_editor` | 24 | 9 | 12 | 3 | editor |
 | `inspect` | 16 | 11 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-62 of 389 capabilities require consent.
+63 of 392 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -94,6 +94,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment.remove_spline_point` | `build_environment` | `remove_spline_point` | destructive | explicit |
 | `control_actor.call_actor_function` | `control_actor` | `call_actor_function` | destructive | elevated |
 | `control_actor.delete` | `control_actor` | `delete` | destructive | explicit |
+| `control_editor.call_editor_tool_destructive` | `control_editor` | `control_editor` | destructive | elevated |
 | `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | elevated |
 | `control_editor.restart_editor` | `control_editor` | `restart_editor` | destructive | explicit |
 | `datatable.delete_data_table_row` | `manage_asset` | `delete_data_table_row` | destructive | elevated |
@@ -270,6 +271,8 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_actor.set_transform` | `control_actor` | `set_transform` | write | write | none | `control_actor.set_transform` `control_actor.set_actor_location` `control_actor.set_actor_rotation` `control_actor.set_actor_scale` `control_actor.teleport_actor` `control_actor.set_actor_transform` |
 | `control_actor.set_visibility` | `control_actor` | `set_visibility` | write | write | none | `control_actor.set_visibility` `control_actor.set_actor_visible` |
 | `control_actor.spawn` | `control_actor` | `spawn` | write | write | none | `control_actor.spawn` `control_actor.spawn_blueprint` `control_actor.spawn_batch` `control_actor.spawn_actor` |
+| `control_editor.call_editor_tool` | `control_editor` | `control_editor` | write | write | none | `control_editor.call_editor_tool` |
+| `control_editor.call_editor_tool_destructive` | `control_editor` | `control_editor` | destructive | destructive | elevated | `control_editor.call_editor_tool_destructive` |
 | `control_editor.close_asset` | `control_editor` | `close_asset` | write | write | none | `control_editor.close_asset` |
 | `control_editor.configure_editor` | `control_editor` | `control_editor` | write | write | none | `control_editor.configure_editor` `control_editor.open_editor_tab` `control_editor.set_preferences` `control_editor.restore_editor_window` |
 | `control_editor.configure_viewport` | `control_editor` | `set_view_mode` | read | read | none | `control_editor.configure_viewport` `control_editor.set_view_mode` `control_editor.set_editor_mode` `control_editor.set_game_view` `control_editor.set_immersive_mode` `control_editor.set_viewport_realtime` `control_editor.show_stats` `control_editor.hide_stats` |
@@ -279,6 +282,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `control_editor.focus_actor` | `control_editor` | `focus_actor` | read | read | none | `control_editor.focus_actor` |
 | `control_editor.invoke_reflected_function` | `control_editor` | `control_editor` | destructive | destructive | elevated | `control_editor.invoke_reflected_function` |
 | `control_editor.jump_to_bookmark` | `control_editor` | `jump_to_bookmark` | read | read | none | `control_editor.jump_to_bookmark` |
+| `control_editor.list_editor_toolsets` | `control_editor` | `control_editor` | read | read | none | `control_editor.list_editor_toolsets` |
 | `control_editor.open_asset` | `control_editor` | `open_asset` | read | read | none | `control_editor.open_asset` |
 | `control_editor.open_level` | `control_editor` | `open_level` | write | write | none | `control_editor.open_level` |
 | `control_editor.play` | `control_editor` | `play` | write | write | none | `control_editor.play` `control_editor.pause` `control_editor.resume` `control_editor.stop` `control_editor.eject` `control_editor.possess` `control_editor.stop_pie` |

@@ -3982,6 +3982,9 @@
         "set_viewport_resolution",
         "invoke_reflected_function",
         "describe_reflected_api",
+        "list_editor_toolsets",
+        "call_editor_tool",
+        "call_editor_tool_destructive",
         "configure_editor",
         "console_command",
         "screenshot",
@@ -4023,11 +4026,13 @@
         "holdSeconds",
         "id",
         "includeMetadata",
+        "input",
         "inputAction",
         "inputType",
         "keepFile",
         "key",
         "levelPath",
+        "limit",
         "location",
         "metadata",
         "minimize",
@@ -4036,6 +4041,7 @@
         "objectPath",
         "path",
         "preferences",
+        "query",
         "realtime",
         "relaunch",
         "resolution",
@@ -4046,6 +4052,8 @@
         "stat",
         "steps",
         "tabId",
+        "toolName",
+        "toolset",
         "type",
         "unthrottle",
         "validateOnly",
@@ -4197,6 +4205,23 @@
             "type": "boolean",
             "description": "Attach caller-provided metadata to the response."
           },
+          "input": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "The tool's arguments, shaped by the inputSchema list_editor_toolsets returned for toolName. Omit for a tool without arguments."
+              },
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "The tool's arguments, shaped by the inputSchema list_editor_toolsets returned for toolName."
+              }
+            ],
+            "description": "The tool's arguments, shaped by the inputSchema list_editor_toolsets returned for toolName."
+          },
           "inputAction": {
             "type": "string",
             "description": "Enhanced Input action to inject directly, as an asset path such as /Game/Input/IA_Move. A raw key already reaches Enhanced Input through the active mapping contexts (key_down D moves a pawn whose context maps D); use inputAction when no key is mapped to the action, or to inject an analog value."
@@ -4216,6 +4241,12 @@
           "levelPath": {
             "type": "string",
             "description": "Level asset path."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "description": "Most tools listed (default 50); matchedTools and hasMore tell what was left out."
           },
           "location": {
             "oneOf": [
@@ -4291,6 +4322,10 @@
             "description": "Editor preferences key-value pairs.",
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
+          },
+          "query": {
+            "type": "string",
+            "description": "Words that must all appear in a tool's name or description (any case), e.g. \"state tree add\"."
           },
           "realtime": {
             "type": "boolean",
@@ -4383,6 +4418,14 @@
             "type": "string",
             "description": "Registered nomad tab id, for example \"BridgeTab\" (Quixel Bridge); \"Fab\" opens a new Fab tab."
           },
+          "toolName": {
+            "type": "string",
+            "description": "Full name of one tool, Toolset.Tool: returns its schema (description, inputSchema) and effect instead of the list."
+          },
+          "toolset": {
+            "type": "string",
+            "description": "List only the tools of this toolset, by the name the toolsets list shows."
+          },
           "type": {
             "type": "string",
             "description": "Input event type (key_down, key_up, key_tap = press then release, mouse_click, mouse_move), or widget_list / widget_click to operate the live UMG of a PIE session."
@@ -4446,6 +4489,9 @@
               "set_viewport_resolution",
               "invoke_reflected_function",
               "describe_reflected_api",
+              "list_editor_toolsets",
+              "call_editor_tool",
+              "call_editor_tool_destructive",
               "configure_editor",
               "console_command",
               "screenshot",

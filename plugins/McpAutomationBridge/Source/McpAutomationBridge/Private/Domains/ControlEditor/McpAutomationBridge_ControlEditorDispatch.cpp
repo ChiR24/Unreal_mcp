@@ -1,4 +1,5 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "Domains/ControlEditor/Toolsets/McpAutomationBridge_EditorToolsets.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     const FString &RequestId, const FString &Action,
@@ -64,6 +65,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorAction(
     return HandleDescribeReflectedApi(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("invoke_reflected_function"))
     return HandleInvokeReflectedFunction(RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("list_editor_toolsets"))
+    return McpEditorToolsets::HandleListToolsets(this, RequestId, Payload, RequestingSocket);
+  if (LowerSub == TEXT("call_editor_tool") || LowerSub == TEXT("call_editor_tool_destructive"))
+    return McpEditorToolsets::HandleCallTool(this, RequestId, Payload, RequestingSocket,
+                                             LowerSub == TEXT("call_editor_tool_destructive"));
   if (LowerSub == TEXT("console_command") || LowerSub == TEXT("execute_command"))
     return HandleControlEditorConsoleCommand(RequestId, Payload, RequestingSocket);
   if (LowerSub == TEXT("step_frame"))
