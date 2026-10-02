@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
+_Nothing yet._
+
+---
+
+## 🏷️ [0.6.0-beta-c] - 2026-10-02
+
+> [!NOTE]
+> **Beta.** Published as a semver prerelease (`0.6.0-beta-c`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release, **`0.5.30`**. This section is everything on `dev` since the `v0.6.0-beta-b` tag, written from the code diff.
+
+> [!IMPORTANT]
+> ### 🔍 The editor checks its own work, and long calls stay alive
+> Spawns, Blueprint component edits and mesh conversions measure where the result landed and name what is sunk, buried, floating or z-fighting; `sample_motion` plays and times a game over game time without the OS cursor; and a call that runs past the client's time limit answers that it is still running instead of failing. New one-call authoring covers smooth SDF shapes, polygon cages, text textures, whole widget layouts, palettes of material instances and several properties at once; Epic's 5.8 editor toolsets run behind the gateway's scopes and consent, and Fab imports run in the background. Contract changes are listed under **⚠️ Migration**.
+
 <details>
 <summary><b>✨ Added</b></summary>
 
@@ -387,6 +400,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Materials and textures: a material node knob the node does not have, `delete_node` where no id matches, `create_noise_texture` with an unknown `noiseType`.
   - Landscape and environment: `sculpt` with a tool other than Raise, Lower or Flatten, `create_landscape` with a section size the engine cannot build, `remove_foliage` naming nothing, a post-process variant with no value to write, `configure_capture_source` without `captureSource`.
 - `fab_search` rows no longer carry `rawIsFree`: `isFree` is derived from the price, because the listing's own flag disagrees with it.
+
+</details>
+
+<details>
+<summary><b>👥 Contributors</b></summary>
+
+- @theonlymankai-hash for making the plugin build on UE 5.8 (the Megascans probe and the PCG delay-load, #648).
+- @SoloGorilla for letting the content mounts the editor reports through the path checks, so plugin and Fab-pack roots are reachable (#652).
+
+</details>
+
+<details>
+<summary><b>📊 Change Statistics</b></summary>
+
+| Metric | Count |
+|--------|-------|
+| Diff range | `v0.6.0-beta-b..v0.6.0-beta-c` |
+| Commits | 489, the version bump and this release entry included |
+| Files changed | 3,108 (3,053 hand-written, not counting line-ending-only changes) |
+| Insertions / deletions | 104,422 / 492,733 (hand-written: 76,076 / 271,870) |
+| Capability records | 393 |
+| Callable `{tool, action}` pairs | 1,501 |
+| C++ domain directories | 55 |
 
 </details>
 

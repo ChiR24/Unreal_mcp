@@ -6,6 +6,12 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.6.0-beta-c] - 2026-10-02
+
+Plugin-side changes since the `v0.6.0-beta-b` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
+
 ### Added
 - **`server/discover`** — `FMcpNativeTransport::HandleServerDiscover` answers it without a session or `MCP-Protocol-Version` header (`bSessionless`, as `initialize`; the capability-token check still runs first): `McpSupportedProtocolVersions()`, the `capabilities` and `instructions` `initialize` sends (both now come from `DescribeServer`), the server identity under `_meta`, `ttlMs` 3600000 and `cacheScope` public.
 - **`raycast_mesh`** (inspect) — `McpAutomationBridge_EnvironmentHandlersInspectRaycast.cpp` converts the mesh's LOD0 source `FMeshDescription` to an `FDynamicMesh3`, as the placement audit does, and asks an `FDynamicMeshAABBTree3` for each ray's nearest hit; the slot name comes from the triangle's polygon group, or the mesh's slot of that index when the group has none (SDF and GeometryScript meshes). `decalRotation` is `FRotationMatrix::MakeFromXY(-Normal, Down)`: X into the surface, Y the texture's down.
