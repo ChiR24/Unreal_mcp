@@ -284,6 +284,13 @@ void WatchForImport(
 					TEXT("The import was still streaming when the %.0f-second ceiling was reached; %d asset(s) landed."),
 					Ceiling, Count);
 			}
+			else if (!Watch->FabFailure.IsEmpty())
+			{
+				Accepted.bTimedOut = false;
+				Accepted.ErrorCode = TEXT("IMPORT_PARTIAL");
+				Accepted.Error = FString::Printf(
+					TEXT("%d asset(s) landed under %s, but Fab also logged a failure: %s"), Count, *Accepted.RootPath, *Watch->FabFailure);
+			}
 
 			// The hooks come off before the post-import step: moving or saving assets raises registry
 			// events of its own, and none of them are this import.
