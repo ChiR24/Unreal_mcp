@@ -39,6 +39,11 @@ public class McpAutomationBridge : ModuleRules {
         string EngineDir = Path.GetFullPath(Target.RelativeEnginePath);
         AddOptionalModules(Target, EngineDir, new string[] { "D|GameplayAbilities|GameplayAbilities", "D|MetasoundEngine|MetasoundEngine", "C|MetasoundFrontend|MetasoundFrontend", "D|MetasoundEditor|MetasoundEditor", "D|StateTreeModule|StateTreeModule", "D|StateTreeEditorModule|StateTreeEditorModule", "D|SmartObjectsModule|SmartObjectsModule", "D|SmartObjectsEditorModule|SmartObjectsEditorModule", "C|StructUtils|StructUtils", "D|MassEntity|MassEntity", "D|MassSpawner|MassSpawner", "D|MassActors|MassActors", "D|OnlineSubsystem|OnlineSubsystem", "D|OnlineSubsystemUtils|OnlineSubsystemUtils", "D|ControlRig|ControlRig", "D|ControlRigDeveloper|ControlRigDeveloper", "D|ControlRigEditor|ControlRigEditor", "D|ProceduralMeshComponent|ProceduralMeshComponent", "D|EnvironmentQueryEditor|EnvironmentQueryEditor", "D|GeometryScriptingCore|GeometryScriptingCore", "D|GeometryScriptingEditor|GeometryScriptingEditor" });
 
+        // Catmull-Clark, Loop and bilinear subdivision (FSubdividePoly, over OpenSubdiv) live in MeshModelingToolset's editor module.
+        // It is added like GeometryScriptingCore above, delay-loaded, and the handler refuses clearly when it is not there.
+        bool bHasSubdividePoly = AddOptionalModule(Target, EngineDir, "ModelingComponentsEditorOnly", "ModelingComponentsEditorOnly", true);
+        PublicDefinitions.Add(bHasSubdividePoly ? "MCP_HAS_SUBDIVIDE_POLY=1" : "MCP_HAS_SUBDIVIDE_POLY=0");
+
         ProjectDescriptor Project = Target.ProjectFile == null ? null : ProjectDescriptor.FromFile(Target.ProjectFile);
         PluginDescriptor Bridge = PluginDescriptor.FromFile(new FileReference(Path.GetFullPath(Path.Combine(ModuleDirectory, "..", "..", "McpAutomationBridge.uplugin"))));
         // UE 5.8 PCG exports a data symbol (PCG::Private::UserParameterTagData), and MSVC cannot delay-load a DLL

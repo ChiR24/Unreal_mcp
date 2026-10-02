@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "03f8d4a702bc4cc5",
+  "catalogRevision": "d787edb12c8efbe0",
   "recordCount": 389,
   "records": [
     {
@@ -62643,14 +62643,20 @@
           "recalculate normals",
           "flip normals",
           "decimate",
-          "reduce triangles"
+          "reduce triangles",
+          "catmull clark",
+          "smooth subdivision",
+          "loop subdivision",
+          "subdivision surface",
+          "round the edges of a cage"
         ],
-        "summary": "Optimize or repair a mesh: simplify, remesh (uniform or voxel), subdivide, merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.",
+        "summary": "Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.",
         "whenToUse": [
           "optimization=simplify_mesh: A mesh must be simplified.",
           "optimization=remesh_uniform: A uniform remesh is needed.",
           "optimization=remesh_voxel: A watertight voxel remesh is needed.",
-          "optimization=subdivide: A mesh must be subdivided.",
+          "optimization=subdivide: A mesh must be refined. For a smooth, rounded model, author a coarse polygon cage (edit_dynamic_mesh append_polygons, one polygroup per face, or create_box) and subdivide it with scheme catmull_clark, iterations 2 or 3.",
+          "optimization=subdivide: The cage carries material ids and polygroups through the subdivision, so assign them with set_material_id first.",
           "optimization=merge_vertices: Duplicate vertices must be welded/merged.",
           "optimization=weld_vertices: Vertices must be welded by threshold.",
           "optimization=remove_degenerates: Degenerate triangles must be removed.",
@@ -62659,7 +62665,9 @@
           "optimization=recalculate_normals: Normals must be recalculated.",
           "optimization=recompute_tangents: Tangents must be recomputed for correct shading."
         ],
-        "whenNotToUse": []
+        "whenNotToUse": [
+          "optimization=subdivide: Edges must stay sharp; subdivision rounds every edge of the cage."
+        ]
       },
       "schemas": {
         "input": {
@@ -62692,7 +62700,17 @@
             },
             "iterations": {
               "type": "integer",
-              "description": "Number of iterations for smooth/remesh."
+              "description": "Subdivision level, 1 to 6 (default 1). Each level quadruples the face count, so 2 or 3 is enough for a smooth result; the call is refused past 500000 triangles."
+            },
+            "scheme": {
+              "type": "string",
+              "enum": [
+                "pn",
+                "catmull_clark",
+                "loop",
+                "bilinear"
+              ],
+              "description": "Subdivision scheme (default pn). pn: PN tessellation, which adds triangles and keeps the shape. catmull_clark: a smooth subdivision surface over a polygon cage, where every polygroup is one face (build the cage with edit_dynamic_mesh append_polygons, or start from create_box, which has one polygroup per face); the surface rounds toward the cage, and polygroups and material ids carry through. loop: smooths the triangles as they are and needs no cage. bilinear: cuts the cage into quads without smoothing. iterations is the level."
             },
             "weldDistance": {
               "type": "number",
@@ -62750,6 +62768,26 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "scheme": {
+              "type": "string",
+              "description": "Scheme that ran."
+            },
+            "level": {
+              "type": "integer",
+              "description": "Subdivision level that ran."
+            },
+            "trianglesBefore": {
+              "type": "integer",
+              "description": "Triangle count before."
+            },
+            "trianglesAfter": {
+              "type": "integer",
+              "description": "Triangle count after."
+            },
+            "cageFaces": {
+              "type": "integer",
+              "description": "Cage faces: polygroups for catmull_clark and bilinear, triangles for loop; absent for pn."
             }
           },
           "required": [
@@ -62760,7 +62798,7 @@
       },
       "examples": [
         {
-          "title": "Optimize or repair a mesh: simplify, remesh (uniform or voxel), subdivide, merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.",
+          "title": "Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.",
           "input": {
             "action": "optimize_mesh",
             "targetActor": "DM_A",
@@ -62829,6 +62867,9 @@
             "iterations": [
               "subdivide"
             ],
+            "scheme": [
+              "subdivide"
+            ],
             "weldDistance": [
               "merge_vertices",
               "weld_vertices"
@@ -62844,8 +62885,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0446133ef909c1d1ab353bce2207adde7c0d2f1b55d273ef05212ded884878b2",
-        "content": "5005e99cb498c9cf77e71b65277bd61e24db89ee54213b8606821c246bb0a03c"
+        "schema": "54de91db914a3a7763a0840716c681eb81b13bd32f1eb91787a0dbd3fa8c9942",
+        "content": "72b8ce942f6f9df415cd355e3d04f474f0828b8e7b7b5644c735166be25b4996"
       }
     },
     {

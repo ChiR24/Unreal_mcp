@@ -11520,6 +11520,7 @@
         "respectUVSeams",
         "rotation",
         "scale",
+        "scheme",
         "screenSizes",
         "segments",
         "setAll",
@@ -12227,6 +12228,16 @@
               }
             },
             "additionalProperties": false
+          },
+          "scheme": {
+            "type": "string",
+            "enum": [
+              "pn",
+              "catmull_clark",
+              "loop",
+              "bilinear"
+            ],
+            "description": "Subdivision scheme (default pn). pn: PN tessellation, which adds triangles and keeps the shape. catmull_clark: a smooth subdivision surface over a polygon cage, where every polygroup is one face (build the cage with edit_dynamic_mesh append_polygons, or start from create_box, which has one polygroup per face); the surface rounds toward the cage, and polygroups and material ids carry through. loop: smooths the triangles as they are and needs no cage. bilinear: cuts the cage into quads without smoothing. iterations is the level."
           },
           "screenSizes": {
             "type": "array",

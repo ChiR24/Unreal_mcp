@@ -21,6 +21,8 @@ const F = 'optimize';
 const PLUGIN = ['GeometryScripting'] as const;
 // remesh targets a triangle count when no targetEdgeLength is given.
 const REMESH_TRIS = { type: 'number', description: 'Triangle budget when targetEdgeLength is omitted (default 5000, voxel remesh: half the current count).' };
+const SUBDIVIDE_SCHEME = { type: 'string', enum: ['pn', 'catmull_clark', 'loop', 'bilinear'], description: 'Subdivision scheme (default pn). pn: PN tessellation, which adds triangles and keeps the shape. catmull_clark: a smooth subdivision surface over a polygon cage, where every polygroup is one face (build the cage with edit_dynamic_mesh append_polygons, or start from create_box, which has one polygroup per face); the surface rounds toward the cage, and polygroups and material ids carry through. loop: smooths the triangles as they are and needs no cage. bilinear: cuts the cage into quads without smoothing. iterations is the level.' };
+const SUBDIVIDE_LEVEL = { type: 'integer', description: 'Subdivision level, 1 to 6 (default 1). Each level quadruples the face count, so 2 or 3 is enough for a smooth result; the call is refused past 500000 triangles.' };
 const CONVERT_MATERIALS = { type: 'array', items: { type: 'string' }, description: 'Materials for the baked asset\'s slots as asset paths (a material or material instance): entry i is the material of slot i, which holds every triangle with material id i (set ids with edit_dynamic_mesh set_material_id). The asset gets the mesh\'s highest material id + 1 slots; slots you do not list, or list as "", keep the default material. A path that is unsafe or does not load as a material is refused before anything is created, and so is a list longer than the slot count.' };
 const SLOT = {
   type: 'object',
@@ -61,9 +63,20 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'subdivide', plugins: PLUGIN,
-    family: F, summary: 'Subdivide a dynamic mesh (increase resolution).', whenToUse: ['A mesh must be subdivided.'], whenNotToUse: ['A mesh must be simplified; use simplify_mesh.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, iterations: P.iterations }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
-    exampleInput: { action: 'subdivide', targetActor: 'DM_A', iterations: 2 },
+    topics: ['catmull clark', 'loop subdivision', 'subdivision surface', 'smooth subdivision', 'round the edges of a cage'],
+    family: F, summary: 'Subdivide a dynamic mesh: pn tessellation (default), or a Catmull-Clark, Loop or bilinear subdivision surface.',
+    whenToUse: ['A mesh must be refined. For a smooth, rounded model, author a coarse polygon cage (edit_dynamic_mesh append_polygons, one polygroup per face, or create_box) and subdivide it with scheme catmull_clark, iterations 2 or 3.',
+      'The cage carries material ids and polygroups through the subdivision, so assign them with set_material_id first.'],
+    whenNotToUse: ['A mesh must be simplified; use simplify_mesh.', 'Edges must stay sharp; subdivision rounds every edge of the cage.'],
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, iterations: SUBDIVIDE_LEVEL, scheme: SUBDIVIDE_SCHEME }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: {
+      scheme: { type: 'string', description: 'Scheme that ran.' },
+      level: { type: 'integer', description: 'Subdivision level that ran.' },
+      trianglesBefore: { type: 'integer', description: 'Triangle count before.' },
+      trianglesAfter: { type: 'integer', description: 'Triangle count after.' },
+      cageFaces: { type: 'integer', description: 'Cage faces: polygroups for catmull_clark and bilinear, triangles for loop; absent for pn.' },
+    },
+    exampleInput: { action: 'subdivide', targetActor: 'DM_Cage', scheme: 'catmull_clark', iterations: 2 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'remesh_uniform', plugins: PLUGIN,

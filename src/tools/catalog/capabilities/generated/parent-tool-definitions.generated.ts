@@ -15699,6 +15699,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
+        "scheme": {
+          "type": "string",
+          "enum": [
+            "pn",
+            "catmull_clark",
+            "loop",
+            "bilinear"
+          ],
+          "description": "Subdivision scheme (default pn). pn: PN tessellation, which adds triangles and keeps the shape. catmull_clark: a smooth subdivision surface over a polygon cage, where every polygroup is one face (build the cage with edit_dynamic_mesh append_polygons, or start from create_box, which has one polygroup per face); the surface rounds toward the cage, and polygroups and material ids carry through. loop: smooths the triangles as they are and needs no cage. bilinear: cuts the cage into quads without smoothing. iterations is the level."
+        },
         "screenSizes": {
           "type": "array",
           "items": {
@@ -16161,6 +16171,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Blue channel, 0-1."
         },
+        "cageFaces": {
+          "type": "integer",
+          "description": "Cage faces: polygroups for catmull_clark and bilinear, triangles for loop; absent for pn."
+        },
         "cellSize": {
           "type": "number",
           "description": "Grid cell size in cm."
@@ -16201,6 +16215,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "largerGroups": {
           "type": "number",
           "description": "Groups of more than two triangles."
+        },
+        "level": {
+          "type": "integer",
+          "description": "Subdivision level that ran."
         },
         "materialId": {
           "type": "integer",
@@ -16282,6 +16300,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Grid cells along the longest side, as used."
         },
+        "scheme": {
+          "type": "string",
+          "description": "Scheme that ran."
+        },
         "singleTriangleGroups": {
           "type": "number",
           "description": "Triangles left in a group of their own."
@@ -16355,11 +16377,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Triangles the faces came to once larger polygons were triangulated."
         },
         "trianglesAfter": {
-          "type": "number",
+          "type": [
+            "integer",
+            "number"
+          ],
           "description": "Triangle count after (before + 2 per poked triangle)."
         },
         "trianglesBefore": {
-          "type": "number",
+          "type": [
+            "integer",
+            "number"
+          ],
           "description": "Triangle count before."
         },
         "trianglesPoked": {

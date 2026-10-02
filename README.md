@@ -345,7 +345,7 @@ The bridge declares its engine-plugin dependencies, so Unreal enables them toget
 | **Chaos Vehicles**, **Chaos Cloth** | `animation_physics`: vehicles and cloth |
 | **Niagara Editor** | `manage_effect`: Niagara authoring |
 | **Behavior Tree Editor**, **Environment Query Editor**, **StateTree**, **Mass Gameplay** | `manage_ai` |
-| **Geometry Scripting**, **Geometry Processing**, **Procedural Mesh Component** | `manage_geometry` |
+| **Geometry Scripting**, **Geometry Processing**, **Mesh Modeling Toolset**, **Procedural Mesh Component** | `manage_geometry` (Catmull-Clark, Loop and bilinear subdivision need Mesh Modeling Toolset) |
 | **PCG** | `manage_pcg`, compiled in only when the project itself enables the PCG plugin |
 | **MetaSound**, **Synthesis** | `manage_audio`: MetaSound authoring |
 | **Enhanced Input**, **Online Subsystem**, **Online Subsystem Utils** | `manage_networking`: input mappings, sessions |

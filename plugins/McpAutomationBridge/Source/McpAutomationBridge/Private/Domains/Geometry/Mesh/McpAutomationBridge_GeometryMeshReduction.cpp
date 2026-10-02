@@ -48,10 +48,21 @@ bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& Request
                             const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
+    const FString Scheme = GetJsonStringField(Payload, TEXT("scheme"), TEXT("pn")).ToLower();
     const int32 Iterations = FMath::Clamp(GetJsonIntField(Payload, TEXT("iterations"), 1), 1, MAX_SUBDIVIDE_ITERATIONS);
+    if (Scheme != TEXT("pn") && Scheme != TEXT("catmull_clark") && Scheme != TEXT("loop") && Scheme != TEXT("bilinear"))
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown subdivision scheme '%s'; use pn, catmull_clark, loop or bilinear."), *Scheme), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
 
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
+    if (Scheme != TEXT("pn"))
+    {
+        return SubdivideByScheme(Self, RequestId, Socket, *Target, ActorName, Scheme, Iterations);
+    }
     auto [TargetActor, DMC, Mesh] = *Target;
 
     const int32 TriCountBefore = Mesh->GetTriangleCount();
@@ -68,6 +79,10 @@ bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetStringField(TEXT("scheme"), TEXT("pn"));
+    Result->SetNumberField(TEXT("level"), Iterations);
+    Result->SetNumberField(TEXT("trianglesBefore"), TriCountBefore);
+    Result->SetNumberField(TEXT("trianglesAfter"), TriCountAfter);
     Result->SetNumberField(TEXT("iterations"), Iterations);
     Result->SetNumberField(TEXT("originalTriangles"), TriCountBefore);
     Result->SetNumberField(TEXT("subdividedTriangles"), TriCountAfter);

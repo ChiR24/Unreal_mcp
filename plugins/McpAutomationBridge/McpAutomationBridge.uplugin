@@ -131,6 +131,11 @@
       "Optional": true
     },
     {
+      "Name": "MeshModelingToolset",
+      "Enabled": true,
+      "Optional": true
+    },
+    {
       "Name": "ChaosCloth",
       "Enabled": true,
       "Optional": true
