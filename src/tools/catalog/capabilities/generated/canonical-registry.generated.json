@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7c39282c4d1a6420",
+  "catalogRevision": "91fe975f08ad08ae",
   "recordCount": 393,
   "records": [
     {
@@ -15348,6 +15348,16 @@
               "type": "boolean",
               "description": "Whether the blueprint asset was saved after the link was made."
             },
+            "replacedLinks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Links the new one replaced, each {nodeId, nodeTitle, pinName}: a pin that holds one link (an exec output, a data input) drops its old link to take the new one. Absent when nothing was replaced."
+            },
             "nodeId": {
               "type": "string",
               "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
@@ -15600,8 +15610,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "53943709fd6eada4e25f11fa770cf801117cf5a257c8c57822ac2f70cb741286",
-        "content": "9636ad7a620a3fd2efed243080638e70910e82d6f2cf13bec739e9c5f0f17a55"
+        "schema": "5fd8e82aababd263480107f147d541a52eea95e28e678449a1de75ddc17d28e2",
+        "content": "d0b83fe1889bffe4e14bb892348868eb1f6d6ed1474fc81fa115069e7201c2a1"
       }
     },
     {

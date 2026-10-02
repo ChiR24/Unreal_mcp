@@ -101,6 +101,7 @@ TArray<TSharedPtr<FJsonValue>> CollectBlueprintFunctions(UBlueprint* Blueprint)
         Fn->SetStringField(TEXT("name"), Graph->GetName());
 
         bool bIsPublic = true;
+        bool bResultRead = false;
         TArray<TSharedPtr<FJsonValue>> Inputs;
         TArray<TSharedPtr<FJsonValue>> Outputs;
 
@@ -110,10 +111,13 @@ TArray<TSharedPtr<FJsonValue>> CollectBlueprintFunctions(UBlueprint* Blueprint)
             UK2Node_FunctionEntry* EntryNode = Cast<UK2Node_FunctionEntry>(Node);
             UK2Node_EditablePinBase* PinNode = EntryNode ? static_cast<UK2Node_EditablePinBase*>(EntryNode)
                                                          : Cast<UK2Node_FunctionResult>(Node);
-            if (!PinNode)
+            // Every return node of a function carries the same outputs: a function with two
+            // returns listed each output twice.
+            if (!PinNode || (!EntryNode && bResultRead))
             {
                 continue;
             }
+            bResultRead |= !EntryNode;
             for (const TSharedPtr<FUserPinInfo>& PinInfo : PinNode->UserDefinedPins)
             {
                 if (PinInfo.IsValid())

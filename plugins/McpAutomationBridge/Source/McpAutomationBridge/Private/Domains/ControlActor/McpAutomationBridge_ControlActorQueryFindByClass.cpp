@@ -81,14 +81,17 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorFindByClass(
       // A name that resolves to nothing is a caller error, not an empty search.
       UE_LOG(LogMcpAutomationBridgeSubsystem, Warning,
              TEXT("HandleControlActorFindByClass: Class '%s' not found"), *ClassName);
+      // A wrong folder was the usual miss; naming where an asset of that name lives ends the guessing.
+      const FString SameNamed = McpSameNamedAssetPaths(ClassName);
+      const FString Where = SameNamed.IsEmpty() ? FString() : FString::Printf(TEXT(" Assets with that name: %s."), *SameNamed);
       SendAutomationError(
           Socket, RequestId,
           FString::Printf(
               TEXT("Class '%s' did not resolve to a UClass, so no actors could "
                    "be matched. A Blueprint takes its asset name (BP_Thing) or "
                    "generated-class path (/Game/Path/BP_Thing.BP_Thing_C); native classes take a "
-                   "short name (StaticMeshActor) or /Script/Engine.Actor."),
-              *ClassName),
+                   "short name (StaticMeshActor) or /Script/Engine.Actor.%s"),
+              *ClassName, *Where),
           TEXT("CLASS_NOT_FOUND"));
       return true;
     }

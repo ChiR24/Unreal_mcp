@@ -87,7 +87,14 @@ FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName
                                     "or a Blueprint asset path (/Game/Folder/BP_Name)."), *MemberClass);
     }
     UClass* HintClass = ResolvedClass ? ResolvedClass : (Blueprint ? Blueprint->GeneratedClass.Get() : nullptr);
-    return FString::Printf(TEXT("Function '%s' not found.%s"), *MemberName, *SuggestMemberFix(HintClass, MemberName));
+    FString Hint = SuggestMemberFix(HintClass, MemberName);
+    // Without a memberClass the stock libraries are searched too, so their near names are the likely fix.
+    UClass* Libraries[] = {UKismetMathLibrary::StaticClass(), UKismetSystemLibrary::StaticClass(), UGameplayStatics::StaticClass()};
+    for (int32 Index = 0; Hint.IsEmpty() && MemberClass.IsEmpty() && Index < UE_ARRAY_COUNT(Libraries); ++Index)
+    {
+        Hint = SuggestMemberFix(Libraries[Index], MemberName);
+    }
+    return FString::Printf(TEXT("Function '%s' not found.%s"), *MemberName, *Hint);
 }
 
 // The name may be exactly right and live on another class: a function library

@@ -74,14 +74,16 @@ static inline FString SuggestMemberFix(UClass* Class, const FString& Wanted)
                 *PropName, *Class->GetName(), *PropName);
         }
     }
-    const FString WantedLower = Wanted.ToLower();
+    // Underscores do not count: VInterpToConstant asked for VInterpTo_Constant and was told nothing.
+    const FString WantedKey = Wanted.Replace(TEXT("_"), TEXT("")).ToLower();
+    const FString BareKey = Bare.Replace(TEXT("_"), TEXT("")).ToLower();
     TArray<FString> Close;
     for (TFieldIterator<UFunction> FuncIt(Class); FuncIt; ++FuncIt)
     {
         const FString Name = FuncIt->GetName();
-        const FString Lower = Name.ToLower();
-        if (Lower.Contains(WantedLower) ||
-            (Bare.Len() >= 4 && Lower.Contains(Bare.ToLower())))
+        const FString Key = Name.Replace(TEXT("_"), TEXT("")).ToLower();
+        if (Key.Contains(WantedKey) ||
+            (Bare.Len() >= 4 && Key.Contains(BareKey)))
         {
             Close.AddUnique(Name);
         }

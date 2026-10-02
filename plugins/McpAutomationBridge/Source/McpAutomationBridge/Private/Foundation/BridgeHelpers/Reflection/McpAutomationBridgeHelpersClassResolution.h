@@ -72,6 +72,27 @@ static inline UClass *McpFindTypeQuiet(const FString &NameOrPath) {
   return FindObject<UClass>(nullptr, *NameOrPath);
 }
 
+// The /Game assets named like the last segment of a class path that did not resolve, so a
+// wrong folder ("/Game/X/Gameplay/BP_Bug" for /Game/X/Enemies/BP_Bug) names the right one.
+static inline FString McpSameNamedAssetPaths(const FString &ClassNameOrPath) {
+  FString Name = ClassNameOrPath;
+  int32 Slash = INDEX_NONE;
+  if (Name.FindLastChar(TEXT('/'), Slash))
+    Name = Name.RightChop(Slash + 1);
+  FString Left, Right;
+  if (Name.Split(TEXT("."), &Left, &Right))
+    Name = Left;
+  Name.RemoveFromEnd(TEXT("_C"));
+  TArray<FAssetData> Assets;
+  FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().GetAssetsByPath(FName(TEXT("/Game")), Assets, true);
+  TArray<FString> Paths;
+  for (const FAssetData &Asset : Assets) {
+    if (Paths.Num() < 4 && Asset.AssetName.ToString().Equals(Name, ESearchCase::IgnoreCase))
+      Paths.Add(Asset.PackageName.ToString());
+  }
+  return FString::Join(Paths, TEXT(", "));
+}
+
 static inline UClass *ResolveClassByName(const FString &ClassNameOrPath) {
   if (ClassNameOrPath.IsEmpty())
     return nullptr;

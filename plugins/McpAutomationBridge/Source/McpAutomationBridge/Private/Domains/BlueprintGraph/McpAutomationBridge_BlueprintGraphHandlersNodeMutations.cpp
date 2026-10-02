@@ -190,12 +190,27 @@ static bool SetNodeProperty(FActionContext& Context)
         TargetNode->GetClass()->GetName() == TEXT("K2Node_MathExpression");
     const FStrProperty* ExpressionProp = bMathExpression ? FindFProperty<FStrProperty>(TargetNode->GetClass(), TEXT("Expression")) : nullptr;
     const FString OldExpression = ExpressionProp ? ExpressionProp->GetPropertyValue_InContainer(TargetNode) : FString();
+    // The failed parse drops the input links, so the restore below puts them back by pin name.
+    TArray<TPair<FName, TArray<UEdGraphPin*>>> SavedLinks;
+    for (const UEdGraphPin* Pin : bMathExpression ? TargetNode->Pins : TArray<UEdGraphPin*>())
+    {
+        if (Pin && !Pin->bOrphanedPin && Pin->LinkedTo.Num() > 0) SavedLinks.Emplace(Pin->PinName, Pin->LinkedTo);
+    }
     if (!bHandled)
         bHandled = McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, Value);
-    if (bHandled && bMathExpression &&
-        !TargetNode->Pins.ContainsByPredicate([](const UEdGraphPin* Pin) { return Pin && Pin->Direction == EGPD_Output; }))
+    // An orphaned pin is the old output kept only for its links: counting it hid the failed parse.
+    if (bHandled && bMathExpression && !TargetNode->Pins.ContainsByPredicate([](const UEdGraphPin* Pin)
+        { return Pin && Pin->Direction == EGPD_Output && !Pin->bOrphanedPin; }))
     {
         McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, OldExpression);
+        for (const TPair<FName, TArray<UEdGraphPin*>>& Saved : SavedLinks)
+        {
+            UEdGraphPin* Pin = TargetNode->FindPin(Saved.Key);
+            for (UEdGraphPin* Other : Saved.Value)
+            {
+                if (Pin && Other && !Pin->LinkedTo.Contains(Other)) Pin->MakeLinkTo(Other);
+            }
+        }
         Context.SendError(
             FString::Printf(TEXT("The expression '%s' does not parse, so the node would have no output; it keeps '%s'. ")
                             TEXT("Write a negative number as 0 - x (there is no unary minus) and use only the math "

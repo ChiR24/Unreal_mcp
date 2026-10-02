@@ -13270,6 +13270,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the widget that was removed from the widget tree."
         },
+        "replacedLinks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Links the new one replaced, each {nodeId, nodeTitle, pinName}: a pin that holds one link (an exec output, a data input) drops its old link to take the new one. Absent when nothing was replaced."
+        },
         "resultNodeGuid": {
           "type": "string",
           "description": "The function's return node, present when the function has one (it is made when outputs are declared)."

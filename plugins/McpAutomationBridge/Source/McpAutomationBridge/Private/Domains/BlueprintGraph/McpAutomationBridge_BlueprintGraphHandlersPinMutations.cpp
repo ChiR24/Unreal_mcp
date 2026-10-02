@@ -142,6 +142,9 @@ static bool ConnectPins(FActionContext& Context)
         }
     }
 
+    // A pin that holds one link (an exec output, a data input) drops its old one without a word.
+    const TArray<UEdGraphPin*> FromBefore = FromPin->LinkedTo;
+    const TArray<UEdGraphPin*> ToBefore = ToPin->LinkedTo;
     const UEdGraphSchema* Schema = Context.TargetGraph->GetSchema();
     if (!Schema->TryCreateConnection(FromPin, ToPin))
     {
@@ -200,6 +203,28 @@ static bool ConnectPins(FActionContext& Context)
     Result->SetStringField(TEXT("targetPinName"), ToPin->GetName());
     Result->SetStringField(TEXT("sourcePinType"), FromPin->PinType.PinCategory.ToString());
     Result->SetStringField(TEXT("targetPinType"), ToPin->PinType.PinCategory.ToString());
+    TArray<TSharedPtr<FJsonValue>> Replaced;
+    auto NoteDropped = [&Replaced](const UEdGraphPin* Pin, const TArray<UEdGraphPin*>& Before)
+    {
+        for (UEdGraphPin* Old : Before)
+        {
+            UEdGraphNode* OldNode = Old ? Old->GetOwningNodeUnchecked() : nullptr;
+            if (OldNode && !Pin->LinkedTo.Contains(Old))
+            {
+                TSharedPtr<FJsonObject> Link = MakeShared<FJsonObject>();
+                Link->SetStringField(TEXT("nodeId"), OldNode->NodeGuid.ToString());
+                Link->SetStringField(TEXT("nodeTitle"), OldNode->GetNodeTitle(ENodeTitleType::ListView).ToString());
+                Link->SetStringField(TEXT("pinName"), Old->GetName());
+                Replaced.Add(MakeShared<FJsonValueObject>(Link));
+            }
+        }
+    };
+    NoteDropped(FromPin, FromBefore);
+    NoteDropped(ToPin, ToBefore);
+    if (Replaced.Num() > 0)
+    {
+        Result->SetArrayField(TEXT("replacedLinks"), Replaced);
+    }
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(
         ConversionNode ? TEXT("Pins connected (conversion node inserted).")

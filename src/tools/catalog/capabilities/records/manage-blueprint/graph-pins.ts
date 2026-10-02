@@ -34,6 +34,12 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
       targetPinType: { type: 'string', description: 'Pin category of the target pin.' },
       blueprintPath: { type: 'string', description: 'Normalized blueprint path the link was written to.' },
       saved: { type: 'boolean', description: 'Whether the blueprint asset was saved after the link was made.' },
+      replacedLinks: {
+        type: 'array',
+        items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+        'x-unreal-reflection-boundary': true,
+        description: 'Links the new one replaced, each {nodeId, nodeTitle, pinName}: a pin that holds one link (an exec output, a data input) drops its old link to take the new one. Absent when nothing was replaced.',
+      },
     },
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
