@@ -260,7 +260,7 @@ if (!ComponentClass) {
         FString RenamedTo;
         if (OpSummary->TryGetStringField(TEXT("renamedTo"), RenamedTo))
           Applied->SetStringField(TEXT("componentName"), RenamedTo);
-        ApplyModifyScsModifyComponent(LocalBP, LocalSCS, Applied, OpSummary);
+        ApplyModifyScsModifyComponent(LocalBP, LocalBP->SimpleConstructionScript, Applied, OpSummary);
       }
     } else {
       USCS_Node *NewNode =
