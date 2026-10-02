@@ -429,7 +429,7 @@ describe('an edit_scs operation takes location, rotation and scale directly on i
 
     expect(apply).toMatch(/if \(!Value->TryGetObject\(Transform\) \|\| !Transform\)\s*Rejected\.Add\(/u);
     expect(apply).toMatch(/else if \(!Scene\)\s*Rejected\.Add\(/u);
-    expect(apply).toMatch(/Field->Type == EJson::Object \|\| \(Field->TryGetArray\(Triple\) && Triple->Num\(\) >= 3\)\)\s*\+\+Readable;\s*else\s*Rejected\.Add\(/u);
+    expect(apply).toMatch(/\(Field->Type == EJson::Object && Field->AsObject\(\)->Values\.Num\(\) > 0\) \|\| \(Field->TryGetArray\(Triple\) && Triple->Num\(\) >= 3\)\)\s*\+\+Readable;\s*else\s*Rejected\.Add\(/u);
     expect(apply.indexOf('if (Readable == 0)')).toBeGreaterThan(-1);
     expect(apply.indexOf('if (Readable == 0)')).toBeLessThan(write);
     expect(apply).toMatch(/Scene->SetRelativeRotation\(Rotation\);\s*Scene->SetRelativeScale3D\(Scale\);\s*bAnyApplied = true;/u);

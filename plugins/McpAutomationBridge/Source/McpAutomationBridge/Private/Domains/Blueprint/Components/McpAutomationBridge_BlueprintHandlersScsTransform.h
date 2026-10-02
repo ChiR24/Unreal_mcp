@@ -61,7 +61,7 @@ inline TArray<FString> Apply(UActorComponent *Template, const TSharedPtr<FJsonOb
     const TArray<TSharedPtr<FJsonValue>> *Triple = nullptr;
     if (!Field.IsValid() || Field->IsNull())
       continue;
-    if (Field->Type == EJson::Object || (Field->TryGetArray(Triple) && Triple->Num() >= 3))
+    if ((Field->Type == EJson::Object && Field->AsObject()->Values.Num() > 0) || (Field->TryGetArray(Triple) && Triple->Num() >= 3))
       ++Readable;
     else
       Rejected.Add(FString::Printf(TEXT("%s: expected an object ({x,y,z} or {pitch,yaw,roll}) or an array of three numbers"), Part));
