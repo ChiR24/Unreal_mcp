@@ -264,7 +264,7 @@ These route requests inside the gateway; clients never list them. More in the [T
 | Core | `manage_tools` | Which internal tools are enabled (through `configure`) |
 | World | `build_environment` | Landscapes, foliage, lights and sky, water, weather, splines, procedural terrain |
 | World | `manage_level_structure` | Sublevels, World Partition, streaming, data layers, HLOD, volumes |
-| World | `manage_geometry` | Geometry Script meshes: booleans, deformers, UVs, collision, LODs |
+| World | `manage_geometry` | Geometry Script meshes: booleans, deformers, UVs, collision, LODs, polygon cages, subdivision surfaces, material ids, vertex-color masks |
 | World | `manage_pcg` | PCG graphs: create, add and connect nodes, execute |
 | Gameplay | `animation_physics` | Animation Blueprints, blend spaces, montages, skeletons, Control Rig and IK, ragdolls, cloth, vehicles |
 | Gameplay | `manage_character` | Character Blueprints, movement, MetaHuman |
