@@ -123,6 +123,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Actor property paths** — `McpResolveActorPropertyPath` reads `Holder.Property` off the object the actor's own object property `Holder` points at, before matching component names.
 - **Slow-frame warning** — `McpSlowFrameWarning` names the render cost, not the background throttle the run had turned off.
 - **Scan depth** — `MaxScanDepth` is 24 in `McpPrequeueGate` and `McpCapabilityPathScan` (was 8); `MaxScanNodes` stays 4096 and a truncated scan still refuses.
+- **Batch step failures** — `SendAutomationError` skips its "Automation request failed" warning for a request `FMcpResponseCaptureRegistry` is capturing, so the outer request's log capture no longer repeats a step's failure under `warnings`.
 - **Replaced links** — `ConnectPins` snapshots both pins' links before `TryCreateConnection` and lists any the schema broke under `replacedLinks`, which batch steps keep.
 - **Conversion collision** — `ApplyConversionCollision` calls `UBodySetup::InvalidatePhysicsData()` before `CreatePhysicsMeshes()`: a body setup reused by a conversion over an existing asset is already marked built, so the new shapes were never cooked. Box mode adds an `FKBoxElem` (no cooking) in place of an 8-point convex hull.
 - **World delete count** — `DeleteWorldPackagesByPath` tells the registry about each deleted map (`ScanModifiedAssetFiles`) before counting it; a path scan skipped the folder it had already seen, so the log said "Deleted 0/N world assets" with every map gone.

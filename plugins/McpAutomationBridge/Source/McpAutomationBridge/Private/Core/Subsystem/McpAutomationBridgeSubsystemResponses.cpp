@@ -232,8 +232,13 @@ void UMcpAutomationBridgeSubsystem::SendAutomationError(
     const FString& ErrorCode)
 {
     const FString ResolvedError = ErrorCode.IsEmpty() ? TEXT("AUTOMATION_ERROR") : ErrorCode;
-    UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation request failed (%s): %s"),
-           *ResolvedError, *SanitizeForLog(Message));
+    // A batch step's failure is data in the batch's own reply; logged, the outer request's warning
+    // capture repeated it under warnings beside the batch's own list of misses.
+    if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId))
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("Automation request failed (%s): %s"),
+               *ResolvedError, *SanitizeForLog(Message));
+    }
     SendAutomationResponse(TargetSocket, RequestId, false, Message, nullptr, ResolvedError);
 }
 
