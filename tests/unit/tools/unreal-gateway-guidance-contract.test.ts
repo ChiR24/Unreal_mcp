@@ -6,9 +6,10 @@ import Ajv from 'ajv';
 // works because the test transform papers over it. Mirrors the interop in
 // src/utils/responses/response-validator.ts.
 const AjvCtor = (Ajv as typeof Ajv & { default?: typeof Ajv.default }).default ?? Ajv.default;
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { handleUnrealGatewayCall, type GatewayContext } from '../../../src/server/tool-registry-gateway.js';
+import { STILL_RUNNING_AFTER_MS } from '../../../src/server/gateway/gateway-execute.js';
 import { EXECUTION_OPTION_KEYS } from '../../../src/tools/catalog/capabilities/semantic/execution-options.js';
 import {
   UNREAL_GATEWAY_DESCRIPTION,
@@ -160,5 +161,47 @@ describe('a plugin from another release is named on every failed execute', () =>
     const reply = await handleUnrealGatewayCall(spawn, mismatched({ success: true, actorName: 'StaticMeshActor_0' }));
     expect(reply.success).toBe(true);
     expect(reply.versionMismatch).toBeUndefined();
+  });
+});
+
+describe('a call still running when the client would give up answers for itself', () => {
+  const spawn = { operation: 'execute', tool: 'control_actor', action: 'spawn', params: { classPath: '/Script/Engine.StaticMeshActor' } };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it(`answers at ${STILL_RUNNING_AFTER_MS} ms with a running task, and the late result still replays under its idempotencyKey`, async () => {
+    vi.useFakeTimers();
+    let finish: (value: unknown) => void = () => undefined;
+    const slow = new Promise((resolve) => { finish = resolve; });
+    const context = gatewayContext(
+      { isConnected: () => true, sendAutomationRequest: () => slow, getAuthority: () => ({ scopes: ['admin'] }) },
+      'still-running'
+    );
+    const keyed = { ...spawn, options: { idempotencyKey: 'slow-spawn-1' } };
+
+    const pending = handleUnrealGatewayCall(keyed, context);
+    await vi.advanceTimersByTimeAsync(STILL_RUNNING_AFTER_MS);
+    const early = await pending;
+    expect(early.success).toBe(true);
+    expect((early.receipt as { task?: { state?: string } }).task?.state).toBe('running');
+    expect(String((early.data as { message?: string }).message)).toContain('same idempotencyKey');
+
+    finish({ success: true, actorName: 'StaticMeshActor_0' });
+    await vi.runAllTimersAsync();
+    const replay = await handleUnrealGatewayCall(keyed, context);
+    expect(replay.replayed).toBe(true);
+    expect((replay.receipt as { task?: unknown }).task).toBeUndefined();
+  });
+
+  it('a call that finishes first answers with its result as before', async () => {
+    const context = gatewayContext(
+      { isConnected: () => true, sendAutomationRequest: async () => ({ success: true, actorName: 'StaticMeshActor_0' }), getAuthority: () => ({ scopes: ['admin'] }) },
+      'fast'
+    );
+    const reply = await handleUnrealGatewayCall(spawn, context);
+    expect(reply.success).toBe(true);
+    expect((reply.receipt as { task?: unknown }).task).toBeUndefined();
   });
 });

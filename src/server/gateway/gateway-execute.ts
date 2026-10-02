@@ -22,11 +22,12 @@ import { resolveExecuteTarget } from './gateway-execute-resolve.js';
 import { capabilityIndex } from './gateway-capability-index.js';
 import { resolveDispatchAction } from './gateway-dispatch-by.js';
 import { checkStaticRequest } from './gateway-execute-static-check.js';
-import { executeErrorEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
+import { executeErrorEnvelope, executeSuccessEnvelope, refuseWithTarget } from './gateway-execute-envelope.js';
 import { dispatchAndValidate, type GatewayContext } from './gateway-execute-dispatch.js';
 import { checkConsentAuthorization, checkExpectedCatalogRevision, checkScopeAuthorization, matchedFoldedGrant } from './gateway-execute-policy.js';
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
-import { buildReceiptContext } from './gateway-receipt-context.js';
+import { buildReceiptContext, type GatewayReceiptContext } from './gateway-receipt-context.js';
+import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
 import {
   conflictMessage,
   IDEMPOTENCY_CONFLICT_CODE,
@@ -151,7 +152,7 @@ export async function executeGatewayCall(
 
   // Dedup sits here, after every refusal stage, so an unauthorized or invalid
   // request can never occupy a slot or be replayed as a recorded success.
-  return await runWithIdempotency(
+  const settled = runWithIdempotency(
       {
         capabilityId: target.record.id,
         principal: authority?.profile ?? LOCAL_PRINCIPAL,
@@ -172,4 +173,41 @@ export async function executeGatewayCall(
       }, receiptContext),
       (recorded: Record<string, unknown>) => markReplayed(recorded, receiptContext.correlationId)
     );
+  return await answerWhileRunning(settled, target.record, receiptContext, context);
+}
+
+/** When a call that has not finished answers for itself, as the native transport's keepalive does. */
+export const STILL_RUNNING_AFTER_MS = 27_000;
+
+// A client gives up on a call at its own timeout (often 30 s) while Unreal keeps
+// working, and the result was lost. Past 27 s the call answers with a success
+// receipt whose task is still running: the work goes on, its idempotency slot
+// stays claimed until it settles, and the same call with the same
+// idempotencyKey then replays the real result.
+async function answerWhileRunning(
+  settled: Promise<Record<string, unknown>>,
+  record: CapabilityRecord,
+  receiptContext: GatewayReceiptContext,
+  context: GatewayContext
+): Promise<Record<string, unknown>> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const running = new Promise<undefined>((resolve) => {
+    timer = setTimeout(resolve, STILL_RUNNING_AFTER_MS, undefined);
+  });
+  const first = await Promise.race([settled, running]).finally(() => clearTimeout(timer));
+  if (first !== undefined) return first;
+  settled.then(
+    (receipt) => context.logger.info(`${record.id} finished after its still-running answer (success=${String(receipt.success)}).`),
+    (error: unknown) => context.logger.warn(`${record.id} failed after its still-running answer: ${error instanceof Error ? error.message : String(error)}`)
+  );
+  const readBack = receiptContext.idempotencyId === undefined
+    ? 'Do not send it again; read the result back once it is done.'
+    : 'Send this call again with the same idempotencyKey once it is done: it answers with the result instead of running again.';
+  const message = `Still running after ${STILL_RUNNING_AFTER_MS / 1000} s. Unreal keeps going; this answer does not stop it. ${readBack}`;
+  return executeSuccessEnvelope({
+    record,
+    result: { success: true, message, task: { taskId: receiptContext.correlationId, state: 'running' } },
+    canonicalOutput: { message },
+    warnings: []
+  }, receiptContext);
 }
