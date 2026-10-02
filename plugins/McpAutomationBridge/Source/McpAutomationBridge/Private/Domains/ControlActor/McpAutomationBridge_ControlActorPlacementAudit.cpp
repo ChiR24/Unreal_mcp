@@ -139,6 +139,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
   FString BlueprintPath;
   if (Payload.IsValid() && Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) &&
       !BlueprintPath.IsEmpty()) {
+    if (WantedKinds.Num() > 0 || !NameFilter.IsEmpty() || Payload->HasField(TEXT("maxTilt"))) {
+      SendAutomationError(Socket, RequestId,
+          TEXT("kinds, nameFilter and maxTilt filter the level's actors; with blueprintPath every part of the Blueprint is "
+               "measured. Drop them, or omit blueprintPath to audit the level."),
+          TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
     FString PartError;
     const TSharedPtr<FJsonObject> Parts = McpPartPlacement::BuildBlueprintAuditReply(
         BlueprintPath, MinSeverity > 0.0 ? MinSeverity : 0.5, Limit, PartError);

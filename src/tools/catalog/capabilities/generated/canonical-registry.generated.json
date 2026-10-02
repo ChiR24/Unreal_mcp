@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ddef954bfa096244",
+  "catalogRevision": "48d48061fe9b6eb9",
   "recordCount": 393,
   "records": [
     {
@@ -30169,7 +30169,7 @@
             },
             "blueprintPath": {
               "type": "string",
-              "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out; mcp.placement.ok:<component> accepts the embed in that one part only and keeps every other check. Blueprint component edits report the same for the parts they touch, as partWarnings."
+              "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm), and kinds, nameFilter and maxTilt are refused (INVALID_ARGUMENT). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out; mcp.placement.ok:<component> accepts the embed in that one part only and keeps every other check. Blueprint component edits report the same for the parts they touch, as partWarnings."
             }
           },
           "required": [
@@ -30286,8 +30286,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3dea1657d19fc56934e167605c9ef42485fd4da754c45edbd55890c26a8d3a11",
-        "content": "8b6d55502e6216375978b8d2d7ae5525bd96727b554749b3377441d8feab11e7"
+        "schema": "281bee05b2676e8052af31d843191e88a7a9f7ffcddb079b2e23481feebbfa97",
+        "content": "3b2b294fb9c0d7ccce30297a7703a5056a505c77d4ab24727e5c6a4733fdc087"
       }
     },
     {
