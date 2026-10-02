@@ -32,9 +32,9 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'optimize_mesh', selector: 'optimization',
-    summary: 'Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.',
-    topics: ['simplify mesh', 'remesh', 'subdivide', 'weld vertices', 'fill holes', 'recalculate normals', 'flip normals', 'decimate', 'reduce triangles', 'catmull clark', 'smooth subdivision'],
-    members: byName(['simplify_mesh', 'remesh_uniform', 'remesh_voxel', 'subdivide', 'merge_vertices', 'weld_vertices', 'remove_degenerates', 'fill_holes',
+    summary: 'Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), morphology (voxel offset: dilate, contract, close to fillet where unioned parts meet, open), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.',
+    topics: ['simplify mesh', 'remesh', 'subdivide', 'weld vertices', 'fill holes', 'recalculate normals', 'flip normals', 'decimate', 'reduce triangles', 'catmull clark', 'smooth subdivision', 'fillet'],
+    members: byName(['simplify_mesh', 'remesh_uniform', 'remesh_voxel', 'subdivide', 'morphology', 'merge_vertices', 'weld_vertices', 'remove_degenerates', 'fill_holes',
       'flip_normals', 'recalculate_normals', 'recompute_tangents']),
   },
   {

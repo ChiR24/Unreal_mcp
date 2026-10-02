@@ -15434,6 +15434,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
+        "operation": {
+          "type": "string",
+          "enum": [
+            "dilate",
+            "contract",
+            "close",
+            "open"
+          ],
+          "description": "dilate grows the surface outward by distance, contract shrinks it inward; close (the default) fills creases and rounds the seams where parts meet, a fillet up to about twice distance wide; open shaves off bumps and thin parts smaller than distance."
+        },
         "optimization": {
           "type": "string",
           "enum": [
@@ -15441,6 +15451,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "remesh_uniform",
             "remesh_voxel",
             "subdivide",
+            "morphology",
             "merge_vertices",
             "weld_vertices",
             "remove_degenerates",
@@ -16109,6 +16120,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 20000,
           "description": "New points {x, y, z} in the mesh's local space, at most 20000. The faces of this call index into this list, so its first point is index 0. Points are never merged with the mesh's existing ones, and a point no face uses is left out."
         },
+        "voxelCount": {
+          "type": "integer",
+          "description": "Grid cells along the mesh's longest side for the voxel operations (default 128, clamped to 16-256): more cells keep thinner detail and cost more time and triangles. The reply's voxelSize is the resulting cell width in cm."
+        },
         "weight": {
           "type": "number",
           "description": "Weight for lattice deformation."
@@ -16192,6 +16207,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "Additional handler result fields not named by the contract."
         },
+        "distance": {
+          "type": "number",
+          "description": "Offset distance used, in cm."
+        },
         "elementsModified": {
           "type": "integer",
           "description": "Number of UV elements written."
@@ -16242,6 +16261,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "naniteEnabled": {
           "type": "boolean",
           "description": "Whether Nanite is on for the asset."
+        },
+        "note": {
+          "type": "string",
+          "description": "What the rebuild dropped, and a hint when distance is under one voxel."
+        },
+        "operation": {
+          "type": "string",
+          "description": "Operation that ran."
         },
         "parts": {
           "type": "array",
@@ -16443,6 +16470,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "verticesModified": {
           "type": "integer",
           "description": "Number of vertices whose colour changed."
+        },
+        "voxelCount": {
+          "type": "integer",
+          "description": "Grid cells along the longest side after clamping."
+        },
+        "voxelSize": {
+          "type": "number",
+          "description": "Width of one grid cell in cm."
         }
       },
       "additionalProperties": true

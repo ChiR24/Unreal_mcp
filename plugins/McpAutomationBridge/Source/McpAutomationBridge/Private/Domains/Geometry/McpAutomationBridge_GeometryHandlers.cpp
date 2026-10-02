@@ -167,7 +167,8 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     if (SubAction == TEXT("quadrangulate")) return HandleQuadrangulate(this, RequestId, Payload, RequestingSocket);
 
     // Remesh Operations
-    if (SubAction == TEXT("remesh_voxel")) return HandleRemeshUniform(this, RequestId, Payload, RequestingSocket, true);
+    if (SubAction == TEXT("remesh_voxel")) return HandleRemeshVoxel(this, RequestId, Payload, RequestingSocket);
+    if (SubAction == TEXT("morphology")) return HandleMorphology(this, RequestId, Payload, RequestingSocket);
 
     // Complex Collision
     if (SubAction == TEXT("generate_complex_collision")) return HandleGenerateCollision(this, RequestId, Payload, RequestingSocket, true);

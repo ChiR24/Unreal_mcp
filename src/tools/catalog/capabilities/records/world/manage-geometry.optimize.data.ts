@@ -1,6 +1,6 @@
 /**
  * Geometry mirror/array/optimization/UV/normals/collision/Nanite family records
- * (28 actions).
+ * (29 actions).
  *
  * Grounded in manage-geometry-tool.ts (mirror/array_linear/array_radial,
  * simplify_mesh/subdivide/remesh_uniform/remesh_voxel/merge/weld/fill/remove,
@@ -20,7 +20,11 @@ import { P } from './properties.js';
 const F = 'optimize';
 const PLUGIN = ['GeometryScripting'] as const;
 // remesh targets a triangle count when no targetEdgeLength is given.
-const REMESH_TRIS = { type: 'number', description: 'Triangle budget when targetEdgeLength is omitted (default 5000, voxel remesh: half the current count).' };
+const REMESH_TRIS = { type: 'number', description: 'Triangle budget when targetEdgeLength is omitted (remesh_uniform default 5000). remesh_voxel only approximates it, picking the grid cell from the surface area, and uses voxelCount first when that is given.' };
+// A fold keeps the first member's text, so this one describes the grid for both remesh_voxel and morphology.
+const VOXEL_COUNT = { type: 'integer', description: 'Grid cells along the mesh\'s longest side for the voxel operations (default 128, clamped to 16-256): more cells keep thinner detail and cost more time and triangles. The reply\'s voxelSize is the resulting cell width in cm.' };
+const MORPH_OPERATION = { type: 'string', enum: ['dilate', 'contract', 'close', 'open'], description: 'dilate grows the surface outward by distance, contract shrinks it inward; close (the default) fills creases and rounds the seams where parts meet, a fillet up to about twice distance wide; open shaves off bumps and thin parts smaller than distance.' };
+const MORPH_DISTANCE = { type: 'number', description: 'Offset distance in cm (default 2% of the mesh\'s longest side). Keep it above one voxel (the longest side divided by voxelCount) or the effect barely registers.' };
 const SUBDIVIDE_SCHEME = { type: 'string', enum: ['pn', 'catmull_clark', 'loop', 'bilinear'], description: 'Subdivision scheme (default pn). pn: PN tessellation, which adds triangles and keeps the shape. catmull_clark: a smooth subdivision surface over a polygon cage, where every polygroup is one face (build the cage with edit_dynamic_mesh append_polygons, or start from create_box, which has one polygroup per face); the surface rounds toward the cage, and polygroups and material ids carry through. loop: smooths the triangles as they are and needs no cage. bilinear: cuts the cage into quads without smoothing. iterations is the level.' };
 const SUBDIVIDE_LEVEL = { type: 'integer', description: 'Subdivision level, 1 to 6 (default 1). Each level quadruples the face count, so 2 or 3 is enough for a smooth result; the call is refused past 500000 triangles.' };
 const CONVERT_MATERIALS = { type: 'array', items: { type: 'string' }, description: 'Materials for the baked asset\'s slots as asset paths (a material or material instance): entry i is the material of slot i, which holds every triangle with material id i (set ids with edit_dynamic_mesh set_material_id). The asset gets the mesh\'s highest material id + 1 slots; slots you do not list, or list as "", keep the default material. A path that is unsafe or does not load as a material is refused before anything is created, and so is a list longer than the slot count.' };
@@ -92,9 +96,30 @@ export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'remesh_voxel', plugins: PLUGIN,
-    family: F, summary: 'Voxel-remesh a dynamic mesh to a watertight form.', whenToUse: ['A watertight voxel remesh is needed.'], whenNotToUse: ['A uniform remesh is needed; use remesh_uniform.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, targetEdgeLength: P.targetEdgeLength, targetTriangleCount: REMESH_TRIS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { longRunning: true }, costLatency: 'long-running', costResources: 'high',
-    exampleInput: { action: 'remesh_voxel', targetActor: 'DM_A', targetEdgeLength: 8 },
+    family: F, summary: 'Voxel-wrap a dynamic mesh into one watertight, smooth-shaded surface (the engine\'s solidify): the mesh is sampled into a grid and rebuilt, closing holes and merging overlapping parts.',
+    whenToUse: ['A watertight voxel remesh is needed, for example to fuse unioned or overlapping parts into one skin. The grid cell is targetEdgeLength, or the longest side divided by voxelCount (default 128). The surface is rebuilt, so UVs, material ids, polygroups and vertex colours are dropped: run auto_uv, set_material_id and bake_vertex_colors afterwards.'],
+    whenNotToUse: ['A uniform remesh is needed; use remesh_uniform.', 'Seams between parts must be rounded rather than fused; use morphology close.'],
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, targetEdgeLength: P.targetEdgeLength, targetTriangleCount: REMESH_TRIS, voxelCount: VOXEL_COUNT }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { longRunning: true }, costLatency: 'long-running', costResources: 'high',
+    exampleInput: { action: 'remesh_voxel', targetActor: 'DM_A', voxelCount: 96 },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'morphology', plugins: PLUGIN,
+    topics: ['fillet', 'blend parts together', 'round the seams', 'dilate', 'contract', 'offset a mesh', 'close gaps in a mesh'],
+    family: F, summary: 'Offset a dynamic mesh\'s surface through a voxel grid: dilate, contract, close (fillet the seams where unioned parts meet) or open.',
+    whenToUse: ['Joined parts need a smooth blend: boolean_union them, then morphology close with a distance about the fillet radius, then auto_uv, set_material_id and bake_vertex_colors.',
+      'A mesh must grow or shrink evenly (dilate, contract), or small bumps must go (open).'],
+    whenNotToUse: ['Edges must stay crisp; the grid rounds every feature narrower than about twice distance.', 'UVs, material ids, polygroups or vertex colours must survive; the surface is rebuilt from the grid, so set them afterwards.'],
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, operation: MORPH_OPERATION, distance: MORPH_DISTANCE, voxelCount: VOXEL_COUNT }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', behavior: { longRunning: true }, costLatency: 'long-running', costResources: 'high',
+    outputProps: {
+      operation: { type: 'string', description: 'Operation that ran.' },
+      distance: { type: 'number', description: 'Offset distance used, in cm.' },
+      voxelCount: { type: 'integer', description: 'Grid cells along the longest side after clamping.' },
+      voxelSize: { type: 'number', description: 'Width of one grid cell in cm.' },
+      trianglesBefore: { type: 'integer', description: 'Triangle count before.' },
+      trianglesAfter: { type: 'integer', description: 'Triangle count after.' },
+      note: { type: 'string', description: 'What the rebuild dropped, and a hint when distance is under one voxel.' },
+    },
+    exampleInput: { action: 'morphology', targetActor: 'DM_A', operation: 'close', distance: 4, voxelCount: 128 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'weld_vertices', plugins: PLUGIN,

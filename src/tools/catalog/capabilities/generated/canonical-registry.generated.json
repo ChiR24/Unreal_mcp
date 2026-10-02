@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d787edb12c8efbe0",
+  "catalogRevision": "1cbd58ce87cbfb16",
   "recordCount": 389,
   "records": [
     {
@@ -62539,6 +62539,7 @@
         "manage_geometry.remesh_uniform",
         "manage_geometry.remesh_voxel",
         "manage_geometry.subdivide",
+        "manage_geometry.morphology",
         "manage_geometry.merge_vertices",
         "manage_geometry.weld_vertices",
         "manage_geometry.remove_degenerates",
@@ -62578,6 +62579,13 @@
           "action": "subdivide",
           "folded": {
             "optimization": "subdivide"
+          }
+        },
+        {
+          "tool": "manage_geometry",
+          "action": "morphology",
+          "folded": {
+            "optimization": "morphology"
           }
         },
         {
@@ -62646,17 +62654,26 @@
           "reduce triangles",
           "catmull clark",
           "smooth subdivision",
+          "fillet",
           "loop subdivision",
           "subdivision surface",
-          "round the edges of a cage"
+          "round the edges of a cage",
+          "blend parts together",
+          "round the seams",
+          "dilate",
+          "contract",
+          "offset a mesh",
+          "close gaps in a mesh"
         ],
-        "summary": "Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.",
+        "summary": "Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), morphology (voxel offset: dilate, contract, close to fillet where unioned parts meet, open), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.",
         "whenToUse": [
           "optimization=simplify_mesh: A mesh must be simplified.",
           "optimization=remesh_uniform: A uniform remesh is needed.",
-          "optimization=remesh_voxel: A watertight voxel remesh is needed.",
+          "optimization=remesh_voxel: A watertight voxel remesh is needed, for example to fuse unioned or overlapping parts into one skin. The grid cell is targetEdgeLength, or the longest side divided by voxelCount (default 128). The surface is rebuilt, so UVs, material ids, polygroups and vertex colours are dropped: run auto_uv, set_material_id and bake_vertex_colors afterwards.",
           "optimization=subdivide: A mesh must be refined. For a smooth, rounded model, author a coarse polygon cage (edit_dynamic_mesh append_polygons, one polygroup per face, or create_box) and subdivide it with scheme catmull_clark, iterations 2 or 3.",
           "optimization=subdivide: The cage carries material ids and polygroups through the subdivision, so assign them with set_material_id first.",
+          "optimization=morphology: Joined parts need a smooth blend: boolean_union them, then morphology close with a distance about the fillet radius, then auto_uv, set_material_id and bake_vertex_colors.",
+          "optimization=morphology: A mesh must grow or shrink evenly (dilate, contract), or small bumps must go (open).",
           "optimization=merge_vertices: Duplicate vertices must be welded/merged.",
           "optimization=weld_vertices: Vertices must be welded by threshold.",
           "optimization=remove_degenerates: Degenerate triangles must be removed.",
@@ -62666,7 +62683,9 @@
           "optimization=recompute_tangents: Tangents must be recomputed for correct shading."
         ],
         "whenNotToUse": [
-          "optimization=subdivide: Edges must stay sharp; subdivision rounds every edge of the cage."
+          "optimization=subdivide: Edges must stay sharp; subdivision rounds every edge of the cage.",
+          "optimization=morphology: Edges must stay crisp; the grid rounds every feature narrower than about twice distance.",
+          "optimization=morphology: UVs, material ids, polygroups or vertex colours must survive; the surface is rebuilt from the grid, so set them afterwards."
         ]
       },
       "schemas": {
@@ -62698,6 +62717,10 @@
               "type": "number",
               "description": "Target edge length for remeshing."
             },
+            "voxelCount": {
+              "type": "integer",
+              "description": "Grid cells along the mesh's longest side for the voxel operations (default 128, clamped to 16-256): more cells keep thinner detail and cost more time and triangles. The reply's voxelSize is the resulting cell width in cm."
+            },
             "iterations": {
               "type": "integer",
               "description": "Subdivision level, 1 to 6 (default 1). Each level quadruples the face count, so 2 or 3 is enough for a smooth result; the call is refused past 500000 triangles."
@@ -62711,6 +62734,20 @@
                 "bilinear"
               ],
               "description": "Subdivision scheme (default pn). pn: PN tessellation, which adds triangles and keeps the shape. catmull_clark: a smooth subdivision surface over a polygon cage, where every polygroup is one face (build the cage with edit_dynamic_mesh append_polygons, or start from create_box, which has one polygroup per face); the surface rounds toward the cage, and polygroups and material ids carry through. loop: smooths the triangles as they are and needs no cage. bilinear: cuts the cage into quads without smoothing. iterations is the level."
+            },
+            "operation": {
+              "type": "string",
+              "enum": [
+                "dilate",
+                "contract",
+                "close",
+                "open"
+              ],
+              "description": "dilate grows the surface outward by distance, contract shrinks it inward; close (the default) fills creases and rounds the seams where parts meet, a fillet up to about twice distance wide; open shaves off bumps and thin parts smaller than distance."
+            },
+            "distance": {
+              "type": "number",
+              "description": "Offset distance in cm (default 2% of the mesh's longest side). Keep it above one voxel (the longest side divided by voxelCount) or the effect barely registers."
             },
             "weldDistance": {
               "type": "number",
@@ -62731,6 +62768,7 @@
                 "remesh_uniform",
                 "remesh_voxel",
                 "subdivide",
+                "morphology",
                 "merge_vertices",
                 "weld_vertices",
                 "remove_degenerates",
@@ -62788,6 +62826,26 @@
             "cageFaces": {
               "type": "integer",
               "description": "Cage faces: polygroups for catmull_clark and bilinear, triangles for loop; absent for pn."
+            },
+            "operation": {
+              "type": "string",
+              "description": "Operation that ran."
+            },
+            "distance": {
+              "type": "number",
+              "description": "Offset distance used, in cm."
+            },
+            "voxelCount": {
+              "type": "integer",
+              "description": "Grid cells along the longest side after clamping."
+            },
+            "voxelSize": {
+              "type": "number",
+              "description": "Width of one grid cell in cm."
+            },
+            "note": {
+              "type": "string",
+              "description": "What the rebuild dropped, and a hint when distance is under one voxel."
             }
           },
           "required": [
@@ -62798,7 +62856,7 @@
       },
       "examples": [
         {
-          "title": "Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.",
+          "title": "Optimize, smooth or repair a mesh: simplify, remesh (uniform or voxel), subdivide (pn tessellation, or Catmull-Clark, Loop and bilinear surfaces from a polygroup cage), morphology (voxel offset: dilate, contract, close to fillet where unioned parts meet, open), merge or weld vertices, remove degenerates, fill holes, flip or recalculate normals, recompute tangents.",
           "input": {
             "action": "optimize_mesh",
             "targetActor": "DM_A",
@@ -62843,6 +62901,7 @@
             "remesh_uniform": "remesh_uniform",
             "remesh_voxel": "remesh_voxel",
             "subdivide": "subdivide",
+            "morphology": "morphology",
             "merge_vertices": "merge_vertices",
             "weld_vertices": "weld_vertices",
             "remove_degenerates": "remove_degenerates",
@@ -62864,11 +62923,21 @@
               "remesh_uniform",
               "remesh_voxel"
             ],
+            "voxelCount": [
+              "remesh_voxel",
+              "morphology"
+            ],
             "iterations": [
               "subdivide"
             ],
             "scheme": [
               "subdivide"
+            ],
+            "operation": [
+              "morphology"
+            ],
+            "distance": [
+              "morphology"
             ],
             "weldDistance": [
               "merge_vertices",
@@ -62885,8 +62954,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "54de91db914a3a7763a0840716c681eb81b13bd32f1eb91787a0dbd3fa8c9942",
-        "content": "72b8ce942f6f9df415cd355e3d04f474f0828b8e7b7b5644c735166be25b4996"
+        "schema": "abd8c5e3e5e593a48de5332a4bec4cca69e49d44c6485fce0d671300d0eded54",
+        "content": "e24d1410863557a3258c140dfda4a5a4cda4d749fc37d53c6be6337c69201547"
       }
     },
     {

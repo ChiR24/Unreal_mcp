@@ -92,9 +92,8 @@ bool HandleSubdivide(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 }
 
 bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
-                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket, bool bVoxel)
+                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
-    // remesh_voxel (GeometryScript has no voxel remesh) halves the triangle count and closes holes.
     const FString ActorName = GetJsonStringField(Payload, TEXT("actorName"));
     const TOptional<FMcpGeometryTarget> Target = ResolveGeometryTarget(Self, RequestId, ActorName, Socket);
     if (!Target) return true;
@@ -113,17 +112,9 @@ bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     else
     {
         UniformOptions.TargetType = EGeometryScriptUniformRemeshTargetType::TriangleCount;
-        UniformOptions.TargetTriangleCount = GetJsonIntField(Payload, TEXT("targetTriangleCount"), bVoxel ? FMath::Max(100, TrisBefore / 2) : 5000);
+        UniformOptions.TargetTriangleCount = GetJsonIntField(Payload, TEXT("targetTriangleCount"), 5000);
     }
     UGeometryScriptLibrary_RemeshingFunctions::ApplyUniformRemesh(Mesh, RemeshOptions, UniformOptions, nullptr);
-    if (bVoxel)
-    {
-        FGeometryScriptFillHolesOptions FillOptions;
-        FillOptions.FillMethod = EGeometryScriptFillHolesMethod::Automatic;
-        int32 NumFilled = 0;
-        int32 NumFailed = 0;
-        UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, NumFilled, NumFailed, nullptr);
-    }
     DMC->NotifyMeshUpdated();
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -131,7 +122,7 @@ bool HandleRemeshUniform(UMcpAutomationBridgeSubsystem* Self, const FString& Req
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());
     McpHandlerUtils::AddVerification(Result, TargetActor);
-    Self->SendAutomationResponse(Socket, RequestId, true, bVoxel ? TEXT("Voxel remesh applied") : TEXT("Uniform remesh applied"), Result);
+    Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Uniform remesh applied"), Result);
     return true;
 }
 

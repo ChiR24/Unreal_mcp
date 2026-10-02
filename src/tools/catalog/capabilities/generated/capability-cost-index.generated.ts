@@ -1095,6 +1095,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_geometry::merge_vertices": "long-running|high",
   "manage_geometry::mirror": "interactive|low",
   "manage_geometry::model_mesh": "interactive|medium",
+  "manage_geometry::morphology": "long-running|high",
   "manage_geometry::noise_deform": "interactive|medium",
   "manage_geometry::offset_faces": "interactive|medium",
   "manage_geometry::optimize_mesh": "long-running|high",
@@ -1531,4 +1532,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1518;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1519;
