@@ -63,9 +63,9 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_dynamic_mesh', selector: 'edit',
-    summary: 'Edit a procedural/dynamic mesh: create one, append vertices or triangles, set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.',
-    topics: ['procedural mesh', 'dynamic mesh', 'append vertex', 'append triangle', 'vertex color', 'vertex position', 'move a vertex', 'create a mesh from vertices'],
-    members: { create: 'create_procedural_mesh', append_vertex: 'append_vertex', append_triangle: 'append_triangle', set_vertex_position: 'set_vertex_position',
+    summary: 'Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.',
+    topics: ['procedural mesh', 'dynamic mesh', 'append vertex', 'append triangle', 'vertex color', 'vertex position', 'move a vertex', 'create a mesh from vertices', 'polygon cage'],
+    members: { create: 'create_procedural_mesh', append_vertex: 'append_vertex', append_triangle: 'append_triangle', append_polygons: 'append_polygons', set_vertex_position: 'set_vertex_position',
       set_vertex_color: 'set_vertex_color', set_uvs: 'set_uvs', split_normals: 'split_normals', translate: 'translate_mesh', difference: 'difference' },
   },
 ];

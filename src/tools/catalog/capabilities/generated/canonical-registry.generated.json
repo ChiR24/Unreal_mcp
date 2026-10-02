@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "513d9ef79a58b711",
+  "catalogRevision": "edd5fb4fd12ca442",
   "recordCount": 389,
   "records": [
     {
@@ -60132,6 +60132,7 @@
         "manage_geometry.create_procedural_mesh",
         "manage_geometry.append_vertex",
         "manage_geometry.append_triangle",
+        "manage_geometry.append_polygons",
         "manage_geometry.set_vertex_position",
         "manage_geometry.set_vertex_color",
         "manage_geometry.set_uvs",
@@ -60163,6 +60164,13 @@
           "action": "append_triangle",
           "folded": {
             "edit": "append_triangle"
+          }
+        },
+        {
+          "tool": "manage_geometry",
+          "action": "append_polygons",
+          "folded": {
+            "edit": "append_polygons"
           }
         },
         {
@@ -60220,13 +60228,21 @@
           "vertex color",
           "vertex position",
           "move a vertex",
-          "create a mesh from vertices"
+          "create a mesh from vertices",
+          "polygon cage",
+          "author a mesh from vertices and faces",
+          "quad mesh",
+          "hard surface cage",
+          "low poly blockout mesh",
+          "subdivision cage"
         ],
-        "summary": "Edit a procedural/dynamic mesh: create one, append vertices or triangles, set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
+        "summary": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
         "whenToUse": [
           "edit=create: A mesh must be built vertex by vertex rather than from a primitive.",
           "edit=append_vertex: A mesh is being authored point by point.",
           "edit=append_triangle: A face must be added to an authored mesh in one call.",
+          "edit=append_polygons: A smooth, rounded model starts as a coarse cage: append its vertices and faces here (one polygroup per face), then optimize_mesh subdivide with scheme catmull_clark and iterations 2 or 3.",
+          "edit=append_polygons: Faces must be built from an explicit vertex list, quads and larger polygons included, with polygroups or material ids set up front.",
           "edit=set_vertex_position: An authored vertex must be nudged without rebuilding the mesh.",
           "edit=set_vertex_color: Authored geometry must carry colour the material reads.",
           "edit=set_uvs: An authored vertex needs an exact UV rather than a generated one.",
@@ -60235,7 +60251,7 @@
           "edit=difference: A caller reaches for the CSG name for a subtraction."
         ],
         "whenNotToUse": [
-          "edit=create: A parametric shape is enough; use a create_* primitive.",
+          "edit=create|append_polygons: A parametric shape is enough; use a create_* primitive.",
           "edit=set_vertex_color: A material parameter is the right place for the colour.",
           "edit=set_uvs: The whole mesh needs unwrapping; use auto_uv or unwrap_uv.",
           "edit=split_normals: Normals only need recomputing; use recalculate_normals.",
@@ -60344,6 +60360,69 @@
               "type": "integer",
               "description": "Polygroup id assigned to the appended triangle."
             },
+            "vertices": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "z"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 20000,
+              "description": "New points {x, y, z} in the mesh's local space, at most 20000. The faces of this call index into this list, so its first point is index 0. Points are never merged with the mesh's existing ones, and a point no face uses is left out."
+            },
+            "faces": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "minItems": 3,
+                "maxItems": 256
+              },
+              "minItems": 1,
+              "maxItems": 20000,
+              "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup."
+            },
+            "faceGroups": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "maxItems": 20000,
+              "description": "Polygroup id of each face, one entry per face, 0 to 1000000 (default: a new unique group per face). Subdivision with catmull_clark treats every polygroup as one face of the cage, so leave this out for a cage of separate faces; give several faces one id to make one flat region."
+            },
+            "faceMaterials": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "maxItems": 20000,
+              "description": "Material id of each face, one entry per face, 0 to 255 (default 0). A material id becomes a static-mesh material slot when the mesh is baked with convert_to_static_mesh or convert_to_nanite."
+            },
             "vertexIndex": {
               "type": "integer",
               "description": "Index of the vertex the operation targets."
@@ -60421,6 +60500,7 @@
                 "create",
                 "append_vertex",
                 "append_triangle",
+                "append_polygons",
                 "set_vertex_position",
                 "set_vertex_color",
                 "set_uvs",
@@ -60497,6 +60577,22 @@
             "triangleCount": {
               "type": "integer",
               "description": "Triangle count of the mesh after the call."
+            },
+            "verticesAdded": {
+              "type": "integer",
+              "description": "Points appended: those some face uses."
+            },
+            "facesAdded": {
+              "type": "integer",
+              "description": "Faces appended."
+            },
+            "trianglesAdded": {
+              "type": "integer",
+              "description": "Triangles the faces came to once larger polygons were triangulated."
+            },
+            "groupCount": {
+              "type": "integer",
+              "description": "Distinct polygroups the mesh holds after the call."
             },
             "position": {
               "type": "object",
@@ -60585,7 +60681,7 @@
       },
       "examples": [
         {
-          "title": "Edit a procedural/dynamic mesh: create one, append vertices or triangles, set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
+          "title": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
           "input": {
             "action": "edit_dynamic_mesh",
             "name": "DM_Authored",
@@ -60632,6 +60728,7 @@
             "create": "create_procedural_mesh",
             "append_vertex": "append_vertex",
             "append_triangle": "append_triangle",
+            "append_polygons": "append_polygons",
             "set_vertex_position": "set_vertex_position",
             "set_vertex_color": "set_vertex_color",
             "set_uvs": "set_uvs",
@@ -60647,6 +60744,7 @@
               "create",
               "append_vertex",
               "append_triangle",
+              "append_polygons",
               "set_vertex_position",
               "set_vertex_color",
               "set_uvs",
@@ -60671,6 +60769,18 @@
             ],
             "groupID": [
               "append_triangle"
+            ],
+            "vertices": [
+              "append_polygons"
+            ],
+            "faces": [
+              "append_polygons"
+            ],
+            "faceGroups": [
+              "append_polygons"
+            ],
+            "faceMaterials": [
+              "append_polygons"
             ],
             "vertexIndex": [
               "set_vertex_position",
@@ -60721,8 +60831,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "951a5bd8651753a25fae01551c3b20b93c2e003d7ac77462d0a7446dbf9aaa2f",
-        "content": "85edaafc2546787dfab808a48109fed8e413dd9650956571460847081e84c62c"
+        "schema": "18287e248a7942ff9e9c93548a37f67901f1d1ecd97fcd57dbd24ada752eba48",
+        "content": "069554fa10c8adc44e495834baf0ca657980e56ff0c87dbe1032f6b2f175ac2b"
       }
     },
     {

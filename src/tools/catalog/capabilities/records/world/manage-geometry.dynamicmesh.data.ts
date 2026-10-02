@@ -1,5 +1,5 @@
 /**
- * DynamicMesh authoring records (12 actions), promoted from raw native routes.
+ * DynamicMesh authoring records (11 actions), promoted from raw native routes.
  *
  * These edit a UDynamicMeshComponent on a placed actor vertex by vertex, rather
  * than running a modeling operator over a whole mesh, so they address the mesh
@@ -22,6 +22,39 @@ const int = (d: string): JsonObject => ({ type: 'integer', description: d });
 
 const OUT_VERTEX_COUNT = int('Vertex count of the mesh after the call.');
 const OUT_TRIANGLE_COUNT = int('Triangle count of the mesh after the call.');
+
+const POINT = {
+  type: 'object',
+  properties: { x: { type: 'number', description: 'X' }, y: { type: 'number', description: 'Y' }, z: { type: 'number', description: 'Z' } },
+  required: ['x', 'y', 'z'],
+  additionalProperties: false,
+};
+const POLYGON_VERTICES = {
+  type: 'array',
+  items: POINT,
+  minItems: 1,
+  maxItems: 20000,
+  description: 'New points {x, y, z} in the mesh\'s local space, at most 20000. The faces of this call index into this list, so its first point is index 0. Points are never merged with the mesh\'s existing ones, and a point no face uses is left out.',
+};
+const POLYGON_FACES = {
+  type: 'array',
+  items: { type: 'array', items: { type: 'integer', minimum: 0 }, minItems: 3, maxItems: 256 },
+  minItems: 1,
+  maxItems: 20000,
+  description: 'Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face\'s corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face\'s polygroup.',
+};
+const FACE_GROUPS = {
+  type: 'array',
+  items: { type: 'integer', minimum: 0 },
+  maxItems: 20000,
+  description: 'Polygroup id of each face, one entry per face, 0 to 1000000 (default: a new unique group per face). Subdivision with catmull_clark treats every polygroup as one face of the cage, so leave this out for a cage of separate faces; give several faces one id to make one flat region.',
+};
+const FACE_MATERIALS = {
+  type: 'array',
+  items: { type: 'integer', minimum: 0, maximum: 255 },
+  maxItems: 20000,
+  description: 'Material id of each face, one entry per face, 0 to 255 (default 0). A material id becomes a static-mesh material slot when the mesh is baked with convert_to_static_mesh or convert_to_nanite.',
+};
 
 export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -149,6 +182,35 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
     outputRequired: ['actorName', 'translation'],
     exampleInput: { action: 'translate_mesh', actorName: 'DM_Authored', translation: { x: 0, y: 0, z: 50 } },
     exampleOutput: { success: true, actorName: 'DM_Authored', translation: { x: 0, y: 0, z: 50 } },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'append_polygons', plugins: PLUGIN,
+    topics: ['polygon cage', 'author a mesh from vertices and faces', 'quad mesh', 'hard surface cage', 'low poly blockout mesh', 'subdivision cage'],
+    family: F, summary: 'Author a polygon cage on a DynamicMesh actor in one call: new vertices and faces of three or more corners, each with its own polygroup and material id.',
+    whenToUse: ['A smooth, rounded model starts as a coarse cage: append its vertices and faces here (one polygroup per face), then optimize_mesh subdivide with scheme catmull_clark and iterations 2 or 3.',
+      'Faces must be built from an explicit vertex list, quads and larger polygons included, with polygroups or material ids set up front.'],
+    whenNotToUse: ['One triangle or one point is enough; use append_triangle or append_vertex.', 'A parametric shape is enough; use a create_* primitive.'],
+    inputProps: { actorName: P.actorName, vertices: POLYGON_VERTICES, faces: POLYGON_FACES, faceGroups: FACE_GROUPS, faceMaterials: FACE_MATERIALS },
+    required: ['actorName', 'vertices', 'faces'], effect: 'write', costLatency: 'interactive', costResources: 'medium',
+    outputProps: {
+      actorName: P.actorName,
+      verticesAdded: int('Points appended: those some face uses.'),
+      facesAdded: int('Faces appended.'),
+      trianglesAdded: int('Triangles the faces came to once larger polygons were triangulated.'),
+      vertexCount: OUT_VERTEX_COUNT,
+      triangleCount: OUT_TRIANGLE_COUNT,
+      groupCount: int('Distinct polygroups the mesh holds after the call.'),
+    },
+    outputRequired: ['actorName', 'verticesAdded', 'facesAdded', 'trianglesAdded', 'vertexCount', 'triangleCount', 'groupCount'],
+    exampleInput: {
+      action: 'append_polygons', actorName: 'DM_Cage',
+      vertices: [
+        { x: -50, y: -50, z: -50 }, { x: 50, y: -50, z: -50 }, { x: 50, y: 50, z: -50 }, { x: -50, y: 50, z: -50 },
+        { x: -50, y: -50, z: 50 }, { x: 50, y: -50, z: 50 }, { x: 50, y: 50, z: 50 }, { x: -50, y: 50, z: 50 },
+      ],
+      faces: [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]],
+    },
+    exampleOutput: { success: true, actorName: 'DM_Cage', verticesAdded: 8, facesAdded: 6, trianglesAdded: 12, vertexCount: 8, triangleCount: 12, groupCount: 6 },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'difference', plugins: PLUGIN,

@@ -1034,6 +1034,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_gas::set_effect_tags": "interactive|low",
   "manage_gas::set_instancing_policy": "interactive|low",
   "manage_gas::set_modifier_magnitude": "interactive|low",
+  "manage_geometry::append_polygons": "interactive|medium",
   "manage_geometry::append_triangle": "interactive|medium",
   "manage_geometry::append_vertex": "interactive|medium",
   "manage_geometry::array_linear": "interactive|medium",
@@ -1529,4 +1530,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1516;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1517;

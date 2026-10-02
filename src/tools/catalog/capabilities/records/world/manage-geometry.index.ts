@@ -1,8 +1,8 @@
 /**
  * manage_geometry capability record catalog.
  *
- * 86 authored CapabilityRecordSource entries -- primitives 14, operations 21,
- * deform 13, optimize 28, dynamicmesh 10 -- in manage_geometry action-enum
+ * 88 authored CapabilityRecordSource entries -- primitives 15, operations 21,
+ * deform 13, optimize 28, dynamicmesh 11 -- in manage_geometry action-enum
  * order, folded by MANAGE_GEOMETRY_FOLDS into the shipped records (counted by
  * ALL_CAPABILITY_RECORD_COUNT in records/aggregate.ts). Every authored action stays
  * callable as a folded legacy pair. Each record requires the GeometryScripting

@@ -74,6 +74,8 @@ inline constexpr double MAX_DIMENSION = 100000.0;
 inline constexpr double MIN_DIMENSION = 0.01;
 inline constexpr int32 MAX_TRIANGLES_PER_DYNAMIC_MESH = 500000;
 inline constexpr int32 MAX_SUBDIVIDE_ITERATIONS = 6;
+// The highest material id (static-mesh slot) set_material_id and append_polygons accept; the bake makes max id + 1 slots.
+inline constexpr int32 MAX_MATERIAL_ID = 255;
 inline constexpr float MEMORY_PRESSURE_CRITICAL = 0.90f;
 
 FTransform ReadTransformFromPayload(const TSharedPtr<FJsonObject>& Payload);
@@ -89,6 +91,19 @@ int32 DeformVertices(UDynamicMesh* Mesh, TFunctionRef<FVector(const FVector&)> M
 void RecomputeMeshNormals(UDynamicMesh* Mesh, const FGeometryScriptCalculateNormalsOptions& Options = FGeometryScriptCalculateNormalsOptions());
 // Optional triangleIndices -> mesh selection (dogfood #137); false after replying INVALID_SELECTION on bad ids.
 bool ReadTriangleSelection(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload, FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection);
+// append_polygons input once validated: the new points, each face's corner indices, the optional per-face polygroup
+// and material ids (empty when not given), and the triangles the faces came to with the face each one belongs to.
+struct FAppendPolygonsInput
+{
+    TArray<FVector3d> Vertices;
+    TArray<TArray<int32>> Faces;
+    TArray<int32> FaceGroups;
+    TArray<int32> FaceMaterials;
+    TArray<UE::Geometry::FIndex3i> Triangles;
+    TArray<int32> TriangleFace;
+};
+// False, with OutError naming the face at fault, when the payload's vertices and faces cannot be appended as a clean cage.
+bool ParseAppendPolygonsInput(const TSharedPtr<FJsonObject>& Payload, FAppendPolygonsInput& OutInput, FString& OutError);
 // Face operators take distance, or amount as the documented spelling.
 double FaceOpDistance(const TSharedPtr<FJsonObject>& Payload, double Default);
 int32 ClampSegments(int32 Value, int32 Default = 1);
@@ -196,6 +211,7 @@ bool HandleSplitNormals(UMcpAutomationBridgeSubsystem* Self, const FString& Requ
 bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleAppendPolygons(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);

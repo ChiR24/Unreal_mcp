@@ -15193,6 +15193,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "append_vertex",
             "append_triangle",
+            "append_polygons",
             "set_vertex_position",
             "set_vertex_color",
             "set_uvs",
@@ -15205,6 +15206,40 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "enableCollision": {
           "type": "boolean",
           "description": "Enable simple collision on the created DynamicMesh actor."
+        },
+        "faceGroups": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxItems": 20000,
+          "description": "Polygroup id of each face, one entry per face, 0 to 1000000 (default: a new unique group per face). Subdivision with catmull_clark treats every polygroup as one face of the cage, so leave this out for a cage of separate faces; give several faces one id to make one flat region."
+        },
+        "faceMaterials": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "maxItems": 20000,
+          "description": "Material id of each face, one entry per face, 0 to 255 (default 0). A material id becomes a static-mesh material slot when the mesh is baked with convert_to_static_mesh or convert_to_nanite."
+        },
+        "faces": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "minItems": 3,
+            "maxItems": 256
+          },
+          "minItems": 1,
+          "maxItems": 20000,
+          "description": "Faces, each a list of three or more vertex indices into vertices (at most 20000 faces). List a face's corners so that (v1 - v0) x (v2 - v0) points outward, and let two faces that share an edge run along it in opposite directions; the call refuses a face wound the other way, or an edge shared by more than two faces, and names the face. A face with more than three corners is triangulated (it may be concave) and all its triangles keep the face's polygroup."
         },
         "floating": {
           "type": "boolean",
@@ -15919,6 +15954,35 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Index of the vertex the operation targets."
         },
+        "vertices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "x": {
+                "type": "number",
+                "description": "X"
+              },
+              "y": {
+                "type": "number",
+                "description": "Y"
+              },
+              "z": {
+                "type": "number",
+                "description": "Z"
+              }
+            },
+            "required": [
+              "x",
+              "y",
+              "z"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 20000,
+          "description": "New points {x, y, z} in the mesh's local space, at most 20000. The faces of this call index into this list, so its first point is index 0. Points are never merged with the mesh's existing ones, and a point no face uses is left out."
+        },
         "weight": {
           "type": "number",
           "description": "Weight for lattice deformation."
@@ -15998,9 +16062,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Enable simple collision on the created DynamicMesh actor."
         },
+        "facesAdded": {
+          "type": "integer",
+          "description": "Faces appended."
+        },
         "g": {
           "type": "number",
           "description": "Green channel, 0-1."
+        },
+        "groupCount": {
+          "type": "integer",
+          "description": "Distinct polygroups the mesh holds after the call."
         },
         "largerGroups": {
           "type": "number",
@@ -16117,6 +16189,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "integer",
           "description": "Index of the triangle the operation targets."
         },
+        "trianglesAdded": {
+          "type": "integer",
+          "description": "Triangles the faces came to once larger polygons were triangulated."
+        },
         "trianglesAfter": {
           "type": "number",
           "description": "Triangle count after (before + 2 per poked triangle)."
@@ -16165,7 +16241,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Index of the third appended corner."
         },
         "verticesAdded": {
-          "type": "number",
+          "type": [
+            "integer",
+            "number"
+          ],
           "description": "New centre vertices."
         },
         "verticesModified": {
