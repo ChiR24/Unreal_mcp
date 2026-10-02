@@ -24,7 +24,7 @@ namespace
 {
 // Bounds for the payload path scan. A hostile client cannot make the gate walk
 // an unbounded structure before its request is even queued.
-constexpr int32 MaxScanDepth = 8;
+constexpr int32 MaxScanDepth = 24;
 constexpr int32 MaxScanNodes = 4096;
 
 struct FScanState
