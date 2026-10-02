@@ -15104,6 +15104,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "additionalProperties": false
         },
+        "collision": {
+          "type": "string",
+          "enum": [
+            "box",
+            "complex",
+            "none"
+          ],
+          "description": "Collision for the baked asset: box (default) is the bounds as one convex hull, which pawns can stand on; complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
+        },
         "collisionOp": {
           "type": "string",
           "enum": [
@@ -15343,6 +15352,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "minimum": 0,
           "maximum": 255,
           "description": "Material id to set, 0 to 255. The baked asset gets the highest id used + 1 slots."
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Materials for the baked asset's slots as asset paths (a material or material instance): entry i is the material of slot i, which holds every triangle with material id i (set ids with edit_dynamic_mesh set_material_id). The asset gets the mesh's highest material id + 1 slots; slots you do not list, or list as \"\", keep the default material. A path that is unsafe or does not load as a material is refused before anything is created, and so is a list longer than the slot count."
         },
         "maxHullCount": {
           "type": "integer",
@@ -16137,6 +16153,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Actor name in the level."
         },
+        "assetPath": {
+          "type": "string",
+          "description": "Path of the new static mesh asset."
+        },
         "b": {
           "type": "number",
           "description": "Blue channel, 0-1."
@@ -16148,6 +16168,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "class": {
           "type": "string",
           "description": "Class of the spawned actor."
+        },
+        "collision": {
+          "type": "string",
+          "description": "Collision the asset got."
         },
         "details": {
           "type": "object",
@@ -16196,6 +16220,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "name": {
           "type": "string",
           "description": "Name for the new asset or node."
+        },
+        "naniteEnabled": {
+          "type": "boolean",
+          "description": "Whether Nanite is on for the asset."
         },
         "parts": {
           "type": "array",
@@ -16261,6 +16289,28 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "skipped": {
           "type": "number",
           "description": "Degenerate or missing triangles that were left alone."
+        },
+        "slots": {
+          "type": "array",
+          "description": "The asset's material slots; an empty material is the default material.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "slot": {
+                "type": "integer",
+                "description": "Slot index, equal to the material id it holds."
+              },
+              "name": {
+                "type": "string",
+                "description": "Slot name."
+              },
+              "material": {
+                "type": "string",
+                "description": "Material asset path; empty for the default material."
+              }
+            },
+            "additionalProperties": false
+          }
         },
         "splitAngle": {
           "type": "number",

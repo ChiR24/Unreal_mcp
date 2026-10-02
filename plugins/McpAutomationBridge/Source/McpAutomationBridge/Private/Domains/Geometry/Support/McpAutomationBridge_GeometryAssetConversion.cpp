@@ -1,7 +1,8 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
-#include "PhysicsEngine/BodySetup.h"
+
+#include "Materials/MaterialInterface.h"
 
 namespace McpGeometryHandlers
 {
@@ -48,6 +49,22 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
         Self->SendAutomationError(Socket, RequestId, PathError, TEXT("INVALID_ASSET_PATH"));
         return true;
     }
+    const FString CollisionMode = GetJsonStringField(Payload, TEXT("collision"), TEXT("box")).ToLower();
+    if (CollisionMode != TEXT("box") && CollisionMode != TEXT("complex") && CollisionMode != TEXT("none"))
+    {
+        Self->SendAutomationError(Socket, RequestId,
+            FString::Printf(TEXT("Unknown collision '%s'; use box, complex or none."), *CollisionMode), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    // The materials are checked before anything is created, so a bad path leaves no half-made asset behind.
+    const int32 SlotCount = ConversionSlotCount(Target->Mesh);
+    TArray<UMaterialInterface*> Materials;
+    FString MaterialError;
+    if (!LoadConversionMaterials(Payload, SlotCount, Materials, MaterialError))
+    {
+        Self->SendAutomationError(Socket, RequestId, MaterialError, TEXT("INVALID_MATERIALS"));
+        return true;
+    }
 
     FGeometryScriptCreateNewStaticMeshAssetOptions CreateOptions;
     CreateOptions.bEnableRecomputeNormals = true;
@@ -74,60 +91,30 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
         return true;
     }
 
-    // A freshly created StaticMesh asset has NO collision body, so pawns fell
-    // straight through any level geometry built from converted meshes even
-    // though the asset itself rendered fine. Give the asset a simple collision
-    // body derived from its bounds (exact for the box primitives, a tight
-    // approximation for the round ones) and cook it synchronously, so the
-    // converted mesh is standable in PIE without a separate round-trip.
-    //
-    // Built from explicit convex-hull vertices in body space via the
-    // long-stable UBodySetup/FKAggregateGeom API rather than version-drifting
-    // Geometry Script static-mesh collision helpers.
+    // The asset comes out with one material slot more than the mesh's highest material id (all empty but the first)
+    // and no collision body; fill the slots and give it a body, then save again, because the first write predates both
+    // and without a second save the materials and the collision were gone on the next editor load.
+    TArray<TSharedPtr<FJsonValue>> SlotsJson;
     UStaticMesh* CreatedMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *AssetPath));
     if (CreatedMesh)
     {
-        UBodySetup* BodySetup = CreatedMesh->GetBodySetup();
-        if (!BodySetup)
-        {
-            BodySetup = NewObject<UBodySetup>(CreatedMesh, NAME_None, RF_Transactional);
-            CreatedMesh->SetBodySetup(BodySetup);
-        }
-
-        const FBox Bounds = CreatedMesh->GetBounds().GetBox();
-        const FVector Min = Bounds.Min;
-        const FVector Max = Bounds.Max;
-
-        BodySetup->CollisionTraceFlag = CTF_UseSimpleAsComplex;
-        BodySetup->AggGeom.ConvexElems.Reset();
-        BodySetup->AggGeom.BoxElems.Reset();
-        BodySetup->AggGeom.SphereElems.Reset();
-        BodySetup->AggGeom.SphylElems.Reset();
-        BodySetup->AggGeom.TaperedCapsuleElems.Reset();
-
-        FKConvexElem ConvexElem;
-        ConvexElem.VertexData.Reset(8);
-        for (int32 CornerIndex = 0; CornerIndex < 8; ++CornerIndex)
-        {
-            ConvexElem.VertexData.Add(FVector(
-                (CornerIndex & 1) ? Max.X : Min.X,
-                (CornerIndex & 2) ? Max.Y : Min.Y,
-                (CornerIndex & 4) ? Max.Z : Min.Z));
-        }
-        ConvexElem.UpdateElemBox();
-        BodySetup->AggGeom.ConvexElems.Add(ConvexElem);
-
-        // Cook the collision data so PIE can stand on the mesh immediately
-        // after this request returns.
-        BodySetup->CreatePhysicsMeshes();
-        CreatedMesh->MarkPackageDirty();
-        // The asset was written before the body was added; without a second save the
-        // collision was gone on the next editor load.
+        ApplyConversionMaterials(CreatedMesh, Materials, SlotCount);
+        ApplyConversionCollision(CreatedMesh, CollisionMode);
         if (!McpSafeAssetSave(CreatedMesh))
         {
             Self->SendAutomationError(Socket, RequestId, FString::Printf(
-                TEXT("%s was created, but its collision body could not be saved to disk."), *AssetPath), TEXT("SAVE_FAILED"));
+                TEXT("%s was created, but its materials and collision body could not be saved to disk."), *AssetPath), TEXT("SAVE_FAILED"));
             return true;
+        }
+        const TArray<FStaticMaterial>& Slots = CreatedMesh->GetStaticMaterials();
+        for (int32 Slot = 0; Slot < Slots.Num(); ++Slot)
+        {
+            TSharedPtr<FJsonObject> SlotJson = MakeShared<FJsonObject>();
+            SlotJson->SetNumberField(TEXT("slot"), Slot);
+            SlotJson->SetStringField(TEXT("name"), Slots[Slot].MaterialSlotName.ToString());
+            // An empty material is the engine's default material.
+            SlotJson->SetStringField(TEXT("material"), Slots[Slot].MaterialInterface ? Slots[Slot].MaterialInterface->GetPathName() : FString());
+            SlotsJson.Add(MakeShared<FJsonValueObject>(SlotJson));
         }
     }
 
@@ -148,6 +135,8 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("assetPath"), AssetPath);
     Result->SetBoolField(TEXT("naniteEnabled"), bNaniteOn);
+    Result->SetStringField(TEXT("collision"), CollisionMode);
+    Result->SetArrayField(TEXT("slots"), SlotsJson);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("StaticMesh created from DynamicMesh"), Result);
     return true;
 }

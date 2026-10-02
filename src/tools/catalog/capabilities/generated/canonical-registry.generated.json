@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bb5f88473712f8a0",
+  "catalogRevision": "03f8d4a702bc4cc5",
   "recordCount": 389,
   "records": [
     {
@@ -58727,9 +58727,9 @@
         "topics": [
           "convert_to_nanite"
         ],
-        "summary": "Bake a dynamic mesh into a Nanite-enabled static mesh asset; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced and its material slots come back empty (set them with asset.process_asset process=mesh_materials).",
+        "summary": "Bake a dynamic mesh into a Nanite-enabled static mesh asset, with a material per slot and a collision choice; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced, and its material slots come back empty unless materials fills them (asset.process_asset process=mesh_materials sets them later).",
         "whenToUse": [
-          "A baked static mesh must use Nanite for virtualized geometry."
+          "A baked static mesh must use Nanite for virtualized geometry. The end of the subdivision-surface workflow: append_polygons a cage, subdivide with catmull_clark, set_material_id per part, bake_vertex_colors, then convert here with materials (entry i is the material of id i)."
         ],
         "whenNotToUse": [
           "The baked mesh must not use Nanite; use convert_to_static_mesh."
@@ -58755,6 +58755,22 @@
             "targetActor": {
               "type": "string",
               "description": "Target actor name for boolean operations."
+            },
+            "materials": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Materials for the baked asset's slots as asset paths (a material or material instance): entry i is the material of slot i, which holds every triangle with material id i (set ids with edit_dynamic_mesh set_material_id). The asset gets the mesh's highest material id + 1 slots; slots you do not list, or list as \"\", keep the default material. A path that is unsafe or does not load as a material is refused before anything is created, and so is a list longer than the slot count."
+            },
+            "collision": {
+              "type": "string",
+              "enum": [
+                "box",
+                "complex",
+                "none"
+              ],
+              "description": "Collision for the baked asset: box (default) is the bounds as one convex hull, which pawns can stand on; complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
             }
           },
           "required": [
@@ -58782,6 +58798,40 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "Path of the new static mesh asset."
+            },
+            "naniteEnabled": {
+              "type": "boolean",
+              "description": "Whether Nanite is on for the asset."
+            },
+            "collision": {
+              "type": "string",
+              "description": "Collision the asset got."
+            },
+            "slots": {
+              "type": "array",
+              "description": "The asset's material slots; an empty material is the default material.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slot": {
+                    "type": "integer",
+                    "description": "Slot index, equal to the material id it holds."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Slot name."
+                  },
+                  "material": {
+                    "type": "string",
+                    "description": "Material asset path; empty for the default material."
+                  }
+                },
+                "additionalProperties": false
+              }
             }
           },
           "required": [
@@ -58792,10 +58842,14 @@
       },
       "examples": [
         {
-          "title": "Bake a dynamic mesh into a Nanite-enabled static mesh asset; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced and its material slots come back empty (set them with asset.process_asset process=mesh_materials).",
+          "title": "Bake a dynamic mesh into a Nanite-enabled static mesh asset, with a material per slot and a collision choice; the reply reads naniteEnabled back from the saved mesh. An asset already at outputPath is replaced, and its material slots come back empty unless materials fills them (asset.process_asset process=mesh_materials sets them later).",
           "input": {
             "action": "convert_to_nanite",
-            "targetActor": "SM_Rock"
+            "targetActor": "DM_Cage",
+            "materials": [
+              "/Engine/BasicShapes/BasicShapeMaterial"
+            ],
+            "collision": "complex"
           },
           "output": {
             "success": true
@@ -58831,8 +58885,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5964b833a9cf3f50c0a17f432814e627d2c2b05502f36c4b3efaeb67b03d3873",
-        "content": "5789a2c01a3520db5807b4c903dd9d68de6b904f151f4a0a78ae5ef8e984f8bf"
+        "schema": "290ae5dd6d06be18736ad2e769fdfaa8a3c01b124512d0f388c1c99bb14b00fe",
+        "content": "395dac8ead2772548522b2d543f5c73cbbb0f31efd7262bb65fa5d53120f0b6f"
       }
     },
     {
@@ -58854,9 +58908,10 @@
           "convert mesh",
           "dynamic mesh to static"
         ],
-        "summary": "Bake a dynamic mesh actor into a static mesh asset.",
+        "summary": "Bake a dynamic mesh actor into a static mesh asset, with a material per slot and a collision choice.",
         "whenToUse": [
-          "A dynamic mesh must be persisted as a static mesh."
+          "A dynamic mesh must be persisted as a static mesh. Give the triangles material ids with edit_dynamic_mesh set_material_id first, then list one material per id in materials (entry i is the material of id i).",
+          "Colours baked with bake_vertex_colors come through to the material's VertexColor node unchanged."
         ],
         "whenNotToUse": [
           "A static mesh must use Nanite; use convert_to_nanite."
@@ -58882,6 +58937,22 @@
             "targetActor": {
               "type": "string",
               "description": "Target actor name for boolean operations."
+            },
+            "materials": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Materials for the baked asset's slots as asset paths (a material or material instance): entry i is the material of slot i, which holds every triangle with material id i (set ids with edit_dynamic_mesh set_material_id). The asset gets the mesh's highest material id + 1 slots; slots you do not list, or list as \"\", keep the default material. A path that is unsafe or does not load as a material is refused before anything is created, and so is a list longer than the slot count."
+            },
+            "collision": {
+              "type": "string",
+              "enum": [
+                "box",
+                "complex",
+                "none"
+              ],
+              "description": "Collision for the baked asset: box (default) is the bounds as one convex hull, which pawns can stand on; complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
             }
           },
           "required": [
@@ -58909,6 +58980,40 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "Path of the new static mesh asset."
+            },
+            "naniteEnabled": {
+              "type": "boolean",
+              "description": "Whether Nanite is on for the asset."
+            },
+            "collision": {
+              "type": "string",
+              "description": "Collision the asset got."
+            },
+            "slots": {
+              "type": "array",
+              "description": "The asset's material slots; an empty material is the default material.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "slot": {
+                    "type": "integer",
+                    "description": "Slot index, equal to the material id it holds."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Slot name."
+                  },
+                  "material": {
+                    "type": "string",
+                    "description": "Material asset path; empty for the default material."
+                  }
+                },
+                "additionalProperties": false
+              }
             }
           },
           "required": [
@@ -58919,11 +59024,14 @@
       },
       "examples": [
         {
-          "title": "Bake a dynamic mesh actor into a static mesh asset.",
+          "title": "Bake a dynamic mesh actor into a static mesh asset, with a material per slot and a collision choice.",
           "input": {
             "action": "convert_to_static_mesh",
             "targetActor": "DM_A",
-            "outputPath": "/Game/Meshes/SM_Baked"
+            "outputPath": "/Game/Meshes/SM_Baked",
+            "materials": [
+              "/Engine/BasicShapes/BasicShapeMaterial"
+            ]
           },
           "output": {
             "success": true
@@ -58959,8 +59067,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5964b833a9cf3f50c0a17f432814e627d2c2b05502f36c4b3efaeb67b03d3873",
-        "content": "0e0a5fff5e7cf6fd6ad613506c2ec1b4d386e8325058592b20f28492d4fd71ec"
+        "schema": "290ae5dd6d06be18736ad2e769fdfaa8a3c01b124512d0f388c1c99bb14b00fe",
+        "content": "2a5cfbfc6ce731da747ddf8f26016c957573c7e272cddcab576724c58ded6b02"
       }
     },
     {

@@ -11455,6 +11455,7 @@
         "booleanOp",
         "cap",
         "center",
+        "collision",
         "collisionOp",
         "collisionType",
         "computeWeightedNormals",
@@ -11490,6 +11491,7 @@
         "lodIndex",
         "lodOp",
         "materialId",
+        "materials",
         "maxHullCount",
         "midpoint",
         "modeling",
@@ -11630,6 +11632,15 @@
               }
             },
             "additionalProperties": false
+          },
+          "collision": {
+            "type": "string",
+            "enum": [
+              "box",
+              "complex",
+              "none"
+            ],
+            "description": "Collision for the baked asset: box (default) is the bounds as one convex hull, which pawns can stand on; complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
           },
           "collisionOp": {
             "type": "string",
@@ -11870,6 +11881,13 @@
             "minimum": 0,
             "maximum": 255,
             "description": "Material id to set, 0 to 255. The baked asset gets the highest id used + 1 slots."
+          },
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Materials for the baked asset's slots as asset paths (a material or material instance): entry i is the material of slot i, which holds every triangle with material id i (set ids with edit_dynamic_mesh set_material_id). The asset gets the mesh's highest material id + 1 slots; slots you do not list, or list as \"\", keep the default material. A path that is unsafe or does not load as a material is refused before anything is created, and so is a list longer than the slot count."
           },
           "maxHullCount": {
             "type": "integer",

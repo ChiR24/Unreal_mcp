@@ -66,6 +66,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpGeometryHandlers, Log, All);
 
 struct FGeometryScriptMeshSelection; // global type (GeometryScript/GeometryScriptSelectionTypes.h), declared outside the namespace
+class UMaterialInterface;
 
 namespace McpGeometryHandlers
 {
@@ -118,6 +119,13 @@ int32 ClampSegments(int32 Value, int32 Default = 1);
 // else /Game/GeneratedMeshes/DefaultName. False, with OutError, for an unsafe path.
 bool ResolveConversionAssetPath(const TSharedPtr<FJsonObject>& Payload, const FString& DefaultName,
                                 FString& OutAssetPath, FString& OutError);
+// What a bake gives its asset (see GeometryConversionSlots.cpp): the slot count a mesh needs (highest material id + 1),
+// the payload `materials` loaded for those slots (false, with OutError, for a path that is unsafe or is no material),
+// the materials put into the asset's slots, and its collision: box, complex or none.
+int32 ConversionSlotCount(UDynamicMesh* Mesh);
+bool LoadConversionMaterials(const TSharedPtr<FJsonObject>& Payload, int32 SlotCount, TArray<UMaterialInterface*>& OutMaterials, FString& OutError);
+void ApplyConversionMaterials(UStaticMesh* Mesh, const TArray<UMaterialInterface*>& Materials, int32 SlotCount);
+void ApplyConversionCollision(UStaticMesh* Mesh, const FString& Mode);
 // create_primitive declares numSides/radialSegments/numRings/heightSegments;
 // the shape handlers read older undeclared names (segments, subdivisions,
 // radialSteps...) that the gateway rejects, so every rounded primitive came
