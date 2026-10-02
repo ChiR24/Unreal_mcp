@@ -144,14 +144,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorPossess(
           Controller->Possess(Pawn); // a pawn held by another controller is released by Possess itself
         }
         APawn *Held = Controller->GetPawn();
-        const bool bPossessed = !bHasTarget || Held == Pawn;
+        const bool bPossessed = Held != nullptr && (!bHasTarget || Held == Pawn);
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
         Resp->SetStringField(TEXT("possessed"), Held ? Held->GetName() : FString());
         Resp->SetBoolField(TEXT("returnedFromEject"), bWasEjected);
         Resp->SetStringField(TEXT("view"), TEXT("pie_game"));
         WeakThis->SendAutomationResponse(
             Socket, RequestId, bPossessed,
-            !bPossessed ? TEXT("The player controller did not take the pawn")
+            !bPossessed ? (Held ? TEXT("The player controller did not take the pawn") : TEXT("The player controller holds no pawn"))
             : bHasTarget ? FString::Printf(TEXT("The player now possesses %s"), *Held->GetName())
                          : FString(TEXT("The ejected player is back in its pawn")),
             Resp, bPossessed ? FString() : TEXT("POSSESS_FAILED"));
