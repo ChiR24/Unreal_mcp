@@ -12,6 +12,7 @@ Area-specific guidance lives in nested `AGENTS.md` files (see **AREA GUIDES** be
 |   |-- automation/         (38) # WebSocket CLIENT: handshake, request tracking/correlation, frames
 |   |-- gateway/             (4) # gateway manifest DATA + loader; 2 of 4 are *.generated.*
 |   |-- handlers/            (2) # MCP RESOURCE handlers (registration + ue:// list resources)
+|   |-- proxy/               (2) # `cli.js proxy`: restart-proof stdio front for the plugin's native /mcp
 |   |-- resources/          (16) # resource providers behind handlers/
 |   |-- server/                  # SDK construction, stdio lifecycle, tools/list + tools/call
 |   |   |-- gateway/        (27) # gateway search/describe/execute ROUTING — NOT src/gateway
@@ -40,6 +41,7 @@ There is no TypeScript action layer: `execute` forwards `{ action, ...params }` 
 | Task | Location | Notes |
 |------|----------|-------|
 | Start TS MCP server | `src/cli.ts`, `src/index.ts`, `src/server/server-factory.ts`, `src/server/stdio-lifecycle.ts` | CLI -> public facade -> construction/lifecycle |
+| Native proxy (`cli.js proxy`) | `src/proxy/native-proxy.ts` | stdio in front of the plugin's `/mcp`: NOT_CONNECTED while the editor is down, new upstream session after a restart, cached tool list |
 | Add/change a tool contract | `src/tools/catalog/capabilities/records/<parent>/` + `records/parent-metadata.ts` | **THE source of truth.** Every `*.generated.*` is an OUTPUT. See `src/tools/catalog/AGENTS.md` |
 | Regenerate contract artifacts | `npm run registry:generate`, then `registry:check` / `manifest:check` | Records -> TS generated defs + gateway manifest + native registry/shards + action reference doc |
 | Change gateway routing | `src/server/gateway/` | Own AGENTS.md. `src/gateway/` is only the generated manifest + loader |

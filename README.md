@@ -173,6 +173,29 @@ This writes `build/McpAutomationBridge-v<version>-UE5.7-<Platform>.zip`, where `
 
    <img src="https://raw.githubusercontent.com/wiki/ChiR24/Unreal_mcp/assets/screenshots/status-bar.png" alt="Unreal Editor status bar showing MCP :3000 (1): the native MCP server on port 3000 with one client connected" width="520">
 
+<details>
+<summary><b>Keep the session when the editor restarts (proxy, Node.js 20.19+)</b></summary>
+
+<br>
+
+A client connected straight to `/mcp` loses its session whenever the editor closes or crashes, and has to reconnect by hand. The package's `proxy` command sits in between over stdio: while the editor is down every call answers `NOT_CONNECTED`, and the first call after it is back reaches it, with no reconnect. It keeps the editor's last tool list, so a session that starts before the editor still gets the real tool.
+
+```json
+{
+  "mcpServers": {
+    "unreal-engine": {
+      "command": "npx",
+      "args": ["-y", "unreal-engine-mcp-server@beta", "proxy"],
+      "env": { "UE_PROJECT_PATH": "C:/Path/To/YourProject" }
+    }
+  }
+}
+```
+
+The token is found the same way as on Route B (`MCP_AUTOMATION_CAPABILITY_TOKEN`, else the project's token file). `UNREAL_MCP_URL` points it at another endpoint (default `http://127.0.0.1:3000/mcp`). Route B survives editor restarts the same way on its own.
+
+</details>
+
 **Route B · stdio (Node.js 20.19+)**
 
 Add this to your client's MCP configuration, for example Claude Desktop's `claude_desktop_config.json`:
