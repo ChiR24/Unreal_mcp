@@ -2,6 +2,7 @@
 
 #include "Core/Security/McpPrequeueGate.h"
 #include "Foundation/McpCapabilityPrincipal.h"
+#include "Interfaces/IPluginManager.h"
 #include "Misc/App.h"
 
 bool FMcpConnectionManager::AuthenticateSocketPrincipal(
@@ -86,6 +87,8 @@ void FMcpConnectionManager::SendBridgeAck(
 	if (ActiveSessionId.IsEmpty()) ActiveSessionId = FGuid::NewGuid().ToString();
 	Ack->SetStringField(TEXT("sessionId"), ActiveSessionId);
 	Ack->SetNumberField(TEXT("protocolVersion"), 1);
+	// The .uplugin VersionName, so the Node server can name the matching build when the two differ.
+	if (const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("McpAutomationBridge"))) { Ack->SetStringField(TEXT("pluginVersion"), Plugin->GetDescriptor().VersionName); }
 
 	// The editor's mount table, so the TypeScript path allowlist has plugin and
 	// game-feature roots before the first request. Updates follow as

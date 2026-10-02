@@ -10,6 +10,7 @@ import { HandshakeHandler } from './handshake.js';
 import { AutomationLogger } from './log-redaction.js';
 import {
     CONTENT_ROOTS_CHANGED_EVENT,
+    pluginVersionMismatch,
     readBridgeAuthority,
     readContentRoots,
     type BridgeAuthority
@@ -198,6 +199,11 @@ export class AutomationBridge extends EventEmitter {
 
     getAuthority(): BridgeAuthority | undefined {
         return readBridgeAuthority(this.state.lastHandshakeMetadata);
+    }
+
+    /** Set while connected to a plugin from another release: both versions and the install that fixes it. */
+    getVersionMismatch(): string | undefined {
+        return this.isConnected() ? pluginVersionMismatch(this.state.lastHandshakeMetadata) : undefined;
     }
 
     async sendAutomationRequest<T = AutomationBridgeResponseMessage>(

@@ -13,7 +13,7 @@ import {
     redactKnownAutomationCredentials
 } from './log-redaction.js';
 import type { MessageHandler } from './message-handler.js';
-import { automationMessageSchema, readContentRoots } from './message-schema.js';
+import { automationMessageSchema, pluginVersionMismatch, readContentRoots } from './message-schema.js';
 import type { AutomationBridgeEvents, AutomationBridgeMessage } from './types.js';
 
 type WebSocketWithInternalSocket = WebSocket & {
@@ -168,6 +168,8 @@ export class AutomationBridgeClient {
         this.deps.state.lastHandshakeMetadata = metadata;
         // The editor's mount table feeds the path allowlist; a plugin that does not send it leaves the static roots.
         setEditorContentRoots(readContentRoots(metadata));
+        const versionMismatch = pluginVersionMismatch(metadata);
+        if (versionMismatch !== undefined) this.deps.log.warn(versionMismatch);
         this.deps.state.lastHandshakeFailure = undefined;
         this.deps.connectionManager.updateLastMessageTime();
 

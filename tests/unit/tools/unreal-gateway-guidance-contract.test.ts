@@ -137,3 +137,28 @@ describe('responses that used to leave nothing to copy now carry a next step', (
     expect(typeof first?.summary).toBe('string');
   });
 });
+
+describe('a plugin from another release is named on every failed execute', () => {
+  const spawn = { operation: 'execute', tool: 'control_actor', action: 'spawn', params: { classPath: '/Script/Engine.StaticMeshActor' } };
+  const mismatched = (reply: Record<string, unknown>): GatewayContext => gatewayContext(
+    {
+      isConnected: () => true,
+      sendAutomationRequest: async () => reply,
+      getAuthority: () => ({ scopes: ['admin'] }),
+      getVersionMismatch: () => 'Version mismatch: test'
+    },
+    'version-mismatch'
+  );
+
+  it('a failed dispatch carries versionMismatch', async () => {
+    const reply = await handleUnrealGatewayCall(spawn, mismatched({ success: false, error: 'UNKNOWN_ACTION', message: 'Unknown action: spawn' }));
+    expect(reply.success).toBe(false);
+    expect(reply.versionMismatch).toBe('Version mismatch: test');
+  });
+
+  it('a successful one does not', async () => {
+    const reply = await handleUnrealGatewayCall(spawn, mismatched({ success: true, actorName: 'StaticMeshActor_0' }));
+    expect(reply.success).toBe(true);
+    expect(reply.versionMismatch).toBeUndefined();
+  });
+});

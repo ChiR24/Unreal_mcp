@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { automationMessageSchema, cancelRequestSchema, readBridgeAuthority } from './message-schema.js';
+import { PACKAGE } from '../constants.js';
+import { automationMessageSchema, cancelRequestSchema, pluginVersionMismatch, readBridgeAuthority } from './message-schema.js';
 
 const LIVE_REVISIONS = {
     selection: 2,
@@ -119,5 +120,25 @@ describe('readBridgeAuthority', () => {
 
     it('returns undefined for a malformed authority value', () => {
         expect(readBridgeAuthority({ authority: 'not-an-object' })).toBeUndefined();
+    });
+});
+
+describe('pluginVersionMismatch', () => {
+    it('is silent when the plugin is this release', () => {
+        expect(pluginVersionMismatch({ pluginVersion: PACKAGE.version })).toBeUndefined();
+    });
+
+    it('names both versions, the matching plugin release and the server pin', () => {
+        const text = pluginVersionMismatch({ pluginVersion: '0.0.1' }) ?? '';
+        expect(text).toContain(`${PACKAGE.name} ${PACKAGE.version}`);
+        expect(text).toContain('McpAutomationBridge 0.0.1');
+        expect(text).toContain(`https://github.com/ChiR24/Unreal_mcp/releases/tag/v${PACKAGE.version}`);
+        expect(text).toContain(`npx -y ${PACKAGE.name}@0.0.1`);
+    });
+
+    it('treats a plugin that sends no version as older than this server', () => {
+        const text = pluginVersionMismatch({ type: 'bridge_ack' }) ?? '';
+        expect(text).toContain('predates version reporting');
+        expect(text).not.toContain('npx');
     });
 });

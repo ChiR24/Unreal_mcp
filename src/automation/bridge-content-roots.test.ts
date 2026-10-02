@@ -1,6 +1,7 @@
 // The editor's mount table reaches the path allowlist over the bridge: the
 // initial list in bridge_ack, updates as content_roots_changed events, and
-// nothing once the socket closes.
+// nothing once the socket closes. The ack's pluginVersion likewise feeds
+// getVersionMismatch only while the socket is up.
 import { afterEach, describe, expect, it } from 'vitest';
 import type { WebSocket, WebSocketServer } from 'ws';
 import { clearEditorContentRoots, getEditorContentRoots } from '../utils/paths/path-security.js';
@@ -122,6 +123,23 @@ describe('AutomationBridge editor content roots', () => {
       expect(getEditorContentRoots()).toEqual(['/Game', '/ShooterCore']);
       bridge.stop();
       expect(getEditorContentRoots()).toEqual([]);
+    } finally {
+      bridge.stop();
+      await closeServer(server);
+    }
+  });
+});
+
+describe('AutomationBridge plugin version', () => {
+  it('reports a mismatch only while connected to a plugin from another release', async () => {
+    const { server, port } = await startAckServer({ pluginVersion: '0.0.1' });
+    const bridge = connectedBridge(port);
+    try {
+      expect(bridge.getVersionMismatch()).toBeUndefined();
+      expect(await bridge.connect()).toBe(true);
+      expect(bridge.getVersionMismatch()).toContain('McpAutomationBridge 0.0.1');
+      bridge.stop();
+      expect(bridge.getVersionMismatch()).toBeUndefined();
     } finally {
       bridge.stop();
       await closeServer(server);

@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import { PACKAGE } from '../constants.js';
 import { LiveStateRevisionsSchema } from '../tools/catalog/capabilities/semantic/live-state-revisions.js';
 
+const RELEASE_TAG_URL = 'https://github.com/ChiR24/Unreal_mcp/releases/tag/v';
 const stringArray = z.array(z.string());
 const nonNegativeInteger = z.number().int().min(0);
 
@@ -53,6 +55,8 @@ export const bridgeAckSchema = z.looseObject({
     serverName: z.string().optional(),
     sessionId: z.string().optional(),
     protocolVersion: nonNegativeInteger.optional(),
+    // The plugin's .uplugin VersionName. Absent from plugins that predate it.
+    pluginVersion: z.string().optional(),
     authority: bridgeAuthoritySchema.optional(),
     // The editor's mounted content roots (`/Game`, `/ShooterCore`, ...), which
     // feed the path allowlist. Absent from plugins that predate it.
@@ -74,6 +78,21 @@ export const CONTENT_ROOTS_CHANGED_EVENT = 'content_roots_changed';
 export function readContentRoots(source: unknown): unknown {
     if (source === null || typeof source !== 'object' || Array.isArray(source)) return undefined;
     return (source as Record<string, unknown>).contentRoots;
+}
+
+/**
+ * Why this server and the plugin it connected to disagree, naming the install
+ * that fixes it; undefined when the versions match. A bridge_ack without
+ * pluginVersion comes from a plugin older than any server that reads it.
+ */
+export function pluginVersionMismatch(metadata: Record<string, unknown> | undefined): string | undefined {
+    const plugin = metadata?.pluginVersion;
+    if (plugin === PACKAGE.version) return undefined;
+    const server = `${PACKAGE.name} ${PACKAGE.version}`;
+    const install = `install the ${PACKAGE.version} plugin from ${RELEASE_TAG_URL}${PACKAGE.version} and restart the editor`;
+    return typeof plugin === 'string'
+        ? `Version mismatch: this server is ${server} but the editor runs McpAutomationBridge ${plugin}, so actions and parameters can differ. Fix: ${install}, or pin the server to the plugin with npx -y ${PACKAGE.name}@${plugin} and restart the MCP client.`
+        : `Version mismatch: this server is ${server} but the editor runs a McpAutomationBridge plugin that predates version reporting, so actions and parameters can differ. Fix: ${install}.`;
 }
 
 export const bridgeErrorSchema = z.looseObject({

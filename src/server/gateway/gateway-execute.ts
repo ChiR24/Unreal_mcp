@@ -136,13 +136,18 @@ export async function executeGatewayCall(
     }
   }
 
-  const dispatch = (): Promise<Record<string, unknown>> =>
-    dispatchAndValidate(target, checked.params, options, context, receiptContext, {
+  const dispatch = async (): Promise<Record<string, unknown>> => {
+    const receipt = await dispatchAndValidate(target, checked.params, options, context, receiptContext, {
       correlationId,
       consent: consentGrant,
       expectedRevisions: checked.expectedRevisions,
       timeoutMs: checked.timeoutMs
     }, checked.unread);
+    // A plugin from another release can lack the action or read its params
+    // differently, so every failed dispatch names the mismatch until the pair agrees.
+    const versionMismatch = receipt.success === true ? undefined : context.tools.automationBridge?.getVersionMismatch?.();
+    return versionMismatch === undefined ? receipt : { ...receipt, versionMismatch };
+  };
 
   // Dedup sits here, after every refusal stage, so an unauthorized or invalid
   // request can never occupy a slot or be replayed as a recorded success.
