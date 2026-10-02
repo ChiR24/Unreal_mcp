@@ -15375,7 +15375,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "complex",
             "none"
           ],
-          "description": "Collision for the baked asset: box (default) is the bounds as one convex hull, which pawns can stand on; complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
+          "description": "Collision for the baked asset: box (default) is one box the size of the bounds, which pawns can stand on (on a converted-over asset too); complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
         },
         "collisionOp": {
           "type": "string",

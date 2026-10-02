@@ -50,9 +50,13 @@ describe('convert_to_static_mesh and convert_to_nanite give the asset its materi
     const source = slots();
     expect(source).toContain('BodySetup->CollisionTraceFlag = CTF_UseComplexAsSimple;');
     expect(source).toMatch(/Mode == TEXT\("none"\)\)\s*\{\s*BodySetup->CollisionTraceFlag = CTF_UseSimpleAsComplex;/u);
-    expect(source).toContain('BodySetup->AggGeom.ConvexElems.Add(ConvexElem);');
-    // Only the box mode builds a hull; complex and none leave the shape list empty.
-    expect(source.split('ConvexElems.Add(').length - 1).toBe(1);
+    expect(source).toContain('BodySetup->AggGeom.BoxElems.Add(Box);');
+    // Only the box mode adds a shape; complex and none leave the shape list empty.
+    expect(source.split('Elems.Add(').length - 1).toBe(1);
+    // A body reused by a conversion over an existing asset is already marked built: it must be invalidated
+    // before it is cooked, or the new shapes never cook and pawns fall through the replaced mesh.
+    expect(source.indexOf('BodySetup->InvalidatePhysicsData();')).toBeGreaterThan(-1);
+    expect(source.indexOf('BodySetup->InvalidatePhysicsData();')).toBeLessThan(source.indexOf('BodySetup->CreatePhysicsMeshes();'));
   });
 
   it('saves again after the materials and the collision, and lists the slots in the reply', () => {

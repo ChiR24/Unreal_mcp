@@ -39,7 +39,7 @@ const SLOT = {
 };
 // A mesh replaced in place reshapes every Blueprint part that draws it: a body grown 4 cm buries a rider's legs.
 const MESH_USER_WARNINGS = { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character\'s capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out, and mcp.placement.ok:<component> accepts the embed in that one part only.' };
-const CONVERT_COLLISION ={ type: 'string', enum: ['box', 'complex', 'none'], description: 'Collision for the baked asset: box (default) is the bounds as one convex hull, which pawns can stand on; complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all.' };
+const CONVERT_COLLISION ={ type: 'string', enum: ['box', 'complex', 'none'], description: 'Collision for the baked asset: box (default) is one box the size of the bounds, which pawns can stand on (on a converted-over asset too); complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all.' };
 const COLLISION_TYPE = { type: 'string', enum: ['box', 'sphere', 'capsule', 'convex', 'convex_decomposition'], description: 'Collision shapes to generate (default convex).' };
 
 export const GEOMETRY_OPTIMIZE_RECORDS: readonly CapabilityRecordSource[] = [

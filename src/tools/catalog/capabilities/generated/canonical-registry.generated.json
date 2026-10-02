@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ffb6c58ae0011c01",
+  "catalogRevision": "939edc3d0cbe355b",
   "recordCount": 393,
   "records": [
     {
@@ -59468,7 +59468,7 @@
                 "complex",
                 "none"
               ],
-              "description": "Collision for the baked asset: box (default) is the bounds as one convex hull, which pawns can stand on; complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
+              "description": "Collision for the baked asset: box (default) is one box the size of the bounds, which pawns can stand on (on a converted-over asset too); complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
             }
           },
           "required": [
@@ -59593,8 +59593,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "77994cdf287cf67279e891e8089db9855e87eb78f36812ee0942552b0441e8e6",
-        "content": "75cb4869a7a2f4a048674f52291cedee80490197c407a21f8daaf2de977ec1e4"
+        "schema": "1c84682c6b45480cfaecfe71c770f87642e5cbc45cd3c5b79566f1a3e86bda25",
+        "content": "6da237bcdc3dcd4c19b21a08f807ccef9e8dc5869e54a7ba300ee1b7f97537a4"
       }
     },
     {
@@ -59660,7 +59660,7 @@
                 "complex",
                 "none"
               ],
-              "description": "Collision for the baked asset: box (default) is the bounds as one convex hull, which pawns can stand on; complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
+              "description": "Collision for the baked asset: box (default) is one box the size of the bounds, which pawns can stand on (on a converted-over asset too); complex uses the render triangles as simple collision too, exact but costly; none gives the asset no collision at all."
             }
           },
           "required": [
@@ -59785,8 +59785,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "77994cdf287cf67279e891e8089db9855e87eb78f36812ee0942552b0441e8e6",
-        "content": "babb9c5f14e3a8897cf950b4409bd061817b5cdba923fe76221a98a448ede242"
+        "schema": "1c84682c6b45480cfaecfe71c770f87642e5cbc45cd3c5b79566f1a3e86bda25",
+        "content": "9a07b0254b98667d15eef69427379fba13857ae60e9bf2108d6076a02b20b766"
       }
     },
     {

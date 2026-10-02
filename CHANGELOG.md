@@ -158,6 +158,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <details>
 <summary><b>🔧 Fixed</b></summary>
 
+- **A mesh converted over an existing asset keeps its collision.** `convert_to_static_mesh` and `convert_to_nanite` onto a path that already held a mesh left it with collision that never cooked, so pawns went straight through it. The physics data is rebuilt every time, and `collision: "box"` is now one box the size of the bounds.
 - **A generated texture that could not be saved says so.** `create_texture` (every kind) answered `saved: true` when all five save attempts failed, as long as an older version was still on disk. The first overwrite of an existing texture in an editor session was one such failure: the editor refused the new pixels ("bulkdata with an invalid payload"). The existing texture is now loaded and refilled, so that save goes through, and an asset of another type at the path is refused rather than replaced.
 - **`set_material` fills every slot of an SDF or other dynamic mesh.** Its component starts with one slot however many material ids the triangles carry, so slot 1 and up answered `MATERIAL_SLOT_NOT_FOUND`; the ids the mesh uses now count as slots.
 - **The plugin compiles on UE 5.0 and 5.1.** Sequencer code called track functions that exist only from 5.2; it now uses the right names on every version, and removing a sequence-level track works on 5.0 and 5.1 too.

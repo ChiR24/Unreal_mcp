@@ -142,21 +142,18 @@ void ApplyConversionCollision(UStaticMesh* Mesh, const FString& Mode)
     }
     else
     {
-        // box: the bounds as one convex hull, exact for the box primitives and a tight approximation for round ones.
+        // box: one box the size of the bounds, exact for the box primitives and a tight approximation for round ones.
+        // A box element needs no cooking; the convex hull this used to build did, and missed it on a reused body.
         const FBox Bounds = Mesh->GetBounds().GetBox();
+        const FVector Size = Bounds.GetSize();
         BodySetup->CollisionTraceFlag = CTF_UseSimpleAsComplex;
-        FKConvexElem ConvexElem;
-        ConvexElem.VertexData.Reset(8);
-        for (int32 CornerIndex = 0; CornerIndex < 8; ++CornerIndex)
-        {
-            ConvexElem.VertexData.Add(FVector(
-                (CornerIndex & 1) ? Bounds.Max.X : Bounds.Min.X,
-                (CornerIndex & 2) ? Bounds.Max.Y : Bounds.Min.Y,
-                (CornerIndex & 4) ? Bounds.Max.Z : Bounds.Min.Z));
-        }
-        ConvexElem.UpdateElemBox();
-        BodySetup->AggGeom.ConvexElems.Add(ConvexElem);
+        FKBoxElem Box(static_cast<float>(Size.X), static_cast<float>(Size.Y), static_cast<float>(Size.Z));
+        Box.Center = Bounds.GetCenter();
+        BodySetup->AggGeom.BoxElems.Add(Box);
     }
+    // A conversion over an existing asset reuses its body setup, which is already marked built: without this
+    // CreatePhysicsMeshes did nothing, the new shapes were never cooked, and pawns went through the replaced mesh.
+    BodySetup->InvalidatePhysicsData();
     BodySetup->CreatePhysicsMeshes();
     Mesh->MarkPackageDirty();
 }
