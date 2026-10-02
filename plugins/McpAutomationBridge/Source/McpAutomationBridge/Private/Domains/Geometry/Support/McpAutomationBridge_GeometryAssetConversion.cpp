@@ -97,7 +97,13 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     // and without a second save the materials and the collision were gone on the next editor load.
     TArray<TSharedPtr<FJsonValue>> SlotsJson;
     UStaticMesh* CreatedMesh = Cast<UStaticMesh>(StaticLoadObject(UStaticMesh::StaticClass(), nullptr, *AssetPath));
-    if (CreatedMesh)
+    if (!CreatedMesh)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("%s was created but could not be loaded back, so its materials and collision body were not applied."), *AssetPath),
+            TEXT("ASSET_CREATION_FAILED"));
+        return true;
+    }
     {
         ApplyConversionMaterials(CreatedMesh, Materials, SlotCount);
         ApplyConversionCollision(CreatedMesh, CollisionMode);
