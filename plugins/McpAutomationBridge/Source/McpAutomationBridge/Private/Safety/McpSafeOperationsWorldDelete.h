@@ -90,7 +90,9 @@ inline int32 DeleteWorldPackagesByPath(const TArray<FAssetData>& WorldAssets)
             }
         }
 
-        AssetRegistry.ScanPathsSynchronous({FPaths::GetPath(PackagePath)}, false);
+        // The registry keeps a deleted file until it is told the file changed; a path scan skips a
+        // path it has already seen, so every deleted map used to count as still present.
+        AssetRegistry.ScanModifiedAssetFiles({AbsoluteMapFilename});
 
         TArray<FAssetData> RemainingWorldAssets;
         AssetRegistry.GetAssetsByPackageName(AssetData.PackageName, RemainingWorldAssets, true);
