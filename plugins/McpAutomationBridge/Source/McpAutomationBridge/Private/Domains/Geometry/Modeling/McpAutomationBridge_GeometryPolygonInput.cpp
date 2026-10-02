@@ -64,6 +64,7 @@ static bool ParseAppendFaces(const TSharedPtr<FJsonObject>& Payload, int32 Verte
         return false;
     }
     OutFaces.Reserve(Values->Num());
+    int64 Triangles = 0;
     for (int32 FaceIndex = 0; FaceIndex < Values->Num(); ++FaceIndex)
     {
         const TArray<TSharedPtr<FJsonValue>>* Corners = nullptr;
@@ -75,6 +76,12 @@ static bool ParseAppendFaces(const TSharedPtr<FJsonObject>& Payload, int32 Verte
         if (Corners->Num() < 3 || Corners->Num() > MaxAppendFaceCorners)
         {
             OutError = FString::Printf(TEXT("faces[%d] has %d corners; a face needs 3 to %d"), FaceIndex, Corners->Num(), MaxAppendFaceCorners);
+            return false;
+        }
+        Triangles += Corners->Num() - 2;
+        if (Triangles > MAX_TRIANGLES_PER_DYNAMIC_MESH)
+        {
+            OutError = FString::Printf(TEXT("faces come to more than %d triangles; append them in several calls"), MAX_TRIANGLES_PER_DYNAMIC_MESH);
             return false;
         }
         TArray<int32>& Face = OutFaces.AddDefaulted_GetRef();
