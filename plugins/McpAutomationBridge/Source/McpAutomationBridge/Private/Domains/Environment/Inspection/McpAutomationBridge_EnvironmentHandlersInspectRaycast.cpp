@@ -66,10 +66,24 @@ bool HandleInspectRaycastMeshAction(
             Hit->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Origin + Direction * Distance));
             Hit->SetObjectField(TEXT("normal"), McpHandlerUtils::VectorToJson(Normal));
             Hit->SetNumberField(TEXT("distance"), Distance);
-            const FPolygonGroupID Group(MaterialIds ? MaterialIds->GetValue(TriangleId) : 0);
-            if (Description->IsPolygonGroupValid(Group))
+            // A decal printed here reads upright from outside: X projects into the surface, Y is the
+            // texture's down (toward -Z, or -X on a surface facing straight up or down), Z its reading
+            // direction. Found by trial on a chest print: the identity rotation lays text sideways and mirrored.
+            const FVector Up = FMath::Abs(Normal.Z) > 0.99 ? FVector::ForwardVector : FVector::UpVector;
+            const FVector Down = -(Up - Normal * FVector::DotProduct(Up, Normal)).GetSafeNormal();
+            Hit->SetObjectField(TEXT("decalRotation"), McpHandlerUtils::RotatorToJson(FRotationMatrix::MakeFromXY(-Normal, Down).Rotator()));
+            // An SDF or GeometryScript mesh leaves the polygon group slot names empty; the mesh's own
+            // slot of that index then names it.
+            const int32 GroupIndex = MaterialIds ? MaterialIds->GetValue(TriangleId) : 0;
+            const FPolygonGroupID Group(GroupIndex);
+            FName Slot = Description->IsPolygonGroupValid(Group) ? SlotNames[Group] : NAME_None;
+            if (Slot.IsNone() && Mesh->GetStaticMaterials().IsValidIndex(GroupIndex))
             {
-                Hit->SetStringField(TEXT("materialSlot"), SlotNames[Group].ToString());
+                Slot = Mesh->GetStaticMaterials()[GroupIndex].MaterialSlotName;
+            }
+            if (!Slot.IsNone())
+            {
+                Hit->SetStringField(TEXT("materialSlot"), Slot.ToString());
             }
         }
         Hits.Add(MakeShared<FJsonValueObject>(Hit));

@@ -6307,6 +6307,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "materialSlot": {
                 "type": "string",
                 "description": "Name of the material slot whose triangle was hit."
+              },
+              "decalRotation": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Rotation {pitch, yaw, roll} for a DecalComponent placed at location in the same space, so its texture prints upright and readable on this surface: the decal projects into the surface along its X axis, and its DecalSize is (projection depth, half the print height, half the print width)."
               }
             }
           },

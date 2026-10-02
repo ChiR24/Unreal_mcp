@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d8b8ca8d97c0f364",
+  "catalogRevision": "ffb6c58ae0011c01",
   "recordCount": 393,
   "records": [
     {
@@ -42535,7 +42535,7 @@
         ],
         "summary": "Cast rays at a static mesh asset in its own local space and read where each one meets the surface: the point, the surface normal and the material slot. Places a part, a print or a decal on a curved surface without a placed actor or collision.",
         "whenToUse": [
-          "A part, decal or print must sit exactly on a mesh surface (a chest, a hull, a rock) and the surface position at a given height or side is unknown.",
+          "A part, decal or print must sit exactly on a mesh surface (a chest, a hull, a rock) and the surface position at a given height or side is unknown; the decalRotation and location of a hit place a DecalComponent there directly.",
           "A surface profile must be sampled: one ray per row or column across the area."
         ],
         "whenNotToUse": [
@@ -42646,6 +42646,12 @@
                   "materialSlot": {
                     "type": "string",
                     "description": "Name of the material slot whose triangle was hit."
+                  },
+                  "decalRotation": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Rotation {pitch, yaw, roll} for a DecalComponent placed at location in the same space, so its texture prints upright and readable on this surface: the decal projects into the surface along its X axis, and its DecalSize is (projection depth, half the print height, half the print width)."
                   }
                 }
               },
@@ -42730,8 +42736,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "58680c5ea8eaa73ff1f364b45db1daabf303c99da58b2161a742484c0b1853c5",
-        "content": "b6ac3a12e3ab8a2b7f5651732b4541b48177359158e638ddc212ec15702d0e16"
+        "schema": "6249f9b721e9b7e84df44f745061cbc13e3ff2a35fef6ddd511f1462d0188f0f",
+        "content": "607b608496d85ddabb0f54ef8b53235cf8da2467546225fdf009b396bda523e3"
       }
     },
     {

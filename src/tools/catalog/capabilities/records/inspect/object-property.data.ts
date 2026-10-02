@@ -115,7 +115,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'inspect', action: 'raycast_mesh', dispatchAction: 'raycast_mesh', domain: D, family: 'object',
     summary: 'Cast rays at a static mesh asset in its own local space and read where each one meets the surface: the point, the surface normal and the material slot. Places a part, a print or a decal on a curved surface without a placed actor or collision.',
     topics: ['raycast mesh', 'surface point', 'where is the surface', 'line trace mesh', 'surface normal'],
-    whenToUse: ['A part, decal or print must sit exactly on a mesh surface (a chest, a hull, a rock) and the surface position at a given height or side is unknown.', 'A surface profile must be sampled: one ray per row or column across the area.'],
+    whenToUse: ['A part, decal or print must sit exactly on a mesh surface (a chest, a hull, a rock) and the surface position at a given height or side is unknown; the decalRotation and location of a hit place a DecalComponent there directly.', 'A surface profile must be sampled: one ray per row or column across the area.'],
     whenNotToUse: ['Only the overall size or pivot of the mesh is needed (use get_mesh_details).', 'Parts of a Blueprint must be checked for sinking into each other (use control_actor.audit_placement).'],
     inputProps: {
       meshPath: { type: 'string', description: 'Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail.' },
@@ -148,6 +148,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
             normal: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Surface normal there, turned to face back along the ray (from outside, the outward normal).' },
             distance: { type: 'number', description: 'Distance from the ray origin, in cm.' },
             materialSlot: { type: 'string', description: 'Name of the material slot whose triangle was hit.' },
+            decalRotation: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Rotation {pitch, yaw, roll} for a DecalComponent placed at location in the same space, so its texture prints upright and readable on this surface: the decal projects into the surface along its X axis, and its DecalSize is (projection depth, half the print height, half the print width).' },
           },
         },
         description: 'One entry per ray, in order.',
