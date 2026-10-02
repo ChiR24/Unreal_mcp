@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
 #include "EdGraph/EdGraphSchema.h"
+#include "K2Node_VariableSet.h"
 #include "ScopedTransaction.h"
 
 namespace McpBlueprintGraphHandlers
@@ -117,7 +118,7 @@ static bool ConnectPins(FActionContext& Context)
 
     // A Set node's value pin carries the variable's name but is its INPUT. Named as the source of a
     // link into another input it can only mean the node's one output of that type (Output_Get).
-    if (FromPin->Direction == EGPD_Input && ToPin->Direction == EGPD_Input)
+    if (FromPin->Direction == EGPD_Input && ToPin->Direction == EGPD_Input && FromNode->IsA<UK2Node_VariableSet>())
     {
         TArray<UEdGraphPin*> SameTypeOutputs;
         for (UEdGraphPin* Pin : FromNode->Pins)
