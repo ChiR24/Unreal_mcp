@@ -142,7 +142,7 @@ FString BuildDetailsScript(const FString& RequestId, const FString& ListingId, c
       if (warnings.length) { out.addWarnings = warnings; }
     });
   }
-  // Pick the SMALLEST usable thumbnail variant, not the first.
+)JS") /* MSVC C2026 caps ONE wide literal near 8190 chars; adjacent literals join into the same string */ TEXT(R"JS(  // Pick the SMALLEST usable thumbnail variant, not the first.
   //
   // Fab publishes each thumbnail at several widths and lists the full-size
   // media first. Taking that one meant the fetched preview was routinely

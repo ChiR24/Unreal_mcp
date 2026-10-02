@@ -58,6 +58,22 @@ describe('plugin source structure contracts', () => {
     expect(oversizedFiles).toEqual([]);
   }, 60_000);
 
+  it('keeps every raw string literal under the MSVC single-literal limit', () => {
+    // MSVC refuses one string literal over 16380 bytes (C2026); a TEXT() literal
+    // is UTF-16, so ~8190 characters. Fab's build farm rejected a submission for
+    // it. Split a long script into adjacent TEXT(R"JS(...)JS") literals instead.
+    const limit = 7000;
+    const oversized = listFiles(pluginSourceRoot)
+      .filter((file) => sourceExtensionPattern.test(file))
+      .flatMap((file) =>
+        [...readFileSync(file, 'utf8').matchAll(/R"([^(\s]{0,16})\(([\s\S]*?)\)\1"/gu)]
+          .filter((match) => (match[2] ?? '').length > limit)
+          .map((match) => `${(match[2] ?? '').length} ${file}`),
+      );
+
+    expect(oversized).toEqual([]);
+  }, 60_000);
+
   it('rejects catch-all and mechanical split artifacts', () => {
     // Given
     const sourceFiles = listFiles(pluginSourceRoot);
