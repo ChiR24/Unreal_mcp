@@ -2,9 +2,56 @@
 
 namespace McpMaterialAuthoringHandlers
 {
+// instances: several instances under the one consent this call carried. Each entry runs through
+// this same handler as a captured step over the call's own fields, so every check stays per
+// instance; a palette of seven instances used to cost seven describes and seven consents.
+static bool CreateMaterialInstanceBatch(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+  TArray<TSharedPtr<FJsonValue>> Results;
+  TArray<FString> Failed;
+  for (int32 Index = 0; Index < Entries.Num(); ++Index) {
+    TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
+    Item->Values = Payload->Values;
+    Item->RemoveField(TEXT("instances"));
+    const TSharedPtr<FJsonObject>* Entry = nullptr;
+    if (Entries[Index].IsValid() && Entries[Index]->TryGetObject(Entry)) {
+      for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Entry)->Values) {
+        Item->SetField(Pair.Key, Pair.Value);
+      }
+    }
+    const FString StepId = FString::Printf(TEXT("%s#instance%d"), *RequestId, Index);
+    FMcpResponseCaptureRegistry::Get().Begin(StepId);
+    HandleCreateMaterialInstance(Bridge, StepId, TEXT("create_material_instance"), Item, Socket);
+    const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(StepId);
+    TSharedPtr<FJsonObject> Row = Reply.Result.IsValid() ? Reply.Result : McpHandlerUtils::CreateResultObject();
+    const FString Name = GetJsonStringField(Item, TEXT("name"));
+    Row->SetStringField(TEXT("name"), Name);
+    Row->SetBoolField(TEXT("success"), Reply.bSuccess);
+    if (!Reply.bSuccess) {
+      const FString Error = Reply.Message.IsEmpty() ? FString(TEXT("the instance sent no reply")) : Reply.Message;
+      Row->SetStringField(TEXT("error"), Error);
+      Row->SetStringField(TEXT("errorCode"), Reply.ErrorCode);
+      Failed.Add(FString::Printf(TEXT("#%d %s: %s"), Index, *Name, *Error));
+    }
+    Results.Add(MakeShared<FJsonValueObject>(Row));
+  }
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetArrayField(TEXT("instances"), Results);
+  Result->SetNumberField(TEXT("created"), Results.Num() - Failed.Num());
+  Bridge->SendAutomationResponse(Socket, RequestId, Failed.Num() == 0,
+      Failed.Num() == 0 ? FString::Printf(TEXT("Created %d material instances."), Results.Num())
+                        : FString::Printf(TEXT("%d of %d material instances failed: %s"), Failed.Num(), Results.Num(), *FString::Join(Failed, TEXT("; "))),
+      Result, Failed.Num() == 0 ? FString() : FString(TEXT("INSTANCE_BATCH_INCOMPLETE")));
+  return true;
+}
+
 bool HandleCreateMaterialInstance(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("create_material_instance")) {
+    const TArray<TSharedPtr<FJsonValue>>* Instances = nullptr;
+    if (Payload->TryGetArrayField(TEXT("instances"), Instances) && Instances->Num() > 0) {
+      return CreateMaterialInstanceBatch(Bridge, RequestId, Payload, *Instances, Socket);
+    }
     FString Name, ValidatedPath, ParentMaterial;
     bool bParentFolderCreated = false;
     if (!Payload->TryGetStringField(TEXT("parentMaterial"), ParentMaterial) ||

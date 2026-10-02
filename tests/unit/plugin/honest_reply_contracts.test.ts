@@ -91,6 +91,15 @@ describe('handlers answer what they did', () => {
     expect(resolver).toContain('PPV->SetActorLabel(Reference);');
   });
 
+  // Seven instances of one parent cost seven describes and seven consents.
+  it('create_material_instance makes a palette under one consent, each entry through the single handler', () => {
+    const create = code('MaterialAuthoring', 'Creation', 'McpAutomationBridge_MaterialAuthoringHandlersCreateMaterialInstance.cpp');
+    expect(create).toContain('Payload->TryGetArrayField(TEXT("instances"), Instances)');
+    expect(create).toMatch(/FMcpResponseCaptureRegistry::Get\(\)\.Begin\(StepId\);\s*HandleCreateMaterialInstance\(Bridge, StepId,/u);
+    expect(create).toContain('Item->RemoveField(TEXT("instances"));');
+    expect(create).toContain('TEXT("INSTANCE_BATCH_INCOMPLETE")');
+  });
+
   it('a resized or combined texture keeps its source colour space', () => {
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersResize.cpp')).toContain('NewTexture->SRGB = SourceTexture->SRGB;');
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersCombine.cpp')).toContain('OutputTexture->SRGB = BaseTex->SRGB;');

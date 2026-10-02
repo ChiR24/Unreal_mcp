@@ -16,7 +16,8 @@ const PRESET_SETTINGS = {
   twoSided: bool('Two-sided flag.'),
   save: SAVE,
 };
-const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } }, ['success']);
+const OK_PROPS = { success: bool('Operation succeeded.'), details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' } };
+const OK = schema(OK_PROPS, ['success']);
 
 export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
   r('create_material', 'material', 'Create a new material asset.',
@@ -27,13 +28,21 @@ export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
       topics: ['new material', 'make material', 'material asset', 'shader'],
       examples: [ex('Create an opaque lit surface material', { name: 'M_Base', path: '/Game/Materials', materialDomain: 'Surface', blendMode: 'Opaque', shadingModel: 'DefaultLit', twoSided: false, save: true }, { success: true })] }
   ),
-  r('create_material_instance', 'material', 'Create a material instance from a parent material, optionally with its parameter values already set.',
-    schema({ name: str('Instance name.'), parentMaterial: str('Parent material /Game path.'), savePath: str('Package path for the instance.'), parameters: MATERIAL_PARAMETER_LIST, save: SAVE }, ['name', 'parentMaterial']),
-    OK, WRITE, WRITE_POLICY, MEDIUM,
-    { whenToUse: ['A variation of a base material is needed with new parameter values and no second node graph.', 'An instance should start with scalar, vector or texture overrides already applied (pass parameters).'],
+  r('create_material_instance', 'material', 'Create a material instance from a parent material, optionally with its parameter values already set, or several instances (a palette) under one consent.',
+    schema({
+      name: str('Instance name.'), parentMaterial: str('Parent material /Game path.'), savePath: str('Package path for the instance.'), parameters: MATERIAL_PARAMETER_LIST, save: SAVE,
+      instances: {
+        type: 'array', minItems: 1, maxItems: 64, items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true,
+        description: 'Several instances in one call, in place of name: each {name, and any of parentMaterial, savePath, parameters, save}; the call\'s own parentMaterial, savePath and save are every entry\'s defaults. Every entry is reported under instances; the call fails naming any that were not created.',
+      },
+    }, [], ['name', 'instances']),
+    schema({ ...OK_PROPS, instances: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With instances: one entry per instance in order: name, success, error and errorCode when it failed, and what a single create reports (assetPath, parameters).' }, created: { type: 'number', description: 'With instances: how many were created.' } }, ['success']),
+    WRITE, WRITE_POLICY, MEDIUM,
+    { whenToUse: ['A variation of a base material is needed with new parameter values and no second node graph.', 'An instance should start with scalar, vector or texture overrides already applied (pass parameters).', 'A palette of instances of one parent must be made at once (instances), under one consent instead of one per instance.'],
       whenNotToUse: ['The material needs its own node graph (use material.create_material).', 'An existing instance needs new values (use material.set_material_parameter); the parent must be a base material, not another instance.'],
-      topics: ['material instance', 'mi', 'instance material', 'child material', 'make material instance'], dispatchAction: 'create_material_instance',
-      examples: [ex('Instance a base material', { name: 'MI_Base_Rusty', parentMaterial: '/Game/Materials/M_Base', savePath: '/Game/Materials' }, { success: true })] }
+      topics: ['material instance', 'mi', 'instance material', 'child material', 'make material instance', 'material palette', 'several material instances'], dispatchAction: 'create_material_instance',
+      examples: [ex('Instance a base material', { name: 'MI_Base_Rusty', parentMaterial: '/Game/Materials/M_Base', savePath: '/Game/Materials' }, { success: true }),
+        ex('Make a palette of instances under one consent', { parentMaterial: '/Game/Materials/M_Toy', savePath: '/Game/Materials/Instances', instances: [{ name: 'MI_Toy_Red', parameters: [{ parameterName: 'Color', parameterType: 'vector', value: [0.8, 0.1, 0.1] }] }, { name: 'MI_Toy_Blue', parameters: [{ parameterName: 'Color', parameterType: 'vector', value: [0.1, 0.2, 0.8] }] }] }, { success: true, created: 2 })] }
   ),
   r('create_material_function', 'material', 'Create a new material function asset.',
     schema({ name: str('Function name.'), path: str('Package path.'), save: SAVE, description: str('Function description.'), exposeToLibrary: bool('Expose in the material function library.') }, ['name']),

@@ -8447,6 +8447,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Input definitions, each {name}; wire one with connect_nodes targetPin set to that name."
         },
+        "instances": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Several instances in one call, in place of name: each {name, and any of parentMaterial, savePath, parameters, save}; the call's own parentMaterial, savePath and save are every entry's defaults. Every entry is reported under instances; the call fails naming any that were not created."
+        },
         "io": {
           "type": "string",
           "enum": [
@@ -9689,6 +9701,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Asset count on this page."
         },
+        "created": {
+          "type": "number",
+          "description": "With instances: how many were created."
+        },
         "currency": {
           "type": "string",
           "description": "Currency code of price, when Fab publishes one."
@@ -9994,6 +10010,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Material function inputs (name, type, nodeId)."
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "With instances: one entry per instance in order: name, success, error and errorCode when it failed, and what a single create reports (assetPath, parameters)."
         },
         "isCc0": {
           "type": "boolean",
