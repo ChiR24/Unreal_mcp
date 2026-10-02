@@ -128,6 +128,8 @@ const testCases = [
 
 // === METASOUND AUTHORING ===
 { scenario: 'CREATE: create_metasound', toolName: 'manage_audio', arguments: { action: 'create_metasound', name: `Testmetasound_${ts}`, path: '/Game/MCPTest', save: true }, expected: 'success|already exists' },
+{ scenario: 'CREATE: create_metasound named by its assetPath', toolName: 'manage_audio', arguments: { action: 'create_metasound', assetPath: `/Game/MCPTest/TestMetaSoundByPath_${ts}`, save: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.assetPath', includes: `TestMetaSoundByPath_${ts}`, label: 'created where assetPath said' }] },
+{ scenario: 'CREATE: create_metasound over an existing MetaSound is refused', toolName: 'manage_audio', arguments: { action: 'create_metasound', assetPath: METASOUND }, expected: 'error|ASSET_EXISTS' },
 
 // add_metasound_node: C++ maps 'add' → {UE, Add, Float}
 { scenario: 'ADD: add_metasound_node', toolName: 'manage_audio', arguments: { action: 'add_metasound_node', assetPath: METASOUND, nodeType: 'add' }, expected: 'success', captureResult: { key: 'addNodeId', fromField: 'result.nodeId' } },

@@ -12,15 +12,32 @@ TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, co
 
 #if MCP_HAS_METASOUND
 	FString Name = GetJsonStringField(Params, TEXT("name"), TEXT(""));
-	FString Path = NormalizeAudioPath(GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Audio/MetaSounds")), false);
+	FString Path = GetJsonStringField(Params, TEXT("path"), TEXT("/Game/Audio/MetaSounds"));
 	bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
-
-	if (Name.IsEmpty())
+	// The assetPath every other edit takes names the new MetaSound as well.
+	const FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")), false);
+	if (Name.IsEmpty() && !AssetPath.IsEmpty())
 	{
-		return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("Name is required"));
+		const FString AssetPackage = FPackageName::ObjectPathToPackageName(AssetPath);
+		Name = FPackageName::GetShortName(AssetPackage);
+		Path = FPackageName::GetLongPackagePath(AssetPackage);
 	}
 
-	FString PackagePath = Path / Name;
+	FString PackagePath, PathError;
+	if (!BuildAudioCreationPath(Path, Name, PackagePath, PathError))
+	{
+		return Name.IsEmpty()
+			? McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NAME"), TEXT("name (with path), or assetPath, is required"))
+			: McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_PATH"), PathError);
+	}
+	// NewObject over a loaded MetaSound rebuilt it in place, and a new package over one on disk replaced it on save.
+	if (McpAssetExists(PackagePath))
+	{
+		return McpHandlerUtils::BuildErrorResponse(TEXT("ASSET_EXISTS"), FString::Printf(
+			TEXT("A MetaSound already exists at %s: edit it with assetPath, or pick another name."), *PackagePath));
+	}
+	Name = FPackageName::GetShortName(PackagePath);
+
 	UPackage* Package = CreatePackage(*PackagePath);
 	if (!Package)
 	{

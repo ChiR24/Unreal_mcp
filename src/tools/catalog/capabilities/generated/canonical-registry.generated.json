@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "8f26aa31b552904b",
+  "catalogRevision": "ddef954bfa096244",
   "recordCount": 393,
   "records": [
     {
@@ -49430,7 +49430,7 @@
         ],
         "summary": "Create a MetaSound or edit it: add inputs, outputs and nodes, connect or disconnect nodes, remove nodes, set input and node literals, or run many edits in one batch.",
         "whenToUse": [
-          "edit=create: Use it to create a MetaSound asset and return its asset path.",
+          "edit=create: Use it to create a MetaSound asset, named by name and path or by its full assetPath, and return its asset path. A MetaSound already at that path is refused (ASSET_EXISTS), never replaced.",
           "edit=add_input: Use it to add an input to a MetaSound graph.",
           "edit=add_output: Use it to add an output to a MetaSound graph.",
           "edit=add_node: Use it to add a node to a MetaSound graph.",
@@ -49459,13 +49459,13 @@
               "type": "string",
               "description": "Canonical /Game folder for the created asset."
             },
-            "save": {
-              "type": "boolean",
-              "description": "Persist the asset to disk (default true); false leaves the change in memory only."
-            },
             "assetPath": {
               "type": "string",
               "description": "Canonical /Game asset path."
+            },
+            "save": {
+              "type": "boolean",
+              "description": "Persist the asset to disk (default true); false leaves the change in memory only."
             },
             "inputName": {
               "type": "string",
@@ -49682,16 +49682,6 @@
             "path": [
               "create"
             ],
-            "assetPath": [
-              "add_input",
-              "add_output",
-              "add_node",
-              "connect_nodes",
-              "disconnect",
-              "remove_node",
-              "set_default",
-              "batch"
-            ],
             "inputName": [
               "add_input",
               "set_default"
@@ -49747,7 +49737,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "84b3f7039cdcc2fb99d2a81f4b2e8cfbe52308e058762174972c081464f0720e",
-        "content": "8bd16617cf7bb72b83790cf4f037e3c22f94fa3ed6b259f2088f2126a910f82c"
+        "content": "ed73fb83ec12af8cc9cea7b9197eceac48339337421dd3df9d3ae25b41df1ec7"
       }
     },
     {
