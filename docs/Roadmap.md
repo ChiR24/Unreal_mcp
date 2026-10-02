@@ -4,7 +4,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 
 **Target**: ~2,825 actions covering all Unreal Engine subsystems and major plugin integrations.
 
-**Current sync (2026-06-11)**: Phases 1-30 are implemented and tracked through the 23 **internal** canonical parent tools shared by the TypeScript and native surfaces. The public MCP surface on both transports is the single `unreal` gateway tool; the 23 parents are reachable only through `unreal.execute` (see [`gateway-client-guide.md`](gateway-client-guide.md)). Phase 31+ remains the planned expansion area, with a few seeded actions already available through existing canonical tools.
+**Current sync (2026-10-02, 0.6.0-beta-c)**: 393 capability records keep 1,501 `{tool, action}` pairs callable. Phases 1-30 are implemented, except the actions 0.6.0-beta-c removed because they answered success without doing the work (Phases 6, 7, 10, 12-15 and 17-23 are marked Partial and list them). All of it is tracked through the 23 **internal** canonical parent tools shared by the TypeScript and native surfaces. The public MCP surface on both transports is the single `unreal` gateway tool; the 23 parents are reachable only through `unreal.execute` (see [`gateway-client-guide.md`](gateway-client-guide.md)). Phase 31+ remains the planned expansion area, with a few seeded actions already available through existing canonical tools.
 
 ---
 
@@ -45,6 +45,8 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Real-time Test/Log Streams**: Editor automation/log events stream through WebSocket notifications and native `/mcp` SSE notification streams.
 - [x] **Extensibility Framework**: Dynamic handler registration supports lower-snake-case C++ handlers and JSON-configured action aliases.
 - [x] **Remote Profiling**: Unreal Insights workflows cover trace status, capture, pause/resume, snapshot write/send, stop, and local trace metadata analysis.
+- [x] **Restart-proof native sessions**: `unreal-engine-mcp-server proxy` fronts the plugin's `/mcp` over stdio, answering `NOT_CONNECTED` while the editor is down and reconnecting by itself.
+- [x] **Discovery and version checks**: `server/discover` answers on both transports without a session, and a server and plugin from different releases name the mismatch and its fix.
 
 ## Context Reduction Initiative (Completed Workstream)
 
@@ -121,7 +123,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 6: Geometry & Mesh Creation (Complete)
+## Phase 6: Geometry & Mesh Creation (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 4 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Enable AI to CREATE actual 3D geometry, not just place existing meshes.
 
@@ -146,11 +150,11 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `chamfer`
 - [x] `bridge`, `loft`, `sweep`
 - [x] `revolve`
-- [x] `mirror`, `symmetrize`
+- [x] `mirror`, ~~`symmetrize`~~
 - [x] `array_linear`, `array_radial`
 - [x] `duplicate_along_spline`
 - [x] `loop_cut`, `edge_split`
-- [x] `poke`, `triangulate`
+- [x] `poke`, ~~`triangulate`~~
 - [x] `quadrangulate`
 
 ### 6.4 Deformers
@@ -163,7 +167,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `displace_by_texture`
 
 ### 6.5 Mesh Processing
-- [x] `subdivide` (PN tessellation)
+- [x] `subdivide` (`scheme`: PN tessellation, `catmull_clark`, `loop`, `bilinear`)
 - [x] `simplify_mesh` (QEM decimation)
 - [x] `remesh_uniform`
 - [x] `weld_vertices`
@@ -177,7 +181,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `auto_uv` (XAtlas)
 - [x] `project_uv` (box, planar, cylindrical)
 - [x] `unwrap_uv`, `pack_uv_islands`
-- [x] `transform_uvs`, `scale_uvs`, `rotate_uvs`
+- [x] `transform_uvs`, ~~`scale_uvs`~~, ~~`rotate_uvs`~~
 
 ### 6.7 Collision Generation
 - [x] `generate_collision` (convex, box, sphere, capsule, decomposition)
@@ -192,12 +196,22 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 6.9 Mesh Query
 - [x] `get_mesh_info` (vertex/triangle count, UV/normal status)
+- [x] `raycast_mesh` (`inspect`): where rays meet a static mesh asset, with normal, material slot and decal rotation
+
+### 6.10 Modeling Additions (0.6)
+- [x] `create_sdf` (`create_primitive` `primitive: sdf`): smooth organic shapes, with mirror and repeat copies
+- [x] `append_polygons`: a polygon cage in one call
+- [x] `set_material_id`, and `region` to pick the triangles of the face operators
+- [x] `bake_vertex_colors`: occlusion, edge, cavity and height masks
+- [x] `morphology` (fillets through a voxel grid)
 
 > **Note**: Geometry Collection for destruction is in Phase 46.1 (Chaos Destruction).
 
 ---
 
-## Phase 7: Skeletal Mesh & Rigging (Complete)
+## Phase 7: Skeletal Mesh & Rigging (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 1 action below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Enable creation and editing of animated characters with proper rigs.
 
@@ -215,7 +229,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `add_bone`, `remove_bone`, `set_bone_parent` (uses FReferenceSkeletonModifier)
 
 ### 7.2 Skin Weights
-- [x] `normalize_weights` (rebuilds mesh)
+- [ ] `normalize_weights` (rebuilds mesh)
 - [x] `prune_weights` (rebuilds mesh with threshold)
 - [x] `auto_skin_weights` (triggers mesh rebuild)
 - [x] `set_vertex_weights` (uses FSkinWeightProfileData)
@@ -304,6 +318,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `create_pattern_texture` (checker, grid, brick, tile, dots, stripes)
 - [x] `create_normal_from_height` (Sobel, Prewitt, Scharr algorithms)
 - [x] `create_ao_from_mesh`
+- [x] `create_text_texture` (`create_texture` `kind: text`): words in any Font asset and face, fitted to the texture
 
 ### 9.2 Texture Processing
 - [x] `resize_texture`
@@ -325,7 +340,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 10: Complete Animation System (Complete)
+## Phase 10: Complete Animation System (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 1 action below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Full animation authoring from keyframes to state machines.
 
@@ -383,7 +400,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 10.6 Retargeting
 - [x] `create_ik_rig`
-- [x] `add_ik_chain`
+- [ ] `add_ik_chain`
 - [x] `create_ik_retargeter`
 - [x] `set_retarget_chain_mapping`
 
@@ -438,7 +455,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 12: Complete Niagara VFX System (Complete)
+## Phase 12: Complete Niagara VFX System (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 1 action below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Full Niagara system authoring.
 
@@ -478,7 +497,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 12.4 Events & GPU
 - [x] `add_event_generator`, `add_event_receiver`
-- [x] `configure_event_payload`
+- [ ] `configure_event_payload`
 - [x] `enable_gpu_simulation`
 - [x] `add_simulation_stage`
 
@@ -488,7 +507,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 13: Gameplay Ability System (GAS) (Complete)
+## Phase 13: Gameplay Ability System (GAS) (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 6 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Complete GAS implementation for abilities, effects, and attributes.
 
@@ -499,14 +520,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `configure_asc` (replication_mode, owner)
 - [x] `create_attribute_set`
 - [x] `add_attribute` (health, mana, stamina, damage, armor, etc.)
-- [x] `set_attribute_base_value`, `set_attribute_clamping`
+- [x] `set_attribute_base_value`, ~~`set_attribute_clamping`~~
 
 ### 13.2 Gameplay Abilities
 - [x] `create_gameplay_ability`
 - [x] `set_ability_tags`
 - [x] `set_ability_costs`, `set_ability_cooldown`
-- [x] `set_ability_targeting`
-- [x] `add_ability_task`
+- [ ] `set_ability_targeting`
+- [ ] `add_ability_task`
 - [x] `set_activation_policy`, `set_instancing_policy`
 
 ### 13.3 Gameplay Effects
@@ -521,9 +542,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 13.4 Gameplay Cues
 - [x] `create_gameplay_cue_notify` (static, actor)
-- [x] `configure_cue_trigger`
-- [x] `set_cue_effects` (particles, sounds, camera_shake)
-- [x] `add_tag_to_asset`
+- [ ] `configure_cue_trigger`
+- [ ] `set_cue_effects` (particles, sounds, camera_shake)
+- [ ] `add_tag_to_asset`
 
 ### 13.5 Utility
 - [x] `get_gas_info`
@@ -532,7 +553,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 14: Character & Movement System (Complete)
+## Phase 14: Character & Movement System (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 10 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Complete character setup with advanced movement.
 
@@ -550,30 +573,32 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `configure_movement_speeds` (walk, run, sprint, crouch, swim, fly)
 - [x] `configure_jump` (height, air_control, double_jump)
 - [x] `configure_rotation` (orient_to_movement, use_controller_rotation)
-- [x] `add_custom_movement_mode`
+- [ ] `add_custom_movement_mode`
 - [x] `configure_nav_movement`
 
 ### 14.3 Advanced Movement
-- [x] `setup_mantling`
-- [x] `setup_vaulting`
-- [x] `setup_climbing`
-- [x] `setup_sliding`
-- [x] `setup_wall_running`
-- [x] `setup_grappling`
+- [ ] `setup_mantling`
+- [ ] `setup_vaulting`
+- [ ] `setup_climbing`
+- [ ] `setup_sliding`
+- [ ] `setup_wall_running`
+- [ ] `setup_grappling`
 
 ### 14.4 Footsteps System
 > **Note**: Physical Material creation is in Phase 34.5 (Physics Materials).
 
-- [x] `setup_footstep_system`
-- [x] `map_surface_to_sound`
-- [x] `configure_footstep_fx`
+- [ ] `setup_footstep_system`
+- [ ] `map_surface_to_sound`
+- [ ] `configure_footstep_fx`
 
 ### 14.5 Utility
 - [x] `get_character_info`
 
 ---
 
-## Phase 15: Combat & Weapons System (Complete)
+## Phase 15: Combat & Weapons System (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 20 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Complete combat implementation.
 
@@ -583,15 +608,15 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 15.1 Weapon Base
 - [x] `create_weapon_blueprint`
-- [x] `configure_weapon_mesh`, `configure_weapon_sockets`
-- [x] `set_weapon_stats` (damage, fire_rate, range, spread)
+- [x] `configure_weapon_mesh`, ~~`configure_weapon_sockets`~~
+- [ ] `set_weapon_stats` (damage, fire_rate, range, spread)
 
 ### 15.2 Firing Modes
-- [x] `configure_hitscan`
+- [ ] `configure_hitscan`
 - [x] `configure_projectile`
-- [x] `configure_spread_pattern`
-- [x] `configure_recoil_pattern`
-- [x] `configure_aim_down_sights`
+- [ ] `configure_spread_pattern`
+- [ ] `configure_recoil_pattern`
+- [ ] `configure_aim_down_sights`
 
 ### 15.3 Projectiles
 - [x] `create_projectile_blueprint`
@@ -601,28 +626,28 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 15.4 Damage System
 - [x] `create_damage_type`
-- [x] `configure_damage_execution`
+- [ ] `configure_damage_execution`
 - [x] `setup_hitbox_component`
 
 ### 15.5 Weapon Features
-- [x] `setup_reload_system`
-- [x] `setup_ammo_system`
+- [ ] `setup_reload_system`
+- [ ] `setup_ammo_system`
 - [x] `setup_attachment_system`
-- [x] `setup_weapon_switching`
+- [ ] `setup_weapon_switching`
 
 ### 15.6 Effects
-- [x] `configure_muzzle_flash`
-- [x] `configure_tracer`
-- [x] `configure_impact_effects`
-- [x] `configure_shell_ejection`
+- [ ] `configure_muzzle_flash`
+- [ ] `configure_tracer`
+- [ ] `configure_impact_effects`
+- [ ] `configure_shell_ejection`
 
 ### 15.7 Melee Combat
-- [x] `create_melee_trace`
-- [x] `configure_combo_system`
-- [x] `create_hit_pause` (hitstop)
-- [x] `configure_hit_reaction`
-- [x] `setup_parry_block_system`
-- [x] `configure_weapon_trails`
+- [ ] `create_melee_trace`
+- [ ] `configure_combo_system`
+- [ ] `create_hit_pause` (hitstop)
+- [ ] `configure_hit_reaction`
+- [ ] `setup_parry_block_system`
+- [ ] `configure_weapon_trails`
 
 ### 15.8 Utility
 - [x] `get_combat_info`
@@ -690,7 +715,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 17: Inventory & Items System (Complete)
+## Phase 17: Inventory & Items System (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 17 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Complete inventory and item management.
 
@@ -705,51 +732,53 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `assign_item_category`
 
 ### 17.2 Inventory Component
-- [x] `create_inventory_component`
-- [x] `configure_inventory_slots`
-- [x] `add_inventory_functions`
-- [x] `configure_inventory_events`
+- [ ] `create_inventory_component`
+- [ ] `configure_inventory_slots`
+- [ ] `add_inventory_functions`
+- [ ] `configure_inventory_events`
 - [x] `set_inventory_replication`
 
 ### 17.3 Pickups
-- [x] `create_pickup_actor`
-- [x] `configure_pickup_interaction`
-- [x] `configure_pickup_respawn`
-- [x] `configure_pickup_effects`
+- [ ] `create_pickup_actor`
+- [ ] `configure_pickup_interaction`
+- [ ] `configure_pickup_respawn`
+- [ ] `configure_pickup_effects`
 
 ### 17.4 Equipment
-- [x] `create_equipment_component`
-- [x] `define_equipment_slots`
-- [x] `configure_equipment_effects`
-- [x] `add_equipment_functions`
-- [x] `configure_equipment_visuals`
+- [ ] `create_equipment_component`
+- [ ] `define_equipment_slots`
+- [ ] `configure_equipment_effects`
+- [ ] `add_equipment_functions`
+- [ ] `configure_equipment_visuals`
 
 ### 17.5 Loot System
 - [x] `create_loot_table`
 - [x] `add_loot_entry`
-- [x] `configure_loot_drop`
+- [ ] `configure_loot_drop`
 - [x] `set_loot_quality_tiers`
 
 ### 17.6 Crafting
 - [x] `create_crafting_recipe`
 - [x] `configure_recipe_requirements`
 - [x] `create_crafting_station`
-- [x] `add_crafting_component`
+- [ ] `add_crafting_component`
 
 ### 17.7 Additional Actions
 - [x] `configure_item_stacking`
 - [x] `set_item_icon`
 - [x] `add_recipe_ingredient`
 - [x] `remove_loot_entry`
-- [x] `configure_inventory_weight`
-- [x] `configure_station_recipes`
+- [ ] `configure_inventory_weight`
+- [ ] `configure_station_recipes`
 
 ### 17.8 Utility
 - [x] `get_inventory_info`
 
 ---
 
-## Phase 18: Interaction System (Complete)
+## Phase 18: Interaction System (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 10 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Complete interaction framework.
 
@@ -760,8 +789,8 @@ The following phases represent the comprehensive expansion to enable **full proj
 ### 18.1 Interaction Component
 - [x] `create_interaction_component`
 - [x] `configure_interaction_trace`
-- [x] `configure_interaction_widget`
-- [x] `add_interaction_events`
+- [ ] `configure_interaction_widget`
+- [ ] `add_interaction_events`
 
 ### 18.2 Interactables
 - [x] `create_interactable_interface`
@@ -776,24 +805,26 @@ The following phases represent the comprehensive expansion to enable **full proj
 > **Note**: Pickup actors are in Phase 17.3 (Inventory - Pickups).
 
 ### 18.3 Destructibles
-- [x] `setup_destructible_mesh`
-- [x] `configure_destruction_levels`
-- [x] `configure_destruction_effects`
-- [x] `configure_destruction_damage`
-- [x] `add_destruction_component`
+- [ ] `setup_destructible_mesh`
+- [ ] `configure_destruction_levels`
+- [ ] `configure_destruction_effects`
+- [ ] `configure_destruction_damage`
+- [ ] `add_destruction_component`
 
 ### 18.4 Trigger System
 - [x] `create_trigger_actor`
-- [x] `configure_trigger_events`
-- [x] `configure_trigger_filter`
-- [x] `configure_trigger_response`
+- [ ] `configure_trigger_events`
+- [ ] `configure_trigger_filter`
+- [ ] `configure_trigger_response`
 
 ### 18.5 Utility
 - [x] `get_interaction_info`
 
 ---
 
-## Phase 19: Complete UI/UX System (Complete)
+## Phase 19: Complete UI/UX System (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 2 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Full UMG widget authoring capabilities.
 
@@ -830,7 +861,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `set_visibility`, `set_style`
 
 ### 19.5 Bindings & Events
-- [x] `create_property_binding`
+- [ ] `create_property_binding`
 - [x] `bind_text`, `bind_visibility`, `bind_color`, `bind_enabled`
 - [x] `bind_on_clicked`, `bind_on_hovered`, `bind_on_value_changed`
 
@@ -838,7 +869,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `create_widget_animation`
 - [x] `add_animation_track` (transform, color, opacity, material)
 - [x] `add_animation_keyframe`
-- [x] `set_animation_loop`
+- [ ] `set_animation_loop`
 
 ### 19.7 UI Templates
 - [x] `create_main_menu`, `create_pause_menu`
@@ -858,7 +889,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 20: Networking & Multiplayer (Complete)
+## Phase 20: Networking & Multiplayer (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 1 action below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Complete networking and replication system.
 
@@ -891,7 +924,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `set_only_relevant_to_owner`
 
 ### 20.5 Net Serialization
-- [x] `configure_net_serialization`
+- [ ] `configure_net_serialization`
 - [x] `set_replicated_using`
 - [x] `configure_push_model`
 
@@ -911,7 +944,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 21: Game Framework (Complete)
+## Phase 21: Game Framework (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 5 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Complete game mode and session management.
 
@@ -935,11 +970,11 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `configure_game_rules`
 
 ### 21.3 Match Flow
-- [x] `setup_match_states` (waiting, warmup, in_progress, post_match)
-- [x] `configure_round_system`
-- [x] `configure_team_system`
-- [x] `configure_scoring_system`
-- [x] `configure_spawn_system`
+- [ ] `setup_match_states` (waiting, warmup, in_progress, post_match)
+- [ ] `configure_round_system`
+- [ ] `configure_team_system`
+- [ ] `configure_scoring_system`
+- [ ] `configure_spawn_system`
 
 ### 21.4 Player Management
 - [x] `configure_player_start`
@@ -951,7 +986,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 22: Sessions & Local Multiplayer ✅
+## Phase 22: Sessions & Local Multiplayer (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 4 actions below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Session management and split-screen support.
 
@@ -960,7 +997,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 ### 22.1 Session Management (Local/LAN)
 > **Note**: Online session management (matchmaking, lobbies) is in Phase 43 (Online Services). This section covers local/LAN sessions only.
 
-- [x] `configure_local_session_settings`
+- [ ] `configure_local_session_settings`
 - [x] `configure_session_interface`
 
 ### 22.2 Local Multiplayer
@@ -977,17 +1014,19 @@ The following phases represent the comprehensive expansion to enable **full proj
 ### 22.4 Voice Chat
 - [x] `enable_voice_chat`
 - [x] `configure_voice_settings`
-- [x] `set_voice_channel`
+- [ ] `set_voice_channel`
 - [x] `mute_player`
-- [x] `set_voice_attenuation`
-- [x] `configure_push_to_talk`
+- [ ] `set_voice_attenuation`
+- [ ] `configure_push_to_talk`
 
 ### 22.5 Utility
 - [x] `get_sessions_info`
 
 ---
 
-## Phase 23: World & Level Structure ✅
+## Phase 23: World & Level Structure (Partial)
+
+> **Removed in 0.6.0-beta-c** (`385775a55`): 1 action below answered success without doing the work and were taken out of the catalog; they are unticked, or struck through where the rest of the line still ships.
 
 **Goal**: Complete level and world management.
 
@@ -999,7 +1038,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `create_level`, `create_sublevel`
 - [x] `configure_level_streaming`
 - [x] `set_streaming_distance`
-- [x] `configure_level_bounds`
+- [ ] `configure_level_bounds`
 
 ### 23.2 World Partition (Expanded)
 - [x] `enable_world_partition`
@@ -1167,7 +1206,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Environment Systems (Complete)
+## Phase 28: Environment Systems (Complete)
 
 **Goal**: Complete environment (sky, weather, water).
 
@@ -1227,13 +1266,13 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Advanced Lighting & Rendering
+## Phase 29: Advanced Lighting & Rendering (Complete)
 
 **Goal**: Complete lighting and post-processing.
 
 **Tool**: `build_environment` exposes the rendering actions, with seeded `manage_asset` and `manage_level_structure` support for render targets and volumes. The native bridge routes the public `build_environment` actions through the internal `manage_render` domain.
 
-**Status**: Implementation complete in TypeScript and C++ (the `manage_render` C++ dispatch is split into per-concern files under `Render/McpAutomationBridge_Render*.cpp`). Native parity audit (`test:params`) reports 0 schema mismatches and 1286/1286 actions covered. The live-acceptance verification record is **pending** — headless Editor run and sha256 evidence archive are not yet captured. Until that record is published, treat this section as "Code complete; verification record pending" rather than "live-tested".
+**Status**: Implementation complete in TypeScript and C++ (the `manage_render` C++ dispatch is split into per-concern files under `Render/McpAutomationBridge_Render*.cpp`). Native parity audit (`test:params`) reports 0 schema mismatches and every declared action covered. The live-acceptance verification record is **pending** — headless Editor run and sha256 evidence archive are not yet captured. Until that record is published, treat this section as "Code complete; verification record pending" rather than "live-tested".
 
 ### 29.1 Ray Tracing
 - [x] `configure_ray_traced_shadows`
@@ -1347,7 +1386,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 31.1 Data Assets
 - [ ] `create_data_asset`, `create_primary_data_asset`
-- [ ] `create_data_table`, `add_data_table_row`, `modify_data_table_row`, `delete_data_table_row`
+- [x] `create_data_table`, `add_data_table_row`, `update_data_table_row`, `delete_data_table_row`
 - [ ] `import_data_table_csv`, `export_data_table_csv`
 - [ ] `create_curve_table`, `create_curve_float`, `create_curve_linear_color`
 
@@ -1386,11 +1425,11 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 32.1 Build Pipeline
 - [x] `run_ubt` (baseline)
-- [ ] `run_ubt` (expanded)
+- [x] `run_ubt` (expanded; `system_control.run_build`)
 - [ ] `generate_project_files`
 - [ ] `compile_shaders`
 - [ ] `cook_content` (platform)
-- [ ] `package_project` (platform)
+- [x] `package_project` (platform)
 - [ ] `configure_build_settings`
 - [ ] `create_build_target`
 
@@ -1414,8 +1453,8 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [ ] `configure_compression`
 
 ### 32.4 Plugins
-- [ ] `list_plugins`
-- [ ] `enable_plugin`, `disable_plugin`
+- [x] `list_plugins`
+- [x] `enable_plugin`, `disable_plugin`
 - [ ] `get_plugin_status`
 - [ ] `configure_plugin_settings`
 
@@ -1475,7 +1514,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 **Tools**: Various editor management tools
 
 ### 34.1 Editor Modes
-- [ ] `set_editor_mode` (place, paint, landscape, foliage, mesh_paint)
+- [x] `set_editor_mode` (place, paint, landscape, foliage, mesh_paint; `control_editor.configure_viewport` setting `editor_mode`)
 - [ ] `configure_editor_preferences`
 - [ ] `set_grid_settings`, `set_snap_settings`
 - [ ] `manage_editor_layouts`
@@ -1495,7 +1534,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [ ] `select_actors_by_tag`
 - [ ] `select_actors_in_volume`
 - [ ] `deselect_all`
-- [ ] `get_selected_actors`
+- [x] `get_selected_actors` (`inspect.get_editor_state`)
 - [ ] `group_actors`, `ungroup_actors`
 
 ### 34.4 Collision
@@ -1536,6 +1575,10 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [ ] `add_interface_function`
 - [ ] `implement_interface`
 - [ ] `call_interface_function`
+
+### 34.9 Epic Editor Toolsets (UE 5.8)
+- [x] `list_editor_toolsets`, `call_editor_tool`: Epic's Toolset Registry behind this gateway's scopes and consent
+- [x] `call_editor_tool_destructive`: tools named for deleting or resetting, under the destructive scope and elevated consent (script, console and `ConfigSettingsToolset` tools are never called)
 
 ---
 
@@ -1732,11 +1775,11 @@ plus `FabDownloader.h` and `FabWorkflowFactory` for the import path. Surfacing
 the Fab library is therefore the same kind of read the Content Browser already
 does against an authenticated plugin — no credential handling here at all:
 
-- [ ] `list_fab_assets` / `search_fab_library` — read the plugin's cache and
+- [x] `list_fab_library` / `search_fab_listings` (`asset.query_marketplace`), with `get_fab_listing_details`, `list_fab_downloads`
       owned-listing set; requires a `Fab` module dependency (the `fabLibrary`
       source root already reads its cache directory without one)
-- [ ] `download_fab_asset` — drive `FFabDownloader`, report progress
-- [ ] `import_fab_asset` — run the plugin's own workflow (Quixel/Pack/MetaHuman)
+- [x] `download_fab_asset` (`asset.import_marketplace_asset`): the add answers when Fab accepts the download; `get_fab_import_status` reports progress and `cancel_fab_import` stops it
+- [x] `add_fab_asset_to_project`: runs Fab's own workflow (Megascans quality tiers, packs), then saves and optionally relocates and renames what landed (MetaHuman listings are refused)
       instead of a raw package copy, so Nanite/VT/quality-tier settings apply
 - [ ] `connect_to_bridge`, `filter_by_category`, `filter_by_biome`
 
@@ -2126,7 +2169,7 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 - [ ] `create_mesh_section`, `update_mesh_section`, `clear_mesh_section`, `clear_all_mesh_sections`
 - [ ] `set_mesh_vertices`, `set_mesh_triangles`, `set_mesh_normals`, `set_mesh_uvs`, `set_mesh_colors`, `set_mesh_tangents`
 - [ ] `set_collision_from_mesh`, `add_collision_convex_mesh`, `clear_collision_convex_meshes`
-- [ ] `convert_to_static_mesh`
+- [x] `convert_to_static_mesh`
 
 ### 45.7 Variant Manager
 - [ ] `create_variant_set`, `add_variant`, `configure_variant_properties`
@@ -2316,7 +2359,7 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 | Modding & UGC (48) | 1 | ~25 |
 | **TOTAL** | **48** | **~2,825** |
 
-Current implementation is complete through Phase 30. Phases 31-33, 35, and 45 have seeded actions on existing canonical tools, but their expanded roadmap surfaces remain planned.
+Current implementation covers Phases 1-30, less the actions 0.6.0-beta-c removed for answering success without doing the work (the Partial phases list them); the estimates above are the planned surface, not what ships. Phases 31-33, 35, 37 and 45 have seeded actions on existing canonical tools, but their expanded roadmap surfaces remain planned.
 
 ## What This Enables
 
