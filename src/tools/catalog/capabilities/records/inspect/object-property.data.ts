@@ -112,6 +112,49 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     },
   }),
   buildCoreRecord({
+    parentTool: 'inspect', action: 'raycast_mesh', dispatchAction: 'raycast_mesh', domain: D, family: 'object',
+    summary: 'Cast rays at a static mesh asset in its own local space and read where each one meets the surface: the point, the surface normal and the material slot. Places a part, a print or a decal on a curved surface without a placed actor or collision.',
+    topics: ['raycast mesh', 'surface point', 'where is the surface', 'line trace mesh', 'surface normal'],
+    whenToUse: ['A part, decal or print must sit exactly on a mesh surface (a chest, a hull, a rock) and the surface position at a given height or side is unknown.', 'A surface profile must be sampled: one ray per row or column across the area.'],
+    whenNotToUse: ['Only the overall size or pivot of the mesh is needed (use get_mesh_details).', 'Parts of a Blueprint must be checked for sinking into each other (use control_actor.audit_placement).'],
+    inputProps: {
+      meshPath: { type: 'string', description: 'Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail.' },
+      rays: {
+        type: 'array', minItems: 1, maxItems: 256,
+        items: {
+          type: 'object', additionalProperties: false, required: ['origin', 'direction'],
+          properties: {
+            origin: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Ray start {x, y, z} in the mesh\'s local space, in cm; start outside the mesh to find its outer surface.' },
+            direction: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Ray direction {x, y, z}; any length, it is normalized.' },
+          },
+        },
+        description: 'Rays in the mesh\'s local space; each answers in hits at the same index.',
+      },
+    },
+    required: ['meshPath', 'rays'],
+    effect: 'read',
+    exampleInput: { action: 'raycast_mesh', meshPath: '/Engine/BasicShapes/Cube', rays: [{ origin: { x: 200, y: 0, z: 50 }, direction: { x: -1, y: 0, z: 0 } }] },
+    exampleOutput: { success: true, meshPath: '/Engine/BasicShapes/Cube', hitCount: 1, hits: [{ hit: true, location: { x: 50, y: 0, z: 50 }, normal: { x: 1, y: 0, z: 0 }, distance: 150, materialSlot: 'Cube' }] },
+    outputProps: {
+      meshPath: { type: 'string', description: 'The mesh the rays were cast at.' },
+      hitCount: { type: 'number', description: 'How many rays met the surface.' },
+      hits: {
+        type: 'array',
+        items: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            hit: { type: 'boolean', description: 'Whether this ray met the surface.' },
+            location: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Nearest point where the ray meets the surface, {x, y, z} in local space.' },
+            normal: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Surface normal there, turned to face back along the ray (from outside, the outward normal).' },
+            distance: { type: 'number', description: 'Distance from the ray origin, in cm.' },
+            materialSlot: { type: 'string', description: 'Name of the material slot whose triangle was hit.' },
+          },
+        },
+        description: 'One entry per ray, in order.',
+      },
+    },
+  }),
+  buildCoreRecord({
     parentTool: 'inspect', action: 'get_texture_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
     summary: 'Inspect a texture asset: dimensions, format and settings. Any other object is refused with TYPE_MISMATCH.',
     whenToUse: ['A texture asset\'s details must be read.'],

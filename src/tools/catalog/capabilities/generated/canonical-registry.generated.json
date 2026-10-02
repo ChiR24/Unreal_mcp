@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "a38934237cf58688",
-  "recordCount": 392,
+  "catalogRevision": "d8b8ca8d97c0f364",
+  "recordCount": 393,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -42511,6 +42511,227 @@
         "algorithm": "sha256",
         "schema": "9e63dc514540de6db766715471c0df8d311947b3a057e69c547bc58cce632b8f",
         "content": "d129d7cc29e73e6892130f2a4d8bc57f5161b52879a470d1c6c6846c3a628d10"
+      }
+    },
+    {
+      "id": "inspect.raycast_mesh",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "inspect",
+          "action": "raycast_mesh"
+        }
+      ],
+      "discovery": {
+        "domain": "inspect",
+        "family": "object",
+        "topics": [
+          "raycast_mesh",
+          "raycast mesh",
+          "surface point",
+          "where is the surface",
+          "line trace mesh",
+          "surface normal"
+        ],
+        "summary": "Cast rays at a static mesh asset in its own local space and read where each one meets the surface: the point, the surface normal and the material slot. Places a part, a print or a decal on a curved surface without a placed actor or collision.",
+        "whenToUse": [
+          "A part, decal or print must sit exactly on a mesh surface (a chest, a hull, a rock) and the surface position at a given height or side is unknown.",
+          "A surface profile must be sampled: one ray per row or column across the area."
+        ],
+        "whenNotToUse": [
+          "Only the overall size or pivot of the mesh is needed (use get_mesh_details).",
+          "Parts of a Blueprint must be checked for sinking into each other (use control_actor.audit_placement)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
+            },
+            "rays": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 256,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "origin",
+                  "direction"
+                ],
+                "properties": {
+                  "origin": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Ray start {x, y, z} in the mesh's local space, in cm; start outside the mesh to find its outer surface."
+                  },
+                  "direction": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Ray direction {x, y, z}; any length, it is normalized."
+                  }
+                }
+              },
+              "description": "Rays in the mesh's local space; each answers in hits at the same index."
+            }
+          },
+          "required": [
+            "action",
+            "meshPath",
+            "rays"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "meshPath": {
+              "type": "string",
+              "description": "The mesh the rays were cast at."
+            },
+            "hitCount": {
+              "type": "number",
+              "description": "How many rays met the surface."
+            },
+            "hits": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "hit": {
+                    "type": "boolean",
+                    "description": "Whether this ray met the surface."
+                  },
+                  "location": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Nearest point where the ray meets the surface, {x, y, z} in local space."
+                  },
+                  "normal": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Surface normal there, turned to face back along the ray (from outside, the outward normal)."
+                  },
+                  "distance": {
+                    "type": "number",
+                    "description": "Distance from the ray origin, in cm."
+                  },
+                  "materialSlot": {
+                    "type": "string",
+                    "description": "Name of the material slot whose triangle was hit."
+                  }
+                }
+              },
+              "description": "One entry per ray, in order."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Cast rays at a static mesh asset in its own local space and read where each one meets the surface: the point, the surface normal and the material slot. Places a part, a print or a decal on a curved surface without a placed actor or collision.",
+          "input": {
+            "action": "raycast_mesh",
+            "meshPath": "/Engine/BasicShapes/Cube",
+            "rays": [
+              {
+                "origin": {
+                  "x": 200,
+                  "y": 0,
+                  "z": 50
+                },
+                "direction": {
+                  "x": -1,
+                  "y": 0,
+                  "z": 0
+                }
+              }
+            ]
+          },
+          "output": {
+            "success": true,
+            "meshPath": "/Engine/BasicShapes/Cube",
+            "hitCount": 1,
+            "hits": [
+              {
+                "hit": true,
+                "location": {
+                  "x": 50,
+                  "y": 0,
+                  "z": 50
+                },
+                "normal": {
+                  "x": 1,
+                  "y": 0,
+                  "z": 0
+                },
+                "distance": 150,
+                "materialSlot": "Cube"
+              }
+            ]
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "inspect",
+        "dispatchAction": "raycast_mesh"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "58680c5ea8eaa73ff1f364b45db1daabf303c99da58b2161a742484c0b1853c5",
+        "content": "b6ac3a12e3ab8a2b7f5651732b4541b48177359158e638ddc212ec15702d0e16"
       }
     },
     {
@@ -92405,6 +92626,10 @@
               "additionalProperties": false,
               "description": "Pixel box the drawn letters cover."
             },
+            "fontSize": {
+              "type": "number",
+              "description": "Font size the text was fitted at, the largest whose lines (letter spacing included) fit inside the padding."
+            },
             "saved": {
               "type": "boolean",
               "description": "Whether the texture was saved."
@@ -92659,8 +92884,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c12c3d364f8a9a5ef3177e02f3d93bcfac09c835e02766afe734262a17a6f55c",
-        "content": "ef1805e17e52583110f031f7531e4d87c95689bf1c45c138bc7770475a40f282"
+        "schema": "f1144a00af9cf38f642f8a62c4f78cf33cf3351d45dd6746b4582737e3f5080b",
+        "content": "3e30d5bf7a977dd4fbcfdacd0012917449379e815deeec7bf8fe98da27cce78c"
       }
     },
     {

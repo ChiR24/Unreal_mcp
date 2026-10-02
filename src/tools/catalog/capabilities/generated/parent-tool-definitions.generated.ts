@@ -5832,6 +5832,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Default true: mark the package dirty and save an asset package. false leaves the package untouched and unsaved, so the change lives in memory only."
         },
+        "meshPath": {
+          "type": "string",
+          "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
+        },
         "name": {
           "type": "string",
           "description": "Actor name identifier (alias of actorName)."
@@ -5881,6 +5885,34 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "propertyPath": {
           "type": "string",
           "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
+        },
+        "rays": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "origin",
+              "direction"
+            ],
+            "properties": {
+              "origin": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Ray start {x, y, z} in the mesh's local space, in cm; start outside the mesh to find its outer surface."
+              },
+              "direction": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Ray direction {x, y, z}; any length, it is normalized."
+              }
+            }
+          },
+          "description": "Rays in the mesh's local space; each answers in hits at the same index."
         },
         "snapshotName": {
           "type": "string",
@@ -5946,6 +5978,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "inspect_object",
             "get_blueprint_details",
+            "raycast_mesh",
             "get_property",
             "set_property",
             "inspect_class",
@@ -6241,6 +6274,44 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Active viewport height in pixels."
         },
+        "hitCount": {
+          "type": "number",
+          "description": "How many rays met the surface."
+        },
+        "hits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "hit": {
+                "type": "boolean",
+                "description": "Whether this ray met the surface."
+              },
+              "location": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Nearest point where the ray meets the surface, {x, y, z} in local space."
+              },
+              "normal": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Surface normal there, turned to face back along the ray (from outside, the outward normal)."
+              },
+              "distance": {
+                "type": "number",
+                "description": "Distance from the ray origin, in cm."
+              },
+              "materialSlot": {
+                "type": "string",
+                "description": "Name of the material slot whose triangle was hit."
+              }
+            }
+          },
+          "description": "One entry per ray, in order."
+        },
         "homepage": {
           "type": "string",
           "description": "Project homepage URL."
@@ -6338,6 +6409,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Mesh assets: every material slot as {slotIndex, slotName, material (asset path, empty for none), triangles and sections (what LOD0 draws with the slot), bounds (where that geometry is, in mesh space: origin is its center, extent its half size, with min, max, size and radius)}. bounds is absent for a slot LOD0 draws nothing with, and for every slot when slotBoundsAvailable is false. A Nanite mesh reports its fallback mesh. A skeletal mesh is read in its reference pose."
+        },
+        "meshPath": {
+          "type": "string",
+          "description": "The mesh the rays were cast at."
         },
         "message": {
           "type": "string",
@@ -9797,6 +9872,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "fontFamily": {
           "type": "string",
           "description": "Font asset drawn with."
+        },
+        "fontSize": {
+          "type": "number",
+          "description": "Font size the text was fitted at, the largest whose lines (letter spacing included) fit inside the padding."
         },
         "formatCode": {
           "type": "string",

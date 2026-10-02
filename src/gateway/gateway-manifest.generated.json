@@ -4522,6 +4522,7 @@
       "actions": [
         "inspect_object",
         "get_blueprint_details",
+        "raycast_mesh",
         "get_property",
         "set_property",
         "inspect_class",
@@ -4554,6 +4555,7 @@
         "limit",
         "lookup",
         "markDirty",
+        "meshPath",
         "name",
         "objectKind",
         "objectPath",
@@ -4563,6 +4565,7 @@
         "propertyName",
         "propertyNames",
         "propertyPath",
+        "rays",
         "snapshotName",
         "snapshotOp",
         "statsKind",
@@ -4688,6 +4691,10 @@
             "type": "boolean",
             "description": "Default true: mark the package dirty and save an asset package. false leaves the package untouched and unsaved, so the change lives in memory only."
           },
+          "meshPath": {
+            "type": "string",
+            "description": "Static mesh asset path, e.g. /Game/Meshes/SM_Rock. Rays meet its source triangles, so a Nanite mesh answers at full detail."
+          },
           "name": {
             "type": "string",
             "description": "Actor name identifier (alias of actorName)."
@@ -4737,6 +4744,34 @@
           "propertyPath": {
             "type": "string",
             "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
+          },
+          "rays": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 256,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "origin",
+                "direction"
+              ],
+              "properties": {
+                "origin": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "x-unreal-reflection-boundary": true,
+                  "description": "Ray start {x, y, z} in the mesh's local space, in cm; start outside the mesh to find its outer surface."
+                },
+                "direction": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "x-unreal-reflection-boundary": true,
+                  "description": "Ray direction {x, y, z}; any length, it is normalized."
+                }
+              }
+            },
+            "description": "Rays in the mesh's local space; each answers in hits at the same index."
           },
           "snapshotName": {
             "type": "string",
@@ -4802,6 +4837,7 @@
             "enum": [
               "inspect_object",
               "get_blueprint_details",
+              "raycast_mesh",
               "get_property",
               "set_property",
               "inspect_class",

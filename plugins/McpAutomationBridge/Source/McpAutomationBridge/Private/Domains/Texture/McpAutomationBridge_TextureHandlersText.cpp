@@ -1,33 +1,75 @@
 #include "Domains/Texture/McpAutomationBridge_TextureHandlersShared.h"
 
 #include "Engine/Font.h"
+#include "Fonts/FontMeasure.h"
+#include "Framework/Application/SlateApplication.h"
+#include "Rendering/SlateRenderer.h"
 #include "RenderingThread.h"
 #include "Slate/WidgetRenderer.h"
 #include "Widgets/Layout/SBox.h"
-#include "Widgets/Layout/SScaleBox.h"
 #include "Widgets/Text/STextBlock.h"
 
 namespace McpTextureHandlers
 {
 namespace
 {
-// White text scaled to fit Size inside Padding, drawn offscreen by Slate (the editor UI's own
-// rasterizer, so any Font asset and face draws as it does in a widget). Only the alpha of
-// OutPixels is used: it is each pixel's coverage, whatever Slate does with gamma or premultiply.
+// Slate's font measurer leaves letter spacing out, while the shaper adds it after every glyph but a
+// line's last, so it is added back per line. A scale box fitted from the bare measure drew spaced
+// text wider than the texture and cut its last letters off.
+FVector2f McpMeasureText(const FString& Text, const FSlateFontInfo& Font)
+{
+    const TSharedRef<FSlateFontMeasure> Measure = FSlateApplication::Get().GetRenderer()->GetFontMeasureService();
+    const float Spacing = Font.LetterSpacing * Font.Size / 1000.f;
+    TArray<FString> Lines;
+    Text.ParseIntoArray(Lines, TEXT("\n"), false);
+    float Width = 0.f;
+    for (const FString& Line : Lines)
+    {
+        const auto LineSize = Measure->Measure(FText::FromString(Line), Font);
+        Width = FMath::Max(Width, static_cast<float>(LineSize.X) + Spacing * FMath::Max(Line.Len() - 1, 0));
+    }
+    const auto Block = Measure->Measure(FText::FromString(Text), Font);
+    return FVector2f(Width, static_cast<float>(Block.Y));
+}
+
+// The largest whole font size whose measure fits Area: a guess scaled from size 100, then smaller
+// until it fits, since glyph advances round per size and do not scale exactly.
+int32 McpFitFontSize(const FString& Text, FSlateFontInfo Font, const FVector2f& Area)
+{
+    const auto FitOf = [&Text, &Font, &Area]()
+    {
+        const FVector2f Natural = McpMeasureText(Text, Font);
+        return FMath::Min(Area.X / FMath::Max(Natural.X, 1.f), Area.Y / FMath::Max(Natural.Y, 1.f));
+    };
+    Font.Size = 100;
+    int32 Size = FMath::Max(1, FMath::FloorToInt(100.f * FitOf()));
+    for (int32 Pass = 0; Pass < 8 && Size > 1; ++Pass)
+    {
+        Font.Size = Size;
+        const float Fit = FitOf();
+        if (Fit >= 1.f)
+        {
+            break;
+        }
+        Size = FMath::Max(1, FMath::Min(Size - 1, FMath::FloorToInt(Size * Fit)));
+    }
+    return Size;
+}
+
+// White text at its own size, centred, drawn offscreen by Slate (the editor UI's own rasterizer, so
+// any Font asset and face draws as it does in a widget). Only the alpha of OutPixels is used: it is
+// each pixel's coverage, whatever Slate does with gamma or premultiply.
 bool McpRasterizeText(const FString& Text, const FSlateFontInfo& Font, ETextJustify::Type Justify,
-                      FIntPoint Size, float Padding, TArray<FColor>& OutPixels)
+                      FIntPoint Size, TArray<FColor>& OutPixels)
 {
     UTextureRenderTarget2D* Target = NewObject<UTextureRenderTarget2D>();
     Target->ClearColor = FLinearColor::Transparent;
     Target->SRGB = true;
     Target->InitCustomFormat(Size.X, Size.Y, PF_B8G8R8A8, false);
     Target->UpdateResourceImmediate(true);
-    const TSharedRef<SWidget> Widget = SNew(SBox).Padding(FMargin(Padding))
+    const TSharedRef<SWidget> Widget = SNew(SBox).HAlign(HAlign_Center).VAlign(VAlign_Center)
     [
-        SNew(SScaleBox).Stretch(EStretch::ScaleToFit)
-        [
-            SNew(STextBlock).Text(FText::FromString(Text)).Font(Font).ColorAndOpacity(FLinearColor::White).Justification(Justify)
-        ]
+        SNew(STextBlock).Text(FText::FromString(Text)).Font(Font).ColorAndOpacity(FLinearColor::White).Justification(Justify)
     ];
     FWidgetRenderer* Renderer = new FWidgetRenderer(false);
     Renderer->DrawWidget(Target, Widget, 1.f, FVector2D(Size.X, Size.Y), 0.f);
@@ -85,10 +127,13 @@ TSharedPtr<FJsonObject> HandleCreateTextTexture(const TSharedPtr<FJsonObject>& P
         TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("typeface '%s' is not a face of %s; it has %s."),
                                                *Typeface, *Family, *FString::Join(Faces, TEXT(", "))));
     }
+    if (!FSlateApplication::IsInitialized())
+    {
+        TEXTURE_ERROR_RESPONSE(TEXT("Text is drawn by Slate, which this editor session (no UI) does not run."));
+    }
     FSlateFontInfo Font;
     Font.FontObject = FontAsset;
     Font.TypefaceFontName = FName(*Typeface);
-    Font.Size = 48;
     Font.LetterSpacing = static_cast<int32>(GetJsonNumberField(Params, TEXT("letterSpacing"), 0));
 
     const FString Justification = GetJsonStringField(Params, TEXT("justification"), TEXT("center"));
@@ -99,9 +144,11 @@ TSharedPtr<FJsonObject> HandleCreateTextTexture(const TSharedPtr<FJsonObject>& P
     {
         TEXTURE_ERROR_RESPONSE(FString::Printf(TEXT("padding %.0f leaves no room in a %dx%d texture."), Padding, Width, Height));
     }
+    const int32 FontSize = McpFitFontSize(Text, Font, FVector2f(Width - Padding * 2.f, Height - Padding * 2.f));
+    Font.Size = FontSize;
 
     TArray<FColor> Coverage;
-    if (!McpRasterizeText(Text, Font, Justify, FIntPoint(Width, Height), Padding, Coverage))
+    if (!McpRasterizeText(Text, Font, Justify, FIntPoint(Width, Height), Coverage))
     {
         TEXTURE_ERROR_RESPONSE(TEXT("Slate drew the text, but its pixels could not be read back."));
     }
@@ -165,6 +212,7 @@ TSharedPtr<FJsonObject> HandleCreateTextTexture(const TSharedPtr<FJsonObject>& P
     Response->SetStringField(TEXT("typeface"), Typeface);
     Response->SetArrayField(TEXT("typefaces"), FaceValues);
     Response->SetObjectField(TEXT("inkBounds"), Ink2D);
+    Response->SetNumberField(TEXT("fontSize"), FontSize);
     Response->SetBoolField(TEXT("saved"), bSaved);
     McpHandlerUtils::AddVerification(Response, NewTexture);
     return Response;
