@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a122b979708d4e99",
+  "catalogRevision": "9c93c7e253a3d23a",
   "recordCount": 389,
   "records": [
     {
@@ -15805,7 +15805,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor's ground, a Character's capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part's surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to [\"mcp.placement.ok\"]) is a deliberate embed, such as an eyeball in its socket, and is left out. control_actor.audit_placement with blueprintPath lists every part of the Blueprint."
+              "description": "Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor's ground, a Character's capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part's surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to [\"mcp.placement.ok\"]) is a deliberate embed, such as an eyeball in its socket, and is left out; mcp.placement.ok:<component> accepts the embed in that one part only (a neck in its collar, a hand round a handle) and keeps every other check. control_actor.audit_placement with blueprintPath lists every part of the Blueprint."
             },
             "verifiedValue": {
               "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
@@ -15956,8 +15956,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5fe9cbcf6935f309556fda47867557bcabd0ccb1a2d8393f9295d48960d77be3",
-        "content": "302d0c2fbbf94e27459db8c07f234668a741516ff96efdcc38c93933cc49db3d"
+        "schema": "2a9153d9fb7a1b9ba3413332cc2c4f2e85b05f79ec2dff9cc1d511f3d66c10fc",
+        "content": "6211c4bc9cc1e92881806c8871c01deedfc92817f04f1b6765444484df6cf5ae"
       }
     },
     {
@@ -30097,7 +30097,7 @@
             },
             "blueprintPath": {
               "type": "string",
-              "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out. Blueprint component edits report the same for the parts they touch, as partWarnings."
+              "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out; mcp.placement.ok:<component> accepts the embed in that one part only and keeps every other check. Blueprint component edits report the same for the parts they touch, as partWarnings."
             }
           },
           "required": [
@@ -30214,8 +30214,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fe69b7fd347bc41a4d789c27ece134b0e0d571542ba8316907c71845389da289",
-        "content": "db426692cb535fc19d356906bf52ccc07f04c0876f916c543ae26922625ee992"
+        "schema": "3dea1657d19fc56934e167605c9ef42485fd4da754c45edbd55890c26a8d3a11",
+        "content": "8b6d55502e6216375978b8d2d7ae5525bd96727b554749b3377441d8feab11e7"
       }
     },
     {
@@ -58870,7 +58870,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out."
+              "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out, and mcp.placement.ok:<component> accepts the embed in that one part only."
             }
           },
           "required": [
@@ -58924,8 +58924,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0a62ce81665fa9fc5bad738f717384e76cdcdec7bfee52caf3d841534feebcd8",
-        "content": "a949a8ba3c7733b39ad0176f48cf1edf3646c3922c42cadd08dec55d5f123e9e"
+        "schema": "77994cdf287cf67279e891e8089db9855e87eb78f36812ee0942552b0441e8e6",
+        "content": "75cb4869a7a2f4a048674f52291cedee80490197c407a21f8daaf2de977ec1e4"
       }
     },
     {
@@ -59062,7 +59062,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out."
+              "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out, and mcp.placement.ok:<component> accepts the embed in that one part only."
             }
           },
           "required": [
@@ -59116,8 +59116,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0a62ce81665fa9fc5bad738f717384e76cdcdec7bfee52caf3d841534feebcd8",
-        "content": "35a07b7fe03803ff532006d0eb19083e6f301516690e5fd274899a348a186cc9"
+        "schema": "77994cdf287cf67279e891e8089db9855e87eb78f36812ee0942552b0441e8e6",
+        "content": "babb9c5f14e3a8897cf950b4409bd061817b5cdba923fe76221a98a448ede242"
       }
     },
     {
@@ -59779,6 +59779,10 @@
                   "triangles": {
                     "type": "integer",
                     "description": "Triangles of that surface; 0 when another shape covered it entirely."
+                  },
+                  "copies": {
+                    "type": "integer",
+                    "description": "How many shapes this entry became with its repeat and mirror (the shape itself included); absent for a single shape."
                   }
                 }
               }
@@ -59997,8 +60001,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2ea77fa23c65f4250489b1f8da40423ef536a2cedd764f84a2ac316e604d4442",
-        "content": "688611e9c3cbaee13b86bbc47f94db77f0de26a86f84cf841568721fcd23e189"
+        "schema": "71aaa65dd6571276d11430b439d29e0c075859d0dfa967f6003f8c3e58373076",
+        "content": "50377db9aafcc8f9a87e58220102813274bec22b5f5e925eda223dd3869a4d10"
       }
     },
     {

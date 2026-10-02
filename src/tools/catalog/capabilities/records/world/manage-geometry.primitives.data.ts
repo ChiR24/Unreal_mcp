@@ -163,6 +163,7 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
             groupId: { type: 'integer', description: 'Polygroup of the surface this shape formed (index+1).' },
             materialId: { type: 'integer', description: 'Material slot of that surface.' },
             triangles: { type: 'integer', description: 'Triangles of that surface; 0 when another shape covered it entirely.' },
+            copies: { type: 'integer', description: 'How many shapes this entry became with its repeat and mirror (the shape itself included); absent for a single shape.' },
           },
         },
       },

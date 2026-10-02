@@ -3604,7 +3604,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintPath": {
           "type": "string",
-          "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out. Blueprint component edits report the same for the parts they touch, as partWarnings."
+          "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out; mcp.placement.ok:<component> accepts the embed in that one part only and keeps every other check. Blueprint component edits report the same for the parts they touch, as partWarnings."
         },
         "childActor": {
           "type": "string",
@@ -12865,7 +12865,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor's ground, a Character's capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part's surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to [\"mcp.placement.ok\"]) is a deliberate embed, such as an eyeball in its socket, and is left out. control_actor.audit_placement with blueprintPath lists every part of the Blueprint."
+          "description": "Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor's ground, a Character's capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part's surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to [\"mcp.placement.ok\"]) is a deliberate embed, such as an eyeball in its socket, and is left out; mcp.placement.ok:<component> accepts the embed in that one part only (a neck in its collar, a hand round a handle) and keeps every other check. control_actor.audit_placement with blueprintPath lists every part of the Blueprint."
         },
         "path": {
           "type": "string",
@@ -16429,7 +16429,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out."
+          "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out, and mcp.placement.ok:<component> accepts the embed in that one part only."
         },
         "parts": {
           "type": "array",
@@ -16453,6 +16453,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "triangles": {
                 "type": "integer",
                 "description": "Triangles of that surface; 0 when another shape covered it entirely."
+              },
+              "copies": {
+                "type": "integer",
+                "description": "How many shapes this entry became with its repeat and mirror (the shape itself included); absent for a single shape."
               }
             }
           }

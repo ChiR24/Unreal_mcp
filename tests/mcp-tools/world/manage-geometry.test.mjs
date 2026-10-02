@@ -49,6 +49,7 @@ const testCases = [
       { type: 'cone', center: { x: 0, y: 30, z: 0 }, rotation: { pitch: 0, yaw: 0, roll: 90 }, radius: 6, topRadius: 2, length: 14, blend: 3 },
       { type: 'sphere', operation: 'intersect', radius: 60, blend: 1 },
     ] }, expected: 'success' },
+  { scenario: 'CONFIG: set_material fills a slot the SDF material ids use', toolName: 'control_actor', arguments: { action: 'set_material', actorName: `TestSdf_${ts}`, materialPath: '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial', materialSlot: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.components.0.materialSlots', equals: 3, label: 'material ids 0-2 are three slots' }] },
   { scenario: 'CREATE: create_sdf mirrors and repeats shapes in rows and rings', toolName: 'manage_geometry', arguments: {
     action: 'create_sdf', name: `TestSdfCopies_${ts}`, resolution: 64, location: { x: 0, y: 1100, z: 100 },
     shapes: [

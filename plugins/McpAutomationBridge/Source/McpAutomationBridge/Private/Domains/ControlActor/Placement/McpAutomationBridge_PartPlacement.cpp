@@ -23,6 +23,9 @@ using UE::Geometry::FDynamicMeshAABBTree3;
 using FWindingTree = UE::Geometry::TFastWindingTree<FDynamicMesh3>;
 
 const FName AcceptedTag(TEXT("mcp.placement.ok"));
+// mcp.placement.ok:<part> accepts one embed only (a neck in its collar, a hand round a handle), so the part is still
+// checked against everything else.
+const FString AcceptedPairPrefix(TEXT("mcp.placement.ok:"));
 // Surface samples per part: enough to find a buried region a few cm across on a character-sized
 // part, few enough that a 25-part rig answers in well under a second.
 constexpr int32 MaxSamples = 3000;
@@ -44,6 +47,7 @@ struct FPart
     FBox Box = FBox(ForceInit);
     const FPartShape* Shape = nullptr;
     TArray<FVector> Samples;
+    TSet<FString> Accepted;
 };
 
 TSharedPtr<FPartShape> BuildShape(UStaticMesh* Mesh)
@@ -112,6 +116,10 @@ void CollectParts(AActor* Actor, const TSet<FString>& Focus, TMap<UStaticMesh*, 
         Part.Name = Component->GetName();
         Part.Transform = Component->GetComponentTransform();
         Part.Shape = Shape.Get();
+        for (const FName& Tag : Component->ComponentTags)
+        {
+            if (Tag.ToString().StartsWith(AcceptedPairPrefix)) Part.Accepted.Add(Tag.ToString().Mid(AcceptedPairPrefix.Len()));
+        }
         const int32 Stride = FMath::Max(1, Shape->Mesh.VertexCount() / MaxSamples);
         int32 Seen = 0;
         for (const int32 Vid : Shape->Mesh.VertexIndicesItr())
@@ -152,15 +160,16 @@ void FindBuried(const TArray<FPart>& Parts, const TSet<FString>& Focus, double T
             const FPart& A = Parts[I];
             const FPart& B = Parts[J];
             if ((Focus.Num() > 0 && !Focus.Contains(A.Name) && !Focus.Contains(B.Name)) ||
-                !A.Box.ExpandBy(-Tolerance).Intersect(B.Box))
+                A.Accepted.Contains(B.Name) || B.Accepted.Contains(A.Name) || !A.Box.ExpandBy(-Tolerance).Intersect(B.Box))
             {
                 continue;
             }
             double DepthAB = 0.0, ShareAB = 0.0, DepthBA = 0.0, ShareBA = 0.0;
             MeasureInside(A, B, DepthAB, ShareAB);
             MeasureInside(B, A, DepthBA, ShareBA);
-            // One finding per pair: the part that went deeper is the one that sank.
-            const bool bAInB = DepthAB >= DepthBA;
+            // One finding per pair: the part with more of its surface inside the other is the one that sank
+            // (a leg's hip ball 15% inside a body, not the body 1% inside the ball at the same depth).
+            const bool bAInB = DepthAB > Tolerance && (DepthBA <= Tolerance || ShareAB >= ShareBA);
             const double Depth = bAInB ? DepthAB : DepthBA;
             if (Depth <= Tolerance)
             {

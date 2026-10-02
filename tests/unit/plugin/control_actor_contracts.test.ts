@@ -497,11 +497,17 @@ describe('set_material is one undoable step, single and many, as set_visibility 
   it('the single form settles which components take the slot before it opens the transaction, so a no-op leaves no undo step', () => {
     const body = single();
 
-    expect(body).toMatch(/TArray<UPrimitiveComponent \*> Takers;\s*for \(UPrimitiveComponent \*Component : TargetComponents\) \{\s*if \(Component && MaterialSlot < Component->GetNumMaterials\(\)\) \{\s*Takers\.Add\(Component\);\s*if \(!bAllComponents\) \{\s*break;\s*\}/u);
+    expect(body).toMatch(/TArray<UPrimitiveComponent \*> Takers;\s*for \(UPrimitiveComponent \*Component : TargetComponents\) \{\s*if \(Component && MaterialSlot < McpTakeableSlots\(Component\)\) \{\s*Takers\.Add\(Component\);\s*if \(!bAllComponents\) \{\s*break;\s*\}/u);
     expect(body.indexOf('TEXT("MATERIAL_SLOT_NOT_FOUND")'), 'refused before anything is recorded').toBeLessThan(body.indexOf('MakeUnique<FMcpScopedEditorTransaction>'));
     expect(body.indexOf('MakeUnique<FMcpScopedEditorTransaction>'), 'opened before the first Modify').toBeLessThan(body.indexOf('Component->Modify();'));
     expect(body).toContain('for (UPrimitiveComponent *Component : Takers) {');
     expect(body, 'the loop no longer re-checks what Takers settled').not.toContain('continue;');
+  });
+
+  // An SDF head with skin, mouth, teeth and tongue ids took a material in slot 0 only: its component starts with one
+  // slot, and the check refused slots 1-3 although the component's own SetMaterial grows the list.
+  it('a dynamic mesh takes a material in every slot its material ids use', () => {
+    expect(source()).toMatch(/if \(UDynamicMeshComponent \*Dynamic = Cast<UDynamicMeshComponent>\(Component\)\) \{\s*Slots = FMath::Max\(Slots, McpGeometryHandlers::ConversionSlotCount\(Dynamic->GetDynamicMesh\(\)\)\);/u);
   });
 
   it('the single form opens a "Set Actor Material" transaction over the actor and its primitive components, and describes it in the reply', () => {

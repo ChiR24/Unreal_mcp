@@ -24,7 +24,7 @@ const PART_WARNINGS: JsonObject = {
   type: 'array',
   items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
   'x-unreal-reflection-boundary': true,
-  description: 'Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor\'s ground, a Character\'s capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part\'s surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to ["mcp.placement.ok"]) is a deliberate embed, such as an eyeball in its socket, and is left out. control_actor.audit_placement with blueprintPath lists every part of the Blueprint.',
+  description: 'Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor\'s ground, a Character\'s capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part\'s surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to ["mcp.placement.ok"]) is a deliberate embed, such as an eyeball in its socket, and is left out; mcp.placement.ok:<component> accepts the embed in that one part only (a neck in its collar, a hand round a handle) and keeps every other check. control_actor.audit_placement with blueprintPath lists every part of the Blueprint.',
 };
 
 export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [

@@ -1,6 +1,20 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 #include "Foundation/McpScopedEditorTransaction.h"
+
+// The slots a component can take a material in. A dynamic mesh names each triangle's slot by its material id, but
+// its component starts with one slot however many ids an SDF or set_material_id gave it, and its SetMaterial grows
+// the list on demand: so the ids its mesh uses count as slots it has (an SDF head's teeth in slot 2).
+static int32 McpTakeableSlots(UPrimitiveComponent *Component) {
+  int32 Slots = Component->GetNumMaterials();
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
+  if (UDynamicMeshComponent *Dynamic = Cast<UDynamicMeshComponent>(Component)) {
+    Slots = FMath::Max(Slots, McpGeometryHandlers::ConversionSlotCount(Dynamic->GetDynamicMesh()));
+  }
+#endif
+  return Slots;
+}
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
@@ -164,7 +178,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
   // so a call that changes nothing opens no undo step.
   TArray<UPrimitiveComponent *> Takers;
   for (UPrimitiveComponent *Component : TargetComponents) {
-    if (Component && MaterialSlot < Component->GetNumMaterials()) {
+    if (Component && MaterialSlot < McpTakeableSlots(Component)) {
       Takers.Add(Component);
       if (!bAllComponents) {
         break;
@@ -192,7 +206,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
 
   TArray<TSharedPtr<FJsonValue>> AppliedComponents;
   for (UPrimitiveComponent *Component : Takers) {
-    const int32 MaterialCount = Component->GetNumMaterials();
+    const int32 MaterialCount = McpTakeableSlots(Component);
     Component->Modify();
     Component->SetMaterial(MaterialSlot, Material);
     // Contingency (UE 5.7): UDynamicMeshComponent::SetMaterial routes

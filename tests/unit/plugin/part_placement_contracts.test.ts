@@ -30,6 +30,13 @@ describe('Blueprint parts that sink are named', () => {
     expect(audit).toContain('ComponentHasTag(AcceptedTag)');
   });
 
+  // A neck in its collar had to opt the whole head out, so a head sunk into anything else went unreported.
+  it('accepts a pair embed for that pair only', () => {
+    expect(audit).toContain('const FString AcceptedPairPrefix(TEXT("mcp.placement.ok:"));');
+    expect(audit).toContain('Part.Accepted.Add(Tag.ToString().Mid(AcceptedPairPrefix.Len()));');
+    expect(audit).toContain('A.Accepted.Contains(B.Name) || B.Accepted.Contains(A.Name)');
+  });
+
   it('reports from every SCS edit path, for the components it touched', () => {
     const finalize = code('Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersModifyScsFinalize.cpp');
     expect(finalize).toContain('McpPartPlacement::AuditBlueprintParts(LocalBP, Touched)');
