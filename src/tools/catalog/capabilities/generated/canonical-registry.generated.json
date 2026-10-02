@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "91ec7ba6f964e78d",
+  "catalogRevision": "a38934237cf58688",
   "recordCount": 392,
   "records": [
     {
@@ -91974,6 +91974,7 @@
         "texture.create_gradient_texture",
         "texture.create_noise_texture",
         "texture.create_pattern_texture",
+        "texture.create_text_texture",
         "texture.create_ao_from_mesh",
         "texture.create_normal_from_height",
         "texture.resize_texture",
@@ -92005,6 +92006,13 @@
           "action": "create_pattern_texture",
           "folded": {
             "kind": "pattern"
+          }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "create_text_texture",
+          "folded": {
+            "kind": "text"
           }
         },
         {
@@ -92058,17 +92066,20 @@
           "create texture",
           "noise texture",
           "gradient texture",
+          "text texture",
+          "text to texture",
           "normal map",
           "bake ambient occlusion",
           "channel pack",
           "resize texture",
           "combine textures"
         ],
-        "summary": "Create a texture: gradient, noise, pattern, normal from height, ambient occlusion baked from a mesh, resized copy, channel pack/extract, or a combination of two textures.",
+        "summary": "Create a texture: gradient, noise, pattern, text, normal from height, ambient occlusion baked from a mesh, resized copy, channel pack/extract, or a combination of two textures.",
         "whenToUse": [
           "kind=gradient: A linear, radial or angular gradient ramp texture is needed, for example a mask or falloff.",
           "kind=noise: A procedural Perlin, ridged or billow noise texture is needed as a mask, cloud or roughness variation; it can tile.",
           "kind=pattern: A checker, grid, brick, stripe or dot pattern texture is needed, for example a debug or placeholder surface.",
+          "kind=text: Words must appear on a surface: a shirt print, sign, label, logo or number, sampled by a material or a decal.",
           "kind=ao_from_mesh: A static mesh needs a ray-traced ambient occlusion map in its UV space; a convex mesh comes out flat white.",
           "kind=normal_from_height: A normal map must be derived from a heightmap texture; strength scales the bump depth.",
           "kind=resized: A texture must be copied at a smaller or larger size such as 512px; the source texture is left as it is.",
@@ -92081,6 +92092,7 @@
           "kind=gradient: A gradient is only needed inside one material and can come from its UVs and math nodes (use material.add_material_node).",
           "kind=noise: The noise can be computed in the material graph instead of baked (use material.add_material_node with nodeKind=noise).",
           "kind=pattern: A photo or authored image file must be brought into the project (use asset.import).",
+          "kind=text: The text belongs in the HUD or a menu (use manage_blueprint widget text), or must change at runtime (use a Text Render component).",
           "kind=ao_from_mesh: Scene lighting must be built, not a per-mesh texture (use build_environment.build_lighting).",
           "kind=normal_from_height: An existing normal map only needs a channel flipped (use texture.adjust_texture with adjust=invert).",
           "kind=resized: Only runtime mip detail or memory must drop, not the source size (use texture.configure_texture).",
@@ -92198,6 +92210,36 @@
             "secondaryColor": {
               "description": "Second colour (default black) as {r, g, b, a} or [r, g, b, a] in 0-1."
             },
+            "text": {
+              "type": "string",
+              "description": "The words to draw; a newline starts a new line."
+            },
+            "fontFamily": {
+              "type": "string",
+              "description": "Font asset, e.g. /Engine/EngineFonts/Roboto (default) or a project font."
+            },
+            "typeface": {
+              "type": "string",
+              "description": "Face of the font: Regular, Bold, Italic, Light... (default Bold when the font has it). A face the font lacks is refused with the list it has."
+            },
+            "letterSpacing": {
+              "type": "number",
+              "description": "Extra space between letters, in thousandths of an em (0 normal, 100 airy, negative tighter)."
+            },
+            "justification": {
+              "type": "string",
+              "description": "Line alignment of multi-line text: left, center (default) or right."
+            },
+            "padding": {
+              "type": "number",
+              "description": "Space kept clear around the text, in pixels (default 4% of the shorter side); the text is scaled to fill the rest."
+            },
+            "color": {
+              "description": "Text colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            },
+            "backgroundColor": {
+              "description": "Background (default transparent, so the alpha channel is the text mask) as {r, g, b, a} or [r, g, b, a] in 0-1."
+            },
             "meshPath": {
               "type": "string",
               "description": "Static mesh to bake, e.g. /Game/Meshes/SM_Rock."
@@ -92284,6 +92326,7 @@
                 "gradient",
                 "noise",
                 "pattern",
+                "text",
                 "ao_from_mesh",
                 "normal_from_height",
                 "resized",
@@ -92314,7 +92357,7 @@
             },
             "assetPath": {
               "type": "string",
-              "description": "The baked texture."
+              "description": "The new texture."
             },
             "width": {
               "type": "number",
@@ -92323,6 +92366,48 @@
             "height": {
               "type": "number",
               "description": "Texture height."
+            },
+            "fontFamily": {
+              "type": "string",
+              "description": "Font asset drawn with."
+            },
+            "typeface": {
+              "type": "string",
+              "description": "Face drawn with."
+            },
+            "typefaces": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Every face the font has."
+            },
+            "inkBounds": {
+              "type": "object",
+              "properties": {
+                "x": {
+                  "type": "number",
+                  "description": "Left pixel."
+                },
+                "y": {
+                  "type": "number",
+                  "description": "Top pixel."
+                },
+                "width": {
+                  "type": "number",
+                  "description": "Width in pixels."
+                },
+                "height": {
+                  "type": "number",
+                  "description": "Height in pixels."
+                }
+              },
+              "additionalProperties": false,
+              "description": "Pixel box the drawn letters cover."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the texture was saved."
             },
             "minValue": {
               "type": "number",
@@ -92339,10 +92424,6 @@
             "convexMesh": {
               "type": "boolean",
               "description": "True when the bake is flat because the mesh is convex and cannot occlude itself."
-            },
-            "saved": {
-              "type": "boolean",
-              "description": "Whether the texture was saved."
             }
           },
           "required": [
@@ -92353,7 +92434,7 @@
       },
       "examples": [
         {
-          "title": "Create a texture: gradient, noise, pattern, normal from height, ambient occlusion baked from a mesh, resized copy, channel pack/extract, or a combination of two textures.",
+          "title": "Create a texture: gradient, noise, pattern, text, normal from height, ambient occlusion baked from a mesh, resized copy, channel pack/extract, or a combination of two textures.",
           "input": {
             "name": "T_Gradient",
             "path": "/Game/Textures",
@@ -92400,6 +92481,7 @@
             "gradient": "create_gradient_texture",
             "noise": "create_noise_texture",
             "pattern": "create_pattern_texture",
+            "text": "create_text_texture",
             "ao_from_mesh": "create_ao_from_mesh",
             "normal_from_height": "create_normal_from_height",
             "resized": "resize_texture",
@@ -92415,12 +92497,14 @@
               "gradient",
               "noise",
               "pattern",
+              "text",
               "ao_from_mesh"
             ],
             "height": [
               "gradient",
               "noise",
               "pattern",
+              "text",
               "ao_from_mesh"
             ],
             "angle": [
@@ -92485,6 +92569,30 @@
             ],
             "secondaryColor": [
               "pattern"
+            ],
+            "text": [
+              "text"
+            ],
+            "fontFamily": [
+              "text"
+            ],
+            "typeface": [
+              "text"
+            ],
+            "letterSpacing": [
+              "text"
+            ],
+            "justification": [
+              "text"
+            ],
+            "padding": [
+              "text"
+            ],
+            "color": [
+              "text"
+            ],
+            "backgroundColor": [
+              "text"
             ],
             "meshPath": [
               "ao_from_mesh"
@@ -92551,8 +92659,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bbb60e664ebdae6891de274cbbb2469042410c9cc59e2e08e0db251e946c8fe6",
-        "content": "ba333dc2503202bfcf63c3b0429d8bdc8c168a032af9d9d2672229725cb7ffee"
+        "schema": "c12c3d364f8a9a5ef3177e02f3d93bcfac09c835e02766afe734262a17a6f55c",
+        "content": "ef1805e17e52583110f031f7531e4d87c95689bf1c45c138bc7770475a40f282"
       }
     },
     {

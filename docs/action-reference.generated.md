@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `91ec7ba6f964e78d`
+Catalog revision: `a38934237cf58688`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -524,5 +524,5 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.validate_assets` | `system_control` | `system_control` | read | read | none | `system_control.validate_assets` |
 | `texture.adjust_texture` | `manage_asset` | `adjust_curves` | write | write | explicit | `manage_asset.adjust_texture` `manage_asset.adjust_curves` `manage_asset.adjust_levels` `manage_asset.blur` `manage_asset.sharpen` `manage_asset.desaturate` `manage_asset.invert` |
 | `texture.configure_texture` | `manage_asset` | `set_compression_settings` | write | write | explicit | `manage_asset.configure_texture` `manage_asset.set_compression_settings` `manage_asset.set_lod_bias` `manage_asset.set_streaming_priority` `manage_asset.set_texture_group` `manage_asset.configure_virtual_texture` |
-| `texture.create_texture` | `manage_asset` | `create_gradient_texture` | write | write | explicit | `manage_asset.create_texture` `manage_asset.create_gradient_texture` `manage_asset.create_noise_texture` `manage_asset.create_pattern_texture` `manage_asset.create_ao_from_mesh` `manage_asset.create_normal_from_height` `manage_asset.resize_texture` `manage_asset.channel_pack` `manage_asset.channel_extract` `manage_asset.combine_textures` |
+| `texture.create_texture` | `manage_asset` | `create_gradient_texture` | write | write | explicit | `manage_asset.create_texture` `manage_asset.create_gradient_texture` `manage_asset.create_noise_texture` `manage_asset.create_pattern_texture` `manage_asset.create_text_texture` `manage_asset.create_ao_from_mesh` `manage_asset.create_normal_from_height` `manage_asset.resize_texture` `manage_asset.channel_pack` `manage_asset.channel_extract` `manage_asset.combine_textures` |
 | `texture.get_texture_info` | `manage_asset` | `get_texture_info` | read | read | none | `manage_asset.get_texture_info` |

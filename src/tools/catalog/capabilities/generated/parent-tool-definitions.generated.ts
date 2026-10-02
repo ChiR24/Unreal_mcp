@@ -7946,6 +7946,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "default": "3d",
           "description": "Bridge asset type: 3d, 3dplant, atlas or surface."
         },
+        "backgroundColor": {
+          "description": "Background (default transparent, so the alpha channel is the text mask) as {r, g, b, a} or [r, g, b, a] in 0-1."
+        },
         "baseTexture": {
           "type": "string",
           "description": "Base texture path; its source must be an 8-bit BGRA8 or single-channel G8 texture (a channel_extract result, read as gray in R, G and B with alpha 255). Other source formats (G16, RGBA16, float, HDR) fail with an error naming the format found."
@@ -8004,6 +8007,9 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "code": {
           "type": "string",
           "description": "HLSL code."
+        },
+        "color": {
+          "description": "Text colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
         },
         "columnTypes": {
           "type": "array",
@@ -8229,6 +8235,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Folder path for bulk operation."
         },
+        "fontFamily": {
+          "type": "string",
+          "description": "Font asset, e.g. /Engine/EngineFonts/Roboto (default) or a project font."
+        },
         "force": {
           "type": "boolean",
           "description": "Delete an asset even when assets outside this delete still reference it (their references break). Default false: such an asset is kept and listed in referencedPaths. Folders are always deleted whole."
@@ -8364,6 +8374,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which add function io variant to run."
         },
+        "justification": {
+          "type": "string",
+          "description": "Line alignment of multi-line text: left, center (default) or right."
+        },
         "key": {
           "type": "string",
           "description": "Metadata key."
@@ -8377,6 +8391,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "gradient",
             "noise",
             "pattern",
+            "text",
             "ao_from_mesh",
             "normal_from_height",
             "resized",
@@ -8408,6 +8423,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "description": "Layer blend definitions."
+        },
+        "letterSpacing": {
+          "type": "number",
+          "description": "Extra space between letters, in thousandths of an em (0 normal, 100 airy, negative tighter)."
         },
         "levels": {
           "type": "number",
@@ -8770,6 +8789,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "Package paths to search within."
+        },
+        "padding": {
+          "type": "number",
+          "description": "Space kept clear around the text, in pixels (default 4% of the shorter side); the text is scaled to fill the rest."
         },
         "pagination": {
           "type": "object",
@@ -9213,6 +9236,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Target pin name. On the material output (targetNodeId Main): BaseColor, Metallic, Specular, Roughness, Anisotropy, EmissiveColor, Opacity, OpacityMask, Normal, Tangent, WorldPositionOffset, SubsurfaceColor, ClearCoat, ClearCoatRoughness, AmbientOcclusion, Refraction, PixelDepthOffset (and SurfaceThickness, Displacement on newer engines); a Cloth material's Cloth and FuzzColor, and CustomData0/CustomData1, name the clear-coat and subsurface pins they share."
         },
+        "text": {
+          "type": "string",
+          "description": "The words to draw; a newline starts a new line."
+        },
         "textureGroup": {
           "type": "string",
           "description": "Texture group name."
@@ -9244,6 +9271,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "type": {
           "type": "string",
           "description": "Node type (alias of nodeType)."
+        },
+        "typeface": {
+          "type": "string",
+          "description": "Face of the font: Regular, Bold, Italic, Light... (default Bold when the font has it). A face the font lacks is refused with the list it has."
         },
         "uTiling": {
           "type": "number",
@@ -9763,6 +9794,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Subfolder paths."
         },
+        "fontFamily": {
+          "type": "string",
+          "description": "Font asset drawn with."
+        },
         "formatCode": {
           "type": "string",
           "description": "Format Fab was asked to import."
@@ -9835,6 +9870,29 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "indexPath": {
           "type": "string",
           "description": "Path of the uassetsData.json index."
+        },
+        "inkBounds": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number",
+              "description": "Left pixel."
+            },
+            "y": {
+              "type": "number",
+              "description": "Top pixel."
+            },
+            "width": {
+              "type": "number",
+              "description": "Width in pixels."
+            },
+            "height": {
+              "type": "number",
+              "description": "Height in pixels."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Pixel box the drawn letters cover."
         },
         "inputName": {
           "type": "string",
@@ -10333,6 +10391,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "type": {
           "type": "string",
           "description": "Expression class name of the start node."
+        },
+        "typeface": {
+          "type": "string",
+          "description": "Face drawn with."
+        },
+        "typefaces": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Every face the font has."
         },
         "unresolvedColumnTypes": {
           "type": "array",

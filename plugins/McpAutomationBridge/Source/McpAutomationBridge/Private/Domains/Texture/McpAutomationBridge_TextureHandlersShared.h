@@ -59,6 +59,7 @@ float FBMNoise(float X, float Y, int32 Octaves, float Persistence, float Lacunar
 TSharedPtr<FJsonObject> HandleCreateNoiseTexture(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleCreateGradientTexture(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleCreatePatternTexture(const TSharedPtr<FJsonObject>& Params);
+TSharedPtr<FJsonObject> HandleCreateTextTexture(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleCreateNormalFromHeight(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleCreateAoFromMesh(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleTextureSettingsAction(const FString& SubAction, const TSharedPtr<FJsonObject>& Params);
