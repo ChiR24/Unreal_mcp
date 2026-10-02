@@ -590,3 +590,11 @@ describe('the edit_scs record names every variant that reads a class or attach p
     expect(batchAdd).toContain('Op->TryGetStringField(TEXT("attachTo"), AttachToName);');
   });
 });
+
+describe('graph edits that used to answer success while doing nothing useful', () => {
+  // create_framework_class documents short class names, but "GameModeBase" answered NOT_FOUND.
+  it('a framework class parent given by short name resolves like every other class parameter', () => {
+    const utilities = read('Domains', 'GameFramework', 'McpAutomationBridge_GameFrameworkHandlersUtilities.cpp');
+    expect(utilities).toContain('if (!ClassPath.Contains(TEXT("/"))) return ResolveClassByName(ClassPath);');
+  });
+});
