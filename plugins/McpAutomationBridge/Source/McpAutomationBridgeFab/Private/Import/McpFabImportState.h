@@ -17,6 +17,8 @@ struct FOperation
 {
 	FString Id;
 	FString ListingId;
+	// Quality, combineMeshes and the core's RequestKey of the add that made it: a repeat add is folded in only on a match.
+	FString OptionsKey;
 	EState State = EState::Resolving;
 	double StartedAt = 0.0;
 	double FinishedAt = 0.0;

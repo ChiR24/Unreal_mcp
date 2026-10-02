@@ -149,9 +149,21 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 
 	// The caller repeated an add that is already queued or running, most likely after a timeout: hand
 	// back that operation rather than start a second one for the same listing.
+	const FString OptionsKey = FString::Printf(TEXT("%s|%s|%s"), *Options.Quality,
+		Options.CombineMeshes.IsSet() ? (Options.CombineMeshes.GetValue() ? TEXT("1") : TEXT("0")) : TEXT(""), *Options.RequestKey);
 	FMcpFabImportStatus Open;
 	if (McpFabImportOperations::FindOpenByListing(ListingId, CacheLocation, Open))
 	{
+		if (McpFabImportOperations::OptionsKeyOf(Open.OperationId) != OptionsKey)
+		{
+			FMcpFabAddResult Changed;
+			Changed.ErrorCode = TEXT("ADD_ALREADY_RUNNING");
+			Changed.Error = FString::Printf(TEXT("%s is already being added (%s) with different quality, combineMeshes, destinationPath "
+				"or assetName; it would ignore these. Wait for it, or cancel it and add again."), *ListingId, *Open.OperationId);
+			Changed.OperationId = Open.OperationId;
+			OnAccepted(Changed);
+			return true;
+		}
 		FMcpFabAddResult Same = Open.Result;
 		Same.bAccepted = true;
 		Same.bAlreadyRunning = true;
@@ -177,7 +189,7 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 		return true;
 	}
 
-	const FString OperationId = McpFabImportOperations::Begin(ListingId);
+	const FString OperationId = McpFabImportOperations::Begin(ListingId, OptionsKey);
 	if (!bBusy)
 	{
 		Launch(OperationId, ListingId, EngineVersion, Options, OnAccepted);

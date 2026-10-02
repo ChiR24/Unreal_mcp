@@ -59,6 +59,16 @@ describe('the Fab add answers when Fab accepts, not when the import ends', () =>
     expect(json).toContain('TEXT("query_marketplace")');
   });
 
+  it('folds a repeat add into the open import only when it asks for the same thing', () => {
+    const dedup = add.slice(add.indexOf('FindOpenByListing('), add.indexOf('Same.bAlreadyRunning = true;'));
+    expect(dedup).toContain('McpFabImportOperations::OptionsKeyOf(Open.OperationId) != OptionsKey');
+    expect(dedup).toContain('TEXT("ADD_ALREADY_RUNNING")');
+    expect(add).toContain('McpFabImportOperations::Begin(ListingId, OptionsKey)');
+    const handler = code(core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp'));
+    expect(handler).toContain('Options.RequestKey = Destination + TEXT("|") + AssetName;');
+    expect(handler).toMatch(/ADD_ALREADY_RUNNING[\s\S]*MakeStatusNextCall\(Result\.OperationId\)/u);
+  });
+
   it('points at a relocation capability that exists', () => {
     const handler = core('Private/Domains/AssetWorkflow/Operations/McpAutomationBridge_AssetWorkflowFabAdd.cpp');
     expect(handler).not.toContain('asset.migrate_assets');

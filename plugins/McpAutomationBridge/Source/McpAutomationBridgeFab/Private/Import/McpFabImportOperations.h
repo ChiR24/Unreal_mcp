@@ -23,7 +23,10 @@
 namespace McpFabImportOperations
 {
 /** Registers a new add and returns its operation id. It is `resolving` until the page answers. */
-FString Begin(const FString& ListingId);
+FString Begin(const FString& ListingId, const FString& OptionsKey);
+
+/** The OptionsKey an operation was begun with; empty for an unknown id. */
+FString OptionsKeyOf(const FString& OperationId);
 
 /** Parks a just-begun add behind the running import; Launch starts it when its turn comes. */
 void Enqueue(const FString& OperationId, TFunction<void()> Launch);

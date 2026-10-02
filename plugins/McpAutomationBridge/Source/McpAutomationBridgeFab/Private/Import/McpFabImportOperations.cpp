@@ -70,7 +70,13 @@ FOperation* FindById(const FString& Id)
 	return Operations().FindByPredicate([&Id](const FOperation& Op) { return Op.Id == Id; });
 }
 
-FString Begin(const FString& ListingId)
+FString OptionsKeyOf(const FString& OperationId)
+{
+	const FOperation* Op = FindById(OperationId);
+	return Op ? Op->OptionsKey : FString();
+}
+
+FString Begin(const FString& ListingId, const FString& OptionsKey)
 {
 	if (Operations().Num() >= MaxOperations)
 	{
@@ -83,6 +89,7 @@ FString Begin(const FString& ListingId)
 	FOperation& Op = Operations().AddDefaulted_GetRef();
 	Op.Id = FString::Printf(TEXT("fab-%s"), *FGuid::NewGuid().ToString(EGuidFormats::Digits).Left(10).ToLower());
 	Op.ListingId = ListingId;
+	Op.OptionsKey = OptionsKey;
 	Op.StartedAt = FPlatformTime::Seconds();
 	return Op.Id;
 }

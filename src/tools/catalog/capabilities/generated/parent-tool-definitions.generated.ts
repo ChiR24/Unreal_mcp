@@ -10266,7 +10266,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "operationId": {
           "type": "string",
-          "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead."
+          "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead, and on ADD_ALREADY_RUNNING the open import of this listing."
         },
         "outputName": {
           "type": "string",

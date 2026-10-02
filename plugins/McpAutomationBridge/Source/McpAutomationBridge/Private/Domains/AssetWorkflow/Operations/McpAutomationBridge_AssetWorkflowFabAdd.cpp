@@ -86,6 +86,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
   }
 
   FMcpFabAddOptions Options;
+  Options.RequestKey = Destination + TEXT("|") + AssetName;
   // Once the import settles it is relocated if asked, and the packages it left dirty are saved; the status
   // read reports how both went. Saved again 15 and 60 seconds later, for what the engine finishes after
   // the registry went quiet.
@@ -130,7 +131,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFabAssetToProject(
           }
           if (!Result.bAccepted) {
             // A full queue names the import at its head and the call that reads it.
-            if (Result.ErrorCode == TEXT("QUEUE_FULL") && !Result.OperationId.IsEmpty()) {
+            if ((Result.ErrorCode == TEXT("QUEUE_FULL") || Result.ErrorCode == TEXT("ADD_ALREADY_RUNNING")) && !Result.OperationId.IsEmpty()) {
               Data->SetObjectField(TEXT("nextCall"), McpFabImportJson::MakeStatusNextCall(Result.OperationId));
             }
             Self->SendAutomationResponse(Socket, RequestId, false, Result.Error, Data, Result.ErrorCode);

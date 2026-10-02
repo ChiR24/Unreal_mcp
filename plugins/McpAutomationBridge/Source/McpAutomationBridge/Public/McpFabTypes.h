@@ -95,6 +95,13 @@ struct FMcpFabAddOptions
 	FString Quality;
 
 	/**
+	 * What else the add asked of the core (destination folder, asset name). A repeat add of a listing whose import
+	 * is still open is handed that import only when this, Quality and CombineMeshes all match it; otherwise it is
+	 * refused with ADD_ALREADY_RUNNING, so a changed request is never folded into one that will ignore it.
+	 */
+	FString RequestKey;
+
+	/**
 	 * Runs once, on the game thread, when the import has settled and before its outcome is stored, with
 	 * every asset path the import created. The adapter module cannot save or move assets itself -- the
 	 * safe wrappers live in the core -- so the core does it here and reports what it did by editing Result.

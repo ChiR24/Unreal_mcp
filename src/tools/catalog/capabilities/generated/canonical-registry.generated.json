@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "206a6c5ab9b2035f",
+  "catalogRevision": "28be41e4be57ba03",
   "recordCount": 393,
   "records": [
     {
@@ -7879,7 +7879,7 @@
             },
             "operationId": {
               "type": "string",
-              "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead."
+              "description": "The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead, and on ADD_ALREADY_RUNNING the open import of this listing."
             },
             "alreadyRunning": {
               "type": "boolean",
@@ -8084,8 +8084,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "978071e44d44d85745f0eb0e3772b5d43ef770fc0fda762f9d522d1bce47d3a5",
-        "content": "b442dd428b68d0a73520f431b0ff184a28567378cca1c87ccd8e739646804294"
+        "schema": "bc9070211fb4499c058ad36a3d149d2a7ebe3ece67704b2d131583a63bd734fc",
+        "content": "0ed54b833c2d886a8c20dc6e1de39c000d4956850457439e35f8460bb515bf7b"
       }
     },
     {
