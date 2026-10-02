@@ -173,6 +173,9 @@ export async function executeGatewayCall(
       }, receiptContext),
       (recorded: Record<string, unknown>) => markReplayed(recorded, receiptContext.correlationId)
     );
+  // Only a keyed call can fetch its real result later, and an explicit timeoutMs is
+  // the caller saying how long it will wait; every other call waits for its result.
+  if (receiptContext.idempotencyId === undefined || checked.timeoutMs !== undefined) return await settled;
   return await answerWhileRunning(settled, target.record, receiptContext, context);
 }
 
@@ -180,7 +183,7 @@ export async function executeGatewayCall(
 export const STILL_RUNNING_AFTER_MS = 27_000;
 
 // A client gives up on a call at its own timeout (often 30 s) while Unreal keeps
-// working, and the result was lost. Past 27 s the call answers with a success
+// working, and the result was lost. Past 27 s a keyed call answers with a success
 // receipt whose task is still running: the work goes on, its idempotency slot
 // stays claimed until it settles, and the same call with the same
 // idempotencyKey then replays the real result.
@@ -200,10 +203,8 @@ async function answerWhileRunning(
     (receipt) => context.logger.info(`${record.id} finished after its still-running answer (success=${String(receipt.success)}).`),
     (error: unknown) => context.logger.warn(`${record.id} failed after its still-running answer: ${error instanceof Error ? error.message : String(error)}`)
   );
-  const readBack = receiptContext.idempotencyId === undefined
-    ? 'Do not send it again; read the result back once it is done.'
-    : 'Send this call again with the same idempotencyKey once it is done: it answers with the result instead of running again.';
-  const message = `Still running after ${STILL_RUNNING_AFTER_MS / 1000} s. Unreal keeps going; this answer does not stop it. ${readBack}`;
+  const message = `Still running after ${STILL_RUNNING_AFTER_MS / 1000} s. Unreal keeps going; this answer does not stop it. `
+    + 'Send this call again with the same idempotencyKey once it is done: it answers with the result instead of running again.';
   return executeSuccessEnvelope({
     record,
     result: { success: true, message, task: { taskId: receiptContext.correlationId, state: 'running' } },

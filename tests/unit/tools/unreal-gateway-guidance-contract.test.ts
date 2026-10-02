@@ -195,6 +195,27 @@ describe('a call still running when the client would give up answers for itself'
     expect((replay.receipt as { task?: unknown }).task).toBeUndefined();
   });
 
+  it.each([
+    ['without an idempotencyKey', {}],
+    ['with an explicit timeoutMs', { options: { idempotencyKey: 'slow-spawn-2', timeoutMs: 120000 } }]
+  ])(`a call %s waits past ${STILL_RUNNING_AFTER_MS} ms for its real result`, async (_label, extra) => {
+    vi.useFakeTimers();
+    let finish: (value: unknown) => void = () => undefined;
+    const slow = new Promise((resolve) => { finish = resolve; });
+    const context = gatewayContext(
+      { isConnected: () => true, sendAutomationRequest: () => slow, getAuthority: () => ({ scopes: ['admin'] }) },
+      `waits-${_label}`
+    );
+    let answered = false;
+    const pending = handleUnrealGatewayCall({ ...spawn, ...extra }, context).then((reply) => { answered = true; return reply; });
+    await vi.advanceTimersByTimeAsync(STILL_RUNNING_AFTER_MS + 1000);
+    expect(answered).toBe(false);
+    finish({ success: true, actorName: 'StaticMeshActor_0' });
+    const reply = await pending;
+    expect(reply.success).toBe(true);
+    expect((reply.receipt as { task?: unknown }).task).toBeUndefined();
+  });
+
   it('a call that finishes first answers with its result as before', async () => {
     const context = gatewayContext(
       { isConnected: () => true, sendAutomationRequest: async () => ({ success: true, actorName: 'StaticMeshActor_0' }), getAuthority: () => ({ scopes: ['admin'] }) },
