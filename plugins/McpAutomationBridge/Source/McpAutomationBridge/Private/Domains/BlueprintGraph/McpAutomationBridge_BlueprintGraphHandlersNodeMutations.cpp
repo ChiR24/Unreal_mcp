@@ -184,8 +184,26 @@ static bool SetNodeProperty(FActionContext& Context)
     // Anything else may still be a reflected field on the node or on its
     // FAnimNode_* payload -- that is how an AnimGraph player is told which
     // Sequence or BlendSpace to play.
+    // A math expression that does not parse ("-1": there is no unary minus) rebuilt into a node with
+    // no output and answered success; the caller only found out when a later connect failed.
+    const bool bMathExpression = PropertyName.Equals(TEXT("Expression"), ESearchCase::IgnoreCase) &&
+        TargetNode->GetClass()->GetName() == TEXT("K2Node_MathExpression");
+    const FStrProperty* ExpressionProp = bMathExpression ? FindFProperty<FStrProperty>(TargetNode->GetClass(), TEXT("Expression")) : nullptr;
+    const FString OldExpression = ExpressionProp ? ExpressionProp->GetPropertyValue_InContainer(TargetNode) : FString();
     if (!bHandled)
         bHandled = McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, Value);
+    if (bHandled && bMathExpression &&
+        !TargetNode->Pins.ContainsByPredicate([](const UEdGraphPin* Pin) { return Pin && Pin->Direction == EGPD_Output; }))
+    {
+        McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, OldExpression);
+        Context.SendError(
+            FString::Printf(TEXT("The expression '%s' does not parse, so the node would have no output; it keeps '%s'. ")
+                            TEXT("Write a negative number as 0 - x (there is no unary minus) and use only the math "
+                                 "library's functions (FInterpTo is a CallFunction node, not an expression)."),
+                *Value, *OldExpression),
+            TEXT("EXPRESSION_INVALID"));
+        return true;
+    }
 
     if (!bHandled)
     {

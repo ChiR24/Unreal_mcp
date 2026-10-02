@@ -602,6 +602,14 @@ describe('graph edits that used to answer success while doing nothing useful', (
     expect(connect.indexOf('SameTypeOutputs')).toBeLessThan(connect.indexOf('TryCreateConnection'));
   });
 
+  // "-1" (no unary minus) left a math expression node with no pins under a success reply.
+  it('a math expression that does not parse is refused and the node keeps its old expression', () => {
+    const mutations = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp');
+    expect(mutations).toContain('TEXT("K2Node_MathExpression")');
+    expect(mutations).toMatch(/McpTrySetNodeAssetPropertyForMcp\(TargetNode, PropertyName, OldExpression\);/u);
+    expect(mutations).toContain('TEXT("EXPRESSION_INVALID")');
+  });
+
   // create_framework_class documents short class names, but "GameModeBase" answered NOT_FOUND.
   it('a framework class parent given by short name resolves like every other class parameter', () => {
     const utilities = read('Domains', 'GameFramework', 'McpAutomationBridge_GameFrameworkHandlersUtilities.cpp');
