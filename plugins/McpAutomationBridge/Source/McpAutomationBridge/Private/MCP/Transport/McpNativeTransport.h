@@ -133,6 +133,11 @@ private:
 	FString HandleInitialize(const TSharedPtr<FJsonObject>& Params,
 		const TSharedPtr<FJsonValue>& Id, FString& OutSessionId,
 		const FString& ConnectionRemoteAddr);
+	// server/discover (MCP 2026-07-28): versions, capabilities, identity and instructions with no session. It
+	// lists only the versions initialize negotiates, so a 2026-07-28 client falls back to that handshake.
+	FString HandleServerDiscover(const TSharedPtr<FJsonValue>& Id) const;
+	// The capabilities and instructions initialize and server/discover share, written into Result; returns serverInfo.
+	TSharedPtr<FJsonObject> DescribeServer(const TSharedPtr<FJsonObject>& Result) const;
 	FString HandleToolsList(const TSharedPtr<FJsonValue>& Id, const FString& SessionId);
 	void HandleToolsCall(const TSharedPtr<FJsonObject>& Params,
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,

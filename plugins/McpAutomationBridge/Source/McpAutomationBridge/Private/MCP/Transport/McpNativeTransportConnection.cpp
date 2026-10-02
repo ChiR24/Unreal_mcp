@@ -176,8 +176,10 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		return;
 	}
 
-	// Session validation (skip for initialize)
-	if (Rpc.Method != TEXT("initialize"))
+	// Session validation, skipped for initialize and for server/discover, which the 2026-07-28 protocol answers
+	// without a session (the capability-token check above still applies to both).
+	const bool bSessionless = Rpc.Method == TEXT("initialize") || Rpc.Method == TEXT("server/discover");
+	if (!bSessionless)
 	{
 		FString SessionError;
 		ESessionValidationResult SessionStatus = ValidateSession(HttpReq.SessionId, HttpReq.CapabilityToken, SessionError);
@@ -202,8 +204,8 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 		}
 	}
 
-	// MCP-Protocol-Version is required post-initialize; initialize is exempt.
-	if (Rpc.Method != TEXT("initialize") && !GuardProtocolVersionHeader(ClientSocket, HttpReq, Rpc.Id, true)) return;
+	// MCP-Protocol-Version is required post-initialize; initialize and server/discover are exempt.
+	if (!bSessionless && !GuardProtocolVersionHeader(ClientSocket, HttpReq, Rpc.Id, true)) return;
 
 	// Notifications (no id) — 202 Accepted after session validation.
 	if (Rpc.bIsNotification)
@@ -274,6 +276,11 @@ void FMcpNativeTransport::HandleConnection(FSocket* ClientSocket)
 	// `ping` is an MCP base-protocol utility: an empty result proves liveness.
 	// The stdio transport answers it through the SDK; without this the native
 	// surface returned -32601 and a liveness client saw the server as broken.
+	if (Rpc.Method == TEXT("server/discover"))
+	{
+		SendAndClose(ClientSocket, 200, TEXT("application/json"), HandleServerDiscover(Rpc.Id), {}, HttpReq.Origin);
+		return;
+	}
 	if (Rpc.Method == TEXT("ping"))
 	{
 		SendAndClose(ClientSocket, 200, TEXT("application/json"),

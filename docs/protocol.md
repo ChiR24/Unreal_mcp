@@ -101,6 +101,17 @@ Behavior:
   **present but unsupported** (or malformed) header returns HTTP 400; the
   response is sent through `SendAndClose(ClientSocket, 400, ...)`.
 
+### `server/discover` (2026-07-28 discovery)
+
+Both transports answer `server/discover` without a session, handshake or
+`MCP-Protocol-Version` header (the native capability-token check still applies):
+`resultType: "complete"`, `supportedVersions` (exactly the versions `initialize`
+negotiates: the three above on native, plus the two legacy ones on stdio), the same
+`capabilities` and `instructions` as `initialize`, the server identity under
+`_meta["io.modelcontextprotocol/serverInfo"]`, and the cache hints `ttlMs: 3600000`
+and `cacheScope: "public"`. The 2026-07-28 revision itself is not served, so a client
+on that revision sees the versions it can use and falls back to `initialize`.
+
 ### Intentional native/TS asymmetry
 
 The native `/mcp` transport is **intentionally stricter than the TypeScript

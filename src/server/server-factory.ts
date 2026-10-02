@@ -99,7 +99,7 @@ export function createServer() {
   );
   serverSetup.setup();
 
-  wirePrimitives(server);
+  wirePrimitives(server, { name: SERVER_NAME, version: SERVER_VERSION }, UNREAL_GATEWAY_INSTRUCTIONS);
 
   // Forward inbound notifications/cancelled to the automation bridge so the
   // matching queued or inflight Unreal work is cancelled. This is the TS stdio

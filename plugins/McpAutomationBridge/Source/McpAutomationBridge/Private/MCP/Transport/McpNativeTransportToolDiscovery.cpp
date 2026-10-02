@@ -213,42 +213,61 @@ FString FMcpNativeTransport::HandleInitialize(
 	auto Result = MakeShared<FJsonObject>();
 	Result->SetStringField(TEXT("protocolVersion"), NegotiatedVersion);
 
+	Result->SetObjectField(TEXT("serverInfo"), DescribeServer(Result));
+
+	UE_LOG(LogMcpNativeTransport, Log,
+		TEXT("MCP session initialized (active sessions: %d)"),
+		CurrentSessionCount);
+
+	return FMcpJsonRpc::BuildResponse(Id, Result);
+}
+
+TSharedPtr<FJsonObject> FMcpNativeTransport::DescribeServer(const TSharedPtr<FJsonObject>& Result) const
+{
 	auto Capabilities = MakeShared<FJsonObject>();
 	// The public surface is the single static 'unreal' gateway tool, whose shape
 	// never changes, so the tools capability omits listChanged entirely (omission
 	// and an explicit false are different claims); the tools object is still sent.
-	auto ToolsCapability = MakeShared<FJsonObject>();
-	Capabilities->SetObjectField(TEXT("tools"), ToolsCapability);
+	Capabilities->SetObjectField(TEXT("tools"), MakeShared<FJsonObject>());
 	// resources, prompts and completions are all answered by HandlePrimitiveMethod.
 	Capabilities->SetObjectField(TEXT("resources"), MakeShared<FJsonObject>());
 	Capabilities->SetObjectField(TEXT("prompts"), MakeShared<FJsonObject>());
 	Capabilities->SetObjectField(TEXT("completions"), MakeShared<FJsonObject>());
 	Result->SetObjectField(TEXT("capabilities"), Capabilities);
 
-	auto ServerInfo = MakeShared<FJsonObject>();
-	ServerInfo->SetStringField(TEXT("name"), ServerName);
-	// serverInfo.version is required by MCP; an unresolvable plugin descriptor left it "".
-	ServerInfo->SetStringField(TEXT("version"), ServerVersion.IsEmpty() ? FString(TEXT("unknown")) : ServerVersion);
-	Result->SetObjectField(TEXT("serverInfo"), ServerInfo);
-
 	FString CombinedInstructions = BaseInstructions;
 	if (!UserInstructions.IsEmpty())
 	{
-		if (!CombinedInstructions.IsEmpty())
-		{
-			CombinedInstructions += TEXT("\n\n");
-		}
-		CombinedInstructions += UserInstructions;
+		CombinedInstructions += (CombinedInstructions.IsEmpty() ? TEXT("") : TEXT("\n\n")) + UserInstructions;
 	}
 	if (!CombinedInstructions.IsEmpty())
 	{
 		Result->SetStringField(TEXT("instructions"), CombinedInstructions);
 	}
 
-	UE_LOG(LogMcpNativeTransport, Log,
-		TEXT("MCP session initialized (active sessions: %d)"),
-		CurrentSessionCount);
+	auto ServerInfo = MakeShared<FJsonObject>();
+	ServerInfo->SetStringField(TEXT("name"), ServerName);
+	// serverInfo.version is required by MCP; an unresolvable plugin descriptor left it "".
+	ServerInfo->SetStringField(TEXT("version"), ServerVersion.IsEmpty() ? FString(TEXT("unknown")) : ServerVersion);
+	return ServerInfo;
+}
 
+FString FMcpNativeTransport::HandleServerDiscover(const TSharedPtr<FJsonValue>& Id) const
+{
+	auto Result = MakeShared<FJsonObject>();
+	Result->SetStringField(TEXT("resultType"), TEXT("complete"));
+	TArray<TSharedPtr<FJsonValue>> Versions;
+	for (const FString& Version : McpSupportedProtocolVersions())
+	{
+		Versions.Add(MakeShared<FJsonValueString>(Version));
+	}
+	Result->SetArrayField(TEXT("supportedVersions"), Versions);
+	auto Meta = MakeShared<FJsonObject>();
+	Meta->SetObjectField(TEXT("io.modelcontextprotocol/serverInfo"), DescribeServer(Result));
+	Result->SetObjectField(TEXT("_meta"), Meta);
+	// Nothing here changes while the editor runs: an hour-long, shareable cache hint.
+	Result->SetNumberField(TEXT("ttlMs"), 3600000);
+	Result->SetStringField(TEXT("cacheScope"), TEXT("public"));
 	return FMcpJsonRpc::BuildResponse(Id, Result);
 }
 
