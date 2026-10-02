@@ -55,7 +55,8 @@ describe('ACTOR_NOT_FOUND hands back a find by the name that missed', () => {
   it('native: the completion keeps the call arguments and adds the same nextCall', () => {
     expect(transport('McpNativeTransportGatewayStream.cpp')).toContain('Conn->Arguments = Arguments;');
     const pending = transport('McpNativeTransportPendingRequests.cpp');
-    expect(pending).toMatch(/McpBuildGatewayExecuteReceipt\([^;]*;\s*AddActorNotFoundGuidance\(ReportedResult, Conn->Arguments\);/u);
+    // After the handler's own nextCall, so ACTOR_NOT_FOUND keeps the find call its suggestion names (as over stdio).
+    expect(pending).toMatch(/McpBuildGatewayExecuteReceipt\([^;]*;\s*if \(!bSuccess\)\s*\{\s*AddHandlerNextCall\(ReportedResult, Result\);\s*\}\s*AddActorNotFoundGuidance\(ReportedResult, Conn->Arguments\);/u);
     for (const token of ['TEXT("ACTOR_NOT_FOUND")', 'TEXT("actorName")', 'TEXT("findBy"), TEXT("name")', 'TEXT("action"), TEXT("find")']) {
       expect(pending).toContain(token);
     }

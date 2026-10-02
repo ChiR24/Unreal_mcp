@@ -266,8 +266,8 @@ export async function dispatchAndValidate(
       errorCode: staleState ? 'STALE_STATE' : handlerCode ?? 'UNREAL_EXECUTION_ERROR',
       message: failureMessage(result),
       ...(handlerCode === undefined ? {} : { handlerCode }),
-      ...actorNotFoundGuidance(handlerCode, params),
       ...handlerNextCall(result),
+      ...actorNotFoundGuidance(handlerCode, params),
       ...(staleState && currentRevision !== undefined ? { currentRevision } : {}),
       ...(staleState && expectedRevision !== undefined ? { expectedRevision } : {}),
       // The code and message stay - they are small and are the actionable part.

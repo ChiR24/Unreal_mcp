@@ -134,11 +134,11 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		Context.GatewayWarnings = Conn->GatewayWarnings;
 		ReportedResult = McpBuildGatewayExecuteReceipt(
 			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
-		AddActorNotFoundGuidance(ReportedResult, Conn->Arguments);
 		if (!bSuccess)
 		{
 			AddHandlerNextCall(ReportedResult, Result);
 		}
+		AddActorNotFoundGuidance(ReportedResult, Conn->Arguments);
 		bReportedSuccess = McpReceiptSucceeded(ReportedResult);
 		ReportedMessage = McpReceiptMessage(ReportedResult);
 		ReportedErrorCode.Reset();
