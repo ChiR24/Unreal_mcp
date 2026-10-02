@@ -50,6 +50,7 @@ const testCases = [
       { type: 'sphere', operation: 'intersect', radius: 60, blend: 1 },
     ] }, expected: 'success' },
   { scenario: 'CONFIG: set_material fills a slot the SDF material ids use', toolName: 'control_actor', arguments: { action: 'set_material', actorName: `TestSdf_${ts}`, materialPath: '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial', materialSlot: 2 }, expected: 'success', assertions: [{ path: 'structuredContent.result.components.0.materialSlots', equals: 3, label: 'material ids 0-2 are three slots' }] },
+  { scenario: 'CONFIG: set_material materials fills every SDF slot in one call', toolName: 'control_actor', arguments: { action: 'set_material', actorName: `TestSdf_${ts}`, materials: ['/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial', '', '/Engine/EngineMaterials/WorldGridMaterial.WorldGridMaterial'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.slots', length: 2, label: 'slots 0 and 2 take a material, the empty entry leaves slot 1' }] },
   { scenario: 'CREATE: create_sdf mirrors and repeats shapes in rows and rings', toolName: 'manage_geometry', arguments: {
     action: 'create_sdf', name: `TestSdfCopies_${ts}`, resolution: 64, location: { x: 0, y: 1100, z: 100 },
     shapes: [

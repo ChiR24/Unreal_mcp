@@ -67,6 +67,7 @@ const testCases = [
 
   // === SPAWN / DELETE ===
   { scenario: 'ACTION: spawn', toolName: 'control_actor', arguments: { action: 'spawn', classPath: '/Engine/BasicShapes/Sphere', actorName: `MCP_SpawnSphere_${ts}`, location: { x: 0, y: 160, z: 120 } }, expected: 'success|already exists' },
+  { scenario: 'ACTION: spawn a mesh actor from a mesh path alone', toolName: 'control_actor', arguments: { action: 'spawn', meshPath: '/Engine/BasicShapes/Cone', actorName: `MCP_SpawnCone_${ts}`, location: { x: 0, y: 320, z: 120 } }, expected: 'success' },
   { scenario: 'CREATE: spawn_actor', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Engine/BasicShapes/Cylinder', actorName: `MCP_SpawnCylinder_${ts}`, location: { x: 120, y: 160, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: spawn_actor with meshPath', toolName: 'control_actor', arguments: { action: 'spawn_actor', classPath: '/Script/Engine.StaticMeshActor', meshPath: '/Engine/BasicShapes/Cube.Cube', actorName: MESH_ACTOR, location: { x: 360, y: 160, z: 120 } }, expected: 'success|already exists' },
   { scenario: 'CREATE: spawn_blueprint', toolName: 'control_actor', arguments: { action: 'spawn_blueprint', blueprintPath: BP_PATH, actorName: BP_ACTOR, location: { x: 240, y: 160, z: 120 } }, expected: 'success|already exists' },

@@ -42,9 +42,58 @@ void ApplyMaterialParameterList(UMcpAutomationBridgeSubsystem* Bridge, const FSt
   }
 }
 
+// assets: several materials retuned under the one consent this call carried. Each entry runs
+// through this same handler as a captured step, so every check stays per asset; recolouring three
+// lamp instances used to cost three describes and three consents.
+static bool SetMaterialParameterBatch(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket)
+{
+  TArray<TSharedPtr<FJsonValue>> Rows;
+  TArray<TSharedPtr<FJsonValue>> Changed;
+  TArray<FString> Failed;
+  for (int32 Index = 0; Index < Entries.Num(); ++Index) {
+    TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
+    Item->Values = Payload->Values;
+    Item->RemoveField(TEXT("assets"));
+    const TSharedPtr<FJsonObject>* Entry = nullptr;
+    if (Entries[Index].IsValid() && Entries[Index]->TryGetObject(Entry)) {
+      for (const TPair<FString, TSharedPtr<FJsonValue>>& Pair : (*Entry)->Values) {
+        Item->SetField(Pair.Key, Pair.Value);
+      }
+    }
+    const FString StepId = FString::Printf(TEXT("%s#asset%d"), *RequestId, Index);
+    FMcpResponseCaptureRegistry::Get().Begin(StepId);
+    HandleSetMaterialParameter(Bridge, StepId, TEXT("set_material_parameter"), Item, Socket);
+    const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(StepId);
+    TSharedPtr<FJsonObject> Row = Reply.Result.IsValid() ? Reply.Result : McpHandlerUtils::CreateResultObject();
+    const FString AssetPath = GetJsonStringField(Item, TEXT("assetPath"));
+    Row->SetStringField(TEXT("assetPath"), AssetPath);
+    Row->SetBoolField(TEXT("success"), Reply.bSuccess);
+    if (Reply.bSuccess) {
+      Changed.Add(MakeShared<FJsonValueString>(AssetPath));
+    } else {
+      const FString Error = Reply.Message.IsEmpty() ? FString(TEXT("the asset sent no reply")) : Reply.Message;
+      Row->SetStringField(TEXT("error"), Error);
+      Failed.Add(FString::Printf(TEXT("#%d %s: %s"), Index, *AssetPath, *Error));
+    }
+    Rows.Add(MakeShared<FJsonValueObject>(Row));
+  }
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetArrayField(TEXT("assets"), Rows);
+  Result->SetArrayField(TEXT("changedAssets"), Changed);
+  Bridge->SendAutomationResponse(Socket, RequestId, Failed.Num() == 0,
+      Failed.Num() == 0 ? FString::Printf(TEXT("Set parameters on %d assets."), Rows.Num())
+                        : FString::Printf(TEXT("%d of %d assets failed: %s"), Failed.Num(), Rows.Num(), *FString::Join(Failed, TEXT("; "))),
+      Result, Failed.Num() == 0 ? FString() : FString(TEXT("ASSET_BATCH_INCOMPLETE")));
+  return true;
+}
+
 bool HandleSetMaterialParameter(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("set_material_parameter")) {
+    const TArray<TSharedPtr<FJsonValue>>* Assets = nullptr;
+    if (Payload->TryGetArrayField(TEXT("assets"), Assets) && Assets->Num() > 0) {
+      return SetMaterialParameterBatch(Bridge, RequestId, Payload, *Assets, Socket);
+    }
     // parameters: several values under one consent instead of a describe +
     // execute pair per value.
     const TArray<TSharedPtr<FJsonValue>>* Entries = nullptr;

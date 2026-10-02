@@ -15,8 +15,9 @@ const MATERIAL_INPUT = {
     actorName: P.actorName,
     actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to give the same material in one call and one undo step, in place of actorName; each is reported under results, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each); the call fails naming any that did not take it.' },
     materialPath: P.materialPath, componentName: P.componentName, materialSlot: P.materialSlot, materialIndex: P.materialIndex, allComponents: P.allComponents,
+    materials: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 64, description: 'One material per slot in place of materialPath and materialSlot: entry i goes into slot i, "" leaves that slot as it is. Every slot is reported under slots, in one undo step; the call fails naming any slot that did not take its material. A mesh made with several material ids (an SDF part) needs this once instead of one call per slot.' },
   },
-  required: ['materialPath'],
+  // materialPath or materials; the handler refuses a call with neither.
   requiredOneOf: ['actorName', 'actorNames'],
 } as const;
 
@@ -108,8 +109,8 @@ export const COMPONENT_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_MATERIAL,
     topics: ['assign material to mesh', 'apply material to actor', 'change actor material', 'put material on mesh', 'replace mesh material', 'set material slot'],
-    summary: 'Apply a material asset to a mesh component on an actor, optionally per slot.',
-    whenToUse: ['A material must be assigned to an actor mesh component.'],
+    summary: 'Apply a material asset to a mesh component on an actor, optionally per slot, or a material to every slot in one call (materials).',
+    whenToUse: ['A material must be assigned to an actor mesh component.', 'A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call.'],
     whenNotToUse: ['The mesh has no material slots (the assignment is a no-op).'],
     ...MATERIAL_INPUT,
     effect: 'write',

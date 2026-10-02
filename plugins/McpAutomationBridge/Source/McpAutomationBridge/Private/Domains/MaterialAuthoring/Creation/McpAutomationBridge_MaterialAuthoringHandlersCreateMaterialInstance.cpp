@@ -8,6 +8,7 @@ namespace McpMaterialAuthoringHandlers
 static bool CreateMaterialInstanceBatch(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, const TArray<TSharedPtr<FJsonValue>>& Entries, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   TArray<TSharedPtr<FJsonValue>> Results;
+  TArray<TSharedPtr<FJsonValue>> Changed;
   TArray<FString> Failed;
   for (int32 Index = 0; Index < Entries.Num(); ++Index) {
     TSharedPtr<FJsonObject> Item = MakeShared<FJsonObject>();
@@ -33,10 +34,16 @@ static bool CreateMaterialInstanceBatch(UMcpAutomationBridgeSubsystem* Bridge, c
       Row->SetStringField(TEXT("errorCode"), Reply.ErrorCode);
       Failed.Add(FString::Printf(TEXT("#%d %s: %s"), Index, *Name, *Error));
     }
+    FString AssetPath;
+    if (Reply.bSuccess && Row->TryGetStringField(TEXT("assetPath"), AssetPath)) {
+      Changed.Add(MakeShared<FJsonValueString>(AssetPath));
+    }
     Results.Add(MakeShared<FJsonValueObject>(Row));
   }
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   Result->SetArrayField(TEXT("instances"), Results);
+  // The receipt's changes list these; without them a palette of six answered changes [].
+  Result->SetArrayField(TEXT("changedAssets"), Changed);
   Result->SetNumberField(TEXT("created"), Results.Num() - Failed.Num());
   Bridge->SendAutomationResponse(Socket, RequestId, Failed.Num() == 0,
       Failed.Num() == 0 ? FString::Printf(TEXT("Created %d material instances."), Results.Num())

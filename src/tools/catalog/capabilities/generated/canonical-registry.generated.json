@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f85ea873117866d4",
+  "catalogRevision": "7c39282c4d1a6420",
   "recordCount": 393,
   "records": [
     {
@@ -33414,7 +33414,8 @@
         ],
         "summary": "Apply a material to an actor's mesh component(s).",
         "whenToUse": [
-          "A material must be assigned to an actor mesh component."
+          "A material must be assigned to an actor mesh component.",
+          "A mesh with several material slots (an SDF part) needs a material in each: materials sets them all in one call."
         ],
         "whenNotToUse": [
           "The mesh has no material slots (the assignment is a no-op)."
@@ -33459,11 +33460,19 @@
             "allComponents": {
               "type": "boolean",
               "description": "When true, apply the material to all mesh components."
+            },
+            "materials": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 64,
+              "description": "One material per slot in place of materialPath and materialSlot: entry i goes into slot i, \"\" leaves that slot as it is. Every slot is reported under slots, in one undo step; the call fails naming any slot that did not take its material. A mesh made with several material ids (an SDF part) needs this once instead of one call per slot."
             }
           },
           "required": [
-            "action",
-            "materialPath"
+            "action"
           ],
           "additionalProperties": false,
           "requiredOneOf": [
@@ -33536,8 +33545,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5adaedcc1bd8e3abf24a884c5d55ddd3645e155ae4ec95e5e149e16328e679b8",
-        "content": "6d132fe2ca7b9f77413cb263b112d1bd9263e8f22a55779f869196f43b3aee30"
+        "schema": "e99c52e4680efc5021bcada6cf52ebcb1092ee7091e37e2eaa7d6cab87b3097c",
+        "content": "f16e53a253e46b063755037e683439fe7c18f64985faecf3d6aafd2d87f6519f"
       }
     },
     {
@@ -34105,6 +34114,7 @@
         "summary": "Spawn an actor from a class or mesh path, or from a Blueprint, or many actors in one batch.",
         "whenToUse": [
           "spawnKind=class: A new actor of a known Unreal class must be created in the scene.",
+          "spawnKind=class: A static or skeletal mesh must be placed as its own actor (meshPath alone; the actor class follows the mesh).",
           "spawnKind=blueprint: A Blueprint instance must be placed in the scene.",
           "spawnKind=batch: More than a couple of actors must be placed, such as laying out a level."
         ],
@@ -34208,6 +34218,7 @@
           "requiredOneOf": [
             "classPath",
             "actorClass",
+            "meshPath",
             "blueprintPath",
             "actors"
           ]
@@ -34418,8 +34429,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d4df3bdf7eb72c3caa38ebff0ed2499104309d72490a45a5a7ac12c28d2d9f98",
-        "content": "e1e0c7bd214436ccd7a3bf30a670dd4d3e58a5dfc236b1d1e95ddd094c49a055"
+        "schema": "3c51a48dd932bb14a67570b38625f98067ae4701922682e7e9eea32986b974da",
+        "content": "8d5c29cd60e003ac949f5ae2bf13410c89dc7f98c2b00c17422bf0dab9ae3ff6"
       }
     },
     {
@@ -43183,9 +43194,10 @@
           "set property on actor",
           "set game instance variable"
         ],
-        "summary": "Write a property value on a world actor, asset, or Blueprint CDO.",
+        "summary": "Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).",
         "whenToUse": [
-          "A single property value must be written."
+          "A single property value must be written.",
+          "Several properties of one target must be written in one call (properties)."
         ],
         "whenNotToUse": [
           "The property is read-only or the target is a packed asset."
@@ -43231,6 +43243,12 @@
               "type": "boolean",
               "description": "Default true: mark the package dirty and save an asset package. false leaves the package untouched and unsaved, so the change lives in memory only."
             },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Several writes on the same target in place of propertyName and value: {name or dotted path: value}, e.g. {\"BoxExtent\": {\"X\": 20, \"Y\": 90, \"Z\": 100}, \"CollisionProfileName\": \"OverlapAllDynamic\"}. Each is written as a single call would be and reported under properties; the call fails naming any that did not apply. watch applies to single writes only."
+            },
             "watch": {
               "type": "object",
               "description": "Sample a property right after the write, in the same call, to see what the write sets off before it ends: a HUD pop or fade runs on real time, even with PIE paused, and is over before a later call can read it. The reply lists each value the property took with its time t in seconds (Lives on GameInstance with watch {objectPath: \"WBP_HUD\", propertyName: \"LivesBox.RenderTransform\"}).",
@@ -43264,7 +43282,8 @@
           "additionalProperties": false,
           "requiredOneOf": [
             "propertyName",
-            "propertyPath"
+            "propertyPath",
+            "properties"
           ]
         },
         "output": {
@@ -43290,6 +43309,20 @@
               "x-unreal-reflection-boundary": true,
               "description": "With watch: objectPath, propertyName, samples ({t, value}, kept when the value changed), sampleCount, changed (it took more than one value) and frames."
             },
+            "properties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With properties: each write as {propertyName, applied, value read back}."
+            },
+            "applied": {
+              "type": "number",
+              "description": "With properties: how many writes applied."
+            },
             "blueprintCompiled": {
               "type": "boolean",
               "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint's current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved."
@@ -43307,7 +43340,7 @@
       },
       "examples": [
         {
-          "title": "Write a property value on a world actor, asset, or Blueprint CDO.",
+          "title": "Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).",
           "input": {
             "action": "set_property",
             "objectPath": "/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1",
@@ -43346,8 +43379,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6fe98316075c276b88500bcbe27079031e70711d2cc8d191cc97532e75a4b632",
-        "content": "184d913a884fe711fb2e18d5ba60bbc78eb5c9b1e66ad258efcc9aaf52349563"
+        "schema": "bd59e59cd5ec16bad6b9501dda2d4c28eaec6285059177db8bddee7d4b0c395f",
+        "content": "9ee98b9ebf0147df6f0b0a2de185de3371d034f9b606d41fc69173f8047fe8e3"
       }
     },
     {
@@ -79863,11 +79896,13 @@
           "set parameter on material instance",
           "set parameter",
           "scalar parameter",
-          "vector parameter"
+          "vector parameter",
+          "recolor several material instances"
         ],
         "summary": "Set a material or instance parameter value: any parameter by type, or a scalar, vector, texture or static-switch parameter.",
         "whenToUse": [
           "parameterKind=parameter: Several parameter values on a base material or an instance must change in one call (parameters list).",
+          "parameterKind=parameter: Several material instances must be retuned at once, a palette recoloured (assets), under one consent instead of one per instance.",
           "parameterKind=parameter: The default of a parameter node on a base material must change; on an instance the value is stored as an override.",
           "parameterKind=scalar: A float parameter such as roughness, opacity or a speed must change on an instance or as a base material default.",
           "parameterKind=vector: A color or vector parameter such as a tint must change; value takes an rgba object or an array of at least three numbers.",
@@ -79914,6 +79949,18 @@
               "x-unreal-reflection-boundary": true,
               "description": "Several parameter values at once, each {parameterName, parameterType (scalar | vector | texture), value, or texturePath for a texture}; every entry is reported, and the call fails naming any that did not apply."
             },
+            "assets": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Several materials or material instances at once, in place of assetPath: each {assetPath, and parameters or parameterName with value}; the call's own save applies to every entry. Every entry is reported under assets, and the call fails naming any that did not apply."
+            },
             "save": {
               "type": "boolean",
               "description": "Save the asset afterwards. Defaults to true; pass false to keep the change in memory only."
@@ -79931,9 +79978,7 @@
               "default": "parameter"
             }
           },
-          "required": [
-            "assetPath"
-          ],
+          "required": [],
           "additionalProperties": false
         },
         "output": {
@@ -80022,14 +80067,17 @@
             ],
             "parameters": [
               "parameter"
+            ],
+            "assets": [
+              "parameter"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c2ec4d93cd66f01f6ff2f5f08acc2a686c1d0430598c91486485c1ee8ecbfcd0",
-        "content": "f8e58d30256b7157ab232d8e03375fd330fa79725ba8c5b4e80d677020c8be36"
+        "schema": "11e96e936d5ae13d5e1d466041aa646a6f045654411468ce16cd4921a262b1d2",
+        "content": "4612b55c64df28ceea706fa2711f3653fd9954f2bbd3e017a52cd6040147e931"
       }
     },
     {

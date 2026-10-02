@@ -209,11 +209,17 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
     parentTool: 'inspect', action: 'set_property', dispatchAction: 'set_property', domain: D, family: 'property',
     topics: ['write property', 'set value', 'change property', 'modify property', 'edit property', 'set field', 'set property on actor', 'set game instance variable'],
-    summary: 'Write a property value on a world actor, asset, or Blueprint CDO.',
-    whenToUse: ['A single property value must be written.'],
+    summary: 'Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).',
+    whenToUse: ['A single property value must be written.', 'Several properties of one target must be written in one call (properties).'],
     whenNotToUse: ['The property is read-only or the target is a packed asset.'],
     inputProps: {
       objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath, value: P.value, markDirty: P.markDirty,
+      properties: {
+        type: 'object',
+        additionalProperties: true,
+        'x-unreal-reflection-boundary': true,
+        description: 'Several writes on the same target in place of propertyName and value: {name or dotted path: value}, e.g. {"BoxExtent": {"X": 20, "Y": 90, "Z": 100}, "CollisionProfileName": "OverlapAllDynamic"}. Each is written as a single call would be and reported under properties; the call fails naming any that did not apply. watch applies to single writes only.',
+      },
       // A UMG pop set off by a write ran on real time and ended between two calls; LivesPop was only
       // provable by slowing the asset 50x.
       watch: {
@@ -230,10 +236,12 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       },
     },
     required: [],
-    requiredOneOf: ['propertyName', 'propertyPath'],
+    requiredOneOf: ['propertyName', 'propertyPath', 'properties'],
     effect: 'write', costLatency: 'interactive',
     outputProps: {
       watch: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With watch: objectPath, propertyName, samples ({t, value}, kept when the value changed), sampleCount, changed (it took more than one value) and frames.' },
+      properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With properties: each write as {propertyName, applied, value read back}.' },
+      applied: { type: 'number', description: 'With properties: how many writes applied.' },
       // Writing a Blueprint CDO only reaches instances spawned later once the
       // class is rebuilt, so the caller is told whether that recompile happened.
       blueprintCompiled: { type: 'boolean', description: 'True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint\'s current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved.' },

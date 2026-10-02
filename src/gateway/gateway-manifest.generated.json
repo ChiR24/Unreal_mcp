@@ -3308,6 +3308,7 @@
         "materialIndex",
         "materialPath",
         "materialSlot",
+        "materials",
         "maxRealSeconds",
         "maxTilt",
         "meshPath",
@@ -3690,6 +3691,15 @@
           "materialSlot": {
             "type": "number",
             "description": "Material slot/index to override (0-based)."
+          },
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "description": "One material per slot in place of materialPath and materialSlot: entry i goes into slot i, \"\" leaves that slot as it is. Every slot is reported under slots, in one undo step; the call fails naming any slot that did not take its material. A mesh made with several material ids (an SDF part) needs this once instead of one call per slot."
           },
           "maxRealSeconds": {
             "type": "number",
@@ -4725,9 +4735,20 @@
             "description": "File to also write the export to, inside the project (relative to it, or absolute under it), e.g. Saved/Exports/Actor.t3d. A path outside the project is refused with INVALID_PATH."
           },
           "properties": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true,
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Several component properties at once, name or dotted path to value, in place of propertyName and value."
+              },
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true,
+                "description": "Several writes on the same target in place of propertyName and value: {name or dotted path: value}, e.g. {\"BoxExtent\": {\"X\": 20, \"Y\": 90, \"Z\": 100}, \"CollisionProfileName\": \"OverlapAllDynamic\"}. Each is written as a single call would be and reported under properties; the call fails naming any that did not apply. watch applies to single writes only."
+              }
+            ],
             "description": "Several component properties at once, name or dotted path to value, in place of propertyName and value."
           },
           "propertyName": {
@@ -6003,6 +6024,7 @@
         "assetPath",
         "assetPaths",
         "assetType",
+        "assets",
         "backgroundColor",
         "baseTexture",
         "blendMode",
@@ -6333,6 +6355,18 @@
             "type": "string",
             "default": "3d",
             "description": "Bridge asset type: 3d, 3dplant, atlas or surface."
+          },
+          "assets": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 64,
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true
+            },
+            "x-unreal-reflection-boundary": true,
+            "description": "Several materials or material instances at once, in place of assetPath: each {assetPath, and parameters or parameterName with value}; the call's own save applies to every entry. Every entry is reported under assets, and the call fails naming any that did not apply."
           },
           "backgroundColor": {
             "description": "Background (default transparent, so the alpha channel is the text mask) as {r, g, b, a} or [r, g, b, a] in 0-1."

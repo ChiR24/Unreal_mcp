@@ -3,7 +3,7 @@
 // transport aliases (C++ rewrites them to connect_nodes/disconnect_nodes/compile_material).
 
 import type { RecordSpec } from './builder.js';
-import { arr, arrObj, bool, ex, LOW, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, refObj, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arr, arrObj, bool, ex, LOW, MATERIAL_PARAMETER_ASSETS, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, refObj, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const MAT = str('Material /Game asset path.');
@@ -155,10 +155,14 @@ export const MATERIAL_GRAPH_RECORDS: readonly RecordSpec[] = [
     { whenToUse: ['The shader must be regenerated after graph edits; the compile, error check and save are identical to a plain compile.'],
       whenNotToUse: ['A property or parameter was just set (material.set_material_property and material.set_material_parameter already recompile).'],
       dispatchAction: 'rebuild_material', examples: [ex('Rebuild after graph edits', { materialPath: M }, DONE)] }),
-  r('set_material_parameter', 'material', 'Set a material parameter value, or several at once with parameters.', schema({ assetPath: MAT, parameterName: str('Parameter name.'), parameterType: str('Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to.'), value: { description: 'Parameter value.' }, texturePath: str('Texture /Game path, for parameterType texture.'), parameters: MATERIAL_PARAMETER_LIST, save: SAVE }, ['assetPath'], ['parameterName', 'parameters']), OK, WRITE, WRITE_POLICY, LOW,
-    { whenToUse: ['Several parameter values on a base material or an instance must change in one call (parameters list).', 'The default of a parameter node on a base material must change; on an instance the value is stored as an override.'],
+  r('set_material_parameter', 'material', 'Set a material parameter value, several at once with parameters, or the values of several material instances under one consent with assets.', schema({ assetPath: MAT, parameterName: str('Parameter name.'), parameterType: str('Parameter kind: scalar (default), vector, or texture. Selects which parameter expression the value is written to.'), value: { description: 'Parameter value.' }, texturePath: str('Texture /Game path, for parameterType texture.'), parameters: MATERIAL_PARAMETER_LIST, assets: MATERIAL_PARAMETER_ASSETS, save: SAVE }, [], ['assetPath', 'assets']), OK, WRITE, WRITE_POLICY, LOW,
+    { whenToUse: ['Several parameter values on a base material or an instance must change in one call (parameters list).', 'Several material instances must be retuned at once, a palette recoloured (assets), under one consent instead of one per instance.', 'The default of a parameter node on a base material must change; on an instance the value is stored as an override.'],
       whenNotToUse: ['The parameter is not on the base material yet (add it there with asset.edit_material_instance edit=add_parameter or material.add_material_node).', 'Every override on an instance must be cleared back to its parent (use asset.edit_material_instance edit=reset_parameters).'],
-      topics: ['material parameter', 'set parameter', 'scalar parameter', 'vector parameter', 'texture parameter'], examples: [ex('Set a roughness parameter', { assetPath: M, parameterName: 'Roughness', value: 0.35 }, DONE)] }),
+      topics: ['material parameter', 'set parameter', 'scalar parameter', 'vector parameter', 'texture parameter', 'recolor several material instances'],
+      examples: [ex('Set a roughness parameter', { assetPath: M, parameterName: 'Roughness', value: 0.35 }, DONE),
+        ex('Retune two instances under one consent', { assets: [
+          { assetPath: '/Game/Materials/MI_LampRed', parameters: [{ parameterName: 'Color', parameterType: 'vector', value: [1, 0.02, 0.01] }, { parameterName: 'SelfGlow', parameterType: 'scalar', value: 3.5 }] },
+          { assetPath: '/Game/Materials/MI_LampGreen', parameterName: 'SelfGlow', value: 3.5 }] }, DONE)] }),
   // assetPath is the spelling the handler reads. Declaring only materialPath made this
   // capability uncallable by any input: the schema-correct call died in the handler, the
   // handler-correct call failed schema validation, and sending both was rejected as

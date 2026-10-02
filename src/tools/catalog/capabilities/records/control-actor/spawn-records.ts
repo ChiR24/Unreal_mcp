@@ -47,9 +47,10 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_SPAWN,
     topics: ['spawn actor', 'place actor', 'add actor to level', 'create actor', 'spawn cube', 'spawn static mesh', 'instantiate class'],
     summary:
-      'Spawn a new actor instance from a class path into the current level.',
+      'Spawn a new actor instance from a class path into the current level, or a mesh actor from a mesh path alone.',
     whenToUse: [
       'A new actor of a known Unreal class must be created in the scene.',
+      'A static or skeletal mesh must be placed as its own actor (meshPath alone; the actor class follows the mesh).',
     ],
     whenNotToUse: ['A Blueprint instance is needed (use spawn_blueprint).'],
     inputProps: {
@@ -62,7 +63,8 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
       scale: P.scale,
     },
     required: [],
-    requiredOneOf: ['classPath', 'actorClass'],
+    // The handler places a mesh actor for a bare meshPath; the schema refused that call before it got there.
+    requiredOneOf: ['classPath', 'actorClass', 'meshPath'],
     outputProps: { name: P.actorName, undo: SPAWN_UNDO, ...SPAWN_PLACEMENT },
     outputRequired: [],
     effect: 'write',

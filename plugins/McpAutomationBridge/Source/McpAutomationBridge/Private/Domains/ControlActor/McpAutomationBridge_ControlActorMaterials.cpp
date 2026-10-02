@@ -94,6 +94,46 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetMaterial(
     return true;
   }
 
+  // materials: entry i into slot i ("" skips one), so an SDF part with six slots is one call, not six.
+  // Each slot runs through this handler under a captured id, as the actorNames form does.
+  const TArray<TSharedPtr<FJsonValue>> *SlotMaterials = nullptr;
+  if (Payload->TryGetArrayField(TEXT("materials"), SlotMaterials) && SlotMaterials->Num() > 0) {
+    TArray<UObject *> Undoable; // one undo step for every slot; a captured run (actorNames) leaves it to its caller
+    AActor *Owner = FindActorByName(GetJsonStringField(Payload, TEXT("actorName")));
+    if (Owner && !FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) McpAddActorUndoSet(Owner, Undoable);
+    TUniquePtr<FMcpScopedEditorTransaction> Transaction(Undoable.Num() == 0 ? nullptr : new FMcpScopedEditorTransaction(
+        FText::FromString(TEXT("Set Actor Material")), EMcpMutationDurability::EditorStateOnly, Undoable));
+    TArray<TSharedPtr<FJsonValue>> Slots;
+    TArray<FString> Failures;
+    for (int32 Slot = 0; Slot < SlotMaterials->Num(); ++Slot) {
+      const FString Path = (*SlotMaterials)[Slot].IsValid() ? (*SlotMaterials)[Slot]->AsString() : FString();
+      if (Path.IsEmpty()) continue;
+      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
+      One->Values = Payload->Values;
+      One->RemoveField(TEXT("materials"));
+      One->SetStringField(TEXT("materialPath"), Path);
+      One->SetNumberField(TEXT("materialSlot"), Slot);
+      const FString ItemId = FString::Printf(TEXT("%s#slot%d"), *RequestId, Slot);
+      FMcpResponseCaptureRegistry::Get().Begin(ItemId);
+      HandleControlActorSetMaterial(ItemId, One, Socket);
+      const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(ItemId);
+      TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
+      Entry->SetNumberField(TEXT("materialSlot"), Slot);
+      Entry->SetStringField(TEXT("materialPath"), Path);
+      Entry->SetBoolField(TEXT("applied"), Reply.bSuccess);
+      if (!Reply.bSuccess) Failures.Add(FString::Printf(TEXT("slot %d: %s"), Slot, *Reply.Message));
+      Slots.Add(MakeShared<FJsonValueObject>(Entry));
+    }
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetArrayField(TEXT("slots"), Slots);
+    if (Owner) Data->SetStringField(TEXT("actorName"), McpActorRef(Owner));
+    if (Transaction) Transaction->DescribeInto(Data);
+    SendAutomationResponse(Socket, RequestId, Failures.Num() == 0, Failures.Num() == 0
+        ? FString::Printf(TEXT("Materials set on %d slots"), Slots.Num()) : FString::Join(Failures, TEXT("; ")),
+        Data, Failures.Num() == 0 ? FString() : FString(TEXT("MATERIAL_BATCH_INCOMPLETE")));
+    return true;
+  }
+
   FString TargetName;
   Payload->TryGetStringField(TEXT("actorName"), TargetName);
   if (TargetName.IsEmpty()) {
