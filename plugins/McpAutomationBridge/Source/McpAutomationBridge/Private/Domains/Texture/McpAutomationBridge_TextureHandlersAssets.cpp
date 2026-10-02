@@ -26,14 +26,23 @@ UTexture2D* CreateEmptyTexture(const FString& PackagePath, const FString& Textur
     }
     FullPath = SanitizedFullPath;
 
-    UPackage* Package = CreatePackage(*FullPath);
+    // A texture already on disk is loaded and refilled. A new object built over the unloaded one left
+    // source data the editor refused to save ("bulkdata with an invalid payload") on the first
+    // overwrite of every session; anything else at the path is never replaced.
+    const FString ObjectPath = FullPath + TEXT(".") + TextureName;
+    UTexture2D* NewTexture = LoadObject<UTexture2D>(nullptr, *ObjectPath, nullptr, LOAD_NoWarn | LOAD_Quiet);
+    if (!NewTexture && (FPackageName::DoesPackageExist(FullPath) || FindObject<UObject>(nullptr, *ObjectPath)))
+    {
+        UE_LOG(LogMcpAutomationBridgeSubsystem, Warning, TEXT("CreateEmptyTexture: %s holds an asset that is not a Texture2D; it is not replaced."), *FullPath);
+        return nullptr;
+    }
+    UPackage* Package = NewTexture ? NewTexture->GetOutermost() : CreatePackage(*FullPath);
     if (!Package)
     {
         return nullptr;
     }
 
     const EPixelFormat Format = bHDR ? PF_FloatRGBA : PF_B8G8R8A8;
-    UTexture2D* NewTexture = FindObject<UTexture2D>(Package, *TextureName);
     if (!NewTexture)
     {
         NewTexture = NewObject<UTexture2D>(Package, UTexture2D::StaticClass(), FName(*TextureName), RF_Public | RF_Standalone);
@@ -114,42 +123,9 @@ bool SaveTextureAsset(UTexture2D* Texture)
     FlushRenderingCommands();
     FAssetRegistryModule::AssetCreated(Texture);
     Texture->MarkPackageDirty();
-    if (McpSafeAssetSave(Texture))
-    {
-        return true;
-    }
-
-    UPackage* Package = Texture->GetOutermost();
-    if (!Package)
-    {
-        return false;
-    }
-
-    TArray<UPackage*> PackagesToSave;
-    PackagesToSave.Add(Package);
-    const FEditorFileUtils::EPromptReturnCode PromptSaveResult =
-        FEditorFileUtils::PromptForCheckoutAndSave(PackagesToSave, false, false);
-    const bool bPromptSaveSucceeded = PromptSaveResult == FEditorFileUtils::PR_Success;
-    const bool bEditorSaveSucceeded =
-        !bPromptSaveSucceeded && UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, false);
-
-    FString PackageFilename;
-    const bool bHasFilename = FPackageName::TryConvertLongPackageNameToFilename(
-        Package->GetName(), PackageFilename, FPackageName::GetAssetPackageExtension());
-    const bool bExistsOnDisk = bHasFilename &&
-        IFileManager::Get().FileExists(*FPaths::ConvertRelativePathToFull(PackageFilename));
-    if (!bPromptSaveSucceeded && !bEditorSaveSucceeded && !bExistsOnDisk)
-    {
-        return false;
-    }
-
-    if (bHasFilename)
-    {
-        TArray<FString> FilesToScan;
-        FilesToScan.Add(PackageFilename);
-        FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get()
-            .ScanFilesSynchronous(FilesToScan, true);
-    }
-    return true;
+    // McpSafeAssetSave tries every save route and says yes only when one of them wrote the file. The
+    // second round of the same routes that used to follow answered yes whenever an older version was
+    // still on disk, so a texture whose five saves all failed was reported saved.
+    return McpSafeAssetSave(Texture);
 }
 }

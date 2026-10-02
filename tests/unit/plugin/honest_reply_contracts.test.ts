@@ -60,6 +60,17 @@ describe('handlers answer what they did', () => {
     expect(source).not.toContain('bShowConfirmation)');
   });
 
+  // Five failed saves of a texture were reported saved: true because an older file was still on
+  // disk. And the first overwrite of an existing texture in a session built a new object over the
+  // unloaded asset, whose source the editor then refused to save.
+  it('a generated texture is saved for real or reported unsaved, and an existing one is loaded and refilled', () => {
+    const assets = code('Texture', 'McpAutomationBridge_TextureHandlersAssets.cpp');
+    expect(assets).toContain('return McpSafeAssetSave(Texture);');
+    expect(assets).not.toContain('bExistsOnDisk');
+    expect(assets).toMatch(/LoadObject<UTexture2D>\(nullptr, \*ObjectPath/u);
+    expect(assets.indexOf('LoadObject<UTexture2D>')).toBeLessThan(assets.indexOf('CreatePackage('));
+  });
+
   it('a resized or combined texture keeps its source colour space', () => {
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersResize.cpp')).toContain('NewTexture->SRGB = SourceTexture->SRGB;');
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersCombine.cpp')).toContain('OutputTexture->SRGB = BaseTex->SRGB;');
