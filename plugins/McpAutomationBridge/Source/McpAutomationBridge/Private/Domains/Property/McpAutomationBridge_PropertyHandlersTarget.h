@@ -32,15 +32,17 @@ bool IsSupersededTarget(const UObject* Object);
 void KeepDeclaredDefault(UBlueprint* Blueprint, UObject* DefaultObject, const FString& PropertyPath);
 
 // A compile replaces the class and its default object, so the one a write went to is a stale copy afterwards. Finds
-// PropertyPath again on the Blueprint's current default object; false, outputs untouched, when it has none or lost the
-// property.
+// PropertyPath again on the Blueprint's current default object, or on its default subobject SubobjectName (a native
+// component of the class defaults, which the compile replaced too); false, outputs untouched, when it has none or lost
+// the property.
 bool FindOnCurrentDefault(UBlueprint* Blueprint, const FString& PropertyPath, UObject*& OutObject,
-                          FProperty*& OutProperty, void*& OutContainer);
+                          FProperty*& OutProperty, void*& OutContainer, FName SubobjectName = NAME_None);
 
 // Reads objectPath|blueprintPath and propertyName|propertyPath and resolves the
 // object: the Blueprint's current CDO, or the object at objectPath (recovering its
 // Blueprint when that object is a CDO, and the Blueprint's current CDO when it is
-// the stale one a compile left). Refuses a target outside McpSafeReflectionTarget
+// the stale one a compile left, or the Blueprint asset itself when the property is
+// not one of the asset's own). Refuses a target outside McpSafeReflectionTarget
 // before any property is touched. False after replying.
 bool ResolvePropertyTarget(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
                            const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket,

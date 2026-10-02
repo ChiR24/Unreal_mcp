@@ -102,18 +102,21 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   return Data;
 }
 
-// A throttled editor (in the background with the throttle preference on) steps
-// PIE a third of a second at a time: every key and sample lands that late, so a
-// 0.2 s jump held for 0.67 s and the samples read as the game's own behaviour.
+// A slow editor steps PIE a third of a second at a time: every key and sample lands that late, so a 0.2 s jump
+// held for 0.67 s and the samples read as the game's own behaviour. The run itself put the window up and the
+// background throttle off, so a slow run is the render cost (video memory ran out once), never the throttle the
+// warning used to blame.
 FString McpSlowFrameWarning(const FMcpMotionRun &Run) {
   const double PerFrame = Run.Frames > 1 ? (Run.LastGame - Run.StartGame) / Run.Frames : 0.0;
   if (PerFrame < 0.1) {
     return FString();
   }
   return FString::Printf(TEXT("the game advanced %.2f s per frame (about %.0f fps), so inputs and samples landed "
-                              "up to that late and holds ran long: the editor is throttled in the background "
-                              "(control_editor.restore_editor_window; set_game_speed fixed_delta_time makes timing "
-                              "exact)."), PerFrame, 1.0 / PerFrame);
+                              "up to that late and holds ran long. The run had the editor window up and its "
+                              "background throttle off, so the editor renders that slowly: a heavy scene, or video "
+                              "memory exhausted (the viewport says so). set_game_speed fixed_delta_time makes "
+                              "timing exact; the console command r.ScreenPercentage 50 lowers the render cost."),
+                         PerFrame, 1.0 / PerFrame);
 }
 
 // Keys pressed while the player's pawn stood perfectly still never reached it:

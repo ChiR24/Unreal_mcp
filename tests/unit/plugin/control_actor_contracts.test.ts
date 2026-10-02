@@ -105,7 +105,8 @@ describe('control_actor.list propertyNames takes "Component.Property" like sampl
     const motion = read('McpAutomationBridge_ControlActorMotionSample.cpp');
 
     expect(support).toMatch(/inline FProperty \*McpResolveActorPropertyPath\(AActor \*Actor, const FString &Wanted, UObject \*&OutOwner\)/u);
-    expect(support).toMatch(/Wanted\.Split\(TEXT\("\."\), &ComponentName, &PropertyName\)\)\s*\{\s*OutOwner = FindComponentByName\(Actor, ComponentName\);/u);
+    expect(support, 'the actor property that holds a component is tried first (CharacterMovement for CharMoveComp)').toMatch(/Wanted\.Split\(TEXT\("\."\), &ComponentName, &PropertyName\)\)\s*\{\s*const FObjectPropertyBase \*Holder = FindFProperty<FObjectPropertyBase>\(Actor->GetClass\(\), FName\(\*ComponentName\)\);/u);
+    expect(support, 'a component name still resolves when no actor property holds it').toMatch(/if \(!OutOwner\) \{\s*OutOwner = FindComponentByName\(Actor, ComponentName\);/u);
     expect(list).toMatch(/McpResolveActorPropertyPath\(Actor, Wanted, Owner\)/u);
     expect(motion).toMatch(/McpResolveActorPropertyPath\(Found, Wanted, Owner\)/u);
     expect(motion, 'sample_motion no longer carries its own copy of the resolution').not.toMatch(/Wanted\.Split\(/u);

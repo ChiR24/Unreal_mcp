@@ -3896,17 +3896,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing); a name that resolves to nothing is listed under missingProperties."
+              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
             },
             {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
+              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
             }
           ],
-          "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing); a name that resolves to nothing is listed under missingProperties."
+          "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
         },
         "propertyPath": {
           "type": "string",
@@ -5896,11 +5896,25 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
         },
         "propertyNames": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "Specific property names to include."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Specific property names to include."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 64,
+              "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
+            }
+          ],
+          "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
         },
         "propertyPath": {
           "type": "string",
@@ -6459,6 +6473,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "componentNames that matched no component."
         },
+        "missingProperties": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With propertyNames: each name that did not resolve, as \"Name: reason\"."
+        },
         "module": {
           "type": "string",
           "description": "Module that declares a C++ class (empty for a Blueprint class)."
@@ -6560,6 +6581,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "x-unreal-reflection-boundary": true,
               "description": "With properties: each write as {propertyName, applied, value read back}."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With propertyNames: each property that resolved, as {propertyName (its own spelling), value}."
             }
           ],
           "description": "With properties: each write as {propertyName, applied, value read back}."

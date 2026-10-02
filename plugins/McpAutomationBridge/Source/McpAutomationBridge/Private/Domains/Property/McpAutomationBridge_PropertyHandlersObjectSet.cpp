@@ -265,6 +265,11 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
               return true;
           }
       }
+      else if (RootObject->HasAnyFlags(RF_DefaultSubObject))
+      {
+          // A native component of the class defaults was replaced along with them: the reply describes its successor.
+          McpPropertyTarget::FindOnCurrentDefault(ResolvedBlueprint, ResolvedPath, RootObject, Property, TargetContainer, RootObject->GetFName());
+      }
   }
   McpPropertyActorAccess::RefreshK2NodeTitleCacheIfNeeded(RootObject);
   const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit(RootObject);
@@ -275,7 +280,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   // PIE content is saved with its level, and engine content is left alone.
   bool bSaved = false;
   FString SaveSkippedReason;
-  UPackage* OwningPackage = RootObject->GetOutermost();
+  // A Blueprint target is saved through its Blueprint: a component a compile moved aside sits in /Engine/Transient.
+  UPackage* OwningPackage = (ResolvedBlueprint ? static_cast<UObject*>(ResolvedBlueprint) : RootObject)->GetOutermost();
   if (!bMarkDirty) {
       SaveSkippedReason = TEXT("markDirty was false");
   } else if (OwningPackage->HasAnyPackageFlags(PKG_PlayInEditor) || OwningPackage == GetTransientPackage()) {

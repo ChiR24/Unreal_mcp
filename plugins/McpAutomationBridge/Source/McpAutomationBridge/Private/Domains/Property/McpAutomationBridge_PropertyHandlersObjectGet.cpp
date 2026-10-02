@@ -10,6 +10,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Safety/McpSafeReflectionTarget.h"
+#include "Core/Requests/McpResponseCaptureRegistry.h"
 
 #include "GameFramework/Actor.h"
 
@@ -24,6 +25,43 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
   if (!Action.Equals(TEXT("get_object_property"), ESearchCase::IgnoreCase) &&
       !LowerAction.Contains(TEXT("get_object_property")))
     return false;
+
+  // propertyNames: several reads of one target in one call, each through this handler under a captured id. A name that
+  // does not resolve is listed under missingProperties with its reason; the others still answer.
+  const TArray<TSharedPtr<FJsonValue>> *Names = nullptr;
+  if (Payload->TryGetArrayField(TEXT("propertyNames"), Names) && Names->Num() > 0) {
+    TArray<TSharedPtr<FJsonValue>> Rows, Missing;
+    for (const TSharedPtr<FJsonValue> &Name : *Names) {
+      const FString Wanted = Name.IsValid() ? Name->AsString() : FString();
+      TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
+      One->Values = Payload->Values;
+      One->RemoveField(TEXT("propertyNames"));
+      One->RemoveField(TEXT("propertyPath"));
+      One->SetStringField(TEXT("propertyName"), Wanted);
+      const FString ItemId = FString::Printf(TEXT("%s#read%d"), *RequestId, Rows.Num() + Missing.Num());
+      FMcpResponseCaptureRegistry::Get().Begin(ItemId);
+      HandleGetObjectProperty(ItemId, Action, One, RequestingSocket);
+      const FMcpCapturedResponse Reply = FMcpResponseCaptureRegistry::Get().End(ItemId);
+      const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(TEXT("value")) : nullptr;
+      FString Resolved;
+      if (!Reply.bSuccess || !Value.IsValid() || !Reply.Result->TryGetStringField(TEXT("propertyName"), Resolved)) {
+        Missing.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("%s: %s"), *Wanted, *Reply.Message)));
+        continue;
+      }
+      // The resolved name, never the caller's spelling: the receipt redactor judges a value by its sibling name.
+      TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
+      Row->SetStringField(TEXT("propertyName"), Resolved);
+      Row->SetField(TEXT("value"), Value);
+      Rows.Add(MakeShared<FJsonValueObject>(Row));
+    }
+    TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    Data->SetArrayField(TEXT("properties"), Rows);
+    if (Missing.Num() > 0) Data->SetArrayField(TEXT("missingProperties"), Missing);
+    SendAutomationResponse(RequestingSocket, RequestId, Rows.Num() > 0,
+        FString::Printf(TEXT("Read %d of %d properties."), Rows.Num(), Names->Num()), Data,
+        Rows.Num() > 0 ? FString() : FString(TEXT("PROPERTY_NOT_FOUND")));
+    return true;
+  }
 
   McpPropertyTarget::FPropertyTarget Target;
   if (!McpPropertyTarget::ResolvePropertyTarget(*this, RequestId, Payload, RequestingSocket, Target)) {

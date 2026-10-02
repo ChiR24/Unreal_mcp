@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3a214949ef8b2118",
+  "catalogRevision": "8f26aa31b552904b",
   "recordCount": 393,
   "records": [
     {
@@ -32324,7 +32324,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing); a name that resolves to nothing is listed under missingProperties."
+              "description": "Actor properties read at every sample, e.g. [\"bDead\", \"HP\"], or a component's as \"Component.Property\" (\"Visual.RelativeScale3D\" catches a squash on landing), the component by its name or by the actor property that holds it (\"CharacterMovement.MaxWalkSpeed\"); a name that resolves to nothing is listed under missingProperties."
             },
             "maxRealSeconds": {
               "type": "number",
@@ -32617,8 +32617,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9de06ed93dc4b009bea234ed7b136be7dac5997634cce30f67636ceda805a6e6",
-        "content": "04bb749ea3861c525b36cc5f415de0139ea39fb7b971f4f2f92addb50279b25f"
+        "schema": "344e7a8f652ae58bf9156dfadb40000e78120ee505a519c5b602aa42d23e6db3",
+        "content": "3945568d74d4c09b6911ca9b40ef5f4da1efd16d27f069d82b1a4f3ddbd680b4"
       }
     },
     {
@@ -32703,7 +32703,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
+              "description": "Property or Blueprint variable names to read on every listed actor, returned per actor under properties, e.g. Kind and Content, or a component's as \"Component.Property\" (StaticMeshComponent.LDMaxDrawDistance, Visual.RelativeScale3D; the component by its name, or by the actor property that holds it, as CharacterMovement.MaxWalkSpeed), keyed as asked. A name that an actor lacks, or whose component it lacks, is listed under missingProperties for that actor."
             },
             "near": {
               "type": "array",
@@ -32947,8 +32947,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f6a99e4cb2a5e67e67e432171df3caa8b9fed9f54a280211fbf842aba546903e",
-        "content": "25ef3beeae148f72d501d76d22b9388b84177984630e617eb10e3d7aa1a4cf2b"
+        "schema": "3440f8ea2ac7a85c66a027913afd9bf92deb2903061b5d01b8dccf75a7bcb479",
+        "content": "fd0e4f0f18d244bea6f5a8c9edbd08e221a325a5f716b547f7ec67e88a1d1eff"
       }
     },
     {
@@ -41151,9 +41151,10 @@
           "read live widget property",
           "widget value during play"
         ],
-        "summary": "Read a property value from a world actor, asset, or Blueprint CDO.",
+        "summary": "Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset's own path), or several at once (propertyNames).",
         "whenToUse": [
-          "A single property value must be read."
+          "A single property value must be read.",
+          "Several properties of one target must be read in one call (propertyNames)."
         ],
         "whenNotToUse": [
           "All properties are needed; use inspect_object or inspect_cdo."
@@ -41191,6 +41192,15 @@
             "propertyPath": {
               "type": "string",
               "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
+            },
+            "propertyNames": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "maxItems": 64,
+              "description": "Several properties of the same target in one call, in place of propertyName: each read as a single call would (dotted paths too, such as CharacterMovement.MaxWalkSpeed). Answered under properties; a name that does not resolve is listed under missingProperties with the reason, and the others still answer."
             }
           },
           "required": [
@@ -41199,7 +41209,8 @@
           "additionalProperties": false,
           "requiredOneOf": [
             "propertyName",
-            "propertyPath"
+            "propertyPath",
+            "propertyNames"
           ]
         },
         "output": {
@@ -41221,6 +41232,23 @@
             },
             "value": {
               "description": "Property value to set (type depends on the target property)."
+            },
+            "properties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "With propertyNames: each property that resolved, as {propertyName (its own spelling), value}."
+            },
+            "missingProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With propertyNames: each name that did not resolve, as \"Name: reason\"."
             }
           },
           "required": [
@@ -41231,7 +41259,7 @@
       },
       "examples": [
         {
-          "title": "Read a property value from a world actor, asset, or Blueprint CDO.",
+          "title": "Read a property value from a world actor, asset, or Blueprint class defaults (blueprintPath, or the Blueprint asset's own path), or several at once (propertyNames).",
           "input": {
             "action": "get_property",
             "objectPath": "/Game/Maps/Demo.Demo_PersistentLevel.PlayerStart_1",
@@ -41271,8 +41299,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "722ee319a0e5863f5e7673f7aea9afc0feafb484991b586736d064635a35564a",
-        "content": "dfa42a6977b08b795533b6207efaf24a8f5537672e04f68195be43cb99011930"
+        "schema": "caf0c74440363f2f00ee7b387aad84b2847c8a9d28775e462539d6c8993bca8e",
+        "content": "6ba3711182a1fb2246c546fa925bbcc2a542ff03c76113adab71b2bcaf5042ba"
       }
     },
     {

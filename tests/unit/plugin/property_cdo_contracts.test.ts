@@ -60,16 +60,18 @@ describe('set_property on a Blueprint CDO reaches the Blueprint\'s current defau
     const flat = compact(setter());
     const compile = flat.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);');
     const refresh = flat.indexOf('McpPropertyTarget::FindOnCurrentDefault(ResolvedBlueprint, ResolvedPath, RootObject, Property, TargetContainer)');
-    const owning = flat.indexOf('UPackage* OwningPackage = RootObject->GetOutermost();');
+    const owning = flat.indexOf('UPackage* OwningPackage = (ResolvedBlueprint ? static_cast<UObject*>(ResolvedBlueprint) : RootObject)->GetOutermost();');
     const verification = flat.indexOf('McpHandlerUtils::AddVerification(ResultPayload, RootObject);');
     const value = flat.indexOf('McpPropertyReflection::ExportPropertyToJsonValue(TargetContainer, Property)');
 
     expect(compile).toBeGreaterThan(-1);
     expect(refresh, 'after the compile').toBeGreaterThan(compile);
-    expect(owning, 'the saved package is the new default object\'s').toBeGreaterThan(refresh);
+    expect(owning, 'the saved package is the Blueprint\'s, never the outer of an object the compile discarded').toBeGreaterThan(refresh);
     expect(verification, 'the reply describes the new default object').toBeGreaterThan(refresh);
     expect(value, 'the value is read off the new default object').toBeGreaterThan(refresh);
     expect(flat, 'a watch on the written object follows it').toContain('if (bWatch && Watch.Object.Get() == Replaced) { Watch.Object = RootObject; }');
+    expect(flat, 'a native component of the class defaults is found again on the new defaults').toContain('else if (RootObject->HasAnyFlags(RF_DefaultSubObject)) { McpPropertyTarget::FindOnCurrentDefault(ResolvedBlueprint, ResolvedPath, RootObject, Property, TargetContainer, RootObject->GetFName()); }');
+    expect(compact(target()), 'a Blueprint asset path means its class defaults unless the property is the asset\'s own').toContain('if (AsBlueprint && AsBlueprint->GeneratedClass && !FindFProperty<FProperty>(AsBlueprint->GetClass(), FName(*Head))) { Out.RootObject = AsBlueprint->GeneratedClass->GetDefaultObject();');
 
     const find = compact(sliceBetween(target(), 'bool FindOnCurrentDefault(', 'bool ResolvePropertyTarget('));
     expect(find).toContain('UClass* Current = Blueprint->GeneratedClass; UObject* Fresh = Current ? Current->GetDefaultObject() : nullptr;');

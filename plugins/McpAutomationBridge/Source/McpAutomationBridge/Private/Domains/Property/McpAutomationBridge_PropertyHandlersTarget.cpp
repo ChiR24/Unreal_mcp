@@ -42,10 +42,13 @@ void KeepDeclaredDefault(UBlueprint* Blueprint, UObject* DefaultObject, const FS
 }
 
 bool FindOnCurrentDefault(UBlueprint* Blueprint, const FString& PropertyPath, UObject*& OutObject,
-                          FProperty*& OutProperty, void*& OutContainer)
+                          FProperty*& OutProperty, void*& OutContainer, FName SubobjectName)
 {
   UClass* Current = Blueprint->GeneratedClass;
   UObject* Fresh = Current ? Current->GetDefaultObject() : nullptr;
+  if (Fresh && !SubobjectName.IsNone()) {
+    Fresh = Fresh->GetDefaultSubobjectByName(SubobjectName);
+  }
   void* Container = nullptr;
   FString ResolvedPath, Error;
   FProperty* Found = Fresh ? McpResolvePropertyPath(Fresh, PropertyPath, Container, ResolvedPath, Error) : nullptr;
@@ -116,6 +119,15 @@ bool ResolvePropertyTarget(UMcpAutomationBridgeSubsystem& Bridge, const FString&
     }
     if (!ResolvedPath.IsEmpty()) {
       Out.ObjectPath = ResolvedPath;
+    }
+    // The Blueprint asset's own path (/Game/X/BP_Foo) means its class defaults unless the property is the asset's: a
+    // read of "CharacterMovement.MaxWalkSpeed" there failed as "not found in scope 'Blueprint'".
+    FString Head = Out.PropertyName, Rest;
+    Out.PropertyName.Split(TEXT("."), &Head, &Rest);
+    UBlueprint* AsBlueprint = Cast<UBlueprint>(Out.RootObject);
+    if (AsBlueprint && AsBlueprint->GeneratedClass && !FindFProperty<FProperty>(AsBlueprint->GetClass(), FName(*Head))) {
+      Out.RootObject = AsBlueprint->GeneratedClass->GetDefaultObject();
+      Out.ObjectPath = Out.RootObject->GetPathName();
     }
     // A caller naming a Blueprint CDO directly (...Default__BP_Foo_C) lands here
     // rather than in the blueprintPath branch. Recover the owning Blueprint so a

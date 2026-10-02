@@ -67,13 +67,19 @@ inline FString McpActorFolder(const AActor *Actor) {
 
 // A property named for the whole actor or for one of its components: "bDead" is read off the actor,
 // "Visual.RelativeScale3D" off the component FindComponentByName finds under that name (a squash on
-// landing lives on a component, not the actor). One resolver for the propertyNames of sample_motion
-// and of list. OutOwner is the object to read the property from; null Property when nothing matches.
+// landing lives on a component, not the actor), and "CharacterMovement.MaxWalkSpeed" off the object the
+// actor's own property of that name holds, as get_property reads it (the component is named CharMoveComp).
+// One resolver for the propertyNames of sample_motion and of list. OutOwner is the object to read the
+// property from; null Property when nothing matches.
 inline FProperty *McpResolveActorPropertyPath(AActor *Actor, const FString &Wanted, UObject *&OutOwner) {
   FString ComponentName, PropertyName = Wanted;
   OutOwner = Actor;
   if (Wanted.Split(TEXT("."), &ComponentName, &PropertyName)) {
-    OutOwner = FindComponentByName(Actor, ComponentName);
+    const FObjectPropertyBase *Holder = FindFProperty<FObjectPropertyBase>(Actor->GetClass(), FName(*ComponentName));
+    OutOwner = Holder ? Holder->GetObjectPropertyValue_InContainer(Actor) : nullptr;
+    if (!OutOwner) {
+      OutOwner = FindComponentByName(Actor, ComponentName);
+    }
   }
   return OutOwner ? OutOwner->GetClass()->FindPropertyByName(FName(*PropertyName)) : nullptr;
 }

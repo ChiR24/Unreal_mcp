@@ -75,6 +75,11 @@ const testCases = [
   ] },
   { scenario: 'VERIFY: get_property through the Default__ path reads the second write', toolName: 'inspect', arguments: { action: 'get_property', objectPath: `${BP_PATH}.Default__${BP_NAME}_C`, propertyName: 'CdoCount' }, expected: 'success', assertions: [{ path: 'structuredContent.result.value', equals: 4, label: 'the default object a spawn gets holds the second write' }] },
   { scenario: 'CONFIG: set_property properties writes two defaults in one call', toolName: 'inspect', arguments: { action: 'set_property', blueprintPath: BP_PATH, properties: { CdoCount: 5, InitialLifeSpan: 12 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.applied', equals: 2, label: 'both writes applied' }] },
+  { scenario: 'VERIFY: get_property on the Blueprint asset path reads its class defaults', toolName: 'inspect', arguments: { action: 'get_property', objectPath: BP_PATH, propertyName: 'CdoCount' }, expected: 'success', assertions: [{ path: 'structuredContent.result.value', equals: 5, label: 'the asset path reaches the default object, not the UBlueprint' }] },
+  { scenario: 'INFO: get_property propertyNames reads several defaults in one call', toolName: 'inspect', arguments: { action: 'get_property', blueprintPath: BP_PATH, propertyNames: ['CdoCount', 'InitialLifeSpan', 'NoSuchProperty'] }, expected: 'success', assertions: [
+    { path: 'structuredContent.result.properties', length: 2, label: 'both real properties answer' },
+    { path: 'structuredContent.result.missingProperties.0', includes: 'NoSuchProperty', label: 'the miss is named, not dropped' },
+  ] },
   { scenario: 'INFO: list_objects', toolName: 'inspect', arguments: { action: 'list_objects' }, expected: 'success' },
   { scenario: 'INFO: list_objects second page', toolName: 'inspect', arguments: { action: 'list_objects', limit: 5, offset: 5 }, expected: 'success', assertions: [{ path: 'structuredContent.result.offset', equals: 5, label: 'offset is honoured' }] },
   { scenario: 'INFO: get_metadata', toolName: 'inspect', arguments: inspectActor('get_metadata'), expected: 'success' },
