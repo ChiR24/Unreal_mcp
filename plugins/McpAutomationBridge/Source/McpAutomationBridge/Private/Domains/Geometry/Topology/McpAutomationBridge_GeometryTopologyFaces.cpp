@@ -18,20 +18,13 @@ bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     auto [TargetActor, DMC, Mesh] = *Target;
     FGeometryScriptMeshSelection Selection;
     bool bHasSelection = false;
-    if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection)) return true;
-    const int32 TrisBefore = Mesh->GetTriangleCount();
-    if (!GuardMeshBudget(Self, RequestId, Socket, static_cast<int64>(TrisBefore) * 3, TEXT("Poke"))) return true;
-
     // The ids are taken before the edit: poking adds triangles, and only the original ones are poked.
     TArray<int32> Requested;
-    const TArray<TSharedPtr<FJsonValue>>* Indices = nullptr;
-    if (bHasSelection && Payload->TryGetArrayField(TEXT("triangleIndices"), Indices))
-    {
-        for (const TSharedPtr<FJsonValue>& Value : *Indices)
-        {
-            Requested.AddUnique(static_cast<int32>(Value->AsNumber()));
-        }
-    }
+    if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection, &Requested)) return true;
+    const int32 TrisBefore = Mesh->GetTriangleCount();
+    const int32 TrisSelected = SelectedTriangleCount(Mesh, Selection, bHasSelection);
+    if (!GuardMeshBudget(Self, RequestId, Socket, static_cast<int64>(TrisBefore) * 3, TEXT("Poke"))) return true;
+
     const int32 VertsBefore = Mesh->GetMeshRef().VertexCount();
     int32 Poked = 0;
     int32 Skipped = 0;
@@ -67,6 +60,7 @@ bool HandlePoke(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
+    Result->SetNumberField(TEXT("trianglesSelected"), TrisSelected);
     Result->SetNumberField(TEXT("trianglesPoked"), Poked);
     Result->SetNumberField(TEXT("trianglesBefore"), TrisBefore);
     Result->SetNumberField(TEXT("trianglesAfter"), Mesh->GetTriangleCount());

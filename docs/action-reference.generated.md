@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `edd5fb4fd12ca442`
+Catalog revision: `bb5f88473712f8a0`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -384,7 +384,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_geometry.convert_to_static_mesh` | `manage_geometry` | `convert_to_static_mesh` | write | write | none | `manage_geometry.convert_to_static_mesh` |
 | `manage_geometry.create_primitive` | `manage_geometry` | `create_box` | write | write | none | `manage_geometry.create_primitive` `manage_geometry.create_box` `manage_geometry.create_sphere` `manage_geometry.create_cylinder` `manage_geometry.create_cone` `manage_geometry.create_capsule` `manage_geometry.create_plane` `manage_geometry.create_disc` `manage_geometry.create_ring` `manage_geometry.create_torus` `manage_geometry.create_pipe` `manage_geometry.create_arch` `manage_geometry.create_ramp` `manage_geometry.create_stairs` `manage_geometry.create_spiral_stairs` `manage_geometry.create_sdf` |
 | `manage_geometry.deform_mesh` | `manage_geometry` | `bend` | write | write | none | `manage_geometry.deform_mesh` `manage_geometry.bend` `manage_geometry.twist` `manage_geometry.taper` `manage_geometry.stretch` `manage_geometry.spherify` `manage_geometry.cylindrify` `manage_geometry.smooth` `manage_geometry.relax` `manage_geometry.noise_deform` `manage_geometry.lattice_deform` `manage_geometry.displace_by_texture` |
-| `manage_geometry.edit_dynamic_mesh` | `manage_geometry` | `create_procedural_mesh` | write | write | none | `manage_geometry.edit_dynamic_mesh` `manage_geometry.create_procedural_mesh` `manage_geometry.append_vertex` `manage_geometry.append_triangle` `manage_geometry.append_polygons` `manage_geometry.set_vertex_position` `manage_geometry.set_vertex_color` `manage_geometry.set_uvs` `manage_geometry.split_normals` `manage_geometry.translate_mesh` `manage_geometry.difference` |
+| `manage_geometry.edit_dynamic_mesh` | `manage_geometry` | `create_procedural_mesh` | write | write | none | `manage_geometry.edit_dynamic_mesh` `manage_geometry.create_procedural_mesh` `manage_geometry.append_vertex` `manage_geometry.append_triangle` `manage_geometry.append_polygons` `manage_geometry.set_vertex_position` `manage_geometry.set_vertex_color` `manage_geometry.set_material_id` `manage_geometry.set_uvs` `manage_geometry.split_normals` `manage_geometry.translate_mesh` `manage_geometry.difference` |
 | `manage_geometry.edit_uvs` | `manage_geometry` | `auto_uv` | write | write | none | `manage_geometry.edit_uvs` `manage_geometry.auto_uv` `manage_geometry.unwrap_uv` `manage_geometry.project_uv` `manage_geometry.pack_uv_islands` `manage_geometry.transform_uvs` |
 | `manage_geometry.get_mesh_info` | `manage_geometry` | `get_mesh_info` | read | read | none | `manage_geometry.get_mesh_info` |
 | `manage_geometry.get_vertex_position` | `manage_geometry` | `get_vertex_position` | read | read | none | `manage_geometry.get_vertex_position` |

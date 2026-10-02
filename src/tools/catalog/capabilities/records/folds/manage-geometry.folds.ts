@@ -19,8 +19,8 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'model_mesh', selector: 'modeling',
-    summary: 'Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Dynamic meshes are always triangles.',
-    topics: ['extrude', 'inset', 'bevel', 'chamfer', 'bridge', 'loft', 'sweep', 'revolve', 'poke faces', 'triangles to quads'],
+    summary: 'Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Extrude, inset, outset, offset, bevel, chamfer and poke work on every triangle, on triangleIndices, or on a region picked by box, facing direction, polygroup or material id. Dynamic meshes are always triangles.',
+    topics: ['extrude', 'inset', 'bevel', 'chamfer', 'bridge', 'loft', 'sweep', 'revolve', 'poke faces', 'triangles to quads', 'select faces by region', 'extrude the top faces'],
     members: byName(['extrude', 'inset', 'outset', 'offset_faces', 'bevel', 'chamfer', 'bridge', 'loft', 'sweep', 'revolve', 'shell', 'loop_cut',
       'edge_split', 'poke', 'quadrangulate', 'extrude_along_spline', 'duplicate_along_spline']),
   },
@@ -63,9 +63,9 @@ export const MANAGE_GEOMETRY_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_dynamic_mesh', selector: 'edit',
-    summary: 'Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.',
-    topics: ['procedural mesh', 'dynamic mesh', 'append vertex', 'append triangle', 'vertex color', 'vertex position', 'move a vertex', 'create a mesh from vertices', 'polygon cage'],
+    summary: 'Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), give triangles material ids by region (set_material_id), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.',
+    topics: ['procedural mesh', 'dynamic mesh', 'append vertex', 'append triangle', 'vertex color', 'vertex position', 'move a vertex', 'create a mesh from vertices', 'polygon cage', 'material ids'],
     members: { create: 'create_procedural_mesh', append_vertex: 'append_vertex', append_triangle: 'append_triangle', append_polygons: 'append_polygons', set_vertex_position: 'set_vertex_position',
-      set_vertex_color: 'set_vertex_color', set_uvs: 'set_uvs', split_normals: 'split_normals', translate: 'translate_mesh', difference: 'difference' },
+      set_vertex_color: 'set_vertex_color', set_material_id: 'set_material_id', set_uvs: 'set_uvs', split_normals: 'split_normals', translate: 'translate_mesh', difference: 'difference' },
   },
 ];

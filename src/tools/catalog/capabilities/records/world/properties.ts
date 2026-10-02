@@ -165,7 +165,27 @@ export const P = {
   midpoint: num('Texture luminance midpoint for displacement.'),
   texturePath: str('Canonical /Game texture asset path.'),
   targetActor: str('Target actor name for boolean operations.'),
-  triangleIndices: arr('Triangle ids the operation is limited to; omit to apply it to the whole mesh.', { type: 'integer' }),
+  triangleIndices: arr('Triangle ids the operation is limited to; omit to apply it to the whole mesh. Give this or region, not both.', { type: 'integer' }),
+  region: {
+    type: 'object',
+    description: 'Pick the triangles to work on by where they are or what they carry, instead of by id; give this or triangleIndices, not both. Every filter given must hold, so they AND together. '
+      + 'Boxes and directions are in the mesh\'s local space, not world space. A region that matches nothing is refused (REGION_EMPTY) with the mesh\'s local bounds in the message, '
+      + 'and the reply\'s trianglesSelected says how many triangles were picked.',
+    properties: {
+      box: {
+        type: 'object',
+        description: 'Triangles whose centroid lies inside this box (inclusive), in the mesh\'s local space.',
+        properties: { min: vec3('Corner with the smallest x, y and z.'), max: vec3('Corner with the largest x, y and z.') },
+        required: ['min', 'max'],
+        additionalProperties: false,
+      },
+      normal: vec3('Direction {x, y, z} in the mesh\'s local space; picks the triangles that face it, within normalAngle. {x: 0, y: 0, z: 1} is the top faces.'),
+      normalAngle: num('Degrees either side of normal that still count as facing it (default 30).'),
+      groupIds: arr('Triangles that belong to one of these polygroup ids; a mesh without polygroups is all group 0.', { type: 'integer' }),
+      materialIds: arr('Triangles that carry one of these material ids (a mesh without material ids is all 0).', { type: 'integer' }),
+    },
+    additionalProperties: false,
+  } as JsonObject,
   edges: arr('Edge ids to split at their midpoints.', { type: 'integer' }),
   numCuts: int('Number of evenly spaced cuts.'),
   toolActor: str('Tool actor name for boolean operations.'),

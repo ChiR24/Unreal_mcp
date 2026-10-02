@@ -89,8 +89,15 @@ bool GuardMeshBudget(UMcpAutomationBridgeSubsystem* Self, const FString& Request
 // Moves every vertex to Move(position) in one mesh edit; returns how many moved.
 int32 DeformVertices(UDynamicMesh* Mesh, TFunctionRef<FVector(const FVector&)> Move);
 void RecomputeMeshNormals(UDynamicMesh* Mesh, const FGeometryScriptCalculateNormalsOptions& Options = FGeometryScriptCalculateNormalsOptions());
-// Optional triangleIndices -> mesh selection (dogfood #137); false after replying INVALID_SELECTION on bad ids.
-bool ReadTriangleSelection(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload, FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection);
+// Optional triangleIndices or region -> mesh selection (dogfood #137); false after replying INVALID_SELECTION on bad
+// ids, INVALID_REGION on a malformed region and REGION_EMPTY when it matches nothing. OutTriangleIds, when given,
+// receives the selected ids (unique) and stays untouched when nothing was selected.
+bool ReadTriangleSelection(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, TSharedPtr<FMcpBridgeWebSocket> Socket, UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Payload, FGeometryScriptMeshSelection& OutSelection, bool& bOutHasSelection, TArray<int32>* OutTriangleIds = nullptr);
+// The triangles a payload `region` object picks: a box the centroids lie in, a facing direction, polygroup ids and
+// material ids, ANDed. False, with OutError and OutCode, when the region is malformed or matches nothing.
+bool ResolveRegionTriangles(UDynamicMesh* Mesh, const TSharedPtr<FJsonObject>& Region, TArray<int32>& OutTriangles, FString& OutError, FString& OutCode);
+// What a face operator will touch, for its reply: the selected triangles, else every triangle of the mesh.
+int32 SelectedTriangleCount(UDynamicMesh* Mesh, const FGeometryScriptMeshSelection& Selection, bool bHasSelection);
 // append_polygons input once validated: the new points, each face's corner indices, the optional per-face polygroup
 // and material ids (empty when not given), and the triangles the faces came to with the face each one belongs to.
 struct FAppendPolygonsInput
@@ -212,6 +219,7 @@ bool HandleCreateProceduralMesh(UMcpAutomationBridgeSubsystem* Self, const FStri
 bool HandleAppendTriangle(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetVertexColor(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAppendPolygons(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleSetMaterialId(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetUVs(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleAppendVertex(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleGetVertexPosition(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);

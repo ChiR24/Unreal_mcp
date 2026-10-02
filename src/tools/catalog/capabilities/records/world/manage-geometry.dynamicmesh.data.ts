@@ -1,5 +1,5 @@
 /**
- * DynamicMesh authoring records (11 actions), promoted from raw native routes.
+ * DynamicMesh authoring records (12 actions), promoted from raw native routes.
  *
  * These edit a UDynamicMeshComponent on a placed actor vertex by vertex, rather
  * than running a modeling operator over a whole mesh, so they address the mesh
@@ -211,6 +211,27 @@ export const GEOMETRY_DYNAMICMESH_RECORDS: readonly CapabilityRecordSource[] = [
       faces: [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]],
     },
     exampleOutput: { success: true, actorName: 'DM_Cage', verticesAdded: 8, facesAdded: 6, trianglesAdded: 12, vertexCount: 8, triangleCount: 12, groupCount: 6 },
+  }),
+  buildWorldRecord({
+    parentTool: 'manage_geometry', action: 'set_material_id', plugins: PLUGIN,
+    topics: ['assign a material to faces', 'material slots on a mesh', 'multi material mesh', 'material per face', 'paint faces with a material'],
+    family: F, summary: 'Set the material id (the static-mesh material slot) of triangles of a DynamicMesh actor: every triangle, the triangleIndices you list, or a region.',
+    whenToUse: ['One mesh needs several materials: give each part an id (0 is the default), then bake with convert_to_static_mesh or convert_to_nanite and list one material per id in materials; entry i is the material of id i.',
+      'Triangles must be picked by where they are: region.box, region.normal (the top faces are {x:0,y:0,z:1}), region.groupIds or region.materialIds.'],
+    whenNotToUse: ['A smooth mask for a material to read is needed rather than a slot; use bake_vertex_colors.'],
+    inputProps: { actorName: P.actorName, materialId: { type: 'integer', minimum: 0, maximum: 255, description: 'Material id to set, 0 to 255. The baked asset gets the highest id used + 1 slots.' }, triangleIndices: P.triangleIndices, region: P.region },
+    required: ['actorName', 'materialId'], effect: 'write',
+    behavior: { idempotency: 'idempotent' }, costLatency: 'interactive', costResources: 'low',
+    outputProps: {
+      actorName: P.actorName,
+      materialId: int('Material id that was set.'),
+      trianglesSelected: int('Triangles that received the id.'),
+      triangleCount: OUT_TRIANGLE_COUNT,
+      materialIdsInUse: { type: 'array', items: { type: 'integer' }, description: 'Every material id the mesh carries now, ascending.' },
+    },
+    outputRequired: ['actorName', 'materialId', 'trianglesSelected', 'triangleCount', 'materialIdsInUse'],
+    exampleInput: { action: 'set_material_id', actorName: 'DM_Cage', materialId: 1, region: { normal: { x: 0, y: 0, z: 1 }, normalAngle: 30 } },
+    exampleOutput: { success: true, actorName: 'DM_Cage', materialId: 1, trianglesSelected: 2, triangleCount: 12, materialIdsInUse: [0, 1] },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'difference', plugins: PLUGIN,

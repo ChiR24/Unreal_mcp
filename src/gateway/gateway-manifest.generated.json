@@ -11489,6 +11489,7 @@
         "lodCount",
         "lodIndex",
         "lodOp",
+        "materialId",
         "maxHullCount",
         "midpoint",
         "modeling",
@@ -11511,6 +11512,7 @@
         "recomputeNormals",
         "recomputeTangents",
         "reductionPercent",
+        "region",
         "resolution",
         "respectHardNormals",
         "respectUVSeams",
@@ -11721,6 +11723,7 @@
               "append_polygons",
               "set_vertex_position",
               "set_vertex_color",
+              "set_material_id",
               "set_uvs",
               "split_normals",
               "translate",
@@ -11861,6 +11864,12 @@
               "set_screen_sizes"
             ],
             "description": "Which configure mesh lods variant to run."
+          },
+          "materialId": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
+            "description": "Material id to set, 0 to 255. The baked asset gets the highest id used + 1 slots."
           },
           "maxHullCount": {
             "type": "integer",
@@ -12046,6 +12055,99 @@
           "reductionPercent": {
             "type": "number",
             "description": "Percent of triangles to reduce."
+          },
+          "region": {
+            "type": "object",
+            "description": "Pick the triangles to work on by where they are or what they carry, instead of by id; give this or triangleIndices, not both. Every filter given must hold, so they AND together. Boxes and directions are in the mesh's local space, not world space. A region that matches nothing is refused (REGION_EMPTY) with the mesh's local bounds in the message, and the reply's trianglesSelected says how many triangles were picked.",
+            "properties": {
+              "box": {
+                "type": "object",
+                "description": "Triangles whose centroid lies inside this box (inclusive), in the mesh's local space.",
+                "properties": {
+                  "min": {
+                    "type": "object",
+                    "description": "Corner with the smallest x, y and z.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "max": {
+                    "type": "object",
+                    "description": "Corner with the largest x, y and z.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "min",
+                  "max"
+                ],
+                "additionalProperties": false
+              },
+              "normal": {
+                "type": "object",
+                "description": "Direction {x, y, z} in the mesh's local space; picks the triangles that face it, within normalAngle. {x: 0, y: 0, z: 1} is the top faces.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "normalAngle": {
+                "type": "number",
+                "description": "Degrees either side of normal that still count as facing it (default 30)."
+              },
+              "groupIds": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "description": "Triangles that belong to one of these polygroup ids; a mesh without polygroups is all group 0."
+              },
+              "materialIds": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "description": "Triangles that carry one of these material ids (a mesh without material ids is all 0)."
+              }
+            },
+            "additionalProperties": false
           },
           "resolution": {
             "type": "integer",
@@ -12355,7 +12457,7 @@
             "items": {
               "type": "integer"
             },
-            "description": "Triangle ids the operation is limited to; omit to apply it to the whole mesh."
+            "description": "Triangle ids the operation is limited to; omit to apply it to the whole mesh. Give this or region, not both."
           },
           "trianglePercent": {
             "type": "number",

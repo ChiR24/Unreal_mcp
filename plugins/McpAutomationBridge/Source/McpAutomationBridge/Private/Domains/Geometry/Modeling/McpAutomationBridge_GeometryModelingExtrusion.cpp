@@ -26,6 +26,7 @@ bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     FGeometryScriptMeshSelection Selection;
     bool bHasSelection = false;
     if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection)) return true;
+    const int32 TrianglesSelected = SelectedTriangleCount(Mesh, Selection, bHasSelection);
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshLinearExtrudeFaces(
         Mesh, ExtrudeOptions, Selection, nullptr);
@@ -35,6 +36,7 @@ bool HandleExtrude(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("distance"), Distance);
+    Result->SetNumberField(TEXT("trianglesSelected"), TrianglesSelected);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Extrude applied"), Result);
     return true;
 }
@@ -57,6 +59,7 @@ bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     FGeometryScriptMeshSelection Selection;
     bool bHasSelection = false;
     if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection)) return true;
+    const int32 TrianglesSelected = SelectedTriangleCount(Mesh, Selection, bHasSelection);
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshInsetOutsetFaces(
         Mesh, Options, Selection, nullptr);
@@ -67,6 +70,7 @@ bool HandleInsetOutset(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetStringField(TEXT("operation"), bIsInset ? TEXT("inset") : TEXT("outset"));
     Result->SetNumberField(TEXT("distance"), Distance);
+    Result->SetNumberField(TEXT("trianglesSelected"), TrianglesSelected);
     Self->SendAutomationResponse(Socket, RequestId, true, bIsInset ? TEXT("Inset applied") : TEXT("Outset applied"), Result);
     return true;
 }
@@ -99,7 +103,10 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     FGeometryScriptMeshSelection BevelSelection;
     bool bHasBevelSelection = false;
     if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, BevelSelection, bHasBevelSelection)) return true;
+    // Before UE 5.2 the polygroup bevel takes no selection, so it always works the whole mesh.
+    int32 TrianglesSelected = Mesh->GetTriangleCount();
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
+    TrianglesSelected = SelectedTriangleCount(Mesh, BevelSelection, bHasBevelSelection);
     if (bHasBevelSelection)
     {
         FGeometryScriptMeshBevelSelectionOptions SelectionOptions;
@@ -123,6 +130,7 @@ bool HandleBevel(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId,
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("distance"), BevelDistance);
     Result->SetNumberField(TEXT("segments"), Subdivisions);
+    Result->SetNumberField(TEXT("trianglesSelected"), TrianglesSelected);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Bevel applied"), Result);
     return true;
 }

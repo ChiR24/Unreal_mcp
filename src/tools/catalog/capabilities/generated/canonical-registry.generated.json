@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "edd5fb4fd12ca442",
+  "catalogRevision": "bb5f88473712f8a0",
   "recordCount": 389,
   "records": [
     {
@@ -60135,6 +60135,7 @@
         "manage_geometry.append_polygons",
         "manage_geometry.set_vertex_position",
         "manage_geometry.set_vertex_color",
+        "manage_geometry.set_material_id",
         "manage_geometry.set_uvs",
         "manage_geometry.split_normals",
         "manage_geometry.translate_mesh",
@@ -60189,6 +60190,13 @@
         },
         {
           "tool": "manage_geometry",
+          "action": "set_material_id",
+          "folded": {
+            "edit": "set_material_id"
+          }
+        },
+        {
+          "tool": "manage_geometry",
           "action": "set_uvs",
           "folded": {
             "edit": "set_uvs"
@@ -60230,13 +60238,19 @@
           "move a vertex",
           "create a mesh from vertices",
           "polygon cage",
+          "material ids",
           "author a mesh from vertices and faces",
           "quad mesh",
           "hard surface cage",
           "low poly blockout mesh",
-          "subdivision cage"
+          "subdivision cage",
+          "assign a material to faces",
+          "material slots on a mesh",
+          "multi material mesh",
+          "material per face",
+          "paint faces with a material"
         ],
-        "summary": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
+        "summary": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), give triangles material ids by region (set_material_id), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
         "whenToUse": [
           "edit=create: A mesh must be built vertex by vertex rather than from a primitive.",
           "edit=append_vertex: A mesh is being authored point by point.",
@@ -60245,6 +60259,8 @@
           "edit=append_polygons: Faces must be built from an explicit vertex list, quads and larger polygons included, with polygroups or material ids set up front.",
           "edit=set_vertex_position: An authored vertex must be nudged without rebuilding the mesh.",
           "edit=set_vertex_color: Authored geometry must carry colour the material reads.",
+          "edit=set_material_id: One mesh needs several materials: give each part an id (0 is the default), then bake with convert_to_static_mesh or convert_to_nanite and list one material per id in materials; entry i is the material of id i.",
+          "edit=set_material_id: Triangles must be picked by where they are: region.box, region.normal (the top faces are {x:0,y:0,z:1}), region.groupIds or region.materialIds.",
           "edit=set_uvs: An authored vertex needs an exact UV rather than a generated one.",
           "edit=split_normals: Authored geometry shades too soft across its creases.",
           "edit=translate: Authored geometry must shift inside its own local space.",
@@ -60253,6 +60269,7 @@
         "whenNotToUse": [
           "edit=create|append_polygons: A parametric shape is enough; use a create_* primitive.",
           "edit=set_vertex_color: A material parameter is the right place for the colour.",
+          "edit=set_material_id: A smooth mask for a material to read is needed rather than a slot; use bake_vertex_colors.",
           "edit=set_uvs: The whole mesh needs unwrapping; use auto_uv or unwrap_uv.",
           "edit=split_normals: Normals only need recomputing; use recalculate_normals.",
           "edit=translate: The actor itself should move; set its transform instead.",
@@ -60447,6 +60464,112 @@
               "type": "boolean",
               "description": "Apply the colour to every vertex instead of one."
             },
+            "materialId": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255,
+              "description": "Material id to set, 0 to 255. The baked asset gets the highest id used + 1 slots."
+            },
+            "triangleIndices": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "description": "Triangle ids the operation is limited to; omit to apply it to the whole mesh. Give this or region, not both."
+            },
+            "region": {
+              "type": "object",
+              "description": "Pick the triangles to work on by where they are or what they carry, instead of by id; give this or triangleIndices, not both. Every filter given must hold, so they AND together. Boxes and directions are in the mesh's local space, not world space. A region that matches nothing is refused (REGION_EMPTY) with the mesh's local bounds in the message, and the reply's trianglesSelected says how many triangles were picked.",
+              "properties": {
+                "box": {
+                  "type": "object",
+                  "description": "Triangles whose centroid lies inside this box (inclusive), in the mesh's local space.",
+                  "properties": {
+                    "min": {
+                      "type": "object",
+                      "description": "Corner with the smallest x, y and z.",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "max": {
+                      "type": "object",
+                      "description": "Corner with the largest x, y and z.",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "additionalProperties": false
+                },
+                "normal": {
+                  "type": "object",
+                  "description": "Direction {x, y, z} in the mesh's local space; picks the triangles that face it, within normalAngle. {x: 0, y: 0, z: 1} is the top faces.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "normalAngle": {
+                  "type": "number",
+                  "description": "Degrees either side of normal that still count as facing it (default 30)."
+                },
+                "groupIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Triangles that belong to one of these polygroup ids; a mesh without polygroups is all group 0."
+                },
+                "materialIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Triangles that carry one of these material ids (a mesh without material ids is all 0)."
+                }
+              },
+              "additionalProperties": false
+            },
             "u": {
               "type": "number",
               "description": "U coordinate."
@@ -60503,6 +60626,7 @@
                 "append_polygons",
                 "set_vertex_position",
                 "set_vertex_color",
+                "set_material_id",
                 "set_uvs",
                 "split_normals",
                 "translate",
@@ -60633,6 +60757,21 @@
               "type": "number",
               "description": "Alpha channel, 0-1."
             },
+            "materialId": {
+              "type": "integer",
+              "description": "Material id that was set."
+            },
+            "trianglesSelected": {
+              "type": "integer",
+              "description": "Triangles that received the id."
+            },
+            "materialIdsInUse": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "description": "Every material id the mesh carries now, ascending."
+            },
             "u": {
               "type": "number",
               "description": "U coordinate."
@@ -60681,7 +60820,7 @@
       },
       "examples": [
         {
-          "title": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
+          "title": "Edit a procedural/dynamic mesh: create one, append vertices, triangles or a whole polygon cage in one call (append_polygons), give triangles material ids by region (set_material_id), set vertex positions, colors or UVs, split normals, translate, or subtract another mesh.",
           "input": {
             "action": "edit_dynamic_mesh",
             "name": "DM_Authored",
@@ -60731,6 +60870,7 @@
             "append_polygons": "append_polygons",
             "set_vertex_position": "set_vertex_position",
             "set_vertex_color": "set_vertex_color",
+            "set_material_id": "set_material_id",
             "set_uvs": "set_uvs",
             "split_normals": "split_normals",
             "translate": "translate_mesh",
@@ -60747,6 +60887,7 @@
               "append_polygons",
               "set_vertex_position",
               "set_vertex_color",
+              "set_material_id",
               "set_uvs",
               "split_normals",
               "translate"
@@ -60802,6 +60943,15 @@
             "setAll": [
               "set_vertex_color"
             ],
+            "materialId": [
+              "set_material_id"
+            ],
+            "triangleIndices": [
+              "set_material_id"
+            ],
+            "region": [
+              "set_material_id"
+            ],
             "u": [
               "set_uvs"
             ],
@@ -60831,8 +60981,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "18287e248a7942ff9e9c93548a37f67901f1d1ecd97fcd57dbd24ada752eba48",
-        "content": "069554fa10c8adc44e495834baf0ca657980e56ff0c87dbe1032f6b2f175ac2b"
+        "schema": "871706fc735e231ecdf7b71e7b8a421509bbc6d356f9b672bddf2246a1b66085",
+        "content": "ea8e0fc8f640ce8a3948947d2272e18634dd4b524822963898e6174fe30ebc8d"
       }
     },
     {
@@ -61669,16 +61819,18 @@
           "sweep",
           "revolve",
           "poke faces",
-          "triangles to quads"
+          "triangles to quads",
+          "select faces by region",
+          "extrude the top faces"
         ],
-        "summary": "Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Dynamic meshes are always triangles.",
+        "summary": "Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Extrude, inset, outset, offset, bevel, chamfer and poke work on every triangle, on triangleIndices, or on a region picked by box, facing direction, polygroup or material id. Dynamic meshes are always triangles.",
         "whenToUse": [
-          "modeling=extrude: Faces must be extruded along a direction.",
-          "modeling=inset: Faces must be inset.",
-          "modeling=outset: Faces must be outset.",
-          "modeling=offset_faces: Faces must be offset.",
-          "modeling=bevel: Edges must be beveled.",
-          "modeling=chamfer: Edges must be chamfered.",
+          "modeling=extrude: Faces must be extruded along a direction; pick them with triangleIndices or a region (the top faces are region.normal {x:0,y:0,z:1}).",
+          "modeling=inset: Faces must be inset; pick them with triangleIndices or a region.",
+          "modeling=outset: Faces must be outset; pick them with triangleIndices or a region.",
+          "modeling=offset_faces: Faces must be offset; pick them with triangleIndices or a region.",
+          "modeling=bevel: Edges must be beveled; pick the faces whose edges bevel with triangleIndices or a region.",
+          "modeling=chamfer: Edges must be chamfered; pick the faces whose edges chamfer with triangleIndices or a region.",
           "modeling=bridge: Two edge loops must be bridged.",
           "modeling=loft: A lofted surface between profiles must be created.",
           "modeling=sweep: A swept solid must be created.",
@@ -61686,7 +61838,7 @@
           "modeling=shell: A hollow shell must be generated.",
           "modeling=loop_cut: An edge loop must be inserted.",
           "modeling=edge_split: Specific edges must be subdivided.",
-          "modeling=poke: Faces must be split from their centre, or pushed out into pyramids or spikes.",
+          "modeling=poke: Faces must be split from their centre, or pushed out into pyramids or spikes; pick them with triangleIndices or a region.",
           "modeling=quadrangulate: A triangulated mesh must be edited as quads.",
           "modeling=extrude_along_spline: A mesh must be swept along a spline path.",
           "modeling=duplicate_along_spline: Copies of a mesh must be distributed along a spline."
@@ -61741,7 +61893,100 @@
               "items": {
                 "type": "integer"
               },
-              "description": "Triangle ids the operation is limited to; omit to apply it to the whole mesh."
+              "description": "Triangle ids the operation is limited to; omit to apply it to the whole mesh. Give this or region, not both."
+            },
+            "region": {
+              "type": "object",
+              "description": "Pick the triangles to work on by where they are or what they carry, instead of by id; give this or triangleIndices, not both. Every filter given must hold, so they AND together. Boxes and directions are in the mesh's local space, not world space. A region that matches nothing is refused (REGION_EMPTY) with the mesh's local bounds in the message, and the reply's trianglesSelected says how many triangles were picked.",
+              "properties": {
+                "box": {
+                  "type": "object",
+                  "description": "Triangles whose centroid lies inside this box (inclusive), in the mesh's local space.",
+                  "properties": {
+                    "min": {
+                      "type": "object",
+                      "description": "Corner with the smallest x, y and z.",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "max": {
+                      "type": "object",
+                      "description": "Corner with the largest x, y and z.",
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "description": "X"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y"
+                        },
+                        "z": {
+                          "type": "number",
+                          "description": "Z"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "min",
+                    "max"
+                  ],
+                  "additionalProperties": false
+                },
+                "normal": {
+                  "type": "object",
+                  "description": "Direction {x, y, z} in the mesh's local space; picks the triangles that face it, within normalAngle. {x: 0, y: 0, z: 1} is the top faces.",
+                  "properties": {
+                    "x": {
+                      "type": "number",
+                      "description": "X"
+                    },
+                    "y": {
+                      "type": "number",
+                      "description": "Y"
+                    },
+                    "z": {
+                      "type": "number",
+                      "description": "Z"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "normalAngle": {
+                  "type": "number",
+                  "description": "Degrees either side of normal that still count as facing it (default 30)."
+                },
+                "groupIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Triangles that belong to one of these polygroup ids; a mesh without polygroups is all group 0."
+                },
+                "materialIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Triangles that carry one of these material ids (a mesh without material ids is all 0)."
+                }
+              },
+              "additionalProperties": false
             },
             "distance": {
               "type": "number",
@@ -61928,6 +62173,10 @@
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
             },
+            "trianglesSelected": {
+              "type": "integer",
+              "description": "Triangles the operation worked on: the triangleIndices or region selection, else every triangle of the mesh."
+            },
             "trianglesPoked": {
               "type": "number",
               "description": "Triangles that were poked."
@@ -61973,7 +62222,7 @@
       },
       "examples": [
         {
-          "title": "Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Dynamic meshes are always triangles.",
+          "title": "Polygon modeling on a mesh: extrude, inset, outset, offset faces, bevel, chamfer, bridge, loft, sweep, revolve, shell, loop cut, edge split, poke faces, group triangles into quads, or extrude/duplicate along a spline. Extrude, inset, outset, offset, bevel, chamfer and poke work on every triangle, on triangleIndices, or on a region picked by box, facing direction, polygroup or material id. Dynamic meshes are always triangles.",
           "input": {
             "action": "model_mesh",
             "targetActor": "DM_A",
@@ -62088,6 +62337,15 @@
               "chamfer",
               "poke"
             ],
+            "region": [
+              "extrude",
+              "inset",
+              "outset",
+              "offset_faces",
+              "bevel",
+              "chamfer",
+              "poke"
+            ],
             "distance": [
               "inset",
               "outset",
@@ -62162,8 +62420,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9bdae56ae7eb5fc461c19b411d81fcb64b39fd6037b00085ca238741702b87b2",
-        "content": "74ee269cc77b98b281ab1e8ce13f84b2466c9b282736e3e3a53983cd83a9c118"
+        "schema": "711b71b3485ed83ce1d03b45607cc9df763fa51acc3ca879c4ad25e114d4c954",
+        "content": "2687bc5f755deae327894bc4689f7fd6e47e098e3f6354d275751999e9861990"
       }
     },
     {

@@ -136,6 +136,7 @@ const CASES: ReadonlyArray<readonly [string, string | readonly string[]]> = [
   ['create box mesh', 'manage_geometry.create_primitive'],
   // Subdivision-surface modelling: a polygon cage, smooth subdivision, fillets, masks and per-face materials.
   ['make a polygon cage', 'manage_geometry.edit_dynamic_mesh'],
+  ['extrude the top faces', 'manage_geometry.model_mesh'],
   // The mesh ASSET's slots; a placed actor's component slot is control_actor.set_material.
   ['set mesh materials', 'asset.process_asset'],
   ['assign materials to a static mesh', 'asset.process_asset'],
@@ -173,7 +174,8 @@ const DECLARED_TOPICS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['material.get_material_info', ['get material parameters', 'material parameters']],
   ['asset.process_asset', ['set mesh materials', 'mesh material slots', 'assign materials to a static mesh']],
   ['inspect.inspect_object', ['material slot bounds', 'which slot is which part']],
-  ['manage_geometry.edit_dynamic_mesh', ['polygon cage']]
+  ['manage_geometry.edit_dynamic_mesh', ['polygon cage', 'material ids']],
+  ['manage_geometry.model_mesh', ['select faces by region']]
 ];
 
 describe('phrasings a name cannot carry are declared as topics', () => {

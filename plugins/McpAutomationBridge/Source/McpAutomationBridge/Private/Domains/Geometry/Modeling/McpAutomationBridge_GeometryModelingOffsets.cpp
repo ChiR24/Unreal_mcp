@@ -21,6 +21,7 @@ bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     FGeometryScriptMeshSelection Selection;
     bool bHasSelection = false;
     if (!ReadTriangleSelection(Self, RequestId, Socket, Mesh, Payload, Selection, bHasSelection)) return true;
+    const int32 TrianglesSelected = SelectedTriangleCount(Mesh, Selection, bHasSelection);
 
     UGeometryScriptLibrary_MeshModelingFunctions::ApplyMeshOffsetFaces(
         Mesh, Options, Selection, nullptr);
@@ -30,6 +31,7 @@ bool HandleOffsetFaces(UMcpAutomationBridgeSubsystem* Self, const FString& Reque
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("actorName"), ActorName);
     Result->SetNumberField(TEXT("distance"), Distance);
+    Result->SetNumberField(TEXT("trianglesSelected"), TrianglesSelected);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("Offset faces applied"), Result);
     return true;
 }

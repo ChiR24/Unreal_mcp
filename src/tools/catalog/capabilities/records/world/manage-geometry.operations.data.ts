@@ -18,6 +18,9 @@ const SWEEP_STEPS = { type: 'integer', description: 'Path steps along the sweep 
 // A fold keeps the first member's description, so text shared by sweep and revolve names both.
 const STEPS = { type: 'integer', description: 'Path steps along a sweep (default 16; the profile uses half as many sides), or segments around the axis for a revolve (default 16, 3 to 512; 48 or more reads as round).' };
 const CAP = { type: 'boolean', description: 'Close open ends: the tube ends of a loft, sweep or extrude along a spline, or for a revolve flat discs from the first and last profile points to the axis (revolve default true).' };
+// The face operators report how many triangles their selection (triangleIndices or region) picked.
+const TRIANGLES_SELECTED = { type: 'integer', description: 'Triangles the operation worked on: the triangleIndices or region selection, else every triangle of the mesh.' };
+const SELECTION_OUTPUT = { trianglesSelected: TRIANGLES_SELECTED };
 
 export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
@@ -52,32 +55,37 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'extrude', plugins: PLUGIN,
-    family: F, summary: 'Extrude selected faces of a dynamic mesh.', whenToUse: ['Faces must be extruded along a direction.'], whenNotToUse: ['A sweep along a spline is needed; use extrude_along_spline.'],
-    inputProps: { actorName: P.actorName, amount: P.amount, targetActor: P.targetActor, offset: P.offset, triangleIndices: P.triangleIndices }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    family: F, summary: 'Extrude selected faces of a dynamic mesh.', whenToUse: ['Faces must be extruded along a direction; pick them with triangleIndices or a region (the top faces are region.normal {x:0,y:0,z:1}).'], whenNotToUse: ['A sweep along a spline is needed; use extrude_along_spline.'],
+    inputProps: { actorName: P.actorName, amount: P.amount, targetActor: P.targetActor, offset: P.offset, triangleIndices: P.triangleIndices, region: P.region }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: SELECTION_OUTPUT,
     exampleInput: { action: 'extrude', targetActor: 'DM_A', offset: { x: 0, y: 0, z: 50 } },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'inset', plugins: PLUGIN,
-    family: F, summary: 'Inset selected faces of a dynamic mesh.', whenToUse: ['Faces must be inset.'], whenNotToUse: ['Faces must be outset; use outset.'],
-    inputProps: { actorName: P.actorName, distance: P.distance, targetActor: P.targetActor, triangleIndices: P.triangleIndices }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    family: F, summary: 'Inset selected faces of a dynamic mesh.', whenToUse: ['Faces must be inset; pick them with triangleIndices or a region.'], whenNotToUse: ['Faces must be outset; use outset.'],
+    inputProps: { actorName: P.actorName, distance: P.distance, targetActor: P.targetActor, triangleIndices: P.triangleIndices, region: P.region }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: SELECTION_OUTPUT,
     exampleInput: { action: 'inset', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'outset', plugins: PLUGIN,
-    family: F, summary: 'Outset selected faces of a dynamic mesh.', whenToUse: ['Faces must be outset.'], whenNotToUse: ['Faces must be inset; use inset.'],
-    inputProps: { actorName: P.actorName, distance: P.distance, targetActor: P.targetActor, triangleIndices: P.triangleIndices }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    family: F, summary: 'Outset selected faces of a dynamic mesh.', whenToUse: ['Faces must be outset; pick them with triangleIndices or a region.'], whenNotToUse: ['Faces must be inset; use inset.'],
+    inputProps: { actorName: P.actorName, distance: P.distance, targetActor: P.targetActor, triangleIndices: P.triangleIndices, region: P.region }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: SELECTION_OUTPUT,
     exampleInput: { action: 'outset', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'bevel', plugins: PLUGIN,
-    family: F, summary: 'Bevel selected edges of a dynamic mesh.', whenToUse: ['Edges must be beveled.'], whenNotToUse: ['Edges must be split; use edge_split.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, distance: BEVEL_DISTANCE, segments: BEVEL_SEGMENTS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    family: F, summary: 'Bevel selected edges of a dynamic mesh.', whenToUse: ['Edges must be beveled; pick the faces whose edges bevel with triangleIndices or a region.'], whenNotToUse: ['Edges must be split; use edge_split.'],
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, region: P.region, distance: BEVEL_DISTANCE, segments: BEVEL_SEGMENTS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: SELECTION_OUTPUT,
     exampleInput: { action: 'bevel', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'offset_faces', plugins: PLUGIN,
-    family: F, summary: 'Offset selected faces of a dynamic mesh.', whenToUse: ['Faces must be offset.'], whenNotToUse: ['Faces must be extruded; use extrude.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, distance: P.distance, triangleIndices: P.triangleIndices }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    family: F, summary: 'Offset selected faces of a dynamic mesh.', whenToUse: ['Faces must be offset; pick them with triangleIndices or a region.'], whenNotToUse: ['Faces must be extruded; use extrude.'],
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, distance: P.distance, triangleIndices: P.triangleIndices, region: P.region }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: SELECTION_OUTPUT,
     exampleInput: { action: 'offset_faces', targetActor: 'DM_A', distance: 10 },
   }),
   buildWorldRecord({
@@ -108,8 +116,9 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'chamfer', plugins: PLUGIN,
-    family: F, summary: 'Chamfer selected edges of a dynamic mesh.', whenToUse: ['Edges must be chamfered.'], whenNotToUse: ['Edges must be beveled; use bevel.'],
-    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, distance: BEVEL_DISTANCE, segments: BEVEL_SEGMENTS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    family: F, summary: 'Chamfer selected edges of a dynamic mesh.', whenToUse: ['Edges must be chamfered; pick the faces whose edges chamfer with triangleIndices or a region.'], whenNotToUse: ['Edges must be beveled; use bevel.'],
+    inputProps: { actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, region: P.region, distance: BEVEL_DISTANCE, segments: BEVEL_SEGMENTS }, required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
+    outputProps: SELECTION_OUTPUT,
     exampleInput: { action: 'chamfer', targetActor: 'DM_A' },
   }),
   buildWorldRecord({
@@ -157,13 +166,14 @@ export const GEOMETRY_OPERATIONS_RECORDS: readonly CapabilityRecordSource[] = [
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'poke', plugins: PLUGIN,
     family: F, summary: 'Poke faces of a dynamic mesh: add a centre vertex to each triangle (optionally pushed out along its normal) and fan it into three triangles.',
-    whenToUse: ['Faces must be split from their centre, or pushed out into pyramids or spikes.'], whenNotToUse: ['The whole mesh should be refined evenly; use subdivide.'],
+    whenToUse: ['Faces must be split from their centre, or pushed out into pyramids or spikes; pick them with triangleIndices or a region.'], whenNotToUse: ['The whole mesh should be refined evenly; use subdivide.'],
     inputProps: {
-      actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices,
+      actorName: P.actorName, targetActor: P.targetActor, triangleIndices: P.triangleIndices, region: P.region,
       distance: { type: 'number', description: 'Distance in cm to push each new centre vertex along its face normal (default 0; negative pushes inward).' },
     },
     required: [], requiredOneOf: ['actorName', 'targetActor'], effect: 'write', costLatency: 'interactive', costResources: 'low',
     outputProps: {
+      ...SELECTION_OUTPUT,
       trianglesPoked: { type: 'number', description: 'Triangles that were poked.' },
       trianglesBefore: { type: 'number', description: 'Triangle count before.' },
       trianglesAfter: { type: 'number', description: 'Triangle count after (before + 2 per poked triangle).' },

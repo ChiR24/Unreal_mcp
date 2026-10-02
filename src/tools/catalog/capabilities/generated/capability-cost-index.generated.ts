@@ -1113,6 +1113,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_geometry::self_union": "interactive|medium",
   "manage_geometry::set_lod_screen_sizes": "long-running|high",
   "manage_geometry::set_lod_settings": "long-running|high",
+  "manage_geometry::set_material_id": "interactive|medium",
   "manage_geometry::set_uvs": "interactive|medium",
   "manage_geometry::set_vertex_color": "interactive|medium",
   "manage_geometry::set_vertex_position": "interactive|medium",
@@ -1530,4 +1531,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1517;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1518;
