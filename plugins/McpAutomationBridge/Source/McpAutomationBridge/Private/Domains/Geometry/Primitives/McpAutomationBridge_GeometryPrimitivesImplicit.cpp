@@ -192,6 +192,12 @@ bool HandleCreateSdf(UMcpAutomationBridgeSubsystem* Self, const FString& Request
             Bounds.Contain(S.Frame.GetLocation() + FVector3d(R));
         }
     }
+    if (!FMath::IsFinite(Bounds.MaxDim()) || Bounds.MaxDim() > MAX_DIMENSION)
+    {
+        Self->SendAutomationError(Socket, RequestId, FString::Printf(
+            TEXT("The shapes span more than %.0f units; keep sizes, centers and blends within that."), MAX_DIMENSION), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
     UE::Geometry::FMarchingCubes Cubes;
     Cubes.CubeSize = Bounds.MaxDim() / Resolution;
     Bounds.Expand(2.0 * Cubes.CubeSize);
