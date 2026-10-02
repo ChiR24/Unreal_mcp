@@ -115,6 +115,18 @@ static bool ConnectPins(FActionContext& Context)
         return true;
     }
 
+    // A Set node's value pin carries the variable's name but is its INPUT. Named as the source of a
+    // link into another input it can only mean the node's one output of that type (Output_Get).
+    if (FromPin->Direction == EGPD_Input && ToPin->Direction == EGPD_Input)
+    {
+        TArray<UEdGraphPin*> SameTypeOutputs;
+        for (UEdGraphPin* Pin : FromNode->Pins)
+        {
+            if (Pin && Pin->Direction == EGPD_Output && Pin->PinType == FromPin->PinType) SameTypeOutputs.Add(Pin);
+        }
+        if (SameTypeOutputs.Num() == 1) FromPin = SameTypeOutputs[0];
+    }
+
     // Snapshot node GUIDs so we can detect an auto-inserted conversion node.
     // When the pin types differ but an autocast exists, the schema silently
     // spawns a conversion node (e.g. real->int Truncate) inside

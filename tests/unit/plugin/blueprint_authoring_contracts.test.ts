@@ -592,6 +592,16 @@ describe('the edit_scs record names every variant that reads a class or attach p
 });
 
 describe('graph edits that used to answer success while doing nothing useful', () => {
+  // A Set node's value pin carries the variable's name but is its input; a batch that named it as a
+  // link's source failed, though the node's one output of that type (Output_Get) was meant.
+  it('connect_pins takes a Set node\'s variable-named source pin as its one same-type output', () => {
+    const connect = read('Domains', 'BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp');
+    expect(connect).toMatch(/FromPin->Direction == EGPD_Input && ToPin->Direction == EGPD_Input/u);
+    expect(connect).toMatch(/Pin->Direction == EGPD_Output && Pin->PinType == FromPin->PinType/u);
+    expect(connect).toContain('if (SameTypeOutputs.Num() == 1) FromPin = SameTypeOutputs[0];');
+    expect(connect.indexOf('SameTypeOutputs')).toBeLessThan(connect.indexOf('TryCreateConnection'));
+  });
+
   // create_framework_class documents short class names, but "GameModeBase" answered NOT_FOUND.
   it('a framework class parent given by short name resolves like every other class parameter', () => {
     const utilities = read('Domains', 'GameFramework', 'McpAutomationBridge_GameFrameworkHandlersUtilities.cpp');
