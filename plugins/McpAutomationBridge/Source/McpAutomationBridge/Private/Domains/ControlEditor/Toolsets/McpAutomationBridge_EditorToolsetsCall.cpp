@@ -9,6 +9,7 @@
 #include "Containers/Ticker.h"
 #include "Dom/JsonValue.h"
 #include "HAL/PlatformTime.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
