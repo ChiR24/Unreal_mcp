@@ -30,6 +30,10 @@ describe('Epic editor toolsets behind this plugin\'s gateway', () => {
     expect(call.indexOf('TEXT("EDITOR_TOOL_BLOCKED")')).toBeLessThan(call.indexOf('StartCall(Toolset, Tool, InputJson, Error)'));
   });
 
+  it('never calls ConfigSettingsToolset, which reaches this plugin\'s own settings and token', () => {
+    expect(list).toMatch(/Lower\.StartsWith\(TEXT\("configsettingstoolset\."\)\)\)\s*\{\s*return EToolClass::Blocked;/u);
+  });
+
   it('refuses a destructive tool on the write door before it starts', () => {
     expect(call).toContain('if (Class == EToolClass::Destructive && !bDestructiveAllowed)');
     expect(call.indexOf('TEXT("DESTRUCTIVE_EDITOR_TOOL")')).toBeLessThan(call.indexOf('StartCall(Toolset, Tool, InputJson, Error)'));

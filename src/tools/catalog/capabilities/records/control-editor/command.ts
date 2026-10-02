@@ -137,7 +137,7 @@ export const COMMAND_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'control_editor', action: 'call_editor_tool', dispatchAction: 'control_editor',
     domain: D, family: F,
     topics: ['run epic tool', 'epic toolset call', 'toolset registry'],
-    summary: 'Run one tool of Epic\'s editor toolsets (Unreal Engine 5.8 Toolset Registry) with a JSON input matching the inputSchema list_editor_toolsets returned, and answer with its output once it finishes. A tool whose name starts with a destructive verb (Delete, Remove, Destroy, Clear, Reset ...) is refused with DESTRUCTIVE_EDITOR_TOOL: run it with call_editor_tool_destructive. A tool that would run scripts or console code is never called (EDITOR_TOOL_BLOCKED).',
+    summary: 'Run one tool of Epic\'s editor toolsets (Unreal Engine 5.8 Toolset Registry) with a JSON input matching the inputSchema list_editor_toolsets returned, and answer with its output once it finishes. A tool whose name starts with a destructive verb (Delete, Remove, Destroy, Clear, Reset ...) is refused with DESTRUCTIVE_EDITOR_TOOL: run it with call_editor_tool_destructive. A tool that would run scripts or console code, and every ConfigSettingsToolset tool (it reaches this plugin\'s own settings; use system_control project settings), is never called (EDITOR_TOOL_BLOCKED).',
     whenToUse: ['list_editor_toolsets found an Epic tool for work no native capability covers.'],
     whenNotToUse: [
       'A native capability covers the operation: prefer it.',

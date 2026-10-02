@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "48d48061fe9b6eb9",
+  "catalogRevision": "206a6c5ab9b2035f",
   "recordCount": 393,
   "records": [
     {
@@ -34461,7 +34461,7 @@
           "epic toolset call",
           "toolset registry"
         ],
-        "summary": "Run one tool of Epic's editor toolsets (Unreal Engine 5.8 Toolset Registry) with a JSON input matching the inputSchema list_editor_toolsets returned, and answer with its output once it finishes. A tool whose name starts with a destructive verb (Delete, Remove, Destroy, Clear, Reset ...) is refused with DESTRUCTIVE_EDITOR_TOOL: run it with call_editor_tool_destructive. A tool that would run scripts or console code is never called (EDITOR_TOOL_BLOCKED).",
+        "summary": "Run one tool of Epic's editor toolsets (Unreal Engine 5.8 Toolset Registry) with a JSON input matching the inputSchema list_editor_toolsets returned, and answer with its output once it finishes. A tool whose name starts with a destructive verb (Delete, Remove, Destroy, Clear, Reset ...) is refused with DESTRUCTIVE_EDITOR_TOOL: run it with call_editor_tool_destructive. A tool that would run scripts or console code, and every ConfigSettingsToolset tool (it reaches this plugin's own settings; use system_control project settings), is never called (EDITOR_TOOL_BLOCKED).",
         "whenToUse": [
           "list_editor_toolsets found an Epic tool for work no native capability covers."
         ],
@@ -34534,7 +34534,7 @@
       },
       "examples": [
         {
-          "title": "Run one tool of Epic's editor toolsets (Unreal Engine 5.8 Toolset Registry) with a JSON input matching the inputSchema list_editor_toolsets returned, and answer with its output once it finishes. A tool whose name starts with a destructive verb (Delete, Remove, Destroy, Clear, Reset ...) is refused with DESTRUCTIVE_EDITOR_TOOL: run it with call_editor_tool_destructive. A tool that would run scripts or console code is never called (EDITOR_TOOL_BLOCKED).",
+          "title": "Run one tool of Epic's editor toolsets (Unreal Engine 5.8 Toolset Registry) with a JSON input matching the inputSchema list_editor_toolsets returned, and answer with its output once it finishes. A tool whose name starts with a destructive verb (Delete, Remove, Destroy, Clear, Reset ...) is refused with DESTRUCTIVE_EDITOR_TOOL: run it with call_editor_tool_destructive. A tool that would run scripts or console code, and every ConfigSettingsToolset tool (it reaches this plugin's own settings; use system_control project settings), is never called (EDITOR_TOOL_BLOCKED).",
           "input": {
             "action": "call_editor_tool",
             "toolName": "EditorToolset.EditorAppToolset.GetSelectedActors"
@@ -34575,7 +34575,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f6a1c21bdddc69aeccbc2f498e83d5f530e33db2fba7469b9888a8b3d1eea68a",
-        "content": "a8e8d553a3dca5425046234564881c0b2c0a0191c62d632c6f206ee5f295ff4a"
+        "content": "9a831db0c5381ea3c36d3878cc09bd63f4c396555260c4e0b8fdcc4300d1da6a"
       }
     },
     {

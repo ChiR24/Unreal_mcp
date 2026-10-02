@@ -58,6 +58,12 @@ EToolClass ClassifyTool(const FString& FullToolName)
     {
         return EToolClass::Blocked;
     }
+    // ConfigSettingsToolset reads and writes any settings section, this plugin's own included: its capability token
+    // and its token and loopback switches. Project settings go through system_control, which refuses that section.
+    if (Lower.StartsWith(TEXT("configsettingstoolset.")))
+    {
+        return EToolClass::Blocked;
+    }
     if (StartsWithVerb(Tool, {TEXT("Delete"), TEXT("Remove"), TEXT("Destroy"), TEXT("Clear"), TEXT("Reset"),
                               TEXT("Purge"), TEXT("Discard"), TEXT("Revert"), TEXT("Wipe"), TEXT("Erase"), TEXT("Kill"),
                               TEXT("Drop"), TEXT("Uninstall"), TEXT("Unregister")}))
