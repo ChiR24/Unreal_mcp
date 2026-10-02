@@ -2,6 +2,7 @@
 
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Domains/ControlActor/Placement/McpAutomationBridge_CoplanarFaces.h"
+#include "Domains/ControlActor/Placement/McpAutomationBridge_PartPlacement.h"
 #include "Domains/ControlActor/Placement/McpAutomationBridge_PlacementTilt.h"
 
 // Per-call warnings only help the actor you just touched. A level assembled by
@@ -131,6 +132,26 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAuditPlacement(
     if (Payload->TryGetNumberField(TEXT("limit"), LimitNum) && LimitNum > 0.0) {
       Limit = FMath::Clamp(static_cast<int32>(LimitNum), 1, 200);
     }
+  }
+
+  // blueprintPath: the mesh parts of one actor Blueprint, against each other and its ground,
+  // instead of the actors of the level.
+  FString BlueprintPath;
+  if (Payload.IsValid() && Payload->TryGetStringField(TEXT("blueprintPath"), BlueprintPath) &&
+      !BlueprintPath.IsEmpty()) {
+    FString PartError;
+    const TSharedPtr<FJsonObject> Parts = McpPartPlacement::BuildBlueprintAuditReply(
+        BlueprintPath, MinSeverity > 0.0 ? MinSeverity : 0.5, Limit, PartError);
+    if (!Parts.IsValid()) {
+      SendAutomationError(Socket, RequestId, PartError, TEXT("BLUEPRINT_NOT_MEASURABLE"));
+      return true;
+    }
+    SendAutomationResponse(Socket, RequestId, true,
+        FString::Printf(TEXT("Examined %d parts, %d sunk or buried"),
+                        static_cast<int32>(Parts->GetNumberField(TEXT("examined"))),
+                        static_cast<int32>(Parts->GetNumberField(TEXT("flagged")))),
+        Parts, FString());
+    return true;
   }
 
   TArray<FMcpPlacementFinding> Findings;

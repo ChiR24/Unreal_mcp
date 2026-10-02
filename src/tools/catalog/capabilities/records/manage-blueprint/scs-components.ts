@@ -10,12 +10,22 @@
  * set_default applies property values to the CDO (Class Default Object) as a
  * fallback when SCS-owned template properties are not the right target.
  */
-import type { CapabilityRecordSource } from '../../model.js';
+import type { CapabilityRecordSource, JsonObject } from '../../model.js';
 import { BP_PLUGINS, buildRecord } from './helpers.js';
 import { P } from './properties.js';
 
 const FAMILY = 'scs';
 const DOMAIN = 'blueprint';
+
+// A rider's legs 12 cm inside his mount answered these edits with a plain success: both parts
+// belong to one actor, so no placement check saw them. Every edit that adds, moves, re-meshes or
+// re-parents a part now measures it against the rest of the actor and names what sank.
+const PART_WARNINGS: JsonObject = {
+  type: 'array',
+  items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+  'x-unreal-reflection-boundary': true,
+  description: 'Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor\'s ground, a Character\'s capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part\'s surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to ["mcp.placement.ok"]) is a deliberate embed, such as an eyeball in its socket, and is left out. control_actor.audit_placement with blueprintPath lists every part of the Blueprint.',
+};
 
 export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
@@ -36,7 +46,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
       meshPath: P.meshPath, materialPath: P.materialPath, location: P.location, rotation: P.rotation, scale: P.scale,
     },
     required: ['blueprintPath', 'componentClass', 'componentName'],
-    outputProps: { componentName: P.componentName },
+    outputProps: { componentName: P.componentName, partWarnings: PART_WARNINGS },
     outputRequired: ['componentName'],
     effect: 'write',
     latency: 'interactive',
@@ -67,6 +77,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
       compiled: P.success,
       saved: P.success,
       scsVerification: { type: 'object', description: 'SCS node verification (exists, parent matches).', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+      partWarnings: PART_WARNINGS,
     },
     outputRequired: ['componentName'],
     effect: 'write',
@@ -99,6 +110,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
       blueprintPath: P.blueprintPath, componentName: P.componentName, operations: { type: 'array', description: 'SCS operations applied in order. Each entry is an object with `type` plus that operation\'s own fields; `type: "add_component"` also takes componentName, componentClass (or componentType), attachTo, transform, meshPath, materialPath and a nested properties bag; `type: "modify_component"` takes the same transform, meshPath, materialPath and properties for a component that already exists; transform is {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}} (or those three directly on the operation), and a part left out keeps its current value, while a transform that cannot be applied (a part that is not an {x,y,z} or {pitch,yaw,roll} object or a three-number array, or a component with no transform) is named in warnings, not skipped, as is a meshPath or materialPath that does not load or that its component cannot take; `type: "attach_component"` (or "reparent") moves componentName under parentComponent (or attachTo/newParent). A failed operation is named in warnings, and the call fails when none applied. Each result carries instancesUpdated (placed copies that took the change, 0 included) with up to three of their paths, and a hint, repeated in warnings, when a mesh or material lands on a hidden component.', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true }, applyAndSave: P.applyAndSave },
     required: ['blueprintPath'],
     requiredOneOf: ['operations', 'componentName'],
+    outputProps: { partWarnings: PART_WARNINGS },
     effect: 'write',
     latency: 'interactive',
     resources: 'low',
@@ -170,6 +182,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['The component hierarchy does not need restructuring.'],
     inputProps: { blueprintPath: P.blueprintPath, componentName: P.componentName, newParent: P.newParent },
     required: ['blueprintPath', 'componentName', 'newParent'],
+    outputProps: { partWarnings: PART_WARNINGS },
     effect: 'write',
     behavior: { idempotency: 'idempotent' },
     latency: 'interactive',
@@ -187,6 +200,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A non-SCS component transform is needed (use set_node_property or add_component).'],
     inputProps: { blueprintPath: P.blueprintPath, componentName: P.componentName, location: P.location, rotation: P.rotation, scale: P.scale },
     required: ['blueprintPath', 'componentName'],
+    outputProps: { partWarnings: PART_WARNINGS },
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',
@@ -207,7 +221,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     // SCSHandlersSetProperty re-reads the property after writing and returns it
     // as verifiedValue, but only when the value exports to JSON, so it is
     // declared optional (not required).
-    outputProps: { verifiedValue: P.propertyValue },
+    outputProps: { verifiedValue: P.propertyValue, partWarnings: PART_WARNINGS },
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',

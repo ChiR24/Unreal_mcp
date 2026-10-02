@@ -1,6 +1,7 @@
 #include "Domains/Geometry/McpAutomationBridge_GeometryHandlers.h"
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
+#include "Domains/Geometry/Primitives/McpAutomationBridge_GeometrySdfCopies.h"
 #include "Domains/Geometry/Primitives/McpAutomationBridge_GeometrySdfField.h"
 #include "DynamicMesh/DynamicMesh3.h"
 #include "DynamicMesh/DynamicMeshAttributeSet.h"
@@ -90,9 +91,27 @@ FString ReadShapes(const TSharedPtr<FJsonObject>& Payload, TArray<FShape>& Out)
         {
             return FString::Printf(TEXT("shapes[%d] needs positive sizes (radius, radii, extent, thickness; length and topRadius 0 or more)."), Index);
         }
-        Out.Add(S);
+        S.Source = Index;
+        S.Reach = McpGeometrySdf::BoundRadius(S);
+        TArray<FShape> Copies;
+        FString CopyError;
+        if (!McpGeometrySdf::ExpandRepeat(*Obj, S, Copies, CopyError) || !McpGeometrySdf::ExpandMirror(*Obj, Copies, CopyError))
+        {
+            return FString::Printf(TEXT("shapes[%d]: %s"), Index, *CopyError);
+        }
+        Out.Append(Copies);
+        if (Out.Num() > 1024)
+        {
+            return TEXT("repeat and mirror copies come to more than 1024 shapes; split the part into two meshes.");
+        }
     }
     return FString();
+}
+
+// Which shapes[] entry decides the surface at Pt: copies count as the shape that made them.
+int32 SourceOwner(const TArray<FShape>& Shapes, const FVector3d& Pt)
+{
+    return Shapes[McpGeometrySdf::FieldOwner(Shapes, Pt)].Source;
 }
 
 // Splits every edge whose ends belong to different shapes at the point where ownership
@@ -104,7 +123,7 @@ void SplitAtPartBoundaries(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FShap
     for (const int32 Eid : Mesh.EdgeIndicesItr())
     {
         const UE::Geometry::FIndex2i V = Mesh.GetEdgeV(Eid);
-        if (McpGeometrySdf::FieldOwner(Shapes, Mesh.GetVertex(V.A)) != McpGeometrySdf::FieldOwner(Shapes, Mesh.GetVertex(V.B))) Crossing.Add(Eid);
+        if (SourceOwner(Shapes, Mesh.GetVertex(V.A)) != SourceOwner(Shapes, Mesh.GetVertex(V.B))) Crossing.Add(Eid);
     }
     // Splitting an edge leaves the other listed edges' ends untouched, so each is split once, end to end.
     for (const int32 Eid : Crossing)
@@ -112,12 +131,12 @@ void SplitAtPartBoundaries(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FShap
         const UE::Geometry::FIndex2i V = Mesh.GetEdgeV(Eid);
         const FVector3d A = Mesh.GetVertex(V.A);
         const FVector3d B = Mesh.GetVertex(V.B);
-        const int32 OwnerA = McpGeometrySdf::FieldOwner(Shapes, A);
+        const int32 OwnerA = SourceOwner(Shapes, A);
         double Lo = 0.0, Hi = 1.0;
         for (int32 Step = 0; Step < 8; ++Step)
         {
             const double Mid = 0.5 * (Lo + Hi);
-            if (McpGeometrySdf::FieldOwner(Shapes, FMath::Lerp(A, B, Mid)) == OwnerA) Lo = Mid;
+            if (SourceOwner(Shapes, FMath::Lerp(A, B, Mid)) == OwnerA) Lo = Mid;
             else Hi = Mid;
         }
         UE::Geometry::FDynamicMesh3::FEdgeSplitInfo Info;
@@ -125,22 +144,23 @@ void SplitAtPartBoundaries(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FShap
     }
 }
 
-// Each triangle belongs to the shape that decides the surface at its centre: polygroup
-// index+1 and that shape's materialId, so a later edit or a material slot can pick out a part.
-void AssignParts(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FShape>& Shapes, TArray<int32>& OutTriangles)
+// Each triangle belongs to the shapes[] entry that decides the surface at its centre (a copy
+// counts as its author): polygroup index+1 and that shape's materialId, so a later edit or a
+// material slot can pick out a part.
+void AssignParts(UE::Geometry::FDynamicMesh3& Mesh, const TArray<FShape>& Shapes, int32 Authored, TArray<int32>& OutTriangles)
 {
     SplitAtPartBoundaries(Mesh, Shapes);
     Mesh.EnableTriangleGroups();
     Mesh.EnableAttributes();
     Mesh.Attributes()->EnableMaterialID();
     UE::Geometry::FDynamicMeshMaterialAttribute* MaterialIds = Mesh.Attributes()->GetMaterialID();
-    OutTriangles.SetNumZeroed(Shapes.Num());
+    OutTriangles.SetNumZeroed(Authored);
     for (const int32 Tid : Mesh.TriangleIndicesItr())
     {
-        const int32 Owner = McpGeometrySdf::FieldOwner(Shapes, Mesh.GetTriCentroid(Tid));
-        Mesh.SetTriangleGroup(Tid, Owner + 1);
-        MaterialIds->SetValue(Tid, Shapes[Owner].MaterialId);
-        ++OutTriangles[Owner];
+        const FShape& Owner = Shapes[McpGeometrySdf::FieldOwner(Shapes, Mesh.GetTriCentroid(Tid))];
+        Mesh.SetTriangleGroup(Tid, Owner.Source + 1);
+        MaterialIds->SetValue(Tid, Owner.MaterialId);
+        ++OutTriangles[Owner.Source];
     }
 }
 } // namespace
@@ -167,7 +187,7 @@ bool HandleCreateSdf(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     {
         if (S.Op == EOp::Union)
         {
-            const double R = McpGeometrySdf::BoundRadius(S) + S.Blend;
+            const double R = S.Reach + S.Blend;
             Bounds.Contain(S.Frame.GetLocation() - FVector3d(R));
             Bounds.Contain(S.Frame.GetLocation() + FVector3d(R));
         }
@@ -191,8 +211,9 @@ bool HandleCreateSdf(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         return true;
     }
     if (!GuardMeshBudget(Self, RequestId, Socket, Mesh.TriangleCount(), TEXT("SDF meshing at this resolution"))) return true;
+    const int32 Authored = Shapes.Last().Source + 1;
     TArray<int32> PartTriangles;
-    AssignParts(Mesh, Shapes, PartTriangles);
+    AssignParts(Mesh, Shapes, Authored, PartTriangles);
     const int32 VertexCount = Mesh.VertexCount();
     const int32 TriangleCount = Mesh.TriangleCount();
     UDynamicMesh* DynMesh = NewObject<UDynamicMesh>(GetTransientPackage());
@@ -203,13 +224,24 @@ bool HandleCreateSdf(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     AActor* NewActor = SpawnPrimitiveOrReply(Self, RequestId, Socket, ReadTransformFromPayload(Payload), Name, DynMesh, Result);
     if (!NewActor) return true;
     TArray<TSharedPtr<FJsonValue>> Parts;
-    for (int32 Index = 0; Index < Shapes.Num(); ++Index)
+    TArray<int32> CopyCounts;
+    CopyCounts.SetNumZeroed(Authored);
+    for (const FShape& S : Shapes)
     {
+        ++CopyCounts[S.Source];
+    }
+    for (int32 Index = 0; Index < Authored; ++Index)
+    {
+        const FShape* First = Shapes.FindByPredicate([Index](const FShape& S) { return S.Source == Index; });
         TSharedPtr<FJsonObject> Part = MakeShared<FJsonObject>();
         Part->SetNumberField(TEXT("shape"), Index);
         Part->SetNumberField(TEXT("groupId"), Index + 1);
-        Part->SetNumberField(TEXT("materialId"), Shapes[Index].MaterialId);
+        Part->SetNumberField(TEXT("materialId"), First ? First->MaterialId : 0);
         Part->SetNumberField(TEXT("triangles"), PartTriangles[Index]);
+        if (CopyCounts[Index] > 1)
+        {
+            Part->SetNumberField(TEXT("copies"), CopyCounts[Index]);
+        }
         Parts.Add(MakeShared<FJsonValueObject>(Part));
     }
     Result->SetArrayField(TEXT("parts"), Parts);
@@ -218,7 +250,9 @@ bool HandleCreateSdf(UMcpAutomationBridgeSubsystem* Self, const FString& Request
     Result->SetNumberField(TEXT("vertexCount"), VertexCount);
     Result->SetNumberField(TEXT("triangleCount"), TriangleCount);
     McpHandlerUtils::AddVerification(Result, NewActor);
-    Self->SendAutomationResponse(Socket, RequestId, true, FString::Printf(TEXT("SDF mesh created from %d shapes"), Shapes.Num()), Result);
+    Self->SendAutomationResponse(Socket, RequestId, true, Authored == Shapes.Num()
+        ? FString::Printf(TEXT("SDF mesh created from %d shapes"), Authored)
+        : FString::Printf(TEXT("SDF mesh created from %d shapes (%d with repeat and mirror copies)"), Authored, Shapes.Num()), Result);
     return true;
 }
 } // namespace McpGeometryHandlers

@@ -38,7 +38,9 @@ describe('create_sdf meshes one field', () => {
   });
 
   it('bounds the grid by the unions only, so a cutter never widens it', () => {
-    expect(handler).toMatch(/if \(S\.Op == EOp::Union\)\s*\{\s*const double R = McpGeometrySdf::BoundRadius\(S\) \+ S\.Blend;/u);
+    // Reach is BoundRadius, computed once per shape when the shapes are read (repeat and mirror copies keep it).
+    expect(handler).toMatch(/if \(S\.Op == EOp::Union\)\s*\{\s*const double R = S\.Reach \+ S\.Blend;/u);
+    expect(handler).toContain('S.Reach = McpGeometrySdf::BoundRadius(S);');
   });
 
   it('gives each triangle to the shape whose field decides the surface there: polygroup index+1 and that slot', () => {
@@ -50,8 +52,9 @@ describe('create_sdf meshes one field', () => {
     expect(field).toContain('if (Ds > D) Owner = Index;');
     expect(handler).toContain('McpGeometrySdf::FieldOwner(Shapes, Mesh.GetTriCentroid(Tid))');
     expect(handler).not.toContain('FMath::Abs(McpGeometrySdf::LocalDistance');
-    expect(handler).toContain('Mesh.SetTriangleGroup(Tid, Owner + 1);');
-    expect(handler).toContain('MaterialIds->SetValue(Tid, Shapes[Owner].MaterialId);');
+    // A repeat or mirror copy counts as the shapes[] entry that made it.
+    expect(handler).toContain('Mesh.SetTriangleGroup(Tid, Owner.Source + 1);');
+    expect(handler).toContain('MaterialIds->SetValue(Tid, Owner.MaterialId);');
   });
 
   it('splits the edges where ownership changes first, so a part boundary is a smooth line, not triangle steps', () => {

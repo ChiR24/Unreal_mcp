@@ -7,6 +7,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
+#include "Domains/ControlActor/Placement/McpAutomationBridge_PartPlacement.h"
 #include "Engine/Blueprint.h"
 
 namespace McpBlueprintHandlers {
@@ -96,6 +97,25 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
       State.LocalWarnings.Add(TEXT("Blueprint failed to save during apply; check output log."));
     }
   }
+  // A rider's legs buried in his mount answered "Processed 1 SCS operation(s)." with nothing else:
+  // both parts belong to one actor, so no placement check saw them. Measure the parts this batch
+  // touched against the rest of the actor and say so here.
+  TSet<FString> Touched;
+  for (const TSharedPtr<FJsonValue> &Summary : State.FinalSummaries) {
+    const TSharedPtr<FJsonObject> *Op = nullptr;
+    if (Summary.IsValid() && Summary->TryGetObject(Op) && Op && GetJsonBoolField(*Op, TEXT("success"))) {
+      Touched.Add(GetJsonStringField(*Op, TEXT("componentName")));
+    }
+  }
+  Touched.Remove(FString());
+  TArray<TSharedPtr<FJsonValue>> PartWarnings;
+  if (Touched.Num() > 0 && LocalBP) {
+    const McpPartPlacement::FPartAudit Parts = McpPartPlacement::AuditBlueprintParts(LocalBP, Touched);
+    for (int32 Index = 0; Index < Parts.Issues.Num() && Index < 8; ++Index) {
+      PartWarnings.Add(MakeShared<FJsonValueObject>(McpPartPlacement::IssueToJson(Parts.Issues[Index])));
+      State.LocalWarnings.Add(Parts.Issues[Index].Issue);
+    }
+  }
   State.CompletionResult->SetStringField(TEXT("blueprintPath"), State.NormalizedBlueprintPath);
   State.CompletionResult->SetBoolField(TEXT("compiled"), bCompileOk);
   State.CompletionResult->SetBoolField(TEXT("saved"), State.bSave && State.bSaveResult);
@@ -126,6 +146,9 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
   }
   if (Repropagated > 0) {
     ResultPayload->SetNumberField(TEXT("instancesRepropagated"), Repropagated);
+  }
+  if (PartWarnings.Num() > 0) {
+    ResultPayload->SetArrayField(TEXT("partWarnings"), PartWarnings);
   }
   if (WarningValues.Num() > 0) {
     ResultPayload->SetArrayField(TEXT("warnings"), WarningValues);

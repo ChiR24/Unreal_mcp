@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
+#include "Domains/ControlActor/Placement/McpAutomationBridge_PartPlacement.h"
 
 namespace McpBlueprintHandlers {
 bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
@@ -75,6 +76,9 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     }
     TSharedPtr<FJsonObject> Result =
         FSCSHandlers::ReparentSCSComponent(BPPath, CompName, NewParent);
+    if (GetJsonBoolField(Result, TEXT("success"))) {
+      McpPartPlacement::AppendPartWarnings(BPPath, {CompName}, Result);
+    }
     Bridge.SendAutomationResponse(RequestingSocket, RequestId,
                            GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
@@ -93,6 +97,9 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     }
     TSharedPtr<FJsonObject> Result =
         FSCSHandlers::SetSCSComponentTransform(BPPath, CompName, Payload);
+    if (GetJsonBoolField(Result, TEXT("success"))) {
+      McpPartPlacement::AppendPartWarnings(BPPath, {CompName}, Result);
+    }
     Bridge.SendAutomationResponse(RequestingSocket, RequestId,
                            GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,
@@ -128,6 +135,9 @@ bool HandleBlueprintScsWrappers(const FBlueprintActionContext &Context) {
     }
     TSharedPtr<FJsonObject> Result = FSCSHandlers::SetSCSComponentProperty(
         BPPath, CompName, PropName, ResolvedPropVal);
+    if (GetJsonBoolField(Result, TEXT("success"))) {
+      McpPartPlacement::AppendPartWarnings(BPPath, {CompName}, Result);
+    }
     Bridge.SendAutomationResponse(RequestingSocket, RequestId,
                            GetJsonBoolField(Result, TEXT("success")),
                            SafeGetStr(Result, TEXT("message")), Result,

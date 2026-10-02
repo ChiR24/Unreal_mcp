@@ -2,6 +2,7 @@
 
 #if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
+#include "Domains/ControlActor/Placement/McpAutomationBridge_PartPlacement.h"
 #include "Materials/MaterialInterface.h"
 
 namespace McpGeometryHandlers
@@ -137,6 +138,8 @@ bool HandleConvertToStaticMesh(UMcpAutomationBridgeSubsystem* Self, const FStrin
     Result->SetBoolField(TEXT("naniteEnabled"), bNaniteOn);
     Result->SetStringField(TEXT("collision"), CollisionMode);
     Result->SetArrayField(TEXT("slots"), SlotsJson);
+    // A mesh replaced in place reshapes every Blueprint part that draws it: say which parts it left sunk.
+    McpPartPlacement::AppendMeshUserWarnings(CreatedMesh, Result);
     Self->SendAutomationResponse(Socket, RequestId, true, TEXT("StaticMesh created from DynamicMesh"), Result);
     return true;
 }

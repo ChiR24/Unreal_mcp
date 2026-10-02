@@ -3604,7 +3604,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "blueprintPath": {
           "type": "string",
-          "description": "Canonical /Game Blueprint asset path to spawn from."
+          "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out. Blueprint component edits report the same for the parts they touch, as partWarnings."
         },
         "childActor": {
           "type": "string",
@@ -4200,6 +4200,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "The actors that spawned, by the name each result carries, in batch order and under either report mode; the receipt lists them as changes, with an actor handle each (the first 20)."
         },
+        "blueprintPath": {
+          "type": "string",
+          "description": "With blueprintPath: the Blueprint whose parts were measured."
+        },
         "blueprintsFixed": {
           "type": "array",
           "items": {
@@ -4362,7 +4366,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "examined": {
           "type": "number",
-          "description": "Actors inspected."
+          "description": "Actors inspected (mesh parts, with blueprintPath)."
         },
         "excludedCount": {
           "type": "number",
@@ -4387,7 +4391,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "flagged": {
           "type": "number",
-          "description": "Actors with a placement problem, before the limit."
+          "description": "Actors with a placement problem (part findings, with blueprintPath), before the limit."
         },
         "gameSeconds": {
           "type": "number",
@@ -4399,7 +4403,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "groundZ": {
           "type": "number",
-          "description": "Z of the solid surface under the actor; absent when nothing is below it."
+          "description": "With blueprintPath: the ground the parts were measured against (the capsule bottom of the preview instance); absent when the root is not a capsule."
         },
         "hasMore": {
           "type": "boolean",
@@ -12853,6 +12857,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Optional parent panel name to add the widget under."
         },
+        "partWarnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor's ground, a Character's capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part's surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to [\"mcp.placement.ok\"]) is a deliberate embed, such as an eyeball in its socket, and is left out. control_actor.audit_placement with blueprintPath lists every part of the Blueprint."
+        },
         "path": {
           "type": "string",
           "description": "Normalized asset path that was checked."
@@ -15757,7 +15771,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "array",
           "minItems": 1,
           "maxItems": 64,
-          "description": "Shapes combined in order onto shapes[0] (which must be a union) as one signed distance field, then meshed. Sizes are cm in the mesh's local space. Each joined shape takes a blend: the radius of the soft fillet where it meets what came before.",
+          "description": "Shapes combined in order onto shapes[0] (which must be a union) as one signed distance field, then meshed. Sizes are cm in the mesh's local space. Each joined shape takes a blend: the radius of the soft fillet where it meets what came before. An entry with mirror or repeat stands for all its copies (at most 1024 shapes in all), applied in its place in the order.",
           "items": {
             "type": "object",
             "required": [
@@ -15892,6 +15906,87 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "minimum": 0,
                 "maximum": 63,
                 "description": "Material slot of the surface this shape forms (default 0). A subtract shape owns the surface it carves, so a carved visor can take its own slot."
+              },
+              "mirror": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 3,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "x",
+                    "y",
+                    "z"
+                  ]
+                },
+                "description": "Also add this shape reflected across the mesh's own plane through the origin normal to each listed axis (\"y\" mirrors y to -y): both eyes, both ears or a pair of legs from one entry. Each axis doubles the copies so far, so [\"x\",\"y\"] gives four; repeat copies are mirrored too."
+              },
+              "repeat": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "count"
+                ],
+                "description": "Copies of this shape with the same size, blend, operation and materialId: a row with offset, or a ring with axis. A row of stitches, rivets round a rim or curls round a head is one entry. The reply's parts[] still lists one entry per shapes[] item, with copies.",
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 2,
+                    "maximum": 256,
+                    "description": "How many, the shape itself included."
+                  },
+                  "offset": {
+                    "type": "object",
+                    "description": "Row: each copy moves this much further from the previous one, cm.",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "axis": {
+                    "type": "string",
+                    "enum": [
+                      "x",
+                      "y",
+                      "z"
+                    ],
+                    "description": "Ring: turn the copies about this mesh axis through pivot (each copy turns with it)."
+                  },
+                  "angle": {
+                    "type": "number",
+                    "description": "Ring: total sweep in degrees (default 360, evenly spaced all round; a smaller arc puts the last copy at its end)."
+                  },
+                  "pivot": {
+                    "type": "object",
+                    "description": "Ring: a point on the turning axis, cm (default 0,0,0).",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "description": "X"
+                      },
+                      "y": {
+                        "type": "number",
+                        "description": "Y"
+                      },
+                      "z": {
+                        "type": "number",
+                        "description": "Z"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
               }
             }
           }
@@ -16325,6 +16420,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "operation": {
           "type": "string",
           "description": "Operation that ran."
+        },
+        "partWarnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out."
         },
         "parts": {
           "type": "array",

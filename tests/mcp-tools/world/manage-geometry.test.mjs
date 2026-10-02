@@ -49,6 +49,14 @@ const testCases = [
       { type: 'cone', center: { x: 0, y: 30, z: 0 }, rotation: { pitch: 0, yaw: 0, roll: 90 }, radius: 6, topRadius: 2, length: 14, blend: 3 },
       { type: 'sphere', operation: 'intersect', radius: 60, blend: 1 },
     ] }, expected: 'success' },
+  { scenario: 'CREATE: create_sdf mirrors and repeats shapes in rows and rings', toolName: 'manage_geometry', arguments: {
+    action: 'create_sdf', name: `TestSdfCopies_${ts}`, resolution: 64, location: { x: 0, y: 1100, z: 100 },
+    shapes: [
+      { type: 'box', extent: { x: 20, y: 30, z: 15 }, rounding: 4 },
+      { type: 'sphere', center: { x: 20, y: 12, z: 5 }, radius: 3, blend: 1, materialId: 1, mirror: ['y'] },
+      { type: 'capsule', center: { x: 20.5, y: -18, z: -10 }, radius: 0.4, length: 1, materialId: 2, repeat: { count: 10, offset: { x: 0, y: 4, z: 0 } } },
+      { type: 'sphere', center: { x: 0, y: 26, z: 15 }, radius: 1.2, blend: 0.4, repeat: { count: 8, axis: 'z', angle: 360, pivot: { x: 0, y: 0, z: 15 } }, mirror: ['x'] },
+    ] }, expected: 'success', assertions: [{ path: 'structuredContent.result.parts.2.copies', equals: 10, label: 'a repeated shape reports its copies under its own entry' }] },
   { scenario: 'ERROR: create_sdf refuses a subtract as the base shape', toolName: 'manage_geometry', arguments: { action: 'create_sdf', name: `TestSdfBad_${ts}`, shapes: [{ type: 'sphere', operation: 'subtract', radius: 10 }] }, expected: 'error' },
   // === ACTION ===
   { scenario: 'ACTION: boolean_union', toolName: 'manage_geometry', arguments: {"action": "boolean_union", "targetActor": EDIT_ACTOR, "toolActor": TOOL_ACTOR, "keepTool": true}, expected: 'success' },

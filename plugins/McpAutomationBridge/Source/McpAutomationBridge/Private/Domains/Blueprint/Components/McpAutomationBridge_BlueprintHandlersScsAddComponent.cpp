@@ -1,6 +1,7 @@
 #include "Domains/Blueprint/McpAutomationBridge_BlueprintActionContext.h"
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsOpFields.h"
 #include "Domains/SCS/McpAutomationBridge_SCSHandlers.h"
+#include "Domains/ControlActor/Placement/McpAutomationBridge_PartPlacement.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
@@ -130,6 +131,10 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
                           *ComponentName, *FString::Join(Rejected, TEXT(", "))));
       Result->SetStringField(TEXT("error"), TEXT("SCS_PROPERTY_FAILED"));
     }
+  }
+  // A part added inside another part, or below the actor's capsule, is named in the reply.
+  if (GetJsonBoolField(Result, TEXT("success"))) {
+    McpPartPlacement::AppendPartWarnings(BlueprintPath, {ComponentName}, Result);
   }
   Bridge.SendAutomationResponse(RequestingSocket, RequestId,
                                 GetJsonBoolField(Result, TEXT("success")),

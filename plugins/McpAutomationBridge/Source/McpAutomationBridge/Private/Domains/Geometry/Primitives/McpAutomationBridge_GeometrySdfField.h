@@ -23,6 +23,10 @@ struct FShape
     double Thickness = 10.0;
     double Blend = 0.0;
     int32 MaterialId = 0;
+    // The shapes[] entry this came from: repeat and mirror copies share their author's index.
+    int32 Source = 0;
+    // Radius of a ball round the frame origin that holds the whole shape (BoundRadius).
+    double Reach = 0.0;
 };
 
 inline double Len2(double X, double Y) { return FMath::Sqrt(X * X + Y * Y); }
@@ -92,8 +96,16 @@ inline double FieldDistance(const TArray<FShape>& Shapes, const FVector3d& Pt, i
     for (int32 Index = 1; Index < Shapes.Num(); ++Index)
     {
         const FShape& S = Shapes[Index];
-        const double Ds = LocalDistance(S, Pt);
         const double K = FMath::Max(S.Blend, 1e-6);
+        // A union or subtract farther away than its blend reaches leaves D and the owner exactly as
+        // they are (the smooth min's weight is 0 there), so hundreds of small shapes - curls,
+        // stitches, rivets - cost only where they are. An intersect cuts everything, near or far.
+        if (S.Op != EOp::Intersect)
+        {
+            const double Far = FVector3d::Dist(Pt, S.Frame.GetLocation()) - S.Reach;
+            if (S.Op == EOp::Union ? Far >= D + K : Far >= K - D) continue;
+        }
+        const double Ds = LocalDistance(S, Pt);
         if (S.Op == EOp::Union)
         {
             const double H = FMath::Clamp(0.5 + 0.5 * (D - Ds) / K, 0.0, 1.0);
@@ -134,7 +146,8 @@ inline double BoundRadius(const FShape& S)
     case EShape::Capsule: return S.Radius + S.Length * 0.5;
     case EShape::Cylinder: return Len2(S.Radius, S.Length * 0.5);
     case EShape::Torus: return S.Radius + S.Thickness;
-    default: return Len2(FMath::Max(S.Radius, S.TopRadius), S.Length * 0.5);
+    // The round cone ends in spheres, so its far point is half the length plus the larger end radius.
+    default: return S.Length * 0.5 + FMath::Max(S.Radius, S.TopRadius);
     }
 }
 } // namespace McpGeometrySdf

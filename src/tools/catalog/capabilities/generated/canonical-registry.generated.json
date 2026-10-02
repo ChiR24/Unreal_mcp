@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ddaaea1663330c4b",
+  "catalogRevision": "a122b979708d4e99",
   "recordCount": 389,
   "records": [
     {
@@ -15797,6 +15797,16 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
+            "partWarnings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Mesh parts this edit left sunk or buried, worst first (at most 8, each also a warnings[] sentence): componentName, kind (sunk: below the actor's ground, a Character's capsule bottom; buried: inside otherComponent), depth in cm, insideShare (0-1, how much of the part's surface is inside the other) and issue. Measured on the real triangles of a preview instance, not on bounds. A part tagged mcp.placement.ok (set ComponentTags to [\"mcp.placement.ok\"]) is a deliberate embed, such as an eyeball in its socket, and is left out. control_actor.audit_placement with blueprintPath lists every part of the Blueprint."
+            },
             "verifiedValue": {
               "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
             }
@@ -15946,8 +15956,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "00c2828283c5aafefbaa96e8a18ba46ba98ee2b8d17a75a9df1e9c58bb74f77b",
-        "content": "3eaa8f167a0eee0f8ebe38d93303418f493e88af60434913f35a4689f3ea5824"
+        "schema": "5fe9cbcf6935f309556fda47867557bcabd0ccb1a2d8393f9295d48960d77be3",
+        "content": "302d0c2fbbf94e27459db8c07f234668a741516ff96efdcc38c93933cc49db3d"
       }
     },
     {
@@ -30024,14 +30034,21 @@
           "coplanar faces",
           "texture flicker",
           "check for floating actors",
-          "actors that overlap"
+          "actors that overlap",
+          "sunk parts",
+          "parts buried in each other",
+          "legs inside the body",
+          "feet below the capsule",
+          "rider clipping through mount",
+          "blueprint part overlap"
         ],
-        "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker).",
+        "summary": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
         "whenToUse": [
           "A level was assembled programmatically and needs checking before anyone looks at it.",
           "Actors appear to clip through each other, stand in the ground, or lie on their side.",
           "A placement pass should be verified without flying the viewport around to eyeball it.",
-          "Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one; control_actor fix_coplanar fixes them all in one call."
+          "Surfaces flicker, or another material shows through in ragged patches (z-fighting): the coplanar face pairs responsible are listed under coplanarFaces, with the direction to push each one; control_actor fix_coplanar fixes them all in one call.",
+          "A character, vehicle or prop is assembled from mesh components in a Blueprint (a rider on a mount, legs on a body): blueprintPath checks every part against every other on their real triangles and against the capsule bottom, so a leg sunk into the mount or a foot through the floor is named with its depth."
         ],
         "whenNotToUse": [
           "One actor was just moved; spawn and set_transform already return placementWarning for it.",
@@ -30077,6 +30094,10 @@
             "maxTilt": {
               "type": "number",
               "description": "Degrees off vertical an actor may lean before it is reported as tilted (1-90, default 30). Lean is the angle between the up vector of the actor and world up, so yaw never counts and a fully inverted actor reads 180. Raise it for a level whose props are deliberately strewn about; lower it to catch subtler leans."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "Audit the mesh parts of this actor Blueprint instead of the level: a preview instance (the level is untouched) has every visible static mesh part measured against every other and against its ground (a Character's capsule bottom). problems[] then lists componentName, kind (buried: inside otherComponent; sunk: below the ground), depth and severity in cm, insideShare and the issue; minSeverity is the tolerance (default 0.5 cm). A part tagged mcp.placement.ok in its ComponentTags is a deliberate embed (an eyeball in its socket) and is left out. Blueprint component edits report the same for the parts they touch, as partWarnings."
             }
           },
           "required": [
@@ -30103,11 +30124,11 @@
             },
             "examined": {
               "type": "number",
-              "description": "Actors inspected."
+              "description": "Actors inspected (mesh parts, with blueprintPath)."
             },
             "flagged": {
               "type": "number",
-              "description": "Actors with a placement problem, before the limit."
+              "description": "Actors with a placement problem (part findings, with blueprintPath), before the limit."
             },
             "returned": {
               "type": "number",
@@ -30132,6 +30153,14 @@
             "truncationNote": {
               "type": "string",
               "description": "Present when the limit cut the list short; says how to reach the rest."
+            },
+            "blueprintPath": {
+              "type": "string",
+              "description": "With blueprintPath: the Blueprint whose parts were measured."
+            },
+            "groundZ": {
+              "type": "number",
+              "description": "With blueprintPath: the ground the parts were measured against (the capsule bottom of the preview instance); absent when the root is not a capsule."
             }
           },
           "required": [
@@ -30142,7 +30171,7 @@
       },
       "examples": [
         {
-          "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker).",
+          "title": "Sweep every actor in the level and report the ones that interpenetrate another actor, sit sunk below the surface under them, float above it, lean off vertical, or have a face in the same plane as another surface (z-fighting flicker); or, with blueprintPath, the mesh parts of one actor Blueprint that are buried in each other or sunk below its capsule.",
           "input": {
             "action": "audit_placement",
             "nameFilter": "HubNPC_"
@@ -30185,8 +30214,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9406aeb5d2ed74d92449fa16df44f71602a9358887e590038fefe0de554eb357",
-        "content": "5007003a27c5009378110c7bed40be4f20d3ec95e6699516dd42f15aff96fe2e"
+        "schema": "fe69b7fd347bc41a4d789c27ece134b0e0d571542ba8316907c71845389da289",
+        "content": "db426692cb535fc19d356906bf52ccc07f04c0876f916c543ae26922625ee992"
       }
     },
     {
@@ -58832,6 +58861,16 @@
                 },
                 "additionalProperties": false
               }
+            },
+            "partWarnings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out."
             }
           },
           "required": [
@@ -58885,8 +58924,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "290ae5dd6d06be18736ad2e769fdfaa8a3c01b124512d0f388c1c99bb14b00fe",
-        "content": "395dac8ead2772548522b2d543f5c73cbbb0f31efd7262bb65fa5d53120f0b6f"
+        "schema": "0a62ce81665fa9fc5bad738f717384e76cdcdec7bfee52caf3d841534feebcd8",
+        "content": "a949a8ba3c7733b39ad0176f48cf1edf3646c3922c42cadd08dec55d5f123e9e"
       }
     },
     {
@@ -59014,6 +59053,16 @@
                 },
                 "additionalProperties": false
               }
+            },
+            "partWarnings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "When outputPath replaced a mesh that loaded Blueprints already draw: the parts drawing it that now sink, worst first (at most 8, each also a warnings[] sentence): blueprintPath, componentName, kind (buried: inside otherComponent; sunk: below a Character's capsule bottom), depth in cm, insideShare and issue. Measured like edit_scs partWarnings; a part tagged mcp.placement.ok is left out."
             }
           },
           "required": [
@@ -59067,8 +59116,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "290ae5dd6d06be18736ad2e769fdfaa8a3c01b124512d0f388c1c99bb14b00fe",
-        "content": "2a5cfbfc6ce731da747ddf8f26016c957573c7e272cddcab576724c58ded6b02"
+        "schema": "0a62ce81665fa9fc5bad738f717384e76cdcdec7bfee52caf3d841534feebcd8",
+        "content": "35a07b7fe03803ff532006d0eb19083e6f301516690e5fd274899a348a186cc9"
       }
     },
     {
@@ -59437,7 +59486,7 @@
               "type": "array",
               "minItems": 1,
               "maxItems": 64,
-              "description": "Shapes combined in order onto shapes[0] (which must be a union) as one signed distance field, then meshed. Sizes are cm in the mesh's local space. Each joined shape takes a blend: the radius of the soft fillet where it meets what came before.",
+              "description": "Shapes combined in order onto shapes[0] (which must be a union) as one signed distance field, then meshed. Sizes are cm in the mesh's local space. Each joined shape takes a blend: the radius of the soft fillet where it meets what came before. An entry with mirror or repeat stands for all its copies (at most 1024 shapes in all), applied in its place in the order.",
               "items": {
                 "type": "object",
                 "required": [
@@ -59572,6 +59621,87 @@
                     "minimum": 0,
                     "maximum": 63,
                     "description": "Material slot of the surface this shape forms (default 0). A subtract shape owns the surface it carves, so a carved visor can take its own slot."
+                  },
+                  "mirror": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 3,
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "x",
+                        "y",
+                        "z"
+                      ]
+                    },
+                    "description": "Also add this shape reflected across the mesh's own plane through the origin normal to each listed axis (\"y\" mirrors y to -y): both eyes, both ears or a pair of legs from one entry. Each axis doubles the copies so far, so [\"x\",\"y\"] gives four; repeat copies are mirrored too."
+                  },
+                  "repeat": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "count"
+                    ],
+                    "description": "Copies of this shape with the same size, blend, operation and materialId: a row with offset, or a ring with axis. A row of stitches, rivets round a rim or curls round a head is one entry. The reply's parts[] still lists one entry per shapes[] item, with copies.",
+                    "properties": {
+                      "count": {
+                        "type": "integer",
+                        "minimum": 2,
+                        "maximum": 256,
+                        "description": "How many, the shape itself included."
+                      },
+                      "offset": {
+                        "type": "object",
+                        "description": "Row: each copy moves this much further from the previous one, cm.",
+                        "properties": {
+                          "x": {
+                            "type": "number",
+                            "description": "X"
+                          },
+                          "y": {
+                            "type": "number",
+                            "description": "Y"
+                          },
+                          "z": {
+                            "type": "number",
+                            "description": "Z"
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      "axis": {
+                        "type": "string",
+                        "enum": [
+                          "x",
+                          "y",
+                          "z"
+                        ],
+                        "description": "Ring: turn the copies about this mesh axis through pivot (each copy turns with it)."
+                      },
+                      "angle": {
+                        "type": "number",
+                        "description": "Ring: total sweep in degrees (default 360, evenly spaced all round; a smaller arc puts the last copy at its end)."
+                      },
+                      "pivot": {
+                        "type": "object",
+                        "description": "Ring: a point on the turning axis, cm (default 0,0,0).",
+                        "properties": {
+                          "x": {
+                            "type": "number",
+                            "description": "X"
+                          },
+                          "y": {
+                            "type": "number",
+                            "description": "Y"
+                          },
+                          "z": {
+                            "type": "number",
+                            "description": "Z"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
                   }
                 }
               }
@@ -59867,8 +59997,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "45e8ff2e515e5e75f810d9b812495d28609b7f108783debe2d28dcd919e1008b",
-        "content": "7da76af75347533e1be41afad8b488d044e787737d95d30e190110cd409438b7"
+        "schema": "2ea77fa23c65f4250489b1f8da40423ef536a2cedd764f84a2ac316e604d4442",
+        "content": "688611e9c3cbaee13b86bbc47f94db77f0de26a86f84cf841568721fcd23e189"
       }
     },
     {
