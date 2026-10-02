@@ -2,6 +2,7 @@
 
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersActorAccess.h"
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoComponents.h"
+#include "Domains/Property/McpAutomationBridge_PropertyHandlersCdoPropagation.h"
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersObjectWatch.h"
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersTarget.h"
 
@@ -195,6 +196,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       return true;
   }
 
+  // The placed copies that never overrode this default follow it, as the details panel makes them.
+  const TArray<UObject*> Followers = McpPropertyCdoPropagation::CollectFollowers(RootObject, ResolvedPath);
   RootObject->Modify();
 
   FString ConversionError;
@@ -204,6 +207,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("PROPERTY_CONVERSION_FAILED"));
       return true;
   }
+  const int32 FollowersUpdated = McpPropertyCdoPropagation::ApplyToFollowers(Followers, ResolvedPath, ValueField);
 
   // A Blueprint's default object is replaced by every compile, and a variable the Blueprint declares gets its value
   // back from the text of its default: the write above alone was gone after the compile below, while the reply read
@@ -301,6 +305,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   // A Blueprint write only reaches future instances once the class is rebuilt,
   // so say whether that happened rather than leaving the caller to assume it.
   ResultPayload->SetBoolField(TEXT("blueprintCompiled"), bCompiledBlueprint);
+  if (Followers.Num() > 0) ResultPayload->SetNumberField(TEXT("instancesUpdated"), FollowersUpdated);
   // A material expression's write reaches material instances only once its material has rebuilt its parameter
   // lists, so say that happened (a renamed ParameterName was invisible to instances until something else did).
   if (bMaterialRebuilt) {

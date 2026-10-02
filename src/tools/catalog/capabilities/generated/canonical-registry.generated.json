@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "91fe975f08ad08ae",
+  "catalogRevision": "3a214949ef8b2118",
   "recordCount": 393,
   "records": [
     {
@@ -13773,7 +13773,7 @@
             },
             "properties": {
               "type": "object",
-              "description": "Property bag applied to the CDO, component template, or node: name to value. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
+              "description": "Property bag applied to the CDO, component template, or node: name to value. A dotted name reaches a member of a component or struct (CapsuleComponent.CapsuleRadius, BodyInstance.CollisionEnabled); on a Blueprint's class defaults a native component also answers to its object name (CollisionCylinder.CapsuleRadius, CharMoveComp.MaxWalkSpeed). An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -13913,8 +13913,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1498de5046f8ae895f64f5a5519fb0da242abd4ef7acff90daa4d6e5be33318b",
-        "content": "f591b9150374acd5160c343f20ce780baa88e70b50b0d39d982e4ddde0de440b"
+        "schema": "a8db077cfb145cea9c2fa492002f2db987cd74f9d98954410e53bbc32408c6af",
+        "content": "91a00b087533ddd8a66313dc1ef082a6b8a72c26c6a2900a324ddf88b6364c41"
       }
     },
     {
@@ -15769,7 +15769,7 @@
             },
             "properties": {
               "type": "object",
-              "description": "Property bag applied to the CDO, component template, or node: name to value. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
+              "description": "Property bag applied to the CDO, component template, or node: name to value. A dotted name reaches a member of a component or struct (CapsuleComponent.CapsuleRadius, BodyInstance.CollisionEnabled); on a Blueprint's class defaults a native component also answers to its object name (CollisionCylinder.CapsuleRadius, CharMoveComp.MaxWalkSpeed). An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
@@ -16028,8 +16028,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2a9153d9fb7a1b9ba3413332cc2c4f2e85b05f79ec2dff9cc1d511f3d66c10fc",
-        "content": "6211c4bc9cc1e92881806c8871c01deedfc92817f04f1b6765444484df6cf5ae"
+        "schema": "f53125670880a8b1a63f8b10200a3fa75486adb3a462d28ec35a079152763dfb",
+        "content": "8eb3948f96e7a522727c50001fbe80d04373111ab577043220da82c87c4285a2"
       }
     },
     {
@@ -43333,6 +43333,10 @@
               "type": "number",
               "description": "With properties: how many writes applied."
             },
+            "instancesUpdated": {
+              "type": "number",
+              "description": "A write to a class default or component template: how many placed copies that still held the old default took the new one, as the details panel does; copies that override the value keep theirs. Absent for any other target."
+            },
             "blueprintCompiled": {
               "type": "boolean",
               "description": "True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint's current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved."
@@ -43389,8 +43393,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bd59e59cd5ec16bad6b9501dda2d4c28eaec6285059177db8bddee7d4b0c395f",
-        "content": "9ee98b9ebf0147df6f0b0a2de185de3371d034f9b606d41fc69173f8047fe8e3"
+        "schema": "a7eec7d3a0dfdcf8695d75068647b6e717b9dd616ef07eb1feafde727f772547",
+        "content": "006efbb5fc430c5989e0d47d29f84aeb4a7d5edbaec08fd5f05f7397d3490f3a"
       }
     },
     {

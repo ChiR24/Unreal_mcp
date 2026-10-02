@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/BlueprintCreation/McpAutomationBridge_BlueprintCreationHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersNestedPropertyPath.h"
 #include "Foundation/BridgeHelpers/Properties/McpAutomationBridgeHelpersPropertyApply.h"
 
 
@@ -23,6 +24,30 @@ void ApplyPropertiesToObject(UObject *TargetObject,
 
   for (const auto &Pair : Properties->Values) {
     const FString Name = Prefix + Pair.Key;
+    // A dotted key reaches a component or struct member as set_property's paths do
+    // ("CapsuleComponent.CapsuleRadius", "BodyInstance.CollisionEnabled"); its first segment may also be a
+    // component's object name ("CollisionCylinder.CapsuleRadius"), which is what the editor shows.
+    const FString Key(Pair.Key.Len(), *Pair.Key); // 5.8 keys are shared strings, not FString
+    FString Head, Tail;
+    if (Key.Split(TEXT("."), &Head, &Tail)) {
+      UObject *Holder = TargetObject;
+      FString Path = Key;
+      if (!FindFProperty<FProperty>(TargetObject->GetClass(), FName(*Head))) {
+        if (UObject *Subobject = TargetObject->GetDefaultSubobjectByName(FName(*Head))) {
+          Holder = Subobject;
+          Path = Tail;
+        }
+      }
+      void *Container = nullptr;
+      FString Error;
+      FProperty *Nested = ResolveNestedPropertyPath(Holder, Path, Container, Error);
+      if (Nested && ApplyJsonValueToProperty(Container, Nested, Pair.Value, Error)) {
+        OutApplied.Add(Name);
+      } else {
+        OutFailed.Add(FString::Printf(TEXT("%s: %s"), *Name, *Error));
+      }
+      continue;
+    }
     FProperty *Property =
         TargetObject->GetClass()->FindPropertyByName(*Pair.Key);
     if (!Property) {

@@ -6346,6 +6346,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Project homepage URL."
         },
+        "instancesUpdated": {
+          "type": "number",
+          "description": "A write to a class default or component template: how many placed copies that still held the old default took the new one, as the details panel does; copies that override the value keep theirs. Absent for any other target."
+        },
         "isActive": {
           "type": "boolean",
           "description": "True when the component is active."
@@ -12188,7 +12192,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "properties": {
           "type": "object",
-          "description": "Property bag applied to the CDO, component template, or node: name to value. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
+          "description": "Property bag applied to the CDO, component template, or node: name to value. A dotted name reaches a member of a component or struct (CapsuleComponent.CapsuleRadius, BodyInstance.CollisionEnabled); on a Blueprint's class defaults a native component also answers to its object name (CollisionCylinder.CapsuleRadius, CharMoveComp.MaxWalkSpeed). An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it.",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true
         },

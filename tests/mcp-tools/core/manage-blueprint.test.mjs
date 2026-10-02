@@ -31,6 +31,8 @@ const testCases = [
   // === ACTION: create (requires name + path/blueprintPath) ===
   { scenario: 'ACTION: create', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_Create_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor', properties: { bReplicates: true } }, expected: 'success|already exists', assertions: [{ path: 'structuredContent.result.appliedProperties.0', equals: 'bReplicates', label: 'the property that was set is listed' }] },
   { scenario: 'ACTION: create names a property it could not set', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_CreateBadProp_${ts}`, savePath: TEST_FOLDER, blueprintType: 'Actor', properties: { NoSuchProperty: 1 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.failedProperties.0', includes: 'NoSuchProperty', label: 'the miss is named, not dropped' }] },
+  // A dotted name reaches a component of the class defaults, by property name or by the component's object name.
+  { scenario: 'ACTION: create sets component members through dotted names', toolName: 'manage_blueprint', arguments: { action: 'create', name: `BP_CreateDotted_${ts}`, savePath: TEST_FOLDER, parentClass: '/Script/Engine.Character', properties: { 'CollisionCylinder.CapsuleRadius': 30, 'CharacterMovement.MaxWalkSpeed': 420 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.appliedProperties', length: 2, label: 'both component members were set' }] },
 
   // === INFO: get_blueprint (uses blueprintPath) ===
   { scenario: 'INFO: get_blueprint', toolName: 'manage_blueprint', arguments: { action: 'get_blueprint', blueprintPath: BP_PATH }, expected: 'success' },

@@ -56,7 +56,7 @@ export const P = {
   },
   properties: {
     type: 'object',
-    description: 'Property bag applied to the CDO, component template, or node: name to value. An object or class reference takes a path (a Blueprint class path ends in _C); null or "None" clears it.',
+    description: 'Property bag applied to the CDO, component template, or node: name to value. A dotted name reaches a member of a component or struct (CapsuleComponent.CapsuleRadius, BodyInstance.CollisionEnabled); on a Blueprint\'s class defaults a native component also answers to its object name (CollisionCylinder.CapsuleRadius, CharMoveComp.MaxWalkSpeed). An object or class reference takes a path (a Blueprint class path ends in _C); null or "None" clears it.',
     additionalProperties: true,
     'x-unreal-reflection-boundary': true,
   },
