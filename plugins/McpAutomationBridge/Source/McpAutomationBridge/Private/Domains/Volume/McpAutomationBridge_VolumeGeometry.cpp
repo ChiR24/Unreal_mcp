@@ -1,5 +1,6 @@
 #include "Domains/Volume/McpAutomationBridge_VolumeGeometry.h"
 
+#include "BSPOps.h"
 #include "Builders/CubeBuilder.h"
 #include "Components/BrushComponent.h"
 #include "Engine/Polys.h"
@@ -36,10 +37,11 @@ bool CreateBoxBrushForVolume(ABrush* Volume, const FVector& Extent)
     }
 
     CubeBuilder->Build(Volume->GetWorld(), Volume);
-    // BuildBound() is what actually populates UModel::Bounds; UBrushComponent
-    // derives its own bounds from that, so without it the component keeps the
-    // zero bound it was spawned with even though the polys now exist.
-    Volume->Brush->BuildBound();
+    // Build() leaves only polys. The editor's own volume placement then runs
+    // csgPrepMovingBrush: bounds, the brush BSP and, from that BSP, the convex
+    // collision. Without it a BlockingVolume blocks nothing and a trigger or
+    // kill volume never overlaps anything, though its bounds look right.
+    FBSPOps::csgPrepMovingBrush(Volume);
     if (UBrushComponent* Built = Volume->GetBrushComponent())
     {
         Built->UpdateBounds();

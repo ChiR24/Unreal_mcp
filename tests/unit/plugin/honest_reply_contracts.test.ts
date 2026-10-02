@@ -71,6 +71,16 @@ describe('handlers answer what they did', () => {
     expect(assets.indexOf('LoadObject<UTexture2D>')).toBeLessThan(assets.indexOf('CreatePackage('));
   });
 
+  // A BlockingVolume from create_volume had the right bounds and blocked nothing: the brush had
+  // polys but no BSP and no convex collision, so triggers and kill volumes never overlapped either.
+  it('a volume brush gets its BSP and collision, as the editor\'s own volume placement builds them', () => {
+    const geometry = code('Volume', 'McpAutomationBridge_VolumeGeometry.cpp');
+    expect(geometry).toContain('FBSPOps::csgPrepMovingBrush(Volume);');
+    expect(geometry.indexOf('CubeBuilder->Build(')).toBeLessThan(geometry.indexOf('csgPrepMovingBrush'));
+    expect(readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'McpAutomationBridge.Build.cs'), 'utf8'))
+      .toContain('"BSPUtils"');
+  });
+
   it('a resized or combined texture keeps its source colour space', () => {
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersResize.cpp')).toContain('NewTexture->SRGB = SourceTexture->SRGB;');
     expect(code('Texture', 'McpAutomationBridge_TextureHandlersCombine.cpp')).toContain('OutputTexture->SRGB = BaseTex->SRGB;');
