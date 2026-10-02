@@ -211,6 +211,7 @@ static bool SetNodeProperty(FActionContext& Context)
                 if (Pin && Other && !Pin->LinkedTo.Contains(Other)) Pin->MakeLinkTo(Other);
             }
         }
+        Context.TargetGraph->NotifyGraphChanged();
         Context.SendError(
             FString::Printf(TEXT("The expression '%s' does not parse, so the node would have no output; it keeps '%s'. ")
                             TEXT("Write a negative number as 0 - x (there is no unary minus) and use only the math "
