@@ -819,3 +819,15 @@ describe('found adding the rider camera shake', () => {
       /UFactory \*Factory = CreateBlueprintFactory\(Context, ParentError\);\s*if \(!Factory\) \{[\s\S]{0,200}?TEXT\("CLASS_NOT_FOUND"\)\);\s*return true;\s*\}/u);
   });
 });
+
+describe('found checking the Fab bushes', () => {
+  // inspect_object objectKind mesh declares actorName, yet refused BG_Bush_3 as "a StaticMeshActor, not a static or
+  // skeletal mesh"; reading a placed prop's mesh took a second lookup for its path.
+  it('the mesh view follows a placed actor or component to the one mesh it draws, and names each when there are several', () => {
+    const source = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectObject.cpp');
+    expect(source).toContain('UObject *Mesh = McpMeshDrawnBy(TargetObject, Several);');
+    expect(source).toMatch(/if \(!Several\.IsEmpty\(\)\)\s*\{[\s\S]{0,300}?TEXT\("AMBIGUOUS_TARGET"\)\);\s*return true;\s*\}/u);
+    expect(source).toContain('Resp->SetStringField(TEXT("meshOf"), MeshOf);');
+    expect(source).toMatch(/#if ENGINE_MINOR_VERSION >= 1\s*EachMesh = Skeletal->GetSkeletalMeshAsset\(\);\s*#else\s*EachMesh = Skeletal->SkeletalMesh;\s*#endif/u);
+  });
+});

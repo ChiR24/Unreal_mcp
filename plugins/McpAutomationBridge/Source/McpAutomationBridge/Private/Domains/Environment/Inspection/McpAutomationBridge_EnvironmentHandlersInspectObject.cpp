@@ -1,5 +1,7 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture.h"
@@ -28,6 +30,51 @@ FString McpInspectWrongTypeReason(const FString &Action, const UObject *Object)
     }
     return FString();
 }
+
+// get_mesh_details declares actorName, yet answered every placed actor "is a StaticMeshActor, not a static or
+// skeletal mesh". A placed actor or mesh component now stands for the one mesh it draws; one drawing several
+// fills OutSeveral with each, so the caller can name the mesh it means by its path.
+UObject *McpMeshDrawnBy(UObject *Object, FString &OutSeveral)
+{
+    TInlineComponentArray<UActorComponent *> Components;
+    if (AActor *Actor = Cast<AActor>(Object))
+    {
+        Actor->GetComponents(Components);
+    }
+    else if (UActorComponent *Component = Cast<UActorComponent>(Object))
+    {
+        Components.Add(Component);
+    }
+    UObject *Mesh = nullptr;
+    TArray<FString> Drawn;
+    for (UActorComponent *Each : Components)
+    {
+        UObject *EachMesh = nullptr;
+        if (UStaticMeshComponent *Static = Cast<UStaticMeshComponent>(Each))
+        {
+            EachMesh = Static->GetStaticMesh();
+        }
+        else if (USkeletalMeshComponent *Skeletal = Cast<USkeletalMeshComponent>(Each))
+        {
+#if ENGINE_MINOR_VERSION >= 1
+            EachMesh = Skeletal->GetSkeletalMeshAsset();
+#else
+            EachMesh = Skeletal->SkeletalMesh;
+#endif
+        }
+        if (EachMesh)
+        {
+            Mesh = EachMesh;
+            Drawn.Add(FString::Printf(TEXT("%s: %s"), *Each->GetName(), *EachMesh->GetPathName()));
+        }
+    }
+    if (Drawn.Num() > 1)
+    {
+        OutSeveral = FString::Join(Drawn, TEXT(", "));
+        return Object;
+    }
+    return Mesh ? Mesh : Object;
+}
 } // namespace
 
 bool HandleInspectObjectAction(
@@ -55,6 +102,27 @@ bool HandleInspectObjectAction(
 
     FString Action;
     Payload->TryGetStringField(TEXT("action"), Action);
+    FString MeshOf;
+    if (Action.Equals(TEXT("get_mesh_details"), ESearchCase::IgnoreCase) &&
+        (TargetObject->IsA<AActor>() || TargetObject->IsA<UActorComponent>()))
+    {
+        FString Several;
+        UObject *Mesh = McpMeshDrawnBy(TargetObject, Several);
+        if (!Several.IsEmpty())
+        {
+            Bridge.SendAutomationError(RequestingSocket, RequestId,
+                FString::Printf(TEXT("%s draws several meshes (%s); inspect the one you mean by its path."),
+                                *ObjectPath, *Several),
+                TEXT("AMBIGUOUS_TARGET"));
+            return true;
+        }
+        if (Mesh != TargetObject)
+        {
+            MeshOf = ObjectPath;
+            TargetObject = Mesh;
+            ObjectPath = Mesh->GetPathName();
+        }
+    }
     const FString Wanted = McpInspectWrongTypeReason(Action, TargetObject);
     if (!Wanted.IsEmpty())
     {
@@ -73,6 +141,10 @@ bool HandleInspectObjectAction(
     Resp->SetStringField(TEXT("classPath"), TargetObject->GetClass()->GetPathName());
     Resp->SetStringField(TEXT("class"), TargetObject->GetClass()->GetName());
     Resp->SetBoolField(TEXT("isAsset"), TargetObject->IsAsset());
+    if (!MeshOf.IsEmpty())
+    {
+        Resp->SetStringField(TEXT("meshOf"), MeshOf);
+    }
 
     if (AActor *Actor = Cast<AActor>(TargetObject))
     {
