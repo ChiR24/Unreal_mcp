@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
-_Nothing yet._
+<details>
+<summary><b>🔧 Fixed</b></summary>
+
+- **A Widget Blueprint can be created by its `widgetPath`.** `edit_widget_blueprint` `create` refused a full asset path with "Missing required parameter: name"; `name` with `path`, or `widgetPath`, now names it.
+- **A widget tree fills a new Widget Blueprint.** `add_widget_tree` into a Widget Blueprint with no root seated the tree's root in the new canvas's default 100x30 slot at the top-left, clipping the layout; a root with no `slot` (and no `positionX/Y` or `sizeX/Y`) now fills the canvas.
+- **Wiring a second object into a Target pin is reported.** A function call's Target pin keeps every object wired into it and runs the call on each, so `connect_pins` onto one that was already wired kept the old target without a word; the reply (and a `build_graph` reply, per step) now warns and says how to replace it.
+
+</details>
 
 ---
 

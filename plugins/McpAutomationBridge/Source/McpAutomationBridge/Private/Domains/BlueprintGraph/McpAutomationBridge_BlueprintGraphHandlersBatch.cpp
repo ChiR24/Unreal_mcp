@@ -228,6 +228,24 @@ bool RunGraphBatch(FActionContext& Context, int32 MaxSteps, bool bCompile)
     Result->SetArrayField(TEXT("results"), Results);
     Result->SetObjectField(TEXT("nodeIds"), NodeIds);
     Result->SetNumberField(TEXT("succeeded"), Results.Num());
+    // A step's warning (a Target pin now holding two objects) sat in results[], where no receipt check looks.
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    for (const TSharedPtr<FJsonValue>& Value : Results)
+    {
+        const TArray<TSharedPtr<FJsonValue>>* StepWarnings = nullptr;
+        if (Value->AsObject()->TryGetArrayField(TEXT("warnings"), StepWarnings))
+        {
+            for (const TSharedPtr<FJsonValue>& Warning : *StepWarnings)
+            {
+                Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(TEXT("operations[%d]: %s"),
+                    static_cast<int32>(Value->AsObject()->GetNumberField(TEXT("index"))), *Warning->AsString())));
+            }
+        }
+    }
+    if (Warnings.Num() > 0)
+    {
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+    }
     // Every step ran, so the Blueprint changed. The compile below leaves it clean, which the reply funnel
     // reads as "unchanged", so the batch says it itself: the receipt then names and lists the Blueprint.
     Context.NameBlueprint(Result, /*bChanged=*/true);

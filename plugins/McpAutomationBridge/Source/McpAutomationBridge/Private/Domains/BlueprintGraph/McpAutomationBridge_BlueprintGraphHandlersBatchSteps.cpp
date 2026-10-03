@@ -122,7 +122,7 @@ void CopyStepFields(const FMcpCapturedResponse& Reply, const TSharedPtr<FJsonObj
     static const TCHAR* const Keep[] = {
         TEXT("nodeGuid"), TEXT("nodeName"), TEXT("connected"), TEXT("appliedValue"),
         TEXT("conversionInserted"), TEXT("conversionNodeId"), TEXT("placementWarning"), TEXT("resultNodeGuid"),
-        TEXT("replacedLinks")};
+        TEXT("replacedLinks"), TEXT("warnings")};
     for (const TCHAR* Key : Keep)
     {
         const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Key)

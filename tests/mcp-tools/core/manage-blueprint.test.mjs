@@ -511,6 +511,7 @@ const testCases = [
 
     // === CREATE ===
     { scenario: 'CREATE: create_widget_blueprint', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', name: `WBP_CreateWidget_${ts}`, path: TEST_FOLDER, parentClass: 'UserWidget' }, expected: 'success|already exists' },
+    { scenario: 'CREATE: create_widget_blueprint named by its widgetPath', toolName: 'manage_blueprint', arguments: { action: 'create_widget_blueprint', widgetPath: `${TEST_FOLDER}/WBP_ByPath_${ts}` }, expected: 'success|already exists' },
     { scenario: 'CONFIG: set_widget_parent_class', toolName: 'manage_blueprint', arguments: widgetArgs('set_widget_parent_class', { parentClass: 'UserWidget' }), expected: 'success' },
 
     // === ADD ===

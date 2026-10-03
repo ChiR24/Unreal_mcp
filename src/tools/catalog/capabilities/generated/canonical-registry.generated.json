@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "28be41e4be57ba03",
+  "catalogRevision": "c90782c40f372b87",
   "recordCount": 393,
   "records": [
     {
@@ -12882,7 +12882,7 @@
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). An unknown field is refused, not ignored; at most 200 widgets."
+              "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). A Widget Blueprint with no root yet gets a canvas, and a tree root with no slot (and no positionX/Y or sizeX/Y) fills it. An unknown field is refused, not ignored; at most 200 widgets."
             },
             "widgetKind": {
               "type": "string",
@@ -13191,8 +13191,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "8405257cfaf43a2ab77562b51273c7cf0aa3b1696e110b7c06dadc711dbc2882",
-        "content": "4b443419132b3b8d23f93497dce9a81ea89f6b4e22f254bc637c863458cdaaea"
+        "schema": "78d55f426b8a8e049d8d389e510e49641256f571e980e2e0881e330661dd1fa9",
+        "content": "d300c84fceb5b95c1660e4c1c83cccfe5a69b4b8a05ec985c80dd52b84d56054"
       }
     },
     {
@@ -16751,13 +16751,13 @@
               "type": "string",
               "description": "Destination /Game folder for a Widget Blueprint."
             },
+            "widgetPath": {
+              "type": "string",
+              "description": "Full asset path of the new Widget Blueprint (/Game/UI/WBP_Title), in place of name and path."
+            },
             "parentClass": {
               "type": "string",
               "description": "Parent class path for Blueprint creation (e.g. /Script/Engine.Actor)."
-            },
-            "widgetPath": {
-              "type": "string",
-              "description": "Canonical /Game Widget Blueprint asset path."
             },
             "slotName": {
               "type": "string",
@@ -16916,11 +16916,6 @@
               "create",
               "set_parent_class"
             ],
-            "widgetPath": [
-              "set_parent_class",
-              "rename_widget",
-              "reparent_widget"
-            ],
             "slotName": [
               "rename_widget",
               "reparent_widget"
@@ -16939,8 +16934,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3b3d25e99b48c495bc7ffb05bcefe4597f20cdee1d833c5dbf01b97fa2e21157",
-        "content": "afcfcd4f273675fcf9d4a20cc5310521d3f7f8011ac7b469e0c4d93ad3cc7504"
+        "schema": "5878abcf216bd80470da11ceb1b9a248c7575cdbd5b0a01fdfd59aa6e587d852",
+        "content": "739a33199bbb9651629cf53df858de6f161101bfad3c31dc60a1cca20bb0e702"
       }
     },
     {

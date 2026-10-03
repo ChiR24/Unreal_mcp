@@ -7,6 +7,7 @@
 #include "Blueprint/WidgetBlueprintGeneratedClass.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Misc/PackageName.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
@@ -33,9 +34,19 @@ bool HandleWidgetAuthoringCreation(
     if (SubAction.Equals(TEXT("create_widget_blueprint"), ESearchCase::IgnoreCase) ||
         SubAction.Equals(TEXT("create_widget"), ESearchCase::IgnoreCase))
     {
-        if (GetJsonStringField(Payload, TEXT("name")).IsEmpty())
+        // A full widgetPath names the asset by itself; it used to be refused with "Missing required parameter: name".
+        TSharedPtr<FJsonObject> CreatePayload = Payload;
+        const FString WidgetPathArg = GetJsonStringField(Payload, TEXT("widgetPath"));
+        if (GetJsonStringField(Payload, TEXT("name")).IsEmpty() && !WidgetPathArg.IsEmpty())
         {
-            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: name"), TEXT("MISSING_PARAMETER"));
+            const FString PackageName = FPackageName::ObjectPathToPackageName(WidgetPathArg);
+            CreatePayload = MakeShared<FJsonObject>(*Payload);
+            CreatePayload->SetStringField(TEXT("name"), FPackageName::GetShortName(PackageName));
+            CreatePayload->SetStringField(TEXT("path"), FPackageName::GetLongPackagePath(PackageName));
+        }
+        if (GetJsonStringField(CreatePayload, TEXT("name")).IsEmpty())
+        {
+            Subsystem.SendAutomationError(RequestingSocket, RequestId, TEXT("Missing required parameter: name (with path), or widgetPath"), TEXT("MISSING_PARAMETER"));
             return true;
         }
 
@@ -62,7 +73,7 @@ bool HandleWidgetAuthoringCreation(
             }
         }
 
-        UWidgetBlueprint* WidgetBlueprint = McpCreateTemplateWidgetBlueprint(Subsystem, RequestId, RequestingSocket, Payload, TEXT(""), ParentUClass);
+        UWidgetBlueprint* WidgetBlueprint = McpCreateTemplateWidgetBlueprint(Subsystem, RequestId, RequestingSocket, CreatePayload, TEXT(""), ParentUClass);
         if (!WidgetBlueprint)
         {
             return true;

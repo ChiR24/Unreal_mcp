@@ -150,9 +150,17 @@ bool McpAddSpecToWidget(UMcpAutomationBridgeSubsystem& Subsystem, const FString&
         return false;
     }
     const TSharedPtr<FJsonObject>* SlotSpec = nullptr;
+    const bool bPlaced = Payload.IsValid() && (Payload->HasField(TEXT("positionX")) || Payload->HasField(TEXT("positionY")) ||
+                                               Payload->HasField(TEXT("sizeX")) || Payload->HasField(TEXT("sizeY")));
     if (Spec->TryGetObjectField(TEXT("slot"), SlotSpec))
     {
         McpApplySpecSlot(Root, *SlotSpec);
+    }
+    else if (UCanvasPanelSlot* Fill = CreatedRoot && !bPlaced ? Cast<UCanvasPanelSlot>(Root->Slot) : nullptr)
+    {
+        // The layout is all the new canvas holds: the default 100x30 slot at the top-left clipped it.
+        Fill->SetAnchors(FAnchors(0.f, 0.f, 1.f, 1.f));
+        Fill->SetOffsets(FMargin(0.f));
     }
     ApplyCanvasSlotGeometry(Payload, Root);
     return true;
@@ -165,11 +173,8 @@ UWidgetBlueprint* McpCreateTemplateWidgetBlueprint(UMcpAutomationBridgeSubsystem
                                                    const TCHAR* DefaultName, UClass* ParentClass)
 {
     const FString Name = GetJsonStringField(Payload, TEXT("name"), DefaultName);
-    FString RawFolder = GetJsonStringField(Payload, TEXT("path"));
-    if (RawFolder.IsEmpty())
-    {
-        RawFolder = GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI"));
-    }
+    const FString PathArg = GetJsonStringField(Payload, TEXT("path"));
+    const FString RawFolder = PathArg.IsEmpty() ? GetJsonStringField(Payload, TEXT("folder"), TEXT("/Game/UI")) : PathArg;
     const FString Folder = SanitizeProjectRelativePath(RawFolder);
     FText NameProblem;
     if (Folder.IsEmpty() || Name.IsEmpty() || !FName(*Name).IsValidObjectName(NameProblem))
