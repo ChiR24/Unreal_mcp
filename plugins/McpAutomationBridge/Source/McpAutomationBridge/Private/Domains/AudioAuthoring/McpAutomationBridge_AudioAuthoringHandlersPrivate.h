@@ -106,6 +106,9 @@
 #if __has_include("MetasoundFrontendDocumentBuilder.h")
 #include "MetasoundFrontendDocumentBuilder.h"
 #include "MetasoundFrontendDocument.h"
+#if __has_include("MetasoundFrontendDocumentBuilderRegistry.h")
+#include "MetasoundFrontendDocumentBuilderRegistry.h"
+#endif
 #define MCP_HAS_METASOUND_FRONTEND 1
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5
 #define MCP_HAS_METASOUND_FRONTEND_V2 1
@@ -117,12 +120,16 @@
 #define MCP_HAS_METASOUND_FRONTEND_V2 0
 #endif
 
-// A document builder over a MetaSound; 5.5+ opens it for edits and needs FinishBuilding().
+// A document builder over a MetaSound: the one the engine already holds for it
+// (a play, a register or an open MetaSound editor made it), else the call's own,
+// which 5.5+ opens for edits and must FinishBuilding(). A second builder beside
+// the engine's logged "prior builder is still active" and left the engine's
+// cache stale, so the next register indexed past the edited arrays and crashed.
+#define MCP_METASOUND_BUILDER(Name, Document) TOptional<FMetaSoundFrontendDocumentBuilder> Name##Own; \
+	FMetaSoundFrontendDocumentBuilder& Name = McpAudioAuthoring::McpMetaSoundBuilder(Document, Name##Own)
 #if MCP_HAS_METASOUND_FRONTEND_V2
-#define MCP_METASOUND_BUILDER(Name, Document) FMetaSoundFrontendDocumentBuilder Name(Document, nullptr, true)
-#define MCP_METASOUND_FINISH(Name) Name.FinishBuilding()
+#define MCP_METASOUND_FINISH(Name) if (Name##Own.IsSet()) { Name.FinishBuilding(); }
 #else
-#define MCP_METASOUND_BUILDER(Name, Document) FMetaSoundFrontendDocumentBuilder Name(Document)
 #define MCP_METASOUND_FINISH(Name)
 #endif
 
@@ -143,6 +150,20 @@
 
 namespace McpAudioAuthoring
 {
+#if MCP_HAS_METASOUND_FRONTEND
+inline FMetaSoundFrontendDocumentBuilder& McpMetaSoundBuilder(const TScriptInterface<IMetaSoundDocumentInterface>& Document, TOptional<FMetaSoundFrontendDocumentBuilder>& Own)
+{
+#if MCP_HAS_METASOUND_FRONTEND_V2
+	if (Metasound::Frontend::IDocumentBuilderRegistry* Builders = Metasound::Frontend::IDocumentBuilderRegistry::Get())
+	{
+		if (FMetaSoundFrontendDocumentBuilder* Existing = Builders->FindBuilder(Document)) { return *Existing; }
+	}
+	return Own.Emplace(Document, nullptr, true);
+#else
+	return Own.Emplace(Document);
+#endif
+}
+#endif
 FString NormalizeAudioPath(const FString& Path, bool bForLoad = true);
 bool BuildAudioCreationPath(const FString& Directory, const FString& Name, FString& OutPackagePath, FString& OutError);
 bool SaveAudioAsset(UObject* Asset, bool bShouldSave);

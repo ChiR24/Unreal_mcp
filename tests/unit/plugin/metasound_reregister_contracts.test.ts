@@ -9,8 +9,9 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const DISPATCHER = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains',
-  'AudioAuthoring', 'McpAutomationBridge_AudioAuthoringHandlers.cpp');
+const AUDIO = join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Domains', 'AudioAuthoring');
+const DISPATCHER = join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlers.cpp');
+const PRIVATE_HEADER = join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlersPrivate.h');
 
 /** Block and line comments removed, so no assertion can be satisfied by prose. */
 const source = (): string =>
@@ -23,7 +24,27 @@ describe('a MetaSound graph edit reaches playback without an editor restart', ()
     // Only a MetaSound source: the editor's register check()s that the object is a MetaSound.
     expect(code).toContain('FindObject<UMetaSoundSource>(nullptr, *AssetPath)');
     expect(code).toContain('GEditor->GetEditorSubsystem<UMetaSoundEditorSubsystem>()');
-    expect(code).toMatch(/if \(MetaSound && MetaSoundEditor\) \{ MetaSoundEditor->RegisterGraphWithFrontend\(\*MetaSound\); \}/u);
+    expect(code).toContain('if (!MetaSound || !MetaSoundEditor) { return; }');
+  });
+
+  it('edits through the builder the engine already holds for the MetaSound, so its cache never goes stale', () => {
+    // The live crash: a second builder edited MS_PowerUp (a batch removed nodes) while the engine's builder
+    // cached the old layout; the register then indexed 9 into an array of 5. A later edit logged "prior builder
+    // is still active".
+    const header = readFileSync(PRIVATE_HEADER, 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+    expect(header).toMatch(/#define MCP_METASOUND_BUILDER\(Name, Document\) TOptional<FMetaSoundFrontendDocumentBuilder> Name##Own; \\\s*FMetaSoundFrontendDocumentBuilder& Name = McpAudioAuthoring::McpMetaSoundBuilder\(Document, Name##Own\)/u);
+    expect(header).toContain('if (FMetaSoundFrontendDocumentBuilder* Existing = Builders->FindBuilder(Document)) { return *Existing; }');
+    // Only a builder the call opened itself is finished; the engine's stays its own.
+    expect(header).toContain('#define MCP_METASOUND_FINISH(Name) if (Name##Own.IsSet()) { Name.FinishBuilding(); }');
+  });
+
+  it('on 5.4, which cannot find the engine\'s builder, drops its cache before registering', () => {
+    const code = source();
+    const invalidate = code.indexOf('Builders->InvalidateDocumentCache(');
+    expect(invalidate).toBeGreaterThan(-1);
+    expect(code.indexOf('MetaSoundEditor->RegisterGraphWithFrontend(*MetaSound);')).toBeGreaterThan(invalidate);
+    expect(code).toMatch(/#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 4\s*if \(Metasound::Frontend::IDocumentBuilderRegistry\* Builders/u);
+    expect(code).not.toContain('ReloadBuilder(');
   });
 
   it('runs after every graph edit handler, once per call (a batch registers once, not per step)', () => {
