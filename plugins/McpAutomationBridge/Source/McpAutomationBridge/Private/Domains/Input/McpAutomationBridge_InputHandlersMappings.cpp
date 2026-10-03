@@ -38,6 +38,17 @@ void AddInputMappingSummary(
     Result->SetArrayField(TEXT("mappings"), Mappings);
 }
 
+void SetInputChangedAsset(const TSharedPtr<FJsonObject>& Result, const UObject* Asset, bool bSaved)
+{
+    TArray<TSharedPtr<FJsonValue>> Changed;
+    if (Asset)
+    {
+        Changed.Add(MakeShared<FJsonValueString>(Asset->GetOutermost()->GetName()));
+        Result->SetBoolField(TEXT("saved"), bSaved);
+    }
+    Result->SetArrayField(TEXT("changedAssets"), Changed);
+}
+
 bool HandleAddInputMapping(
     UMcpAutomationBridgeSubsystem& Bridge,
     const FString& RequestId,
@@ -114,7 +125,7 @@ bool HandleAddInputMapping(
     {
         Mapping.Modifiers.Add(NewObject<UInputModifier>(Context, ModifierClass));
     }
-    SaveLoadedAssetThrottled(Context, true);
+    const bool bSaved = SaveLoadedAssetThrottled(Context, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
@@ -125,6 +136,7 @@ bool HandleAddInputMapping(
     Result->SetBoolField(TEXT("reusedExistingMapping"), bReusedExistingMapping);
     AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
     AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
+    SetInputChangedAsset(Result, Context, bSaved);
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
         SubAction == TEXT("map_input_action") ?
@@ -191,7 +203,9 @@ bool HandleRemoveInputMapping(
         Context->UnmapKey(InAction, KeyToRemove);
     }
 
-    SaveLoadedAssetThrottled(Context, true);
+    // An action with no mappings left to remove changes nothing, so nothing is saved or reported as changed.
+    const bool bChanged = KeysToRemove.Num() > 0;
+    const bool bSaved = bChanged && SaveLoadedAssetThrottled(Context, true);
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
@@ -211,6 +225,7 @@ bool HandleRemoveInputMapping(
     AddInputMappingSummary(Result, Context, InAction);
     AddAssetVerificationNested(Result, TEXT("contextVerification"), Context);
     AddAssetVerificationNested(Result, TEXT("actionVerification"), InAction);
+    SetInputChangedAsset(Result, bChanged ? Context : nullptr, bSaved);
 
     const FString SuccessMessage = bHasSpecificKey
         ? FString::Printf(TEXT("Mapping removed for action key: %s"), *KeyName)

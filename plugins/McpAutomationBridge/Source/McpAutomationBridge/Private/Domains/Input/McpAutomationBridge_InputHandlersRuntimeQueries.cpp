@@ -50,6 +50,8 @@ bool HandleEnableInputMapping(
     Result->SetStringField(TEXT("contextPath"), SanitizedContextPath);
     Result->SetNumberField(TEXT("priority"), Priority);
     McpHandlerUtils::AddVerification(Result, Context);
+    // Enabling touches the running game's local player, never the mapping context asset.
+    McpHandlerUtils::MarkNoAssetsChanged(Result);
 
     {
         UWorld* PlayWorld = GEditor->PlayWorld.Get();

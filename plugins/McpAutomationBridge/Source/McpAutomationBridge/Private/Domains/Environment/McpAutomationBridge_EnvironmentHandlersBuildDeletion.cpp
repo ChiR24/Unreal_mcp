@@ -71,6 +71,8 @@ void SetDeleteResult(
     const TArray<FString> &FailedTargets)
 {
     McpAddStringArrayField(Context.Resp, TEXT("deletedTargets"), DeletedTargets);
+    // The receipt's changes[] reads deleted, not deletedTargets.
+    McpAddStringArrayField(Context.Resp, TEXT("deleted"), DeletedTargets);
     McpAddStringArrayField(Context.Resp, TEXT("missingTargets"), MissingTargets);
     McpAddStringArrayField(Context.Resp, TEXT("ambiguousTargets"), AmbiguousTargets);
     McpAddStringArrayField(Context.Resp, TEXT("failedTargets"), FailedTargets);

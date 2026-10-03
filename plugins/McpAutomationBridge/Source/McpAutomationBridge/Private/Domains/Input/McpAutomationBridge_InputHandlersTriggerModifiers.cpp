@@ -67,11 +67,12 @@ bool HandleSetInputTrigger(
     // "Set" is idempotent: a trigger of this class already on the action is kept, not stacked again.
     const bool bAlreadyPresent = InAction->Triggers.ContainsByPredicate(
         [TriggerClass](const auto& Trigger) { return Trigger && Trigger->GetClass() == TriggerClass; });
+    bool bSaved = false;
     if (!bAlreadyPresent)
     {
         InAction->Modify();
         InAction->Triggers.Add(NewObject<UInputTrigger>(InAction, TriggerClass));
-        SaveLoadedAssetThrottled(InAction, true);
+        bSaved = SaveLoadedAssetThrottled(InAction, true);
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -81,6 +82,7 @@ bool HandleSetInputTrigger(
     Result->SetBoolField(TEXT("alreadyPresent"), bAlreadyPresent);
     Result->SetNumberField(TEXT("triggerCount"), InAction->Triggers.Num());
     McpHandlerUtils::AddVerification(Result, InAction);
+    SetInputChangedAsset(Result, bAlreadyPresent ? nullptr : InAction, bSaved);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
         bAlreadyPresent ? FString::Printf(TEXT("Trigger '%s' was already on the action; nothing added."), *TriggerType)
                         : FString::Printf(TEXT("Trigger '%s' configured on action."), *TriggerType), Result);
@@ -170,12 +172,13 @@ bool HandleSetInputModifier(
     auto& Modifiers = TargetMapping ? TargetMapping->Modifiers : InAction->Modifiers;
     const bool bAlreadyPresent = Modifiers.ContainsByPredicate(
         [ModifierClass](const auto& Modifier) { return Modifier && Modifier->GetClass() == ModifierClass; });
+    UObject* ModifiedAsset = TargetMapping ? static_cast<UObject*>(Context) : static_cast<UObject*>(InAction);
+    bool bSaved = false;
     if (!bAlreadyPresent)
     {
-        UObject* ModifiedAsset = TargetMapping ? static_cast<UObject*>(Context) : static_cast<UObject*>(InAction);
         ModifiedAsset->Modify();
         Modifiers.Add(NewObject<UInputModifier>(ModifierOuter, ModifierClass));
-        SaveLoadedAssetThrottled(ModifiedAsset, true);
+        bSaved = SaveLoadedAssetThrottled(ModifiedAsset, true);
     }
 
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
@@ -197,6 +200,7 @@ bool HandleSetInputModifier(
     {
         McpHandlerUtils::AddVerification(Result, InAction);
     }
+    SetInputChangedAsset(Result, bAlreadyPresent ? nullptr : ModifiedAsset, bSaved);
 
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
         FString::Printf(TEXT("Modifier '%s' configured on action."), *ModifierType), Result);

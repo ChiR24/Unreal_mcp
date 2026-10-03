@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 
 #include "McpAutomationBridgeSubsystem.h"
+#include "Domains/Input/McpAutomationBridge_InputHandlersMappingSummaries.h"
 
 #include "AssetToolsModule.h"
 #include "EditorAssetLibrary.h"
@@ -54,11 +55,15 @@ bool SendExistingInputAssetResponse(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket,
     const FString& RequestId,
     UObject* ExistingAsset,
-    const TCHAR* Message)
+    const TCHAR* Message,
+    bool bChanged = false,
+    bool bSaved = false)
 {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), ExistingAsset->GetPathName());
     McpHandlerUtils::AddVerification(Result, ExistingAsset);
+    // Finding the asset changes nothing, unless the call upgraded the action's value type.
+    SetInputChangedAsset(Result, bChanged ? ExistingAsset : nullptr, bSaved);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);
     return true;
 }
@@ -77,10 +82,11 @@ bool SaveNewInputAssetResponse(
         return true;
     }
 
-    SaveLoadedAssetThrottled(NewAsset, true);
+    const bool bSaved = SaveLoadedAssetThrottled(NewAsset, true);
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("assetPath"), NewAsset->GetPathName());
     McpHandlerUtils::AddVerification(Result, NewAsset);
+    SetInputChangedAsset(Result, NewAsset, bSaved);
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true, Message, Result);
     return true;
 }
@@ -135,18 +141,21 @@ bool HandleCreateInputAction(
 
         // Existing asset: apply a newly supplied valueType so an action created
         // before this param existed can be upgraded in place.
-        if (!ValueType.IsEmpty())
+        const bool bUpgrade = !ValueType.IsEmpty() &&
+            ExistingAction->ValueType != static_cast<EInputActionValueType>(RequestedValueType);
+        bool bSaved = false;
+        if (bUpgrade)
         {
-            if (ExistingAction->ValueType != static_cast<EInputActionValueType>(RequestedValueType))
-            {
-                ExistingAction->Modify();
-                ExistingAction->ValueType = static_cast<EInputActionValueType>(RequestedValueType);
-                SaveLoadedAssetThrottled(ExistingAction, true);
-            }
+            ExistingAction->Modify();
+            ExistingAction->ValueType = static_cast<EInputActionValueType>(RequestedValueType);
+            bSaved = SaveLoadedAssetThrottled(ExistingAction, true);
         }
 
         return SendExistingInputAssetResponse(
-            Bridge, RequestingSocket, RequestId, ExistingAction, TEXT("Input Action already exists."));
+            Bridge, RequestingSocket, RequestId, ExistingAction,
+            bUpgrade ? TEXT("Input Action already existed; its value type was changed to the one requested.")
+                     : TEXT("Input Action already exists."),
+            bUpgrade, bSaved);
     }
 
     IAssetTools& AssetTools = FModuleManager::Get()

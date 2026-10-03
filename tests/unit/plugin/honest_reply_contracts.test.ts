@@ -741,3 +741,35 @@ describe('found building the stage-1 checkpoint', () => {
     expect(placement).toContain('!McpBlocksSolids(A) || !McpBlocksSolids(B)');
   });
 });
+
+describe('found wiring the pause key', () => {
+  // map_action saved IMC_Rider but its receipt listed no change: the context was named only inside nested
+  // verification objects, which changes[] never reads.
+  it('every Enhanced Input edit names the asset it saved in changedAssets', () => {
+    const mappings = code('Input', 'McpAutomationBridge_InputHandlersMappings.cpp');
+    expect(mappings).toContain('const bool bSaved = SaveLoadedAssetThrottled(Context, true);');
+    expect(mappings).toContain('SetInputChangedAsset(Result, Context, bSaved);');
+    expect(mappings).toContain('SetInputChangedAsset(Result, bChanged ? Context : nullptr, bSaved);');
+    expect(mappings).toMatch(/Changed\.Add\(MakeShared<FJsonValueString>\(Asset->GetOutermost\(\)->GetName\(\)\)\);[\s\S]{0,120}?Result->SetArrayField\(TEXT\("changedAssets"\), Changed\);/u);
+  });
+
+  it('a trigger or modifier already there, or an input asset that already exists, is reported as no change', () => {
+    const triggers = code('Input', 'McpAutomationBridge_InputHandlersTriggerModifiers.cpp');
+    expect(triggers).toContain('SetInputChangedAsset(Result, bAlreadyPresent ? nullptr : InAction, bSaved);');
+    expect(triggers).toContain('SetInputChangedAsset(Result, bAlreadyPresent ? nullptr : ModifiedAsset, bSaved);');
+    const creation = code('Input', 'McpAutomationBridge_InputHandlersCreation.cpp');
+    expect(creation).toContain('SetInputChangedAsset(Result, bChanged ? ExistingAsset : nullptr, bSaved);');
+    expect(creation).toContain('bUpgrade, bSaved);');
+    // Enabling a context changes the running game, not the asset.
+    expect(code('Input', 'McpAutomationBridge_InputHandlersRuntimeQueries.cpp')).toMatch(/AddVerification\(Result, Context\);\s*McpHandlerUtils::MarkNoAssetsChanged\(Result\);/u);
+  });
+
+  it('an asset delete and an environment delete name what they removed', () => {
+    // asset.delete of the throwaway IA_ZTmp answered deletedCount 1 with an empty changes[].
+    const mutation = code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowAssetMutation.cpp');
+    expect(mutation).toContain('DeletedPaths.Add(FPackageName::ObjectPathToPackageName(SafePath));');
+    expect(mutation).toContain('Resp->SetArrayField(TEXT("deleted"), DeletedArray);');
+    expect(code('Environment', 'McpAutomationBridge_EnvironmentHandlersBuildDeletion.cpp'))
+      .toContain('McpAddStringArrayField(Context.Resp, TEXT("deleted"), DeletedTargets);');
+  });
+});
