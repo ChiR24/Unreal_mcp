@@ -60,16 +60,25 @@ bool HandleWidgetAuthoringManipulation(
         // orphan that ensured "was deleted but still has a GUID" on every
         // later load. Detach, drop the GUIDs, then move the widget out to the
         // transient package so the recompile below cannot see it at all.
+        // Every widget is outered to the WidgetTree, not to its parent panel, so the whole
+        // subtree moves out: moving only the removed widget left its descendants holding their
+        // names, and an add of those names afterwards was refused "Name is already in use."
+        TArray<UWidget*> Removed{TargetWidget};
+        UWidgetTree::GetChildWidgets(TargetWidget, Removed);
         if (!WidgetBP->WidgetTree->RemoveWidget(TargetWidget))
         {
             Subsystem.SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Widget '%s' could not be detached from its parent"), *SlotName), TEXT("REMOVE_FAILED"));
             return true;
         }
         WidgetAuthoringHelpers::UnregisterWidgetAndChildren(WidgetBP, TargetWidget);
-        TargetWidget->Rename(nullptr, GetTransientPackage(),
-                             REN_DontCreateRedirectors | REN_DoNotDirty);
-        TargetWidget->MarkAsGarbage();
+        for (UWidget* Widget : Removed)
+        {
+            Widget->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_DoNotDirty);
+            Widget->MarkAsGarbage();
+        }
         WidgetAuthoringHelpers::MarkWidgetBlueprintModifiedAndSave(WidgetBP);
+        // The class still carried the removed widgets' variables, which kept their names taken too.
+        WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);
 
         ResultJson->SetBoolField(TEXT("success"), true);
         ResultJson->SetStringField(TEXT("widgetPath"), WidgetPath);

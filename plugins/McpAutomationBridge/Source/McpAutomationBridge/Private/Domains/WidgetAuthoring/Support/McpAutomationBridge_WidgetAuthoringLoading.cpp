@@ -121,7 +121,23 @@ FString WidgetBlueprintPackagePath(const UWidgetBlueprint* WidgetBP)
 
 bool RefreshWidgetBlueprintClass(UWidgetBlueprint* WidgetBP)
 {
-    return WidgetBP && !(GEditor && GEditor->PlayWorld) && McpSafeCompileBlueprint(WidgetBP);
+    if (!WidgetBP || (GEditor && GEditor->PlayWorld))
+    {
+        return false;
+    }
+    const bool bCompiled = McpSafeCompileBlueprint(WidgetBP);
+    // The engine only relinks the Blueprints that read this one's widgets, mapping each old property to a new one
+    // by name, so removing a widget left their compiled code pointing at nothing - and a widget of that name added
+    // back did not repair it: a game mode focusing the rebuilt PlayButton failed every play with "Attempted to
+    // access missing property" while it still read up to date. Compiled in full, each finds the widget by name again
+    // (or reports that it is gone).
+    TArray<UBlueprint*> Dependents;
+    FBlueprintEditorUtils::GetDependentBlueprints(WidgetBP, Dependents);
+    for (UBlueprint* Dependent : Dependents)
+    {
+        McpSafeCompileBlueprint(Dependent);
+    }
+    return bCompiled;
 }
 
 bool MarkWidgetBlueprintModifiedAndSave(UWidgetBlueprint* WidgetBP)

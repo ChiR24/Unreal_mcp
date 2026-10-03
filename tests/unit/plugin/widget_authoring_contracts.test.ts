@@ -89,7 +89,7 @@ describe('set_style and set_clipping name the widget they saved into', () => {
 describe('a tree edit that adds or renames a variable widget leaves the generated class current', () => {
   it('RefreshWidgetBlueprintClass compiles, but never while Play-In-Editor runs', () => {
     expect(read('Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp')).toMatch(
-      /bool RefreshWidgetBlueprintClass\(UWidgetBlueprint\* WidgetBP\)\s*\{\s*return WidgetBP && !\(GEditor && GEditor->PlayWorld\) && McpSafeCompileBlueprint\(WidgetBP\);/u
+      /bool RefreshWidgetBlueprintClass\(UWidgetBlueprint\* WidgetBP\)\s*\{\s*if \(!WidgetBP \|\| \(GEditor && GEditor->PlayWorld\)\)\s*\{\s*return false;\s*\}\s*const bool bCompiled = McpSafeCompileBlueprint\(WidgetBP\);/u
     );
   });
 
@@ -106,13 +106,14 @@ describe('a tree edit that adds or renames a variable widget leaves the generate
     expect(refresh).toBeGreaterThan(source.indexOf(after));
   });
 
-  it('rename_widget refreshes it inside its own block, not remove_widget\'s', () => {
+  it('rename_widget and remove_widget each refresh it inside their own block', () => {
     const source = read('Support', 'McpAutomationBridge_WidgetAuthoringManipulation.cpp');
     const rename = source.slice(source.indexOf('"rename_widget"'), source.indexOf('"reparent_widget"'));
     const remove = source.slice(source.indexOf('"remove_widget"'), source.indexOf('"rename_widget"'));
 
     expect(rename).toContain('WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);');
-    expect(remove).not.toContain('RefreshWidgetBlueprintClass');
+    // A removed widget's variable left on the class kept its name taken for the next add.
+    expect(remove).toContain('WidgetAuthoringHelpers::RefreshWidgetBlueprintClass(WidgetBP);');
   });
 });
 

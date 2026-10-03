@@ -859,3 +859,29 @@ describe('found giving the Bug its patrol and chase', () => {
     expect(source).toContain('if (InstancesUpdated >= 0.0) Data->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);');
   });
 });
+
+describe('found rebuilding the stage-1 HUD', () => {
+  // remove_widget RootCanvas moved only the canvas out of the WidgetTree: its descendants kept their names (and the
+  // class kept their variables), so adding the same names back was refused with a bare "Name is already in use."
+  it('removing a widget takes its whole subtree out of the tree and refreshes the class', () => {
+    const source = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringManipulation.cpp');
+    expect(source).toMatch(/TArray<UWidget\*> Removed\{TargetWidget\};\s*UWidgetTree::GetChildWidgets\(TargetWidget, Removed\);/u);
+    expect(source).toMatch(/for \(UWidget\* Widget : Removed\)\s*\{\s*Widget->Rename\(nullptr, GetTransientPackage\(\), REN_DontCreateRedirectors \| REN_DoNotDirty\);\s*Widget->MarkAsGarbage\(\);\s*\}/u);
+    expect(source).toMatch(/MarkWidgetBlueprintModifiedAndSave\(WidgetBP\);\s*WidgetAuthoringHelpers::RefreshWidgetBlueprintClass\(WidgetBP\);\s*ResultJson->SetBoolField\(TEXT\("success"\), true\);\s*ResultJson->SetStringField\(TEXT\("widgetPath"\), WidgetPath\);\s*ResultJson->SetStringField\(TEXT\("removedWidget"\)/u);
+  });
+
+  it('a name the Blueprint refuses for a new widget is named in the refusal', () => {
+    const source = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringValidation.cpp');
+    expect(source).toMatch(/FString::Printf\(TEXT\("'%s': %s"\), \*Name\.ToString\(\), \*INameValidatorInterface::GetErrorString\(Name\.ToString\(\), Result\)\);/u);
+  });
+});
+
+describe('found rebuilding the title menu', () => {
+  // After remove_widget MenuStack and a tree re-adding PlayButton, BP_RiderGameMode (Set Input Mode UI Only focusing
+  // the title's PlayButton) failed every play with "Attempted to access missing property 'none'" while it read up to
+  // date: the engine only relinks a dependent by name, and the removal left it pointing at nothing.
+  it('a widget class refresh compiles every Blueprint that depends on it in full', () => {
+    const source = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp');
+    expect(source).toMatch(/const bool bCompiled = McpSafeCompileBlueprint\(WidgetBP\);\s*TArray<UBlueprint\*> Dependents;\s*FBlueprintEditorUtils::GetDependentBlueprints\(WidgetBP, Dependents\);\s*for \(UBlueprint\* Dependent : Dependents\)\s*\{\s*McpSafeCompileBlueprint\(Dependent\);\s*\}\s*return bCompiled;/u);
+  });
+});

@@ -76,8 +76,10 @@ FString McpWidgetNameConflict(UWidgetBlueprint* WidgetBP, const FName Name, cons
     {
         return FString();
     }
+    // The validator's own text ("Name is already in use.") does not say which name it refused.
     const EValidatorResult Result = FKismetNameValidator(WidgetBP).IsValid(Name);
-    return Result == EValidatorResult::Ok ? FString() : INameValidatorInterface::GetErrorString(Name.ToString(), Result);
+    return Result == EValidatorResult::Ok ? FString()
+        : FString::Printf(TEXT("'%s': %s"), *Name.ToString(), *INameValidatorInterface::GetErrorString(Name.ToString(), Result));
 }
 
 FString McpFreeWidgetName(UWidgetBlueprint* WidgetBP, const FName Name, const UClass* WidgetClass)
