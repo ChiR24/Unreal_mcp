@@ -27,7 +27,7 @@ const TArray<FString>& WidgetTreeNodeKeys()
         TEXT("maxHeight"), TEXT("options"), TEXT("selected"), TEXT("foreground"), TEXT("slotPadding"),
         TEXT("minSlotSize"), TEXT("texture"), TEXT("typeface"), TEXT("fontFamily"), TEXT("letterSpacing"),
         TEXT("copyStyleFrom"), TEXT("outline"), TEXT("outlineColor"), TEXT("outlineWidth"), TEXT("shadowOffset"),
-        TEXT("shadowColor")};
+        TEXT("shadowColor"), TEXT("material")};
     return Keys;
 }
 
@@ -84,6 +84,16 @@ FString McpValidateWidgetTreeSpec(const TSharedPtr<FJsonObject>& Node, const FSt
     if (!Texture.IsEmpty() && !McpLoadSpecTexture(Texture))
     {
         return FString::Printf(TEXT("%s texture '%s' does not load as a Texture2D"), *Where, *Texture);
+    }
+    const FString Material = GetJsonStringField(Node, TEXT("material"));
+    const FString Type = GetJsonStringField(Node, TEXT("type"));
+    if (!Material.IsEmpty() && Type != TEXT("Image") && Type != TEXT("Border"))
+    {
+        return FString::Printf(TEXT("%s material is the brush of an Image or a Border, not of a %s"), *Where, *Type);
+    }
+    if (!Material.IsEmpty() && !McpLoadSpecMaterial(Material))
+    {
+        return FString::Printf(TEXT("%s material '%s' does not load as a material or material instance"), *Where, *Material);
     }
     const TArray<TSharedPtr<FJsonValue>>* Children = nullptr;
     if (!Node->TryGetArrayField(TEXT("children"), Children))

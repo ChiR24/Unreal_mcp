@@ -952,6 +952,19 @@ describe('found restyling the stage-1 HUD', () => {
     expect(source).toMatch(/if \(SourceOutputIndex == INDEX_NONE && Outputs\.Num\(\) > 0 && ParseChannelMask\(SourcePin, Channels\)\)/u);
   });
 
+  // The HUD panels are drawn by a UI material, and add_widget_tree took a texture but no material, so every
+  // panel needed a second call to set its brush by reflection.
+  it('a widget tree node takes a material as an Image or Border brush', () => {
+    const tree = code('WidgetAuthoring', 'Templates', 'McpAutomationBridge_WidgetAuthoringTreeBuild.cpp');
+    expect(tree).toContain('TEXT("shadowColor"), TEXT("material")};');
+    expect(tree).toMatch(/if \(!Material\.IsEmpty\(\) && Type != TEXT\("Image"\) && Type != TEXT\("Border"\)\)/u);
+    expect(tree).toContain('if (!Material.IsEmpty() && !McpLoadSpecMaterial(Material))');
+    const props = code('WidgetAuthoring', 'Templates', 'McpAutomationBridge_WidgetAuthoringSpecProps.cpp');
+    expect(props).toMatch(/Brush\.SetResourceObject\(Material\);\s*Brush\.DrawAs = ESlateBrushDrawType::Image;/u);
+    expect(props).toContain('if (UBorder* Border = Cast<UBorder>(Widget)) { Border->SetBrush(Brush); Border->SetBrushColor(FLinearColor::White); }');
+    expect(props).toContain('if (UImage* MaterialImage = Cast<UImage>(Widget)) { MaterialImage->SetBrush(Brush); }');
+  });
+
   // create_material with materialDomain "UserInterface" (the Details panel says "User Interface") was refused,
   // and the refused call had already made the material, so the retry with "UI" hit "already exists".
   it('create_material checks its enum settings before it makes anything, and takes the Details panel labels', () => {
@@ -965,5 +978,19 @@ describe('found restyling the stage-1 HUD', () => {
     const parse = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringEnumParsing.cpp');
     expect(parse).toContain('Enum->GetDisplayNameTextByIndex(Index).ToString().Replace(TEXT(" "), TEXT(""))');
     expect(parse).toContain('Wanted.Equals(Label, ESearchCase::IgnoreCase)');
+  });
+
+  // Each screen's entrance animation took one call per key (thirty for the title alone).
+  it('add_animation_keyframe writes a keys batch, checking every key before writing any', () => {
+    const handler = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationKeyframe.cpp');
+    expect(handler).toContain('Payload->TryGetArrayField(TEXT("keys"), KeyList)');
+    expect(handler).toContain('Merged->RemoveField(TEXT("keys"));');
+    expect(handler).toContain('FString(Pair.Key.Len(), *Pair.Key)');
+    const checked = handler.indexOf(': KeyRefusal(Keys[Index]);');
+    expect(checked).toBeGreaterThan(-1);
+    expect(checked).toBeLessThan(handler.indexOf('McpAuthorWidgetAnimationKey('));
+    expect(handler).toContain('ResultJson->SetNumberField(TEXT("keysAdded"), Keys.Num());');
+    const keys = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringAnimationKeys.h');
+    expect(keys).toContain('FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value);');
   });
 });

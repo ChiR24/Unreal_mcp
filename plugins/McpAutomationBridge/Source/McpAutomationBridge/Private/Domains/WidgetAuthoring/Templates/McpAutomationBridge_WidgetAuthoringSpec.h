@@ -5,6 +5,7 @@
 
 class FMcpBridgeWebSocket;
 class UMcpAutomationBridgeSubsystem;
+class UMaterialInterface;
 class UTexture2D;
 class UWidget;
 class UWidgetAnimation;
@@ -19,7 +20,8 @@ class UWidgetBlueprint;
 //           percent, visibility, opacity, padding (number or [l,t,r,b]), radius,
 //           imageSize [w,h], value, checked, width, height, maxHeight, options [strings],
 //           selected, foreground [r,g,b,a] (combo text), slotPadding and minSlotSize [w,h] (grids),
-//           texture; text blocks also typeface, fontFamily, letterSpacing, copyStyleFrom,
+//           texture, material (an Image's or Border's brush: a UI material or instance draws
+//           the whole widget); text blocks also typeface, fontFamily, letterSpacing, copyStyleFrom,
 //           outline + outlineColor (glyph outline), shadowOffset [x,y] + shadowColor; a rounded
 //           brush (radius) also outlineColor + outlineWidth.
 // slot:     canvas: anchors [4], alignment [2], position [2], size [2], offsets [4],
@@ -84,6 +86,9 @@ FString McpFinishHudElement(UWidgetBlueprint* WidgetBP, const FString& Action, c
 
 // A texture a spec's "texture" prop may name; null when the path is empty or does not load.
 UTexture2D* McpLoadSpecTexture(const FString& TexturePath);
+
+// A material or instance a spec's "material" prop may name; null when the path is empty or does not load.
+UMaterialInterface* McpLoadSpecMaterial(const FString& MaterialPath);
 
 // Adds (or replaces the keys of) a RenderOpacity animation on Target: Keys are {time, opacity}.
 // Returns the animation, or null when the name is taken by something else or a key could not be

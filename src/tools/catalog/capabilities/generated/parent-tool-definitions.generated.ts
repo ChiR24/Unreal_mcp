@@ -12055,6 +12055,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Key shown in the interaction prompt badge, such as E."
         },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Many keyframes in one call, in place of time: each {time, propertyValue or value, and any of slotName, trackType, interpolation that differ from the call's own}. Every key is checked before any is written: a refused one is named by its index (keys[3]) and nothing is added. The Widget Blueprint is saved once."
+        },
         "kind": {
           "type": "string",
           "enum": [
@@ -12656,7 +12668,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
-          "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). A Widget Blueprint with no root yet gets a canvas, and a tree root with no slot (and no positionX/Y or sizeX/Y) fills it. An unknown field is refused, not ignored; at most 200 widgets."
+          "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), material (an Image's or Border's brush: a UI material or instance that draws the whole widget, such as a rounded panel with its rim and gradient), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). A Widget Blueprint with no root yet gets a canvas, and a tree root with no slot (and no positionX/Y or sizeX/Y) fills it. An unknown field is refused, not ignored; at most 200 widgets."
         },
         "typeface": {
           "type": "string",
@@ -13222,6 +13234,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "keyCount": {
           "type": "number",
           "description": "Keys on the last channel written after this call."
+        },
+        "keysAdded": {
+          "type": "number",
+          "description": "With keys: how many keyframes were added; the other fields describe the last one."
         },
         "layout": {
           "type": "object",

@@ -39,6 +39,7 @@ FGuid FindOrCreateBinding(UMovieScene* MovieScene, UWidgetAnimation* Animation, 
     bOutCreated = true;
     return Guid;
 }
+} // namespace
 
 TSharedPtr<FJsonValue> ReadValueField(const TSharedPtr<FJsonObject>& Payload)
 {
@@ -103,7 +104,6 @@ FString KeyValueError(const FString& Kind, const FString& TrackType, const TShar
                   : FString::Printf(TEXT("%s keys need an {x,y} pair in propertyValue (angle: a number; transform: "
                                          "{translation,scale,angle,shear})"), *TrackType);
 }
-} // namespace
 
 bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* Animation, UWidget* Target,
                                  const TSharedPtr<FJsonObject>& Payload, FMcpWidgetKeyResult& Out,

@@ -15,6 +15,7 @@
 #include "Domains/WidgetAuthoring/Styling/McpAutomationBridge_WidgetAuthoringStyleColor.h"
 #include "Engine/Texture2D.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Materials/MaterialInterface.h"
 
 // The widget-level props of a widget spec node (see ...Spec.h); the tree walk and slots
 // live in ...Spec.cpp and ...SpecPlacement.cpp.
@@ -182,6 +183,16 @@ FString McpApplySpecWidgetProps(UWidget* Widget, const TSharedPtr<FJsonObject>& 
     if (!Visibility.IsEmpty()) { Widget->SetVisibility(GetVisibility(Visibility)); }
     ApplyPanelProps(Widget, Node);
     ApplyInputProps(Widget, Node);
+    // A UI material draws the whole widget (its shape, rim and gradient), so it takes a plain image
+    // brush in place of any rounded box; callers validated the path (McpLoadSpecMaterial).
+    if (UMaterialInterface* Material = McpLoadSpecMaterial(GetJsonStringField(Node, TEXT("material"))))
+    {
+        FSlateBrush Brush;
+        Brush.SetResourceObject(Material);
+        Brush.DrawAs = ESlateBrushDrawType::Image;
+        if (UBorder* Border = Cast<UBorder>(Widget)) { Border->SetBrush(Brush); Border->SetBrushColor(FLinearColor::White); }
+        if (UImage* MaterialImage = Cast<UImage>(Widget)) { MaterialImage->SetBrush(Brush); }
+    }
     UImage* Image = Cast<UImage>(Widget);
     FVector2D ImageSize;
     if (Image && PropPair(Node, TEXT("imageSize"), ImageSize))

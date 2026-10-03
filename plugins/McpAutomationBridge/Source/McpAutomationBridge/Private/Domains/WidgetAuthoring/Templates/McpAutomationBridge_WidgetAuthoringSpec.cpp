@@ -6,6 +6,7 @@
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringValidation.h"
 #include "Engine/Texture2D.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
+#include "Materials/MaterialInterface.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
 #include "UObject/Package.h"
@@ -99,6 +100,12 @@ UTexture2D* McpLoadSpecTexture(const FString& TexturePath)
 {
     return TexturePath.IsEmpty() ? nullptr
         : Cast<UTexture2D>(StaticLoadObject(UTexture2D::StaticClass(), nullptr, *TexturePath));
+}
+
+UMaterialInterface* McpLoadSpecMaterial(const FString& MaterialPath)
+{
+    return MaterialPath.IsEmpty() ? nullptr
+        : Cast<UMaterialInterface>(StaticLoadObject(UMaterialInterface::StaticClass(), nullptr, *MaterialPath));
 }
 
 TSharedPtr<FJsonObject> McpParseWidgetSpec(const TCHAR* Json)

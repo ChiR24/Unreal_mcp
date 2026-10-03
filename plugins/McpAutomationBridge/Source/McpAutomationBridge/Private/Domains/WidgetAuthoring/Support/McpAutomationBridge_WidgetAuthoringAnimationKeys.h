@@ -35,6 +35,13 @@ bool McpAuthorWidgetAnimationKey(UWidgetBlueprint* WidgetBP, UWidgetAnimation* A
 // translation, scale, angle, shear, transform), with an empty section ready for keys.
 bool McpAddWidgetAnimationTrack(UWidgetAnimation* Animation, UWidget* Target, const FString& TrackType,
                                 FMcpWidgetKeyResult& Out, FString& OutError);
+
+// A key's value: propertyValue, value or keyValue, whichever it carries.
+TSharedPtr<FJsonValue> ReadValueField(const TSharedPtr<FJsonObject>& Payload);
+
+// Why McpAuthorWidgetAnimationKey would refuse a key of this kind (the trackType lowercased) and
+// value, or empty when it can write it; nothing is touched.
+FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value);
 }
 
 namespace WidgetAuthoringHandlers

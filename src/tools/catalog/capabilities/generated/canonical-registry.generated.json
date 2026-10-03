@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "41dab4016bd44ca8",
+  "catalogRevision": "a2b3c5feb2125d36",
   "recordCount": 394,
   "records": [
     {
@@ -12932,7 +12932,7 @@
               "type": "object",
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true,
-              "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). A Widget Blueprint with no root yet gets a canvas, and a tree root with no slot (and no positionX/Y or sizeX/Y) fills it. An unknown field is refused, not ignored; at most 200 widgets."
+              "description": "The layout as one nested node {type, name, children[], slot{}, ...props}. type: a UMG class short name (CanvasPanel, Overlay, VerticalBox, HorizontalBox, Border, SizeBox, ScaleBox, UniformGridPanel, Spacer, TextBlock, RichTextBlock, Image, ProgressBar, Button). name: the widget name, unique in the Widget Blueprint (each becomes a variable a graph can read). Props: text, fontSize, color [r,g,b,a] (text colour, border brush, image tint, bar fill), justify left|center|right, autoWrap, opacity, visibility, padding (number or [l,t,r,b]: a border's inner padding), radius (rounded border, image or button) with outlineColor and outlineWidth, imageSize [w,h], texture (an image's texture path), material (an Image's or Border's brush: a UI material or instance that draws the whole widget, such as a rounded panel with its rim and gradient), percent (progress bar), width, height, maxHeight (size box). Text blocks also take typeface (Bold, Regular, Light, Italic), fontFamily, letterSpacing, outline with outlineColor, and shadowOffset [x,y] with shadowColor. slot places the node in its parent: in a canvas anchors [minX,minY,maxX,maxY], alignment [x,y], position [x,y], size [w,h], autoSize, z; in a box padding, hAlign (left|center|right|fill), vAlign (top|center|bottom|fill) and fill (a share of the free space). A Widget Blueprint with no root yet gets a canvas, and a tree root with no slot (and no positionX/Y or sizeX/Y) fills it. An unknown field is refused, not ignored; at most 200 widgets."
             },
             "widgetKind": {
               "type": "string",
@@ -13241,8 +13241,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "78d55f426b8a8e049d8d389e510e49641256f571e980e2e0881e330661dd1fa9",
-        "content": "d300c84fceb5b95c1660e4c1c83cccfe5a69b4b8a05ec985c80dd52b84d56054"
+        "schema": "6db4ddc68b19035e216f87c5da984ea3faa9c20dc2b8844c898f0b3387963e62",
+        "content": "a55b4270d4700dfc6998ddbef80a0f5496b562acddfa99d586d0c569cba30534"
       }
     },
     {
@@ -16451,7 +16451,8 @@
         "whenToUse": [
           "edit=create: A new UMG widget animation must be created for property keyframing.",
           "edit=add_track: A property track must be added to a widget animation for keyframing.",
-          "edit=add_keyframe: A property value must be keyframed at a specific time in a widget animation."
+          "edit=add_keyframe: A property value must be keyframed at a specific time in a widget animation.",
+          "edit=add_keyframe: A whole widget animation (a logo popping in, a menu sliding up, a pulse) must be keyed in one call (keys)."
         ],
         "whenNotToUse": [
           "edit=create: A Blueprint graph animation is needed (use animation_physics).",
@@ -16518,6 +16519,18 @@
             "value": {
               "type": "number",
               "description": "A plain number for an opacity or angle key, in place of propertyValue."
+            },
+            "keys": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Many keyframes in one call, in place of time: each {time, propertyValue or value, and any of slotName, trackType, interpolation that differ from the call's own}. Every key is checked before any is written: a refused one is named by its index (keys[3]) and nothing is added. The Widget Blueprint is saved once."
             },
             "edit": {
               "type": "string",
@@ -16597,6 +16610,10 @@
             "saved": {
               "type": "boolean",
               "description": "Whether the Widget Blueprint was saved."
+            },
+            "keysAdded": {
+              "type": "number",
+              "description": "With keys: how many keyframes were added; the other fields describe the last one."
             },
             "time": {
               "type": "number",
@@ -16693,14 +16710,17 @@
             ],
             "value": [
               "add_keyframe"
+            ],
+            "keys": [
+              "add_keyframe"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "08e559dd30be22e0c4b263ced1391950bd64107b28ffd2df484106b88e3f3154",
-        "content": "23bdc34359079352f1db6cb1a22c73cb0e4a99bcd019bd70e17143d7f173f872"
+        "schema": "14264c3adc18880c0bfbdf5b76849cd75d98896ea9825d1eebed5bddebfea201",
+        "content": "72b5aacd45712da209469b78ebeb9def6c796fa4d2fcba2ce97619849909adcd"
       }
     },
     {
