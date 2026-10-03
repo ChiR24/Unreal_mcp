@@ -1,13 +1,47 @@
 # Roadmap for Unreal Engine MCP Server
 
-This roadmap outlines the comprehensive development plan for expanding the Unreal Engine Model Context Protocol (MCP) server into a **complete automation platform** capable of building full production projects (games, films, archviz, VR experiences, virtual production, etc.).
+## Choose the next deliverable
 
-**Target**: ~2,825 actions covering all Unreal Engine subsystems and major plugin integrations.
+Use the single [Roadmap board](https://github.com/users/ChiR24/projects/3/views/2) for execution order and current workflow. This document keeps the detailed feature scope; the [generated action reference](action-reference.generated.md) defines what is callable. Phase numbers identify areas, not a mandatory implementation sequence.
 
-**Current sync (2026-06-11)**: Phases 1-30 are implemented and tracked through the 23 **internal** canonical parent tools shared by the TypeScript and native surfaces. The public MCP surface on both transports is the single `unreal` gateway tool; the 23 parents are reachable only through `unreal.execute` (see [`gateway-client-guide.md`](gateway-client-guide.md)). Phase 31+ remains the planned expansion area, with a few seeded actions already available through existing canonical tools.
+**Recommended Ready queue — proposals, not assignments or deadlines:**
+
+| Order | Bounded deliverable | Acceptance focus |
+|-------|---------------------|------------------|
+| 1 | [Phase 33: reproducible validation baseline](#phase-33) | Record the commit, commands and exit codes; distinguish unit/static checks from plugin builds and live Unreal runs. |
+| 2 | [Phase 34: editor-toolset authorization](#phase-34) | Demonstrate scope, consent and path restrictions on both transports before expanding generic tool invocation. |
+| 3 | [Phase 37: Fab import reliability](#phase-37) | Verify persistence after restart, cancellation, partial failure, changed repeat-add options and relocation references. |
+| 4 | [Phase 32: packaging lifecycle](#phase-32) | Verify real outputs, status, cancellation and failed-process receipts on a small owned fixture. |
+
+[Phase 29](#phase-29) separately awaits its lighting/post-process live-acceptance record. Prioritize that validation rather than describing it as universally live-tested.
+
+### Workflow is not coverage
+
+- **Backlog:** unselected work, including phases that already have partial implementation.
+- **Ready:** a recommended slice has acceptance criteria and known prerequisites; nobody is presumed to have started it.
+- **In Progress:** an owner has actually accepted the work. Aim for no more than two active slices.
+- **Needs Validation:** a known acceptance gate remains unsatisfied.
+- **Done:** the documented phase scope is implemented, not certified across every supported engine version.
+
+The board's separate **Coverage** field records Implemented, Partial, Planned or Blocked. Finishing one slice does not make a still-partial phase Done: update its remaining scope and choose the next slice. Suggested priorities are recommendations; original estimates and historical notes are retained as history.
+
+### Evidence required for completion
+
+Attach the implementation commit, exact test commands/results, relevant engine/platform versions, observable output or state readback, failure-path results and cleanup. Record an unrun engine target as **not run**, not passed. Do not restore a capability that reports success without performing the operation. Suggested prerequisites on a card refer to the relevant API or fixture, not completion of an entire phase.
 
 ---
 
+This roadmap outlines the comprehensive development plan for expanding the Unreal Engine Model Context Protocol (MCP) server into a **complete automation platform** capable of building full production projects (games, films, archviz, VR experiences, virtual production, etc.).
+
+**Target**: ~2,825 actions covering all Unreal Engine subsystems and major plugin integrations. This is a **planning estimate of the intended surface, not the current measured count** — the callable count is the 1,501 `{tool, action}` pairs stated below.
+
+**Current sync (2026-10-03, 0.6.0-beta-c)**: 393 capability records keep 1,501 `{tool, action}` pairs callable. Both figures are reproducible from `src/tools/catalog/capabilities/generated/canonical-registry.generated.json`: the record count is the array length, and 1,501 is the size of the set of distinct `legacyIds` entries flattened as `tool + '.' + action` across all records — folded families dispatch several such pairs from one record. The phases marked Complete or Partial below are the documented catalog surface as of this sync; the Partial phases list what the catalog does **not** currently offer. All of it is tracked through the 23 **internal** canonical parent tools shared by the TypeScript and native surfaces. The public MCP surface on both transports is the single `unreal` gateway tool; the 23 parents are reachable only through `unreal.execute` (see [`gateway-client-guide.md`](gateway-client-guide.md)). Phase 31+ remains the planned expansion area, with a few seeded actions already available through existing canonical tools (Phases 31-35, 37 and 45); Phases 36, 38-44, 46, 47 and 48 have none.
+
+**What a checked box means here**: a ticked item means the action is **documented and backed by a capability record** in the current catalog. It is not a claim of universal live verification. `npm run test:unit` runs real TypeScript behaviour tests and mock-based tests alongside the source-contract gates, and `npm run test:params` audits declared parameters against the catalog and integration cases — none of that replaces running the integration suite (`npm test`) against a live Unreal editor. **Full platform and engine-version compatibility requires running the engine tests on each target**; the plugin declares support for UE 5.0-5.8 but most actions have only been exercised on a subset of those versions.
+
+---
+
+<a id="phase-01"></a>
 ## Phase 1: Architecture & Foundation (Completed)
 
 - [x] **Native C++ Bridge**: Replace Python-based bridge with native C++ WebSocket plugin.
@@ -16,6 +50,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Performance Optimization**: Pure TypeScript implementation for all math/JSON operations (WASM removed - FFI overhead made it 4-33x slower).
 - [x] **Offline Capabilities**: Implement file-based fallback for project settings (`DefaultEngine.ini`).
 
+<a id="phase-02"></a>
 ## Phase 2: Graph & Logic Automation (Completed)
 
 - [x] **Blueprint Graphs**: Add/remove nodes, pins, and properties (`manage_blueprint` graph actions).
@@ -24,6 +59,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Behavior Trees**: Edit AI behavior trees, tasks, and decorators (`manage_ai`).
 - [x] **Environment**: Unified environment builder (`build_environment`) for landscape, foliage, and proc-gen.
 
+<a id="phase-03"></a>
 ## Phase 3: Cinematic & Visual Automation (Completed)
 
 - [x] **Sequencer**: Full control over Level Sequences (create, play, tracks, keys, bindings).
@@ -31,6 +67,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Landscape**: Sculpting, painting layers, modifying heightmaps (`sculpt_landscape`, `paint_landscape_layer`).
 - [x] **Foliage**: Painting foliage instances and procedural spawning (`paint_foliage`).
 
+<a id="phase-04"></a>
 ## Phase 4: System & Developer Experience (Completed)
 
 - [x] **Pipeline Integration**: Direct UBT execution with output streaming.
@@ -38,6 +75,7 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Metrics Dashboard**: `ue://health` view backed by bridge/server metrics.
 - [x] **UE 5.7 Support**: Full compatibility with Unreal Engine 5.7 (Control Rig, Subobject Data); implemented and working.
 
+<a id="phase-05"></a>
 ## Infrastructure Improvements (Completed)
 
 - [x] **Native MCP Streaming Transport**: Optional native `/mcp` HTTP/SSE transport supports SSE sessions and streamed `tools/call` responses.
@@ -45,6 +83,8 @@ This roadmap outlines the comprehensive development plan for expanding the Unrea
 - [x] **Real-time Test/Log Streams**: Editor automation/log events stream through WebSocket notifications and native `/mcp` SSE notification streams.
 - [x] **Extensibility Framework**: Dynamic handler registration supports lower-snake-case C++ handlers and JSON-configured action aliases.
 - [x] **Remote Profiling**: Unreal Insights workflows cover trace status, capture, pause/resume, snapshot write/send, stop, and local trace metadata analysis.
+- [x] **Restart-proof native sessions**: `unreal-engine-mcp-server proxy` fronts the plugin's `/mcp` over stdio, answering `NOT_CONNECTED` while the editor is down and reconnecting by itself.
+- [x] **Discovery and version checks**: `server/discover` answers on both transports without a session, and a server and plugin from different releases name the mismatch and its fix.
 
 ## Context Reduction Initiative (Completed Workstream)
 
@@ -121,13 +161,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 6: Geometry & Mesh Creation (Complete)
+<a id="phase-06"></a>
+## Phase 6: Geometry & Mesh Creation (Partial)
 
 **Goal**: Enable AI to CREATE actual 3D geometry, not just place existing meshes.
 
 **Tool**: `manage_geometry`
 
-**Status**: All primitives, booleans, modeling operations, deformers, topology, mesh processing, mesh repair, UV operations, collision, LOD, and Nanite conversion implemented.
+**Status**: The ticked primitives, booleans, modeling operations, deformers, topology, mesh processing, UV operations, collision, LOD and Nanite items are documented and catalog-backed. This is not a live-tested claim for every engine version; see the meaning of a checked box at the top of this document.
 
 ### 6.1 Primitives
 - [x] `create_box`, `create_sphere`, `create_cylinder`, `create_cone`
@@ -146,11 +187,11 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `chamfer`
 - [x] `bridge`, `loft`, `sweep`
 - [x] `revolve`
-- [x] `mirror`, `symmetrize`
+- [x] `mirror`, ~~`symmetrize`~~
 - [x] `array_linear`, `array_radial`
 - [x] `duplicate_along_spline`
 - [x] `loop_cut`, `edge_split`
-- [x] `poke`, `triangulate`
+- [x] `poke`, ~~`triangulate`~~
 - [x] `quadrangulate`
 
 ### 6.4 Deformers
@@ -163,7 +204,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `displace_by_texture`
 
 ### 6.5 Mesh Processing
-- [x] `subdivide` (PN tessellation)
+- [x] `subdivide` (`scheme`: PN tessellation, `catmull_clark`, `loop`, `bilinear`)
 - [x] `simplify_mesh` (QEM decimation)
 - [x] `remesh_uniform`
 - [x] `weld_vertices`
@@ -177,7 +218,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `auto_uv` (XAtlas)
 - [x] `project_uv` (box, planar, cylindrical)
 - [x] `unwrap_uv`, `pack_uv_islands`
-- [x] `transform_uvs`, `scale_uvs`, `rotate_uvs`
+- [x] `transform_uvs`, ~~`scale_uvs`~~, ~~`rotate_uvs`~~
 
 ### 6.7 Collision Generation
 - [x] `generate_collision` (convex, box, sphere, capsule, decomposition)
@@ -192,18 +233,27 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 6.9 Mesh Query
 - [x] `get_mesh_info` (vertex/triangle count, UV/normal status)
+- [x] `raycast_mesh` (`inspect`): where rays meet a static mesh asset, with normal, material slot and decal rotation
+
+### 6.10 Modeling Additions (0.6)
+- [x] `create_sdf` (`create_primitive` `primitive: sdf`): smooth organic shapes, with mirror and repeat copies
+- [x] `append_polygons`: a polygon cage in one call
+- [x] `set_material_id`, and `region` to pick the triangles of the face operators
+- [x] `bake_vertex_colors`: occlusion, edge, cavity and height masks
+- [x] `morphology` (fillets through a voxel grid)
 
 > **Note**: Geometry Collection for destruction is in Phase 46.1 (Chaos Destruction).
 
 ---
 
-## Phase 7: Skeletal Mesh & Rigging (Complete)
+<a id="phase-07"></a>
+## Phase 7: Skeletal Mesh & Rigging (Partial)
 
 **Goal**: Enable creation and editing of animated characters with proper rigs.
 
 **Tool**: `animation_physics`
 
-**Status**: All 29 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked and struck-through ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 7.1 Skeleton Creation
 - [x] `get_skeleton_info`, `list_bones`, `list_sockets` (query operations)
@@ -215,7 +265,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `add_bone`, `remove_bone`, `set_bone_parent` (uses FReferenceSkeletonModifier)
 
 ### 7.2 Skin Weights
-- [x] `normalize_weights` (rebuilds mesh)
+- [ ] `normalize_weights` (rebuilds mesh)
 - [x] `prune_weights` (rebuilds mesh with threshold)
 - [x] `auto_skin_weights` (triggers mesh rebuild)
 - [x] `set_vertex_weights` (uses FSkinWeightProfileData)
@@ -241,13 +291,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
+<a id="phase-08"></a>
 ## Phase 8: Advanced Material Authoring (Complete)
 
 **Goal**: Full material creation and shader authoring capabilities.
 
 **Tool**: `manage_asset`
 
-**Status**: All 39 actions fully implemented in TypeScript and C++.
+**Status**: Every action listed in this phase is documented and catalog-backed. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 8.1 Material Creation
 - [x] `create_material` (surface, deferred_decal, light_function, post_process, UI, volume)
@@ -290,13 +341,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
+<a id="phase-09"></a>
 ## Phase 9: Texture Generation & Processing (Complete)
 
 **Goal**: Procedural texture creation and processing.
 
 **Tool**: `manage_asset`
 
-**Status**: All 21 actions fully implemented in TypeScript and C++.
+**Status**: Every action listed in this phase is documented and catalog-backed. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 9.1 Procedural Generation
 - [x] `create_noise_texture` (perlin, simplex, worley, voronoi)
@@ -304,6 +356,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `create_pattern_texture` (checker, grid, brick, tile, dots, stripes)
 - [x] `create_normal_from_height` (Sobel, Prewitt, Scharr algorithms)
 - [x] `create_ao_from_mesh`
+- [x] `create_text_texture` (`create_texture` `kind: text`): words in any Font asset and face, fitted to the texture
 
 ### 9.2 Texture Processing
 - [x] `resize_texture`
@@ -325,13 +378,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 10: Complete Animation System (Complete)
+<a id="phase-10"></a>
+## Phase 10: Complete Animation System (Partial)
 
 **Goal**: Full animation authoring from keyframes to state machines.
 
 **Tool**: `animation_physics`
 
-**Status**: All listed actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 10.1 Animation Sequences
 - [x] `create_animation_sequence`
@@ -383,7 +437,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 10.6 Retargeting
 - [x] `create_ik_rig`
-- [x] `add_ik_chain`
+- [ ] `add_ik_chain`
 - [x] `create_ik_retargeter`
 - [x] `set_retarget_chain_mapping`
 
@@ -392,6 +446,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
+<a id="phase-11"></a>
 ## Phase 11: Complete Audio System (Complete)
 
 **Goal**: Full audio authoring including MetaSounds.
@@ -438,13 +493,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 12: Complete Niagara VFX System (Complete)
+<a id="phase-12"></a>
+## Phase 12: Complete Niagara VFX System (Partial)
 
 **Goal**: Full Niagara system authoring.
 
 **Tool**: `manage_effect`
 
-**Status**: All listed actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 12.1 Systems & Emitters
 - [x] `create_niagara_system`
@@ -478,7 +534,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 12.4 Events & GPU
 - [x] `add_event_generator`, `add_event_receiver`
-- [x] `configure_event_payload`
+- [ ] `configure_event_payload`
 - [x] `enable_gpu_simulation`
 - [x] `add_simulation_stage`
 
@@ -488,7 +544,8 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 13: Gameplay Ability System (GAS) (Complete)
+<a id="phase-13"></a>
+## Phase 13: Gameplay Ability System (GAS) (Partial)
 
 **Goal**: Complete GAS implementation for abilities, effects, and attributes.
 
@@ -499,14 +556,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `configure_asc` (replication_mode, owner)
 - [x] `create_attribute_set`
 - [x] `add_attribute` (health, mana, stamina, damage, armor, etc.)
-- [x] `set_attribute_base_value`, `set_attribute_clamping`
+- [x] `set_attribute_base_value`, ~~`set_attribute_clamping`~~
 
 ### 13.2 Gameplay Abilities
 - [x] `create_gameplay_ability`
 - [x] `set_ability_tags`
 - [x] `set_ability_costs`, `set_ability_cooldown`
-- [x] `set_ability_targeting`
-- [x] `add_ability_task`
+- [ ] `set_ability_targeting`
+- [ ] `add_ability_task`
 - [x] `set_activation_policy`, `set_instancing_policy`
 
 ### 13.3 Gameplay Effects
@@ -521,9 +578,9 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 13.4 Gameplay Cues
 - [x] `create_gameplay_cue_notify` (static, actor)
-- [x] `configure_cue_trigger`
-- [x] `set_cue_effects` (particles, sounds, camera_shake)
-- [x] `add_tag_to_asset`
+- [ ] `configure_cue_trigger`
+- [ ] `set_cue_effects` (particles, sounds, camera_shake)
+- [ ] `add_tag_to_asset`
 
 ### 13.5 Utility
 - [x] `get_gas_info`
@@ -532,13 +589,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 14: Character & Movement System (Complete)
+<a id="phase-14"></a>
+## Phase 14: Character & Movement System (Partial)
 
 **Goal**: Complete character setup with advanced movement.
 
 **Tool**: `manage_character`
 
-**Status**: All 19 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 14.1 Character Creation
 - [x] `create_character_blueprint`
@@ -550,48 +608,49 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `configure_movement_speeds` (walk, run, sprint, crouch, swim, fly)
 - [x] `configure_jump` (height, air_control, double_jump)
 - [x] `configure_rotation` (orient_to_movement, use_controller_rotation)
-- [x] `add_custom_movement_mode`
+- [ ] `add_custom_movement_mode`
 - [x] `configure_nav_movement`
 
 ### 14.3 Advanced Movement
-- [x] `setup_mantling`
-- [x] `setup_vaulting`
-- [x] `setup_climbing`
-- [x] `setup_sliding`
-- [x] `setup_wall_running`
-- [x] `setup_grappling`
+- [ ] `setup_mantling`
+- [ ] `setup_vaulting`
+- [ ] `setup_climbing`
+- [ ] `setup_sliding`
+- [ ] `setup_wall_running`
+- [ ] `setup_grappling`
 
 ### 14.4 Footsteps System
 > **Note**: Physical Material creation is in Phase 34.5 (Physics Materials).
 
-- [x] `setup_footstep_system`
-- [x] `map_surface_to_sound`
-- [x] `configure_footstep_fx`
+- [ ] `setup_footstep_system`
+- [ ] `map_surface_to_sound`
+- [ ] `configure_footstep_fx`
 
 ### 14.5 Utility
 - [x] `get_character_info`
 
 ---
 
-## Phase 15: Combat & Weapons System (Complete)
+<a id="phase-15"></a>
+## Phase 15: Combat & Weapons System (Partial)
 
 **Goal**: Complete combat implementation.
 
 **Tool**: `manage_combat`
 
-**Status**: All 31 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 15.1 Weapon Base
 - [x] `create_weapon_blueprint`
-- [x] `configure_weapon_mesh`, `configure_weapon_sockets`
-- [x] `set_weapon_stats` (damage, fire_rate, range, spread)
+- [x] `configure_weapon_mesh`, ~~`configure_weapon_sockets`~~
+- [ ] `set_weapon_stats` (damage, fire_rate, range, spread)
 
 ### 15.2 Firing Modes
-- [x] `configure_hitscan`
+- [ ] `configure_hitscan`
 - [x] `configure_projectile`
-- [x] `configure_spread_pattern`
-- [x] `configure_recoil_pattern`
-- [x] `configure_aim_down_sights`
+- [ ] `configure_spread_pattern`
+- [ ] `configure_recoil_pattern`
+- [ ] `configure_aim_down_sights`
 
 ### 15.3 Projectiles
 - [x] `create_projectile_blueprint`
@@ -601,41 +660,42 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ### 15.4 Damage System
 - [x] `create_damage_type`
-- [x] `configure_damage_execution`
+- [ ] `configure_damage_execution`
 - [x] `setup_hitbox_component`
 
 ### 15.5 Weapon Features
-- [x] `setup_reload_system`
-- [x] `setup_ammo_system`
+- [ ] `setup_reload_system`
+- [ ] `setup_ammo_system`
 - [x] `setup_attachment_system`
-- [x] `setup_weapon_switching`
+- [ ] `setup_weapon_switching`
 
 ### 15.6 Effects
-- [x] `configure_muzzle_flash`
-- [x] `configure_tracer`
-- [x] `configure_impact_effects`
-- [x] `configure_shell_ejection`
+- [ ] `configure_muzzle_flash`
+- [ ] `configure_tracer`
+- [ ] `configure_impact_effects`
+- [ ] `configure_shell_ejection`
 
 ### 15.7 Melee Combat
-- [x] `create_melee_trace`
-- [x] `configure_combo_system`
-- [x] `create_hit_pause` (hitstop)
-- [x] `configure_hit_reaction`
-- [x] `setup_parry_block_system`
-- [x] `configure_weapon_trails`
+- [ ] `create_melee_trace`
+- [ ] `configure_combo_system`
+- [ ] `create_hit_pause` (hitstop)
+- [ ] `configure_hit_reaction`
+- [ ] `setup_parry_block_system`
+- [ ] `configure_weapon_trails`
 
 ### 15.8 Utility
 - [x] `get_combat_info`
 
 ---
 
+<a id="phase-16"></a>
 ## Phase 16: Complete AI System (Complete)
 
 **Goal**: Full AI pipeline with EQS, perception, and smart objects.
 
 **Tool**: `manage_ai`
 
-**Status**: All listed actions fully implemented in TypeScript and C++.
+**Status**: Every action listed in this phase is documented and catalog-backed. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 16.1 AI Controller
 - [x] `create_ai_controller`
@@ -690,13 +750,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 17: Inventory & Items System (Complete)
+<a id="phase-17"></a>
+## Phase 17: Inventory & Items System (Partial)
 
 **Goal**: Complete inventory and item management.
 
 **Tool**: `manage_inventory`
 
-**Status**: All 33 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 17.1 Data Assets
 - [x] `create_item_data_asset`
@@ -705,63 +766,64 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `assign_item_category`
 
 ### 17.2 Inventory Component
-- [x] `create_inventory_component`
-- [x] `configure_inventory_slots`
-- [x] `add_inventory_functions`
-- [x] `configure_inventory_events`
+- [ ] `create_inventory_component`
+- [ ] `configure_inventory_slots`
+- [ ] `add_inventory_functions`
+- [ ] `configure_inventory_events`
 - [x] `set_inventory_replication`
 
 ### 17.3 Pickups
-- [x] `create_pickup_actor`
-- [x] `configure_pickup_interaction`
-- [x] `configure_pickup_respawn`
-- [x] `configure_pickup_effects`
+- [ ] `create_pickup_actor`
+- [ ] `configure_pickup_interaction`
+- [ ] `configure_pickup_respawn`
+- [ ] `configure_pickup_effects`
 
 ### 17.4 Equipment
-- [x] `create_equipment_component`
-- [x] `define_equipment_slots`
-- [x] `configure_equipment_effects`
-- [x] `add_equipment_functions`
-- [x] `configure_equipment_visuals`
+- [ ] `create_equipment_component`
+- [ ] `define_equipment_slots`
+- [ ] `configure_equipment_effects`
+- [ ] `add_equipment_functions`
+- [ ] `configure_equipment_visuals`
 
 ### 17.5 Loot System
 - [x] `create_loot_table`
 - [x] `add_loot_entry`
-- [x] `configure_loot_drop`
+- [ ] `configure_loot_drop`
 - [x] `set_loot_quality_tiers`
 
 ### 17.6 Crafting
 - [x] `create_crafting_recipe`
 - [x] `configure_recipe_requirements`
 - [x] `create_crafting_station`
-- [x] `add_crafting_component`
+- [ ] `add_crafting_component`
 
 ### 17.7 Additional Actions
 - [x] `configure_item_stacking`
 - [x] `set_item_icon`
 - [x] `add_recipe_ingredient`
 - [x] `remove_loot_entry`
-- [x] `configure_inventory_weight`
-- [x] `configure_station_recipes`
+- [ ] `configure_inventory_weight`
+- [ ] `configure_station_recipes`
 
 ### 17.8 Utility
 - [x] `get_inventory_info`
 
 ---
 
-## Phase 18: Interaction System (Complete)
+<a id="phase-18"></a>
+## Phase 18: Interaction System (Partial)
 
 **Goal**: Complete interaction framework.
 
 **Tool**: `manage_interaction`
 
-**Status**: All 22 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 18.1 Interaction Component
 - [x] `create_interaction_component`
 - [x] `configure_interaction_trace`
-- [x] `configure_interaction_widget`
-- [x] `add_interaction_events`
+- [ ] `configure_interaction_widget`
+- [ ] `add_interaction_events`
 
 ### 18.2 Interactables
 - [x] `create_interactable_interface`
@@ -776,30 +838,31 @@ The following phases represent the comprehensive expansion to enable **full proj
 > **Note**: Pickup actors are in Phase 17.3 (Inventory - Pickups).
 
 ### 18.3 Destructibles
-- [x] `setup_destructible_mesh`
-- [x] `configure_destruction_levels`
-- [x] `configure_destruction_effects`
-- [x] `configure_destruction_damage`
-- [x] `add_destruction_component`
+- [ ] `setup_destructible_mesh`
+- [ ] `configure_destruction_levels`
+- [ ] `configure_destruction_effects`
+- [ ] `configure_destruction_damage`
+- [ ] `add_destruction_component`
 
 ### 18.4 Trigger System
 - [x] `create_trigger_actor`
-- [x] `configure_trigger_events`
-- [x] `configure_trigger_filter`
-- [x] `configure_trigger_response`
+- [ ] `configure_trigger_events`
+- [ ] `configure_trigger_filter`
+- [ ] `configure_trigger_response`
 
 ### 18.5 Utility
 - [x] `get_interaction_info`
 
 ---
 
-## Phase 19: Complete UI/UX System (Complete)
+<a id="phase-19"></a>
+## Phase 19: Complete UI/UX System (Partial)
 
 **Goal**: Full UMG widget authoring capabilities.
 
 **Tool**: `manage_blueprint`
 
-**Status**: All 65 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 19.1 Widget Creation
 - [x] `create_widget_blueprint`
@@ -830,7 +893,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `set_visibility`, `set_style`
 
 ### 19.5 Bindings & Events
-- [x] `create_property_binding`
+- [ ] `create_property_binding`
 - [x] `bind_text`, `bind_visibility`, `bind_color`, `bind_enabled`
 - [x] `bind_on_clicked`, `bind_on_hovered`, `bind_on_value_changed`
 
@@ -838,7 +901,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `create_widget_animation`
 - [x] `add_animation_track` (transform, color, opacity, material)
 - [x] `add_animation_keyframe`
-- [x] `set_animation_loop`
+- [ ] `set_animation_loop`
 
 ### 19.7 UI Templates
 - [x] `create_main_menu`, `create_pause_menu`
@@ -858,13 +921,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 20: Networking & Multiplayer (Complete)
+<a id="phase-20"></a>
+## Phase 20: Networking & Multiplayer (Partial)
 
 **Goal**: Complete networking and replication system.
 
 **Tool**: `manage_networking`
 
-**Status**: All 27 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 20.1 Replication
 - [x] `set_property_replicated`
@@ -891,7 +955,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `set_only_relevant_to_owner`
 
 ### 20.5 Net Serialization
-- [x] `configure_net_serialization`
+- [ ] `configure_net_serialization`
 - [x] `set_replicated_using`
 - [x] `configure_push_model`
 
@@ -911,13 +975,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 21: Game Framework (Complete)
+<a id="phase-21"></a>
+## Phase 21: Game Framework (Partial)
 
 **Goal**: Complete game mode and session management.
 
 **Tool**: `manage_networking`
 
-**Status**: All 20 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 21.1 Core Classes
 - [x] `create_game_mode`
@@ -935,11 +1000,11 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [x] `configure_game_rules`
 
 ### 21.3 Match Flow
-- [x] `setup_match_states` (waiting, warmup, in_progress, post_match)
-- [x] `configure_round_system`
-- [x] `configure_team_system`
-- [x] `configure_scoring_system`
-- [x] `configure_spawn_system`
+- [ ] `setup_match_states` (waiting, warmup, in_progress, post_match)
+- [ ] `configure_round_system`
+- [ ] `configure_team_system`
+- [ ] `configure_scoring_system`
+- [ ] `configure_spawn_system`
 
 ### 21.4 Player Management
 - [x] `configure_player_start`
@@ -951,7 +1016,8 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 22: Sessions & Local Multiplayer ✅
+<a id="phase-22"></a>
+## Phase 22: Sessions & Local Multiplayer (Partial)
 
 **Goal**: Session management and split-screen support.
 
@@ -960,7 +1026,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 ### 22.1 Session Management (Local/LAN)
 > **Note**: Online session management (matchmaking, lobbies) is in Phase 43 (Online Services). This section covers local/LAN sessions only.
 
-- [x] `configure_local_session_settings`
+- [ ] `configure_local_session_settings`
 - [x] `configure_session_interface`
 
 ### 22.2 Local Multiplayer
@@ -977,29 +1043,30 @@ The following phases represent the comprehensive expansion to enable **full proj
 ### 22.4 Voice Chat
 - [x] `enable_voice_chat`
 - [x] `configure_voice_settings`
-- [x] `set_voice_channel`
+- [ ] `set_voice_channel`
 - [x] `mute_player`
-- [x] `set_voice_attenuation`
-- [x] `configure_push_to_talk`
+- [ ] `set_voice_attenuation`
+- [ ] `configure_push_to_talk`
 
 ### 22.5 Utility
 - [x] `get_sessions_info`
 
 ---
 
-## Phase 23: World & Level Structure ✅
+<a id="phase-23"></a>
+## Phase 23: World & Level Structure (Partial)
 
 **Goal**: Complete level and world management.
 
 **Tool**: `manage_level_structure`
 
-**Status**: All 17 actions fully implemented in TypeScript and C++.
+**Status**: The ticked actions are documented and catalog-backed; the unticked ones are not callable today. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 23.1 Levels
 - [x] `create_level`, `create_sublevel`
 - [x] `configure_level_streaming`
 - [x] `set_streaming_distance`
-- [x] `configure_level_bounds`
+- [ ] `configure_level_bounds`
 
 ### 23.2 World Partition (Expanded)
 - [x] `enable_world_partition`
@@ -1023,13 +1090,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 24: Volumes & Zones ✅
+<a id="phase-24"></a>
+## Phase 24: Volumes & Zones (Complete)
 
 **Goal**: Complete volume and trigger system.
 
 **Tool**: `manage_level_structure`
 
-**Status**: All 19 actions fully implemented in TypeScript and C++.
+**Status**: Every action listed in this phase is documented and catalog-backed. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 24.1 Trigger Volumes
 - [x] `create_trigger_volume`
@@ -1059,6 +1127,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
+<a id="phase-25"></a>
 ## Phase 25: Navigation System (Complete)
 
 **Goal**: Complete navigation mesh and pathfinding.
@@ -1084,13 +1153,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
+<a id="phase-26"></a>
 ## Phase 26: Spline System (Complete)
 
 **Goal**: Complete spline-based content creation.
 
 **Tool**: `build_environment`
 
-**Status**: All 22 actions fully implemented in TypeScript and C++.
+**Status**: Every action listed in this phase is documented and catalog-backed. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 26.1 Spline Creation
 - [x] `create_spline_actor`
@@ -1124,13 +1194,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
+<a id="phase-27"></a>
 ## Phase 27: PCG Framework (Complete)
 
 **Goal**: Complete procedural content generation.
 
 **Tool**: `manage_pcg`
 
-**Status**: All listed PCG graph, node, sampler, spawner, execution, and partition-grid actions are implemented in TypeScript and C++.
+**Status**: Every listed PCG graph, node, sampler, spawner, execution, and partition-grid action is documented and catalog-backed. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 27.1 Graph Management
 - [x] `create_pcg_graph`, `create_pcg_subgraph`
@@ -1167,13 +1238,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Environment Systems (Complete)
+<a id="phase-28"></a>
+## Phase 28: Environment Systems (Complete)
 
 **Goal**: Complete environment (sky, weather, water).
 
 **Tool**: `build_environment`
 
-**Status**: All 42 listed actions fully implemented in TypeScript and C++.
+**Status**: Every action listed in this phase is documented and catalog-backed. This is a contract-level claim, not a live-test record for every engine version.
 
 ### 28.1 Landscape (Expanded)
 - [x] `create_landscape`
@@ -1227,13 +1299,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Advanced Lighting & Rendering
+<a id="phase-29"></a>
+## Phase 29: Advanced Lighting & Rendering (Code Complete; Live Verification Pending)
 
 **Goal**: Complete lighting and post-processing.
 
 **Tool**: `build_environment` exposes the rendering actions, with seeded `manage_asset` and `manage_level_structure` support for render targets and volumes. The native bridge routes the public `build_environment` actions through the internal `manage_render` domain.
 
-**Status**: Implementation complete in TypeScript and C++ (the `manage_render` C++ dispatch is split into per-concern files under `Render/McpAutomationBridge_Render*.cpp`). Native parity audit (`test:params`) reports 0 schema mismatches and 1286/1286 actions covered. The live-acceptance verification record is **pending** — headless Editor run and sha256 evidence archive are not yet captured. Until that record is published, treat this section as "Code complete; verification record pending" rather than "live-tested".
+**Status**: The listed actions are documented and catalog-backed (the `manage_render` C++ dispatch is split into per-concern files under `Render/McpAutomationBridge_Render*.cpp`). **What the checks here do and do not establish**: `npm run test:params` is a *static and schema* audit of the capability records — it compares declared parameters against the catalog and integration cases and reports 0 mismatches. It is **not** native runtime parity, not a native `/mcp` execution test, and **not** live proof that a handler does what it says. The live-acceptance verification record is **pending** — a headless Editor run and a sha256 evidence archive are not captured. Treat this section as "Code complete; verification record pending" rather than "live-tested".
 
 ### 29.1 Ray Tracing
 - [x] `configure_ray_traced_shadows`
@@ -1285,13 +1358,14 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 30: Cinematics & Media
+<a id="phase-30"></a>
+## Phase 30: Cinematics & Media (Complete)
 
 **Goal**: Complete sequencer and media capabilities.
 
 **Tool**: `manage_sequence` expanded with movie-render and media actions.
 
-**Status**: Complete. The expanded cinematic, Movie Render Queue, media, take-recorder, and replay surface is implemented through `manage_sequence`, including TypeScript schemas, native C++ handlers, native `/mcp` metadata, and live headless Unreal validation. Acceptance includes real one-frame MRQ output over both WebSocket and native `/mcp`, file-backed media playback, Take Recorder, and direct stdio PIE replay recording/playback/killcam. The historical UE 5.7 run also exercised allowlisted loopback HTTP media before network-backed media was disabled because redirect destinations cannot be pinned by the Unreal media backend. MRQ timeouts request deferred editor-safe cancellation, wait for executor settlement within a bounded cancellation window, and report whether rendering is still active without using unsafe same-stack PIE teardown. The live harness captures package-form Take Recorder outputs, deletes the sequence and subscene folder with read-back receipts, and independently removes its render output, replay, and owned media fixture. The recorded live acceptance run covers UE 5.7.4 only; UE 5.0-5.8 remain source-compatibility targets until separately compiled and tested.
+**Status**: Complete. The expanded cinematic, Movie Render Queue, media, take-recorder, and replay surface is documented and catalog-backed through `manage_sequence` (TypeScript schemas, native C++ handlers, native `/mcp` metadata), with a recorded live headless Unreal acceptance run. Acceptance includes real one-frame MRQ output over both WebSocket and native `/mcp`, file-backed media playback, Take Recorder, and direct stdio PIE replay recording/playback/killcam. The historical UE 5.7 run also exercised allowlisted loopback HTTP media before network-backed media was disabled because redirect destinations cannot be pinned by the Unreal media backend. MRQ timeouts request deferred editor-safe cancellation, wait for executor settlement within a bounded cancellation window, and report whether rendering is still active without using unsafe same-stack PIE teardown. The live harness captures package-form Take Recorder outputs, deletes the sequence and subscene folder with read-back receipts, and independently removes its render output, replay, and owned media fixture. The recorded live acceptance run covers UE 5.7.4 only; UE 5.0-5.8 remain source-compatibility targets until separately compiled and tested.
 
 ### 30.1 Sequencer (Expanded)
 - [x] `create_master_sequence`
@@ -1337,17 +1411,26 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 > **Roadmap naming note**: In Phases 31-48, `manage_*` names are capability-family placeholders unless they already match one of the current 23 internal canonical parent tools.
 
-## Phase 31: Data & Persistence
+<a id="phase-31"></a>
+## Phase 31: Data & Persistence (Partial)
 
 **Goal**: Complete data management and save systems.
 
 **Tools**: Planned data, save, gameplay-tag, and config capability families; current project-setting baseline lives on `system_control`.
 
-**Status**: `get_project_settings` and `set_project_setting` are implemented. Data assets, save slots, gameplay tags, and expanded config hierarchy actions remain planned.
+**Status**: `get_project_settings` and `set_project_setting` (`system_control`) and the data-table family are documented and catalog-backed. Data assets proper, save slots, gameplay tags, and expanded config hierarchy actions remain planned.
 
 ### 31.1 Data Assets
 - [ ] `create_data_asset`, `create_primary_data_asset`
-- [ ] `create_data_table`, `add_data_table_row`, `modify_data_table_row`, `delete_data_table_row`
+- [x] `create_data_table`, `add_data_table_row`, `update_data_table_row`, `delete_data_table_row`
+      — all four remain separately callable as `manage_asset` `{tool, action}` pairs; what folds them is the
+      *record* layer, not the action layer:
+      - `manage_asset.create_data_table`, `manage_asset.add_data_table_row`, `manage_asset.update_data_table_row`
+        dispatch from the canonical id `datatable.edit_data_table`, selected by `edit`
+        (`create` | `create_row_struct` | `add_row` | `update_row` | `import_rows` | `set_row_struct` |
+        `set_struct_as_row_struct`)
+      - `manage_asset.delete_data_table_row` and `manage_asset.clear_data_table_rows` dispatch from the canonical
+        id `datatable.delete_data_table_row`, selected by `deleteScope` (`row` | `all`, default `row`)
 - [ ] `import_data_table_csv`, `export_data_table_csv`
 - [ ] `create_curve_table`, `create_curve_float`, `create_curve_linear_color`
 
@@ -1376,21 +1459,23 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 32: Build & Deployment
+<a id="phase-32"></a>
+## Phase 32: Build & Deployment (Partial)
 
 **Goal**: Complete build pipeline and packaging.
 
 **Tool**: `system_control` for current `run_ubt`; expanded build/deployment capability remains planned.
 
-**Status**: Baseline UBT execution and asset validation are available. Cooking, packaging, platform signing, chunking, plugin management, and encryption/compression remain planned.
+**Status**: Baseline UBT execution (`system_control.run_build`), project packaging (`system_control.package_project` / `package_status` / `launch_build`), asset validation (`system_control.validate_assets`) and plugin enable/disable/list (`system_control.list_plugins` / `enable_plugin` / `disable_plugin`) are documented and catalog-backed. Cooking, platform signing, chunking, build-target and settings authoring, plugin-status inspection, and encryption/compression remain planned. The ticked `run_ubt` line is the legacy spelling of `run_build`; there is no separate `run_ubt` capability.
 
 ### 32.1 Build Pipeline
 - [x] `run_ubt` (baseline)
-- [ ] `run_ubt` (expanded)
+- [x] `run_ubt` (expanded; `system_control.run_build`)
 - [ ] `generate_project_files`
 - [ ] `compile_shaders`
 - [ ] `cook_content` (platform)
-- [ ] `package_project` (platform)
+- [x] `package_project` (platform; `system_control.package_project`, with `package_status` and `launch_build`
+      for the async side)
 - [ ] `configure_build_settings`
 - [ ] `create_build_target`
 
@@ -1414,14 +1499,15 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [ ] `configure_compression`
 
 ### 32.4 Plugins
-- [ ] `list_plugins`
-- [ ] `enable_plugin`, `disable_plugin`
+- [x] `list_plugins` (`system_control.list_plugins`)
+- [x] `enable_plugin`, `disable_plugin` (the `system_control` plugin management family)
 - [ ] `get_plugin_status`
 - [ ] `configure_plugin_settings`
 
 ---
 
-## Phase 33: Testing & Quality
+<a id="phase-33"></a>
+## Phase 33: Testing & Quality (Partial)
 
 **Goal**: Complete testing and profiling infrastructure.
 
@@ -1468,14 +1554,17 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 34: Editor Utilities
+<a id="phase-34"></a>
+## Phase 34: Editor Utilities (Partial)
 
 **Goal**: Complete editor automation.
 
-**Tools**: Various editor management tools
+**Tools**: `control_editor` for viewport/mode configuration and the Epic Toolset Registry, and `inspect` for the selection read; the rest of this phase is planned and has no parent tool.
+
+**Status**: Only the ticked items below (34.1 `set_editor_mode`, 34.3 `get_selected_actors`, 34.9 toolsets) are documented and catalog-backed. Everything unticked in 34.1-34.8 is planned.
 
 ### 34.1 Editor Modes
-- [ ] `set_editor_mode` (place, paint, landscape, foliage, mesh_paint)
+- [x] `set_editor_mode` (place, paint, landscape, foliage, mesh_paint; `control_editor.configure_viewport` setting `editor_mode`)
 - [ ] `configure_editor_preferences`
 - [ ] `set_grid_settings`, `set_snap_settings`
 - [ ] `manage_editor_layouts`
@@ -1495,7 +1584,7 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [ ] `select_actors_by_tag`
 - [ ] `select_actors_in_volume`
 - [ ] `deselect_all`
-- [ ] `get_selected_actors`
+- [x] `get_selected_actors` (`inspect.get_editor_state`)
 - [ ] `group_actors`, `ungroup_actors`
 
 ### 34.4 Collision
@@ -1537,9 +1626,16 @@ The following phases represent the comprehensive expansion to enable **full proj
 - [ ] `implement_interface`
 - [ ] `call_interface_function`
 
+### 34.9 Epic Editor Toolsets (UE 5.8)
+- [x] `list_editor_toolsets`, `call_editor_tool`: Epic's Toolset Registry behind this gateway's scopes and consent (`control_editor`)
+- [x] `call_editor_tool_destructive`: tools named for deleting or resetting, under the destructive scope and elevated consent (script, console and `ConfigSettingsToolset` tools are never called)
+
+> **Note**: 34.9, 34.1 and 34.3 are the three subsections of Phase 34 with any shipped surface. 34.2 and 34.4-34.8 have no parent tool and no callable actions today.
+
 ---
 
-## Phase 35: Additional Gameplay Systems
+<a id="phase-35"></a>
+## Phase 35: Additional Gameplay Systems (Partial)
 
 **Goal**: Common gameplay patterns and systems.
 
@@ -1622,7 +1718,8 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 36: Character & Avatar Plugins
+<a id="phase-36"></a>
+## Phase 36: Character & Avatar Plugins (Planned)
 
 ### 36.1 MetaHuman
 - [ ] `import_metahuman`, `list_available_metahumans`, `spawn_metahuman_actor`
@@ -1654,15 +1751,32 @@ The following phases represent the comprehensive expansion to enable **full proj
 
 ---
 
-## Phase 37: Asset & Content Plugins
+<a id="phase-37"></a>
+## Phase 37: Asset & Content Plugins (Partial)
 
 ### 37.1 Quixel Bridge / Megascans / Fab
 
-Shipped — content ingestion, built generically rather than per-marketplace.
-Bridge and Fab deliver **cooked `.uasset` packs**, not source art, so bringing
-one in is a package copy plus an asset-registry scan; the same operation also
-covers engine templates and plugin content, which is why these are not
-Megascans-specific actions:
+Content ingestion, built generically rather than per-marketplace. Two distinct
+paths exist and they are **not** equivalent:
+
+- **Bridge / Megascans content sources** (`list_content_sources`,
+  `migrate_assets`) deliver existing Unreal packages (`.uasset`), so bringing one
+  in is a package copy plus an asset-registry scan. The requirement is that the
+  packages be editor-compatible with the running engine version — the `.uasset`
+  extension alone does not imply they were cooked for a particular target. The
+  same operation also covers engine templates and plugin content, which is why
+  these are not Megascans-specific actions.
+- **Fab adds** (`add_fab_asset_to_project`, `asset.import_marketplace_asset`)
+  run Fab's own import workflow. That workflow can import **source formats —
+  FBX and glTF/GLB**, plus OBJ and USDZ — as well as Unreal packages, so the
+  listing's format decides the path.
+
+Limitations that survive both paths: no USD stage authoring (37.3 is planned),
+no Alembic/groom, no `.pak` creation or chunking, post-import tuning
+(`configure_import_settings`, `set_lod_generation`, `configure_nanite_import`,
+`configure_virtual_texture`) is planned, MetaHuman listings are refused, and the
+Fab HTTP endpoints used are Epic's private `/i/` namespace — observed directly
+but not a published contract, so they can change without notice.
 
 - [x] `asset.list_content_sources` — enumerate engine templates, engine/plugin
       content, and downloaded Bridge/Fab packs, with optional package counts.
@@ -1732,12 +1846,12 @@ plus `FabDownloader.h` and `FabWorkflowFactory` for the import path. Surfacing
 the Fab library is therefore the same kind of read the Content Browser already
 does against an authenticated plugin — no credential handling here at all:
 
-- [ ] `list_fab_assets` / `search_fab_library` — read the plugin's cache and
+- [x] `list_fab_library` / `search_fab_listings` (`asset.query_marketplace`), with `get_fab_listing_details`, `list_fab_downloads`
       owned-listing set; requires a `Fab` module dependency (the `fabLibrary`
       source root already reads its cache directory without one)
-- [ ] `download_fab_asset` — drive `FFabDownloader`, report progress
-- [ ] `import_fab_asset` — run the plugin's own workflow (Quixel/Pack/MetaHuman)
-      instead of a raw package copy, so Nanite/VT/quality-tier settings apply
+- [x] `download_fab_asset` (`asset.import_marketplace_asset`): the add answers when Fab accepts the download; `get_fab_import_status` reports progress and `cancel_fab_import` stops it
+- [x] `add_fab_asset_to_project`: runs Fab's own workflow (Megascans quality tiers, packs), then saves and optionally relocates and renames what landed (MetaHuman listings are refused)
+      instead of a raw package copy, so the listing's import settings apply
 - [ ] `connect_to_bridge`, `filter_by_category`, `filter_by_biome`
 
 Still open, and genuinely useful — post-import tuning of migrated content:
@@ -1797,7 +1911,8 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 38: Audio Middleware Plugins
+<a id="phase-38"></a>
+## Phase 38: Audio Middleware Plugins (Planned)
 
 ### 38.1 Wwise
 - [ ] Project: `connect_wwise_project`, `refresh_wwise_project`, `generate_sound_banks`
@@ -1825,7 +1940,8 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 39: Motion Capture & Live Link Plugins
+<a id="phase-39"></a>
+## Phase 39: Motion Capture & Live Link Plugins (Planned)
 
 ### 39.1 Live Link (Core)
 - [ ] Sources: `add_livelink_source`, `remove_livelink_source`, `list_livelink_sources`, `configure_livelink_source`
@@ -1861,7 +1977,8 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 40: Virtual Production Plugins
+<a id="phase-40"></a>
+## Phase 40: Virtual Production Plugins (Planned)
 
 ### 40.1 nDisplay
 - [ ] Cluster: `create_ndisplay_config`, `add_cluster_node`, `configure_cluster_node`, `set_primary_node`
@@ -1918,7 +2035,8 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 41: XR Plugins (VR/AR/MR)
+<a id="phase-41"></a>
+## Phase 41: XR Plugins (VR/AR/MR) (Planned)
 
 ### 41.1 OpenXR
 - [ ] System: `get_openxr_runtime_name`, `configure_openxr_settings`
@@ -1974,7 +2092,8 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 42: AI & NPC Plugins
+<a id="phase-42"></a>
+## Phase 42: AI & NPC Plugins (Planned)
 
 ### 42.1 Convai
 - [ ] Characters: `create_convai_character`, `configure_character_backstory`, `set_character_personality`
@@ -1997,7 +2116,8 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 43: Online Services Plugins
+<a id="phase-43"></a>
+## Phase 43: Online Services Plugins (Planned)
 
 ### 43.1 Online Subsystem (Core)
 - [ ] `get_online_subsystem`, `configure_default_subsystem`
@@ -2066,7 +2186,8 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 44: Streaming & Distribution Plugins
+<a id="phase-44"></a>
+## Phase 44: Streaming & Distribution Plugins (Planned)
 
 ### 44.1 Pixel Streaming
 - [ ] Server: `enable_pixel_streaming`, `configure_pixel_streaming_settings`
@@ -2085,9 +2206,10 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 45: Utility Plugins
+<a id="phase-45"></a>
+## Phase 45: Utility Plugins (Partial)
 
-**Status**: Baseline Python execution is implemented through `system_control.execute_python`. The rest of this phase remains planned plugin-specific utility expansion.
+**Status**: Baseline Python execution is documented and catalog-backed through `system_control.execute_python`. The rest of this phase remains planned plugin-specific utility expansion.
 
 ### 45.1 Python Scripting
 - [x] `execute_python` (inline code and file execution)
@@ -2102,6 +2224,9 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 - [ ] Commands: `register_editor_command`, `bind_command_to_action`, `execute_editor_command`
 
 ### 45.3 Modeling Tools Editor Mode
+
+> **Note**: Every item in this subsection is planned, which is why none is ticked. The overlapping geometry operations themselves are catalog-backed under `manage_geometry` (Phase 6) — `extrude`, `inset`, `bevel`, `bridge`, `fill_holes`, `weld_vertices`, `edge_split`, `flip_normals`, `simplify_mesh`, `remesh_uniform`, `remesh_voxel`, `boolean_*`, `transform_uvs`, `pack_uv_islands`, `unwrap_uv`, `lattice_deform`, `bend`, `twist` — but as geometry-script operations on Dynamic Mesh geometry (an in-memory `UDynamicMesh` component or asset), not as Modeling-Tools-Editor-Mode UI commands on a selected editor mesh. What is missing here is the editor-mode layer itself: selection, brushes, tool activation.
+
 - [ ] `activate_modeling_tool`, `deactivate_modeling_tool`
 - [ ] PolyEdit: `select_mesh_elements`, `transform_selection`, `extrude_selection`, `inset_selection`, `bevel_selection`, `bridge_edges`, `fill_hole`, `weld_edges`, `split_edges`, `triangulate`, `flip_normals`
 - [ ] Sculpt: `set_sculpt_brush`, `set_brush_size`, `set_brush_strength`, `set_brush_falloff`, `sculpt_stroke`
@@ -2126,7 +2251,9 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 - [ ] `create_mesh_section`, `update_mesh_section`, `clear_mesh_section`, `clear_all_mesh_sections`
 - [ ] `set_mesh_vertices`, `set_mesh_triangles`, `set_mesh_normals`, `set_mesh_uvs`, `set_mesh_colors`, `set_mesh_tangents`
 - [ ] `set_collision_from_mesh`, `add_collision_convex_mesh`, `clear_collision_convex_meshes`
-- [ ] `convert_to_static_mesh`
+- [x] `convert_to_static_mesh` — the one shared capability in this phase, catalog-backed as
+      `manage_geometry.convert_to_static_mesh` (Phase 6.8), not as a ProceduralMeshComponent
+      authoring flow; the rest of 45.6 remains planned
 
 ### 45.7 Variant Manager
 - [ ] `create_variant_set`, `add_variant`, `configure_variant_properties`
@@ -2137,7 +2264,8 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 46: Physics & Destruction Plugins
+<a id="phase-46"></a>
+## Phase 46: Physics & Destruction Plugins (Planned)
 
 ### 46.1 Chaos Destruction
 - [ ] Collection: `create_geometry_collection`, `add_geometry_to_collection`, `remove_geometry_from_collection`
@@ -2170,11 +2298,14 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 47: Accessibility System
+<a id="phase-47"></a>
+## Phase 47: Accessibility System (Planned)
 
 **Goal**: Complete accessibility features for inclusive game design.
 
-**Tool**: `manage_accessibility`
+**Tool**: **none**. `manage_accessibility` does not exist as a canonical parent tool — the current catalog has 23 parent tools and accessibility is not among them. The name is a placeholder for a future capability family, not a shipping surface.
+
+**Status**: **Nothing in this phase is implemented.** All 37 listed items in 47.1-47.6 are unticked because the catalog contains no accessibility capability.
 
 ### 47.1 Visual Accessibility
 - [ ] `create_colorblind_filter` (protanopia, deuteranopia, tritanopia)
@@ -2227,11 +2358,14 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ---
 
-## Phase 48: Modding & UGC System
+<a id="phase-48"></a>
+## Phase 48: Modding & UGC System (Planned)
 
 **Goal**: Enable mod support and user-generated content within Unreal Engine.
 
-**Tool**: `manage_modding`
+**Tool**: **none**. `manage_modding` does not exist as a canonical parent tool — the current catalog has 23 parent tools and modding is not among them (see [`action-reference.generated.md`](action-reference.generated.md) for the authoritative list). The name below is a placeholder for a future capability family, not a shipping surface.
+
+**Status**: **Nothing in this phase is implemented.** All 32 listed items in 48.1-48.6 are unticked — zero checked items — because the catalog contains no pak/mod action, no mod-discovery action, no asset-override action, no mod-SDK action, no sandbox action and no Steam Workshop action. This phase is scope to preserve, not a status to report. Any earlier note claiming a seeded modding surface was wrong.
 
 ### 48.1 Pak/Mod Loading
 - [ ] `configure_mod_loading_paths`
@@ -2285,42 +2419,44 @@ Still open, and genuinely useful — post-import tuning of migrated content:
 
 ## Statistics
 
-| Category | Phases | Estimated Actions |
-|----------|--------|-------------------|
-| Completed Foundation (1-4) | 4 | ~160 |
-| Completed Infrastructure (5) | 1 | ~20 |
-| Completed Content Creation (6-12) | 7 | ~400 |
-| Completed Gameplay Systems (13-18) | 6 | ~300 |
-| Completed UI/UX (19) | 1 | ~80 |
-| Completed Networking & Framework (20-22) | 3 | ~100 |
-| Completed World & Environment (23-28) | 6 | ~200 |
-| Completed Rendering & Post (29) | 1 | ~80 |
-| Cinematics & Media (30) | 1 | ~80 |
-| Data & Persistence (31, partial/planned) | 1 | ~50 |
-| Build & Deploy (32, partial/planned) | 1 | ~35 |
-| Testing & Quality (33, partial/planned) | 1 | ~35 |
-| Editor Utilities (34) | 1 | ~60 |
-| Additional Systems (35, partial/planned) | 1 | ~80 |
-| Plugin: Character (36) | 1 | ~60 |
-| Plugin: Asset/Content (37) | 1 | ~150 |
-| Plugin: Audio Middleware (38) | 1 | ~80 |
-| Plugin: Motion Capture (39) | 1 | ~70 |
-| Plugin: Virtual Production (40) | 1 | ~150 |
-| Plugin: XR (41) | 1 | ~150 |
-| Plugin: AI/NPC (42) | 1 | ~30 |
-| Plugin: Online Services (43) | 1 | ~160 |
-| Plugin: Streaming (44) | 1 | ~50 |
-| Plugin: Utilities (45, partial/planned) | 1 | ~100 |
-| Plugin: Physics/Destruction (46) | 1 | ~80 |
-| Accessibility (47) | 1 | ~40 |
-| Modding & UGC (48) | 1 | ~25 |
-| **TOTAL** | **48** | **~2,825** |
+**Estimated Actions** is a **planning estimate of the intended surface, not a measured metric**. Nothing in the repo counts toward it, and the row totals are not the number of callable actions. What is callable is stated per phase and, authoritatively, in [`action-reference.generated.md`](action-reference.generated.md).
 
-Current implementation is complete through Phase 30. Phases 31-33, 35, and 45 have seeded actions on existing canonical tools, but their expanded roadmap surfaces remain planned.
+| Category | Phases | Status | Estimated Actions (planned, not measured) |
+|----------|--------|--------|-------------------------------------------|
+| Foundation (1-4) | 4 | Complete | ~160 |
+| Infrastructure (5) | 1 | Complete | ~20 |
+| Content Creation (6-12) | 7 | Mixed — 6, 7, 10, 12 Partial | ~400 |
+| Gameplay Systems (13-18) | 6 | Mixed — 13-15, 17, 18 Partial | ~300 |
+| UI/UX (19) | 1 | Partial | ~80 |
+| Networking & Framework (20-22) | 3 | Partial | ~100 |
+| World & Environment (23-28) | 6 | Mixed — 23 Partial, 24-28 Complete | ~200 |
+| Rendering & Post (29) | 1 | Code complete; live-acceptance record pending | ~80 |
+| Cinematics & Media (30) | 1 | Complete (live-validated on UE 5.7.4 only) | ~80 |
+| Data & Persistence (31) | 1 | Seeded, mostly planned | ~50 |
+| Build & Deploy (32) | 1 | Seeded, mostly planned | ~35 |
+| Testing & Quality (33) | 1 | Seeded, mostly planned | ~35 |
+| Editor Utilities (34) | 1 | Partial (34.1, 34.3 and 34.9 contain shipped items) | ~60 |
+| Additional Systems (35) | 1 | Seeded, mostly planned | ~80 |
+| Plugin: Character (36) | 1 | Planned | ~60 |
+| Plugin: Asset/Content (37) | 1 | Seeded (37.1 only), rest planned | ~150 |
+| Plugin: Audio Middleware (38) | 1 | Planned | ~80 |
+| Plugin: Motion Capture (39) | 1 | Planned | ~70 |
+| Plugin: Virtual Production (40) | 1 | Planned | ~150 |
+| Plugin: XR (41) | 1 | Planned | ~150 |
+| Plugin: AI/NPC (42) | 1 | Planned | ~30 |
+| Plugin: Online Services (43) | 1 | Planned | ~160 |
+| Plugin: Streaming (44) | 1 | Planned | ~50 |
+| Plugin: Utilities (45) | 1 | Partial (45.1 Python and 45.6 shared mesh conversion) | ~100 |
+| Plugin: Physics/Destruction (46) | 1 | Planned | ~80 |
+| Accessibility (47) | 1 | Planned | ~40 |
+| Modding & UGC (48) | 1 | Planned — nothing implemented | ~25 |
+| **TOTAL** | **48** | | **~2,825 (planning estimate)** |
+
+The Partial phases identify gaps in the current catalog, whether the proposed action was removed or never offered under that name. Phases 31-35, 37 and 45 have some implemented actions on existing canonical tools, but their expanded roadmap scope remains planned; Phase 48 has none. A "Complete" phase describes the documented scope, not live-test coverage across every engine version.
 
 ## What This Enables
 
-When the planned ~2,825-action target is complete, the platform will cover all Unreal Engine systems and major plugins for:
+If the planned ~2,825-action surface is ever built out — a planning estimate, not a measured metric — the platform would cover all Unreal Engine systems and major plugins for:
 
 - **Complete Game Development**: Build any genre (FPS, RPG, Racing, Platformer, etc.)
 - **Animated Films**: Full pipeline from character to final render
@@ -2338,8 +2474,11 @@ When the planned ~2,825-action target is complete, the platform will cover all U
 
 ## Legend
 
-- [x] **Completed**: Feature is implemented and verified.
-- [ ] **Planned**: Feature is scheduled for implementation.
+- [x] **Checked**: the listed action is documented and catalog-backed, or the infrastructure item is implemented. This does not imply live verification on every engine version. Unit tests include executable TypeScript and mock tests; static schema and source-contract checks supplement, rather than replace, live Unreal integration tests.
+- [ ] **Planned**: the stated workflow is not implemented. A similarly named action may exist in another domain without implementing this workflow. Some missing action names were removed; others were never in the catalog.
+- **Phase heading tags**: `(Complete)` describes implemented documented scope; `(Partial)` indicates unchecked or struck-through gaps; `(Planned)` indicates unimplemented phase scope. Phase 29 explicitly awaits live verification. These labels are not engine-compatibility certifications.
+
+> **Parent tool names**: the 23 canonical parents are **internal routing boundaries** behind the single public `unreal` tool, never listed by `tools/list`. A `manage_*` name in Phases 31-48 that is not one of those 23 is a capability-family placeholder, not a shipping surface.
 
 ---
 
