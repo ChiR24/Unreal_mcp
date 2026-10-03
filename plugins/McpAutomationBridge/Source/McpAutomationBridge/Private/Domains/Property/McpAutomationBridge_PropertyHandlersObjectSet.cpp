@@ -37,6 +37,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
     TArray<TSharedPtr<FJsonValue>> Rows;
     TArray<FString> Failed;
     TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
+    double InstancesUpdated = -1.0;
     for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : (*Properties)->Values) {
       TSharedPtr<FJsonObject> One = MakeShared<FJsonObject>();
       One->Values = Payload->Values;
@@ -51,12 +52,19 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       Row->SetStringField(TEXT("propertyName"), Pair.Key);
       Row->SetBoolField(TEXT("applied"), Reply.bSuccess);
       if (!Reply.bSuccess) Failed.Add(FString::Printf(TEXT("%s: %s"), *Pair.Key, *Reply.Message));
-      for (const TCHAR *Field : {TEXT("value"), TEXT("actorName"), TEXT("actorPath"), TEXT("packagePath"), TEXT("blueprintCompiled")}) {
+      // assetPath names the Blueprint or material a class-default or expression write saved: without it a batch on
+      // BP_Bug's class defaults recompiled and saved the Blueprint while its receipt listed no change.
+      for (const TCHAR *Field : {TEXT("value"), TEXT("actorName"), TEXT("actorPath"), TEXT("packagePath"), TEXT("blueprintCompiled"),
+                                 TEXT("assetPath"), TEXT("materialRebuilt")}) {
         const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Field) : nullptr;
         if (Value.IsValid()) (FCString::Strcmp(Field, TEXT("value")) == 0 ? Row : Data)->SetField(Field, Value);
       }
+      double Updated = 0.0;
+      // The same placed copies follow every write of the batch, so the count is the most any one write moved, not a sum.
+      if (Reply.Result.IsValid() && Reply.Result->TryGetNumberField(TEXT("instancesUpdated"), Updated)) InstancesUpdated = FMath::Max(InstancesUpdated, Updated);
       Rows.Add(MakeShared<FJsonValueObject>(Row));
     }
+    if (InstancesUpdated >= 0.0) Data->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);
     Data->SetArrayField(TEXT("properties"), Rows);
     Data->SetNumberField(TEXT("applied"), Rows.Num() - Failed.Num());
     SendAutomationResponse(RequestingSocket, RequestId, Failed.Num() == 0, Failed.Num() == 0
@@ -89,18 +97,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 
   const TSharedPtr<FJsonValue> ValueField = Payload->TryGetField(TEXT("value"));
   if (!ValueField.IsValid()) {
-      SendAutomationError(RequestingSocket, RequestId,
-          TEXT("set_object_property payload missing value field."),
-          TEXT("INVALID_VALUE"));
+      SendAutomationError(RequestingSocket, RequestId, TEXT("set_object_property payload missing value field."), TEXT("INVALID_VALUE"));
       return true;
   }
 
   // A watch is resolved before anything is written, so a bad one leaves the target untouched.
   McpPropertyWatch::FWatch Watch;
   bool bWatch = false;
-  if (!McpPropertyWatch::ParseWatch(*this, RequestId, Payload, RequestingSocket, RootObject, Watch, bWatch)) {
-      return true;
-  }
+  if (!McpPropertyWatch::ParseWatch(*this, RequestId, Payload, RequestingSocket, RootObject, Watch, bWatch)) return true;
 
   const bool bIsClassDefaultObject = RootObject->HasAnyFlags(RF_ClassDefaultObject);
   if (AActor *Actor = Cast<AActor>(RootObject))
@@ -154,9 +158,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   // A template is rooted in a Blueprint that already passed, but the fail-closed
   // boundary must not depend on that non-local invariant.
   if (!McpSafeReflectionTarget::IsAddressable(RootObject)) {
-    SendAutomationError(RequestingSocket, RequestId,
-                        McpSafeReflectionTarget::DenyMessage(),
-                        McpSafeReflectionTarget::DenyCode());
+    SendAutomationError(RequestingSocket, RequestId, McpSafeReflectionTarget::DenyMessage(), McpSafeReflectionTarget::DenyCode());
     return true;
   }
 

@@ -849,3 +849,13 @@ describe('found reading the stage-1 post process volume', () => {
     expect(source).toMatch(/if \(FProperty \*Nested = McpResolvePropertyPath\(Actor, Wanted, Container, Resolved, Error\)\) \{\s*MCP_PROPERTY_EXPORT_TEXT\(Nested, Value, Nested->ContainerPtrToValuePtr<void>\(Container\), nullptr, nullptr, PPF_None\);\s*Properties->SetStringField\(Wanted, Value\);/u);
   });
 });
+
+describe('found giving the Bug its patrol and chase', () => {
+  // set_property properties {CharMoveComp.bCanWalkOffLedges, CharMoveComp.PerchRadiusThreshold} on BP_Bug recompiled and
+  // saved the Blueprint while its receipt listed no change: the batch kept only actor fields from each write.
+  it('a multi-property write names the asset it saved and how many placed copies took the new default', () => {
+    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+    expect(source).toContain('TEXT("assetPath"), TEXT("materialRebuilt")}) {');
+    expect(source).toContain('if (InstancesUpdated >= 0.0) Data->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);');
+  });
+});
