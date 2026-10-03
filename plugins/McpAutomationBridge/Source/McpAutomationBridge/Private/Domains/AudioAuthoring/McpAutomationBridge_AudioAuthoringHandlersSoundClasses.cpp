@@ -8,7 +8,11 @@ static TSharedPtr<FJsonObject> ResolveParentSoundClass(const TSharedPtr<FJsonObj
 {
 	OutParent = nullptr;
 	const FString ParentPath = McpGetFirstStringField(Params, {TEXT("parentClass"), TEXT("parentPath")});
-	if (!ParentPath.IsEmpty() && !(OutParent = LoadSoundClassFromPath(ParentPath)))
+	if (!ParentPath.IsEmpty())
+	{
+		OutParent = LoadSoundClassFromPath(ParentPath);
+	}
+	if (!ParentPath.IsEmpty() && !OutParent)
 	{
 		return McpHandlerUtils::BuildErrorResponse(TEXT("PARENT_NOT_FOUND"), FString::Printf(TEXT("Could not load parent SoundClass: %s"), *ParentPath));
 	}

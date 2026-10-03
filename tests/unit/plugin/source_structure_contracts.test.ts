@@ -74,6 +74,27 @@ describe('plugin source structure contracts', () => {
     expect(oversized).toEqual([]);
   }, 60_000);
 
+  it('avoids the two warnings Fab builds treat as errors', () => {
+    // Fab's MSVC build fails C4706 (an assignment as a condition, here `!(X = f())`);
+    // its Mac clang build fails -Wdeprecated-enum-compare-conditional (a ternary
+    // whose arms are two different enum types, e.g. HAlign_Fill : VAlign_Fill).
+    const offenders = listFiles(pluginSourceRoot)
+      .filter((file) => sourceExtensionPattern.test(file))
+      .flatMap((file) =>
+        readFileSync(file, 'utf8')
+          .split('\n')
+          .flatMap((line, index) => {
+            const code = line.replace(/\/\/.*$/u, '');
+            const mixed = /\?\s*([A-Z][A-Za-z]*)_\w+\s*:\s*([A-Z][A-Za-z]*)_\w+/u.exec(code);
+            return /!\(\s*\*?\w+\s*=[^=]/u.test(code) || (mixed && mixed[1] !== mixed[2])
+              ? [`${file}:${index + 1}: ${line.trim()}`]
+              : [];
+          }),
+      );
+
+    expect(offenders).toEqual([]);
+  }, 60_000);
+
   it('rejects catch-all and mechanical split artifacts', () => {
     // Given
     const sourceFiles = listFiles(pluginSourceRoot);

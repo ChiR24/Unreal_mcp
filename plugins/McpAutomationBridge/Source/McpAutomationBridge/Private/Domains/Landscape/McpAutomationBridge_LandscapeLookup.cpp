@@ -61,7 +61,10 @@ ALandscape *ResolveLandscapeOrReply(UMcpAutomationBridgeSubsystem &Bridge,
         TEXT("LANDSCAPE_NOT_FOUND"));
     return nullptr;
   }
-  if (OutInfo && !(*OutInfo = Landscape->GetLandscapeInfo())) {
+  if (OutInfo) {
+    *OutInfo = Landscape->GetLandscapeInfo();
+  }
+  if (OutInfo && !*OutInfo) {
     Bridge.SendAutomationError(RequestingSocket, RequestId,
                                TEXT("Landscape has no info"),
                                TEXT("INVALID_LANDSCAPE"));

@@ -35,22 +35,22 @@ inline bool ResolveAlignmentValue(const TSharedPtr<FJsonValue> &Value,
   if (Value->Type == EJson::String && Value->TryGetString(Text)) {
     Text = Text.TrimStartAndEnd().ToLower();
     if (Text == TEXT("fill")) {
-      OutAlign = bHorizontal ? HAlign_Fill : VAlign_Fill;
+      OutAlign = bHorizontal ? static_cast<uint8>(HAlign_Fill) : static_cast<uint8>(VAlign_Fill);
       OutName = TEXT("Fill");
       return true;
     }
     if (Text == TEXT("left") || Text == TEXT("top")) {
-      OutAlign = bHorizontal ? HAlign_Left : VAlign_Top;
+      OutAlign = bHorizontal ? static_cast<uint8>(HAlign_Left) : static_cast<uint8>(VAlign_Top);
       OutName = bHorizontal ? TEXT("Left") : TEXT("Top");
       return true;
     }
     if (Text == TEXT("center") || Text == TEXT("centre")) {
-      OutAlign = bHorizontal ? HAlign_Center : VAlign_Center;
+      OutAlign = bHorizontal ? static_cast<uint8>(HAlign_Center) : static_cast<uint8>(VAlign_Center);
       OutName = TEXT("Center");
       return true;
     }
     if (Text == TEXT("right") || Text == TEXT("bottom")) {
-      OutAlign = bHorizontal ? HAlign_Right : VAlign_Bottom;
+      OutAlign = bHorizontal ? static_cast<uint8>(HAlign_Right) : static_cast<uint8>(VAlign_Bottom);
       OutName = bHorizontal ? TEXT("Right") : TEXT("Bottom");
       return true;
     }
@@ -61,13 +61,13 @@ inline bool ResolveAlignmentValue(const TSharedPtr<FJsonValue> &Value,
     return false;
   }
   if (Number < 0.25) {
-    OutAlign = bHorizontal ? HAlign_Left : VAlign_Top;
+    OutAlign = bHorizontal ? static_cast<uint8>(HAlign_Left) : static_cast<uint8>(VAlign_Top);
     OutName = bHorizontal ? TEXT("Left") : TEXT("Top");
   } else if (Number < 0.75) {
-    OutAlign = bHorizontal ? HAlign_Center : VAlign_Center;
+    OutAlign = bHorizontal ? static_cast<uint8>(HAlign_Center) : static_cast<uint8>(VAlign_Center);
     OutName = TEXT("Center");
   } else {
-    OutAlign = bHorizontal ? HAlign_Right : VAlign_Bottom;
+    OutAlign = bHorizontal ? static_cast<uint8>(HAlign_Right) : static_cast<uint8>(VAlign_Bottom);
     OutName = bHorizontal ? TEXT("Right") : TEXT("Bottom");
   }
   return true;
