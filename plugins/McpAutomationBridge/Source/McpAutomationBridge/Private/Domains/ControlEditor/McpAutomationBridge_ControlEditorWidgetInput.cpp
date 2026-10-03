@@ -7,6 +7,7 @@
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 #include "UObject/UObjectIterator.h"
+#include "Widgets/SViewport.h"
 #include "Widgets/SWindow.h"
 
 namespace {
@@ -200,6 +201,23 @@ void WarnWhenPieWindowMinimizedForMcp(const TSharedPtr<FJsonObject> &Resp) {
   }
 }
 } // namespace
+
+// A real key goes through Slate's focus path first, so a menu button the game has focused takes Enter or Space
+// and the arrows move focus between buttons; only what it leaves bubbles up to the viewport and the game. Keys
+// sent straight to the viewport client never reached a focused UMG button. Only while a widget inside the PIE
+// viewport holds focus: otherwise Slate would hand the key to whatever editor panel has focus.
+bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, const EInputEvent InputEvent, bool &bOutHandled) {
+  UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+  UGameViewportClient *Viewport = PlayWorld ? PlayWorld->GetGameViewport() : nullptr;
+  const TSharedPtr<SViewport> ViewportWidget = Viewport ? Viewport->GetGameViewportWidget() : nullptr;
+  FSlateApplication &SlateApp = FSlateApplication::Get();
+  if (!ViewportWidget.IsValid() || !SlateApp.HasUserFocusedDescendants(ViewportWidget.ToSharedRef(), 0)) {
+    return false;
+  }
+  const FKeyEvent KeyEvent(Key, FModifierKeysState(), 0, false, 0, 0);
+  bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);
+  return true;
+}
 
 bool SimulateLiveWidgetInputForMcp(const FString &InputType,
                                    const TSharedPtr<FJsonObject> &Payload,

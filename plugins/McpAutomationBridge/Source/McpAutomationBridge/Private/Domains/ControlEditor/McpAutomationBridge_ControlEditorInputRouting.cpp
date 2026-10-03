@@ -143,7 +143,9 @@ void SimulateKeyInputForMcp(const FString &Key, const EInputEvent InputEvent,
     return;
   }
 
-  bRoutedToPIE = RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE);
+  // A menu widget the game focused takes the key through Slate first, as a real key reaches it.
+  bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp(InputKey, InputEvent, bHandledBySlate) ||
+                 RouteKeyToPIEForMcp(InputKey, InputEvent, bHandledByPIE);
   if (!bRoutedToPIE) {
     FSlateApplication &SlateApp = FSlateApplication::Get();
     FKeyEvent KeyEvent(InputKey, FModifierKeysState(), 0, false, 0, 0);

@@ -79,6 +79,9 @@ bool SimulateLiveWidgetInputForMcp(const FString &InputType,
                                    const TSharedPtr<FJsonObject> &Payload,
                                    const TSharedPtr<FJsonObject> &Resp,
                                    FString &Message);
+// While a widget inside the PIE viewport holds keyboard focus, sends the key through Slate's focus path (as a real
+// key arrives) and returns true with bOutHandled; returns false, sending nothing, otherwise.
+bool RouteKeyToFocusedPieWidgetForMcp(const FKey &Key, EInputEvent InputEvent, bool &bOutHandled);
 // Drop every live Enhanced Input hold. The holds run on the core ticker, which
 // outlives this module, so a delegate still registered when the module unloads
 // would call into code that is no longer there -- and Live Coding unloads this

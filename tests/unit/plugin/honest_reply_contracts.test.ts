@@ -876,6 +876,18 @@ describe('found rebuilding the stage-1 HUD', () => {
   });
 });
 
+describe('found giving the title menu keyboard focus', () => {
+  // simulate_input key_tap Enter in PIE went straight to the viewport client, so the focused PLAY button of the title
+  // menu never saw it (handledByPIE false, handledBySlate false) while a real Enter pressed it.
+  it('a key goes through the Slate focus path while a widget inside the PIE viewport holds focus', () => {
+    const widgetInput = code('ControlEditor', 'McpAutomationBridge_ControlEditorWidgetInput.cpp');
+    expect(widgetInput).toMatch(/if \(!ViewportWidget\.IsValid\(\) \|\| !SlateApp\.HasUserFocusedDescendants\(ViewportWidget\.ToSharedRef\(\), 0\)\) \{\s*return false;\s*\}/u);
+    expect(widgetInput).toContain('bOutHandled = InputEvent == IE_Released ? SlateApp.ProcessKeyUpEvent(KeyEvent) : SlateApp.ProcessKeyDownEvent(KeyEvent);');
+    const routing = code('ControlEditor', 'McpAutomationBridge_ControlEditorInputRouting.cpp');
+    expect(routing).toMatch(/bRoutedToPIE = RouteKeyToFocusedPieWidgetForMcp\(InputKey, InputEvent, bHandledBySlate\) \|\|\s*RouteKeyToPIEForMcp\(InputKey, InputEvent, bHandledByPIE\);/u);
+  });
+});
+
 describe('found rebuilding the title menu', () => {
   // After remove_widget MenuStack and a tree re-adding PlayButton, BP_RiderGameMode (Set Input Mode UI Only focusing
   // the title's PlayButton) failed every play with "Attempted to access missing property 'none'" while it read up to
@@ -883,5 +895,15 @@ describe('found rebuilding the title menu', () => {
   it('a widget class refresh compiles every Blueprint that depends on it in full', () => {
     const source = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp');
     expect(source).toMatch(/const bool bCompiled = McpSafeCompileBlueprint\(WidgetBP\);\s*TArray<UBlueprint\*> Dependents;\s*FBlueprintEditorUtils::GetDependentBlueprints\(WidgetBP, Dependents\);\s*for \(UBlueprint\* Dependent : Dependents\)\s*\{\s*McpSafeCompileBlueprint\(Dependent\);\s*\}\s*return bCompiled;/u);
+  });
+});
+
+describe('found pressing PLAY with Enter on the title', () => {
+  // key_tap Enter reached the focused PLAY button but the title stayed up: the release waited on game time, which a
+  // title or pause menu stops, so the key stayed down for the 600 s grace and the button never clicked.
+  it('a tapped key is released on wall time while the game is paused', () => {
+    const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorInput.cpp');
+    expect(source).toContain('const bool bGameClock = bGameTime && !bWorldGone && !Live->IsPaused();');
+    expect(source).toContain('(bGameClock ? Live->GetTimeSeconds() < EndGameTime : FPlatformTime::Seconds() < EndHoldWall)');
   });
 });
