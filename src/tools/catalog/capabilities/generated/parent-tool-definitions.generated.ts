@@ -6686,7 +6686,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "With propertyNames: each property that resolved, as {propertyName (its own spelling), value}."
+              "description": "With propertyNames: each property that resolved, as {propertyName (its own spelling), value}, plus propertyPath (the path as asked) when that differs, so two .Text reads stay apart."
             }
           ],
           "description": "With properties: each write as {propertyName, applied, value read back}."

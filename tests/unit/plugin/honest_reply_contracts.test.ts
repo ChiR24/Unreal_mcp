@@ -831,3 +831,12 @@ describe('found checking the Fab bushes', () => {
     expect(source).toMatch(/#if ENGINE_MINOR_VERSION >= 1\s*EachMesh = Skeletal->GetSkeletalMeshAsset\(\);\s*#else\s*EachMesh = Skeletal->SkeletalMesh;\s*#endif/u);
   });
 });
+
+describe('found wiring the stage label into the intro card', () => {
+  // get_property with propertyNames IntroStage.Text and IntroRound.Text answered two rows both named "Text".
+  it('a multi-property read echoes each dotted path as asked under propertyPath, keeping the resolved propertyName', () => {
+    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectGet.cpp');
+    expect(source).toContain('Row->SetStringField(TEXT("propertyName"), Resolved);');
+    expect(source).toMatch(/if \(!Wanted\.Equals\(Resolved, ESearchCase::CaseSensitive\)\) \{\s*Row->SetStringField\(TEXT\("propertyPath"\), Wanted\);\s*\}/u);
+  });
+});

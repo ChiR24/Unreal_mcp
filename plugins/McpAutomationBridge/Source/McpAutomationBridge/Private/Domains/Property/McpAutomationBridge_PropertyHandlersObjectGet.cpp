@@ -49,8 +49,13 @@ bool UMcpAutomationBridgeSubsystem::HandleGetObjectProperty(
         continue;
       }
       // The resolved name, never the caller's spelling: the receipt redactor judges a value by its sibling name.
+      // A dotted path also comes back as asked under propertyPath (name-bearing for the redactor as well): reads
+      // of IntroStage.Text and IntroRound.Text otherwise answered as two rows both named "Text".
       TSharedPtr<FJsonObject> Row = McpHandlerUtils::CreateResultObject();
       Row->SetStringField(TEXT("propertyName"), Resolved);
+      if (!Wanted.Equals(Resolved, ESearchCase::CaseSensitive)) {
+        Row->SetStringField(TEXT("propertyPath"), Wanted);
+      }
       Row->SetField(TEXT("value"), Value);
       Rows.Add(MakeShared<FJsonValueObject>(Row));
     }

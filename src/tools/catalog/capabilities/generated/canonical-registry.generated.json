@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "68f39a4278344d51",
+  "catalogRevision": "357589afaed13f5e",
   "recordCount": 394,
   "records": [
     {
@@ -41286,7 +41286,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "With propertyNames: each property that resolved, as {propertyName (its own spelling), value}."
+              "description": "With propertyNames: each property that resolved, as {propertyName (its own spelling), value}, plus propertyPath (the path as asked) when that differs, so two .Text reads stay apart."
             },
             "missingProperties": {
               "type": "array",
@@ -41344,8 +41344,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "caf0c74440363f2f00ee7b387aad84b2847c8a9d28775e462539d6c8993bca8e",
-        "content": "6ba3711182a1fb2246c546fa925bbcc2a542ff03c76113adab71b2bcaf5042ba"
+        "schema": "b6573098190d521cd68f0422291decf27f17a89f9ea0deb0a8f631f27ae13975",
+        "content": "917ec4c97a56097d68861becbd41b465ff2438ea8bed9a5c5e3dcca13e1c21e3"
       }
     },
     {

@@ -259,7 +259,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     exampleOutput: { success: true, message: 'Property read', value: 'PlayerStart_1' },
     outputProps: {
       value: P.value,
-      properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With propertyNames: each property that resolved, as {propertyName (its own spelling), value}.' },
+      properties: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, 'x-unreal-reflection-boundary': true, description: 'With propertyNames: each property that resolved, as {propertyName (its own spelling), value}, plus propertyPath (the path as asked) when that differs, so two .Text reads stay apart.' },
       missingProperties: { type: 'array', items: { type: 'string' }, description: 'With propertyNames: each name that did not resolve, as "Name: reason".' },
     },
   }),
