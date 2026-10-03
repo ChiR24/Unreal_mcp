@@ -73,6 +73,15 @@ void MoveFolderContents(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
 
     Result->SetStringField(TEXT("sourceFolder"), SourceFolder);
     Result->SetStringField(TEXT("destinationFolder"), DestinationFolder);
+    if (bMoved)
+    {
+        // The receipt's changes[] reads modifiedPaths, not the two folder fields: name both folders, however
+        // many assets moved between them.
+        TArray<TSharedPtr<FJsonValue>> Folders;
+        Folders.Add(MakeShared<FJsonValueString>(SourceFolder));
+        Folders.Add(MakeShared<FJsonValueString>(DestinationFolder));
+        Result->SetArrayField(TEXT("modifiedPaths"), Folders);
+    }
     Result->SetNumberField(TEXT("movedCount"), bMoved ? RenameData.Num() : 0);
     Result->SetNumberField(TEXT("redirectorsFixed"), FixedBefore + RedirectorsFixed);
     if (RenameData.Num() == 0)

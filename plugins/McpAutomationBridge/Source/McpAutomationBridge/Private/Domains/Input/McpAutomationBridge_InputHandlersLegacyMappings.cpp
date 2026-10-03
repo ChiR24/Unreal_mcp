@@ -159,6 +159,13 @@ bool HandleLegacyInputMapping(
         Result->SetBoolField(TEXT("alreadyPresent"), BeforeCount > 0);
     }
     Result->SetBoolField(bRemove ? TEXT("removed") : TEXT("added"), true);
+    if (bUpdatedDefaultConfig && (bRemove || BeforeCount == 0))
+    {
+        // The receipt's changes[] reads modifiedPaths: the project's input config is what this edit changed.
+        TArray<TSharedPtr<FJsonValue>> Paths;
+        Paths.Add(MakeShared<FJsonValueString>(TEXT("Config/DefaultInput.ini")));
+        Result->SetArrayField(TEXT("modifiedPaths"), Paths);
+    }
     Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
         bRemove ? TEXT("Legacy input mapping removed.") : TEXT("Legacy input mapping added."), Result);
     return true;

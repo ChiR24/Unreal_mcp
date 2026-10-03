@@ -772,4 +772,16 @@ describe('found wiring the pause key', () => {
     expect(code('Environment', 'McpAutomationBridge_EnvironmentHandlersBuildDeletion.cpp'))
       .toContain('McpAddStringArrayField(Context.Resp, TEXT("deleted"), DeletedTargets);');
   });
+
+  // A folder move and a legacy input mapping did their work while their receipts listed no change: the
+  // reply named the folders and the ini only in fields changes[] never reads.
+  it('a folder move names both folders in modifiedPaths, once something moved', () => {
+    expect(code('AssetWorkflow', 'Rename', 'McpAutomationBridge_AssetFolderMove.cpp')).toMatch(
+      /if \(bMoved\)\s*\{[\s\S]{0,200}?Folders\.Add\(MakeShared<FJsonValueString>\(SourceFolder\)\);\s*Folders\.Add\(MakeShared<FJsonValueString>\(DestinationFolder\)\);\s*Result->SetArrayField\(TEXT\("modifiedPaths"\), Folders\);/u);
+  });
+
+  it('a legacy input mapping names DefaultInput.ini when it changed it, not for a mapping already there', () => {
+    expect(code('Input', 'McpAutomationBridge_InputHandlersLegacyMappings.cpp')).toMatch(
+      /if \(bUpdatedDefaultConfig && \(bRemove \|\| BeforeCount == 0\)\)\s*\{[\s\S]{0,200}?Paths\.Add\(MakeShared<FJsonValueString>\(TEXT\("Config\/DefaultInput\.ini"\)\)\);\s*Result->SetArrayField\(TEXT\("modifiedPaths"\), Paths\);/u);
+  });
 });
