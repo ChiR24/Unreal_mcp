@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3ecd191f3d310d10",
+  "catalogRevision": "a68ffecc53161f2d",
   "recordCount": 393,
   "records": [
     {
@@ -50682,7 +50682,8 @@
         "manage_audio.play_sound_at_location",
         "manage_audio.spawn_sound_at_location",
         "manage_audio.play_sound_attached",
-        "manage_audio.prime_sound"
+        "manage_audio.prime_sound",
+        "manage_audio.play_sound_measure"
       ],
       "legacyIds": [
         {
@@ -50723,6 +50724,13 @@
           "folded": {
             "playback": "prime"
           }
+        },
+        {
+          "tool": "manage_audio",
+          "action": "play_sound_measure",
+          "folded": {
+            "playback": "measure"
+          }
         }
       ],
       "discovery": {
@@ -50737,21 +50745,29 @@
           "prime sound",
           "preview sound",
           "preload sound",
+          "measure sound",
+          "is sound audible",
           "play audio",
           "play sfx",
           "ui sound",
           "play music",
           "3d sound",
           "spatial sound",
-          "positional audio"
+          "positional audio",
+          "sound level",
+          "loudness",
+          "silent sound",
+          "audio meter",
+          "verify sound plays"
         ],
-        "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound.",
+        "summary": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent).",
         "whenToUse": [
           "playback=2d: Use it to play a non-spatial sound.",
           "playback=at_location: Use it to play a sound at a world location.",
           "playback=spawn_at_location: Use it to spawn a transient sound at a world location.",
           "playback=attached: Use it to play a sound attached to an actor component.",
-          "playback=prime: Use it to prime a sound asset for playback."
+          "playback=prime: Use it to prime a sound asset for playback.",
+          "playback=measure: Use it to play a sound 2D and measure how loud it played, from the mixer's own meter: peak and average level in dB and a timeline, with silent: true when it played but produced no audio (an empty Sound Cue, a MetaSound whose audio output is unconnected). Answers when the sound ends or after maxSeconds."
         ],
         "whenNotToUse": []
       },
@@ -50822,6 +50838,10 @@
               "type": "string",
               "description": "Socket or bone name to attach the sound to."
             },
+            "maxSeconds": {
+              "type": "number",
+              "description": "Longest the measurement runs, in seconds (default 5, 0.2 to 20). A sound that ends sooner ends it then; looping sounds, music and MetaSounds that never trigger On Finished play until this."
+            },
             "playback": {
               "type": "string",
               "enum": [
@@ -50829,7 +50849,8 @@
                 "at_location",
                 "spawn_at_location",
                 "attached",
-                "prime"
+                "prime",
+                "measure"
               ],
               "description": "Which play sound variant to run."
             }
@@ -50861,6 +50882,40 @@
             "componentName": {
               "type": "string",
               "description": "Name of the audio component that was created or spawned."
+            },
+            "peakDb": {
+              "type": "number",
+              "description": "Loudest level the sound reached, in dB of full scale (0 is full scale, -120 means no signal). The mixer meters each sound after its own volume and before distance attenuation; the editor being in the background does not lower it."
+            },
+            "averageDb": {
+              "type": "number",
+              "description": "Mean level over every reading in dB, the release tail included."
+            },
+            "silent": {
+              "type": "boolean",
+              "description": "True when the peak stayed below -60 dB: the sound played but produced no audio; the warning says the likely cause."
+            },
+            "envelopeUpdates": {
+              "type": "number",
+              "description": "Meter readings that arrived, about one per editor frame; 0 means the engine never rendered the sound."
+            },
+            "endedBecause": {
+              "type": "string",
+              "description": "finished (the sound ended on its own), maxSeconds (cut there, as looping sounds and music always are) or stopped (stopped by another call, or its Play-In-Editor world ended)."
+            },
+            "timeline": {
+              "type": "array",
+              "items": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "description": "Loudest reading in dB in each timelineStepSeconds step from the start, null for a step no reading landed in (a slow editor frame)."
+            },
+            "timelineStepSeconds": {
+              "type": "number",
+              "description": "Seconds each timeline entry covers: 0.05 for sounds up to 5 s, longer so there are at most 100 entries."
             }
           },
           "required": [
@@ -50871,7 +50926,7 @@
       },
       "examples": [
         {
-          "title": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound.",
+          "title": "Play a sound: 2D, at a location (played or spawned), attached to an actor, or prime it for playback. A 2D sound (looping music too) plays until stop_sound. measure plays it 2D and reports how loud it played (peak and average dB, silent).",
           "input": {
             "action": "play_sound",
             "soundPath": "/Game/Audio/Waves/SW_FootstepConcrete",
@@ -50916,14 +50971,16 @@
             "at_location": "play_sound_at_location",
             "spawn_at_location": "spawn_sound_at_location",
             "attached": "play_sound_attached",
-            "prime": "prime_sound"
+            "prime": "prime_sound",
+            "measure": "play_sound_measure"
           },
           "declaredBy": {
             "volume": [
               "2d",
               "at_location",
               "spawn_at_location",
-              "attached"
+              "attached",
+              "measure"
             ],
             "pitch": [
               "2d",
@@ -50960,14 +51017,17 @@
             ],
             "attachPointName": [
               "attached"
+            ],
+            "maxSeconds": [
+              "measure"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3fb0b4fc7150dc2e5a252bd3725a1a860044b885cc157164303491b99629c900",
-        "content": "75e777ae738d55310c6082bda2568530e9bebc706eafefe3a488dc9223b0c5c2"
+        "schema": "24a102b169607f71766484933e2d4b85e9736a3de6cc7d2675d98cf90f7a65ac",
+        "content": "018ee6671a32d78c1351f959f960ca462e1620a8291bcdbaa02d7006d7739a75"
       }
     },
     {

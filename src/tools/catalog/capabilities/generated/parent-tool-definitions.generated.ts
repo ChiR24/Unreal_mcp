@@ -10921,6 +10921,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Low-pass filter cutoff frequency in Hz."
         },
+        "maxSeconds": {
+          "type": "number",
+          "description": "Longest the measurement runs, in seconds (default 5, 0.2 to 20). A sound that ends sooner ends it then; looping sounds, music and MetaSounds that never trigger On Finished play until this."
+        },
         "midFrequency": {
           "type": "number",
           "description": "Centre frequency of EQ band 1 in Hz."
@@ -11011,7 +11015,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "at_location",
             "spawn_at_location",
             "attached",
-            "prime"
+            "prime",
+            "measure"
           ],
           "description": "Which play sound variant to run."
         },
@@ -11224,6 +11229,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Path of the Sound Attenuation asset referenced by the inspected Sound Cue."
         },
+        "averageDb": {
+          "type": "number",
+          "description": "Mean level over every reading in dB, the release tail included."
+        },
         "componentName": {
           "type": "string",
           "description": "Name of the audio component that was created or spawned."
@@ -11261,6 +11270,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "edgesRemoved": {
           "type": "number",
           "description": "How many MetaSound links were removed."
+        },
+        "endedBecause": {
+          "type": "string",
+          "description": "finished (the sound ended on its own), maxSeconds (cut there, as looping sounds and music always are) or stopped (stopped by another call, or its Play-In-Editor world ended)."
+        },
+        "envelopeUpdates": {
+          "type": "number",
+          "description": "Meter readings that arrived, about one per editor frame; 0 means the engine never rendered the sound."
         },
         "falloffDistance": {
           "type": "number",
@@ -11335,6 +11352,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Playing sounds this call paused (0 when none was playing)."
         },
+        "peakDb": {
+          "type": "number",
+          "description": "Loudest level the sound reached, in dB of full scale (0 is full scale, -120 means no signal). The mixer meters each sound after its own volume and before distance attenuation; the editor being in the background does not lower it."
+        },
         "pitch": {
           "type": "number",
           "description": "Pitch multiplier declared by the inspected Sound Class."
@@ -11375,6 +11396,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the asset was saved to disk."
         },
+        "silent": {
+          "type": "boolean",
+          "description": "True when the peak stayed below -60 dB: the sound played but produced no audio; the warning says the likely cause."
+        },
         "smoothing": {
           "type": "boolean",
           "description": "Whether the Doppler pitch change is smoothed."
@@ -11390,6 +11415,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "description": "Loudest reading in dB in each timelineStepSeconds step from the start, null for a step no reading landed in (a slow editor frame)."
+        },
+        "timelineStepSeconds": {
+          "type": "number",
+          "description": "Seconds each timeline entry covers: 0.05 for sounds up to 5 s, longer so there are at most 100 entries."
         },
         "type": {
           "type": "string",

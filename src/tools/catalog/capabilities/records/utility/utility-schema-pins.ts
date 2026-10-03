@@ -49,6 +49,7 @@ export const NUMBER_FIELDS = new Set([
   'midFrequency', 'midGain', 'highMidFrequency', 'highMidGain', 'highFrequency', 'highGain',
   'density', 'diffusion', 'gain', 'gainHF', 'decayTime', 'decayHFRatio', 'lfeBleed',
   'voiceCenterChannelVolume', 'micInputGain', 'noiseGateThreshold', 'silenceDetectionThreshold', 'sampleRate',
+  'maxSeconds',
 ]);
 
 /** Field names whose value is an arbitrary reflection-boundary object. */
@@ -108,6 +109,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   location: 'World location as [x, y, z] (an {x, y, z} object is accepted).',
   looping: 'Whether playback loops.',
   lowPassFilterFrequency: 'Low-pass filter cutoff frequency in Hz.',
+  maxSeconds: 'Longest the measurement runs, in seconds (default 5, 0.2 to 20). A sound that ends sooner ends it then; looping sounds, music and MetaSounds that never trigger On Finished play until this.',
   mixName: 'Sound Mix name.',
   nodeClassName: 'Node class name; short names such as Sine resolve against the MetaSound registry (UE.Sine.Audio).',
   nodeType: 'Node type or class short name.',

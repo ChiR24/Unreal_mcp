@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 🏷️ [Unreleased]
 
 <details>
+<summary><b>✨ Added</b></summary>
+
+- **`play_sound` `measure` says whether a sound is audible.** It plays the sound 2D and answers when the sound ends (or after `maxSeconds`, default 5) with the level the mixer metered for it: `peakDb`, `averageDb`, a `timeline` per step, and `silent: true` when it played but produced no audio (an empty Sound Cue, a MetaSound whose audio output is unconnected, a gain of 0), with the likely cause. Until now a sound could only be shown to have started (`au.DumpActiveSounds`, which a short click is over before), and the reading does not drop when the editor is in the background.
+
+</details>
+
+<details>
 <summary><b>🔧 Fixed</b></summary>
 
 - **A Widget Blueprint can be created by its `widgetPath`.** `edit_widget_blueprint` `create` refused a full asset path with "Missing required parameter: name"; `name` with `path`, or `widgetPath`, now names it.

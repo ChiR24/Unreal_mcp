@@ -81,6 +81,8 @@ using FAudioActionHandler = bool (*)(
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 
 bool HandlePlaybackActions(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+// play_sound_measure: plays a sound and answers, once it ends, with the level the mixer metered for it.
+bool HandleMeasureActions(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandlePauseActions(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleAmbientActions(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleMixActions(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const FString& Lower, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);

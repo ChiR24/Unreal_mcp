@@ -6,6 +6,9 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ## [Unreleased]
 
+### Added
+- **`play_sound_measure`** — `HandleMeasureActions` (`AudioHandlersMeasure.cpp`) plays the sound with `UGameplayStatics::CreateSound2D` in the PIE world while one runs (its audio device is the active one) or else the editor world, as a preview sound (`bIsPreviewSound`: off the primary volume, which falls to the unfocused level when the editor is in the background), binds `OnAudioSingleEnvelopeValueNative` and `OnAudioFinishedNative` before `Play` (the active sound turns envelope following on only when one is bound then), and answers from an `FTSTicker` when the sound finishes, at `maxSeconds` (default 5, 0.2-20) or when the component is gone (`endedBecause`). `peakDb` and `averageDb` come from the mixer's per-source envelope (after the sound's volume, before distance attenuation); `silent` is a peak below -60 dB, with a warning naming the likely cause (a muted device, no reading at all, or readings of silence); `timeline` is the loudest reading per step (0.05 s, at most 100 steps, null where no reading landed), plus `envelopeUpdates`. The run holds the editor through `BeginEditorRunForMcp`, since the meter is read once per editor frame.
+
 ### Fixed
 - **Widget Blueprint create by path** — `create_widget_blueprint` derives `name` and `path` from `widgetPath` (`FPackageName::ObjectPathToPackageName`) when no `name` is given.
 - **Widget tree root in a new canvas** — `McpAddSpecToWidget` anchors a slot-less root it seats in the canvas it made for the call to fill it (anchors 0,0,1,1, offsets 0) unless the call gives a position or size.

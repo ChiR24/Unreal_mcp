@@ -7934,6 +7934,7 @@
         "lowFrequency",
         "lowGain",
         "lowPassFilterFrequency",
+        "maxSeconds",
         "midFrequency",
         "midGain",
         "mixName",
@@ -8262,6 +8263,10 @@
             "type": "number",
             "description": "Low-pass filter cutoff frequency in Hz."
           },
+          "maxSeconds": {
+            "type": "number",
+            "description": "Longest the measurement runs, in seconds (default 5, 0.2 to 20). A sound that ends sooner ends it then; looping sounds, music and MetaSounds that never trigger On Finished play until this."
+          },
           "midFrequency": {
             "type": "number",
             "description": "Centre frequency of EQ band 1 in Hz."
@@ -8352,7 +8357,8 @@
               "at_location",
               "spawn_at_location",
               "attached",
-              "prime"
+              "prime",
+              "measure"
             ],
             "description": "Which play sound variant to run."
           },

@@ -53,6 +53,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAudioAction(
 
   const McpAudioHandlers::FAudioActionHandler Handlers[] = {
       &McpAudioHandlers::HandlePlaybackActions,
+      &McpAudioHandlers::HandleMeasureActions,
       &McpAudioHandlers::HandlePauseActions,
       &McpAudioHandlers::HandleAmbientActions,
       &McpAudioHandlers::HandleMixActions,
