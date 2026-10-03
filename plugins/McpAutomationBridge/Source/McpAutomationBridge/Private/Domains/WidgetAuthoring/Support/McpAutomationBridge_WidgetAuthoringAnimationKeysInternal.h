@@ -61,6 +61,12 @@ inline int32 AddFloatKey(UMovieSceneSection* Section, int32 ChannelIndex, FFrame
     {
         return 0;
     }
+    // A key already on this frame is replaced, as the Sequencer does: adding beside it left two keys on one
+    // frame, and which of them played was down to the key search. Every one goes, so a doubled frame heals.
+    for (int32 Existing = Channel->GetData().FindKey(Frame); Existing != INDEX_NONE; Existing = Channel->GetData().FindKey(Frame))
+    {
+        Channel->GetData().RemoveKey(Existing);
+    }
     const float FloatValue = static_cast<float>(Value);
     if (Interp.Equals(TEXT("linear"), ESearchCase::IgnoreCase))
     {

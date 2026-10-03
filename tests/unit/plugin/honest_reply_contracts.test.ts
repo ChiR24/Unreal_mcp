@@ -1000,4 +1000,11 @@ describe('found restyling the stage-1 HUD', () => {
     const core = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationCore.cpp');
     expect(core).toMatch(/RegisterAnimationGuid\(WidgetBP, NewAnim\);\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(WidgetBP\);\s*RefreshWidgetBlueprintClass\(WidgetBP\);\s*McpSafeAssetSave\(WidgetBP\);/u);
   });
+
+  // Re-keying the stage intro's logo at 0.15 s answered "4 keys in the track" for a 3-key track: the new key went
+  // in beside the old one on the same frame.
+  it('a widget animation key on an occupied frame replaces the key there', () => {
+    const keys = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringAnimationKeysInternal.h');
+    expect(keys).toMatch(/for \(int32 Existing = Channel->GetData\(\)\.FindKey\(Frame\); Existing != INDEX_NONE; Existing = Channel->GetData\(\)\.FindKey\(Frame\)\)\s*\{\s*Channel->GetData\(\)\.RemoveKey\(Existing\);\s*\}\s*const float FloatValue/u);
+  });
 });
