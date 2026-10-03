@@ -993,4 +993,11 @@ describe('found restyling the stage-1 HUD', () => {
     const keys = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringAnimationKeys.h');
     expect(keys).toContain('FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value);');
   });
+
+  // Wiring the title's new Intro into PlayAnimation stopped with "Variable 'Intro' not found": the animation was
+  // only a property of the generated class after the next compile.
+  it('create_widget_animation compiles the Widget Blueprint so a graph can read the animation at once', () => {
+    const core = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationCore.cpp');
+    expect(core).toMatch(/RegisterAnimationGuid\(WidgetBP, NewAnim\);\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(WidgetBP\);\s*RefreshWidgetBlueprintClass\(WidgetBP\);\s*McpSafeAssetSave\(WidgetBP\);/u);
+  });
 });
