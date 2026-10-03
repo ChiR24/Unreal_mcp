@@ -7,6 +7,7 @@
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 #include "UObject/UObjectIterator.h"
+#include "Widgets/SWindow.h"
 
 namespace {
 // The user widgets a PIE player can actually see: in the play world, and either
@@ -178,12 +179,33 @@ bool ClickLiveWidgetForMcp(const TSharedPtr<FJsonObject> &Payload,
   Message = FString::Printf(TEXT("%s %s"), *Label, *Outcome);
   return bDriven;
 }
+
+// A minimized window is never painted, and UMG ticks a user widget while it paints it, so the Delay nodes of a
+// widget graph and its animations stand still: a stage card meant to clear itself after two seconds stayed up
+// for as long as the editor was minimized, and widget_list kept listing it with nothing to say why.
+void WarnWhenPieWindowMinimizedForMcp(const TSharedPtr<FJsonObject> &Resp) {
+  UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+  UGameViewportClient *Viewport = PlayWorld ? PlayWorld->GetGameViewport() : nullptr;
+  TSharedPtr<SWindow> Window;
+  if (Viewport) {
+    Window = Viewport->GetWindow();
+  }
+  if (Window.IsValid() && Window->IsWindowMinimized()) {
+    TArray<TSharedPtr<FJsonValue>> Warnings;
+    Warnings.Add(MakeShared<FJsonValueString>(
+        TEXT("The window showing Play In Editor is minimized, so its widgets are not painted and do not tick: "
+             "Delay nodes in a widget graph and widget animations stand still until it is restored "
+             "(control_editor.configure_editor setting window).")));
+    Resp->SetArrayField(TEXT("warnings"), Warnings);
+  }
+}
 } // namespace
 
 bool SimulateLiveWidgetInputForMcp(const FString &InputType,
                                    const TSharedPtr<FJsonObject> &Payload,
                                    const TSharedPtr<FJsonObject> &Resp,
                                    FString &Message) {
+  WarnWhenPieWindowMinimizedForMcp(Resp);
   if (InputType == TEXT("widget_list")) {
     return ListLiveWidgetsForMcp(Resp, Message);
   }

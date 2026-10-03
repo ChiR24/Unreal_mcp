@@ -785,3 +785,14 @@ describe('found wiring the pause key', () => {
       /if \(bUpdatedDefaultConfig && \(bRemove \|\| BeforeCount == 0\)\)\s*\{[\s\S]{0,200}?Paths\.Add\(MakeShared<FJsonValueString>\(TEXT\("Config\/DefaultInput\.ini"\)\)\);\s*Result->SetArrayField\(TEXT\("modifiedPaths"\), Paths\);/u);
   });
 });
+
+describe('found testing the stage intro card', () => {
+  // A minimized editor paints no widget, so a widget graph's Delay never fires: the card stayed up and
+  // widget_list kept listing it with no word on why.
+  it('widget_list and widget_click warn while the window showing Play In Editor is minimized', () => {
+    const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorWidgetInput.cpp');
+    expect(source).toMatch(/if \(Viewport\) \{\s*Window = Viewport->GetWindow\(\);\s*\}\s*if \(Window\.IsValid\(\) && Window->IsWindowMinimized\(\)\) \{/u);
+    expect(source).toContain('Resp->SetArrayField(TEXT("warnings"), Warnings);');
+    expect(source).toMatch(/FString &Message\) \{\s*WarnWhenPieWindowMinimizedForMcp\(Resp\);\s*if \(InputType == TEXT\("widget_list"\)\)/u);
+  });
+});
