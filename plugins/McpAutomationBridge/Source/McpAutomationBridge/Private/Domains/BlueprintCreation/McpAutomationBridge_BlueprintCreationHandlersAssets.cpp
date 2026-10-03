@@ -54,7 +54,13 @@ bool ExecuteBlueprintCreation(UMcpAutomationBridgeSubsystem *Self,
     return true;
   }
 
-  UFactory *Factory = CreateBlueprintFactory(Context);
+  FString ParentError;
+  UFactory *Factory = CreateBlueprintFactory(Context, ParentError);
+  if (!Factory) {
+    Self->SendAutomationResponse(Context.RequestingSocket, Context.RequestId, false, ParentError, nullptr,
+                                 TEXT("CLASS_NOT_FOUND"));
+    return true;
+  }
   FAssetToolsModule &AssetToolsModule =
       FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools"));
   UObject *NewObject = AssetToolsModule.Get().CreateAsset(

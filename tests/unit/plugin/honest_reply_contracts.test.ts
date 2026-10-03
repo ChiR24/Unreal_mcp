@@ -808,3 +808,14 @@ describe('found extending the stage-1 meadow', () => {
     expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersGetInstances.cpp')).not.toContain('SetFoliageActorChanged');
   });
 });
+
+describe('found adding the rider camera shake', () => {
+  // A camera shake asked for under the wrong module (/Script/GameplayCameras.LegacyCameraShake) came out an Actor
+  // Blueprint answering "Blueprint created", with only a list of shake properties that did not exist on it.
+  it('a create whose named parent class resolves to nothing is refused and names classes with that name', () => {
+    const parents = code('BlueprintCreation', 'McpAutomationBridge_BlueprintCreationHandlersParentClasses.cpp');
+    expect(parents).toMatch(/if \(!ResolvedParent && !Context\.ParentClassSpec\.IsEmpty\(\)\) \{\s*const FString Candidates = ClassesNamedLikeForMcp\(Context\.ParentClassSpec\);[\s\S]{0,600}?return nullptr;\s*\}/u);
+    expect(code('BlueprintCreation', 'McpAutomationBridge_BlueprintCreationHandlersAssets.cpp')).toMatch(
+      /UFactory \*Factory = CreateBlueprintFactory\(Context, ParentError\);\s*if \(!Factory\) \{[\s\S]{0,200}?TEXT\("CLASS_NOT_FOUND"\)\);\s*return true;\s*\}/u);
+  });
+});

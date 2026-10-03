@@ -58,9 +58,23 @@ UClass *ResolveExplicitParentClass(const FString &ParentClassSpec) {
   return ResolvedParent;
 }
 
+// The loaded classes carrying the class name of Spec (the part after its last '.'), by path: the
+// way to the right module when a parent class path names the wrong one.
+FString ClassesNamedLikeForMcp(const FString &Spec) {
+  FString ShortName = Spec;
+  Spec.Split(TEXT("."), nullptr, &ShortName, ESearchCase::CaseSensitive, ESearchDir::FromEnd);
+  TArray<FString> Paths;
+  for (TObjectIterator<UClass> It; It; ++It) {
+    if (It->GetName().Equals(ShortName, ESearchCase::IgnoreCase)) {
+      Paths.Add(It->GetPathName());
+    }
+  }
+  return FString::Join(Paths, TEXT(", "));
 }
 
-UFactory *CreateBlueprintFactory(const FRequestContext &Context) {
+}
+
+UFactory *CreateBlueprintFactory(const FRequestContext &Context, FString &OutError) {
   const FString NormalizedParentClassSpec =
       Context.ParentClassSpec.ToLower().Replace(TEXT(" "), TEXT(""));
   const bool bFunctionLibraryByParent =
@@ -85,6 +99,17 @@ UFactory *CreateBlueprintFactory(const FRequestContext &Context) {
     } else if (bFunctionLibraryByType) {
       ResolvedParent = UBlueprintFunctionLibrary::StaticClass();
     }
+  }
+
+  // A named parent that resolves to nothing used to become Actor without a word: a camera shake
+  // asked for under the wrong module came out an Actor Blueprint, and "Blueprint created" said
+  // only that its shake properties did not exist.
+  if (!ResolvedParent && !Context.ParentClassSpec.IsEmpty()) {
+    const FString Candidates = ClassesNamedLikeForMcp(Context.ParentClassSpec);
+    OutError = FString::Printf(TEXT("Parent class '%s' was not found, so nothing was created. "), *Context.ParentClassSpec) +
+               (Candidates.IsEmpty() ? FString(TEXT("Give a native class as /Script/Module.Class or a Blueprint class path ending in _C."))
+                                     : FString::Printf(TEXT("A class with that name: %s."), *Candidates));
+    return nullptr;
   }
 
   if (ResolvedParent == UBlueprintFunctionLibrary::StaticClass()) {

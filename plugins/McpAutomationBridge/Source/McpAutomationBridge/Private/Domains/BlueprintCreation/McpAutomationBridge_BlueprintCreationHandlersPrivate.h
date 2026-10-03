@@ -22,7 +22,8 @@ struct FRequestContext {
 
 bool ExecuteBlueprintCreation(UMcpAutomationBridgeSubsystem* Self,
                               const FRequestContext& Context);
-UFactory* CreateBlueprintFactory(const FRequestContext& Context);
+// Null, with OutError, when Context names a parent class that resolves to nothing.
+UFactory* CreateBlueprintFactory(const FRequestContext& Context, FString& OutError);
 // Sets the payload `properties` on the class default object; every name lands in one of the lists.
 void ApplyBlueprintProperties(
     UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Payload,
