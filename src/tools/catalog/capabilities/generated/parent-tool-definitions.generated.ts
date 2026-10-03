@@ -4371,7 +4371,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "endedBecause": {
           "type": "string",
-          "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped) or startWhenTimeout (startWhen never happened within maxWaitSeconds)."
+          "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it)."
         },
         "examined": {
           "type": "number",

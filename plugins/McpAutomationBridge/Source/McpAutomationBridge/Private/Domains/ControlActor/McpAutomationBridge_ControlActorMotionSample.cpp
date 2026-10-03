@@ -2,7 +2,6 @@
 #include "Containers/Ticker.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
-#include "GameFramework/Pawn.h"
 
 // sample_motion: one call that watches an actor over GAME time in Play-In-Editor
 // and returns where it was, how fast it moved and the properties asked for at
@@ -28,7 +27,7 @@ struct FMcpMotionRun {
   TArray<TSharedPtr<FJsonValue>> Samples;
   TArray<TSharedPtr<FJsonValue>> Missing;
   double StartGame = 0.0, LastGame = 0.0, NextSample = 0.0, EndGame = 0.0, Interval = 0.05;
-  double StartReal = 0.0, MaxReal = 40.0, Duration = 2.0, Waited = -1.0;
+  double StartReal = 0.0, MaxReal = 40.0, Duration = 2.0, Waited = -1.0, LastAdvanceReal = 0.0;
   FBox Extent = FBox(ForceInit);
   FVector First = FVector::ZeroVector, Last = FVector::ZeroVector;
   TArray<FMcpMotionInput> Inputs;
@@ -102,37 +101,6 @@ TSharedPtr<FJsonObject> McpMotionResult(const FMcpMotionRun &Run, const FString 
   return Data;
 }
 
-// A slow editor steps PIE a third of a second at a time: every key and sample lands that late, so a 0.2 s jump
-// held for 0.67 s and the samples read as the game's own behaviour. The run itself put the window up and the
-// background throttle off, so a slow run is the render cost (video memory ran out once), never the throttle the
-// warning used to blame.
-FString McpSlowFrameWarning(const FMcpMotionRun &Run) {
-  const double PerFrame = Run.Frames > 1 ? (Run.LastGame - Run.StartGame) / Run.Frames : 0.0;
-  if (PerFrame < 0.1) {
-    return FString();
-  }
-  return FString::Printf(TEXT("the game advanced %.2f s per frame (about %.0f fps), so inputs and samples landed "
-                              "up to that late and holds ran long. The run had the editor window up and its "
-                              "background throttle off, so the editor renders that slowly: a heavy scene, or video "
-                              "memory exhausted (the viewport says so). set_game_speed fixed_delta_time makes "
-                              "timing exact; the console command r.ScreenPercentage 50 lowers the render cost."),
-                         PerFrame, 1.0 / PerFrame);
-}
-
-// Keys pressed while the player's pawn stood perfectly still never reached it:
-// a title or pause menu was up, or the game had locked its input. The samples
-// alone read like a level that blocks the way, so the reply says it.
-FString McpIgnoredInputsWarning(const FMcpMotionRun &Run) {
-  const APawn *Pawn = Cast<APawn>(Run.Actor.Get());
-  if (Run.Inputs.Num() == 0 || Run.Samples.Num() < 2 || !Pawn || !Pawn->IsPlayerControlled() ||
-      Run.Extent.GetSize().GetMax() > 1.0) {
-    return FString();
-  }
-  return TEXT("keys were pressed but the player's pawn never moved, so the game did not act on them: a menu "
-              "or pause screen on top (control_editor.simulate_input widget_list / widget_click gets past "
-              "it), or input locked by the game. A screenshot shows which.");
-}
-
 // One tick of a run: sample when due, and say why it ended ("" = keep going).
 // A PIE death that reloads the level destroys the actor, and stopping PIE
 // destroys the world; both end the run with the samples taken so far, so the
@@ -147,6 +115,11 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
     return TEXT("actorDestroyed");
   }
   const double Now = World->GetTimeSeconds();
+  // A paused world (a title or pause menu) draws frames but never advances game time.
+  Run.LastAdvanceReal = Now > Run.LastGame ? FPlatformTime::Seconds() : Run.LastAdvanceReal;
+  if (FPlatformTime::Seconds() - Run.LastAdvanceReal > 3.0) {
+    return TEXT("gamePaused");
+  }
   Run.LastGame = Now;
   // startWhen: nothing is sampled or pressed until the other actor's property
   // takes its value; then the run's clock (and every input offset) starts.
@@ -223,7 +196,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
   Run->StartGame = Run->LastGame = World->GetTimeSeconds();
   Run->Duration = FMath::Clamp(Duration, 0.05, 30.0);
   Run->EndGame = Run->StartGame + Run->Duration;
-  Run->StartReal = FPlatformTime::Seconds();
+  Run->StartReal = Run->LastAdvanceReal = FPlatformTime::Seconds();
   FString TimelineError;
   const TSharedPtr<FJsonObject> *When = nullptr;
   if (Payload->TryGetObjectField(TEXT("startWhen"), When) && When && When->IsValid()) {
@@ -278,9 +251,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSampleMotion(
         // The envelope's own warnings list; a `warnings` field set on the data
         // is overwritten by it.
         TArray<FString> Warnings;
-        for (const FString &Warning : {Ended == TEXT("startWhenTimeout") ? McpStartWhenTimeoutWarning(Run->Trigger)
-                                                                        : McpIgnoredInputsWarning(*Run),
-                                       McpSlowFrameWarning(*Run)}) {
+        const FString EndWarning =
+            Ended == TEXT("gamePaused")         ? McpGamePausedWarning(Run->World.Get())
+            : Ended == TEXT("startWhenTimeout") ? McpStartWhenTimeoutWarning(Run->Trigger)
+                                                : McpIgnoredInputsWarning(Run->Actor.Get(), Run->Inputs.Num(),
+                                                                          Run->Samples.Num(), Run->Extent);
+        for (const FString &Warning : {EndWarning, McpSlowFrameWarning(Run->LastGame - Run->StartGame, Run->Frames)}) {
           if (!Warning.IsEmpty()) {
             Message += TEXT(". WARNING: ") + Warning;
             Warnings.Add(Warning);

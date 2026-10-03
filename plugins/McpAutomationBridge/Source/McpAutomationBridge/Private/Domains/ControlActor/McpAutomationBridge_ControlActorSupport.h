@@ -220,6 +220,9 @@ bool McpInitMotionTrigger(AActor *Gate, const TSharedPtr<FJsonObject> &When, UWo
                           FMcpMotionTrigger &Out, FString &Error);
 bool McpMotionTriggerFired(FMcpMotionTrigger &Trigger);
 FString McpStartWhenTimeoutWarning(const FMcpMotionTrigger &Trigger);
+FString McpGamePausedWarning(const UWorld *World);
+FString McpIgnoredInputsWarning(const AActor *Actor, int32 InputCount, int32 SampleCount, const FBox &Extent);
+FString McpSlowFrameWarning(double GameSeconds, int32 Frames);
 void McpApplyMotionInputs(TArray<FMcpMotionInput> &Inputs, double Elapsed, bool bRunEnded);
 TArray<TSharedPtr<FJsonValue>> McpMotionInputsJson(const TArray<FMcpMotionInput> &Inputs);
 

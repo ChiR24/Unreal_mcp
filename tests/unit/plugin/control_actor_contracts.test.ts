@@ -167,8 +167,15 @@ describe('sample_motion runs at full rate or says it did not', () => {
 
   it('warns when the game advanced 0.1 s or more per frame', () => {
     expect(source).toContain('Run.Frames += 1;');
-    expect(source).toMatch(/if \(PerFrame < 0\.1\) \{\s*return FString\(\);/u);
-    expect(source).toContain('McpSlowFrameWarning(*Run)');
+    expect(read('McpAutomationBridge_ControlActorMotionInputs.cpp')).toMatch(/if \(PerFrame < 0\.1\) \{\s*return FString\(\);/u);
+    expect(source).toContain('McpSlowFrameWarning(Run->LastGame - Run->StartGame, Run->Frames)');
+  });
+
+  // A title screen holds the game paused: the run sat out its whole 25 s real-time cap for one sample.
+  it('ends a run whose game time stood still for 3 s, and says why', () => {
+    expect(source).toMatch(/Run\.LastAdvanceReal = Now > Run\.LastGame \? FPlatformTime::Seconds\(\) : Run\.LastAdvanceReal;\s*if \(FPlatformTime::Seconds\(\) - Run\.LastAdvanceReal > 3\.0\) \{\s*return TEXT\("gamePaused"\);/u);
+    expect(source).toContain('Run->StartReal = Run->LastAdvanceReal = FPlatformTime::Seconds();');
+    expect(source).toContain('Ended == TEXT("gamePaused")         ? McpGamePausedWarning(Run->World.Get())');
   });
 });
 

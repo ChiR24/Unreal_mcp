@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c90782c40f372b87",
+  "catalogRevision": "36c43dd7f43c3b28",
   "recordCount": 393,
   "records": [
     {
@@ -32468,7 +32468,7 @@
             },
             "endedBecause": {
               "type": "string",
-              "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped) or startWhenTimeout (startWhen never happened within maxWaitSeconds)."
+              "description": "duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it)."
             },
             "inputsApplied": {
               "type": "array",
@@ -32612,8 +32612,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "344e7a8f652ae58bf9156dfadb40000e78120ee505a519c5b602aa42d23e6db3",
-        "content": "3945568d74d4c09b6911ca9b40ef5f4da1efd16d27f069d82b1a4f3ddbd680b4"
+        "schema": "e17775fec694b56b5b09cbb6a8b91288c974dda27eb4bb862ebf30c9b2a041b6",
+        "content": "c00921fe4f57213090356277ff0cbb2f496b86ae13af30fab883b0f08303f979"
       }
     },
     {

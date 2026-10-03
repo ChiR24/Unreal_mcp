@@ -10,6 +10,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Widget Blueprint create by path** — `create_widget_blueprint` derives `name` and `path` from `widgetPath` (`FPackageName::ObjectPathToPackageName`) when no `name` is given.
 - **Widget tree root in a new canvas** — `McpAddSpecToWidget` anchors a slot-less root it seats in the canvas it made for the call to fill it (anchors 0,0,1,1, offsets 0) unless the call gives a position or size.
 - **Multi-target Target pins** — `connect_pins` adds a `warnings` entry when the input pin holds several links after the connect (`McpReportPinLinkChanges`, which also writes `replacedLinks`), and `build_graph` lifts each step's warnings into its own reply as `operations[i]: ...`.
+- **Motion sampling in a paused world** — `McpAdvanceMotionRun` ends a run with `gamePaused` (and `McpGamePausedWarning`) once game time has not advanced for 3 s of real time, instead of waiting out `maxRealSeconds`; the run's warning helpers moved to `ControlActorMotionInputs.cpp`.
 
 ## [0.6.0-beta-c] - 2026-10-02
 

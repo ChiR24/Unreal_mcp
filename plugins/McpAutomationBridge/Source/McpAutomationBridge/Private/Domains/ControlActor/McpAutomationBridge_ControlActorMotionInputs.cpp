@@ -1,6 +1,8 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
+#include "Engine/World.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "GameFramework/Pawn.h"
 #include "InputCoreTypes.h"
 
 // sample_motion's inputs and startWhen (FMcpMotionInput / FMcpMotionTrigger in
@@ -134,6 +136,45 @@ FString McpStartWhenTimeoutWarning(const FMcpMotionTrigger &Trigger) {
   }
   return FString::Printf(TEXT("startWhen: %s never read %s within maxWaitSeconds (last read %s)."), *Name,
                          *Trigger.Equals, Trigger.bSeen ? *Trigger.Last : TEXT("nothing"));
+}
+
+// Game time stood still for seconds while the editor kept drawing frames: before this, the run sat out its whole
+// real-time cap (25 s) for a single sample and the caller read it as a frozen actor.
+FString McpGamePausedWarning(const UWorld *World) {
+  return FString::Printf(TEXT("game time stopped advancing (the world %s paused): a title or pause menu holding the ")
+                         TEXT("game (control_editor.simulate_input widget_list / widget_click gets past it), ")
+                         TEXT("control_editor pause, or a set_game_speed step_frame session. Unpause, then run ")
+                         TEXT("again."), World && World->IsPaused() ? TEXT("reads") : TEXT("does not read"));
+}
+
+// Keys pressed while the player's pawn stood perfectly still never reached it:
+// a title or pause menu was up, or the game had locked its input. The samples
+// alone read like a level that blocks the way, so the reply says it.
+FString McpIgnoredInputsWarning(const AActor *Actor, int32 InputCount, int32 SampleCount, const FBox &Extent) {
+  const APawn *Pawn = Cast<APawn>(Actor);
+  if (InputCount == 0 || SampleCount < 2 || !Pawn || !Pawn->IsPlayerControlled() || Extent.GetSize().GetMax() > 1.0) {
+    return FString();
+  }
+  return TEXT("keys were pressed but the player's pawn never moved, so the game did not act on them: a menu "
+              "or pause screen on top (control_editor.simulate_input widget_list / widget_click gets past "
+              "it), or input locked by the game. A screenshot shows which.");
+}
+
+// A slow editor steps PIE a third of a second at a time: every key and sample lands that late, so a 0.2 s jump
+// held for 0.67 s and the samples read as the game's own behaviour. The run itself put the window up and the
+// background throttle off, so a slow run is the render cost (video memory ran out once), never the throttle the
+// warning used to blame.
+FString McpSlowFrameWarning(double GameSeconds, int32 Frames) {
+  const double PerFrame = Frames > 1 ? GameSeconds / Frames : 0.0;
+  if (PerFrame < 0.1) {
+    return FString();
+  }
+  return FString::Printf(TEXT("the game advanced %.2f s per frame (about %.0f fps), so inputs and samples landed "
+                              "up to that late and holds ran long. The run had the editor window up and its "
+                              "background throttle off, so the editor renders that slowly: a heavy scene, or video "
+                              "memory exhausted (the viewport says so). set_game_speed fixed_delta_time makes "
+                              "timing exact; the console command r.ScreenPercentage 50 lowers the render cost."),
+                         PerFrame, 1.0 / PerFrame);
 }
 
 // Presses and releases what is due at Elapsed game seconds into the run; when

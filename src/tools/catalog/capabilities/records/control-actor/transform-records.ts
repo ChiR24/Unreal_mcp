@@ -245,7 +245,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         sampleCount: { type: 'number', description: 'How many samples were taken.' },
         gameSeconds: { type: 'number', description: 'Game time covered.' },
         realSeconds: { type: 'number', description: 'Wall-clock time the run took.' },
-        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped) or startWhenTimeout (startWhen never happened within maxWaitSeconds).' },
+        endedBecause: { type: 'string', description: 'duration, realTimeCap, sampleCap, actorDestroyed (a PIE death that reloads the level ends here), worldEnded (PIE stopped), startWhenTimeout (startWhen never happened within maxWaitSeconds) or gamePaused (game time stood still for 3 s: a title or pause menu holds the game; the warning says how to get past it).' },
         inputsApplied: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
           description: 'One entry per input: key, at, hold, and down/up, the game seconds since the start when it was pressed and released (up is when the run ended for a key still held).',
