@@ -1,4 +1,6 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
+#include "Materials/Material.h"
+#include "Safety/McpSafeOperationsAssetSave.h"
 
 namespace McpNiagaraAuthoringHandlers
 {
@@ -40,7 +42,7 @@ static TRenderer* FindOrCreateRenderer(FRendererTarget& Target)
             return TypedRenderer;
         }
     }
-    TRenderer* NewRenderer = NewObject<TRenderer>(Target.Emitter);
+    TRenderer* NewRenderer = NewObject<TRenderer>(Target.Emitter, NAME_None, RF_Transactional);
     if (!NewRenderer)
     {
         return nullptr;
@@ -92,6 +94,24 @@ static bool LoadRendererAsset(FActionContext& Context, const TCHAR* Field, TAsse
     return true;
 }
 
+// A material without its Niagara usage flag draws as the engine default material on the renderer. The editor sets
+// a missing flag itself only outside Play In Editor and never saves it, so a material assigned during play, or one
+// no viewport showed before a cook, rendered wrong: set it by reflection (the bitfields are deprecated for direct
+// access in 5.8) as the details panel does, which recompiles, and save the project material.
+static void EnsureNiagaraUsage(UMaterialInterface* Material, const TCHAR* FlagName)
+{
+    UMaterial* Base = Material ? Material->GetMaterial() : nullptr;
+    FBoolProperty* Flag = Base ? FindFProperty<FBoolProperty>(UMaterial::StaticClass(), FlagName) : nullptr;
+    if (!Flag || Flag->GetPropertyValue_InContainer(Base) || !Base->GetPathName().StartsWith(TEXT("/Game/")))
+    {
+        return;
+    }
+    Base->Modify();
+    Flag->SetPropertyValue_InContainer(Base, true);
+    Base->PostEditChange();
+    McpSafeOperations::McpSafeAssetSave(Base);
+}
+
 bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
 {
     const bool bSprite = SubAction == TEXT("add_sprite_renderer_module");
@@ -102,6 +122,7 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
         {
             return true;
         }
+        EnsureNiagaraUsage(Material, bSprite ? TEXT("bUsedWithNiagaraSprites") : TEXT("bUsedWithNiagaraRibbons"));
         const auto SetMaterial = [Material](auto& Renderer)
         {
             if (Material)

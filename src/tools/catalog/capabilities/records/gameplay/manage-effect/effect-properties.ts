@@ -45,7 +45,7 @@ export const E: PropertyMap = {
   forceType: str('Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction).'),
   velocityMode: str('Velocity module mode (Linear, Cone, FromPoint).'),
   color: { description: 'Color as an {r, g, b, a} object or an [r, g, b, a] array: 0 to 255 channels for debug_shape, 0 to 1 for a light.' },
-  materialPath: str('Canonical /Game material asset path for the renderer.'),
+  materialPath: str('Canonical /Game material asset path for the renderer; its Niagara sprite or ribbon usage flag is set and the material saved, so the renderer never falls back to the default material.'),
   lightRadius: num('Multiplier on each particle\'s light radius (the renderer RadiusScale, engine default 1). Left unchanged when omitted.'),
   eventName: str('Niagara event name.'),
   eventType: str('Niagara event generator type (Location, Death, Collision).'),

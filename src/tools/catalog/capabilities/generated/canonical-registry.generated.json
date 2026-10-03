@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "14c271fa89147f6d",
+  "catalogRevision": "3ecd191f3d310d10",
   "recordCount": 393,
   "records": [
     {
@@ -54949,7 +54949,7 @@
             },
             "materialPath": {
               "type": "string",
-              "description": "Canonical /Game material asset path for the renderer."
+              "description": "Canonical /Game material asset path for the renderer; its Niagara sprite or ribbon usage flag is set and the material saved, so the renderer never falls back to the default material."
             },
             "meshPath": {
               "type": "string",
@@ -55166,8 +55166,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5e065e681d6e06b8ad3a9ec19791fd28a71eb5db6b2295b87a96a3f73d6ab187",
-        "content": "963bf7b17e551cc4bfb12f4a459b8584a8828b28a76625912dfb4fd0e8e752f3"
+        "schema": "e3bd55d9fbd37e667492becbd2cb7b6bb6efdead22aaf12879fccba1cab012c9",
+        "content": "48a3c84ebed058ddcf236b18bb096d9d912b282544cdea0d1ed5e33be14ea0ad"
       }
     },
     {
@@ -56231,7 +56231,9 @@
           "gpu simulation",
           "add emitter",
           "gpu particles",
-          "particle lifetime"
+          "particle lifetime",
+          "static switch",
+          "ribbon width"
         ],
         "summary": "Edit a Niagara system: add an emitter, user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.",
         "whenToUse": [
@@ -56240,6 +56242,7 @@
           "edit=bind_parameter: Param driven externally.",
           "edit=set_parameter_value: A user parameter or a module input value must change.",
           "edit=set_parameter_value: Several values of one system or emitter must change together (parameters): one call, one save.",
+          "edit=set_parameter_value: A module input changes nothing because a static switch gates it (a Ribbon Width written while InitializeParticle.Ribbon Width Mode is Unset): set the switch; get_niagara_info lists every staticSwitches value.",
           "edit=set_parameter: A parameter value must change.",
           "edit=set_dynamic_input: Expression-driven value needed.",
           "edit=set_emitter_properties: Emitter config must change.",
@@ -56313,7 +56316,7 @@
                 ],
                 "additionalProperties": false
               },
-              "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter or a module input as get_niagara_info lists it (InitializeParticle.Lifetime), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
+              "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
             },
             "actorName": {
               "type": "string",
@@ -56435,7 +56438,7 @@
             },
             "moduleInputCopiesWritten": {
               "type": "number",
-              "description": "Module input: how many copies of it (one per script that runs the module) took the value."
+              "description": "Module input: how many copies of it (one per script that runs the module) took the value; static switch: how many module nodes took it."
             },
             "saved": {
               "type": "boolean",
@@ -56612,8 +56615,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "86fc99636989a7818035f4ed913e7c9d9f17522d923b72563178bae8f8f36e35",
-        "content": "56da2a5a10e9212f09c1a723c82929852e000b6951b9c0e58fd2c2d0f48d7d4e"
+        "schema": "b7d496004ab2217e5c38e3eba11c31cec334fbfbff57cb7eacde3a2b4d9217eb",
+        "content": "7ac0afe6c8b7c9ce2b28c20e05bc7a40fea7c30f4a83166418c70356fa2385ed"
       }
     },
     {
@@ -56641,9 +56644,10 @@
           "get_niagara_info",
           "emitter list",
           "stack modules",
-          "user parameters"
+          "user parameters",
+          "static switches"
         ],
-        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
+        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
         "whenToUse": [
           "info=info: Inspect a Niagara system.",
           "info=validate: Catch authoring errors."
@@ -56735,7 +56739,7 @@
       },
       "examples": [
         {
-          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
+          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
           "input": {
             "action": "get_niagara_info",
             "assetPath": "/Game/NS_Fire",
@@ -56785,7 +56789,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f251d6730117cacc98a9d93652b954b98783c723b82c220ea2341c17eb9ba984",
-        "content": "f89caf9b24cb6f21dd21a5c84cda6255e15b4899bf9fedcaa4cc7219393bbaa3"
+        "content": "4d8de565feb5a8db446ee248e50e9a4c980b22186733b025844e41d7030b0fec"
       }
     },
     {
@@ -78360,7 +78364,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Compile errors reported by the material translator, empty when it compiles."
+              "description": "Compile errors from the material translator and, once it has finished, the shader compile (where a Custom node's HLSL fails); empty when it compiles."
             },
             "saved": {
               "type": "boolean",
@@ -78427,8 +78431,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f5654053c0c6ffaf8d17ddc969d229b06ae8d035832c125a77e906f0c14493c0",
-        "content": "723e0e7a713fe1b6873136ca9a97734eb7081473611ce5f482f6dc9b27620061"
+        "schema": "a9e8398a7bc3d6a5d85ef4236978546480515f1ac01931c1b8cd195a1e93c9da",
+        "content": "f12379f8cc29f0428acd32dced97d98ddac664ca16beb8148fc70d3d0c0aa82d"
       }
     },
     {
@@ -80569,7 +80573,7 @@
               "items": {
                 "type": "string"
               },
-              "description": "Compile errors the material translator reported after the edit, empty when it compiles."
+              "description": "Compile errors after the edit, from the material translator and, once it has finished, the shader compile (where a Custom node's HLSL fails); empty when it compiles."
             },
             "saved": {
               "type": "boolean",
@@ -80629,8 +80633,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3e57e4ccf0b2c8a51b87861d52fbf76c3f29602defb4fd3e493b1740e7544d93",
-        "content": "65ed7393854b6596ddcfea9db2b805d988215b3d5d1fbb8c24a38445b24e9f82"
+        "schema": "cc204dd630f51f656732925d7c09c84c4c3000235326210c2be03c4098cf6186",
+        "content": "446ce30b1df40692be0727dae3af92e144b6d2e1278f5321ff49852c5395b94c"
       }
     },
     {

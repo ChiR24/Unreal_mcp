@@ -91,7 +91,7 @@ const BATCH_OUT = schema({
 const CUSTOM_UPDATE_OUT = schema({
   success: bool('Operation succeeded.'),
   compiled: bool('False when the material does not compile after the edit (the default material renders in its place); compileErrors says why. A material function has no translation of its own to read, so this is true for one.'),
-  compileErrors: arr('Compile errors the material translator reported after the edit, empty when it compiles.'),
+  compileErrors: arr('Compile errors after the edit, from the material translator and, once it has finished, the shader compile (where a Custom node\'s HLSL fails); empty when it compiles.'),
   saved: bool('Whether the material or function was saved after the edit.'),
   details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
 }, ['success']);

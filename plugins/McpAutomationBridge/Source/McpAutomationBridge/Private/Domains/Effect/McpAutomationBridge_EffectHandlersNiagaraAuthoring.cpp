@@ -2,6 +2,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 
 #include "Domains/Effect/McpAutomationBridge_EffectHandlersPrivate.h"
+#include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
@@ -80,6 +81,31 @@ FString AddTemplateEmitter(UNiagaraSystem& System, UNiagaraEmitter& Template)
 #else
     return System.AddEmitterHandle(Template, FName(*Template.GetName())).GetName().ToString();
 #endif
+}
+
+// LocationBasedRibbon spawns only from the location events another emitter sends, so the ribbon and trail
+// creators authored systems that drew nothing on their own. A spawn rate of its own (60 a second: the module's
+// default 1 leaves a one-second ribbon one or two points long) makes the ribbon trail whatever it is attached
+// to, Direct Set makes its Ribbon Width count, and an infinite loop keeps it trailing past the template's
+// single 5 s loop. False where no stack edits (UE 5.0).
+bool MakeRibbonStandalone(UNiagaraSystem& System, const FString& EmitterName)
+{
+    using namespace McpNiagaraAuthoringHandlers;
+    if (!AddModuleToEmitterStack(FindEmitterHandle(&System, EmitterName), TEXT("/Niagara/Modules/Emitter/SpawnRate.SpawnRate"),
+                                 ENiagaraScriptUsage::EmitterUpdateScript, TEXT("SpawnRate")))
+    {
+        return false;
+    }
+    TSharedPtr<FJsonObject> Rate = MakeShared<FJsonObject>();
+    Rate->SetNumberField(TEXT("parameterValue"), 60.0);
+    TArray<FString> Unmatched;
+    FString RateType;
+    SetModuleInputValue(&System, EmitterName, TEXT("SpawnRate.SpawnRate"), Rate, Unmatched, RateType);
+    FString SwitchError;
+    SetModuleStaticSwitch(&System, EmitterName, TEXT("InitializeParticle.Ribbon Width Mode"), MakeShared<FJsonValueString>(TEXT("Direct Set")), SwitchError);
+    SetModuleStaticSwitch(&System, EmitterName, TEXT("EmitterState.Loop Behavior"), MakeShared<FJsonValueString>(TEXT("Infinite")), SwitchError);
+    System.RequestCompile(false);
+    return true;
 }
 
 FString ResolveSystemFolder(const FEffectActionContext& Context, const FString& Name, FString& OutRefusal)
@@ -182,7 +208,8 @@ bool AuthorProceduralNiagaraSystem(
             return false;
         }
         UPackage* Package = CreatePackage(*PackageName);
-        System = Package ? NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone) : nullptr;
+        // RF_Transactional as the asset factory gives it (undo, and no "not transctional" stack warning).
+        System = Package ? NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional) : nullptr;
         if (!System)
         {
             OutError = FString::Printf(TEXT("Failed to create Niagara system %s"), *PackageName);
@@ -197,6 +224,10 @@ bool AuthorProceduralNiagaraSystem(
         if (Template)
         {
             EmitterName = AddTemplateEmitter(*System, *Template);
+        }
+        if (Template && !bExplicitTemplate && TemplatePath.Contains(TEXT("LocationBasedRibbon")))
+        {
+            OutDetails->SetBoolField(TEXT("spawnRateAdded"), MakeRibbonStandalone(*System, EmitterName));
         }
         OutDetails->SetStringField(TEXT("templateEmitterPath"), TemplatePath);
         OutDetails->SetBoolField(TEXT("templateEmitterFound"), Template != nullptr);

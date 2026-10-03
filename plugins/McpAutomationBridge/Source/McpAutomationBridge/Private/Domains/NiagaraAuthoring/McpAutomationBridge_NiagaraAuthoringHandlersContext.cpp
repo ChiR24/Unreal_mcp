@@ -172,7 +172,11 @@ UNiagaraSystem* LoadSystemOrError(FActionContext& Context)
     if (!System)
     {
         Context.SendError(FString::Printf(TEXT("Niagara system not found: %s"), *Context.SystemPath), TEXT("ASSET_NOT_FOUND"));
+        return nullptr;
     }
+    // A system this tool made before it created them transactional lacks the flag, so undo skipped it and every
+    // edit's stack check warned "Object is not transctional"; setting it is the stack's own fix for that issue.
+    System->SetFlags(RF_Transactional);
     return System;
 }
 

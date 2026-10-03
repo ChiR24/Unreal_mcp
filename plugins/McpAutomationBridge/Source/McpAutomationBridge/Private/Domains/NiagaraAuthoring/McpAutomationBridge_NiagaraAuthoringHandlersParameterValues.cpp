@@ -35,10 +35,10 @@ static bool WriteRapidIterationValue(FNiagaraParameterStore& Store, const FNiaga
 // mirrored into the system scripts, so every copy is written - what the Niagara stack editor does.
 // Returns the number of copies written; fills Candidates with the names that did not match and
 // MatchedType with the type of a match whose value could not be converted. The caller requests the compile.
-static int32 SetModuleInputValue(const FActionContext& Context, UNiagaraSystem* System, const FString& ParamName, const TSharedPtr<FJsonObject>& Payload, TArray<FString>& Candidates, FString& MatchedType)
+int32 SetModuleInputValue(UNiagaraSystem* System, const FString& EmitterName, const FString& ParamName, const TSharedPtr<FJsonObject>& Payload, TArray<FString>& Candidates, FString& MatchedType)
 {
     const TArray<UNiagaraScript*> Scripts = GatherModuleInputScripts(System);
-    const FString Scope = Context.EmitterName.IsEmpty() ? FString() : TEXT("Constants.") + Context.EmitterName + TEXT(".");
+    const FString Scope = EmitterName.IsEmpty() ? FString() : TEXT("Constants.") + EmitterName + TEXT(".");
     int32 Written = 0;
     for (UNiagaraScript* Script : Scripts)
     {
@@ -90,13 +90,24 @@ static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSys
     // Not a user parameter: try the module inputs, which is what tuning a template emitter needs.
     TArray<FString> Candidates;
     FString MatchedType;
-    Write.InputCopies = SetModuleInputValue(Context, System, ParamName, Entry, Candidates, MatchedType);
+    Write.InputCopies = SetModuleInputValue(System, Context.EmitterName, ParamName, Entry, Candidates, MatchedType);
+    // Nor a module input: a module's static switch ("InitializeParticle.Ribbon Width Mode"), which gates inputs.
+    FString SwitchError;
+    if (Write.InputCopies == 0 && MatchedType.IsEmpty())
+    {
+        Write.InputCopies = SetModuleStaticSwitch(System, Context.EmitterName, ParamName, Entry->TryGetField(TEXT("parameterValue")), SwitchError);
+    }
     Write.bApplied = Write.InputCopies > 0;
     if (Write.bApplied)
     {
         return Write;
     }
-    Write.ErrorCode = MatchedType.IsEmpty() ? TEXT("PARAM_NOT_FOUND") : TEXT("PARAM_TYPE_MISMATCH");
+    Write.ErrorCode = MatchedType.IsEmpty() && SwitchError.IsEmpty() ? TEXT("PARAM_NOT_FOUND") : TEXT("PARAM_TYPE_MISMATCH");
+    if (!SwitchError.IsEmpty())
+    {
+        Write.Error = SwitchError;
+        return Write;
+    }
     if (!MatchedType.IsEmpty())
     {
         Write.Error = FString::Printf(TEXT("Module input '%s' is a %s; %s"), *ParamName, *MatchedType, ValueForms);
@@ -110,7 +121,7 @@ static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSys
         Candidate.RemoveFromStart(Scope);
     }
     Candidates.SetNum(FMath::Min(Candidates.Num(), 8));
-    Write.Error = FString::Printf(TEXT("Parameter '%s' is neither a user parameter nor a module input%s. get_niagara_info lists every emitter's moduleInputs with their values; some here: %s"),
+    Write.Error = FString::Printf(TEXT("Parameter '%s' is neither a user parameter nor a module input or static switch%s. get_niagara_info lists every emitter's moduleInputs and staticSwitches with their values; some here: %s"),
         *ParamName, Context.EmitterName.IsEmpty() ? TEXT("") : *FString::Printf(TEXT(" of emitter '%s'"), *Context.EmitterName),
         *FString::Join(Candidates, TEXT(", ")));
     return Write;

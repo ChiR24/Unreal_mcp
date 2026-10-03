@@ -20,7 +20,9 @@ static bool CreateNiagaraSystem(FActionContext& Context)
         Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
         return true;
     }
-    UNiagaraSystem* NewSystem = NewObject<UNiagaraSystem>(Package, FName(*Context.Name), RF_Public | RF_Standalone);
+    // RF_Transactional as the asset factory gives it: without it undo skipped the system and every Niagara stack
+    // read reported "Object is not transctional, undo won't work for it!".
+    UNiagaraSystem* NewSystem = NewObject<UNiagaraSystem>(Package, FName(*Context.Name), RF_Public | RF_Standalone | RF_Transactional);
     if (NewSystem)
     {
 #if MCP_HAS_NIAGARA_SYSTEM_FACTORY_NEW
@@ -67,7 +69,7 @@ static bool CreateNiagaraEmitter(FActionContext& Context)
         Context.SendError(TEXT("Failed to create package."), TEXT("PACKAGE_ERROR"));
         return true;
     }
-    UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Context.Name), RF_Public | RF_Standalone);
+    UNiagaraEmitter* NewEmitter = NewObject<UNiagaraEmitter>(Package, FName(*Context.Name), RF_Public | RF_Standalone | RF_Transactional);
     if (!NewEmitter)
     {
         Context.SendError(TEXT("Failed to create Niagara Emitter."), TEXT("CREATE_FAILED"));

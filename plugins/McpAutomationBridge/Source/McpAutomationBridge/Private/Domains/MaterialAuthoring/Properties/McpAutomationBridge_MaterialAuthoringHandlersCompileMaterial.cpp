@@ -5,6 +5,29 @@
 
 namespace McpMaterialAuthoringHandlers
 {
+// Translation errors are known once PostEditChange returns, but that recompile only compiles shaders as rendering
+// asks for them (precompile mode None), so a Custom node's HLSL error surfaced at the next draw, after a reply
+// that said "compiled". Compile every shader now, as loading the material does, and wait for them.
+TArray<FString> McpMaterialCompileErrors(UMaterial* Material)
+{
+  if (!Material) {
+    return {};
+  }
+  Material->ForceRecompileForRendering();
+  FMaterialResource *Resource = MCP_GET_MATERIAL_RESOURCE(Material);
+  if (!Resource) {
+    return {};
+  }
+  Resource->FinishCompilation();
+  TArray<FString> Errors = Resource->GetCompileErrors();
+  // A shader map that failed leaves none behind, whether or not this resource kept its errors.
+  if (Errors.Num() == 0 && !Resource->GetGameThreadShaderMap()) {
+    Errors.Add(TEXT("No shader map compiled (LogShaderCompilers in the editor log names the failing shader); the default "
+                    "material renders in its place."));
+  }
+  return Errors;
+}
+
 bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId, const FString& SubAction, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket)
 {
   if (SubAction == TEXT("compile_material")) {
@@ -46,15 +69,9 @@ bool HandleCompileMaterial(UMcpAutomationBridgeSubsystem* Bridge, const FString&
     Host->PreEditChange(nullptr);
     Host->PostEditChange();
     Host->MarkPackageDirty();
-    // Translation runs inside PostEditChange, so its errors are known now. A
-    // material that fails to translate renders as the default material, and
-    // this used to answer "compiled" regardless.
-    TArray<FString> CompileErrors;
-    if (Material) {
-      if (const FMaterialResource *Resource = MCP_GET_MATERIAL_RESOURCE(Material)) {
-        CompileErrors = Resource->GetCompileErrors();
-      }
-    }
+    // A material that fails to compile renders as the default material, and this used to answer "compiled"
+    // regardless.
+    const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);
 
     bool bSave = true;
     Payload->TryGetBoolField(TEXT("save"), bSave);

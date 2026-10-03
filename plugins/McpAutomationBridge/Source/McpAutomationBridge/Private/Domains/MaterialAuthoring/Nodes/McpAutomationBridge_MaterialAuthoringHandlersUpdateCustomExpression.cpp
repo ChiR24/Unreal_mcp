@@ -58,14 +58,9 @@ bool HandleUpdateCustomExpression(UMcpAutomationBridgeSubsystem* Bridge, const F
     FString Message = TEXT("Custom expression updated.");
     // A step of build_material_graph leaves the compile and the save to the batch, which does both once at its end.
     // A call of its own does both here, as compile_material does: it used to leave the material unsaved and say
-    // nothing of a compile error. Translation ran inside PostEditChange, so its errors are known now.
+    // nothing of a compile error, including the HLSL errors only the shader compile finds.
     if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {
-      TArray<FString> CompileErrors;
-      if (Material) {
-        if (const FMaterialResource *Resource = MCP_GET_MATERIAL_RESOURCE(Material)) {
-          CompileErrors = Resource->GetCompileErrors();
-        }
-      }
+      const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);
       TArray<TSharedPtr<FJsonValue>> ErrorValues;
       for (const FString &Error : CompileErrors) {
         ErrorValues.Add(MakeShared<FJsonValueString>(Error));

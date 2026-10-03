@@ -208,6 +208,22 @@ inline TArray<UNiagaraScript*> GatherModuleInputScripts(UNiagaraSystem* System)
     }
     return Scripts;
 }
+// A module's static switch ("Ribbon Width Mode", "Write Color") is no rapid-iteration parameter: it is a
+// not-connectable input pin of the module's call node, named after the switch, on every engine 5.0-5.8.
+inline bool IsStaticSwitchPin(const UEdGraphPin* Pin)
+{
+    return Pin && Pin->Direction == EGPD_Input && Pin->bNotConnectable && !Pin->bOrphanedPin;
+}
+// "NiagaraBool" or "NiagaraInt32" for those switch types (an enum switch carries its UEnum instead).
+inline FName PinStructName(const UEdGraphPin& Pin)
+{
+    const UObject* Struct = Pin.PinType.PinSubCategoryObject.Get();
+    return Struct ? Struct->GetFName() : NAME_None;
+}
+// In ...HandlersStackGraph.cpp: writes Value (an enum entry by display name, name or value; a bool; an int) to the
+// switch ParamName ("InitializeParticle.Ribbon Width Mode") on every match in the named emitter, or in the system
+// and every emitter, and returns the count written; OutError names what the switch takes when Value fits none.
+int32 SetModuleStaticSwitch(UNiagaraSystem* System, const FString& EmitterName, const FString& ParamName, const TSharedPtr<FJsonValue>& Value, FString& OutError);
 void CollectNiagaraSystemStackIssues(
     UNiagaraSystem* System,
     TArray<TSharedPtr<FJsonValue>>& OutErrors,
@@ -233,6 +249,9 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction);
 bool HandleParameterAction(FActionContext& Context, const FString& SubAction);
 // set_parameter_value: one parameter, or every entry of a parameters list. In ...HandlersParameterValues.cpp.
 bool SetParameterValue(FActionContext& Context);
+// Writes Payload's parameterValue to every rapid-iteration copy of the module input ParamName
+// ("SpawnRate.SpawnRate"), in EmitterName's scripts or, empty, every script's; returns the copies written.
+int32 SetModuleInputValue(UNiagaraSystem* System, const FString& EmitterName, const FString& ParamName, const TSharedPtr<FJsonObject>& Payload, TArray<FString>& Candidates, FString& MatchedType);
 bool HandleDynamicInputAction(FActionContext& Context, const FString& SubAction);
 bool HandleDataInterfaceAction(FActionContext& Context, const FString& SubAction);
 bool HandleEventAction(FActionContext& Context, const FString& SubAction);

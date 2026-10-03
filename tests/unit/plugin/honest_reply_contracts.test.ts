@@ -280,13 +280,26 @@ describe('handlers answer what they did', () => {
     const own = source.slice(source.indexOf('if (!FMcpResponseCaptureRegistry::Get().IsCapturing(RequestId)) {'));
 
     expect(source.indexOf('FINALIZE_HOST();'), 'after the edit').toBeLessThan(source.indexOf('IsCapturing(RequestId)'));
-    expect(own).toContain('CompileErrors = Resource->GetCompileErrors();');
+    expect(own).toContain('const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);');
     expect(own).toContain('Result->SetBoolField(TEXT("compiled"), CompileErrors.Num() == 0);');
     expect(own).toContain('Result->SetBoolField(TEXT("saved"), Material ? McpSafeAssetSave(Material) : McpSafeAssetSave(Function));');
     expect(own).toContain('WARNING: the material does not compile');
     expect(own.indexOf('Message +='), 'the warning is in the message the reply carries').toBeLessThan(own.indexOf('SendAutomationResponse(Socket, RequestId, true, Message, Result);'));
     const properties = capabilityIndex().byId.get('material.update_custom_expression')?.schemas.output.properties;
     expect(Object.keys(isRecord(properties) ? properties : {})).toEqual(expect.arrayContaining(['compiled', 'compileErrors', 'saved']));
+  });
+
+  // A Custom node's HLSL error (float3 .a) shows only once the asynchronous shader compile ends: read right after
+  // PostEditChange, the build_material_graph batch answered "compiled": true while the default material rendered.
+  it('compile errors are read after the shader compile, not just the translation', () => {
+    const compile = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringHandlersCompileMaterial.cpp');
+
+    expect(compile, 'every shader, not the on-demand few a post-edit recompile asks for').toMatch(/Material->ForceRecompileForRendering\(\);\s*FMaterialResource \*Resource = MCP_GET_MATERIAL_RESOURCE\(Material\);/u);
+    expect(compile).toMatch(/Resource->FinishCompilation\(\);\s*TArray<FString> Errors = Resource->GetCompileErrors\(\);/u);
+    expect(compile, 'a failed shader map leaves none behind').toContain('if (Errors.Num() == 0 && !Resource->GetGameThreadShaderMap()) {');
+    expect(compile).toContain('const TArray<FString> CompileErrors = McpMaterialCompileErrors(Material);');
+    expect(code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp'), 'the batch compiles through compile_material')
+      .toContain('Compile->SetStringField(TEXT("subAction"), TEXT("compile_material"));');
   });
 
   // set_material_parameter with a parameters list answered {parameters, applied} and no assetPath, so the receipt
@@ -405,6 +418,56 @@ describe('handlers answer what they did', () => {
     expect(single).toMatch(/if \(!ParamName\.IsEmpty\(\)\)\s*\{\s*Context\.SendError\(TEXT\("Send parameters[^"]*not both\."\), TEXT\("INVALID_ARGUMENT"\)\);/u);
     expect(single, 'one parameter keeps its own errors and its own compile request').toContain('Context.SendError(Write.Error, Write.ErrorCode);');
     expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersParameters.cpp')).toContain('if (SubAction == TEXT("set_parameter_value")) return SetParameterValue(Context);');
+  });
+
+  // A Ribbon Width written while InitializeParticle.Ribbon Width Mode was Unset changed nothing, and no call could see or flip the
+  // switch: a static switch is a pin of the module's call node, not a rapid-iteration parameter.
+  it('set_parameter_value sets a module static switch as the stack does, and get_niagara_info lists them', () => {
+    const values = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersParameterValues.cpp');
+    const graph = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersStackGraph.cpp');
+
+    expect(values).toContain('SetModuleStaticSwitch(System, Context.EmitterName, ParamName, Entry->TryGetField(TEXT("parameterValue")), SwitchError)');
+    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersContext.h')).toContain('Pin->Direction == EGPD_Input && Pin->bNotConnectable && !Pin->bOrphanedPin');
+    expect(graph).toMatch(/Pin->DefaultValue = Default;\s*Node->MarkNodeRequiresSynchronization\([^;]*, true\);/u);
+    expect(graph, 'an enum pin holds the entry name the type editor writes').toContain('Enum->GetNameStringByValue(EntryValue)');
+    const info = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersInfoValidation.cpp');
+    expect(info).toContain('EmitterObj->SetObjectField(TEXT("staticSwitches"), CollectModuleStaticSwitches(Handle));');
+    expect(info, 'and each renderer by the object path set_property writes').toContain('RendererObj->SetStringField(TEXT("objectPath"), Renderer->GetPathName());');
+  });
+
+  // create_niagara_ribbon and create_particle_trail authored LocationBasedRibbon, which spawns only on another emitter's location events.
+  it('a default ribbon or trail effect spawns on its own', () => {
+    const source = code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraAuthoring.cpp');
+
+    expect(source).toContain('TEXT("/Niagara/Modules/Emitter/SpawnRate.SpawnRate")');
+    expect(source, 'at a trail rate, not the module\'s 1 a second').toMatch(/Rate->SetNumberField\(TEXT\("parameterValue"\), 60\.0\);[\s\S]*?SetModuleInputValue\(&System, EmitterName, TEXT\("SpawnRate\.SpawnRate"\), Rate,/u);
+    expect(source).toContain('TEXT("InitializeParticle.Ribbon Width Mode"), MakeShared<FJsonValueString>(TEXT("Direct Set"))');
+    expect(source, 'and keeps trailing past the template\'s single 5 s loop').toContain('TEXT("EmitterState.Loop Behavior"), MakeShared<FJsonValueString>(TEXT("Infinite"))');
+    expect(source).toMatch(/if \(Template && !bExplicitTemplate && TemplatePath\.Contains\(TEXT\("LocationBasedRibbon"\)\)\)\s*\{\s*OutDetails->SetBoolField\(TEXT\("spawnRateAdded"\), MakeRibbonStandalone\(\*System, EmitterName\)\);/u);
+  });
+
+  // Niagara objects made without RF_Transactional skipped undo and made every later edit's stack check warn.
+  it('Niagara systems, emitters and renderers the tools make are transactional, and older systems are repaired on load', () => {
+    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersSystems.cpp').split('RF_Public | RF_Standalone | RF_Transactional')).toHaveLength(3);
+    expect(code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraAuthoring.cpp')).toContain('NewObject<UNiagaraSystem>(Package, FName(*Name), RF_Public | RF_Standalone | RF_Transactional)');
+    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersRenderers.cpp')).toContain('NewObject<TRenderer>(Target.Emitter, NAME_None, RF_Transactional)');
+    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp')).toMatch(/System->SetFlags\(RF_Transactional\);\s*return System;/u);
+  });
+
+  // Every effect a creator authored also dropped a preview actor at the world origin of whatever level was open.
+  it('an authored effect is placed in the level only when location asks for it', () => {
+    const source = code('Effect', 'McpAutomationBridge_EffectHandlersProceduralEffects.cpp');
+
+    expect(source).toMatch(/if \(!Context\.Payload->HasField\(TEXT\("location"\)\)\)\s*\{\s*Details->SetStringField\(TEXT\("systemPath"\), AuthoredSystemPath\);\s*Details->SetBoolField\(TEXT\("placed"\), false\);/u);
+    expect(source.indexOf('HasField(TEXT("location"))'), 'checked before the placing call').toBeLessThan(source.lastIndexOf('return CreateNiagaraEffectFromPayload(Context, EffectName, AuthoredSystemPath, Details);'));
+  });
+
+  // The editor sets a missing usage flag only outside PIE and never saves it, so a renderer material drew as the default material.
+  it('a sprite or ribbon renderer material gets its Niagara usage flag, set and saved', () => {
+    const source = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersRenderers.cpp');
+
+    expect(source).toContain('EnsureNiagaraUsage(Material, bSprite ? TEXT("bUsedWithNiagaraSprites") : TEXT("bUsedWithNiagaraRibbons"));');
+    expect(source).toMatch(/Flag->SetPropertyValue_InContainer\(Base, true\);\s*Base->PostEditChange\(\);\s*McpSafeOperations::McpSafeAssetSave\(Base\);/u);
   });
 
   it('the record declares the list, one of the two ways to name a value, and what the reply carries', () => {

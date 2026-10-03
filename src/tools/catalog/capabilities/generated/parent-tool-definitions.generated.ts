@@ -9743,14 +9743,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "items": {
                 "type": "string"
               },
-              "description": "Compile errors reported by the material translator, empty when it compiles."
+              "description": "Compile errors after the edit, from the material translator and, once it has finished, the shader compile (where a Custom node's HLSL fails); empty when it compiles."
             },
             {
               "type": "array",
               "items": {
                 "type": "string"
               },
-              "description": "Compile errors the material translator reported after the edit, empty when it compiles."
+              "description": "Compile errors from the material translator and, once it has finished, the shader compile (where a Custom node's HLSL fails); empty when it compiles."
             }
           ],
           "description": "Compile errors after the batch, empty when the material compiles."
@@ -14687,7 +14687,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "materialPath": {
           "type": "string",
-          "description": "Canonical /Game material asset path for the renderer."
+          "description": "Canonical /Game material asset path for the renderer; its Niagara sprite or ribbon usage flag is set and the material saved, so the renderer never falls back to the default material."
         },
         "meshPath": {
           "type": "string",
@@ -14769,7 +14769,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             ],
             "additionalProperties": false
           },
-          "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter or a module input as get_niagara_info lists it (InitializeParticle.Lifetime), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
+          "description": "Several values written together and saved once, in place of parameterName and parameterValue: each {parameterName, parameterValue} names a user parameter, a module input or a module's static switch as get_niagara_info lists it (InitializeParticle.Lifetime, InitializeParticle.Ribbon Width Mode), and emitterName and save apply to every entry. The reply lists every entry (parameterName, applied, error); the call fails PARAMETER_BATCH_INCOMPLETE naming any that did not apply, and the others stay written."
         },
         "path": {
           "type": "string",
@@ -14964,7 +14964,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "moduleInputCopiesWritten": {
           "type": "number",
-          "description": "Module input: how many copies of it (one per script that runs the module) took the value."
+          "description": "Module input: how many copies of it (one per script that runs the module) took the value; static switch: how many module nodes took it."
         },
         "nodeId": {
           "type": "string",

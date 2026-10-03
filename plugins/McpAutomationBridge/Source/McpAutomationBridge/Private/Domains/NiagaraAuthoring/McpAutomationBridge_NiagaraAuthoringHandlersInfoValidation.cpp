@@ -45,6 +45,80 @@ static TSharedPtr<FJsonObject> CollectModuleInputs(const TArray<UNiagaraScript*>
     return Inputs;
 }
 
+// The static switches that gate those inputs, keyed Module.Switch as set_parameter_value takes them: an enum by
+// its display name, a bool, an int. A Ribbon Width written while Ribbon Width Mode is Unset draws nothing.
+static TSharedPtr<FJsonObject> CollectModuleStaticSwitches(const FNiagaraEmitterHandle& Handle)
+{
+    TSharedPtr<FJsonObject> Switches = MakeShared<FJsonObject>();
+    UNiagaraScriptSource* Source = GetEmitterScriptSource(const_cast<FNiagaraEmitterHandle*>(&Handle));
+    if (!Source || !Source->NodeGraph)
+    {
+        return Switches;
+    }
+    for (UEdGraphNode* GraphNode : Source->NodeGraph->Nodes)
+    {
+        UNiagaraNodeFunctionCall* Node = Cast<UNiagaraNodeFunctionCall>(GraphNode);
+        if (!Node || !Node->FunctionScript || Node->GetCalledUsage() != ENiagaraScriptUsage::Module)
+        {
+            continue;
+        }
+        for (UEdGraphPin* Pin : Node->Pins)
+        {
+            if (!IsStaticSwitchPin(Pin))
+            {
+                continue;
+            }
+            const FString Key = Node->GetFunctionName() + TEXT(".") + Pin->PinName.ToString();
+            const UEnum* Enum = Cast<UEnum>(Pin->PinType.PinSubCategoryObject.Get());
+            const int64 EnumValue = Enum ? Enum->GetValueByNameString(Pin->DefaultValue) : INDEX_NONE;
+            if (EnumValue != INDEX_NONE)
+            {
+                Switches->SetStringField(Key, Enum->GetDisplayNameTextByValue(EnumValue).ToString());
+            }
+            else if (PinStructName(*Pin) == FName(TEXT("NiagaraBool")))
+            {
+                Switches->SetBoolField(Key, Pin->DefaultValue.ToBool());
+            }
+            else if (PinStructName(*Pin) == FName(TEXT("NiagaraInt32")))
+            {
+                Switches->SetNumberField(Key, FCString::Atoi(*Pin->DefaultValue));
+            }
+            else
+            {
+                Switches->SetStringField(Key, Pin->DefaultValue);
+            }
+        }
+    }
+    return Switches;
+}
+
+// Each renderer by the object path inspect.set_property writes (Material, bCastShadows ...): finding it took a dump
+// of the emitter's own properties.
+static TArray<TSharedPtr<FJsonValue>> CollectRenderers(MCP_NIAGARA_EMITTER_DATA_TYPE& EmitterData)
+{
+    TArray<TSharedPtr<FJsonValue>> Renderers;
+    for (UNiagaraRendererProperties* Renderer : EmitterData.GetRenderers())
+    {
+        if (!Renderer)
+        {
+            continue;
+        }
+        TSharedPtr<FJsonObject> RendererObj = MakeShared<FJsonObject>();
+        RendererObj->SetStringField(TEXT("class"), Renderer->GetClass()->GetName());
+        RendererObj->SetStringField(TEXT("objectPath"), Renderer->GetPathName());
+        RendererObj->SetBoolField(TEXT("enabled"), Renderer->GetIsEnabled());
+        const UNiagaraSpriteRendererProperties* Sprite = Cast<UNiagaraSpriteRendererProperties>(Renderer);
+        const UNiagaraRibbonRendererProperties* Ribbon = Cast<UNiagaraRibbonRendererProperties>(Renderer);
+        const UMaterialInterface* Material = Sprite ? Sprite->Material.Get() : Ribbon ? Ribbon->Material.Get() : nullptr;
+        if (Material)
+        {
+            RendererObj->SetStringField(TEXT("material"), Material->GetPathName());
+        }
+        Renderers.Add(MakeShared<FJsonValueObject>(RendererObj));
+    }
+    return Renderers;
+}
+
 static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* System)
 {
     InfoObj->SetStringField(TEXT("assetType"), TEXT("System"));
@@ -58,6 +132,7 @@ static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* Syst
         EmitterObj->SetStringField(TEXT("name"), Handle.GetName().ToString());
         EmitterObj->SetBoolField(TEXT("enabled"), Handle.GetIsEnabled());
         EmitterObj->SetObjectField(TEXT("moduleInputs"), CollectModuleInputs(Scripts, Handle.GetName().ToString()));
+        EmitterObj->SetObjectField(TEXT("staticSwitches"), CollectModuleStaticSwitches(Handle));
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
         UNiagaraEmitter* Emitter = Handle.GetInstance().Emitter;
 #else
@@ -68,6 +143,7 @@ static void AddSystemInfo(TSharedPtr<FJsonObject>& InfoObj, UNiagaraSystem* Syst
             const bool bGpuEmitter = MCP_GET_LATEST_EMITTER_DATA(Emitter)->SimTarget == ENiagaraSimTarget::GPUComputeSim;
             EmitterObj->SetStringField(TEXT("simulationTarget"), bGpuEmitter ? TEXT("GPU") : TEXT("CPU"));
             bHasGPU = bHasGPU || bGpuEmitter;
+            EmitterObj->SetArrayField(TEXT("renderers"), CollectRenderers(*MCP_GET_LATEST_EMITTER_DATA(Emitter)));
         }
 #if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
         // Enumerate the real stack modules per emitter. Without this, get_niagara_info reports

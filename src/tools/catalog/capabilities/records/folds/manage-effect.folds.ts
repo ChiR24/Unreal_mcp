@@ -40,7 +40,7 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   {
     primary: 'edit_niagara_system', selector: 'edit',
     summary: 'Edit a Niagara system: add an emitter, user parameters or parameter bindings, set parameter values or dynamic inputs, emitter properties, GPU simulation, connect pins.',
-    topics: ['niagara parameter', 'user parameter', 'emitter properties', 'dynamic input', 'gpu simulation', 'add emitter', 'gpu particles', 'particle lifetime'],
+    topics: ['niagara parameter', 'user parameter', 'emitter properties', 'dynamic input', 'gpu simulation', 'add emitter', 'gpu particles', 'particle lifetime', 'static switch', 'ribbon width'],
     members: {
       add_emitter: 'add_emitter_to_system', add_user_parameter: 'add_user_parameter', bind_parameter: 'bind_parameter_to_source', set_parameter_value: 'set_parameter_value',
       set_parameter: 'set_niagara_parameter', set_dynamic_input: 'set_niagara_dynamic_input', set_emitter_properties: 'set_emitter_properties',
@@ -54,8 +54,8 @@ export const MANAGE_EFFECT_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'get_niagara_info', selector: 'info',
-    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.',
-    topics: ['emitter list', 'stack modules', 'user parameters'],
+    summary: 'Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.',
+    topics: ['emitter list', 'stack modules', 'user parameters', 'static switches'],
     members: { info: 'get_niagara_info', validate: 'validate_niagara_system' },
   },
 ];

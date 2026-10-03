@@ -208,6 +208,17 @@ bool HandleProceduralEffectAction(const FEffectActionContext& Context, bool bIsC
             Context.Socket, Context.RequestId, false, Error, Details, ErrorCode);
         return true;
     }
+    // The authored system is an asset first; placing it is what location asks for. Without one, every effect made
+    // dropped a preview actor at the world origin of whatever level was open, one more actor to find and delete.
+    if (!Context.Payload->HasField(TEXT("location")))
+    {
+        Details->SetStringField(TEXT("systemPath"), AuthoredSystemPath);
+        Details->SetBoolField(TEXT("placed"), false);
+        Context.Bridge.SendAutomationResponse(Context.Socket, Context.RequestId, true,
+            FString::Printf(TEXT("%s authored %s (not placed: give location, or use kind niagara with systemPath, or a "
+                                 "NiagaraComponent)"), *EffectName, *AuthoredSystemPath), Details);
+        return true;
+    }
     return CreateNiagaraEffectFromPayload(Context, EffectName, AuthoredSystemPath, Details);
 }
 }

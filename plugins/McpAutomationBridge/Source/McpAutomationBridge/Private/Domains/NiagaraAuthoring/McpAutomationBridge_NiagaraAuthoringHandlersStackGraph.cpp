@@ -125,4 +125,106 @@ bool EnsureScriptOutputGraph(UNiagaraScriptSource* ScriptSource, ENiagaraScriptU
     Graph->NotifyGraphChanged();
     return true;
 }
+
+// The pin default the Niagara stack writes for Value: an enum entry by name (matched here by display name, name or
+// value), a bool as true/false, an int as its digits. Empty when Value fits none; Allowed then names what fits.
+static FString StaticSwitchDefault(const UEdGraphPin& Pin, const TSharedPtr<FJsonValue>& Value, FString& Allowed)
+{
+    FString Text;
+    double Number = 0.0;
+    const bool bText = Value.IsValid() && Value->Type == EJson::String && Value->TryGetString(Text);
+    const bool bNumber = Value.IsValid() && Value->Type == EJson::Number && Value->TryGetNumber(Number);
+    if (const UEnum* Enum = Cast<UEnum>(Pin.PinType.PinSubCategoryObject.Get()))
+    {
+        FString Match;
+        const int32 Count = Enum->ContainsExistingMax() ? Enum->NumEnums() - 1 : Enum->NumEnums();
+        for (int32 Index = 0; Index < Count; ++Index)
+        {
+            const int64 EntryValue = Enum->GetValueByIndex(Index);
+            const FString Display = Enum->GetDisplayNameTextByIndex(Index).ToString();
+            const FString Name = Enum->GetNameStringByValue(EntryValue);
+            Allowed += (Allowed.IsEmpty() ? TEXT("") : TEXT(", ")) + Display;
+            if ((bNumber && EntryValue == static_cast<int64>(Number)) || (bText && (Text.Equals(Display, ESearchCase::IgnoreCase) || Text.Equals(Name, ESearchCase::IgnoreCase))))
+            {
+                Match = Name;
+            }
+        }
+        return Match;
+    }
+    if (PinStructName(Pin) == FName(TEXT("NiagaraBool")))
+    {
+        Allowed = TEXT("true, false");
+        bool bValue = bNumber && Number != 0.0;
+        const bool bParsed = bNumber || (Value.IsValid() && Value->Type == EJson::Boolean && Value->TryGetBool(bValue)) || (bText && LexTryParseString(bValue, *Text));
+        return bParsed ? LexToString(bValue) : FString();
+    }
+    Allowed = TEXT("a whole number");
+    const bool bDigits = bText && Text.IsNumeric();
+    return bNumber || bDigits ? LexToString(bNumber ? static_cast<int32>(Number) : FCString::Atoi(*Text)) : FString();
+}
+
+// Gathers the call nodes that can carry the switch: the named emitter's graph, or with no emitter the system
+// stack's graph and every emitter's.
+static TArray<UNiagaraGraph*> GatherStackGraphs(UNiagaraSystem* System, const FString& EmitterName)
+{
+    TArray<UNiagaraGraph*> Graphs;
+    UNiagaraScript* SystemScript = EmitterName.IsEmpty() ? System->GetSystemSpawnScript() : nullptr;
+    if (UNiagaraScriptSource* Source = SystemScript ? Cast<UNiagaraScriptSource>(SystemScript->GetLatestSource()) : nullptr)
+    {
+        Graphs.AddUnique(Source->NodeGraph);
+    }
+    for (FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+    {
+        UNiagaraScriptSource* Source = GetEmitterScriptSource(&Handle);
+        if (Source && (EmitterName.IsEmpty() || Handle.GetName().ToString() == EmitterName))
+        {
+            Graphs.AddUnique(Source->NodeGraph);
+        }
+    }
+    Graphs.Remove(nullptr);
+    return Graphs;
+}
+
+int32 SetModuleStaticSwitch(UNiagaraSystem* System, const FString& EmitterName, const FString& ParamName, const TSharedPtr<FJsonValue>& Value, FString& OutError)
+{
+    FString ModuleName;
+    FString SwitchName;
+    if (!System || !ParamName.Split(TEXT("."), &ModuleName, &SwitchName))
+    {
+        return 0;
+    }
+    int32 Written = 0;
+    for (UNiagaraGraph* Graph : GatherStackGraphs(System, EmitterName))
+    {
+        for (UEdGraphNode* GraphNode : Graph->Nodes)
+        {
+            UNiagaraNodeFunctionCall* Node = Cast<UNiagaraNodeFunctionCall>(GraphNode);
+            if (!Node || !Node->FunctionScript || !Node->GetFunctionName().Equals(ModuleName, ESearchCase::IgnoreCase))
+            {
+                continue;
+            }
+            for (UEdGraphPin* Pin : Node->Pins)
+            {
+                if (!IsStaticSwitchPin(Pin) || !Pin->PinName.ToString().Equals(SwitchName, ESearchCase::IgnoreCase))
+                {
+                    continue;
+                }
+                FString Allowed;
+                const FString Default = StaticSwitchDefault(*Pin, Value, Allowed);
+                if (Default.IsEmpty())
+                {
+                    OutError = FString::Printf(TEXT("Static switch '%s' takes %s."), *ParamName, *Allowed);
+                    return 0;
+                }
+                // What the stack does for a static switch: write the pin, then resynchronise the node so the
+                // graph's change id moves and the next compile rebuilds the script.
+                Pin->Modify();
+                Pin->DefaultValue = Default;
+                Node->MarkNodeRequiresSynchronization(TEXT("Static switch set over MCP"), true);
+                ++Written;
+            }
+        }
+    }
+    return Written;
+}
 }
