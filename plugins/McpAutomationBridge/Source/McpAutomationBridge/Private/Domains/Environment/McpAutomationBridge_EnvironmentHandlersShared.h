@@ -281,6 +281,10 @@ bool HandleInspectRaycastMeshAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
+bool HandleInspectRaycastWorldAction(
+    UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
+    const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> RequestingSocket);
 bool HandleInspectActorQueryAction(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     const FString &LowerSubAction, const TSharedPtr<FJsonObject> &Payload,

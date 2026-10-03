@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `a68ffecc53161f2d`
+Catalog revision: `d59a766c7f32ec76`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 393 capabilities across
+The catalog declares 394 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -40,7 +40,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `build_environment` | 40 | 5 | 32 | 3 | environment |
 | `control_actor` | 24 | 8 | 14 | 2 | actor |
 | `control_editor` | 24 | 9 | 12 | 3 | editor |
-| `inspect` | 17 | 12 | 4 | 1 | inspect |
+| `inspect` | 18 | 13 | 4 | 1 | inspect |
 | `manage_ai` | 16 | 2 | 14 | 0 | manage ai |
 | `manage_asset` | 46 | 9 | 32 | 5 | asset, datatable, enum, material, struct, texture |
 | `manage_audio` | 13 | 2 | 11 | 0 | audio |
@@ -62,7 +62,7 @@ validates against, so `execute` cannot accept an action this table omits.
 
 ## Capabilities requiring consent
 
-63 of 393 capabilities require consent.
+63 of 394 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -315,6 +315,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `inspect.inspect_object` | `inspect` | `inspect_object` | read | read | none | `inspect.inspect_object` `inspect.get_actor_details` `inspect.get_level_details` `inspect.get_material_details` `inspect.get_mesh_details` `inspect.get_texture_details` |
 | `inspect.query_object` | `inspect` | `control_actor` | read | read | none | `inspect.query_object` `inspect.list_objects` `inspect.find_by_tag` `inspect.get_metadata` `inspect.get_bounding_box` `inspect.export` |
 | `inspect.raycast_mesh` | `inspect` | `raycast_mesh` | read | read | none | `inspect.raycast_mesh` |
+| `inspect.raycast_world` | `inspect` | `raycast_world` | read | read | none | `inspect.raycast_world` |
 | `inspect.runtime_report` | `inspect` | `runtime_report` | read | read | none | `inspect.runtime_report` `inspect.pie_report` |
 | `inspect.set_component_property` | `inspect` | `control_actor` | write | write | none | `inspect.set_component_property` |
 | `inspect.set_property` | `inspect` | `set_property` | write | write | none | `inspect.set_property` |

@@ -5742,6 +5742,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
         },
+        "channel": {
+          "type": "string",
+          "description": "Collision channel traced: Visibility (default), Camera, WorldStatic, WorldDynamic, Pawn, PhysicsBody, Vehicle, Destructible, or a project trace channel by its name. What blocks depends on each component's response to that channel: most meshes block Visibility, a character capsule blocks Pawn."
+        },
         "className": {
           "type": "string",
           "description": "Class name or /Script/ class path to inspect."
@@ -5802,6 +5806,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "format": {
           "type": "string",
           "description": "Exporter format by file extension, default T3D (the text form of the object); fails with EXPORT_FAILED when no exporter for that format handles the object."
+        },
+        "ignoreActors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Actors (label, name or path) the lines pass through, such as the player pawn a line starts inside; an unknown name is refused."
         },
         "info": {
           "type": "string",
@@ -5921,32 +5932,65 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
         },
         "rays": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 256,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "origin",
-              "direction"
-            ],
-            "properties": {
-              "origin": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 256,
+              "items": {
                 "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true,
-                "description": "Ray start {x, y, z} in the mesh's local space, in cm; start outside the mesh to find its outer surface."
+                "additionalProperties": false,
+                "required": [
+                  "origin",
+                  "direction"
+                ],
+                "properties": {
+                  "origin": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Ray start {x, y, z} in the mesh's local space, in cm; start outside the mesh to find its outer surface."
+                  },
+                  "direction": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Ray direction {x, y, z}; any length, it is normalized."
+                  }
+                }
               },
-              "direction": {
+              "description": "Rays in the mesh's local space; each answers in hits at the same index."
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 256,
+              "items": {
                 "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true,
-                "description": "Ray direction {x, y, z}; any length, it is normalized."
-              }
+                "additionalProperties": false,
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "properties": {
+                  "start": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Line start {x, y, z} in world space, in cm."
+                  },
+                  "end": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Line end {x, y, z} in world space; nothing past it is reported."
+                  }
+                }
+              },
+              "description": "Lines in world space; each answers in hits at the same index."
             }
-          },
-          "description": "Rays in the mesh's local space; each answers in hits at the same index."
+          ],
+          "description": "Lines in world space; each answers in hits at the same index."
         },
         "snapshotName": {
           "type": "string",
@@ -5977,6 +6021,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "tag": {
           "type": "string",
           "description": "Actor tag to match."
+        },
+        "traceComplex": {
+          "type": "boolean",
+          "description": "Trace the render triangles of meshes that allow it instead of their simple collision (default false: the shapes the game's movement collides with)."
         },
         "value": {
           "description": "Property value to set (type depends on the target property)."
@@ -6013,6 +6061,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "inspect_object",
             "get_blueprint_details",
             "raycast_mesh",
+            "raycast_world",
             "get_property",
             "set_property",
             "inspect_class",
@@ -6314,47 +6363,94 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "hitCount": {
           "type": "number",
-          "description": "How many rays met the surface."
+          "description": "How many lines hit something."
         },
         "hits": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "hit": {
-                "type": "boolean",
-                "description": "Whether this ray met the surface."
-              },
-              "location": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
                 "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true,
-                "description": "Nearest point where the ray meets the surface, {x, y, z} in local space."
+                "additionalProperties": false,
+                "properties": {
+                  "hit": {
+                    "type": "boolean",
+                    "description": "Whether this line hit something that blocks the channel."
+                  },
+                  "location": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Where the line first hits, {x, y, z} in world space."
+                  },
+                  "normal": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Surface normal there."
+                  },
+                  "distance": {
+                    "type": "number",
+                    "description": "Distance from start, in cm."
+                  },
+                  "actorName": {
+                    "type": "string",
+                    "description": "Label of the actor hit."
+                  },
+                  "componentName": {
+                    "type": "string",
+                    "description": "Component whose collision the line hit."
+                  },
+                  "startedInside": {
+                    "type": "boolean",
+                    "description": "True when start was already inside the collision it reports: the line begins in a wall, or in a pawn left out of ignoreActors."
+                  }
+                }
               },
-              "normal": {
+              "description": "One entry per line, in order."
+            },
+            {
+              "type": "array",
+              "items": {
                 "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true,
-                "description": "Surface normal there, turned to face back along the ray (from outside, the outward normal)."
+                "additionalProperties": false,
+                "properties": {
+                  "hit": {
+                    "type": "boolean",
+                    "description": "Whether this ray met the surface."
+                  },
+                  "location": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Nearest point where the ray meets the surface, {x, y, z} in local space."
+                  },
+                  "normal": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Surface normal there, turned to face back along the ray (from outside, the outward normal)."
+                  },
+                  "distance": {
+                    "type": "number",
+                    "description": "Distance from the ray origin, in cm."
+                  },
+                  "materialSlot": {
+                    "type": "string",
+                    "description": "Name of the material slot whose triangle was hit."
+                  },
+                  "decalRotation": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "x-unreal-reflection-boundary": true,
+                    "description": "Rotation {pitch, yaw, roll} for a DecalComponent placed at location in the same space, so its texture prints upright and readable on this surface: the decal projects into the surface along its X axis, and its DecalSize is (projection depth, half the print height, half the print width)."
+                  }
+                }
               },
-              "distance": {
-                "type": "number",
-                "description": "Distance from the ray origin, in cm."
-              },
-              "materialSlot": {
-                "type": "string",
-                "description": "Name of the material slot whose triangle was hit."
-              },
-              "decalRotation": {
-                "type": "object",
-                "additionalProperties": true,
-                "x-unreal-reflection-boundary": true,
-                "description": "Rotation {pitch, yaw, roll} for a DecalComponent placed at location in the same space, so its texture prints upright and readable on this surface: the decal projects into the surface along its X axis, and its DecalSize is (projection depth, half the print height, half the print width)."
-              }
+              "description": "One entry per ray, in order."
             }
-          },
-          "description": "One entry per ray, in order."
+          ],
+          "description": "One entry per line, in order."
         },
         "homepage": {
           "type": "string",

@@ -156,6 +156,56 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     },
   }),
   buildCoreRecord({
+    parentTool: 'inspect', action: 'raycast_world', dispatchAction: 'raycast_world', domain: D, family: 'object',
+    summary: 'Trace lines through the level against collision and read what each one hits first: the point, the surface normal, the distance, the actor and the component. Finds the ground under a point, checks a line of sight, and proves a wall, floor or volume really blocks. Traces the running game while Play In Editor runs.',
+    topics: ['line trace', 'raycast world', 'what is below', 'ground height', 'line of sight', 'does it block', 'collision test', 'trace channel'],
+    whenToUse: [
+      'The ground height under a point, or what a jump or a drop would land on, must be known.',
+      'A line of sight between two points (a camera, an enemy, the player) must be checked.',
+      'A placed wall, floor, platform or blocking volume must be proven to block: a mesh or volume with no collision is traced straight through.',
+    ],
+    whenNotToUse: ['The surface of a mesh asset must be found without placing it (use raycast_mesh).', 'Only an actor\'s overall size is needed (use query_object lookup bounding_box).'],
+    inputProps: {
+      rays: {
+        type: 'array', minItems: 1, maxItems: 256,
+        items: {
+          type: 'object', additionalProperties: false, required: ['start', 'end'],
+          properties: {
+            start: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line start {x, y, z} in world space, in cm.' },
+            end: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Line end {x, y, z} in world space; nothing past it is reported.' },
+          },
+        },
+        description: 'Lines in world space; each answers in hits at the same index.',
+      },
+      channel: { type: 'string', description: 'Collision channel traced: Visibility (default), Camera, WorldStatic, WorldDynamic, Pawn, PhysicsBody, Vehicle, Destructible, or a project trace channel by its name. What blocks depends on each component\'s response to that channel: most meshes block Visibility, a character capsule blocks Pawn.' },
+      traceComplex: { type: 'boolean', description: 'Trace the render triangles of meshes that allow it instead of their simple collision (default false: the shapes the game\'s movement collides with).' },
+      ignoreActors: { type: 'array', items: { type: 'string' }, description: 'Actors (label, name or path) the lines pass through, such as the player pawn a line starts inside; an unknown name is refused.' },
+    },
+    required: ['rays'],
+    effect: 'read',
+    exampleInput: { action: 'raycast_world', rays: [{ start: { x: 0, y: 0, z: 1000 }, end: { x: 0, y: 0, z: -1000 } }] },
+    exampleOutput: { success: true, hitCount: 1, hits: [{ hit: true, location: { x: 0, y: 0, z: 0 }, normal: { x: 0, y: 0, z: 1 }, distance: 1000, actorName: 'Floor', componentName: 'StaticMeshComponent0' }] },
+    outputProps: {
+      hitCount: { type: 'number', description: 'How many lines hit something.' },
+      hits: {
+        type: 'array',
+        items: {
+          type: 'object', additionalProperties: false,
+          properties: {
+            hit: { type: 'boolean', description: 'Whether this line hit something that blocks the channel.' },
+            location: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Where the line first hits, {x, y, z} in world space.' },
+            normal: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Surface normal there.' },
+            distance: { type: 'number', description: 'Distance from start, in cm.' },
+            actorName: { type: 'string', description: 'Label of the actor hit.' },
+            componentName: { type: 'string', description: 'Component whose collision the line hit.' },
+            startedInside: { type: 'boolean', description: 'True when start was already inside the collision it reports: the line begins in a wall, or in a pawn left out of ignoreActors.' },
+          },
+        },
+        description: 'One entry per line, in order.',
+      },
+    },
+  }),
+  buildCoreRecord({
     parentTool: 'inspect', action: 'get_texture_details', dispatchAction: 'inspect_object', domain: D, family: 'object',
     summary: 'Inspect a texture asset: dimensions, format and settings. Any other object is refused with TYPE_MISMATCH.',
     whenToUse: ['A texture asset\'s details must be read.'],

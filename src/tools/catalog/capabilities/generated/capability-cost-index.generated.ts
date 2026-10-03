@@ -436,6 +436,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "inspect::pie_report": "instant|low",
   "inspect::query_object": "interactive|low",
   "inspect::raycast_mesh": "instant|low",
+  "inspect::raycast_world": "instant|low",
   "inspect::restore_snapshot": "interactive|low",
   "inspect::runtime_report": "instant|low",
   "inspect::set_component_property": "interactive|low",
@@ -1540,4 +1541,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1527;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1528;

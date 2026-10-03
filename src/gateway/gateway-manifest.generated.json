@@ -4533,6 +4533,7 @@
         "inspect_object",
         "get_blueprint_details",
         "raycast_mesh",
+        "raycast_world",
         "get_property",
         "set_property",
         "inspect_class",
@@ -4552,6 +4553,7 @@
         "actorName",
         "actorNames",
         "blueprintPath",
+        "channel",
         "className",
         "classPath",
         "componentName",
@@ -4560,6 +4562,7 @@
         "editorState",
         "filter",
         "format",
+        "ignoreActors",
         "info",
         "kind",
         "limit",
@@ -4581,6 +4584,7 @@
         "statsKind",
         "structPath",
         "tag",
+        "traceComplex",
         "value",
         "watch"
       ],
@@ -4601,6 +4605,10 @@
           "blueprintPath": {
             "type": "string",
             "description": "Blueprint asset /Game path (for CDO/component inspection without spawning)."
+          },
+          "channel": {
+            "type": "string",
+            "description": "Collision channel traced: Visibility (default), Camera, WorldStatic, WorldDynamic, Pawn, PhysicsBody, Vehicle, Destructible, or a project trace channel by its name. What blocks depends on each component's response to that channel: most meshes block Visibility, a character capsule blocks Pawn."
           },
           "className": {
             "type": "string",
@@ -4662,6 +4670,13 @@
           "format": {
             "type": "string",
             "description": "Exporter format by file extension, default T3D (the text form of the object); fails with EXPORT_FAILED when no exporter for that format handles the object."
+          },
+          "ignoreActors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Actors (label, name or path) the lines pass through, such as the player pawn a line starts inside; an unknown name is refused."
           },
           "info": {
             "type": "string",
@@ -4781,32 +4796,65 @@
             "description": "Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName."
           },
           "rays": {
-            "type": "array",
-            "minItems": 1,
-            "maxItems": 256,
-            "items": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [
-                "origin",
-                "direction"
-              ],
-              "properties": {
-                "origin": {
+            "oneOf": [
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 256,
+                "items": {
                   "type": "object",
-                  "additionalProperties": true,
-                  "x-unreal-reflection-boundary": true,
-                  "description": "Ray start {x, y, z} in the mesh's local space, in cm; start outside the mesh to find its outer surface."
+                  "additionalProperties": false,
+                  "required": [
+                    "origin",
+                    "direction"
+                  ],
+                  "properties": {
+                    "origin": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true,
+                      "description": "Ray start {x, y, z} in the mesh's local space, in cm; start outside the mesh to find its outer surface."
+                    },
+                    "direction": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true,
+                      "description": "Ray direction {x, y, z}; any length, it is normalized."
+                    }
+                  }
                 },
-                "direction": {
+                "description": "Rays in the mesh's local space; each answers in hits at the same index."
+              },
+              {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 256,
+                "items": {
                   "type": "object",
-                  "additionalProperties": true,
-                  "x-unreal-reflection-boundary": true,
-                  "description": "Ray direction {x, y, z}; any length, it is normalized."
-                }
+                  "additionalProperties": false,
+                  "required": [
+                    "start",
+                    "end"
+                  ],
+                  "properties": {
+                    "start": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true,
+                      "description": "Line start {x, y, z} in world space, in cm."
+                    },
+                    "end": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "x-unreal-reflection-boundary": true,
+                      "description": "Line end {x, y, z} in world space; nothing past it is reported."
+                    }
+                  }
+                },
+                "description": "Lines in world space; each answers in hits at the same index."
               }
-            },
-            "description": "Rays in the mesh's local space; each answers in hits at the same index."
+            ],
+            "description": "Lines in world space; each answers in hits at the same index."
           },
           "snapshotName": {
             "type": "string",
@@ -4837,6 +4885,10 @@
           "tag": {
             "type": "string",
             "description": "Actor tag to match."
+          },
+          "traceComplex": {
+            "type": "boolean",
+            "description": "Trace the render triangles of meshes that allow it instead of their simple collision (default false: the shapes the game's movement collides with)."
           },
           "value": {
             "description": "Property value to set (type depends on the target property)."
@@ -4873,6 +4925,7 @@
               "inspect_object",
               "get_blueprint_details",
               "raycast_mesh",
+              "raycast_world",
               "get_property",
               "set_property",
               "inspect_class",
