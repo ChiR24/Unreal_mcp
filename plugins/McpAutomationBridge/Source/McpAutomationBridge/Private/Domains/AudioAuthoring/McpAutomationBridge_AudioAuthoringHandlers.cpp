@@ -1,5 +1,20 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
+#include "Editor.h"
+
+// A MetaSound plays the graph the frontend registered at its first play, and
+// later plays reuse it, so an edit was saved while the editor kept playing the
+// old graph until a restart (nine gain changes measured exactly as before).
+// Re-register after every graph edit, as the MetaSound editor does after its own.
+static void ReregisterEditedMetaSound(const TSharedPtr<FJsonObject>& Params)
+{
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND && __has_include("MetasoundEditorSubsystem.h")
+	const FString AssetPath = McpAudioAuthoring::NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
+	UMetaSoundSource* MetaSound = AssetPath.IsEmpty() ? nullptr : FindObject<UMetaSoundSource>(nullptr, *AssetPath);
+	UMetaSoundEditorSubsystem* MetaSoundEditor = GEditor ? GEditor->GetEditorSubsystem<UMetaSoundEditorSubsystem>() : nullptr;
+	if (MetaSound && MetaSoundEditor) { MetaSoundEditor->RegisterGraphWithFrontend(*MetaSound); }
+#endif
+}
 
 static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJsonObject>& Params)
 {
@@ -11,10 +26,16 @@ static TSharedPtr<FJsonObject> HandleAudioAuthoringRequest(const TSharedPtr<FJso
 	if (TSharedPtr<FJsonObject> Result = HandleSoundCueNodeActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleSoundCueDopplerAction(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundAssetActions(SubAction, Params, Response)) { return Result; }
-	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundBatchAction(SubAction, Params, Response)) { return Result; }
-	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundNodeActions(SubAction, Params, Response)) { return Result; }
-	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundInterfaceActions(SubAction, Params, Response)) { return Result; }
-	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundGraphEditActions(SubAction, Params, Response)) { return Result; }
+	// Graph edits: a batch, nodes and links, inputs, outputs and literals, removals.
+	TSharedPtr<FJsonObject> Edited = HandleMetaSoundBatchAction(SubAction, Params, Response);
+	if (!Edited) { Edited = HandleMetaSoundNodeActions(SubAction, Params, Response); }
+	if (!Edited) { Edited = HandleMetaSoundInterfaceActions(SubAction, Params, Response); }
+	if (!Edited) { Edited = HandleMetaSoundGraphEditActions(SubAction, Params, Response); }
+	if (Edited)
+	{
+		ReregisterEditedMetaSound(Params);
+		return Edited;
+	}
 	if (TSharedPtr<FJsonObject> Result = HandleMetaSoundGraphReadAction(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleSoundClassActions(SubAction, Params, Response)) { return Result; }
 	if (TSharedPtr<FJsonObject> Result = HandleSoundMixActions(SubAction, Params, Response)) { return Result; }
