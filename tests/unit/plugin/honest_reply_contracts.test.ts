@@ -898,6 +898,19 @@ describe('found rebuilding the title menu', () => {
   });
 });
 
+describe('found wiring the HUD power-up chips', () => {
+  // A build_graph step connecting a Sequence's then_2 stopped the batch with PIN_NOT_FOUND ("pins: execute, then_0,
+  // then_1"): the editor adds that pin on demand, the tool never did.
+  it('connect_pins grows a node that adds pins on demand to the pin it names, and takes back pins added in vain', () => {
+    const source = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp');
+    expect(source).toMatch(/IK2Node_AddPinInterface\* Growable = Cast<IK2Node_AddPinInterface>\(Node\);/u);
+    expect(source).toMatch(/Growable->AddInputPin\(\);\s*Pin = Context\.FindPin\(Node, PinName\);/u);
+    expect(source).toMatch(/if \(!Before\.Contains\(Extra\)\) Growable->RemoveInputPin\(Extra\);/u);
+    expect(source).toContain('UEdGraphPin* FromPin = FindOrGrowPin(Context, FromNode, FromPinName);');
+    expect(source).toContain('UEdGraphPin* ToPin = FindOrGrowPin(Context, ToNode, ToPinName);');
+  });
+});
+
 describe('found pressing PLAY with Enter on the title', () => {
   // key_tap Enter reached the focused PLAY button but the title stayed up: the release waited on game time, which a
   // title or pause menu stops, so the key stayed down for the 600 s grace and the button never clicked.
