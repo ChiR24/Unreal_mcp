@@ -6,6 +6,8 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
+
 namespace
 {
 // LOD settings target a static mesh asset; the caller names the level actor that
@@ -28,8 +30,6 @@ UStaticMesh* ResolveLodMesh(UMcpAutomationBridgeSubsystem* Self, const FString& 
     return nullptr;
 }
 }
-
-#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 
 namespace McpGeometryHandlers
 {

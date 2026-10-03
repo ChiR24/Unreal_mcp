@@ -28,6 +28,15 @@
 #include "EdgeLoop.h"
 #endif
 
+// GeometryScripting is linked only when Build.cs finds it, and it is Experimental (so left out) in some
+// packages; its headers are then off the include path and the whole domain compiles out.
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1 && __has_include("GeometryScript/MeshPrimitiveFunctions.h")
+#define MCP_HAS_FULL_GEOMETRY_SCRIPT 1
+#else
+#define MCP_HAS_FULL_GEOMETRY_SCRIPT 0
+#endif
+
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 #if __has_include("GeometryScript/GeometryScriptTypes.h")
 #include "GeometryScript/GeometryScriptTypes.h"
 #else
@@ -56,15 +65,11 @@
 #include "GeometryScript/MeshTransformFunctions.h"
 #endif
 #include "GeometryScript/MeshUVFunctions.h"
-
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 1
-#define MCP_HAS_FULL_GEOMETRY_SCRIPT 1
-#else
-#define MCP_HAS_FULL_GEOMETRY_SCRIPT 0
 #endif
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMcpGeometryHandlers, Log, All);
 
+#if MCP_HAS_FULL_GEOMETRY_SCRIPT
 struct FGeometryScriptMeshSelection; // global type (GeometryScript/GeometryScriptSelectionTypes.h), declared outside the namespace
 class UMaterialInterface;
 
@@ -245,4 +250,5 @@ bool HandleGenerateLODsGeometry(UMcpAutomationBridgeSubsystem* Self, const FStri
 bool HandleSetLODSettings(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleSetLODScreenSizes(UMcpAutomationBridgeSubsystem* Self, const FString& RequestId, const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
 } // namespace McpGeometryHandlers
+#endif // MCP_HAS_FULL_GEOMETRY_SCRIPT
 

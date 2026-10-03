@@ -185,9 +185,9 @@ bool UMcpAutomationBridgeSubsystem::HandleGeometryAction(
     SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("Unknown geometry subAction: '%s'"), *SubAction), TEXT("UNKNOWN_SUBACTION"));
     return true;
 #else
-    // UE 5.0 doesn't have full GeometryScript support
+    // UE 5.0, or a build without the Geometry Script plugin (left out where it is Experimental)
     SendAutomationError(RequestingSocket, RequestId,
-        TEXT("GeometryScript operations require UE 5.1 or later"),
+        TEXT("Geometry Script operations need UE 5.1 or later with the Geometry Script plugin, which this build does not include"),
         TEXT("NOT_SUPPORTED"));
     return true;
 #endif // MCP_HAS_FULL_GEOMETRY_SCRIPT
