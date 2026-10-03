@@ -220,7 +220,7 @@ describe('the transient package is never a changed asset', () => {
     const result = { success: true, details: { assetPath: '/Engine/Transient', actorName: 'BP_RiderGM0' } };
     expect(extractHandles(result)).toEqual([{ kind: 'actor', ref: 'BP_RiderGM0' }]);
     expect(extractChanges(result)).toEqual(['BP_RiderGM0']);
-    expect(extractChanges({ assetPath: '/Engine/Transient.BP_RiderGI_C_0' })).toEqual([]);
+    expect(extractChanges({ assetPath: '/Engine/Transient.BP_MyGameInstance_C_0' })).toEqual([]);
   });
 
   it('the native extraction skips it on the same fields', () => {

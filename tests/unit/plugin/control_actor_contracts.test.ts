@@ -66,7 +66,7 @@ describe('control_actor.list near and radius: what is close to a point, nearest 
     expect(source).toMatch(/OutBoundsSize = Extent\.Size\(\);/u);
   });
 
-  // className /Game/Enemies/BP_Bug listed 0 actors: ObjectPathToObjectName hands a path without a
+  // className /Game/Enemies/BP_Enemy listed 0 actors: ObjectPathToObjectName hands a path without a
   // '.' back whole, and no class is named after a whole path.
   it('className matches a Blueprint by package path, as well as by name or object path', () => {
     expect(read('McpAutomationBridge_ControlActorSupport.h'))

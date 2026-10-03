@@ -534,7 +534,7 @@ describe('handlers answer what they did', () => {
   });
 });
 
-// One session's level load dropped another session's unsaved stage edits: FEditorFileUtils::LoadMap never asks about
+// One session's level load dropped another session's unsaved level edits: FEditorFileUtils::LoadMap never asks about
 // unsaved levels (only the editor's Open Level dialog does), and only a headless editor was ever refused.
 describe('opening another level over unsaved level changes', () => {
   // Each caller, and the call that loads there: the check has to answer before it.
@@ -718,9 +718,9 @@ describe('Nanite bakes and rebuilds', () => {
   });
 });
 
-describe('found building the stage-1 checkpoint', () => {
+describe('graph batches, PIE spawns and trigger volumes', () => {
   it('a build_graph pre-check knows the custom events earlier create_node steps make', () => {
-    // A batch that created ShowSaved and then called it was refused with FUNCTION_NOT_FOUND before anything ran.
+    // A batch that created a custom event and then called it was refused with FUNCTION_NOT_FOUND before anything ran.
     const batch = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
     expect(batch).toMatch(/NodeType\.Equals\(TEXT\("CustomEvent"\), ESearchCase::IgnoreCase\)[\s\S]{0,200}?Declared\.Add\(/u);
     // ...and the event exists on the skeleton class by then, as add_event's does, so the call node resolves.
@@ -735,15 +735,15 @@ describe('found building the stage-1 checkpoint', () => {
   });
 
   it('the placement check leaves trigger and pickup volumes out of what an actor intersects', () => {
-    // A rider standing in a checkpoint's trigger read "intersects Checkpoint_C1 by 68 units".
+    // A pawn standing in a trigger box read as intersecting the trigger's actor.
     const placement = code('ControlActor', 'McpAutomationBridge_ControlActorPlacementCheck.cpp');
     expect(placement).toContain('GetCollisionResponseToChannel(Channel) == ECR_Block');
     expect(placement).toContain('!McpBlocksSolids(A) || !McpBlocksSolids(B)');
   });
 });
 
-describe('found wiring the pause key', () => {
-  // map_action saved IMC_Rider but its receipt listed no change: the context was named only inside nested
+describe('receipts of input edits and deletes', () => {
+  // map_action saved the mapping context but its receipt listed no change: the context was named only inside nested
   // verification objects, which changes[] never reads.
   it('every Enhanced Input edit names the asset it saved in changedAssets', () => {
     const mappings = code('Input', 'McpAutomationBridge_InputHandlersMappings.cpp');
@@ -765,7 +765,7 @@ describe('found wiring the pause key', () => {
   });
 
   it('an asset delete and an environment delete name what they removed', () => {
-    // asset.delete of the throwaway IA_ZTmp answered deletedCount 1 with an empty changes[].
+    // asset.delete of an input action answered deletedCount 1 with an empty changes[].
     const mutation = code('AssetWorkflow', 'Operations', 'McpAutomationBridge_AssetWorkflowAssetMutation.cpp');
     expect(mutation).toContain('DeletedPaths.Add(FPackageName::ObjectPathToPackageName(SafePath));');
     expect(mutation).toContain('Resp->SetArrayField(TEXT("deleted"), DeletedArray);');
@@ -786,8 +786,8 @@ describe('found wiring the pause key', () => {
   });
 });
 
-describe('found testing the stage intro card', () => {
-  // A minimized editor paints no widget, so a widget graph's Delay never fires: the card stayed up and
+describe('widget input on a minimized editor', () => {
+  // A minimized editor paints no widget, so a widget graph's Delay never fires: a timed widget stayed up and
   // widget_list kept listing it with no word on why.
   it('widget_list and widget_click warn while the window showing Play In Editor is minimized', () => {
     const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorWidgetInput.cpp');
@@ -797,8 +797,8 @@ describe('found testing the stage intro card', () => {
   });
 });
 
-describe('found extending the stage-1 meadow', () => {
-  // Painting 96 tufts and daisies answered changes: [] four times: the reply named the foliage actor only as
+describe('foliage edit receipts', () => {
+  // Painting foliage answered changes: []: the reply named the foliage actor only as
   // foliageActorPath, which a read (get_foliage_instances) reports too.
   it('a foliage paint, add or remove names the foliage actor it changed', () => {
     expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersPrivate.h')).toContain('Resp->SetArrayField(TEXT("affectedActors"), Changed);');
@@ -809,7 +809,7 @@ describe('found extending the stage-1 meadow', () => {
   });
 });
 
-describe('found adding the rider camera shake', () => {
+describe('Blueprint create with an unresolved parent class', () => {
   // A camera shake asked for under the wrong module (/Script/GameplayCameras.LegacyCameraShake) came out an Actor
   // Blueprint answering "Blueprint created", with only a list of shake properties that did not exist on it.
   it('a create whose named parent class resolves to nothing is refused and names classes with that name', () => {
@@ -820,8 +820,8 @@ describe('found adding the rider camera shake', () => {
   });
 });
 
-describe('found checking the Fab bushes', () => {
-  // inspect_object objectKind mesh declares actorName, yet refused BG_Bush_3 as "a StaticMeshActor, not a static or
+describe('mesh view of a placed actor', () => {
+  // inspect_object objectKind mesh declares actorName, yet refused a placed StaticMeshActor as "not a static or
   // skeletal mesh"; reading a placed prop's mesh took a second lookup for its path.
   it('the mesh view follows a placed actor or component to the one mesh it draws, and names each when there are several', () => {
     const source = code('Environment', 'Inspection', 'McpAutomationBridge_EnvironmentHandlersInspectObject.cpp');
@@ -832,8 +832,8 @@ describe('found checking the Fab bushes', () => {
   });
 });
 
-describe('found wiring the stage label into the intro card', () => {
-  // get_property with propertyNames IntroStage.Text and IntroRound.Text answered two rows both named "Text".
+describe('multi-property reads of dotted paths', () => {
+  // get_property with propertyNames TitleText.Text and SubtitleText.Text answered two rows both named "Text".
   it('a multi-property read echoes each dotted path as asked under propertyPath, keeping the resolved propertyName', () => {
     const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectGet.cpp');
     expect(source).toContain('Row->SetStringField(TEXT("propertyName"), Resolved);');
@@ -841,7 +841,7 @@ describe('found wiring the stage label into the intro card', () => {
   });
 });
 
-describe('found reading the stage-1 post process volume', () => {
+describe('list reads struct members of an actor', () => {
   // list propertyNames reported Settings.BloomIntensity "missing" on a post process volume while get_property read it:
   // list only followed Component.Property, never a struct member of the actor itself.
   it('list falls back to the get_property resolver for struct members and deeper paths', () => {
@@ -850,8 +850,8 @@ describe('found reading the stage-1 post process volume', () => {
   });
 });
 
-describe('found giving the Bug its patrol and chase', () => {
-  // set_property properties {CharMoveComp.bCanWalkOffLedges, CharMoveComp.PerchRadiusThreshold} on BP_Bug recompiled and
+describe('multi-property writes on class defaults', () => {
+  // set_property properties {CharMoveComp.bCanWalkOffLedges, CharMoveComp.PerchRadiusThreshold} on a Character Blueprint recompiled and
   // saved the Blueprint while its receipt listed no change: the batch kept only actor fields from each write.
   it('a multi-property write names the asset it saved and how many placed copies took the new default', () => {
     const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
@@ -860,7 +860,7 @@ describe('found giving the Bug its patrol and chase', () => {
   });
 });
 
-describe('found rebuilding the stage-1 HUD', () => {
+describe('removing a widget subtree', () => {
   // remove_widget RootCanvas moved only the canvas out of the WidgetTree: its descendants kept their names (and the
   // class kept their variables), so adding the same names back was refused with a bare "Name is already in use."
   it('removing a widget takes its whole subtree out of the tree and refreshes the class', () => {
@@ -876,9 +876,9 @@ describe('found rebuilding the stage-1 HUD', () => {
   });
 });
 
-describe('found giving the title menu keyboard focus', () => {
-  // simulate_input key_tap Enter in PIE went straight to the viewport client, so the focused PLAY button of the title
-  // menu never saw it (handledByPIE false, handledBySlate false) while a real Enter pressed it.
+describe('simulated keys and focused PIE widgets', () => {
+  // simulate_input key_tap Enter in PIE went straight to the viewport client, so a focused menu button never saw it
+  // (handledByPIE false, handledBySlate false) while a real Enter pressed it.
   it('a key goes through the Slate focus path while a widget inside the PIE viewport holds focus', () => {
     const widgetInput = code('ControlEditor', 'McpAutomationBridge_ControlEditorWidgetInput.cpp');
     expect(widgetInput).toMatch(/if \(!ViewportWidget\.IsValid\(\) \|\| !SlateApp\.HasUserFocusedDescendants\(ViewportWidget\.ToSharedRef\(\), 0\)\) \{\s*return false;\s*\}/u);
@@ -888,17 +888,17 @@ describe('found giving the title menu keyboard focus', () => {
   });
 });
 
-describe('found rebuilding the title menu', () => {
-  // After remove_widget MenuStack and a tree re-adding PlayButton, BP_RiderGameMode (Set Input Mode UI Only focusing
-  // the title's PlayButton) failed every play with "Attempted to access missing property 'none'" while it read up to
-  // date: the engine only relinks a dependent by name, and the removal left it pointing at nothing.
+describe('Blueprints that depend on a changed Widget Blueprint', () => {
+  // After a widget was removed and added back, a game mode focusing it (Set Input Mode UI Only) failed every play
+  // with "Attempted to access missing property 'none'" while it read up to date: the engine only relinks a
+  // dependent by name, and the removal left it pointing at nothing.
   it('a widget class refresh compiles every Blueprint that depends on it in full', () => {
     const source = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringLoading.cpp');
     expect(source).toMatch(/const bool bCompiled = McpSafeCompileBlueprint\(WidgetBP\);\s*TArray<UBlueprint\*> Dependents;\s*FBlueprintEditorUtils::GetDependentBlueprints\(WidgetBP, Dependents\);\s*for \(UBlueprint\* Dependent : Dependents\)\s*\{\s*McpSafeCompileBlueprint\(Dependent\);\s*\}\s*return bCompiled;/u);
   });
 });
 
-describe('found wiring the HUD power-up chips', () => {
+describe('connect_pins on pins added on demand', () => {
   // A build_graph step connecting a Sequence's then_2 stopped the batch with PIN_NOT_FOUND ("pins: execute, then_0,
   // then_1"): the editor adds that pin on demand, the tool never did.
   it('connect_pins grows a node that adds pins on demand to the pin it names, and takes back pins added in vain', () => {
@@ -911,9 +911,9 @@ describe('found wiring the HUD power-up chips', () => {
   });
 });
 
-describe('found pressing PLAY with Enter on the title', () => {
-  // key_tap Enter reached the focused PLAY button but the title stayed up: the release waited on game time, which a
-  // title or pause menu stops, so the key stayed down for the 600 s grace and the button never clicked.
+describe('tapped keys while the game is paused', () => {
+  // key_tap Enter reached a focused menu button that never clicked: the release waited on game time, which a pause
+  // menu stops, so the key stayed down for the 600 s grace.
   it('a tapped key is released on wall time while the game is paused', () => {
     const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorInput.cpp');
     expect(source).toContain('const bool bGameClock = bGameTime && !bWorldGone && !Live->IsPaused();');
@@ -921,10 +921,10 @@ describe('found pressing PLAY with Enter on the title', () => {
   });
 });
 
-describe('found extending the stage-1 meadow', () => {
-  // set_transform moved BG_Meadow and scaled it from 220 to 270, yet grass painted past its old end found no ground
-  // (243 of 600 skipped) and raycast_world missed it there: in the editor world a body moved from code kept its
-  // collision queries on the old spot, so only where the old and new footprints overlapped did a trace hit.
+describe('actors moved from code', () => {
+  // After set_transform moved and scaled a ground plane, foliage painted past its old end found no ground and
+  // raycast_world missed it there: in the editor world a body moved from code kept its collision queries on the old
+  // spot, so only where the old and new footprints overlapped did a trace hit.
   it('a move made from code ends as the editor ends its own moves, with its bodies rebuilt where it stands', () => {
     const helper = code('..', 'Foundation', 'BridgeHelpers', 'Actors', 'McpAutomationBridgeHelpersActorMove.h');
     expect(helper).toMatch(/if \(!World \|\| World->IsGameWorld\(\)\)\s*return;\s*Actor->PostEditMove\(true\);/u);
@@ -942,7 +942,7 @@ describe('found extending the stage-1 meadow', () => {
   });
 });
 
-describe('found restyling the stage-1 HUD', () => {
+describe('material and widget authoring', () => {
   // A material batch wiring a Custom node's colour and alpha ("$panel.RGB", "$panel.A") stopped with "Source output
   // pin 'RGB' not found": a Custom source only matched its extra outputs by name, never the default output's
   // aliases or channel letters, which every other node takes.
@@ -952,8 +952,8 @@ describe('found restyling the stage-1 HUD', () => {
     expect(source).toMatch(/if \(SourceOutputIndex == INDEX_NONE && Outputs\.Num\(\) > 0 && ParseChannelMask\(SourcePin, Channels\)\)/u);
   });
 
-  // The HUD panels are drawn by a UI material, and add_widget_tree took a texture but no material, so every
-  // panel needed a second call to set its brush by reflection.
+  // add_widget_tree took a texture but no material, so a panel drawn by a UI material needed a second call to set
+  // its brush by reflection.
   it('a widget tree node takes a material as an Image or Border brush', () => {
     const tree = code('WidgetAuthoring', 'Templates', 'McpAutomationBridge_WidgetAuthoringTreeBuild.cpp');
     expect(tree).toContain('TEXT("shadowColor"), TEXT("material")};');
@@ -980,7 +980,7 @@ describe('found restyling the stage-1 HUD', () => {
     expect(parse).toContain('Wanted.Equals(Label, ESearchCase::IgnoreCase)');
   });
 
-  // Each screen's entrance animation took one call per key (thirty for the title alone).
+  // A widget animation took one call per key.
   it('add_animation_keyframe writes a keys batch, checking every key before writing any', () => {
     const handler = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationKeyframe.cpp');
     expect(handler).toContain('Payload->TryGetArrayField(TEXT("keys"), KeyList)');
@@ -994,24 +994,24 @@ describe('found restyling the stage-1 HUD', () => {
     expect(keys).toContain('FString KeyValueError(const FString& Kind, const FString& TrackType, const TSharedPtr<FJsonValue>& Value);');
   });
 
-  // Wiring the title's new Intro into PlayAnimation stopped with "Variable 'Intro' not found": the animation was
-  // only a property of the generated class after the next compile.
+  // Wiring a new animation into PlayAnimation stopped with "Variable not found": the animation was only a property
+  // of the generated class after the next compile.
   it('create_widget_animation compiles the Widget Blueprint so a graph can read the animation at once', () => {
     const core = code('WidgetAuthoring', 'Animation', 'McpAutomationBridge_WidgetAuthoringAnimationCore.cpp');
     expect(core).toMatch(/RegisterAnimationGuid\(WidgetBP, NewAnim\);\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(WidgetBP\);\s*RefreshWidgetBlueprintClass\(WidgetBP\);\s*McpSafeAssetSave\(WidgetBP\);/u);
   });
 
-  // Re-keying the stage intro's logo at 0.15 s answered "4 keys in the track" for a 3-key track: the new key went
-  // in beside the old one on the same frame.
+  // Re-keying a frame answered "4 keys in the track" for a 3-key track: the new key went in beside the old one on
+  // the same frame.
   it('a widget animation key on an occupied frame replaces the key there', () => {
     const keys = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringAnimationKeysInternal.h');
     expect(keys).toMatch(/for \(int32 Existing = Channel->GetData\(\)\.FindKey\(Frame\); Existing != INDEX_NONE; Existing = Channel->GetData\(\)\.FindKey\(Frame\)\)\s*\{\s*Channel->GetData\(\)\.RemoveKey\(Existing\);\s*\}\s*const float FloatValue/u);
   });
 });
 
-describe('found giving the stage-1 camera a look-ahead', () => {
-  // Breaking the rider's velocity with create_node BreakStruct (structPath Vector) compiled with "The structure
-  // cannot be broken using generic 'break' node Break Vector": the editor breaks such a struct with its native function.
+describe('Make and Break nodes of structs with native functions', () => {
+  // Breaking a velocity with create_node BreakStruct (structPath Vector) compiled with "The structure cannot be
+  // broken using generic 'break' node Break Vector": the editor breaks such a struct with its native function.
   it('a Make or Break of a struct with a native make or break builds that function node', () => {
     const dynamic = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCreationDynamic.cpp');
     expect(dynamic).toContain('NodeClass->IsChildOf(UK2Node_MakeStruct::StaticClass()) ? TEXT("HasNativeMake") : TEXT("HasNativeBreak")');

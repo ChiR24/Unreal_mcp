@@ -3620,7 +3620,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "classPath": {
           "type": "string",
-          "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Bug) of the actors to find (alias of className)."
+          "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className)."
         },
         "collisionEnabled": {
           "type": "boolean",

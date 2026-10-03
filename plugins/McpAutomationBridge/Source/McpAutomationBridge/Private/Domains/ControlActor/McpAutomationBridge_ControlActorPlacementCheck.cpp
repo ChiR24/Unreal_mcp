@@ -86,8 +86,8 @@ bool McpHasConvexBody(UPrimitiveComponent *Comp) {
 }
 
 // A trigger or pickup volume overlaps what enters it and blocks nothing, so it
-// cannot interpenetrate anything: a rider standing in a checkpoint's trigger read
-// "intersects Checkpoint_C1 by 68 units".
+// cannot interpenetrate anything: a pawn standing in a trigger box read as
+// intersecting the trigger's actor.
 bool McpBlocksSolids(const UPrimitiveComponent *Comp) {
   for (const ECollisionChannel Channel : {ECC_WorldStatic, ECC_WorldDynamic, ECC_Pawn}) {
     if (Comp->GetCollisionResponseToChannel(Channel) == ECR_Block) {

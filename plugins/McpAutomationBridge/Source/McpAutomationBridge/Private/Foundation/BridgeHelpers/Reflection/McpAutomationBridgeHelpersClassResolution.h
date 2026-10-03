@@ -73,7 +73,7 @@ static inline UClass *McpFindTypeQuiet(const FString &NameOrPath) {
 }
 
 // The /Game assets named like the last segment of a class path that did not resolve, so a
-// wrong folder ("/Game/X/Gameplay/BP_Bug" for /Game/X/Enemies/BP_Bug) names the right one.
+// wrong folder ("/Game/X/Gameplay/BP_Enemy" for /Game/X/Enemies/BP_Enemy) names the right one.
 static inline FString McpSameNamedAssetPaths(const FString &ClassNameOrPath) {
   FString Name = ClassNameOrPath;
   int32 Slash = INDEX_NONE;

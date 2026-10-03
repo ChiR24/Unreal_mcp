@@ -6,8 +6,8 @@
 class UBlueprint;
 class UStaticMesh;
 
-// Placement inside one actor. McpPlacement compares whole actors against the level, so a rider's
-// legs buried 12 cm inside his mount, or a mount's feet below its own capsule, read as a clean
+// Placement inside one actor. McpPlacement compares whole actors against the level, so a seated
+// character's legs buried 12 cm inside the body it sits on, or feet below the actor's own capsule, read as a clean
 // placement: both parts belong to the same actor. This measures the actor's mesh parts on their
 // real triangles against each other and against the actor's ground.
 namespace McpPartPlacement

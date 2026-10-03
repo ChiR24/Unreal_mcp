@@ -53,7 +53,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       Row->SetBoolField(TEXT("applied"), Reply.bSuccess);
       if (!Reply.bSuccess) Failed.Add(FString::Printf(TEXT("%s: %s"), *Pair.Key, *Reply.Message));
       // assetPath names the Blueprint or material a class-default or expression write saved: without it a batch on
-      // BP_Bug's class defaults recompiled and saved the Blueprint while its receipt listed no change.
+      // a Blueprint's class defaults recompiled and saved the Blueprint while its receipt listed no change.
       for (const TCHAR *Field : {TEXT("value"), TEXT("actorName"), TEXT("actorPath"), TEXT("packagePath"), TEXT("blueprintCompiled"),
                                  TEXT("assetPath"), TEXT("materialRebuilt")}) {
         const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Field) : nullptr;

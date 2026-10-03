@@ -20,7 +20,7 @@ describe('audit_placement finds the floor under an actor, not what it holds up',
     expect(placementCheck()).toContain('if (HitBottomZ >= Origin.Z) {');
   });
 
-  // Stage 1's start wall is a BlockingVolume standing in the first ground slab; the trace began inside it and
+  // A BlockingVolume standing in a ground slab: the trace began inside it and
   // took its own start for the floor, so the slab read "sunk 160 units".
   it('never takes an invisible volume for the floor', () => {
     const source = placementCheck();

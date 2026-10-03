@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a2b3c5feb2125d36",
+  "catalogRevision": "234c9dfa10226f86",
   "recordCount": 394,
   "records": [
     {
@@ -31398,7 +31398,7 @@
             },
             "classPath": {
               "type": "string",
-              "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Bug) of the actors to find (alias of className)."
+              "description": "Unreal class path (e.g. /Script/Engine.PointLight or /Game/Enemies/BP_Enemy) of the actors to find (alias of className)."
             },
             "name": {
               "type": "string",
@@ -31589,8 +31589,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a74fc566936c1ac461a59d28e1d4c5bc99501b80db9428527271108d4730e3d3",
-        "content": "46bd6700be03efdc322e0d5c2a73f4f07028e20dafaa3ed433046e7ee55e72e4"
+        "schema": "783e85c1b31e1661efbfe717abd013aefd8a420d83725e37c617c07a0c31b3c7",
+        "content": "cbb7db40afa330fa3e75746e86a9d876d3e0d6da1651a770df6d7f619a1b7053"
       }
     },
     {

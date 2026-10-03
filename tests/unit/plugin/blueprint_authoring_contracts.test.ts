@@ -310,7 +310,7 @@ describe('an add_event batch step without a position takes an auto grid slot', (
   });
 });
 
-// A Cast step with targetClass /Game/NarioRider/Blueprints/BP_RiderGI stopped a batch with
+// A Cast step with targetClass /Game/MyGame/Blueprints/BP_MyGameInstance stopped a batch with
 // "Class not found": the documented Blueprint path names the Blueprint, not its class.
 describe('a Blueprint asset path resolves wherever a graph node takes a class', () => {
   it('Cast, VariableGet/Set memberClass and event memberClass fall back to the class-pin resolver', () => {

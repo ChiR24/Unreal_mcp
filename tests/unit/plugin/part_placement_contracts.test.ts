@@ -1,6 +1,6 @@
 /**
- * Source contracts for parts that sink inside one actor, and for SDF shape copies. A rider's legs sat 12 cm inside his
- * mount while every Blueprint edit answered a plain success: both parts belong to one actor, so the actor placement
+ * Source contracts for parts that sink inside one actor, and for SDF shape copies. A seated character's legs sat 12 cm
+ * inside the body under them while every Blueprint edit answered a plain success: both parts belong to one actor, so the actor placement
  * check never compared them. And the only way to give an SDF both eyes or a row of stitches was to list every copy,
  * which pushed authoring out of the editor. The C++ cannot run here, so these pin the rules.
  */

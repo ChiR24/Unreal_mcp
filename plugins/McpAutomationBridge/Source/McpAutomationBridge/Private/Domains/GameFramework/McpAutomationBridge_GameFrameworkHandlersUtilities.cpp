@@ -5,7 +5,7 @@ namespace McpGameFrameworkHandlers
 UClass* LoadClassFromPath(const FString& ClassPath)
 {
     if (ClassPath.IsEmpty()) return nullptr;
-    // A short name ("GameModeBase", "BP_RiderGameMode") resolves as every other class parameter
+    // A short name ("GameModeBase", "BP_MyGameMode") resolves as every other class parameter
     // does; the path lookups below answered NOT_FOUND for it.
     if (!ClassPath.Contains(TEXT("/"))) return ResolveClassByName(ClassPath);
 

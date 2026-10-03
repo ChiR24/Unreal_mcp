@@ -17,7 +17,7 @@ import { P } from './properties.js';
 const FAMILY = 'scs';
 const DOMAIN = 'blueprint';
 
-// A rider's legs 12 cm inside his mount answered these edits with a plain success: both parts
+// A part sunk 12 cm inside another part of the same actor answered these edits with a plain success: both parts
 // belong to one actor, so no placement check saw them. Every edit that adds, moves, re-meshes or
 // re-parents a part now measures it against the rest of the actor and names what sank.
 const PART_WARNINGS: JsonObject = {

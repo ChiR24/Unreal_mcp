@@ -1,7 +1,7 @@
 // Copyright (c) 2024 MCP Automation Bridge Contributors
 //
 // control_actor fix_coplanar. Fixing z-fighting pair by pair meant a geometric judgement per pair, a few hundred of
-// them across the nine NARIO RIDER stages; one rule covers nearly all of them. A piece lying wholly inside the other
+// them in a large level; one rule covers nearly all of them. A piece lying wholly inside the other
 // face is applied to it (a door on a wall, a post foot on a slab) and comes forward; a piece only partly inside is
 // sunk into it (a ramp bedded in the floor, a lintel in its posts) and goes back, so the surface it is sunk into
 // shows. Either way it moves a unit, which nobody sees and the depth buffer always resolves.

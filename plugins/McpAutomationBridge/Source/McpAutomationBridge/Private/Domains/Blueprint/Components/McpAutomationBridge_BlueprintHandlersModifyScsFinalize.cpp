@@ -97,7 +97,7 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
       State.LocalWarnings.Add(TEXT("Blueprint failed to save during apply; check output log."));
     }
   }
-  // A rider's legs buried in his mount answered "Processed 1 SCS operation(s)." with nothing else:
+  // A part buried in another part of the same actor answered "Processed 1 SCS operation(s)." with nothing else:
   // both parts belong to one actor, so no placement check saw them. Measure the parts this batch
   // touched against the rest of the actor and say so here.
   TSet<FString> Touched;
