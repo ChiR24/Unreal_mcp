@@ -3,6 +3,7 @@
 #include "Dom/JsonValue.h"
 #include "EdGraph/EdGraphNode.h"
 #include "EdGraph/EdGraphPin.h"
+#include "EdGraphSchema_K2.h"
 
 void McpReportPinLinkChanges(const TSharedPtr<FJsonObject>& Result, const UEdGraphPin* FromPin, const UEdGraphPin* ToPin,
                              const TArray<UEdGraphPin*>& FromBefore, const TArray<UEdGraphPin*>& ToBefore)
@@ -30,9 +31,9 @@ void McpReportPinLinkChanges(const TSharedPtr<FJsonObject>& Result, const UEdGra
         Result->SetArrayField(TEXT("replacedLinks"), Replaced);
     }
     // A Target (self) pin keeps every object wired into it: wiring in a new one kept the old one without a word,
-    // and two components then took the same transform.
+    // and two components then took the same transform. Several wires into an exec input are ordinary.
     const UEdGraphPin* InputPin = ToPin->Direction == EGPD_Input ? ToPin : FromPin;
-    if (InputPin->LinkedTo.Num() > 1)
+    if (InputPin->LinkedTo.Num() > 1 && InputPin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec)
     {
         TArray<TSharedPtr<FJsonValue>> Warnings;
         Warnings.Add(MakeShared<FJsonValueString>(FString::Printf(
