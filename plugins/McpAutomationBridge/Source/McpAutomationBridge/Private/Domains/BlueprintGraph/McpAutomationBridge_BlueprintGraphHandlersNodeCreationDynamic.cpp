@@ -1,8 +1,10 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
 #include "K2Node_CallArrayFunction.h"
+#include "K2Node_CallFunction.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_DynamicCast.h"
+#include "K2Node_MakeStruct.h"
 #include "K2Node_StructOperation.h"
 
 namespace McpBlueprintGraphHandlers
@@ -224,6 +226,19 @@ void CreateDynamicNode(
                                      "/Script/SlateCore.SlateColor%s."),
                                 *NodeType, StructPath.IsEmpty() ? TEXT("") : *FString::Printf(TEXT("; '%s' was not found"), *StructPath)),
                 TEXT("INVALID_ARGUMENT"));
+            return;
+        }
+        // A struct with a native make or break (Vector, Rotator, Transform, LinearColor ...) is made and
+        // broken by that function, as the editor's menu does: the generic node compiled with "The structure
+        // cannot be broken using generic 'break' node".
+        const FString& Native = StructType->GetMetaData(
+            NodeClass->IsChildOf(UK2Node_MakeStruct::StaticClass()) ? TEXT("HasNativeMake") : TEXT("HasNativeBreak"));
+        if (UFunction* NativeFunction = Native.IsEmpty() ? nullptr : FindObject<UFunction>(nullptr, *Native))
+        {
+            FGraphNodeCreator<UK2Node_CallFunction> NativeCreator(*Context.TargetGraph);
+            UK2Node_CallFunction* NativeNode = NativeCreator.CreateNode(false);
+            NativeNode->SetFromFunction(NativeFunction);
+            Context.FinalizeNode(NativeCreator, NativeNode, X, Y);
             return;
         }
     }

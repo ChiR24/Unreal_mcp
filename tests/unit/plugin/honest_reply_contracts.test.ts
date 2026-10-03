@@ -1008,3 +1008,14 @@ describe('found restyling the stage-1 HUD', () => {
     expect(keys).toMatch(/for \(int32 Existing = Channel->GetData\(\)\.FindKey\(Frame\); Existing != INDEX_NONE; Existing = Channel->GetData\(\)\.FindKey\(Frame\)\)\s*\{\s*Channel->GetData\(\)\.RemoveKey\(Existing\);\s*\}\s*const float FloatValue/u);
   });
 });
+
+describe('found giving the stage-1 camera a look-ahead', () => {
+  // Breaking the rider's velocity with create_node BreakStruct (structPath Vector) compiled with "The structure
+  // cannot be broken using generic 'break' node Break Vector": the editor breaks such a struct with its native function.
+  it('a Make or Break of a struct with a native make or break builds that function node', () => {
+    const dynamic = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCreationDynamic.cpp');
+    expect(dynamic).toContain('NodeClass->IsChildOf(UK2Node_MakeStruct::StaticClass()) ? TEXT("HasNativeMake") : TEXT("HasNativeBreak")');
+    expect(dynamic).toMatch(/FindObject<UFunction>\(nullptr, \*Native\)\)\s*\{\s*FGraphNodeCreator<UK2Node_CallFunction> NativeCreator\(\*Context\.TargetGraph\);/u);
+    expect(dynamic.indexOf('HasNativeBreak')).toBeLessThan(dynamic.indexOf('NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass)'));
+  });
+});
