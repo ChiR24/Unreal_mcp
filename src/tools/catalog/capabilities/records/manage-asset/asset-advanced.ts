@@ -81,6 +81,35 @@ export const ASSET_ADVANCED_RECORDS: readonly RecordSpec[] = [
       ],
       examples: [ex('Give an imported mesh its own materials, one slot by name and one by index', { assetPath: '/Game/Meshes/SM_Rider', materials: [{ slot: 'hull', materialPath: '/Game/Materials/M_Hull' }, { slot: 9, materialPath: '/Game/Materials/M_Claw' }] }, { success: true, assetPath: '/Game/Meshes/SM_Rider', assetType: 'StaticMesh', applied: 2, changed: 2, refused: [], saved: true })] }
   ),
+  r('set_mesh_collision', 'asset', 'Set the collision of a static mesh asset: one box, sphere or capsule fitted to its bounds, its own render triangles (complex), or none; every placed copy is rebuilt to match and the mesh is saved.',
+    schema({
+      assetPath: str('Static mesh asset path under /Game; engine meshes are refused (duplicate one into /Game first).'),
+      collisionType: { type: 'string', enum: ['box', 'sphere', 'capsule', 'complex', 'none'], description: 'box, sphere or capsule: one shape fitted to the mesh bounds (a capsule stands upright along Z) replaces its simple collision. complex: the render triangles are the collision, exact for terrain-like or concave meshes but costlier. none: no collision, so pawns and traces pass through.' },
+      save: bool('Save the mesh after the change. Defaults to true.'),
+    }, ['assetPath', 'collisionType']),
+    schema({
+      success: bool('Operation succeeded.'),
+      assetPath: ASSET_PATH,
+      collisionType: str('The collision the mesh has now.'),
+      shapeCount: num('Simple collision shapes the mesh holds after the call (0 for complex and none).'),
+      componentsRefreshed: num('Placed copies of the mesh in open worlds whose collision was rebuilt to match.'),
+      saved: bool('Whether the mesh was saved.'),
+      details: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'Operation details.' },
+    }, ['success']),
+    WRITE, WRITE_POLICY, MEDIUM,
+    { topics: ['mesh collision', 'static mesh collision', 'add box collision', 'complex as simple', 'remove collision', 'player falls through mesh', 'walk on imported mesh'],
+      whenToUse: [
+        'An imported or Fab mesh has no simple collision, so pawns fall through it or walk through it.',
+        'A decorative mesh (grass, flowers, small debris) must stop blocking the player.',
+        'A terrain-like or concave mesh must collide exactly with its own triangles (complex).',
+      ],
+      whenNotToUse: [
+        'A dynamic mesh actor needs collision generated (use manage_geometry.configure_mesh_collision).',
+        'Only one placed copy should stop colliding (use control_actor.set_actor_collision).',
+        'It must be checked whether a placed mesh blocks at all (use inspect.raycast_world).',
+      ],
+      examples: [ex('Make an imported rock standable with one box', { assetPath: '/Game/Meshes/SM_Rock', collisionType: 'box' }, { success: true, assetPath: '/Game/Meshes/SM_Rock', collisionType: 'box', shapeCount: 1, componentsRefreshed: 3, saved: true })] }
+  ),
   r('add_material_parameter', 'asset', 'Add a parameter to a material.',
     schema({ assetPath: str('Material asset path.'), parameterName: str('Parameter name.'), parameterType: str('Parameter type.'), value: { description: 'Parameter value.' } }, ['assetPath', 'parameterName']),
     OK, WRITE, WRITE_POLICY, LOW,

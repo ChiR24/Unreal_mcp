@@ -8271,6 +8271,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "HLSL code."
         },
+        "collisionType": {
+          "type": "string",
+          "enum": [
+            "box",
+            "sphere",
+            "capsule",
+            "complex",
+            "none"
+          ],
+          "description": "box, sphere or capsule: one shape fitted to the mesh bounds (a capsule stands upright along Z) replaces its simple collision. complex: the render triangles are the collision, exact for terrain-like or concave meshes but costlier. none: no collision, so pawns and traces pass through."
+        },
         "color": {
           "description": "Text colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
         },
@@ -9238,7 +9249,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "enum": [
             "thumbnail",
             "lods",
-            "mesh_materials"
+            "mesh_materials",
+            "mesh_collision"
           ],
           "description": "Which process asset variant to run."
         },
@@ -9817,6 +9829,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Slots whose material this call changed; an entry that names the material a slot already holds changes nothing."
         },
+        "collisionType": {
+          "type": "string",
+          "description": "The collision the mesh has now."
+        },
         "combineMeshesApplied": {
           "type": "boolean",
           "description": "Present only when the add passed combineMeshes=false for a listing Fab merges meshes for: true once Interchange's mesh combining was switched off before it ran, false while that has not happened yet or could not (the import then yields the single merged mesh)."
@@ -9858,6 +9874,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "completedBytes": {
           "type": "number",
           "description": "Bytes transferred."
+        },
+        "componentsRefreshed": {
+          "type": "number",
+          "description": "Placed copies of the mesh in open worlds whose collision was rebuilt to match."
         },
         "connectionCount": {
           "type": "number",
@@ -10576,6 +10596,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "shadingModel": {
           "type": "string",
           "description": "First matching shading model name."
+        },
+        "shapeCount": {
+          "type": "number",
+          "description": "Simple collision shapes the mesh holds after the call (0 for complex and none)."
         },
         "skippedCount": {
           "type": "number",

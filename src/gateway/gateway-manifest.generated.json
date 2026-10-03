@@ -6107,6 +6107,7 @@
         "classNames",
         "clearExisting",
         "code",
+        "collisionType",
         "color",
         "columnTypes",
         "combineMeshes",
@@ -6496,6 +6497,17 @@
           "code": {
             "type": "string",
             "description": "HLSL code."
+          },
+          "collisionType": {
+            "type": "string",
+            "enum": [
+              "box",
+              "sphere",
+              "capsule",
+              "complex",
+              "none"
+            ],
+            "description": "box, sphere or capsule: one shape fitted to the mesh bounds (a capsule stands upright along Z) replaces its simple collision. complex: the render triangles are the collision, exact for terrain-like or concave meshes but costlier. none: no collision, so pawns and traces pass through."
           },
           "color": {
             "description": "Text colour (default white) as {r, g, b, a} or [r, g, b, a] in 0-1."
@@ -7464,7 +7476,8 @@
             "enum": [
               "thumbnail",
               "lods",
-              "mesh_materials"
+              "mesh_materials",
+              "mesh_collision"
             ],
             "description": "Which process asset variant to run."
           },

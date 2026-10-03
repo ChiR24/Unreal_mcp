@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d59a766c7f32ec76",
+  "catalogRevision": "68f39a4278344d51",
   "recordCount": 394,
   "records": [
     {
@@ -9324,7 +9324,8 @@
       "aliases": [
         "asset.create_thumbnail",
         "asset.generate_lods",
-        "asset.set_mesh_materials"
+        "asset.set_mesh_materials",
+        "asset.set_mesh_collision"
       ],
       "legacyIds": [
         {
@@ -9351,6 +9352,13 @@
           "folded": {
             "process": "mesh_materials"
           }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "set_mesh_collision",
+          "folded": {
+            "process": "mesh_collision"
+          }
         }
       ],
       "discovery": {
@@ -9361,26 +9369,39 @@
           "thumbnail",
           "generate lods",
           "material thumbnail",
+          "mesh collision",
+          "static mesh collision",
           "set mesh materials",
           "assign materials to a static mesh",
           "mesh material slots",
           "skeletal mesh materials",
           "imported mesh grid material",
-          "materials on a mesh asset"
+          "materials on a mesh asset",
+          "add box collision",
+          "complex as simple",
+          "remove collision",
+          "player falls through mesh",
+          "walk on imported mesh"
         ],
-        "summary": "Process an asset: render a thumbnail, generate mesh LODs, or set the materials in the slots of a static or skeletal mesh asset (mesh_materials) so every placement shows them.",
+        "summary": "Process an asset: render a thumbnail, generate mesh LODs, set the materials in the slots of a static or skeletal mesh asset (mesh_materials), or set a static mesh asset's collision (mesh_collision), so every placement shows or uses them.",
         "whenToUse": [
           "process=thumbnail: An asset needs a preview image, optionally written as a PNG file inside the project.",
           "process=lods: One or several static meshes need LOD levels generated so distant copies render cheaper.",
           "process=mesh_materials: An imported mesh came in with every slot on the default grid material and each slot needs its own material, once for every placement of the mesh.",
-          "process=mesh_materials: Several slots of a static or skeletal mesh asset get their materials in one call, by index or by slot name."
+          "process=mesh_materials: Several slots of a static or skeletal mesh asset get their materials in one call, by index or by slot name.",
+          "process=mesh_collision: An imported or Fab mesh has no simple collision, so pawns fall through it or walk through it.",
+          "process=mesh_collision: A decorative mesh (grass, flowers, small debris) must stop blocking the player.",
+          "process=mesh_collision: A terrain-like or concave mesh must collide exactly with its own triangles (complex)."
         ],
         "whenNotToUse": [
           "process=thumbnail: The image should show the editor viewport or a level camera view (use control_editor.screenshot).",
           "process=lods: LOD reduction settings or screen sizes must be tuned by hand (use manage_geometry.configure_mesh_lods).",
           "process=lods: The mesh should use Nanite instead of discrete LODs (use asset.nanite_rebuild_mesh).",
           "process=mesh_materials: Only one placed actor must look different from its mesh (use control_actor.set_material, which overrides a component and leaves the asset alone).",
-          "process=mesh_materials: It is not known yet which slot holds which part of the mesh (inspect.inspect_object with objectKind=mesh lists every slot with the triangle count and bounds of its geometry)."
+          "process=mesh_materials: It is not known yet which slot holds which part of the mesh (inspect.inspect_object with objectKind=mesh lists every slot with the triangle count and bounds of its geometry).",
+          "process=mesh_collision: A dynamic mesh actor needs collision generated (use manage_geometry.configure_mesh_collision).",
+          "process=mesh_collision: Only one placed copy should stop colliding (use control_actor.set_actor_collision).",
+          "process=mesh_collision: It must be checked whether a placed mesh blocks at all (use inspect.raycast_world)."
         ]
       },
       "schemas": {
@@ -9445,12 +9466,24 @@
               "type": "boolean",
               "description": "Save the mesh after the change. Defaults to true."
             },
+            "collisionType": {
+              "type": "string",
+              "enum": [
+                "box",
+                "sphere",
+                "capsule",
+                "complex",
+                "none"
+              ],
+              "description": "box, sphere or capsule: one shape fitted to the mesh bounds (a capsule stands upright along Z) replaces its simple collision. complex: the render triangles are the collision, exact for terrain-like or concave meshes but costlier. none: no collision, so pawns and traces pass through."
+            },
             "process": {
               "type": "string",
               "enum": [
                 "thumbnail",
                 "lods",
-                "mesh_materials"
+                "mesh_materials",
+                "mesh_collision"
               ],
               "description": "Which process asset variant to run."
             }
@@ -9512,6 +9545,18 @@
             "saveSkippedReason": {
               "type": "string",
               "description": "Why nothing was saved: save was false, or the mesh is engine content, which is never written."
+            },
+            "collisionType": {
+              "type": "string",
+              "description": "The collision the mesh has now."
+            },
+            "shapeCount": {
+              "type": "number",
+              "description": "Simple collision shapes the mesh holds after the call (0 for complex and none)."
+            },
+            "componentsRefreshed": {
+              "type": "number",
+              "description": "Placed copies of the mesh in open worlds whose collision was rebuilt to match."
             }
           },
           "required": [
@@ -9522,7 +9567,7 @@
       },
       "examples": [
         {
-          "title": "Process an asset: render a thumbnail, generate mesh LODs, or set the materials in the slots of a static or skeletal mesh asset (mesh_materials) so every placement shows them.",
+          "title": "Process an asset: render a thumbnail, generate mesh LODs, set the materials in the slots of a static or skeletal mesh asset (mesh_materials), or set a static mesh asset's collision (mesh_collision), so every placement shows or uses them.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "width": 256,
@@ -9566,7 +9611,8 @@
           "actions": {
             "thumbnail": "create_thumbnail",
             "lods": "generate_lods",
-            "mesh_materials": "set_mesh_materials"
+            "mesh_materials": "set_mesh_materials",
+            "mesh_collision": "set_mesh_collision"
           },
           "declaredBy": {
             "width": [
@@ -9588,15 +9634,19 @@
               "mesh_materials"
             ],
             "save": [
-              "mesh_materials"
+              "mesh_materials",
+              "mesh_collision"
+            ],
+            "collisionType": [
+              "mesh_collision"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f909c34df8351b37d6498d0dd04be41955421d5b3f13e16556628791352eb1d3",
-        "content": "d19fc7ab94de0c4db052f160fc8c8a6c0e0a8c211f7d6541e7af060f7363032d"
+        "schema": "d43e535b0ebf6aa5ac77f9a08a72eb080d30be388772a48776a3b6d04ef423f8",
+        "content": "4fc6322067f47291886d11a6d287ecbbf864c390558c8c1cae940d44e0a6f261"
       }
     },
     {

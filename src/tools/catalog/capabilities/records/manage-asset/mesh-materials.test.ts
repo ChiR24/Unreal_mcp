@@ -13,9 +13,10 @@ describe('asset.process_asset mesh_materials', () => {
     expect(pair?.folded).toEqual({ process: 'mesh_materials' });
   });
 
-  it('is the only variant that declares materials and save, so sending materials selects it', () => {
+  it('is the only variant that declares materials, so sending materials selects it; save it shares with mesh_collision', () => {
     expect(record?.routing.dispatchBy?.declaredBy?.materials).toEqual(['mesh_materials']);
-    expect(record?.routing.dispatchBy?.declaredBy?.save).toEqual(['mesh_materials']);
+    expect(record?.routing.dispatchBy?.declaredBy?.save).toEqual(['mesh_materials', 'mesh_collision']);
+    expect(record?.routing.dispatchBy?.declaredBy?.collisionType).toEqual(['mesh_collision']);
   });
 
   it('takes a slot by index or by name, and a material path, in every entry', () => {

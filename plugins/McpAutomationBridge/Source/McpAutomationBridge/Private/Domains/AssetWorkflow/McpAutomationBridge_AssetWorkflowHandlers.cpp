@@ -15,6 +15,12 @@ namespace McpStructProperty
 {
     bool HandleStructPropertyAction(FString Action, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject>& OutResult);
 }
+// process_asset process=mesh_collision (Optimization/McpAutomationBridge_AssetWorkflowMeshCollision.cpp).
+namespace McpMeshCollision
+{
+    bool HandleSetMeshCollision(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
+                                const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);
+}
 
 bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     const FString &RequestId, const FString &Action,
@@ -143,6 +149,8 @@ bool UMcpAutomationBridgeSubsystem::HandleAssetAction(
     return HandleNaniteRebuildMesh(RequestId, Lower, Payload, RequestingSocket);
   if (Lower == TEXT("set_mesh_materials"))
     return McpMeshMaterials::HandleSetMeshMaterials(this, RequestId, Payload, RequestingSocket);
+  if (Lower == TEXT("set_mesh_collision"))
+    return McpMeshCollision::HandleSetMeshCollision(this, RequestId, Payload, RequestingSocket);
 
   // Source Control
   if (Lower == TEXT("source_control_checkout"))
