@@ -4,7 +4,7 @@
 // The material reads and the compile read BOTH (assetPath, then materialPath), so they declare both.
 
 import type { RecordSpec } from './builder.js';
-import { arr, arrObj, bool, ex, LOW, num, READ, READ_POLICY, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { arr, arrObj, BLEND_MODE, bool, ex, LOW, MATERIAL_DOMAIN, num, READ, READ_POLICY, r, SHADING_MODEL, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const MAT = str('Material /Game asset path.');
@@ -62,15 +62,15 @@ const MF = '/Game/Materials/Functions/MF_HeightBlend';
 const DONE = { success: true };
 
 export const MATERIAL_PARAMS_RECORDS: readonly RecordSpec[] = [
-  r('set_blend_mode', 'material', 'Set the blend mode of a material.', schema({ assetPath: MAT, blendMode: str('Blend mode.'), save: SAVE }, ['assetPath', 'blendMode']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_blend_mode', 'material', 'Set the blend mode of a material.', schema({ assetPath: MAT, blendMode: BLEND_MODE, save: SAVE }, ['assetPath', 'blendMode']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A material must become translucent, cut out (Masked) or additive instead of Opaque.'],
       whenNotToUse: ['The target is a material instance; only a base material can be edited here (find it with material.get_material_info).', 'A new material is being created with the blend mode already known (use material.create_material with blendMode).'],
       examples: [ex('Switch a material to masked blending', { assetPath: M, blendMode: 'Masked' }, DONE)] }),
-  r('set_shading_model', 'material', 'Set the shading model of a material.', schema({ assetPath: MAT, shadingModel: str('Shading model.'), save: SAVE }, ['assetPath', 'shadingModel']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_shading_model', 'material', 'Set the shading model of a material.', schema({ assetPath: MAT, shadingModel: SHADING_MODEL, save: SAVE }, ['assetPath', 'shadingModel']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A surface needs a different shading model, such as DefaultLit, Unlit, Subsurface, ClearCoat or Hair.'],
       whenNotToUse: ['The target is a material instance; only a base material can be edited here (find it with material.get_material_info).', 'A new material is being created with the shading model already known (use material.create_material with shadingModel).'],
       examples: [ex('Use the default lit shading model', { assetPath: M, shadingModel: 'DefaultLit' }, DONE)] }),
-  r('set_material_domain', 'material', 'Set the material domain of a material.', schema({ assetPath: MAT, materialDomain: str('Material domain.'), save: SAVE }, ['assetPath', 'materialDomain']), OK, WRITE, WRITE_POLICY, LOW,
+  r('set_material_domain', 'material', 'Set the material domain of a material.', schema({ assetPath: MAT, materialDomain: MATERIAL_DOMAIN, save: SAVE }, ['assetPath', 'materialDomain']), OK, WRITE, WRITE_POLICY, LOW,
     { whenToUse: ['A material must change domain, for example between Surface, DeferredDecal, PostProcess and UI.'],
       whenNotToUse: ['The target is a material instance; only a base material can be edited here (find it with material.get_material_info).', 'A new material is being created with the domain already known (use material.create_material with materialDomain).'],
       examples: [ex('Keep a material in the surface domain', { assetPath: M, materialDomain: 'Surface' }, DONE)] }),

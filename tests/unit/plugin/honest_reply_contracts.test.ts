@@ -941,3 +941,29 @@ describe('found extending the stage-1 meadow', () => {
     expect(property).toMatch(/Actor->SetActorScale3D\(NewScale\);\s*McpFinishEditorMove\(Actor\);/u);
   });
 });
+
+describe('found restyling the stage-1 HUD', () => {
+  // A material batch wiring a Custom node's colour and alpha ("$panel.RGB", "$panel.A") stopped with "Source output
+  // pin 'RGB' not found": a Custom source only matched its extra outputs by name, never the default output's
+  // aliases or channel letters, which every other node takes.
+  it('a Custom node source resolves names, aliases and channel letters like any other node', () => {
+    const source = code('MaterialAuthoring', 'Connections', 'McpAutomationBridge_MaterialAuthoringHandlersConnectNodes.cpp');
+    expect(source).not.toContain('CustomSource->AdditionalOutputs');
+    expect(source).toMatch(/if \(SourceOutputIndex == INDEX_NONE && Outputs\.Num\(\) > 0 && ParseChannelMask\(SourcePin, Channels\)\)/u);
+  });
+
+  // create_material with materialDomain "UserInterface" (the Details panel says "User Interface") was refused,
+  // and the refused call had already made the material, so the retry with "UI" hit "already exists".
+  it('create_material checks its enum settings before it makes anything, and takes the Details panel labels', () => {
+    const create = code('MaterialAuthoring', 'Creation', 'McpAutomationBridge_MaterialAuthoringHandlersCreateMaterial.cpp');
+    const check = create.indexOf('if (!ApplyMaterialEnumFields(nullptr, Payload, EnumError))');
+    expect(check).toBeGreaterThan(-1);
+    expect(check).toBeLessThan(create.indexOf('CreatePackage('));
+    expect(check).toBeLessThan(create.indexOf('PrepareNewMaterialAsset('));
+    const setters = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringHandlersSetMaterialEnum.cpp');
+    expect(setters.match(/if \(Material\) Material->/gu)).toHaveLength(3);
+    const parse = code('MaterialAuthoring', 'Properties', 'McpAutomationBridge_MaterialAuthoringEnumParsing.cpp');
+    expect(parse).toContain('Enum->GetDisplayNameTextByIndex(Index).ToString().Replace(TEXT(" "), TEXT(""))');
+    expect(parse).toContain('Wanted.Equals(Label, ESearchCase::IgnoreCase)');
+  });
+});

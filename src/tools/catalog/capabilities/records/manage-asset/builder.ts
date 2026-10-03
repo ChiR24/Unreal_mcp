@@ -31,6 +31,11 @@ export const MATERIAL_PARAMETER_ASSETS: JsonObject = {
   'x-unreal-reflection-boundary': true,
   description: 'Several materials or material instances at once, in place of assetPath: each {assetPath, and parameters or parameterName with value}; the call\'s own save applies to every entry. Every entry is reported under assets, and the call fails naming any that did not apply.',
 };
+// The material enum settings, as create_material and the set_* actions parse them: the enum name
+// without its prefix, the prefixed name, or the Details panel label, in any case.
+export const MATERIAL_DOMAIN: JsonObject = { type: 'string', description: 'Material domain: Surface, DeferredDecal, LightFunction, Volume, PostProcess or UI (a widget, brush or font material). The Details panel label (User Interface) and the MD_ name work too.' };
+export const BLEND_MODE: JsonObject = { type: 'string', description: 'Blend mode, such as Opaque, Masked, Translucent, Additive, Modulate or AlphaComposite. The Details panel label and the BLEND_ name work too.' };
+export const SHADING_MODEL: JsonObject = { type: 'string', description: 'Shading model, such as DefaultLit, Unlit, Subsurface, ClearCoat or TwoSidedFoliage. The Details panel label and the MSM_ name work too.' };
 export const arr = (desc: string): JsonObject => ({ type: 'array', items: { type: 'string' }, description: desc });
 export const arrObj = (desc: string): JsonObject => ({ type: 'array', items: { type: 'object', 'x-unreal-reflection-boundary': true }, description: desc });
 export const refObj = (desc: string): JsonObject => ({ type: 'object', 'x-unreal-reflection-boundary': true, description: desc });

@@ -4,17 +4,24 @@ namespace McpMaterialAuthoringHandlers
 {
 namespace
 {
-// Value is the enumerator without its prefix ("Surface" for MD_Surface).
+// Value is the enumerator without its prefix ("UI" for MD_UI), its full name, or the label the
+// Details panel shows ("User Interface"), in any case and with or without spaces.
 template <typename TEnum>
 bool ParseEnumShortName(const FString& Value, const TCHAR* Prefix, TEnum& Out)
 {
+  const FString Wanted = Value.Replace(TEXT(" "), TEXT(""));
   const UEnum* Enum = StaticEnum<TEnum>();
-  const int32 Index = Enum ? Enum->GetIndexByNameString(FString(Prefix) + Value) : INDEX_NONE;
-  if (Index == INDEX_NONE || Index >= Enum->NumEnums() - 1 || Enum->HasMetaData(TEXT("Hidden"), Index)) {
-    return false;
+  for (int32 Index = 0; Enum && Index < Enum->NumEnums() - 1; ++Index) {
+    if (Enum->HasMetaData(TEXT("Hidden"), Index)) continue;
+    const FString Name = Enum->GetNameStringByIndex(Index);
+    const FString Label = Enum->GetDisplayNameTextByIndex(Index).ToString().Replace(TEXT(" "), TEXT(""));
+    if (Wanted.Equals(Name.RightChop(FCString::Strlen(Prefix)), ESearchCase::IgnoreCase)
+        || Wanted.Equals(Name, ESearchCase::IgnoreCase) || Wanted.Equals(Label, ESearchCase::IgnoreCase)) {
+      Out = static_cast<TEnum>(Enum->GetValueByIndex(Index));
+      return true;
+    }
   }
-  Out = static_cast<TEnum>(Enum->GetValueByIndex(Index));
-  return true;
+  return false;
 }
 
 // Every enumerator's short name, for "valid values" messages.

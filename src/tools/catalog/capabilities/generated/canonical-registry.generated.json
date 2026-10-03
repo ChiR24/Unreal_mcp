@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "357589afaed13f5e",
+  "catalogRevision": "41dab4016bd44ca8",
   "recordCount": 394,
   "records": [
     {
@@ -79149,15 +79149,15 @@
             },
             "materialDomain": {
               "type": "string",
-              "description": "Material domain."
+              "description": "Material domain: Surface, DeferredDecal, LightFunction, Volume, PostProcess or UI (a widget, brush or font material). The Details panel label (User Interface) and the MD_ name work too."
             },
             "blendMode": {
               "type": "string",
-              "description": "Blend mode."
+              "description": "Blend mode, such as Opaque, Masked, Translucent, Additive, Modulate or AlphaComposite. The Details panel label and the BLEND_ name work too."
             },
             "shadingModel": {
               "type": "string",
-              "description": "Shading model."
+              "description": "Shading model, such as DefaultLit, Unlit, Subsurface, ClearCoat or TwoSidedFoliage. The Details panel label and the MSM_ name work too."
             },
             "twoSided": {
               "type": "boolean",
@@ -79303,8 +79303,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "30698f5719dec15483c5b572099121e71fe78aa7079abc34a3cc3f7d0253c52e",
-        "content": "70dd257512b453bb0d9205b4e9e991a6592287fd4f19bb5acf2da1443b1e9109"
+        "schema": "01167a33e491172f77f5a079ae79ef8966323df434d0028ec235fde68f83d1cc",
+        "content": "09647174c2f1ef7871d8394fbff361024c5d5cdafba22b3f1d45459a99a5da5b"
       }
     },
     {
@@ -80538,7 +80538,7 @@
             },
             "blendMode": {
               "type": "string",
-              "description": "Blend mode."
+              "description": "Blend mode, such as Opaque, Masked, Translucent, Additive, Modulate or AlphaComposite. The Details panel label and the BLEND_ name work too."
             },
             "save": {
               "type": "boolean",
@@ -80546,11 +80546,11 @@
             },
             "materialDomain": {
               "type": "string",
-              "description": "Material domain."
+              "description": "Material domain: Surface, DeferredDecal, LightFunction, Volume, PostProcess or UI (a widget, brush or font material). The Details panel label (User Interface) and the MD_ name work too."
             },
             "shadingModel": {
               "type": "string",
-              "description": "Shading model."
+              "description": "Shading model, such as DefaultLit, Unlit, Subsurface, ClearCoat or TwoSidedFoliage. The Details panel label and the MSM_ name work too."
             },
             "value": {
               "type": "boolean",
@@ -80659,8 +80659,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f5f906dff97488fd478574861c0183db1258be7414469b3f5609d13ad20873c0",
-        "content": "fc093b758f3f26a432e68153a3999b696e04f78a643e13e78db02b29964085f3"
+        "schema": "3646e0a9c3f7b0dc97f7228835da49b076572fcdf8aca8ec93cb4fc1449883bf",
+        "content": "e6ea6fec5b31c0aa51d7ccdb6fa107d1eadf771ade6a792068a17ff085cf969d"
       }
     },
     {

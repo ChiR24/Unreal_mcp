@@ -2,7 +2,7 @@
 // specialized material types (landscape, decal, post-process).
 
 import type { RecordSpec } from './builder.js';
-import { bool, ex, MATERIAL_PARAMETER_LIST, MEDIUM, r, str, WRITE, WRITE_POLICY } from './builder.js';
+import { BLEND_MODE, bool, ex, MATERIAL_DOMAIN, MATERIAL_PARAMETER_LIST, MEDIUM, r, SHADING_MODEL, str, WRITE, WRITE_POLICY } from './builder.js';
 import { schema } from '../shared/record-presets.js';
 
 const SAVE = bool('Save the asset afterwards. Defaults to true; pass false to keep it in memory only.');
@@ -21,7 +21,7 @@ const OK = schema(OK_PROPS, ['success']);
 
 export const MATERIAL_CREATE_RECORDS: readonly RecordSpec[] = [
   r('create_material', 'material', 'Create a new material asset.',
-    schema({ name: str('Material name.'), path: str('Package path.'), materialDomain: str('Material domain.'), blendMode: str('Blend mode.'), shadingModel: str('Shading model.'), twoSided: bool('Two-sided flag.'), save: SAVE }, ['name']),
+    schema({ name: str('Material name.'), path: str('Package path.'), materialDomain: MATERIAL_DOMAIN, blendMode: BLEND_MODE, shadingModel: SHADING_MODEL, twoSided: bool('Two-sided flag.'), save: SAVE }, ['name']),
     OK, WRITE, WRITE_POLICY, MEDIUM,
     { whenToUse: ['A mesh, surface or effect needs a shader of its own and no material asset exists for it yet.', 'A translucent, unlit or two-sided material is wanted from the start (materialDomain, blendMode, shadingModel, twoSided).'],
       whenNotToUse: ['A variation of an existing material with different parameter values is wanted (use material.create_material_instance).', 'An existing material must be copied as it is (use asset.duplicate).'],

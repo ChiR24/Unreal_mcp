@@ -19,7 +19,7 @@ bool ApplyBlendMode(UMaterial* Material, const FString& Value)
 {
   EBlendMode Parsed{};
   if (!ParseBlendMode(Value, Parsed)) return false;
-  Material->BlendMode = Parsed;
+  if (Material) Material->BlendMode = Parsed;
   return true;
 }
 
@@ -27,7 +27,7 @@ bool ApplyMaterialDomain(UMaterial* Material, const FString& Value)
 {
   EMaterialDomain Parsed{};
   if (!ParseMaterialDomain(Value, Parsed)) return false;
-  Material->MaterialDomain = Parsed;
+  if (Material) Material->MaterialDomain = Parsed;
   return true;
 }
 
@@ -35,7 +35,7 @@ bool ApplyShadingModel(UMaterial* Material, const FString& Value)
 {
   EMaterialShadingModel Parsed{};
   if (!ParseShadingModel(Value, Parsed)) return false;
-  Material->SetShadingModel(Parsed);
+  if (Material) Material->SetShadingModel(Parsed);
   return true;
 }
 
@@ -46,6 +46,7 @@ const FMaterialEnumSetter Setters[] = {
 };
 }
 
+// A null Material only checks the fields, so a create can refuse before it makes anything.
 bool ApplyMaterialEnumFields(UMaterial* Material, const TSharedPtr<FJsonObject>& Payload, FString& OutError)
 {
   for (const FMaterialEnumSetter& Setter : Setters) {

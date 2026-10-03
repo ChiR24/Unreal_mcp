@@ -73,21 +73,6 @@ bool HandleConnectNodes(UMcpAutomationBridgeSubsystem* Bridge, const FString& Re
                               TEXT("INVALID_PIN"));
           return true;
         }
-      } else if (UMaterialExpressionCustom* CustomSource = Cast<UMaterialExpressionCustom>(SourceExpr)) {
-        bool bResolvedOutputName = false;
-        for (int32 OutputIdx = 0; OutputIdx < CustomSource->AdditionalOutputs.Num(); ++OutputIdx) {
-          if (CustomSource->AdditionalOutputs[OutputIdx].OutputName.ToString().Equals(SourcePin, ESearchCase::IgnoreCase)) {
-            SourceOutputIndex = OutputIdx + 1;
-            bResolvedOutputName = true;
-            break;
-          }
-        }
-        if (!bResolvedOutputName) {
-          Bridge->SendAutomationError(Socket, RequestId,
-                              FString::Printf(TEXT("Source output pin '%s' not found."), *SourcePin),
-                              TEXT("INVALID_PIN"));
-          return true;
-        }
       } else if (SourceExpr->IsA<UMaterialExpressionTextureSample>()) {
         // TextureSample / TextureSampleParameter2D expose named output pins but only numeric
         // indices were accepted before. Map names to the engine's fixed output order (see
