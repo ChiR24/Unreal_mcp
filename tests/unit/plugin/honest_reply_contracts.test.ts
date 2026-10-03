@@ -840,3 +840,12 @@ describe('found wiring the stage label into the intro card', () => {
     expect(source).toMatch(/if \(!Wanted\.Equals\(Resolved, ESearchCase::CaseSensitive\)\) \{\s*Row->SetStringField\(TEXT\("propertyPath"\), Wanted\);\s*\}/u);
   });
 });
+
+describe('found reading the stage-1 post process volume', () => {
+  // list propertyNames reported Settings.BloomIntensity "missing" on a post process volume while get_property read it:
+  // list only followed Component.Property, never a struct member of the actor itself.
+  it('list falls back to the get_property resolver for struct members and deeper paths', () => {
+    const source = code('ControlActor', 'List', 'McpAutomationBridge_ControlActorList.cpp');
+    expect(source).toMatch(/if \(FProperty \*Nested = McpResolvePropertyPath\(Actor, Wanted, Container, Resolved, Error\)\) \{\s*MCP_PROPERTY_EXPORT_TEXT\(Nested, Value, Nested->ContainerPtrToValuePtr<void>\(Container\), nullptr, nullptr, PPF_None\);\s*Properties->SetStringField\(Wanted, Value\);/u);
+  });
+});

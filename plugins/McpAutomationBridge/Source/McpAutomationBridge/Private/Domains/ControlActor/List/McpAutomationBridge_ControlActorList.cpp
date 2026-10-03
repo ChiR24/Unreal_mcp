@@ -200,11 +200,21 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
       TArray<TSharedPtr<FJsonValue>> Missing;
       for (const FString &Wanted : PropertyNames) {
         UObject *Owner = nullptr;
-        if (FProperty *Property = McpResolveActorPropertyPath(Actor, Wanted, Owner))
+        if (FProperty *Property = McpResolveActorPropertyPath(Actor, Wanted, Owner)) {
           Properties->SetStringField(Wanted.Contains(TEXT(".")) ? Wanted : Property->GetName(),
                                      McpPropertyReflection::GetPropertyValueAsString(Owner, Property));
-        else
+          continue;
+        }
+        // A struct member of the actor itself (a post process volume's Settings.BloomIntensity) or a deeper
+        // path read as missing here while get_property found it: fall back to the resolver get_property uses.
+        void *Container = nullptr;
+        FString Resolved, Error, Value;
+        if (FProperty *Nested = McpResolvePropertyPath(Actor, Wanted, Container, Resolved, Error)) {
+          MCP_PROPERTY_EXPORT_TEXT(Nested, Value, Nested->ContainerPtrToValuePtr<void>(Container), nullptr, nullptr, PPF_None);
+          Properties->SetStringField(Wanted, Value);
+        } else {
           Missing.Add(MakeShared<FJsonValueString>(Wanted));
+        }
       }
       Entry->SetObjectField(TEXT("properties"), Properties);
       if (Missing.Num() > 0)
