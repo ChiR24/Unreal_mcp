@@ -225,10 +225,12 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
       return true;
     }
     if (MeshComponent) {
+      // Movable first: a game world (Play In Editor) refuses SetStaticMesh on a Static component ("Calling
+      // SetStaticMesh ... but Mobility is Static"), so a cube spawned while PIE ran came up with no mesh at all.
+      MeshComponent->SetMobility(EComponentMobility::Movable);
       if (ResolvedStaticMesh) {
         MeshComponent->SetStaticMesh(ResolvedStaticMesh);
       }
-      MeshComponent->SetMobility(EComponentMobility::Movable);
       MeshComponent->MarkRenderStateDirty();
     }
   } else if (bSpawnSkeletalMeshActor) {

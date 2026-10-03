@@ -717,3 +717,27 @@ describe('Nanite bakes and rebuilds', () => {
     expect(code('Render', 'McpAutomationBridge_RenderHandlers.cpp')).toContain('return HandleNaniteRebuildMesh(RequestId, SubAction, Payload, RequestingSocket);');
   });
 });
+
+describe('found building the stage-1 checkpoint', () => {
+  it('a build_graph pre-check knows the custom events earlier create_node steps make', () => {
+    // A batch that created ShowSaved and then called it was refused with FUNCTION_NOT_FOUND before anything ran.
+    const batch = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
+    expect(batch).toMatch(/NodeType\.Equals\(TEXT\("CustomEvent"\), ESearchCase::IgnoreCase\)[\s\S]{0,200}?Declared\.Add\(/u);
+    // ...and the event exists on the skeleton class by then, as add_event's does, so the call node resolves.
+    const events = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersCustomEvents.cpp');
+    expect(events).toMatch(/EventNode->CustomFunctionName = FName\(\*EventName\);\s*Context\.FinalizeNode\(NodeCreator, EventNode, X, Y\);\s*FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified\(Context\.Blueprint\);/u);
+  });
+
+  it('a spawned static mesh actor is made movable before its mesh is set, so a spawn during PIE keeps the mesh', () => {
+    const spawn = code('ControlActor', 'McpAutomationBridge_ControlActorSpawn.cpp');
+    expect(spawn.indexOf('MeshComponent->SetMobility(EComponentMobility::Movable);'))
+      .toBeLessThan(spawn.indexOf('MeshComponent->SetStaticMesh(ResolvedStaticMesh);'));
+  });
+
+  it('the placement check leaves trigger and pickup volumes out of what an actor intersects', () => {
+    // A rider standing in a checkpoint's trigger read "intersects Checkpoint_C1 by 68 units".
+    const placement = code('ControlActor', 'McpAutomationBridge_ControlActorPlacementCheck.cpp');
+    expect(placement).toContain('GetCollisionResponseToChannel(Channel) == ECR_Block');
+    expect(placement).toContain('!McpBlocksSolids(A) || !McpBlocksSolids(B)');
+  });
+});

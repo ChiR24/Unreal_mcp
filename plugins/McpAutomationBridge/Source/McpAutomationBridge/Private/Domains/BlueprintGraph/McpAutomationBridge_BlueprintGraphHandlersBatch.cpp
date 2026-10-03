@@ -110,6 +110,15 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
                                                                 TEXT("memberName")})));
             continue;
         }
+        // A custom event a create_node step makes is as callable by a later step as one add_event declares: the
+        // batch that created ShowSaved and then called it was refused with FUNCTION_NOT_FOUND before anything ran.
+        if (Edit == TEXT("create_node") && (NodeType.Equals(TEXT("CustomEvent"), ESearchCase::IgnoreCase) ||
+                                            NodeType.Equals(TEXT("K2Node_CustomEvent"), ESearchCase::IgnoreCase)))
+        {
+            Declared.Add(FName(*McpGetFirstStringField(*Step, {TEXT("customEventName"), TEXT("eventName"),
+                                                                TEXT("memberName")})));
+            continue;
+        }
         if (Edit != TEXT("create_node") || Member.IsEmpty())
         {
             continue;

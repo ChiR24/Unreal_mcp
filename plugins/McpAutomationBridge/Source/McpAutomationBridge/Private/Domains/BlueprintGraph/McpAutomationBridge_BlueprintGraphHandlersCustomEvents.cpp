@@ -193,6 +193,9 @@ bool TryCreateCustomEventNode(
             NodeCreator.CreateNode(false);
         EventNode->CustomFunctionName = FName(*EventName);
         Context.FinalizeNode(NodeCreator, EventNode, X, Y);
+        // Regenerates the skeleton class, as add_event does, so a later step of the same batch can call the
+        // event: CallFunction resolved nothing until a compile and failed with FUNCTION_NOT_FOUND.
+        FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Context.Blueprint);
         return true;
     }
 

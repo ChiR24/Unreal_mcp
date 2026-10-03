@@ -84,6 +84,18 @@ bool McpHasConvexBody(UPrimitiveComponent *Comp) {
          Setup->AggGeom.GetElementCount() > 0;
 }
 
+// A trigger or pickup volume overlaps what enters it and blocks nothing, so it
+// cannot interpenetrate anything: a rider standing in a checkpoint's trigger read
+// "intersects Checkpoint_C1 by 68 units".
+bool McpBlocksSolids(const UPrimitiveComponent *Comp) {
+  for (const ECollisionChannel Channel : {ECC_WorldStatic, ECC_WorldDynamic, ECC_Pawn}) {
+    if (Comp->GetCollisionResponseToChannel(Channel) == ECR_Block) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Boxes only say where an actor could be. A cone's box is mostly air, so a blimp
 // flying past a mountain peak read "intersects by 340 units". Apart only when
 // every colliding component pair was checked on its real shapes and none touch;
@@ -93,7 +105,7 @@ bool McpShapesApart(AActor *Actor, AActor *Other) {
   const FCollisionQueryParams Params(SCENE_QUERY_STAT(McpPlacementShapes), false);
   for (UPrimitiveComponent *A : Mine) {
     for (UPrimitiveComponent *B : Theirs) {
-      if (!A->IsCollisionEnabled() || !B->IsCollisionEnabled() ||
+      if (!A->IsCollisionEnabled() || !B->IsCollisionEnabled() || !McpBlocksSolids(A) || !McpBlocksSolids(B) ||
           !A->Bounds.GetBox().Intersect(B->Bounds.GetBox())) {
         continue;
       }
