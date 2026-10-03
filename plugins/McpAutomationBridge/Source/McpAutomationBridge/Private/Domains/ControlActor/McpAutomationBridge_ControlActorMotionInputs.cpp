@@ -76,10 +76,11 @@ bool McpInitMotionTrigger(AActor *Gate, const TSharedPtr<FJsonObject> &When, UWo
     Error = FString::Printf(TEXT("startWhen.actorName '%s' is not in the world being sampled."), *GateName);
     return false;
   }
-  Out.Property = FName(*PropertyName);
-  if (!Gate->GetClass()->FindPropertyByName(Out.Property)) {
-    Error = FString::Printf(TEXT("startWhen.propertyName '%s' is not a property of %s."), *PropertyName,
-                            *Gate->GetClass()->GetName());
+  Out.Property = PropertyName;
+  UObject *Owner = nullptr;
+  if (!McpResolveActorPropertyPath(Gate, PropertyName, Owner)) {
+    Error = FString::Printf(TEXT("startWhen.propertyName '%s' is not a property of %s or, as Component.Property, "
+                                 "of one of its components."), *PropertyName, *Gate->GetClass()->GetName());
     return false;
   }
   // Read by the value's own JSON type: TryGetBoolField coerces a number (non-zero)
@@ -111,11 +112,12 @@ bool McpInitMotionTrigger(AActor *Gate, const TSharedPtr<FJsonObject> &When, UWo
 // so the run starts as it next appears instead of partway through.
 bool McpMotionTriggerFired(FMcpMotionTrigger &Trigger) {
   AActor *Gate = Trigger.Actor.Get();
-  FProperty *Property = IsValid(Gate) ? Gate->GetClass()->FindPropertyByName(Trigger.Property) : nullptr;
+  UObject *Owner = nullptr;
+  FProperty *Property = IsValid(Gate) ? McpResolveActorPropertyPath(Gate, Trigger.Property, Owner) : nullptr;
   if (!Property) {
     return false;
   }
-  const FString Value = McpPropertyReflection::GetPropertyValueAsString(Gate, Property);
+  const FString Value = McpPropertyReflection::GetPropertyValueAsString(Owner, Property);
   const bool bMatch = McpMotionValueMatches(Value, Trigger.Equals);
   const bool bFired = bMatch && (Trigger.bSeen ? !McpMotionValueMatches(Trigger.Last, Trigger.Equals)
                                                : !Trigger.bWaitForChange);
@@ -128,7 +130,7 @@ bool McpMotionTriggerFired(FMcpMotionTrigger &Trigger) {
 // the call arrived: by default the run waits for it to CHANGE into equals, and a
 // bare "startWhenTimeout" left the caller to guess that.
 FString McpStartWhenTimeoutWarning(const FMcpMotionTrigger &Trigger) {
-  const FString Name = Trigger.Property.IsNone() ? FString(TEXT("the property")) : Trigger.Property.ToString();
+  const FString Name = Trigger.Property.IsEmpty() ? FString(TEXT("the property")) : Trigger.Property;
   if (Trigger.bWaitForChange && Trigger.bSeen && McpMotionValueMatches(Trigger.Last, Trigger.Equals)) {
     return FString::Printf(TEXT("startWhen: %s already read %s and never changed; by default the run starts ")
                            TEXT("only when the value CHANGES into equals. Pass waitForChange: false to start ")

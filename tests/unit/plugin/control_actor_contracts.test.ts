@@ -135,6 +135,15 @@ describe('startWhen.equals is read by its JSON type', () => {
     expect(source).toMatch(/EqualsType == EJson::Number\) \{\s*Out\.Equals = FString::SanitizeFloat\(EqualsValue->AsNumber\(\)\);/u);
     expect(source).not.toMatch(/TryGetBoolField\(TEXT\("equals"\)/u);
   });
+
+  // startWhen on CharacterMovement.MovementMode was refused as "not a property" although the record says the
+  // name is read as propertyNames reads it, and propertyNames takes Component.Property.
+  it('resolves its property the way propertyNames does, components included', () => {
+    expect(source).toContain('if (!McpResolveActorPropertyPath(Gate, PropertyName, Owner)) {');
+    expect(source).toContain('McpResolveActorPropertyPath(Gate, Trigger.Property, Owner)');
+    expect(source).toContain('McpPropertyReflection::GetPropertyValueAsString(Owner, Property)');
+    expect(source).not.toContain('Gate->GetClass()->FindPropertyByName');
+  });
 });
 
 // A minimized editor stepped PIE 0.333 s at a time: a 0.22 s jump was held 0.67 s and the

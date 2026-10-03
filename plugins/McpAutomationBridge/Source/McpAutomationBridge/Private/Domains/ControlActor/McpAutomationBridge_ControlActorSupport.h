@@ -208,8 +208,9 @@ struct FMcpMotionInput {
 };
 struct FMcpMotionTrigger {
   TWeakObjectPtr<AActor> Actor;
-  // By name, looked up on each read: a Blueprint recompiled mid-run frees the FProperty it had.
-  FName Property;
+  // By path ("bDead", "CharacterMovement.MovementMode"), resolved on each read as propertyNames are: a
+  // Blueprint recompiled mid-run frees the FProperty it had.
+  FString Property;
   FString Equals, Last;
   bool bWaitForChange = true, bSeen = false;
   double WaitStart = 0.0, Deadline = 0.0;

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A widget tree fills a new Widget Blueprint.** `add_widget_tree` into a Widget Blueprint with no root seated the tree's root in the new canvas's default 100x30 slot at the top-left, clipping the layout; a root with no `slot` (and no `positionX/Y` or `sizeX/Y`) now fills the canvas.
 - **Wiring a second object into a Target pin is reported.** A function call's Target pin keeps every object wired into it and runs the call on each, so `connect_pins` onto one that was already wired kept the old target without a word; the reply (and a `build_graph` reply, per step) now warns and says how to replace it.
 - **Watching motion in a paused game answers at once.** `get_transform` `motion` against a game held by a title or pause menu sat out its whole 25 s wall-clock cap for one sample; once game time stands still for 3 s it now ends with `endedBecause: gamePaused` and says how to get past the menu.
+- **`startWhen` reads component properties.** `get_transform` `motion` refused `startWhen.propertyName: "CharacterMovement.MovementMode"` as "not a property" although its own `propertyNames` take `Component.Property`, so a run could not start on a landing; both now resolve the same way.
 
 </details>
 

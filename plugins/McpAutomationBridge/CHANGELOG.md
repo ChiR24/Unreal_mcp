@@ -11,6 +11,7 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 - **Widget tree root in a new canvas** — `McpAddSpecToWidget` anchors a slot-less root it seats in the canvas it made for the call to fill it (anchors 0,0,1,1, offsets 0) unless the call gives a position or size.
 - **Multi-target Target pins** — `connect_pins` adds a `warnings` entry when the input pin holds several links after the connect (`McpReportPinLinkChanges`, which also writes `replacedLinks`), and `build_graph` lifts each step's warnings into its own reply as `operations[i]: ...`.
 - **Motion sampling in a paused world** — `McpAdvanceMotionRun` ends a run with `gamePaused` (and `McpGamePausedWarning`) once game time has not advanced for 3 s of real time, instead of waiting out `maxRealSeconds`; the run's warning helpers moved to `ControlActorMotionInputs.cpp`.
+- **Motion `startWhen` on a component** — `McpInitMotionTrigger` and `McpMotionTriggerFired` resolve `propertyName` through `McpResolveActorPropertyPath` (the `propertyNames` resolver) on every read, so `Component.Property` paths work; `FMcpMotionTrigger::Property` is now the path string.
 
 ## [0.6.0-beta-c] - 2026-10-02
 

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "36c43dd7f43c3b28",
+  "catalogRevision": "14c271fa89147f6d",
   "recordCount": 393,
   "records": [
     {
@@ -32359,7 +32359,7 @@
                 },
                 "propertyName": {
                   "type": "string",
-                  "description": "That actor's property, as propertyNames reads it (e.g. bActorEnableCollision)."
+                  "description": "That actor's property, as propertyNames reads it: bActorEnableCollision, or a component's as Component.Property (CharacterMovement.MovementMode starts the run on a landing when equals is MOVE_Walking)."
                 },
                 "equals": {
                   "description": "Value that starts the run, as samples show it (\"True\", \"False\", 3)."
@@ -32612,8 +32612,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e17775fec694b56b5b09cbb6a8b91288c974dda27eb4bb862ebf30c9b2a041b6",
-        "content": "c00921fe4f57213090356277ff0cbb2f496b86ae13af30fab883b0f08303f979"
+        "schema": "dec5dd5fca65339069ac4670144852ec87a870fb1aef3770663ae3d0692a7e52",
+        "content": "92b30a5cc1093b64205023bcdf72dc81b714da629aa524a6bc3e4a79530bbd80"
       }
     },
     {

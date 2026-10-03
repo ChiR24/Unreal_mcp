@@ -3979,7 +3979,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             },
             "propertyName": {
               "type": "string",
-              "description": "That actor's property, as propertyNames reads it (e.g. bActorEnableCollision)."
+              "description": "That actor's property, as propertyNames reads it: bActorEnableCollision, or a component's as Component.Property (CharacterMovement.MovementMode starts the run on a landing when equals is MOVE_Walking)."
             },
             "equals": {
               "description": "Value that starts the run, as samples show it (\"True\", \"False\", 3)."

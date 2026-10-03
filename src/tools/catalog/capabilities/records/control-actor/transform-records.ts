@@ -225,7 +225,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
           type: 'object',
           properties: {
             actorName: { type: 'string', description: 'Actor whose property starts the run.' },
-            propertyName: { type: 'string', description: 'That actor\'s property, as propertyNames reads it (e.g. bActorEnableCollision).' },
+            propertyName: { type: 'string', description: 'That actor\'s property, as propertyNames reads it: bActorEnableCollision, or a component\'s as Component.Property (CharacterMovement.MovementMode starts the run on a landing when equals is MOVE_Walking).' },
             equals: { description: 'Value that starts the run, as samples show it ("True", "False", 3).' },
             waitForChange: { type: 'boolean', description: 'Default true: start only when the value BECOMES equals (a platform appearing), not while it already is.' },
             maxWaitSeconds: { type: 'number', description: 'Game seconds to wait before giving up with endedBecause startWhenTimeout (default 10, at most 30).' },
