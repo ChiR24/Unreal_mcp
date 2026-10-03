@@ -1,5 +1,6 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Foundation/McpScopedEditorTransaction.h"
+#include "Foundation/BridgeHelpers/Actors/McpAutomationBridgeHelpersActorMove.h"
 #include "Core/Requests/McpResponseCaptureRegistry.h"
 
 bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
@@ -125,6 +126,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSetTransform(
                           ETeleportType::TeleportPhysics);
   Found->SetActorRotation(Rotation, ETeleportType::TeleportPhysics);
   Found->SetActorScale3D(Scale);
+  McpFinishEditorMove(Found);
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
 

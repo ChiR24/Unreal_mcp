@@ -920,3 +920,24 @@ describe('found pressing PLAY with Enter on the title', () => {
     expect(source).toContain('(bGameClock ? Live->GetTimeSeconds() < EndGameTime : FPlatformTime::Seconds() < EndHoldWall)');
   });
 });
+
+describe('found extending the stage-1 meadow', () => {
+  // set_transform moved BG_Meadow and scaled it from 220 to 270, yet grass painted past its old end found no ground
+  // (243 of 600 skipped) and raycast_world missed it there: in the editor world a body moved from code kept its
+  // collision queries on the old spot, so only where the old and new footprints overlapped did a trace hit.
+  it('a move made from code ends as the editor ends its own moves, with its bodies rebuilt where it stands', () => {
+    const helper = code('..', 'Foundation', 'BridgeHelpers', 'Actors', 'McpAutomationBridgeHelpersActorMove.h');
+    expect(helper).toMatch(/if \(!World \|\| World->IsGameWorld\(\)\)\s*return;\s*Actor->PostEditMove\(true\);/u);
+    expect(helper).toMatch(/if \(Primitive->IsPhysicsStateCreated\(\)\)\s*Primitive->RecreatePhysicsState\(\);/u);
+    expect(code('ControlActor', 'McpAutomationBridge_ControlActorTransform.cpp'))
+      .toMatch(/Found->SetActorScale3D\(Scale\);\s*McpFinishEditorMove\(Found\);/u);
+    expect(code('ControlActor', 'McpAutomationBridge_ControlActorSnapshots.cpp'))
+      .toMatch(/Found->SetActorTransform\(SavedTransform\);\s*McpFinishEditorMove\(Found\);/u);
+    expect(code('ControlActor', 'Placement', 'McpAutomationBridge_CoplanarFix.cpp'))
+      .toMatch(/ETeleportType::TeleportPhysics\);\s*McpFinishEditorMove\(Actor\);/u);
+    const property = code('Property', 'McpAutomationBridge_PropertyHandlersActorAccess.cpp');
+    expect(property).toMatch(/Actor->SetActorLocation\(NewLoc\);\s*McpFinishEditorMove\(Actor\);/u);
+    expect(property).toMatch(/Actor->SetActorRotation\(NewRot\);\s*McpFinishEditorMove\(Actor\);/u);
+    expect(property).toMatch(/Actor->SetActorScale3D\(NewScale\);\s*McpFinishEditorMove\(Actor\);/u);
+  });
+});

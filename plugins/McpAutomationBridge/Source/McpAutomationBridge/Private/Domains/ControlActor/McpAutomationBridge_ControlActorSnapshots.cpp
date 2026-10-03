@@ -1,6 +1,7 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
+#include "Foundation/BridgeHelpers/Actors/McpAutomationBridgeHelpersActorMove.h"
 
 namespace {
 // Composes the Foundation vector/rotator helpers into one transform object, so the snapshot pair reports
@@ -100,6 +101,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorRestoreSnapshot(
   const FTransform BeforeTransform = Found->GetActorTransform();
   Found->Modify();
   Found->SetActorTransform(SavedTransform);
+  McpFinishEditorMove(Found);
   Found->MarkComponentsRenderStateDirty();
   Found->MarkPackageDirty();
   const FTransform AfterTransform = Found->GetActorTransform();

@@ -7,6 +7,7 @@
 #include "Foundation/Reflection/McpPropertyReflection.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
+#include "Foundation/BridgeHelpers/Actors/McpAutomationBridgeHelpersActorMove.h"
 
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -76,6 +77,7 @@ bool TryHandleSetActorProperty(
         const FVector NewLoc = ReadJsonVector(ValueField, FVector::ZeroVector);
 
         Actor->SetActorLocation(NewLoc);
+        McpFinishEditorMove(Actor);
 
         return SendActorWrite(Subsystem, RequestId, RequestingSocket, PropertyName, Actor,
                               MakeShared<FJsonValueObject>(McpHandlerUtils::VectorToJson(NewLoc)), TEXT("Actor location updated."));
@@ -86,6 +88,7 @@ bool TryHandleSetActorProperty(
         const FRotator NewRot = ReadJsonRotator(ValueField, FRotator::ZeroRotator);
 
         Actor->SetActorRotation(NewRot);
+        McpFinishEditorMove(Actor);
 
         return SendActorWrite(Subsystem, RequestId, RequestingSocket, PropertyName, Actor,
                               MakeShared<FJsonValueObject>(McpHandlerUtils::RotatorToJson(NewRot)), TEXT("Actor rotation updated."));
@@ -97,6 +100,7 @@ bool TryHandleSetActorProperty(
         const FVector NewScale = ReadJsonVector(ValueField, FVector::OneVector);
 
         Actor->SetActorScale3D(NewScale);
+        McpFinishEditorMove(Actor);
 
         return SendActorWrite(Subsystem, RequestId, RequestingSocket, PropertyName, Actor,
                               MakeShared<FJsonValueObject>(McpHandlerUtils::VectorToJson(NewScale)), TEXT("Actor scale updated."));

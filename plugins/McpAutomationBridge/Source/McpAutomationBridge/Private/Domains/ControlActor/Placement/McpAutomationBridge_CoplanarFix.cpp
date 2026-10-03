@@ -8,6 +8,7 @@
 
 #include "Domains/ControlActor/Placement/McpAutomationBridge_CoplanarFaces.h"
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
+#include "Foundation/BridgeHelpers/Actors/McpAutomationBridgeHelpersActorMove.h"
 
 #include "Engine/StaticMeshActor.h"
 #include "ScopedTransaction.h"
@@ -90,6 +91,7 @@ bool McpCoplanarApply(AActor* Actor, const FMcpCoplanarPlan& Plan, bool bDryRun,
         OutOffset = Center - ScaledOrigin;
     }
     Actor->SetActorLocation(Actor->GetActorLocation() + OutOffset, false, nullptr, ETeleportType::TeleportPhysics);
+    McpFinishEditorMove(Actor);
     Actor->MarkPackageDirty();
     return true;
 }
