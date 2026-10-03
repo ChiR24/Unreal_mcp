@@ -4,6 +4,7 @@
 #include "Domains/ControlActor/Placement/McpAutomationBridge_PlacementMount.h"
 
 #include "Components/InstancedStaticMeshComponent.h"
+#include "GameFramework/Volume.h"
 #include "PhysicsEngine/BodySetup.h"
 
 // A spawn or a transform write used to answer nothing but "success" and the
@@ -243,8 +244,10 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     const UPrimitiveComponent *Surface = Candidate.GetComponent();
     AActor *HitActor = Candidate.GetActor();
     // Triggers and pickups share those object types; only something solid can
-    // hold an actor up.
-    if (!Surface || !HitActor ||
+    // hold an actor up. An invisible volume holds up nothing a viewer sees, and a
+    // trace starting inside one hits at its own start: the floor slab a blocking
+    // start wall stands in read "sunk 160 units below the surface under it".
+    if (!Surface || !HitActor || HitActor->IsA<AVolume>() ||
         Surface->GetCollisionResponseToChannel(ECC_WorldStatic) != ECR_Block) {
       continue;
     }

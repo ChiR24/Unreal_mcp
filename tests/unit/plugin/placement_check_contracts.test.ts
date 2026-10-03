@@ -19,6 +19,14 @@ describe('audit_placement finds the floor under an actor, not what it holds up',
   it('skips a hit whose bottom sits in the upper half of the actor', () => {
     expect(placementCheck()).toContain('if (HitBottomZ >= Origin.Z) {');
   });
+
+  // Stage 1's start wall is a BlockingVolume standing in the first ground slab; the trace began inside it and
+  // took its own start for the floor, so the slab read "sunk 160 units".
+  it('never takes an invisible volume for the floor', () => {
+    const source = placementCheck();
+    expect(source).toContain('#include "GameFramework/Volume.h"');
+    expect(source).toContain('if (!Surface || !HitActor || HitActor->IsA<AVolume>() ||');
+  });
 });
 
 // Stage 9's blimps "intersected" the mountain peak by 270 and 340 units: the cone's box is mostly
