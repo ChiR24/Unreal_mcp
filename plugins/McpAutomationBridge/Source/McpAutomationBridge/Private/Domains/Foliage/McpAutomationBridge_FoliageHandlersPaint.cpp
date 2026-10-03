@@ -157,6 +157,7 @@ bool UMcpAutomationBridgeSubsystem::HandlePaintFoliage(
   Resp->SetNumberField(TEXT("skippedNoSurface"), SkippedNoSurface);
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetStringField(TEXT("foliageActorName"), IFA->GetName());
+  McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);
   Resp->SetBoolField(TEXT("existsAfter"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,

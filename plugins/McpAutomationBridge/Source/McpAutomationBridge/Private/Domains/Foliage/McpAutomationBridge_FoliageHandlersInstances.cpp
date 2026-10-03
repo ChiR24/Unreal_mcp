@@ -93,6 +93,7 @@ bool UMcpAutomationBridgeSubsystem::HandleAddFoliageInstances(
   Resp->SetNumberField(TEXT("instancesPlaced"), Added);
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
   Resp->SetStringField(TEXT("foliageTypePath"), FoliageTypePath);
+  McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);
   Resp->SetBoolField(TEXT("existsAfter"), true);
 
   SendAutomationResponse(RequestingSocket, RequestId, true,

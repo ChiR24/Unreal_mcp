@@ -796,3 +796,15 @@ describe('found testing the stage intro card', () => {
     expect(source).toMatch(/FString &Message\) \{\s*WarnWhenPieWindowMinimizedForMcp\(Resp\);\s*if \(InputType == TEXT\("widget_list"\)\)/u);
   });
 });
+
+describe('found extending the stage-1 meadow', () => {
+  // Painting 96 tufts and daisies answered changes: [] four times: the reply named the foliage actor only as
+  // foliageActorPath, which a read (get_foliage_instances) reports too.
+  it('a foliage paint, add or remove names the foliage actor it changed', () => {
+    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersPrivate.h')).toContain('Resp->SetArrayField(TEXT("affectedActors"), Changed);');
+    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersPaint.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
+    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersInstances.cpp')).toContain('McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);');
+    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersQueries.cpp')).toMatch(/if \(RemovedCount > 0\) \{\s*McpFoliageHandlers::SetFoliageActorChanged\(Resp, IFA\);\s*\}/u);
+    expect(code('Foliage', 'McpAutomationBridge_FoliageHandlersGetInstances.cpp')).not.toContain('SetFoliageActorChanged');
+  });
+});

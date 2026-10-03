@@ -125,6 +125,9 @@ bool UMcpAutomationBridgeSubsystem::HandleRemoveFoliage(
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetNumberField(TEXT("instancesRemoved"), RemovedCount);
   Resp->SetStringField(TEXT("foliageActorPath"), IFA->GetPathName());
+  if (RemovedCount > 0) {
+    McpFoliageHandlers::SetFoliageActorChanged(Resp, IFA);
+  }
   Resp->SetBoolField(TEXT("existsAfter"), true);
   SendAutomationResponse(RequestingSocket, RequestId, true,
                          Boxes.Num() > 0 ? FString::Printf(TEXT("Removed %d foliage instances inside %d area(s)"), RemovedCount, Boxes.Num())

@@ -47,6 +47,15 @@ inline void AddFoliageInstance(AInstancedFoliageActor* IFA, UFoliageType* Type, 
     }
 }
 
+// Names the foliage actor a paint, add or remove changed under affectedActors, which the receipt's changes[]
+// reads: foliageActorPath alone (a query reports it too) left those receipts listing no change at all.
+inline void SetFoliageActorChanged(const TSharedPtr<FJsonObject>& Resp, const AInstancedFoliageActor* IFA)
+{
+    TArray<TSharedPtr<FJsonValue>> Changed;
+    Changed.Add(MakeShared<FJsonValueString>(IFA->GetName()));
+    Resp->SetArrayField(TEXT("affectedActors"), Changed);
+}
+
 // foliageTypePath (or foliageType), sanitized; a bare name lives in /Game/Foliage. OutPath is empty
 // when neither is given. Replies SECURITY_VIOLATION and returns false for an unsafe path.
 inline bool ReadFoliageTypePath(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
