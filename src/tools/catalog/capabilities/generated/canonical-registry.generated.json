@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "80ec6d2622fd8bd8",
+  "catalogRevision": "39819640c3708a8d",
   "recordCount": 396,
   "records": [
     {
@@ -9728,6 +9728,8 @@
           "find assets by tag",
           "find text",
           "where is text used",
+          "where is function called",
+          "find function calls",
           "analyze graph",
           "material stats",
           "source control state",
@@ -9758,7 +9760,7 @@
           "text in blueprints",
           "find literal"
         ],
-        "summary": "Query assets: existence, search by name/class, find by tag, find where a text appears inside assets, the node graph inside a material or Blueprint, material stats, source-control state.",
+        "summary": "Query assets: existence, search by name/class, find by tag, find where a text appears inside assets (graph nodes by title too, so every call of a function), the node graph inside a material or Blueprint, material stats, source-control state.",
         "whenToUse": [
           "lookup=exists: A path must be tested for an asset, or several paths at once, before creating, importing or referencing one.",
           "lookup=search: Assets must be found across the project by name, class, folder or asset-registry tag.",
@@ -10044,7 +10046,7 @@
       },
       "examples": [
         {
-          "title": "Query assets: existence, search by name/class, find by tag, find where a text appears inside assets, the node graph inside a material or Blueprint, material stats, source-control state.",
+          "title": "Query assets: existence, search by name/class, find by tag, find where a text appears inside assets (graph nodes by title too, so every call of a function), the node graph inside a material or Blueprint, material stats, source-control state.",
           "input": {
             "assetPath": "/Game/Meshes/SM_Crate",
             "action": "query_asset",
@@ -10148,7 +10150,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "3d4ff7c734139c1db40706a40c3b341e43180f132a49de387d56c7e7e97909b0",
-        "content": "e421606cc2ac8f4bd88417df4c357e02c1a183a5f5a1e851122a0a9156a83c66"
+        "content": "a9da7c896f2aebd96a9dc1a3e6da8b0c2283a981753e31f4671e8ec92436d578"
       }
     },
     {
