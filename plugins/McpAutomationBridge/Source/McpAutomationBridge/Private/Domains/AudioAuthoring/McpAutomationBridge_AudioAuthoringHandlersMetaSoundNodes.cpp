@@ -25,14 +25,81 @@ static const FMcpMetaSoundNodeAlias MetaSoundNodeAliases[] = {
 };
 #endif
 
+FMcpMetaSoundNodeClassRequest ResolveMetaSoundAddNodeClass(const TSharedPtr<FJsonObject>& Params)
+{
+	FMcpMetaSoundNodeClassRequest Request;
+#if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
+	const FString NodeClassName = GetJsonStringField(Params, TEXT("nodeClassName"), TEXT(""));
+	const FString NodeType = GetJsonStringField(Params, TEXT("nodeType"), TEXT(""));
+	if (!NodeClassName.IsEmpty())
+	{
+		TArray<FString> Parts;
+		NodeClassName.ParseIntoArray(Parts, TEXT("."));
+		if (Parts.Num() == 3)
+		{
+			Request.Namespace = Parts[0];
+			Request.Name = Parts[1];
+			Request.Variant = Parts[2];
+		}
+		else if (Parts.Num() == 2)
+		{
+			Request.Namespace = Parts[0];
+			Request.Name = Parts[1];
+		}
+		else
+		{
+			Request.Name = NodeClassName;
+		}
+	}
+	else if (!NodeType.IsEmpty())
+	{
+		Request.Name = NodeType;
+		for (const FMcpMetaSoundNodeAlias& Alias : MetaSoundNodeAliases)
+		{
+			TArray<FString> Spellings;
+			FString(Alias.Aliases).ParseIntoArray(Spellings, TEXT("/"));
+			if (Spellings.Contains(NodeType.ToLower()))
+			{
+				Request.Namespace = TEXT("UE");
+				Request.Name = Alias.Name;
+				Request.Variant = Alias.Variant;
+				break;
+			}
+		}
+	}
+	Request.Requested = BuildMetaSoundClassName(Request.Namespace, Request.Name, Request.Variant);
+#if MCP_HAS_METASOUND_SEARCH_ENGINE
+	// Every spelling is resolved against the live node registry before the add,
+	// case-insensitively: a bare or partial name ("Sine", "UE.Multiply") gets its
+	// full Namespace.Name.Variant (dogfood #115), and a wrong namespace guess
+	// ("UE.AD Envelope.Audio" for "AD Envelope.AD Envelope.Audio" -- standard
+	// nodes do not share one namespace) is retried by name and variant alone,
+	// so the engine is never asked for a class it will log as unregistered.
+	FMetasoundFrontendClassName Resolved;
+	if (!Request.Name.IsEmpty())
+	{
+		Request.bInRegistry = ResolveMetaSoundNodeClassName(Request.Namespace, Request.Name, Request.Variant, Resolved, Request.Candidates) ||
+			(!Request.Namespace.IsEmpty() &&
+				ResolveMetaSoundNodeClassName(FString(), Request.Name, Request.Variant, Resolved, Request.Candidates));
+		if (Request.bInRegistry)
+		{
+			Request.Namespace = Resolved.Namespace.ToString();
+			Request.Name = Resolved.Name.ToString();
+			Request.Variant = Resolved.Variant.ToString();
+			Request.bResolvedByName = !BuildMetaSoundClassName(Request.Namespace, Request.Name, Request.Variant).Equals(Request.Requested);
+		}
+	}
+#endif
+#endif
+	return Request;
+}
+
 TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response)
 {
 	if (SubAction == TEXT("add_metasound_node"))
 	{
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
 		FString AssetPath = NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT("")));
-		FString NodeClassName = GetJsonStringField(Params, TEXT("nodeClassName"), TEXT(""));
-		FString NodeType = GetJsonStringField(Params, TEXT("nodeType"), TEXT(""));
 		bool bSave = GetJsonBoolField(Params, TEXT("save"), true);
 
 		if (AssetPath.IsEmpty())
@@ -55,79 +122,20 @@ TSharedPtr<FJsonObject> HandleMetaSoundNodeActions(const FString& SubAction, con
 		TScriptInterface<IMetaSoundDocumentInterface> ScriptInterface(MetaSound);
 		MCP_METASOUND_BUILDER(Builder, ScriptInterface);
 
-		FString ActualNamespace;
-		FString ActualName;
-		FString ActualVariant;
-
-		if (!NodeClassName.IsEmpty())
-		{
-			TArray<FString> Parts;
-			NodeClassName.ParseIntoArray(Parts, TEXT("."));
-			if (Parts.Num() == 3)
-			{
-				ActualNamespace = Parts[0];
-				ActualName = Parts[1];
-				ActualVariant = Parts[2];
-			}
-			else if (Parts.Num() == 2)
-			{
-				ActualNamespace = Parts[0];
-				ActualName = Parts[1];
-			}
-			else
-			{
-				ActualName = NodeClassName;
-			}
-		}
-		else if (!NodeType.IsEmpty())
-		{
-			ActualName = NodeType;
-			for (const FMcpMetaSoundNodeAlias& Alias : MetaSoundNodeAliases)
-			{
-				TArray<FString> Spellings;
-				FString(Alias.Aliases).ParseIntoArray(Spellings, TEXT("/"));
-				if (Spellings.Contains(NodeType.ToLower()))
-				{
-					ActualNamespace = TEXT("UE");
-					ActualName = Alias.Name;
-					ActualVariant = Alias.Variant;
-					break;
-				}
-			}
-		}
-
-		if (ActualName.IsEmpty())
+		const FMcpMetaSoundNodeClassRequest Request = ResolveMetaSoundAddNodeClass(Params);
+		if (Request.Name.IsEmpty())
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("MISSING_NODE_TYPE"), TEXT("Node class name or type is required"));
 		}
-
-		TArray<FString> RegistryCandidates;
-		bool bInRegistry = true;
-#if MCP_HAS_METASOUND_SEARCH_ENGINE
-		// Every spelling is resolved against the live node registry before the add,
-		// case-insensitively: a bare or partial name ("Sine", "UE.Multiply") gets its
-		// full Namespace.Name.Variant (dogfood #115), and a wrong namespace guess
-		// ("UE.AD Envelope.Audio" for "AD Envelope.AD Envelope.Audio" -- standard
-		// nodes do not share one namespace) is retried by name and variant alone,
-		// so the engine is never asked for a class it will log as unregistered.
+		if (Request.bResolvedByName)
 		{
-			const FString Requested = BuildMetaSoundClassName(ActualNamespace, ActualName, ActualVariant);
-			FMetasoundFrontendClassName Resolved;
-			bInRegistry = ResolveMetaSoundNodeClassName(ActualNamespace, ActualName, ActualVariant, Resolved, RegistryCandidates) ||
-				(!ActualNamespace.IsEmpty() &&
-					ResolveMetaSoundNodeClassName(FString(), ActualName, ActualVariant, Resolved, RegistryCandidates));
-			if (bInRegistry)
-			{
-				ActualNamespace = Resolved.Namespace.ToString();
-				ActualName = Resolved.Name.ToString();
-				ActualVariant = Resolved.Variant.ToString();
-				if (!BuildMetaSoundClassName(ActualNamespace, ActualName, ActualVariant).Equals(Requested))
-				{
-					Response->SetStringField(TEXT("nodeClassResolvedBy"), TEXT("registry-name-match"));
-				}
-			}
+			Response->SetStringField(TEXT("nodeClassResolvedBy"), TEXT("registry-name-match"));
 		}
-#endif
+		const FString& ActualNamespace = Request.Namespace;
+		const FString& ActualName = Request.Name;
+		const FString& ActualVariant = Request.Variant;
+		const TArray<FString>& RegistryCandidates = Request.Candidates;
+		const bool bInRegistry = Request.bInRegistry;
 		FMetasoundFrontendClassName ClassName = FMetasoundFrontendClassName(FName(*ActualNamespace), FName(*ActualName), FName(*ActualVariant));
 		// A class the registry does not hold (or holds more than once) goes straight to the candidates reply:
 		// the builder logged each one as an engine error first, which the receipt then reported as a failure.

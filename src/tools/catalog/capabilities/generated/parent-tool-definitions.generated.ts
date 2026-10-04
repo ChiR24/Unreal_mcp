@@ -11107,7 +11107,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+          "description": "Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node class the registry does not hold fails the batch with nothing applied. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
         },
         "outputName": {
           "type": "string",
@@ -11562,6 +11562,18 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "volume": {
           "type": "number",
           "description": "Volume multiplier declared by the inspected Sound Class."
+        },
+        "wavePeakDb": {
+          "type": "number",
+          "description": "A Sound Wave only: the loudest sample of the recording itself, in dB of full scale, read from its imported audio rather than the meter, so it holds however few frames the editor drew. Before volume. Compare sounds by this when matching levels."
+        },
+        "waveRmsDb": {
+          "type": "number",
+          "description": "A Sound Wave only: the average (RMS) level of the whole recording in dB, before volume."
+        },
+        "waveSeconds": {
+          "type": "number",
+          "description": "A Sound Wave only: the length of the recording in seconds."
         }
       },
       "additionalProperties": true

@@ -76,6 +76,10 @@ export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Objec
   endedBecause: str('finished (the sound ended on its own), maxSeconds (cut there, as looping sounds and music always are) or stopped (stopped by another call, or its Play-In-Editor world ended).'),
   timeline: { type: 'array', items: { type: ['number', 'null'] }, description: 'Loudest reading in dB in each timelineStepSeconds step from the start, null for a step no reading landed in (a slow editor frame).' },
   timelineStepSeconds: num('Seconds each timeline entry covers: 0.05 for sounds up to 5 s, longer so there are at most 100 entries.'),
+  // The meter is read once per editor frame: at a few frames a second it misses a short hit's peak and reads its tail.
+  wavePeakDb: num('A Sound Wave only: the loudest sample of the recording itself, in dB of full scale, read from its imported audio rather than the meter, so it holds however few frames the editor drew. Before volume. Compare sounds by this when matching levels.'),
+  waveRmsDb: num('A Sound Wave only: the average (RMS) level of the whole recording in dB, before volume.'),
+  waveSeconds: num('A Sound Wave only: the length of the recording in seconds.'),
   existsAfter: bool('Whether the asset still resolved after the action completed.'),
   falloffDistance: num('Distance in centimetres over which the attenuation falls off.'),
   functionName: str('Name of the Blueprint RPC function that was created.'),

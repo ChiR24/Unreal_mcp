@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
 #include "Containers/Ticker.h"
+#include "Sound/SoundWave.h"
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorScreenshotSupport.h"
 
 // play_sound playback measure: plays a sound and reads the level the mixer's own per-sound meter (its envelope
@@ -15,6 +16,7 @@ constexpr int32 McpSoundMeasureSteps = 100;
 struct FMcpSoundMeasure
 {
   TWeakObjectPtr<UAudioComponent> Component;
+  TWeakObjectPtr<const USoundWave> Wave;
   double StartReal = 0.0, MaxSeconds = 5.0, Step = 0.05, Peak = 0.0, Sum = 0.0;
   int32 Updates = 0;
   TArray<double> Timeline; // the loudest reading in each step, -1 for a step no reading landed in
@@ -65,6 +67,31 @@ TSharedPtr<FJsonObject> McpSoundMeasureResult(const FMcpSoundMeasure &Run, const
   Data->SetArrayField(TEXT("timeline"), Timeline);
   McpHandlerUtils::MarkNoAssetsChanged(Data); // the sound asset is played, not changed
   return Data;
+}
+
+// The meter is read once per editor frame, so at a few frames a second it misses a short hit's peak and reads its
+// tail: two recordings could not be level-matched. A Sound Wave's own samples answer that exactly (16-bit PCM).
+void McpAddWaveLevels(const USoundWave *Wave, const TSharedPtr<FJsonObject> &Data)
+{
+  TArray<uint8> Pcm;
+  uint32 SampleRate = 0;
+  uint16 Channels = 0;
+  if (!Wave || !Wave->GetImportedSoundWaveData(Pcm, SampleRate, Channels) || SampleRate == 0 || Channels == 0)
+  {
+    return;
+  }
+  const int16 *Samples = reinterpret_cast<const int16 *>(Pcm.GetData());
+  const int32 Count = Pcm.Num() / static_cast<int32>(sizeof(int16));
+  double Peak = 0.0, SumSquares = 0.0;
+  for (int32 Index = 0; Index < Count; ++Index)
+  {
+    const double Value = FMath::Abs(static_cast<double>(Samples[Index])) / 32768.0;
+    Peak = FMath::Max(Peak, Value);
+    SumSquares += Value * Value;
+  }
+  Data->SetNumberField(TEXT("wavePeakDb"), McpSoundLevelDb(Peak));
+  Data->SetNumberField(TEXT("waveRmsDb"), McpSoundLevelDb(Count > 0 ? FMath::Sqrt(SumSquares / Count) : 0.0));
+  Data->SetNumberField(TEXT("waveSeconds"), FMath::RoundToDouble(100.0 * Count / Channels / SampleRate) / 100.0);
 }
 
 FString McpSilentSoundWarning(const FMcpSoundMeasure &Run, bool bDeviceMuted)
@@ -122,6 +149,7 @@ bool HandleMeasureActions(UMcpAutomationBridgeSubsystem *Self, const FString &Re
 
   TSharedRef<FMcpSoundMeasure> Run = MakeShared<FMcpSoundMeasure>();
   Run->Component = Comp;
+  Run->Wave = Cast<USoundWave>(Sound);
   Run->MaxSeconds = FMath::Clamp(MaxSeconds, 0.2, 20.0);
   // Looping sounds and every MetaSound report about 10000 s, so only maxSeconds bounds them.
   const double Duration = Sound->GetDuration();
@@ -163,6 +191,7 @@ bool HandleMeasureActions(UMcpAutomationBridgeSubsystem *Self, const FString &Re
           return false;
         }
         const TSharedPtr<FJsonObject> Data = McpSoundMeasureResult(*Run, Ended);
+        McpAddWaveLevels(Run->Wave.Get(), Data);
         const bool bSilent = Data->GetBoolField(TEXT("silent"));
         const FString Message =
             FString::Printf(TEXT("%s%s: peak %.1f dB, average %.1f dB over %.2f s (%s)"), bSilent ? TEXT("SILENT ") : TEXT(""),

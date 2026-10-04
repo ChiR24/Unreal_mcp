@@ -1159,4 +1159,25 @@ describe('widget previews', () => {
     const preview = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringPreview.cpp');
     expect(preview.indexOf('McpDrawWidgetPreview(WidgetBP')).toBeLessThan(preview.indexOf('McpDeferForShaderCompile(Payload'));
     expect(preview).toContain('McpAddShaderCompileState(ResultJson, Payload);');
-  });});
+  });
+});
+
+// The meter is read once per editor frame: at about 5 fps two recordings read 20-30 dB apart that were not.
+describe('sound measurement', () => {
+  it('a Sound Wave also reports the level of its own samples', () => {
+    const measure = code('Audio', 'McpAutomationBridge_AudioHandlersMeasure.cpp');
+    expect(measure).toContain('Wave->GetImportedSoundWaveData(Pcm, SampleRate, Channels)');
+    expect(measure).toContain('McpAddWaveLevels(Run->Wave.Get(), Data);');
+    const properties = capabilityIndex().byId.get('manage_audio.play_sound')?.schemas.output.properties;
+    expect(isRecord(properties) && 'wavePeakDb' in properties && 'waveRmsDb' in properties && 'waveSeconds' in properties).toBe(true);
+  });
+
+  // A batch that removed a voice's synth nodes, then named a node class the registry did not hold, saved the voice gutted.
+  it('a MetaSound batch looks up every add_node class before any step runs', () => {
+    const batch = code('AudioAuthoring', 'MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundBatch.cpp');
+    expect(batch.indexOf('ResolveMetaSoundAddNodeClass(*StepObj)')).toBeGreaterThan(-1);
+    expect(batch.indexOf('ResolveMetaSoundAddNodeClass(*StepObj)')).toBeLessThan(batch.indexOf('HandleMetaSoundNodeActions(StepSubAction'));
+    expect(code('AudioAuthoring', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundNodes.cpp'))
+      .toContain('const FMcpMetaSoundNodeClassRequest Request = ResolveMetaSoundAddNodeClass(Params);');
+  });
+});

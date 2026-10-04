@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a05d0c2c8f87bb4c",
+  "catalogRevision": "80ec6d2622fd8bd8",
   "recordCount": 396,
   "records": [
     {
@@ -49859,7 +49859,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200, stopping at the first failure. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
+              "description": "Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node class the registry does not hold fails the batch with nothing applied. Each is {edit, ...the params of that edit}: edit is add_node, connect, disconnect, remove_node, set_default, add_input or add_output (the add_metasound_node, connect_metasound_nodes, disconnect_metasound_nodes, remove_metasound_node, set_metasound_default, add_metasound_input, add_metasound_output params). Optional per step: id (names the node it creates; later steps use \"$id\" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to (\"$id.PinName\" shorthand for connect; interface nodes such as the On Play input are named with the explicit fields)."
             },
             "edit": {
               "type": "string",
@@ -50064,8 +50064,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "84b3f7039cdcc2fb99d2a81f4b2e8cfbe52308e058762174972c081464f0720e",
-        "content": "ed73fb83ec12af8cc9cea7b9197eceac48339337421dd3df9d3ae25b41df1ec7"
+        "schema": "0351c0692047d36bd7a315972d40041d0ecfb05fded3a223ad14a1ee6e6122e3",
+        "content": "169e7c1469068a405959df5c0b00712be81a433b6af459d9b98e2fffbcfe9f9a"
       }
     },
     {
@@ -51100,7 +51100,7 @@
           "playback=spawn_at_location: Use it to spawn a transient sound at a world location.",
           "playback=attached: Use it to play a sound attached to an actor component.",
           "playback=prime: Use it to prime a sound asset for playback.",
-          "playback=measure: Use it to play a sound 2D and measure how loud it played, from the mixer's own meter: peak and average level in dB and a timeline, with silent: true when it played but produced no audio (an empty Sound Cue, a MetaSound whose audio output is unconnected). Answers when the sound ends or after maxSeconds."
+          "playback=measure: Use it to play a sound 2D and measure how loud it played, from the mixer's own meter: peak and average level in dB and a timeline, with silent: true when it played but produced no audio (an empty Sound Cue, a MetaSound whose audio output is unconnected). A Sound Wave also gets the peak, RMS and length of the recording itself (wavePeakDb, waveRmsDb, waveSeconds), which hold however slowly the editor draws. Answers when the sound ends or after maxSeconds."
         ],
         "whenNotToUse": []
       },
@@ -51249,6 +51249,18 @@
             "timelineStepSeconds": {
               "type": "number",
               "description": "Seconds each timeline entry covers: 0.05 for sounds up to 5 s, longer so there are at most 100 entries."
+            },
+            "wavePeakDb": {
+              "type": "number",
+              "description": "A Sound Wave only: the loudest sample of the recording itself, in dB of full scale, read from its imported audio rather than the meter, so it holds however few frames the editor drew. Before volume. Compare sounds by this when matching levels."
+            },
+            "waveRmsDb": {
+              "type": "number",
+              "description": "A Sound Wave only: the average (RMS) level of the whole recording in dB, before volume."
+            },
+            "waveSeconds": {
+              "type": "number",
+              "description": "A Sound Wave only: the length of the recording in seconds."
             }
           },
           "required": [
@@ -51359,8 +51371,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "24a102b169607f71766484933e2d4b85e9736a3de6cc7d2675d98cf90f7a65ac",
-        "content": "018ee6671a32d78c1351f959f960ca462e1620a8291bcdbaa02d7006d7739a75"
+        "schema": "5a15db6eda3d6892a99e9122abce96bfeb692004006237f52d28ca1f16c91dcc",
+        "content": "af3a6492dde52754c47accc6f194efb0e18d5c357e43cb1fb5f92002d9602f06"
       }
     },
     {

@@ -98,6 +98,33 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 			MaxMetaSoundBatchSteps));
 	}
 
+	// Every add_node class is looked up before any step runs: one the registry does not hold stopped the batch after
+	// the steps before it were applied and saved, a voice's old nodes removed and its replacement never added.
+	for (int32 Index = 0; Index < Steps->Num(); ++Index)
+	{
+		const TSharedPtr<FJsonObject>* StepObj = nullptr;
+		FString Edit;
+		if (!(*Steps)[Index].IsValid() || !(*Steps)[Index]->TryGetObject(StepObj) || !(*StepObj)->TryGetStringField(TEXT("edit"), Edit) ||
+			MetaSoundStepSubAction(Edit) != TEXT("add_metasound_node"))
+		{
+			continue;
+		}
+		const FMcpMetaSoundNodeClassRequest Request = ResolveMetaSoundAddNodeClass(*StepObj);
+		if (!Request.Name.IsEmpty() && !Request.bInRegistry)
+		{
+			TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
+			TArray<TSharedPtr<FJsonValue>> Candidates;
+			for (const FString& Candidate : Request.Candidates) { Candidates.Add(MakeShared<FJsonValueString>(Candidate)); }
+			Details->SetArrayField(TEXT("candidateNodeClasses"), Candidates);
+			Details->SetNumberField(TEXT("failedIndex"), Index);
+			Details->SetNumberField(TEXT("succeeded"), 0);
+			const FString Hint = Request.Candidates.Num() > 0 ? FString(TEXT(" (see candidateNodeClasses)")) : FString();
+			return McpHandlerUtils::BuildErrorResponse(TEXT("NODE_CLASS_NOT_FOUND"), FString::Printf(
+				TEXT("build_metasound: operations[%d] (add_node) names '%s', which the MetaSound node registry does not hold%s; nothing was applied."),
+				Index, *Request.Requested, *Hint), Details);
+		}
+	}
+
 	TMap<FString, FString> Aliases;
 	TArray<TSharedPtr<FJsonValue>> Results;
 	TSharedPtr<FJsonObject> NodeIds = MakeShared<FJsonObject>();

@@ -192,6 +192,16 @@ bool ResolveMetaSoundNodeClassName(
 	FMetasoundFrontendClassName& OutClassName,
 	TArray<FString>& OutCandidates);
 #endif
+/** The class an add_node names (nodeClassName "Namespace.Name.Variant" or a nodeType shorthand), resolved against the
+ *  live registry where the engine has a search engine. Name is empty when it names none; Requested is the spelling. */
+struct FMcpMetaSoundNodeClassRequest
+{
+	FString Namespace, Name, Variant, Requested;
+	TArray<FString> Candidates;
+	bool bInRegistry = true;
+	bool bResolvedByName = false;
+};
+FMcpMetaSoundNodeClassRequest ResolveMetaSoundAddNodeClass(const TSharedPtr<FJsonObject>& Params);
 TSharedPtr<FJsonObject> HandleMetaSoundInterfaceActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleMetaSoundDefaultAction(const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 #if MCP_HAS_METASOUND && MCP_HAS_METASOUND_FRONTEND
