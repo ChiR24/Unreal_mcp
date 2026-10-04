@@ -155,6 +155,28 @@ export function flattenPayloadWrappers(payload: Record<string, unknown>): Record
   return effectivePayload;
 }
 
+/** Distinct warnings from the root and its data/result wrappers, root first. */
+function collectWarnings(payload: Record<string, unknown>): unknown[] {
+  const seen = new Set<string>();
+  const warnings: unknown[] = [];
+  const visit = (obj: Record<string, unknown>, depth: number): void => {
+    if (depth > 5) return;
+    if (Array.isArray(obj.warnings)) {
+      for (const warning of obj.warnings) {
+        const key = typeof warning === 'string' ? warning : JSON.stringify(warning);
+        if (!seen.has(key)) {
+          seen.add(key);
+          warnings.push(warning);
+        }
+      }
+    }
+    if (isRecord(obj.data)) visit(obj.data, depth + 1);
+    if (isRecord(obj.result)) visit(obj.result, depth + 1);
+  };
+  visit(payload, 0);
+  return warnings;
+}
+
 export function buildSummaryText(toolName: string, payload: unknown): string {
   if (typeof payload === 'string') {
     const normalized = payload.trim();
@@ -169,7 +191,14 @@ export function buildSummaryText(toolName: string, payload: unknown): string {
     return `${toolName} responded`;
   }
 
-  const effectivePayload = flattenPayloadWrappers(payload);
+  // The root envelope owns the outcome: a nested handler `success: true` must
+  // not mask a gateway refusal (OUTPUT_SCHEMA_VIOLATION, RESULT_TOO_LARGE, ...).
+  // Warnings from every wrapper level are kept, so none is hidden by another.
+  const effectivePayload = { ...flattenPayloadWrappers(payload) };
+  for (const key of ['success', 'error', 'errorCode', 'message']) {
+    if (payload[key] !== undefined) effectivePayload[key] = payload[key];
+  }
+  effectivePayload.warnings = collectWarnings(payload);
   const parts: string[] = [];
   const addedKeys = new Set<string>();
 
