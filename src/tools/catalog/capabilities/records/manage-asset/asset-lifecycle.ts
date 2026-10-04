@@ -187,7 +187,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
       searchText: str('Text to search for.'),
       packagePaths: arr('Package paths to search within.'),
       caseSensitive: bool('Match letter case (default false).'),
-      includeLevel: bool('Also search the actors and components of the open level (default true).'),
+      includeLevel: bool('Also search the actors and components of the open level: true or false outright; omitted, only when that level lies under packagePaths (always with the default /Game).'),
       limit: boundedLimit(500, 50)
     }, ['searchText']),
     schema({

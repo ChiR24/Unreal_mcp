@@ -141,6 +141,11 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction)
         {
             return true;
         }
+        // Mesh particles draw the mesh's own materials, which need their mesh-particle flag the same way.
+        for (const FStaticMaterial& Slot : Mesh ? Mesh->GetStaticMaterials() : TArray<FStaticMaterial>())
+        {
+            EnsureNiagaraUsage(Slot.MaterialInterface, TEXT("bUsedWithNiagaraMeshParticles"));
+        }
         return AddRenderer<UNiagaraMeshRendererProperties>(Context, TEXT("Mesh"), [Mesh](UNiagaraMeshRendererProperties& Renderer)
         {
             if (Mesh)

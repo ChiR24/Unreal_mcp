@@ -1,9 +1,9 @@
 // find_text: where a piece of text appears. search_assets matches asset names only, so "where does
 // this string still show?" meant opening every widget, graph and table by hand. Under packagePaths
 // it reads Blueprint graph pin literals, the assets picked on pins and comments, Blueprint variable and component defaults,
-// widget tree properties (text block text, tooltips), DataTable rows and String Table entries; with
-// includeLevel (default true) also every actor and component of the open level (TextRender text,
-// strings set on a placed instance).
+// widget tree properties (text block text, tooltips), DataTable rows and String Table entries; and
+// every actor and component of the open level (TextRender text, strings set on a placed instance)
+// when that level lies under packagePaths, or as includeLevel says.
 #include "Domains/AssetQuery/McpAutomationBridge_AssetQueryHandlersPrivate.h"
 
 #include "Blueprint/WidgetTree.h"
@@ -280,7 +280,7 @@ bool HandleFindText(
         else if (const UStringTable* Strings = Cast<UStringTable>(Asset)) { Scan.Strings(Strings); }
     }
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
-    if (World && GetJsonBoolField(Payload, TEXT("includeLevel"), true))
+    if (World && FindTextIncludesLevel(Payload, Filter.PackagePaths, World))
     {
         Scan.Level(World);
     }

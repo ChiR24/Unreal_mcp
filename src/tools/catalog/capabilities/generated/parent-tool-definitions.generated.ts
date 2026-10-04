@@ -8568,7 +8568,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "includeLevel": {
           "type": "boolean",
-          "description": "Also search the actors and components of the open level (default true)."
+          "description": "Also search the actors and components of the open level: true or false outright; omitted, only when that level lies under packagePaths (always with the default /Game)."
         },
         "includeMetadata": {
           "type": "boolean",
@@ -14875,7 +14875,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "meshPath": {
           "type": "string",
-          "description": "Canonical /Game mesh asset path."
+          "description": "Canonical /Game static mesh for the mesh renderer; its materials get their Niagara mesh-particle usage flag set and saved, so the particles never fall back to the default material."
         },
         "moduleKind": {
           "type": "string",

@@ -265,7 +265,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     exampleInput: { action: 'add_sprite_renderer_module', systemPath: '/Game/NS_Fire', emitterName: 'Spark', materialPath: '/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial' } }),
   buildRecord({ parentTool: T, id: `${T}.add_mesh_renderer_module`, action: 'add_mesh_renderer_module', family: F,
     summary: 'Add a mesh renderer module.', whenToUse: ['Mesh rendering needed.'], whenNotToUse: ['Use add_sprite_renderer_module.'],
-    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, meshPath: P.meshPath, save: SAVE }, required: EMITTER_ONLY, requiredOneOf: SYSTEM_ONE_OF,
+    inputProps: { systemPath: E.systemPath, assetPath: P.assetPath, emitterName: E.emitterName, meshPath: E.meshPath, save: SAVE }, required: EMITTER_ONLY, requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     exampleInput: { action: 'add_mesh_renderer_module', systemPath: '/Game/NS_Debris', emitterName: 'Chunks', meshPath: '/Engine/BasicShapes/Cube.Cube' } }),
   buildRecord({ parentTool: T, id: `${T}.add_ribbon_renderer_module`, action: 'add_ribbon_renderer_module', family: F,

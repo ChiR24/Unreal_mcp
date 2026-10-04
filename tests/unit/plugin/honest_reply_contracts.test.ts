@@ -1103,3 +1103,20 @@ describe('save game slots', () => {
     expect(saves).toContain('NewClass->HasAnyClassFlags(CLASS_Abstract)');
   });
 });
+
+describe('search scope and mesh-particle materials', () => {
+  // find_text narrowed to /Game/UI still read every actor of the open level elsewhere: 148 hits, 3 of them asked for.
+  it('find_text reads the open level only under the searched paths unless includeLevel says otherwise', () => {
+    expect(code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp'))
+      .toContain('if (World && FindTextIncludesLevel(Payload, Filter.PackagePaths, World))');
+    const scope = code('AssetQuery', 'McpAutomationBridge_AssetQueryHandlersPrivate.h');
+    expect(scope).toContain('if (Payload->TryGetBoolField(TEXT("includeLevel"), bInclude))');
+    expect(scope).toContain('Level.StartsWith(Path.ToString() + TEXT("/"))');
+  });
+
+  // Sprite and ribbon materials got their Niagara usage flag saved; a mesh renderer's mesh materials did not.
+  it('add_mesh_renderer_module flags the mesh materials for mesh particles', () => {
+    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersRenderers.cpp'))
+      .toContain('EnsureNiagaraUsage(Slot.MaterialInterface, TEXT("bUsedWithNiagaraMeshParticles"));');
+  });
+});

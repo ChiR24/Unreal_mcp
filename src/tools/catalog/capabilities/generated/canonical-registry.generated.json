@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "615793f280a2e161",
+  "catalogRevision": "7b5bc55e14e52a92",
   "recordCount": 396,
   "records": [
     {
@@ -9844,7 +9844,7 @@
             },
             "includeLevel": {
               "type": "boolean",
-              "description": "Also search the actors and components of the open level (default true)."
+              "description": "Also search the actors and components of the open level: true or false outright; omitted, only when that level lies under packagePaths (always with the default /Game)."
             },
             "recursive": {
               "type": "boolean",
@@ -10147,8 +10147,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7f77ef7f39da6251ef07d31ad4a1fa40b1d5cd9090cc4d06c8901cfc18a410c1",
-        "content": "fb1ad50bbd32e121d4fa41987896e7c2ebab247d8580e8344a744118f66b2bf4"
+        "schema": "3d4ff7c734139c1db40706a40c3b341e43180f132a49de387d56c7e7e97909b0",
+        "content": "e421606cc2ac8f4bd88417df4c357e02c1a183a5f5a1e851122a0a9156a83c66"
       }
     },
     {
@@ -55332,7 +55332,7 @@
             },
             "meshPath": {
               "type": "string",
-              "description": "Canonical /Game mesh asset path."
+              "description": "Canonical /Game static mesh for the mesh renderer; its materials get their Niagara mesh-particle usage flag set and saved, so the particles never fall back to the default material."
             },
             "lightRadius": {
               "type": "number",
@@ -55545,8 +55545,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e3bd55d9fbd37e667492becbd2cb7b6bb6efdead22aaf12879fccba1cab012c9",
-        "content": "48a3c84ebed058ddcf236b18bb096d9d912b282544cdea0d1ed5e33be14ea0ad"
+        "schema": "0f0512cbb9a9b6a3cee53639d9140702b9889a96d4cce8988de2856c19100e2b",
+        "content": "98f4e2755fc44bf650a73178360793c421946712a0205cc506ad944a94d4c393"
       }
     },
     {
