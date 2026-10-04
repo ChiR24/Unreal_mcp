@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "48235bd8792cfaa9",
+  "catalogRevision": "de46cf90114786a8",
   "recordCount": 394,
   "records": [
     {
@@ -57016,7 +57016,7 @@
           "user parameters",
           "static switches"
         ],
-        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
+        "summary": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
         "whenToUse": [
           "info=info: Inspect a Niagara system.",
           "info=validate: Catch authoring errors."
@@ -57108,7 +57108,7 @@
       },
       "examples": [
         {
-          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
+          "title": "Read a Niagara system: each emitter (enabled, CPU or GPU, stack modules, current module input values, an input that reads a parameter or a dynamic input as {linkedTo}, the static switches such as Ribbon Width Mode that gate them, and its renderers with the object path inspect.set_property writes and their material) and its user parameters; an emitter asset gives its name and CPU or GPU target. info=validate lists errors and warnings.",
           "input": {
             "action": "get_niagara_info",
             "assetPath": "/Game/NS_Fire",
@@ -57158,7 +57158,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "f251d6730117cacc98a9d93652b954b98783c723b82c220ea2341c17eb9ba984",
-        "content": "4d8de565feb5a8db446ee248e50e9a4c980b22186733b025844e41d7030b0fec"
+        "content": "069550b71e82f42deab9b84da6386a72fb47f8bdb056852daceba38803c14d27"
       }
     },
     {

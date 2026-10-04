@@ -231,6 +231,11 @@ void CollectNiagaraSystemStackIssues(
     UNiagaraSystem* System,
     TArray<TSharedPtr<FJsonValue>>& OutErrors,
     TArray<TSharedPtr<FJsonValue>>& OutWarnings);
+#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+// In ...HandlersModuleInfo.cpp: EmitterObj's modules and moduleCount, and in its moduleInputs each input wired to a
+// parameter or a dynamic input as {linkedTo}, which the literal stored for the input does not show.
+void AddEmitterModuleInfo(TSharedPtr<FJsonObject>& EmitterObj, const FNiagaraEmitterHandle& Handle);
+#endif
 #if MCP_HAS_NIAGARA_INPUT_OVERRIDES
 // The last "."-separated part of an input name ("Module.Lifetime" -> "Lifetime").
 FString BareInputName(const FString& InputName);
