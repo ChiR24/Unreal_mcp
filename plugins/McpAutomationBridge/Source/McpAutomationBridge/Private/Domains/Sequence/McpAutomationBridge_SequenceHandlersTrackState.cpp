@@ -95,6 +95,64 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceSetTrackLocked(
   return true;
 }
 
+// A section already on a track takes a new start and/or end and a manual ease in and/or out, all in display
+// frames: overlapping clips with eased edges crossfade where they otherwise cut on one frame.
+bool UMcpAutomationBridgeSubsystem::HandleSequenceSetSection(
+    const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
+    TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  ULevelSequence *Sequence = nullptr;
+  UMovieScene *MovieScene = nullptr;
+  UMovieSceneTrack *Track = LoadTrackOrReply(this, RequestId, Socket, Payload, TEXT("set_section"), Sequence, MovieScene);
+  if (!Track)
+    return true;
+  double Index = 0.0;
+  Payload->TryGetNumberField(TEXT("sectionIndex"), Index);
+  const TArray<UMovieSceneSection *> &Sections = Track->GetAllSections();
+  UMovieSceneSection *Section = Index >= 0.0 && Index < Sections.Num() ? Sections[static_cast<int32>(Index)] : nullptr;
+  if (!Section) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           FString::Printf(TEXT("sectionIndex %g is not a section of %s, which has %d"), Index,
+                                           *Track->GetName(), Sections.Num()),
+                           nullptr, TEXT("SECTION_NOT_FOUND"));
+    return true;
+  }
+  auto Ticks = [MovieScene](double Frames) {
+    return FFrameRate::TransformTime(FFrameTime::FromDecimal(Frames), MovieScene->GetDisplayRate(),
+                                     MovieScene->GetTickResolution()).RoundToFrame();
+  };
+  double Start = 0.0, End = 0.0, EaseIn = 0.0, EaseOut = 0.0;
+  const bool bStart = Payload->TryGetNumberField(TEXT("startFrame"), Start);
+  const bool bEnd = Payload->TryGetNumberField(TEXT("endFrame"), End);
+  TRange<FFrameNumber> Range = Section->GetRange();
+  if (bStart)
+    Range.SetLowerBound(TRangeBound<FFrameNumber>::Inclusive(Ticks(Start)));
+  if (bEnd)
+    Range.SetUpperBound(TRangeBound<FFrameNumber>::Exclusive(Ticks(End)));
+  if ((bStart || bEnd) && Range.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false, TEXT("endFrame must come after startFrame"), nullptr,
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+  Section->Modify();
+  if (bStart || bEnd)
+    Section->SetRange(Range);
+  if (Payload->TryGetNumberField(TEXT("easeInFrames"), EaseIn)) {
+    Section->Easing.bManualEaseIn = EaseIn > 0.0;
+    Section->Easing.ManualEaseInDuration = Ticks(FMath::Max(EaseIn, 0.0)).Value;
+  }
+  if (Payload->TryGetNumberField(TEXT("easeOutFrames"), EaseOut)) {
+    Section->Easing.bManualEaseOut = EaseOut > 0.0;
+    Section->Easing.ManualEaseOutDuration = Ticks(FMath::Max(EaseOut, 0.0)).Value;
+  }
+  MovieScene->Modify();
+  Sequence->MarkPackageDirty();
+  TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+  Resp->SetStringField(TEXT("trackName"), Track->GetName());
+  Resp->SetNumberField(TEXT("sectionIndex"), static_cast<int32>(Index));
+  SendAutomationResponse(Socket, RequestId, true, TEXT("Section updated"), Resp);
+  return true;
+}
+
 bool UMcpAutomationBridgeSubsystem::HandleSequenceRemoveTrack(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {

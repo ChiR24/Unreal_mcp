@@ -128,7 +128,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     inputProps: { assetPath: P.assetPath, systemPath: E.systemPath, emitterName: E.emitterName, modulePath: E.modulePath, scriptType: E.scriptType, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,
     effect: 'write', latency: 'interactive', resources: 'low', plugins: NIAGARA,
     outputProps: { nodeId: E.nodeId }, outputRequired: [],
-    exampleInput: { action: 'add_niagara_module', assetPath: '/Game/NS_Fire', emitterName: 'Spark', modulePath: '/Niagara/Modules/Emitter/EmitterState.EmitterState', scriptType: 'Update' }, exampleOutput: { success: true, message: 'Niagara module added', nodeId: 'A1B2C3' } }),
+    exampleInput: { action: 'add_niagara_module', assetPath: '/Game/NS_Fire', emitterName: 'Spark', modulePath: '/Niagara/Modules/Update/Color/ScaleColor.ScaleColor', scriptType: 'Update' }, exampleOutput: { success: true, message: 'Niagara module added', nodeId: 'A1B2C3' } }),
   buildRecord({ parentTool: T, id: `${T}.connect_niagara_pins`, action: 'connect_niagara_pins', family: F,
     summary: 'Connect two Niagara graph pins (fromNode, fromPin, toNode, toPin), or with autoConnect wire the first compatible free pins.', whenToUse: ['Modules must wire together.'], whenNotToUse: ['Use add_niagara_module.'],
     inputProps: { assetPath: P.assetPath, systemPath: E.systemPath, emitterName: E.emitterName, scriptType: E.scriptType, fromNode: E.fromNode, fromPin: E.fromPin, toNode: E.toNode, toPin: E.toPin, autoConnect: E.autoConnect, save: SAVE }, required: [], requiredOneOf: SYSTEM_ONE_OF,

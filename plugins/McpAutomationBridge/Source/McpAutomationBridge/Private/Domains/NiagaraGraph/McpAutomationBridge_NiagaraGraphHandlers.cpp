@@ -147,8 +147,11 @@ bool UMcpAutomationBridgeSubsystem::HandleNiagaraGraphAction(
         UNiagaraNodeOutput* OutputNode = nullptr;
         for (UEdGraphNode* Node : TargetGraph->Nodes)
         {
+            // An emitter with interpolated spawning runs its particle spawn script as
+            // ParticleSpawnScriptInterpolated while the stack's output node says
+            // ParticleSpawnScript, so an exact match found no stack to add to.
             UNiagaraNodeOutput* Candidate = Cast<UNiagaraNodeOutput>(Node);
-            if (Candidate && Candidate->GetUsage() == TargetScript->GetUsage())
+            if (Candidate && UNiagaraScript::IsEquivalentUsage(Candidate->GetUsage(), TargetScript->GetUsage()))
             {
                 OutputNode = Candidate;
                 break;

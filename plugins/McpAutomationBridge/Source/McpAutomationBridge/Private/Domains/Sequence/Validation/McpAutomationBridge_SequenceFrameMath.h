@@ -23,6 +23,8 @@ bool TrySubtractFrames(int32 End, int32 Start, int32 &OutValue,
                        FString &OutError);
 bool TrySecondsToFrame(double Seconds, const FFrameRate &Rate,
                        FFrameNumber &OutFrame, FString &OutError);
+// A play or pause startTime: non-negative seconds, no later than the end of MovieScene's playback range.
+bool CheckPlaybackTime(const UMovieScene *MovieScene, double Seconds, FString &OutError);
 bool ValidateCinematicFrameRequest(
     const TSharedPtr<FJsonObject> &Payload, const UMovieScene *MovieScene,
     FString &OutError, int32 DefaultDuration = 240);

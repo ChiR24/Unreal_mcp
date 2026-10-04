@@ -451,6 +451,20 @@ describe('handlers answer what they did', () => {
     expect(info, 'and each renderer by the object path set_property writes').toContain('RendererObj->SetStringField(TEXT("objectPath"), Renderer->GetPathName());');
   });
 
+  // A module for the particle spawn stack of an emitter with interpolated spawning found no stack: its script
+  // runs as ParticleSpawnScriptInterpolated while the stack output says ParticleSpawnScript.
+  it('add_niagara_module finds the spawn stack of an emitter with interpolated spawning', () => {
+    const source = code('NiagaraGraph', 'McpAutomationBridge_NiagaraGraphHandlers.cpp');
+    expect(source).toContain('UNiagaraScript::IsEquivalentUsage(Candidate->GetUsage(), TargetScript->GetUsage())');
+    expect(source).not.toContain('Candidate->GetUsage() == TargetScript->GetUsage()');
+  });
+
+  // A module added, wired or removed ran the old scripts and listed no inputs until something else compiled.
+  it('a Niagara graph edit compiles the system before saving it', () => {
+    const save = code('NiagaraGraph', 'McpAutomationBridge_NiagaraGraphHandlersPrivate.h');
+    expect(save).toMatch(/inline void SaveNiagaraGraphEdit\([^)]*\)\s*\{\s*System->RequestCompile\(false\);\s*System->MarkPackageDirty\(\);/u);
+  });
+
   // create_niagara_ribbon and create_particle_trail authored LocationBasedRibbon, which spawns only on another emitter's location events.
   it('a default ribbon or trail effect spawns on its own', () => {
     const source = code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraAuthoring.cpp');

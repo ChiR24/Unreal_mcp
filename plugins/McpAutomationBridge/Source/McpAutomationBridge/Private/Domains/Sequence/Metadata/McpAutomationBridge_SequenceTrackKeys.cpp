@@ -17,6 +17,7 @@
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
 #include "MovieSceneSection.h"
+#include "Sections/MovieSceneSkeletalAnimationSection.h"
 
 namespace McpSequenceTracks {
 
@@ -94,6 +95,20 @@ TSharedPtr<FJsonObject> DescribeSectionKeys(const UMovieScene *MovieScene,
           TickToDisplayFrame(MovieScene, Range.GetUpperBoundValue()));
     }
   }
+  // Row, easing and clip, so set_section can be aimed: which clips overlap and whether they crossfade.
+  Obj->SetNumberField(TEXT("rowIndex"), Section->GetRowIndex());
+  const double TicksPerFrame = MovieScene->GetTickResolution().AsDecimal() / MovieScene->GetDisplayRate().AsDecimal();
+  if (Section->Easing.GetEaseInDuration() > 0) {
+    Obj->SetNumberField(TEXT("easeInFrames"), Section->Easing.GetEaseInDuration() / TicksPerFrame);
+  }
+  if (Section->Easing.GetEaseOutDuration() > 0) {
+    Obj->SetNumberField(TEXT("easeOutFrames"), Section->Easing.GetEaseOutDuration() / TicksPerFrame);
+  }
+  if (const UMovieSceneSkeletalAnimationSection *Clip = Cast<UMovieSceneSkeletalAnimationSection>(Section)) {
+    if (Clip->Params.Animation) {
+      Obj->SetStringField(TEXT("animation"), Clip->Params.Animation->GetPathName());
+    }
+  }
   TArray<TSharedPtr<FJsonValue>> ChannelsArray;
   FMovieSceneChannelProxy &Proxy = Section->GetChannelProxy();
   DescribeChannels<FMovieSceneDoubleChannel>(MovieScene, Proxy, TEXT("double"),
@@ -141,6 +156,11 @@ bool HandleListTrackKeys(UMcpAutomationBridgeSubsystem *Subsystem,
     TSharedPtr<FJsonObject> TrackObj = McpHandlerUtils::CreateResultObject();
     TrackObj->SetStringField(TEXT("trackName"), Track->GetName());
     TrackObj->SetStringField(TEXT("trackType"), Track->GetClass()->GetName());
+    // Several actors' tracks share a name (Visibility, Transform); the binding says whose keys these are.
+    FGuid BindingGuid;
+    if (MovieScene->FindTrackBinding(*Track, BindingGuid)) {
+      TrackObj->SetStringField(TEXT("bindingName"), GetBindingName(MovieScene, BindingGuid));
+    }
     TArray<TSharedPtr<FJsonValue>> SectionsArray;
     for (UMovieSceneSection *Section : Track->GetAllSections()) {
       if (!Section) {

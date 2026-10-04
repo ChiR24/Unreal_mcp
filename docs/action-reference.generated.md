@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `7007a2687fd0c952`
+Catalog revision: `267a64d5d920aa0d`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -484,7 +484,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `sequence.create` | `manage_sequence` | `create` | write | write | none | `manage_sequence.create` `manage_sequence.duplicate` `manage_sequence.rename` |
 | `sequence.delete` | `manage_sequence` | `delete` | destructive | destructive | explicit | `manage_sequence.delete` `manage_sequence.remove_track` `manage_sequence.remove_keyframe` |
 | `sequence.edit_sequence_bindings` | `manage_sequence` | `add_actor` | write | write | none | `manage_sequence.edit_sequence_bindings` `manage_sequence.add_actor` `manage_sequence.add_actors` `manage_sequence.add_camera` `manage_sequence.add_spawnable_from_class` `manage_sequence.remove_actors` |
-| `sequence.edit_sequence_tracks` | `manage_sequence` | `add_track` | write | write | none | `manage_sequence.edit_sequence_tracks` `manage_sequence.add_track` `manage_sequence.add_section` `manage_sequence.add_keyframe` `manage_sequence.set_track_locked` `manage_sequence.set_track_muted` `manage_sequence.set_track_solo` |
+| `sequence.edit_sequence_tracks` | `manage_sequence` | `add_track` | write | write | none | `manage_sequence.edit_sequence_tracks` `manage_sequence.add_track` `manage_sequence.add_section` `manage_sequence.add_keyframe` `manage_sequence.set_track_locked` `manage_sequence.set_track_muted` `manage_sequence.set_track_solo` `manage_sequence.set_section` |
 | `sequence.get_metadata` | `manage_sequence` | `get_metadata` | read | read | none | `manage_sequence.get_metadata` |
 | `sequence.get_properties` | `manage_sequence` | `get_properties` | read | read | none | `manage_sequence.get_properties` `manage_sequence.get_bindings` `manage_sequence.list_tracks` `manage_sequence.list_track_keys` `manage_sequence.list_track_types` `manage_sequence.list` `manage_sequence.open` |
 | `sequence.media.create_media_asset` | `manage_sequence` | `create_media_source` | write | write | none | `manage_sequence.create_media_asset` `manage_sequence.create_media_source` `manage_sequence.create_media_player` `manage_sequence.create_media_playlist` `manage_sequence.create_media_texture` `manage_sequence.create_media_sound_component` |

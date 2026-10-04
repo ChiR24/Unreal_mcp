@@ -15063,7 +15063,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "scriptType": {
           "type": "string",
-          "description": "Niagara script usage (System, Emitter, Particle)."
+          "description": "Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
         },
         "shape": {
           "type": "string",
@@ -20085,6 +20085,36 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Killcam duration in seconds (<=600)."
         },
+        "easeInFrames": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "description": "Frames at the start of the section over which the clip blends in from the clip it overlaps (0 or omitted: it takes over at once)."
+            },
+            {
+              "type": "number",
+              "minimum": 0,
+              "description": "Frames the section fades in over; 0 removes its ease in."
+            }
+          ],
+          "description": "Frames at the start of the section over which the clip blends in from the clip it overlaps (0 or omitted: it takes over at once)."
+        },
+        "easeOutFrames": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "description": "Frames at the end of the section over which the clip blends out into the clip that overlaps it."
+            },
+            {
+              "type": "number",
+              "minimum": 0,
+              "description": "Frames the section fades out over; 0 removes its ease out."
+            }
+          ],
+          "description": "Frames at the end of the section over which the clip blends out into the clip that overlaps it."
+        },
         "edit": {
           "type": "string",
           "enum": [
@@ -20098,7 +20128,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "add_keyframe",
             "set_locked",
             "set_muted",
-            "set_solo"
+            "set_solo",
+            "set_section"
           ],
           "description": "Which edit sequence bindings variant to run."
         },
@@ -20124,6 +20155,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "type": "integer",
               "minimum": 1,
               "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
+            },
+            {
+              "type": "number",
+              "description": "New end of the section in display-rate frames, after its start."
             }
           ],
           "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
@@ -20247,6 +20282,38 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "key": {
           "type": "string",
           "description": "Metadata key to look up; the reply then carries found and value."
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "object",
+            "properties": {
+              "frame": {
+                "type": "integer",
+                "description": "Frame number for this key."
+              },
+              "value": {
+                "description": "Key value, in the form value takes."
+              },
+              "interpolation": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "linear",
+                  "constant"
+                ],
+                "description": "How the curve leaves this key; default the interpolation of the call."
+              }
+            },
+            "required": [
+              "frame",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Several keys on this property in one call, in place of frame and value: a whole curve, or a flash shown on one frame and hidden on the next. Each entry is {frame, value, interpolation}; they are written in order, so lookAt keys turn the short way from the entry before. Every frame is checked before any key is written."
         },
         "kind": {
           "type": "string",
@@ -20578,7 +20645,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Seek time in seconds (alias of timeSeconds)."
         },
         "sectionIndex": {
-          "type": "integer",
+          "oneOf": [
+            {
+              "type": "integer",
+              "description": "Index of the shot section to configure."
+            },
+            {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Which section of the track, in the order info=keys lists them (default 0)."
+            }
+          ],
           "description": "Index of the shot section to configure."
         },
         "sectionName": {
@@ -20762,13 +20839,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Range start frame or time."
         },
         "startFrame": {
-          "type": "integer",
+          "type": [
+            "integer",
+            "number"
+          ],
           "description": "Custom playback range start frame (paired with endFrame)."
         },
         "startTime": {
           "type": "number",
           "minimum": 0,
-          "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment."
+          "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment. A time past the end of the playback range is refused: frame N at 24 fps is N / 24 seconds."
         },
         "subsequencePath": {
           "type": "string",
@@ -21137,6 +21217,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Whether the asset was saved."
         },
+        "sectionIndex": {
+          "type": "integer",
+          "description": "The section that changed."
+        },
         "sectionName": {
           "type": "string",
           "description": "Name of the created section, assigned by Sequencer."
@@ -21204,6 +21288,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                 "type": "string",
                 "description": "MovieScene track class name."
               },
+              "bindingName": {
+                "type": "string",
+                "description": "The bound actor or component the track animates; absent on a master track."
+              },
               "sections": {
                 "type": "array",
                 "description": "Sections on the track.",
@@ -21227,6 +21315,22 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                     "endFrame": {
                       "type": "number",
                       "description": "Section end in display frames."
+                    },
+                    "rowIndex": {
+                      "type": "integer",
+                      "description": "Row of the section within its track."
+                    },
+                    "easeInFrames": {
+                      "type": "number",
+                      "description": "Frames the section fades in over; absent when it does not ease in."
+                    },
+                    "easeOutFrames": {
+                      "type": "number",
+                      "description": "Frames the section fades out over; absent when it does not ease out."
+                    },
+                    "animation": {
+                      "type": "string",
+                      "description": "The clip an animation section plays."
                     },
                     "channels": {
                       "type": "array",

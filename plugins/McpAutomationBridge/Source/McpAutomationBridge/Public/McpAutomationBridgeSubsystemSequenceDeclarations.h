@@ -28,4 +28,5 @@ MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetViewRange); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetTrackMuted); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetTrackSolo); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetTrackLocked); \
+MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceSetSection); \
 MCP_DECLARE_PAYLOAD_HANDLER(HandleSequenceRemoveTrack);

@@ -157,6 +157,21 @@ bool HandleAddSkeletalAnimationTrack(const TSharedPtr<FJsonObject> &Params,
   SetSectionRange(
       Sequence->GetMovieScene(), Section, Params,
       FMath::Max(1, AnimationDisplayDuration.Value));
+  // Overlapping clips crossfade over these frames; without them every change of clip was a one-frame cut.
+  const UMovieScene *MovieScene = Sequence->GetMovieScene();
+  auto Ticks = [MovieScene](double Frames) {
+    return FFrameRate::TransformTime(FFrameTime::FromDecimal(Frames), MovieScene->GetDisplayRate(),
+                                     MovieScene->GetTickResolution()).RoundToFrame().Value;
+  };
+  double EaseFrames = 0.0;
+  if (Params->TryGetNumberField(TEXT("easeInFrames"), EaseFrames) && EaseFrames > 0.0) {
+    Section->Easing.bManualEaseIn = true;
+    Section->Easing.ManualEaseInDuration = Ticks(EaseFrames);
+  }
+  if (Params->TryGetNumberField(TEXT("easeOutFrames"), EaseFrames) && EaseFrames > 0.0) {
+    Section->Easing.bManualEaseOut = true;
+    Section->Easing.ManualEaseOutDuration = Ticks(EaseFrames);
+  }
   Sequence->GetMovieScene()->Modify();
   Sequence->MarkPackageDirty();
   if (!MaybeSaveSequence(Sequence, Params, OutResult)) return true;

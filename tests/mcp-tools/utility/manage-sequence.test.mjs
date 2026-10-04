@@ -66,6 +66,8 @@ const testCases = [
   { scenario: 'PLAYBACK: play', toolName: 'manage_sequence', arguments: { action: 'play', path: SEQUENCE_PATH, startTime: 0, loopMode: 'once' }, expected: 'success' },
   { scenario: 'PLAYBACK: pause', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH }, expected: 'success' },
   { scenario: 'PLAYBACK: pause holds a frame', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH, startTime: 0.5 }, expected: 'success' },
+  // startTime is seconds; a frame number sent there lands past the end and is refused.
+  { scenario: 'ERROR: pause past the end of the sequence', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH, startTime: 100000 }, expected: 'error' },
   { scenario: 'PLAYBACK: stop', toolName: 'manage_sequence', arguments: { action: 'stop', path: SEQUENCE_PATH }, expected: 'success' },
   { scenario: 'CONFIG: set_playback_speed', toolName: 'manage_sequence', arguments: { action: 'set_playback_speed', path: SEQUENCE_PATH, speed: 1.25 }, expected: 'success' },
 
@@ -78,6 +80,9 @@ const testCases = [
   { scenario: 'ERROR: add_keyframe with an unknown interpolation', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Location', frame: 40, interpolation: 'bezier', value: { x: 0, y: 0, z: 0 } }, expected: 'error' },
   // Visibility keys a Visibility track, which really hides the actor in renders.
   { scenario: 'ADD: add_keyframe Visibility hides the actor', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Visibility', frame: 30, value: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.message', equals: 'Visibility Keyframe added' }] },
+  // keys writes several keys in one call: a one-frame flash here.
+  { scenario: 'ADD: add_keyframe keys shows the actor for one frame', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Visibility', keys: [{ frame: 44, value: true }, { frame: 45, value: false, interpolation: 'constant' }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.message', equals: '2 keys added' }] },
+  { scenario: 'ERROR: add_keyframe keys entry without a frame', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Visibility', keys: [{ value: true }] }, expected: 'error' },
   // The harness merges args.params into the call arguments before routing.
   { scenario: 'PARAMS: get_properties via nested params', toolName: 'manage_sequence', arguments: { action: 'get_properties', params: { path: SEQUENCE_PATH } }, expected: 'success' },
   { scenario: 'INFO: get_properties', toolName: 'manage_sequence', arguments: { action: 'get_properties', path: SEQUENCE_PATH }, expected: 'success' },
@@ -100,6 +105,10 @@ const testCases = [
   { scenario: 'ADD: add_track', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: TRACK_TYPE, trackName: TRACK_NAME }, expected: 'success|already exists' },
   { scenario: 'ADD: add_section', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, start: 0, end: 48 }, expected: 'success|already exists' },
   { scenario: 'ADD: add_section refuses an empty range', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, actorName: ACTOR_A, start: 48, end: 48 }, expected: 'error' },
+  // set_section moves, trims and eases a section already on the track.
+  { scenario: 'EDIT: set_section trims and eases a section', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, sectionIndex: 0, startFrame: 4, endFrame: 40, easeInFrames: 6, easeOutFrames: 6 }, expected: 'success', assertions: [{ path: 'structuredContent.result.sectionIndex', equals: 0 }] },
+  { scenario: 'ERROR: set_section with no such section', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, sectionIndex: 99, endFrame: 40 }, expected: 'error' },
+  { scenario: 'ERROR: set_section ending before it starts', toolName: 'manage_sequence', arguments: { action: 'set_section', path: SEQUENCE_PATH, trackName: TRACK_NAME, startFrame: 40, endFrame: 10 }, expected: 'error' },
   { scenario: 'ADD: add_track Audio (music or sound)', toolName: 'manage_sequence', arguments: { action: 'add_track', path: SEQUENCE_PATH, trackType: 'Audio', trackName: AUDIO_TRACK_NAME }, expected: 'success', assertions: [{ path: 'structuredContent.result.trackClass', equals: 'MovieSceneAudioTrack', label: 'Audio resolves to the audio track' }] },
   { scenario: 'ADD: add_section soundPath puts the sound in the audio track, as long as the sound', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 24, soundPath: SOUND_WAVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.soundName', equals: 'VR_click1', label: 'reply names the sound' }] },
   { scenario: 'ADD: add_section soundPath with an explicit end', toolName: 'manage_sequence', arguments: { action: 'add_section', path: SEQUENCE_PATH, trackName: AUDIO_TRACK_NAME, start: 0, end: 48, soundPath: SOUND_WAVE }, expected: 'success', assertions: [{ path: 'structuredContent.result.endFrame', equals: 48, label: 'the given end is kept' }] },
@@ -165,6 +174,8 @@ const testCases = [
   { scenario: 'CINEMATICS: add_skeletal_animation_track refuses an actor with no skeletal mesh', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, actorName: ACTOR_A, animationSequencePath: ANIM_PATH }, expected: 'error' },
   { scenario: 'CINEMATICS: add_skeletal_animation_track refuses a component that is not a skeletal mesh', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, actorName: ACTOR_A, componentName: 'StaticMeshComponent0', animationSequencePath: ANIM_PATH }, expected: 'error' },
   { scenario: 'CINEMATICS: add_skeletal_animation_track optional', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, animationPath: ANIM_PATH, bindingGuid: '${captured:actorBindingId}', startFrame: 0, durationFrames: 48, endFrame: 48, rowIndex: 0, save: true }, expected: 'success|already exists' },
+  // An overlapping clip crossfades over its ease frames.
+  { scenario: 'CINEMATICS: add_skeletal_animation_track eased in and out', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, animationPath: ANIM_PATH, bindingGuid: '${captured:actorBindingId}', startFrame: 36, durationFrames: 48, easeInFrames: 12, easeOutFrames: 12 }, expected: 'success|already exists' },
   // add_transform_track
   { scenario: 'CINEMATICS: add_transform_track', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists' },
   { scenario: 'CINEMATICS: add_transform_track optional', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', path: SEQUENCE_PATH, bindingGuid: '${captured:actorBindingId}', startFrame: 24, durationFrames: 24, endFrame: 48, rowIndex: 1, save: true }, expected: 'success|already exists' },

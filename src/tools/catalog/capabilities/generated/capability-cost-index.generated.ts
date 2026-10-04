@@ -1446,6 +1446,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_sequence::set_metadata": "interactive|low",
   "manage_sequence::set_playback_speed": "interactive|low",
   "manage_sequence::set_properties": "interactive|low",
+  "manage_sequence::set_section": "interactive|low",
   "manage_sequence::set_tick_resolution": "interactive|low",
   "manage_sequence::set_track_locked": "interactive|low",
   "manage_sequence::set_track_muted": "interactive|low",
@@ -1544,4 +1545,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1531;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1532;

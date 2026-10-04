@@ -13,7 +13,7 @@ const D = 'sequence';
 
 const START_TIME = {
   type: 'number', minimum: 0,
-  description: 'Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment.',
+  description: 'Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment. A time past the end of the playback range is refused: frame N at 24 fps is N / 24 seconds.',
 };
 
 export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [

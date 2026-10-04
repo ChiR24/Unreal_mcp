@@ -1,6 +1,6 @@
 /**
  * Timeline track-state and range records: set_track_muted, set_track_solo,
- * set_track_locked, set_display_rate, set_tick_resolution, set_work_range,
+ * set_track_locked, set_section, set_display_rate, set_tick_resolution, set_work_range,
  * set_view_range.
  *
  * Grounded in sequence-track-actions.ts (track state, ranges) and
@@ -43,6 +43,25 @@ export const TIMELINE_STATE_RANGE_RECORDS: readonly CapabilityRecordSource[] = [
     required: ['path', 'trackName'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'set_track_locked', path: '/Game/Cinematics/SEQ_Master', trackName: 'Transform', locked: true },
+  }),
+  buildRecord({
+    id: 'sequence.set_section', action: 'set_section', family: F, domain: D,
+    summary: 'Move, trim or ease a section already on a track: its start and end frames, and the frames it eases in and out over.',
+    whenToUse: ['Two animation clips should crossfade: overlap their sections, ease the later one in and the earlier one out.', 'A section must start or end on another frame.'],
+    whenNotToUse: ['The section does not exist yet (use add_section, or add_cinematic_track for a clip).'],
+    inputProps: {
+      path: P.path,
+      trackName: { type: 'string', description: 'The track, by the trackName get_properties info=tracks or info=keys lists (MovieSceneSkeletalAnimationTrack_3).' },
+      sectionIndex: { type: 'integer', minimum: 0, description: 'Which section of the track, in the order info=keys lists them (default 0).' },
+      startFrame: { type: 'number', description: 'New start of the section in display-rate frames.' },
+      endFrame: { type: 'number', description: 'New end of the section in display-rate frames, after its start.' },
+      easeInFrames: { type: 'number', minimum: 0, description: 'Frames the section fades in over; 0 removes its ease in.' },
+      easeOutFrames: { type: 'number', minimum: 0, description: 'Frames the section fades out over; 0 removes its ease out.' },
+    },
+    required: ['path', 'trackName'],
+    outputProps: { trackName: { type: 'string', description: 'The track the section is on.' }, sectionIndex: { type: 'integer', description: 'The section that changed.' } },
+    effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
+    exampleInput: { action: 'set_section', path: '/Game/Cinematics/SEQ_Master', trackName: 'MovieSceneSkeletalAnimationTrack_3', endFrame: 130, easeOutFrames: 10 },
   }),
   buildRecord({
     id: 'sequence.set_display_rate', action: 'set_display_rate', family: F, domain: D,

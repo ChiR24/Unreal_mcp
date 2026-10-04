@@ -1,6 +1,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "EngineUtils.h"
 #include "LevelSequenceActor.h"
@@ -73,19 +74,16 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
   LoopMode = LoopMode.ToLower();
   double StartTime = 0.0;
   const bool bHasStartTime = LocalPayload->TryGetNumberField(TEXT("startTime"), StartTime);
-  if ((!LoopMode.IsEmpty() && LoopMode != TEXT("once") && LoopMode != TEXT("loop")) ||
-      (bHasStartTime && (!FMath::IsFinite(StartTime) || StartTime < 0.0))) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("loopMode must be once or loop (Sequencer has no "
-                                "ping-pong playback) and startTime a non-negative "
-                                "number of seconds"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  ULevelSequence *LevelSeq = Cast<ULevelSequence>(McpLoadAsset(SeqPath));
+  UMovieScene *MovieScene = LevelSeq ? LevelSeq->GetMovieScene() : nullptr;
+  FString TimeError;
+  if (!LoopMode.IsEmpty() && LoopMode != TEXT("once") && LoopMode != TEXT("loop")) {
+    TimeError = TEXT("loopMode must be once or loop (Sequencer has no ping-pong playback)");
+  }
+  if (!TimeError.IsEmpty() || (bHasStartTime && !McpSequenceFrameMath::CheckPlaybackTime(MovieScene, StartTime, TimeError))) {
+    SendAutomationResponse(Socket, RequestId, false, TimeError, nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
-
-  ULevelSequence *LevelSeq =
-      Cast<ULevelSequence>(McpLoadAsset(SeqPath));
-  UMovieScene *MovieScene = LevelSeq ? LevelSeq->GetMovieScene() : nullptr;
   if (MovieScene && ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq)) {
     TSharedPtr<ISequencer> Sequencer = McpFindOpenSequencer(LevelSeq);
     if (!Sequencer.IsValid() && (bHasStartTime || !LoopMode.IsEmpty())) {
@@ -218,14 +216,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(
   }
   double HoldAt = 0.0;
   const bool bHold = LocalPayload->TryGetNumberField(TEXT("startTime"), HoldAt);
-  if (bHold && (!FMath::IsFinite(HoldAt) || HoldAt < 0.0)) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("startTime must be a non-negative number of seconds"),
-                           nullptr, TEXT("INVALID_ARGUMENT"));
+  ULevelSequence *LevelSeq = Cast<ULevelSequence>(McpLoadAsset(SeqPath));
+  FString TimeError;
+  if (bHold && !McpSequenceFrameMath::CheckPlaybackTime(LevelSeq ? LevelSeq->GetMovieScene() : nullptr, HoldAt, TimeError)) {
+    SendAutomationResponse(Socket, RequestId, false, TimeError, nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
-  ULevelSequence *LevelSeq =
-      Cast<ULevelSequence>(McpLoadAsset(SeqPath));
   // Holding a frame needs Sequencer, so a closed sequence is opened the way play opens it.
   if (LevelSeq && bHold && ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() != LevelSeq) {
     ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq);

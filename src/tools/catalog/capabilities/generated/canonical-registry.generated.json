@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7007a2687fd0c952",
+  "catalogRevision": "267a64d5d920aa0d",
   "recordCount": 396,
   "records": [
     {
@@ -55378,7 +55378,7 @@
             },
             "scriptType": {
               "type": "string",
-              "description": "Niagara script usage (System, Emitter, Particle)."
+              "description": "Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
             },
             "save": {
               "type": "boolean",
@@ -55503,7 +55503,7 @@
             "action": "add_niagara_module",
             "assetPath": "/Game/NS_Fire",
             "emitterName": "Spark",
-            "modulePath": "/Niagara/Modules/Emitter/EmitterState.EmitterState",
+            "modulePath": "/Niagara/Modules/Update/Color/ScaleColor.ScaleColor",
             "scriptType": "Update",
             "moduleKind": "module"
           },
@@ -55615,8 +55615,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "0f0512cbb9a9b6a3cee53639d9140702b9889a96d4cce8988de2856c19100e2b",
-        "content": "98f4e2755fc44bf650a73178360793c421946712a0205cc506ad944a94d4c393"
+        "schema": "721dc4464f43a877ee76e96bf1ba4c6ebd7ead9d2ee531b8552c14bc78fdd9af",
+        "content": "b5fdb2af506b05ad535a1e792bdb5647ba2e3651743837397fa17343f273175a"
       }
     },
     {
@@ -56811,7 +56811,7 @@
             },
             "scriptType": {
               "type": "string",
-              "description": "Niagara script usage (System, Emitter, Particle)."
+              "description": "Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
             },
             "fromNode": {
               "type": "string",
@@ -57065,8 +57065,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "038a4dcec4d8c131a5fe002d96b28a930db8e6479a651f6d1fbada2a746b031c",
-        "content": "17212b037383f2068e1c61e260ce4ddd2c562f8ad9f871a4521ec53f324cc6d0"
+        "schema": "a552f4ac62c9b6bf57301acde979253db9739af6187021a7a2db17979061622a",
+        "content": "1599866d1525bca44e076dc55085e907b3c9fb48fccf076358b62229bc18bdda"
       }
     },
     {
@@ -57395,7 +57395,7 @@
             },
             "scriptType": {
               "type": "string",
-              "description": "Niagara script usage (System, Emitter, Particle)."
+              "description": "Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script."
             },
             "nodeId": {
               "type": "string",
@@ -57477,8 +57477,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1878cf2d88c84ba0524cb10a7477154fa7b912132a458b740b7cd82d5dece5de",
-        "content": "a8ce30ec27d5f8e078994c3c09f6c6b793d034e398552b054a702f062b055e25"
+        "schema": "bd68eed699308c3b29a02bfdda9f08e82691c2edbe0dab8b791a75fc34015e72",
+        "content": "a9d5b56ec08ce0e28e8c304805db5f8f5c3f00d6cdfcc394d8b06ee73313f5ad"
       }
     },
     {
@@ -81215,7 +81215,7 @@
           "trackKind=camera_shake: Camera shake must be animated along the sequence.",
           "trackKind=transform: Add a transform track to animate actor transforms during cinematic.",
           "trackKind=property: Add a property track to animate a specific property on a bound actor.",
-          "trackKind=skeletal_animation: Add a skeletal animation track to play animations on a skeletal mesh. A clip whose skeleton the mesh cannot play is refused with SKELETON_MISMATCH instead of silently showing the rest pose.",
+          "trackKind=skeletal_animation: Add a skeletal animation track to play animations on a skeletal mesh. A clip whose skeleton the mesh cannot play is refused with SKELETON_MISMATCH instead of silently showing the rest pose. Overlap the clips before and after it and give easeInFrames/easeOutFrames to crossfade between them instead of cutting in one frame.",
           "trackKind=material_parameter: Add a material parameter collection track to animate material parameters.",
           "trackKind=particle: Add a particle track to trigger particle systems during cinematic.",
           "trackKind=event: Add an event track to trigger events at specific frames.",
@@ -81318,6 +81318,16 @@
             "componentName": {
               "type": "string",
               "description": "Component of the actor the track works on. skeletal_animation: the skeletal mesh that plays the clip (default the actor's root when that is a skeletal mesh; it gets its own binding under the actor, because Sequencer otherwise plays the clip on the first skeletal mesh it finds, which on a character built from several meshes copies another's pose and shows nothing). material_parameter: the component owning the material."
+            },
+            "easeInFrames": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Frames at the start of the section over which the clip blends in from the clip it overlaps (0 or omitted: it takes over at once)."
+            },
+            "easeOutFrames": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Frames at the end of the section over which the clip blends out into the clip that overlaps it."
             },
             "materialPath": {
               "type": "string",
@@ -81577,6 +81587,12 @@
               "skeletal_animation",
               "material_parameter"
             ],
+            "easeInFrames": [
+              "skeletal_animation"
+            ],
+            "easeOutFrames": [
+              "skeletal_animation"
+            ],
             "materialPath": [
               "material_parameter"
             ],
@@ -81618,8 +81634,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "096d25db618665439f31b03bf86b9bc1e11dfe6cddee1b9c19993213d1c432e8",
-        "content": "bde56fedff9c0e10d4740cef5e5baf6c91f4741a8d0faef17af778d0a51172cd"
+        "schema": "857e00c63edcd716b101ad28e83aa5e21c1758e879398c920595ccf4cb90b2ff",
+        "content": "b4188f905be7b03dcc437ea2c2748dad62782514deaa3ac5dffd186774280c93"
       }
     },
     {
@@ -83118,7 +83134,8 @@
         "sequence.add_keyframe",
         "sequence.set_track_locked",
         "sequence.set_track_muted",
-        "sequence.set_track_solo"
+        "sequence.set_track_solo",
+        "sequence.set_section"
       ],
       "legacyIds": [
         {
@@ -83166,6 +83183,13 @@
           "folded": {
             "edit": "set_solo"
           }
+        },
+        {
+          "tool": "manage_sequence",
+          "action": "set_section",
+          "folded": {
+            "edit": "set_section"
+          }
         }
       ],
       "discovery": {
@@ -83181,11 +83205,14 @@
           "solo track",
           "lock track",
           "keyframe actor location",
+          "crossfade clips",
+          "ease section",
+          "trim section",
           "add music to sequence",
           "add sound to cutscene",
           "sequence audio"
         ],
-        "summary": "Edit sequence tracks: add a track, section or keyframe; lock, mute or solo a track.",
+        "summary": "Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section; lock, mute or solo a track.",
         "whenToUse": [
           "edit=add_track: A new track (transform, float, event, etc.) must be added.",
           "edit=add_section: A section must be added to animate a sub-range of a track.",
@@ -83193,7 +83220,9 @@
           "edit=add_keyframe: A property value must be animated at a specific frame.",
           "edit=set_locked: A track must be protected from accidental edits.",
           "edit=set_muted: A track must be temporarily silenced.",
-          "edit=set_solo: A single track must be isolated for preview."
+          "edit=set_solo: A single track must be isolated for preview.",
+          "edit=set_section: Two animation clips should crossfade: overlap their sections, ease the later one in and the earlier one out.",
+          "edit=set_section: A section must start or end on another frame."
         ],
         "whenNotToUse": [
           "edit=add_track: The track type is not supported by the sequence.",
@@ -83266,6 +83295,38 @@
               ],
               "description": "How the curve leaves this key: auto (default) a smooth curve through the keys, linear a steady rate to the next key (a bullet, a constant pan), constant a hold that jumps at the next key."
             },
+            "keys": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "frame": {
+                    "type": "integer",
+                    "description": "Frame number for this key."
+                  },
+                  "value": {
+                    "description": "Key value, in the form value takes."
+                  },
+                  "interpolation": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "linear",
+                      "constant"
+                    ],
+                    "description": "How the curve leaves this key; default the interpolation of the call."
+                  }
+                },
+                "required": [
+                  "frame",
+                  "value"
+                ],
+                "additionalProperties": false
+              },
+              "description": "Several keys on this property in one call, in place of frame and value: a whole curve, or a flash shown on one frame and hidden on the next. Each entry is {frame, value, interpolation}; they are written in order, so lookAt keys turn the short way from the entry before. Every frame is checked before any key is written."
+            },
             "locked": {
               "type": "boolean",
               "description": "Whether to lock."
@@ -83278,6 +83339,29 @@
               "type": "boolean",
               "description": "Whether to solo."
             },
+            "sectionIndex": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Which section of the track, in the order info=keys lists them (default 0)."
+            },
+            "startFrame": {
+              "type": "number",
+              "description": "New start of the section in display-rate frames."
+            },
+            "endFrame": {
+              "type": "number",
+              "description": "New end of the section in display-rate frames, after its start."
+            },
+            "easeInFrames": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Frames the section fades in over; 0 removes its ease in."
+            },
+            "easeOutFrames": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Frames the section fades out over; 0 removes its ease out."
+            },
             "edit": {
               "type": "string",
               "enum": [
@@ -83286,7 +83370,8 @@
                 "add_keyframe",
                 "set_locked",
                 "set_muted",
-                "set_solo"
+                "set_solo",
+                "set_section"
               ],
               "description": "Which edit sequence tracks variant to run."
             }
@@ -83342,6 +83427,10 @@
             "bindingGuid": {
               "type": "string",
               "description": "Sequencer binding GUID the track was added to (bound tracks only)."
+            },
+            "sectionIndex": {
+              "type": "integer",
+              "description": "The section that changed."
             }
           },
           "required": [
@@ -83352,7 +83441,7 @@
       },
       "examples": [
         {
-          "title": "Edit sequence tracks: add a track, section or keyframe; lock, mute or solo a track.",
+          "title": "Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section; lock, mute or solo a track.",
           "input": {
             "action": "edit_sequence_tracks",
             "path": "/Game/Cinematics/SEQ_Master",
@@ -83399,7 +83488,8 @@
             "add_keyframe": "add_keyframe",
             "set_locked": "set_track_locked",
             "set_muted": "set_track_muted",
-            "set_solo": "set_track_solo"
+            "set_solo": "set_track_solo",
+            "set_section": "set_section"
           },
           "declaredBy": {
             "trackType": [
@@ -83410,7 +83500,8 @@
               "add_section",
               "set_locked",
               "set_muted",
-              "set_solo"
+              "set_solo",
+              "set_section"
             ],
             "actorName": [
               "add_track",
@@ -83442,6 +83533,9 @@
             "interpolation": [
               "add_keyframe"
             ],
+            "keys": [
+              "add_keyframe"
+            ],
             "locked": [
               "set_locked"
             ],
@@ -83450,14 +83544,29 @@
             ],
             "solo": [
               "set_solo"
+            ],
+            "sectionIndex": [
+              "set_section"
+            ],
+            "startFrame": [
+              "set_section"
+            ],
+            "endFrame": [
+              "set_section"
+            ],
+            "easeInFrames": [
+              "set_section"
+            ],
+            "easeOutFrames": [
+              "set_section"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "6f1bb9c2e760f62e133fb0320e52438be803b9d65a2704488f5bb1233960b36a",
-        "content": "4aa63303184f347c4316646207c7c1948a2316df955762e060c7211fda1f1218"
+        "schema": "ae79d154ef5af1c2893d4b4bae205d54d155149b392efbb2432f80c0543fa40f",
+        "content": "b3d1432d7489c7a70479bae817bdab9b88e2fbbe9eaf3cd4c4b2e54324ac11f0"
       }
     },
     {
@@ -83877,6 +83986,10 @@
                     "type": "string",
                     "description": "MovieScene track class name."
                   },
+                  "bindingName": {
+                    "type": "string",
+                    "description": "The bound actor or component the track animates; absent on a master track."
+                  },
                   "sections": {
                     "type": "array",
                     "description": "Sections on the track.",
@@ -83900,6 +84013,22 @@
                         "endFrame": {
                           "type": "number",
                           "description": "Section end in display frames."
+                        },
+                        "rowIndex": {
+                          "type": "integer",
+                          "description": "Row of the section within its track."
+                        },
+                        "easeInFrames": {
+                          "type": "number",
+                          "description": "Frames the section fades in over; absent when it does not ease in."
+                        },
+                        "easeOutFrames": {
+                          "type": "number",
+                          "description": "Frames the section fades out over; absent when it does not ease out."
+                        },
+                        "animation": {
+                          "type": "string",
+                          "description": "The clip an animation section plays."
                         },
                         "channels": {
                           "type": "array",
@@ -84064,8 +84193,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "fbc6300372345ebd633e05428b7ff22580f78922cdd245883175f387b6fd332f",
-        "content": "5b4a93754d45d5aeb6d25949f4b7622f2e72b222357bb1e1fba12d6940ae3e5d"
+        "schema": "f68ffb2175bf096251c7d5e90cdfb629e9aef77e2a7c9f45f80cc05b5c987b80",
+        "content": "8a42b196f9178751ca9296702a75080630429a03e7c307b094771b0c0d49a466"
       }
     },
     {
@@ -85516,7 +85645,7 @@
             "startTime": {
               "type": "number",
               "minimum": 0,
-              "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment."
+              "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment. A time past the end of the playback range is refused: frame N at 24 fps is N / 24 seconds."
             },
             "loopMode": {
               "type": "string",
@@ -85626,8 +85755,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "74c41bf7e93562feaad6d5399a0ea347f9dc34b672609bc64797c6f42c60e04c",
-        "content": "7313f7be63e05d55e9286277ef6ee4db6875da4844c8785f23c79348f04b8eb4"
+        "schema": "4ddb9578cbfeb625dabccaf9e972252cb8a1f47e9ba5c11f5283b912032e4197",
+        "content": "984f80f741a7f47e01bbd9d50dd66318b7f2ed15eb97153df231f4d1a643ef59"
       }
     },
     {

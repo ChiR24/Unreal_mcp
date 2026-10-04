@@ -26,6 +26,12 @@ describe('sequence playback', () => {
     expect(playback).toContain('McpPlayheadFrame(Sequencer, MovieScene)');
   });
 
+  it('refuses a play or pause time past the end of the sequence', () => {
+    expect(playback.match(/McpSequenceFrameMath::CheckPlaybackTime\(/gu)?.length).toBe(2);
+    const math = read('Validation/McpAutomationBridge_SequenceFrameMath.cpp');
+    expect(math).toMatch(/bool CheckPlaybackTime[\s\S]*if \(Seconds <= EndSeconds\) \{\s*return true;/u);
+  });
+
   it('holds a frame on pause, opening a closed sequence first', () => {
     const pause = playback.slice(playback.indexOf('HandleSequencePause'));
     expect(pause).toMatch(/TryGetNumberField\(TEXT\("startTime"\), HoldAt\)/u);
@@ -65,10 +71,42 @@ describe('sequence keying and binding', () => {
     expect(read('McpAutomationBridge_SequenceHandlersTransformKeyframes.cpp')).toContain('FindOrAddKeySection(MovieScene, Track, TickFrame, &bSectionAdded)');
   });
 
+  it('writes a keys array in one call, checking every frame before writing any', () => {
+    const handler = read('McpAutomationBridge_SequenceHandlersKeyframes.cpp');
+    expect(handler).toMatch(/TryGetArrayField\(TEXT\("keys"\), Entries\)/u);
+    expect(handler).toMatch(/if \(!ReadKeys\(LocalPayload, Keys, KeyError\)\)[\s\S]*McpLoadAsset\(SeqPath\)/u);
+    expect(handler).toMatch(/for \(const TSharedPtr<FJsonObject> &Key : Keys\) \{\s*WrapTransformPart\(Key, Part\);/u);
+    expect(handler).toMatch(/for \(int32 Index = 0; Index < Keys\.Num\(\); \+\+Index\)[\s\S]*AddTransformKeyframe\(MovieScene, BindingGuid, TickFrame, Keys\[Index\], BoundRoot\)/u);
+  });
+
   it('reads bool keys back, so a Visibility track can be checked', () => {
     const keys = read('Metadata/McpAutomationBridge_SequenceTrackKeys.cpp');
     expect(keys).toContain('DescribeChannels<FMovieSceneBoolChannel>(MovieScene, Proxy, TEXT("bool")');
     expect(keys).toContain('double KeyNumber(bool bValue) { return bValue ? 1.0 : 0.0; }');
+  });
+
+  it('eases a skeletal animation section in and out, in ticks, so overlapping clips crossfade', () => {
+    const tracks = read('Cinematics/McpAutomationBridge_SequenceCinematicsBindingTracks.cpp');
+    expect(tracks).toMatch(/TryGetNumberField\(TEXT\("easeInFrames"\), EaseFrames\)[\s\S]*bManualEaseIn = true;[\s\S]*ManualEaseInDuration = Ticks\(EaseFrames\);/u);
+    expect(tracks).toMatch(/TryGetNumberField\(TEXT\("easeOutFrames"\), EaseFrames\)[\s\S]*bManualEaseOut = true;[\s\S]*ManualEaseOutDuration = Ticks\(EaseFrames\);/u);
+  });
+
+  it('moves, trims and eases a section already on a track', () => {
+    const state = read('McpAutomationBridge_SequenceHandlersTrackState.cpp');
+    const setSection = state.slice(state.indexOf('HandleSequenceSetSection('), state.indexOf('HandleSequenceRemoveTrack('));
+    expect(setSection).toMatch(/Range\.SetLowerBound\(TRangeBound<FFrameNumber>::Inclusive\(Ticks\(Start\)\)\)/u);
+    expect(setSection).toMatch(/Range\.SetUpperBound\(TRangeBound<FFrameNumber>::Exclusive\(Ticks\(End\)\)\)/u);
+    expect(setSection).toMatch(/Section->Easing\.bManualEaseIn = EaseIn > 0\.0;[\s\S]*Section->Easing\.bManualEaseOut = EaseOut > 0\.0;/u);
+    expect(setSection).toContain('Sequence->MarkPackageDirty();');
+    expect(read('McpAutomationBridge_SequenceHandlers.cpp')).toContain('if (EffectiveAction == TEXT("sequence_set_section"))');
+  });
+
+  it('reads back whose track it is, and each section row, easing and clip', () => {
+    const keys = read('Metadata/McpAutomationBridge_SequenceTrackKeys.cpp');
+    expect(keys).toContain('MovieScene->FindTrackBinding(*Track, BindingGuid)');
+    expect(keys).toContain('Obj->SetNumberField(TEXT("rowIndex"), Section->GetRowIndex());');
+    expect(keys).toMatch(/Section->Easing\.GetEaseInDuration\(\) > 0[\s\S]*Section->Easing\.GetEaseOutDuration\(\) > 0/u);
+    expect(keys).toContain('Obj->SetStringField(TEXT("animation"), Clip->Params.Animation->GetPathName());');
   });
 
   it('binds the mesh that plays the clip and refuses a skeleton it cannot play', () => {

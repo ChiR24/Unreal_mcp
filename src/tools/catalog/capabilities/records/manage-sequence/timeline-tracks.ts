@@ -109,12 +109,17 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
         type: 'object', additionalProperties: false, description: 'Track keys.', properties: {
           trackName: { type: 'string', description: 'Track name.' },
           trackType: { type: 'string', description: 'MovieScene track class name.' },
+          bindingName: { type: 'string', description: 'The bound actor or component the track animates; absent on a master track.' },
           sections: { type: 'array', description: 'Sections on the track.', items: {
             type: 'object', additionalProperties: false, description: 'Section keys.', properties: {
               sectionName: { type: 'string', description: 'Section object name.' },
               rangeIsEmpty: { type: 'boolean', description: 'True when the section covers no time, so its keys never evaluate.' },
               startFrame: { type: 'number', description: 'Section start in display frames.' },
               endFrame: { type: 'number', description: 'Section end in display frames.' },
+              rowIndex: { type: 'integer', description: 'Row of the section within its track.' },
+              easeInFrames: { type: 'number', description: 'Frames the section fades in over; absent when it does not ease in.' },
+              easeOutFrames: { type: 'number', description: 'Frames the section fades out over; absent when it does not ease out.' },
+              animation: { type: 'string', description: 'The clip an animation section plays.' },
               channels: { type: 'array', description: 'Channels and their keys.', items: {
                 type: 'object', additionalProperties: false, description: 'Channel keys.', properties: {
                   channelIndex: { type: 'integer', description: 'Index within the channel family.' },

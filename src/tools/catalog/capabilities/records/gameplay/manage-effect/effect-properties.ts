@@ -30,7 +30,7 @@ export const E: PropertyMap = {
     'x-unreal-reflection-boundary': true,
   },
   savePath: str('Canonical /Game directory for the created asset.'),
-  scriptType: str('Niagara script usage (System, Emitter, Particle).'),
+  scriptType: str('Which script the graph edit works in: Spawn (default) or Update. With emitterName that is the particle spawn or particle update stack of that emitter; without it, the system spawn or update script.'),
   modulePath: str('Canonical /Niagara module script path to insert.'),
   nodeId: str('Niagara graph node identifier.'),
   targetNodeId: str('Niagara graph node the dynamic input is attached to.'),

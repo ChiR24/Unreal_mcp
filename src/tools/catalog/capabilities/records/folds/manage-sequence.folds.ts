@@ -22,9 +22,9 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'edit_sequence_tracks', selector: 'edit',
-    summary: 'Edit sequence tracks: add a track, section or keyframe; lock, mute or solo a track.',
-    topics: ['sequence track', 'add track', 'add section', 'keyframe', 'mute track', 'solo track', 'lock track', 'keyframe actor location'],
-    members: { add_track: 'add_track', add_section: 'add_section', add_keyframe: 'add_keyframe', set_locked: 'set_track_locked', set_muted: 'set_track_muted', set_solo: 'set_track_solo' },
+    summary: 'Edit sequence tracks: add a track, section or keyframe; move, trim or ease a section; lock, mute or solo a track.',
+    topics: ['sequence track', 'add track', 'add section', 'keyframe', 'mute track', 'solo track', 'lock track', 'keyframe actor location', 'crossfade clips', 'ease section', 'trim section'],
+    members: { add_track: 'add_track', add_section: 'add_section', add_keyframe: 'add_keyframe', set_locked: 'set_track_locked', set_muted: 'set_track_muted', set_solo: 'set_track_solo', set_section: 'set_section' },
   },
   {
     primary: 'set_properties', selector: 'sequenceProperty',

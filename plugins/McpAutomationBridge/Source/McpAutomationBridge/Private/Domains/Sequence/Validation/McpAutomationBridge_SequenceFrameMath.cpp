@@ -146,6 +146,29 @@ bool TrySecondsToFrame(double Seconds, const FFrameRate &Rate,
   return TryFrameNumber(static_cast<double>(Scaled), OutFrame, OutError);
 }
 
+bool CheckPlaybackTime(const UMovieScene *MovieScene, double Seconds, FString &OutError) {
+  if (!FMath::IsFinite(Seconds) || Seconds < 0.0) {
+    OutError = TEXT("startTime must be a non-negative number of seconds");
+    return false;
+  }
+  if (!MovieScene || !MovieScene->GetPlaybackRange().HasUpperBound()) {
+    return true;
+  }
+  // A time past the end held a frame the sequence never plays while the reply named it as reached; a frame number
+  // sent as seconds lands there.
+  const FFrameRate Display = MovieScene->GetDisplayRate();
+  const FFrameNumber End = MovieScene->GetPlaybackRange().GetUpperBoundValue();
+  const double EndSeconds = MovieScene->GetTickResolution().AsSeconds(FFrameTime(End));
+  if (Seconds <= EndSeconds) {
+    return true;
+  }
+  OutError = FString::Printf(TEXT("startTime %g s is past the end of the sequence (%g s, frame %d). startTime is in "
+                                  "seconds: if %g is a frame number, send %g."),
+                             Seconds, EndSeconds, Display.AsFrameNumber(EndSeconds).Value, Seconds,
+                             Seconds / Display.AsDecimal());
+  return false;
+}
+
 bool ValidateCinematicFrameRequest(
     const TSharedPtr<FJsonObject> &Payload, const UMovieScene *MovieScene,
     FString &OutError, int32 DefaultDuration) {

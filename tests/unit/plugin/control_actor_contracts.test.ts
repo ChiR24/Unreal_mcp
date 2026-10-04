@@ -45,9 +45,10 @@ describe('control_actor.list near and radius: what is close to a point, nearest 
     const source = list();
 
     // GetActorBounds' box without debug-draw components: the gameplay debugger's renderer claims a
-    // million-unit box round the origin, which put its replicator at distance 0 from every point in PIE.
-    expect(source).toMatch(/if \(Primitive->IsRegistered\(\) && !Primitive->IsA<UDebugDrawComponent>\(\)\)\s*Box \+= Primitive->Bounds\.GetBox\(\);/u);
-    // No bounds at all (a PIE camera or target point): its location, not the world origin.
+    // million-unit box round the origin, which put its replicator at distance 0 from every point in PIE. Editor-only
+    // components are skipped as well: a camera's frustum put every camera at distance 0 in the editor.
+    expect(source).toMatch(/if \(Primitive->IsRegistered\(\) && !Primitive->IsEditorOnly\(\) && !Primitive->IsA<UDebugDrawComponent>\(\)\)\s*Box \+= Primitive->Bounds\.GetBox\(\);/u);
+    // No bounds at all (a camera or target point): its location, not the world origin.
     expect(source).toMatch(/if \(!Box\.IsValid\)\s*Box = FBox\(Actor->GetActorLocation\(\), Actor->GetActorLocation\(\)\);/u);
     expect(source).not.toContain('GetActorBounds(');
     expect(source).toMatch(/const FVector Outside = \(Point - Origin\)\.GetAbs\(\) - Extent;/u);

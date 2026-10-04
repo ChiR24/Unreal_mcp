@@ -108,6 +108,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAction(
   if (EffectiveAction == TEXT("sequence_set_track_locked"))
     return HandleSequenceSetTrackLocked(RequestId, LocalPayload,
                                         RequestingSocket);
+  if (EffectiveAction == TEXT("sequence_set_section"))
+    return HandleSequenceSetSection(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_remove_track"))
     return HandleSequenceRemoveTrack(RequestId, LocalPayload, RequestingSocket);
   if (EffectiveAction == TEXT("sequence_list_track_types"))
