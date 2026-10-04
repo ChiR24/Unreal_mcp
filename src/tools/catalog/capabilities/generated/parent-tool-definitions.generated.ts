@@ -21546,6 +21546,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Alternate CVar name field."
         },
+        "deleteSlot": {
+          "type": "boolean",
+          "description": "true deletes the slot instead; properties are then ignored."
+        },
         "detailed": {
           "type": "boolean",
           "description": "Produce a detailed report."
@@ -21797,6 +21801,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Profiling domain to display."
         },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Saved properties to set, by name, each value as list_save_games shows it ({\"BestScore\": 0}). All are checked before the slot is written. A slot being created may leave them out: it is written with its class defaults."
+        },
         "recursive": {
           "type": "boolean",
           "description": "For a folder path, include its subfolders (default true)."
@@ -21826,6 +21836,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "runsBack": {
           "type": "number",
           "description": "With source previous: how many editor runs back to read (default 1, max 20). After a crash and one more restart, the crashed run is 2."
+        },
+        "saveGameClass": {
+          "type": "string",
+          "description": "SaveGame subclass to create the slot from when it does not exist yet, such as /Game/Core/BP_Save.BP_Save_C (SaveGame itself is abstract); an existing slot keeps its own class."
         },
         "savePath": {
           "type": "string",
@@ -21872,6 +21886,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Occlusion query bounds padding in world units (r.OcclusionSlop)."
         },
+        "slotName": {
+          "type": "string",
+          "description": "Slot to change, as list_save_games lists it: its file name without .sav."
+        },
         "snapshotPath": {
           "type": "string",
           "description": "Snapshot .utrace file name, resolved inside Saved/Profiling (default a generated name)."
@@ -21913,6 +21931,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "type": {
           "type": "string",
           "description": "Optional benchmark type."
+        },
+        "userIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "User index the game saves under (default 0)."
         },
         "value": {
           "type": "string",
@@ -21975,6 +21998,8 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "read_log",
             "list_output_files",
             "delete_output_file",
+            "list_save_games",
+            "edit_save_game",
             "execute_python",
             "set_project_setting",
             "get_project_settings",
@@ -22043,9 +22068,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Connection type: none, file, network, relay, or secure_network."
         },
+        "count": {
+          "type": "number",
+          "description": "Without slotName: how many slots there are."
+        },
+        "created": {
+          "type": "boolean",
+          "description": "True when the slot did not exist and was created from saveGameClass."
+        },
         "deleted": {
           "type": "boolean",
-          "description": "With path: true when the file is gone."
+          "description": "With deleteSlot: true when the slot is gone."
         },
         "deletedCount": {
           "type": "number",
@@ -22086,7 +22119,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "existsAfter": {
           "type": "boolean",
-          "description": "With path: whether the file still exists after the call."
+          "description": "With deleteSlot: whether the slot still exists after the call."
         },
         "exitCode": {
           "type": "number",
@@ -22254,6 +22287,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           }
         },
+        "properties": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Every saved property as read back from the written slot."
+            },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With slotName: every saved property by name with its value."
+            }
+          ],
+          "description": "Every saved property as read back from the written slot."
+        },
         "reportDirectory": {
           "type": "string",
           "description": "Directory where memory reports are written."
@@ -22283,6 +22333,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "The folders searched."
         },
+        "saveGameClass": {
+          "type": "string",
+          "description": "Class path of the slot's SaveGame object."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "True when the slot was written."
+        },
         "seconds": {
           "type": "number",
           "description": "Length of the run in seconds."
@@ -22303,6 +22361,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
+        },
+        "slotName": {
+          "type": "string",
+          "description": "The slot changed."
+        },
+        "slots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Without slotName: each slot as {slotName, sizeBytes, modified (ISO 8601)}, newest first."
         },
         "status": {
           "type": "string",

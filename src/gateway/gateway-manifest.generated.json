@@ -16583,6 +16583,8 @@
         "read_log",
         "list_output_files",
         "delete_output_file",
+        "list_save_games",
+        "edit_save_game",
         "execute_python",
         "set_project_setting",
         "get_project_settings",
@@ -16614,6 +16616,7 @@
         "connectionType",
         "control",
         "cvar",
+        "deleteSlot",
         "detailed",
         "duration",
         "enableBatching",
@@ -16663,18 +16666,21 @@
         "port",
         "profile",
         "profileType",
+        "properties",
         "recursive",
         "replaceSourceActors",
         "resolution",
         "returnBase64",
         "root",
         "runsBack",
+        "saveGameClass",
         "savePath",
         "scale",
         "seconds",
         "section",
         "setting",
         "slop",
+        "slotName",
         "snapshotPath",
         "soundPath",
         "source",
@@ -16684,6 +16690,7 @@
         "text",
         "traceFile",
         "type",
+        "userIndex",
         "value",
         "volume",
         "widgetId",
@@ -16788,6 +16795,10 @@
           "cvar": {
             "type": "string",
             "description": "Alternate CVar name field."
+          },
+          "deleteSlot": {
+            "type": "boolean",
+            "description": "true deletes the slot instead; properties are then ignored."
           },
           "detailed": {
             "type": "boolean",
@@ -17040,6 +17051,12 @@
             ],
             "description": "Profiling domain to display."
           },
+          "properties": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true,
+            "description": "Saved properties to set, by name, each value as list_save_games shows it ({\"BestScore\": 0}). All are checked before the slot is written. A slot being created may leave them out: it is written with its class defaults."
+          },
           "recursive": {
             "type": "boolean",
             "description": "For a folder path, include its subfolders (default true)."
@@ -17069,6 +17086,10 @@
           "runsBack": {
             "type": "number",
             "description": "With source previous: how many editor runs back to read (default 1, max 20). After a crash and one more restart, the crashed run is 2."
+          },
+          "saveGameClass": {
+            "type": "string",
+            "description": "SaveGame subclass to create the slot from when it does not exist yet, such as /Game/Core/BP_Save.BP_Save_C (SaveGame itself is abstract); an existing slot keeps its own class."
           },
           "savePath": {
             "type": "string",
@@ -17115,6 +17136,10 @@
             "type": "number",
             "description": "Occlusion query bounds padding in world units (r.OcclusionSlop)."
           },
+          "slotName": {
+            "type": "string",
+            "description": "Slot to change, as list_save_games lists it: its file name without .sav."
+          },
           "snapshotPath": {
             "type": "string",
             "description": "Snapshot .utrace file name, resolved inside Saved/Profiling (default a generated name)."
@@ -17156,6 +17181,11 @@
           "type": {
             "type": "string",
             "description": "Optional benchmark type."
+          },
+          "userIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "User index the game saves under (default 0)."
           },
           "value": {
             "type": "string",
@@ -17218,6 +17248,8 @@
               "read_log",
               "list_output_files",
               "delete_output_file",
+              "list_save_games",
+              "edit_save_game",
               "execute_python",
               "set_project_setting",
               "get_project_settings",

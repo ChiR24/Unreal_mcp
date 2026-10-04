@@ -1083,3 +1083,23 @@ describe('start minimized', () => {
     expect(lifecycle).toMatch(/Root->IsVisible\(\)\)\s*\{\s*if \(!Root->IsWindowMinimized\(\)\)\s*\{\s*MinimizeWindowForMcp\(Root\.ToSharedRef\(\)\);\s*\}\s*if \(\*HoldUntil == 0\.0\)/u);
   });
 });
+
+describe('save game slots', () => {
+  // The slot name becomes the .sav file name, so a separator or ".." would reach a file outside SaveGames.
+  it('a slot name cannot leave Saved/SaveGames', () => {
+    const saves = code('SystemControl', 'McpAutomationBridge_SystemControlHandlersSaveGames.cpp');
+    for (const refused of ['TEXT("..")', 'TEXT("/")', 'TEXT("\\\\")', 'TEXT(":")']) {
+      expect(saves).toContain(`OutSlot.Contains(${refused})`);
+    }
+    expect(saves.match(/ReadSaveSlot\(Payload, Slot, User, Error\)/gu)).toHaveLength(2);
+  });
+
+  // A slot is written only after every requested property resolved and converted, and the reply is read back from disk.
+  it('edit_save_game writes after the properties apply and answers what it reloads', () => {
+    const saves = code('SystemControl', 'McpAutomationBridge_SystemControlHandlersSaveGames.cpp');
+    expect(saves.indexOf('ApplySavedProperties(Self, RequestId, RequestingSocket, Save, *Props)'))
+      .toBeLessThan(saves.indexOf('UGameplayStatics::SaveGameToSlot(Save, Slot, User)'));
+    expect(saves).toContain('USaveGame* Reloaded = bSaved ? UGameplayStatics::LoadGameFromSlot(Slot, User) : nullptr;');
+    expect(saves).toContain('NewClass->HasAnyClassFlags(CLASS_Abstract)');
+  });
+});

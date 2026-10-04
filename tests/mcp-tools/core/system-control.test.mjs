@@ -10,6 +10,8 @@ const TEST_FOLDER = '/Game/MCPTest/SystemControl';
 const WIDGET_NAME = 'WBP_SystemControl_Test';
 const WIDGET_PATH = `${TEST_FOLDER}/${WIDGET_NAME}`;
 const VALIDATION_MATERIAL = `${TEST_FOLDER}/M_SystemControlValidation`;
+const SAVE_BP_PATH = `${TEST_FOLDER}/BP_SuiteSave`;
+const SAVE_CLASS = `${SAVE_BP_PATH}.BP_SuiteSave_C`;
 const PYTHON_TEST_ID = Date.now();
 const PYTHON_FILE_RELATIVE = `Saved/MCPTests/system-control-${PYTHON_TEST_ID}.py`;
 const PYTHON_HELPER_RELATIVE = `Saved/MCPTests/system-control-${PYTHON_TEST_ID}-helper.txt`;
@@ -115,6 +117,20 @@ const testCases = [
   { scenario: 'CLEANUP: delete_output_file the suite screenshot', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Saved/Screenshots/SystemControl_NullRHI.png' }, expected: 'success|not found' },
   { scenario: 'CLEANUP: delete_output_file reports each of several paths', toolName: 'system_control', arguments: { action: 'delete_output_file', paths: ['Saved/Screenshots/SystemControl_NullRHI.png', 'Config/DefaultGame.ini'] }, expected: 'error|PARTIAL_DELETE' },
   { scenario: 'CLEANUP: delete_output_file refuses a project file', toolName: 'system_control', arguments: { action: 'delete_output_file', path: 'Config/DefaultGame.ini' }, expected: 'error|PATH_OUTSIDE_OUTPUT_ROOTS' },
+  // A save slot round trip on a Blueprint SaveGame the suite makes (SaveGame itself is abstract):
+  // create the slot with its defaults, set a value, list and read it, refuse bad edits, then delete it.
+  { scenario: 'Setup: create a SaveGame Blueprint', toolName: 'manage_blueprint', arguments: { action: 'create', name: 'BP_SuiteSave', savePath: TEST_FOLDER, parentClass: '/Script/Engine.SaveGame' }, expected: 'success|already exists' },
+  { scenario: 'Setup: give the SaveGame Blueprint a saved Score', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: SAVE_BP_PATH, variableName: 'Score', variableType: 'Integer' }, expected: 'success|already exists' },
+  { scenario: 'Setup: compile the SaveGame Blueprint', toolName: 'manage_blueprint', arguments: { action: 'compile', blueprintPath: SAVE_BP_PATH }, expected: 'success' },
+  { scenario: 'CREATE: edit_save_game refuses the abstract SaveGame class', toolName: 'system_control', arguments: { action: 'edit_save_game', slotName: 'McpSuiteSlot', saveGameClass: '/Script/Engine.SaveGame' }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'CREATE: edit_save_game creates a slot from a SaveGame class', toolName: 'system_control', arguments: { action: 'edit_save_game', slotName: 'McpSuiteSlot', userIndex: 0, saveGameClass: SAVE_CLASS }, expected: 'success', assertions: [{ path: 'structuredContent.result.created', equals: true }] },
+  { scenario: 'WRITE: edit_save_game sets a saved value', toolName: 'system_control', arguments: { action: 'edit_save_game', slotName: 'McpSuiteSlot', properties: { Score: 7 } }, expected: 'success', assertions: [{ path: 'structuredContent.result.properties.Score', equals: 7 }] },
+  { scenario: 'READ: list_save_games lists the slots', toolName: 'system_control', arguments: { action: 'list_save_games' }, expected: 'success', assertions: [{ path: 'structuredContent.result.count', gte: 1 }] },
+  { scenario: 'READ: list_save_games reads one slot', toolName: 'system_control', arguments: { action: 'list_save_games', slotName: 'McpSuiteSlot', userIndex: 0 }, expected: 'success', assertions: [{ path: 'structuredContent.result.saveGameClass', equals: SAVE_CLASS }] },
+  { scenario: 'WRITE: edit_save_game refuses a property the slot does not save', toolName: 'system_control', arguments: { action: 'edit_save_game', slotName: 'McpSuiteSlot', properties: { NotSaved: 1 } }, expected: 'error|UNKNOWN_PROPERTY' },
+  { scenario: 'WRITE: edit_save_game refuses a slot name that leaves SaveGames', toolName: 'system_control', arguments: { action: 'edit_save_game', slotName: '../Config/McpSuiteSlot', deleteSlot: true }, expected: 'error|INVALID_ARGUMENT' },
+  { scenario: 'CLEANUP: edit_save_game deletes the slot', toolName: 'system_control', arguments: { action: 'edit_save_game', slotName: 'McpSuiteSlot', deleteSlot: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.existsAfter', equals: false }] },
+  { scenario: 'READ: list_save_games on a deleted slot', toolName: 'system_control', arguments: { action: 'list_save_games', slotName: 'McpSuiteSlot' }, expected: 'error|SAVE_SLOT_NOT_FOUND' },
   // === CREATE ===
   { scenario: 'CREATE: spawn_category', toolName: 'system_control', arguments: { action: 'spawn_category', categoryName: 'AI', enabled: true }, expected: 'success' },
   // === ACTION ===

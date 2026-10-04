@@ -45,12 +45,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
   const bool bPluginAction = Lower == TEXT("list_plugins") ||
                              Lower == TEXT("enable_plugin") ||
                              Lower == TEXT("disable_plugin");
-  const bool bOutputFileAction =
-      Lower == TEXT("list_output_files") || Lower == TEXT("delete_output_file");
+  const bool bFileAction =
+      Lower == TEXT("list_output_files") || Lower == TEXT("delete_output_file") ||
+      Lower == TEXT("list_save_games") || Lower == TEXT("edit_save_game");
   const bool bPackageAction =
       Lower == TEXT("package_project") || Lower == TEXT("package_status") ||
       Lower == TEXT("launch_build");
-  if (!bPluginAction && !bConsoleAction && !bPackageAction && !bOutputFileAction &&
+  if (!bPluginAction && !bConsoleAction && !bPackageAction && !bFileAction &&
       !Lower.StartsWith(TEXT("run_ubt")) &&
       !Lower.StartsWith(TEXT("run_tests")) &&
       !bInsightsAction &&
@@ -91,6 +92,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSystemControlAction(
   if (Lower == TEXT("delete_output_file")) {
     return McpSystemControlHandlers::HandleDeleteOutputFile(this, RequestId, Payload,
                                                             RequestingSocket);
+  }
+  if (Lower == TEXT("list_save_games")) {
+    return McpSystemControlHandlers::HandleListSaveGames(this, RequestId, Payload,
+                                                         RequestingSocket);
+  }
+  if (Lower == TEXT("edit_save_game")) {
+    return McpSystemControlHandlers::HandleEditSaveGame(this, RequestId, Payload,
+                                                        RequestingSocket);
   }
   if (Lower == TEXT("validate_assets")) {
     return McpSystemControlHandlers::HandleValidateAssets(

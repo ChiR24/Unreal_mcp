@@ -10,7 +10,7 @@
  * pure-ASCII JSON payload carrying the COMPLETE CapabilityRecord for native
  * discovery (aliases, legacyIds, discovery, schemas.input/output, examples,
  * availability, behavior/policy, normalization, deprecation, hashes).
- * 23 shards, 394 records total.
+ * 23 shards, 396 records total.
  *
  * Chunks are bounded so no single string literal approaches the MSVC 65,535-byte
  * ceiling; concatenating a shard's chunks in order yields its exact JSON.
@@ -41,7 +41,7 @@ namespace Detail
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_PCG_CHUNKS[];	// manage_pcg (3)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS[];	// manage_sequence (19)
 	extern const TCHAR* const MCP_CAP_SHARD_MANAGE_TOOLS_CHUNKS[];	// manage_tools (8)
-	extern const TCHAR* const MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS[];	// system_control (25)
+	extern const TCHAR* const MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS[];	// system_control (27)
 }
 
 struct FMcpCapabilityShard
@@ -79,13 +79,13 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("manage_pcg"), Detail::MCP_CAP_SHARD_MANAGE_PCG_CHUNKS, 5, 3 },
 		{ TEXT("manage_sequence"), Detail::MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS, 28, 19 },
 		{ TEXT("manage_tools"), Detail::MCP_CAP_SHARD_MANAGE_TOOLS_CHUNKS, 5, 8 },
-		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 23, 25 },
+		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 25, 27 },
 	};
 	check(Index >= 0 && Index < Num());
 	return Table[Index];
 }
 
-inline int32 TotalRecordCount() { return 394; }
+inline int32 TotalRecordCount() { return 396; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("fbfbda68e277e579"); }
+inline const TCHAR* CatalogRevision() { return TEXT("615793f280a2e161"); }
 }

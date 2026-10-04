@@ -1,8 +1,8 @@
 /**
- * System operations records (14): run_ubt, package_project, package_status,
- * launch_build, run_tests, subscribe, unsubscribe, read_log, spawn_category, execute_python,
- * set_project_setting, get_project_settings, validate_assets,
- * lumen_update_scene.
+ * System operations records (18): run_ubt, package_project, package_status,
+ * launch_build, run_tests, subscribe, unsubscribe, read_log, list_output_files,
+ * delete_output_file, list_save_games, edit_save_game, spawn_category, execute_python,
+ * set_project_setting, get_project_settings, validate_assets, lumen_update_scene.
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
@@ -287,6 +287,76 @@ export const SYSTEM_OPS_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'destructive',
     exampleInput: { action: 'delete_output_file', path: 'Saved/Screenshots/check.png' },
     exampleOutput: { success: true, message: 'Deleted Saved/Screenshots/check.png', path: 'Saved/Screenshots/check.png', deleted: true, existsAfter: false },
+  }),
+  // A game's save slots were out of reach: a test run that raised the player's best score could not be read
+  // back or put right without a game function written for it.
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'list_save_games',
+    domain: 'project',
+    family: 'save-games',
+    topics: ['save game', 'save slot', 'savegame file', 'read save file', 'saved best score'],
+    summary: 'List the game\'s SaveGame slots (Saved/SaveGames), or read one slot as the game loads it: its SaveGame class and every saved property value.',
+    whenToUse: [
+      'What a game saved must be checked, such as a best score or the settings SaveGameToSlot wrote.',
+      'The slots a game created must be found before one is edited or deleted.',
+    ],
+    whenNotToUse: [
+      'The values a running game holds are wanted (inspect.get_property on GameInstance): it keeps what it loaded.',
+      'A slot must change (use edit_save_game).',
+    ],
+    inputProps: {
+      slotName: { type: 'string', description: 'Slot to read, as listed: its file name without .sav. Omit to list every slot.' },
+      userIndex: { type: 'integer', minimum: 0, description: 'User index the game saves under (default 0).' },
+    },
+    required: [],
+    outputProps: {
+      slots: { type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true }, description: 'Without slotName: each slot as {slotName, sizeBytes, modified (ISO 8601)}, newest first.' },
+      count: { type: 'number', description: 'Without slotName: how many slots there are.' },
+      slotName: { type: 'string', description: 'With slotName: the slot read.' },
+      saveGameClass: { type: 'string', description: 'With slotName: class path of the saved SaveGame object.' },
+      properties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With slotName: every saved property by name with its value.' },
+    },
+    effect: 'read',
+    exampleInput: { action: 'list_save_games', slotName: 'Profile' },
+    exampleOutput: { success: true, message: 'Read save slot Profile (BP_Save_C)', slotName: 'Profile', saveGameClass: '/Game/Core/BP_Save.BP_Save_C', properties: { BestScore: 26050, MusicVolume: 1 } },
+  }),
+  buildCoreRecord({
+    parentTool: PT,
+    action: 'edit_save_game',
+    domain: 'project',
+    family: 'save-games',
+    topics: ['edit save game', 'reset save file', 'delete save slot', 'write save slot', 'reset best score'],
+    summary: 'Change a SaveGame slot on disk: set saved properties and write it again (a missing slot is created from saveGameClass), or delete the slot.',
+    whenToUse: [
+      'Test runs left values in a save (a best score, unlocks) that must be put back.',
+      'A save must be seeded or removed to test a load, continue or first-run flow.',
+    ],
+    whenNotToUse: [
+      'The slot only needs reading (use list_save_games).',
+      'A running game must change now: it keeps what it loaded, so set the GameInstance value too (inspect.set_property).',
+    ],
+    inputProps: {
+      slotName: { type: 'string', description: 'Slot to change, as list_save_games lists it: its file name without .sav.' },
+      userIndex: { type: 'integer', minimum: 0, description: 'User index the game saves under (default 0).' },
+      properties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Saved properties to set, by name, each value as list_save_games shows it ({"BestScore": 0}). All are checked before the slot is written. A slot being created may leave them out: it is written with its class defaults.' },
+      saveGameClass: { type: 'string', description: 'SaveGame subclass to create the slot from when it does not exist yet, such as /Game/Core/BP_Save.BP_Save_C (SaveGame itself is abstract); an existing slot keeps its own class.' },
+      deleteSlot: { type: 'boolean', description: 'true deletes the slot instead; properties are then ignored.' },
+    },
+    required: ['slotName'],
+    requiredOneOf: ['properties', 'saveGameClass', 'deleteSlot'],
+    outputProps: {
+      slotName: { type: 'string', description: 'The slot changed.' },
+      saveGameClass: { type: 'string', description: 'Class path of the slot\'s SaveGame object.' },
+      properties: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Every saved property as read back from the written slot.' },
+      created: { type: 'boolean', description: 'True when the slot did not exist and was created from saveGameClass.' },
+      saved: { type: 'boolean', description: 'True when the slot was written.' },
+      deleted: { type: 'boolean', description: 'With deleteSlot: true when the slot is gone.' },
+      existsAfter: { type: 'boolean', description: 'With deleteSlot: whether the slot still exists after the call.' },
+    },
+    effect: 'destructive',
+    exampleInput: { action: 'edit_save_game', slotName: 'Profile', properties: { BestScore: 0 } },
+    exampleOutput: { success: true, message: 'Saved slot Profile', slotName: 'Profile', saveGameClass: '/Game/Core/BP_Save.BP_Save_C', properties: { BestScore: 0, MusicVolume: 1 }, created: false, saved: true },
   }),
   buildCoreRecord({
     parentTool: PT,

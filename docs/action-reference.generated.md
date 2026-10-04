@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `fbfbda68e277e579`
+Catalog revision: `615793f280a2e161`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 394 capabilities across
+The catalog declares 396 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -58,11 +58,11 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
 | `manage_tools` | 8 | 3 | 5 | 0 | tools |
-| `system_control` | 25 | 8 | 16 | 1 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
+| `system_control` | 27 | 9 | 16 | 2 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-63 of 394 capabilities require consent.
+64 of 396 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -125,6 +125,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `struct.delete_struct` | `manage_asset` | `delete_struct` | destructive | elevated |
 | `struct.edit_struct` | `manage_asset` | `create_struct` | write | explicit |
 | `system_control.delete_output_file` | `system_control` | `delete_output_file` | destructive | explicit |
+| `system_control.edit_save_game` | `system_control` | `edit_save_game` | destructive | explicit |
 | `system_control.execute_python` | `system_control` | `system_control` | write | explicit |
 | `texture.adjust_texture` | `manage_asset` | `adjust_curves` | write | explicit |
 | `texture.configure_texture` | `manage_asset` | `set_compression_settings` | write | explicit |
@@ -504,6 +505,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.console_command` | `system_control` | `console_command` | write | write | none | `system_control.console_command` `system_control.execute_command` |
 | `system_control.create_widget` | `system_control` | `manage_widget_authoring` | write | write | none | `system_control.create_widget` `system_control.add_widget_child` `system_control.show_widget` |
 | `system_control.delete_output_file` | `system_control` | `delete_output_file` | destructive | destructive | explicit | `system_control.delete_output_file` |
+| `system_control.edit_save_game` | `system_control` | `edit_save_game` | destructive | destructive | explicit | `system_control.edit_save_game` |
 | `system_control.enable_plugin` | `system_control` | `system_control` | write | write | none | `system_control.enable_plugin` `system_control.disable_plugin` |
 | `system_control.execute_python` | `system_control` | `system_control` | write | write | explicit | `system_control.execute_python` |
 | `system_control.get_project_settings` | `system_control` | `system_control` | read | read | none | `system_control.get_project_settings` |
@@ -511,6 +513,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `system_control.launch_build` | `system_control` | `system_control` | write | write | none | `system_control.launch_build` |
 | `system_control.list_output_files` | `system_control` | `list_output_files` | read | read | none | `system_control.list_output_files` |
 | `system_control.list_plugins` | `system_control` | `system_control` | read | read | none | `system_control.list_plugins` |
+| `system_control.list_save_games` | `system_control` | `list_save_games` | read | read | none | `system_control.list_save_games` |
 | `system_control.lumen_update_scene` | `system_control` | `manage_render` | write | write | none | `system_control.lumen_update_scene` |
 | `system_control.merge_actors` | `system_control` | `merge_actors` | write | write | none | `system_control.merge_actors` |
 | `system_control.package_project` | `system_control` | `system_control` | write | write | none | `system_control.package_project` |

@@ -52,6 +52,15 @@ bool HandleDeleteOutputFile(UMcpAutomationBridgeSubsystem* Self,
                             const FString& RequestId,
                             const TSharedPtr<FJsonObject>& Payload,
                             FSystemControlSocket RequestingSocket);
+// list_save_games / edit_save_game: the game's SaveGame slots (Saved/SaveGames), loaded as the game loads them.
+bool HandleListSaveGames(UMcpAutomationBridgeSubsystem* Self,
+                         const FString& RequestId,
+                         const TSharedPtr<FJsonObject>& Payload,
+                         FSystemControlSocket RequestingSocket);
+bool HandleEditSaveGame(UMcpAutomationBridgeSubsystem* Self,
+                        const FString& RequestId,
+                        const TSharedPtr<FJsonObject>& Payload,
+                        FSystemControlSocket RequestingSocket);
 bool HandleManagePlugins(UMcpAutomationBridgeSubsystem* Self,
                          const FString& RequestId,
                          const FString& SubAction,

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "fbfbda68e277e579",
-  "recordCount": 394,
+  "catalogRevision": "615793f280a2e161",
+  "recordCount": 396,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -88992,6 +88992,189 @@
       }
     },
     {
+      "id": "system_control.edit_save_game",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "edit_save_game"
+        }
+      ],
+      "discovery": {
+        "domain": "project",
+        "family": "save-games",
+        "topics": [
+          "edit_save_game",
+          "edit save game",
+          "reset save file",
+          "delete save slot",
+          "write save slot",
+          "reset best score"
+        ],
+        "summary": "Change a SaveGame slot on disk: set saved properties and write it again (a missing slot is created from saveGameClass), or delete the slot.",
+        "whenToUse": [
+          "Test runs left values in a save (a best score, unlocks) that must be put back.",
+          "A save must be seeded or removed to test a load, continue or first-run flow."
+        ],
+        "whenNotToUse": [
+          "The slot only needs reading (use list_save_games).",
+          "A running game must change now: it keeps what it loaded, so set the GameInstance value too (inspect.set_property)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "Slot to change, as list_save_games lists it: its file name without .sav."
+            },
+            "userIndex": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "User index the game saves under (default 0)."
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Saved properties to set, by name, each value as list_save_games shows it ({\"BestScore\": 0}). All are checked before the slot is written. A slot being created may leave them out: it is written with its class defaults."
+            },
+            "saveGameClass": {
+              "type": "string",
+              "description": "SaveGame subclass to create the slot from when it does not exist yet, such as /Game/Core/BP_Save.BP_Save_C (SaveGame itself is abstract); an existing slot keeps its own class."
+            },
+            "deleteSlot": {
+              "type": "boolean",
+              "description": "true deletes the slot instead; properties are then ignored."
+            }
+          },
+          "required": [
+            "action",
+            "slotName"
+          ],
+          "additionalProperties": false,
+          "requiredOneOf": [
+            "properties",
+            "saveGameClass",
+            "deleteSlot"
+          ]
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "The slot changed."
+            },
+            "saveGameClass": {
+              "type": "string",
+              "description": "Class path of the slot's SaveGame object."
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Every saved property as read back from the written slot."
+            },
+            "created": {
+              "type": "boolean",
+              "description": "True when the slot did not exist and was created from saveGameClass."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "True when the slot was written."
+            },
+            "deleted": {
+              "type": "boolean",
+              "description": "With deleteSlot: true when the slot is gone."
+            },
+            "existsAfter": {
+              "type": "boolean",
+              "description": "With deleteSlot: whether the slot still exists after the call."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Change a SaveGame slot on disk: set saved properties and write it again (a missing slot is created from saveGameClass), or delete the slot.",
+          "input": {
+            "action": "edit_save_game",
+            "slotName": "Profile",
+            "properties": {
+              "BestScore": 0
+            }
+          },
+          "output": {
+            "success": true,
+            "message": "Saved slot Profile",
+            "slotName": "Profile",
+            "saveGameClass": "/Game/Core/BP_Save.BP_Save_C",
+            "properties": {
+              "BestScore": 0,
+              "MusicVolume": 1
+            },
+            "created": false,
+            "saved": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "destructive",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "destructive",
+        "consent": "explicit",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "edit_save_game"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "eef224d0f06bdca5d154ac8219f13810fcf76470a1f00f1bd64b1b33e7f1f983",
+        "content": "aca31a4f7a43107fc5c80e4e49e9d06d772da28ceed531073623a25c3a08d475"
+      }
+    },
+    {
       "id": "system_control.enable_plugin",
       "aliases": [
         "system_control.disable_plugin"
@@ -90108,6 +90291,161 @@
         "algorithm": "sha256",
         "schema": "f3bf90fe7d36333be374840c9a5a5e2cc5de37c124945f936f63eef83426b175",
         "content": "bbeb3a44766e923bc47846d4612a87732b23b5f61dae57b4308219429480441b"
+      }
+    },
+    {
+      "id": "system_control.list_save_games",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "list_save_games"
+        }
+      ],
+      "discovery": {
+        "domain": "project",
+        "family": "save-games",
+        "topics": [
+          "list_save_games",
+          "save game",
+          "save slot",
+          "savegame file",
+          "read save file",
+          "saved best score"
+        ],
+        "summary": "List the game's SaveGame slots (Saved/SaveGames), or read one slot as the game loads it: its SaveGame class and every saved property value.",
+        "whenToUse": [
+          "What a game saved must be checked, such as a best score or the settings SaveGameToSlot wrote.",
+          "The slots a game created must be found before one is edited or deleted."
+        ],
+        "whenNotToUse": [
+          "The values a running game holds are wanted (inspect.get_property on GameInstance): it keeps what it loaded.",
+          "A slot must change (use edit_save_game)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "Slot to read, as listed: its file name without .sav. Omit to list every slot."
+            },
+            "userIndex": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "User index the game saves under (default 0)."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "slots": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Without slotName: each slot as {slotName, sizeBytes, modified (ISO 8601)}, newest first."
+            },
+            "count": {
+              "type": "number",
+              "description": "Without slotName: how many slots there are."
+            },
+            "slotName": {
+              "type": "string",
+              "description": "With slotName: the slot read."
+            },
+            "saveGameClass": {
+              "type": "string",
+              "description": "With slotName: class path of the saved SaveGame object."
+            },
+            "properties": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With slotName: every saved property by name with its value."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "List the game's SaveGame slots (Saved/SaveGames), or read one slot as the game loads it: its SaveGame class and every saved property value.",
+          "input": {
+            "action": "list_save_games",
+            "slotName": "Profile"
+          },
+          "output": {
+            "success": true,
+            "message": "Read save slot Profile (BP_Save_C)",
+            "slotName": "Profile",
+            "saveGameClass": "/Game/Core/BP_Save.BP_Save_C",
+            "properties": {
+              "BestScore": 26050,
+              "MusicVolume": 1
+            }
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "list_save_games"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "e15c0a9705aa2c560c66eaa526fe67b3f73257c7404e4e351815928b20cb10fd",
+        "content": "6abad142f1809531b12c59e1e081830b43b6507f26718f9bef47941e20751395"
       }
     },
     {
