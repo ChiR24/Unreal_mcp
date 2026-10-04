@@ -1,6 +1,7 @@
 #include "Domains/NiagaraAuthoring/McpAutomationBridge_NiagaraAuthoringHandlersContext.h"
+#include "EdGraphSchema_Niagara.h"
 
-#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+#if MCP_HAS_NIAGARA_INPUT_OVERRIDES
 namespace McpNiagaraAuthoringHandlers
 {
 FString BareInputName(const FString& InputName)
@@ -9,12 +10,14 @@ FString BareInputName(const FString& InputName)
     return InputName.FindLastChar(TEXT('.'), DotIndex) ? InputName.Mid(DotIndex + 1) : InputName;
 }
 
-UNiagaraNodeInput* FindModuleInputNode(UNiagaraNodeFunctionCall* Module, const FString& InputName)
+// A function or dynamic-input script declares each input as an input node. A module script reads its inputs from
+// the parameter map as "Module.<Name>" pins instead, the only form most modules (InitializeParticle) have.
+bool FindModuleInput(UNiagaraNodeFunctionCall* Module, const FString& InputName, FNiagaraVariable& OutInput)
 {
     UNiagaraGraph* CalledGraph = Module ? Module->GetCalledGraph() : nullptr;
     if (!CalledGraph)
     {
-        return nullptr;
+        return false;
     }
     const FString Bare = BareInputName(InputName);
     for (UEdGraphNode* Node : CalledGraph->Nodes)
@@ -25,10 +28,48 @@ UNiagaraNodeInput* FindModuleInputNode(UNiagaraNodeFunctionCall* Module, const F
             Candidate.Equals(Bare, ESearchCase::IgnoreCase) ||
             Candidate.EndsWith(TEXT(".") + Bare, ESearchCase::IgnoreCase)))
         {
-            return InputNode;
+            OutInput = InputNode->Input;
+            return true;
         }
     }
-    return nullptr;
+    const FString ModuleForm = TEXT("Module.") + Bare;
+    for (UEdGraphNode* Node : CalledGraph->Nodes)
+    {
+        for (UEdGraphPin* Pin : Node->Pins)
+        {
+            if (Pin->Direction == EGPD_Output && Pin->PinName.ToString().Equals(ModuleForm, ESearchCase::IgnoreCase))
+            {
+                OutInput = FNiagaraVariable(UEdGraphSchema_Niagara::PinToTypeDefinition(Pin), Pin->PinName);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+FString ListModuleInputs(UNiagaraNodeFunctionCall* Module)
+{
+    TArray<FString> Names;
+    UNiagaraGraph* CalledGraph = Module ? Module->GetCalledGraph() : nullptr;
+    if (!CalledGraph)
+    {
+        return FString();
+    }
+    for (UEdGraphNode* Node : CalledGraph->Nodes)
+    {
+        if (UNiagaraNodeInput* InputNode = Cast<UNiagaraNodeInput>(Node))
+        {
+            Names.AddUnique(InputNode->Input.GetName().ToString());
+        }
+        for (UEdGraphPin* Pin : Node->Pins)
+        {
+            if (Pin->Direction == EGPD_Output && Pin->PinName.ToString().StartsWith(TEXT("Module.")))
+            {
+                Names.AddUnique(Pin->PinName.ToString());
+            }
+        }
+    }
+    return FString::Join(Names, TEXT(", "));
 }
 
 // targetNodeId is optional (the contract only requires systemPath + inputName): without it
@@ -108,18 +149,11 @@ UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
         const bool bGraphUnavailable = !ModuleName.IsEmpty() && Module->GetCalledGraph() == nullptr;
         if (bNameMatches && !ModuleName.IsEmpty())
         {
-            if (UNiagaraGraph* Called = Module->GetCalledGraph())
-            {
-                for (UEdGraphNode* Node : Called->Nodes)
-                {
-                    if (UNiagaraNodeInput* InputNode = Cast<UNiagaraNodeInput>(Node))
-                    {
-                        NamedModuleInputs += (NamedModuleInputs.IsEmpty() ? TEXT("") : TEXT(", ")) + InputNode->Input.GetName().ToString();
-                    }
-                }
-            }
+            const FString Inputs = ListModuleInputs(Module);
+            NamedModuleInputs += (NamedModuleInputs.IsEmpty() || Inputs.IsEmpty() ? TEXT("") : TEXT(", ")) + Inputs;
         }
-        if (bNameMatches && (FindModuleInputNode(Module, InputName) || bGraphUnavailable))
+        FNiagaraVariable Matched;
+        if (bNameMatches && (FindModuleInput(Module, InputName, Matched) || bGraphUnavailable))
         {
             Candidates.Add(Module);
         }

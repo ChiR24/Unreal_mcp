@@ -25,14 +25,39 @@ static bool AddUserParameter(FActionContext& Context)
     return true;
 }
 
-static FString NormalizeDefaultSource(const FString& SourceBinding)
+#if MCP_HAS_NIAGARA_INPUT_OVERRIDES
+// Points a function input at a parameter, as the stack's Link Inputs menu does, so the input reads it every run.
+// Whatever fed the input before (a link, a dynamic input) goes first: the engine asserts on an override pin with links.
+static void LinkInputToParameter(UNiagaraNodeFunctionCall& Function, const FString& InputName, const FNiagaraTypeDefinition& Type, const FNiagaraVariable& Source)
 {
-    if (SourceBinding == TEXT("Emitter.Age")) return TEXT("Emitter Age");
-    if (SourceBinding == TEXT("Emitter.NormalizedAge")) return TEXT("Emitter Normalized Age");
-    if (SourceBinding == TEXT("System.Age")) return TEXT("System Age");
-    return SourceBinding;
+    UEdGraphPin& OverridePin = FNiagaraStackGraphUtilities::GetOrCreateStackFunctionInputOverridePin(
+        Function, FNiagaraParameterHandle(FName(*Function.GetFunctionName()), FName(*InputName)), Type, FGuid(), FGuid());
+    TArray<UEdGraphNode*> Feeding;
+    for (UEdGraphPin* Linked : OverridePin.LinkedTo)
+    {
+        Feeding.AddUnique(Linked->GetOwningNode());
+    }
+    OverridePin.BreakAllPinLinks();
+    for (UEdGraphNode* Node : Feeding)
+    {
+        if (!Node->Pins.ContainsByPredicate([](const UEdGraphPin* Pin) { return Pin->Direction == EGPD_Output && Pin->LinkedTo.Num() > 0; }))
+        {
+            Node->DestroyNode();
+        }
+    }
+#if ENGINE_MINOR_VERSION >= 6
+    const TSet<FNiagaraVariableBase> Known{Source};
+    FNiagaraStackGraphUtilities::SetLinkedParameterValueForFunctionInput(OverridePin, Source, Known);
+#else
+    const TSet<FNiagaraVariable> Known{Source};
+    FNiagaraStackGraphUtilities::SetLinkedValueHandleForFunctionInput(OverridePin, FNiagaraParameterHandle(Source.GetName()), Known);
+#endif
 }
+#endif
 
+// A module input as get_niagara_info lists it (InitializeParticle.Color) is linked to sourceBinding where it is; any
+// other name gets a Set Variables module in particle update that writes it from sourceBinding every frame. Both read
+// the source through a link: a source name given to Set Variables as a value is linked only for engine constants.
 static bool BindParameterToSource(FActionContext& Context)
 {
     const FString ParamName = GetJsonStringField(Context.Payload, TEXT("parameterName"));
@@ -46,68 +71,94 @@ static bool BindParameterToSource(FActionContext& Context)
     {
         return true;
     }
-    UNiagaraSystem* System = LoadSystemOrError(Context);
-    if (!System)
+#if MCP_HAS_NIAGARA_INPUT_OVERRIDES
+    UNiagaraSystem* System = nullptr;
+    FNiagaraEmitterHandle* Handle = nullptr;
+    if (!LoadSystemAndEmitter(Context, System, Handle))
     {
-        return true;
-    }
-#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
-    FNiagaraEmitterHandle* Handle = FindEmitterHandle(System, Context.EmitterName);
-    if (!Handle)
-    {
-        Context.SendError(FString::Printf(TEXT("Emitter '%s' not found."), *Context.EmitterName), TEXT("EMITTER_NOT_FOUND"));
         return true;
     }
     UNiagaraScriptSource* ScriptSource = GetEmitterScriptSource(Handle);
     UNiagaraGraph* Graph = ScriptSource ? ScriptSource->NodeGraph : nullptr;
-    UNiagaraNodeOutput* TargetOutput = nullptr;
     if (!Graph)
     {
         Context.SendError(TEXT("Emitter has no Niagara graph source."), TEXT("NIAGARA_GRAPH_MISSING"));
         return true;
     }
-    for (UEdGraphNode* Node : Graph->Nodes)
-    {
-        if (UNiagaraNodeOutput* OutputNode = Cast<UNiagaraNodeOutput>(Node); OutputNode && OutputNode->GetUsage() == ENiagaraScriptUsage::ParticleUpdateScript)
+    FString NotAnInput;
+    FString NotAnInputCode;
+    UNiagaraNodeFunctionCall* Function = ResolveDynamicInputTargetNode(Context, Graph, FString(), ParamName, NotAnInput, NotAnInputCode);
+    FNiagaraVariable Input;
+    const bool bModuleInput = Function && FindModuleInput(Function, ParamName, Input);
+    // "InitializeParticle.Colour" names a module but none of its inputs: a typo, not a variable to create.
+    int32 Dot = INDEX_NONE;
+    const FString Prefix = ParamName.FindChar(TEXT('.'), Dot) ? ParamName.Left(Dot) : FString();
+    if (!bModuleInput && !Prefix.IsEmpty() && Graph->Nodes.ContainsByPredicate([&Prefix](UEdGraphNode* Node)
         {
-            TargetOutput = OutputNode;
-            break;
+            UNiagaraNodeFunctionCall* Call = Cast<UNiagaraNodeFunctionCall>(Node);
+            return Call && Call->GetFunctionName().Equals(Prefix, ESearchCase::IgnoreCase);
+        }))
+    {
+        Context.SendError(FString::Printf(TEXT("'%s' names a module of this emitter but none of its inputs. %s"), *ParamName, *NotAnInput), TEXT("INPUT_NOT_FOUND"));
+        return true;
+    }
+    FString InputName = ParamName;
+    FNiagaraTypeDefinition Type = ResolveNiagaraTypeByName(GetJsonStringField(Context.Payload, TEXT("parameterType"), TEXT("Float")));
+    if (bModuleInput)
+    {
+        InputName = Input.GetName().ToString();
+        InputName.RemoveFromStart(TEXT("Module."));
+        Type = Input.GetType();
+    }
+    // An unknown user parameter would compile to its type's default without a word.
+    if (SourceBinding.StartsWith(TEXT("User.")))
+    {
+        const FNiagaraVariableWithOffset* User = System->GetExposedParameters().ReadParameterVariables().FindByPredicate(
+            [&SourceBinding](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == SourceBinding; });
+        if (!User || User->GetType() != Type)
+        {
+            Context.SendError(FString::Printf(TEXT("User parameter '%s' %s; '%s' takes a %s (add_user_parameter makes one)."), *SourceBinding,
+                User ? *FString::Printf(TEXT("is a %s"), *User->GetType().GetName()) : TEXT("does not exist"), *ParamName, *Type.GetName()),
+                User ? TEXT("PARAM_TYPE_MISMATCH") : TEXT("PARAM_NOT_FOUND"));
+            return true;
         }
     }
-    if (!TargetOutput)
-    {
-        Context.SendError(TEXT("Emitter has no particle update stack output for parameter binding."), TEXT("NIAGARA_STACK_MISSING"));
-        return true;
-    }
-    const FString NiagaraDefaultSource = NormalizeDefaultSource(SourceBinding);
-    const FNiagaraVariable TargetVariable(ResolveNiagaraTypeByName(GetJsonStringField(Context.Payload, TEXT("parameterType"), TEXT("Float"))), FName(*ParamName));
-    TArray<FNiagaraVariable> TargetVariables;
-    TargetVariables.Add(TargetVariable);
-    TArray<FString> DefaultValues;
-    DefaultValues.Add(NiagaraDefaultSource);
     Graph->Modify();
-    UNiagaraNodeAssignment* AssignmentNode = FNiagaraStackGraphUtilities::AddParameterModuleToStack(TargetVariables, *TargetOutput, INDEX_NONE, DefaultValues);
-    if (!AssignmentNode)
+    if (!bModuleInput)
     {
-        Context.SendError(TEXT("Failed to create Niagara assignment module for parameter binding."), TEXT("NIAGARA_BINDING_FAILED"));
-        return true;
+        UNiagaraNodeOutput* TargetOutput = nullptr;
+        for (UEdGraphNode* Node : Graph->Nodes)
+        {
+            if (UNiagaraNodeOutput* OutputNode = Cast<UNiagaraNodeOutput>(Node); OutputNode && OutputNode->GetUsage() == ENiagaraScriptUsage::ParticleUpdateScript)
+            {
+                TargetOutput = OutputNode;
+                break;
+            }
+        }
+        UNiagaraNodeAssignment* AssignmentNode = TargetOutput ? FNiagaraStackGraphUtilities::AddParameterModuleToStack(
+            TArray<FNiagaraVariable>{FNiagaraVariable(Type, FName(*ParamName))}, *TargetOutput, INDEX_NONE, TArray<FString>{FString()}) : nullptr;
+        if (!AssignmentNode)
+        {
+            Context.SendError(FString::Printf(TEXT("'%s' is not a module input (%s), and no Set Variables module could be added to particle update."), *ParamName, *NotAnInput), TEXT("NIAGARA_BINDING_FAILED"));
+            return true;
+        }
+        AssignmentNode->RefreshFromExternalChanges();
+        AssignmentNode->UpdateUsageBitmaskFromOwningScript();
+        Function = AssignmentNode;
     }
-    AssignmentNode->RefreshFromExternalChanges();
-    AssignmentNode->UpdateUsageBitmaskFromOwningScript();
+    LinkInputToParameter(*Function, InputName, Type, FNiagaraVariable(Type, FName(*SourceBinding)));
     Graph->NotifyGraphChanged();
+    System->RequestCompile(false);
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetBoolField(TEXT("bindingApplied"), true);
-    Context.Result->SetBoolField(TEXT("assignmentModuleAdded"), true);
+    Context.Result->SetBoolField(TEXT("assignmentModuleAdded"), !bModuleInput);
     Context.Result->SetStringField(TEXT("parameterName"), ParamName);
     Context.Result->SetStringField(TEXT("sourceBinding"), SourceBinding);
-    Context.Result->SetStringField(TEXT("niagaraDefaultSource"), NiagaraDefaultSource);
-    Context.Result->SetStringField(TEXT("assignmentNodeId"), AssignmentNode->NodeGuid.ToString());
-    Context.Result->SetStringField(TEXT("targetUsage"), TEXT("ParticleUpdateScript"));
-    Context.Result->SetNumberField(TEXT("assignmentTargetCount"), AssignmentNode->GetAssignmentTargets().Num());
-    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Bound Niagara parameter '%s' to source '%s' with a real assignment module."), *ParamName, *SourceBinding));
+    Context.Result->SetStringField(TEXT("linkedInput"), Function->GetFunctionName() + TEXT(".") + InputName);
+    Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("%s.%s now reads '%s'."), *Function->GetFunctionName(), *InputName, *SourceBinding));
     Context.SendSuccess(true, TEXT("Niagara parameter binding applied."));
 #else
-    Context.SendError(TEXT("Niagara stack graph utilities are unavailable in this engine version."), TEXT("NIAGARA_BINDING_UNSUPPORTED"));
+    Context.SendError(TEXT("Linking a Niagara input to a parameter needs Unreal Engine 5.3 or later."), TEXT("NIAGARA_BINDING_UNSUPPORTED"));
 #endif
     return true;
 }

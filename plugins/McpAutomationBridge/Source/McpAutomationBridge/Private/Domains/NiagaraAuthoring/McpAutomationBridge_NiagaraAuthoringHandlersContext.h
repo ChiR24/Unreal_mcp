@@ -80,6 +80,9 @@
 #else
 #define MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES 0
 #endif
+// Giving a module input a value through its override pin (a dynamic input, a linked parameter) needs functions the
+// engine exports only from 5.3: on 5.1 and 5.2 GetOrCreateStackFunctionInputOverridePin does not link.
+#define MCP_HAS_NIAGARA_INPUT_OVERRIDES (MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES && ENGINE_MINOR_VERSION >= 3)
 
 #include "NiagaraDataInterfaceSkeletalMesh.h"
 
@@ -228,12 +231,14 @@ void CollectNiagaraSystemStackIssues(
     UNiagaraSystem* System,
     TArray<TSharedPtr<FJsonValue>>& OutErrors,
     TArray<TSharedPtr<FJsonValue>>& OutWarnings);
-#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+#if MCP_HAS_NIAGARA_INPUT_OVERRIDES
 // The last "."-separated part of an input name ("Module.Lifetime" -> "Lifetime").
 FString BareInputName(const FString& InputName);
-// Module's input node for InputName: the bare name, the stored "Module.<Name>" form or the stack's aliased
-// "<ModuleName>.<Name>" form, case ignored; null when the module has no such input (or no graph).
-UNiagaraNodeInput* FindModuleInputNode(UNiagaraNodeFunctionCall* Module, const FString& InputName);
+// The input of Module that InputName names: the bare name, the stored "Module.<Name>" form or the stack's aliased
+// "<ModuleName>.<Name>" form, case ignored. False when the module has no such input (or no graph).
+bool FindModuleInput(UNiagaraNodeFunctionCall* Module, const FString& InputName, FNiagaraVariable& OutInput);
+// Every input FindModuleInput can find on Module, comma-separated, for an error that names the right spellings.
+FString ListModuleInputs(UNiagaraNodeFunctionCall* Module);
 UNiagaraNodeFunctionCall* ResolveDynamicInputTargetNode(
     FActionContext& Context,
     UNiagaraGraph* Graph,

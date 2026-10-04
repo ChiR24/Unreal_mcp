@@ -2,7 +2,7 @@
 
 namespace McpNiagaraAuthoringHandlers
 {
-#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+#if MCP_HAS_NIAGARA_INPUT_OVERRIDES
 static bool SetNiagaraDynamicInput(FActionContext& Context)
 {
     const FString TargetNodeId = GetJsonStringField(Context.Payload, TEXT("targetNodeId"));
@@ -61,24 +61,13 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
     // aliased "<FunctionName>.<Name>" handle, so accept the bare name, either spelling, and
     // build the aliased handle from the resolved module exactly as the stack does.
     const FNiagaraParameterHandle AliasedHandle(FName(*TargetNode->GetFunctionName()), FName(*BareInputName(InputName)));
-    UNiagaraNodeInput* MatchedInput = FindModuleInputNode(TargetNode, InputName);
-    if (!MatchedInput)
+    FNiagaraVariable MatchedInput;
+    if (!FindModuleInput(TargetNode, InputName, MatchedInput))
     {
-        TArray<FString> Available;
-        if (UNiagaraGraph* CalledGraph = TargetNode->GetCalledGraph())
-        {
-            for (UEdGraphNode* Node : CalledGraph->Nodes)
-            {
-                if (UNiagaraNodeInput* InputNode = Cast<UNiagaraNodeInput>(Node))
-                {
-                    Available.Add(InputNode->Input.GetName().ToString());
-                }
-            }
-        }
-        Context.SendError(FString::Printf(TEXT("Input '%s' not found on target node. Available: %s"), *InputName, *FString::Join(Available, TEXT(", "))), TEXT("INPUT_NOT_FOUND"));
+        Context.SendError(FString::Printf(TEXT("Input '%s' not found on target node. Available: %s"), *InputName, *ListModuleInputs(TargetNode)), TEXT("INPUT_NOT_FOUND"));
         return true;
     }
-    const FNiagaraTypeDefinition InputType = MatchedInput->Input.GetType();
+    const FNiagaraTypeDefinition InputType = MatchedInput.GetType();
 
     FNiagaraTypeDefinition DIOutputType;
     bool bFoundDIOutputType = false;
@@ -166,7 +155,7 @@ static bool SetNiagaraDynamicInput(FActionContext& Context)
 
 bool HandleDynamicInputAction(FActionContext& Context, const FString& SubAction)
 {
-#if MCP_HAS_NIAGARA_STACK_GRAPH_UTILITIES
+#if MCP_HAS_NIAGARA_INPUT_OVERRIDES
     if (SubAction == TEXT("set_niagara_dynamic_input")) return SetNiagaraDynamicInput(Context);
 #else
     if (SubAction == TEXT("set_niagara_dynamic_input"))

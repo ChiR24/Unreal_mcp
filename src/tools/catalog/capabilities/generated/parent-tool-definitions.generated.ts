@@ -15004,7 +15004,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "sourceBinding": {
           "type": "string",
-          "description": "Data source the parameter binds to."
+          "description": "The parameter to read: a user parameter of the same type (User.Tint) or an engine, system or emitter one (Emitter.Age)."
         },
         "spawnOnEvent": {
           "type": "boolean",

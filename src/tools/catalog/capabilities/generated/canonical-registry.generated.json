@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "234c9dfa10226f86",
+  "catalogRevision": "48235bd8792cfaa9",
   "recordCount": 394,
   "records": [
     {
@@ -56607,7 +56607,8 @@
         "whenToUse": [
           "edit=add_emitter: System needs an emitter.",
           "edit=add_user_parameter: Expose a user param.",
-          "edit=bind_parameter: Param driven externally.",
+          "edit=bind_parameter: A Blueprint sets a value at run time (Set Niagara Variable on a user parameter): parameterName is the module input as get_niagara_info lists it (InitializeParticle.Color), sourceBinding the user parameter (User.Tint).",
+          "edit=bind_parameter: A value must follow an engine, system or emitter parameter (sourceBinding Emitter.Age).",
           "edit=set_parameter_value: A user parameter or a module input value must change.",
           "edit=set_parameter_value: Several values of one system or emitter must change together (parameters): one call, one save.",
           "edit=set_parameter_value: A module input changes nothing because a static switch gates it (a Ribbon Width written while InitializeParticle.Ribbon Width Mode is Unset): set the switch; get_niagara_info lists every staticSwitches value.",
@@ -56658,7 +56659,7 @@
             },
             "sourceBinding": {
               "type": "string",
-              "description": "Data source the parameter binds to."
+              "description": "The parameter to read: a user parameter of the same type (User.Tint) or an engine, system or emitter one (Emitter.Age)."
             },
             "parameterValue": {
               "description": "Niagara parameter value (any type)."
@@ -56983,8 +56984,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b7d496004ab2217e5c38e3eba11c31cec334fbfbff57cb7eacde3a2b4d9217eb",
-        "content": "7ac0afe6c8b7c9ce2b28c20e05bc7a40fea7c30f4a83166418c70356fa2385ed"
+        "schema": "038a4dcec4d8c131a5fe002d96b28a930db8e6479a651f6d1fbada2a746b031c",
+        "content": "17212b037383f2068e1c61e260ce4ddd2c562f8ad9f871a4521ec53f324cc6d0"
       }
     },
     {
