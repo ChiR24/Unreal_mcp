@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3eb9ded5a30b9542",
+  "catalogRevision": "a05d0c2c8f87bb4c",
   "recordCount": 396,
   "records": [
     {
@@ -18224,7 +18224,7 @@
           "widget image",
           "preview ui"
         ],
-        "summary": "Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image. Design mode, like its thumbnail: Construct graphs do not run, so texts are the designer defaults.",
+        "summary": "Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image, as the game creates it: Construct graphs do not run, so texts are the designer defaults, and widgets set Collapsed or Hidden stay hidden.",
         "whenToUse": [
           "A Widget Blueprint must be seen after an edit (layout, colours, fonts) without running PIE."
         ],
@@ -18252,6 +18252,10 @@
             "openEditor": {
               "type": "boolean",
               "description": "Also open it in the Widget Blueprint editor, which takes focus (default false)."
+            },
+            "waitForShaders": {
+              "type": "boolean",
+              "description": "true: when the drawing left shaders compiling (the editor compiles a material's UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling."
             }
           },
           "required": [
@@ -18304,6 +18308,16 @@
             "editorOpened": {
               "type": "boolean",
               "description": "Whether the Widget Blueprint editor was opened (openEditor)."
+            },
+            "shadersCompiling": {
+              "type": "number",
+              "description": "Shader compile jobs still outstanding when the widget was drawn. Above 0, images and borders that use a material may be drawn blank and a warning says so; pass waitForShaders to draw after they finish."
+            },
+            "shaderWait": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "With waitForShaders while shaders compiled: waitedSeconds, jobsLeft (still outstanding when the wait ended) and timedOut (true when jobs were left after the 25 second cap)."
             }
           },
           "required": [
@@ -18315,14 +18329,14 @@
       },
       "examples": [
         {
-          "title": "Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image. Design mode, like its thumbnail: Construct graphs do not run, so texts are the designer defaults.",
+          "title": "Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image, as the game creates it: Construct graphs do not run, so texts are the designer defaults, and widgets set Collapsed or Hidden stay hidden.",
           "input": {
             "action": "preview_widget",
             "widgetPath": "/Game/UI/WBP_MainUI"
           },
           "output": {
             "success": true,
-            "message": "Widget drawn at 1280x720 (design mode: Construct graphs do not run)",
+            "message": "Widget drawn at 1280x720 as the game creates it (Construct graphs do not run)",
             "widgetPath": "/Game/UI/WBP_MainUI",
             "mimeType": "image/png",
             "width": 1280,
@@ -18360,8 +18374,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "2e2da924899322ad4f6cd6d69f6daa4e2a84a464d139dfeb5bfc313e42db7595",
-        "content": "02babda409461306d2571970d54251fb46062446112039040cb754f5f81c36ed"
+        "schema": "9f8f7958c414788d25e582d8c833fb2fb1fe1b5dfdca6bdd24ef90b42a3c67d9",
+        "content": "1d6237a43fa74e96e1c1e432426d9580d94924a92b9f67ff4dec0ba4e50e57ce"
       }
     },
     {

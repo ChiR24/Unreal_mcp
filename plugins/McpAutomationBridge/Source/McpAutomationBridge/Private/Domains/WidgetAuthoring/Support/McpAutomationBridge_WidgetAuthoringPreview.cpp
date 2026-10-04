@@ -2,6 +2,8 @@
 #include "Domains/WidgetAuthoring/Support/McpAutomationBridge_WidgetAuthoringBlueprintLoading.h"
 
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/Widget.h"
 #include "Editor.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/UserInterfaceSettings.h"
@@ -13,6 +15,7 @@
 #include "TextureResource.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "Foundation/McpScreenshotResample.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Transport/WebSocket/McpBridgeWebSocket.h"
 #include "WidgetBlueprint.h"
@@ -23,8 +26,8 @@ using namespace WidgetAuthoringHelpers;
 
 namespace
 {
-// Draws the widget offscreen the way the game would at Size (the project's DPI curve applied), in
-// design mode like its thumbnail: Construct graphs do not run, so a HUD shows its designer texts.
+// Draws the widget offscreen the way the game would at Size (the project's DPI curve applied), with the
+// designer flags of its thumbnail: Construct graphs do not run, so a HUD shows its designer texts.
 // The preview used to open and focus the Widget Blueprint editor and return no image at all.
 bool McpDrawWidgetPreview(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FColor>& OutPixels, FString& OutError)
 {
@@ -39,6 +42,22 @@ bool McpDrawWidgetPreview(UWidgetBlueprint* WidgetBP, FIntPoint Size, TArray<FCo
     Widget->SetDesignerFlags(EWidgetDesignFlags::Designing | EWidgetDesignFlags::ExecutePreConstruct);
     Widget->Initialize();
     const TSharedRef<SWidget> Slate = Widget->TakeWidget();
+    // Design mode draws every widget (UWidget::GetVisibilityInDesigner), so a Collapsed card the game shows later,
+    // or a NEW RECORD pill, appeared in the preview. Each widget gets the visibility it is saved with, read off the
+    // property itself: GetVisibility() reports the forced designer state once the Slate widget exists.
+    const FProperty* VisibilityProperty = UWidget::StaticClass()->FindPropertyByName(TEXT("Visibility"));
+    if (Widget->WidgetTree && VisibilityProperty)
+    {
+        Widget->WidgetTree->ForEachWidget([VisibilityProperty](UWidget* Child)
+        {
+            const TSharedPtr<SWidget> Cached = Child ? Child->GetCachedWidget() : nullptr;
+            if (Cached.IsValid())
+            {
+                const ESlateVisibility Saved = *VisibilityProperty->ContainerPtrToValuePtr<ESlateVisibility>(Child);
+                Cached->SetVisibility(UWidget::ConvertSerializedVisibilityToRuntime(Saved));
+            }
+        });
+    }
     UTextureRenderTarget2D* Target = NewObject<UTextureRenderTarget2D>();
     Target->ClearColor = FLinearColor::Transparent;
     Target->SRGB = true;
@@ -103,6 +122,20 @@ bool HandleWidgetAuthoringPreview(
         Subsystem.SendAutomationError(RequestingSocket, RequestId, Error, TEXT("PREVIEW_FAILED"));
         return true;
     }
+    // The editor compiles a material's Slate shaders when it is first drawn, so the first preview after the editor
+    // starts (or after a material edit) drew panels and button faces blank. waitForShaders waits for that compile and
+    // draws again; without it the reply says shaders were compiling.
+    if (McpDeferForShaderCompile(Payload, [Weak = TWeakObjectPtr<UMcpAutomationBridgeSubsystem>(&Subsystem), RequestId,
+                                           RequestingSocket, ResultJson](const TSharedPtr<FJsonObject>& Resumed)
+        {
+            if (UMcpAutomationBridgeSubsystem* Self = Weak.Get())
+            {
+                HandleWidgetAuthoringPreview(*Self, RequestId, TEXT("preview_widget"), Resumed, RequestingSocket, ResultJson);
+            }
+        }))
+    {
+        return true;
+    }
     FImageUtils::PNGCompressImageArray(Size.X, Size.Y, TArrayView64<const FColor>(Pixels.GetData(), Pixels.Num()), Png);
     // openEditor also shows it in the Widget Blueprint editor, which takes focus.
     const bool bOpen = GetJsonBoolField(Payload, TEXT("openEditor"), false);
@@ -117,8 +150,9 @@ bool HandleWidgetAuthoringPreview(
     ResultJson->SetNumberField(TEXT("sizeBytes"), static_cast<double>(Png.Num()));
     ResultJson->SetStringField(TEXT("imageBase64"), FBase64::Encode(Png.GetData(), static_cast<uint32>(Png.Num())));
     ResultJson->SetBoolField(TEXT("editorOpened"), AssetEditors && AssetEditors->OpenEditorForAsset(WidgetBP));
+    McpAddShaderCompileState(ResultJson, Payload);
     Subsystem.SendAutomationResponse(RequestingSocket, RequestId, true, FString::Printf(
-        TEXT("Widget drawn at %dx%d (design mode: Construct graphs do not run)"), Size.X, Size.Y), ResultJson);
+        TEXT("Widget drawn at %dx%d as the game creates it (Construct graphs do not run)"), Size.X, Size.Y), ResultJson);
     return true;
 }
 }

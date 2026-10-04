@@ -1141,3 +1141,22 @@ describe('material batch steps', () => {
       .toContain('!IsBatchableMaterialEdit(Edit = McpMaterialBatchStepEdit(Edit, *StepPtr))');
   });
 });
+
+describe('widget previews', () => {
+  // A design-mode preview drew every widget, Collapsed ones too: a hidden controls card or NEW RECORD pill showed.
+  it('preview_widget gives each widget the visibility the game creates it with', () => {
+    const preview = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringPreview.cpp');
+    // GetVisibility() reads the Slate widget, which design mode forces visible: the saved property is read instead.
+    expect(preview).toContain('*VisibilityProperty->ContainerPtrToValuePtr<ESlateVisibility>(Child);');
+    expect(preview).toContain('Cached->SetVisibility(UWidget::ConvertSerializedVisibilityToRuntime(Saved));');
+    expect(preview).not.toContain('Child->GetVisibility()');
+    expect(preview.indexOf('Widget->TakeWidget()')).toBeLessThan(preview.indexOf('ConvertSerializedVisibilityToRuntime'));
+  });
+
+  // The first preview after the editor started drew material brushes blank, unannounced: the editor compiles a
+  // material's Slate shaders when it is first drawn, so the wait has to follow a draw and be followed by another.
+  it('preview_widget waits for shaders on request and always reports them', () => {
+    const preview = code('WidgetAuthoring', 'Support', 'McpAutomationBridge_WidgetAuthoringPreview.cpp');
+    expect(preview.indexOf('McpDrawWidgetPreview(WidgetBP')).toBeLessThan(preview.indexOf('McpDeferForShaderCompile(Payload'));
+    expect(preview).toContain('McpAddShaderCompileState(ResultJson, Payload);');
+  });});

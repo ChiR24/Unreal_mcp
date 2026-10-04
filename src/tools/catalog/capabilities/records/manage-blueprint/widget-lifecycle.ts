@@ -65,13 +65,16 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['preview widget', 'render widget', 'see widget', 'widget screenshot', 'widget image', 'preview ui'],
-    summary: 'Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image. Design mode, like its thumbnail: Construct graphs do not run, so texts are the designer defaults.',
+    summary: 'Look at a Widget Blueprint without running the game: it is drawn offscreen for a screen size and returned as a PNG image, as the game creates it: Construct graphs do not run, so texts are the designer defaults, and widgets set Collapsed or Hidden stay hidden.',
     whenToUse: ['A Widget Blueprint must be seen after an edit (layout, colours, fonts) without running PIE.'],
     whenNotToUse: ['What the running game shows is needed, runtime texts included (play, then control_editor screenshot mode full_editor_window).'],
     inputProps: {
       widgetPath: P.widgetPath,
       resolution: { type: 'string', description: 'Screen size the widget is drawn for, "WxH" (default "1280x720"); the project DPI scaling for that size applies, as in the game.' },
       openEditor: { type: 'boolean', description: 'Also open it in the Widget Blueprint editor, which takes focus (default false).' },
+      // The editor compiles a material's UI shaders the first time it is drawn: the first preview after the editor
+      // starts, or after a material edit, drew panels and button faces blank.
+      waitForShaders: { type: 'boolean', description: 'true: when the drawing left shaders compiling (the editor compiles a material\'s UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling.' },
     },
     required: ['widgetPath'],
     outputProps: {
@@ -82,6 +85,8 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
       height: { type: 'number', description: 'Image height in pixels.' },
       sizeBytes: { type: 'number', description: 'PNG size in bytes.' },
       editorOpened: { type: 'boolean', description: 'Whether the Widget Blueprint editor was opened (openEditor).' },
+      shadersCompiling: { type: 'number', description: 'Shader compile jobs still outstanding when the widget was drawn. Above 0, images and borders that use a material may be drawn blank and a warning says so; pass waitForShaders to draw after they finish.' },
+      shaderWait: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'With waitForShaders while shaders compiled: waitedSeconds, jobsLeft (still outstanding when the wait ended) and timedOut (true when jobs were left after the 25 second cap).' },
     },
     outputRequired: ['widgetPath'],
     // Read, and its own record: the widget and render target are transient, and
@@ -92,7 +97,7 @@ export const WIDGET_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     resources: 'medium',
     plugins: WIDGET_PLUGINS,
     exampleInput: { action: 'preview_widget', widgetPath: '/Game/UI/WBP_MainUI' },
-    exampleOutput: { success: true, message: 'Widget drawn at 1280x720 (design mode: Construct graphs do not run)', widgetPath: '/Game/UI/WBP_MainUI', mimeType: 'image/png', width: 1280, height: 720 },
+    exampleOutput: { success: true, message: 'Widget drawn at 1280x720 as the game creates it (Construct graphs do not run)', widgetPath: '/Game/UI/WBP_MainUI', mimeType: 'image/png', width: 1280, height: 720 },
   }),
   buildRecord({
     id: 'blueprint.remove_widget',

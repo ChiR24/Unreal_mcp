@@ -8847,6 +8847,7 @@
         "variableNames",
         "variableType",
         "visibility",
+        "waitForShaders",
         "widgetKind",
         "widgetPath",
         "widthOverride",
@@ -10006,6 +10007,10 @@
               "SelfHitTestInvisible"
             ],
             "description": "Widget visibility state."
+          },
+          "waitForShaders": {
+            "type": "boolean",
+            "description": "true: when the drawing left shaders compiling (the editor compiles a material's UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling."
           },
           "widgetKind": {
             "type": "string",

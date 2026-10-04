@@ -42,14 +42,20 @@ describe('shader compile state: counted through the engine, waited for off the g
 
     expect(wait).toContain('FTSTicker::GetCoreTicker().AddTicker(');
     expect(wait, 'FinishAllCompilation and Sleep would stall the very thread the shaders need').not.toMatch(/FinishAllCompilation|FPlatformProcess::Sleep|FlushRenderingCommands/u);
-    expect(wait).toMatch(/if \(Left > 0 && Waited < McpShaderWaitMaxSeconds\) \{\s*return true;\s*\}/u);
-    expect(wait).toMatch(/Wait->SetNumberField\(TEXT\("waitedSeconds"\)[^;]*;\s*Wait->SetNumberField\(TEXT\("jobsLeft"\), Left\);\s*Wait->SetBoolField\(TEXT\("timedOut"\), Left > 0\);\s*Payload->SetObjectField\(TEXT\("shaderWait"\), Wait\);\s*Resume\(Payload\);\s*return false;/u);
+    expect(wait).toMatch(/if \(bCompiling && Waited < McpShaderWaitMaxSeconds\) \{\s*return true;\s*\}/u);
+    expect(wait).toMatch(/Wait->SetNumberField\(TEXT\("waitedSeconds"\)[^;]*;\s*Wait->SetNumberField\(TEXT\("jobsLeft"\), McpShaderJobsRemaining\(\)\);\s*Wait->SetBoolField\(TEXT\("timedOut"\), bCompiling\);\s*Payload->SetObjectField\(TEXT\("shaderWait"\), Wait\);\s*Resume\(Payload\);\s*return false;/u);
   });
 
   it('defers only when asked, when something is compiling, and once', () => {
     const wait = sliceBetween(source(), 'bool McpDeferForShaderCompile(', 'const double Start');
 
-    expect(wait).toMatch(/TryGetBoolField\(TEXT\("waitForShaders"\), bWait\) \|\| !bWait \|\|\s*Payload->HasField\(TEXT\("shaderWait"\)\) \|\| McpShaderJobsRemaining\(\) == 0\) \{\s*return false;/u);
+    expect(wait).toMatch(/TryGetBoolField\(TEXT\("waitForShaders"\), bWait\) \|\| !bWait \|\|\s*Payload->HasField\(TEXT\("shaderWait"\)\) \|\| !McpShadersCompiling\(\)\) \{\s*return false;/u);
+  });
+
+  // Finished jobs are applied to their shader maps on a later tick; a wait that ended on the job count resumed a
+  // frame early and drew the default material (a widget preview came back with its panels blank).
+  it('waits until compiled shaders are applied, not just until the jobs finish', () => {
+    expect(source()).toMatch(/static bool McpShadersCompiling\(\) \{\s*return GShaderCompilingManager && GShaderCompilingManager->IsCompiling\(\);\s*\}/u);
   });
 
   it('adds shadersCompiling to every reply, a warning while some compile (keeping the ones already there), and the wait it ran', () => {

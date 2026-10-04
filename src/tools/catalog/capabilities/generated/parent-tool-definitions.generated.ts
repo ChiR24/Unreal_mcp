@@ -12725,6 +12725,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Widget visibility state."
         },
+        "waitForShaders": {
+          "type": "boolean",
+          "description": "true: when the drawing left shaders compiling (the editor compiles a material's UI shaders the first time it is drawn: right after the editor starts, or after a material edit), wait for them, at most 25 seconds, and draw again; shaderWait in the reply says how long it waited. Default false: draw once and report shadersCompiling."
+        },
         "widgetKind": {
           "type": "string",
           "enum": [
@@ -13536,6 +13540,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "additionalProperties": true,
           "x-unreal-reflection-boundary": true,
           "description": "An animation graph node's editable settings, name to value (a Sequence Player: Sequence, PlayRate, StartPosition, bLoopAnimation ...; at most 24, lists left out). Absent on any other node. graphName is the AnimGraph, or the name of the state whose graph holds the node."
+        },
+        "shaderWait": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "With waitForShaders while shaders compiled: waitedSeconds, jobsLeft (still outstanding when the wait ended) and timedOut (true when jobs were left after the 25 second cap)."
+        },
+        "shadersCompiling": {
+          "type": "number",
+          "description": "Shader compile jobs still outstanding when the widget was drawn. Above 0, images and borders that use a material may be drawn blank and a warning says so; pass waitForShaders to draw after they finish."
         },
         "sizeBytes": {
           "type": "number",

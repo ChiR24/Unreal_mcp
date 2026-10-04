@@ -571,6 +571,7 @@ const testCases = [
     { scenario: 'INFO: get_widget_info by name + folder', toolName: 'manage_blueprint', arguments: { action: 'get_widget_info', name: WIDGET_NAME, folder: TEST_FOLDER }, expected: 'success' },
     { scenario: 'ACTION: preview_widget', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget'), expected: 'success' },
     { scenario: 'ACTION: preview_widget drawn for a small screen, editor opened', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { resolution: '640x360', openEditor: true }), expected: 'success', assertions: [{ path: 'structuredContent.result.width', equals: 640, label: 'drawn at the asked width' }] },
+    { scenario: 'ACTION: preview_widget drawn once shaders finish', toolName: 'manage_blueprint', arguments: widgetArgs('preview_widget', { waitForShaders: true }), expected: 'success', timeoutMs: 30000, assertions: [{ path: 'structuredContent.result.shadersCompiling', gte: 0, label: 'shader jobs reported' }] },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test folder', toolName: 'manage_asset', arguments: { action: 'delete', path: TEST_FOLDER, force: true }, expected: 'success|not found' },

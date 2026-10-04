@@ -189,25 +189,31 @@ void McpAddShaderCompileState(const TSharedPtr<FJsonObject> &Resp,
   }
 }
 
+// Jobs done compiling still have to be applied to their shader maps on a later tick: until then the material
+// draws as before, so a wait that ended on the job count alone resumed a frame too early.
+static bool McpShadersCompiling() {
+  return GShaderCompilingManager && GShaderCompilingManager->IsCompiling();
+}
+
 bool McpDeferForShaderCompile(const TSharedPtr<FJsonObject> &Payload,
                               TFunction<void(const TSharedPtr<FJsonObject> &)> Resume) {
   bool bWait = false;
   if (!Payload.IsValid() || !Payload->TryGetBoolField(TEXT("waitForShaders"), bWait) || !bWait ||
-      Payload->HasField(TEXT("shaderWait")) || McpShaderJobsRemaining() == 0) {
+      Payload->HasField(TEXT("shaderWait")) || !McpShadersCompiling()) {
     return false;
   }
   const double Start = FPlatformTime::Seconds();
   FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda([Payload, Resume, Start](float) -> bool {
-        const int32 Left = McpShaderJobsRemaining();
+        const bool bCompiling = McpShadersCompiling();
         const double Waited = FPlatformTime::Seconds() - Start;
-        if (Left > 0 && Waited < McpShaderWaitMaxSeconds) {
+        if (bCompiling && Waited < McpShaderWaitMaxSeconds) {
           return true;
         }
         TSharedPtr<FJsonObject> Wait = MakeShared<FJsonObject>();
         Wait->SetNumberField(TEXT("waitedSeconds"), FMath::RoundToDouble(Waited * 10.0) / 10.0);
-        Wait->SetNumberField(TEXT("jobsLeft"), Left);
-        Wait->SetBoolField(TEXT("timedOut"), Left > 0);
+        Wait->SetNumberField(TEXT("jobsLeft"), McpShaderJobsRemaining());
+        Wait->SetBoolField(TEXT("timedOut"), bCompiling);
         Payload->SetObjectField(TEXT("shaderWait"), Wait);
         Resume(Payload);
         return false;
