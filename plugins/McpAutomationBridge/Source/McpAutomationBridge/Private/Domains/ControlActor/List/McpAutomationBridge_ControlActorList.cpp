@@ -1,6 +1,7 @@
 #include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsTransforms.h"
 #include "Foundation/Reflection/McpPropertyReflection.h"
+#include "Debug/DebugDrawComponent.h"
 
 // control_actor.list, moved out of the lookup file when near and radius made it two passes: the actors that pass
 // the filters (and the radius) are collected and, with near, sorted by distance, then paged and described.
@@ -12,12 +13,22 @@ struct FMcpListedActor {
 };
 
 // How far the point is from the actor's world bounding box: 0 when the box contains it, so a big slab
-// under the point is at distance 0. An actor with no bounds is measured to its location. OutBoundsSize is
-// the box's half-diagonal, which orders equally near actors: of those containing the point, the smallest
-// is the thing at that spot, and the foliage actor, whose box covers the level, comes last.
+// under the point is at distance 0. The box is GetActorBounds' without debug-draw components: the gameplay
+// debugger's renderer claims a million-unit box round the origin, which put its replicator at distance 0
+// from every point in PIE. An actor with no bounds (a camera or target point in PIE, whose sprites are
+// editor-only) is measured to its location, not to the world origin. OutBoundsSize is the box's
+// half-diagonal, which orders equally near actors: of those containing the point, the smallest is the
+// thing at that spot, and the foliage actor, whose box covers the level, comes last.
 double McpDistanceToActorBounds(const AActor *Actor, const FVector &Point, double &OutBoundsSize) {
+  FBox Box(ForceInit);
+  Actor->ForEachComponent<UPrimitiveComponent>(false, [&Box](const UPrimitiveComponent *Primitive) {
+    if (Primitive->IsRegistered() && !Primitive->IsA<UDebugDrawComponent>())
+      Box += Primitive->Bounds.GetBox();
+  });
+  if (!Box.IsValid)
+    Box = FBox(Actor->GetActorLocation(), Actor->GetActorLocation());
   FVector Origin, Extent;
-  Actor->GetActorBounds(false, Origin, Extent);
+  Box.GetCenterAndExtents(Origin, Extent);
   OutBoundsSize = Extent.Size();
   const FVector Outside = (Point - Origin).GetAbs() - Extent;
   return FVector(FMath::Max(Outside.X, 0.0), FMath::Max(Outside.Y, 0.0), FMath::Max(Outside.Z, 0.0)).Size();
