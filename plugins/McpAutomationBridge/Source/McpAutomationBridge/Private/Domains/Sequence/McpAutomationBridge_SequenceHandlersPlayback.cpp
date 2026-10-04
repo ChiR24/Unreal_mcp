@@ -1,9 +1,11 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "EngineUtils.h"
 #include "LevelSequenceActor.h"
 #include "SequencerSettings.h"
+#include "UObject/UObjectIterator.h"
 
 
 namespace {
@@ -19,6 +21,38 @@ TSharedPtr<ISequencer> McpFindOpenSequencer(UObject *SequenceAsset) {
     return TSharedPtr<ISequencer>();
   }
   return static_cast<ILevelSequenceEditorToolkit *>(Editor)->GetSequencer();
+}
+
+// A playing Sequencer ignores a seek: its clock carries on from where playback started, so the playhead stayed put
+// while the reply named the frame asked for. Pausing first makes the jump land; play restarts the clock from there.
+// The Sequencer poses its meshes on their next tick, and an editor that is minimized or in the background does not
+// tick its world, so a screenshot after the seek showed the old frame: pose the meshes the Sequencer drives (it turns
+// on their editor animation updates; followers have no instance and follow their leader) right away.
+void McpSeekPaused(const TSharedPtr<ISequencer> &Sequencer, UMovieScene *MovieScene, double Seconds) {
+  ULevelSequenceEditorBlueprintLibrary::Pause();
+  Sequencer->SetLocalTime(MovieScene->GetTickResolution().AsFrameTime(Seconds));
+  UWorld *World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
+  // A mesh that copies another's pose (a face following its body) could refresh first and copy the old pose,
+  // so a held frame showed the head a frame behind; the second pass reads the pose the first one made.
+  for (int32 Pass = 0; Pass < 2; ++Pass) {
+    for (TObjectIterator<USkeletalMeshComponent> It; It; ++It) {
+      if (It->GetWorld() == World && It->GetUpdateAnimationInEditor() && It->GetAnimInstance()) {
+        It->TickAnimation(0.f, false);
+        It->RefreshBoneTransforms();
+#if ENGINE_MINOR_VERSION >= 1
+        It->RefreshFollowerComponents();
+#else
+        It->RefreshSlaveComponents();
+#endif
+        It->MarkRenderDynamicDataDirty();
+      }
+    }
+  }
+}
+
+// The display frame the playhead is really on, read back rather than echoed from the request.
+int32 McpPlayheadFrame(const TSharedPtr<ISequencer> &Sequencer, UMovieScene *MovieScene) {
+  return Sequencer->GetLocalTime().ConvertTo(MovieScene->GetDisplayRate()).FloorToFrame().Value;
 }
 }
 
@@ -71,29 +105,25 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePlay(
                                      ? TickRate.AsFrameTime(StartTime)
                                      : FFrameTime(Range.GetLowerBoundValue());
     if (bHasStartTime) {
-      Sequencer->SetLocalTime(StartTick);
+      McpSeekPaused(Sequencer, MovieScene, StartTime);
     }
     ULevelSequenceEditorBlueprintLibrary::Play();
     auto ToDisplay = [MovieScene, TickRate](FFrameTime Tick) {
-      return ConvertFrameTime(Tick, TickRate, MovieScene->GetDisplayRate())
-          .FloorToFrame()
-          .Value;
+      return ConvertFrameTime(Tick, TickRate, MovieScene->GetDisplayRate()).FloorToFrame().Value;
     };
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetBoolField(TEXT("playing"), true);
     // Seconds and display-rate frames; tick values divided by the display
     // rate used to be reported as seconds.
     Resp->SetNumberField(TEXT("startTime"), TickRate.AsSeconds(StartTick));
-    Resp->SetNumberField(TEXT("currentFrame"), ToDisplay(StartTick));
-    Resp->SetNumberField(TEXT("playbackStart"),
-                         ToDisplay(FFrameTime(Range.GetLowerBoundValue())));
-    Resp->SetNumberField(TEXT("playbackEnd"),
-                         ToDisplay(FFrameTime(Range.GetUpperBoundValue())));
+    Resp->SetNumberField(TEXT("currentFrame"), Sequencer.IsValid() ? McpPlayheadFrame(Sequencer, MovieScene)
+                                                                   : ToDisplay(StartTick));
+    Resp->SetNumberField(TEXT("playbackStart"), ToDisplay(FFrameTime(Range.GetLowerBoundValue())));
+    Resp->SetNumberField(TEXT("playbackEnd"), ToDisplay(FFrameTime(Range.GetUpperBoundValue())));
     if (!LoopMode.IsEmpty()) {
       Resp->SetStringField(TEXT("loopMode"), LoopMode);
     }
-    SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence playing"),
-                           Resp);
+    SendAutomationResponse(Socket, RequestId, true, TEXT("Sequence playing"), Resp);
     return true;
   }
   SendAutomationResponse(Socket, RequestId, false,
@@ -186,21 +216,39 @@ bool UMcpAutomationBridgeSubsystem::HandleSequencePause(
                            nullptr, TEXT("INVALID_SEQUENCE"));
     return true;
   }
+  double HoldAt = 0.0;
+  const bool bHold = LocalPayload->TryGetNumberField(TEXT("startTime"), HoldAt);
+  if (bHold && (!FMath::IsFinite(HoldAt) || HoldAt < 0.0)) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("startTime must be a non-negative number of seconds"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   ULevelSequence *LevelSeq =
       Cast<ULevelSequence>(McpLoadAsset(SeqPath));
+  // Holding a frame needs Sequencer, so a closed sequence is opened the way play opens it.
+  if (LevelSeq && bHold && ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() != LevelSeq) {
+    ULevelSequenceEditorBlueprintLibrary::OpenLevelSequence(LevelSeq);
+  }
   if (LevelSeq) {
     if (ULevelSequenceEditorBlueprintLibrary::GetCurrentLevelSequence() ==
         LevelSeq) {
       ULevelSequenceEditorBlueprintLibrary::Pause();
+      TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+      // startTime holds that frame, so the viewport shows the scene at that moment.
+      if (TSharedPtr<ISequencer> Sequencer = McpFindOpenSequencer(LevelSeq)) {
+        if (bHold) {
+          McpSeekPaused(Sequencer, LevelSeq->GetMovieScene(), HoldAt);
+        }
+        Resp->SetNumberField(TEXT("currentFrame"), McpPlayheadFrame(Sequencer, LevelSeq->GetMovieScene()));
+      }
       SendAutomationResponse(Socket, RequestId, true,
-                                        TEXT("Sequence paused"), nullptr);
+                                        TEXT("Sequence paused"), Resp);
       return true;
     }
   }
-  SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("Sequence not currently open in editor"), nullptr,
-      TEXT("EXECUTION_ERROR"));
+  SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not currently open in editor"), nullptr,
+                         TEXT("EXECUTION_ERROR"));
   return true;
 }
 
@@ -236,9 +284,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceStop(
       return true;
     }
   }
-  SendAutomationResponse(
-      Socket, RequestId, false,
-      TEXT("Sequence not currently open in editor"), nullptr,
-      TEXT("EXECUTION_ERROR"));
+  SendAutomationResponse(Socket, RequestId, false, TEXT("Sequence not currently open in editor"), nullptr,
+                         TEXT("EXECUTION_ERROR"));
   return true;
 }

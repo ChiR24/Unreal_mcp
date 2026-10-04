@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "39819640c3708a8d",
+  "catalogRevision": "7007a2687fd0c952",
   "recordCount": 396,
   "records": [
     {
@@ -1144,7 +1144,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. Channels left out keep the reference pose of that bone, so a rotation-only track poses without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative to its rest orientation; plain rotation replaces the local rotation outright and needs the rest orientation to already be known."
+              "description": "Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. frame runs 0 to numFrames inclusive. Only the poses that matter need keys: frames between two keys of a channel are blended (rotation slerped), frames before its first key or after its last hold that key. Channels left out keep the reference pose of that bone, so a rotation-only track poses without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative to its rest orientation; plain rotation replaces the local rotation outright and needs the rest orientation to already be known. Calling it again with the name of an existing clip re-keys that clip from empty (its additive settings are kept)."
             },
             "kind": {
               "type": "string",
@@ -1363,8 +1363,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "33593de8f9238751ef65b2d7e1c81c5a18f6b3fa10db6d43db144121dcecffd8",
-        "content": "9770d95686063894b23b9bf9ed298cd0e2f79c3f42bee0f3b01e1ad1c1060c88"
+        "schema": "1986d95ad40086f81feced740dfc98727fd520cc603ee6c7cecbbb80f00d9556",
+        "content": "beb52b4879719785d0ff50dce3d3bddc1c626ef4e7b7bfddc4ead54340bccb8c"
       }
     },
     {
@@ -2445,6 +2445,7 @@
           "edit=add_notify_state: A ranged notify is needed.",
           "edit=add_sync_marker: Sync groups needed.",
           "edit=set_additive_settings: Additive layering needed.",
+          "edit=set_additive_settings: A hand-keyed move (an arm raise, a head turn) must play on top of a mocap clip: key it as a procedural clip relative to the reference pose, then make it LocalSpaceAdditive with basePoseType RefPose.",
           "edit=set_root_motion_settings: Root motion locomotion needed.",
           "edit=set_sequence_length: Clip duration must change.",
           "edit=add_aim_offset_sample: Aim sample must be added."
@@ -2552,11 +2553,21 @@
             },
             "additiveAnimType": {
               "type": "string",
-              "description": "String parameter."
+              "enum": [
+                "NoAdditive",
+                "LocalSpaceAdditive",
+                "MeshSpaceAdditive"
+              ],
+              "description": "NoAdditive (default) plays the clip as a full pose. LocalSpaceAdditive keeps only its difference from the base pose and adds that on top of whatever plays under it (a Sequencer section on another row, Apply Additive in an Animation Blueprint). MeshSpaceAdditive adds rotations in mesh space, for aim offsets; Sequencer cannot play it."
             },
             "basePoseType": {
               "type": "string",
-              "description": "Additive base pose type (RefPose, AnimScaled, AnimFrame)."
+              "enum": [
+                "RefPose",
+                "AnimScaled",
+                "AnimFrame"
+              ],
+              "description": "What the additive difference is taken from (default RefPose): RefPose = the skeleton reference pose, AnimScaled = basePoseAnimation frame by frame, AnimFrame = one frame (basePoseFrame) of basePoseAnimation."
             },
             "basePoseFrame": {
               "type": "number",
@@ -2804,8 +2815,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5e941903157cc1884b1ba9610edf17df3e37616b2403063246ca50438a9059f9",
-        "content": "cf1d1070dcf4411630f107ae2ca90955584b285cf532e0e96e2caef366de53b0"
+        "schema": "fb5a31bec6f5f554bdbb49834b0b674dd598f24c9077582793c7b24828b4fc1a",
+        "content": "28bf8f2d3a85933e9957a7b7735083235aa8e48cbcf2b863e00bf6f536fcbaee"
       }
     },
     {
@@ -30071,7 +30082,8 @@
         ],
         "summary": "Attach an actor to a parent actor.",
         "whenToUse": [
-          "An actor must follow another actor transform."
+          "An actor must follow another actor transform.",
+          "A prop must ride a character's hand, head or other bone: socketName with snapToTarget, then tune the grip with relativeLocation/relativeRotation."
         ],
         "whenNotToUse": [
           "The actor should remain independent (use detach)."
@@ -30093,6 +30105,36 @@
             "parentActor": {
               "type": "string",
               "description": "Parent actor name to attach to."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "Component of the parent actor to attach to (default its root): on a character built from several meshes, the mesh that owns the bone."
+            },
+            "socketName": {
+              "type": "string",
+              "description": "Bone or socket on that component to attach to (hand_r, weapon_r, head). Refused with SOCKET_NOT_FOUND when the component has neither."
+            },
+            "snapToTarget": {
+              "type": "boolean",
+              "description": "Snap the child onto the bone or socket instead of keeping its current world placement (default false)."
+            },
+            "relativeLocation": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "With snapToTarget: offset from the bone or socket in its own space, as [x, y, z]."
+            },
+            "relativeRotation": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 3,
+              "maxItems": 3,
+              "description": "With snapToTarget: rotation relative to the bone or socket, as [pitch, yaw, roll] in degrees."
             }
           },
           "required": [
@@ -30166,8 +30208,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ffc9c5b496fc5e8716f21272cc676868e132ad3ab6a873639b4a387143b8fc56",
-        "content": "4ad8f61174d0a7acead13b8ac40cb2574dd511e2cf940afbcfea4c9159c56789"
+        "schema": "e974f29be6e4711582c14d1298af6abb90eb5dc53b409cb58e04d592e9974999",
+        "content": "94f39b0d45739729db213d99247ce3907bd96cfc3635d2f401aab6e1a529733e"
       }
     },
     {
@@ -81173,7 +81215,7 @@
           "trackKind=camera_shake: Camera shake must be animated along the sequence.",
           "trackKind=transform: Add a transform track to animate actor transforms during cinematic.",
           "trackKind=property: Add a property track to animate a specific property on a bound actor.",
-          "trackKind=skeletal_animation: Add a skeletal animation track to play animations on a skeletal mesh.",
+          "trackKind=skeletal_animation: Add a skeletal animation track to play animations on a skeletal mesh. A clip whose skeleton the mesh cannot play is refused with SKELETON_MISMATCH instead of silently showing the rest pose.",
           "trackKind=material_parameter: Add a material parameter collection track to animate material parameters.",
           "trackKind=particle: Add a particle track to trigger particle systems during cinematic.",
           "trackKind=event: Add an event track to trigger events at specific frames.",
@@ -81273,13 +81315,13 @@
               "type": "string",
               "description": "Animation sequence asset path (alias of animationSequencePath)."
             },
+            "componentName": {
+              "type": "string",
+              "description": "Component of the actor the track works on. skeletal_animation: the skeletal mesh that plays the clip (default the actor's root when that is a skeletal mesh; it gets its own binding under the actor, because Sequencer otherwise plays the clip on the first skeletal mesh it finds, which on a character built from several meshes copies another's pose and shows nothing). material_parameter: the component owning the material."
+            },
             "materialPath": {
               "type": "string",
               "description": "Material asset path for a material render pass."
-            },
-            "componentName": {
-              "type": "string",
-              "description": "Name of the component owning the target material."
             },
             "materialIndex": {
               "type": "integer",
@@ -81531,10 +81573,11 @@
             "animationPath": [
               "skeletal_animation"
             ],
-            "materialPath": [
+            "componentName": [
+              "skeletal_animation",
               "material_parameter"
             ],
-            "componentName": [
+            "materialPath": [
               "material_parameter"
             ],
             "materialIndex": [
@@ -81575,8 +81618,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "59c8648242c2d3b60b256b4b026b6439e7d56194c06a16ca4b1da178e050102a",
-        "content": "9445f602b6d3538a5f19a58dd56ee783f793e66fbc47afa4c2ed5a5685feac7d"
+        "schema": "096d25db618665439f31b03bf86b9bc1e11dfe6cddee1b9c19993213d1c432e8",
+        "content": "bde56fedff9c0e10d4740cef5e5baf6c91f4741a8d0faef17af778d0a51172cd"
       }
     },
     {
@@ -83205,14 +83248,23 @@
             },
             "property": {
               "type": "string",
-              "description": "Property name to keyframe (Transform, Location, Rotation, Scale)."
+              "description": "Property to key: Transform, Location, Rotation or Scale; Visibility, which shows (true) or hides (false) the bound actor in the editor and in renders; or a float or bool property by name."
             },
             "frame": {
               "type": "integer",
               "description": "Frame number for the keyframe."
             },
             "value": {
-              "description": "Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Other properties take their own scalar value, so no type is declared here."
+              "description": "Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes; a new Transform track starts from the current transform of the actor, so the parts a key leaves out keep their values. Add lookAt:{x,y,z} beside location to aim the key at that point (a camera at its subject): pitch and yaw are worked out, roll comes from rotation.roll or 0, and the yaw turns the short way from the key before, so an orbit of aimed keys never spins round. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Visibility takes true or false; other properties take their own scalar value, so no type is declared here."
+            },
+            "interpolation": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "linear",
+                "constant"
+              ],
+              "description": "How the curve leaves this key: auto (default) a smooth curve through the keys, linear a steady rate to the next key (a bullet, a constant pan), constant a hold that jumps at the next key."
             },
             "locked": {
               "type": "boolean",
@@ -83387,6 +83439,9 @@
             "value": [
               "add_keyframe"
             ],
+            "interpolation": [
+              "add_keyframe"
+            ],
             "locked": [
               "set_locked"
             ],
@@ -83401,8 +83456,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4154c002c9eab96b66e70dffc618aa70cb4a27091688d89385222bb3806c8bd9",
-        "content": "c003d1622ddd84f5c806ddf31b30743e7a2a20fe8c99d6806716440cc70f4712"
+        "schema": "6f1bb9c2e760f62e133fb0320e52438be803b9d65a2704488f5bb1233960b36a",
+        "content": "4aa63303184f347c4316646207c7c1948a2316df955762e060c7211fda1f1218"
       }
     },
     {
@@ -83860,7 +83915,7 @@
                               },
                               "channelType": {
                                 "type": "string",
-                                "description": "double or float."
+                                "description": "double, float or bool."
                               },
                               "channelName": {
                                 "type": "string",
@@ -83884,7 +83939,7 @@
                                     },
                                     "value": {
                                       "type": "number",
-                                      "description": "Key value."
+                                      "description": "Key value; a bool key (a Visibility track) reads 1 for true and 0 for false."
                                     }
                                   }
                                 }
@@ -84009,8 +84064,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a61b924acbdde2ac9d967747cbe781d5402ed3216e604fecabac3525f7ce125f",
-        "content": "c7c2ce9a508ff1e7a5d886c0ee0d6be717eb99df6760ddd7be5a736d23e97ef7"
+        "schema": "fbc6300372345ebd633e05428b7ff22580f78922cdd245883175f387b6fd332f",
+        "content": "5b4a93754d45d5aeb6d25949f4b7622f2e72b222357bb1e1fba12d6940ae3e5d"
       }
     },
     {
@@ -85437,11 +85492,11 @@
         "whenToUse": [
           "control=play: Sequence playback must be started for preview or PIE.",
           "control=pause: Sequence playback must be paused.",
+          "control=pause: A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot.",
           "control=stop: Sequence playback must be stopped and the playhead reset."
         ],
         "whenNotToUse": [
           "control=play: The sequence is already playing.",
-          "control=pause: The sequence is not playing.",
           "control=stop: The sequence should only be paused."
         ]
       },
@@ -85461,7 +85516,7 @@
             "startTime": {
               "type": "number",
               "minimum": 0,
-              "description": "Sequence time in seconds to start playing from."
+              "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment."
             },
             "loopMode": {
               "type": "string",
@@ -85560,7 +85615,8 @@
           },
           "declaredBy": {
             "startTime": [
-              "play"
+              "play",
+              "pause"
             ],
             "loopMode": [
               "play"
@@ -85570,8 +85626,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "284fb60599d8d1d50a843ebaad1fb7563261a1a2be1e82fa16d783fa51714853",
-        "content": "c17ac077cb9778e579443c948bf8f4d12ef2acc65de553a01df8506b686b64f6"
+        "schema": "74c41bf7e93562feaad6d5399a0ea347f9dc34b672609bc64797c6f42c60e04c",
+        "content": "7313f7be63e05d55e9286277ef6ee4db6875da4844c8785f23c79348f04b8eb4"
       }
     },
     {

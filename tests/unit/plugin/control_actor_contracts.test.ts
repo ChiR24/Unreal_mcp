@@ -711,11 +711,12 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     expect(blueprint.indexOf('McpDescribeSpawnPlacement(RequestId, Spawned, Resp);')).toBeLessThan(blueprint.indexOf('SendAutomationResponse(Socket, RequestId, true, TEXT("Blueprint spawned")'));
   });
 
-  it('spawn_batch measures each item once it is tagged, furnished and coloured, and keeps a flagged item under report: failures', () => {
+  it('spawn_batch measures each item once the whole batch stands, tagged, furnished and coloured, and keeps a flagged item under report: failures', () => {
     const source = read('McpAutomationBridge_ControlActorSpawnBatch.cpp');
-    const measured = source.indexOf('McpPlacement::DescribePlacement(Actor, Entry);');
+    const measured = source.indexOf('McpPlacement::DescribePlacement(Item.Key, Item.Value);');
 
-    expect(flat(source)).toContain('if (Actor) { McpPlacement::DescribePlacement(Actor, Entry); PlacementWarnings += Entry->HasField(TEXT("placementWarning")) ? 1 : 0; }');
+    expect(flat(source)).toContain('if (Actor) { Placed.Emplace(Actor, Entry); } }');
+    expect(flat(source)).toContain('for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) { McpPlacement::DescribePlacement(Item.Key, Item.Value); PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0; }');
     expect(measured, 'after the tags and folder').toBeGreaterThan(source.indexOf('ApplySpawnOrganisation(Actor, Item);'));
     expect(measured, 'after the variables').toBeGreaterThan(source.indexOf('HandleControlActorSetBlueprintVariables('));
     expect(measured, 'after the material').toBeGreaterThan(source.indexOf('HandleControlActorSetMaterial('));
@@ -753,5 +754,19 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     expect(check).toContain('const double SuggestedZ = ActorLocation.Z - Clearance;');
     expect(check).toContain('Suggested->SetNumberField(TEXT("x"), ActorLocation.X);');
     expect(check, 'no claim that every location is a bounds centre').not.toContain('is its bounds centre, not its base');
+  });
+});
+
+describe('get_component_property reads weak and lazy object pointers', () => {
+  it('reads any object pointer through the base class, after a soft one is answered with its unloaded path', () => {
+    const source = readFileSync(
+      join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp'),
+      'utf8',
+    );
+    const soft = source.indexOf('CastField<FSoftObjectProperty>(Property)');
+    const base = source.indexOf('CastField<FObjectPropertyBase>(Property)');
+    expect(soft).toBeGreaterThan(-1);
+    expect(base, 'a soft pointer is an object pointer too, so it must be answered first').toBeGreaterThan(soft);
+    expect(source).not.toContain('CastField<FObjectProperty>(Property)');
   });
 });

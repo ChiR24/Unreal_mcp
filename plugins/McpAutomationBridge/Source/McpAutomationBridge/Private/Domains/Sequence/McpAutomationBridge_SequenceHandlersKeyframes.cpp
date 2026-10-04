@@ -2,6 +2,7 @@
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
+#include "Domains/Sequence/Cinematics/McpAutomationBridge_SequenceCinematics.h"
 
 namespace {
 bool NormalizeSequenceTransformAlias(const TSharedPtr<FJsonObject> &Payload,
@@ -63,6 +64,14 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("frame number is required. Example: "
                                 "{\"frame\": 30} for keyframe at frame 30"),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
+
+  ERichCurveInterpMode Interpolation = RCIM_Cubic;
+  if (!McpSequenceKeyframes::ReadKeyInterpolation(LocalPayload, Interpolation)) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("interpolation must be auto, linear or constant"),
                            nullptr, TEXT("INVALID_ARGUMENT"));
     return true;
   }
@@ -131,8 +140,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
       }
 
       if (PropertyName.Equals(TEXT("Transform"), ESearchCase::IgnoreCase)) {
+        TArray<UObject *, TInlineAllocator<1>> Bound;
+        McpSequenceCinematics::LocateBindingObjects(LevelSeq, BindingGuid, GEditor ? GEditor->GetEditorWorldContext().World() : nullptr, Bound);
+        const AActor *BoundActor = Bound.Num() > 0 ? Cast<AActor>(Bound[0]) : nullptr;
+        const USceneComponent *BoundRoot = BoundActor ? BoundActor->GetRootComponent() : (Bound.Num() > 0 ? Cast<USceneComponent>(Bound[0]) : nullptr);
         if (McpSequenceKeyframes::AddTransformKeyframe(
-                MovieScene, BindingGuid, TickFrame, LocalPayload)) {
+                MovieScene, BindingGuid, TickFrame, LocalPayload, BoundRoot)) {
           SendAutomationResponse(
               Socket, RequestId, true,
               bRangeExtended
@@ -156,7 +169,9 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddKeyframe(
           Socket, RequestId, false,
           TEXT("Unsupported property or failed to create track. Supported "
                "properties: transform (location+rotation+scale in one value "
-               "object), location/translation, rotation, scale — e.g. "
+               "object; lookAt there needs location beside it), "
+               "location/translation, rotation, scale, Visibility "
+               "(true or false), or a float or bool property — e.g. "
                "{\"property\": \"transform\", \"value\": {\"location\": "
                "{\"x\":0,\"y\":0,\"z\":0}, \"rotation\": {\"pitch\":0,\"yaw\":0,"
                "\"roll\":0}, \"scale\": {\"x\":1,\"y\":1,\"z\":1}}}."),

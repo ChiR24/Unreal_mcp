@@ -12,6 +12,7 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
+#include "Channels/MovieSceneBoolChannel.h"
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
@@ -28,6 +29,11 @@ double TickToDisplayFrame(const UMovieScene *MovieScene, FFrameNumber Tick) {
                                    MovieScene->GetDisplayRate())
       .AsDecimal();
 }
+
+/** A key value as a number; a bool key (a Visibility track) reads 1 or 0. */
+double KeyNumber(const FMovieSceneDoubleValue &Value) { return Value.Value; }
+double KeyNumber(const FMovieSceneFloatValue &Value) { return Value.Value; }
+double KeyNumber(bool bValue) { return bValue ? 1.0 : 0.0; }
 
 /** Append one channel family's key times and values to OutChannels. */
 template <typename ChannelType>
@@ -57,7 +63,7 @@ void DescribeChannels(const UMovieScene *MovieScene,
       KeyObj->SetNumberField(TEXT("frame"),
                              TickToDisplayFrame(MovieScene, Times[KeyIndex]));
       if (Values.IsValidIndex(KeyIndex)) {
-        KeyObj->SetNumberField(TEXT("value"), Values[KeyIndex].Value);
+        KeyObj->SetNumberField(TEXT("value"), KeyNumber(Values[KeyIndex]));
       }
       KeysArray.Add(MakeShared<FJsonValueObject>(KeyObj));
     }
@@ -94,6 +100,7 @@ TSharedPtr<FJsonObject> DescribeSectionKeys(const UMovieScene *MovieScene,
                                              ChannelsArray, OutKeyCount);
   DescribeChannels<FMovieSceneFloatChannel>(MovieScene, Proxy, TEXT("float"),
                                             ChannelsArray, OutKeyCount);
+  DescribeChannels<FMovieSceneBoolChannel>(MovieScene, Proxy, TEXT("bool"), ChannelsArray, OutKeyCount);
   Obj->SetArrayField(TEXT("channels"), ChannelsArray);
   return Obj;
 }

@@ -16,6 +16,15 @@ const D = 'cinematics';
 /** SetSectionRange (Cinematics.cpp): start, then duration or end, on a row. */
 const SECTION_RANGE = { startFrame: A.startFrame, durationFrames: A.durationFrames, endFrame: A.endFrame, rowIndex: A.rowIndex };
 
+/** One wording for both tracks that read it: a fold keeps a shared parameter's first description. */
+const TRACK_COMPONENT = {
+  type: 'string',
+  description: 'Component of the actor the track works on. skeletal_animation: the skeletal mesh that plays the clip '
+    + '(default the actor\'s root when that is a skeletal mesh; it gets its own binding under the actor, because '
+    + 'Sequencer otherwise plays the clip on the first skeletal mesh it finds, which on a character built from several '
+    + 'meshes copies another\'s pose and shows nothing). material_parameter: the component owning the material.',
+};
+
 /** LoadSequence reads the sequence to edit from path; for shots that is the master. */
 const masterPath = { type: 'string', description: 'Canonical /Game path of the master sequence that owns the shot track.' };
 
@@ -207,7 +216,7 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
   // MaterialTrack.cpp requires parameterName and value, and keys value at startFrame.
   trackRecord('sequence.cinematic.add_material_parameter_track', 'add_material_parameter_track',
     'Add a material parameter collection track to animate material parameters.',
-    { materialPath: P.materialPath, componentName: A.componentName, materialIndex: A.materialIndex, parameterName: A.parameterName, bindingGuid: A.bindingGuid, actorName: P.actorName, value: { description: 'Key value at startFrame: a number for a scalar parameter, or an {r, g, b, a} object for a color parameter.' }, startFrame: A.startFrame },
+    { materialPath: P.materialPath, componentName: TRACK_COMPONENT, materialIndex: A.materialIndex, parameterName: A.parameterName, bindingGuid: A.bindingGuid, actorName: P.actorName, value: { description: 'Key value at startFrame: a number for a scalar parameter, or an {r, g, b, a} object for a color parameter.' }, startFrame: A.startFrame },
     { required: ['path', 'parameterName', 'value'], example: { actorName: 'Cube', parameterName: 'Opacity', value: 0.5 }, requiredOneOf: ['actorName', 'bindingGuid'] }),
   // Tracks.cpp resolves the binding from bindingGuid or actorName like the other bound tracks.
   trackRecord('sequence.cinematic.add_particle_track', 'add_particle_track',
@@ -215,8 +224,8 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     { activate: A.activate, bindingGuid: A.bindingGuid, actorName: P.actorName, ...SECTION_RANGE },
     { required: ['path'], example: { actorName: 'NiagaraActor_1' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
   trackRecord('sequence.cinematic.add_skeletal_animation_track', 'add_skeletal_animation_track',
-    'Add a skeletal animation track to play animations on a skeletal mesh.',
-    { animationSequencePath: { type: 'string', description: 'Animation sequence asset path.' }, animationPath: A.animationPath, actorName: P.actorName, bindingGuid: A.bindingGuid, ...SECTION_RANGE },
+    'Add a skeletal animation track to play animations on a skeletal mesh. A clip whose skeleton the mesh cannot play is refused with SKELETON_MISMATCH instead of silently showing the rest pose.',
+    { animationSequencePath: { type: 'string', description: 'Animation sequence asset path.' }, animationPath: A.animationPath, actorName: P.actorName, componentName: TRACK_COMPONENT, bindingGuid: A.bindingGuid, ...SECTION_RANGE },
     { required: ['path'], example: { actorName: 'SkeletalMeshActor_1', animationSequencePath: '/Game/Animations/AS_Walk' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
   trackRecord('sequence.cinematic.add_transform_track', 'add_transform_track',
     'Add a transform track to animate actor transforms during cinematic.',

@@ -125,3 +125,13 @@ describe('the set_property record says where a Blueprint write lands', () => {
     expect(description).toMatch(/STALE_TARGET/u);
   });
 });
+
+describe('set_property tells the object which property changed', () => {
+  it('posts the edit with the written property and its top-level member, as the details panel does', () => {
+    const flat = compact(setter());
+    expect(flat).toContain('FPropertyChangedEvent Changed(Property, EPropertyChangeType::ValueSet);');
+    expect(flat).toContain('Changed.MemberProperty = Member; RootObject->PostEditChangeProperty(Changed);');
+    expect(flat).toContain('FindPropertyByName(FName(*ResolvedPath.Left(Dot == INDEX_NONE ? ResolvedPath.Len() : Dot)))');
+    expect(flat).not.toContain('RootObject->PostEditChange();');
+  });
+});

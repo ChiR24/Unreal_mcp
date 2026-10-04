@@ -71,15 +71,6 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
         return MakeShared<FJsonValueNumber>(0.0);
     }
 
-    if (FObjectProperty* ObjectProp = CastField<FObjectProperty>(Property))
-    {
-        UObject* Object = ObjectProp->GetObjectPropertyValue_InContainer(TargetContainer);
-        if (Object)
-        {
-            return MakeShared<FJsonValueString>(Object->GetPathName());
-        }
-        return MakeShared<FJsonValueNull>();
-    }
     // Also FSoftClassProperty, which derives from FSoftObjectProperty.
     if (FSoftObjectProperty* SoftObjectProp = CastField<FSoftObjectProperty>(Property))
     {
@@ -87,6 +78,17 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
         if (SoftObject && !SoftObject->IsNull())
         {
             return MakeShared<FJsonValueString>(SoftObject->ToSoftObjectPath().ToString());
+        }
+        return MakeShared<FJsonValueNull>();
+    }
+    // The base also reads weak and lazy pointers (a skeletal mesh's LeaderPoseComponent), which came back as an
+    // unsupported type; soft ones were answered above with their path, unloaded.
+    if (FObjectPropertyBase* ObjectProp = CastField<FObjectPropertyBase>(Property))
+    {
+        UObject* Object = ObjectProp->GetObjectPropertyValue_InContainer(TargetContainer);
+        if (Object)
+        {
+            return MakeShared<FJsonValueString>(Object->GetPathName());
         }
         return MakeShared<FJsonValueNull>();
     }

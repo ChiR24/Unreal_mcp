@@ -65,6 +65,7 @@ const testCases = [
   // === PLAYBACK ===
   { scenario: 'PLAYBACK: play', toolName: 'manage_sequence', arguments: { action: 'play', path: SEQUENCE_PATH, startTime: 0, loopMode: 'once' }, expected: 'success' },
   { scenario: 'PLAYBACK: pause', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH }, expected: 'success' },
+  { scenario: 'PLAYBACK: pause holds a frame', toolName: 'manage_sequence', arguments: { action: 'pause', path: SEQUENCE_PATH, startTime: 0.5 }, expected: 'success' },
   { scenario: 'PLAYBACK: stop', toolName: 'manage_sequence', arguments: { action: 'stop', path: SEQUENCE_PATH }, expected: 'success' },
   { scenario: 'CONFIG: set_playback_speed', toolName: 'manage_sequence', arguments: { action: 'set_playback_speed', path: SEQUENCE_PATH, speed: 1.25 }, expected: 'success' },
 
@@ -72,6 +73,11 @@ const testCases = [
   { scenario: 'ADD: add_keyframe', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Location', frame: 12, value: { x: 100, y: 50, z: 150 } }, expected: 'success' },
   // bindingId is parsed by ReadBindingGuid (Cinematics.cpp:113) as the binding to key against.
   { scenario: 'ADD: add_keyframe via bindingId', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, bindingId: '${captured:actorBindingId}', property: 'Location', frame: 24, value: { x: 10, y: 20, z: 30 } }, expected: 'success' },
+  // lookAt aims the key from its location; linear keys run at a steady rate.
+  { scenario: 'ADD: add_keyframe aimed with lookAt, linear', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Transform', frame: 36, interpolation: 'linear', value: { location: { x: 300, y: 0, z: 200 }, lookAt: { x: 0, y: 0, z: 100 } } }, expected: 'success' },
+  { scenario: 'ERROR: add_keyframe with an unknown interpolation', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Location', frame: 40, interpolation: 'bezier', value: { x: 0, y: 0, z: 0 } }, expected: 'error' },
+  // Visibility keys a Visibility track, which really hides the actor in renders.
+  { scenario: 'ADD: add_keyframe Visibility hides the actor', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Visibility', frame: 30, value: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.message', equals: 'Visibility Keyframe added' }] },
   // The harness merges args.params into the call arguments before routing.
   { scenario: 'PARAMS: get_properties via nested params', toolName: 'manage_sequence', arguments: { action: 'get_properties', params: { path: SEQUENCE_PATH } }, expected: 'success' },
   { scenario: 'INFO: get_properties', toolName: 'manage_sequence', arguments: { action: 'get_properties', path: SEQUENCE_PATH }, expected: 'success' },
@@ -156,7 +162,8 @@ const testCases = [
   { scenario: 'CINEMATICS: add_particle_track by actorName', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'error|PARTICLE_BINDING_REQUIRED' },
   { scenario: 'CINEMATICS: add_particle_track optional', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', path: SEQUENCE_PATH, activate: true, startFrame: 0, durationFrames: 120, endFrame: 120, rowIndex: 2, bindingGuid: '${captured:actorBindingId}', save: true }, expected: 'error|PARTICLE_BINDING_REQUIRED' },
   // add_skeletal_animation_track
-  { scenario: 'CINEMATICS: add_skeletal_animation_track', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, actorName: ACTOR_A, animationSequencePath: ANIM_PATH }, expected: 'success|already exists' },
+  { scenario: 'CINEMATICS: add_skeletal_animation_track refuses an actor with no skeletal mesh', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, actorName: ACTOR_A, animationSequencePath: ANIM_PATH }, expected: 'error' },
+  { scenario: 'CINEMATICS: add_skeletal_animation_track refuses a component that is not a skeletal mesh', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, actorName: ACTOR_A, componentName: 'StaticMeshComponent0', animationSequencePath: ANIM_PATH }, expected: 'error' },
   { scenario: 'CINEMATICS: add_skeletal_animation_track optional', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, animationPath: ANIM_PATH, bindingGuid: '${captured:actorBindingId}', startFrame: 0, durationFrames: 48, endFrame: 48, rowIndex: 0, save: true }, expected: 'success|already exists' },
   // add_transform_track
   { scenario: 'CINEMATICS: add_transform_track', toolName: 'manage_sequence', arguments: { action: 'add_transform_track', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'success|already exists' },

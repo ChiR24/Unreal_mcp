@@ -75,12 +75,17 @@ USkeletalMesh* LoadSkeletalMeshFromPathSkel(const FString& MeshPath, FString& Ou
 
 USkeleton* LoadSkeletonOrMeshSkeleton(const FString& Path, FString& OutError)
 {
-    if (USkeleton* Skeleton = LoadSkeletonFromPathSkel(Path, OutError))
+    // Load once as whatever the asset is. Probing a mesh path as a Skeleton first logged "Failed to find object",
+    // which the reply then carried as an engine warning although the mesh was found.
+    const FString SanitizedPath = SanitizeProjectRelativePath(Path);
+    UObject* Asset = SanitizedPath.IsEmpty() ? nullptr
+        : StaticLoadObject(UObject::StaticClass(), nullptr, *SanitizedPath, nullptr, LOAD_NoWarn);
+    if (USkeletalMesh* Mesh = Cast<USkeletalMesh>(Asset))
     {
-        return Skeleton;
+        OutError.Reset();
+        return Mesh->GetSkeleton();
     }
-    USkeletalMesh* Mesh = Path.IsEmpty() ? nullptr : LoadSkeletalMeshFromPathSkel(Path, OutError);
-    return Mesh ? Mesh->GetSkeleton() : nullptr;
+    return LoadSkeletonFromPathSkel(Path, OutError);
 }
 
 USkeleton* LoadPayloadSkeletonOrReply(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,

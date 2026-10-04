@@ -47,13 +47,18 @@ bool HandleAnimationCreateProceduralAnimAction(FActionContext &Context,
   }
   Resp->SetBoolField(TEXT("existingAsset"), bExisting);
   McpHandlerUtils::AddVerification(Resp, Sequence);
+  // An existing clip used to come back as success with none of the new keys in it. It is re-keyed instead, from
+  // empty, so a bone the new tracks leave out does not keep the old version's motion; its additive settings stay.
+  if (bExisting && Sequence->GetSkeleton() != TargetSkeleton) {
+    Context.Fail(TEXT("SKELETON_MISMATCH"),
+                 FString::Printf(TEXT("%s already exists on skeleton %s; re-keying it onto %s is refused"), *Name,
+                                 *GetPathNameSafe(Sequence->GetSkeleton()), *TargetSkeleton->GetPathName()));
+    return false;
+  }
   Context.bSuccess = true;
   if (bExisting) {
-    Context.Message = FString::Printf(TEXT("Procedural animation '%s' already exists - reusing existing asset"), *Name);
-    Resp->SetStringField(TEXT("assetPath"), SavePath / Name);
-    Resp->SetStringField(TEXT("skeletonPath"),
-                         Sequence->GetSkeleton() ? Sequence->GetSkeleton()->GetPathName() : SkeletonPath);
-    return false;
+    Sequence->Modify();
+    Sequence->GetController().RemoveAllBoneTracks();
   }
 
   SetAnimSequenceFrames(Sequence, NumFrames, FrameRate);
@@ -63,7 +68,8 @@ bool HandleAnimationCreateProceduralAnimAction(FActionContext &Context,
   if (GetJsonBoolField(Payload, TEXT("save"), true)) {
     McpSafeOperations::McpSafeAssetSave(Sequence);
   }
-  Context.Message = FString::Printf(TEXT("Procedural animation '%s' created with %d tracks"), *Name, AppliedTrackCount);
+  Context.Message = FString::Printf(TEXT("Procedural animation '%s' %s with %d tracks"), *Name,
+                                    bExisting ? TEXT("re-keyed") : TEXT("created"), AppliedTrackCount);
   Resp->SetStringField(TEXT("assetPath"), Sequence->GetPathName());
   Resp->SetStringField(TEXT("skeletonPath"), TargetSkeleton->GetPathName());
   Resp->SetNumberField(TEXT("numFrames"), NumFrames);

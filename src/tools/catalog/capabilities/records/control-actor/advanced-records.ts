@@ -6,6 +6,7 @@
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildCoreRecord } from '../core/builder.js';
 import { DOMAIN, P } from './properties.js';
+import { bool, str, vec3 } from '../shared/schema-props.js';
 
 const FAMILY_ATTACH = 'attachment';
 const FAMILY_BLUEPRINT = 'blueprint';
@@ -20,10 +21,17 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     domain: DOMAIN,
     family: FAMILY_ATTACH,
     topics: ['attach actor', 'parent actor', 'attach to actor', 'child actor', 'attach to socket', 'set actor parent'],
-    summary: 'Attach a child actor to a parent actor in the scene hierarchy.',
-    whenToUse: ['An actor must follow another actor transform.'],
+    summary: 'Attach a child actor to a parent actor in the scene hierarchy, or to a bone or socket of one of its components (a weapon or a case to a hand).',
+    whenToUse: ['An actor must follow another actor transform.', 'A prop must ride a character\'s hand, head or other bone: socketName with snapToTarget, then tune the grip with relativeLocation/relativeRotation.'],
     whenNotToUse: ['The actor should remain independent (use detach).'],
-    inputProps: { childActor: P.childActor, parentActor: P.parentActor },
+    inputProps: {
+      childActor: P.childActor, parentActor: P.parentActor,
+      componentName: str('Component of the parent actor to attach to (default its root): on a character built from several meshes, the mesh that owns the bone.'),
+      socketName: str('Bone or socket on that component to attach to (hand_r, weapon_r, head). Refused with SOCKET_NOT_FOUND when the component has neither.'),
+      snapToTarget: bool('Snap the child onto the bone or socket instead of keeping its current world placement (default false).'),
+      relativeLocation: vec3('With snapToTarget: offset from the bone or socket in its own space, as [x, y, z].'),
+      relativeRotation: vec3('With snapToTarget: rotation relative to the bone or socket, as [pitch, yaw, roll] in degrees.'),
+    },
     required: ['childActor', 'parentActor'],
     effect: 'write',
     costLatency: 'interactive',

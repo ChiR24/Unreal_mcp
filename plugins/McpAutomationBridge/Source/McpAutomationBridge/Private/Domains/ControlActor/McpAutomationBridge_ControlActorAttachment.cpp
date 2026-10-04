@@ -27,31 +27,60 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorAttach(
     return true;
   }
 
+  // A prop in a hand rides a bone or socket of one of the parent's components, not the actor's root.
+  FString ComponentName;
+  Payload->TryGetStringField(TEXT("componentName"), ComponentName);
+  FString SocketText;
+  Payload->TryGetStringField(TEXT("socketName"), SocketText);
+  const FName SocketName = SocketText.IsEmpty() ? NAME_None : FName(*SocketText);
   USceneComponent *ChildRoot = Child->GetRootComponent();
-  USceneComponent *ParentRoot = Parent->GetRootComponent();
+  USceneComponent *ParentRoot = ComponentName.IsEmpty()
+                                    ? Parent->GetRootComponent()
+                                    : Cast<USceneComponent>(FindComponentByName(Parent, ComponentName));
   if (!ChildRoot || !ParentRoot) {
-    SendStandardErrorResponse(this, Socket, RequestId, TEXT("ROOT_MISSING"),
-                              TEXT("Actor missing root component"), nullptr);
+    const FString Why = ComponentName.IsEmpty()
+                            ? FString(TEXT("Actor missing root component"))
+                            : FString::Printf(TEXT("%s has no scene component named %s"), *ParentName, *ComponentName);
+    SendStandardErrorResponse(this, Socket, RequestId,
+                              ComponentName.IsEmpty() ? TEXT("ROOT_MISSING") : TEXT("COMPONENT_NOT_FOUND"), Why,
+                              nullptr);
     return true;
   }
+  if (!SocketName.IsNone() && !ParentRoot->DoesSocketExist(SocketName)) {
+    SendStandardErrorResponse(this, Socket, RequestId, TEXT("SOCKET_NOT_FOUND"),
+                              FString::Printf(TEXT("%s has no bone or socket named %s"), *ParentRoot->GetName(),
+                                              *SocketText),
+                              nullptr);
+    return true;
+  }
+  bool bSnap = false;
+  Payload->TryGetBoolField(TEXT("snapToTarget"), bSnap);
 
   Child->Modify();
   ChildRoot->Modify();
   ChildRoot->AttachToComponent(ParentRoot,
-                               FAttachmentTransformRules::KeepWorldTransform);
+                               bSnap ? FAttachmentTransformRules::SnapToTargetNotIncludingScale
+                                     : FAttachmentTransformRules::KeepWorldTransform,
+                               SocketName);
+  if (bSnap) {
+    // Offsets are in the bone's or socket's space, which is how a grip is tuned.
+    ChildRoot->SetRelativeLocationAndRotation(
+        ExtractVectorField(Payload, TEXT("relativeLocation"), FVector::ZeroVector),
+        ExtractRotatorField(Payload, TEXT("relativeRotation"), FRotator::ZeroRotator));
+  }
   Child->SetOwner(Parent);
   Child->MarkPackageDirty();
   Parent->MarkPackageDirty();
 
-  bool bAttached = false;
-  if (Child->GetRootComponent() &&
-      Child->GetRootComponent()->GetAttachParent() == ParentRoot) {
-    bAttached = true;
-  }
+  const bool bAttached = Child->GetRootComponent() &&
+                         Child->GetRootComponent()->GetAttachParent() == ParentRoot &&
+                         Child->GetRootComponent()->GetAttachSocketName() == SocketName;
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("child"), McpActorRef(Child));
   Data->SetStringField(TEXT("parent"), McpActorRef(Parent));
+  Data->SetStringField(TEXT("parentComponent"), ParentRoot->GetName());
+  if (!SocketName.IsNone()) Data->SetStringField(TEXT("socketName"), SocketText);
   Data->SetBoolField(TEXT("attached"), bAttached);
 
   if (!bAttached) {

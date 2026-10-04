@@ -40,10 +40,13 @@ export const A: PropertyMap = {
   boneTracks: objectList(
     'Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, '
     + 'rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. '
-    + 'Channels left out keep the reference pose of that bone, so a rotation-only track poses '
-    + 'without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative '
-    + 'to its rest orientation; plain rotation replaces the local rotation outright and needs '
-    + 'the rest orientation to already be known.',
+    + 'frame runs 0 to numFrames inclusive. Only the poses that matter need keys: frames between '
+    + 'two keys of a channel are blended (rotation slerped), frames before its first key or '
+    + 'after its last hold that key. Channels left out keep the reference pose of that bone, so '
+    + 'a rotation-only track poses without collapsing the skeleton. Prefer rotationDelta, which '
+    + 'bends the bone relative to its rest orientation; plain rotation replaces the local '
+    + 'rotation outright and needs the rest orientation to already be known. Calling it again with '
+    + 'the name of an existing clip re-keys that clip from empty (its additive settings are kept).',
   ),
   weights: objectList('Per-vertex skin weight descriptors with bone influences.'),
   deltas: objectList('Per-vertex morph target position deltas.'),
@@ -53,7 +56,6 @@ export const A: PropertyMap = {
   endFrame: num('Last frame of the notify state range.'),
   trackIndex: num('Notify track index within the animation sequence.'),
   notifyClass: str('AnimNotify (or AnimNotifyState) class name; prefixed with AnimNotify_/AnimNotifyState_ automatically when missing.'),
-  basePoseType: str('Additive base pose type (RefPose, AnimScaled, AnimFrame).'),
   basePoseFrame: num('Frame used as the additive base pose.'),
   forceRootLock: bool('Whether root motion is force-locked to the reference pose.'),
   bodyType: str('Physics body primitive type (Sphere, Box, Capsule).'),

@@ -107,39 +107,31 @@ TSharedPtr<FJsonObject> HandleSequenceSettingsActions(const FString& SubAction, 
             }
         }
 
-        // Set additive anim type
-        if (AdditiveAnimType == TEXT("LocalSpaceAdditive"))
+        // An unknown name used to turn additive OFF and still answer success.
+        const bool bLocal = AdditiveAnimType == TEXT("LocalSpaceAdditive");
+        const bool bMesh = AdditiveAnimType == TEXT("MeshSpaceAdditive");
+        const bool bFrame = BasePoseType == TEXT("AnimationFrame") || BasePoseType == TEXT("AnimFrame");
+        const bool bScaled = BasePoseType == TEXT("AnimationScaled") || BasePoseType == TEXT("AnimScaled");
+        if ((!bLocal && !bMesh && AdditiveAnimType != TEXT("NoAdditive")) ||
+            (!bFrame && !bScaled && BasePoseType != TEXT("RefPose")))
         {
-            Sequence->AdditiveAnimType = AAT_LocalSpaceBase;
+            ANIM_ERROR_RESPONSE(TEXT("additiveAnimType must be NoAdditive, LocalSpaceAdditive or MeshSpaceAdditive, and basePoseType RefPose, AnimScaled or AnimFrame"), TEXT("INVALID_ARGUMENT"));
         }
-        else if (AdditiveAnimType == TEXT("MeshSpaceAdditive"))
+        Sequence->Modify();
+        Sequence->AdditiveAnimType = bLocal ? AAT_LocalSpaceBase : (bMesh ? AAT_RotationOffsetMeshSpace : AAT_None);
+        Sequence->RefPoseType = bFrame ? ABPT_AnimFrame : (bScaled ? ABPT_AnimScaled : ABPT_RefPose);
+        if (bFrame)
         {
-            Sequence->AdditiveAnimType = AAT_RotationOffsetMeshSpace;
-        }
-        else
-        {
-            Sequence->AdditiveAnimType = AAT_None;
-        }
-
-        // Set base pose type
-        if (BasePoseType == TEXT("AnimationFrame") || BasePoseType == TEXT("AnimFrame"))
-        {
-            Sequence->RefPoseType = ABPT_AnimFrame;
             Sequence->RefFrameIndex = BasePoseFrame;
         }
-        else if (BasePoseType == TEXT("AnimationScaled") || BasePoseType == TEXT("AnimScaled"))
-        {
-            Sequence->RefPoseType = ABPT_AnimScaled;
-        }
-        else
-        {
-            Sequence->RefPoseType = ABPT_RefPose;
-        }
-
         if (BaseAnim)
         {
             Sequence->RefPoseSeq = BaseAnim;
         }
+        // Only the change event for these properties rebuilds the compressed data as deltas; without it the clip
+        // played its absolute pose on top of the base until the editor restarted.
+        FPropertyChangedEvent AdditiveChanged(FindFProperty<FProperty>(UAnimSequence::StaticClass(), GET_MEMBER_NAME_CHECKED(UAnimSequence, AdditiveAnimType)));
+        Sequence->PostEditChangeProperty(AdditiveChanged);
 
         SaveAnimAsset(Sequence, bSave);
 

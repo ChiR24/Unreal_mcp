@@ -11,6 +11,11 @@ import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
 const F = 'timeline';
 const D = 'sequence';
 
+const START_TIME = {
+  type: 'number', minimum: 0,
+  description: 'Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment.',
+};
+
 export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'sequence.play', action: 'play', family: F, domain: D,
@@ -18,17 +23,17 @@ export const TIMELINE_PLAYBACK_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Start playing the currently open Level Sequence.',
     whenToUse: ['Sequence playback must be started for preview or PIE.'],
     whenNotToUse: ['The sequence is already playing.'],
-    inputProps: { path: P.path, startTime: { type: 'number', minimum: 0, description: 'Sequence time in seconds to start playing from.' }, loopMode: { type: 'string', enum: ['once', 'loop'], description: 'Sequencer loop mode for the preview: once or loop.' } },
+    inputProps: { path: P.path, startTime: START_TIME, loopMode: { type: 'string', enum: ['once', 'loop'], description: 'Sequencer loop mode for the preview: once or loop.' } },
     required: ['path'],
     effect: 'write', latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'play', path: '/Game/Cinematics/SEQ_Master' },
   }),
   buildRecord({
     id: 'sequence.pause', action: 'pause', family: F, domain: D,
-    summary: 'Pause playback of the currently open Level Sequence.',
-    whenToUse: ['Sequence playback must be paused.'],
-    whenNotToUse: ['The sequence is not playing.'],
-    inputProps: { path: P.path },
+    summary: 'Pause playback of the currently open Level Sequence, or hold it at one moment to inspect it.',
+    whenToUse: ['Sequence playback must be paused.', 'A pose, camera or effect must be checked at one moment of the sequence: pause with startTime, then take a screenshot.'],
+    whenNotToUse: ['The sequence is not open in Sequencer (play opens it).'],
+    inputProps: { path: P.path, startTime: START_TIME },
     required: ['path'],
     effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'instant', resources: 'low', plugins: SEQ_PLUGINS,
     exampleInput: { action: 'pause', path: '/Game/Cinematics/SEQ_Master' },

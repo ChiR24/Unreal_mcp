@@ -46,12 +46,33 @@ UObject *CreateOrReuseAnimAsset(UClass *AssetClass, UFactory *Factory, const FSt
   return NewAsset;
 }
 
+#if ENGINE_MINOR_VERSION >= 1
+namespace {
+// The engine refuses a rate that is neither a multiple nor a factor of the current one once the model holds data,
+// and a new sequence starts at 30 fps: 24 was refused and the clip silently stayed at 30. A common multiple of the
+// two is accepted coming from either side, so an incompatible rate is reached through it.
+void SetFrameRateVia(UAnimSequence *Sequence, int32 FrameRate) {
+  const FFrameRate Target(FrameRate, 1);
+  const FFrameRate Current = Sequence->GetDataModel()->GetFrameRate();
+  if (FrameRate > 0 && Current.Denominator == 1 && Current.Numerator > 0 &&
+      !Target.IsMultipleOf(Current) && !Target.IsFactorOf(Current)) {
+#if ENGINE_MINOR_VERSION >= 2
+    // One second converts exactly at every whole rate; the new clip's single 1/30 s frame does not and warned.
+    Sequence->GetController().SetNumberOfFrames(FFrameNumber(Current.Numerator));
+#endif
+    Sequence->GetController().SetFrameRate(FFrameRate(FMath::LeastCommonMultiplier(Current.Numerator, FrameRate), 1));
+  }
+  Sequence->GetController().SetFrameRate(Target);
+}
+} // namespace
+#endif
+
 void SetAnimSequenceFrames(UAnimSequence *Sequence, int32 NumFrames, int32 FrameRate) {
 #if ENGINE_MINOR_VERSION >= 2
-  Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
+  SetFrameRateVia(Sequence, FrameRate);
   Sequence->GetController().SetNumberOfFrames(FFrameNumber(NumFrames));
 #elif ENGINE_MINOR_VERSION == 1
-  Sequence->GetController().SetFrameRate(FFrameRate(FrameRate, 1));
+  SetFrameRateVia(Sequence, FrameRate);
   Sequence->GetController().SetPlayLength(static_cast<float>(NumFrames) / static_cast<float>(FrameRate));
 #else
   // SequenceLength is deprecated in UE 5.1+ but is the only length on 5.0.
@@ -61,6 +82,31 @@ void SetAnimSequenceFrames(UAnimSequence *Sequence, int32 NumFrames, int32 Frame
 #endif
 }
 
+namespace {
+// Fills every frame the caller did not key from its keyed neighbours: blended between two keys, held before the
+// first and after the last. Left at the reference pose instead, a pose keyed at frames 0 and 20 snapped back to rest
+// on frames 1-19. A channel with no keys at all keeps the reference pose it was seeded with.
+template <typename T, typename BlendFn>
+void FillBetweenKeys(TArray<T> &Keys, TArray<int32> Keyed, BlendFn Blend) {
+  if (Keyed.Num() == 0) {
+    return;
+  }
+  Keyed.Sort();
+  for (int32 Frame = 0; Frame < Keys.Num(); ++Frame) {
+    int32 Prev = INDEX_NONE;
+    int32 Next = INDEX_NONE;
+    for (const int32 Key : Keyed) {
+      if (Key <= Frame) { Prev = Key; }
+      if (Key >= Frame && Next == INDEX_NONE) { Next = Key; }
+    }
+    if (Prev == Frame) { continue; }
+    if (Prev == INDEX_NONE) { Keys[Frame] = Keys[Next]; }
+    else if (Next == INDEX_NONE) { Keys[Frame] = Keys[Prev]; }
+    else { Keys[Frame] = Blend(Keys[Prev], Keys[Next], static_cast<float>(Frame - Prev) / static_cast<float>(Next - Prev)); }
+  }
+}
+} // namespace
+
 int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
                                 USkeleton *TargetSkeleton,
                                 const TArray<TSharedPtr<FJsonValue>> &Tracks,
@@ -68,6 +114,9 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
   if (!NewSequence || !TargetSkeleton) {
     return 0;
   }
+  // A sequence of N frames holds N + 1 keys (frames 0..N). Writing N left every track one key short of the model,
+  // and the engine drew the reference pose instead of the authored one.
+  const int32 NumKeys = NumFrames + 1;
 
   IAnimationDataController &Controller = NewSequence->GetController();
   int32 AppliedTrackCount = 0;
@@ -130,9 +179,12 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
     const FTransform RefLocal = RefPose.IsValidIndex(RefBoneIndex)
                                     ? RefPose[RefBoneIndex]
                                     : FTransform::Identity;
-    PositionKeys.Init(RefLocal.GetTranslation(), NumFrames);
-    RotationKeys.Init(RefLocal.GetRotation(), NumFrames);
-    ScaleKeys.Init(RefLocal.GetScale3D(), NumFrames);
+    PositionKeys.Init(RefLocal.GetTranslation(), NumKeys);
+    RotationKeys.Init(RefLocal.GetRotation(), NumKeys);
+    ScaleKeys.Init(RefLocal.GetScale3D(), NumKeys);
+    TArray<int32> PositionKeyed;
+    TArray<int32> RotationKeyed;
+    TArray<int32> ScaleKeyed;
 
     const TArray<TSharedPtr<FJsonValue>> *FramesArray = nullptr;
     if (TrackObject->TryGetArrayField(TEXT("frames"), FramesArray) &&
@@ -150,7 +202,7 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
         double FrameNumberValue = 0.0;
         FrameObject->TryGetNumberField(TEXT("frame"), FrameNumberValue);
         const int32 FrameIndex = static_cast<int32>(FrameNumberValue);
-        if (FrameIndex < 0 || FrameIndex >= NumFrames) {
+        if (FrameIndex < 0 || FrameIndex >= NumKeys) {
           continue;
         }
 
@@ -164,6 +216,7 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
           PositionKeys[FrameIndex] = FVector(static_cast<float>(X),
                                              static_cast<float>(Y),
                                              static_cast<float>(Z));
+          PositionKeyed.AddUnique(FrameIndex);
         }
 
         const TSharedPtr<FJsonObject> *RotationObject = nullptr;
@@ -190,6 +243,7 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
                          static_cast<float>(Roll))
                     .Quaternion();
           }
+          RotationKeyed.AddUnique(FrameIndex);
         }
 
         // "Bend this bone 20 degrees" is what posing actually means, and it
@@ -210,6 +264,7 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
               FRotator(static_cast<float>(Pitch), static_cast<float>(Yaw),
                        static_cast<float>(Roll))
                   .Quaternion();
+          RotationKeyed.AddUnique(FrameIndex);
         }
 
         const TSharedPtr<FJsonObject> *ScaleObject = nullptr;
@@ -222,10 +277,14 @@ int32 ApplyProceduralBoneTracks(UAnimSequence *NewSequence,
           ScaleKeys[FrameIndex] = FVector(static_cast<float>(X),
                                           static_cast<float>(Y),
                                           static_cast<float>(Z));
+          ScaleKeyed.AddUnique(FrameIndex);
         }
       }
     }
 
+    FillBetweenKeys(PositionKeys, PositionKeyed, [](const FVector &A, const FVector &B, float T) { return FMath::Lerp(A, B, T); });
+    FillBetweenKeys(RotationKeys, RotationKeyed, [](const FQuat &A, const FQuat &B, float T) { return FQuat::Slerp(A, B, T); });
+    FillBetweenKeys(ScaleKeys, ScaleKeyed, [](const FVector &A, const FVector &B, float T) { return FMath::Lerp(A, B, T); });
     Controller.SetBoneTrackKeys(BoneFName, PositionKeys, RotationKeys, ScaleKeys);
     ++AppliedTrackCount;
   }

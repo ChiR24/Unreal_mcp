@@ -123,11 +123,11 @@ describe('the reflection surface refuses /Script targets', () => {
     const source = objectSet();
     const guardAt = source.indexOf(FIRST_GUARD);
     const applyAt = source.indexOf('ApplyJsonValueToProperty(');
-    const persistAt = source.indexOf('RootObject->PostEditChange()');
+    const persistAt = source.indexOf('RootObject->PostEditChangeProperty(Changed)');
     expect(guardAt, 'the write path must call the guard').toBeGreaterThan(-1);
     expect(applyAt).toBeGreaterThan(-1);
     expect(guardAt).toBeLessThan(applyAt);
-    // PostEditChange() is what writes DefaultGame.ini, so a refusal must land
+    // PostEditChangeProperty() is what writes DefaultGame.ini, so a refusal must land
     // before it or the hostile setting survives an editor restart.
     expect(persistAt).toBeGreaterThan(-1);
     expect(guardAt).toBeLessThan(persistAt);

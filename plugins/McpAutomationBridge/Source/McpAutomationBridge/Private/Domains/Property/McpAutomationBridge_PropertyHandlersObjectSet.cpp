@@ -230,7 +230,12 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   }
 
   bool bCompiledBlueprint = false;
-  RootObject->PostEditChange();
+  // The details panel names the property it changed; PostEditChange() named none, so an object that works one value
+  // out from another there (a Niagara system's warm-up tick count from its warm-up time) kept the old one.
+  FPropertyChangedEvent Changed(Property, EPropertyChangeType::ValueSet);
+  const int32 Dot = ResolvedPath.Find(TEXT("."));
+  if (FProperty* Member = RootObject->GetClass()->FindPropertyByName(FName(*ResolvedPath.Left(Dot == INDEX_NONE ? ResolvedPath.Len() : Dot)))) Changed.MemberProperty = Member;
+  RootObject->PostEditChangeProperty(Changed);
   McpRefreshComponentAfterEdit(Cast<UActorComponent>(RootObject));
   if (ResolvedBlueprint)
   {

@@ -6,7 +6,9 @@
 #include "Components/ActorComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Dom/JsonValue.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 
 static inline UActorComponent *
@@ -65,6 +67,12 @@ static inline void McpRefreshComponentAfterEdit(UActorComponent *Component) {
   }
   if (USceneComponent *SceneComponent = Cast<USceneComponent>(Component)) {
     SceneComponent->UpdateComponentToWorld();
+  }
+  // An editor world never ticks animation, so a skeletal mesh kept the pose it was initialised with: a new
+  // AnimToPlay or SavedPosition showed only after the level reloaded. Re-initialising evaluates it once.
+  USkeletalMeshComponent *Skeletal = Cast<USkeletalMeshComponent>(Component);
+  if (Skeletal && Skeletal->GetWorld() && Skeletal->GetWorld()->WorldType == EWorldType::Editor) {
+    Skeletal->InitAnim(true);
   }
 }
 

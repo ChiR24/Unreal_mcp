@@ -156,3 +156,19 @@ describe('inspect_graph info=node shows what an animation node plays and how it 
     expect(description('settings')).toMatch(/graphName is the AnimGraph, or the name of the state whose graph holds the node/u);
   });
 });
+
+describe('a retargeter built for setup_retargeting carries the pelvis and matches the poses', () => {
+  it('starts from the default op stack, maps chains, auto-aligns the target pose and leaves the IK pass off, as the editor does', () => {
+    const pipeline = compact(code('Animation', 'Rigging', 'McpAutomationBridge_AnimationRetargetPipeline.h'));
+    const build = pipeline.slice(pipeline.indexOf('inline UIKRetargeter *McpBuildRetargeter('));
+
+    expect(build).toMatch(/MCP_IKRETARGETER_SET_TARGET_IKRIG\(Controller, TargetRig\);.*Controller->AddDefaultOps\(\);.*AutoMapChains\(EAutoMapChainType::Exact.*Controller->AutoAlignAllBones\(ERetargetSourceOrTarget::Target\);.*RunIK->SetEnabled\(false\);/u);
+  });
+
+  it('create_ik_rig with a mesh builds the same characterized rig, in place, and names the asset it wrote', () => {
+    const rig = compact(code('AnimationAuthoring', 'McpAutomationBridge_AnimationAuthoringHandlersIKRig.cpp'));
+
+    expect(rig).toContain('UIKRigDefinition* Built = McpBuildIKRig(RigMesh, Path, Name, BuildError);');
+    expect(rig).toContain('created successfully"), *IKRig->GetName())');
+  });
+});

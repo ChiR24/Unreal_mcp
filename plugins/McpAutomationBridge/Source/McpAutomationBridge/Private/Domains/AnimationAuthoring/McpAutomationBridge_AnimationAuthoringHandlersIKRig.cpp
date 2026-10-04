@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AnimationAuthoring/McpAutomationBridge_AnimationAuthoringSupport.h"
+#include "Domains/Animation/Rigging/McpAutomationBridge_AnimationRetargetPipeline.h"
 
 namespace McpAnimationAuthoring {
 
@@ -18,6 +19,30 @@ if (SubAction == TEXT("create_ik_rig"))
     {
         ANIM_ERROR_RESPONSE(TEXT("Name is required"), TEXT("MISSING_NAME"));
     }
+
+#if MCP_HAS_IKRIG_PIPELINE
+    // A rig meant to drive a retarget needs its chains and pelvis: build it as setup_retargeting does, characterized
+    // from the mesh and rebuilt in place when the name exists. It used to come back empty, under Name1 when Name was
+    // taken, while the reply named Name.
+    USkeletalMesh* RigMesh = SkeletalMeshPath.IsEmpty() ? nullptr : LoadSkeletalMeshFromPathAnim(SkeletalMeshPath);
+    if (!RigMesh && SkeletalMeshPath.IsEmpty() && !SkeletonPath.IsEmpty())
+    {
+        USkeleton* RigSkeleton = LoadSkeletonFromPathAnim(SkeletonPath);
+        RigMesh = RigSkeleton ? RigSkeleton->GetPreviewMesh() : nullptr;
+    }
+    if (RigMesh)
+    {
+        FString BuildError;
+        UIKRigDefinition* Built = McpBuildIKRig(RigMesh, Path, Name, BuildError);
+        if (!Built)
+        {
+            ANIM_ERROR_RESPONSE(BuildError, TEXT("CREATION_FAILED"));
+        }
+        Response->SetStringField(TEXT("assetPath"), Built->GetPathName());
+        ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Rig '%s' built from %s"), *Built->GetName(), *RigMesh->GetName()));
+        return Response;
+    }
+#endif
 
     // Use the static factory (UE 5.6+, it notifies the asset registry) or fall
     // back to NewObject on older engines where CreateNewIKRigAsset is absent.
@@ -81,7 +106,7 @@ if (SubAction == TEXT("create_ik_rig"))
     }
 
     Response->SetStringField(TEXT("assetPath"), IKRig->GetPathName());
-    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Rig '%s' created successfully"), *Name));
+    ANIM_SUCCESS_RESPONSE(FString::Printf(TEXT("IK Rig '%s' created successfully"), *IKRig->GetName()));
     return Response;
 #elif MCP_HAS_IKRIG
     ANIM_ERROR_RESPONSE(

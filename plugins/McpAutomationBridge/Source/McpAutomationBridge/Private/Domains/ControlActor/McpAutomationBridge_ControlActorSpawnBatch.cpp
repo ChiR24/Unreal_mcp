@@ -74,6 +74,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   TArray<FString> Affected;
   int32 SpawnedCount = 0;
   int32 PlacementWarnings = 0;
+  TArray<TPair<AActor *, TSharedPtr<FJsonObject>>> Placed;
   for (int32 Index = 0; Index < Items->Num(); ++Index) {
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
     Entry->SetNumberField(TEXT("index"), Index);
@@ -184,12 +185,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
       }
     }
 
-    // Where it ended up (set_transform's placement facts), now that it is tagged (mcp.placement.ok), furnished and
-    // coloured: a spawn run inside the batch leaves the check to this point, once per item.
     if (Actor) {
-      McpPlacement::DescribePlacement(Actor, Entry);
-      PlacementWarnings += Entry->HasField(TEXT("placementWarning")) ? 1 : 0;
+      Placed.Emplace(Actor, Entry);
     }
+  }
+  // Where each ended up (set_transform's placement facts), tagged (mcp.placement.ok), furnished and coloured: a spawn
+  // run inside the batch leaves the check to here. Judged once the whole batch stands, since a pipe measured before
+  // the supports later in the batch existed was reported floating over the deck.
+  for (const TPair<AActor *, TSharedPtr<FJsonObject>> &Item : Placed) {
+    McpPlacement::DescribePlacement(Item.Key, Item.Value);
+    PlacementWarnings += Item.Value->HasField(TEXT("placementWarning")) ? 1 : 0;
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();

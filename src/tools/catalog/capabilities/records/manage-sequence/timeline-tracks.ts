@@ -118,13 +118,13 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
               channels: { type: 'array', description: 'Channels and their keys.', items: {
                 type: 'object', additionalProperties: false, description: 'Channel keys.', properties: {
                   channelIndex: { type: 'integer', description: 'Index within the channel family.' },
-                  channelType: { type: 'string', description: 'double or float.' },
+                  channelType: { type: 'string', description: 'double, float or bool.' },
                   channelName: { type: 'string', description: 'Channel name, when the section publishes metadata.' },
                   keyCount: { type: 'integer', description: 'Number of keys on the channel.' },
                   keys: { type: 'array', description: 'Keys on the channel.', items: {
                     type: 'object', additionalProperties: false, description: 'One key.', properties: {
                       frame: { type: 'number', description: 'Key time in display frames.' },
-                      value: { type: 'number', description: 'Key value.' },
+                      value: { type: 'number', description: 'Key value; a bool key (a Visibility track) reads 1 for true and 0 for false.' },
                     } } },
                 } } },
             } } },

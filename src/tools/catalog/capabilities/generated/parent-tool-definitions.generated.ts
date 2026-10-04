@@ -35,7 +35,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "additiveAnimType": {
           "type": "string",
-          "description": "String parameter."
+          "enum": [
+            "NoAdditive",
+            "LocalSpaceAdditive",
+            "MeshSpaceAdditive"
+          ],
+          "description": "NoAdditive (default) plays the clip as a full pose. LocalSpaceAdditive keeps only its difference from the base pose and adds that on top of whatever plays under it (a Sequencer section on another row, Apply Additive in an Animation Blueprint). MeshSpaceAdditive adds rotations in mesh space, for aim offsets; Sequencer cannot play it."
         },
         "angularDamping": {
           "type": "number",
@@ -124,7 +129,12 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "basePoseType": {
           "type": "string",
-          "description": "Additive base pose type (RefPose, AnimScaled, AnimFrame)."
+          "enum": [
+            "RefPose",
+            "AnimScaled",
+            "AnimFrame"
+          ],
+          "description": "What the additive difference is taken from (default RefPose): RefPose = the skeleton reference pose, AnimScaled = basePoseAnimation frame by frame, AnimFrame = one frame (basePoseFrame) of basePoseAnimation."
         },
         "bidirectional": {
           "type": "boolean",
@@ -184,7 +194,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. Channels left out keep the reference pose of that bone, so a rotation-only track poses without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative to its rest orientation; plain rotation replaces the local rotation outright and needs the rest orientation to already be known."
+          "description": "Bone tracks to key: [{ boneName, frames: [{ frame, rotationDelta?: {pitch,yaw,roll}, rotation?: {pitch,yaw,roll}|{x,y,z,w}, location?: {x,y,z}, scale?: {x,y,z} }] }]. frame runs 0 to numFrames inclusive. Only the poses that matter need keys: frames between two keys of a channel are blended (rotation slerped), frames before its first key or after its last hold that key. Channels left out keep the reference pose of that bone, so a rotation-only track poses without collapsing the skeleton. Prefer rotationDelta, which bends the bone relative to its rest orientation; plain rotation replaces the local rotation outright and needs the rest orientation to already be known. Calling it again with the name of an existing clip re-keys that clip from empty (its additive settings are kept)."
         },
         "cacheName": {
           "type": "string",
@@ -3628,7 +3638,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "componentName": {
           "type": "string",
-          "description": "Target component name on the actor."
+          "description": "Component of the parent actor to attach to (default its root): on a character built from several meshes, the mesh that owns the bone."
         },
         "componentNames": {
           "type": "array",
@@ -3926,6 +3936,24 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Which get transform variant to run; omit for 'transform'.",
           "default": "transform"
         },
+        "relativeLocation": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "With snapToTarget: offset from the bone or socket in its own space, as [x, y, z]."
+        },
+        "relativeRotation": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "With snapToTarget: rotation relative to the bone or socket, as [pitch, yaw, roll] in degrees."
+        },
         "renameObject": {
           "type": "boolean",
           "description": "Also rename the object itself to newName, made valid and unique (default false: the label only). The label is editor-only; the object name ships in the cooked level. References from inside the same level follow the rename, a Level Sequence binding or a soft reference by the old path does not. An actor saved in its own package (World Partition) keeps its object name, with a note."
@@ -3956,9 +3984,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "maxItems": 3,
           "description": "Scale as [x, y, z]."
         },
+        "snapToTarget": {
+          "type": "boolean",
+          "description": "Snap the child onto the bone or socket instead of keeping its current world placement (default false)."
+        },
         "snapshotName": {
           "type": "string",
           "description": "Name for the actor snapshot."
+        },
+        "socketName": {
+          "type": "string",
+          "description": "Bone or socket on that component to attach to (hand_r, weapon_r, head). Refused with SOCKET_NOT_FOUND when the component has neither."
         },
         "spawnKind": {
           "type": "string",
@@ -19960,7 +19996,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "componentName": {
           "type": "string",
-          "description": "Name of the component owning the target material."
+          "description": "Component of the actor the track works on. skeletal_animation: the skeletal mesh that plays the clip (default the actor's root when that is a skeletal mesh; it gets its own binding under the actor, because Sequencer otherwise plays the clip on the first skeletal mesh it finds, which on a character built from several meshes copies another's pose and shows nothing). material_parameter: the component owning the material."
         },
         "consoleVariables": {
           "type": "object",
@@ -20190,6 +20226,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Which get properties variant to run; omit for 'properties'.",
           "default": "properties"
+        },
+        "interpolation": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "linear",
+            "constant"
+          ],
+          "description": "How the curve leaves this key: auto (default) a smooth curve through the keys, linear a steady rate to the next key (a bullet, a constant pan), constant a hold that jumps at the next key."
         },
         "jobId": {
           "type": "string",
@@ -20723,7 +20768,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "startTime": {
           "type": "number",
           "minimum": 0,
-          "description": "Sequence time in seconds to start playing from."
+          "description": "Sequence time in seconds. play starts there; pause jumps the playhead there and holds that frame, so the viewport and screenshots show the scene at that moment."
         },
         "subsequencePath": {
           "type": "string",
@@ -20815,7 +20860,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Key value at startFrame: a number for a scalar parameter, or an {r, g, b, a} object for a color parameter."
             },
             {
-              "description": "Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Other properties take their own scalar value, so no type is declared here."
+              "description": "Keyframe value. For property \"Transform\" pass a composed object with any subset of {location:{x,y,z}, rotation:{pitch,yaw,roll}, scale:{x,y,z}}; each component supplied must carry all of its finite axes; a new Transform track starts from the current transform of the actor, so the parts a key leaves out keep their values. Add lookAt:{x,y,z} beside location to aim the key at that point (a camera at its subject): pitch and yaw are worked out, roll comes from rotation.roll or 0, and the yaw turns the short way from the key before, so an orbit of aimed keys never spins round. For \"Location\"/\"Rotation\"/\"Scale\" pass that component object alone. Visibility takes true or false; other properties take their own scalar value, so no type is declared here."
             },
             {
               "type": [
@@ -21197,7 +21242,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                           },
                           "channelType": {
                             "type": "string",
-                            "description": "double or float."
+                            "description": "double, float or bool."
                           },
                           "channelName": {
                             "type": "string",
@@ -21221,7 +21266,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                                 },
                                 "value": {
                                   "type": "number",
-                                  "description": "Key value."
+                                  "description": "Key value; a bool key (a Visibility track) reads 1 for true and 0 for false."
                                 }
                               }
                             }

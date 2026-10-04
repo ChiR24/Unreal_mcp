@@ -31,6 +31,7 @@
 #include "Rig/IKRigDefinition.h"
 #include "RigEditor/IKRigAutoCharacterizer.h"
 #include "RigEditor/IKRigController.h"
+#include "Retargeter/RetargetOps/RunIKRigOp.h"
 #include "RigEditor/IKRigDefinitionFactory.h"
 #else
 #define MCP_HAS_IKRIG_PIPELINE 0
@@ -92,8 +93,9 @@ inline UIKRigDefinition *McpBuildIKRig(USkeletalMesh *Mesh,
   }
   // CreateNewIKRigAsset uniquifies, so re-running a retarget would leave
   // IKR_Foo, IKR_Foo1, IKR_Foo2 behind and none of them the one in use.
+  // A first run finds none: NoWarn keeps that from reading as a failure.
   UIKRigDefinition *Rig =
-      LoadObject<UIKRigDefinition>(nullptr, *(PackagePath / AssetName));
+      LoadObject<UIKRigDefinition>(nullptr, *(PackagePath / AssetName), nullptr, LOAD_NoWarn);
   if (Rig == nullptr) {
     Rig = MCP_IKRIG_CREATE_NEW_ASSET(PackagePath, AssetName);
   }
@@ -140,11 +142,22 @@ inline UIKRetargeter *McpBuildRetargeter(UIKRigDefinition *SourceRig,
   }
   MCP_IKRETARGETER_SET_SOURCE_IKRIG(Controller, SourceRig);
   MCP_IKRETARGETER_SET_TARGET_IKRIG(Controller, TargetRig);
+  // A retargeter made with NewObject starts with no ops: nothing carried the pelvis, so a crouch came out standing,
+  // and the target pose was never matched to the source, so the arms hung wide. Build it the way the editor's own
+  // retarget window does: the default stack (pelvis motion, FK chains, IK, root motion, curves), chains mapped below,
+  // then an auto-aligned target pose with the IK pass off.
+  Controller->AddDefaultOps();
   // Exact first so identically named chains bind to their twin, then fuzzy for
   // the rest: two rigs characterized from different templates agree on most
   // chain names but not all, and an unmapped chain silently drops that limb.
   Controller->AutoMapChains(EAutoMapChainType::Exact, /*bForceRemap=*/true);
   Controller->AutoMapChains(EAutoMapChainType::Fuzzy, /*bForceRemap=*/false);
+  const FName TargetPose = Controller->GetCurrentRetargetPoseName(ERetargetSourceOrTarget::Target);
+  Controller->ResetRetargetPose(TargetPose, TArray<FName>(), ERetargetSourceOrTarget::Target);
+  Controller->AutoAlignAllBones(ERetargetSourceOrTarget::Target);
+  if (FIKRetargetRunIKRigOp *RunIK = Controller->GetFirstRetargetOpOfType<FIKRetargetRunIKRigOp>()) {
+    RunIK->SetEnabled(false);
+  }
   FAssetRegistryModule::AssetCreated(Retargeter);
   Retargeter->MarkPackageDirty();
   McpSafeOperations::McpSafeAssetSave(Retargeter);

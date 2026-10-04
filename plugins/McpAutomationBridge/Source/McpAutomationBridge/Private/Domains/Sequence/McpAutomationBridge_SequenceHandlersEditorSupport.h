@@ -162,9 +162,19 @@ inline void CollectTracksByName(UMovieScene *MovieScene, const FString &TrackNam
 namespace McpSequenceKeyframes {
 FGuid ResolveBindingGuid(UMovieScene *MovieScene, const FString &BindingIdStr,
                          const FString &ActorName);
+// The payload's interpolation as a key mode: auto (the default, a smooth curve through the keys), linear or
+// constant; false for any other name.
+bool ReadKeyInterpolation(const TSharedPtr<FJsonObject> &Payload, ERichCurveInterpMode &OutMode);
+// The section a key at TickFrame goes in: the track's section at frame 0, or a new one (bOutAdded), spanning the
+// playback range and grown to reach the key; null when the track holds no section.
+UMovieSceneSection *FindOrAddKeySection(UMovieScene *MovieScene, UMovieScenePropertyTrack *Track,
+                                        FFrameNumber TickFrame, bool *bOutAdded = nullptr);
+// A new transform section starts from Bound's relative transform; without Bound it keeps the section's own
+// defaults (the origin, no rotation, unit scale).
 bool AddTransformKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
                           FFrameNumber TickFrame,
-                          const TSharedPtr<FJsonObject> &LocalPayload);
+                          const TSharedPtr<FJsonObject> &LocalPayload,
+                          const USceneComponent *Bound);
 bool AddPropertyKeyframe(UMovieScene *MovieScene, const FGuid &BindingGuid,
                          const FString &PropertyName, FFrameNumber TickFrame,
                          const TSharedPtr<FJsonObject> &LocalPayload,
