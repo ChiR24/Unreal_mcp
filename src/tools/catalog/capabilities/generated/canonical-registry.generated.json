@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "de46cf90114786a8",
+  "catalogRevision": "941bfb7b758dbb24",
   "recordCount": 394,
   "records": [
     {
@@ -30370,9 +30370,10 @@
         "topics": [
           "call_actor_function"
         ],
-        "summary": "Call a named function on an actor with optional arguments; normalizes to call_function.",
+        "summary": "Call a named function on an actor, or while Play In Editor runs on the game's GameInstance, GameMode or another framework object, with optional arguments; normalizes to call_function.",
         "whenToUse": [
-          "A Blueprint or native function on an actor must be invoked."
+          "A Blueprint or native function on an actor must be invoked.",
+          "A function of the running game's GameInstance (save, score, reset) must be called during Play In Editor: actorName GameInstance."
         ],
         "whenNotToUse": [
           "The function has side effects that cannot be undone."
@@ -30389,7 +30390,7 @@
             },
             "actorName": {
               "type": "string",
-              "description": "Target actor name in the current level."
+              "description": "Target actor name in the current level; while Play In Editor runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game (the GameInstance is no actor)."
             },
             "functionName": {
               "type": "string",
@@ -30435,7 +30436,7 @@
       },
       "examples": [
         {
-          "title": "Call a named function on an actor with optional arguments; normalizes to call_function.",
+          "title": "Call a named function on an actor, or while Play In Editor runs on the game's GameInstance, GameMode or another framework object, with optional arguments; normalizes to call_function.",
           "input": {
             "action": "call_actor_function",
             "actorName": "Lamp1",
@@ -30475,8 +30476,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bf2d5cbb4de347bf0412bd13b8ec2d6859d925686b913b6b584bf43f21b93129",
-        "content": "39c6aea914eeddd6a3c42eb0a333434c423104b01b7e1485719703f5087ef86b"
+        "schema": "508e1e3325936497f87ea70d94e89a205a20e2cf4554bfead730bc0bf5d24128",
+        "content": "bee38a91ddd61a82bbf1573944b02f0598881997cd276af5adaa4dda5d01c286"
       }
     },
     {

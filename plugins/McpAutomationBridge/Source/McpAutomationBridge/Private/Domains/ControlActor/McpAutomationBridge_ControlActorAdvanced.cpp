@@ -222,7 +222,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
     return true;
   }
 
-  AActor* Actor = FindActorByName(ActorName);
+  // While PIE runs the game's objects also go by role, as get_property takes them: the GameInstance is no actor.
+  UObject* Actor = FindActorByName(ActorName);
+  Actor = Actor ? Actor : McpHandlerUtils::ResolveRuntimeRole(ActorName);
   if (!Actor) {
     SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
     return true;

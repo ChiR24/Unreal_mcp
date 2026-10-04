@@ -105,10 +105,22 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'call_actor_function',
     domain: DOMAIN,
     family: FAMILY_FUNCTION,
-    summary: 'Call a named function on an actor with optional arguments; normalizes to call_function.',
-    whenToUse: ['A Blueprint or native function on an actor must be invoked.'],
+    summary:
+      'Call a named function on an actor, or while Play In Editor runs on the game\'s GameInstance, GameMode or another framework object, with optional arguments; normalizes to call_function.',
+    whenToUse: [
+      'A Blueprint or native function on an actor must be invoked.',
+      'A function of the running game\'s GameInstance (save, score, reset) must be called during Play In Editor: actorName GameInstance.',
+    ],
     whenNotToUse: ['The function has side effects that cannot be undone.'],
-    inputProps: { actorName: P.actorName, functionName: P.functionName, arguments: P.arguments },
+    inputProps: {
+      actorName: {
+        ...P.actorName,
+        description:
+          'Target actor name in the current level; while Play In Editor runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game (the GameInstance is no actor).',
+      },
+      functionName: P.functionName,
+      arguments: P.arguments,
+    },
     required: ['actorName', 'functionName'],
     outputProps: { value: P.value },
     outputRequired: [],
