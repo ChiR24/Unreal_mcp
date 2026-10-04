@@ -38,6 +38,7 @@ export default [
       // failures the pipeline will never see and hides ones it will.
       '.omo/**',
       '.kilo/**',
+      '.claude/**',
       'tmp/**',
     ],
   },
