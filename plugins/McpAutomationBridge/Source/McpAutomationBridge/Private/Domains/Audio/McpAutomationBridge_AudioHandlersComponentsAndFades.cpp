@@ -236,7 +236,9 @@ bool HandleComponentActions(
     if (AudioComp) {
       // volume and pitch are numbers in the contract; they were read as strings and so never applied.
       ApplyAudioComponentOptions(AudioComp, Payload);
-      if (GetJsonBoolField(Payload, TEXT("autoPlay"), true))
+      // autoPlay also decides whether the saved component starts with the game (bIsActive is transient).
+      AudioComp->bAutoActivate = GetJsonBoolField(Payload, TEXT("autoPlay"), true);
+      if (AudioComp->bAutoActivate)
         AudioComp->Activate(true);
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();

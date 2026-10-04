@@ -30,7 +30,7 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 			return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create SoundAttenuation"));
 		}
 
-		if (Params->HasField(TEXT("innerRadius"))) { NewAtten->Attenuation.AttenuationShapeExtents.X = static_cast<float>(GetJsonNumberField(Params, TEXT("innerRadius"), 400.0)); }
+		if (Params->HasField(TEXT("innerRadius"))) { SetAttenuationInnerRadius(NewAtten->Attenuation, GetJsonNumberField(Params, TEXT("innerRadius"), 400.0)); }
 		if (Params->HasField(TEXT("falloffDistance"))) { NewAtten->Attenuation.FalloffDistance = static_cast<float>(GetJsonNumberField(Params, TEXT("falloffDistance"), 3600.0)); }
 		SaveAudioAsset(NewAtten, bSave);
 		Response->SetBoolField(TEXT("success"), true);
@@ -63,7 +63,7 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		{
 			return McpHandlerUtils::BuildErrorResponse(TEXT("INVALID_ARGUMENT"), FString::Printf(TEXT("distanceAlgorithm '%s' is not Linear, Logarithmic, Inverse or NaturalSound"), *FunctionType));
 		}
-		if (Params->HasField(TEXT("innerRadius"))) { Atten->Attenuation.AttenuationShapeExtents.X = static_cast<float>(GetJsonNumberField(Params, TEXT("innerRadius"), 400.0)); }
+		if (Params->HasField(TEXT("innerRadius"))) { SetAttenuationInnerRadius(Atten->Attenuation, GetJsonNumberField(Params, TEXT("innerRadius"), 400.0)); }
 		if (Params->HasField(TEXT("falloffDistance"))) { Atten->Attenuation.FalloffDistance = static_cast<float>(GetJsonNumberField(Params, TEXT("falloffDistance"), 3600.0)); }
 
 		SaveAudioAsset(Atten, bSave);

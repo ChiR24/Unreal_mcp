@@ -1,5 +1,6 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Audio/McpAutomationBridge_AudioHandlersPrivate.h"
+#include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
 
 namespace McpAudioHandlers
 {
@@ -181,8 +182,6 @@ bool HandleSpatialActions(
        return true;
      }
 
-       // Configure attenuation settings
-       Atten->Attenuation.AttenuationShapeExtents.X = (float)InnerRadius;
        Atten->Attenuation.FalloffDistance = (float)FalloffDistance;
 
       FString AppliedShape = TEXT("Sphere");
@@ -198,6 +197,8 @@ bool HandleSpatialActions(
       } else {
         Atten->Attenuation.AttenuationShape = EAttenuationShape::Sphere;
       }
+      // After the shape: it decides which extents the radius fills.
+      McpAudioAuthoring::SetAttenuationInnerRadius(Atten->Attenuation, InnerRadius);
 
       FString AppliedFalloffMode = TEXT("Linear");
       if (FalloffMode.Equals(TEXT("Logarithmic"), ESearchCase::IgnoreCase)) {

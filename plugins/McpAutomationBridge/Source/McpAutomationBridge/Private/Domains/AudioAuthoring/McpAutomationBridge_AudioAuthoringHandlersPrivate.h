@@ -203,6 +203,15 @@ TSharedPtr<FJsonObject> HandleSoundClassActions(const FString& SubAction, const 
 TSharedPtr<FJsonObject> HandleSoundMixActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleSoundMixEqActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
+/** innerRadius as the shape reads its extents: a Box half-size on every axis, a Capsule radius (Y) with a half height
+ *  (X) of at least that, a Sphere or Cone radius (X). Writing X alone left a Box or Capsule flat. */
+inline void SetAttenuationInnerRadius(FBaseAttenuationSettings& Settings, double Radius)
+{
+	FVector& Extents = Settings.AttenuationShapeExtents;
+	if (Settings.AttenuationShape == EAttenuationShape::Box) { Extents = FVector(Radius); }
+	else if (Settings.AttenuationShape == EAttenuationShape::Capsule) { Extents.Y = Radius; Extents.X = FMath::Max(Extents.X, Radius); }
+	else { Extents.X = Radius; }
+}
 TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

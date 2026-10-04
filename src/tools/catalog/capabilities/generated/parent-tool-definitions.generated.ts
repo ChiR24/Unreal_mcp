@@ -10803,7 +10803,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "autoPlay": {
           "type": "boolean",
-          "description": "Whether the sound starts playing when it is created (default true)."
+          "description": "Whether the sound plays now and again every time the game starts (default true); false leaves starting it to a Blueprint."
         },
         "bypass": {
           "type": "boolean",
@@ -10976,7 +10976,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "innerRadius": {
           "type": "number",
-          "description": "Inner radius of full volume, in centimetres."
+          "description": "Inner radius of full volume, in centimetres: a Box shape takes it as its half-size on every axis, a Capsule as its radius (half height at least that), a Sphere or Cone as its radius."
         },
         "inputName": {
           "type": "string",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "941bfb7b758dbb24",
+  "catalogRevision": "ec06a29dede0de18",
   "recordCount": 394,
   "records": [
     {
@@ -48170,7 +48170,7 @@
             },
             "innerRadius": {
               "type": "number",
-              "description": "Inner radius of full volume, in centimetres."
+              "description": "Inner radius of full volume, in centimetres: a Box shape takes it as its half-size on every axis, a Capsule as its radius (half height at least that), a Sphere or Cone as its radius."
             },
             "falloffDistance": {
               "type": "number",
@@ -48418,8 +48418,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1efa1d87dd07dba05eb309f5b0816a9ec836eb7c1242b154e783c925c2d89bd1",
-        "content": "078aa1e36e91139ffa7157b2dd21441dec4329f13bcb7a45e28a595d46946222"
+        "schema": "839fc06dec07b2b946ebfeb58a9dac3deb135984c0745092b0f5cd217af21d10",
+        "content": "67de1471c674c2847fe3a2b80afab1baa1df86ffa5f3ed59d47907d15dac8d83"
       }
     },
     {
@@ -49096,7 +49096,7 @@
             },
             "autoPlay": {
               "type": "boolean",
-              "description": "Whether the sound starts playing when it is created (default true)."
+              "description": "Whether the sound plays now and again every time the game starts (default true); false leaves starting it to a Blueprint."
             },
             "size": {
               "type": "array",
@@ -49256,8 +49256,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "64114b4934dd736867a71acc379711b80cbdcac26c0082de7c1d0b0214fd0957",
-        "content": "2ab955bc8b2ee308fcc3334443fe85e134540241cf5d652196cced52170119e8"
+        "schema": "7ca565077c1d3023e9beb02b3964739bd23ccc91ae32cf162896cbd5398af913",
+        "content": "056cb984d6b6d600fe889d7aa92015c3eb4ea977627c999e83cab79d8f89be0e"
       }
     },
     {
@@ -49415,7 +49415,7 @@
             },
             "innerRadius": {
               "type": "number",
-              "description": "Inner radius of full volume, in centimetres."
+              "description": "Inner radius of full volume, in centimetres: a Box shape takes it as its half-size on every axis, a Capsule as its radius (half height at least that), a Sphere or Cone as its radius."
             },
             "falloffDistance": {
               "type": "number",
@@ -49632,8 +49632,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1855b92fc3acca256e944a1deafc687b073b1906e6973820e81fd934660c174a",
-        "content": "44bbf674fad041597b6095b2e81bb49c11d544cdacfd5eb1894f3b323358f442"
+        "schema": "1b635564a7ac35793079826e889baa0e9a1598db99ee1364d314e6d67dc4b6f8",
+        "content": "4322c88b9f87fe8bcc9c71ace5050a25f09d591b41c4e18a0c6d4c0a7b546a03"
       }
     },
     {

@@ -64,7 +64,6 @@ bool HandleAmbientActions(
       if (AudioComp)
       {
         AudioComp->SetSound(Sound);
-        AudioComp->bAutoActivate = false;
       }
     }
     if (!AudioComp)
@@ -79,6 +78,8 @@ bool HandleAmbientActions(
         AudioComp->AttenuationSettings = Attenuation;
       if (Concurrency)
         AudioComp->ConcurrencySet.Add(Concurrency);
+      // bIsActive is transient: the saved sound starts in game only through bAutoActivate, which was forced off.
+      AudioComp->bAutoActivate = true;
       AudioComp->Activate(true);
 
       TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
