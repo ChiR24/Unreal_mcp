@@ -1035,3 +1035,27 @@ describe('Make and Break nodes of structs with native functions', () => {
     expect(dynamic.indexOf('HasNativeBreak')).toBeLessThan(dynamic.indexOf('NewObject<UEdGraphNode>(Context.TargetGraph, NodeClass)'));
   });
 });
+
+describe('asset queries point at what they found', () => {
+  // Searching for a sound found nothing although a PlaySound2D node played it: an asset picked on a pin is
+  // DefaultObject, which the scan never read.
+  it('find_text matches the asset picked on a graph pin by its path', () => {
+    const scan = code('AssetQuery', 'McpAutomationBridge_AssetQueryFindText.cpp');
+    expect(scan).toContain('Reference(Asset, Where, Pin->PinName.ToString(), Pin->DefaultObject ? Pin->DefaultObject->GetPathName() : FString());');
+    expect(scan).toMatch(/void Reference\(const FString& Asset, const FString& Where, const FString& Field, const FString& Path\)\s*\{\s*if \(!Path\.IsEmpty\(\) && !Path\.StartsWith\(TEXT\("\/Script\/"\)\)/u);
+  });
+
+  // lookup=graph on a MetaSound answered "Asset does not have a graph structure".
+  it('analyze_graph names the action that reads a MetaSound, Niagara or Behavior Tree graph', () => {
+    const report = code('AssetWorkflow', 'Analysis', 'McpAutomationBridge_AssetWorkflowGraphReport.cpp');
+    for (const reader of [
+      '{TEXT("MetaSoundSource"), TEXT("manage_audio"), TEXT("get_metasound_graph")}',
+      '{TEXT("NiagaraSystem"), TEXT("manage_effect"), TEXT("get_niagara_info")}',
+      '{TEXT("BehaviorTree"), TEXT("manage_ai"), TEXT("get_tree")}',
+    ]) {
+      expect(report).toContain(reader);
+    }
+    expect(report).toContain('Result->SetObjectField(TEXT("nextCall"), Next);');
+    expect(report.indexOf('Readers[]')).toBeLessThan(report.indexOf('TEXT("Asset does not have a graph structure")'));
+  });
+});

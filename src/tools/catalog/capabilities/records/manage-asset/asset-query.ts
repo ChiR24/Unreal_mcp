@@ -32,7 +32,7 @@ const ANALYZE_GRAPH_OK = schema({
   success: bool('Operation succeeded.'),
   assetPath: ASSET_PATH,
   assetClass: str('Concrete UClass name of the analyzed asset.'),
-  graphType: str('Graph kind analyzed: Material, Blueprint, or None.'),
+  graphType: str('Graph kind analyzed: Material, Blueprint, None, or the class of an asset whose graph another action reads (see nextCall).'),
   nodeCount: num('Material expression nodes in the graph.'),
   parameterCount: num('Material parameter expressions in the graph.'),
   textureSampleCount: num('Texture sample expressions in the graph.'),
@@ -46,7 +46,8 @@ const ANALYZE_GRAPH_OK = schema({
   totalNodes: num('Total nodes across every Blueprint graph.'),
   graphCount: num('Number of graphs in the Blueprint.'),
   graphs: arrObj('Per-graph breakdown (name, nodeCount).'),
-  message: str('Explanation when the asset type carries no graph.'),
+  message: str('Explanation when the asset type carries no graph, or which action reads it.'),
+  nextCall: { type: 'object', 'x-unreal-reflection-boundary': true, description: 'A MetaSound, Niagara or Behavior Tree asset: the execute call of the action that reads its graph.' },
 }, ['success']);
 
 export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
@@ -72,7 +73,7 @@ export const ASSET_QUERY_RECORDS: readonly RecordSpec[] = [
       examples: [ex('Check whether a mesh is checked out', { assetPath: '/Game/Meshes/SM_Crate' }, { success: true })] }
   ),
 
-  r('analyze_graph', 'asset', 'Analyze the node graph inside a material or Blueprint asset.',
+  r('analyze_graph', 'asset', 'Analyze the node graph inside a material or Blueprint asset; a MetaSound, Niagara or Behavior Tree asset answers with the nextCall that reads its graph.',
     schema({ assetPath: ASSET_PATH }, ['assetPath']),
     ANALYZE_GRAPH_OK, READ, READ_POLICY, MEDIUM,
     { whenToUse: ['A material or Blueprint must be summarised: node counts, parameters, blend mode or graph count.'],

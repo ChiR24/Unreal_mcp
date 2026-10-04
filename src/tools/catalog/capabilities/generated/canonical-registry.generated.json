@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "222dc4ac1b787461",
+  "catalogRevision": "9c3b4db5a13294af",
   "recordCount": 394,
   "records": [
     {
@@ -9965,7 +9965,7 @@
             },
             "graphType": {
               "type": "string",
-              "description": "Graph kind analyzed: Material, Blueprint, or None."
+              "description": "Graph kind analyzed: Material, Blueprint, None, or the class of an asset whose graph another action reads (see nextCall)."
             },
             "nodeCount": {
               "type": "number",
@@ -10028,7 +10028,12 @@
             },
             "message": {
               "type": "string",
-              "description": "Explanation when the asset type carries no graph."
+              "description": "Explanation when the asset type carries no graph, or which action reads it."
+            },
+            "nextCall": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "A MetaSound, Niagara or Behavior Tree asset: the execute call of the action that reads its graph."
             }
           },
           "required": [
@@ -10142,8 +10147,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "35fbce16e381714533140fb28a0da7821c1d568479381647e9e89131f7da0840",
-        "content": "42dba652fc4aa692c62b69190ccd6d4545f234fad4cd0c7f9f03ce599304aa56"
+        "schema": "7f77ef7f39da6251ef07d31ad4a1fa40b1d5cd9090cc4d06c8901cfc18a410c1",
+        "content": "fb1ad50bbd32e121d4fa41987896e7c2ebab247d8580e8344a744118f66b2bf4"
       }
     },
     {

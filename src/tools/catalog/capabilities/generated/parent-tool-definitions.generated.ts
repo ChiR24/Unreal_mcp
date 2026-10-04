@@ -10124,7 +10124,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "graphType": {
           "type": "string",
-          "description": "Graph kind analyzed: Material, Blueprint, or None."
+          "description": "Graph kind analyzed: Material, Blueprint, None, or the class of an asset whose graph another action reads (see nextCall)."
         },
         "graphs": {
           "type": "array",
@@ -10312,7 +10312,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "message": {
           "type": "string",
-          "description": "Explanation when the asset type carries no graph."
+          "description": "Explanation when the asset type carries no graph, or which action reads it."
         },
         "metadata": {
           "type": "object",
@@ -10337,6 +10337,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "movedCount": {
           "type": "number",
           "description": "Assets moved or renamed by that relocation."
+        },
+        "nextCall": {
+          "type": "object",
+          "x-unreal-reflection-boundary": true,
+          "description": "A MetaSound, Niagara or Behavior Tree asset: the execute call of the action that reads its graph."
         },
         "nextCursor": {
           "type": [

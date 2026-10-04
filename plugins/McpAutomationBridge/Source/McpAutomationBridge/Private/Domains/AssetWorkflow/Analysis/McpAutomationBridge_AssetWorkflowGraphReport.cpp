@@ -231,6 +231,35 @@ bool UMcpAutomationBridgeSubsystem::HandleAnalyzeGraph(
     return true;
   }
 
+  // Graphs this action does not walk: name the reader instead of claiming there is no graph.
+  struct FMcpGraphReader { const TCHAR *ClassName; const TCHAR *Tool; const TCHAR *Action; };
+  static const FMcpGraphReader Readers[] = {
+      {TEXT("MetaSoundSource"), TEXT("manage_audio"), TEXT("get_metasound_graph")},
+      {TEXT("MetaSoundPatch"), TEXT("manage_audio"), TEXT("get_metasound_graph")},
+      {TEXT("NiagaraSystem"), TEXT("manage_effect"), TEXT("get_niagara_info")},
+      {TEXT("NiagaraEmitter"), TEXT("manage_effect"), TEXT("get_niagara_info")},
+      {TEXT("BehaviorTree"), TEXT("manage_ai"), TEXT("get_tree")}};
+  const FString ClassName = Asset->GetClass()->GetName();
+  for (const FMcpGraphReader &Reader : Readers) {
+    if (ClassName != Reader.ClassName) {
+      continue;
+    }
+    TSharedPtr<FJsonObject> Params = MakeShared<FJsonObject>();
+    Params->SetStringField(TEXT("assetPath"), AssetPath);
+    TSharedPtr<FJsonObject> Next = MakeShared<FJsonObject>();
+    Next->SetStringField(TEXT("operation"), TEXT("execute"));
+    Next->SetStringField(TEXT("tool"), Reader.Tool);
+    Next->SetStringField(TEXT("action"), Reader.Action);
+    Next->SetObjectField(TEXT("params"), Params);
+    const FString Message = FString::Printf(TEXT("A %s graph is read by %s %s; nextCall reads this one."),
+                                            *ClassName, Reader.Tool, Reader.Action);
+    Result->SetStringField(TEXT("graphType"), ClassName);
+    Result->SetStringField(TEXT("message"), Message);
+    Result->SetObjectField(TEXT("nextCall"), Next);
+    SendAutomationResponse(Socket, RequestId, true, Message, Result, FString());
+    return true;
+  }
+
   // Generic asset - no graph
   Result->SetStringField(TEXT("graphType"), TEXT("None"));
   Result->SetStringField(TEXT("message"), TEXT("Asset does not have a graph structure"));

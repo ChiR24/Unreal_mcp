@@ -1,6 +1,6 @@
 // find_text: where a piece of text appears. search_assets matches asset names only, so "where does
 // this string still show?" meant opening every widget, graph and table by hand. Under packagePaths
-// it reads Blueprint graph pin literals and comments, Blueprint variable and component defaults,
+// it reads Blueprint graph pin literals, the assets picked on pins and comments, Blueprint variable and component defaults,
 // widget tree properties (text block text, tooltips), DataTable rows and String Table entries; with
 // includeLevel (default true) also every actor and component of the open level (TextRender text,
 // strings set on a placed instance).
@@ -53,6 +53,13 @@ struct FMcpFindTextScan
         Matches.Add(MakeShared<FJsonValueObject>(Match));
     }
 
+    // A reference to another asset counts by its path (a component's Sound set to MS_Music),
+    // not by what it holds; links inside the same package and native classes are skipped.
+    void Reference(const FString& Asset, const FString& Where, const FString& Field, const FString& Path)
+    {
+        if (!Path.IsEmpty() && !Path.StartsWith(TEXT("/Script/")) && FPackageName::ObjectPathToPackageName(Path) != FPackageName::ObjectPathToPackageName(Asset)) { Hit(Asset, Where, Field, Path); }
+    }
+
     // Every string, text and name reachable through Struct's properties: nested structs and arrays
     // are followed; an object reference is matched by its path, never followed.
     void Properties(const UStruct* Struct, const void* Container, const FString& Asset, const FString& Where,
@@ -87,15 +94,9 @@ struct FMcpFindTextScan
         }
         else if (const FObjectPropertyBase* Ref = CastField<FObjectPropertyBase>(Property))
         {
-            // A reference to another asset counts by its path (a component's Sound set to MS_Music),
-            // not by what it holds; links inside the same package and native classes are skipped.
             const FSoftObjectProperty* Soft = CastField<FSoftObjectProperty>(Property);
             const UObject* Target = Soft ? nullptr : Ref->GetObjectPropertyValue(Data);
-            const FString Path = Soft ? Soft->GetPropertyValue(Data).ToString() : (Target ? Target->GetPathName() : FString());
-            if (!Path.IsEmpty() && !Path.StartsWith(TEXT("/Script/")) && FPackageName::ObjectPathToPackageName(Path) != FPackageName::ObjectPathToPackageName(Asset))
-            {
-                Hit(Asset, Where, Field, Path);
-            }
+            Reference(Asset, Where, Field, Soft ? Soft->GetPropertyValue(Data).ToString() : (Target ? Target->GetPathName() : FString()));
         }
         else if (const FStructProperty* Nested = CastField<FStructProperty>(Property))
         {
@@ -143,6 +144,8 @@ struct FMcpFindTextScan
                     {
                         Hit(Asset, Where, Pin->PinName.ToString(), Pin->DefaultValue);
                         Hit(Asset, Where, Pin->PinName.ToString(), Pin->DefaultTextValue.ToString());
+                        // An asset picked on an object or class pin (PlaySound2D's Sound) is DefaultObject, not DefaultValue.
+                        Reference(Asset, Where, Pin->PinName.ToString(), Pin->DefaultObject ? Pin->DefaultObject->GetPathName() : FString());
                     }
                 }
             }

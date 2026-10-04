@@ -182,7 +182,7 @@ export const ASSET_LIFECYCLE_RECORDS: readonly RecordSpec[] = [
   ),
 
   // search_assets matches asset names only; this reads what the assets and the open level contain.
-  r('find_text', 'asset', 'Find where a piece of text appears: Blueprint graph literals and comments, variable and component defaults (a reference to another asset matches by its path, so a sound name finds the component that plays it), widget texts, DataTable rows, String Table entries, and the actors of the open level.',
+  r('find_text', 'asset', 'Find where a piece of text appears: Blueprint graph literals, assets picked on pins and comments, variable and component defaults (a reference to another asset matches by its path, so a sound name finds the node or component that plays it), widget texts, DataTable rows, String Table entries, and the actors of the open level.',
     schema({
       searchText: str('Text to search for.'),
       packagePaths: arr('Package paths to search within.'),
