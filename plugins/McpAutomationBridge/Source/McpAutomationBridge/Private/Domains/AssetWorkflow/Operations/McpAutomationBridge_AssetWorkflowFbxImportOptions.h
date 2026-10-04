@@ -99,7 +99,7 @@ inline bool McpClearFbxImportTarget(const FString &DestPath,
     // the engine answers by itself only while unattended -- and this runs on a
     // later tick, after the request's own unattended guard has ended.
     TGuardValue<bool> Unattended(GIsRunningUnattendedScript, true);
-    UObject *Existing = Target.TryLoad();
+    UObject *Existing = FSoftObjectPath(Target).TryLoad();
     if (Existing == nullptr ||
         !ObjectTools::DeleteSingleObject(Existing, /*bPerformReferenceCheck=*/true)) {
       OutError = FString::Printf(
