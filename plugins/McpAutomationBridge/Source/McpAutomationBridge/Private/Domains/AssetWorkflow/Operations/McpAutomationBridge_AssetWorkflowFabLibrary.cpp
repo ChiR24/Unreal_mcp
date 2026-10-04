@@ -257,11 +257,13 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
   }
 
   // The sync answers over the next seconds, so the reply waits on the core ticker, never on the game thread.
-  struct FWait { double Elapsed = 0.0; double Quiet = 0.0; int32 LastTotal = 0; };
+  // Timed by the wall clock: a delayed ticker is handed the frame's delta, not the time since it last fired,
+  // so summing it turned the 12 s budget into minutes and every signed-out read outlasted the client.
+  struct FWait { double Start = FPlatformTime::Seconds(); double QuietSince = Start; int32 LastTotal = 0; };
   const TSharedRef<FWait> Wait = MakeShared<FWait>();
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
   FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(
-      [WeakThis, Wait, Read, Socket, RequestId, Reply](float Delta) {
+      [WeakThis, Wait, Read, Socket, RequestId, Reply](float) {
         ICoreProvider *Live = GetMutableDataStorageFeature<ICoreProvider>(StorageFeatureName);
         UMcpAutomationBridgeSubsystem *Self = WeakThis.Get();
         if (Self == nullptr) {
@@ -273,16 +275,19 @@ bool UMcpAutomationBridgeSubsystem::HandleListFabLibrary(
                                        nullptr, TEXT("NOT_SUPPORTED"));
           return false;
         }
-        Wait->Elapsed += Delta;
+        const double Now = FPlatformTime::Seconds();
         TArray<TSharedPtr<FJsonValue>> Rows;
-        const int32 Now = ReadFabLibraryRows(*Live, *Read, Rows);
-        Wait->Quiet = Now == Wait->LastTotal ? Wait->Quiet + Delta : 0.0;
-        Wait->LastTotal = Now;
-        if ((Now == 0 || Wait->Quiet < FabSyncQuietSeconds) && Wait->Elapsed < FabSyncBudgetSeconds) {
+        const int32 RowsNow = ReadFabLibraryRows(*Live, *Read, Rows);
+        if (RowsNow != Wait->LastTotal) {
+          Wait->LastTotal = RowsNow;
+          Wait->QuietSince = Now;
+        }
+        if ((RowsNow == 0 || Now - Wait->QuietSince < FabSyncQuietSeconds) &&
+            Now - Wait->Start < FabSyncBudgetSeconds) {
           return true;
         }
         Live->UnregisterQuery(Read->Handle);
-        Reply(Self, Socket, RequestId, *Read, Rows, Wait->Elapsed, FString());
+        Reply(Self, Socket, RequestId, *Read, Rows, Now - Wait->Start, FString());
         return false;
       }), FabSyncPollSeconds);
   return true;

@@ -50,14 +50,22 @@ describe('the Fab library sync', () => {
   it('waits on the core ticker, within a budget, and never on the game thread', () => {
     expect(source).toContain('FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda(');
     expect(source).toMatch(/constexpr double FabSyncBudgetSeconds = \d+(\.\d+)?;/u);
-    expect(source).toMatch(/Wait->Elapsed < FabSyncBudgetSeconds/u);
+    expect(source).toMatch(/Now - Wait->Start < FabSyncBudgetSeconds/u);
     for (const banned of ['FPlatformProcess::Sleep', 'FEvent', 'WaitForCompletion']) {
       expect(source).not.toContain(banned);
     }
   });
 
+  it('times the wait by the wall clock, because a delayed ticker is handed the frame delta', () => {
+    expect(source).toContain('double Start = FPlatformTime::Seconds();');
+    expect(source).toContain('const double Now = FPlatformTime::Seconds();');
+    expect(source).not.toMatch(/\+= Delta/u);
+  });
+
   it('answers when the row count has held still, or when the wait is spent', () => {
-    expect(source).toMatch(/\(Now == 0 \|\| Wait->Quiet < FabSyncQuietSeconds\) && Wait->Elapsed < FabSyncBudgetSeconds/u);
+    expect(source).toMatch(
+      /\(RowsNow == 0 \|\| Now - Wait->QuietSince < FabSyncQuietSeconds\) &&\s*Now - Wait->Start < FabSyncBudgetSeconds/u,
+    );
   });
 
   it('gives the registered query back on every path that answers', () => {

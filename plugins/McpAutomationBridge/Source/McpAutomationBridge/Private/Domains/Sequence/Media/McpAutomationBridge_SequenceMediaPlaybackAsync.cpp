@@ -23,6 +23,9 @@ uint64 NextPlaybackGeneration = 0;
 struct FMediaPlaybackWaitState {
   bool bCompleted = false;
   bool bPlayRequested = false;
+  // Wall time: a delayed ticker is handed the frame's delta, not the time since it last fired, so
+  // summing that delta stretched the open timeout (2x at 60 fps with the 0.02 s poll).
+  double StartSeconds = FPlatformTime::Seconds();
   float ElapsedSeconds = 0.0f;
   TWeakObjectPtr<UMcpAutomationBridgeSubsystem> Subsystem;
   TWeakObjectPtr<UMediaPlayer> Player;
@@ -97,12 +100,11 @@ void CancelMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State) {
   }
 }
 
-bool AdvanceMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State,
-                          float DeltaSeconds) {
+bool AdvanceMediaPlayback(TSharedRef<FMediaPlaybackWaitState> State) {
   if (State->bCompleted) {
     return false;
   }
-  State->ElapsedSeconds += DeltaSeconds;
+  State->ElapsedSeconds = static_cast<float>(FPlatformTime::Seconds() - State->StartSeconds);
   if (!OwnsPlayback(State)) {
     FinishMediaPlayback(State, false,
                         TEXT("A newer request replaced this media playback"),
@@ -200,9 +202,7 @@ void StartMediaPlaybackAfterOpen(
   }
   State->TickerHandle = FTSTicker::GetCoreTicker().AddTicker(
       FTickerDelegate::CreateLambda(
-          [State](float DeltaSeconds) {
-            return AdvanceMediaPlayback(State, DeltaSeconds);
-          }),
+          [State](float) { return AdvanceMediaPlayback(State); }),
       MediaOpenPollSeconds);
 #else
   static_cast<void>(PlayerObject);
