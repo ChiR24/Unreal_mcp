@@ -122,6 +122,15 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       return true;
     }
 
+    // A name the parent lets a Blueprint override (a widget's OnKeyDown) is made as that override, with its
+    // signature: a plain function of that name compiled as a new one the engine never called.
+    FString OverrideRefusal;
+    UClass *const OverrideClass = ResolveFunctionOverride(Blueprint, FuncName, LocalPayload, OverrideRefusal);
+    if (!OverrideRefusal.IsEmpty()) {
+      Bridge.SendAutomationError(RequestingSocket, RequestId, OverrideRefusal, TEXT("INVALID_ARGUMENT"));
+      return true;
+    }
+
     UEdGraph *NewGraph = FBlueprintEditorUtils::CreateNewGraph(
         Blueprint, FName(*FuncName), UEdGraph::StaticClass(),
         UEdGraphSchema_K2::StaticClass());
@@ -132,12 +141,9 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
       return true;
     }
 
-    FBlueprintEditorUtils::CreateFunctionGraph<UFunction>(
-        Blueprint, NewGraph, /*bIsUserCreated=*/true, nullptr);
-    if (!Blueprint->FunctionGraphs.Contains(NewGraph)) {
-      FBlueprintEditorUtils::AddFunctionGraph<UClass>(
-          Blueprint, NewGraph, /*bIsUserCreated=*/true, nullptr);
-    }
+    // AddFunctionGraph makes the entry and return nodes once, from the parent's signature for an override;
+    // creating them before it as well left a duplicate entry node behind to clean up.
+    FBlueprintEditorUtils::AddFunctionGraph<UClass>(Blueprint, NewGraph, /*bIsUserCreated=*/OverrideClass == nullptr, OverrideClass);
 
     TArray<UK2Node_FunctionEntry *> EntryNodes;
     TArray<UK2Node_FunctionResult *> ResultNodes;
@@ -156,40 +162,6 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
         EntryNodes.Num() > 0 ? EntryNodes[0] : nullptr;
     UK2Node_FunctionResult *ResultNode =
         ResultNodes.Num() > 0 ? ResultNodes[0] : nullptr;
-
-    if (EntryNodes.Num() > 1 || ResultNodes.Num() > 1) {
-      NewGraph->Modify();
-      for (int32 EntryIdx = 1; EntryIdx < EntryNodes.Num(); ++EntryIdx) {
-        if (UK2Node_FunctionEntry *ExtraEntry = EntryNodes[EntryIdx]) {
-          ExtraEntry->Modify();
-          ExtraEntry->DestroyNode();
-        }
-      }
-      for (int32 ResultIdx = 1; ResultIdx < ResultNodes.Num(); ++ResultIdx) {
-        if (UK2Node_FunctionResult *ExtraResult = ResultNodes[ResultIdx]) {
-          ExtraResult->Modify();
-          ExtraResult->DestroyNode();
-        }
-      }
-      // Refresh surviving pointers in case the first entries were removed via
-      // Blueprint internals.
-      EntryNode = nullptr;
-      ResultNode = nullptr;
-      for (UEdGraphNode *Node : NewGraph->Nodes) {
-        if (!EntryNode) {
-          EntryNode = Cast<UK2Node_FunctionEntry>(Node);
-          if (EntryNode) {
-            continue;
-          }
-        }
-        if (!ResultNode) {
-          ResultNode = Cast<UK2Node_FunctionResult>(Node);
-        }
-        if (EntryNode && ResultNode) {
-          break;
-        }
-      }
-    }
 
     for (const TSharedPtr<FJsonValue> &Value : Inputs) {
       if (!Value.IsValid() || Value->Type != EJson::Object)
@@ -305,7 +277,7 @@ bool HandleBlueprintAddFunction(const FBlueprintActionContext &Context) {
                                    Blueprint, RegistryKey, FuncName, bIsPublic,
                                    Inputs, Outputs, bSaved,
                                    FunctionTerminatorGuid(NewGraph, true),
-                                   FunctionTerminatorGuid(NewGraph, false));
+                                   FunctionTerminatorGuid(NewGraph, false), OverrideClass);
     return true;
   }
 

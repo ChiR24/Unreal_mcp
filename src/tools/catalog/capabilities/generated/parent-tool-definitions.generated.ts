@@ -13382,6 +13382,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Titles of existing nodes whose estimated bounds intersect this one. Empty or absent when placement is clear."
         },
+        "overrides": {
+          "type": "string",
+          "description": "The parent function the new one overrides (UserWidget::OnKeyDown), when functionName names one."
+        },
         "parent": {
           "type": "string",
           "description": "Parent SCS node name for reparenting."

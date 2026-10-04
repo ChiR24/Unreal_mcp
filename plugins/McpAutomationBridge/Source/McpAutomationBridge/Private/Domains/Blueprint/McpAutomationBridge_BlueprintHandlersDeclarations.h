@@ -137,13 +137,19 @@ bool McpBlueprintAddEventStandard(
     const FString &FinalType, const TArray<TSharedPtr<FJsonValue>> &Params);
 // EntryNodeGuid goes out as nodeGuid, ResultNodeGuid (when the function has a
 // return node) as resultNodeGuid: build_graph aliases them "$id" and "$id_return".
+// OverrideClass names the parent function the new one overrides, as overrides.
 void SendBlueprintAddFunctionResult(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *Blueprint,
     const FString &RegistryKey, const FString &FuncName, bool bIsPublic,
     const TArray<TSharedPtr<FJsonValue>> &Inputs,
     const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved,
-    const FString &EntryNodeGuid, const FString &ResultNodeGuid);
+    const FString &EntryNodeGuid, const FString &ResultNodeGuid,
+    const UClass *OverrideClass = nullptr);
+// The class declaring the overridable function FuncName names (a widget's OnKeyDown), or null for a new
+// function. OutRefusal is set when it is overridden as an event, or the request gave a signature of its own.
+UClass *ResolveFunctionOverride(UBlueprint *Blueprint, const FString &FuncName,
+                                const TSharedPtr<FJsonObject> &Payload, FString &OutRefusal);
 // The guid of a function graph's entry (bEntry) or first return node; empty when none.
 FString FunctionTerminatorGuid(const UEdGraph *Graph, bool bEntry);
 // Why an existing function does not match the pure, inputs and outputs a request

@@ -3,9 +3,11 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "EdGraph/EdGraph.h"
+#include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 
 namespace McpBlueprintHandlers {
 namespace {
@@ -69,17 +71,39 @@ FString DescribeFunctionSignatureMismatch(const UEdGraph *Graph, const TSharedPt
   return FString();
 }
 
+UClass *ResolveFunctionOverride(UBlueprint *Blueprint, const FString &FuncName,
+                                const TSharedPtr<FJsonObject> &Payload, FString &OutRefusal) {
+  UFunction *Parent = nullptr;
+  UClass *const Owner = FBlueprintEditorUtils::GetOverrideFunctionClass(Blueprint, FName(*FuncName), &Parent);
+  // The Blueprint's own members (a custom event of that name) are not a parent's to override.
+  if (!Owner || !Parent || Owner == Blueprint->GeneratedClass || !UEdGraphSchema_K2::CanKismetOverrideFunction(Parent)) {
+    return nullptr;
+  }
+  const FString Name = Owner->GetName() + TEXT("::") + Parent->GetName();
+  if (UEdGraphSchema_K2::FunctionCanBePlacedAsEvent(Parent)) {
+    OutRefusal = FString::Printf(TEXT("%s is overridden as an event, not a function graph: edit_graph create_node "
+                                      "nodeType Event with eventName %s."), *Name, *FuncName);
+  } else if (Payload->HasField(TEXT("inputs")) || Payload->HasField(TEXT("outputs")) ||
+             Payload->HasField(TEXT("pure")) || Payload->HasField(TEXT("isPublic"))) {
+    OutRefusal = FString::Printf(TEXT("%s is overridden with its own signature: leave out inputs, outputs, pure and isPublic."), *Name);
+  }
+  return Owner;
+}
+
 void SendBlueprintAddFunctionResult(
     UMcpAutomationBridgeSubsystem &Bridge, const FString &RequestId,
     TSharedPtr<FMcpBridgeWebSocket> RequestingSocket, UBlueprint *Blueprint,
     const FString &RegistryKey, const FString &FuncName, bool bIsPublic,
     const TArray<TSharedPtr<FJsonValue>> &Inputs,
     const TArray<TSharedPtr<FJsonValue>> &Outputs, bool bSaved,
-    const FString &EntryNodeGuid, const FString &ResultNodeGuid) {
+    const FString &EntryNodeGuid, const FString &ResultNodeGuid, const UClass *OverrideClass) {
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetBoolField(TEXT("success"), true);
   Resp->SetStringField(TEXT("blueprintPath"), RegistryKey);
   Resp->SetStringField(TEXT("functionName"), FuncName);
+  if (OverrideClass) {
+    Resp->SetStringField(TEXT("overrides"), OverrideClass->GetName() + TEXT("::") + FuncName);
+  }
   Resp->SetBoolField(TEXT("public"), bIsPublic);
   Resp->SetBoolField(TEXT("saved"), bSaved);
   Resp->SetStringField(TEXT("nodeGuid"), EntryNodeGuid);

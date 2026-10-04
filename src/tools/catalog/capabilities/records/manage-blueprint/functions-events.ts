@@ -17,8 +17,8 @@ export const FUNCTIONS_EVENTS_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['new function', 'custom function', 'function graph', 'define function'],
-    summary: 'Add a new function graph to a Blueprint with optional inputs and outputs; an existing function of that name is reused only when it matches the pure, inputs and outputs given.',
-    whenToUse: ['A new callable function must be created on the Blueprint.'],
+    summary: 'Add a new function graph to a Blueprint with optional inputs and outputs; an existing function of that name is reused only when it matches the pure, inputs and outputs given. A name the parent class lets a Blueprint override (a widget\'s OnKeyDown) makes that override with its own signature, so leave inputs, outputs, pure and isPublic out.',
+    whenToUse: ['A new callable function must be created on the Blueprint.', 'A parent function with a return value must be overridden, such as a widget\'s OnKeyDown to handle a key.'],
     whenNotToUse: ['An event handler is needed (use add_event).'],
     inputProps: {
       blueprintPath: P.blueprintPath, functionName: P.functionName, inputs: P.inputs, outputs: P.outputs,
@@ -32,6 +32,7 @@ export const FUNCTIONS_EVENTS_RECORDS: readonly CapabilityRecordSource[] = [
       functionName: P.functionName,
       nodeGuid: { type: 'string', description: 'Node guid: the function\'s entry node, or the event node. A built-in event that already exists in the graph may be bound without one.' },
       resultNodeGuid: { type: 'string', description: 'The function\'s return node, present when the function has one (it is made when outputs are declared).' },
+      overrides: { type: 'string', description: 'The parent function the new one overrides (UserWidget::OnKeyDown), when functionName names one.' },
     },
     outputRequired: ['functionName'],
     effect: 'write',

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9c3b4db5a13294af",
+  "catalogRevision": "fbfbda68e277e579",
   "recordCount": 394,
   "records": [
     {
@@ -11932,9 +11932,10 @@
           "tick event",
           "event graph"
         ],
-        "summary": "Add a function or an event to a Blueprint; an event can be bound to a component's or a Widget Blueprint widget's delegate (OnClicked).",
+        "summary": "Add a function or an event to a Blueprint; an event can be bound to a component's or a Widget Blueprint widget's delegate (OnClicked), and a function named after one the parent lets a Blueprint override (a widget's OnKeyDown) is made as that override.",
         "whenToUse": [
           "kind=function: A new callable function must be created on the Blueprint.",
+          "kind=function: A parent function with a return value must be overridden, such as a widget's OnKeyDown to handle a key.",
           "kind=event: An event handler node must be created in the EventGraph.",
           "kind=event: A component event such as OnComponentBeginOverlap or OnComponentHit must be handled.",
           "kind=event: A Widget Blueprint button, slider or other widget event such as OnClicked must be handled."
@@ -12069,6 +12070,10 @@
               "type": "string",
               "description": "The function's return node, present when the function has one (it is made when outputs are declared)."
             },
+            "overrides": {
+              "type": "string",
+              "description": "The parent function the new one overrides (UserWidget::OnKeyDown), when functionName names one."
+            },
             "eventName": {
               "type": "string",
               "description": "Custom event name."
@@ -12082,7 +12087,7 @@
       },
       "examples": [
         {
-          "title": "Add a function or an event to a Blueprint; an event can be bound to a component's or a Widget Blueprint widget's delegate (OnClicked).",
+          "title": "Add a function or an event to a Blueprint; an event can be bound to a component's or a Widget Blueprint widget's delegate (OnClicked), and a function named after one the parent lets a Blueprint override (a widget's OnKeyDown) is made as that override.",
           "input": {
             "action": "add_function",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -12187,8 +12192,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4a9e08d84cf74a3cc798dcd65b4e60e651521d2ba74406aff2a486f9dd91cdc1",
-        "content": "5b16accbaabcfe61f06f156f84bb0f106bd1f25aae8b698aa123d9dd93f1be58"
+        "schema": "1ec3e015b70c055675e024594442db97428cf07f56f1ef9ebce5e32c9ab6bc4a",
+        "content": "90ecbe9aab4de2ea7ac9c1c4419e83220992ca2e2358d2f34d4c25d385c65028"
       }
     },
     {

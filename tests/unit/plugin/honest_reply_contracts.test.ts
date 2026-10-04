@@ -1059,3 +1059,17 @@ describe('asset queries point at what they found', () => {
     expect(report.indexOf('Readers[]')).toBeLessThan(report.indexOf('TEXT("Asset does not have a graph structure")'));
   });
 });
+
+describe('function overrides', () => {
+  // A widget's OnKeyDown added with add_function compiled as a new function nothing called: it took no
+  // signature from the parent. The graph was also made twice and the second entry node deleted afterwards.
+  it('add_function makes a parent function override with its signature, in one graph creation', () => {
+    const add = code('Blueprint', 'Functions', 'McpAutomationBridge_BlueprintHandlersAddFunction.cpp');
+    expect(add).toMatch(/AddFunctionGraph<UClass>\(Blueprint, NewGraph,\s*OverrideClass == nullptr, OverrideClass\);/u);
+    expect(add).not.toContain('CreateFunctionGraph<UFunction>');
+    const resolve = code('Blueprint', 'Functions', 'McpAutomationBridge_BlueprintHandlersAddFunctionResult.cpp');
+    expect(resolve).toContain('Owner == Blueprint->GeneratedClass || !UEdGraphSchema_K2::CanKismetOverrideFunction(Parent)');
+    expect(resolve).toContain('if (UEdGraphSchema_K2::FunctionCanBePlacedAsEvent(Parent))');
+    expect(resolve).toContain('Resp->SetStringField(TEXT("overrides"), OverrideClass->GetName() + TEXT("::") + FuncName);');
+  });
+});
