@@ -6,6 +6,8 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/Texture.h"
 #include "Materials/MaterialInterface.h"
+#include "Misc/PackageName.h"
+#include "UObject/Package.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -86,10 +88,19 @@ bool HandleInspectObjectAction(
     FString ResolvedPath;
     UObject* TargetObject = McpHandlerUtils::ResolveObjectFromPath(ObjectPath, &ResolvedPath);
 
+    // A path whose asset does not exist can still resolve to an empty in-memory package of that name: report the
+    // asset inside the package, or that there is none, never the package itself as a successful inspection.
+    FString PackageNote;
+    if (UPackage *Package = Cast<UPackage>(TargetObject))
+    {
+        const FString AssetName = FPackageName::GetShortName(Package->GetName());
+        TargetObject = FindObject<UObject>(Package, *AssetName);
+        PackageNote = FString::Printf(TEXT(" (no asset named %s is in that package)"), *AssetName);
+    }
     if (!TargetObject)
     {
         Bridge.SendAutomationError(RequestingSocket, RequestId,
-                            FString::Printf(TEXT("Object not found: %s"), *ObjectPath),
+                            FString::Printf(TEXT("Object not found: %s%s"), *ObjectPath, *PackageNote),
                             TEXT("OBJECT_NOT_FOUND"));
         return true;
     }
