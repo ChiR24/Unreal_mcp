@@ -161,13 +161,9 @@ UClass* FindNodeClassByName(const FString& NodeType)
         {TEXT("SwitchOnEnum"), TEXT("K2Node_SwitchEnum")},
         {TEXT("SwitchOnString"), TEXT("K2Node_SwitchString")},
         {TEXT("SwitchOnName"), TEXT("K2Node_SwitchName")},
-        {TEXT("DoOnce"), TEXT("K2Node_DoOnce")},
-        {TEXT("DoN"), TEXT("K2Node_DoN")},
-        {TEXT("FlipFlop"), TEXT("K2Node_FlipFlop")},
-        {TEXT("Gate"), TEXT("K2Node_Gate")},
         {TEXT("MultiGate"), TEXT("K2Node_MultiGate")},
-        // ForLoop / ForLoopWithBreak / WhileLoop / ForEachLoop are StandardMacros
-        // library macros (no UK2Node_* class), resolved earlier by
+        // ForLoop / WhileLoop / ForEachLoop, DoOnce, DoN, Gate and FlipFlop are
+        // StandardMacros library macros (no UK2Node_* class), resolved earlier by
         // TryCreateMacroNode via K2Node_MacroInstance. Listing them here mis-resolved
         // them (nonexistent class -> NODE_TYPE_NOT_FOUND; ForEachLoop -> the wrong
         // enum iterator). Kept out on purpose.

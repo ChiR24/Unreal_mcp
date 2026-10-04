@@ -258,33 +258,23 @@ UEdGraphNode *CreateBlueprintGraphNode(
   }
 
   // ForLoop / ForEachLoop / DoOnce / Gate and friends are Blueprint MACROS in
-  // the engine StandardMacros library, not UK2Node_* classes. create_node has
-  // resolved them for a while; add_node did not, so the same nodeType answered
-  // UNSUPPORTED_NODE on one action and succeeded on the other. Resolve them
-  // here too rather than leaving the two doors disagreeing.
-  static const TCHAR *const StandardMacroNamesForMcp[] = {
-      TEXT("forloop"),    TEXT("forloopwithbreak"), TEXT("whileloop"),
-      TEXT("foreachloop"), TEXT("foreachloopwithbreak"), TEXT("doonce"),
-      TEXT("gate"),       TEXT("multigate"),        TEXT("flipflop"),
-      TEXT("isvalid")};
-  for (const TCHAR *const MacroName : StandardMacroNamesForMcp) {
-    if (NodeTypeLower != MacroName) {
-      continue;
-    }
+  // the engine StandardMacros library, not UK2Node_* classes. Resolve them
+  // through the table create_node uses, so the two doors cannot disagree (this
+  // copy once lacked DoN, whose graph is named "Do N").
+  if (const FString *MacroName =
+          McpBlueprintGraphHandlers::StandardMacroGraphName(NodeType)) {
     UBlueprint *MacroLibrary = LoadObject<UBlueprint>(
         nullptr, TEXT("/Engine/EditorBlueprintResources/StandardMacros.StandardMacros"));
-    if (!MacroLibrary) {
-      break;
-    }
-    for (UEdGraph *Graph : MacroLibrary->MacroGraphs) {
-      if (Graph && Graph->GetName().Equals(NodeType, ESearchCase::IgnoreCase)) {
-        UK2Node_MacroInstance *MacroNode =
-            NewObject<UK2Node_MacroInstance>(TargetGraph);
-        MacroNode->SetMacroGraph(Graph);
-        return MacroNode;
+    if (MacroLibrary) {
+      for (UEdGraph *Graph : MacroLibrary->MacroGraphs) {
+        if (Graph && Graph->GetName().Equals(*MacroName, ESearchCase::IgnoreCase)) {
+          UK2Node_MacroInstance *MacroNode =
+              NewObject<UK2Node_MacroInstance>(TargetGraph);
+          MacroNode->SetMacroGraph(Graph);
+          return MacroNode;
+        }
       }
     }
-    break;
   }
 
   UClass *NodeClass = ResolveClassByName(NodeType);

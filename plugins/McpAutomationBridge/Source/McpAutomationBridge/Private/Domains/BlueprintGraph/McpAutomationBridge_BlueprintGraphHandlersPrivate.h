@@ -248,6 +248,8 @@ FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName
                                 const FString& MemberClass, UClass* ResolvedClass);
 const TTuple<FString, FString>* FindCommonFunctionNode(const FString& NodeType);
 UClass* FindNodeClassByName(const FString& NodeType);
+// The StandardMacros graph a nodeType names (ForLoop, DoOnce, DoN -> "Do N" ...), or null.
+const FString* StandardMacroGraphName(const FString& NodeType);
 // Resolve a class string (Blueprint asset path like /Game/..., generated-class
 // path, or native class name) to a UClass. Shared so every create_node branch
 // with a class pin accepts the same input formats — including /Game/ Blueprint

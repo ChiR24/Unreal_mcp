@@ -6,32 +6,44 @@
 
 namespace McpBlueprintGraphHandlers
 {
-// ForLoop / WhileLoop / ForEachLoop and friends are NOT UK2Node_* classes — they
-// are Blueprint macros in the engine StandardMacros library, instantiated via
-// K2Node_MacroInstance. The old name aliases pointed either at a nonexistent class
-// (K2Node_ForLoop/K2Node_WhileLoop -> NODE_TYPE_NOT_FOUND) or at the wrong
-// class (ForEachLoop -> K2Node_ForEachElementInEnum, the enum iterator).
-// Resolve them to the real macro graph and spawn a macro instance.
+// ForLoop / WhileLoop / ForEachLoop, DoOnce, Do N, Gate, FlipFlop and the exec IsValid
+// are NOT UK2Node_* classes — they are Blueprint macros in the engine StandardMacros
+// library, instantiated via K2Node_MacroInstance. Aliases that pointed at a nonexistent
+// class (K2Node_ForLoop, K2Node_FlipFlop, K2Node_DoOnce -> NODE_TYPE_NOT_FOUND) or at
+// the wrong class (ForEachLoop -> K2Node_ForEachElementInEnum) are gone; create_node and
+// add_node both resolve them through this table. FString keys match case-insensitively.
+static const TMap<FString, FString>& StandardMacroByType()
+{
+    static const TMap<FString, FString> Table = {
+        {TEXT("ForLoop"), TEXT("ForLoop")},
+        {TEXT("ForLoopWithBreak"), TEXT("ForLoopWithBreak")},
+        {TEXT("WhileLoop"), TEXT("WhileLoop")},
+        {TEXT("ForEachLoop"), TEXT("ForEachLoop")},
+        {TEXT("ForEachLoopWithBreak"), TEXT("ForEachLoopWithBreak")},
+        {TEXT("DoOnce"), TEXT("DoOnce")},
+        {TEXT("DoN"), TEXT("Do N")},
+        {TEXT("Gate"), TEXT("Gate")},
+        {TEXT("FlipFlop"), TEXT("FlipFlop")},
+        {TEXT("IsValid"), TEXT("IsValid")}};
+    return Table;
+}
+
+const FString* StandardMacroGraphName(const FString& NodeType)
+{
+    // Accept a bare name or a K2Node_-prefixed alias (callers send both forms).
+    const FString* Name = StandardMacroByType().Find(NodeType);
+    return Name || !NodeType.StartsWith(TEXT("K2Node_"))
+        ? Name
+        : StandardMacroByType().Find(NodeType.RightChop(7));
+}
+
 static bool TryCreateMacroNode(
     FActionContext& Context,
     const FString& NodeType,
     float X,
     float Y)
 {
-    static const TMap<FString, FString> StandardMacroByType = {
-        {TEXT("ForLoop"), TEXT("ForLoop")},
-        {TEXT("ForLoopWithBreak"), TEXT("ForLoopWithBreak")},
-        {TEXT("WhileLoop"), TEXT("WhileLoop")},
-        {TEXT("ForEachLoop"), TEXT("ForEachLoop")},
-        {TEXT("ForEachLoopWithBreak"), TEXT("ForEachLoopWithBreak")}};
-
-    // Accept a bare name or a K2Node_-prefixed alias (callers send both forms).
-    FString Key = NodeType;
-    if (!StandardMacroByType.Contains(Key) && Key.StartsWith(TEXT("K2Node_")))
-    {
-        Key = Key.RightChop(7);
-    }
-    const FString* MacroGraphName = StandardMacroByType.Find(Key);
+    const FString* MacroGraphName = StandardMacroGraphName(NodeType);
     if (!MacroGraphName)
     {
         // "MacroInstance" is the NODE CLASS, not a macro. Left to the generic
@@ -39,10 +51,11 @@ static bool TryCreateMacroNode(
         // a node that reports created and then fails the blueprint with "Macro
         // instance is pointing at an invalid macro graph". Name the spellings
         // that actually resolve instead of building the broken node.
-        if (Key.Equals(TEXT("MacroInstance"), ESearchCase::IgnoreCase))
+        if (NodeType.Equals(TEXT("MacroInstance"), ESearchCase::IgnoreCase) ||
+            NodeType.Equals(TEXT("K2Node_MacroInstance"), ESearchCase::IgnoreCase))
         {
             TArray<FString> Supported;
-            StandardMacroByType.GenerateKeyArray(Supported);
+            StandardMacroByType().GenerateKeyArray(Supported);
             Supported.Sort();
             Context.SendError(
                 FString::Printf(
