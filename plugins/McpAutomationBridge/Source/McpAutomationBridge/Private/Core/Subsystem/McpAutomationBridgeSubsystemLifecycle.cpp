@@ -94,9 +94,14 @@ void UMcpAutomationBridgeSubsystem::Initialize(FSubsystemCollectionBase& Collect
         {
             const double Now = FPlatformTime::Seconds();
             const TSharedPtr<SWindow> Root = FGlobalTabmanager::Get()->GetRootWindow();
-            if (Root.IsValid() && Root->GetNativeWindow().IsValid() && Root->IsVisible() && !Root->IsWindowMinimized())
+            // The hold starts the first time the window is on screen, down already or not: a window that came up
+            // minimized kept this waiting, and the first restore made over the bridge minutes later was put away.
+            if (Root.IsValid() && Root->GetNativeWindow().IsValid() && Root->IsVisible())
             {
-                MinimizeWindowForMcp(Root.ToSharedRef());
+                if (!Root->IsWindowMinimized())
+                {
+                    MinimizeWindowForMcp(Root.ToSharedRef());
+                }
                 if (*HoldUntil == 0.0)
                 {
                     *HoldUntil = Now + 10.0;

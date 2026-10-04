@@ -1073,3 +1073,13 @@ describe('function overrides', () => {
     expect(resolve).toContain('Resp->SetStringField(TEXT("overrides"), OverrideClass->GetName() + TEXT("::") + FuncName);');
   });
 });
+
+describe('start minimized', () => {
+  // The editor came up already minimized, so the start-minimized ticker never saw it on screen, kept waiting, and
+  // put away the first restore made over the bridge minutes later.
+  it('the start-minimized hold begins the first time the window is on screen, minimized or not', () => {
+    const lifecycle = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Core', 'Subsystem',
+      'McpAutomationBridgeSubsystemLifecycle.cpp'), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+    expect(lifecycle).toMatch(/Root->IsVisible\(\)\)\s*\{\s*if \(!Root->IsWindowMinimized\(\)\)\s*\{\s*MinimizeWindowForMcp\(Root\.ToSharedRef\(\)\);\s*\}\s*if \(\*HoldUntil == 0\.0\)/u);
+  });
+});
