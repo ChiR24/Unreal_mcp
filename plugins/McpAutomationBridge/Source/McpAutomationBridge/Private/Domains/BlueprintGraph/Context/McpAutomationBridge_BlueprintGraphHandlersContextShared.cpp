@@ -72,8 +72,10 @@ void FActionContext::SendResponse(
 {
     FString OutMessage = Message;
     // A reply that named no asset (create_node on its dynamic path, build_graph) left the receipt with no
-    // handle and no change. The dirty test below is the one this funnel already uses for "THIS call changed it".
-    NameBlueprint(Result, Blueprint && Blueprint->Status == BS_Dirty);
+    // handle and no change. The dirty test below is the one this funnel already uses for "THIS call changed it";
+    // a read (bDeferCompile, as a batch step that the batch names itself) never did: a widget edit that saved but
+    // left the Blueprint uncompiled made the next inspect_graph list it under changedAssets.
+    NameBlueprint(Result, !bDeferCompile && Blueprint && Blueprint->Status == BS_Dirty);
     // "Node created." while the graph no longer compiles is the worst answer a
     // mutation can give: nothing surfaces until someone presses Play, and by
     // then the edit that broke it is many calls back. Every mutation here marks

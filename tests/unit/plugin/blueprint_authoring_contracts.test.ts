@@ -226,10 +226,11 @@ describe('an edit_graph reply names the Blueprint it ran on', () => {
     expect(body).toMatch(/SetArrayField\(TEXT\("changedAssets"\), Changed\)/u);
   });
 
-  it('every reply that goes through the funnel is named, on the dirty test the funnel already uses', () => {
+  // A widget edit saves but leaves the Blueprint uncompiled (dirty), and the next inspect_graph claimed the change.
+  it('every reply that goes through the funnel is named, on the dirty test the funnel already uses; a read claims no change', () => {
     const send = shared().slice(shared().indexOf('void FActionContext::SendResponse('));
 
-    expect(send).toMatch(/NameBlueprint\(Result, Blueprint && Blueprint->Status == BS_Dirty\);/u);
+    expect(send).toMatch(/NameBlueprint\(Result, !bDeferCompile && Blueprint && Blueprint->Status == BS_Dirty\);/u);
     expect(send.indexOf('NameBlueprint(')).toBeLessThan(send.indexOf('McpCompileBlueprintWithDiagnostics('));
   });
 
