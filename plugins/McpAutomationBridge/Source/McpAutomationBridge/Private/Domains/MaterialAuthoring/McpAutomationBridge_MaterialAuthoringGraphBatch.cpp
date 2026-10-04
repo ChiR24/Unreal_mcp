@@ -1,6 +1,7 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringBatchSteps.h"
 #include "Misc/PackageName.h"
 
 // build_material_graph: one call that adds a material's nodes, wires them and
@@ -72,6 +73,7 @@ TSharedPtr<FJsonObject> BuildStepPayload(const TSharedPtr<FJsonObject>& Batch, c
   }
   Out->RemoveField(TEXT("edit"));
   Out->RemoveField(TEXT("id"));
+  Out->RemoveField(TEXT("nodeKind"));
   Out->SetStringField(TEXT("subAction"), Edit);
   ExpandEndpoint(Out, TEXT("from"), TEXT("sourceNodeId"), TEXT("sourcePin"));
   ExpandEndpoint(Out, TEXT("to"), TEXT("targetNodeId"), TEXT("inputName"));
@@ -170,7 +172,8 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
     const TSharedPtr<FJsonObject>* StepPtr = nullptr;
     FString Edit, Alias, Error, ErrorCode = TEXT("INVALID_OPERATION");
     if (!(*Steps)[Index].IsValid() || !(*Steps)[Index]->TryGetObject(StepPtr) ||
-        !(*StepPtr)->TryGetStringField(TEXT("edit"), Edit) || !IsBatchableMaterialEdit(Edit)) {
+        !(*StepPtr)->TryGetStringField(TEXT("edit"), Edit) ||
+        !IsBatchableMaterialEdit(Edit = McpMaterialBatchStepEdit(Edit, *StepPtr))) {
       Error = FString::Printf(TEXT("%s: a node adder (add_material_node, add_scalar_parameter, add_math_node, "
                    "add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, "
                    "update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided"),

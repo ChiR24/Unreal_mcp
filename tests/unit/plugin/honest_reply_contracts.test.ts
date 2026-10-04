@@ -1120,3 +1120,24 @@ describe('search scope and mesh-particle materials', () => {
       .toContain('EnsureNiagaraUsage(Slot.MaterialInterface, TEXT("bUsedWithNiagaraMeshParticles"));');
   });
 });
+
+describe('material batch steps', () => {
+  // {"edit": "add_material_node", "nodeKind": "world_position"} failed inside build_material_graph with "Missing 'nodeType'":
+  // the gateway resolves nodeKind through the add_material_node fold, and batch steps never pass the gateway.
+  it('a step resolves nodeKind with the add_material_node fold member map', async () => {
+    const { MANAGE_ASSET_FOLDS } = await import('../../../src/tools/catalog/capabilities/records/folds/manage-asset.folds.js');
+    const fold = MANAGE_ASSET_FOLDS.find((spec) => spec.primary === 'add_material_node');
+    const members = fold && !Array.isArray(fold.members) ? fold.members : {};
+    const resolver = readFileSync(join(DOMAINS, 'MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringBatchSteps.h'), 'utf8');
+    const named = Object.fromEntries([...resolver.matchAll(/Kind == TEXT\("(\w+)"\)\)\s*\{\s*return TEXT\("(\w+)"\);/gu)].map((m) => [m[1], m[2]]));
+    const resolve = (kind: string): string => (kind === 'node' ? 'add_material_node' : kind === 'batch' ? 'build_material_graph' : named[kind] ?? `add_${kind}`);
+    expect(resolver).toMatch(/if \(Kind == TEXT\("node"\)\)\s*\{\s*return Edit;/u);
+    expect(resolver).toContain('return Kind == TEXT("batch") ? FString(TEXT("build_material_graph")) : TEXT("add_") + Kind;');
+    expect(Object.keys(members).length).toBeGreaterThan(15);
+    for (const [kind, action] of Object.entries(members)) {
+      expect(resolve(kind)).toBe(action);
+    }
+    expect(code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp'))
+      .toContain('!IsBatchableMaterialEdit(Edit = McpMaterialBatchStepEdit(Edit, *StepPtr))');
+  });
+});

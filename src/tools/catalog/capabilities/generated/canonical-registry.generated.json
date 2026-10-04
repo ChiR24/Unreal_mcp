@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7b5bc55e14e52a92",
+  "catalogRevision": "3eb9ded5a30b9542",
   "recordCount": 396,
   "records": [
     {
@@ -78253,7 +78253,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is compiled and saved once."
+              "description": "Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, add_custom_expression, ...; or add_material_node with nodeKind, as in the single call: {\"edit\": \"add_material_node\", \"nodeKind\": \"world_position\"}), use_material_function, connect_nodes, set_node_position, update_custom_expression, set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created node; later steps use \"$id\" in sourceNodeId/targetNodeId/nodeId), from/to (\"$id.Pin\" shorthand for connect_nodes, where a source pin may be channel letters like \"$uv.G\"; \"Main.EmissiveColor\" is the material output). A created node without x/y is laid out automatically. Deleting and disconnecting are not batched. The batch stops at the first failing step; when every step ran, the material is compiled and saved once."
             },
             "nodeKind": {
               "type": "string",
@@ -78646,8 +78646,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7f33b50544a35a0ee835a2ed63f461590848f710b959af2461196ca3ac81a67d",
-        "content": "aa16d9073e534c946ea9a4457e1e755a45e26e0b1d9f3527628f08a32878b343"
+        "schema": "cb6c51a14bc759407fbbee21a40e7a38eb28967b2ff6201e99bebb067b5be7c2",
+        "content": "470825726c4f84c43eacf761fced1085e7bb626ecc27af04ba4aa9dc368c673c"
       }
     },
     {

@@ -66,7 +66,8 @@ const OPERATIONS = {
   'x-unreal-reflection-boundary': true,
   description: 'Steps run in order, 1-200. Each is {edit, ...the params of that edit}: edit is a node adder (add_material_node, '
     + 'add_scalar_parameter, add_vector_parameter, add_texture_sample, add_texture_coordinate, add_math_node, add_noise, '
-    + 'add_custom_expression, ...), use_material_function, connect_nodes, set_node_position, update_custom_expression, '
+    + 'add_custom_expression, ...; or add_material_node with nodeKind, as in the single call: {"edit": "add_material_node", '
+    + '"nodeKind": "world_position"}), use_material_function, connect_nodes, set_node_position, update_custom_expression, '
     + 'set_blend_mode, set_shading_model, set_material_domain or set_two_sided. Optional per step: id (names the created '
     + 'node; later steps use "$id" in sourceNodeId/targetNodeId/nodeId), from/to ("$id.Pin" shorthand for connect_nodes, where '
     + 'a source pin may be channel letters like "$uv.G"; '
