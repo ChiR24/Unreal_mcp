@@ -254,8 +254,7 @@ bool UMcpAutomationBridgeSubsystem::HandleLogAction(
         double RunsBack = 1.0;
         Payload->TryGetNumberField(TEXT("runsBack"), RunsBack);
         const int32 Run = FMath::Clamp(static_cast<int32>(RunsBack), 1, 20);
-        const FString FilePath = Source == TEXT("livecoding")
-            ? FPaths::Combine(FPaths::EngineDir(), TEXT("Programs/LiveCodingConsole/Saved/Logs/LiveCodingConsole.log"))
+        const FString FilePath = Source == TEXT("livecoding") ? FMcpLogHistory::LiveCodingLogPath()
             : Source == TEXT("previous") ? FMcpLogHistory::PreviousRunLogPath(Run)
             : Source != TEXT("build") ? FString()
             : FApp::IsEngineInstalled()

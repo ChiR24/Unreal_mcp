@@ -43,6 +43,11 @@ public:
     // run before that (a crash, then a rebuild restart). Empty if none.
     static FString PreviousRunLogPath(int32 RunsBack = 1);
 
+    // The log of the Live Coding console serving THIS editor. A second editor of
+    // the same engine gets its own console, which logs to LiveCodingConsole_2.log
+    // because the first still holds the plain name.
+    static FString LiveCodingLogPath();
+
 private:
     struct FLine
     {
