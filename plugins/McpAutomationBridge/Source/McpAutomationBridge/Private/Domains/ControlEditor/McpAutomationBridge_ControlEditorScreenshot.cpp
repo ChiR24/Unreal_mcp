@@ -217,8 +217,13 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     return true;
   }
 
-  Viewport->Draw();
-  FlushRenderingCommands();
+  // The first frames after a camera move still use the occlusion results of the old view, which hide small things
+  // (a sign's text, a tree) the new view shows; a few frames later the picture is what the camera sees.
+  const bool bCameraMoved = CaptureClient && (Payload->HasField(TEXT("location")) || Payload->HasField(TEXT("rotation")));
+  for (int32 Frame = bCameraMoved ? 0 : 2; Frame < 3; ++Frame) {
+    Viewport->Draw();
+    FlushRenderingCommands();
+  }
 
   TArray<FColor> Bitmap;
   const FReadSurfaceDataFlags ReadFlags(RCM_UNorm);
