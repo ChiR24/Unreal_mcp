@@ -92,11 +92,13 @@ void ApplyStateAnimations(UAnimStateNode *StateNode, const TArray<FString> &Anim
         UAnimGraphNode_SequencePlayer *Player = Creator.CreateNode();
         Player->NodePosX = -400;
         Player->NodePosY = Index * 160;
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 0
-        Player->Node.Sequence = Sequence;
-#else
-        Player->Node.SetSequence(Sequence);
-#endif
+        // Write the reflected property, as the details panel does: Node.Sequence is protected, and 5.0's SetSequence
+        // also writes anim-class node data that a graph node, not yet compiled into a class, does not have.
+        const FStructProperty* NodeProperty = FindFProperty<FStructProperty>(Player->GetClass(), TEXT("Node"));
+        if (FObjectPropertyBase* SequenceProperty = NodeProperty ? FindFProperty<FObjectPropertyBase>(NodeProperty->Struct, TEXT("Sequence")) : nullptr)
+        {
+            SequenceProperty->SetObjectPropertyValue_InContainer(&Player->Node, Sequence);
+        }
         Creator.Finalize();
         bool bConnected = false;
         UEdGraphPin *Out = Player->FindPin(TEXT("Pose"), EGPD_Output);

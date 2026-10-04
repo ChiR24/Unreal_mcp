@@ -143,8 +143,11 @@ bool HandleWidgetAuthoringAdvancedStyling(
             FEditableTextBoxStyle Style = TextBox->GetWidgetStyle();
             ApplyFont(Style.TextStyle.Font);
             TextBox->SetWidgetStyle(Style);
-#else
+#elif ENGINE_MINOR_VERSION >= 1
             ApplyFont(TextBox->WidgetStyle.TextStyle.Font);
+            TextBox->SynchronizeProperties();
+#else // 5.0: FEditableTextBoxStyle holds the font directly
+            ApplyFont(TextBox->WidgetStyle.Font);
             TextBox->SynchronizeProperties();
 #endif
             bFontApplied = true;

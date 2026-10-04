@@ -84,7 +84,7 @@ namespace
             FString Err;
             if (McpBuildDataTableRow(RowStruct, Snap.Value, RowMem, Err))
             {
-                Table->AddRow(Snap.Key, RowMem, RowStruct);
+                MCP_DATATABLE_ADD_ROW(Table, Snap.Key, RowMem);
                 McpFreeDataTableRow(RowStruct, RowMem);
                 ++MigratedCount;
                 continue;

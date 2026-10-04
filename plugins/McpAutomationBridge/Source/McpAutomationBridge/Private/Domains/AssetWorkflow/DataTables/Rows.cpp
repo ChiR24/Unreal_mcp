@@ -28,7 +28,7 @@ bool HandleDataTableRowActions(
             OutResult = McpDataTableMakeError(TEXT("INVALID_ROW_DATA"), *Err);
             return true;
         }
-        Table->AddRow(FName(*RowName), RowMem, Table->RowStruct);
+        MCP_DATATABLE_ADD_ROW(Table, FName(*RowName), RowMem);
         McpFreeDataTableRow(Table->RowStruct, RowMem);
         const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 
@@ -108,7 +108,7 @@ bool HandleDataTableRowActions(
             return true;
         }
         Table->RemoveRow(FName(*RowName));
-        Table->AddRow(FName(*RowName), RowMem, Table->RowStruct);
+        MCP_DATATABLE_ADD_ROW(Table, FName(*RowName), RowMem);
         McpFreeDataTableRow(Table->RowStruct, RowMem);
         const bool bSaved = McpDataTableSaveIfRequested(Params, Table);
 

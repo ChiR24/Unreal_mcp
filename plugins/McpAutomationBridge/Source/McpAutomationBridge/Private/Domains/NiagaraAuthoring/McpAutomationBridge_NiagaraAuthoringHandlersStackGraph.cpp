@@ -173,7 +173,7 @@ static TArray<UNiagaraGraph*> GatherStackGraphs(UNiagaraSystem* System, const FS
     {
         Graphs.AddUnique(Source->NodeGraph);
     }
-    for (FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+    for (FNiagaraEmitterHandle& Handle : MCP_MUTABLE_EMITTER_HANDLES(System))
     {
         UNiagaraScriptSource* Source = GetEmitterScriptSource(&Handle);
         if (Source && (EmitterName.IsEmpty() || Handle.GetName().ToString() == EmitterName))

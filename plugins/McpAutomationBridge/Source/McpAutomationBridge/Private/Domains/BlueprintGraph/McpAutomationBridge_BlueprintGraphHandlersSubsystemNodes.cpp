@@ -5,6 +5,34 @@
 
 namespace McpBlueprintGraphHandlers
 {
+namespace
+{
+// FGraphNodeCreator<T>::CreateNode(bSelect, Class) arrives in 5.3, and the GetSubsystem subclasses are not exported, so
+// they cannot be its T. This does what UEdGraph::CreateNode and FGraphNodeCreator::Finalize do, on every engine.
+struct FSubsystemNodeCreator
+{
+    UEdGraph& Graph;
+    UK2Node_GetSubsystem* Node = nullptr;
+
+    UK2Node_GetSubsystem* CreateNode(UClass* NodeClass)
+    {
+        Node = NewObject<UK2Node_GetSubsystem>(&Graph, NodeClass, NAME_None, RF_Transactional);
+        Graph.AddNode(Node, false, false);
+        return Node;
+    }
+
+    void Finalize()
+    {
+        Node->CreateNewGuid();
+        Node->PostPlacedNewNode();
+        if (Node->Pins.Num() == 0)
+        {
+            Node->AllocateDefaultPins();
+        }
+    }
+};
+}
+
 bool TryCreateSubsystemNode(
     FActionContext& Context,
     UClass* NodeClass,
@@ -68,8 +96,8 @@ bool TryCreateSubsystemNode(
         return true;
     }
 
-    FGraphNodeCreator<UK2Node_GetSubsystem> Creator(*Context.TargetGraph);
-    UK2Node_GetSubsystem* Node = Creator.CreateNode(false, NodeClass);
+    FSubsystemNodeCreator Creator{*Context.TargetGraph};
+    UK2Node_GetSubsystem* Node = Creator.CreateNode(NodeClass);
     if (!Node)
     {
         Context.SendError(

@@ -147,7 +147,7 @@ bool HandleAddSubsequence(const TSharedPtr<FJsonObject> &Params,
     return true;
   }
   UMovieScene *MovieScene = Master->GetMovieScene();
-  UMovieSceneSubTrack *Track = MovieScene->FindTrack<UMovieSceneSubTrack>();
+  UMovieSceneSubTrack *Track = MCP_FIND_MOVIESCENE_TRACK(MovieScene, UMovieSceneSubTrack);
   const bool bCreatedTrack = !Track;
   if (!Track) {
     Track = Cast<UMovieSceneSubTrack>(MCP_ADD_MOVIESCENE_TRACK(MovieScene, UMovieSceneSubTrack::StaticClass()));
@@ -195,7 +195,7 @@ bool HandleAddShotTrack(const TSharedPtr<FJsonObject> &Params,
   }
   UMovieScene *MovieScene = Master->GetMovieScene();
   UMovieSceneCinematicShotTrack *Track =
-      MovieScene->FindTrack<UMovieSceneCinematicShotTrack>();
+      MCP_FIND_MOVIESCENE_TRACK(MovieScene, UMovieSceneCinematicShotTrack);
   const bool bCreatedTrack = !Track;
   if (!Track)
     Track = Cast<UMovieSceneCinematicShotTrack>(MCP_ADD_MOVIESCENE_TRACK(MovieScene, UMovieSceneCinematicShotTrack::StaticClass()));

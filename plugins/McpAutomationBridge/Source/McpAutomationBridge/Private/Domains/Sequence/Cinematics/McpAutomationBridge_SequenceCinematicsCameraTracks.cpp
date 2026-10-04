@@ -146,7 +146,7 @@ bool HandleAddCameraShakeTrack(const TSharedPtr<FJsonObject> &Params,
   UMovieSceneCameraShakeTrack *Track =
       CameraGuid.IsValid()
           ? MovieScene->FindTrack<UMovieSceneCameraShakeTrack>(CameraGuid)
-          : MovieScene->FindTrack<UMovieSceneCameraShakeTrack>();
+          : MCP_FIND_MOVIESCENE_TRACK(MovieScene, UMovieSceneCameraShakeTrack);
   const bool bCreatedTrack = !Track;
   if (!Track)
     Track = Cast<UMovieSceneCameraShakeTrack>(AddTrackForBinding(

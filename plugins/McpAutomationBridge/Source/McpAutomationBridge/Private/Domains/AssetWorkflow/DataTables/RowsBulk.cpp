@@ -138,7 +138,7 @@ bool HandleDataTableBulkRowActions(
                 }
             }
             Table->RemoveRow(P.Name);
-            Table->AddRow(P.Name, P.Mem, Table->RowStruct);
+            MCP_DATATABLE_ADD_ROW(Table, P.Name, P.Mem);
             McpFreeDataTableRow(Table->RowStruct, P.Mem);
             ++Imported;
         }

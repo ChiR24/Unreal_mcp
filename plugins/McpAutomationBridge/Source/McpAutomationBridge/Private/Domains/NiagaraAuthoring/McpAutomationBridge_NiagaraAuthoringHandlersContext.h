@@ -199,7 +199,7 @@ FNiagaraTypeDefinition ResolveNiagaraTypeByName(const FString& ParamType);
 inline TArray<UNiagaraScript*> GatherModuleInputScripts(UNiagaraSystem* System)
 {
     TArray<UNiagaraScript*> Scripts{System->GetSystemSpawnScript(), System->GetSystemUpdateScript()};
-    for (FNiagaraEmitterHandle& Handle : System->GetEmitterHandles())
+    for (FNiagaraEmitterHandle& Handle : MCP_MUTABLE_EMITTER_HANDLES(System))
     {
         if (MCP_NIAGARA_EMITTER_DATA_TYPE* Data = MCP_GET_EMITTER_DATA(Handle))
         {

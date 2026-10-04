@@ -34,8 +34,12 @@ bool Start(const FString& ListingId, const FString& EngineVersion, const FString
 #else
 #define MCP_FAB_ADAPTER_HAS_FAB_API 0
 #endif
-#if MCP_FAB_ADAPTER_HAS_MEGASCANS
+// UE 5.0's AssetsImportController.h includes MSAssetImportData.h, which MegascansPlugin keeps private.
+#if MCP_FAB_ADAPTER_HAS_MEGASCANS && __has_include("AssetsImportController.h") && __has_include("MSAssetImportData.h")
+#define MCP_FAB_ADAPTER_HAS_MEGASCANS_API 1
 #include "AssetsImportController.h"
+#else
+#define MCP_FAB_ADAPTER_HAS_MEGASCANS_API 0
 #endif
 
 namespace
@@ -65,7 +69,7 @@ public:
 
 	virtual bool IsMegascansAvailable() const override
 	{
-#if MCP_FAB_ADAPTER_HAS_MEGASCANS
+#if MCP_FAB_ADAPTER_HAS_MEGASCANS_API
 		return FModuleManager::Get().IsModuleLoaded(TEXT("MegascansPlugin"));
 #else
 		return false;
@@ -186,7 +190,7 @@ public:
 
 	virtual bool ImportMegascansEnvelope(const FString& SerializedJson, FString& OutError) override
 	{
-#if MCP_FAB_ADAPTER_HAS_MEGASCANS
+#if MCP_FAB_ADAPTER_HAS_MEGASCANS_API
 		TSharedPtr<FAssetsImportController> Controller = FAssetsImportController::Get();
 		if (!Controller.IsValid())
 		{

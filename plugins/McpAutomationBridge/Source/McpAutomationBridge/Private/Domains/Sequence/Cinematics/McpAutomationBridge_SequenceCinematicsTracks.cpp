@@ -46,7 +46,7 @@ bool HandleAddFadeTrack(const TSharedPtr<FJsonObject> &Params,
   ULevelSequence *Sequence = LoadSequence(Params, OutResult);
   if (!Sequence) return true;
   UMovieScene *MovieScene = Sequence->GetMovieScene();
-  UMovieSceneFadeTrack *Track = MovieScene->FindTrack<UMovieSceneFadeTrack>();
+  UMovieSceneFadeTrack *Track = MCP_FIND_MOVIESCENE_TRACK(MovieScene, UMovieSceneFadeTrack);
   const bool bCreatedTrack = !Track;
   if (!Track)
     Track = Cast<UMovieSceneFadeTrack>(MCP_ADD_MOVIESCENE_TRACK(MovieScene, UMovieSceneFadeTrack::StaticClass()));
@@ -80,7 +80,7 @@ bool HandleAddLevelVisibilityTrack(const TSharedPtr<FJsonObject> &Params,
   if (!Sequence) return true;
   UMovieScene *MovieScene = Sequence->GetMovieScene();
   UMovieSceneLevelVisibilityTrack *Track =
-      MovieScene->FindTrack<UMovieSceneLevelVisibilityTrack>();
+      MCP_FIND_MOVIESCENE_TRACK(MovieScene, UMovieSceneLevelVisibilityTrack);
   const bool bCreatedTrack = !Track;
   if (!Track)
     Track = Cast<UMovieSceneLevelVisibilityTrack>(MCP_ADD_MOVIESCENE_TRACK(MovieScene, UMovieSceneLevelVisibilityTrack::StaticClass()));

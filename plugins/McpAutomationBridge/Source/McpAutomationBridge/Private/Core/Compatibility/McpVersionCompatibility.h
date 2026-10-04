@@ -385,8 +385,21 @@
 #define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetTracks()
 #define MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->AddTrack(TrackClass)
 #define MCP_REMOVE_MOVIESCENE_TRACK(MovieScene, Track) (MovieScene)->RemoveTrack(Track)
+#define MCP_FIND_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->FindTrack<TrackClass>()
 #else
 #define MCP_GET_MOVIESCENE_TRACKS(MovieScene) (MovieScene)->GetMasterTracks()
 #define MCP_ADD_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->AddMasterTrack(TrackClass)
 #define MCP_REMOVE_MOVIESCENE_TRACK(MovieScene, Track) ((MovieScene)->RemoveMasterTrack(Track) || (MovieScene)->RemoveTrack(Track))
+#define MCP_FIND_MOVIESCENE_TRACK(MovieScene, TrackClass) (MovieScene)->FindMasterTrack<TrackClass>()
 #endif
+
+// UDataTable::AddRow(Name, RowMemory, RowStruct) arrives in 5.5. Before it, the FTableRowBase& overload copies the
+// row with the table's own RowStruct, which is the struct every caller here built the row memory for.
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+#define MCP_DATATABLE_ADD_ROW(Table, RowName, RowMemory) (Table)->AddRow(RowName, RowMemory, (Table)->RowStruct)
+#else
+#define MCP_DATATABLE_ADD_ROW(Table, RowName, RowMemory) (Table)->AddRow(RowName, *reinterpret_cast<const FTableRowBase*>(RowMemory))
+#endif
+
+// UE 5.0's non-const UNiagaraSystem::GetEmitterHandles() returns a const array; 5.1+ returns a mutable one.
+#define MCP_MUTABLE_EMITTER_HANDLES(System) const_cast<TArray<FNiagaraEmitterHandle>&>((System)->GetEmitterHandles())

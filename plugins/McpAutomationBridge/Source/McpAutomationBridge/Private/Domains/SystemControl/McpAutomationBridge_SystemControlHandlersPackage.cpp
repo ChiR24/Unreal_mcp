@@ -139,7 +139,9 @@ bool HandlePackageProject(UMcpAutomationBridgeSubsystem* Self, const FString& Re
 	IUATHelperModule::Get().CreateUatTask(
 		CommandLine, FText::FromString(Platform), FText::FromString(TEXT("Packaging project")),
 		FText::FromString(TEXT("Package")), FAppStyle::Get().GetBrush(TEXT("MainFrame.PackageProject")),
-		nullptr,
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 1
+		nullptr, // analytics attributes, added in 5.1
+#endif
 		[JobId](FString ResultType, double RuntimeSeconds)
 		{
 			if (McpPackageJobs::FJob* Tracked = McpPackageJobs::Registry().Find(JobId))

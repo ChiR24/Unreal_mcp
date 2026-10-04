@@ -152,7 +152,12 @@ bool HandleInspectActorQueryAction(
             FileType = TEXT("T3D");
         }
         FMcpOutputCapture Capture;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 2
         const bool bExported = UExporter::ExportToOutputDevice(nullptr, Target, nullptr, Capture, *FileType, 0, 0, false, nullptr);
+#else // returns void before 5.2; an empty capture below still reports a missing exporter
+        UExporter::ExportToOutputDevice(nullptr, Target, nullptr, Capture, *FileType, 0, 0, false, nullptr);
+        const bool bExported = false;
+#endif
         const FString Text = FString::Join(Capture.Consume(), TEXT("\n"));
         if (!bExported && Text.IsEmpty())
         {

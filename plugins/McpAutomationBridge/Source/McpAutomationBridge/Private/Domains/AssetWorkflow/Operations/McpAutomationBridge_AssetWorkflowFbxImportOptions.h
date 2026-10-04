@@ -81,8 +81,8 @@ inline bool McpClearFbxImportTarget(const FString &DestPath,
       FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry")
           .Get();
   for (const FString &Name : Names) {
-    const FSoftObjectPath Target(DestPath / Name + TEXT(".") + Name);
-    if (!Registry.GetAssetByObjectPath(Target, false).IsValid()) {
+    const FString Target = DestPath / Name + TEXT(".") + Name;
+    if (!Registry.GetAssetByObjectPath(MCP_ASSET_REGISTRY_OBJECT_PATH(Target), false).IsValid()) {
       continue;
     }
     if (!bOverwrite) {

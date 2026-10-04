@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EdGraph/EdGraphNode.h"
 #include "CoreMinimal.h"
 #include "Dom/JsonObject.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -24,7 +25,6 @@ struct FPinConnectionResponse;
 class FProperty;
 struct FUserPinInfo;
 
-enum EEdGraphPinDirection : int;
 
 namespace McpBlueprintHandlers {
 struct FBlueprintActionContext {
