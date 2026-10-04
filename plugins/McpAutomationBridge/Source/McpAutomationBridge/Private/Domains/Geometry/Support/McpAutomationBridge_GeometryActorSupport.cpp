@@ -16,7 +16,15 @@ AActor* SpawnPrimitiveOrReply(UMcpAutomationBridgeSubsystem* Self, const FString
         return nullptr;
     }
     OutResult = McpHandlerUtils::CreateResultObject();
-    OutResult->SetStringField(TEXT("name"), McpActorRef(NewActor));
+    // A label another actor already carries stays ambiguous: the reply names this actor by its unique object name,
+    // and says why, so a later call by the label does not reach the older actor.
+    const FString Ref = McpActorRef(NewActor);
+    OutResult->SetStringField(TEXT("name"), Ref);
+    if (!Name.IsEmpty() && !Ref.Equals(Name, ESearchCase::IgnoreCase))
+    {
+        OutResult->SetArrayField(TEXT("warnings"), TArray<TSharedPtr<FJsonValue>>{MakeShared<FJsonValueString>(FString::Printf(
+            TEXT("Another actor is already labelled '%s'; name this one '%s' in later calls."), *Name, *Ref))});
+    }
     OutResult->SetStringField(TEXT("class"), TEXT("DynamicMeshActor"));
     return NewActor;
 }
