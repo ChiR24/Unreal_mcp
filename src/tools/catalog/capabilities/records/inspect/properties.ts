@@ -18,7 +18,7 @@ export const P = {
   actorName: str('World actor name to inspect.'),
   actorNames: arrStr('Several world actors to act on in one call, in place of actorName; names not found are listed back.'),
   name: str('Actor name identifier (alias of actorName).'),
-  propertyName: str('Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath.'),
+  propertyName: str('Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component\'s name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath.'),
   propertyPath: str('Same as propertyName (a name or dotted path); used when propertyName is absent. Give this or propertyName.'),
   componentName: str('Component name on the actor.'),
   className: str('Class name or /Script/ class path to inspect.'),

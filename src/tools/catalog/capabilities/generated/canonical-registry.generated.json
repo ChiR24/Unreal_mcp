@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ec06a29dede0de18",
+  "catalogRevision": "222dc4ac1b787461",
   "recordCount": 394,
   "records": [
     {
@@ -40582,7 +40582,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
@@ -40696,8 +40696,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "9c2e56bd2418f4d56c9f1b2688f8c90660c36e927c0760296f28e3533fc740d3",
-        "content": "c0161e36ca6c047b2baf78d948205a169708c016f514d2c1bc518b0580fd314a"
+        "schema": "d08c00365d06bdbb930bc973b79457022ca2e73517e17b58dbeac298ec5372a8",
+        "content": "95b82c0fc6b6dd05e82111b4045640c6f7717184be9e031c47e8a4f55bca37aa"
       }
     },
     {
@@ -41253,7 +41253,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
@@ -41365,8 +41365,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "b6573098190d521cd68f0422291decf27f17a89f9ea0deb0a8f631f27ae13975",
-        "content": "917ec4c97a56097d68861becbd41b465ff2438ea8bed9a5c5e3dcca13e1c21e3"
+        "schema": "c99a32e9fcdfe5829b0ee81e8dbfee7accf264f70487b573221078090d044c7a",
+        "content": "2aaab2fcdefbf1d4931cfa5758a86166559589331913fd44905688fcae59f834"
       }
     },
     {
@@ -43223,7 +43223,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
@@ -43362,8 +43362,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "de082c161cdb56f1839e834c630eecd7057afd2f088327f1c6a72022e3e045bc",
-        "content": "a86b8242e7e00437091a001aaeef0db8eaac71c7b208513f888ac9b26d846299"
+        "schema": "534f1412a3d7a9e1cdad97b770d6c75d200e2f4ff2a7fe341585d2aa37b47149",
+        "content": "8b4d303b2cca965c65d1ae3696194208392b29f9f4fcd5d6b3e8cdbdd4ecff4e"
       }
     },
     {
@@ -43416,7 +43416,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
@@ -43509,8 +43509,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3afd46699d03b66840a0502ac7d387ca8cd94314174b37328df7a53b09cb47a6",
-        "content": "39cdae8ecea42971079603e6f808cb572e59ac99f20d9a816afebd513280369c"
+        "schema": "441e436e167f24a83d698f43a9473a9ca24c396f7bcbdc8ededcdae5fab0b71d",
+        "content": "d1c5c3be7bce7c6d26b2924b1f9f044c9cb5a52080fa68a5ec785071f8d07baf"
       }
     },
     {
@@ -43572,7 +43572,7 @@
             },
             "propertyName": {
               "type": "string",
-              "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+              "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
             },
             "propertyPath": {
               "type": "string",
@@ -43725,8 +43725,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a7eec7d3a0dfdcf8695d75068647b6e717b9dd616ef07eb1feafde727f772547",
-        "content": "006efbb5fc430c5989e0d47d29f84aeb4a7d5edbaec08fd5f05f7397d3490f3a"
+        "schema": "cec5136436a32511b50a1155aec7af913feeb7da8407d8a505e105cbfc5ae972",
+        "content": "9e79281f928735f1c48a84bbc0fa3b8b768dfc65ec74981675f4100fbfa1eb60"
       }
     },
     {

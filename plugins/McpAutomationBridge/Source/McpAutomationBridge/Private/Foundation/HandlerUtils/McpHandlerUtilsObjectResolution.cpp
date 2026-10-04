@@ -112,9 +112,10 @@ UObject* ResolveObjectFromPath(const FString& ObjectPath, FString* OutResolvedPa
         return Resolved(RuntimeObject);
     }
 
-    // Try to load as asset (whitelist known roots + engine-registered mount points)
+    // Try to load as asset (whitelist known roots + engine-registered mount points). The package part is what must be
+    // valid: an object path (/Temp/X.X, /Niagara/...) is never a valid package name, so those mounts only took /Temp/X.
     if (Path.StartsWith(TEXT("/Game/")) || Path.StartsWith(TEXT("/Engine/")) || Path.StartsWith(TEXT("/Script/")) ||
-        FPackageName::IsValidLongPackageName(Path, true))
+        FPackageName::IsValidLongPackageName(FPackageName::ObjectPathToPackageName(Path), true))
     {
         // Canonical asset resolution FIRST: LoadObject auto-resolves PackageName ->
         // PackageName.AssetName, returning a real asset (DataAsset/GE/...) as the object instead of

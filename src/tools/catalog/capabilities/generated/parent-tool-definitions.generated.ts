@@ -5904,7 +5904,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "propertyName": {
           "type": "string",
-          "description": "Property to read or write: a name, or a dotted path through structs at any depth (BodyInstance.CollisionEnabled). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
+          "description": "Property to read or write: a name, or a dotted path through structs and object references at any depth (BodyInstance.CollisionEnabled). On an actor the path may start with a component's name, including one added in the level (MyAudio.VolumeMultiplier). A bare name that is not on the object itself resolves to the one struct member carrying it. Give this or propertyPath."
         },
         "propertyNames": {
           "oneOf": [

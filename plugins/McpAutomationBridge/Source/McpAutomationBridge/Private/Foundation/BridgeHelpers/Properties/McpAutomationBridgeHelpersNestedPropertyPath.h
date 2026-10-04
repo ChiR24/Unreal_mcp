@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/ActorComponent.h"
+#include "GameFramework/Actor.h"
 #include "UObject/UnrealType.h"
 
 // Up to 8 property names of Scope sharing a word (3+ letters, split at capitals) with Wanted, so a
@@ -74,6 +76,7 @@ static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
 
   UStruct *CurrentTypeScope = RootObject->GetClass();
   void *CurrentContainer = RootObject;
+  UObject *CurrentObject = RootObject; // null while the walk is inside a struct
   FProperty *CurrentProperty = nullptr;
 
   for (int32 Index = 0; Index < PathSegments.Num(); ++Index) {
@@ -82,6 +85,21 @@ static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
 
     CurrentProperty =
         FindFProperty<FProperty>(CurrentTypeScope, FName(*Segment));
+    // An actor's instance components (placed in the level, or added by AddInstanceComponent) have no property
+    // behind them, so a middle segment may name one exactly: the component name a create call reported.
+    AActor *Actor = !CurrentProperty && !bIsLastSegment ? Cast<AActor>(CurrentObject) : nullptr;
+    if (Actor) {
+      TArray<UActorComponent *> Components;
+      Actor->GetComponents(Components);
+      if (UActorComponent *const *Named = Components.FindByPredicate([&Segment](const UActorComponent *Component) {
+            return Component && Component->GetName().Equals(Segment, ESearchCase::IgnoreCase);
+          })) {
+        CurrentObject = *Named;
+        CurrentContainer = *Named;
+        CurrentTypeScope = (*Named)->GetClass();
+        continue;
+      }
+    }
     if (!CurrentProperty) {
       const FString Similar = McpSimilarPropertyNames(CurrentTypeScope, Segment);
       OutError = FString::Printf(
@@ -107,11 +125,13 @@ static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
         return nullptr;
       }
       CurrentContainer = NextObject;
+      CurrentObject = NextObject;
       CurrentTypeScope = NextObject->GetClass();
     } else if (FStructProperty *StructProperty =
                    CastField<FStructProperty>(CurrentProperty)) {
       CurrentContainer =
           StructProperty->ContainerPtrToValuePtr<void>(CurrentContainer);
+      CurrentObject = nullptr;
       CurrentTypeScope = StructProperty->Struct;
     } else {
       OutError = FString::Printf(

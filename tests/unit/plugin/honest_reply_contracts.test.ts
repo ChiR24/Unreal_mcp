@@ -169,6 +169,15 @@ describe('handlers answer what they did', () => {
     expect(resolver).toContain('TEXT("; similar: ")');
   });
 
+  // create_audio_actor named its new component QuietComp, then get_property "QuietComp.bAutoActivate" on the actor
+  // missed it: an instance component has no property behind it.
+  it('a middle path segment may name an actor component exactly', () => {
+    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersNestedPropertyPath.h');
+    expect(resolver).toContain('!CurrentProperty && !bIsLastSegment ? Cast<AActor>(CurrentObject) : nullptr');
+    expect(resolver).toContain('Component->GetName().Equals(Segment, ESearchCase::IgnoreCase)');
+    expect(resolver, 'a struct member is no actor').toMatch(/ContainerPtrToValuePtr<void>\(CurrentContainer\);\s*CurrentObject = nullptr;/u);
+  });
+
   // A scale key without an {x,y} pair created the binding and an empty track, then answered
   // INVALID_ARGUMENT; the later valid key reported createdTrack false.
   it('a refused widget animation key or track leaves nothing behind', () => {
@@ -194,6 +203,13 @@ describe('handlers answer what they did', () => {
     const role = resolution.slice(resolution.indexOf('UObject* ResolveRuntimeRole('));
     expect(role).toMatch(/for \(TObjectIterator<UUserWidget> It; It; \+\+It\)/u);
     expect(role).toContain('It->GetWorld() == World');
+  });
+
+  // get_property "/Temp/X.X" answered OBJECT_NOT_FOUND while "/Temp/X" worked: an object path is never a package name.
+  it('an object path under any mounted root resolves, not only under /Game, /Engine and /Script', () => {
+    const resolution = code('..', 'Foundation', 'HandlerUtils', 'McpHandlerUtilsObjectResolution.cpp');
+    expect(resolution).toContain('FPackageName::IsValidLongPackageName(FPackageName::ObjectPathToPackageName(Path), true)');
+    expect(resolution).not.toContain('FPackageName::IsValidLongPackageName(Path, true)');
   });
 
   // set_pp_color_grading with {"saturation": 1.1} answered "applied" with every key under unsupportedSettings.
