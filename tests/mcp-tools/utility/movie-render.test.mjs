@@ -45,10 +45,15 @@ const testCases = [
   // === configure_output_settings ===
   { scenario: 'MRQ: configure_output_settings', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, outputDirectory: OUT_DIR, fileNameFormat: 'Frame_{frame}' }, expected: 'success' },
   { scenario: 'MRQ: configure_output_settings optional', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, width: 1920, height: 1080, settings: { handleFrameCount: 4, zeroPadFrameNumbers: 5 } }, expected: 'success' },
+  { scenario: 'MRQ: configure_output_settings audio on', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, audioOutput: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.audioOutput', equals: true, label: 'the job now writes a .wav' }] },
+  { scenario: 'MRQ: configure_output_settings plays the level game mode', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, gameModeOverride: 'level' }, expected: 'success', assertions: [{ path: 'structuredContent.result.gameModeOverride', equals: 'level', label: 'gameplay renders with the level\'s own pawn and HUD' }] },
+  { scenario: 'MRQ: configure_output_settings refuses a non-game-mode class', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, gameModeOverride: '/Script/Engine.StaticMeshActor' }, expected: 'error|INVALID_GAME_MODE' },
+  { scenario: 'MRQ: configure_output_settings audio off', toolName: 'manage_sequence', arguments: { action: 'configure_output_settings', renderJobName: JOB_NAME, audioOutput: false }, expected: 'success', assertions: [{ path: 'structuredContent.result.audioOutput', equals: undefined, label: 'and false takes it off again' }] },
 
   // === add_render_pass ===
   { scenario: 'MRQ: add_render_pass', toolName: 'manage_sequence', arguments: { action: 'add_render_pass', renderJobName: JOB_NAME, renderPass: 'DeferredRendering' }, expected: 'success' },
   { scenario: 'MRQ: add_render_pass optional', toolName: 'manage_sequence', arguments: { action: 'add_render_pass', renderJobName: JOB_NAME, renderPasses: ['DeferredRendering', 'FinalImage'], materialPath: MAT_PATH, includeTranslucentObjects: true }, expected: 'success' },
+  { scenario: 'MRQ: add_render_pass ui layer', toolName: 'manage_sequence', arguments: { action: 'add_render_pass', renderJobName: JOB_NAME, renderPass: 'ui', compositeOntoFinalImage: true }, expected: 'success' },
 
   // === configure_anti_aliasing ===
   { scenario: 'MRQ: configure_anti_aliasing', toolName: 'manage_sequence', arguments: { action: 'configure_anti_aliasing', renderJobName: JOB_NAME, antiAliasingMethod: 'tsr' }, expected: 'success' },

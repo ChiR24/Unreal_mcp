@@ -5,19 +5,25 @@
 #include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderInternal.h"
 #include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderResourceLimits.h"
 
+#include "AudioThread.h"
+#include "Dom/JsonValue.h"
 #include "Editor.h"
 #include "Engine/World.h"
+#include "Misc/CommandLine.h"
+#include "Misc/Parse.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "LevelSequence.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Modules/ModuleManager.h"
 #include "MoviePipelineDeferredPasses.h"
+#include "MoviePipelineGameOverrideSetting.h"
 #include "MoviePipelineImageSequenceOutput.h"
 #include "MoviePipelineBurnInSetting.h"
 #include "MoviePipelineOutputSetting.h"
 #include MCP_MOVIE_PIPELINE_CONFIG_HEADER
 #include "MoviePipelineQueue.h"
 #include "MoviePipelineQueueSubsystem.h"
+#include "MoviePipelineWaveOutput.h"
 
 namespace McpSequenceMovieRender {
 namespace {
@@ -236,6 +242,28 @@ TSharedPtr<FJsonObject> BuildJobResult(UMoviePipelineExecutorJob *Job,
                            BurnIn->bCompositeOntoFinalImage);
       Result->SetStringField(TEXT("burnInClass"),
                              BurnIn->BurnInClass.ToString());
+    }
+    if (UMoviePipelineGameOverrideSetting *Overrides = Cast<UMoviePipelineGameOverrideSetting>(
+            Config->FindSettingByClass(UMoviePipelineGameOverrideSetting::StaticClass(), true))) {
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+      const FString Mode = Overrides->SoftGameModeOverride.ToString();
+#else
+      const UClass *ModeClass = Overrides->GameModeOverride.Get();
+      const FString Mode = ModeClass ? ModeClass->GetPathName() : FString();
+#endif
+      Result->SetStringField(TEXT("gameModeOverride"), Mode.IsEmpty() ? FString(TEXT("level")) : Mode);
+    }
+    if (Config->FindSettingByClass(UMoviePipelineWaveOutput::StaticClass(), true)) {
+      Result->SetBoolField(TEXT("audioOutput"), true);
+      // MRQ records only the non-realtime mixer (MoviePipelineWaveOutput's own check).
+      if (FAudioThread::IsUsingThreadedAudio() &&
+          !FParse::Param(FCommandLine::Get(), TEXT("DeterministicAudio"))) {
+        TArray<TSharedPtr<FJsonValue>> Warnings;
+        Warnings.Add(MakeShared<FJsonValueString>(
+            TEXT("No .wav will be written: MRQ records audio only when the editor runs "
+                 "with -DeterministicAudio.")));
+        Result->SetArrayField(TEXT("warnings"), Warnings);
+      }
     }
   }
   return Result;

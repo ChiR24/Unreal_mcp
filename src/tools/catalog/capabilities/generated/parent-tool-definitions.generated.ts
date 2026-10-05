@@ -19942,6 +19942,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Canonical /Game asset path."
         },
+        "audioOutput": {
+          "type": "boolean",
+          "description": "true also writes a .wav of everything the world played during the render (music, effects, gameplay sounds) beside the frames; false removes it. MRQ records audio only when the editor runs with -DeterministicAudio, and the reply warns when it does not."
+        },
         "autoClear": {
           "type": "boolean",
           "description": "Whether the media texture clears when playback stops."
@@ -20007,6 +20011,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "componentName": {
           "type": "string",
           "description": "Component of the actor the track works on. skeletal_animation: the skeletal mesh that plays the clip (default the actor's root when that is a skeletal mesh; it gets its own binding under the actor, because Sequencer otherwise plays the clip on the first skeletal mesh it finds, which on a character built from several meshes copies another's pose and shows nothing). material_parameter: the component owning the material."
+        },
+        "compositeOntoFinalImage": {
+          "type": "boolean",
+          "description": "For the ui pass: draw the UI over the final image (default true); false writes it as its own ViewportUI layer."
         },
         "consoleVariables": {
           "type": "object",
@@ -20259,6 +20267,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "from": {
           "type": "number",
           "description": "Fade start opacity value."
+        },
+        "gameModeOverride": {
+          "type": "string",
+          "description": "The game mode the render plays. Unset, MRQ uses its cinematic game mode, which spawns no player pawn and no HUD: right for a cinematic, empty for gameplay. \"level\" plays the level's own game mode (its pawn, HUD and rules); a class path (/Game/X/BP_Mode or /Script/Module.Class) plays that one."
         },
         "height": {
           "type": "integer",
@@ -20615,13 +20627,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "renderPass": {
           "type": "string",
-          "description": "Render pass identifier, such as beauty or object_id."
+          "description": "Render pass identifier: beauty (final, lit), depth, motion_vector, normal, object_id, custom_stencil (with materialPath), or ui (the game viewport's UMG layer: HUD and menus; widget and ui_renderer also work)."
         },
         "renderPasses": {
           "type": "array",
           "items": {
             "type": "string",
-            "description": "Render pass identifier."
+            "description": "Render pass identifier, as renderPass takes."
           },
           "description": "Render pass identifiers to add."
         },

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "01899b6898f961cb",
+  "catalogRevision": "43340293bfe3b758",
   "recordCount": 396,
   "records": [
     {
@@ -84973,6 +84973,7 @@
           "setting=output: Render output settings must be specified.",
           "setting=anti_aliasing: Anti-aliasing settings must be specified for render quality.",
           "setting=add_render_pass: An additional render pass must be added to the job.",
+          "setting=add_render_pass: A render of gameplay must show the HUD and menus (renderPass ui).",
           "setting=burn_ins: Burn-in overlays must be composited onto rendered frames.",
           "setting=console_variables: CVars must be set for render-specific behavior."
         ],
@@ -85033,6 +85034,14 @@
               "minimum": 1,
               "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
             },
+            "audioOutput": {
+              "type": "boolean",
+              "description": "true also writes a .wav of everything the world played during the render (music, effects, gameplay sounds) beside the frames; false removes it. MRQ records audio only when the editor runs with -DeterministicAudio, and the reply warns when it does not."
+            },
+            "gameModeOverride": {
+              "type": "string",
+              "description": "The game mode the render plays. Unset, MRQ uses its cinematic game mode, which spawns no player pawn and no HUD: right for a cinematic, empty for gameplay. \"level\" plays the level's own game mode (its pawn, HUD and rules); a class path (/Game/X/BP_Mode or /Script/Module.Class) plays that one."
+            },
             "settings": {
               "type": "object",
               "description": "Nested MRQ settings.",
@@ -85086,13 +85095,13 @@
             },
             "renderPass": {
               "type": "string",
-              "description": "Render pass identifier, such as beauty or object_id."
+              "description": "Render pass identifier: beauty (final, lit), depth, motion_vector, normal, object_id, custom_stencil (with materialPath), or ui (the game viewport's UMG layer: HUD and menus; widget and ui_renderer also work)."
             },
             "renderPasses": {
               "type": "array",
               "items": {
                 "type": "string",
-                "description": "Render pass identifier."
+                "description": "Render pass identifier, as renderPass takes."
               },
               "description": "Render pass identifiers to add."
             },
@@ -85103,6 +85112,10 @@
             "includeTranslucentObjects": {
               "type": "boolean",
               "description": "Whether the pass includes translucent objects."
+            },
+            "compositeOntoFinalImage": {
+              "type": "boolean",
+              "description": "For the ui pass: draw the UI over the final image (default true); false writes it as its own ViewportUI layer."
             },
             "burnIn": {
               "type": "object",
@@ -85254,6 +85267,12 @@
             "endFrame": [
               "output"
             ],
+            "audioOutput": [
+              "output"
+            ],
+            "gameModeOverride": [
+              "output"
+            ],
             "settings": [
               "output",
               "anti_aliasing"
@@ -85282,6 +85301,9 @@
             "includeTranslucentObjects": [
               "add_render_pass"
             ],
+            "compositeOntoFinalImage": [
+              "add_render_pass"
+            ],
             "burnIn": [
               "burn_ins"
             ],
@@ -85293,8 +85315,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ff6c31979c043d5a35f22657cc6294415f5db0af8457e8d0bf105371309c423d",
-        "content": "76480fdf6a768e8458a7a159dc23b990709c201ebf9af8359c2760e491ecaa5d"
+        "schema": "4b50323e7c40a35018a40faf58ca1a58bd389353f7aef19ef68aa8dddf6ba46b",
+        "content": "2f50144a7c7b2cfa5c93e332fd45fc405dfc36b801a53bbd9ad3995a3b678e96"
       }
     },
     {
@@ -85406,6 +85428,14 @@
               "type": "integer",
               "minimum": 1,
               "description": "Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE."
+            },
+            "audioOutput": {
+              "type": "boolean",
+              "description": "true also writes a .wav of everything the world played during the render (music, effects, gameplay sounds) beside the frames; false removes it. MRQ records audio only when the editor runs with -DeterministicAudio, and the reply warns when it does not."
+            },
+            "gameModeOverride": {
+              "type": "string",
+              "description": "The game mode the render plays. Unset, MRQ uses its cinematic game mode, which spawns no player pawn and no HUD: right for a cinematic, empty for gameplay. \"level\" plays the level's own game mode (its pawn, HUD and rules); a class path (/Game/X/BP_Mode or /Script/Module.Class) plays that one."
             },
             "settings": {
               "type": "object",
@@ -85590,6 +85620,12 @@
             "endFrame": [
               "create"
             ],
+            "audioOutput": [
+              "create"
+            ],
+            "gameModeOverride": [
+              "create"
+            ],
             "settings": [
               "create"
             ],
@@ -85619,8 +85655,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "913c4483e6c5c8eb8dc55679cb930545a44b7e73bf543732482713a3a2547385",
-        "content": "f9023a2ca0fc432bc0ae069ab19dbc4a0d1c873b1860e15c6882fbfa16cae6a2"
+        "schema": "c03de26c492366096ba738b9ef69d7746e9c95954048df62688646b6e0bd3cb7",
+        "content": "162b604455128f0571ba9943352f98d1de7f7a35dbbd1dfa4a6a3dbd04a61c12"
       }
     },
     {

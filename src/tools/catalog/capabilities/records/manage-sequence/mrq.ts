@@ -37,6 +37,8 @@ const OUTPUT_SETTINGS = {
   width: P.width, height: P.height, frameRate: P.frameRate,
   startFrame: P.startFrame,
   endFrame: { type: 'integer', minimum: 1, description: 'Custom playback range end frame, EXCLUSIVE: must be strictly greater than startFrame. 0..1 renders exactly one frame; 0..0 renders nothing and is refused as INVALID_FRAME_RANGE.' },
+  audioOutput: { type: 'boolean', description: 'true also writes a .wav of everything the world played during the render (music, effects, gameplay sounds) beside the frames; false removes it. MRQ records audio only when the editor runs with -DeterministicAudio, and the reply warns when it does not.' },
+  gameModeOverride: { type: 'string', description: 'The game mode the render plays. Unset, MRQ uses its cinematic game mode, which spawns no player pawn and no HUD: right for a cinematic, empty for gameplay. "level" plays the level\'s own game mode (its pawn, HUD and rules); a class path (/Game/X/BP_Mode or /Script/Module.Class) plays that one.' },
 };
 
 /** ResolveJob (State.cpp) selects the job by jobId or renderJobName. */
@@ -85,13 +87,14 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.mrq.add_render_pass', action: 'add_render_pass', family: F, domain: D,
-    summary: 'Add a render pass (beauty, object ID, etc.) to an MRQ job.',
-    whenToUse: ['An additional render pass must be added to the job.'],
+    summary: 'Add a render pass (beauty, depth, object ID, the game UI layer, etc.) to an MRQ job.',
+    whenToUse: ['An additional render pass must be added to the job.', 'A render of gameplay must show the HUD and menus (renderPass ui).'],
     whenNotToUse: ['The pass is not supported by the MRQ configuration.'],
     inputProps: {
       jobId: P.jobId, renderJobName: P.renderJobName, renderPass: P.renderPass,
       renderPasses: P.renderPasses, materialPath: P.materialPath,
       includeTranslucentObjects: P.includeTranslucentObjects,
+      compositeOntoFinalImage: { type: 'boolean', description: 'For the ui pass: draw the UI over the final image (default true); false writes it as its own ViewportUI layer.' },
     },
     requiredOneOf: JOB_SELECTOR,
     effect: 'write', latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,

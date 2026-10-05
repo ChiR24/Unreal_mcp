@@ -7,15 +7,19 @@
 #include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderInternal.h"
 #include "Domains/Sequence/MovieRender/McpAutomationBridge_SequenceMovieRenderResourceLimits.h"
 
+#include "Foundation/BridgeHelpers/Reflection/McpAutomationBridgeHelpersClassResolution.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
+#include "GameFramework/GameModeBase.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "LevelSequence.h"
 #include "Misc/FrameRate.h"
 #include "MovieScene.h"
+#include "MoviePipelineGameOverrideSetting.h"
 #include "MoviePipelineOutputSetting.h"
 #include MCP_MOVIE_PIPELINE_CONFIG_HEADER
 #include "MoviePipelineQueue.h"
 #include "MoviePipelineQueueSubsystem.h"
+#include "MoviePipelineWaveOutput.h"
 
 namespace McpSequenceMovieRender {
 namespace {
@@ -80,12 +84,47 @@ struct FOutputSettingsSnapshot {
   }
 };
 
+// Without an override MRQ renders with its cinematic game mode, which spawns no player pawn and
+// no HUD. "level" plays the level's own game mode; a class path plays that one.
+bool ResolveGameModeOverride(const TSharedPtr<FJsonObject> &Payload, bool &bOutSet,
+                             UClass *&OutClass, FString &OutMessage, FString &OutCode) {
+  FString Path;
+  bOutSet = Payload.IsValid() && Payload->TryGetStringField(TEXT("gameModeOverride"), Path) &&
+            !Path.IsEmpty();
+  OutClass = nullptr;
+  if (!bOutSet || Path.Equals(TEXT("level"), ESearchCase::IgnoreCase))
+    return true;
+  OutClass = ResolveClassByName(Path);
+  if (OutClass && OutClass->IsChildOf(AGameModeBase::StaticClass()))
+    return true;
+  OutMessage = FString::Printf(
+      TEXT("gameModeOverride must be \"level\" or a game mode class: %s"), *Path);
+  OutCode = TEXT("INVALID_GAME_MODE");
+  return false;
+}
+
+void ApplyGameModeOverride(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config, UClass *GameMode) {
+  UMoviePipelineGameOverrideSetting *Overrides = Cast<UMoviePipelineGameOverrideSetting>(
+      Config->FindOrAddSettingByClass(UMoviePipelineGameOverrideSetting::StaticClass(), true));
+  if (!Overrides)
+    return;
+#if ENGINE_MAJOR_VERSION > 5 || ENGINE_MINOR_VERSION >= 5
+  Overrides->SoftGameModeOverride = TSoftClassPtr<AGameModeBase>(FSoftObjectPath(GameMode));
+#else
+  Overrides->GameModeOverride = GameMode;
+#endif
+}
+
 }
 
 UMoviePipelineOutputSetting *ApplyOutputSettings(
     UMoviePipelineExecutorJob *Job, const TSharedPtr<FJsonObject> &Payload,
     FString &OutMessage, FString &OutCode) {
   if (!ValidateOutputSettingsPayload(Payload, OutMessage, OutCode))
+    return nullptr;
+  bool bGameMode = false;
+  UClass *GameMode = nullptr;
+  if (!ResolveGameModeOverride(Payload, bGameMode, GameMode, OutMessage, OutCode))
     return nullptr;
   MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config = ResolveConfig(Job, OutMessage, OutCode);
   if (!Config)
@@ -192,6 +231,17 @@ UMoviePipelineOutputSetting *ApplyOutputSettings(
     Snapshot.Restore(Output);
     return nullptr;
   }
+  // A .wav of what the world played during the render, beside the frames.
+  bool bAudio = false;
+  if (Payload.IsValid() && Payload->TryGetBoolField(TEXT("audioOutput"), bAudio)) {
+    if (bAudio)
+      Config->FindOrAddSettingByClass(UMoviePipelineWaveOutput::StaticClass(), true);
+    else if (UMoviePipelineSetting *Wave =
+                 Config->FindSettingByClass(UMoviePipelineWaveOutput::StaticClass(), true))
+      Config->RemoveSetting(Wave);
+  }
+  if (bGameMode)
+    ApplyGameModeOverride(Config, GameMode);
   Job->Modify();
   Config->Modify();
   return Output;

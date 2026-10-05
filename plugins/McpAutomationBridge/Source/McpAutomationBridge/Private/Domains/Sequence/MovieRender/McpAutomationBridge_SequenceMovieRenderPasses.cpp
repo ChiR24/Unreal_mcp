@@ -19,6 +19,7 @@
 #include MCP_MOVIE_PIPELINE_CONFIG_HEADER
 #include "MoviePipelineQueue.h"
 #include "MoviePipelineQueueSubsystem.h"
+#include "MoviePipelineWidgetRenderSetting.h"
 #include "UObject/SoftObjectPath.h"
 
 namespace McpSequenceMovieRender {
@@ -33,7 +34,8 @@ FString CanonicalPass(const FString &Input) {
       {TEXT("final"), TEXT("beauty")},        {TEXT("final_image"), TEXT("beauty")},
       {TEXT("lit"), TEXT("beauty")},          {TEXT("world_depth"), TEXT("depth")},
       {TEXT("motion_vectors"), TEXT("motion_vector")}, {TEXT("world_normal"), TEXT("normal")},
-      {TEXT("object_ids"), TEXT("object_id")}};
+      {TEXT("object_ids"), TEXT("object_id")}, {TEXT("widget"), TEXT("ui")},
+      {TEXT("ui_renderer"), TEXT("ui")}};
   const FString Pass = Input.ToLower().Replace(TEXT("-"), TEXT("_"));
   const FString *Canonical = Aliases.Find(Pass);
   return Canonical ? *Canonical : Pass;
@@ -131,6 +133,19 @@ bool ApplySinglePass(MCP_MOVIE_PIPELINE_CONFIG_CLASS *Config,
 #endif
     return true;
   }
+  // The game viewport's UMG layer (HUD, menus), drawn each frame.
+  if (Pass == TEXT("ui")) {
+    UMoviePipelineWidgetRenderer *Ui = Cast<UMoviePipelineWidgetRenderer>(
+        Config->FindOrAddSettingByClass(UMoviePipelineWidgetRenderer::StaticClass(), true));
+    if (!Ui) {
+      OutMessage = TEXT("UI render pass could not be added.");
+      OutCode = TEXT("RENDER_PASS_UNAVAILABLE");
+      return false;
+    }
+    Ui->bCompositeOntoFinalImage =
+        GetJsonBoolField(Payload, TEXT("compositeOntoFinalImage"), true);
+    return true;
+  }
   if (Pass == TEXT("object_id")) {
 #if MCP_HAS_MOVIE_PIPELINE_OBJECT_ID_PASS
     UMoviePipelineObjectIdRenderPass *ObjectPass =
@@ -174,7 +189,7 @@ bool ValidateSinglePass(const TSharedPtr<FJsonObject> &Payload,
     }
     return ValidatePostProcessMaterial(MaterialPath, OutMessage, OutCode);
   }
-  if (Pass == TEXT("beauty") || !MaterialPath.IsEmpty())
+  if (Pass == TEXT("beauty") || Pass == TEXT("ui") || !MaterialPath.IsEmpty())
     return true;
   OutMessage = FString::Printf(TEXT("Unsupported MRQ render pass: %s"), *PassName);
   OutCode = TEXT("RENDER_PASS_UNSUPPORTED");
