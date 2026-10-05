@@ -67,7 +67,7 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
         displayName: { type: 'string', description: 'Track display name.' },
         isMasterTrack: { type: 'boolean', description: 'Whether the track belongs to the master (unbound) row.' },
         isCameraCut: { type: 'boolean', description: 'Whether the track is a camera-cut track.' },
-        bindingName: { type: 'string', description: 'Bound actor name (binding tracks only).' },
+        bindingName: { type: 'string', description: 'Bound actor name, or Actor/Component for a component bound under its actor (binding tracks only).' },
         bindingGuid: { type: 'string', description: 'Bound object guid string (binding tracks only).' },
         sectionCount: { type: 'integer', description: 'Number of sections on the track.' },
       }, required: ['trackName', 'trackType', 'displayName', 'isMasterTrack', 'sectionCount'] }, description: 'Sequence tracks.' },
@@ -109,7 +109,7 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
         type: 'object', additionalProperties: false, description: 'Track keys.', properties: {
           trackName: { type: 'string', description: 'Track name.' },
           trackType: { type: 'string', description: 'MovieScene track class name.' },
-          bindingName: { type: 'string', description: 'The bound actor or component the track animates; absent on a master track.' },
+          bindingName: { type: 'string', description: 'The bound actor the track animates, or Actor/Component for a component bound under its actor; absent on a master track.' },
           sections: { type: 'array', description: 'Sections on the track.', items: {
             type: 'object', additionalProperties: false, description: 'Section keys.', properties: {
               sectionName: { type: 'string', description: 'Section object name.' },
@@ -123,13 +123,13 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
               channels: { type: 'array', description: 'Channels and their keys.', items: {
                 type: 'object', additionalProperties: false, description: 'Channel keys.', properties: {
                   channelIndex: { type: 'integer', description: 'Index within the channel family.' },
-                  channelType: { type: 'string', description: 'double, float or bool.' },
+                  channelType: { type: 'string', description: 'double, float, bool, byte, integer or particle.' },
                   channelName: { type: 'string', description: 'Channel name, when the section publishes metadata.' },
                   keyCount: { type: 'integer', description: 'Number of keys on the channel.' },
                   keys: { type: 'array', description: 'Keys on the channel.', items: {
                     type: 'object', additionalProperties: false, description: 'One key.', properties: {
                       frame: { type: 'number', description: 'Key time in display frames.' },
-                      value: { type: 'number', description: 'Key value; a bool key (a Visibility track) reads 1 for true and 0 for false.' },
+                      value: { type: 'number', description: 'Key value; a bool key (a Visibility track) reads 1 for true and 0 for false, a particle key 0 activate, 1 deactivate, 2 trigger.' },
                     } } },
                 } } },
             } } },
@@ -145,11 +145,11 @@ export const TIMELINE_TRACKS_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'sequence.remove_keyframe', action: 'remove_keyframe', family: F, domain: D,
-    summary: 'Remove keyframes from a sequence track: one frame, or every key on the track.',
+    summary: 'Remove keyframes from a sequence track: the keys on one frame or on several, or every key on the track.',
     whenToUse: ['A track must be cleanly re-authored rather than added to.',
       'A single bad key must be deleted.'],
     whenNotToUse: ['The whole track should go; use delete with deleteScope track.'],
-    inputProps: { path: P.path, trackName: P.trackName, bindingId: P.bindingId, frame: P.frame },
+    inputProps: { path: P.path, trackName: P.trackName, bindingId: P.bindingId, frame: P.frame, frames: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'integer', description: 'Frame number.' }, description: 'Remove the keys on each of these frames in one call, of every key type (transform, float, Visibility, particle). Without frame and frames every key on the track goes.' } },
     required: ['path'],
     // Omitting `frame` clears every key on the matching track, which is the
     // operation wanted before re-authoring. removedKeys is reported because

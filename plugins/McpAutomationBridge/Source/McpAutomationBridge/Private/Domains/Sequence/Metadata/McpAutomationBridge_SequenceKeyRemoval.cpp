@@ -5,9 +5,9 @@
 // could not be cleanly replaced -- the practical effect was that a shot's
 // framing drifted toward the old keys no matter what you wrote.
 //
-// Omitting `frame` clears every key on the matching track, which is the
-// operation you actually want before re-authoring; passing `frame` removes
-// just that one. Either way the count of keys actually removed is reported,
+// Omitting `frame` and `frames` clears every key on the matching track, which is
+// the operation you actually want before re-authoring; `frame` removes the keys
+// on one frame and `frames` those on several. Either way the count of keys actually removed is reported,
 // because "removed 0" and "removed 12" must not look the same to a caller.
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
@@ -15,10 +15,14 @@
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 #include "Domains/Sequence/Validation/McpAutomationBridge_SequenceFrameMath.h"
 
+#include "Channels/MovieSceneBoolChannel.h"
+#include "Channels/MovieSceneByteChannel.h"
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
+#include "Channels/MovieSceneIntegerChannel.h"
 #include "MovieSceneSection.h"
+#include "Sections/MovieSceneParticleSection.h"
 
 namespace McpSequenceTracks {
 
@@ -27,7 +31,7 @@ namespace {
 /** Delete keys on one channel family; returns how many went. */
 template <typename ChannelType>
 int32 RemoveChannelKeys(FMovieSceneChannelProxy &Proxy, bool bAllFrames,
-                        FFrameNumber TargetTick) {
+                        const TArray<FFrameNumber> &TargetTicks) {
   int32 Removed = 0;
   for (ChannelType *Channel : Proxy.GetChannels<ChannelType>()) {
     if (!Channel) {
@@ -42,7 +46,7 @@ int32 RemoveChannelKeys(FMovieSceneChannelProxy &Proxy, bool bAllFrames,
     // Walk backwards: deleting by index invalidates the indices after it.
     const TArrayView<const FFrameNumber> Times = Data.GetTimes();
     for (int32 Index = Times.Num() - 1; Index >= 0; --Index) {
-      if (Times[Index] == TargetTick) {
+      if (TargetTicks.Contains(Times[Index])) {
         Data.RemoveKey(Index);
         ++Removed;
       }
@@ -78,22 +82,43 @@ bool HandleRemoveKeyframe(UMcpAutomationBridgeSubsystem *Subsystem,
       GetJsonStringField(LocalPayload, TEXT("trackName"));
   const FString BindingFilter =
       GetJsonStringField(LocalPayload, TEXT("bindingId"));
+  // frame removes the keys on one frame, frames those on each listed frame; neither clears the track. An empty
+  // frames list is refused rather than read as "clear everything".
+  TArray<double> FrameValues;
   double FrameValue = 0.0;
-  const bool bHasFrame =
-      LocalPayload.IsValid() &&
-      LocalPayload->TryGetNumberField(TEXT("frame"), FrameValue);
-
-  FFrameNumber TargetTick(0);
-  if (bHasFrame) {
+  if (LocalPayload->TryGetNumberField(TEXT("frame"), FrameValue)) {
+    FrameValues.Add(FrameValue);
+  }
+  const TArray<TSharedPtr<FJsonValue>> *FrameList = nullptr;
+  if (LocalPayload->TryGetArrayField(TEXT("frames"), FrameList) && FrameList) {
+    for (const TSharedPtr<FJsonValue> &Entry : *FrameList) {
+      if (!Entry.IsValid() || !Entry->TryGetNumber(FrameValue)) {
+        FrameList = nullptr;
+        break;
+      }
+      FrameValues.Add(FrameValue);
+    }
+    if (!FrameList || FrameList->Num() == 0) {
+      Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
+                                        TEXT("frames must list at least one frame number"), nullptr,
+                                        TEXT("INVALID_FRAME"));
+      return true;
+    }
+  }
+  const bool bHasFrame = FrameValues.Num() > 0;
+  TArray<FFrameNumber> TargetTicks;
+  for (const double Value : FrameValues) {
+    FFrameNumber TargetTick(0);
     FString FrameError;
     if (!McpSequenceFrameMath::TryTransformFrameFloor(
-            FrameValue, MovieScene->GetDisplayRate(),
+            Value, MovieScene->GetDisplayRate(),
             MovieScene->GetTickResolution(), TargetTick, FrameError)) {
       Subsystem->SendAutomationResponse(RequestingSocket, RequestId, false,
                                         FrameError, nullptr,
                                         TEXT("INVALID_FRAME"));
       return true;
     }
+    TargetTicks.Add(TargetTick);
   }
 
   // A removal that matches no track is a caller error, not a silent no-op, so
@@ -114,10 +139,13 @@ bool HandleRemoveKeyframe(UMcpAutomationBridgeSubsystem *Subsystem,
       }
       Section->Modify();
       FMovieSceneChannelProxy &Proxy = Section->GetChannelProxy();
-      RemovedKeys += RemoveChannelKeys<FMovieSceneDoubleChannel>(
-          Proxy, !bHasFrame, TargetTick);
-      RemovedKeys += RemoveChannelKeys<FMovieSceneFloatChannel>(
-          Proxy, !bHasFrame, TargetTick);
+      // Every key family: a Visibility (bool) or particle key used to stay put under "Removed 0 key(s)".
+      RemovedKeys += RemoveChannelKeys<FMovieSceneDoubleChannel>(Proxy, !bHasFrame, TargetTicks);
+      RemovedKeys += RemoveChannelKeys<FMovieSceneFloatChannel>(Proxy, !bHasFrame, TargetTicks);
+      RemovedKeys += RemoveChannelKeys<FMovieSceneBoolChannel>(Proxy, !bHasFrame, TargetTicks);
+      RemovedKeys += RemoveChannelKeys<FMovieSceneByteChannel>(Proxy, !bHasFrame, TargetTicks);
+      RemovedKeys += RemoveChannelKeys<FMovieSceneIntegerChannel>(Proxy, !bHasFrame, TargetTicks);
+      RemovedKeys += RemoveChannelKeys<FMovieSceneParticleChannel>(Proxy, !bHasFrame, TargetTicks);
     }
   }
 

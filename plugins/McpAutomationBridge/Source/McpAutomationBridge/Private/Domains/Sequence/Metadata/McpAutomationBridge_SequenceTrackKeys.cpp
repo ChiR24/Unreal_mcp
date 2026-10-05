@@ -13,10 +13,13 @@
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
 
 #include "Channels/MovieSceneBoolChannel.h"
+#include "Channels/MovieSceneByteChannel.h"
 #include "Channels/MovieSceneChannelProxy.h"
 #include "Channels/MovieSceneDoubleChannel.h"
 #include "Channels/MovieSceneFloatChannel.h"
+#include "Channels/MovieSceneIntegerChannel.h"
 #include "MovieSceneSection.h"
+#include "Sections/MovieSceneParticleSection.h"
 #include "Sections/MovieSceneSkeletalAnimationSection.h"
 
 namespace McpSequenceTracks {
@@ -31,10 +34,13 @@ double TickToDisplayFrame(const UMovieScene *MovieScene, FFrameNumber Tick) {
       .AsDecimal();
 }
 
-/** A key value as a number; a bool key (a Visibility track) reads 1 or 0. */
+/** A key value as a number; a bool key (a Visibility track) reads 1 or 0, a particle key 0 activate, 1 deactivate,
+ *  2 trigger. */
 double KeyNumber(const FMovieSceneDoubleValue &Value) { return Value.Value; }
 double KeyNumber(const FMovieSceneFloatValue &Value) { return Value.Value; }
 double KeyNumber(bool bValue) { return bValue ? 1.0 : 0.0; }
+double KeyNumber(uint8 Value) { return Value; }
+double KeyNumber(int32 Value) { return Value; }
 
 /** Append one channel family's key times and values to OutChannels. */
 template <typename ChannelType>
@@ -116,6 +122,9 @@ TSharedPtr<FJsonObject> DescribeSectionKeys(const UMovieScene *MovieScene,
   DescribeChannels<FMovieSceneFloatChannel>(MovieScene, Proxy, TEXT("float"),
                                             ChannelsArray, OutKeyCount);
   DescribeChannels<FMovieSceneBoolChannel>(MovieScene, Proxy, TEXT("bool"), ChannelsArray, OutKeyCount);
+  DescribeChannels<FMovieSceneByteChannel>(MovieScene, Proxy, TEXT("byte"), ChannelsArray, OutKeyCount);
+  DescribeChannels<FMovieSceneIntegerChannel>(MovieScene, Proxy, TEXT("integer"), ChannelsArray, OutKeyCount);
+  DescribeChannels<FMovieSceneParticleChannel>(MovieScene, Proxy, TEXT("particle"), ChannelsArray, OutKeyCount);
   Obj->SetArrayField(TEXT("channels"), ChannelsArray);
   return Obj;
 }
@@ -159,7 +168,7 @@ bool HandleListTrackKeys(UMcpAutomationBridgeSubsystem *Subsystem,
     // Several actors' tracks share a name (Visibility, Transform); the binding says whose keys these are.
     FGuid BindingGuid;
     if (MovieScene->FindTrackBinding(*Track, BindingGuid)) {
-      TrackObj->SetStringField(TEXT("bindingName"), GetBindingName(MovieScene, BindingGuid));
+      TrackObj->SetStringField(TEXT("bindingName"), GetBindingLabel(MovieScene, BindingGuid));
     }
     TArray<TSharedPtr<FJsonValue>> SectionsArray;
     for (UMovieSceneSection *Section : Track->GetAllSections()) {

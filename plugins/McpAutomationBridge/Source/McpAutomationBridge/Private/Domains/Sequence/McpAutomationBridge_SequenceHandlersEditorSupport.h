@@ -80,6 +80,15 @@ inline FString GetBindingName(UMovieScene *MovieScene, const FGuid &Guid) {
   return FString();
 }
 
+// A binding as reads report it: a component bound under its actor reads "Actor/Component", so the tracks of several
+// actors' NiagaraComponent0 tell apart. GetBindingName stays the bare name that lookups match against.
+inline FString GetBindingLabel(UMovieScene *MovieScene, const FGuid &Guid) {
+  const FString Name = GetBindingName(MovieScene, Guid);
+  const FMovieScenePossessable *Possessable = MovieScene->FindPossessable(Guid);
+  const FString Parent = Possessable && Possessable->GetParent().IsValid() ? GetBindingName(MovieScene, Possessable->GetParent()) : FString();
+  return Parent.IsEmpty() || Parent == Name ? Name : Parent + TEXT("/") + Name;
+}
+
 // First track whose name (or, optionally, display name) contains TrackName: the
 // movie scene tracks first, then the tracks of every binding whose name contains
 // BindingFilter (all bindings when the filter is empty).

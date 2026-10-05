@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "07734dd371ac95b4",
+  "catalogRevision": "bfcee38a7ffedc73",
   "recordCount": 396,
   "records": [
     {
@@ -56189,6 +56189,10 @@
             "scale": {
               "description": "Scale of the spawned system: one uniform number, or [x, y, z] (an {x, y, z} object is accepted). Default 1."
             },
+            "autoActivate": {
+              "type": "boolean",
+              "description": "false places the effect switched off so it waits for its cue (a particle track trigger key, Activate); default true, which also fires it when the level starts."
+            },
             "preset": {
               "type": "string",
               "description": "Particle preset name or canonical /Game particle asset path."
@@ -56382,6 +56386,9 @@
             "scale": [
               "niagara"
             ],
+            "autoActivate": [
+              "niagara"
+            ],
             "preset": [
               "particle"
             ]
@@ -56390,8 +56397,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f8f1978baba2304c9affccd436dcb8db8d2f171d82277aae9c6caa94e1e87faf",
-        "content": "58056affe67f8173b1949a2d2c403f100b2192c14cb977d3f5ef514bb91ad0d7"
+        "schema": "e6b2b3ab707222cd08226fd7576e77c2d85faaa9c40af042a3ffd55884baf2c5",
+        "content": "a1bebf7dcc0d413c26d6251385d4f0bc9daad7b5239b7c065fb386fea1b2c2d4"
       }
     },
     {
@@ -82755,6 +82762,16 @@
               "type": "integer",
               "description": "Frame number for the keyframe."
             },
+            "frames": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "integer",
+                "description": "Frame number."
+              },
+              "description": "Remove the keys on each of these frames in one call, of every key type (transform, float, Visibility, particle). Without frame and frames every key on the track goes."
+            },
             "deleteScope": {
               "type": "string",
               "enum": [
@@ -82876,14 +82893,17 @@
             ],
             "frame": [
               "keyframe"
+            ],
+            "frames": [
+              "keyframe"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a22415d48e09bc11e01589106766c79a183ecee5b3a8c43bed291716d7e690fd",
-        "content": "7007f06703d4fff6b5b37af119f70db4e1cc900b21716b263702bedc3e0ae276"
+        "schema": "2cc4e96109cb7714d5e8c10fa3fd3eb127e3eabcd24e02bff627d46d394e9a3a",
+        "content": "a2941076827c07ac5c92d600de3fbdf2ea9e7c2338747dbbdf49a432bb839d28"
       }
     },
     {
@@ -83953,7 +83973,7 @@
                   },
                   "bindingName": {
                     "type": "string",
-                    "description": "Bound actor name (binding tracks only)."
+                    "description": "Bound actor name, or Actor/Component for a component bound under its actor (binding tracks only)."
                   },
                   "bindingGuid": {
                     "type": "string",
@@ -84000,7 +84020,7 @@
                   },
                   "bindingName": {
                     "type": "string",
-                    "description": "The bound actor or component the track animates; absent on a master track."
+                    "description": "The bound actor the track animates, or Actor/Component for a component bound under its actor; absent on a master track."
                   },
                   "sections": {
                     "type": "array",
@@ -84056,7 +84076,7 @@
                               },
                               "channelType": {
                                 "type": "string",
-                                "description": "double, float or bool."
+                                "description": "double, float, bool, byte, integer or particle."
                               },
                               "channelName": {
                                 "type": "string",
@@ -84080,7 +84100,7 @@
                                     },
                                     "value": {
                                       "type": "number",
-                                      "description": "Key value; a bool key (a Visibility track) reads 1 for true and 0 for false."
+                                      "description": "Key value; a bool key (a Visibility track) reads 1 for true and 0 for false, a particle key 0 activate, 1 deactivate, 2 trigger."
                                     }
                                   }
                                 }
@@ -84205,8 +84225,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f68ffb2175bf096251c7d5e90cdfb629e9aef77e2a7c9f45f80cc05b5c987b80",
-        "content": "8a42b196f9178751ca9296702a75080630429a03e7c307b094771b0c0d49a466"
+        "schema": "b76739bedb3934eb3401285f2dc7027d3b252a01f5d00132af0c1633e4ce2298",
+        "content": "d78a48c5a6c6997de640c89c90fd4aa2f6f70c112d948cb8fb6699cb7fd18e4f"
       }
     },
     {

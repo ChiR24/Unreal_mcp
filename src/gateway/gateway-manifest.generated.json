@@ -10830,6 +10830,7 @@
         "angle",
         "assetPath",
         "attachToActor",
+        "autoActivate",
         "autoConnect",
         "boxSize",
         "cleanupTarget",
@@ -10924,6 +10925,10 @@
           "attachToActor": {
             "type": "string",
             "description": "Name of the actor the spawned system attaches to."
+          },
+          "autoActivate": {
+            "type": "boolean",
+            "description": "false places the effect switched off so it waits for its cue (a particle track trigger key, Activate); default true, which also fires it when the level starts."
           },
           "autoConnect": {
             "type": "boolean",
@@ -15407,6 +15412,7 @@
         "focusDistance",
         "frame",
         "frameRate",
+        "frames",
         "friendlyName",
         "from",
         "height",
@@ -15880,6 +15886,16 @@
               "string"
             ],
             "description": "Frame rate as fps or a rate string such as 24fps or 24000/1001."
+          },
+          "frames": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "type": "integer",
+              "description": "Frame number."
+            },
+            "description": "Remove the keys on each of these frames in one call, of every key type (transform, float, Visibility, particle). Without frame and frames every key on the track goes."
           },
           "friendlyName": {
             "type": "string",

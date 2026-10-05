@@ -468,6 +468,16 @@ describe('handlers answer what they did', () => {
     expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersModuleInfo.cpp')).toContain('ModuleObj->SetBoolField(TEXT("enabled"), Module->IsNodeEnabled());');
   });
 
+  // Every placed effect fired once at level start, whatever cue it was placed for.
+  it('a Niagara effect can be placed switched off', () => {
+    const spawn = code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraSpawn.cpp');
+    // SetAutoActivate is refused after registration (it only logs), so the flag is written directly.
+    expect(spawn).toMatch(/GetJsonBoolField\(Context\.Payload, TEXT\("autoActivate"\), true\);\s*NiagaraComponent->bAutoActivate = bAutoActivate;/u);
+    expect(spawn).not.toContain('SetAutoActivate(');
+    // Deactivate only winds a system down, and an editor world never ticks it to the end.
+    expect(spawn).toMatch(/if \(bAutoActivate\)\s*\{\s*NiagaraComponent->Activate\(true\);\s*\}\s*else\s*\{\s*NiagaraComponent->DeactivateImmediate\(\);/u);
+  });
+
   // An activate key restarted a finished one-shot every frame of its section: a spark burst fired again and again.
   it('a particle track can fire a one-shot burst once with a trigger key', () => {
     const tracks = code('Sequence', 'Cinematics', 'McpAutomationBridge_SequenceCinematicsTracks.cpp');

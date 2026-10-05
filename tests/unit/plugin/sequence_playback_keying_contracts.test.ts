@@ -101,8 +101,20 @@ describe('sequence keying and binding', () => {
     expect(read('McpAutomationBridge_SequenceHandlers.cpp')).toContain('if (EffectiveAction == TEXT("sequence_set_section"))');
   });
 
+  it('removes keys of every type, on one frame or several', () => {
+    const removal = read('Metadata/McpAutomationBridge_SequenceKeyRemoval.cpp');
+    for (const family of ['Double', 'Float', 'Bool', 'Byte', 'Integer', 'Particle']) {
+      expect(removal).toContain(`RemoveChannelKeys<FMovieScene${family}Channel>(Proxy, !bHasFrame, TargetTicks)`);
+    }
+    expect(removal).toMatch(/TryGetArrayField\(TEXT\("frames"\), FrameList\)/u);
+    expect(removal, 'an empty frames list must not clear the track').toContain('frames must list at least one frame number');
+  });
+
   it('reads back whose track it is, and each section row, easing and clip', () => {
     const keys = read('Metadata/McpAutomationBridge_SequenceTrackKeys.cpp');
+    expect(keys).toContain('GetBindingLabel(MovieScene, BindingGuid)');
+    expect(keys).toContain('DescribeChannels<FMovieSceneParticleChannel>(MovieScene, Proxy, TEXT("particle")');
+    expect(read('McpAutomationBridge_SequenceHandlersEditorSupport.h')).toMatch(/inline FString GetBindingLabel[\s\S]*Parent \+ TEXT\("\/"\) \+ Name/u);
     expect(keys).toContain('MovieScene->FindTrackBinding(*Track, BindingGuid)');
     expect(keys).toContain('Obj->SetNumberField(TEXT("rowIndex"), Section->GetRowIndex());');
     expect(keys).toMatch(/Section->Easing\.GetEaseInDuration\(\) > 0[\s\S]*Section->Easing\.GetEaseOutDuration\(\) > 0/u);

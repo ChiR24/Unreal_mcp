@@ -98,7 +98,20 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     }
     NiagaraComponent->SetAsset(NiagaraSystem);
     NiagaraComponent->SetWorldScale3D(ReadScaleField(Context.Payload));
-    NiagaraComponent->Activate(true);
+    // autoActivate false places the effect switched off, for a sequence particle track or a Blueprint to start; it
+    // used to fire once at level start whatever cue it was placed for. The flag is written directly because
+    // SetAutoActivate is refused once the component is registered, which spawning already did. Deactivate only
+    // lets a running system wind down, which an editor world never ticks, so the reply said active: true.
+    const bool bAutoActivate = GetJsonBoolField(Context.Payload, TEXT("autoActivate"), true);
+    NiagaraComponent->bAutoActivate = bAutoActivate;
+    if (bAutoActivate)
+    {
+        NiagaraComponent->Activate(true);
+    }
+    else
+    {
+        NiagaraComponent->DeactivateImmediate();
+    }
     // Activation needs a ticking world: in edit mode the component stays inactive even
     // though the asset is assigned, so only a missing asset is a failure (dogfood #107).
     if (!NiagaraComponent->GetAsset())
@@ -125,6 +138,7 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     Response->SetStringField(TEXT("actorName"), McpActorRef(Spawned));
     Response->SetStringField(TEXT("systemPath"), NiagaraSystem->GetPathName());
     Response->SetBoolField(TEXT("active"), bActive);
+    Response->SetBoolField(TEXT("autoActivate"), bAutoActivate);
     if (Parent)
     {
         Response->SetStringField(TEXT("attachedTo"), Parent->GetActorLabel());
@@ -132,7 +146,9 @@ bool HandleSpawnNiagara(const FEffectActionContext& Context, bool bIsCreateEffec
     McpHandlerUtils::AddVerification(Response, Spawned);
     Context.Bridge.SendAutomationResponse(
         Context.Socket, Context.RequestId, true,
-        bActive ? TEXT("Niagara spawned") : TEXT("Niagara spawned (inactive until the world ticks)"), Response);
+        !bAutoActivate ? TEXT("Niagara spawned switched off; a particle track or Activate starts it")
+        : bActive      ? TEXT("Niagara spawned")
+                       : TEXT("Niagara spawned (inactive until the world ticks)"), Response);
     return true;
 }
 }

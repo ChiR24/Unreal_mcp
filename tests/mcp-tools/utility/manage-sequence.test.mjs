@@ -83,6 +83,8 @@ const testCases = [
   // keys writes several keys in one call: a one-frame flash here.
   { scenario: 'ADD: add_keyframe keys shows the actor for one frame', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Visibility', keys: [{ frame: 44, value: true }, { frame: 45, value: false, interpolation: 'constant' }] }, expected: 'success', assertions: [{ path: 'structuredContent.result.message', equals: '2 keys added' }] },
   { scenario: 'ERROR: add_keyframe keys entry without a frame', toolName: 'manage_sequence', arguments: { action: 'add_keyframe', path: SEQUENCE_PATH, actorName: ACTOR_A, property: 'Visibility', keys: [{ value: true }] }, expected: 'error' },
+  // frames removes the keys on several frames, Visibility (bool) keys included.
+  { scenario: 'DELETE: remove_keyframe frames takes the flash keys off again', toolName: 'manage_sequence', arguments: { action: 'remove_keyframe', path: SEQUENCE_PATH, trackName: 'MovieSceneVisibilityTrack', frames: [44, 45] }, expected: 'success', assertions: [{ path: 'structuredContent.result.removedKeys', equals: 2 }] },
   // The harness merges args.params into the call arguments before routing.
   { scenario: 'PARAMS: get_properties via nested params', toolName: 'manage_sequence', arguments: { action: 'get_properties', params: { path: SEQUENCE_PATH } }, expected: 'success' },
   { scenario: 'INFO: get_properties', toolName: 'manage_sequence', arguments: { action: 'get_properties', path: SEQUENCE_PATH }, expected: 'success' },

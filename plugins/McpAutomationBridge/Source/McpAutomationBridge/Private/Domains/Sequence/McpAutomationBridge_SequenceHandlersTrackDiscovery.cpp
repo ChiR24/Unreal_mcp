@@ -41,7 +41,7 @@ bool HandleListTracks(UMcpAutomationBridgeSubsystem *Subsystem,
     TrackObj->SetStringField(TEXT("displayName"), Track->GetDisplayName().ToString());
     TrackObj->SetBoolField(TEXT("isMasterTrack"), Binding == nullptr);
     if (Binding) {
-      TrackObj->SetStringField(TEXT("bindingName"), GetBindingName(MovieScene, Binding->GetObjectGuid()));
+      TrackObj->SetStringField(TEXT("bindingName"), GetBindingLabel(MovieScene, Binding->GetObjectGuid()));
       TrackObj->SetStringField(TEXT("bindingGuid"), Binding->GetObjectGuid().ToString());
     }
     TrackObj->SetNumberField(TEXT("sectionCount"), Track->GetAllSections().Num());

@@ -14712,6 +14712,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Name of the actor the spawned system attaches to."
         },
+        "autoActivate": {
+          "type": "boolean",
+          "description": "false places the effect switched off so it waits for its cue (a particle track trigger key, Activate); default true, which also fires it when the level starts."
+        },
         "autoConnect": {
           "type": "boolean",
           "description": "Whether inserted pins are auto-connected."
@@ -20232,6 +20236,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Frame rate as fps or a rate string such as 24fps or 24000/1001."
         },
+        "frames": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 500,
+          "items": {
+            "type": "integer",
+            "description": "Frame number."
+          },
+          "description": "Remove the keys on each of these frames in one call, of every key type (transform, float, Visibility, particle). Without frame and frames every key on the track goes."
+        },
         "friendlyName": {
           "type": "string",
           "description": "Human-readable replay name."
@@ -21299,7 +21313,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "bindingName": {
                 "type": "string",
-                "description": "The bound actor or component the track animates; absent on a master track."
+                "description": "The bound actor the track animates, or Actor/Component for a component bound under its actor; absent on a master track."
               },
               "sections": {
                 "type": "array",
@@ -21355,7 +21369,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                           },
                           "channelType": {
                             "type": "string",
-                            "description": "double, float or bool."
+                            "description": "double, float, bool, byte, integer or particle."
                           },
                           "channelName": {
                             "type": "string",
@@ -21379,7 +21393,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
                                 },
                                 "value": {
                                   "type": "number",
-                                  "description": "Key value; a bool key (a Visibility track) reads 1 for true and 0 for false."
+                                  "description": "Key value; a bool key (a Visibility track) reads 1 for true and 0 for false, a particle key 0 activate, 1 deactivate, 2 trigger."
                                 }
                               }
                             }
@@ -21434,7 +21448,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               },
               "bindingName": {
                 "type": "string",
-                "description": "Bound actor name (binding tracks only)."
+                "description": "Bound actor name, or Actor/Component for a component bound under its actor (binding tracks only)."
               },
               "bindingGuid": {
                 "type": "string",
