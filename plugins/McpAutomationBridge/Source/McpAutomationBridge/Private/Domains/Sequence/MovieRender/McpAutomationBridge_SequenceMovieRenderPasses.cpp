@@ -242,7 +242,8 @@ bool HandleAddRenderPass(UMcpAutomationBridgeSubsystem *Subsystem,
   Config->Modify();
   MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
-                                    TEXT("MRQ render pass configured."),
+                                    FString::Printf(TEXT("Render pass %s added to %s."),
+                                                    *FString::Join(Passes, TEXT(", ")), *Job->JobName),
                                     BuildJobResult(Job, Queue));
   return true;
 }

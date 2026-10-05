@@ -67,9 +67,9 @@ export const MANAGE_SEQUENCE_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_render_job', selector: 'control',
-    summary: 'Movie Render Queue: create a render job, queue it, or start rendering.',
-    topics: ['movie render queue', 'render job', 'queue render', 'start render', 'mrq', 'render video'],
-    members: { create: 'create_render_job', queue: 'queue_render', start: 'start_render' },
+    summary: 'Movie Render Queue: create a render job, queue it, start rendering, or remove jobs from the queue.',
+    topics: ['movie render queue', 'render job', 'queue render', 'start render', 'mrq', 'render video', 'remove render job', 'clear render queue'],
+    members: { create: 'create_render_job', queue: 'queue_render', start: 'start_render', remove: 'remove_render_job' },
   },
   {
     primary: 'configure_render_job', selector: 'setting',

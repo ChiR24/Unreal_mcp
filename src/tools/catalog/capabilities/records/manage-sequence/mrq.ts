@@ -2,7 +2,7 @@
  * Movie Render Queue (MRQ) records: create_render_job,
  * configure_output_settings, add_render_pass, configure_anti_aliasing,
  * configure_console_variables, configure_burn_ins, queue_render,
- * start_render.
+ * start_render, remove_render_job.
  *
  * Gated by MCP_HAS_MOVIE_RENDER_PIPELINE (MovieRenderPipeline plugin).
  *
@@ -164,5 +164,22 @@ export const MRQ_RECORDS: readonly CapabilityRecordSource[] = [
     latency: 'long-running', resources: 'high', plugins: MRQ_PLUGINS,
     exampleInput: { action: 'start_render', jobId: 'render-job-1' },
     exampleOutput: { success: true, outputDirectory: '/tmp/renders', renderContinuesAsynchronously: false, bCancellationDeadlineExpired: false },
+  }),
+  buildRecord({
+    id: 'sequence.mrq.remove_render_job', action: 'remove_render_job', family: F, domain: D,
+    summary: 'Remove a render job from the Movie Render Queue, or every job (allJobs). Rendered files stay on disk. The queue holds a limited number of jobs, and a finished job stays queued (an unrestricted start renders it again), so remove finished ones before creating more.',
+    whenToUse: ['create_render_job answered MRQ_RESOURCE_LIMIT_EXCEEDED: the queue is full.', 'Finished jobs would render again with the next start.'],
+    whenNotToUse: ['A render is running (MRQ_ALREADY_RENDERING).'],
+    // HandleRemoveRenderJob (JobCreation.cpp) selects the job as the other job actions do.
+    inputProps: { jobId: P.jobId, renderJobName: P.renderJobName, allJobs: { type: 'boolean', description: 'Remove every job in the queue instead of one.' } },
+    requiredOneOf: ['jobId', 'renderJobName', 'allJobs'],
+    outputProps: {
+      removedCount: { type: 'integer', description: 'Jobs removed.' },
+      queueJobCount: { type: 'integer', description: 'Jobs left in the queue.' },
+    },
+    outputRequired: [],
+    effect: 'write', latency: 'instant', resources: 'low', plugins: MRQ_PLUGINS,
+    exampleInput: { action: 'remove_render_job', allJobs: true },
+    exampleOutput: { success: true, removedCount: 3, queueJobCount: 0 },
   }),
 ];

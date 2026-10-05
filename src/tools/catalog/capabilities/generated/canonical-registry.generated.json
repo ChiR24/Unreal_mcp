@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "aa1503b4aa47eb3b",
+  "catalogRevision": "688215cc0b14c02b",
   "recordCount": 396,
   "records": [
     {
@@ -82554,11 +82554,11 @@
             },
             "name": {
               "type": "string",
-              "description": "Name for the new sequence or asset."
+              "description": "Name of the new sequence, made in the folder path names (default /Game). Leave it out when path names the sequence itself."
             },
             "path": {
               "type": "string",
-              "description": "Canonical /Game sequence asset path."
+              "description": "Sequence asset path, such as /Game/Cinematics/SEQ_Shot; with name, create reads it as the folder instead."
             },
             "destinationPath": {
               "type": "string",
@@ -82698,8 +82698,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "660472f540c2c7b42fd755267a723504b486e1e629265ca18bbdc65cd8fa732f",
-        "content": "3fa4cae50878108b7a84802bb5604737af801acace6bc31bb448a442c3bbeb81"
+        "schema": "2c66347f71ca4c5ebbd035e67653203e37e92a268e2c018f304d6a69e5fb2280",
+        "content": "1c2a73f13aeea2de404b503b9ed92184c9a90cada6c75ec25fdc67a37e07c5b1"
       }
     },
     {
@@ -85323,7 +85323,8 @@
       "id": "sequence.mrq.create_render_job",
       "aliases": [
         "sequence.mrq.queue_render",
-        "sequence.mrq.start_render"
+        "sequence.mrq.start_render",
+        "sequence.mrq.remove_render_job"
       ],
       "legacyIds": [
         {
@@ -85343,6 +85344,13 @@
           "folded": {
             "control": "start"
           }
+        },
+        {
+          "tool": "manage_sequence",
+          "action": "remove_render_job",
+          "folded": {
+            "control": "remove"
+          }
         }
       ],
       "discovery": {
@@ -85355,17 +85363,22 @@
           "queue render",
           "start render",
           "mrq",
-          "render video"
+          "render video",
+          "remove render job",
+          "clear render queue"
         ],
-        "summary": "Movie Render Queue: create a render job, queue it, or start rendering.",
+        "summary": "Movie Render Queue: create a render job, queue it, start rendering, or remove jobs from the queue.",
         "whenToUse": [
           "control=create: A new render job must be created for a cinematic sequence.",
           "control=queue: A job must be added to the render queue for later execution.",
-          "control=start: The MRQ queue must be executed to produce rendered output files."
+          "control=start: The MRQ queue must be executed to produce rendered output files.",
+          "control=remove: create_render_job answered MRQ_RESOURCE_LIMIT_EXCEEDED: the queue is full.",
+          "control=remove: Finished jobs would render again with the next start."
         ],
         "whenNotToUse": [
           "control=create: A render job already exists for the sequence.",
-          "control=start: A render is already in progress (MRQ_ALREADY_RENDERING)."
+          "control=start: A render is already in progress (MRQ_ALREADY_RENDERING).",
+          "control=remove: A render is running (MRQ_ALREADY_RENDERING)."
         ]
       },
       "schemas": {
@@ -85478,12 +85491,17 @@
               "type": "string",
               "description": "Movie pipeline executor class path."
             },
+            "allJobs": {
+              "type": "boolean",
+              "description": "Remove every job in the queue instead of one."
+            },
             "control": {
               "type": "string",
               "enum": [
                 "create",
                 "queue",
-                "start"
+                "start",
+                "remove"
               ],
               "description": "Which create render job variant to run; omit for 'create'.",
               "default": "create"
@@ -85526,6 +85544,14 @@
             "bCancellationDeadlineExpired": {
               "type": "boolean",
               "description": "Whether the cancellation deadline expired."
+            },
+            "removedCount": {
+              "type": "integer",
+              "description": "Jobs removed."
+            },
+            "queueJobCount": {
+              "type": "integer",
+              "description": "Jobs left in the queue."
             }
           },
           "required": [
@@ -85536,7 +85562,7 @@
       },
       "examples": [
         {
-          "title": "Movie Render Queue: create a render job, queue it, or start rendering.",
+          "title": "Movie Render Queue: create a render job, queue it, start rendering, or remove jobs from the queue.",
           "input": {
             "action": "create_render_job",
             "sequencePath": "/Game/Cinematics/SEQ_Master",
@@ -85584,7 +85610,8 @@
           "actions": {
             "create": "create_render_job",
             "queue": "queue_render",
-            "start": "start_render"
+            "start": "start_render",
+            "remove": "remove_render_job"
           },
           "declaredBy": {
             "sequencePath": [
@@ -85631,7 +85658,8 @@
             ],
             "jobId": [
               "queue",
-              "start"
+              "start",
+              "remove"
             ],
             "renderJobId": [
               "queue"
@@ -85649,14 +85677,17 @@
             ],
             "executorClass": [
               "start"
+            ],
+            "allJobs": [
+              "remove"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c03de26c492366096ba738b9ef69d7746e9c95954048df62688646b6e0bd3cb7",
-        "content": "162b604455128f0571ba9943352f98d1de7f7a35dbbd1dfa4a6a3dbd04a61c12"
+        "schema": "a1505524590acbc6fc26b6434b2660b221606d4e1a2d3da4b6b094fc9d0a3240",
+        "content": "7a8e7f2ee25250c3420f6d8555c8d2e19474f737aff8d31274d0dd627c405b11"
       }
     },
     {

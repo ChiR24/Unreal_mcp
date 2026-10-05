@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `aa1503b4aa47eb3b`
+Catalog revision: `688215cc0b14c02b`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -490,7 +490,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `sequence.media.create_media_asset` | `manage_sequence` | `create_media_source` | write | write | none | `manage_sequence.create_media_asset` `manage_sequence.create_media_source` `manage_sequence.create_media_player` `manage_sequence.create_media_playlist` `manage_sequence.create_media_texture` `manage_sequence.create_media_sound_component` |
 | `sequence.media.play_media` | `manage_sequence` | `play_media` | write | write | none | `manage_sequence.play_media` `manage_sequence.pause_media` `manage_sequence.seek_media` |
 | `sequence.mrq.configure_render_job` | `manage_sequence` | `configure_output_settings` | write | write | none | `manage_sequence.configure_render_job` `manage_sequence.configure_output_settings` `manage_sequence.configure_anti_aliasing` `manage_sequence.add_render_pass` `manage_sequence.configure_burn_ins` `manage_sequence.configure_console_variables` |
-| `sequence.mrq.create_render_job` | `manage_sequence` | `create_render_job` | write | write | none | `manage_sequence.create_render_job` `manage_sequence.queue_render` `manage_sequence.start_render` |
+| `sequence.mrq.create_render_job` | `manage_sequence` | `create_render_job` | write | write | none | `manage_sequence.create_render_job` `manage_sequence.queue_render` `manage_sequence.start_render` `manage_sequence.remove_render_job` |
 | `sequence.play` | `manage_sequence` | `play` | write | write | none | `manage_sequence.play` `manage_sequence.pause` `manage_sequence.stop` |
 | `sequence.replay.configure_demo_settings` | `manage_sequence` | `configure_demo_settings` | write | write | none | `manage_sequence.configure_demo_settings` `manage_sequence.configure_killcam_duration` |
 | `sequence.replay.play_demo` | `manage_sequence` | `play_demo` | write | write | none | `manage_sequence.play_demo` `manage_sequence.pause_demo` `manage_sequence.seek_demo` `manage_sequence.set_demo_playback_speed` `manage_sequence.start_demo_recording` `manage_sequence.stop_demo_recording` `manage_sequence.start_killcam` |

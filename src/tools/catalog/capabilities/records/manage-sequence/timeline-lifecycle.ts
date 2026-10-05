@@ -6,6 +6,7 @@
  */
 import type { CapabilityRecordSource } from '../../model.js';
 import { buildRecord, P, SEQ_PLUGINS } from './helpers.js';
+import { str } from '../shared/schema-props.js';
 
 const FAMILY = 'timeline';
 const DOMAIN = 'sequence';
@@ -21,8 +22,12 @@ export const TIMELINE_LIFECYCLE_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Create a new Level Sequence asset in the content browser.',
     whenToUse: ['A new cinematic or animation sequence asset is needed.'],
     whenNotToUse: ['An existing sequence should be opened instead.'],
-    inputProps: { name: P.name, path: P.path },
-    required: ['name'],
+    inputProps: {
+      name: str('Name of the new sequence, made in the folder path names (default /Game). Leave it out when path names the sequence itself.'),
+      path: str('Sequence asset path, such as /Game/Cinematics/SEQ_Shot; with name, create reads it as the folder instead.'),
+    },
+    required: [],
+    requiredOneOf: ['name', 'path'],
     // Native HandleSequenceCreate (SequenceHandlersAssetCreation.cpp:5-109)
     // never emits sequencePath: it verifies with assetPath/assetName/assetClass/
     // existsAfter (AddAssetVerification) on create, or verifiedPath/existsAfter

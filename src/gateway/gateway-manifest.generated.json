@@ -15363,6 +15363,7 @@
         "actorPath",
         "actors",
         "additionalOptions",
+        "allJobs",
         "animationPath",
         "animationSequencePath",
         "antiAliasingMethod",
@@ -15570,6 +15571,10 @@
             },
             "description": "Additional replay streamer options."
           },
+          "allJobs": {
+            "type": "boolean",
+            "description": "Remove every job in the queue instead of one."
+          },
           "animationPath": {
             "type": "string",
             "description": "Animation sequence asset path (alias of animationSequencePath)."
@@ -15676,6 +15681,7 @@
               "create",
               "queue",
               "start",
+              "remove",
               "play",
               "pause",
               "seek",

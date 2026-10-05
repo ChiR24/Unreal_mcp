@@ -174,6 +174,11 @@ void BeginTimedOutRenderCancellation(
             State->bCancellationDeadlineExpired =
                 Executor && Executor->IsRendering() &&
                 FPlatformTime::Seconds() >= State->CancellationDeadlineSeconds;
+            // A render that ignores the cancel (one whose game loaded another level lost its world and
+            // hangs) kept the queue busy until the editor closed: its Play In Editor session is ended.
+            if (State->bCancellationDeadlineExpired && Cast<UMoviePipelinePIEExecutor>(Executor) &&
+                GEditor && GEditor->PlayWorld)
+              GEditor->RequestEndPlayMap();
             if (!Executor || !Executor->IsRendering() ||
                 State->bCancellationDeadlineExpired) {
               SendStartRenderCompletion(

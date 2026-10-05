@@ -159,7 +159,9 @@ bool ValidateQueueResourceLimits(UMoviePipelineQueue *Queue,
       FMath::Max(MaxJobs, Settings->MaxMovieRenderQueueJobs);
   if (Queue->GetJobs().Num() > MaxQueueJobs)
     return ResourceLimitExceeded(
-        TEXT("MRQ total job count exceeds the configured queue limit."),
+        FString::Printf(TEXT("The Movie Render Queue holds more than %d jobs (its limit). Remove finished "
+                             "ones with create_render_job control remove (allJobs clears the queue)."),
+                        MaxQueueJobs),
         OutMessage, OutCode);
   const int64 MaxWork =
       FMath::Max<int64>(1, Settings->MaxMovieRenderAggregateWork);
@@ -170,7 +172,9 @@ bool ValidateQueueResourceLimits(UMoviePipelineQueue *Queue,
       continue;
     if (++EnabledJobs > MaxJobs)
       return ResourceLimitExceeded(
-          TEXT("MRQ enabled job count exceeds the configured limit."),
+          FString::Printf(TEXT("The Movie Render Queue holds more than %d enabled jobs (its limit). Remove "
+                               "finished ones with create_render_job control remove (allJobs clears the queue)."),
+                          MaxJobs),
           OutMessage, OutCode);
     const int64 JobWork = EstimateJobWork(Job);
     if (JobWork == MAX_int64 || AggregateWork > MaxWork - JobWork)

@@ -54,6 +54,9 @@ const testCases = [
 
   // === CREATE / OPEN ===
   { scenario: 'ACTION: create', toolName: 'manage_sequence', arguments: { action: 'create', name: SEQUENCE_NAME, path: TEST_FOLDER }, expected: 'success|already exists' },
+  // Without a name, a path that is no folder names the sequence itself; an existing folder still needs a name.
+  { scenario: 'ACTION: create from a path that names the sequence', toolName: 'manage_sequence', arguments: { action: 'create', path: `${TEST_FOLDER}/SEQ_PathOnly_${ts}` }, expected: 'success' },
+  { scenario: 'ERROR: create with a folder path and no name', toolName: 'manage_sequence', arguments: { action: 'create', path: TEST_FOLDER }, expected: 'error' },
   { scenario: 'ACTION: open', toolName: 'manage_sequence', arguments: { action: 'open', path: SEQUENCE_PATH }, expected: 'success' },
 
   // === BINDINGS ===

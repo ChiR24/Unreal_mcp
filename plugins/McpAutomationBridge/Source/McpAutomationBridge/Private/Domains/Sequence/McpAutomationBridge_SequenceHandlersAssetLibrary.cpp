@@ -118,6 +118,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceDuplicate(
   UObject *DuplicatedSeq =
       UEditorAssetLibrary::DuplicateAsset(SourcePath, DestinationPath);
   if (DuplicatedSeq) {
+    // Saved like a created sequence: the copy lived only in memory and an editor exit lost it.
+    McpSafeAssetSave(DuplicatedSeq);
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
     Resp->SetStringField(TEXT("sourcePath"), SourcePath);
     Resp->SetStringField(TEXT("destinationPath"), DestinationPath);

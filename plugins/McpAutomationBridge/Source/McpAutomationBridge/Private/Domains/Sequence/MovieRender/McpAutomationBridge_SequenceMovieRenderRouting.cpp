@@ -31,6 +31,7 @@ bool TryHandle(UMcpAutomationBridgeSubsystem *Subsystem, const FString &RequestI
                             const TSharedPtr<FJsonObject> &, TSharedPtr<FMcpBridgeWebSocket>);
   static const TMap<FString, FHandler> Handlers = {
       {TEXT("create_render_job"), &HandleCreateRenderJob},
+      {TEXT("remove_render_job"), &HandleRemoveRenderJob},
       {TEXT("configure_output_settings"), &HandleConfigureOutputSettings},
       {TEXT("add_render_pass"), &HandleAddRenderPass},
       {TEXT("configure_anti_aliasing"), &HandleConfigureAntiAliasing},
@@ -50,7 +51,7 @@ bool TryHandle(UMcpAutomationBridgeSubsystem *Subsystem,
                const TSharedPtr<FJsonObject> &Payload,
                TSharedPtr<FMcpBridgeWebSocket> RequestingSocket) {
   static const TSet<FString> Actions = {
-      TEXT("create_render_job"), TEXT("configure_output_settings"),
+      TEXT("create_render_job"), TEXT("remove_render_job"), TEXT("configure_output_settings"),
       TEXT("add_render_pass"), TEXT("configure_anti_aliasing"),
       TEXT("configure_console_variables"), TEXT("configure_burn_ins"),
       TEXT("queue_render"), TEXT("start_render"),

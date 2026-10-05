@@ -38,25 +38,18 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceAddSpawnable(
   }
 
   if (ULevelSequence *LevelSeq = Cast<ULevelSequence>(SeqObj)) {
-    UMovieScene *MovieScene = LevelSeq->GetMovieScene();
-    if (MovieScene) {
-      UObject *DefaultObject = ResolvedClass->GetDefaultObject();
-      if (DefaultObject) {
-        FGuid BindingGuid = MovieScene->AddSpawnable(ClassName, *DefaultObject);
-        if (MovieScene->FindSpawnable(BindingGuid)) {
-          MovieScene->Modify();
-          TSharedPtr<FJsonObject> SpawnableResp =
-              McpHandlerUtils::CreateResultObject();
-          SpawnableResp->SetBoolField(TEXT("success"), true);
-          SpawnableResp->SetStringField(TEXT("className"), ClassName);
-          SpawnableResp->SetStringField(TEXT("bindingGuid"),
-                                        BindingGuid.ToString());
-          SendAutomationResponse(Socket, RequestId, true,
-                                 TEXT("Spawnable added to sequence"),
-                                 SpawnableResp, FString());
-          return true;
-        }
-      }
+    // The sequence's own spawners make a template the sequence owns. AddSpawnable with the class default object
+    // stored the CDO itself, which a recompile replaces: "does not have a valid object template", nothing spawned.
+    const FGuid BindingGuid = LevelSeq->GetMovieScene()
+                                  ? static_cast<UMovieSceneSequence *>(LevelSeq)->CreateSpawnable(ResolvedClass)
+                                  : FGuid();
+    if (BindingGuid.IsValid()) {
+      LevelSeq->MarkPackageDirty();
+      TSharedPtr<FJsonObject> SpawnableResp = McpHandlerUtils::CreateResultObject();
+      SpawnableResp->SetStringField(TEXT("className"), ResolvedClass->GetPathName());
+      SpawnableResp->SetStringField(TEXT("bindingGuid"), BindingGuid.ToString());
+      SendAutomationResponse(Socket, RequestId, true, TEXT("Spawnable added to sequence"), SpawnableResp, FString());
+      return true;
     }
     SendAutomationResponse(Socket, RequestId, false,
                            TEXT("Failed to create spawnable binding"), nullptr,

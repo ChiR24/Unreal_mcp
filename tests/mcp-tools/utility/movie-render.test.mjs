@@ -3,10 +3,10 @@
  * manage_sequence — Movie Render Queue (MRQ) integration + parameter-coverage
  * cases. T5 lane L2.
  *
- * Exercises the 8 MOVIE_RENDER_ACTIONS (create_render_job,
+ * Exercises the 9 MOVIE_RENDER_ACTIONS (create_render_job,
  * configure_output_settings, add_render_pass, configure_anti_aliasing,
  * configure_console_variables, configure_burn_ins, queue_render,
- * start_render) and every audited optional parameter they consume.
+ * start_render, remove_render_job) and every audited optional parameter they consume.
  *
  * These cases are captured statically by the parameter-combination audit
  * (tests/parameter-combination-audit.mjs) and also run live against a
@@ -74,6 +74,11 @@ const testCases = [
   // === start_render ===
   { scenario: 'MRQ: start_render', toolName: 'manage_sequence', arguments: { action: 'start_render', renderJobName: JOB_NAME }, expected: 'success' },
   { scenario: 'MRQ: start_render optional', toolName: 'manage_sequence', arguments: { action: 'start_render', renderJobName: JOB_NAME, jobId: `mcp.renderJobId=${JOB_NAME}`, executorClass: EXECUTOR_CLASS, useCurrentLevel: false, onlyJob: true, renderTimeoutMs: 55000 }, expected: 'success', timeoutMs: 60000 },
+
+  // === remove_render_job ===
+  { scenario: 'MRQ: remove_render_job by name', toolName: 'manage_sequence', arguments: { action: 'remove_render_job', renderJobName: `${JOB_NAME}_Size` }, expected: 'success', assertions: [{ path: 'structuredContent.result.removedCount', equals: 1, label: 'the named job leaves the queue' }] },
+  { scenario: 'MRQ: remove_render_job by id', toolName: 'manage_sequence', arguments: { action: 'remove_render_job', jobId: `mcp.renderJobId=${JOB_NAME}` }, expected: 'success|not found' },
+  { scenario: 'MRQ: remove_render_job every job', toolName: 'manage_sequence', arguments: { action: 'remove_render_job', allJobs: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.queueJobCount', equals: 0, label: 'the queue is empty' }] },
 
   // === CLEANUP ===
   { scenario: 'MRQ Cleanup: delete render sequence', toolName: 'manage_asset', arguments: { action: 'delete', path: SEQUENCE_PATH, force: true }, expected: 'success|not found' },

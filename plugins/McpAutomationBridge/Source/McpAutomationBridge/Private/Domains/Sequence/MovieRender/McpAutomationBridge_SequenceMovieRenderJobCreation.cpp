@@ -8,6 +8,7 @@
 
 #include "EditorAssetLibrary.h"
 #include "Engine/World.h"
+#include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "LevelSequence.h"
 #include "McpAutomationBridgeSubsystem.h"
 #include "Misc/Guid.h"
@@ -114,6 +115,42 @@ bool HandleCreateRenderJob(UMcpAutomationBridgeSubsystem *Subsystem,
   Subsystem->SendAutomationResponse(Socket, RequestId, true,
                                     TEXT("Movie Render Queue job created."),
                                     BuildJobResult(Job, Queue));
+  return true;
+}
+
+// Takes one job (jobId or renderJobName) or every job (allJobs) out of the queue; rendered files stay on disk.
+bool HandleRemoveRenderJob(UMcpAutomationBridgeSubsystem *Subsystem,
+                           const FString &RequestId,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> Socket) {
+  FString Message, Code;
+  UMoviePipelineQueueSubsystem *QueueSubsystem = GetQueueSubsystem(Message, Code);
+  if (!QueueSubsystem)
+    return SendError(Subsystem, RequestId, Socket, Message, Code), true;
+  if (QueueSubsystem->GetActiveExecutor() || QueueSubsystem->IsRendering())
+    return SendError(Subsystem, RequestId, Socket,
+                     TEXT("The queue cannot change while a render runs; remove jobs once it finishes."),
+                     TEXT("MRQ_ALREADY_RENDERING")),
+           true;
+  UMoviePipelineQueue *Queue = QueueSubsystem->GetQueue();
+  int32 Removed = 0;
+  if (Queue && GetJsonBoolField(Payload, TEXT("allJobs"), false)) {
+    Removed = Queue->GetJobs().Num();
+    Queue->DeleteAllJobs();
+  } else {
+    UMoviePipelineExecutorJob *Job = ResolveRequestJob(Subsystem, RequestId, Socket, Payload, Queue);
+    if (!Job)
+      return true;
+    Queue->DeleteJob(Job);
+    Removed = 1;
+  }
+  MCP_SET_MOVIE_PIPELINE_QUEUE_DIRTY(Queue, true);
+  TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
+  Result->SetNumberField(TEXT("removedCount"), Removed);
+  Result->SetNumberField(TEXT("queueJobCount"), Queue->GetJobs().Num());
+  Subsystem->SendAutomationResponse(
+      Socket, RequestId, true,
+      FString::Printf(TEXT("Removed %d job(s) from the Movie Render Queue."), Removed), Result);
   return true;
 }
 }

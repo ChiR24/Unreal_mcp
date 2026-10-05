@@ -1,4 +1,5 @@
 #include "Foundation/BridgeHelpers/Security/McpAutomationBridgeHelpersAssetPathCanonical.h"
+#include "Foundation/BridgeHelpers/Assets/McpAutomationBridgeHelpersAssetDirectories.h"
 #include "Foundation/BridgeHelpers/Blueprints/McpAutomationBridgeHelpersBlueprintPaths.h"
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/Sequence/McpAutomationBridge_SequenceHandlersEditorSupport.h"
@@ -24,14 +25,22 @@ bool UMcpAutomationBridgeSubsystem::HandleSequenceCreate(
   LocalPayload->TryGetStringField(TEXT("name"), Name);
   FString Path;
   LocalPayload->TryGetStringField(TEXT("path"), Path);
-  if (Name.IsEmpty()) {
-    SendAutomationResponse(Socket, RequestId, false,
-                           TEXT("sequence_create requires name"), nullptr,
-                           TEXT("INVALID_ARGUMENT"));
-    return true;
-  }
   FString Folder = Path.IsEmpty() ? TEXT("/Game") : Path;
   McpAssetPathCanonical::MapContentRootInline(Folder);
+  // Without a name, a path that is no folder names the sequence itself, the way every other sequence action reads path.
+  if (Name.IsEmpty() && !Path.IsEmpty()) {
+    const FString Probe = SanitizeProjectRelativePath(Folder);
+    if (!Probe.IsEmpty() && !DoesAssetDirectoryExistOnDisk(Probe)) {
+      Name = FPackageName::GetShortName(Probe);
+      Folder = FPackageName::GetLongPackagePath(Probe);
+    }
+  }
+  if (Name.IsEmpty()) {
+    SendAutomationResponse(Socket, RequestId, false,
+                           TEXT("sequence_create requires name (path is then its folder, default /Game), or a path that names the sequence: /Game/Folder/SEQ_Name."),
+                           nullptr, TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   // Sanitize (accepts the slashless Game/... alias), then the writable-path check
   // create_master_sequence applies; this passed the raw path to AssetTools.
   FString FullPath;

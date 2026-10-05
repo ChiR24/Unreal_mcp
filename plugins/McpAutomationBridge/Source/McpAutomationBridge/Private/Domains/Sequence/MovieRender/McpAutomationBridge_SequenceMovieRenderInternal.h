@@ -69,6 +69,10 @@ bool HandleCreateRenderJob(UMcpAutomationBridgeSubsystem *Subsystem,
                            const FString &RequestId,
                            const TSharedPtr<FJsonObject> &Payload,
                            TSharedPtr<FMcpBridgeWebSocket> Socket);
+bool HandleRemoveRenderJob(UMcpAutomationBridgeSubsystem *Subsystem,
+                           const FString &RequestId,
+                           const TSharedPtr<FJsonObject> &Payload,
+                           TSharedPtr<FMcpBridgeWebSocket> Socket);
 bool HandleConfigureOutputSettings(UMcpAutomationBridgeSubsystem *Subsystem,
                                    const FString &RequestId,
                                    const TSharedPtr<FJsonObject> &Payload,

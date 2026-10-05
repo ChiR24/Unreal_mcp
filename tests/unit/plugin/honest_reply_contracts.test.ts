@@ -985,6 +985,57 @@ describe('connect_pins on pins added on demand', () => {
   });
 });
 
+describe('a spawnable added from a class', () => {
+  // add_spawnable stored the class default object as the template; a recompile of the Blueprint replaced it and
+  // the binding spawned nothing ("does not have a valid object template").
+  it('gets a template the sequence owns', () => {
+    const source = code('Sequence', 'McpAutomationBridge_SequenceHandlersSpawnables.cpp');
+    expect(source).toContain('static_cast<UMovieSceneSequence *>(LevelSeq)->CreateSpawnable(ResolvedClass)');
+    expect(source).not.toContain('GetDefaultObject()');
+  });
+});
+
+describe('sequence duplicates and the render queue', () => {
+  // A duplicated sequence stayed in memory only, while a created one was saved: an editor exit lost the copies.
+  it('a duplicated sequence is saved like a created one', () => {
+    const source = code('Sequence', 'McpAutomationBridge_SequenceHandlersAssetLibrary.cpp');
+    expect(source).toMatch(/if \(DuplicatedSeq\) \{[^}]*McpSafeAssetSave\(DuplicatedSeq\);/u);
+  });
+
+  // A render whose game loaded another level hung past its deadline and kept the queue busy until the editor
+  // closed: once the cancel wait runs out, its Play In Editor session is ended.
+  it('a render still running after the cancel wait has its Play In Editor session ended', () => {
+    const source = code('Sequence', 'MovieRender', 'McpAutomationBridge_SequenceMovieRenderCompletion.cpp');
+    expect(source).toMatch(/State->bCancellationDeadlineExpired && Cast<UMoviePipelinePIEExecutor>\(Executor\) &&\s*GEditor && GEditor->PlayWorld\)\s*GEditor->RequestEndPlayMap\(\);/u);
+  });
+
+  // The queue keeps every job (a finished one renders again with the next unrestricted start) and refuses
+  // new ones past its limit; nothing could take a job out, so a long session hit the limit for good.
+  it('render jobs can be removed, one or all, but not mid-render', () => {
+    const source = code('Sequence', 'MovieRender', 'McpAutomationBridge_SequenceMovieRenderJobCreation.cpp');
+    expect(source).toContain('Queue->DeleteAllJobs();');
+    expect(source).toContain('Queue->DeleteJob(Job);');
+    expect(source).toMatch(/QueueSubsystem->GetActiveExecutor\(\) \|\| QueueSubsystem->IsRendering\(\)\)\s*return SendError/u);
+    const routing = code('Sequence', 'MovieRender', 'McpAutomationBridge_SequenceMovieRenderRouting.cpp');
+    expect(routing).toContain('{TEXT("remove_render_job"), &HandleRemoveRenderJob}');
+  });
+
+  // "MRQ render pass configured." named neither the pass nor the job, so a caller could not tell the ui pass landed.
+  it('add_render_pass names the passes it added and the job', () => {
+    const source = code('Sequence', 'MovieRender', 'McpAutomationBridge_SequenceMovieRenderPasses.cpp');
+    expect(source).toContain('TEXT("Render pass %s added to %s."),');
+    expect(source).toContain('*FString::Join(Passes, TEXT(", ")), *Job->JobName)');
+  });
+
+  // create took path as a folder only, while every other sequence action reads it as the sequence's own path: a
+  // full path with no name answered "sequence_create requires name".
+  it('create reads a path that is no folder as the new sequence itself', () => {
+    const source = code('Sequence', 'McpAutomationBridge_SequenceHandlersAssetCreation.cpp');
+    expect(source).toMatch(/if \(!Probe\.IsEmpty\(\) && !DoesAssetDirectoryExistOnDisk\(Probe\)\) \{\s*Name = FPackageName::GetShortName\(Probe\);\s*Folder = FPackageName::GetLongPackagePath\(Probe\);/u);
+    expect(source.indexOf('DoesAssetDirectoryExistOnDisk(Probe)')).toBeLessThan(source.indexOf('sequence_create requires name'));
+  });
+});
+
 describe('tapped keys while the game is paused', () => {
   // key_tap Enter reached a focused menu button that never clicked: the release waited on game time, which a pause
   // menu stops, so the key stayed down for the 600 s grace.

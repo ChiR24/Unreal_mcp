@@ -19922,6 +19922,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Additional replay streamer options."
         },
+        "allJobs": {
+          "type": "boolean",
+          "description": "Remove every job in the queue instead of one."
+        },
         "animationPath": {
           "type": "string",
           "description": "Animation sequence asset path (alias of animationSequencePath)."
@@ -20028,6 +20032,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "create",
             "queue",
             "start",
+            "remove",
             "play",
             "pause",
             "seek",
@@ -21231,6 +21236,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "playlistPath": {
           "type": "string",
           "description": "Canonical /Game media playlist path."
+        },
+        "queueJobCount": {
+          "type": "integer",
+          "description": "Jobs left in the queue."
+        },
+        "removedCount": {
+          "type": "integer",
+          "description": "Jobs removed."
         },
         "removedKeys": {
           "type": "integer",

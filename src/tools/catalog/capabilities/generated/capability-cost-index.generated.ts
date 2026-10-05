@@ -1437,6 +1437,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_sequence::queue_render": "long-running|high",
   "manage_sequence::remove_actors": "interactive|low",
   "manage_sequence::remove_keyframe": "interactive|low",
+  "manage_sequence::remove_render_job": "long-running|high",
   "manage_sequence::remove_track": "interactive|low",
   "manage_sequence::rename": "interactive|low",
   "manage_sequence::seek_demo": "long-running|medium",
@@ -1545,4 +1546,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1532;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1533;
