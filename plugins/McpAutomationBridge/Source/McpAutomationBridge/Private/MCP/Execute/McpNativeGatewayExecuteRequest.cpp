@@ -210,6 +210,20 @@ bool McpParseGatewayExecuteRequest(
 	// carries it (the receipt then keeps its capability + revision triple, like
 	// the TS gateway which resolves the capability before validating options).
 	OutRequest.CapabilityId = Record->Id;
+	// The names the call used (mirror of resolvedFromAlias / migratedFrom in the TS
+	// envelope): a reply names what actually ran only when the two differ.
+	OutRequest.Provenance = MakeShared<FJsonObject>();
+	if (FromCapability && !Capability.Equals(Record->Id, ESearchCase::CaseSensitive))
+	{
+		OutRequest.Provenance->SetStringField(TEXT("resolvedFromAlias"), Capability);
+	}
+	if (FromLegacy)
+	{
+		TSharedPtr<FJsonObject> Legacy = MakeShared<FJsonObject>();
+		Legacy->SetStringField(TEXT("tool"), Tool);
+		Legacy->SetStringField(TEXT("action"), Action);
+		OutRequest.Provenance->SetObjectField(TEXT("migratedFrom"), Legacy);
+	}
 
 	TSharedPtr<FJsonObject> ActionParams;
 	const TSharedPtr<FJsonValue> RawParams = Params->TryGetField(TEXT("params"));

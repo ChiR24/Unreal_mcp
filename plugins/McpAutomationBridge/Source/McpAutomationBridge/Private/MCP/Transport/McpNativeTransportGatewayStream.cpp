@@ -41,6 +41,7 @@ void FMcpNativeTransport::StreamToolCall(
 	Conn->OutputSchema = OutputSchema;
 	Conn->Arguments = Arguments;
 	Conn->GatewayWarnings = Context.GatewayWarnings;
+	Conn->Provenance = Context.Provenance;
 	bool bPendingLimitReached = false;
 	bool bSessionInvalid = false;
 	{

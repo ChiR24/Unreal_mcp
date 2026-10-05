@@ -48,11 +48,12 @@ struct FMcpGatewayExecutePlan
  * semantic error receipt to send back unchanged. Rejects unknown capabilities,
  * ambiguous aliases, conflicting request forms, disabled capabilities,
  * unsupported options, and any input the exact per-action schema refuses.
+ * Context gains the request's provenance once it resolves, so every receipt carries it.
  */
 TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	const TSharedPtr<FJsonObject>& GatewayParams,
 	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager,
-	const FMcpReceiptContext& Context, FMcpGatewayExecutePlan& OutPlan);
+	FMcpReceiptContext& Context, FMcpGatewayExecutePlan& OutPlan);
 
 /**
  * Project a handler result to the capability's declared output fields.

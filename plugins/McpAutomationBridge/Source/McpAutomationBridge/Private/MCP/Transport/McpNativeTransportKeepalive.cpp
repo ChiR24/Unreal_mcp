@@ -163,6 +163,7 @@ void FMcpNativeTransport::AnswerStillRunning(const FString& RequestId)
 		Context.IdempotencyId = Conn->IdempotencyId;
 		Context.StartTimeSeconds = Conn->RequestStartSeconds;
 		Context.GatewayWarnings = Conn->GatewayWarnings;
+		Context.Provenance = Conn->Provenance;
 		Result = McpBuildSuccessReceipt(Conn->CapabilityId, Data, Context, Raw, Message);
 	}
 	const FString Body = FMcpJsonRpc::BuildResponse(

@@ -108,8 +108,9 @@ FMcpSemanticError McpUnrealExecutionError(
 
 namespace
 {
-TSharedPtr<FJsonObject> BuildReceiptShell(const FString& CapabilityId, const FString& CorrelationId)
+TSharedPtr<FJsonObject> BuildReceiptShell(const FString& CapabilityId, const FMcpReceiptContext& Context)
 {
+	const FString& CorrelationId = Context.CorrelationId;
 	TSharedPtr<FJsonObject> Receipt = MakeShared<FJsonObject>();
 	Receipt->SetStringField(TEXT("capabilityId"), CapabilityId);
 	// capabilityId is the catalog record id (asset.rename); name the parent tool and public
@@ -123,6 +124,13 @@ TSharedPtr<FJsonObject> BuildReceiptShell(const FString& CapabilityId, const FSt
 		TEXT("catalogRevision"), FMcpCanonicalRecordIndex::Get().GetCatalogRevision());
 	McpSetReceiptRecordRevisions(Receipt, CapabilityId);
 	SetIfPresent(Receipt, TEXT("correlationId"), CorrelationId);
+	if (Context.Provenance.IsValid())
+	{
+		for (const auto& Field : Context.Provenance->Values)
+		{
+			Receipt->SetField(FString(Field.Key.Len(), *Field.Key), Field.Value);  // 5.8 keys are not FString
+		}
+	}
 	return Receipt;
 }
 }
@@ -131,7 +139,7 @@ TSharedPtr<FJsonObject> McpBuildErrorReceipt(
 	const FString& CapabilityId, const FMcpSemanticError& Error,
 	const FMcpReceiptContext& Context, const TSharedPtr<FJsonObject>& Guidance)
 {
-	TSharedPtr<FJsonObject> Receipt = BuildReceiptShell(CapabilityId, Context.CorrelationId);
+	TSharedPtr<FJsonObject> Receipt = BuildReceiptShell(CapabilityId, Context);
 	Receipt->SetStringField(TEXT("status"), TEXT("error"));
 	const TSharedRef<FJsonObject> LiveRevisions = FMcpLiveStateRevisions::Get().Snapshot().ToJson();
 	Receipt->SetObjectField(TEXT("liveRevisions"), LiveRevisions);
@@ -212,7 +220,7 @@ TSharedPtr<FJsonObject> McpBuildSuccessReceipt(
 	const FMcpReceiptContext& Context, const TSharedPtr<FJsonObject>& RawResult,
 	const FString& Message)
 {
-	TSharedPtr<FJsonObject> Receipt = BuildReceiptShell(CapabilityId, Context.CorrelationId);
+	TSharedPtr<FJsonObject> Receipt = BuildReceiptShell(CapabilityId, Context);
 	Receipt->SetStringField(TEXT("status"), TEXT("success"));
 	const TSharedRef<FJsonObject> LiveRevisions = FMcpLiveStateRevisions::Get().Snapshot().ToJson();
 	Receipt->SetObjectField(TEXT("liveRevisions"), LiveRevisions);

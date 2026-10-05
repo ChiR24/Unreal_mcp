@@ -132,6 +132,7 @@ bool FMcpNativeTransport::CompletePendingRequest(
 		Context.IdempotencyId = Conn->IdempotencyId;
 		Context.StartTimeSeconds = Conn->RequestStartSeconds;
 		Context.GatewayWarnings = Conn->GatewayWarnings;
+		Context.Provenance = Conn->Provenance;
 		ReportedResult = McpBuildGatewayExecuteReceipt(
 			Conn->CapabilityId, Conn->OutputSchema, Context, bSuccess, Message, Result, ErrorCode);
 		if (!bSuccess)

@@ -30,6 +30,9 @@ struct FMcpGatewayExecuteRequest
 	FString CapabilityId;
 	TSharedPtr<FJsonObject> Params;
 	TSharedPtr<FJsonObject> Options;
+
+	/** resolvedFromAlias / migratedFrom: the names the call used, as the TS gateway reports them. */
+	TSharedPtr<FJsonObject> Provenance;
 };
 
 /**

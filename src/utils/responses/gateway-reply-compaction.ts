@@ -12,6 +12,9 @@ export const LOG_ONLY_EXECUTE_FIELDS = [
   'capabilityRevision', 'schemaRevision', 'correlationId', 'replayedFrom', 'liveRevisions'
 ] as const;
 
+/** What ran, kept when the call named it differently (an alias or another action name) and dropped as an echo otherwise. */
+export const RESOLVED_IDENTITY_FIELDS = ['capabilityId', 'capability', 'tool', 'action'] as const;
+
 /** The receipt fields that say what the call did; the rest of a receipt is bookkeeping. */
 export const RECEIPT_OUTCOME_LISTS = ['nextCalls', 'handles', 'changes', 'warnings'] as const;
 
@@ -86,6 +89,14 @@ function compactTypedError(typedError: Json, reply: Json): Json {
 
 function compactExecute(reply: Json): Json {
   const out = omit(reply, LOG_ONLY_EXECUTE_FIELDS);
+  const migrated = isRecord(reply.migratedFrom) ? reply.migratedFrom : undefined;
+  const translated = reply.resolvedFromAlias !== undefined ||
+    (migrated !== undefined && !(same(migrated.tool, reply.tool) && same(migrated.action, reply.action)));
+  if (translated) {
+    for (const key of RESOLVED_IDENTITY_FIELDS) if (key in reply) out[key] = reply[key];
+  } else {
+    delete out.migratedFrom;
+  }
   if (same(out.error, out.message)) delete out.error;
   const receipt = isRecord(reply.receipt) ? receiptOutcome(reply.receipt, reply) : undefined;
   if (receipt === undefined) delete out.receipt;

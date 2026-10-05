@@ -77,6 +77,9 @@ struct FMcpReceiptContext
 
 	/** Receipt warnings the gateway found before dispatch (McpUnreadVariantParams). */
 	TArray<FString> GatewayWarnings;
+
+	/** resolvedFromAlias / migratedFrom of the request, copied onto every receipt (FMcpGatewayExecuteRequest). */
+	TSharedPtr<FJsonObject> Provenance;
 };
 
 FMcpSemanticError McpValidationError(const FString& GatewayCode, const FString& Message, const FString& Pointer = FString());

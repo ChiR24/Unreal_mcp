@@ -93,6 +93,8 @@ struct FSSEConnection
 	TSharedPtr<FJsonObject> Arguments;
 	// Warnings the gateway found before dispatch, added to the receipt.
 	TArray<FString> GatewayWarnings;
+	// resolvedFromAlias / migratedFrom of the request (FMcpReceiptContext::Provenance).
+	TSharedPtr<FJsonObject> Provenance;
 };
 
 /** Persistent SSE notification stream (GET /mcp). */

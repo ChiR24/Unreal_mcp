@@ -10,6 +10,9 @@ const TCHAR* const LogOnlyExecuteFields[] = {
 	TEXT("catalogRevision"), TEXT("capabilityRevision"), TEXT("schemaRevision"), TEXT("correlationId"),
 	TEXT("replayedFrom"), TEXT("liveRevisions")};
 
+// What ran, kept when the call named it differently (an alias or another action name) and dropped as an echo otherwise.
+const TCHAR* const ResolvedIdentityFields[] = {TEXT("capabilityId"), TEXT("capability"), TEXT("tool"), TEXT("action")};
+
 // The receipt fields that say what the call did; the rest of a receipt is bookkeeping.
 const TCHAR* const ReceiptOutcomeLists[] = {TEXT("nextCalls"), TEXT("handles"), TEXT("changes"), TEXT("warnings")};
 
@@ -89,6 +92,14 @@ TSharedPtr<FJsonObject> CompactExecute(const TSharedPtr<FJsonObject>& Reply)
 {
 	TSharedPtr<FJsonObject> Out = Copy(Reply);
 	for (const TCHAR* Field : LogOnlyExecuteFields) Out->RemoveField(Field);
+	const TSharedPtr<FJsonObject> Migrated = ObjectField(Reply, TEXT("migratedFrom"));
+	const bool bTranslated = Reply->HasField(TEXT("resolvedFromAlias")) || (Migrated &&
+		!(SameField(Migrated, TEXT("tool"), Reply, TEXT("tool")) && SameField(Migrated, TEXT("action"), Reply, TEXT("action"))));
+	for (const TCHAR* Field : ResolvedIdentityFields)
+	{
+		if (bTranslated && Reply->HasField(Field)) Out->SetField(Field, Reply->TryGetField(Field));
+	}
+	if (!bTranslated) Out->RemoveField(TEXT("migratedFrom"));
 	if (SameField(Out, TEXT("error"), Out, TEXT("message"))) Out->RemoveField(TEXT("error"));
 	const TSharedPtr<FJsonObject> Receipt = ObjectField(Reply, TEXT("receipt"));
 	const TSharedPtr<FJsonObject> Outcome = Receipt ? ReceiptOutcome(Receipt, Reply) : nullptr;

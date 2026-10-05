@@ -66,7 +66,7 @@ TArray<FString> McpUnreadVariantParams(
 TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	const TSharedPtr<FJsonObject>& GatewayParams,
 	const FMcpToolRegistry& Registry, const FMcpDynamicToolManager& ToolManager,
-	const FMcpReceiptContext& Context, FMcpGatewayExecutePlan& OutPlan)
+	FMcpReceiptContext& Context, FMcpGatewayExecutePlan& OutPlan)
 {
 	if (!GatewayParams.IsValid())
 	{
@@ -78,7 +78,9 @@ TSharedPtr<FJsonObject> ValidateAndResolveGatewayExecute(
 	FMcpGatewayExecuteRequest Request;
 	FMcpSemanticError Error;
 	TSharedPtr<FJsonObject> Guidance;
-	if (!McpParseGatewayExecuteRequest(GatewayParams, Request, Error, Guidance))
+	const bool bParsed = McpParseGatewayExecuteRequest(GatewayParams, Request, Error, Guidance);
+	Context.Provenance = Request.Provenance;
+	if (!bParsed)
 	{
 		return McpBuildErrorReceipt(Request.CapabilityId, Error, Context, Guidance);
 	}
