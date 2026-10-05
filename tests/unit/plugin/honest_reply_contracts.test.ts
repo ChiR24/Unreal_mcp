@@ -959,12 +959,29 @@ describe('connect_pins on pins added on demand', () => {
   // A build_graph step connecting a Sequence's then_2 stopped the batch with PIN_NOT_FOUND ("pins: execute, then_0,
   // then_1"): the editor adds that pin on demand, the tool never did.
   it('connect_pins grows a node that adds pins on demand to the pin it names, and takes back pins added in vain', () => {
+    const growth = code('BlueprintGraph', 'PinMutations', 'McpAutomationBridge_BlueprintGraphPinGrowth.cpp');
+    expect(growth).toMatch(/IK2Node_AddPinInterface\* Growable = Cast<IK2Node_AddPinInterface>\(Node\)/u);
+    expect(growth).toMatch(/Growable->AddInputPin\(\);\s*Pin = Context\.FindPin\(Node, PinName\);/u);
+    expect(growth).toMatch(/if \(!Pin && !Before\.Contains\(Extra\)\) Growable->RemoveInputPin\(Extra\);/u);
     const source = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersPinMutations.cpp');
-    expect(source).toMatch(/IK2Node_AddPinInterface\* Growable = Cast<IK2Node_AddPinInterface>\(Node\);/u);
-    expect(source).toMatch(/Growable->AddInputPin\(\);\s*Pin = Context\.FindPin\(Node, PinName\);/u);
-    expect(source).toMatch(/if \(!Before\.Contains\(Extra\)\) Growable->RemoveInputPin\(Extra\);/u);
     expect(source).toContain('UEdGraphPin* FromPin = FindOrGrowPin(Context, FromNode, FromPinName);');
     expect(source).toContain('UEdGraphPin* ToPin = FindOrGrowPin(Context, ToNode, ToPinName);');
+  });
+
+  // nodeType GetAllActorsOfClass, listed by create_node, answered NODE_TYPE_NOT_FOUND: it was aliased to a K2Node
+  // class Unreal does not have, while the node is a plain call of the GameplayStatics function.
+  it('GetAllActorsOfClass and GetActorOfClass create function calls', () => {
+    const catalog = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeCatalog.cpp');
+    expect(catalog).toMatch(/\{TEXT\("GetAllActorsOfClass"\),\s*MakeTuple\(TEXT\("UGameplayStatics"\), TEXT\("GetAllActorsOfClass"\)\)\}/u);
+    expect(catalog).toMatch(/\{TEXT\("GetActorOfClass"\),\s*MakeTuple\(TEXT\("UGameplayStatics"\), TEXT\("GetActorOfClass"\)\)\}/u);
+    expect(catalog).not.toContain('K2Node_GetAllActorsOfClass');
+  });
+
+  // A Switch on Int made over MCP had only its Default pin: a link to case 17 answered PIN_NOT_FOUND.
+  it('a Switch on Int grows to the case a link names, and takes back cases added in vain', () => {
+    const growth = code('BlueprintGraph', 'PinMutations', 'McpAutomationBridge_BlueprintGraphPinGrowth.cpp');
+    expect(growth).toMatch(/Switch->AddPinToSwitchNode\(\);\s*Pin = Context\.FindPin\(Node, PinName\);/u);
+    expect(growth).toMatch(/if \(!Pin && !Before\.Contains\(Extra\)\) Switch->RemovePinFromSwitchNode\(Extra\);/u);
   });
 });
 

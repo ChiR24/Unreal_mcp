@@ -17,7 +17,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY,
     domain: DOMAIN,
     topics: ['link pins', 'wire nodes', 'connect nodes', 'exec pin', 'connect output to input'],
-    summary: 'Connect two graph pins (exec or data) by nodeGuid and pin name.',
+    summary: 'Connect two graph pins (exec or data) by nodeGuid and pin name. A pin the editor adds on demand is added: a Sequence\'s then_2, a Make Array\'s [2], a Switch on Int\'s case 7 (a new switch has only Default).',
     whenToUse: ['An exec or data link between two existing nodes must be created.'],
     whenNotToUse: ['Links must be broken (use break_pin_links).'],
     inputProps: { blueprintPath: P.blueprintPath, graphName: P.graphName, fromNodeId: P.fromNodeId, fromPinName: P.fromPinName, toNodeId: P.toNodeId, toPinName: P.toPinName, sourceNode: P.sourceNode, targetNode: P.targetNode, sourcePin: P.sourcePin, targetPin: P.targetPin },

@@ -1,36 +1,13 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
+#include "Domains/BlueprintGraph/PinMutations/McpAutomationBridge_BlueprintGraphPinGrowth.h"
 #include "Domains/BlueprintGraph/PinMutations/McpAutomationBridge_BlueprintGraphPinLinkReport.h"
 #include "EdGraph/EdGraphSchema.h"
-#include "K2Node_AddPinInterface.h"
 #include "K2Node_VariableSet.h"
 #include "ScopedTransaction.h"
 
 namespace McpBlueprintGraphHandlers
 {
-// A Sequence, Make Array or commutative math node grows pins on demand ("Add pin" in the editor), so then_2, [2]
-// or C named on one that has two is grown to it, not refused PIN_NOT_FOUND. Pins added in vain are removed again.
-static UEdGraphPin* FindOrGrowPin(FActionContext& Context, UEdGraphNode* Node, const FString& PinName)
-{
-    UEdGraphPin* Pin = Context.FindPin(Node, PinName);
-    IK2Node_AddPinInterface* Growable = Cast<IK2Node_AddPinInterface>(Node);
-    const TArray<UEdGraphPin*> Before = Node->Pins;
-    for (int32 Added = 0; !Pin && Growable && !PinName.IsEmpty() && Growable->CanAddPin() &&
-                          Added < IK2Node_AddPinInterface::GetMaxInputPinsNum(); ++Added)
-    {
-        Growable->AddInputPin();
-        Pin = Context.FindPin(Node, PinName);
-    }
-    if (!Pin && Growable)
-    {
-        for (UEdGraphPin* Extra : TArray<UEdGraphPin*>(Node->Pins))
-        {
-            if (!Before.Contains(Extra)) Growable->RemoveInputPin(Extra);
-        }
-    }
-    return Pin;
-}
-
 static bool ConnectPins(FActionContext& Context)
 {
     if (Context.SubAction != TEXT("connect_pins"))
