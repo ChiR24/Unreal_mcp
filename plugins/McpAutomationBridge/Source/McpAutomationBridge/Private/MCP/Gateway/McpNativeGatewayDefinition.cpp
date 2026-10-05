@@ -53,8 +53,8 @@ TSharedPtr<FJsonObject> BuildUnrealGatewayToolDefinition()
 						TEXT("Refuse to run unless the catalog revision still equals this value; read it "
 							"from any search or describe response."))
 					.FreeformObject(TEXT("expectedRevisions"),
-						TEXT("Live editor-state revisions to pin (selection, level, assetRegistry, package); "
-							"the call is refused with STALE_STATE when one has moved."))
+						TEXT("Live editor-state revisions to pin (selection, level, assetRegistry, package), as the "
+							"ue://state/revisions resource reports them; the call is refused with STALE_STATE when one has moved."))
 					.Integer(TEXT("timeoutMs"), TEXT("Deadline for this call in milliseconds (1-600000)."));
 			})
 		.Integer(TEXT("limit"), TEXT("Maximum rows per page: search results (default 12) or describe action rows (default 20). Defaults to 12."))

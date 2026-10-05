@@ -77,7 +77,7 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
               package: { type: 'integer', minimum: 1 }
             },
             additionalProperties: false,
-            description: 'Live editor-state revisions to pin; the call is refused with STALE_STATE when one has moved.'
+            description: 'Live editor-state revisions to pin, as the ue://state/revisions resource reports them; the call is refused with STALE_STATE when one has moved.'
           },
           timeoutMs: { type: 'integer', minimum: 1, maximum: 600000, description: 'Deadline for this call in milliseconds.' }
         },
@@ -102,7 +102,7 @@ export const unrealGatewayToolDefinition: ToolDefinition = {
       message: { type: 'string' },
       results: { type: 'array' },
       result: {},
-      data: { description: "Execute payload projected against the capability's declared output schema. Bound to receipt.dataDigest, and the same location the native /mcp surface publishes." },
+      data: { description: "Execute payload projected against the capability's declared output schema; the same location the native /mcp surface publishes." },
       tool: { type: 'string' },
       action: { type: 'string' },
       param: { type: 'string' },

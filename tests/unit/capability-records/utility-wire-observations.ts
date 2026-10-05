@@ -13,8 +13,8 @@
  *
  * WHAT "THE WIRE" MEANS HERE
  * Both transports carry the handler's `Result` object:
- *   - native `/mcp` puts it in `structuredContent` verbatim
- *     (`MCP/Protocol/McpJsonRpc.cpp` -> `Result->SetObjectField(TEXT("structuredContent"), Data)`)
+ *   - native `/mcp` puts it in `structuredContent`, less the log-only fields
+ *     (`MCP/Protocol/McpJsonRpc.cpp` -> `Result->SetObjectField(TEXT("structuredContent"), Shown)`)
  *   - the WebSocket bridge nests it under `result` in the automation frame
  *     (`Transport/Connection/McpConnectionManagerResponses.cpp`)
  * so the domain payload keys named below are what a client actually observes on

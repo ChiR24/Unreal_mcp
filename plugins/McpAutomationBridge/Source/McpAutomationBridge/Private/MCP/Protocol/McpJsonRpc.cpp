@@ -5,11 +5,13 @@
 #include "Policies/CondensedJsonPrintPolicy.h"
 
 #include "MCP/Protocol/McpJsonRpcImageContent.h"
+#include "MCP/Protocol/McpJsonRpcReplyCompaction.h"
 
 // Image helpers live in McpJsonRpcImageContent.cpp so this translation unit stays
 // under the 250 pure-line ceiling; call sites below are unqualified.
 using McpJsonRpcImage::AddImageContentIfPresent;
 using McpJsonRpcImage::MakeToolTextData;
+using McpJsonRpcReply::MakeCompactReply;
 
 FMcpJsonRpcRequest FMcpJsonRpc::ParseRequest(const FString& Body)
 {
@@ -119,12 +121,21 @@ TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 	FString Text = bSuccess ? Message
 		: ErrorCode.IsEmpty() ? FString::Printf(TEXT("Error: %s"), *Message)
 		: FString::Printf(TEXT("Error [%s]: %s"), *ErrorCode, *Message);
+	// What a client reads is the reply without its log-only fields (McpJsonRpcReplyCompaction.h);
+	// Data itself stays whole for the image block below.
+	const TSharedPtr<FJsonObject> Shown = Data.IsValid() ? MakeToolTextData(MakeCompactReply(Data)) : nullptr;
 	// Success and failure both carry the receipt as text: a failure's errorCode,
 	// suggestions[], executable nextCall and partial results live in Data, and a
-	// client that renders only the text block needs them to recover.
-	if (Data.IsValid())
+	// client that renders only the text block needs them to recover. The first
+	// line already says the message and the error code, so the copy below does not.
+	if (Shown.IsValid())
 	{
-		Text += TEXT("\n\n") + JsonToString(MakeToolTextData(Data));
+		TSharedPtr<FJsonObject> Body = MakeShared<FJsonObject>();
+		Body->Values = Shown->Values;
+		FString Field;
+		if (Body->TryGetStringField(TEXT("message"), Field) && Field.Equals(Message, ESearchCase::CaseSensitive)) Body->RemoveField(TEXT("message"));
+		if (Body->TryGetStringField(TEXT("errorCode"), Field) && Field.Equals(ErrorCode, ESearchCase::CaseSensitive)) Body->RemoveField(TEXT("errorCode"));
+		Text += TEXT("\n\n") + JsonToString(Body);
 	}
 
 	auto TextContent = MakeShared<FJsonObject>();
@@ -134,13 +145,13 @@ TSharedPtr<FJsonObject> FMcpJsonRpc::BuildToolResult(
 	AddImageContentIfPresent(Data, Content);
 
 	Result->SetArrayField(TEXT("content"), Content);
-	if (Data.IsValid())
+	if (Shown.IsValid())
 	{
 		// Same omission the text block gets. The image already travels once, as its own
 		// image content block; repeating the base64 here shipped it twice and left every
 		// client that renders structuredContent showing megabytes of unreadable text
 		// beside the picture. The placeholder keeps the field's shape intact.
-		Result->SetObjectField(TEXT("structuredContent"), MakeToolTextData(Data));
+		Result->SetObjectField(TEXT("structuredContent"), Shown);
 	}
 	Result->SetBoolField(TEXT("isError"), !bSuccess);
 

@@ -40,11 +40,12 @@ inline void McpAppendPieRefusalHint(FString& Message, const bool bPieRequest,
     }
 }
 
-// engine<Kind>sObserved / engine<Kind>Count / engine<Kind>s (the first 3, sanitized) /
-// engine<Kind>sTruncated; returns the attached values.
+// engine<Kind>sObserved / engine<Kind>Count / engine<Kind>sTruncated, and engine<Kind>s (the first 3,
+// sanitized) when bList; returns those lines. Warnings pass bList false: their lines ride in `warnings`,
+// and listing them again sent every captured warning twice in one reply.
 inline TArray<TSharedPtr<FJsonValue>> McpAttachCapturedEngineMessages(
     const TSharedPtr<FJsonObject>& Enriched, const TCHAR* Kind,
-    const TArray<FString>& Messages, const int32 Total, const bool bTruncated)
+    const TArray<FString>& Messages, const int32 Total, const bool bTruncated, const bool bList)
 {
     constexpr int32 MaxInResponse = 3;
     TArray<TSharedPtr<FJsonValue>> Values;
@@ -54,7 +55,10 @@ inline TArray<TSharedPtr<FJsonValue>> McpAttachCapturedEngineMessages(
     }
     Enriched->SetBoolField(FString::Printf(TEXT("engine%ssObserved"), Kind), true);
     Enriched->SetNumberField(FString::Printf(TEXT("engine%sCount"), Kind), Total);
-    Enriched->SetArrayField(FString::Printf(TEXT("engine%ss"), Kind), Values);
+    if (bList)
+    {
+        Enriched->SetArrayField(FString::Printf(TEXT("engine%ss"), Kind), Values);
+    }
     if (bTruncated || Messages.Num() > MaxInResponse)
     {
         Enriched->SetBoolField(FString::Printf(TEXT("engine%ssTruncated"), Kind), true);
@@ -106,7 +110,7 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     if (Captured.WarningMessages.Num() > 0)
     {
         WarningValues.Append(McpAttachCapturedEngineMessages(Enriched, TEXT("Warning"),
-            Captured.WarningMessages, Captured.WarningCount, Captured.bWarningMessagesTruncated));
+            Captured.WarningMessages, Captured.WarningCount, Captured.bWarningMessagesTruncated, false));
     }
 
     if (Captured.ErrorMessages.Num() == 0)
@@ -119,7 +123,7 @@ inline TSharedPtr<FJsonObject> McpBuildEnrichedResponseResult(
     }
 
     McpAttachCapturedEngineMessages(Enriched, TEXT("Error"),
-        Captured.ErrorMessages, Captured.ErrorCount, Captured.bErrorMessagesTruncated);
+        Captured.ErrorMessages, Captured.ErrorCount, Captured.bErrorMessagesTruncated, true);
 
     // The errors were only reachable under `details`, while `warnings` is the channel a caller watches
     // for "it succeeded, but read this" -- so a mutation that tripped 32 engine errors, including an

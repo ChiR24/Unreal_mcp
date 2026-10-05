@@ -1,5 +1,6 @@
 import { Logger } from '../logging/logger.js';
 import { buildImageContent, buildSummaryText, hasExplicitFailurePayload } from './response-content.js';
+import { compactGatewayReply } from './gateway-reply-compaction.js';
 import { cleanObject } from '../serialization/safe-json.js';
 import { isRecord } from '../validation/type-guards.js';
 import { validateAgainstCapabilitySchema } from '../../server/gateway/gateway-schema-validate.js';
@@ -9,11 +10,13 @@ const log = new Logger('ResponseValidator');
 
 /**
  * Shape an `unreal` gateway result as an MCP tools/call response: one text
- * summary block, the object as structuredContent (checked against the gateway
+ * summary block, the object without its log-only fields (gateway-reply-compaction.ts)
+ * as structuredContent (checked against the gateway
  * output schema; a mismatch is logged and reported in `_validation`, not
  * thrown), an image block when the result carries one, and isError on failure.
  */
-export function wrapGatewayResponse(response: unknown): Record<string, unknown> {
+export function wrapGatewayResponse(fullResponse: unknown): Record<string, unknown> {
+  const response = compactGatewayReply(fullResponse);
   const schema = unrealGatewayToolDefinition.outputSchema;
   const violation = schema === undefined ? undefined : validateAgainstCapabilitySchema(response, schema);
   const errors = violation === undefined ? undefined : [`${violation.pointer || 'root'}: ${violation.message}`];

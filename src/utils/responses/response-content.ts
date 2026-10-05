@@ -170,6 +170,7 @@ function collectWarnings(payload: Record<string, unknown>): unknown[] {
         }
       }
     }
+    if (isRecord(obj.receipt)) visit(obj.receipt, depth + 1);
     if (isRecord(obj.data)) visit(obj.data, depth + 1);
     if (isRecord(obj.result)) visit(obj.result, depth + 1);
   };
