@@ -25,7 +25,7 @@ bool FMcpMovieRenderNativeTimeoutPolicyTest::RunTest(
       McpNativeTransportTimeoutPolicy::ResolveToolCallTimeoutSeconds(
           TEXT("manage_sequence"), RenderArguments, 3600000, 30000),
       335.0);
-  RenderArguments->SetNumberField(TEXT("timeoutMs"), 3600000);
+  RenderArguments->SetNumberField(TEXT("renderTimeoutMs"), 3600000);
   TestEqual(
       TEXT("Maximum render timeout remains alive through cancellation"),
       McpNativeTransportTimeoutPolicy::ResolveToolCallTimeoutSeconds(

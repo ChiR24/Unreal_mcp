@@ -137,13 +137,13 @@ bool ValidateRenderTimeoutResourceLimit(double TimeoutMs, FString &OutMessage,
                                         FString &OutCode) {
   const UMcpAutomationBridgeSettings *Settings = GetDefault<UMcpAutomationBridgeSettings>();
   if (!FMath::IsFinite(TimeoutMs) || TimeoutMs <= 0.0) {
-    OutMessage = TEXT("timeoutMs must be finite and positive.");
+    OutMessage = TEXT("renderTimeoutMs must be finite and positive.");
     OutCode = TEXT("INVALID_TIMEOUT");
     return false;
   }
   if (TimeoutMs > FMath::Max(1, Settings->MaxMovieRenderTimeoutMs)) {
     return ResourceLimitExceeded(
-        TEXT("MRQ timeoutMs exceeds the configured resource limit."),
+        TEXT("MRQ renderTimeoutMs exceeds the configured resource limit."),
         OutMessage, OutCode);
   }
   return true;

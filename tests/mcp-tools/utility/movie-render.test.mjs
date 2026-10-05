@@ -68,7 +68,7 @@ const testCases = [
 
   // === start_render ===
   { scenario: 'MRQ: start_render', toolName: 'manage_sequence', arguments: { action: 'start_render', renderJobName: JOB_NAME }, expected: 'success' },
-  { scenario: 'MRQ: start_render optional', toolName: 'manage_sequence', arguments: { action: 'start_render', renderJobName: JOB_NAME, jobId: `mcp.renderJobId=${JOB_NAME}`, executorClass: EXECUTOR_CLASS, useCurrentLevel: false, onlyJob: true, timeoutMs: 55000 }, expected: 'success', timeoutMs: 60000 },
+  { scenario: 'MRQ: start_render optional', toolName: 'manage_sequence', arguments: { action: 'start_render', renderJobName: JOB_NAME, jobId: `mcp.renderJobId=${JOB_NAME}`, executorClass: EXECUTOR_CLASS, useCurrentLevel: false, onlyJob: true, renderTimeoutMs: 55000 }, expected: 'success', timeoutMs: 60000 },
 
   // === CLEANUP ===
   { scenario: 'MRQ Cleanup: delete render sequence', toolName: 'manage_asset', arguments: { action: 'delete', path: SEQUENCE_PATH, force: true }, expected: 'success|not found' },

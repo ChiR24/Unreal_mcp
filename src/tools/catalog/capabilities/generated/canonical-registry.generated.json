@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "fd7115871ad9e342",
+  "catalogRevision": "01899b6898f961cb",
   "recordCount": 396,
   "records": [
     {
@@ -85438,11 +85438,11 @@
               "type": "boolean",
               "description": "Whether to render against the currently loaded level."
             },
-            "timeoutMs": {
+            "renderTimeoutMs": {
               "type": "integer",
               "minimum": 1,
               "maximum": 300000,
-              "description": "Render deadline in milliseconds (default and maximum 300000)."
+              "description": "How long the render may run before it is cancelled, in milliseconds (default and maximum 300000). options.timeoutMs is the gateway deadline for the call and never reaches the render."
             },
             "executorClass": {
               "type": "string",
@@ -85608,7 +85608,7 @@
               "queue",
               "start"
             ],
-            "timeoutMs": [
+            "renderTimeoutMs": [
               "start"
             ],
             "executorClass": [
@@ -85619,8 +85619,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e6ffc51142ebe3ccf32f571ea029be00769fe14c9afaabf64ab8e7228f092c55",
-        "content": "33c27ecbc663e1e2e21b4fd7fb751cffcf08244fb726593fa5ae0c55e1cd8a1c"
+        "schema": "913c4483e6c5c8eb8dc55679cb930545a44b7e73bf543732482713a3a2547385",
+        "content": "f9023a2ca0fc432bc0ae069ab19dbc4a0d1c873b1860e15c6882fbfa16cae6a2"
       }
     },
     {

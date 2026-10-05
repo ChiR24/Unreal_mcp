@@ -135,7 +135,7 @@ bool HandleStartRender(UMcpAutomationBridgeSubsystem *Subsystem,
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   double TimeoutMs = 300000.0;
   if (Payload.IsValid())
-    Payload->TryGetNumberField(TEXT("timeoutMs"), TimeoutMs);
+    Payload->TryGetNumberField(TEXT("renderTimeoutMs"), TimeoutMs);
   if (!ValidateRenderTimeoutResourceLimit(TimeoutMs, Message, Code))
     return SendError(Subsystem, RequestId, Socket, Message, Code), true;
   UMoviePipelineExecutorBase *Executor =
