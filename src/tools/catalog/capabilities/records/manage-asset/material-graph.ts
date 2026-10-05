@@ -4,7 +4,7 @@
 
 import type { RecordSpec } from './builder.js';
 import { arr, arrObj, bool, ex, LOW, MATERIAL_PARAMETER_ASSETS, MATERIAL_PARAMETER_LIST, num, READ, READ_POLICY, r, refObj, str, WRITE, WRITE_POLICY } from './builder.js';
-import { schema } from '../shared/record-presets.js';
+import { OUTPUT_HEADER, schema } from '../shared/record-presets.js';
 
 const MAT = str('Material /Game asset path.');
 // Every material read takes the path under either spelling (LOAD_MATERIAL_OR_FUNCTION_OR_RETURN reads
@@ -20,6 +20,7 @@ const OK = schema({ success: bool('Operation succeeded.'), details: { type: 'obj
 // the collision instead of trading one overlap for another.
 const MOVE_OUT = schema({
   success: bool('Operation succeeded.'),
+  details: OUTPUT_HEADER.details,
   nodeId: str('Moved node ID.'),
   posX: num('X coordinate the node now sits at.'),
   posY: num('Y coordinate the node now sits at.'),

@@ -7,7 +7,7 @@ const textOf = (wrapped: Record<string, unknown>): string => String(parts(wrappe
 const imageOf = (wrapped: Record<string, unknown>): Part | undefined => parts(wrapped).find((part) => part.type === 'image');
 
 describe('wrapGatewayResponse', () => {
-  it('summarizes pin arrays without malformed JSON fragments', () => {
+  it('carries nested results whole, as valid JSON after the message line', () => {
     const wrapped = wrapGatewayResponse({
       success: true,
       operation: 'execute',
@@ -19,10 +19,9 @@ describe('wrapGatewayResponse', () => {
     });
 
     const text = textOf(wrapped);
-    expect(text).toContain('pinName=InString');
-    expect(text).toContain('pinType=string');
-    expect(text).toContain('linkedTo=0');
-    expect(text).not.toContain('pinType]');
+    expect(text.split('\n')[0]).toBe('Pin details retrieved.');
+    const body = JSON.parse(text.slice(text.indexOf('\n\n') + 2)) as { result: { pins: unknown[] } };
+    expect(body.result.pins[0]).toMatchObject({ pinName: 'InString', direction: 'Input', pinType: 'string', defaultValue: 'test' });
   });
 
   it('marks a success:false envelope as an MCP error', () => {

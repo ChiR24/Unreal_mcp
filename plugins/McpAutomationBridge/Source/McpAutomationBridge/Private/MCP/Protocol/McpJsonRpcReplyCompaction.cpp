@@ -27,15 +27,55 @@ bool AllListed(const FJsonArray& Items, const TArray<FString>& Listed)
 	return true;
 }
 
-// A payload's warnings that the receipt already lists, at its root and down details (where the receipt collects them).
-TSharedPtr<FJsonObject> WithoutListedWarnings(const TSharedPtr<FJsonObject>& Payload, const TArray<FString>& Listed)
+// A payload list (warnings, changedAssets) whose every entry the receipt already lists, at its root and down
+// details (where the receipt collects them).
+TSharedPtr<FJsonObject> WithoutListed(const TSharedPtr<FJsonObject>& Payload, const TCHAR* Field, const TArray<FString>& Listed)
 {
 	TSharedPtr<FJsonObject> Out = Copy(Payload);
-	const FJsonArray* Warnings = ArrayField(Out, TEXT("warnings"));
-	if (Warnings && AllListed(*Warnings, Listed)) Out->RemoveField(TEXT("warnings"));
+	const FJsonArray* List = ArrayField(Out, Field);
+	if (List && AllListed(*List, Listed)) Out->RemoveField(Field);
 	if (const TSharedPtr<FJsonObject> Details = ObjectField(Out, TEXT("details")))
 	{
-		Out->SetObjectField(TEXT("details"), WithoutListedWarnings(Details, Listed));
+		Out->SetObjectField(TEXT("details"), WithoutListed(Details, Field, Listed));
+	}
+	return Out;
+}
+
+// The projection puts the declared fields at the top of data and the rest in details: a value there (a path or a
+// name of 8 or more characters) that repeats a declared field's (the read-back assetPath of a widgetPath, actorName
+// beside name) says nothing new; the receipt read its fields from the full result before this.
+TSharedPtr<FJsonObject> WithoutRepeatedValues(const TSharedPtr<FJsonObject>& Data)
+{
+	const TSharedPtr<FJsonObject> Details = ObjectField(Data, TEXT("details"));
+	if (!Details) return Data;
+	TArray<FString> Declared;
+	for (const auto& Field : Data->Values)
+	{
+		if (Field.Value.IsValid() && Field.Value->Type == EJson::String) Declared.Add(Field.Value->AsString());
+	}
+	TSharedPtr<FJsonObject> Kept = MakeShared<FJsonObject>();
+	for (const auto& Field : Details->Values)
+	{
+		const FString Key(Field.Key.Len(), *Field.Key);  // 5.8 keys are not FString
+		const bool bString = Field.Value.IsValid() && Field.Value->Type == EJson::String;
+		const FString Value = bString ? Field.Value->AsString() : FString();
+		const bool bRepeat = bString && Value.Len() >= 8 &&
+			Declared.ContainsByPredicate([&Value](const FString& Text) { return Text.Equals(Value, ESearchCase::CaseSensitive); });
+		if (!bRepeat) Kept->SetField(Key, Field.Value);
+	}
+	TSharedPtr<FJsonObject> Out = Copy(Data);
+	if (Kept->Values.Num() > 0) Out->SetObjectField(TEXT("details"), Kept);
+	else Out->RemoveField(TEXT("details"));
+	return Out;
+}
+
+TArray<FString> StringItems(const FJsonArray* Items)
+{
+	TArray<FString> Out;
+	if (!Items) return Out;
+	for (const TSharedPtr<FJsonValue>& Item : *Items)
+	{
+		if (Item.IsValid() && Item->Type == EJson::String) Out.Add(Item->AsString());
 	}
 	return Out;
 }
@@ -64,6 +104,38 @@ TSharedPtr<FJsonObject> ReceiptOutcome(const TSharedPtr<FJsonObject>& Receipt, c
 	return Out->Values.Num() > 0 ? Out : nullptr;
 }
 
+// The bridge frame's own fields.
+const TCHAR* const DetailBookkeeping[] = {TEXT("type"), TEXT("requestId"), TEXT("liveRevisions")};
+
+// What Unreal reported beside a refusal (typedError.unrealDetail here, the reply's result over stdio), less what
+// the reply already says: its message, its code, an empty data, the frame's own fields. Partial results stay.
+TSharedPtr<FJsonObject> CompactDetail(const TSharedPtr<FJsonObject>& Detail, const TSharedPtr<FJsonObject>& Reply)
+{
+	TSharedPtr<FJsonObject> Out = Copy(Detail);
+	for (const TCHAR* Field : DetailBookkeeping) Out->RemoveField(Field);
+	// A handler that said success while the gateway refused its output keeps saying so.
+	if (SameField(Out, TEXT("success"), Reply, TEXT("success"))) Out->RemoveField(TEXT("success"));
+	if (SameField(Out, TEXT("message"), Reply, TEXT("message"))) Out->RemoveField(TEXT("message"));
+	if (SameField(Out, TEXT("error"), Reply, TEXT("message")) || SameField(Out, TEXT("error"), Reply, TEXT("errorCode")))
+	{
+		Out->RemoveField(TEXT("error"));
+	}
+	const TSharedPtr<FJsonObject> Error = ObjectField(Out, TEXT("error"));
+	if (SameField(Error, TEXT("message"), Reply, TEXT("message")) && SameField(Error, TEXT("code"), Reply, TEXT("errorCode")))
+	{
+		Out->RemoveField(TEXT("error"));
+	}
+	const TSharedPtr<FJsonObject> Data = ObjectField(Out, TEXT("data"));
+	if (Data && Data->Values.Num() == 0) Out->RemoveField(TEXT("data"));
+	if (const TSharedPtr<FJsonObject> Inner = ObjectField(Out, TEXT("result")))
+	{
+		const TSharedPtr<FJsonObject> Kept = CompactDetail(Inner, Reply);
+		if (Kept) Out->SetObjectField(TEXT("result"), Kept);
+		else Out->RemoveField(TEXT("result"));
+	}
+	return Out->Values.Num() > 0 ? Out : nullptr;
+}
+
 TSharedPtr<FJsonObject> CompactTypedError(const TSharedPtr<FJsonObject>& Typed, const TSharedPtr<FJsonObject>& Reply)
 {
 	TSharedPtr<FJsonObject> Out = MakeShared<FJsonObject>();
@@ -75,15 +147,8 @@ TSharedPtr<FJsonObject> CompactTypedError(const TSharedPtr<FJsonObject>& Typed, 
 	if (SameField(Out, TEXT("handlerCode"), Reply, TEXT("errorCode"))) Out->RemoveField(TEXT("handlerCode"));
 	const TSharedPtr<FJsonObject> Unreal = ObjectField(Out, TEXT("unrealDetail"));
 	if (!Unreal) return Out;
-	TSharedPtr<FJsonObject> Detail = Without(Unreal, TEXT("success"));
-	const TSharedPtr<FJsonObject> Error = ObjectField(Detail, TEXT("error"));
-	if (SameField(Error, TEXT("message"), Reply, TEXT("message")) && SameField(Error, TEXT("code"), Reply, TEXT("errorCode")))
-	{
-		Detail->RemoveField(TEXT("error"));
-	}
-	const TSharedPtr<FJsonObject> Data = ObjectField(Detail, TEXT("data"));
-	if (Data && Data->Values.Num() == 0) Detail->RemoveField(TEXT("data"));
-	if (Detail->Values.Num() > 0) Out->SetObjectField(TEXT("unrealDetail"), Detail);
+	const TSharedPtr<FJsonObject> Detail = CompactDetail(Unreal, Reply);
+	if (Detail) Out->SetObjectField(TEXT("unrealDetail"), Detail);
 	else Out->RemoveField(TEXT("unrealDetail"));
 	return Out;
 }
@@ -101,6 +166,14 @@ TSharedPtr<FJsonObject> CompactExecute(const TSharedPtr<FJsonObject>& Reply)
 	}
 	if (!bTranslated) Out->RemoveField(TEXT("migratedFrom"));
 	if (SameField(Out, TEXT("error"), Out, TEXT("message"))) Out->RemoveField(TEXT("error"));
+	// A success's raw `result` only repeats `data`, its projection (stdio sends one; mirrored for parity).
+	if (IsTrue(Out, TEXT("success")) && ObjectField(Out, TEXT("data"))) Out->RemoveField(TEXT("result"));
+	if (const TSharedPtr<FJsonObject> Detail = IsTrue(Out, TEXT("success")) ? nullptr : ObjectField(Out, TEXT("result")))
+	{
+		const TSharedPtr<FJsonObject> Kept = CompactDetail(Detail, Out);
+		if (Kept) Out->SetObjectField(TEXT("result"), Kept);
+		else Out->RemoveField(TEXT("result"));
+	}
 	const TSharedPtr<FJsonObject> Receipt = ObjectField(Reply, TEXT("receipt"));
 	const TSharedPtr<FJsonObject> Outcome = Receipt ? ReceiptOutcome(Receipt, Reply) : nullptr;
 	if (Outcome) Out->SetObjectField(TEXT("receipt"), Outcome);
@@ -109,19 +182,13 @@ TSharedPtr<FJsonObject> CompactExecute(const TSharedPtr<FJsonObject>& Reply)
 	{
 		Out->SetObjectField(TEXT("typedError"), CompactTypedError(Typed, Out));
 	}
-	TArray<FString> Listed;
-	if (const FJsonArray* Warnings = ArrayField(Outcome, TEXT("warnings")))
-	{
-		for (const TSharedPtr<FJsonValue>& Warning : *Warnings)
-		{
-			if (Warning.IsValid() && Warning->Type == EJson::String) Listed.Add(Warning->AsString());
-		}
-	}
+	const TArray<FString> Listed = StringItems(ArrayField(Outcome, TEXT("warnings")));
 	const FJsonArray* TopWarnings = ArrayField(Out, TEXT("warnings"));
 	if (TopWarnings && AllListed(*TopWarnings, Listed)) Out->RemoveField(TEXT("warnings"));
 	if (const TSharedPtr<FJsonObject> Data = ObjectField(Out, TEXT("data")))
 	{
-		TSharedPtr<FJsonObject> Shown = WithoutListedWarnings(Data, Listed);
+		TSharedPtr<FJsonObject> Shown = WithoutRepeatedValues(WithoutListed(
+			WithoutListed(Data, TEXT("warnings"), Listed), TEXT("changedAssets"), StringItems(ArrayField(Outcome, TEXT("changes")))));
 		if (SameField(Shown, TEXT("success"), Out, TEXT("success"))) Shown->RemoveField(TEXT("success"));
 		if (SameField(Shown, TEXT("message"), Out, TEXT("message"))) Shown->RemoveField(TEXT("message"));
 		Out->SetObjectField(TEXT("data"), Shown);

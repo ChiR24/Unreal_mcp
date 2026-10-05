@@ -6868,7 +6868,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Used virtual memory in megabytes."
         },
         "value": {
-          "description": "Property value to set (type depends on the target property)."
+          "description": "The value read; its type follows the property."
         },
         "viewTarget": {
           "type": "string",
@@ -9974,9 +9974,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Destination /Game root."
         },
         "details": {
-          "type": "object",
-          "x-unreal-reflection-boundary": true,
-          "description": "Operation details."
+          "oneOf": [
+            {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Operation details."
+            }
+          ],
+          "description": "Additional handler result fields not named by the contract."
         },
         "distributionMethod": {
           "type": "string",
@@ -15165,10 +15175,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
       "type": "object",
       "properties": {
         "actorClass": {
-          "type": "string",
-          "description": "String parameter."
-        },
-        "actorGuid": {
           "type": "string",
           "description": "String parameter."
         },

@@ -10,7 +10,7 @@
 import type { CapabilityBehaviorSource } from '../../model.js';
 import type { RecordSpec } from './builder.js';
 import { arr, arrObj, bool, boundedLimit, ex, HIGH, LOW, MEDIUM, num, READ, READ_POLICY, r, str, WRITE_POLICY } from './builder.js';
-import { schema } from '../shared/record-presets.js';
+import { OUTPUT_HEADER, schema } from '../shared/record-presets.js';
 
 // A migration or Bridge import walks a whole content pack, so it is long-running by cost, and it
 // copies files outside any transaction — dryRun is the preview and there is no
@@ -135,6 +135,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
     schema({ listingId: str('Fab listing uid. Restricted to [A-Za-z0-9_-], 64 characters max. fab_import_status also takes it, in place of operationId, to report the newest import of that listing.') }, ['listingId']),
     schema({
       success: bool('Listing was described.'),
+      details: OUTPUT_HEADER.details,
       listingId: str('Listing that was described.'),
       title: str('Listing title.'),
       listingType: str('Content kind, e.g. 3d-model or material.'),
@@ -226,6 +227,7 @@ export const CONTENT_SOURCE_RECORDS: readonly RecordSpec[] = [
     }, ['listingId']),
     schema({
       success: bool('True when Fab accepted the download. It does not mean content exists: poll fab_import_status for that.'),
+      details: OUTPUT_HEADER.details,
       listingId: str('Listing that was requested.'),
       accepted: bool('True when Fab accepted the workflow. Not the same as content existing.'),
       operationId: str('The background import. Pass it to asset.query_marketplace lookup=fab_import_status. On QUEUE_FULL it names the import at the head of the queue instead, and on ADD_ALREADY_RUNNING the open import of this listing.'),

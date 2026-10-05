@@ -40,14 +40,28 @@ function strings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
-// A payload's `warnings` that the receipt already lists, at its root and down `details` (where the
-// receipt collects them from).
-function withoutListedWarnings(payload: Json, listed: readonly string[]): Json {
+// A payload list (warnings, changedAssets) whose every entry the receipt already lists, at its root and down
+// `details` (where the receipt collects them from).
+function withoutListed(payload: Json, field: string, listed: readonly string[]): Json {
   const out = { ...payload };
-  if (Array.isArray(out.warnings) && out.warnings.every((item) => typeof item === 'string' && listed.includes(item))) {
-    delete out.warnings;
+  const list = out[field];
+  if (Array.isArray(list) && list.every((item) => typeof item === 'string' && listed.includes(item))) delete out[field];
+  if (isRecord(out.details)) out.details = withoutListed(out.details, field, listed);
+  return out;
+}
+
+// The projection puts the declared fields at the top of `data` and the rest in `details`: a value there (a path or
+// a name of 8 or more characters) that repeats a declared field's (the read-back assetPath of a widgetPath, actorName
+// beside name) says nothing new; the receipt read its fields from the full result before this.
+function withoutRepeatedValues(data: Json): Json {
+  if (!isRecord(data.details)) return data;
+  const declared = Object.entries(data).filter(([key, value]) => key !== 'details' && typeof value === 'string').map(([, value]) => value);
+  const details = { ...data.details };
+  for (const [key, value] of Object.entries(details)) {
+    if (typeof value === 'string' && value.length >= 8 && declared.includes(value)) delete details[key];
   }
-  if (isRecord(out.details)) out.details = withoutListedWarnings(out.details, listed);
+  const out: Json = { ...data, details };
+  if (Object.keys(details).length === 0) delete out.details;
   return out;
 }
 
@@ -69,6 +83,27 @@ function receiptOutcome(receipt: Json, reply: Json): Json | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+/** The bridge frame's own fields. */
+const DETAIL_BOOKKEEPING = ['type', 'requestId', 'liveRevisions'] as const;
+
+// What Unreal reported beside a refusal (typedError.unrealDetail natively, the reply's `result` over stdio), less
+// what the reply already says: its message, its code, an empty data, the frame's own fields. Partial results stay.
+function compactDetail(detail: Json, reply: Json): Json | undefined {
+  const out = omit(detail, DETAIL_BOOKKEEPING);
+  // A handler that said success while the gateway refused its output keeps saying so.
+  if (same(out.success, reply.success)) delete out.success;
+  if (same(out.message, reply.message)) delete out.message;
+  if (same(out.error, reply.message) || same(out.error, reply.errorCode)) delete out.error;
+  if (isRecord(out.error) && same(out.error.message, reply.message) && same(out.error.code, reply.errorCode)) delete out.error;
+  if (isRecord(out.data) && Object.keys(out.data).length === 0) delete out.data;
+  if (isRecord(out.result)) {
+    const inner = compactDetail(out.result, reply);
+    if (inner === undefined) delete out.result;
+    else out.result = inner;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function compactTypedError(typedError: Json, reply: Json): Json {
   const out = { ...typedError };
   for (const key of Object.keys(out)) {
@@ -76,13 +111,9 @@ function compactTypedError(typedError: Json, reply: Json): Json {
   }
   if (same(out.handlerCode, reply.errorCode)) delete out.handlerCode;
   if (isRecord(out.unrealDetail)) {
-    const detail = omit(out.unrealDetail, ['success']);
-    if (isRecord(detail.error) && same(detail.error.message, reply.message) && same(detail.error.code, reply.errorCode)) {
-      delete detail.error;
-    }
-    if (isRecord(detail.data) && Object.keys(detail.data).length === 0) delete detail.data;
-    if (Object.keys(detail).length > 0) out.unrealDetail = detail;
-    else delete out.unrealDetail;
+    const detail = compactDetail(out.unrealDetail, reply);
+    if (detail === undefined) delete out.unrealDetail;
+    else out.unrealDetail = detail;
   }
   return out;
 }
@@ -98,6 +129,14 @@ function compactExecute(reply: Json): Json {
     delete out.migratedFrom;
   }
   if (same(out.error, out.message)) delete out.error;
+  // Over stdio a success also carried the raw handler result beside `data`, its projection; the projection folds
+  // every undeclared field into data.details, so the raw copy only repeated it. A failure's `result` is its detail.
+  if (out.success === true && isRecord(out.data)) delete out.result;
+  if (out.success === false && isRecord(out.result)) {
+    const detail = compactDetail(out.result, out);
+    if (detail === undefined) delete out.result;
+    else out.result = detail;
+  }
   const receipt = isRecord(reply.receipt) ? receiptOutcome(reply.receipt, reply) : undefined;
   if (receipt === undefined) delete out.receipt;
   else out.receipt = receipt;
@@ -107,7 +146,7 @@ function compactExecute(reply: Json): Json {
     delete out.warnings;
   }
   if (isRecord(out.data)) {
-    const data = withoutListedWarnings(out.data, listed);
+    const data = withoutRepeatedValues(withoutListed(withoutListed(out.data, 'warnings', listed), 'changedAssets', strings(receipt?.changes)));
     if (same(data.success, out.success)) delete data.success;
     if (same(data.message, out.message)) delete data.message;
     out.data = data;
@@ -153,10 +192,20 @@ function compactOutputSchema(schema: Json): Json | undefined {
   return out;
 }
 
+// Search-index and catalog bookkeeping the stdio contract carries (the native one never had them).
+const DESCRIBE_INTERNAL_FIELDS = ['topics', 'category', 'perActionSchemas'] as const;
+
 function compactDescribe(reply: Json): Json {
   const out = omit(reply, ['hashes', 'exampleCount']);
-  if (out.scope !== 'capability') return out;
+  if (out.scope !== 'capability' && out.scope !== 'parameter') return out;
   if (out.success === true) delete out.message;
+  for (const key of DESCRIBE_INTERNAL_FIELDS) delete out[key];
+  const pair = { tool: out.tool ?? out.parentTool, action: out.action };
+  if (Array.isArray(out.aliases) && out.aliases.length === 0) delete out.aliases;
+  if (Array.isArray(out.legacyIds) && out.legacyIds.length === 1 && same(out.legacyIds[0], pair)) delete out.legacyIds;
+  if (same(out.migratedFrom, pair)) delete out.migratedFrom;
+  if (Array.isArray(out.parameters) && out.parameterCount === out.parameters.length) delete out.parameterCount;
+  if (out.runnable === true) delete out.runnable;
   for (const key of ['parent', 'parentTool']) {
     if (same(out[key], out.tool)) delete out[key];
   }

@@ -125,9 +125,8 @@ bool HandleInspectActorQueryAction(
             return Fail(FString::Printf(TEXT("Bounds are not available for %s (%s)"), *Requested, *Target->GetClass()->GetName()),
                         TEXT("UNSUPPORTED_OBJECT"));
         }
+        // bounds carries origin and extent beside min, max, size and radius; they used to be sent twice.
         Resp->SetObjectField(TEXT("bounds"), McpMakeBoundsObject(Box));
-        Resp->SetObjectField(TEXT("origin"), McpHandlerUtils::VectorToJson(Box.GetCenter()));
-        Resp->SetObjectField(TEXT("extent"), McpHandlerUtils::VectorToJson(Box.GetExtent()));
         Resp->SetStringField(TEXT("boundsSource"), Source);
         Message = TEXT("Bounding box retrieved");
     }

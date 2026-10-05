@@ -39,7 +39,7 @@ export const EFFECT_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Place a Niagara system in the level as a Niagara actor, at a location or attached to an actor; autoActivate false places it switched off, for a sequence particle track or gameplay to start.', whenToUse: W, whenNotToUse: ['Use particle.'],
     inputProps: { name: P.name, actorName: P.actorName, systemPath: E.systemPath, attachToActor: E.attachToActor, location: P.location, rotation: P.rotation, scale: E.scale, autoActivate: { type: 'boolean', description: 'false places the effect switched off so it waits for its cue (a particle track trigger key, Activate); default true, which also fires it when the level starts.' } }, required: ['systemPath'],
     effect: 'write', latency: 'interactive', resources: 'medium', plugins: NIAGARA,
-    outputProps: { actorPath: P.string_, actorName: P.actorName, actorGuid: P.string_, existsAfter: P.bool_, actorClass: P.string_ }, outputRequired: [],
+    outputProps: { actorPath: P.string_, actorName: P.actorName, existsAfter: P.bool_, actorClass: P.string_ }, outputRequired: [],
     exampleInput: { action: 'niagara', systemPath: '/Game/NS_Explosion', actorName: 'FX_1' }, exampleOutput: { success: true, message: 'Niagara system authored', actorName: 'FX_1' } }),
   buildRecord({ parentTool: T, id: `${T}.debug_shape`, action: 'debug_shape', topics: ['draw debug shape', 'debug sphere box line arrow capsule', 'show debug shape', 'draw a debug line', 'draw debug line'], family: F,
     summary: 'Spawn a debug shape in the editor viewport.', whenToUse: ['Visualize a region/volume.'], whenNotToUse: ['Use spawn_niagara.'],

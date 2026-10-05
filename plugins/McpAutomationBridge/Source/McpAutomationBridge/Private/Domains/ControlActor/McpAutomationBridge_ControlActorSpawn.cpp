@@ -278,19 +278,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
     Spawned->SetActorLabel(BaseName);
   }
 
-  // Build response matching the outputWithActor schema:
-  // { actor: { id, name, path }, actorPath, classPath?, meshPath? }
+  // actorPath, actorName and actorClass come from AddVerification below; an actor { id, name, path }
+  // object used to repeat them, with the path twice.
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
-
-  // Actor object with id, name and path
-  TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
-  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
-  ActorObj->SetStringField(TEXT("name"), McpActorRef(Spawned));
-  ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
-  Data->SetObjectField(TEXT("actor"), ActorObj);
-
-  // actorPath for convenience
-  Data->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
 
   // Provide the resolved class path useful for referencing
   if (ResolvedClass)

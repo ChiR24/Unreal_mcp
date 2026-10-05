@@ -111,7 +111,8 @@ function lookupByLegacyPair(
       kind: 'failed',
       failure: {
         errorCode: 'UNKNOWN_ACTION',
-        message: `Unknown action for ${tool}.${guide.hint} Call describe before execute.`,
+        // Names the action, as describe and the native gateway do: the reply no longer echoes it beside.
+        message: `Unknown action ${action === undefined ? '' : `'${action}' `}for ${tool}.${guide.hint} Call describe before execute.`,
         availableActions: available,
         suggestions: guide.suggestions,
         nextCall: guide.nextCall

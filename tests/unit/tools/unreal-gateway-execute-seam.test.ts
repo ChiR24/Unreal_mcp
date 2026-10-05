@@ -79,7 +79,7 @@ describe('execute seam: guided error envelopes are preserved verbatim', () => {
   it('UNKNOWN_ACTION keeps availableActions plus a describe nextCall on the closest action', async () => {
     const result = await execute({ tool: 'manage_tools', action: 'get_stat' });
     expect(result.errorCode).toBe('UNKNOWN_ACTION');
-    expect(result.message).toBe('Unknown action for manage_tools. Call describe before execute.');
+    expect(result.message).toBe("Unknown action 'get_stat' for manage_tools. Call describe before execute.");
     expect(result.tool).toBe('manage_tools');
     expect(Array.isArray(result.availableActions)).toBe(true);
     expect(result.suggestions).toContain('get_status');

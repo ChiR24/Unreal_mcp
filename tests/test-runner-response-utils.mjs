@@ -13,6 +13,25 @@ function getValueAtPath(source, pathExpression) {
   }, source);
 }
 
+// A success reply no longer repeats the raw handler result beside `data`, its projection, where a field the
+// contract does not name sits under data.details. A path written against `result` reads the projection then
+// (data, data.details, then the reply itself, which keeps success and message); a failure keeps its `result`.
+export function resolveResponsePath(source, pathExpression) {
+  const direct = getValueAtPath(source, pathExpression);
+  if (direct !== undefined || typeof pathExpression !== 'string') return direct;
+  const parts = pathExpression.split('.');
+  const at = parts.indexOf('result');
+  if (at < 0) return undefined;
+  const owner = at === 0 ? source : getValueAtPath(source, parts.slice(0, at).join('.'));
+  if (!owner || typeof owner !== 'object' || Object.prototype.hasOwnProperty.call(owner, 'result')) return undefined;
+  const rest = parts.slice(at + 1);
+  for (const candidate of [['data', ...rest], ['data', 'details', ...rest], rest]) {
+    const value = getValueAtPath(owner, candidate.join('.'));
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
 function matchesObjectSubset(candidate, expectedSubset) {
   if (!candidate || typeof candidate !== 'object' || !expectedSubset || typeof expectedSubset !== 'object') return false;
   return Object.entries(expectedSubset).every(([key, expectedValue]) => {
@@ -51,7 +70,7 @@ export function evaluateAssertions(testCase, response) {
       return { passed: false, reason: `${label}: assertion declares no operator, so it can never fail` };
     }
 
-    const actual = getValueAtPath(response, assertion.path);
+    const actual = resolveResponsePath(response, assertion.path);
 
     if (Object.prototype.hasOwnProperty.call(assertion, 'equals') && actual !== assertion.equals) {
       return { passed: false, reason: `${label}: expected ${JSON.stringify(assertion.equals)}, got ${JSON.stringify(actual)}` };
@@ -145,9 +164,7 @@ export function evaluateAssertions(testCase, response) {
 export function selectCaptureValue(structuredContent, captureResult) {
   const { fromField, selectField, where } = captureResult ?? {};
   if (!fromField) return undefined;
-  let value = fromField.includes('.')
-    ? getValueAtPath(structuredContent, fromField)
-    : structuredContent?.[fromField];
+  let value = resolveResponsePath(structuredContent, fromField);
 
   if (where) {
     if (!Array.isArray(value) || typeof where.path !== 'string') return undefined;

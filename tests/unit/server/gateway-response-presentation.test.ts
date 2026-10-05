@@ -29,9 +29,9 @@ describe('gateway response presentation over MCP', () => {
       const text = contentParts(response).find((part) => part.type === 'text')?.text;
       expect(response.isError).toBe(true);
       expect(structured).toMatchObject({ success: false, errorCode: 'OUTPUT_SCHEMA_VIOLATION' });
-      expect(text).toContain('success: false');
-      expect(text).not.toContain('success: true');
-      expect(text).toContain('OUTPUT_SCHEMA_VIOLATION');
+      const shown = String(text);
+      expect(shown.split('\n')[0]).toMatch(/^Error \[OUTPUT_SCHEMA_VIOLATION\]: /u);
+      expect(JSON.parse(shown.slice(shown.indexOf('{')))).toMatchObject({ success: false });
       expect(text).toContain('Inspect the current state before retrying.');
       expect(structured.result).toMatchObject({ success: true, settings: 'invalid settings shape' });
     } finally {

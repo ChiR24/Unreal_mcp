@@ -39,7 +39,7 @@ export const COMPONENT_ACTOR_RECORDS: readonly CapabilityRecordSource[] = [
     effect: 'read',
     exampleInput: { action: 'get_component_property', actorName: 'PlayerStart_1', componentName: 'Billboard', propertyName: 'Sprite' },
     exampleOutput: { success: true, message: 'Component property read', value: null },
-    outputProps: { value: P.value },
+    outputProps: { value: P.valueRead },
   }),
   buildCoreRecord({
     parentTool: 'inspect', action: 'set_component_property', dispatchAction: 'control_actor', domain: D, family: 'components',

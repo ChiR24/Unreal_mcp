@@ -192,6 +192,12 @@ TSharedPtr<FJsonObject> CapabilityContract(
 	SetObjectOrEmpty(Out, TEXT("inputSchema"), McpStripActionFromInputSchema(Record.InputSchema));
 	Out->SetStringField(TEXT("message"),
 		TEXT("Exact capability contract. Every parameter below is action-specific, not a tool union."));
+	// The execute call to send with params filled in, as the tool description promises (capabilityNextCall in TS).
+	const TSharedPtr<FJsonObject> Next = GatewayBuildNextCall(bAvailable ? TEXT("execute") : TEXT("configure"), Tool,
+		bAvailable ? McpCapabilityPublicAction(Record) : FString(), FString());
+	if (bAvailable) Next->SetStringField(TEXT("capability"), Record.Id);
+	if (bAvailable) Next->SetObjectField(TEXT("params"), MakeShared<FJsonObject>());
+	Out->SetObjectField(TEXT("nextCall"), Next);
 	Out->SetStringField(TEXT("operation"), TEXT("describe"));
 	SetObjectOrEmpty(Out, TEXT("outputSchema"), Record.OutputSchema);
 	TArray<TSharedPtr<FJsonValue>> Parameters;

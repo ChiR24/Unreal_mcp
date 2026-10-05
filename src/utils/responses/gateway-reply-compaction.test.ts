@@ -44,6 +44,66 @@ describe('compactGatewayReply', () => {
     });
   });
 
+  it('drops a payload list or path the reply already states, and the raw result beside its projection', () => {
+    const shown = compactGatewayReply({
+      success: true, operation: 'execute', message: 'Compiled.',
+      receipt: { changes: ['/Game/UI/WBP_Menu'] },
+      data: { widgetPath: '/Game/UI/WBP_Menu', details: { changedAssets: ['/Game/UI/WBP_Menu'], assetPath: '/Game/UI/WBP_Menu', assetName: 'WBP_Menu' } },
+      result: { success: true, widgetPath: '/Game/UI/WBP_Menu', assetName: 'WBP_Menu' }
+    });
+    expect(shown).toEqual({
+      success: true, operation: 'execute', message: 'Compiled.', receipt: { changes: ['/Game/UI/WBP_Menu'] },
+      data: { widgetPath: '/Game/UI/WBP_Menu', details: { assetName: 'WBP_Menu' } }
+    });
+    const spawned = compactGatewayReply({
+      success: true, operation: 'execute',
+      data: { name: 'DynamicMeshActor_3', class: 'DynamicMeshActor', details: { actorName: 'DynamicMeshActor_3', actorClass: 'DynamicMeshActor', saved: 'no', phase: 'none' } }
+    }) as { data: unknown };
+    expect(spawned.data, 'a short value is kept even when another field shares it').toEqual({
+      name: 'DynamicMeshActor_3', class: 'DynamicMeshActor', details: { saved: 'no', phase: 'none' }
+    });
+    const unlisted = compactGatewayReply({
+      success: true, operation: 'execute', data: { details: { changedAssets: ['/Game/A'] } }
+    }) as { data: unknown };
+    expect(unlisted.data, 'a change the receipt does not list stays').toEqual({ details: { changedAssets: ['/Game/A'] } });
+    const failed = compactGatewayReply({ success: false, operation: 'execute', message: 'No.', result: { missing: ['/Game/B'] } });
+    expect(failed, 'a failure keeps its detail').toMatchObject({ result: { missing: ['/Game/B'] } });
+  });
+
+  it('reduces a stdio refusal\'s bridge frame to what it alone says', () => {
+    const refusal = compactGatewayReply({
+      success: false, operation: 'execute', errorCode: 'ACTOR_NOT_FOUND', message: 'Actor not found',
+      result: {
+        type: 'automation_response', requestId: 'r-1', success: false, message: 'Actor not found', error: 'ACTOR_NOT_FOUND',
+        result: { success: false, data: {}, error: { code: 'ACTOR_NOT_FOUND', message: 'Actor not found' }, missing: ['X'] },
+        liveRevisions: { level: 3 }
+      }
+    });
+    expect(refusal).toEqual({
+      success: false, operation: 'execute', errorCode: 'ACTOR_NOT_FOUND', message: 'Actor not found', result: { result: { missing: ['X'] } }
+    });
+    const refused = compactGatewayReply({
+      success: false, operation: 'execute', errorCode: 'OUTPUT_SCHEMA_VIOLATION', message: 'settings must be an object.',
+      result: { success: true, message: 'Handler completed.', settings: 'bad' }
+    }) as { result: unknown };
+    expect(refused.result, 'the handler\'s own success claim stays beside the refusal').toEqual({ success: true, message: 'Handler completed.', settings: 'bad' });
+  });
+
+  it('drops the stdio contract\'s catalog bookkeeping and keeps its execute nextCall', () => {
+    const contract = compactGatewayReply({
+      success: true, operation: 'describe', scope: 'capability', capability: 'inspect.get_property', parentTool: 'inspect',
+      action: 'get_property', category: 'core', topics: ['read property'], aliases: [], perActionSchemas: true,
+      legacyIds: [{ tool: 'inspect', action: 'get_property' }], migratedFrom: { tool: 'inspect', action: 'get_property' },
+      parameters: [{ name: 'actorName', type: 'string', description: 'Actor.' }], parameterCount: 1, runnable: true,
+      nextCall: { operation: 'execute', capability: 'inspect.get_property', tool: 'inspect', action: 'get_property', params: {} }
+    });
+    expect(contract).toEqual({
+      success: true, operation: 'describe', scope: 'capability', capability: 'inspect.get_property', parentTool: 'inspect',
+      action: 'get_property', parameters: [{ name: 'actorName', type: 'string', description: 'Actor.' }],
+      nextCall: { operation: 'execute', capability: 'inspect.get_property', tool: 'inspect', action: 'get_property', params: {} }
+    });
+  });
+
   it('says an engine refusal once and keeps the guidance', () => {
     const refusal = compactGatewayReply({
       capabilityId: 'control_actor.set_material', ...bookkeeping, status: 'error', liveRevisions: live,

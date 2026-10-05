@@ -188,7 +188,10 @@ bool HandleLoadLevelAction(UMcpAutomationBridgeSubsystem& Subsystem, const FStri
       // What every success reply says about the paths and the dirty packages; reloaded tells a load from a no-op.
       const auto LoadReply = [&](const bool bReloaded) {
         TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-        Resp->SetStringField(TEXT("requestedPath"), LevelPath);
+        // requestedPath only when the path asked for resolved to another (a short name, an object path).
+        if (!LevelPath.Equals(ExpectedLoadedPath, ESearchCase::CaseSensitive)) {
+          Resp->SetStringField(TEXT("requestedPath"), LevelPath);
+        }
         Resp->SetStringField(TEXT("loadedPath"), ExpectedLoadedPath);
         Resp->SetBoolField(TEXT("alreadyLoaded"), !bReloaded);
         Resp->SetBoolField(TEXT("reloaded"), bReloaded);

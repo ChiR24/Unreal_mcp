@@ -2,10 +2,29 @@ import { describe, expect, it } from 'vitest';
 
 import {
   evaluateAssertions,
+  resolveResponsePath,
   selectCaptureValue,
   selectCaptureValues,
   withServerTimeout,
 } from '../test-runner-response-utils.mjs';
+
+describe('result paths on a reply that carries only its projection', () => {
+  const success = { structuredContent: { success: true, message: 'Moved.', data: { movedActors: 2, details: { worldName: '/Game/Maps/Demo' } } } };
+
+  it('reads a declared field from data, an undeclared one from data.details, and success from the reply', () => {
+    expect(resolveResponsePath(success, 'structuredContent.result.movedActors')).toBe(2);
+    expect(resolveResponsePath(success, 'structuredContent.result.worldName')).toBe('/Game/Maps/Demo');
+    expect(resolveResponsePath(success, 'structuredContent.result.success')).toBe(true);
+    expect(resolveResponsePath(success, 'structuredContent.result.missing')).toBeUndefined();
+    expect(selectCaptureValue(success.structuredContent, { fromField: 'result.details.worldName' })).toBe('/Game/Maps/Demo');
+  });
+
+  it('keeps a failure on its own result', () => {
+    const failure = { structuredContent: { success: false, result: { code: 'X' }, data: { code: 'Y' } } };
+    expect(resolveResponsePath(failure, 'structuredContent.result.code')).toBe('X');
+    expect(resolveResponsePath(failure, 'structuredContent.result.other')).toBeUndefined();
+  });
+});
 
 describe('test runner response helpers', () => {
   it('accepts numeric assertions within an explicit tolerance', () => {

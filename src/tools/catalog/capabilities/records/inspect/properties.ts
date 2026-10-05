@@ -31,6 +31,7 @@ export const P = {
   propertyNames: arrStr('Specific property names to include.'),
   componentNames: arrStr('Specific component names to include.'),
   value: { description: 'Property value to set (type depends on the target property).' } as Prop,
+  valueRead: { description: 'The value read; its type follows the property.' } as Prop,
   structPath: str('UserDefinedStruct asset /Game path to introspect.'),
   limit: num('Maximum objects to return (default 100).'),
   offset: num('Matching objects to skip before the first one returned, for paging (default 0); hasMore says whether more follow.'),

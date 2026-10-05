@@ -30,15 +30,16 @@ static inline void AddActorVerification(TSharedPtr<FJsonObject> Response,
   if (!Response || !Actor)
     return;
 
-  // actorPath is the actor object path (addressable by inspect/control_actor); the owning
-  // package rides as packagePath. It used to carry the package path under the actor name.
+  // actorPath is the actor object path (addressable by inspect/control_actor). The owning
+  // package rides as packagePath only when it is a file of its own (a World Partition actor);
+  // otherwise it is the level's and repeated worldName. No action takes an actor GUID.
   Response->SetStringField(TEXT("actorPath"), Actor->GetPathName());
-  if (Actor->GetPackage()) {
-    Response->SetStringField(TEXT("packagePath"), Actor->GetPackage()->GetPathName());
+  const UPackage *Package = Actor->GetPackage();
+  const UWorld *World = Actor->GetWorld();
+  if (Package && (!World || Package != World->GetPackage())) {
+    Response->SetStringField(TEXT("packagePath"), Package->GetPathName());
   }
   Response->SetStringField(TEXT("actorName"), McpActorRef(Actor));
-  Response->SetStringField(TEXT("actorGuid"),
-                           Actor->GetActorGuid().ToString());
   Response->SetBoolField(TEXT("existsAfter"), true);
   Response->SetStringField(TEXT("actorClass"), Actor->GetClass()->GetName());
 }
@@ -88,7 +89,16 @@ static inline bool VerifyAssetExists(TSharedPtr<FJsonObject> Response,
                                      const FString &AssetPath) {
   const bool bExists = McpAssetExists(AssetPath);
   if (Response) {
-    Response->SetStringField(TEXT("verifiedPath"), AssetPath);
+    // existsAfter is the verdict; verifiedPath names the path only when no field already does
+    // (a level load's loadedPath, a save's savedAssetPath), so the reply says it once.
+    bool bStated = false;
+    for (const auto &Field : Response->Values) {
+      bStated |= Field.Value.IsValid() && Field.Value->Type == EJson::String &&
+                 Field.Value->AsString().Equals(AssetPath, ESearchCase::CaseSensitive);
+    }
+    if (!bStated) {
+      Response->SetStringField(TEXT("verifiedPath"), AssetPath);
+    }
     Response->SetBoolField(TEXT("existsAfter"), bExists);
   }
   return bExists;

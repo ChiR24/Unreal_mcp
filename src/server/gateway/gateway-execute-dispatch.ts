@@ -70,7 +70,8 @@ export function projectCanonicalOutput(result: unknown, schema: Draft202012Objec
     const details: Record<string, unknown> = existing ? { ...existing } : {};
     const fold = (source: Record<string, unknown>): void => {
       for (const [name, value] of Object.entries(source)) {
-        if (name === 'data' || name === 'requestId' || name === 'type' || name in schema.properties) continue;
+        // The bridge frame's own fields (liveRevisions too, which the envelope reports) are not handler output.
+        if (name === 'data' || name === 'requestId' || name === 'type' || name === 'liveRevisions' || name in schema.properties) continue;
         if (!(name in details)) details[name] = value;
       }
     };

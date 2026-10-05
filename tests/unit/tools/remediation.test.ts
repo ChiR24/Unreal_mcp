@@ -62,9 +62,10 @@ afterEach(() => {
 });
 
 describe('task39 (h): success receipt populates reusable outcome metadata from real handler output', () => {
+  // changes is the mutation record, so the change cases run a capability that writes; a read reports none.
   it('carries changed entities the handler reported', async () => {
     handlerResult = { success: true, message: 'ok', changedEntities: ['/Game/Meshes/SM_Rock'] };
-    const receipt = receiptOf(await execute({ capability: 'asset.list', params: {} }));
+    const receipt = receiptOf(await execute({ capability: 'build_environment.create_sky_light', params: {} }));
     expect(receipt.status).toBe('success');
     expect(receipt.changes).toContain('/Game/Meshes/SM_Rock');
   });
@@ -78,7 +79,7 @@ describe('task39 (h): success receipt populates reusable outcome metadata from r
 
   it('derives a reusable asset handle + changed entity from a mutation result', async () => {
     handlerResult = { success: true, message: 'ok', assetPath: '/Game/Meshes/SM_New', changedEntities: ['/Game/Meshes/SM_New'] };
-    const receipt = receiptOf(await execute({ capability: 'asset.list', params: {} }));
+    const receipt = receiptOf(await execute({ capability: 'build_environment.create_sky_light', params: {} }));
     expect(receipt.changes).toContain('/Game/Meshes/SM_New');
     const handles = Array.isArray(receipt.handles) ? receipt.handles : [];
     expect(handles).toContainEqual({ kind: 'asset', path: '/Game/Meshes/SM_New' });

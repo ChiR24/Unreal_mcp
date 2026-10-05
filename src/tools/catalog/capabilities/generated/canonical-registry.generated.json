@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "bfcee38a7ffedc73",
+  "catalogRevision": "fd7115871ad9e342",
   "recordCount": 396,
   "records": [
     {
@@ -7880,6 +7880,11 @@
               "type": "boolean",
               "description": "True when Fab accepted the download. It does not mean content exists: poll fab_import_status for that."
             },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
             "listingId": {
               "type": "string",
               "description": "Listing that was requested."
@@ -8095,8 +8100,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "bc9070211fb4499c058ad36a3d149d2a7ebe3ece67704b2d131583a63bd734fc",
-        "content": "0ed54b833c2d886a8c20dc6e1de39c000d4956850457439e35f8460bb515bf7b"
+        "schema": "3507da32efa0ac1c07a3f20e58a8c03d39213a6612bb0c0a645086c16872c957",
+        "content": "f3f00e55cc6bf78edf09f4733e335d1ee64505da391deaaace1f3105443bbcc4"
       }
     },
     {
@@ -10328,6 +10333,11 @@
               "type": "boolean",
               "description": "Listing was described."
             },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
             "listingId": {
               "type": "string",
               "description": "Listing that was described."
@@ -10854,8 +10864,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c63e47ba4582f2141dacc3ceca3bbd86600dd7784e41d4cf2e560672306b3f2b",
-        "content": "da6c37f9f4fc51b18ac595cdd31b34beb1046f74d894d53833c786dacd610c90"
+        "schema": "f3f9c6a47f02b1850e5903484dfedadcde841b1968b467ea5222f5185577590c",
+        "content": "caf8c99e87f9586f860ecb7c14d1096793fdde75653301a467083e0d6fd6b054"
       }
     },
     {
@@ -40694,7 +40704,7 @@
               "description": "Component name on the actor."
             },
             "value": {
-              "description": "Property value to set (type depends on the target property)."
+              "description": "The value read; its type follows the property."
             }
           },
           "required": [
@@ -40764,8 +40774,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d08c00365d06bdbb930bc973b79457022ca2e73517e17b58dbeac298ec5372a8",
-        "content": "95b82c0fc6b6dd05e82111b4045640c6f7717184be9e031c47e8a4f55bca37aa"
+        "schema": "35bc2f292fd4ad077c545bd62c41c4077b7f2dd1b5239fdfbd46c0df3849294a",
+        "content": "1df3f734de4692cc6ad5257c57754b03b9c204f402c1b0718002872aafbeb81b"
       }
     },
     {
@@ -41365,7 +41375,7 @@
               "description": "Additional handler result fields not named by the contract."
             },
             "value": {
-              "description": "Property value to set (type depends on the target property)."
+              "description": "The value read; its type follows the property."
             },
             "properties": {
               "type": "array",
@@ -41433,8 +41443,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c99a32e9fcdfe5829b0ee81e8dbfee7accf264f70487b573221078090d044c7a",
-        "content": "2aaab2fcdefbf1d4931cfa5758a86166559589331913fd44905688fcae59f834"
+        "schema": "3d115538b6221a9970fffa1e1e79ed9a0f7fd272ba3cb7279c70b0293d410350",
+        "content": "185ef5c384c4c4b0a8dcc3bcdce2b488ab27586453f0a7c14ec5de3abcaa307c"
       }
     },
     {
@@ -56247,10 +56257,6 @@
               "type": "string",
               "description": "Target actor name in the current level."
             },
-            "actorGuid": {
-              "type": "string",
-              "description": "String parameter."
-            },
             "existsAfter": {
               "type": "boolean",
               "description": "Boolean parameter."
@@ -56397,8 +56403,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e6b2b3ab707222cd08226fd7576e77c2d85faaa9c40af042a3ffd55884baf2c5",
-        "content": "a1bebf7dcc0d413c26d6251385d4f0bc9daad7b5239b7c065fb386fea1b2c2d4"
+        "schema": "f797424be69822caec5b4cbe3eb68a6b9dbc2e1370a34820ed8ff5d7bdda6ac7",
+        "content": "c62fa8f23394a2664572bf950443b63507e8581f6f2631fd558ab0815e53ebde"
       }
     },
     {
@@ -80849,6 +80855,11 @@
               "type": "boolean",
               "description": "Operation succeeded."
             },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
             "nodeId": {
               "type": "string",
               "description": "Moved node ID."
@@ -80933,8 +80944,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5b98de51369d363472e058f3ff20f509b037ecbb80218cd88ba862889e05e8a2",
-        "content": "da5fa67081228c427e9316a91c5af1d9079cb53ee7f4e4dee811de8bc9a6d946"
+        "schema": "22d0c91ccf58652e7252c68ce9b2a7fdf2092de4ea83555011915917d4892c5d",
+        "content": "d10a7489c26ba5e8a0a1548663f05d644f4d95fbde481ca53399f11b0fc6bfc6"
       }
     },
     {

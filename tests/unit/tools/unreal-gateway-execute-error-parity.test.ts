@@ -77,7 +77,7 @@ describe('TS guided execute-error parity: deterministic suggestions + executable
     const executed = (await handleUnrealGatewayCall({ operation: 'execute', ...payload }, makeContext())) as Record<string, unknown>;
     expect(executed.errorCode).toBe('UNKNOWN_ACTION');
     expect(executed.message).toBe(
-      "Unknown action for manage_blueprint. 'set_blueprint_variables' is a control_actor action. Call describe before execute.");
+      "Unknown action 'set_blueprint_variables' for manage_blueprint. 'set_blueprint_variables' is a control_actor action. Call describe before execute.");
     expect(executed.nextCall).toEqual(owner);
     const described = (await handleUnrealGatewayCall({ operation: 'describe', ...payload }, makeContext())) as Record<string, unknown>;
     expect(described.errorCode).toBe('UNKNOWN_ACTION');

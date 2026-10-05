@@ -289,7 +289,8 @@ export function executeSuccessEnvelope(input: {
     capabilityId,
     data: publishedData,
     handles: extractHandles(input.result),
-    changes: extractChanges(input.result),
+    // changes is the mutation record: a read names what it looked at, not what it changed (as the native receipt).
+    changes: input.record.behavior.effect === 'read' ? [] : extractChanges(input.result),
     task: extractTask(input.result),
     warnings: input.warnings,
     ...correlationFields(context),
@@ -299,9 +300,14 @@ export function executeSuccessEnvelope(input: {
     liveRevisions
   });
 
+  const handlerMessage = typeof input.result === 'object' && input.result !== null && 'message' in input.result
+    ? (input.result as { message?: unknown }).message
+    : undefined;
   return definedOnly({
     success: true,
     operation: 'execute',
+    // The handler's own message, at the top as the native envelope carries it.
+    message: typeof handlerMessage === 'string' && handlerMessage !== '' ? redactText(handlerMessage) : undefined,
     correlationId: context.correlationId,
     catalogRevision: catalogRevision(),
     ...capabilityFields(input.record),

@@ -57,7 +57,7 @@ TSharedPtr<FJsonObject> McpProjectCanonicalOutput(
 			for (const auto& Entry : Source->Values)
 			{
 				if (Entry.Key == TEXT("data") || Entry.Key == TEXT("requestId") || Entry.Key == TEXT("type") ||
-					(*Properties)->HasField(Entry.Key))
+					Entry.Key == TEXT("liveRevisions") || (*Properties)->HasField(Entry.Key))
 				{
 					continue;
 				}

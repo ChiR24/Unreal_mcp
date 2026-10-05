@@ -272,7 +272,15 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
 
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
   Resp->SetStringField(TEXT("filename"), Filename);
-  Resp->SetStringField(TEXT("mode"), Mode);
+  // Which view the picture is of: the level viewport, the game as its pawn sees it, or the free camera of an
+  // ejected player. mode, the one asked for, is named only when the picture is of another.
+  const TCHAR *View = GEditor->PlayWorld == nullptr ? TEXT("editor_viewport")
+                      : bEjectedView                ? TEXT("pie_ejected")
+                                                    : TEXT("pie_game");
+  Resp->SetStringField(TEXT("view"), View);
+  if (!Mode.Equals(View, ESearchCase::CaseSensitive)) {
+    Resp->SetStringField(TEXT("mode"), Mode);
+  }
   // width/height describe the PNG actually returned. When a resample happened
   // the untouched viewport size rides alongside, so a caller comparing the two
   // can tell a downscaled frame from a native-resolution one.
@@ -295,12 +303,6 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
   // the level editor where it showed something else.
   if (Payload->HasField(TEXT("_levelEditorFronted"))) {
     Resp->SetBoolField(TEXT("levelEditorBroughtToFront"), true);
-  }
-  // Which view the picture is of: the level viewport, the game as its pawn sees it, or the free camera of an ejected player.
-  if (GEditor->PlayWorld == nullptr) {
-    Resp->SetStringField(TEXT("view"), TEXT("editor_viewport"));
-  } else {
-    Resp->SetStringField(TEXT("view"), bEjectedView ? TEXT("pie_ejected") : TEXT("pie_game"));
   }
   SendScreenshotReceiptForMcp(this, Socket, RequestId, Payload, Resp,
                               PngData.GetData(), PngData.Num(), FullPath,

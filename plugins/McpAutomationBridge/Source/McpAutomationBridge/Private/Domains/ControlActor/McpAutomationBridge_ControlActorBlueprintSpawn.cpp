@@ -103,18 +103,9 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBlueprint(
   if (!ActorName.IsEmpty())
     Spawned->SetActorLabel(ActorName);
 
-  // Build response matching the outputWithActor schema:
-  // { actor: { id, name, path }, actorPath, classPath }
+  // actorPath, actorName and actorClass come from AddVerification below; an actor { id, name, path }
+  // object used to repeat them, with the path twice.
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-
-  TSharedPtr<FJsonObject> ActorObj = McpHandlerUtils::CreateResultObject();
-  ActorObj->SetStringField(TEXT("id"), Spawned->GetPathName());  // Use path as unique ID
-  ActorObj->SetStringField(TEXT("name"), McpActorRef(Spawned));
-  ActorObj->SetStringField(TEXT("path"), Spawned->GetPathName());
-  Resp->SetObjectField(TEXT("actor"), ActorObj);
-
-  // actorPath for convenience
-  Resp->SetStringField(TEXT("actorPath"), Spawned->GetPathName());
   Resp->SetStringField(TEXT("classPath"), ResolvedClass->GetPathName());
   Resp->SetArrayField(TEXT("scale"), McpHandlerUtils::VectorToJsonArray(Spawned->GetActorScale3D()));
   if (Transaction) {
