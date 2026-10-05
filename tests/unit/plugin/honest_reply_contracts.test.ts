@@ -459,6 +459,23 @@ describe('handlers answer what they did', () => {
     expect(source).not.toContain('Candidate->GetUsage() == TargetScript->GetUsage()');
   });
 
+  // A template module that worked against the values set (a size curve, wind) could not be switched off.
+  it('set_emitter_properties turns stack modules on or off by name and refuses a name it cannot find', () => {
+    const systems = code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersSystems.cpp');
+    expect(systems).toMatch(/TryGetObjectField\(TEXT\("moduleEnabled"\), ModulesObj\)/u);
+    expect(systems).toMatch(/Module->SetEnabledState\(bOn \? ENodeEnabledState::Enabled : ENodeEnabledState::Disabled, false\);\s*Module->MarkNodeRequiresSynchronization\(/u);
+    expect(systems).toContain('TEXT("MODULE_NOT_FOUND")');
+    expect(code('NiagaraAuthoring', 'McpAutomationBridge_NiagaraAuthoringHandlersModuleInfo.cpp')).toContain('ModuleObj->SetBoolField(TEXT("enabled"), Module->IsNodeEnabled());');
+  });
+
+  // An activate key restarted a finished one-shot every frame of its section: a spark burst fired again and again.
+  it('a particle track can fire a one-shot burst once with a trigger key', () => {
+    const tracks = code('Sequence', 'Cinematics', 'McpAutomationBridge_SequenceCinematicsTracks.cpp');
+    expect(tracks).toMatch(/KeyName == TEXT\("trigger"\) \? EParticleKey::Trigger/u);
+    const handler = tracks.slice(tracks.indexOf('bool HandleAddParticleTrack'));
+    expect(handler.indexOf('particleKey must be activate, deactivate or trigger')).toBeLessThan(handler.indexOf('CreateBoundSection('));
+  });
+
   // A module added, wired or removed ran the old scripts and listed no inputs until something else compiled.
   it('a Niagara graph edit compiles the system before saving it', () => {
     const save = code('NiagaraGraph', 'McpAutomationBridge_NiagaraGraphHandlersPrivate.h');

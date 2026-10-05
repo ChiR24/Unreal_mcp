@@ -11028,7 +11028,7 @@
           "emitterProperties": {
             "type": "object",
             "additionalProperties": true,
-            "description": "Emitter settings to change. Supported key: enabled (boolean); any other key is refused. Module inputs are set with set_parameter_value.",
+            "description": "Emitter settings to change: enabled (boolean) turns the emitter on or off; moduleEnabled ({ModuleName: boolean}, names as get_niagara_info lists them) turns stack modules on or off, so a template module that works against the values set (a size curve, wind) can be switched off. Any other key is refused. Module inputs are set with set_parameter_value.",
             "x-unreal-reflection-boundary": true
           },
           "endLocation": {
@@ -15444,6 +15444,7 @@
         "onlyJob",
         "outputDirectory",
         "parameterName",
+        "particleKey",
         "path",
         "paused",
         "platformSources",
@@ -16125,6 +16126,15 @@
           "parameterName": {
             "type": "string",
             "description": "Material parameter name to animate."
+          },
+          "particleKey": {
+            "type": "string",
+            "enum": [
+              "activate",
+              "deactivate",
+              "trigger"
+            ],
+            "description": "The key at startFrame: trigger fires the system once, the key for a one-shot burst; activate keeps it running, so a one-shot that finishes starts again until the section ends; deactivate stops it. Default from activate."
           },
           "path": {
             "type": "string",

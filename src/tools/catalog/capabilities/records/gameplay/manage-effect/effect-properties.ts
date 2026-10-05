@@ -26,7 +26,7 @@ export const E: PropertyMap = {
   emitterProperties: {
     type: 'object',
     additionalProperties: true,
-    description: 'Emitter settings to change. Supported key: enabled (boolean); any other key is refused. Module inputs are set with set_parameter_value.',
+    description: 'Emitter settings to change: enabled (boolean) turns the emitter on or off; moduleEnabled ({ModuleName: boolean}, names as get_niagara_info lists them) turns stack modules on or off, so a template module that works against the values set (a size curve, wind) can be switched off. Any other key is refused. Module inputs are set with set_parameter_value.',
     'x-unreal-reflection-boundary': true,
   },
   savePath: str('Canonical /Game directory for the created asset.'),

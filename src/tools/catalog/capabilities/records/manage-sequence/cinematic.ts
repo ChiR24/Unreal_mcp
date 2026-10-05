@@ -220,8 +220,8 @@ export const CINEMATIC_RECORDS: readonly CapabilityRecordSource[] = [
     { required: ['path', 'parameterName', 'value'], example: { actorName: 'Cube', parameterName: 'Opacity', value: 0.5 }, requiredOneOf: ['actorName', 'bindingGuid'] }),
   // Tracks.cpp resolves the binding from bindingGuid or actorName like the other bound tracks.
   trackRecord('sequence.cinematic.add_particle_track', 'add_particle_track',
-    'Add a particle track to trigger particle systems during cinematic.',
-    { activate: A.activate, bindingGuid: A.bindingGuid, actorName: P.actorName, ...SECTION_RANGE },
+    'Add a particle track to trigger particle systems during cinematic: trigger fires a one-shot burst (a hit, a spark) once, activate keeps a system running for the section.',
+    { activate: A.activate, particleKey: { type: 'string', enum: ['activate', 'deactivate', 'trigger'], description: 'The key at startFrame: trigger fires the system once, the key for a one-shot burst; activate keeps it running, so a one-shot that finishes starts again until the section ends; deactivate stops it. Default from activate.' }, bindingGuid: A.bindingGuid, actorName: P.actorName, ...SECTION_RANGE },
     { required: ['path'], example: { actorName: 'NiagaraActor_1' }, requiredOneOf: ['actorName', 'bindingGuid'] }),
   trackRecord('sequence.cinematic.add_skeletal_animation_track', 'add_skeletal_animation_track',
     'Add a skeletal animation track to play animations on a skeletal mesh. A clip whose skeleton the mesh cannot play is refused with SKELETON_MISMATCH instead of silently showing the rest pose. Overlap the clips before and after it and give easeInFrames/easeOutFrames to crossfade between them instead of cutting in one frame.',

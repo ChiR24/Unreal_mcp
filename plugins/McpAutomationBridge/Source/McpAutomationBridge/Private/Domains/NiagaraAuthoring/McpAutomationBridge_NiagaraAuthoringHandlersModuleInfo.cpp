@@ -49,6 +49,7 @@ void AddEmitterModuleInfo(TSharedPtr<FJsonObject>& EmitterObj, const FNiagaraEmi
         }
         TSharedPtr<FJsonObject> ModuleObj = McpHandlerUtils::CreateResultObject();
         ModuleObj->SetStringField(TEXT("name"), Module->GetFunctionName());
+        ModuleObj->SetBoolField(TEXT("enabled"), Module->IsNodeEnabled());
         Modules.Add(MakeShared<FJsonValueObject>(ModuleObj));
         const FString Prefix = Module->GetFunctionName() + TEXT(".");
         for (const UEdGraphPin* MapIn : Module->Pins)

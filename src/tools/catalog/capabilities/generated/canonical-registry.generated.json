@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "267a64d5d920aa0d",
+  "catalogRevision": "07734dd371ac95b4",
   "recordCount": 396,
   "records": [
     {
@@ -56798,7 +56798,7 @@
             "emitterProperties": {
               "type": "object",
               "additionalProperties": true,
-              "description": "Emitter settings to change. Supported key: enabled (boolean); any other key is refused. Module inputs are set with set_parameter_value.",
+              "description": "Emitter settings to change: enabled (boolean) turns the emitter on or off; moduleEnabled ({ModuleName: boolean}, names as get_niagara_info lists them) turns stack modules on or off, so a template module that works against the values set (a size curve, wind) can be switched off. Any other key is refused. Module inputs are set with set_parameter_value.",
               "x-unreal-reflection-boundary": true
             },
             "fixedBoundsEnabled": {
@@ -57065,8 +57065,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "a552f4ac62c9b6bf57301acde979253db9739af6187021a7a2db17979061622a",
-        "content": "1599866d1525bca44e076dc55085e907b3c9fb48fccf076358b62229bc18bdda"
+        "schema": "38d155c01cae897662222cce3b17837ed89a797405c187e6be0257568bc01956",
+        "content": "735b0096a80283b62c9c0debf732eec1e044024ab9ba1560026ca8bcc238d8fb"
       }
     },
     {
@@ -81217,7 +81217,7 @@
           "trackKind=property: Add a property track to animate a specific property on a bound actor.",
           "trackKind=skeletal_animation: Add a skeletal animation track to play animations on a skeletal mesh. A clip whose skeleton the mesh cannot play is refused with SKELETON_MISMATCH instead of silently showing the rest pose. Overlap the clips before and after it and give easeInFrames/easeOutFrames to crossfade between them instead of cutting in one frame.",
           "trackKind=material_parameter: Add a material parameter collection track to animate material parameters.",
-          "trackKind=particle: Add a particle track to trigger particle systems during cinematic.",
+          "trackKind=particle: Add a particle track to trigger particle systems during cinematic: trigger fires a one-shot burst (a hit, a spark) once, activate keeps a system running for the section.",
           "trackKind=event: Add an event track to trigger events at specific frames.",
           "trackKind=fade: Add a fade track for cinematic fade-in/fade-out transitions.",
           "trackKind=level_visibility: Add a level visibility track to control level streaming during cinematic.",
@@ -81347,6 +81347,15 @@
             "activate": {
               "type": "boolean",
               "description": "Whether the key activates (true) or deactivates (false)."
+            },
+            "particleKey": {
+              "type": "string",
+              "enum": [
+                "activate",
+                "deactivate",
+                "trigger"
+              ],
+              "description": "The key at startFrame: trigger fires the system once, the key for a one-shot burst; activate keeps it running, so a one-shot that finishes starts again until the section ends; deactivate stops it. Default from activate."
             },
             "from": {
               "type": "number",
@@ -81608,6 +81617,9 @@
             "activate": [
               "particle"
             ],
+            "particleKey": [
+              "particle"
+            ],
             "from": [
               "fade"
             ],
@@ -81634,8 +81646,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "857e00c63edcd716b101ad28e83aa5e21c1758e879398c920595ccf4cb90b2ff",
-        "content": "b4188f905be7b03dcc437ea2c2748dad62782514deaa3ac5dffd186774280c93"
+        "schema": "5f037c87f2dfc922a70d96e483c84e79adb80c3951dbfd9bd4ca39a7780736ec",
+        "content": "9c2c3c68e756cb7921ad69c09ba436a515822b85036ca969cf84b49f7b8ad8bb"
       }
     },
     {

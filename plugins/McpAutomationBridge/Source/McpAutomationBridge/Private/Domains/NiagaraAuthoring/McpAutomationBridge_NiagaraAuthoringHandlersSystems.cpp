@@ -173,16 +173,64 @@ static bool SetEmitterProperties(FActionContext& Context)
     {
         return true;
     }
-    // Only `enabled` is implemented; any other key used to be ignored under an "updated" reply.
+    // enabled turns the emitter on or off; moduleEnabled {Module: bool} turns stack modules on or off by the names
+    // get_niagara_info lists, so a template module that fights the values set (a size-over-life curve, wind) can go.
+    // Any other key used to be ignored under an "updated" reply.
     const TSharedPtr<FJsonObject>* PropsObj = nullptr;
+    const TSharedPtr<FJsonObject>* ModulesObj = nullptr;
     bool bEnabled = false;
-    if (!Context.Payload->TryGetObjectField(TEXT("emitterProperties"), PropsObj) || !PropsObj->IsValid() ||
-        !(*PropsObj)->TryGetBoolField(TEXT("enabled"), bEnabled) || (*PropsObj)->Values.Num() != 1)
+    const bool bHasProps = Context.Payload->TryGetObjectField(TEXT("emitterProperties"), PropsObj) && PropsObj->IsValid();
+    const bool bHasEnabled = bHasProps && (*PropsObj)->TryGetBoolField(TEXT("enabled"), bEnabled);
+    const bool bHasModules = bHasProps && (*PropsObj)->TryGetObjectField(TEXT("moduleEnabled"), ModulesObj) && ModulesObj->IsValid();
+    if ((!bHasEnabled && !bHasModules) || (*PropsObj)->Values.Num() != int32(bHasEnabled) + int32(bHasModules))
     {
-        Context.SendError(TEXT("emitterProperties supports exactly one key, enabled (a boolean). Set module inputs with set_parameter_value."), TEXT("UNSUPPORTED_PROPERTY"));
+        Context.SendError(TEXT("emitterProperties takes enabled (a boolean) and/or moduleEnabled ({ModuleName: boolean}, names as get_niagara_info lists them). Set module inputs with set_parameter_value."), TEXT("UNSUPPORTED_PROPERTY"));
         return true;
     }
-    Handle->SetIsEnabled(bEnabled, *System, false);
+    UNiagaraScriptSource* Source = bHasModules ? GetEmitterScriptSource(Handle) : nullptr;
+    UNiagaraGraph* Graph = Source ? Source->NodeGraph : nullptr;
+    TArray<FString> Missing;
+    if (bHasModules)
+    {
+        for (const auto& Pair : (*ModulesObj)->Values)
+        {
+            const FString ModuleName(*Pair.Key);
+            bool bOn = true;
+            int32 Matched = 0;
+            if (Graph && Pair.Value.IsValid() && Pair.Value->TryGetBool(bOn))
+            {
+                for (UEdGraphNode* GraphNode : Graph->Nodes)
+                {
+                    UNiagaraNodeFunctionCall* Module = Cast<UNiagaraNodeFunctionCall>(GraphNode);
+                    if (Module && Module->GetCalledUsage() == ENiagaraScriptUsage::Module &&
+                        Module->GetFunctionName().Equals(ModuleName, ESearchCase::IgnoreCase))
+                    {
+                        Module->Modify();
+                        Module->SetEnabledState(bOn ? ENodeEnabledState::Enabled : ENodeEnabledState::Disabled, false);
+                        Module->MarkNodeRequiresSynchronization(TEXT("Module enabled state changed"), true);
+                        ++Matched;
+                    }
+                }
+            }
+            if (Matched == 0)
+            {
+                Missing.Add(ModuleName);
+            }
+        }
+    }
+    if (Missing.Num() > 0)
+    {
+        Context.SendError(FString::Printf(TEXT("No module named %s on emitter '%s' (or its value is not a boolean); get_niagara_info lists each emitter's modules."), *FString::Join(Missing, TEXT(", ")), *Context.EmitterName), TEXT("MODULE_NOT_FOUND"));
+        return true;
+    }
+    if (bHasEnabled)
+    {
+        Handle->SetIsEnabled(bEnabled, *System, false);
+    }
+    if (bHasModules)
+    {
+        System->RequestCompile(false);
+    }
     MarkDirtyAndVerify(Context, System);
     Context.Result->SetStringField(TEXT("message"), FString::Printf(TEXT("Updated properties for emitter '%s'."), *Context.EmitterName));
     Context.SendSuccess(true, TEXT("Emitter properties updated."));

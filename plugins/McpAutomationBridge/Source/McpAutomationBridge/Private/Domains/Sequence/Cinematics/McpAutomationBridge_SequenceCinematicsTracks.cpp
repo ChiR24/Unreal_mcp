@@ -116,6 +116,19 @@ bool HandleAddLevelVisibilityTrack(const TSharedPtr<FJsonObject> &Params,
 
 bool HandleAddParticleTrack(const TSharedPtr<FJsonObject> &Params,
                             TSharedPtr<FJsonObject> &OutResult) {
+  // particleKey: activate keeps the system running (one that finishes is started again while the section lasts),
+  // deactivate stops it, trigger fires it once: the key for a one-shot burst. The older activate flag still picks
+  // activate or deactivate.
+  bool bActivate = true;
+  Params->TryGetBoolField(TEXT("activate"), bActivate);
+  FString KeyName = GetString(Params, TEXT("particleKey")).ToLower();
+  if (KeyName.IsEmpty())
+    KeyName = bActivate ? TEXT("activate") : TEXT("deactivate");
+  if (KeyName != TEXT("activate") && KeyName != TEXT("deactivate") && KeyName != TEXT("trigger")) {
+    OutResult = MakeResult(false, TEXT("add_particle_track"), TEXT("particleKey must be activate, deactivate or trigger"),
+                           TEXT("INVALID_ARGUMENT"));
+    return true;
+  }
   ULevelSequence *Sequence = nullptr;
   FGuid Guid;
   if (!LoadSequenceAndBinding(Params, TEXT("add_particle_track"), Sequence, Guid,
@@ -142,10 +155,9 @@ bool HandleAddParticleTrack(const TSharedPtr<FJsonObject> &Params,
       TEXT("add_particle_track")));
   if (!Section) return true;
   SetSectionRange(MovieScene, Section, Params, 100);
-  bool bActivate = true;
-  Params->TryGetBoolField(TEXT("activate"), bActivate);
-  const EParticleKey Key =
-      bActivate ? EParticleKey::Activate : EParticleKey::Deactivate;
+  const EParticleKey Key = KeyName == TEXT("trigger") ? EParticleKey::Trigger
+                           : KeyName == TEXT("deactivate") ? EParticleKey::Deactivate
+                                                           : EParticleKey::Activate;
   Section->ParticleKeys.GetData().UpdateOrAddKey(
       GetFrame(Params, MovieScene, TEXT("startFrame")),
       static_cast<uint8>(Key));
@@ -164,8 +176,7 @@ bool HandleAddParticleTrack(const TSharedPtr<FJsonObject> &Params,
       }
     }
   }
-  OutResult->SetStringField(TEXT("particleAction"),
-                            bActivate ? TEXT("activate") : TEXT("deactivate"));
+  OutResult->SetStringField(TEXT("particleAction"), KeyName);
   return true;
 }
 }

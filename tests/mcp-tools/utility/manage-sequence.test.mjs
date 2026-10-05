@@ -169,6 +169,7 @@ const testCases = [
   // add_particle_track
   // A cube is bound by actorName (no bindingGuid needed) and then refused because it carries no FX component.
   { scenario: 'CINEMATICS: add_particle_track by actorName', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', path: SEQUENCE_PATH, actorName: ACTOR_A }, expected: 'error|PARTICLE_BINDING_REQUIRED' },
+  { scenario: 'CINEMATICS: add_particle_track trigger key needs an FX binding too', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', path: SEQUENCE_PATH, actorName: ACTOR_A, particleKey: 'trigger', startFrame: 12 }, expected: 'error|PARTICLE_BINDING_REQUIRED' },
   { scenario: 'CINEMATICS: add_particle_track optional', toolName: 'manage_sequence', arguments: { action: 'add_particle_track', path: SEQUENCE_PATH, activate: true, startFrame: 0, durationFrames: 120, endFrame: 120, rowIndex: 2, bindingGuid: '${captured:actorBindingId}', save: true }, expected: 'error|PARTICLE_BINDING_REQUIRED' },
   // add_skeletal_animation_track
   { scenario: 'CINEMATICS: add_skeletal_animation_track refuses an actor with no skeletal mesh', toolName: 'manage_sequence', arguments: { action: 'add_skeletal_animation_track', path: SEQUENCE_PATH, actorName: ACTOR_A, animationSequencePath: ANIM_PATH }, expected: 'error' },
