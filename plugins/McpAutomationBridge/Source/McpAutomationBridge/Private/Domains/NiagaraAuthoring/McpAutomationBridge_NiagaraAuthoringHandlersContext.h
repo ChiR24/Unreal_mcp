@@ -186,6 +186,9 @@ bool ValidateNiagaraIdentifier(FActionContext& Context, const FString& Value, co
 
 UNiagaraSystem* LoadSystemOrError(FActionContext& Context);
 FNiagaraEmitterHandle* FindEmitterHandle(UNiagaraSystem* System, const FString& TargetEmitter);
+// Context.EmitterName in System; an omitted name takes the sole emitter (emitterResolvedBy). On success names the system
+// and emitter in the result and sets Context.EmitterName to the handle; on a miss sends EMITTER_NOT_FOUND listing the emitters.
+FNiagaraEmitterHandle* ResolveEmitterHandle(FActionContext& Context, UNiagaraSystem* System);
 bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNiagaraEmitterHandle*& Handle);
 void MarkDirtyAndVerify(FActionContext& Context, UObject* Object);
 UNiagaraNodeFunctionCall* AddModuleToEmitterStack(

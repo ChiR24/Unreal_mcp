@@ -151,6 +151,17 @@ bool ValidateNiagaraIdentifier(FActionContext& Context, const FString& Value, co
     return true;
 }
 
+// systemPath (or system) and assetPath naming two systems: the edit went to systemPath and answered success.
+static bool ValidateOneSystem(FActionContext& Context)
+{
+    if (Context.AssetPath.IsEmpty() || FPackageName::ObjectPathToPackageName(Context.SystemPath).Equals(FPackageName::ObjectPathToPackageName(Context.AssetPath), ESearchCase::IgnoreCase))
+    {
+        return true;
+    }
+    Context.SendError(FString::Printf(TEXT("'systemPath' (%s) and 'assetPath' (%s) name different Niagara systems; pass one of them. Nothing was changed."), *Context.SystemPath, *Context.AssetPath), TEXT("CONFLICTING_TARGET"));
+    return false;
+}
+
 bool ValidateCommonFields(FActionContext& Context)
 {
     return ValidateAndSanitizePath(Context, Context.Path, TEXT("path"))
@@ -158,7 +169,8 @@ bool ValidateCommonFields(FActionContext& Context)
         && ValidateAndSanitizePath(Context, Context.SystemPath, TEXT("systemPath"))
         && ValidateAndSanitizePath(Context, Context.EmitterPath, TEXT("emitterPath"))
         && ValidateNiagaraIdentifier(Context, Context.Name, TEXT("name"), false)
-        && ValidateNiagaraIdentifier(Context, Context.EmitterName, TEXT("emitterName"), true);
+        && ValidateNiagaraIdentifier(Context, Context.EmitterName, TEXT("emitterName"), true)
+        && ValidateOneSystem(Context);
 }
 
 UNiagaraSystem* LoadSystemOrError(FActionContext& Context)
@@ -196,6 +208,33 @@ FNiagaraEmitterHandle* FindEmitterHandle(UNiagaraSystem* System, const FString& 
     return nullptr;
 }
 
+// The sole emitter stands in only for a name the caller left out; a name the caller chose must match, or an edit
+// meant for one system's emitter landed in the only emitter of another and still answered success.
+FNiagaraEmitterHandle* ResolveEmitterHandle(FActionContext& Context, UNiagaraSystem* System)
+{
+    FNiagaraEmitterHandle* Handle = Context.EmitterName.IsEmpty() ? nullptr : FindEmitterHandle(System, Context.EmitterName);
+    const TArray<FNiagaraEmitterHandle>& Handles = System->GetEmitterHandles();
+    if (!Handle && Context.EmitterName.IsEmpty() && Handles.Num() == 1)
+    {
+        Handle = const_cast<FNiagaraEmitterHandle*>(&Handles[0]);
+        Context.Result->SetStringField(TEXT("emitterResolvedBy"), TEXT("single-emitter-fallback"));
+    }
+    if (!Handle)
+    {
+        TArray<FString> Names;
+        for (const FNiagaraEmitterHandle& Candidate : Handles) { Names.Add(Candidate.GetName().ToString()); }
+        Context.SendError(FString::Printf(TEXT("%s Niagara system '%s' (its emitters: [%s]); pass one of them as 'emitterName'. Nothing was changed."),
+            Context.EmitterName.IsEmpty() ? TEXT("No 'emitterName' given, and it is needed for") : *FString::Printf(TEXT("Emitter '%s' not found in"), *Context.EmitterName),
+            *System->GetPathName(), *FString::Join(Names, TEXT(", "))), TEXT("EMITTER_NOT_FOUND"));
+        return nullptr;
+    }
+    // Name what the call acts on, so the caller can check the change landed where it asked.
+    Context.EmitterName = Handle->GetName().ToString();
+    Context.Result->SetStringField(TEXT("systemPath"), System->GetPathName());
+    Context.Result->SetStringField(TEXT("emitterName"), Context.EmitterName);
+    return Handle;
+}
+
 bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNiagaraEmitterHandle*& Handle)
 {
     if (Context.SystemPath.IsEmpty())
@@ -204,35 +243,8 @@ bool LoadSystemAndEmitter(FActionContext& Context, UNiagaraSystem*& System, FNia
         return false;
     }
     System = LoadSystemOrError(Context);
-    if (!System)
-    {
-        return false;
-    }
-    Handle = FindEmitterHandle(System, Context.EmitterName);
-    if (!Handle)
-    {
-        // Single-emitter fallback: the dispatch layer defaults 'emitterName' (e.g. to
-        // "DefaultEmitter") when the caller omits it, but the actual handle is named after
-        // the source emitter asset. Rather than fail on a brittle exact-name mismatch,
-        // resolve to the system's sole emitter and surface how it was resolved.
-        const TArray<FNiagaraEmitterHandle>& Handles = System->GetEmitterHandles();
-        if (Handles.Num() == 1)
-        {
-            Handle = const_cast<FNiagaraEmitterHandle*>(&Handles[0]);
-            Context.Result->SetStringField(TEXT("emitterResolvedBy"), TEXT("single-emitter-fallback"));
-            Context.Result->SetStringField(TEXT("requestedEmitterName"), Context.EmitterName);
-            Context.Result->SetStringField(TEXT("resolvedEmitterName"), Handle->GetName().ToString());
-        }
-    }
-    if (!Handle)
-    {
-        Context.SendError(
-            FString::Printf(TEXT("Emitter '%s' not found. The system has %d emitter(s); pass a matching 'emitterName'."),
-                *Context.EmitterName, System->GetEmitterHandles().Num()),
-            TEXT("EMITTER_NOT_FOUND"));
-        return false;
-    }
-    return true;
+    Handle = System ? ResolveEmitterHandle(Context, System) : nullptr;
+    return Handle != nullptr;
 }
 
 void MarkDirtyAndVerify(FActionContext& Context, UObject* Object)

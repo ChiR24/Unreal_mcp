@@ -67,19 +67,31 @@ struct FParameterWrite
     FString Error;
 };
 
+static const FNiagaraVariableWithOffset* FindUserParameter(UNiagaraSystem* System, const FString& ParamName)
+{
+    const FString UserName = ParamName.StartsWith(TEXT("User.")) ? ParamName : TEXT("User.") + ParamName;
+    return System->GetExposedParameters().ReadParameterVariables().FindByPredicate(
+        [&UserName](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == UserName; });
+}
+
+// A module input belongs to one emitter: an omitted emitterName wrote the input in every emitter that has it, and
+// a name with no such emitter answered PARAM_NOT_FOUND. User parameters need no emitter.
+static bool ResolveEmitterForModuleInputs(FActionContext& Context, UNiagaraSystem* System, const TArray<FString>& Names)
+{
+    const bool bModuleInput = Names.ContainsByPredicate([System](const FString& Name) { return !Name.IsEmpty() && !FindUserParameter(System, Name); });
+    return !bModuleInput || ResolveEmitterHandle(Context, System) != nullptr;
+}
+
 // One value written: the user parameter of that name, else the module input. It replies and saves nothing, so a
 // list writes every entry and saves once. Entry holds parameterValue (the payload itself, or one list entry).
 static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSystem* System, const FString& ParamName, const TSharedPtr<FJsonObject>& Entry)
 {
     static const TCHAR* ValueForms = TEXT("parameterValue must be a number (float, int or bool) or an {x,y,z[,w]} or {r,g,b,a} object (or an array) to match.");
     FParameterWrite Write;
-    FNiagaraUserRedirectionParameterStore& UserStore = System->GetExposedParameters();
-    const FString UserName = ParamName.StartsWith(TEXT("User.")) ? ParamName : TEXT("User.") + ParamName;
-    const FNiagaraVariableWithOffset* UserVar = UserStore.ReadParameterVariables().FindByPredicate(
-        [&UserName](const FNiagaraVariableWithOffset& Var) { return Var.GetName().ToString() == UserName; });
+    const FNiagaraVariableWithOffset* UserVar = FindUserParameter(System, ParamName);
     if (UserVar)
     {
-        Write.bApplied = WriteRapidIterationValue(UserStore, FNiagaraVariable(*UserVar), Entry);
+        Write.bApplied = WriteRapidIterationValue(System->GetExposedParameters(), FNiagaraVariable(*UserVar), Entry);
         if (!Write.bApplied)
         {
             Write.ErrorCode = TEXT("PARAM_TYPE_MISMATCH");
@@ -110,7 +122,7 @@ static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSys
     }
     if (!MatchedType.IsEmpty())
     {
-        Write.Error = FString::Printf(TEXT("Module input '%s' is a %s; %s"), *ParamName, *MatchedType, ValueForms);
+        Write.Error = FString::Printf(TEXT("Module input '%s' of emitter '%s' is a %s; %s"), *ParamName, *Context.EmitterName, *MatchedType, ValueForms);
         return Write;
     }
     // An error message is capped in transit, so the full list lives in get_niagara_info;
@@ -205,11 +217,21 @@ bool SetParameterValue(FActionContext& Context)
             Context.SendError(TEXT("Send parameters (a list of {parameterName, parameterValue}), or parameterName with parameterValue, not both."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        return SetParameterValueList(Context, System, *Entries);
+        TArray<FString> Names;
+        for (const TSharedPtr<FJsonValue>& Item : *Entries)
+        {
+            const TSharedPtr<FJsonObject>* Object = nullptr;
+            if (Item.IsValid() && Item->TryGetObject(Object)) { Names.Add(GetJsonStringField(*Object, TEXT("parameterName"))); }
+        }
+        return !ResolveEmitterForModuleInputs(Context, System, Names) || SetParameterValueList(Context, System, *Entries);
     }
     if (ParamName.IsEmpty())
     {
         Context.SendError(TEXT("Missing 'parameterName' (or a 'parameters' list)."), TEXT("INVALID_ARGUMENT"));
+        return true;
+    }
+    if (!ResolveEmitterForModuleInputs(Context, System, {ParamName}))
+    {
         return true;
     }
     const FParameterWrite Write = WriteParameter(Context, System, ParamName, Context.Payload);
