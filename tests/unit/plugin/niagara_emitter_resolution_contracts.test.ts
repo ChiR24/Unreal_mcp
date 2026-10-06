@@ -16,10 +16,11 @@ const code = (file: string): string =>
   readFileSync(join(DIR, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 const context = (): string => code('McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp');
 const values = (): string => code('McpAutomationBridge_NiagaraAuthoringHandlersParameterValues.cpp');
+const resolver = (): string => sliceBetween(context(), 'FNiagaraEmitterHandle* FindTargetEmitter(', 'FNiagaraEmitterHandle* ResolveEmitterHandle(');
 
 describe('Niagara emitter resolution', () => {
   it('falls back to the sole emitter only for an omitted emitterName, and says so', () => {
-    const resolve = sliceBetween(context(), 'FNiagaraEmitterHandle* ResolveEmitterHandle(', 'bool LoadSystemAndEmitter(');
+    const resolve = resolver();
     expect(resolve).toMatch(/if \(!Handle && Context\.EmitterName\.IsEmpty\(\) && Handles\.Num\(\) == 1\)/u);
     expect(resolve).toContain('TEXT("emitterResolvedBy"), TEXT("single-emitter-fallback")');
     // A chosen name that misses must not reach the fallback by another route.
@@ -27,16 +28,17 @@ describe('Niagara emitter resolution', () => {
   });
 
   it('refuses a missing emitter naming the system, its emitters and that nothing changed', () => {
-    const resolve = sliceBetween(context(), 'FNiagaraEmitterHandle* ResolveEmitterHandle(', 'bool LoadSystemAndEmitter(');
-    expect(resolve).toContain('TEXT("EMITTER_NOT_FOUND")');
+    const resolve = resolver();
     expect(resolve).toContain('(its emitters: [%s])');
     expect(resolve).toContain('Nothing was changed.');
     expect(resolve).toContain('System->GetPathName()');
     expect(resolve).toMatch(/return nullptr;\s*\}/u);
+    expect(sliceBetween(context(), 'FNiagaraEmitterHandle* ResolveEmitterHandle(', 'bool LoadSystemAndEmitter('))
+      .toMatch(/if \(!Handle\) \{ Context\.SendError\(Error, TEXT\("EMITTER_NOT_FOUND"\)\); \}/u);
   });
 
   it('names the system and emitter a successful edit acted on', () => {
-    const resolve = sliceBetween(context(), 'FNiagaraEmitterHandle* ResolveEmitterHandle(', 'bool LoadSystemAndEmitter(');
+    const resolve = resolver();
     expect(resolve).toContain('Context.EmitterName = Handle->GetName().ToString();');
     expect(resolve).toContain('Context.Result->SetStringField(TEXT("systemPath"), System->GetPathName());');
     expect(resolve).toContain('Context.Result->SetStringField(TEXT("emitterName"), Context.EmitterName);');
@@ -58,14 +60,20 @@ describe('Niagara emitter resolution', () => {
 
   it('set_parameter_value resolves the emitter before a module input, and not for a user parameter', () => {
     const source = values();
-    const gate = sliceBetween(source, 'static bool ResolveEmitterForModuleInputs(', '// One value written');
-    expect(gate).toContain('!Name.IsEmpty() && !FindUserParameter(System, Name)');
-    expect(gate).toContain('ResolveEmitterHandle(Context, System) != nullptr');
-    const single = sliceBetween(source, 'bool SetParameterValue(FActionContext& Context)', '\n}\n}');
-    expect(single.indexOf('ResolveEmitterForModuleInputs(Context, System, {ParamName})')).toBeGreaterThan(-1);
-    expect(single.indexOf('ResolveEmitterForModuleInputs(Context, System, {ParamName})'))
-      .toBeLessThan(single.indexOf('WriteParameter(Context, System, ParamName, Context.Payload)'));
-    expect(single).toContain('return !ResolveEmitterForModuleInputs(Context, System, Names) || SetParameterValueList(Context, System, *Entries);');
+    expect(sliceBetween(source, 'static bool NamesModuleInput(', '// One value written')).toContain('!Name.IsEmpty() && !FindUserParameter(System, Name)');
+    const single = source.slice(source.indexOf('bool SetParameterValue(FActionContext& Context)'));
+    const gate = 'if (NamesModuleInput(System, {ParamName}) && !ResolveEmitterHandle(Context, System))';
+    expect(single.indexOf(gate)).toBeGreaterThan(-1);
+    expect(single.indexOf(gate)).toBeLessThan(single.indexOf('WriteParameter(Context, System, ParamName, Context.Payload)'));
+  });
+
+  // A list fails only the entries that need the emitter: the user parameters in it are still written.
+  it('a parameters list resolves the emitter once and fails only the module-input entries when it cannot', () => {
+    const list = sliceBetween(values(), 'static bool SetParameterValueList(', 'bool SetParameterValue(FActionContext& Context)');
+    expect(list).toMatch(/if \(NamesModuleInput\(System, Names\)\)\s*\{\s*FindTargetEmitter\(Context, System, EmitterError\);\s*\}/u);
+    expect(list).toMatch(/else if \(!EmitterError\.IsEmpty\(\) && !FindUserParameter\(System, Name\)\)\s*\{\s*Write\.Error = EmitterError;\s*\}/u);
+    expect(list.indexOf('FindTargetEmitter(')).toBeLessThan(list.indexOf('Write = WriteParameter(Context, System, Name, Entry);'));
+    expect(list).not.toContain('ResolveEmitterHandle(');
   });
 
   it('a type mismatch on a module input names the emitter', () => {

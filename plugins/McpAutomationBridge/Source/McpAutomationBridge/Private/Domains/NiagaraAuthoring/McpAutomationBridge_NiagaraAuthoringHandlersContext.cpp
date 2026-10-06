@@ -210,7 +210,7 @@ FNiagaraEmitterHandle* FindEmitterHandle(UNiagaraSystem* System, const FString& 
 
 // The sole emitter stands in only for a name the caller left out; a name the caller chose must match, or an edit
 // meant for one system's emitter landed in the only emitter of another and still answered success.
-FNiagaraEmitterHandle* ResolveEmitterHandle(FActionContext& Context, UNiagaraSystem* System)
+FNiagaraEmitterHandle* FindTargetEmitter(FActionContext& Context, UNiagaraSystem* System, FString& OutError)
 {
     FNiagaraEmitterHandle* Handle = Context.EmitterName.IsEmpty() ? nullptr : FindEmitterHandle(System, Context.EmitterName);
     const TArray<FNiagaraEmitterHandle>& Handles = System->GetEmitterHandles();
@@ -223,15 +223,23 @@ FNiagaraEmitterHandle* ResolveEmitterHandle(FActionContext& Context, UNiagaraSys
     {
         TArray<FString> Names;
         for (const FNiagaraEmitterHandle& Candidate : Handles) { Names.Add(Candidate.GetName().ToString()); }
-        Context.SendError(FString::Printf(TEXT("%s Niagara system '%s' (its emitters: [%s]); pass one of them as 'emitterName'. Nothing was changed."),
+        OutError = FString::Printf(TEXT("%s Niagara system '%s' (its emitters: [%s]); pass one of them as 'emitterName'. Nothing was changed."),
             Context.EmitterName.IsEmpty() ? TEXT("No 'emitterName' given, and it is needed for") : *FString::Printf(TEXT("Emitter '%s' not found in"), *Context.EmitterName),
-            *System->GetPathName(), *FString::Join(Names, TEXT(", "))), TEXT("EMITTER_NOT_FOUND"));
+            *System->GetPathName(), *FString::Join(Names, TEXT(", ")));
         return nullptr;
     }
     // Name what the call acts on, so the caller can check the change landed where it asked.
     Context.EmitterName = Handle->GetName().ToString();
     Context.Result->SetStringField(TEXT("systemPath"), System->GetPathName());
     Context.Result->SetStringField(TEXT("emitterName"), Context.EmitterName);
+    return Handle;
+}
+
+FNiagaraEmitterHandle* ResolveEmitterHandle(FActionContext& Context, UNiagaraSystem* System)
+{
+    FString Error;
+    FNiagaraEmitterHandle* Handle = FindTargetEmitter(Context, System, Error);
+    if (!Handle) { Context.SendError(Error, TEXT("EMITTER_NOT_FOUND")); }
     return Handle;
 }
 

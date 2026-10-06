@@ -76,10 +76,9 @@ static const FNiagaraVariableWithOffset* FindUserParameter(UNiagaraSystem* Syste
 
 // A module input belongs to one emitter: an omitted emitterName wrote the input in every emitter that has it, and
 // a name with no such emitter answered PARAM_NOT_FOUND. User parameters need no emitter.
-static bool ResolveEmitterForModuleInputs(FActionContext& Context, UNiagaraSystem* System, const TArray<FString>& Names)
+static bool NamesModuleInput(UNiagaraSystem* System, const TArray<FString>& Names)
 {
-    const bool bModuleInput = Names.ContainsByPredicate([System](const FString& Name) { return !Name.IsEmpty() && !FindUserParameter(System, Name); });
-    return !bModuleInput || ResolveEmitterHandle(Context, System) != nullptr;
+    return Names.ContainsByPredicate([System](const FString& Name) { return !Name.IsEmpty() && !FindUserParameter(System, Name); });
 }
 
 // One value written: the user parameter of that name, else the module input. It replies and saves nothing, so a
@@ -143,22 +142,35 @@ static FParameterWrite WriteParameter(const FActionContext& Context, UNiagaraSys
 // reported as the material parameters list reports its own, so twelve values of an emitter cost one call.
 static bool SetParameterValueList(FActionContext& Context, UNiagaraSystem* System, const TArray<TSharedPtr<FJsonValue>>& Entries)
 {
+    TArray<TSharedPtr<FJsonObject>> Objects;
+    TArray<FString> Names;
+    for (const TSharedPtr<FJsonValue>& Item : Entries)
+    {
+        const TSharedPtr<FJsonObject>* Object = nullptr;
+        Objects.Add(Item.IsValid() && Item->TryGetObject(Object) ? *Object : MakeShared<FJsonObject>());
+        Names.Add(GetJsonStringField(Objects.Last(), TEXT("parameterName")));
+    }
+    // Resolved once for every module input of the list; when it cannot be, only those entries fail.
+    FString EmitterError;
+    if (NamesModuleInput(System, Names))
+    {
+        FindTargetEmitter(Context, System, EmitterError);
+    }
     TArray<TSharedPtr<FJsonValue>> Results;
     TArray<FString> Failed;
     bool bWroteModuleInput = false;
-    for (const TSharedPtr<FJsonValue>& Item : Entries)
+    for (int32 Index = 0; Index < Objects.Num(); ++Index)
     {
-        TSharedPtr<FJsonObject> Entry = MakeShared<FJsonObject>();
-        const TSharedPtr<FJsonObject>* Object = nullptr;
-        if (Item.IsValid() && Item->TryGetObject(Object))
-        {
-            Entry = *Object;
-        }
-        const FString Name = GetJsonStringField(Entry, TEXT("parameterName"));
+        const TSharedPtr<FJsonObject>& Entry = Objects[Index];
+        const FString& Name = Names[Index];
         FParameterWrite Write;
         if (Name.IsEmpty())
         {
             Write.Error = TEXT("Missing 'parameterName'.");
+        }
+        else if (!EmitterError.IsEmpty() && !FindUserParameter(System, Name))
+        {
+            Write.Error = EmitterError;
         }
         else
         {
@@ -217,20 +229,14 @@ bool SetParameterValue(FActionContext& Context)
             Context.SendError(TEXT("Send parameters (a list of {parameterName, parameterValue}), or parameterName with parameterValue, not both."), TEXT("INVALID_ARGUMENT"));
             return true;
         }
-        TArray<FString> Names;
-        for (const TSharedPtr<FJsonValue>& Item : *Entries)
-        {
-            const TSharedPtr<FJsonObject>* Object = nullptr;
-            if (Item.IsValid() && Item->TryGetObject(Object)) { Names.Add(GetJsonStringField(*Object, TEXT("parameterName"))); }
-        }
-        return !ResolveEmitterForModuleInputs(Context, System, Names) || SetParameterValueList(Context, System, *Entries);
+        return SetParameterValueList(Context, System, *Entries);
     }
     if (ParamName.IsEmpty())
     {
         Context.SendError(TEXT("Missing 'parameterName' (or a 'parameters' list)."), TEXT("INVALID_ARGUMENT"));
         return true;
     }
-    if (!ResolveEmitterForModuleInputs(Context, System, {ParamName}))
+    if (NamesModuleInput(System, {ParamName}) && !ResolveEmitterHandle(Context, System))
     {
         return true;
     }
