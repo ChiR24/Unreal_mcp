@@ -23,31 +23,26 @@ namespace McpPlacement {
 
 namespace {
 
-/** Actors with no meaningful volume would report a bogus overlap against everything. */
+// Actors with no meaningful volume would report a bogus overlap against everything.
 bool McpHasUsableBounds(const FVector &Extent) {
   return Extent.X > 1.0 && Extent.Y > 1.0 && Extent.Z > 1.0;
 }
 
-/**
- * A slab: far wider than it is thick. Floors, aprons, inlays, emblems, road
- * decals and platform tiers are all built this way, and a level assembles them
- * by STACKING them into each other -- a 24-thick floor disc with a decorative
- * inlay bedded 8 units into it is correct construction, not a mistake. Without
- * this distinction the hub reported 407 of 776 actors as broken, which is the
- * same as reporting nothing.
- */
+// A slab: far wider than it is thick. Floors, aprons, inlays, emblems, road
+// decals and platform tiers are all built this way, and a level assembles them
+// by STACKING them into each other -- a 24-thick floor disc with a decorative
+// inlay bedded 8 units into it is correct construction, not a mistake. Without
+// this distinction the hub reported 407 of 776 actors as broken, which is the
+// same as reporting nothing.
 bool McpIsSlab(const FVector &Extent) {
   return Extent.Z * 4.0 < FMath::Min(Extent.X, Extent.Y);
 }
 
-
-/**
- * Only a floor can tell you whether something is sunk. The ground trace used to
- * accept whatever it hit first on the way down from an actor's top, so a
- * neighbouring tree's canopy, a market awning or a roof overhang became "the
- * surface under it" -- and every actor standing beneath one was reported as sunk
- * by the height of the thing above it, with no overlap to explain why.
- */
+// Only a floor can tell you whether something is sunk. The ground trace used to
+// accept whatever it hit first on the way down from an actor's top, so a
+// neighbouring tree's canopy, a market awning or a roof overhang became "the
+// surface under it" -- and every actor standing beneath one was reported as sunk
+// by the height of the thing above it, with no overlap to explain why.
 bool McpIsGroundLike(const AActor *Actor) {
   if (!Actor) {
     return false;
@@ -97,6 +92,38 @@ bool McpBlocksSolids(const UPrimitiveComponent *Comp) {
   return false;
 }
 
+// Collision switched on is not a body. A water mesh, a text render or a mesh
+// converted with no collision has nothing in the physics scene to strike or
+// stand on, so it cannot interpenetrate anything: a pawn standing in a water
+// zone read "intersects WaterZone by 68 units" on every move. An instanced mesh
+// keeps a body per instance instead, so it still counts.
+bool McpHasBody(const UPrimitiveComponent *Comp) {
+  if (Comp->IsA<UInstancedStaticMeshComponent>()) {
+    return static_cast<const UInstancedStaticMeshComponent *>(Comp)->GetInstanceCount() > 0;
+  }
+  const FBodyInstance *Body = Comp->GetBodyInstance();
+  return Body && Body->IsValidBodyInstance();
+}
+
+// A pickup, a trigger or a flying enemy is built from overlap bodies alone: it
+// holds nothing up and nothing holds it up, so it hovers where it was put on
+// purpose and "floating 275 units above the surface" told the caller nothing.
+// A prop with no body at all is still judged by its bounds.
+bool McpIsOverlapOnly(const AActor *Actor) {
+  bool bAnyBody = false;
+  TInlineComponentArray<UPrimitiveComponent *> Comps(Actor);
+  for (const UPrimitiveComponent *Comp : Comps) {
+    if (!Comp->IsCollisionEnabled() || !McpHasBody(Comp)) {
+      continue;
+    }
+    if (McpBlocksSolids(Comp)) {
+      return false;
+    }
+    bAnyBody = true;
+  }
+  return bAnyBody;
+}
+
 // Boxes only say where an actor could be. A cone's box is mostly air, so a blimp
 // flying past a mountain peak read "intersects by 340 units". Apart only when
 // every colliding component pair was checked on its real shapes and none touch;
@@ -107,7 +134,7 @@ bool McpShapesApart(AActor *Actor, AActor *Other) {
   for (UPrimitiveComponent *A : Mine) {
     for (UPrimitiveComponent *B : Theirs) {
       if (!A->IsCollisionEnabled() || !B->IsCollisionEnabled() || !McpBlocksSolids(A) || !McpBlocksSolids(B) ||
-          !A->Bounds.GetBox().Intersect(B->Bounds.GetBox())) {
+          !McpHasBody(A) || !McpHasBody(B) || !A->Bounds.GetBox().Intersect(B->Bounds.GetBox())) {
         continue;
       }
       if (!McpHasConvexBody(A) || !McpHasConvexBody(B) ||
@@ -121,25 +148,21 @@ bool McpShapesApart(AActor *Actor, AActor *Other) {
 
 } // namespace
 
-/**
- * A geometric test cannot tell a mistake from a composition. A keep is built by
- * bedding its towers, walls and stairs into its platform; an island is meant to
- * hang in the air; a jumbotron is meant to hang off a mast. Left alone, those
- * report forever and train the caller to ignore the whole check. This tag is the
- * caller's way to say "checked, deliberate" -- add it with control_actor.add_tag
- * and the actor drops out as both subject and overlap target, so the flagged
- * count can actually reach zero and mean something.
- */
+// A geometric test cannot tell a mistake from a composition. A keep is built by
+// bedding its towers, walls and stairs into its platform; an island is meant to
+// hang in the air; a jumbotron is meant to hang off a mast. Left alone, those
+// report forever and train the caller to ignore the whole check. This tag is the
+// caller's way to say "checked, deliberate" -- add it with control_actor.add_tag
+// and the actor drops out as both subject and overlap target, so the flagged
+// count can actually reach zero and mean something.
 bool McpPlacementAccepted(const AActor *Actor) {
   return Actor && Actor->ActorHasTag(FName(TEXT("mcp.placement.ok")));
 }
 
-/**
- * Describe where Actor actually ended up: what it interpenetrates, and whether
- * it is sunk into or floating above the surface under it. Adds placementWarning,
- * overlappingActors[] and suggestedLocation to Data when there is something to
- * say, and leaves Data untouched when the placement looks clean.
- */
+// Describe where Actor actually ended up: what it interpenetrates, and whether
+// it is sunk into or floating above the surface under it. Adds placementWarning,
+// overlappingActors[] and suggestedLocation to Data when there is something to
+// say, and leaves Data untouched when the placement looks clean.
 void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   if (!Actor || !Data.IsValid()) {
     return;
@@ -150,8 +173,9 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   }
   // The same actors that make useless overlap TARGETS make useless subjects: a
   // level-spanning debug-draw proxy reported itself as sunk into the geometry it
-  // was drawn over, and led the list every time.
-  if (IsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor)) {
+  // was drawn over, and led the list every time. An actor of overlap bodies alone
+  // can neither interpenetrate nor rest on anything, so it has nothing to report.
+  if (IsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor) || McpIsOverlapOnly(Actor)) {
     return;
   }
 
