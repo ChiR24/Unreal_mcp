@@ -1516,3 +1516,13 @@ describe('a pin named without its spaces still connects', () => {
     expect(source).toContain('Squash(Pin->PinName.ToString()).Equals(Squashed, ESearchCase::IgnoreCase)');
   });
 });
+
+// A StaticMeshActor's mesh took its mesh's default collision back when it next registered, and a Blueprint's
+// CollisionProfileName change never reached its placed copies.
+describe('a static mesh collision change holds', () => {
+  it('a static mesh set to a collision mode stops using its mesh default collision, and its placed copies follow', () => {
+    const lookup = readFileSync(join(DOMAINS, '..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersComponentLookup.h'), 'utf8');
+    expect(lookup).toMatch(/Primitive->SetCollisionEnabled\(static_cast<ECollisionEnabled::Type>\(Enabled\)\);[\s\S]*?Mesh->bUseDefaultCollision = false;/u);
+    expect(code('Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersScsPropagate.h')).toContain('TEXT("bUseDefaultCollision")})');
+  });
+});

@@ -52,11 +52,14 @@ struct FDefaults
   }
 
   // A collision setter writes more than the key it was given (a profile also sets
-  // the object type and every channel response), so all of it is captured.
+  // the object type and every channel response, and a static mesh stops using its
+  // mesh's default collision), so all of it is captured: copies that kept
+  // bUseDefaultCollision took the mesh's profile back when they next registered.
   void CaptureCollision()
   {
     for (const TCHAR *Path : {TEXT("BodyInstance.CollisionProfileName"), TEXT("BodyInstance.CollisionEnabled"),
-                              TEXT("BodyInstance.ObjectType"), TEXT("BodyInstance.CollisionResponses")})
+                              TEXT("BodyInstance.ObjectType"), TEXT("BodyInstance.CollisionResponses"),
+                              TEXT("bUseDefaultCollision")})
       Capture(Path);
   }
 

@@ -7,6 +7,7 @@
 #include "Components/PrimitiveComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Dom/JsonValue.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
@@ -111,5 +112,10 @@ static inline bool McpApplyCollisionSetterKey(UActorComponent *Component, const 
     return false;
   }
   Primitive->SetCollisionEnabled(static_cast<ECollisionEnabled::Type>(Enabled));
+  // A static mesh on its mesh's default collision (a StaticMeshActor's) takes that profile back when it next
+  // registers, as SetCollisionProfileName and the details panel's Custom preset both prevent.
+  if (UStaticMeshComponent *Mesh = Cast<UStaticMeshComponent>(Primitive)) {
+    Mesh->bUseDefaultCollision = false;
+  }
   return true;
 }
