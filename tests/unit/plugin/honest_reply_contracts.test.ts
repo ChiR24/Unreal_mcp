@@ -1421,3 +1421,14 @@ describe('a component add names the properties it set', () => {
     expect(source).toContain('Result->SetArrayField(TEXT("appliedProperties"), AppliedNames);');
   });
 });
+
+// Setting a Float member's default to 2.5 answered success with default 0: the text was read from the struct's first
+// bytes (a String) instead of the member's own offset.
+describe('a struct member default lands on its own member', () => {
+  it('converts in a scratch copy and reads the value back at the member offset', () => {
+    const source = code('AssetWorkflow', 'Structs', 'McpAutomationBridge_AssetWorkflowStructsHelpers.cpp');
+    expect(source).toContain('FStructOnScope Scratch(S);');
+    expect(source).toContain('const void* Value = Prop->ContainerPtrToValuePtr<void>(Container);');
+    expect(source).not.toContain('const_cast<uint8*>(DefaultInstance)');
+  });
+});

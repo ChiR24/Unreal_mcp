@@ -2,6 +2,7 @@
 
 #include "EditorAssetLibrary.h"
 #include "Foundation/HandlerUtils/McpHandlerUtilsBlueprintGraph.h"
+#include "UObject/StructOnScope.h"
 
 
 FGuid ResolveMemberGuid(UUserDefinedStruct* S, const FString& VarGuidStr, const FString& MemberName)
@@ -210,14 +211,17 @@ FString UserDefinedStructureStatusToString(EUserDefinedStructureStatus Status)
 
 FString BuildDefaultExportText(UUserDefinedStruct* S, FProperty* Prop, const TSharedPtr<FJsonValue>& JsonValue)
 {
-    const uint8* DefaultInstance = S->GetDefaultInstance();
-    void* Container = const_cast<uint8*>(DefaultInstance);
+    // Converted in a scratch copy of the struct, never in its own default instance, and read back at the
+    // member's offset: reading the struct's first bytes set a Float after a String to 0 under a success reply.
+    FStructOnScope Scratch(S);
+    void* Container = Scratch.GetStructMemory();
 
     FString ApplyError;
     if (McpPropertyReflection::ApplyJsonValueToProperty(Container, Prop, JsonValue, ApplyError))
     {
         FString OutStr;
-        MCP_PROPERTY_EXPORT_TEXT(Prop, OutStr, Container, nullptr, nullptr, PPF_None);
+        const void* Value = Prop->ContainerPtrToValuePtr<void>(Container);
+        MCP_PROPERTY_EXPORT_TEXT(Prop, OutStr, Value, Value, nullptr, PPF_None);
         return OutStr;
     }
 
