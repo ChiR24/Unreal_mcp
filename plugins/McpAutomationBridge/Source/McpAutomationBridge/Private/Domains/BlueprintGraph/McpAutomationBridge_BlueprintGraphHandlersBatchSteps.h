@@ -50,6 +50,11 @@ bool IsBatchableEdit(const FString& Edit);
 FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJsonValue>>& Steps,
                       int32& OutIndex, FString& OutCode);
 
+/** One step of that pre-check: a set_node_property Expression the node cannot parse is described (one at step 7
+ *  stopped the batch with 7 nodes made); an add_variable of a bool is noted in DeclaredBools for the steps after
+ *  it. Empty for every other step. */
+FString DescribeExpressionStep(const UBlueprint* Blueprint, const FJsonObject& Step, TSet<FName>& DeclaredBools);
+
 /** add_variable, add_function, add_event and add_event_dispatcher run their ordinary member
  *  handler (which compiles, so later steps can use what it made). False for any other edit. */
 bool RunBlueprintMemberStep(const FActionContext& Parent, const FString& Edit, const FString& StepId,

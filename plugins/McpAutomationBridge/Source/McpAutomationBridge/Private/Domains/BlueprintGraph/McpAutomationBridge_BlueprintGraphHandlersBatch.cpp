@@ -75,13 +75,19 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
                       int32& OutIndex, FString& OutCode)
 {
     const bool bWidgetBlueprint = FindObject<UObject>(Context.Blueprint, TEXT("WidgetTree")) != nullptr;
-    TSet<FName> Declared;
+    TSet<FName> Declared, DeclaredBools;
     for (int32 Index = 0; Index < Steps.Num(); ++Index)
     {
         const TSharedPtr<FJsonObject>* Step = nullptr;
         if (!Steps[Index].IsValid() || !Steps[Index]->TryGetObject(Step) || Step == nullptr)
         {
             continue;
+        }
+        if (const FString Bad = DescribeExpressionStep(Context.Blueprint, **Step, DeclaredBools); !Bad.IsEmpty())
+        {
+            OutIndex = Index;
+            OutCode = TEXT("EXPRESSION_INVALID");
+            return Bad;
         }
         FString Edit, NodeType, Member, MemberClass;
         (*Step)->TryGetStringField(TEXT("edit"), Edit);

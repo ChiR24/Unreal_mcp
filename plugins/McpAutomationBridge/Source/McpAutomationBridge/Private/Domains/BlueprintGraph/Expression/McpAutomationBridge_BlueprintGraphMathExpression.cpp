@@ -144,7 +144,7 @@ TArray<FString> Tokens(const FString& Expression)
 }
 }
 
-FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression)
+FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression, const TSet<FName>& ExtraBools)
 {
   const TArray<FString> Parts = Tokens(Expression);
   const UClass* Members = Blueprint ? Blueprint->SkeletonGeneratedClass.Get() : nullptr;
@@ -172,7 +172,7 @@ FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expre
       continue;
     }
     const FProperty* Member = Members ? Members->FindPropertyByName(FName(*Parts[Index])) : nullptr;
-    if (!CastField<FBoolProperty>(Member))
+    if (!CastField<FBoolProperty>(Member) && !ExtraBools.Contains(FName(*Parts[Index])))
     {
       Notes.AddUnique(FString::Printf(TEXT("'%s' is a number here (a name that is not a bool variable becomes a "
                                            "number input), but && and || take true/false: compare it (%s > 0), "
@@ -221,6 +221,14 @@ FString DescribeUnknownFunctions(const FString& Expression)
   }
   return Unknown.Num() > 0 ? FString::Printf(TEXT("No math function is called %s."), *FString::Join(Unknown, TEXT(", ")))
                            : FString();
+}
+
+FString DescribeProblems(const UBlueprint* Blueprint, const FString& Expression, const TSet<FName>& ExtraBools)
+{
+  FString Problems = DescribeUnknownFunctions(Expression) + TEXT(" ") +
+                     DescribeOperatorMisuse(Blueprint, Expression, ExtraBools);
+  Problems.TrimStartAndEndInline();
+  return Problems;
 }
 
 void DescribeInputs(const UBlueprint* Blueprint, const UEdGraphNode& Node, const FString& Expression,

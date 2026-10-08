@@ -1355,3 +1355,15 @@ describe('a full-window screenshot shows the view as it is now', () => {
     expect(source).toContain('GEditor->RedrawAllViewports(true);');
   });
 });
+
+// An expression with a unary minus at step 7 stopped a build_graph batch after 7 nodes were already made.
+describe('a graph batch checks its expressions before any step runs', () => {
+  it('describes every Expression step in the pre-check, bools the batch declares included', () => {
+    const steps = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatchSteps.cpp');
+    expect(steps).toContain('McpBlueprintMathExpression::DescribeProblems(Blueprint, Expression, DeclaredBools)');
+    expect(steps).toContain('DeclaredBools.Add(FName(*Name));');
+    const batch = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
+    expect(batch.indexOf('DescribeExpressionStep(Context.Blueprint, **Step, DeclaredBools)')).toBeGreaterThan(-1);
+    expect(batch.indexOf('DescribeExpressionStep(')).toBeLessThan(batch.indexOf('RunBatchStep(Context, State'));
+  });
+});

@@ -17,8 +17,14 @@ namespace McpBlueprintMathExpression
 FString DescribeUnknownFunctions(const FString& Expression);
 
 // The operators Expression uses in a way no Math Expression node takes: a unary ! or minus, and && or || on a name
-// that is not a bool variable (every unknown name becomes a number input). Empty when none.
-FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression);
+// that is not a bool variable (every unknown name becomes a number input). ExtraBools are bool variables a batch
+// declares before the expression's step runs (not in the class yet). Empty when none.
+FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression,
+                               const TSet<FName>& ExtraBools = TSet<FName>());
+
+// Both of the above in one text; empty when Expression shows neither problem.
+FString DescribeProblems(const UBlueprint* Blueprint, const FString& Expression,
+                         const TSet<FName>& ExtraBools = TSet<FName>());
 
 // After a parse: inputPins, the pins the node made, and boundToMembers, the names it reads from the Blueprint's
 // own variables instead (no pin to wire).

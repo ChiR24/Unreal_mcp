@@ -1,5 +1,7 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersBatchSteps.h"
 
+#include "Domains/BlueprintGraph/Expression/McpAutomationBridge_BlueprintGraphMathExpression.h"
+
 namespace McpBlueprintGraphHandlers::GraphBatch
 {
 namespace
@@ -206,5 +208,26 @@ FString RunBatchStep(const FActionContext& Context, FBatchState& State,
         }
     }
     return FString();
+}
+
+FString DescribeExpressionStep(const UBlueprint* Blueprint, const FJsonObject& Step, TSet<FName>& DeclaredBools)
+{
+    FString Edit, Name, Type, Expression;
+    Step.TryGetStringField(TEXT("edit"), Edit);
+    if (Edit == TEXT("add_variable") && Step.TryGetStringField(TEXT("variableName"), Name) &&
+        Step.TryGetStringField(TEXT("variableType"), Type) &&
+        (Type.Equals(TEXT("Boolean"), ESearchCase::IgnoreCase) || Type.Equals(TEXT("Bool"), ESearchCase::IgnoreCase)))
+    {
+        DeclaredBools.Add(FName(*Name));
+    }
+    if (Edit != TEXT("set_node_property") || !Step.TryGetStringField(TEXT("propertyName"), Name) ||
+        !Name.Equals(TEXT("Expression"), ESearchCase::IgnoreCase) ||
+        !Step.TryGetStringField(TEXT("propertyValue"), Expression))
+    {
+        return FString();
+    }
+    const FString Problems = McpBlueprintMathExpression::DescribeProblems(Blueprint, Expression, DeclaredBools);
+    return Problems.IsEmpty() ? FString()
+                              : FString::Printf(TEXT("The expression '%s' does not parse: %s"), *Expression, *Problems);
 }
 }

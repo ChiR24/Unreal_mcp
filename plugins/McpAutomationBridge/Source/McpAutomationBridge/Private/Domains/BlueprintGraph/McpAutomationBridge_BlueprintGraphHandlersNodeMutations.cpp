@@ -213,9 +213,7 @@ static bool SetNodeProperty(FActionContext& Context)
             }
         }
         Context.TargetGraph->NotifyGraphChanged();
-        FString Unknown = McpBlueprintMathExpression::DescribeUnknownFunctions(Value) + TEXT(" ") +
-            McpBlueprintMathExpression::DescribeOperatorMisuse(Context.Blueprint, Value);
-        Unknown.TrimStartAndEndInline();
+        const FString Unknown = McpBlueprintMathExpression::DescribeProblems(Context.Blueprint, Value);
         Context.SendError(
             FString::Printf(TEXT("The expression '%s' does not parse, so the node would have no output; it keeps the "
                                  "old one. %s%sCall a function by its compact title (max, clamp, abs, sin), else its "
