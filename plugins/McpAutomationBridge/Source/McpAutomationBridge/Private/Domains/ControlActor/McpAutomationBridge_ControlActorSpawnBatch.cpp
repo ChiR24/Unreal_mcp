@@ -9,6 +9,17 @@
 namespace {
 constexpr int32 MaxSpawnBatchItems = 500;
 
+// Every key a batch item is read for: the spawn's own, then the material, organisation and variables steps.
+// Anything else (a "label" meant as actorName) was dropped without a word.
+bool IsSpawnItemKey(const FString &Key) {
+  static const TSet<FString> Keys = {
+      TEXT("classPath"), TEXT("actorClass"), TEXT("blueprintPath"), TEXT("meshPath"), TEXT("actorName"),
+      TEXT("location"), TEXT("rotation"), TEXT("scale"), TEXT("variables"), TEXT("materialPath"),
+      TEXT("componentName"), TEXT("materialSlot"), TEXT("allComponents"), TEXT("folder"), TEXT("tags"),
+      TEXT("spawnKind")};
+  return Keys.Contains(Key);
+}
+
 // The item's own fields over the batch's shared `defaults`.
 TSharedPtr<FJsonObject> MergeSpawnItem(const TSharedPtr<FJsonObject> &Defaults,
                                        const TSharedPtr<FJsonObject> &Item) {
@@ -74,6 +85,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
   TArray<FString> Affected;
   int32 SpawnedCount = 0;
   int32 PlacementWarnings = 0;
+  int32 IgnoredItems = 0;
   TArray<TPair<AActor *, TSharedPtr<FJsonObject>>> Placed;
   for (int32 Index = 0; Index < Items->Num(); ++Index) {
     TSharedPtr<FJsonObject> Entry = McpHandlerUtils::CreateResultObject();
@@ -89,6 +101,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
     }
     const TSharedPtr<FJsonObject> Item = MergeSpawnItem(Defaults, *ItemObj);
     const bool bNamed = Item->HasField(TEXT("actorName"));
+    TArray<FString> Ignored;
+    for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : Item->Values) {
+      if (!IsSpawnItemKey(Pair.Key)) {
+        Ignored.Add(Pair.Key);
+      }
+    }
+    if (Ignored.Num() > 0) {
+      Entry->SetStringField(TEXT("ignoredKeys"), FString::Join(Ignored, TEXT(", ")));
+      ++IgnoredItems;
+    }
 
     const FString SpawnId = FString::Printf(TEXT("%s#spawn%d"), *RequestId, Index);
     Capture.Begin(SpawnId);
@@ -206,7 +228,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
     Results.RemoveAll([](const TSharedPtr<FJsonValue> &Value) {
       const TSharedPtr<FJsonObject> Entry = Value->AsObject();
       return Entry->GetBoolField(TEXT("success")) && !Entry->HasField(TEXT("materialError")) &&
-             !Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning"));
+             !Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning")) &&
+             !Entry->HasField(TEXT("ignoredKeys"));
     });
     Data->SetStringField(TEXT("report"), Report);
   }
@@ -230,11 +253,14 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawnBatch(
         Data, TEXT("SPAWN_BATCH_INCOMPLETE"));
     return true;
   }
-  SendAutomationResponse(Socket, RequestId, true,
-                         PlacementWarnings > 0
-                             ? FString::Printf(TEXT("Spawned %d actors; %d with a placement warning (results[].placementWarning)"),
-                                               SpawnedCount, PlacementWarnings)
-                             : FString::Printf(TEXT("Spawned %d actors"), SpawnedCount),
-                         Data);
+  FString Message = FString::Printf(TEXT("Spawned %d actors"), SpawnedCount);
+  if (PlacementWarnings > 0) {
+    Message += FString::Printf(TEXT("; %d with a placement warning (results[].placementWarning)"), PlacementWarnings);
+  }
+  if (IgnoredItems > 0) {
+    Message += FString::Printf(TEXT("; %d with keys no spawn reads, ignored (results[].ignoredKeys; actorName names "
+                                    "an actor)"), IgnoredItems);
+  }
+  SendAutomationResponse(Socket, RequestId, true, Message, Data);
   return true;
 }

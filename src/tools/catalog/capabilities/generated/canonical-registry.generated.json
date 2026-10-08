@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2648acd9195c42fc",
+  "catalogRevision": "33d3f790573c0fea",
   "recordCount": 396,
   "records": [
     {
@@ -34500,7 +34500,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per item (only the failed ones and those with a placementWarning under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
+              "description": "Per item (only the failed ones and those with a placementWarning or ignoredKeys under report: failures): index, success, name, path, error, errorCode, variablesSet, variablesError, materialApplied, materialError, ignoredKeys (the item's keys no spawn reads, such as a \"label\" meant as actorName), and the placement facts set_transform reports (groundZ, groundClearance, placementWarning, overlappingActors, suggestedLocation), measured after the item took its tags, variables and material, so an item tagged mcp.placement.ok is never reported. name is the label the item asked for, or the unique actor name when it gave no actorName."
             },
             "unnamedActors": {
               "type": "array",
@@ -34627,8 +34627,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "63ae1036b4d8cc06db707be8d51b569b6c446b2a2804070cd2224c8d19cfa424",
-        "content": "ab2a8299fb602be5f0e0ade80e97e1898c3725ed2ac4413caa3fac4d05193f14"
+        "schema": "c5096df4b16d643466b040556b9d888538e4f36ba07fe2586707d4c64affef8b",
+        "content": "84cbe5c3769ce70c67d5e06355102eb6b8a44bafda4a8e79cbd0f5da299db637"
       }
     },
     {

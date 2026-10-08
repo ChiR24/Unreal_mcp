@@ -721,10 +721,10 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     expect(measured, 'after the tags and folder').toBeGreaterThan(source.indexOf('ApplySpawnOrganisation(Actor, Item);'));
     expect(measured, 'after the variables').toBeGreaterThan(source.indexOf('HandleControlActorSetBlueprintVariables('));
     expect(measured, 'after the material').toBeGreaterThan(source.indexOf('HandleControlActorSetMaterial('));
-    expect(flat(source)).toContain('!Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning"));');
+    expect(flat(source)).toContain('!Entry->HasField(TEXT("variablesError")) && !Entry->HasField(TEXT("placementWarning")) && !Entry->HasField(TEXT("ignoredKeys"));');
     expect(source).toContain('Data->SetNumberField(TEXT("placementWarnings"), PlacementWarnings);');
     expect(source, 'a warning is not a failure').not.toMatch(/Failures\.Add\([^;]*placement/iu);
-    expect(source).toContain('Spawned %d actors; %d with a placement warning (results[].placementWarning)');
+    expect(source).toContain('"; %d with a placement warning (results[].placementWarning)"');
   });
 
   it('the records declare the facts, the count and the tag that silences a deliberate placement', () => {
@@ -744,7 +744,7 @@ describe('every spawn says where the actor ended up, as set_transform does', () 
     const audit = capabilityIndex().byId.get('control_actor.audit_placement')?.schemas.input.properties;
     const kinds = isRecord(audit) ? audit.kinds : undefined;
     expect(isRecord(kinds) ? kinds.description : '').toMatch(/vertical face .* is mounted, never floating or unsupported/u);
-    expect(description('results')).toMatch(/with a placementWarning under report: failures/u);
+    expect(description('results')).toMatch(/with a placementWarning or ignoredKeys under report: failures/u);
     expect(description('results')).toMatch(/measured after the item took its tags, variables and material/u);
   });
 

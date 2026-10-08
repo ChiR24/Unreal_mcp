@@ -1489,3 +1489,12 @@ describe('an actor component added to a Blueprint is not reported under the root
     expect(source).toContain('!bSceneComponent ? TEXT("(none - not a scene component)")');
   });
 });
+
+// A spawn batch item with "label" kept the class label and the reply never mentioned the key.
+describe('a spawn batch names the item keys it ignored', () => {
+  it('lists unread keys per item and keeps those items under report failures', () => {
+    const source = code('ControlActor', 'McpAutomationBridge_ControlActorSpawnBatch.cpp');
+    expect(source).toContain('Entry->SetStringField(TEXT("ignoredKeys"), FString::Join(Ignored, TEXT(", ")));');
+    expect(source).toContain('!Entry->HasField(TEXT("ignoredKeys"));');
+  });
+});
