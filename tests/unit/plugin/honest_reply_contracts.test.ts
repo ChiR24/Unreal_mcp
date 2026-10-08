@@ -1307,6 +1307,14 @@ describe('removing a Blueprint\'s root component hands its place to a child', ()
     expect(source).toContain('TEXT("SCS_REMOVE_REVERTED")');
     expect(source).not.toContain('SCS->RemoveNode(');
   });
+
+  // Removing a Buoyancy component answered newRoot "WaterContact": actor components are SCS roots too.
+  it('names a new root only when the scene root went, and only a scene component', () => {
+    const source = code('SCS', 'McpAutomationBridge_SCSHandlersRemoveComponent.cpp');
+    expect(source).toContain('Node->ComponentTemplate->IsA<USceneComponent>()');
+    expect(source).toContain('const bool bWasRoot = IsSceneRootNode(NodeToRemove) && SCS->GetRootNodes().Contains(NodeToRemove);');
+    expect(source).toContain('SCS->GetRootNodes().FindByPredicate(IsSceneRootNode)');
+  });
 });
 
 // set_default changed the class default while every placed actor kept the old value under a success reply.

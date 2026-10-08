@@ -6,11 +6,21 @@
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
+#include "Components/SceneComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/SCS_Node.h"
 #include "Engine/SimpleConstructionScript.h"
 
 using namespace McpSCSHandlers;
+
+namespace {
+// Actor components (no transform) are SCS root nodes too, and so is a scene component hung on an
+// inherited parent: only a scene node with no parent is the actor's root.
+bool IsSceneRootNode(const USCS_Node *Node) {
+  return Node && Node->ComponentTemplate && Node->ComponentTemplate->IsA<USceneComponent>() &&
+         Node->ParentComponentOrVariableName == NAME_None;
+}
+}
 
 TSharedPtr<FJsonObject>
 FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
@@ -33,7 +43,7 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
   // The default root with no child to take its place comes straight back on compile: removing it
   // answered success and changed nothing.
   const bool bDefaultRoot = NodeToRemove == SCS->GetDefaultSceneRootNode();
-  const bool bWasRoot = SCS->GetRootNodes().Contains(NodeToRemove);
+  const bool bWasRoot = IsSceneRootNode(NodeToRemove) && SCS->GetRootNodes().Contains(NodeToRemove);
   if (bDefaultRoot && NodeToRemove->GetChildNodes().Num() == 0) {
     return SCSFail(Result, TEXT("DefaultSceneRoot is the only scene root and the engine re-creates it; add a scene component "
                                 "first, then remove DefaultSceneRoot and that component takes its place."),
@@ -62,9 +72,9 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
   if (Promoted.Num() > 0) {
     Result->SetArrayField(TEXT("promotedChildren"), Promoted);
   }
-  const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
-  if (bWasRoot && Roots.Num() > 0) {
-    Result->SetStringField(TEXT("newRoot"), Roots[0]->GetVariableName().ToString());
+  const USCS_Node *const *NewRoot = SCS->GetRootNodes().FindByPredicate(IsSceneRootNode);
+  if (bWasRoot && NewRoot) {
+    Result->SetStringField(TEXT("newRoot"), (*NewRoot)->GetVariableName().ToString());
   }
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
