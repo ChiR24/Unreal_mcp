@@ -153,10 +153,13 @@ USCS_Node *FindSCSParentNode(USimpleConstructionScript *SCS,
   return nullptr;
 }
 
-bool IsSCSRootAlias(const FString &Name) {
-  return Name.Equals(TEXT("RootComponent"), ESearchCase::IgnoreCase) ||
-         Name.Equals(TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase) ||
-         Name.Equals(TEXT("Root"), ESearchCase::IgnoreCase);
+// A component of that exact name wins over the alias: the interaction tools name their scene root "Root", and
+// attachTo "Root" landed on the DefaultSceneRoot above it.
+bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name) {
+  return (Name.Equals(TEXT("RootComponent"), ESearchCase::IgnoreCase) ||
+          Name.Equals(TEXT("DefaultSceneRoot"), ESearchCase::IgnoreCase) ||
+          Name.Equals(TEXT("Root"), ESearchCase::IgnoreCase)) &&
+         !FindSCSNodeByVariableName(SCS, Name);
 }
 
 bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node) {
@@ -259,7 +262,7 @@ bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
     return ActualParent == nullptr || IsSCSRootNode(SCS, Node) ||
            IsSCSRootNode(SCS, ActualParent);
   }
-  if (IsSCSRootAlias(ExpectedParentName)) {
+  if (IsSCSRootAlias(SCS, ExpectedParentName)) {
     return ActualParent ? IsSCSRootNode(SCS, ActualParent)
                         : IsSCSRootNode(SCS, Node);
   }

@@ -21,7 +21,7 @@ USCS_Node *FindSCSNodeByVariableName(USimpleConstructionScript *SCS,
                                      const FString &Name);
 USCS_Node *FindSCSParentNode(USimpleConstructionScript *SCS,
                              USCS_Node *ChildNode);
-bool IsSCSRootAlias(const FString &Name);
+bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name);
 bool IsSCSRootNode(USimpleConstructionScript *SCS, USCS_Node *Node);
 TSharedPtr<FJsonObject> MakeTransformJson(const FTransform &Transform);
 void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,

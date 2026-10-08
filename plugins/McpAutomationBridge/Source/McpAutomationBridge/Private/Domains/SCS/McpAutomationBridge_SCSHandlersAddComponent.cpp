@@ -122,7 +122,7 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   USCS_Node *ParentNode = nullptr;
   USceneComponent *NativeParent = nullptr;
   if (!ParentComponentName.IsEmpty()) {
-    if (IsSCSRootAlias(ParentComponentName)) {
+    if (IsSCSRootAlias(SCS, ParentComponentName)) {
       const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
       for (USCS_Node *Root : Roots) {
         if (Root && GetSCSNodeName(Root).Equals(

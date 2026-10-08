@@ -39,7 +39,7 @@ FSCSHandlers::ReparentSCSComponent(const FString &BlueprintPath,
 
   USCS_Node *NewParentNode = nullptr;
   if (!NewParentName.IsEmpty()) {
-    const bool bRootSynonym = IsSCSRootAlias(NewParentName);
+    const bool bRootSynonym = IsSCSRootAlias(SCS, NewParentName);
     if (bRootSynonym) {
       const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
       for (USCS_Node *R : Roots) {

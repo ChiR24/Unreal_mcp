@@ -1585,3 +1585,14 @@ describe('an instanced subobject write tells its owner', () => {
     expect(set.indexOf('McpPropertyTarget::NotifyOwners(RootObject);')).toBeGreaterThan(set.indexOf('RootObject->PostEditChangeProperty(Changed);'));
   });
 });
+
+// attachTo "Root" on a Blueprint with a component named Root landed on the DefaultSceneRoot above it.
+describe('a component named like the root alias is the parent it names', () => {
+  it('treats Root, RootComponent and DefaultSceneRoot as the root only when no component has that name', () => {
+    const scs = code('SCS', 'McpAutomationBridge_SCSHandlers.cpp');
+    expect(scs).toContain('bool IsSCSRootAlias(USimpleConstructionScript *SCS, const FString &Name) {');
+    expect(scs).toContain('!FindSCSNodeByVariableName(SCS, Name);');
+    expect(code('SCS', 'McpAutomationBridge_SCSHandlersAddComponent.cpp')).toContain('IsSCSRootAlias(SCS, ParentComponentName)');
+    expect(code('SCS', 'McpAutomationBridge_SCSHandlersReparent.cpp')).toContain('IsSCSRootAlias(SCS, NewParentName)');
+  });
+});
