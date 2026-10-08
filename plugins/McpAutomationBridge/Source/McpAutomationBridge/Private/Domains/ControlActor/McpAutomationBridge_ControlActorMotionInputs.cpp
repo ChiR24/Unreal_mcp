@@ -143,10 +143,10 @@ FString McpStartWhenTimeoutWarning(const FMcpMotionTrigger &Trigger) {
 // Game time stood still for seconds while the editor kept drawing frames: before this, the run sat out its whole
 // real-time cap (25 s) for a single sample and the caller read it as a frozen actor.
 FString McpGamePausedWarning(const UWorld *World) {
-  return FString::Printf(TEXT("game time stopped advancing (the world %s paused): a title or pause menu holding the ")
-                         TEXT("game (control_editor.simulate_input widget_list / widget_click gets past it), ")
-                         TEXT("control_editor pause, or a set_game_speed step_frame session. Unpause, then run ")
-                         TEXT("again."), World && World->IsPaused() ? TEXT("reads") : TEXT("does not read"));
+  return FString::Printf(TEXT("game time stopped advancing (the world %s paused): a title or pause menu holding the game ")
+                         TEXT("(control_editor.simulate_input type \"widget_list\" names its buttons, type \"widget_click\" with ")
+                         TEXT("widget presses one), control_editor pause, or a set_game_speed step_frame session. Unpause, then ")
+                         TEXT("run again."), World && World->IsPaused() ? TEXT("reads") : TEXT("does not read"));
 }
 
 // Keys pressed while the player's pawn stood perfectly still never reached it:
@@ -157,9 +157,9 @@ FString McpIgnoredInputsWarning(const AActor *Actor, int32 InputCount, int32 Sam
   if (InputCount == 0 || SampleCount < 2 || !Pawn || !Pawn->IsPlayerControlled() || Extent.GetSize().GetMax() > 1.0) {
     return FString();
   }
-  return TEXT("keys were pressed but the player's pawn never moved, so the game did not act on them: a menu "
-              "or pause screen on top (control_editor.simulate_input widget_list / widget_click gets past "
-              "it), or input locked by the game. A screenshot shows which.");
+  return TEXT("keys were pressed but the player's pawn never moved, so the game did not act on them: a menu or pause "
+              "screen on top (control_editor.simulate_input type \"widget_list\" names its buttons, type \"widget_click\" "
+              "with widget presses one), or input locked by the game. A screenshot shows which.");
 }
 
 // A slow editor steps PIE a third of a second at a time: every key and sample lands that late, so a 0.2 s jump
