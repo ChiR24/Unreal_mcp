@@ -56,7 +56,7 @@ if (bRemoved) {
 } else {
   if (USCS_Node *TargetNode =
           FindScsNodeByName(LocalSCS, ComponentName)) {
-    LocalSCS->RemoveNode(TargetNode);
+    LocalSCS->RemoveNodeAndPromoteChildren(TargetNode);
     OpSummary->SetBoolField(TEXT("success"), true);
     OpSummary->SetStringField(TEXT("componentName"), ComponentName);
   } else {

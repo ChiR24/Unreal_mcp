@@ -13397,6 +13397,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "New parent SCS node name."
         },
+        "newRoot": {
+          "type": "string",
+          "description": "The root after a root was removed, read back after the compile."
+        },
         "nodeClass": {
           "type": "string",
           "description": "Resolved UK2Node class name."
@@ -13555,6 +13559,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "posY": {
           "type": "number",
           "description": "Y coordinate the node was placed at."
+        },
+        "promotedChildren": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The removed component's children, which moved up instead of going with it."
         },
         "property": {
           "type": "string",

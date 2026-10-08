@@ -156,8 +156,8 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     action: 'remove_scs_component',
     family: FAMILY,
     domain: DOMAIN,
-    summary: 'Remove one or several SCS-owned component template nodes from the Blueprint.',
-    whenToUse: ['An SCS component node and its template must be permanently removed.'],
+    summary: 'Remove one or several SCS-owned component template nodes from the Blueprint. As the editor deletes, the children move up to the removed node\'s parent, and removing a root makes its first scene child the root (DefaultSceneRoot gives way to the mesh under it).',
+    whenToUse: ['An SCS component node and its template must be permanently removed.', 'A mesh under DefaultSceneRoot must become the root, as physics simulation and buoyancy need: remove DefaultSceneRoot.'],
     whenNotToUse: ['The component should be detached but preserved (no detach action exists; remove is destructive).'],
     inputProps: {
       blueprintPath: P.blueprintPath, componentName: P.componentName,
@@ -165,6 +165,10 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['blueprintPath'],
     requiredOneOf: ['componentName', 'componentNames'],
+    outputProps: {
+      promotedChildren: { type: 'array', items: { type: 'string' }, description: 'The removed component\'s children, which moved up instead of going with it.' },
+      newRoot: { type: 'string', description: 'The root after a root was removed, read back after the compile.' },
+    },
     effect: 'destructive',
     behavior: { safeToRetry: false },
     latency: 'interactive',

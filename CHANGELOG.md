@@ -70,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`spawn_batch` variables are in place before BeginPlay.** In a running game the actor's BeginPlay ran inside the spawn, before the batch set its `variables`, so it saw the class defaults (a projectile spawned with its launch velocity never moved); the spawn now waits for them.
 - **`set_property` `watch` samples the written property by default.** `watch.propertyName` was required even to watch the property the call writes; omitted, it is now that property.
 - **A math expression names what went wrong and what it made.** `EXPRESSION_INVALID` names each call the node cannot reach with the spelling it takes (`FMax` is `Max`, `frac` is `Fraction`), a unary `!` or minus (`x == false`, `0 - x`), and `&&` or `||` on a name that would become a number input; a parsed expression answers `inputPins` and `boundToMembers`, the names that read the Blueprint's own variables instead of becoming pins (also in `build_graph` step results).
+- **Removing a Blueprint's root component hands its place to a child.** `remove_scs_component` `DefaultSceneRoot` answered "removed" while the compile put it straight back with the mesh still under it, so a mesh meant to be the physics root never was (a buoy with buoyancy sank). The removed node's children now move up as the editor does, the first scene child becoming the root (`promotedChildren`, `newRoot`); a default root with nothing to take its place is refused, and a removal the compile undid fails.
 
 </details>
 

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "a58b428cb1ee231d",
+  "catalogRevision": "b8e49a1a83114893",
   "recordCount": 396,
   "records": [
     {
@@ -18741,9 +18741,10 @@
         "topics": [
           "remove_scs_component"
         ],
-        "summary": "Remove one or several SCS-owned component template nodes from the Blueprint.",
+        "summary": "Remove one or several SCS-owned component template nodes from the Blueprint. As the editor deletes, the children move up to the removed node's parent, and removing a root makes its first scene child the root (DefaultSceneRoot gives way to the mesh under it).",
         "whenToUse": [
-          "An SCS component node and its template must be permanently removed."
+          "An SCS component node and its template must be permanently removed.",
+          "A mesh under DefaultSceneRoot must become the root, as physics simulation and buoyancy need: remove DefaultSceneRoot."
         ],
         "whenNotToUse": [
           "The component should be detached but preserved (no detach action exists; remove is destructive)."
@@ -18800,6 +18801,17 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "promotedChildren": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The removed component's children, which moved up instead of going with it."
+            },
+            "newRoot": {
+              "type": "string",
+              "description": "The root after a root was removed, read back after the compile."
             }
           },
           "required": [
@@ -18810,7 +18822,7 @@
       },
       "examples": [
         {
-          "title": "Remove one or several SCS-owned component template nodes from the Blueprint.",
+          "title": "Remove one or several SCS-owned component template nodes from the Blueprint. As the editor deletes, the children move up to the removed node's parent, and removing a root makes its first scene child the root (DefaultSceneRoot gives way to the mesh under it).",
           "input": {
             "action": "remove_scs_component",
             "blueprintPath": "/Game/Blueprints/BP_Test",
@@ -18850,8 +18862,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f8c71b15bf4df0670bb50d2eefe33eead0f2c454bf5aac13f403f51bf2596cdb",
-        "content": "52cbdbccfe84f13f17a9233b816d68a5e00732bc81e02787e40afb56f41e19da"
+        "schema": "083cb983ca5aa93ff969f8f3f24d85fd199179ae77db07ab034510136c2801eb",
+        "content": "5a2a1793a495dde87b8f9193dad711b245be3dead7b0e711acd42f56d7551135"
       }
     },
     {

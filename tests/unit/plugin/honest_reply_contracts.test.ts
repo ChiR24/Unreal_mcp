@@ -1296,3 +1296,15 @@ describe('sound measurement', () => {
       .toContain('const FMcpMetaSoundNodeClassRequest Request = ResolveMetaSoundAddNodeClass(Params);');
   });
 });
+
+// Removing DefaultSceneRoot answered "removed from SCS" while the compile put it straight back with the mesh still under
+// it, so a mesh meant to be the physics root never was.
+describe('removing a Blueprint\'s root component hands its place to a child', () => {
+  it('remove_scs_component promotes the removed node\'s children and reads the tree back', () => {
+    const source = code('SCS', 'McpAutomationBridge_SCSHandlersRemoveComponent.cpp');
+    expect(source).toContain('SCS->RemoveNodeAndPromoteChildren(NodeToRemove);');
+    expect(source).toContain('TEXT("SCS_ROOT_REQUIRED")');
+    expect(source).toContain('TEXT("SCS_REMOVE_REVERTED")');
+    expect(source).not.toContain('SCS->RemoveNode(');
+  });
+});

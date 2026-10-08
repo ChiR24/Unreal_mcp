@@ -30,16 +30,42 @@ FSCSHandlers::RemoveSCSComponent(const FString &BlueprintPath,
     return SCSFail(Result, FString::Printf(TEXT("Component not found: %s"), *ComponentName), TEXT("SCS_COMPONENT_NOT_FOUND"));
   }
 
-  SCS->RemoveNode(NodeToRemove);
+  // The default root with no child to take its place comes straight back on compile: removing it
+  // answered success and changed nothing.
+  const bool bDefaultRoot = NodeToRemove == SCS->GetDefaultSceneRootNode();
+  const bool bWasRoot = SCS->GetRootNodes().Contains(NodeToRemove);
+  if (bDefaultRoot && NodeToRemove->GetChildNodes().Num() == 0) {
+    return SCSFail(Result, TEXT("DefaultSceneRoot is the only scene root and the engine re-creates it; add a scene component "
+                                "first, then remove DefaultSceneRoot and that component takes its place."),
+                   TEXT("SCS_ROOT_REQUIRED"));
+  }
+  TArray<TSharedPtr<FJsonValue>> Promoted;
+  for (const USCS_Node *Child : NodeToRemove->GetChildNodes()) {
+    Promoted.Add(MakeShared<FJsonValueString>(Child->GetVariableName().ToString()));
+  }
+  // As the editor deletes: the children move up (the first scene child becomes the root), never
+  // vanish with their parent; a plain RemoveNode put the default root back with the mesh still under it.
+  SCS->RemoveNodeAndPromoteChildren(NodeToRemove);
 
   bool bCompiled = false;
   bool bSaved = false;
   FinalizeBlueprintSCSChange(Blueprint, bCompiled, bSaved);
+  if (FindSCSNodeByVariableName(SCS, ComponentName)) {
+    return SCSFail(Result, FString::Printf(TEXT("Component '%s' is still in the Blueprint after the compile"), *ComponentName),
+                   TEXT("SCS_REMOVE_REVERTED"));
+  }
 
   Result->SetBoolField(TEXT("success"), true);
   Result->SetStringField(
       TEXT("message"),
       FString::Printf(TEXT("Component '%s' removed from SCS"), *ComponentName));
+  if (Promoted.Num() > 0) {
+    Result->SetArrayField(TEXT("promotedChildren"), Promoted);
+  }
+  const TArray<USCS_Node *> &Roots = SCS->GetRootNodes();
+  if (bWasRoot && Roots.Num() > 0) {
+    Result->SetStringField(TEXT("newRoot"), Roots[0]->GetVariableName().ToString());
+  }
   Result->SetBoolField(TEXT("compiled"), bCompiled);
   Result->SetBoolField(TEXT("saved"), bSaved);
   McpHandlerUtils::AddVerification(Result, Blueprint);
@@ -66,7 +92,7 @@ FSCSHandlers::RemoveSCSComponents(const FString &BlueprintPath,
     One->SetStringField(TEXT("componentName"), Name);
     One->SetBoolField(TEXT("success"), Node != nullptr);
     if (Node) {
-      SCS->RemoveNode(Node);
+      SCS->RemoveNodeAndPromoteChildren(Node);
     } else {
       One->SetStringField(TEXT("error"), TEXT("Component not found"));
       Missing.Add(Name);
