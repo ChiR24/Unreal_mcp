@@ -146,9 +146,19 @@ bool TryCreateCommonFunctionNode(
         return true;
     }
 
+    // nodeType GetAllActorsOfClass with targetClass: the class it looks for, as on the CallFunction spelling.
+    FString OutputClassText;
+    Context.Payload->TryGetStringField(TEXT("targetClass"), OutputClassText);
+    bool bRefused = false;
+    UClass* OutputClass = ResolveOutputClass(Context, *Function, OutputClassText, bRefused);
+    if (bRefused)
+    {
+        return true;
+    }
     FGraphNodeCreator<UK2Node_CallFunction> NodeCreator(*Context.TargetGraph);
     UK2Node_CallFunction* Node = NodeCreator.CreateNode(false);
     Node->SetFromFunction(Function);
+    ApplyOutputClass(*Node, *Function, OutputClass);
     Context.FinalizeNode(NodeCreator, Node, X, Y);
     return true;
 }

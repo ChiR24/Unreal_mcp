@@ -125,11 +125,12 @@ FString PrecheckSteps(const FActionContext& Context, const TArray<TSharedPtr<FJs
         }
         OutIndex = Index;
         UClass* ResolvedClass = nullptr;
+        FString OwnerClass, OutputClass;
         if (IsCallFunctionType(NodeType) && !(MemberClass.IsEmpty() && Declared.Contains(FName(*Member))) &&
-            !ResolveGraphCallFunction(Context.Blueprint, Member, MemberClass, ResolvedClass))
+            !ResolveCallNodeFunction(Context.Blueprint, *Step, Member, OwnerClass, OutputClass, ResolvedClass))
         {
             OutCode = TEXT("FUNCTION_NOT_FOUND");
-            return DescribeMissingFunction(Context.Blueprint, Member, MemberClass, ResolvedClass);
+            return DescribeMissingFunction(Context.Blueprint, Member, OwnerClass, ResolvedClass);
         }
         const FName Variable(*Member);
         bool bSetNode = false;

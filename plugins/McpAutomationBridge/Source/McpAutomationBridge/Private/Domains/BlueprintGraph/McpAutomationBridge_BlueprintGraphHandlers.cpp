@@ -1,5 +1,6 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 
+#include "EdGraphSchema_K2.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetStringLibrary.h"
@@ -75,6 +76,36 @@ UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& Member
         }
     }
     return nullptr;
+}
+
+// targetClass stands in for a missing memberClass, but GetAllActorsOfClass, GetActorOfClass and the other
+// functions whose result follows a class pin take it as the class they look for: {memberName:
+// GetAllActorsOfClass, targetClass: BP_Enemy} failed FUNCTION_NOT_FOUND on BP_Enemy, and beside a memberClass
+// it was dropped, so the pin stayed empty and OutActors an array of plain Actors.
+UFunction* ResolveCallNodeFunction(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Payload, const FString& MemberName,
+                                   FString& OutOwnerClass, FString& OutOutputClass, UClass*& OutResolvedClass)
+{
+    FString MemberClass;
+    FString TargetClass;
+    Payload->TryGetStringField(TEXT("memberClass"), MemberClass);
+    Payload->TryGetStringField(TEXT("targetClass"), TargetClass);
+    OutOwnerClass = MemberClass.IsEmpty() ? TargetClass : MemberClass;
+    OutOutputClass = MemberClass.IsEmpty() ? FString() : TargetClass;
+    UFunction* Function = ResolveGraphCallFunction(Blueprint, MemberName, OutOwnerClass, OutResolvedClass);
+    if (Function || !MemberClass.IsEmpty() || TargetClass.IsEmpty())
+    {
+        return Function;
+    }
+    UClass* LibraryClass = nullptr;
+    UFunction* Library = ResolveGraphCallFunction(Blueprint, MemberName, FString(), LibraryClass);
+    if (!Library || !Library->HasMetaData(FBlueprintMetadata::MD_DynamicOutputType))
+    {
+        return nullptr; // targetClass named the owner after all; the error is reported against it
+    }
+    OutOwnerClass.Empty();
+    OutOutputClass = TargetClass;
+    OutResolvedClass = LibraryClass;
+    return Library;
 }
 
 // "Function not found" hid the usual cause: the memberClass itself resolved nothing.

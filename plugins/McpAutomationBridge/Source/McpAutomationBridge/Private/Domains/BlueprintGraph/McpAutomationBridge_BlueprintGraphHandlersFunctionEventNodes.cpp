@@ -1,6 +1,7 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
+#include "EdGraphSchema_K2.h"
 #include "K2Node_CallArrayFunction.h"
 #include "K2Node_CallFunction.h"
 #include "K2Node_PromotableOperator.h"
@@ -13,6 +14,43 @@
 
 namespace McpBlueprintGraphHandlers
 {
+UClass* ResolveOutputClass(FActionContext& Context, const UFunction& Function, const FString& ClassText, bool& bOutRefused)
+{
+    bOutRefused = false;
+    const FString& PinName = Function.GetMetaData(FBlueprintMetadata::MD_DynamicOutputType);
+    if (ClassText.IsEmpty() || PinName.IsEmpty())
+    {
+        return nullptr;
+    }
+    UClass* Class = ResolveUClass(ClassText);
+    Class = Class ? Class : ResolveTargetClassFromString(ClassText);
+    const FClassProperty* Param = CastField<FClassProperty>(Function.FindPropertyByName(FName(*PinName)));
+    if (Class && (!Param || Class->IsChildOf(Param->MetaClass)))
+    {
+        return Class;
+    }
+    bOutRefused = true;
+    const FString Takes = Param ? FString::Printf(TEXT(", a %s"), *Param->MetaClass->GetName()) : FString();
+    Context.SendError(FString::Printf(TEXT("targetClass '%s' is not a class the %s pin of %s takes%s."), *ClassText,
+                                      *PinName, *Function.GetName(), *Takes),
+                      TEXT("CLASS_NOT_FOUND"));
+    return nullptr;
+}
+
+void ApplyOutputClass(UK2Node_CallFunction& Node, const UFunction& Function, UClass* OutputClass)
+{
+    if (!OutputClass)
+    {
+        return;
+    }
+    // Pins first: the class pin must exist to take the class, and its change re-types the result pin.
+    Node.AllocateDefaultPins();
+    if (UEdGraphPin* Pin = Node.FindPin(Function.GetMetaData(FBlueprintMetadata::MD_DynamicOutputType)))
+    {
+        GetDefault<UEdGraphSchema_K2>()->TrySetDefaultObject(*Pin, OutputClass);
+    }
+}
+
 static bool TryCreateFunctionNode(
     FActionContext& Context,
     const FString& NodeType,
@@ -38,20 +76,16 @@ static bool TryCreateFunctionNode(
     // memberName was read, so {nodeType: CallFunction, functionName: X} failed
     // with "Function '' not found". Either spelling names the function.
     const FString MemberName = McpGetFirstStringField(Context.Payload, {TEXT("memberName"), TEXT("functionName")});
-    FString MemberClass;
-    Context.Payload->TryGetStringField(TEXT("memberClass"), MemberClass);
     // `targetClass` is published alongside `memberClass` and reads as the obvious way to say
     // which class owns the function, but it was never consulted here. A call naming it was
     // silently resolved by global search instead, so e.g. GetForwardVector landed on the
     // KismetMathLibrary(Rotator) overload rather than the component's - a wrong node that
-    // still reported success. Treat it as an alias.
-    if (MemberClass.IsEmpty())
-    {
-        Context.Payload->TryGetStringField(TEXT("targetClass"), MemberClass);
-    }
+    // still reported success. Treat it as an alias, unless it is the class a GetAllActorsOfClass looks for.
+    FString MemberClass;
+    FString OutputClassText;
     UClass* ResolvedMemberClass = nullptr;
-    UFunction* Function = ResolveGraphCallFunction(Context.Blueprint, MemberName, MemberClass,
-                                                   ResolvedMemberClass);
+    UFunction* Function = ResolveCallNodeFunction(Context.Blueprint, Context.Payload, MemberName, MemberClass,
+                                                  OutputClassText, ResolvedMemberClass);
 
     if (!Function)
     {
@@ -98,10 +132,17 @@ static bool TryCreateFunctionNode(
         return true;
     }
 
+    bool bRefused = false;
+    UClass* OutputClass = ResolveOutputClass(Context, *Function, OutputClassText, bRefused);
+    if (bRefused)
+    {
+        return true;
+    }
     FGraphNodeCreator<UK2Node_CallFunction> NodeCreator(
         *Context.TargetGraph);
     UK2Node_CallFunction* Node = NodeCreator.CreateNode(false);
     Node->SetFromFunction(Function);
+    ApplyOutputClass(*Node, *Function, OutputClass);
     Context.FinalizeNode(NodeCreator, Node, X, Y);
     return true;
 }

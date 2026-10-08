@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6f4cdc1c248dd746",
+  "catalogRevision": "2a7ab44e49d205e8",
   "recordCount": 396,
   "records": [
     {
@@ -15142,7 +15142,7 @@
             },
             "targetClass": {
               "type": "string",
-              "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, or the subsystem a Get Subsystem node returns. Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
+              "description": "Target class for a node that carries one: a Cast target, a CreateWidget or SpawnActor class, the subsystem a Get Subsystem node returns, or the class GetAllActorsOfClass and GetActorOfClass look for (their result is then typed to it, so a ForEach element wires to its functions). Required for cast and subsystem nodes, whose type is stored on the node itself and cannot be set afterwards."
             },
             "pure": {
               "type": "boolean",
@@ -15693,8 +15693,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c20a1c1298340e4b8568de917a0ec7e3628ccb37e99456e106435baebb68886b",
-        "content": "9a42fc7e6af203ea7f940264fed78fe0a3771113aa2c8acb82f1c961914a04ba"
+        "schema": "1854a98db93e63d8ca41cfd7726704f48c2d71c0993ba1607d4de1a5aae33f6a",
+        "content": "78b669047762e1cb467813c6e29cf55df1d272512869c62942418dfece97f0a7"
       }
     },
     {

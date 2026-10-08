@@ -19,6 +19,8 @@
 #include "UObject/UObjectIterator.h"
 #include "Foundation/GraphLayout/McpGraphNodeExtent.h"
 
+class UK2Node_CallFunction;
+
 namespace McpBlueprintGraphHandlers
 {
 // "Pin not found." named neither the pin looked for nor what would have
@@ -243,6 +245,14 @@ bool HandleGraphBatchAction(FActionContext& Context);
 // by node creation and the build_graph pre-check so the two cannot disagree.
 UFunction* ResolveGraphCallFunction(UBlueprint* Blueprint, const FString& MemberName,
                                     const FString& MemberClass, UClass*& OutResolvedClass);
+// A call node's function from memberClass and targetClass; OutOutputClass is the class a DeterminesOutputType
+// pin (GetAllActorsOfClass's ActorClass) takes, OutOwnerClass the class the function was looked up on.
+UFunction* ResolveCallNodeFunction(UBlueprint* Blueprint, const TSharedPtr<FJsonObject>& Payload, const FString& MemberName,
+                                   FString& OutOwnerClass, FString& OutOutputClass, UClass*& OutResolvedClass);
+// That class, checked against the pin before any node exists (bOutRefused: the error is sent), and set on the new
+// node so its result pin takes the class.
+UClass* ResolveOutputClass(FActionContext& Context, const UFunction& Function, const FString& ClassText, bool& bOutRefused);
+void ApplyOutputClass(UK2Node_CallFunction& Node, const UFunction& Function, UClass* OutputClass);
 // Why a CallFunction name did not resolve: an unresolved memberClass, else the member hint.
 FString DescribeMissingFunction(UBlueprint* Blueprint, const FString& MemberName,
                                 const FString& MemberClass, UClass* ResolvedClass);
