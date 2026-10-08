@@ -1,4 +1,5 @@
 #include "Domains/BlueprintGraph/McpAutomationBridge_BlueprintGraphHandlersPrivate.h"
+#include "Domains/BlueprintGraph/Expression/McpAutomationBridge_BlueprintGraphMathExpression.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 #include "K2Node_Knot.h"
@@ -212,11 +213,17 @@ static bool SetNodeProperty(FActionContext& Context)
             }
         }
         Context.TargetGraph->NotifyGraphChanged();
+        FString Unknown = McpBlueprintMathExpression::DescribeUnknownFunctions(Value);
+        if (!Unknown.IsEmpty())
+        {
+            Unknown += TEXT(" ");
+        }
         Context.SendError(
-            FString::Printf(TEXT("The expression '%s' does not parse, so the node would have no output; it keeps '%s'. ")
-                            TEXT("Write a negative number as 0 - x (there is no unary minus) and use only the math "
-                                 "library's functions (FInterpTo is a CallFunction node, not an expression)."),
-                *Value, *OldExpression),
+            FString::Printf(TEXT("The expression '%s' does not parse, so the node would have no output; it keeps the "
+                                 "old one. %sCall a function by its compact title (max, clamp, abs, sin), else its name "
+                                 "(Fraction, SelectFloat); write a negative number as 0 - x; FInterpTo is a CallFunction "
+                                 "node, not an expression."),
+                *Value, *Unknown),
             TEXT("EXPRESSION_INVALID"));
         return true;
     }
@@ -247,6 +254,10 @@ static bool SetNodeProperty(FActionContext& Context)
         TEXT("nodeId"),
         TargetNode->NodeGuid.ToString());
     Result->SetStringField(TEXT("nodeName"), TargetNode->GetName());
+    if (bMathExpression)
+    {
+        McpBlueprintMathExpression::DescribeInputs(Context.Blueprint, *TargetNode, Value, Result);
+    }
     McpHandlerUtils::AddVerification(Result, Context.Blueprint);
     Context.SendResponse(TEXT("Node property updated."), Result);
     return true;

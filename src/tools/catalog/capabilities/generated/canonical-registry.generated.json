@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "2a7ab44e49d205e8",
+  "catalogRevision": "9977a12cc3bb8000",
   "recordCount": 396,
   "records": [
     {
@@ -15231,7 +15231,7 @@
               "description": "Node GUID accepted in place of nodeId."
             },
             "propertyValue": {
-              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
+              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes an input pin, except one the Blueprint has a variable of, which reads that variable), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
             },
             "pinName": {
               "type": "string",
@@ -15441,6 +15441,20 @@
               "x-unreal-reflection-boundary": true,
               "description": "Links the new one replaced, each {nodeId, nodeTitle, pinName}: a pin that holds one link (an exec output, a data input) drops its old link to take the new one. Absent when nothing was replaced."
             },
+            "inputPins": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Expression: the input pins the parsed expression made, the names to wire."
+            },
+            "boundToMembers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Expression: names that read the Blueprint's own variable of that name instead of making a pin; rename the input to get a pin."
+            },
             "nodeId": {
               "type": "string",
               "description": "Id of an existing node: the nodeGuid edit_graph returned when it made the node, or a nodeId inspect_graph lists."
@@ -15481,7 +15495,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps)."
+              "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression's Expression step: the pins it made, and the names that read member variables instead)."
             },
             "nodeIds": {
               "type": "object",
@@ -15693,8 +15707,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1854a98db93e63d8ca41cfd7726704f48c2d71c0993ba1607d4de1a5aae33f6a",
-        "content": "78b669047762e1cb467813c6e29cf55df1d272512869c62942418dfece97f0a7"
+        "schema": "3c290ae144b47ddabae446f87c4d2577f81a3e91f9b351cc29a2d0eb4099ebca",
+        "content": "047d363551e482a31dacffb9f329b4ded0ce91197e28ad985defca4daf016196"
       }
     },
     {

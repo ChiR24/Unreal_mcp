@@ -12499,7 +12499,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Value to assign to the property. An object or class reference takes a path (a Blueprint class path ends in _C); null or \"None\" clears it."
             },
             {
-              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
+              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes an input pin, except one the Blueprint has a variable of, which reads that variable), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
             }
           ],
           "description": "The key value, by trackType: opacity a number 0-1; color {r,g,b,a} or [r,g,b,a]; translation, scale or shear {x,y} or [x,y]; angle a number in degrees; transform any of {translation:{x,y}, scale:{x,y}, angle, shear:{x,y}}. A value of the wrong shape is refused before anything is added."
@@ -13005,6 +13005,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Bottom margin in slate units."
         },
+        "boundToMembers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Expression: names that read the Blueprint's own variable of that name instead of making a pin; rename the input to get a pin."
+        },
         "buttons": {
           "type": "array",
           "items": {
@@ -13315,6 +13322,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Components inherited from parent Blueprints (their own components) and from the native parent class (a Character's CollisionCylinder): componentName, componentType, isSceneComponent, ownerClass. A native one is valid as parentComponent for add_scs_component; one from a parent Blueprint is not.",
           "x-unreal-reflection-boundary": true
         },
+        "inputPins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Expression: the input pins the parsed expression made, the names to wire."
+        },
         "isVisible": {
           "type": "boolean",
           "description": "Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden)."
@@ -13598,7 +13612,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps)."
+          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression's Expression step: the pins it made, and the names that read member variables instead)."
         },
         "right": {
           "type": "number",
