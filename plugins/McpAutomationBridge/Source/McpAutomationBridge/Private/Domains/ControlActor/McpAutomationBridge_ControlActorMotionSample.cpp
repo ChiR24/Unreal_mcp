@@ -26,7 +26,7 @@ struct FMcpMotionRun {
   TArray<FMcpMotionProperty> Properties;
   TArray<TSharedPtr<FJsonValue>> Samples;
   TArray<TSharedPtr<FJsonValue>> Missing;
-  double StartGame = 0.0, LastGame = 0.0, NextSample = 0.0, EndGame = 0.0, Interval = 0.05;
+  double StartGame = 0.0, LastGame = 0.0, NextSample = 0.0, EndGame = 0.0, Interval = 0.05, LastSampleGame = -1.0;
   double StartReal = 0.0, MaxReal = 40.0, Duration = 2.0, Waited = -1.0, LastAdvanceReal = 0.0;
   FBox Extent = FBox(ForceInit);
   FVector First = FVector::ZeroVector, Last = FVector::ZeroVector;
@@ -67,6 +67,7 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
     Run.First = Location;
   }
   Run.Last = Location;
+  Run.LastSampleGame = GameTime;
   Run.Extent += Location;
   Run.Samples.Add(MakeShared<FJsonValueObject>(Sample));
 }
@@ -139,7 +140,10 @@ FString McpAdvanceMotionRun(FMcpMotionRun &Run) {
   }
   Run.Frames += 1;
   McpApplyMotionInputs(Run.Inputs, Now - Run.StartGame, false);
-  if (Now >= Run.NextSample || Now >= Run.EndGame) {
+  // A frame that did not advance game time repeats the last sample: a paused run at interval 0 kept
+  // 74 copies of t=0.
+  const bool bAdvanced = Run.Samples.Num() == 0 || Now > Run.LastSampleGame;
+  if (bAdvanced && (Now >= Run.NextSample || Now >= Run.EndGame)) {
     McpTakeMotionSample(Run, Actor, Now);
     Run.NextSample = Now + Run.Interval;
   }

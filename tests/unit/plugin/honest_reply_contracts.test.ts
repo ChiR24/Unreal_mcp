@@ -1393,3 +1393,12 @@ describe('listed struct values show their zero fields', () => {
       .toContain('MCP_PROPERTY_EXPORT_TEXT(Nested, Value, NestedValue, NestedValue, nullptr, PPF_None);');
   });
 });
+
+// A paused motion run at interval 0 answered 74 copies of the same t=0 sample.
+describe('a paused motion run repeats no sample', () => {
+  it('samples only when game time moved since the last sample', () => {
+    const source = code('ControlActor', 'McpAutomationBridge_ControlActorMotionSample.cpp');
+    expect(source).toContain('const bool bAdvanced = Run.Samples.Num() == 0 || Now > Run.LastSampleGame;');
+    expect(source).toContain('Run.LastSampleGame = GameTime;');
+  });
+});
