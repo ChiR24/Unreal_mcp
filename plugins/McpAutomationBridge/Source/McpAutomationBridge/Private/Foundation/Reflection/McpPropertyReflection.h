@@ -13,6 +13,8 @@
 namespace McpPropertyReflection
 {
 MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FProperty* Property);
+// The echo of a write: a struct, or an array of them, shows its editable fields only (see the .cpp).
+MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonValue> ExportWrittenValueToJson(void* TargetContainer, FProperty* Property);
 MCPAUTOMATIONBRIDGE_API TSharedPtr<FJsonObject> ExportPropertiesToJson(UObject* Object, const TArray<FName>& PropertyNames);
 // A broad export walks every reflected property, so a large CDO answered with
 // a payload the gateway then refused as RESULT_TOO_LARGE - advice the caller

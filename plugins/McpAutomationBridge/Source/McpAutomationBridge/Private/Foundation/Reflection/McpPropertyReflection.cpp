@@ -128,4 +128,49 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
 
     return nullptr;
 }
+
+namespace
+{
+// A struct's editable fields as export text; "" when none is left out or none is editable, so a vector, a colour or
+// any all-editable struct keeps the full export.
+FString EditableStructText(const UScriptStruct* Struct, void* Data)
+{
+    TArray<FString> Fields;
+    bool bLeftOut = false;
+    for (TFieldIterator<FProperty> It(Struct); It; ++It)
+    {
+        if (!It->HasAnyPropertyFlags(CPF_Edit))
+        {
+            bLeftOut = true;
+            continue;
+        }
+        FString Text;
+        MCP_PROPERTY_EXPORT_TEXT(*It, Text, It->ContainerPtrToValuePtr<void>(Data), nullptr, nullptr, PPF_Delimited);
+        Fields.Add(It->GetName() + TEXT("=") + Text);
+    }
+    return bLeftOut && !Fields.IsEmpty() ? TEXT("(") + FString::Join(Fields, TEXT(",")) + TEXT(")") : FString();
+}
+}
+
+// Runtime state a reader wants (a pontoon's LocalForce, CenterLocation, WaterHeight ...) is not what a caller wrote:
+// four written pontoons echoed 4 KB of it. Reads keep the full export.
+TSharedPtr<FJsonValue> ExportWrittenValueToJson(void* TargetContainer, FProperty* Property)
+{
+    FArrayProperty* ArrayProp = CastField<FArrayProperty>(Property);
+    FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp ? ArrayProp->Inner : Property);
+    if (!TargetContainer || !StructProp || !StructProp->Struct) return ExportPropertyToJsonValue(TargetContainer, Property);
+    if (!ArrayProp)
+    {
+        const FString Text = EditableStructText(StructProp->Struct, StructProp->ContainerPtrToValuePtr<void>(TargetContainer));
+        return Text.IsEmpty() ? ExportPropertyToJsonValue(TargetContainer, Property) : MakeShared<FJsonValueString>(Text);
+    }
+    TArray<TSharedPtr<FJsonValue>> Out;
+    FScriptArrayHelper Helper(ArrayProp, ArrayProp->ContainerPtrToValuePtr<void>(TargetContainer));
+    for (int32 Index = 0; Index < Helper.Num(); ++Index)
+    {
+        const FString Text = EditableStructText(StructProp->Struct, Helper.GetRawPtr(Index));
+        Out.Add(Text.IsEmpty() ? Private::ExportElementToJsonValue(ArrayProp->Inner, Helper.GetRawPtr(Index)) : MakeShared<FJsonValueString>(Text));
+    }
+    return MakeShared<FJsonValueArray>(Out);
+}
 }

@@ -63,7 +63,7 @@ describe('set_property on a Blueprint CDO reaches the Blueprint\'s current defau
     const owning = flat.indexOf('McpPropertyTarget::SaveAfterWrite(RootObject, ResolvedBlueprint, bMarkDirty, SaveSkippedReason)');
     expect(compact(target())).toContain('UPackage* OwningPackage = (Blueprint ? static_cast<UObject*>(Blueprint) : Target)->GetOutermost();');
     const verification = flat.indexOf('McpHandlerUtils::AddVerification(ResultPayload, RootObject);');
-    const value = flat.indexOf('McpPropertyReflection::ExportPropertyToJsonValue(TargetContainer, Property)');
+    const value = flat.indexOf('McpPropertyReflection::ExportWrittenValueToJson(TargetContainer, Property)');
 
     expect(compile).toBeGreaterThan(-1);
     expect(refresh, 'after the compile').toBeGreaterThan(compile);

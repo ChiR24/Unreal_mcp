@@ -320,7 +320,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   }
   McpHandlerUtils::AddVerification(ResultPayload, RootObject);
 
-  if (TSharedPtr<FJsonValue> CurrentValue = McpPropertyReflection::ExportPropertyToJsonValue(TargetContainer, Property))
+  if (TSharedPtr<FJsonValue> CurrentValue = McpPropertyReflection::ExportWrittenValueToJson(TargetContainer, Property))
   {
       ResultPayload->SetField(TEXT("value"), CurrentValue);
   }

@@ -1605,3 +1605,15 @@ describe('a bool named without its b prefix resolves', () => {
     expect(resolver).toContain('McpCollectNestedMemberPaths(RootObject->GetClass(), FName(*(TEXT("b") + PropertyPath)), FString(), Candidates);');
   });
 });
+
+// Writing four buoyancy pontoons echoed every runtime field of each one (LocalForce, WaterHeight ...): 4 KB per call.
+describe('a written struct echoes its editable fields', () => {
+  it('leaves runtime fields out of a write echo, for a struct and an array of them, and reads stay whole', () => {
+    const reflection = code('..', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp');
+    expect(reflection).toContain('if (!It->HasAnyPropertyFlags(CPF_Edit))');
+    expect(reflection).toContain('return bLeftOut && !Fields.IsEmpty() ?');
+    expect(reflection).toContain('FStructProperty* StructProp = CastField<FStructProperty>(ArrayProp ? ArrayProp->Inner : Property);');
+    expect(code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp')).toContain('McpPropertyReflection::ExportWrittenValueToJson(TargetContainer, Property)');
+    expect(code('Property', 'McpAutomationBridge_PropertyHandlersObjectGet.cpp')).not.toContain('ExportWrittenValueToJson');
+  });
+});
