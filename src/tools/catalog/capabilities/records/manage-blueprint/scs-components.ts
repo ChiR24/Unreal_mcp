@@ -77,6 +77,7 @@ export const SCS_COMPONENTS_RECORDS: readonly CapabilityRecordSource[] = [
       compiled: P.success,
       saved: P.success,
       scsVerification: { type: 'object', description: 'SCS node verification (exists, parent matches).', additionalProperties: true, 'x-unreal-reflection-boundary': true },
+      appliedProperties: { type: 'array', items: { type: 'string' }, description: 'The names in properties that took their value; one that did not apply fails the call and is named in the error.' },
       partWarnings: PART_WARNINGS,
     },
     outputRequired: ['componentName'],

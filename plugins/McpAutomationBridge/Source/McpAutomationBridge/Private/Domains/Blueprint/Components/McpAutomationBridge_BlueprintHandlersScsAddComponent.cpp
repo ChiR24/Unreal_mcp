@@ -96,6 +96,8 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
       Payload->TryGetObjectField(TEXT("properties"), PropertiesObj) &&
       PropertiesObj != nullptr && GetJsonBoolField(Result, TEXT("success"))) {
     TArray<FString> Rejected;
+    // The names that took their value, so the reply says what it set without a read-back.
+    TArray<TSharedPtr<FJsonValue>> AppliedNames;
     TSharedPtr<FJsonObject> LatestVerification;
     // Iterate Values directly: UE 5.8 keys the map by UE::FSharedString and 5.7
     // by FString, but *Pair.Key is const TCHAR* on both.
@@ -107,6 +109,7 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
         Rejected.Add(PropName);
         continue;
       }
+      AppliedNames.Add(MakeShared<FJsonValueString>(PropName));
       // Same snapshot problem the transform path already solves: AddSCSComponent
       // built its verification before these properties existed, so a component
       // given RelativeScale3D here answers scale 1,1,1 and reads as a property
@@ -120,6 +123,7 @@ bool HandleScsAddComponent(const FBlueprintActionContext &Context) {
     if (LatestVerification.IsValid()) {
       Result->SetObjectField(TEXT("scsVerification"), LatestVerification);
     }
+    Result->SetArrayField(TEXT("appliedProperties"), AppliedNames);
     if (Rejected.Num() > 0) {
       // The component exists but is not configured the way the caller asked.
       // Reporting success here is the silent default-value bug this path was

@@ -12952,11 +12952,23 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "set_style: the style fields that were written (text, fontSize, colorAndOpacity, cornerRadius...)."
         },
         "appliedProperties": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "description": "The properties names set on the class defaults; a subobject property reads Holder.Property."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The names in properties that took their value; one that did not apply fails the call and is named in the error."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The properties names set on the class defaults; a subobject property reads Holder.Property."
+            }
+          ],
+          "description": "The names in properties that took their value; one that did not apply fails the call and is named in the error."
         },
         "appliedValue": {
           "type": "string",

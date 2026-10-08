@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "824a4c6d5b993cbd",
+  "catalogRevision": "f32936092e053fb1",
   "recordCount": 396,
   "records": [
     {
@@ -15966,6 +15966,13 @@
               "additionalProperties": true,
               "x-unreal-reflection-boundary": true
             },
+            "appliedProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The names in properties that took their value; one that did not apply fails the call and is named in the error."
+            },
             "partWarnings": {
               "type": "array",
               "items": {
@@ -16125,8 +16132,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "f53125670880a8b1a63f8b10200a3fa75486adb3a462d28ec35a079152763dfb",
-        "content": "8eb3948f96e7a522727c50001fbe80d04373111ab577043220da82c87c4285a2"
+        "schema": "e4ba6f04251552d8edb9ac3f93f0c1c3b93657c072208b0665cdd14574c4df54",
+        "content": "f9a920b24ef293e4b4c29c70702dbfb3cc9468aef4c6fff2798f7f34cd0e2592"
       }
     },
     {

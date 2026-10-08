@@ -1412,3 +1412,12 @@ describe('a batch-added component says where it was attached', () => {
     expect(ops.match(/McpScsParent::ReportParent\(/gu)?.length).toBe(2);
   });
 });
+
+// add_scs_component with a properties bag answered success without saying which properties took their value.
+describe('a component add names the properties it set', () => {
+  it('echoes appliedProperties on the single add path', () => {
+    const source = code('Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersScsAddComponent.cpp');
+    expect(source).toContain('AppliedNames.Add(MakeShared<FJsonValueString>(PropName));');
+    expect(source).toContain('Result->SetArrayField(TEXT("appliedProperties"), AppliedNames);');
+  });
+});
