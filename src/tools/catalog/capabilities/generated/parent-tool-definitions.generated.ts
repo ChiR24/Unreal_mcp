@@ -6787,6 +6787,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "x-unreal-reflection-boundary": true,
           "description": "World rotation as {pitch, yaw, roll} in degrees."
         },
+        "saveSkippedReason": {
+          "type": "string",
+          "description": "Why nothing was saved: markDirty was false, a running-game or transient object (the change lasts until PIE stops), level content (saved with its level), engine content, or a save that failed (the change is only in memory)."
+        },
+        "saved": {
+          "type": "boolean",
+          "description": "Whether the target's package was written to disk after the write; with properties, the last write's save, which holds every write of the call. False with saveSkippedReason when nothing was saved."
+        },
         "scale": {
           "type": "object",
           "x-unreal-reflection-boundary": true,

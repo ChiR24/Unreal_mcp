@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "4a823854b65ed74c",
+  "catalogRevision": "2648acd9195c42fc",
   "recordCount": 396,
   "records": [
     {
@@ -43792,6 +43792,14 @@
               "type": "number",
               "description": "With properties: how many writes applied."
             },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the target's package was written to disk after the write; with properties, the last write's save, which holds every write of the call. False with saveSkippedReason when nothing was saved."
+            },
+            "saveSkippedReason": {
+              "type": "string",
+              "description": "Why nothing was saved: markDirty was false, a running-game or transient object (the change lasts until PIE stops), level content (saved with its level), engine content, or a save that failed (the change is only in memory)."
+            },
             "instancesUpdated": {
               "type": "number",
               "description": "A write to a class default or component template: how many placed copies that still held the old default took the new one, as the details panel does; copies that override the value keep theirs. Absent for any other target."
@@ -43852,8 +43860,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "879b957d1c7ee049195be4fc99ae610cd507c2d60186e325fc664012402ab6f4",
-        "content": "930f946e22c2bdfb81643e376c73ebd16d222a02075a4c4cf05aeba32cea3b3a"
+        "schema": "ecf5c90dad7a055d629cdd0fe6792beddc2b28c0f6561899295bbb048648920c",
+        "content": "39d43ddfcc3d38823ef7a8021dad6bea1ea66c063932b939d629abae273c6833"
       }
     },
     {

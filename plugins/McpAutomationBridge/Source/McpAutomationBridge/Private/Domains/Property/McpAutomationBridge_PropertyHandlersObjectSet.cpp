@@ -53,9 +53,10 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       Row->SetBoolField(TEXT("applied"), Reply.bSuccess);
       if (!Reply.bSuccess) Failed.Add(FString::Printf(TEXT("%s: %s"), *Pair.Key, *Reply.Message));
       // assetPath names the Blueprint or material a class-default or expression write saved: without it a batch on
-      // a Blueprint's class defaults recompiled and saved the Blueprint while its receipt listed no change.
+      // a Blueprint's class defaults recompiled and saved the Blueprint while its receipt listed no change. Every row
+      // saves the same package, so the last row's saved/saveSkippedReason is what reached disk.
       for (const TCHAR *Field : {TEXT("value"), TEXT("actorName"), TEXT("actorPath"), TEXT("packagePath"), TEXT("blueprintCompiled"),
-                                 TEXT("assetPath"), TEXT("materialRebuilt")}) {
+                                 TEXT("assetPath"), TEXT("materialRebuilt"), TEXT("saved"), TEXT("saveSkippedReason")}) {
         const TSharedPtr<FJsonValue> Value = Reply.Result.IsValid() ? Reply.Result->TryGetField(Field) : nullptr;
         if (Value.IsValid()) (FCString::Strcmp(Field, TEXT("value")) == 0 ? Row : Data)->SetField(Field, Value);
       }
