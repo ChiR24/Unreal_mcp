@@ -186,8 +186,23 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorSpawn(
                                    : (bSpawnSkeletalMeshActor
                                           ? ASkeletalMeshActor::StaticClass()
                                           : AActor::StaticClass()));
+  // A spawn_batch item's variables are the actor's own from its first frame. In a running game SpawnActor ran
+  // BeginPlay before the batch set them, so BeginPlay saw the class defaults (a projectile spawned with its launch
+  // velocity never moved); construction waits for them there. The batch sets them again after, reporting each one.
+  const TSharedPtr<FJsonObject> *Variables = nullptr;
+  SpawnParams.bDeferConstruction = GEditor->PlayWorld && Payload->TryGetObjectField(TEXT("variables"), Variables) &&
+                                   Variables && Variables->IsValid() && (*Variables)->Values.Num() > 0;
   Spawned = TargetWorld->SpawnActor(ClassToSpawn, &Location, &Rotation,
                                     SpawnParams);
+  if (SpawnParams.bDeferConstruction && IsValid(Spawned)) {
+    for (const TPair<FString, TSharedPtr<FJsonValue>> &Pair : (*Variables)->Values) {
+      FString Unapplied; // reported by the batch's own pass
+      if (FProperty *Property = Spawned->GetClass()->FindPropertyByName(*Pair.Key)) {
+        ApplyJsonValueToProperty(Spawned, Property, Pair.Value, Unapplied);
+      }
+    }
+    Spawned->FinishSpawning(FTransform(Rotation, Location));
+  }
 
   if (!IsValid(Spawned)) {
     // SpawnActor returned null / an invalid object — nothing was added to the

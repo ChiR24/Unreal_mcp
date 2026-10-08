@@ -145,7 +145,8 @@ export const SPAWN_RECORDS: readonly CapabilityRecordSource[] = [
         description: 'Actors to spawn, 1-500. Each is a spawn payload: classPath, blueprintPath or meshPath, plus '
           + 'actorName, location, rotation, scale ([x, y, z] arrays). Optional per item: materialPath (applied like '
           + 'set_material; componentName/materialSlot/allComponents narrow it), variables ({name: value} Blueprint '
-          + 'variables set on the new instance, like set_blueprint_variables), folder (outliner folder path), tags '
+          + 'variables set on the new instance, like set_blueprint_variables; in a running game they are set before its '
+          + 'BeginPlay, so it starts with them), folder (outliner folder path), tags '
           + '(actor tags; delete_by_tag removes the batch again). Items that fail are reported; the rest still spawn.',
       },
       defaults: {
