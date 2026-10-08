@@ -222,7 +222,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorList(
         void *Container = nullptr;
         FString Resolved, Error, Value;
         if (FProperty *Nested = McpResolvePropertyPath(Actor, Wanted, Container, Resolved, Error)) {
-          MCP_PROPERTY_EXPORT_TEXT(Nested, Value, Nested->ContainerPtrToValuePtr<void>(Container), nullptr, nullptr, PPF_None);
+          const void *NestedValue = Nested->ContainerPtrToValuePtr<void>(Container);
+          MCP_PROPERTY_EXPORT_TEXT(Nested, Value, NestedValue, NestedValue, nullptr, PPF_None);
           Properties->SetStringField(Wanted, Value);
         } else {
           Missing.Add(MakeShared<FJsonValueString>(Wanted));

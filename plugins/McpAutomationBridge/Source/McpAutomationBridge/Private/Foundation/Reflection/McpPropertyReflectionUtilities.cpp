@@ -38,8 +38,11 @@ FString GetPropertyValueAsString(UObject* Object, FProperty* Property)
 {
     if (!Object || !Property) return FString();
 
+    // The value as its own defaults: with none, a struct drops every field that is zero (BuoyancyDamp2 = 0
+    // read as never set).
     FString Result;
-    MCP_PROPERTY_EXPORT_TEXT(Property, Result, Property->ContainerPtrToValuePtr<void>(Object), nullptr, nullptr, PPF_None);
+    const void* Value = Property->ContainerPtrToValuePtr<void>(Object);
+    MCP_PROPERTY_EXPORT_TEXT(Property, Result, Value, Value, nullptr, PPF_None);
     return Result;
 }
 }

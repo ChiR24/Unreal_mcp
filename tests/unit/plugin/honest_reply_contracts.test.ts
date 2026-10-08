@@ -903,7 +903,7 @@ describe('list reads struct members of an actor', () => {
   // list only followed Component.Property, never a struct member of the actor itself.
   it('list falls back to the get_property resolver for struct members and deeper paths', () => {
     const source = code('ControlActor', 'List', 'McpAutomationBridge_ControlActorList.cpp');
-    expect(source).toMatch(/if \(FProperty \*Nested = McpResolvePropertyPath\(Actor, Wanted, Container, Resolved, Error\)\) \{\s*MCP_PROPERTY_EXPORT_TEXT\(Nested, Value, Nested->ContainerPtrToValuePtr<void>\(Container\), nullptr, nullptr, PPF_None\);\s*Properties->SetStringField\(Wanted, Value\);/u);
+    expect(source).toMatch(/if \(FProperty \*Nested = McpResolvePropertyPath\(Actor, Wanted, Container, Resolved, Error\)\) \{\s*const void \*NestedValue = Nested->ContainerPtrToValuePtr<void>\(Container\);\s*MCP_PROPERTY_EXPORT_TEXT\(Nested, Value, NestedValue, NestedValue, nullptr, PPF_None\);\s*Properties->SetStringField\(Wanted, Value\);/u);
   });
 });
 
@@ -1373,5 +1373,15 @@ describe('a class default counts only the actors placed in a level', () => {
   it('skips preview copies when counting instancesUpdated', () => {
     const source = code('Blueprint', 'Graph', 'McpAutomationBridge_BlueprintHandlersSetDefaultLiteral.cpp');
     expect(source).toContain('World->WorldType == EWorldType::Editor || World->WorldType == EWorldType::PIE');
+  });
+});
+
+// A listed BuoyancyData left out BuoyancyDamp2 = 0: the list read exported structs against zero defaults.
+describe('listed struct values show their zero fields', () => {
+  it('exports a value against itself in the shared property reader and the list fallback', () => {
+    const reader = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflectionUtilities.cpp'), 'utf8');
+    expect(reader).toContain('MCP_PROPERTY_EXPORT_TEXT(Property, Result, Value, Value, nullptr, PPF_None);');
+    expect(code('ControlActor', 'List', 'McpAutomationBridge_ControlActorList.cpp'))
+      .toContain('MCP_PROPERTY_EXPORT_TEXT(Nested, Value, NestedValue, NestedValue, nullptr, PPF_None);');
   });
 });
