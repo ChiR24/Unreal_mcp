@@ -119,3 +119,22 @@ static inline bool McpApplyCollisionSetterKey(UActorComponent *Component, const 
   }
   return true;
 }
+
+/**
+ * A water body hands buoyancy over in its begin-overlap. An actor placed already in the water gets it at level load
+ * only when it asks for overlaps during level streaming, and never when its root makes no overlap events: a
+ * StaticMeshActor's mesh has them off, so a floater built on one sank with no warning. True when anything changed.
+ */
+static inline bool McpEnableWaterOverlaps(AActor *Actor) {
+  UPrimitiveComponent *Root = Actor ? Cast<UPrimitiveComponent>(Actor->GetRootComponent()) : nullptr;
+  if (!Actor || (Actor->bGenerateOverlapEventsDuringLevelStreaming && (!Root || Root->GetGenerateOverlapEvents()))) {
+    return false;
+  }
+  Actor->Modify();
+  Actor->bGenerateOverlapEventsDuringLevelStreaming = true;
+  if (Root) {
+    Root->Modify();
+    Root->SetGenerateOverlapEvents(true);
+  }
+  return true;
+}

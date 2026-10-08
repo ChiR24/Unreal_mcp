@@ -1331,9 +1331,18 @@ describe('a class default reaches the actors already placed', () => {
 // placed floater sank.
 describe('a Blueprint given buoyancy floats where it is placed', () => {
   it('asks for the water\'s begin-overlap at level load', () => {
-    expect(code('SCS', 'McpAutomationBridge_SCSHandlers.cpp')).toContain('CDO->bGenerateOverlapEventsDuringLevelStreaming = true;');
+    expect(code('SCS', 'McpAutomationBridge_SCSHandlers.cpp')).toContain('McpEnableWaterOverlaps(CDO);');
     expect(code('Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersModifyScsFinalize.cpp'))
       .toContain('McpSCSHandlers::EnableLoadOverlapsForBuoyancy(LocalBP);');
+  });
+
+  // A StaticMeshActor-based floater sank with no warning: its mesh makes no overlap events, so the water's
+  // begin-overlap never reached the buoyancy component.
+  it('turns overlap events on for the root, on the Blueprint path and the water tool alike', () => {
+    const lookup = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersComponentLookup.h');
+    expect(lookup).toContain('Actor->bGenerateOverlapEventsDuringLevelStreaming = true;');
+    expect(lookup).toContain('Root->SetGenerateOverlapEvents(true);');
+    expect(code('Environment', 'Runtime', 'McpAutomationBridge_EnvironmentHandlersTimeWater.cpp')).toContain('McpEnableWaterOverlaps(TargetActor);');
   });
 });
 

@@ -30,18 +30,16 @@ void EnableLoadOverlapsForBuoyancy(UBlueprint *Blueprint) {
     }
     return false;
   });
-  if (!bBuoyant || !CDO || CDO->bGenerateOverlapEventsDuringLevelStreaming) {
+  if (!bBuoyant || !CDO) {
     return;
   }
   TArray<UObject *> Instances;
   CDO->GetArchetypeInstances(Instances);
-  CDO->Modify();
-  CDO->bGenerateOverlapEventsDuringLevelStreaming = true;
+  McpEnableWaterOverlaps(CDO);
   for (UObject *Instance : Instances) {
     AActor *Actor = Cast<AActor>(Instance);
-    if (IsValid(Actor) && !Actor->bGenerateOverlapEventsDuringLevelStreaming) {
-      Actor->Modify();
-      Actor->bGenerateOverlapEventsDuringLevelStreaming = true;
+    if (IsValid(Actor)) {
+      McpEnableWaterOverlaps(Actor);
     }
   }
 }

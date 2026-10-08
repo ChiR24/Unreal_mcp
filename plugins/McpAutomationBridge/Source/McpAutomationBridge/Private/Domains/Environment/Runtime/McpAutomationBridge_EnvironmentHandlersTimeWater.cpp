@@ -201,14 +201,7 @@ bool McpCreateBuoyancyComponent(const TSharedPtr<FJsonObject> &Payload, TSharedP
     }
 
     McpApplyEnvironmentSettings(Component, Payload, Resp);
-    // An actor that starts the level already in the water never gets the water body's begin-overlap, so its
-    // buoyancy never starts and it sinks; this flag makes level load send that overlap.
-    if (FProperty *LoadOverlaps = McpFindPropertyCaseInsensitive(TargetActor, TEXT("bGenerateOverlapEventsDuringLevelStreaming")))
-    {
-        FString IgnoredError;
-        TargetActor->Modify();
-        McpPropertyReflection::ApplyJsonValueToProperty(TargetActor, LoadOverlaps, MakeShared<FJsonValueBoolean>(true), IgnoredError);
-    }
+    McpEnableWaterOverlaps(TargetActor);
     Resp->SetStringField(TEXT("actorName"), McpActorRef(TargetActor));
     Resp->SetStringField(TEXT("componentName"), Component->GetName());
     Resp->SetStringField(TEXT("componentPath"), Component->GetPathName());
