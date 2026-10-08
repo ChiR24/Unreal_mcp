@@ -267,8 +267,15 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
     parentTool: 'inspect', action: 'set_property', dispatchAction: 'set_property', domain: D, family: 'property',
     topics: ['write property', 'set value', 'change property', 'modify property', 'edit property', 'set field', 'set property on actor', 'set game instance variable'],
     summary: 'Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).',
-    whenToUse: ['A single property value must be written.', 'Several properties of one target must be written in one call (properties).'],
-    whenNotToUse: ['The property is read-only or the target is a packed asset.'],
+    whenToUse: [
+      'A single property value must be written.',
+      'Several properties of one target must be written in one call (properties).',
+      'A placed actor\'s component property must be written ("StaticMeshComponent0.StaticMesh", "Mesh.BodyInstance.CollisionEnabled"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component\'s own setter, as control_actor edit_component writes it.',
+    ],
+    whenNotToUse: [
+      'The property is read-only or the target is a packed asset.',
+      'A value the object works out from another of its settings: the object puts the write back and the call fails with PROPERTY_SET_FAILED naming both values, so change that setting instead. A value the object only adjusts (a clamp) is written, and the message names what it became.',
+    ],
     inputProps: {
       objectPath: P.runtimeObjectPath, actorName: P.actorName, name: P.name, blueprintPath: P.blueprintPath, propertyName: P.propertyName, propertyPath: P.propertyPath, value: P.value, markDirty: P.markDirty,
       properties: {
@@ -300,7 +307,7 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
       applied: { type: 'number', description: 'With properties: how many writes applied.' },
       saved: { type: 'boolean', description: 'Whether the target\'s package was written to disk after the write; with properties, the last write\'s save, which holds every write of the call. False with saveSkippedReason when nothing was saved.' },
       saveSkippedReason: { type: 'string', description: 'Why nothing was saved: markDirty was false, a running-game or transient object (the change lasts until PIE stops), level content (saved with its level), engine content, or a save that failed (the change is only in memory).' },
-      instancesUpdated: { type: 'number', description: 'A write to a class default or component template: how many placed copies that still held the old default took the new one, as the details panel does; copies that override the value keep theirs. Absent for any other target.' },
+      instancesUpdated: { type: 'number', description: 'A write to a class default or component template: how many placed copies, and derived Blueprints\' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target.' },
       // Writing a Blueprint CDO only reaches instances spawned later once the
       // class is rebuilt, so the caller is told whether that recompile happened.
       blueprintCompiled: { type: 'boolean', description: 'True when the target was a Blueprint CDO and the Blueprint was recompiled, so the value now applies to newly spawned instances. The reply (value, actorPath, actorClass) is read back from the recompiled class default object and the Blueprint package is saved; a variable the Blueprint declares keeps the value as its default, and the call fails with PROPERTY_SET_FAILED, never success, when the compile did not keep it. A Default__ objectPath resolves to the Blueprint\'s current default object; a copy a compile left behind (a REINST_ class, or a Blueprint object in /Engine/Transient with no game running) fails with STALE_TARGET. False for plain world actors and assets, where no compile is involved.' },

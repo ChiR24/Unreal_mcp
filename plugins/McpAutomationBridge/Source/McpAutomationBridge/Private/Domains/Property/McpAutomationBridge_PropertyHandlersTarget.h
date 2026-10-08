@@ -38,6 +38,27 @@ void KeepDeclaredDefault(UBlueprint* Blueprint, UObject* DefaultObject, const FS
 bool FindOnCurrentDefault(UBlueprint* Blueprint, const FString& PropertyPath, UObject*& OutObject,
                           FProperty*& OutProperty, void*& OutContainer, FName SubobjectName = NAME_None);
 
+// Property's value in Container as text, the form a write is compared by once the object's own change handling or a
+// Blueprint compile ran.
+FString ValueText(FProperty* Property, void* Container);
+
+// Writes Value through the component's own setter when the key has one (a StaticMeshComponent's StaticMesh, collision,
+// SimulatePhysics, Mobility), as control_actor edit_component does, else straight into Container. The component is the
+// root, or the one a placed actor's path names first ("StaticMeshComponent0.StaticMesh"): a raw StaticMesh write
+// tripped the engine's KnownStaticMesh check, and a raw CollisionEnabled was put back by the mesh's default collision.
+bool WriteValue(UObject* Root, const FString& Path, FProperty* Property, void* Container,
+                const TSharedPtr<FJsonValue>& Value, FString& OutError);
+
+// Tells the owner of an instanced subobject (a water body's wave generator) that the property holding it changed, as
+// the details panel does, up the chain of owners: the waves were not regenerated when only the generator heard it.
+void NotifyOwners(UObject* Edited);
+
+// Saves the package a write landed in when it is a project asset (a Blueprint target through its Blueprint: a
+// component a compile moved aside sits in /Engine/Transient). Otherwise false with OutSkipReason saying why nothing
+// was saved: markDirty off, running-game or transient content, level content (saved with its level), engine content,
+// or a save that failed.
+bool SaveAfterWrite(UObject* Target, UBlueprint* Blueprint, bool bMarkDirty, FString& OutSkipReason);
+
 // Reads objectPath|blueprintPath and propertyName|propertyPath and resolves the
 // object: the Blueprint's current CDO, or the object at objectPath (recovering its
 // Blueprint when that object is a CDO, and the Blueprint's current CDO when it is

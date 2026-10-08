@@ -50,6 +50,9 @@ void McpAppendComponentDetailFields(UActorComponent *Component,
 // engine setters for physics, mesh and collision, then McpResolvePropertyPath.
 void McpApplyComponentProperties(UActorComponent *Component, const TSharedPtr<FJsonObject> &Properties,
                                  TArray<FString> &OutApplied, TArray<FString> &OutWarnings);
+// True for a key McpApplyComponentProperties writes through the component's own setter (Mobility, SimulatePhysics, a
+// StaticMeshComponent's StaticMesh, collision): a raw reflected write of one skips what the setter keeps in step.
+bool McpIsComponentSetterKey(const UActorComponent *Component, const FString &Name);
 // Sends PROPERTY_CONVERSION_FAILED (nothing applied) or PARTIAL_FAILURE with the
 // warnings in Data and returns true; false (nothing sent) when all applied.
 bool McpSendComponentPropertyShortfall(UMcpAutomationBridgeSubsystem &Bridge,

@@ -96,7 +96,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     family: FAMILY_COLLISION,
     summary: 'Enable or disable collision on an actor, or on many actors at once with actorNames, as one undoable step; normalizes to set_collision.',
     whenToUse: ['Actor collision must be toggled.', 'Many actors must have collision toggled together (actorNames does them in one call).'],
-    whenNotToUse: ['Per-component collision is required (use set_component_property).'],
+    whenNotToUse: ['One component only, or a mode other than on and off (QueryOnly, PhysicsOnly): use edit_component (edit set_properties) with CollisionEnabled, which takes the ECollisionEnabled names.'],
     inputProps: {
       actorName: P.actorName,
       actorNames: { type: 'array', items: { type: 'string' }, description: 'Several actors to toggle in one call and one undo step, in place of actorName; names not found are listed back under missing, and the actors changed under affectedActors (which the receipt lists as changes, with an actor handle each).' },

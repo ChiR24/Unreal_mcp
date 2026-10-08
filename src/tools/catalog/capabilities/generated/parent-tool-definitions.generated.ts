@@ -6523,7 +6523,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "instancesUpdated": {
           "type": "number",
-          "description": "A write to a class default or component template: how many placed copies that still held the old default took the new one, as the details panel does; copies that override the value keep theirs. Absent for any other target."
+          "description": "A write to a class default or component template: how many placed copies, and derived Blueprints' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target."
         },
         "isActive": {
           "type": "boolean",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "36a759d7b3e53fad",
+  "catalogRevision": "c3c4d35e41b57c3c",
   "recordCount": 396,
   "records": [
     {
@@ -33323,7 +33323,7 @@
           "Many actors must have collision toggled together (actorNames does them in one call)."
         ],
         "whenNotToUse": [
-          "Per-component collision is required (use set_component_property)."
+          "One component only, or a mode other than on and off (QueryOnly, PhysicsOnly): use edit_component (edit set_properties) with CollisionEnabled, which takes the ECollisionEnabled names."
         ]
       },
       "schemas": {
@@ -33425,7 +33425,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "2a9198bfe38e9006c5187546c21827b63ecb4a9ae1e09a84aa1cb6f5f5d0e268",
-        "content": "0e31897e73092fdcb1c0a911205ea69c63b95102a0e66071f1db9c888041e8ee"
+        "content": "dfcbc0812d87aec46baf5cafa5d9781d3da871075dce1abe3e437d0275455b78"
       }
     },
     {
@@ -43669,10 +43669,12 @@
         "summary": "Write a property value on a world actor, asset, or Blueprint CDO, or several at once (properties).",
         "whenToUse": [
           "A single property value must be written.",
-          "Several properties of one target must be written in one call (properties)."
+          "Several properties of one target must be written in one call (properties).",
+          "A placed actor's component property must be written (\"StaticMeshComponent0.StaticMesh\", \"Mesh.BodyInstance.CollisionEnabled\"): a StaticMesh, collision, SimulatePhysics or Mobility key goes through the component's own setter, as control_actor edit_component writes it."
         ],
         "whenNotToUse": [
-          "The property is read-only or the target is a packed asset."
+          "The property is read-only or the target is a packed asset.",
+          "A value the object works out from another of its settings: the object puts the write back and the call fails with PROPERTY_SET_FAILED naming both values, so change that setting instead. A value the object only adjusts (a clamp) is written, and the message names what it became."
         ]
       },
       "schemas": {
@@ -43802,7 +43804,7 @@
             },
             "instancesUpdated": {
               "type": "number",
-              "description": "A write to a class default or component template: how many placed copies that still held the old default took the new one, as the details panel does; copies that override the value keep theirs. Absent for any other target."
+              "description": "A write to a class default or component template: how many placed copies, and derived Blueprints' defaults with their own copies, still held the old default and took the new one, as the details panel does; one that overrides the value keeps it. Absent for any other target."
             },
             "blueprintCompiled": {
               "type": "boolean",
@@ -43860,8 +43862,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ecf5c90dad7a055d629cdd0fe6792beddc2b28c0f6561899295bbb048648920c",
-        "content": "39d43ddfcc3d38823ef7a8021dad6bea1ea66c063932b939d629abae273c6833"
+        "schema": "bf7261d41cc7f6dce4b9ad77d32f9556780242c7e223748388ec0f84978065f8",
+        "content": "4f436e8f16e23a568d4e1ead8e617cee4a618b65361c6c21b7fee3ad619715f3"
       }
     },
     {

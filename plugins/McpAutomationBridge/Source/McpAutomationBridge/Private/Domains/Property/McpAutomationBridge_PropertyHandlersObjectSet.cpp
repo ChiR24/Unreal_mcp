@@ -201,10 +201,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 
   // The placed copies that never overrode this default follow it, as the details panel makes them.
   const TArray<UObject*> Followers = McpPropertyCdoPropagation::CollectFollowers(RootObject, ResolvedPath);
+  // An instanced object exports under a new name in every copy, so it never reads back as written.
+  const bool bCompare = !Property->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference);
+  const FString BeforeText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();
   RootObject->Modify();
 
   FString ConversionError;
-  if (!ApplyJsonValueToProperty(TargetContainer, Property, ValueField, ConversionError))
+  if (!McpPropertyTarget::WriteValue(RootObject, EffectivePropertyName, Property, TargetContainer, ValueField, ConversionError))
   {
       CreatedOverride.Rollback();
       SendAutomationError(RequestingSocket, RequestId, ConversionError, TEXT("PROPERTY_CONVERSION_FAILED"));
@@ -214,15 +217,13 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
 
   // A Blueprint's default object is replaced by every compile, and a variable the Blueprint declares gets its value
   // back from the text of its default: the write above alone was gone after the compile below, while the reply read
-  // the value off the replaced copy and said success.
+  // the value off the replaced copy and said success. Any other object can put a value back in its own change handling.
   const bool bDefaultObject = ResolvedBlueprint && RootObject->HasAnyFlags(RF_ClassDefaultObject);
-  const bool bCompare = bDefaultObject && !Property->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference);
-  FString WrittenText;
   if (bDefaultObject)
   {
       McpPropertyTarget::KeepDeclaredDefault(ResolvedBlueprint, RootObject, ResolvedPath);
-      MCP_PROPERTY_EXPORT_TEXT(Property, WrittenText, Property->ContainerPtrToValuePtr<void>(TargetContainer), nullptr, nullptr, PPF_None);
   }
+  const FString WrittenText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();
 
   const bool bMarkDirty = GetJsonBoolField(Payload, TEXT("markDirty"), true);
   if (bMarkDirty)
@@ -238,6 +239,20 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   if (FProperty* Member = RootObject->GetClass()->FindPropertyByName(FName(*ResolvedPath.Left(Dot == INDEX_NONE ? ResolvedPath.Len() : Dot)))) Changed.MemberProperty = Member;
   RootObject->PostEditChangeProperty(Changed);
   McpRefreshComponentAfterEdit(Cast<UActorComponent>(RootObject));
+  McpPropertyTarget::NotifyOwners(RootObject);
+  // A value the object's own change handling put back was never applied (a StaticMeshActor's mesh restored a raw
+  // CollisionEnabled from its mesh's default collision), and the reply read the old value back while it said success.
+  // One it only adjusted (a clamp, a warm-up time snapped to whole ticks) is applied, and the message names it.
+  const FString AfterText = bCompare && !bDefaultObject ? McpPropertyTarget::ValueText(Property, TargetContainer) : WrittenText;
+  const bool bAdjusted = AfterText != WrittenText;
+  if (bAdjusted && AfterText == BeforeText)
+  {
+      CreatedOverride.Rollback();
+      SendAutomationError(RequestingSocket, RequestId, FString::Printf(TEXT("'%s' reads '%s' again after the object's own "
+          "change handling ran, not the '%s' written: the object works it out from another of its settings, so change that "
+          "one instead."), *Property->GetName(), *AfterText, *WrittenText), TEXT("PROPERTY_SET_FAILED"));
+      return true;
+  }
   if (ResolvedBlueprint)
   {
       FBlueprintEditorUtils::MarkBlueprintAsModified(ResolvedBlueprint);
@@ -282,30 +297,8 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
   McpPropertyActorAccess::RefreshK2NodeTitleCacheIfNeeded(RootObject);
   const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit(RootObject);
 
-  // `saved` used to be hard-coded true while nothing reached disk: the package
-  // was only marked dirty, so an InputAction's bTriggerWhenPaused set here was
-  // gone after the next editor restart. Persist a real asset package; level and
-  // PIE content is saved with its level, and engine content is left alone.
-  bool bSaved = false;
   FString SaveSkippedReason;
-  // A Blueprint target is saved through its Blueprint: a component a compile moved aside sits in /Engine/Transient.
-  UPackage* OwningPackage = (ResolvedBlueprint ? static_cast<UObject*>(ResolvedBlueprint) : RootObject)->GetOutermost();
-  if (!bMarkDirty) {
-      SaveSkippedReason = TEXT("markDirty was false");
-  } else if (OwningPackage->HasAnyPackageFlags(PKG_PlayInEditor) || OwningPackage == GetTransientPackage()) {
-      // Checked before ContainsMap: a PIE package holds a map too, and "saved
-      // with its level" promised a save that stopping PIE throws away.
-      SaveSkippedReason = TEXT("a running-game or transient object has nothing to save; the change lasts until PIE stops");
-  } else if (OwningPackage->ContainsMap()) {
-      SaveSkippedReason = TEXT("level content is saved with its level");
-  } else if (OwningPackage->GetName().StartsWith(TEXT("/Engine/"))) {
-      SaveSkippedReason = TEXT("engine content is not saved");
-  } else {
-      bSaved = McpSafeAssetSave(OwningPackage);
-      if (!bSaved) {
-          SaveSkippedReason = TEXT("the package could not be saved; the change is only in memory");
-      }
-  }
+  const bool bSaved = McpPropertyTarget::SaveAfterWrite(RootObject, ResolvedBlueprint, bMarkDirty, SaveSkippedReason);
 
   TSharedPtr<FJsonObject> ResultPayload = McpHandlerUtils::CreateResultObject();
   // Echo the RESOLVED property's canonical name, never the caller-supplied
@@ -336,6 +329,7 @@ bool UMcpAutomationBridgeSubsystem::HandleSetObjectProperty(
       McpPropertyWatch::SendAfterWatch(*this, RequestId, RequestingSocket, ResultPayload, Watch);
       return true;
   }
-  SendAutomationResponse(RequestingSocket, RequestId, true, TEXT("Property value updated."), ResultPayload);
+  SendAutomationResponse(RequestingSocket, RequestId, true, bAdjusted ? FString::Printf(TEXT("Property value updated; the "
+      "object's own change handling made it '%s'."), *AfterText) : FString(TEXT("Property value updated.")), ResultPayload);
   return true;
 }

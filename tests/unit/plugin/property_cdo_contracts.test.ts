@@ -36,7 +36,7 @@ describe('set_property on a Blueprint CDO reaches the Blueprint\'s current defau
   it('a variable the Blueprint declares keeps the written value as its default, so the compile does not undo it', () => {
     const keep = compact(sliceBetween(target(), 'void KeepDeclaredDefault(', 'bool FindOnCurrentDefault('));
     const flat = compact(setter());
-    const apply = flat.indexOf('ApplyJsonValueToProperty(TargetContainer, Property, ValueField, ConversionError)');
+    const apply = flat.indexOf('McpPropertyTarget::WriteValue(RootObject, EffectivePropertyName, Property, TargetContainer, ValueField, ConversionError)');
     const kept = flat.indexOf('McpPropertyTarget::KeepDeclaredDefault(ResolvedBlueprint, RootObject, ResolvedPath);');
     const compile = flat.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);');
 
@@ -49,18 +49,19 @@ describe('set_property on a Blueprint CDO reaches the Blueprint\'s current defau
     expect(compile, 'and before the compile that would have undone it').toBeGreaterThan(kept);
   });
 
-  it('only a default object is synced and read back: a component template keeps its own path', () => {
+  it('only a default object is synced and read back after the compile: a component template keeps its own path', () => {
     const flat = compact(setter());
 
     expect(flat).toContain('const bool bDefaultObject = ResolvedBlueprint && RootObject->HasAnyFlags(RF_ClassDefaultObject);');
-    expect(flat).toContain('const bool bCompare = bDefaultObject && !Property->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference);');
+    expect(flat).toContain('const bool bCompare = !Property->HasAnyPropertyFlags(CPF_InstancedReference | CPF_ContainsInstancedReference);');
   });
 
   it('after the compile the new default object is found again, and it is the one the reply, the value and the save describe', () => {
     const flat = compact(setter());
     const compile = flat.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);');
     const refresh = flat.indexOf('McpPropertyTarget::FindOnCurrentDefault(ResolvedBlueprint, ResolvedPath, RootObject, Property, TargetContainer)');
-    const owning = flat.indexOf('UPackage* OwningPackage = (ResolvedBlueprint ? static_cast<UObject*>(ResolvedBlueprint) : RootObject)->GetOutermost();');
+    const owning = flat.indexOf('McpPropertyTarget::SaveAfterWrite(RootObject, ResolvedBlueprint, bMarkDirty, SaveSkippedReason)');
+    expect(compact(target())).toContain('UPackage* OwningPackage = (Blueprint ? static_cast<UObject*>(Blueprint) : Target)->GetOutermost();');
     const verification = flat.indexOf('McpHandlerUtils::AddVerification(ResultPayload, RootObject);');
     const value = flat.indexOf('McpPropertyReflection::ExportPropertyToJsonValue(TargetContainer, Property)');
 
@@ -86,7 +87,7 @@ describe('set_property on a Blueprint CDO reaches the Blueprint\'s current defau
     expect(flat).toContain('TEXT("PROPERTY_SET_FAILED")');
     expect(flat).toContain("The Blueprint compile did not keep the write: '%s' reads '%s' on the Blueprint's default object afterwards, not '%s'.");
     const all = compact(setter());
-    expect(all.indexOf('MCP_PROPERTY_EXPORT_TEXT(Property, WrittenText,'), 'the written value is taken before the compile').toBeLessThan(all.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);'));
+    expect(all.indexOf('const FString WrittenText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();'), 'the written value is taken before the compile').toBeLessThan(all.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);'));
   });
 });
 

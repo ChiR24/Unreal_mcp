@@ -377,7 +377,7 @@ describe('handlers answer what they did', () => {
     expect(access).toMatch(/bool RefreshMaterialHostAfterEdit\(UObject\* Edited\)\s*\{\s*UObject\* Host = Edited \? Edited->GetTypedOuter<UMaterial>\(\) : nullptr;\s*if \(!Host && Edited\)\s*\{\s*Host = Edited->GetTypedOuter<UMaterialFunction>\(\);\s*\}\s*if \(!Host\)\s*\{\s*return false;\s*\}\s*Host->PreEditChange\(nullptr\);\s*Host->PostEditChange\(\);\s*return true;\s*\}/u);
     expect(compile, 'the same two calls compile_material makes').toMatch(/Host->PreEditChange\(nullptr\);\s*Host->PostEditChange\(\);/u);
     expect(set).toMatch(/RefreshK2NodeTitleCacheIfNeeded\(RootObject\);\s*const bool bMaterialRebuilt = McpPropertyActorAccess::RefreshMaterialHostAfterEdit\(RootObject\);/u);
-    expect(set.indexOf('RefreshMaterialHostAfterEdit(RootObject)'), 'before the save, so the saved material is the rebuilt one').toBeLessThan(set.indexOf('McpSafeAssetSave(OwningPackage)'));
+    expect(set.indexOf('RefreshMaterialHostAfterEdit(RootObject)'), 'before the save, so the saved material is the rebuilt one').toBeLessThan(set.indexOf('McpPropertyTarget::SaveAfterWrite('));
     expect(set).toMatch(/if \(bMaterialRebuilt\) \{\s*ResultPayload->SetBoolField\(TEXT\("materialRebuilt"\), true\);\s*\}/u);
 
     const properties = capabilityIndex().byId.get('inspect.set_property')?.schemas.output.properties;
@@ -1524,5 +1524,64 @@ describe('a static mesh collision change holds', () => {
     const lookup = readFileSync(join(DOMAINS, '..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersComponentLookup.h'), 'utf8');
     expect(lookup).toMatch(/Primitive->SetCollisionEnabled\(static_cast<ECollisionEnabled::Type>\(Enabled\)\);[\s\S]*?Mesh->bUseDefaultCollision = false;/u);
     expect(code('Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersScsPropagate.h')).toContain('TEXT("bUseDefaultCollision")})');
+  });
+});
+
+// set_property of CollisionEnabled on a placed mesh answered success while the collision profile had put the old value back.
+describe('a property write the object put back fails', () => {
+  it('reads the value again after the change handling and fails when it is the value from before the write', () => {
+    const source = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+    const before = source.indexOf('const FString BeforeText = bCompare ? McpPropertyTarget::ValueText(Property, TargetContainer) : FString();');
+    const after = source.indexOf('const FString AfterText = bCompare && !bDefaultObject ? McpPropertyTarget::ValueText(Property, TargetContainer) : WrittenText;');
+    expect(before, 'taken before the write').toBeGreaterThan(-1);
+    expect(before).toBeLessThan(source.indexOf('McpPropertyTarget::WriteValue(RootObject, EffectivePropertyName, Property, TargetContainer, ValueField, ConversionError)'));
+    expect(after, 'after the object\'s own change handling').toBeGreaterThan(source.indexOf('RootObject->PostEditChangeProperty(Changed);'));
+    expect(after, 'and before a Blueprint compile replaces the object').toBeLessThan(source.indexOf('FKismetEditorUtilities::CompileBlueprint(ResolvedBlueprint);'));
+    expect(source).toMatch(/if \(bAdjusted && AfterText == BeforeText\)\s*\{\s*CreatedOverride\.Rollback\(\);/u);
+    expect(source).toMatch(/the object works it out from another of its settings, so change that "\s*"one instead\./u);
+    expect(source, 'an adjusted value is a success that names it').toContain('object\'s own change handling made it \'%s\'.');
+  });
+
+  it('saves through the shared helper, with the same skip reasons', () => {
+    const target = code('Property', 'McpAutomationBridge_PropertyHandlersTarget.cpp');
+    expect(target).toContain('bool SaveAfterWrite(UObject* Target, UBlueprint* Blueprint, bool bMarkDirty, FString& OutSkipReason)');
+    expect(target).toContain('} else if (McpSafeAssetSave(OwningPackage)) {');
+    expect(target).toContain('OutSkipReason = TEXT("level content is saved with its level");');
+  });
+});
+
+// set_property of "StaticMeshComponent0.StaticMesh" on a placed actor wrote the raw property, and the engine's
+// KnownStaticMesh ensure fired; a raw CollisionEnabled was put back by the mesh's default collision.
+describe('a component key with a setter is written through the setter', () => {
+  it('set_property routes a setter key of a component, or of the component a placed actor path names first', () => {
+    const target = code('Property', 'McpAutomationBridge_PropertyHandlersTarget.cpp');
+    expect(target).toContain('if (!Component || !McpIsComponentSetterKey(Component, Key)) {');
+    expect(target).toContain('McpApplyComponentProperties(Component, Bag, Applied, Warnings);');
+    expect(target, 'the actor property holding it, or its own name').toContain('Held->GetObjectPropertyValue_InContainer(Actor)');
+    expect(code('ControlActor', 'McpAutomationBridge_ControlActorComponentProperties.cpp'))
+      .toContain('bool McpIsComponentSetterKey(const UActorComponent *Component, const FString &Name) {');
+    expect(code('Property', 'McpAutomationBridge_PropertyHandlersCdoPropagation.cpp'), 'placed copies take it the same way')
+      .toContain('McpPropertyTarget::WriteValue(Instance, Path, Property, Container, Value, Error)');
+  });
+});
+
+// A parent Blueprint's class default reached its own placed copies, not a child Blueprint's default or the child's copies.
+describe('a class default reaches derived Blueprints that never overrode it', () => {
+  it('collects derived defaults and their copies whose whole archetype chain still holds the old value', () => {
+    const source = code('Property', 'McpAutomationBridge_PropertyHandlersCdoPropagation.cpp');
+    expect(source).toContain('for (UObject* Each = Instance; Each && Each != Template; Each = Each->GetArchetype())');
+    expect(source).toContain('Instance->IsTemplate() && !McpPropertyTarget::IsSupersededTarget(Instance)');
+    expect(source).not.toContain('Instance->GetArchetype() != Template');
+  });
+});
+
+// A water body's wave generator took MaxAmplitude while the waves kept their old height: only the generator heard it.
+describe('an instanced subobject write tells its owner', () => {
+  it('walks up the owners through the instanced property holding each one', () => {
+    const target = code('Property', 'McpAutomationBridge_PropertyHandlersTarget.cpp');
+    expect(target).toContain('if (It->HasAnyPropertyFlags(CPF_InstancedReference) && It->GetObjectPropertyValue_InContainer(Owner) == Edited) {');
+    expect(target).toContain('Owner->PostEditChangeProperty(Changed);');
+    const set = code('Property', 'McpAutomationBridge_PropertyHandlersObjectSet.cpp');
+    expect(set.indexOf('McpPropertyTarget::NotifyOwners(RootObject);')).toBeGreaterThan(set.indexOf('RootObject->PostEditChangeProperty(Changed);'));
   });
 });

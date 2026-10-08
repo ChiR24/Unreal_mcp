@@ -39,6 +39,13 @@ bool McpApplyComponentStaticMesh(UActorComponent *Component, const FString &Name
 }
 } // namespace
 
+bool McpIsComponentSetterKey(const UActorComponent *Component, const FString &Name) {
+  const auto Is = [&Name](const TCHAR *Key) { return Name.Equals(Key, ESearchCase::IgnoreCase); };
+  return (Cast<USceneComponent>(Component) && Is(TEXT("Mobility"))) ||
+         (Cast<UPrimitiveComponent>(Component) && (Is(TEXT("SimulatePhysics")) || Is(TEXT("bSimulatePhysics")))) ||
+         (Cast<UStaticMeshComponent>(Component) && Is(TEXT("StaticMesh"))) || McpIsCollisionSetterKey(Component, Name);
+}
+
 void McpApplyComponentProperties(UActorComponent *Component, const TSharedPtr<FJsonObject> &Properties,
                                  TArray<FString> &OutApplied, TArray<FString> &OutWarnings) {
   // PRIORITY: Apply Mobility FIRST. Physics simulation fails on a Static

@@ -1,6 +1,7 @@
 #include "Domains/Property/McpAutomationBridge_PropertyHandlersTarget.h"
 
 #include "Core/Compatibility/McpVersionCompatibility.h"
+#include "Domains/ControlActor/McpAutomationBridge_ControlActorSupport.h"
 #include "Foundation/BridgeHelpers/McpAutomationBridgeHelpers.h"
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "McpAutomationBridgeSubsystem.h"
@@ -156,5 +157,96 @@ bool ResolvePropertyTarget(UMcpAutomationBridgeSubsystem& Bridge, const FString&
     return false;
   }
   return true;
+}
+
+FString ValueText(FProperty* Property, void* Container)
+{
+  FString Text;
+  MCP_PROPERTY_EXPORT_TEXT(Property, Text, Property->ContainerPtrToValuePtr<void>(Container), nullptr, nullptr, PPF_None);
+  return Text;
+}
+
+namespace
+{
+// The component a placed actor's dotted path names first, by the actor property holding it (StaticMeshComponent,
+// CharacterMovement) or by its own name (StaticMeshComponent0), with the rest of the path; null otherwise.
+UActorComponent* PathComponent(UObject* Root, const FString& Path, FString& OutRest)
+{
+  AActor* Actor = Cast<AActor>(Root);
+  FString Head;
+  if (!Actor || !Path.Split(TEXT("."), &Head, &OutRest)) {
+    return nullptr;
+  }
+  if (const FObjectProperty* Held = FindFProperty<FObjectProperty>(Actor->GetClass(), FName(*Head))) {
+    return Cast<UActorComponent>(Held->GetObjectPropertyValue_InContainer(Actor));
+  }
+  TArray<UActorComponent*> Components;
+  Actor->GetComponents(Components);
+  UActorComponent* const* Named = Components.FindByPredicate([&Head](const UActorComponent* Each) {
+    return Each && Each->GetName().Equals(Head, ESearchCase::IgnoreCase);
+  });
+  return Named ? *Named : nullptr;
+}
+}
+
+bool WriteValue(UObject* Root, const FString& Path, FProperty* Property, void* Container,
+                const TSharedPtr<FJsonValue>& Value, FString& OutError)
+{
+  FString Key = Path;
+  UActorComponent* Component = Cast<UActorComponent>(Root);
+  if (!Component) {
+    Component = PathComponent(Root, Path, Key);
+  }
+  if (!Component || !McpIsComponentSetterKey(Component, Key)) {
+    return ApplyJsonValueToProperty(Container, Property, Value, OutError);
+  }
+  TSharedPtr<FJsonObject> Bag = MakeShared<FJsonObject>();
+  Bag->SetField(Key, Value);
+  TArray<FString> Applied, Warnings;
+  McpApplyComponentProperties(Component, Bag, Applied, Warnings);
+  OutError = FString::Join(Warnings, TEXT("; "));
+  return Applied.Num() > 0;
+}
+
+void NotifyOwners(UObject* Edited)
+{
+  // A component's actor is left to the caller's own change handling: only instanced subobjects are walked up.
+  for (UObject* Owner = Edited && !Edited->IsA<UActorComponent>() ? Edited->GetOuter() : nullptr;
+       Owner && !Owner->IsA<UPackage>(); Edited = Owner, Owner = Owner->GetOuter()) {
+    FObjectProperty* Holder = nullptr;
+    for (TFieldIterator<FObjectProperty> It(Owner->GetClass()); It && !Holder; ++It) {
+      if (It->HasAnyPropertyFlags(CPF_InstancedReference) && It->GetObjectPropertyValue_InContainer(Owner) == Edited) {
+        Holder = *It;
+      }
+    }
+    if (!Holder) {
+      return;
+    }
+    FPropertyChangedEvent Changed(Holder, EPropertyChangeType::ValueSet);
+    Owner->PostEditChangeProperty(Changed);
+  }
+}
+
+// `saved` used to be hard-coded true while nothing reached disk: the package was only marked dirty, so an InputAction's
+// bTriggerWhenPaused set through set_property was gone after the next editor restart.
+bool SaveAfterWrite(UObject* Target, UBlueprint* Blueprint, bool bMarkDirty, FString& OutSkipReason)
+{
+  UPackage* OwningPackage = (Blueprint ? static_cast<UObject*>(Blueprint) : Target)->GetOutermost();
+  if (!bMarkDirty) {
+    OutSkipReason = TEXT("markDirty was false");
+  } else if (OwningPackage->HasAnyPackageFlags(PKG_PlayInEditor) || OwningPackage == GetTransientPackage()) {
+    // Checked before ContainsMap: a PIE package holds a map too, and "saved with its level" promised a save that
+    // stopping PIE throws away.
+    OutSkipReason = TEXT("a running-game or transient object has nothing to save; the change lasts until PIE stops");
+  } else if (OwningPackage->ContainsMap()) {
+    OutSkipReason = TEXT("level content is saved with its level");
+  } else if (OwningPackage->GetName().StartsWith(TEXT("/Engine/"))) {
+    OutSkipReason = TEXT("engine content is not saved");
+  } else if (McpSafeAssetSave(OwningPackage)) {
+    return true;
+  } else {
+    OutSkipReason = TEXT("the package could not be saved; the change is only in memory");
+  }
+  return false;
 }
 }
