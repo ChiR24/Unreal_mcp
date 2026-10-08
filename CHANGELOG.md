@@ -73,6 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Removing a Blueprint's root component hands its place to a child.** `remove_scs_component` `DefaultSceneRoot` answered "removed" while the compile put it straight back with the mesh still under it, so a mesh meant to be the physics root never was (a buoy with buoyancy sank). The removed node's children now move up as the editor does, the first scene child becoming the root (`promotedChildren`, `newRoot`); a default root with nothing to take its place is refused, and a removal the compile undid fails.
 - **A class default reaches the actors already placed.** `set_default` changed the Blueprint's class default while every placed actor kept the old value under a success reply; placed actors still holding the old default now take the new one, as the Details panel does (`instancesUpdated`), and an actor that overrides it keeps its own.
 - **A Blueprint given buoyancy floats where it is placed.** An actor placed in the water learns it is in water only from the begin-overlap the water body sends at level load, which it gets only when it asks for it; a `BuoyancyComponent` added to a Blueprint's components never asked, so every placed floater sank. Adding one now sets the request on the class and its placed actors.
+- **A struct read shows its zero fields.** A struct property read left out every field that was zero (`BuoyancyDamp2=0`, whose default is 1, read as never set); every field is now written.
 
 </details>
 

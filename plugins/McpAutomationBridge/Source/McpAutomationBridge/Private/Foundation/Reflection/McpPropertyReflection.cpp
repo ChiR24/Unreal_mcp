@@ -105,11 +105,11 @@ TSharedPtr<FJsonValue> ExportPropertyToJsonValue(void* TargetContainer, FPropert
             return MakeShared<FJsonValueArray>(McpHandlerUtils::RotatorToJsonArray(*StructProp->ContainerPtrToValuePtr<FRotator>(TargetContainer)));
         }
 
+        // The value as its own defaults writes every field: with no defaults the export compares each field
+        // to zero and leaves zeros out, so a damping set to 0 (struct default 1) read as never set.
         FString Exported;
-        StructProp->Struct->ExportText(
-            Exported,
-            StructProp->ContainerPtrToValuePtr<void>(TargetContainer),
-            nullptr, nullptr, 0, nullptr, true);
+        const void* StructValue = StructProp->ContainerPtrToValuePtr<void>(TargetContainer);
+        StructProp->Struct->ExportText(Exported, StructValue, StructValue, nullptr, 0, nullptr, true);
         return MakeShared<FJsonValueString>(Exported);
     }
 

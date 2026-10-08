@@ -1328,3 +1328,12 @@ describe('a Blueprint given buoyancy floats where it is placed', () => {
       .toContain('McpSCSHandlers::EnableLoadOverlapsForBuoyancy(LocalBP);');
   });
 });
+
+// A struct read left out every field that was zero (BuoyancyData without BuoyancyDamp2 = 0, its default 1), so the
+// reader could not tell a zero from a field the read did not show.
+describe('struct reads write every field', () => {
+  it('exports a struct against itself, so no field is compared away', () => {
+    const source = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'Foundation', 'Reflection', 'McpPropertyReflection.cpp'), 'utf8');
+    expect(source).toContain('StructProp->Struct->ExportText(Exported, StructValue, StructValue, nullptr, 0, nullptr, true);');
+  });
+});
