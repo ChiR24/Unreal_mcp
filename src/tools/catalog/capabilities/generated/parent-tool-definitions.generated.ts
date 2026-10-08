@@ -17116,6 +17116,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "copies": {
                 "type": "integer",
                 "description": "How many shapes this entry became with its repeat and mirror (the shape itself included); absent for a single shape."
+              },
+              "warning": {
+                "type": "string",
+                "description": "Present when a union shape is under two grid cells across: its surface can come out ragged, or as almost nothing when it formed under 24 triangles; raise resolution or thicken it."
               }
             }
           }

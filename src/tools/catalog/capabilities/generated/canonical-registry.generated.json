@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "0cfe145f5ec9711b",
+  "catalogRevision": "4c116cd640a4a9e2",
   "recordCount": 396,
   "records": [
     {
@@ -61041,6 +61041,10 @@
                   "copies": {
                     "type": "integer",
                     "description": "How many shapes this entry became with its repeat and mirror (the shape itself included); absent for a single shape."
+                  },
+                  "warning": {
+                    "type": "string",
+                    "description": "Present when a union shape is under two grid cells across: its surface can come out ragged, or as almost nothing when it formed under 24 triangles; raise resolution or thicken it."
                   }
                 }
               }
@@ -61259,8 +61263,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "71aaa65dd6571276d11430b439d29e0c075859d0dfa967f6003f8c3e58373076",
-        "content": "50377db9aafcc8f9a87e58220102813274bec22b5f5e925eda223dd3869a4d10"
+        "schema": "e218a4a2ce1d33df54e8bddf0a4b5aafa30ef6f5920aa2d0c410fde559c55207",
+        "content": "20836aa9cc5bf5c1ac2b6251f5d42615794a41379e324211a454eca975f39a05"
       }
     },
     {

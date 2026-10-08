@@ -248,6 +248,15 @@ bool HandleCreateSdf(UMcpAutomationBridgeSubsystem* Self, const FString& Request
         {
             Part->SetNumberField(TEXT("copies"), CopyCounts[Index]);
         }
+        const double Thinnest = First ? McpGeometrySdf::ThinnestSize(*First) : 0.0;
+        if (First && First->Op == EOp::Union && Thinnest < 2.0 * Cubes.CubeSize)
+        {
+            // A thin strip on a broad face still meshes (thousands of triangles), only raggedly; only a part
+            // that formed almost nothing is lost.
+            const TCHAR* Outcome = PartTriangles[Index] < 24 ? TEXT("it meshed to almost nothing")
+                                                             : TEXT("its surface can come out ragged or patchy");
+            Part->SetStringField(TEXT("warning"), FString::Printf(TEXT("%.1f cm across, under two %.1f cm cells: %s. Raise resolution or thicken it."), Thinnest, Cubes.CubeSize, Outcome));
+        }
         Parts.Add(MakeShared<FJsonValueObject>(Part));
     }
     Result->SetArrayField(TEXT("parts"), Parts);

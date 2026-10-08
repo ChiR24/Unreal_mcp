@@ -150,4 +150,21 @@ inline double BoundRadius(const FShape& S)
     default: return S.Length * 0.5 + FMath::Max(S.Radius, S.TopRadius);
     }
 }
+
+// The shape's thinnest full size across. Under about two grid cells a part meshes to slivers or
+// nothing (a 9 cm-radius cable at a 21 cm cell came out as one triangle), so the reply warns.
+inline double ThinnestSize(const FShape& S)
+{
+    switch (S.Type)
+    {
+    case EShape::Sphere:
+    case EShape::Capsule: return 2.0 * S.Radius;
+    case EShape::Ellipsoid: return 2.0 * S.Radii.GetMin();
+    case EShape::Box: return 2.0 * S.Extent.GetMin();
+    case EShape::Cylinder: return FMath::Min(2.0 * S.Radius, S.Length);
+    case EShape::Torus: return 2.0 * S.Thickness;
+    // A cone's tip is meant to be fine; it is thin when even its wider end is.
+    default: return 2.0 * FMath::Max(S.Radius, S.TopRadius);
+    }
+}
 } // namespace McpGeometrySdf
