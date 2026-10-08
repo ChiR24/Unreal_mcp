@@ -78,9 +78,19 @@ bool ParseWatch(UMcpAutomationBridgeSubsystem& Bridge, const FString& RequestId,
   }
   (*WatchObject)->TryGetStringField(TEXT("propertyName"), Out.PropertyName);
   Out.PropertyName.TrimStartAndEndInline();
+  // Omitted, the watch samples the property the call writes: watching the value just set is the common case.
+  for (const TCHAR* Field : {TEXT("propertyPath"), TEXT("propertyName")})
+  {
+    if (Out.PropertyName.IsEmpty())
+    {
+      Payload->TryGetStringField(Field, Out.PropertyName);
+      Out.PropertyName.TrimStartAndEndInline();
+    }
+  }
   if (Out.PropertyName.IsEmpty())
   {
-    Bridge.SendAutomationError(Socket, RequestId, TEXT("watch.propertyName is required: the property to sample after the write."),
+    Bridge.SendAutomationError(Socket, RequestId,
+                               TEXT("watch.propertyName is required when the call writes several properties: the one to sample after the write."),
                                TEXT("INVALID_ARGUMENT"));
     return false;
   }

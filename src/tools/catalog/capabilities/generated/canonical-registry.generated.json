@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "6d71dcab368df67a",
+  "catalogRevision": "7dc8ccf2ac12f13b",
   "recordCount": 396,
   "records": [
     {
@@ -43675,7 +43675,7 @@
               "properties": {
                 "propertyName": {
                   "type": "string",
-                  "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform)."
+                  "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform). Omitted, the property the call writes."
                 },
                 "objectPath": {
                   "type": "string",
@@ -43690,9 +43690,6 @@
                   "description": "Seconds between samples (default 0: every frame); a sample is kept only when the value changed."
                 }
               },
-              "required": [
-                "propertyName"
-              ],
               "additionalProperties": false
             }
           },
@@ -43803,8 +43800,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cec5136436a32511b50a1155aec7af913feeb7da8407d8a505e105cbfc5ae972",
-        "content": "9e79281f928735f1c48a84bbc0fa3b8b768dfc65ec74981675f4100fbfa1eb60"
+        "schema": "879b957d1c7ee049195be4fc99ae610cd507c2d60186e325fc664012402ab6f4",
+        "content": "930f946e22c2bdfb81643e376c73ebd16d222a02075a4c4cf05aeba32cea3b3a"
       }
     },
     {

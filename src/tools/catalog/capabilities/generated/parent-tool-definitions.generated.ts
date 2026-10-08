@@ -6095,7 +6095,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "properties": {
             "propertyName": {
               "type": "string",
-              "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform)."
+              "description": "The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform). Omitted, the property the call writes."
             },
             "objectPath": {
               "type": "string",
@@ -6110,9 +6110,6 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
               "description": "Seconds between samples (default 0: every frame); a sample is kept only when the value changed."
             }
           },
-          "required": [
-            "propertyName"
-          ],
           "additionalProperties": false
         },
         "action": {

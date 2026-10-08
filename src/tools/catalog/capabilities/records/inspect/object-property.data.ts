@@ -283,12 +283,11 @@ export const OBJECT_PROPERTY_RECORDS: readonly CapabilityRecordSource[] = [
         type: 'object',
         description: 'Sample a property right after the write, in the same call, to see what the write sets off before it ends: a HUD pop or fade runs on real time, even with PIE paused, and is over before a later call can read it. The reply lists each value the property took with its time t in seconds (Lives on GameInstance with watch {objectPath: "WBP_HUD", propertyName: "LivesBox.RenderTransform"}).',
         properties: {
-          propertyName: { type: 'string', description: 'The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform).' },
+          propertyName: { type: 'string', description: 'The property to sample; a dotted path reaches through widgets and structs (LivesBox.RenderTransform). Omitted, the property the call writes.' },
           objectPath: { type: 'string', description: 'The object to sample, as objectPath takes it (GameInstance, a live widget such as WBP_HUD); omitted, the object written.' },
           durationSeconds: { type: 'number', description: 'Real seconds to sample (default 0.5, at most 20).' },
           intervalSeconds: { type: 'number', description: 'Seconds between samples (default 0: every frame); a sample is kept only when the value changed.' },
         },
-        required: ['propertyName'],
         additionalProperties: false,
       },
     },
