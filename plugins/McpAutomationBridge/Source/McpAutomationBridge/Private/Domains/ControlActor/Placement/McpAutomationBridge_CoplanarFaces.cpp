@@ -162,6 +162,14 @@ bool McpCoplanarOverlap(const FMcpCoplanarFace& A, const FMcpCoplanarFace& B, do
     return OutU > McpCoplanarMinOverlap && OutV > McpCoplanarMinOverlap;
 }
 
+// A mesh kept out of the main view cannot flicker in it: one drawn outside the main pass, and a water body's two info
+// meshes, which its own scene proxy hides from every pass but the water info texture's (an ocean was reported as one
+// coplanar pair of them). Matched by class name so the plugin needs no link to the Water module.
+bool McpCoplanarDrawnInView(const UStaticMeshComponent* Component)
+{
+    return Component->bRenderInMainPass && Component->GetClass()->GetFName() != TEXT("WaterBodyInfoMeshComponent");
+}
+
 TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameFilter)
 {
     TArray<FMcpCoplanarPiece> Pieces;
@@ -182,7 +190,7 @@ TArray<FMcpCoplanarPiece> McpCoplanarCollect(UWorld* World, const FString& NameF
         {
             // Instanced components hold many transforms under one; their bounds are not one mesh.
             if (!Component || !Component->IsVisible() || Component->bHiddenInGame || !Component->GetStaticMesh() ||
-                Component->IsA<UInstancedStaticMeshComponent>())
+                Component->IsA<UInstancedStaticMeshComponent>() || !McpCoplanarDrawnInView(Component))
             {
                 continue;
             }

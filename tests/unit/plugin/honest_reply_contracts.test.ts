@@ -1432,3 +1432,23 @@ describe('a struct member default lands on its own member', () => {
     expect(source).not.toContain('const_cast<uint8*>(DefaultInstance)');
   });
 });
+
+// fix_coplanar left twelve flush pier sections as a staircase after four passes: the smaller piece of every pair moved,
+// so each section of a row moved the same way as its neighbour and stayed in its plane.
+describe('a row of flush pieces is parted in one pass', () => {
+  it('2-colours the touching faces and moves only one colour', () => {
+    const plan = code('ControlActor', 'Placement', 'McpAutomationBridge_CoplanarPlan.cpp');
+    expect(plan).toContain('const TMap<FMcpFaceKey, bool> Moves = McpCoplanarColour(Hits, Sides);');
+    expect(plan).toMatch(/Moves\.Add\(Next, !bMoves\);/u);
+    expect(plan).toMatch(/Swap\(Mover, Still\);\s*Shift = -Shift;/u);
+    expect(code('ControlActor', 'Placement', 'McpAutomationBridge_CoplanarFix.cpp'))
+      .toContain('const TMap<AActor*, FMcpCoplanarPlan> Plans = PlanCoplanarPass(Hits, Distance, Inside);');
+  });
+
+  // An ocean was reported as a coplanar pair of its two water info meshes, which no view ever draws.
+  it('skips meshes kept out of the main view', () => {
+    const faces = code('ControlActor', 'Placement', 'McpAutomationBridge_CoplanarFaces.cpp');
+    expect(faces).toContain('return Component->bRenderInMainPass && Component->GetClass()->GetFName() != TEXT("WaterBodyInfoMeshComponent");');
+    expect(faces).toContain('!McpCoplanarDrawnInView(Component))');
+  });
+});

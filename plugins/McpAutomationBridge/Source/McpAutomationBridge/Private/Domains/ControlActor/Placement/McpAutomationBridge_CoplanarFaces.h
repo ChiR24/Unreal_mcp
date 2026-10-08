@@ -49,6 +49,22 @@ TArray<FMcpCoplanarReport> ReportCoplanarFaces(UWorld* World, const FString& Nam
 // "+X" for a face that points along an axis, so it reads like the gizmo arrows.
 FString DescribeDirection(const FVector& Normal);
 
+// Where one actor's faces go, per world axis: the shift of its + face and of its - face along that axis.
+struct FMcpCoplanarPlan
+{
+    bool bPlus[3] = {false, false, false};
+    bool bMinus[3] = {false, false, false};
+    double PlusShift[3] = {0.0, 0.0, 0.0};
+    double MinusShift[3] = {0.0, 0.0, 0.0};
+    FVector FreeShift = FVector::ZeroVector; // faces turned off the world axes can only be translated
+    TArray<TSharedPtr<FJsonValue>> Pairs;
+};
+
+// One fix_coplanar pass: where each actor's faces go. A pair inside one actor goes to Inside, to be fixed in its
+// Blueprint.
+TMap<AActor*, FMcpCoplanarPlan> PlanCoplanarPass(const TArray<FMcpCoplanarHit>& Hits, double Distance,
+                                                 TArray<FMcpCoplanarHit>& Inside);
+
 // control_actor fix_coplanar: moves the actor of every coplanar pair a unit so one surface is clearly in front.
 bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
                        const TSharedPtr<FJsonObject>& Payload, TSharedPtr<FMcpBridgeWebSocket> Socket);

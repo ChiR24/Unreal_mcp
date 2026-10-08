@@ -79,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A component `modify_scs` adds says where it went.** With no `attachTo` it lands under the Blueprint's root (`DefaultSceneRoot` on a new Blueprint), as the editor's Components panel puts it, and the reply never said so; each add now answers `attachedTo`.
 - **A frame step says the speed it ran at.** `step_frame` keeps the game speed that was set, so six steps at speed 0.1 advanced 0.02 s while the reply said only "Stepped 6 frame(s)"; it now names the speed (`timeDilation`) and, with a fixed delta time, the game seconds advanced (`gameSeconds`).
 - **A full-window screenshot shows the view as it is now.** A capture that had to restore the minimized editor photographed the viewport frame drawn before it was minimized, so a camera moved since was not in the picture; the viewports are redrawn and the picture taken a few frames later. A game-viewport capture outside Play In Editor now says to capture the editor with `full_editor_window`.
+- **A row of flush pieces is parted in one call.** `fix_coplanar` moved the smaller piece of every pair, so in a row of equal flush pieces (pier sections, floor tiles) each moved the same way as its neighbour and stayed in its plane: four passes left twelve sections as a staircase with seven pairs still flickering. The faces touching in one plane now alternate, so one pass parts the row. `audit_placement` and `fix_coplanar` also skip meshes no view draws: an ocean was reported as a coplanar pair of its two water info meshes.
 
 </details>
 

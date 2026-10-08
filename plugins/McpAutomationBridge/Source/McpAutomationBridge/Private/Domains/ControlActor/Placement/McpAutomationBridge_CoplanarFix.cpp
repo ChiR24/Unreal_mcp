@@ -17,17 +17,6 @@ namespace McpCoplanar
 {
 namespace
 {
-// Where one actor's faces go, per world axis: the shift of its + face and of its - face along that axis.
-struct FMcpCoplanarPlan
-{
-    bool bPlus[3] = {false, false, false};
-    bool bMinus[3] = {false, false, false};
-    double PlusShift[3] = {0.0, 0.0, 0.0};
-    double MinusShift[3] = {0.0, 0.0, 0.0};
-    FVector FreeShift = FVector::ZeroVector; // faces turned off the world axes can only be translated
-    TArray<TSharedPtr<FJsonValue>> Pairs;
-};
-
 // The local axis of Actor that lies along world Axis, or INDEX_NONE when the actor is turned off it.
 int32 McpCoplanarLocalAxis(const AActor* Actor, int32 Axis)
 {
@@ -111,51 +100,6 @@ void McpCoplanarSkip(TArray<TSharedPtr<FJsonValue>>& Skipped, TSet<FString>& See
         Skipped.Add(McpCoplanarText(Line));
     }
 }
-
-// One pass: where each actor's faces go. A pair inside one actor goes to Inside, to be fixed in its Blueprint.
-TMap<AActor*, FMcpCoplanarPlan> McpCoplanarPlanPass(const TArray<FMcpCoplanarHit>& Hits, double Distance,
-                                                    TArray<FMcpCoplanarHit>& Inside)
-{
-    TMap<AActor*, FMcpCoplanarPlan> Plans;
-    for (const FMcpCoplanarHit& Hit : Hits)
-    {
-        const FString Direction = DescribeDirection(Hit.Normal);
-        // An actor tagged mcp.placement.ok overlaps on purpose, but no two faces flicker on purpose: it is fixed too.
-        if (Hit.Actor == Hit.OtherActor)
-        {
-            Inside.Add(Hit);
-            continue;
-        }
-        const bool bApplied = Hit.FaceArea > 0.0 && Hit.OverlapU * Hit.OverlapV >= 0.95 * Hit.FaceArea;
-        const double Shift = bApplied ? Distance : -Distance; // along the face's own direction
-        FMcpCoplanarPlan& Plan = Plans.FindOrAdd(Hit.Actor);
-        int32 Axis = INDEX_NONE;
-        for (int32 Candidate = 0; Candidate < 3 && Axis == INDEX_NONE; ++Candidate)
-        {
-            Axis = FMath::Abs(Hit.Normal[Candidate]) > 0.99 ? Candidate : INDEX_NONE;
-        }
-        // The largest overlap comes first and decides a face that two pairs share.
-        if (Axis == INDEX_NONE)
-        {
-            Plan.FreeShift += Hit.Normal * Shift;
-        }
-        else if (Hit.Normal[Axis] > 0.0 && !Plan.bPlus[Axis])
-        {
-            Plan.bPlus[Axis] = true;
-            Plan.PlusShift[Axis] = Shift;
-        }
-        else if (Hit.Normal[Axis] < 0.0 && !Plan.bMinus[Axis])
-        {
-            Plan.bMinus[Axis] = true;
-            Plan.MinusShift[Axis] = -Shift;
-        }
-        Plan.Pairs.Add(McpCoplanarText(FString::Printf(TEXT("%s face with '%s' %s"), *Direction,
-                                                       *McpActorRef(Hit.OtherActor),
-                                                       bApplied ? TEXT("brought forward") : TEXT("pulled back"))));
-    }
-
-    return Plans;
-}
 } // namespace
 
 bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& RequestId,
@@ -200,7 +144,7 @@ bool HandleFixCoplanar(UMcpAutomationBridgeSubsystem* Bridge, const FString& Req
         const TArray<FMcpCoplanarHit> Hits = FindCoplanarFaces(World, NameFilter);
         PairsFound = PairsFound == INDEX_NONE ? Hits.Num() : PairsFound;
         TArray<FMcpCoplanarHit> Inside;
-        const TMap<AActor*, FMcpCoplanarPlan> Plans = McpCoplanarPlanPass(Hits, Distance, Inside);
+        const TMap<AActor*, FMcpCoplanarPlan> Plans = PlanCoplanarPass(Hits, Distance, Inside);
         if (Plans.Num() == 0 && Inside.Num() == 0)
         {
             break;
