@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ab5a6f8dce965c8c",
+  "catalogRevision": "824a4c6d5b993cbd",
   "recordCount": 396,
   "records": [
     {
@@ -15114,7 +15114,7 @@
             },
             "nodeType": {
               "type": "string",
-              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment; a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
+              "description": "The node to create: CallFunction (memberName, plus memberClass for a function of another class), Event (eventName: BeginPlay, Tick), CustomEvent (customEventName), VariableGet or VariableSet (memberName), Cast (targetClass), InputAxisEvent (inputAxisName), Branch, Sequence, Select, Switch, SwitchOnInt, SwitchOnEnum, SwitchOnString, DoOnce, DoN, FlipFlop, Gate, MultiGate, ForLoop, ForEachLoop, WhileLoop (each also WithBreak), MakeArray, MakeStruct and BreakStruct (structPath), SpawnActorFromClass, GetAllActorsOfClass, Self, Timeline, Reroute, Comment (a Switch on Int is made with only Default: wire a case by its number, from \"$id.0\", \"$id.1\"..., and the case pin is added; a Sequence or a commutative math node grows its inputs the same way); a common function by name (PrintString, Delay, SetActorLocation, GetPlayerPawn, GetActorOfClass, IsValid, PlaySound2D); or a K2Node class name that inspect_graph info=node_types lists. For create_struct_make_break_nodes: make or break."
             },
             "posX": {
               "type": "number",
@@ -15707,8 +15707,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3c290ae144b47ddabae446f87c4d2577f81a3e91f9b351cc29a2d0eb4099ebca",
-        "content": "047d363551e482a31dacffb9f329b4ded0ce91197e28ad985defca4daf016196"
+        "schema": "1d9c44e339daaf0b67289ae79c348499918dd91af50d28fec094779908aabed3",
+        "content": "058f61ee7aa9bd10b5d6e73bfb1cf9990d426b91a7472b2dd75e882604935617"
       }
     },
     {
