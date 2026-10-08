@@ -65,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A reflected setter or call on an actor runs in the editor.** `invoke_reflected_function` and the environment setters went through the actor's ProcessEvent, which runs nothing in an editor world unless script execution is allowed, so they answered success and changed nothing (a water body's waves stayed empty); they now run under the editor's script guard.
 - **A water body comes out complete.** `create_water_body` now fills the materials and waves a new body lacks from the editor's placement defaults (it drew nothing before), and `configure_water_waves` spreads the body's waves from the given size down to 15% height and 13% wavelength, where one size for all lined the crests up and folded the surface. `create_buoyancy_component` turns on the overlap a body sends at level load, so an actor placed already in the water floats instead of sinking.
 - **A shape too thin for the grid is named.** `create_sdf` meshed a union shape under two cells across to slivers or nothing without a word; its `parts` entry now carries a `warning` with its size and the cell size.
+- **Console commands reach the running game.** During Play In Editor `console_command` ran every command against the editor world, so a game command (`slomo`, a cheat, a pawn's or HUD's exec) came back not executed; it now goes through the game's local player first, as the in-game console sends it.
 
 </details>
 

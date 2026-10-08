@@ -8,6 +8,7 @@
 
 #include "CoreGlobals.h"
 #include "Editor/UnrealEd/Public/Editor.h"
+#include "Engine/Player.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -213,7 +214,16 @@ bool UMcpAutomationBridgeSubsystem::HandleConsoleCommandAction(
         GLog->AddOutputDevice(&LogCapture);
 
         bool bHandled = false;
-        if (GEditor)
+        // While a game runs, its own commands (slomo, a cheat, an exec on its pawn, HUD or game mode) reach it only
+        // through its player, as the in-game console sends them: run against the editor world, slomo came back
+        // "not executed". What the game does not take still runs below as before. Blocked commands never get here.
+        UWorld* PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+        APlayerController* GamePlayer = PlayWorld ? PlayWorld->GetFirstPlayerController() : nullptr;
+        if (GamePlayer && GamePlayer->Player)
+        {
+            bHandled = GamePlayer->Player->Exec(PlayWorld, *Command, OutputCapture);
+        }
+        if (!bHandled && GEditor)
         {
             bHandled = GEditor->Exec(World, *Command, OutputCapture);
         }
