@@ -47,9 +47,11 @@ inline bool McpRemoveLeftoverPackageFile(const FString& PackageName)
     // open until the queue is flushed; delete while it is open fails on Windows.
     DeleteLoaders();
     // Not quiet: a refusal logs the OS error code.
-    IFileManager::Get().Delete(*FPaths::ConvertRelativePathToFull(Filename), false, true, false);
+    const bool bDeleted = IFileManager::Get().Delete(*FPaths::ConvertRelativePathToFull(Filename), false, true, false);
     ScanPathSynchronous(FPaths::GetPath(PackageName), false);
-    return !FPackageName::DoesPackageExist(PackageName);
+    // A file something still holds open is removed when the last handle closes, so it can show a while longer: a
+    // delete the system accepted is done. A struct reported "still on disk" was gone at the next editor start.
+    return bDeleted || !FPackageName::DoesPackageExist(PackageName);
 }
 
 /** Runs the engine delete, then removes a file it left behind. */

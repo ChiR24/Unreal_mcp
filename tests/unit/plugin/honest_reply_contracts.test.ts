@@ -1452,3 +1452,13 @@ describe('a row of flush pieces is parted in one pass', () => {
     expect(faces).toContain('!McpCoplanarDrawnInView(Component))');
   });
 });
+
+// A delete listed a struct as "still on disk because the package is still loaded" after the package was unloaded and
+// the system had accepted the file delete; the file was gone at the next editor start.
+describe('a file delete the system accepted counts as done', () => {
+  it('trusts the accepted delete over a file that still shows while a handle is open', () => {
+    const source = readFileSync(join(DOMAINS, '..', 'Safety', 'McpSafeOperationsAssetDelete.h'), 'utf8');
+    expect(source).toContain('const bool bDeleted = IFileManager::Get().Delete(');
+    expect(source).toContain('return bDeleted || !FPackageName::DoesPackageExist(PackageName);');
+  });
+});
