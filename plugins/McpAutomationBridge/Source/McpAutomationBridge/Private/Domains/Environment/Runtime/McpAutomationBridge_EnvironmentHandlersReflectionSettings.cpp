@@ -1,5 +1,6 @@
 #include "Domains/Environment/McpAutomationBridge_EnvironmentHandlersShared.h"
 #include "Engine/TextureCube.h"
+#include "UObject/Script.h"
 
 namespace McpEnvironmentHandlers {
 
@@ -54,6 +55,8 @@ UObject *McpInvokeObjectGetter(UObject *Object, const FName &FunctionName)
         UObject *ReturnValue = nullptr;
     };
 
+    // AActor::ProcessEvent runs nothing in an editor world unless script execution is allowed.
+    FEditorScriptExecutionGuard ScriptGuard;
     FObjectGetterParams Params;
     Object->ProcessEvent(Function, &Params);
     return Params.ReturnValue;
@@ -76,6 +79,8 @@ bool McpInvokeObjectSetter(UObject *Object, const FName &FunctionName, UObject *
         UObject *Value = nullptr;
     };
 
+    // Without the guard a water body's SetWaterWaves silently never ran and the call still reported success.
+    FEditorScriptExecutionGuard ScriptGuard;
     FObjectSetterParams Params;
     Params.Value = Value;
     Object->ProcessEvent(Function, &Params);

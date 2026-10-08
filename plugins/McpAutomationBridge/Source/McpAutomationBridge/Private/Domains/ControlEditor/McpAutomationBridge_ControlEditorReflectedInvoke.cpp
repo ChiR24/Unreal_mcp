@@ -8,6 +8,7 @@
 #include "Foundation/Reflection/McpReflectedInvoke.h"
 
 #include "UObject/Class.h"
+#include "UObject/Script.h"
 #include "UObject/UnrealType.h"
 #include "UObject/UObjectIterator.h"
 
@@ -112,6 +113,8 @@ bool UMcpAutomationBridgeSubsystem::HandleInvokeReflectedFunction(
     return true;
   }
 
+  // An actor's ProcessEvent runs nothing in an editor world unless script execution is allowed.
+  FEditorScriptExecutionGuard ScriptGuard;
   Instance->ProcessEvent(Function, Params.Data());
 
   // Return and out parameters carry the answer; read them back generically so
