@@ -95,7 +95,8 @@ bool HandleScreenshotAction(
   }
 
   if (!ViewportClient) {
-    Message = TEXT("No game viewport available");
+    Message = TEXT("No game viewport available: the game viewport exists only while Play In Editor runs; capture the "
+                   "editor with mode full_editor_window, or start play first");
     ErrorCode = TEXT("NO_VIEWPORT");
     Resp->SetStringField(TEXT("error"), Message);
     return true;

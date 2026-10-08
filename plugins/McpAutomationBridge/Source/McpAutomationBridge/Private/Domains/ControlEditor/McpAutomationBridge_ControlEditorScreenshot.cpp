@@ -21,6 +21,19 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     return true;
   }
 
+  // Takes the picture again a few frames later, once Slate has painted what this pass brought forward.
+  auto RetryLater = [this, &RequestId, &Payload, &Socket]() {
+    TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
+    FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateLambda([WeakThis, RequestId, Payload, Socket](float) {
+          if (WeakThis.IsValid()) {
+            WeakThis->HandleControlEditorScreenshot(RequestId, Payload, Socket);
+          }
+          return false;
+        }),
+        0.3f);
+  };
+
   FString Mode;
   Payload->TryGetStringField(TEXT("mode"), Mode);
   Mode = Mode.TrimStartAndEnd().ToLower();
@@ -116,7 +129,16 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     // minimized window sits off screen and photographs as nothing. It is put
     // back WITHOUT activating it (no focus change, no cursor move); when that
     // cannot be done the capture is refused rather than taken of another window.
-    const bool bRestored = RestoreWindowForCaptureForMcp(EditorWindow.ToSharedRef());
+    // A window just restored still shows the viewport frame drawn before it was minimized, so a camera moved
+    // since then was not in the picture: redraw the viewports and take it a few frames later.
+    const bool bRestoredNow = RestoreWindowForCaptureForMcp(EditorWindow.ToSharedRef());
+    if (bRestoredNow && !Payload->HasField(TEXT("_windowRestoredForCapture"))) {
+      Payload->SetBoolField(TEXT("_windowRestoredForCapture"), true);
+      GEditor->RedrawAllViewports(true);
+      RetryLater();
+      return true;
+    }
+    const bool bRestored = bRestoredNow || Payload->HasField(TEXT("_windowRestoredForCapture"));
     if (EditorWindow->IsWindowMinimized()) {
       SendStandardErrorResponse(this, Socket, RequestId, TEXT("EDITOR_WINDOW_MINIMIZED"),
                                 FString::Printf(TEXT("The editor window '%s' is minimized and could not be restored "
@@ -178,15 +200,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorScreenshot(
     if (!Payload->HasField(TEXT("_levelEditorFronted")) &&
         BringLevelEditorTabToFrontForMcp()) {
       Payload->SetBoolField(TEXT("_levelEditorFronted"), true);
-      TWeakObjectPtr<UMcpAutomationBridgeSubsystem> WeakThis(this);
-      FTSTicker::GetCoreTicker().AddTicker(
-          FTickerDelegate::CreateLambda([WeakThis, RequestId, Payload, Socket](float) {
-            if (WeakThis.IsValid()) {
-              WeakThis->HandleControlEditorScreenshot(RequestId, Payload, Socket);
-            }
-            return false;
-          }),
-          0.3f);
+      RetryLater();
       return true;
     }
     // Resolve through the same helper the camera handlers use, so the viewport

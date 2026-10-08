@@ -1346,3 +1346,12 @@ describe('a frame step says the speed it ran at', () => {
     expect(source).toContain('Resp->SetNumberField(TEXT("gameSeconds"), Stepped * FApp::GetFixedDeltaTime() * Dilation);');
   });
 });
+
+// A capture that restored the minimized editor photographed the frame drawn before it was minimized.
+describe('a full-window screenshot shows the view as it is now', () => {
+  it('a capture that restored the editor redraws and waits before taking the picture', () => {
+    const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorScreenshot.cpp');
+    expect(source).toContain('Payload->SetBoolField(TEXT("_windowRestoredForCapture"), true);');
+    expect(source).toContain('GEditor->RedrawAllViewports(true);');
+  });
+});
