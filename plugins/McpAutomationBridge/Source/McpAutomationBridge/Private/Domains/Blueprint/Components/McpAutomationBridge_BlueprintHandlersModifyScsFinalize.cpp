@@ -8,6 +8,7 @@
 
 #include "Domains/Blueprint/Components/McpAutomationBridge_BlueprintHandlersScsPropagate.h"
 #include "Domains/ControlActor/Placement/McpAutomationBridge_PartPlacement.h"
+#include "Domains/SCS/McpAutomationBridge_SCSHandlersSupport.h"
 #include "Engine/Blueprint.h"
 
 namespace McpBlueprintHandlers {
@@ -70,6 +71,9 @@ void FinalizeModifyScsResponse(const FBlueprintActionContext &Context,
   // not write a blueprint to disk that just failed to compile.
   bool bCompileOk = false;
   TSharedPtr<FJsonObject> CompileInfo = McpHandlerUtils::CreateResultObject();
+  if (LocalBP) {
+    McpSCSHandlers::EnableLoadOverlapsForBuoyancy(LocalBP);
+  }
   if (State.bCompile && LocalBP) {
     FString CompileError;
     bCompileOk =

@@ -18,6 +18,35 @@
 #include "Engine/SimpleConstructionScript.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 
+namespace McpSCSHandlers {
+void EnableLoadOverlapsForBuoyancy(UBlueprint *Blueprint) {
+  USimpleConstructionScript *SCS = Blueprint->SimpleConstructionScript;
+  AActor *CDO = Blueprint->GeneratedClass ? Cast<AActor>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+  const bool bBuoyant = SCS && SCS->GetAllNodes().ContainsByPredicate([](const USCS_Node *Node) {
+    for (const UClass *Class = Node ? Node->ComponentClass : nullptr; Class; Class = Class->GetSuperClass()) {
+      if (Class->GetFName() == TEXT("BuoyancyComponent")) {
+        return true;
+      }
+    }
+    return false;
+  });
+  if (!bBuoyant || !CDO || CDO->bGenerateOverlapEventsDuringLevelStreaming) {
+    return;
+  }
+  TArray<UObject *> Instances;
+  CDO->GetArchetypeInstances(Instances);
+  CDO->Modify();
+  CDO->bGenerateOverlapEventsDuringLevelStreaming = true;
+  for (UObject *Instance : Instances) {
+    AActor *Actor = Cast<AActor>(Instance);
+    if (IsValid(Actor) && !Actor->bGenerateOverlapEventsDuringLevelStreaming) {
+      Actor->Modify();
+      Actor->bGenerateOverlapEventsDuringLevelStreaming = true;
+    }
+  }
+}
+}
+
 void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
                                               bool &bOutCompiled,
                                               bool &bOutSaved) {
@@ -28,6 +57,7 @@ void FSCSHandlers::FinalizeBlueprintSCSChange(UBlueprint *Blueprint,
     return;
   }
 
+  McpSCSHandlers::EnableLoadOverlapsForBuoyancy(Blueprint);
   FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
   bOutCompiled = McpSafeCompileBlueprint(Blueprint);
 

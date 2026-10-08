@@ -28,6 +28,10 @@ void AddSCSNodeVerification(TSharedPtr<FJsonObject> Result,
                             USimpleConstructionScript *SCS, USCS_Node *Node);
 bool SCSParentMatches(USimpleConstructionScript *SCS, USCS_Node *Node,
                       const FString &ExpectedParentName);
-
+// A level-placed actor with a BuoyancyComponent only learns it starts in water from the water body's begin-overlap,
+// which level load sends only when the actor sets bGenerateOverlapEventsDuringLevelStreaming; without it buoyancy never
+// started and every placed floater sank. Sets the flag on the class default and on placed actors when the
+// Blueprint's components include a BuoyancyComponent (the water tool's own buoyancy path sets it on its actor).
+void EnableLoadOverlapsForBuoyancy(UBlueprint *Blueprint);
 
 }

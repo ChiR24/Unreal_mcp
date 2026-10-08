@@ -1318,3 +1318,13 @@ describe('a class default reaches the actors already placed', () => {
     expect(source).toContain('Result->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);');
   });
 });
+
+// A BuoyancyComponent added to a Blueprint never asked for the begin-overlap a water body sends at level load, so every
+// placed floater sank.
+describe('a Blueprint given buoyancy floats where it is placed', () => {
+  it('asks for the water\'s begin-overlap at level load', () => {
+    expect(code('SCS', 'McpAutomationBridge_SCSHandlers.cpp')).toContain('CDO->bGenerateOverlapEventsDuringLevelStreaming = true;');
+    expect(code('Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersModifyScsFinalize.cpp'))
+      .toContain('McpSCSHandlers::EnableLoadOverlapsForBuoyancy(LocalBP);');
+  });
+});
