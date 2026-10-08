@@ -105,6 +105,18 @@ bool McpHasBody(const UPrimitiveComponent *Comp) {
   return Body && Body->IsValidBodyInstance();
 }
 
+// A water body is a surface, not a solid: a buoy, a hull or a wading pawn sits partly under it on purpose, and
+// "intersects the ocean by 47; sunk 47 below the surface; z=-3 would rest it" lifted a buoy on top of the sea.
+// Matched by class name so the plugin needs no link to the Water module.
+bool McpIsWaterBody(const AActor *Actor) {
+  for (const UClass *Class = Actor ? Actor->GetClass() : nullptr; Class; Class = Class->GetSuperClass()) {
+    if (Class->GetFName() == TEXT("WaterBody")) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // A pickup, a trigger or a flying enemy is built from overlap bodies alone: it
 // holds nothing up and nothing holds it up, so it hovers where it was put on
 // purpose and "floating 275 units above the surface" told the caller nothing.
@@ -175,7 +187,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   // level-spanning debug-draw proxy reported itself as sunk into the geometry it
   // was drawn over, and led the list every time. An actor of overlap bodies alone
   // can neither interpenetrate nor rest on anything, so it has nothing to report.
-  if (IsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor) || McpIsOverlapOnly(Actor)) {
+  if (IsBoundsOnlyActor(Actor) || McpPlacementAccepted(Actor) || McpIsOverlapOnly(Actor) || McpIsWaterBody(Actor)) {
     return;
   }
 
@@ -201,7 +213,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   for (TActorIterator<AActor> It(World); It; ++It) {
     AActor *Other = *It;
     if (!Other || Other == Actor || Other->IsHidden() ||
-        IsBoundsOnlyActor(Other) || McpPlacementAccepted(Other)) {
+        IsBoundsOnlyActor(Other) || McpPlacementAccepted(Other) || McpIsWaterBody(Other)) {
       continue;
     }
     // An attached child sharing its parent's space is structural, not a mistake.
@@ -261,6 +273,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
   World->LineTraceMultiByObjectType(Hits, TraceStart, TraceEnd, Solids, Params);
 
   bool bHasGround = false;
+  bool bOnWater = false;
   double GroundZ = 0.0;
   // Hits come back ordered along the ray, which points down, so the first
   // floor struck is the highest one under the actor.
@@ -293,6 +306,7 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
       continue;
     }
     bHasGround = true;
+    bOnWater = McpIsWaterBody(HitActor);
     GroundZ = Candidate.ImpactPoint.Z;
     break;
   }
@@ -314,7 +328,8 @@ void DescribePlacement(AActor *Actor, const TSharedPtr<FJsonObject> &Data) {
     // deeper than its own thickness is actually lost in the geometry.
     const double SunkFloor =
         bSelfSlab ? FMath::Max(IgnoreBelow, 2.0 * Extent.Z) : IgnoreBelow;
-    if (Clearance < -SunkFloor) {
+    // Below a water surface is afloat or wading, not sunk; above it still reads floating.
+    if (Clearance < -SunkFloor && !bOnWater) {
       // The exact trap that buried a Character: its location is the capsule
       // CENTRE, so reusing a StaticMeshActor's feet-relative Z sinks it by half
       // its height. Hand back the actor location that rests it on the surface: its own location raised by the depth,

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "9977a12cc3bb8000",
+  "catalogRevision": "a58b428cb1ee231d",
   "recordCount": 396,
   "records": [
     {
@@ -34435,7 +34435,7 @@
             },
             "placementWarning": {
               "type": "string",
-              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
+              "description": "Present when the placement looks wrong: it intersects other actors, is sunk below the surface under it (the bottom of its bounds is under it, wherever its pivot is; suggestedLocation rests it), floats more than 50 units above it, or has nothing below it (an actor held up from the side is mounted, never floating: see mountedOn). A water body is a surface, not a solid: an actor partly under water (a buoy, a hull, a wading pawn) is neither intersecting nor sunk, and groundZ is the water level. Tag the actor mcp.placement.ok when that is deliberate and it is never reported."
             },
             "mountedOn": {
               "type": "string",
@@ -34604,8 +34604,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "3a935bd9d574ee8def70f41f08f39bb80ff980da8537578bfbce182e84c8cc2e",
-        "content": "f560944edfc7d7200456604b412869ba09a6bd8d58fdb93910ea4ff2fc28b845"
+        "schema": "63ae1036b4d8cc06db707be8d51b569b6c446b2a2804070cd2224c8d19cfa424",
+        "content": "ab2a8299fb602be5f0e0ade80e97e1898c3725ed2ac4413caa3fac4d05193f14"
       }
     },
     {

@@ -44,6 +44,23 @@ describe('audit_placement confirms a box overlap on the real shapes', () => {
   });
 });
 
+// Seven buoys floating in an ocean each read "intersects the ocean by 47; sunk 47 units below the surface; z=-3 would
+// rest it": following the suggestion would sit a floating body on top of the water like a deck.
+describe('the placement check treats a water body as a surface, not a solid', () => {
+  it('never reports an overlap with a water body, nor checks one as the subject', () => {
+    const source = placementCheck();
+    expect(source).toContain('if (Class->GetFName() == TEXT("WaterBody")) {');
+    expect(source).toContain('IsBoundsOnlyActor(Other) || McpPlacementAccepted(Other) || McpIsWaterBody(Other)) {');
+    expect(source).toContain('McpIsOverlapOnly(Actor) || McpIsWaterBody(Actor)) {');
+  });
+
+  it('an actor below a water surface is not sunk and gets no suggested location', () => {
+    const source = placementCheck();
+    expect(source).toContain('bOnWater = McpIsWaterBody(HitActor);');
+    expect(source).toContain('if (Clearance < -SunkFloor && !bOnWater) {');
+  });
+});
+
 // "intersects 4 actor(s)" named only the deepest, and no read call describes one actor's placement.
 describe('audit_placement rows list every actor a finding intersects', () => {
   it('carries overlappingActors from the placement check into the row', () => {
