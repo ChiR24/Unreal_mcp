@@ -8,6 +8,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 
 #include "Engine/Blueprint.h"
+#include "Engine/World.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
 
@@ -137,7 +138,13 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
       Property->CopyCompleteValue(Property->ContainerPtrToValuePtr<void>(InstanceContainer),
                                   Property->ContainerPtrToValuePtr<void>(TargetContainer));
       Instance->PostEditChange();
-      ++InstancesUpdated;
+      // Preview copies (the Blueprint editor's viewport, placement checks) take the value too, but only
+      // actors placed in a level count: a class with no placed copies answered 2.
+      const UWorld *World = Instance->GetWorld();
+      if (World && (World->WorldType == EWorldType::Editor || World->WorldType == EWorldType::PIE ||
+                    World->WorldType == EWorldType::Game)) {
+        ++InstancesUpdated;
+      }
     }
     Property->DestroyValue(OldValue);
     FMemory::Free(OldValue);

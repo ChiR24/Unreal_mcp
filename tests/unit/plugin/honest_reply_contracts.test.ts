@@ -1367,3 +1367,11 @@ describe('a graph batch checks its expressions before any step runs', () => {
     expect(batch.indexOf('DescribeExpressionStep(')).toBeLessThan(batch.indexOf('RunBatchStep(Context, State'));
   });
 });
+
+// set_default answered instancesUpdated 2 for a class with no placed copies: it counted editor preview actors.
+describe('a class default counts only the actors placed in a level', () => {
+  it('skips preview copies when counting instancesUpdated', () => {
+    const source = code('Blueprint', 'Graph', 'McpAutomationBridge_BlueprintHandlersSetDefaultLiteral.cpp');
+    expect(source).toContain('World->WorldType == EWorldType::Editor || World->WorldType == EWorldType::PIE');
+  });
+});
