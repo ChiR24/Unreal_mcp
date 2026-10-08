@@ -21,7 +21,10 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     summary: 'Add a new member variable to a Blueprint.',
     whenToUse: ['A Blueprint needs a new member variable with a type and default.'],
     whenNotToUse: ['A graph-local variable is needed (use create_node with a local variable).'],
-    inputProps: { blueprintPath: P.blueprintPath, variableName: P.variableName, variableType: P.variableType, defaultValue: P.defaultValue, category: P.category, isReplicated: P.isReplicated, isPublic: P.isPublic },
+    inputProps: {
+      blueprintPath: P.blueprintPath, variableName: P.variableName, variableType: P.variableType, defaultValue: P.defaultValue, category: P.category, isReplicated: P.isReplicated, isPublic: P.isPublic,
+      exposeOnSpawn: { type: 'boolean', description: 'Expose on Spawn: the variable becomes an input pin on SpawnActor and Create Widget nodes for this class, set as the actor is made (before its BeginPlay). Makes it instance-editable too, as the editor does.' },
+    },
     required: ['blueprintPath', 'variableName', 'variableType'],
     outputProps: { variableName: P.variableName },
     outputRequired: ['variableName'],

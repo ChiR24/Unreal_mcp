@@ -15,6 +15,7 @@
 #include "Foundation/HandlerUtils/McpHandlerUtils.h"
 #include "Misc/ScopeExit.h"
 
+#include "EdGraphSchema_K2.h"
 #include "Engine/Blueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "UObject/UnrealType.h"
@@ -184,6 +185,14 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     // explicit false turns it off; callers that omit it keep the old default.
     if (LocalPayload->HasField(TEXT("isPublic")) && !bPublic) {
       NewVar.PropertyFlags |= CPF_DisableEditOnInstance;
+    }
+    // Expose on Spawn makes the variable a pin on SpawnActor and Create Widget nodes for this class. A batch step
+    // that asked for it was silently ignored, so the later SpawnActor node had no pin to wire. The editor only
+    // exposes an instance-editable variable, so the flag implies that too.
+    const bool bExposeOnSpawn = GetJsonBoolField(LocalPayload, TEXT("exposeOnSpawn"));
+    if (bExposeOnSpawn) {
+      NewVar.PropertyFlags &= ~CPF_DisableEditOnInstance;
+      NewVar.SetMetaData(FBlueprintMetadata::MD_ExposeOnSpawn, TEXT("true"));
     }
     // Every default is written, and checked, after the first compile: an object
     // or array ({x,y,z}, a color, a list) has no string form until the property

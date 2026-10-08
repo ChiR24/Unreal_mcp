@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "7dc8ccf2ac12f13b",
+  "catalogRevision": "6f4cdc1c248dd746",
   "recordCount": 396,
   "records": [
     {
@@ -15254,7 +15254,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function graph). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran."
+              "description": "Steps run in order, 1-200. Each is {edit, ...that edit's own params}. Member steps come before the nodes that use them: add_variable (variableName, variableType as add_variable takes it: basic, class, struct, enum and container types, defaultValue, isPublic, exposeOnSpawn, category), add_function (functionName, inputs, outputs, pure, isPublic; its body steps set graphName to the function name; with an id, \"$id\" is its entry node and \"$id_return\" its return node, which exists when outputs are declared), add_event (customEventName and parameters, or componentName plus eventName for a component or Widget Blueprint widget delegate, e.g. PlayButton with OnClicked) and add_event_dispatcher (dispatcherName, parameters [{name, type}]). Node steps: create_node, connect_pins, set_pin_default_value, set_node_property, create_reroute_node. create_node also takes nodeType CallDelegate (memberName: a dispatcher), Message (memberClass: an interface, memberName: its function), AsyncTask (memberClass: the task or async-action class, memberName: its static factory; event graphs only) and FunctionResult (one more return node in a function graph). Optional per step: id (names the created node; later steps use \"$id\" in fromNodeId, toNodeId and nodeId), from and to (\"$id.PinName\" shorthand for connect_pins), pinDefaults (create_node only: {PinName: value} applied to the new node; a read-only pin such as Set Text's Value gets a MakeLiteral node wired into it). \"$entry\" is the graph's own entry node (a Construction Script or function graph starts there: from \"$entry.then\"). A create step without posX and posY is auto-placed, and once every step ran it moves beside a node it is wired to (right of what runs it, below-left of what reads it); one whose posX and posY overlap an existing node is placed at the nearest free position instead, and its result says where in placementWarning, so a crowded row never stops the batch (a single create_node call still refuses an overlap). Every function, variable, dispatcher and async factory a step names is checked before any step runs, so a misspelled one fails the batch with nothing applied; any other failure stops the batch at that step, and that step leaves nothing behind (a member step included), in whichever graph it ran."
             },
             "edit": {
               "type": "string",
@@ -15693,8 +15693,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ddcba115db7db90fcbbc2460423f2d9735ae1213e3dac94b2ba3ed2e130a0f1a",
-        "content": "d5463a5bde8bd40bcbbe054f60d55e6f4bd602dc90ddc6c2eeea78f7cbcc96e0"
+        "schema": "c20a1c1298340e4b8568de917a0ec7e3628ccb37e99456e106435baebb68886b",
+        "content": "9a42fc7e6af203ea7f940264fed78fe0a3771113aa2c8acb82f1c961914a04ba"
       }
     },
     {
@@ -16241,6 +16241,10 @@
               "type": "boolean",
               "description": "Whether the variable is exposed to the editor/BP graph."
             },
+            "exposeOnSpawn": {
+              "type": "boolean",
+              "description": "Expose on Spawn: the variable becomes an input pin on SpawnActor and Create Widget nodes for this class, set as the actor is made (before its BeginPlay). Makes it instance-editable too, as the editor does."
+            },
             "oldName": {
               "type": "string",
               "description": "Current name of the variable or component."
@@ -16401,6 +16405,9 @@
             "isPublic": [
               "add_variable"
             ],
+            "exposeOnSpawn": [
+              "add_variable"
+            ],
             "oldName": [
               "rename_variable"
             ],
@@ -16426,8 +16433,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "5aa1108f63eaa5c49834770ad04b3617fcc1f4ec4f668da9c5452bea38150042",
-        "content": "bd390a1520ca74b7c557f3728d63e73a97fdec3a41b0ff4236e47219de521677"
+        "schema": "faf8285b71954240cc96c0a2eecf2aed838da12c7f7a2767069630fac5d1fdf2",
+        "content": "eb286ea6bdf786544a3efc647c128f9f9f2fe65a881e7784ab415b3e8e140478"
       }
     },
     {

@@ -123,6 +123,7 @@ const testCases = [
   // === ADD: add_variable (blueprintPath + variableName + variableType) ===
   // This variable will be renamed in the next step — do NOT delete it before rename.
   { scenario: 'ADD: add_variable', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'TestVariable', variableType: 'Boolean', category: 'MCP', isReplicated: true, isPublic: true }, expected: 'success|already exists' },
+  { scenario: 'ADD: add_variable exposed on spawn', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'SpawnPower', variableType: 'Float', exposeOnSpawn: true }, expected: 'success|already exists' },
   { scenario: 'ERROR: add_variable colliding with a parent-class property', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'bReplicates', variableType: 'Boolean' }, expected: 'error|VARIABLE_NAME_CONFLICT' },
   // The compiler only warns on a default it cannot parse; add_variable refuses it and adds nothing.
   { scenario: 'ERROR: add_variable with a default its type cannot take', toolName: 'manage_blueprint', arguments: { action: 'add_variable', blueprintPath: BP_PATH, variableName: 'BadDefaultVar', variableType: 'Int', defaultValue: 'NotANumberAtAll' }, expected: 'error|DEFAULT_NOT_APPLIED' },
