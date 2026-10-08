@@ -336,13 +336,19 @@ export function applyDeclaredDefaults(
 // Anything else (a typo'd key, a short or over-long array, a non-numeric component)
 // falls through to the schema's guided type error instead of being silently truncated
 // or having keys dropped. In a set of four keys the last one (w / a) is optional, so
-// three of four are required. The sets and their order are mirrored by
+// three of four are required. A shorter set never stands in for a longer one the
+// schema declares: ['x','y'] does not match a schema that also declares z, or a
+// two-number array would ship as {x, y} and the handler would fill z with its
+// default. pitch/yaw/roll comes first: a rotation that also declares x/y/z aliases
+// (sequence.cinematic.create_cinematic_asset) reads an array as [pitch, yaw, roll],
+// the order every rotation array in the catalogue documents, and its handler reads
+// pitch/yaw/roll only. The sets and their order are mirrored by
 // McpNativeGatewayVectorCoercion.cpp and pinned by
 // tests/unit/tools/vector-shape-coercion-parity.test.ts — change both or neither.
 export const VECTOR_KEY_SETS: ReadonlyArray<readonly string[]> = [
+  ['pitch', 'yaw', 'roll'],
   ['x', 'y', 'z', 'w'],
   ['x', 'y', 'z'],
-  ['pitch', 'yaw', 'roll'],
   ['r', 'g', 'b', 'a'],
   ['width', 'height'],
   ['x', 'y']
@@ -367,12 +373,22 @@ function objectToVector(value: Record<string, unknown>): number[] | undefined {
   return undefined;
 }
 
+// True when a longer set that contains every key of `keys` has a further key the
+// schema declares — that longer set describes the schema, so `keys` must not match.
+function isShadowedByLongerSet(keys: readonly string[], declared: readonly string[]): boolean {
+  return VECTOR_KEY_SETS.some((longer) =>
+    longer.length > keys.length
+    && keys.every((key) => longer.includes(key))
+    && longer.some((key) => !keys.includes(key) && declared.includes(key)));
+}
+
 function vectorToObject(values: readonly number[], propertySchema: Record<string, unknown>): Record<string, number> | undefined {
   const declared = isRecord(propertySchema.properties) ? Object.keys(propertySchema.properties) : [];
   if (declared.length === 0) return undefined;
   for (const keys of VECTOR_KEY_SETS) {
     const required = keys.length === 4 ? keys.length - 1 : keys.length;
     if (!keys.slice(0, required).every((key) => declared.includes(key))) continue;
+    if (isShadowedByLongerSet(keys, declared)) continue;
     const consumed = keys.filter((key) => declared.includes(key));
     // Over-long arrays would silently drop their tail; short arrays below the
     // required prefix would fabricate handler defaults. Both refuse instead.
@@ -395,6 +411,7 @@ export function coerceVectorShapes(args: Record<string, unknown>, schema: unknow
     if (types.includes('array') && !types.includes('object') && isRecord(value) && !Array.isArray(value)) {
       replacement = objectToVector(value);
     } else if (types.includes('object') && !types.includes('array') && Array.isArray(value) && value.every(isFiniteNumber)) {
+      // Only arrays of finite numbers coerce (the native twin checks the same before reading numbers).
       replacement = vectorToObject(value, propertySchema);
     } else if (types.includes('array') && Array.isArray(value) && isRecord(propertySchema.items)) {
       // Batch items (actors: [{location: {x, y, z}}]) take the same shapes as the single form.

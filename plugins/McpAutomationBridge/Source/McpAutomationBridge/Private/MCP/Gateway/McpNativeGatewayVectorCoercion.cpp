@@ -11,7 +11,9 @@
 // Anything else (a typo'd key, a short or over-long array, a non-numeric component)
 // falls through to the schema's guided type error instead of being silently truncated
 // or having keys dropped. In a set of four keys the last one (w / a) is optional, so
-// three of four are required. The key sets and their order are pinned against the
+// three of four are required. A shorter set never stands in for a longer one the
+// schema declares (XyKeys does not match a schema that also declares z), and only
+// arrays of finite numbers coerce. The key sets and their order are pinned against the
 // TypeScript VECTOR_KEY_SETS by tests/unit/tools/vector-shape-coercion-parity.test.ts.
 #include "MCP/Execute/McpNativeGatewaySchemaValidation.h"
 
@@ -28,10 +30,12 @@ namespace
 	const TCHAR* const WhKeys[] = { TEXT("width"), TEXT("height") };
 	const TCHAR* const XyKeys[] = { TEXT("x"), TEXT("y") };
 
+	// PyrKeys first: a rotation that also declares x/y/z aliases reads an array as
+	// [pitch, yaw, roll] (mirror of the TypeScript order).
 	const FVectorKeySet GVectorKeySets[] = {
+		{ PyrKeys, 3, 3 },
 		{ XyzwKeys, 4, 3 },
 		{ XyzKeys, 3, 3 },
-		{ PyrKeys, 3, 3 },
 		{ RgbaKeys, 4, 3 },
 		{ WhKeys, 2, 2 },
 		{ XyKeys, 2, 2 },
@@ -60,6 +64,46 @@ namespace
 		double Number = 0.0;
 		return Value.IsValid() && Value->Type == EJson::Number
 			&& Value->TryGetNumber(Number) && FMath::IsFinite(Number);
+	}
+
+	bool AllFiniteNumbers(const TArray<TSharedPtr<FJsonValue>>& Values)
+	{
+		for (const TSharedPtr<FJsonValue>& Value : Values)
+		{
+			if (!IsFiniteNumber(Value)) return false;
+		}
+		return true;
+	}
+
+	bool SetHasKey(const FVectorKeySet& Set, const TCHAR* Key)
+	{
+		for (int32 Index = 0; Index < Set.Count; ++Index)
+		{
+			if (FCString::Strcmp(Set.Keys[Index], Key) == 0) return true;
+		}
+		return false;
+	}
+
+	// True when a longer set that contains every key of Set has a further key the schema
+	// declares — that longer set describes the schema, so Set must not match. Mirrors
+	// isShadowedByLongerSet in gateway-schema-validate.ts.
+	bool IsShadowedByLongerSet(const FVectorKeySet& Set, const TSharedPtr<FJsonObject>& Declared)
+	{
+		for (const FVectorKeySet& Longer : GVectorKeySets)
+		{
+			if (Longer.Count <= Set.Count) continue;
+			bool bContainsSet = true;
+			for (int32 Index = 0; Index < Set.Count && bContainsSet; ++Index)
+			{
+				bContainsSet = SetHasKey(Longer, Set.Keys[Index]);
+			}
+			if (!bContainsSet) continue;
+			for (int32 Index = 0; Index < Longer.Count; ++Index)
+			{
+				if (!SetHasKey(Set, Longer.Keys[Index]) && Declared->HasField(Longer.Keys[Index])) return true;
+			}
+		}
+		return false;
 	}
 
 	bool ObjectKeysAreSubset(const TSharedPtr<FJsonObject>& Object, const FVectorKeySet& Set)
@@ -112,6 +156,7 @@ namespace
 				bDeclared = (*Declared)->HasField(Set.Keys[Index]);
 			}
 			if (!bDeclared) continue;
+			if (IsShadowedByLongerSet(Set, *Declared)) continue;
 			int32 Consumed = 0;
 			for (int32 Index = 0; Index < Set.Count; ++Index)
 			{
@@ -152,8 +197,10 @@ TSharedPtr<FJsonObject> McpCoerceCanonicalVectorShapes(const TSharedPtr<FJsonObj
 		{
 			Replacement = ObjectToVector(Value->AsObject());
 		}
-		else if (bWantsObject && Value->Type == EJson::Array)
+		else if (bWantsObject && Value->Type == EJson::Array && AllFiniteNumbers(Value->AsArray()))
 		{
+			// As in TypeScript: a non-numeric element keeps the array shape and fails validation
+			// (AsNumber() would read "a" as 0 and ship a fabricated vector).
 			Replacement = VectorToObject(Value->AsArray(), *PropertySchema);
 		}
 		else if (DeclaresType(*PropertySchema, TEXT("array")) && Value->Type == EJson::Array)

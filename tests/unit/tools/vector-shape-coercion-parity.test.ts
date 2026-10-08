@@ -70,11 +70,11 @@ describe('vector coercion TS/native parity', () => {
   it('declares identical key sets in identical order on both surfaces', () => {
     const native = parseNativeKeySets(cppCoercionSource);
     const nativeKeys = native.map((set) => set.identifier);
-    expect(nativeKeys).toEqual(['XyzwKeys', 'XyzKeys', 'PyrKeys', 'RgbaKeys', 'WhKeys', 'XyKeys']);
+    expect(nativeKeys).toEqual(['PyrKeys', 'XyzwKeys', 'XyzKeys', 'RgbaKeys', 'WhKeys', 'XyKeys']);
     expect(VECTOR_KEY_SETS.map((keys) => [...keys])).toEqual([
+      ['pitch', 'yaw', 'roll'],
       ['x', 'y', 'z', 'w'],
       ['x', 'y', 'z'],
-      ['pitch', 'yaw', 'roll'],
       ['r', 'g', 'b', 'a'],
       ['width', 'height'],
       ['x', 'y']
@@ -105,6 +105,32 @@ describe('vector coercion TS/native parity', () => {
   it('recurses into batch item arrays on the native surface (TS: vector-shape-coercion.test)', () => {
     expect(cppCoercionSource).toContain('TryGetObjectField(TEXT("items"), ItemSchema)');
     expect(cppCoercionSource).toContain('McpCoerceCanonicalVectorShapes(Item, *ItemSchema)');
+  });
+
+  it('lets no shorter key set stand in for a longer one the schema declares on either surface', () => {
+    // A two-number array for an {x,y,z} schema matched the trailing ['x','y'] set and shipped as {x, y};
+    // the handler then defaulted z (create_light location [100, 200] spawned the light at (100, 200, 0)).
+    // Pins the call AND the predicate: a longer set that contains this one, with a further declared key.
+    const tsCoercionSource = readSource(resolve(repoRoot, 'src/server/gateway/gateway-schema-validate.ts'));
+    expect(tsCoercionSource).toContain('if (isShadowedByLongerSet(keys, declared)) continue;');
+    expect(tsCoercionSource).toContain('&& keys.every((key) => longer.includes(key))');
+    expect(tsCoercionSource).toContain('&& longer.some((key) => !keys.includes(key) && declared.includes(key)));');
+    expect(cppCoercionSource).toContain('if (IsShadowedByLongerSet(Set, *Declared)) continue;');
+    expect(cppCoercionSource).toContain('bContainsSet = SetHasKey(Longer, Set.Keys[Index]);');
+    expect(cppCoercionSource).toContain(
+      'if (!SetHasKey(Set, Longer.Keys[Index]) && Declared->HasField(Longer.Keys[Index])) return true;'
+    );
+  });
+
+  it('coerces only arrays of finite numbers into objects on either surface', () => {
+    // The native twin read each element with AsNumber(), so ["a","b","c"] became {x: 0, y: 0, z: 0}
+    // (LogJson: "Json Value of type 'String' used as a 'Number'") where TypeScript refuses.
+    const tsCoercionSource = readSource(resolve(repoRoot, 'src/server/gateway/gateway-schema-validate.ts'));
+    expect(tsCoercionSource).toContain('Array.isArray(value) && value.every(isFiniteNumber)');
+    expect(cppCoercionSource).toContain('Value->Type == EJson::Array && AllFiniteNumbers(Value->AsArray())');
+    expect(cppCoercionSource).toMatch(
+      /bool AllFiniteNumbers\([^)]*\)\n\t\{\n\t\tfor \([^)]*\)\n\t\t\{\n\t\t\tif \(!IsFiniteNumber\(Value\)\) return false;\n\t\t\}\n\t\treturn true;\n\t\}/
+    );
   });
 
   it('keeps the native describe action-strip guard guarded like the TS projection', () => {
