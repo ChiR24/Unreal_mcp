@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "33d3f790573c0fea",
+  "catalogRevision": "36a759d7b3e53fad",
   "recordCount": 396,
   "records": [
     {
@@ -32474,7 +32474,7 @@
           "watch actor move",
           "jump height"
         ],
-        "summary": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
+        "summary": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation and chosen properties at every interval, to prove a jump, launch, patrol, fall or a rocking hull in one call.",
         "whenToUse": [
           "readMode=transform: The current transform of an actor must be inspected.",
           "readMode=motion: A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.",
@@ -32645,7 +32645,7 @@
                 "additionalProperties": true,
                 "x-unreal-reflection-boundary": true
               },
-              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], properties."
+              "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties."
             },
             "sampleCount": {
               "type": "number",
@@ -32724,7 +32724,7 @@
       },
       "examples": [
         {
-          "title": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity and chosen properties at every interval, to prove a jump, launch, patrol or fall in one call.",
+          "title": "Read where an actor is (the player's pawn too): its transform now, or watch it over game time in PIE (motion): location, velocity, rotation and chosen properties at every interval, to prove a jump, launch, patrol, fall or a rocking hull in one call.",
           "input": {
             "action": "get_transform",
             "actorName": "Cube1",
@@ -32805,8 +32805,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "dec5dd5fca65339069ac4670144852ec87a870fb1aef3770663ae3d0692a7e52",
-        "content": "92b30a5cc1093b64205023bcdf72dc81b714da629aa524a6bc3e4a79530bbd80"
+        "schema": "1814eb220d8da9a79c39d7f720ad4969f1f41ae517c2544f5b476b5c368b524d",
+        "content": "aec545e3fb7e326a0e84d3fb22f5d3fd53d5bb7dadd3003b0102c707a8598ef8"
       }
     },
     {

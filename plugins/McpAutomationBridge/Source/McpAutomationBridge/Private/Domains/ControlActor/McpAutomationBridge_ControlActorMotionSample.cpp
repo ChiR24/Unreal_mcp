@@ -30,6 +30,7 @@ struct FMcpMotionRun {
   double StartReal = 0.0, MaxReal = 40.0, Duration = 2.0, Waited = -1.0, LastAdvanceReal = 0.0;
   FBox Extent = FBox(ForceInit);
   FVector First = FVector::ZeroVector, Last = FVector::ZeroVector;
+  TOptional<FRotator> LastRotation; // the rotation the samples last carried
   TArray<FMcpMotionInput> Inputs;
   FMcpMotionTrigger Trigger;
   int32 Frames = 0;
@@ -53,6 +54,13 @@ void McpTakeMotionSample(FMcpMotionRun &Run, AActor *Actor, double GameTime) {
   Sample->SetNumberField(TEXT("t"), McpRoundTo(GameTime - Run.StartGame, 1000.0));
   Sample->SetArrayField(TEXT("location"), McpMotionVec(Location));
   Sample->SetArrayField(TEXT("velocity"), McpMotionVec(Actor->GetVelocity()));
+  // A floating hull's roll or a turning pawn's heading was unreadable over time. The rotation rides on the first
+  // sample and on each one where it moved, so an actor that never turns adds nothing.
+  const FRotator Rotation = Actor->GetActorRotation();
+  if (!Run.LastRotation.IsSet() || !Rotation.Equals(Run.LastRotation.GetValue(), 0.05)) {
+    Sample->SetArrayField(TEXT("rotation"), McpMotionVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));
+    Run.LastRotation = Rotation;
+  }
   if (Run.Properties.Num() > 0) {
     TSharedPtr<FJsonObject> Values = MakeShared<FJsonObject>();
     for (const FMcpMotionProperty &Watched : Run.Properties) {

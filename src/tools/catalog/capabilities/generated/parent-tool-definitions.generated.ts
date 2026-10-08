@@ -4707,7 +4707,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "additionalProperties": true,
             "x-unreal-reflection-boundary": true
           },
-          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], properties."
+          "description": "One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties."
         },
         "scale": {
           "oneOf": [

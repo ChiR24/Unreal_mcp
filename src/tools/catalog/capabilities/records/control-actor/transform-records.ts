@@ -194,7 +194,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       domain: DOMAIN,
       family: FAMILY_TRANSFORM,
       topics: ['sample motion', 'record trajectory', 'track actor over time', 'watch actor move', 'jump height'],
-      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
+      summary: 'Watch an actor over game time in Play-In-Editor and return its location, velocity, rotation and chosen properties at every interval, plus start/end and min/max extents, in one call; it can also press keys at exact game times (inputs) and wait for another actor\'s property to change before it starts (startWhen).',
       whenToUse: [
         'A jump, spring launch, moving platform, enemy patrol or fall must be proven in PIE without a sleep-and-poll loop.',
         'The peak height, landing point or path of a moving actor is needed.',
@@ -240,7 +240,7 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
         actorName: { type: 'string', description: 'The actor watched.' },
         samples: {
           type: 'array', items: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true },
-          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], properties.',
+          description: 'One entry per sample: t (game seconds since the start), location [x, y, z], velocity [x, y, z], rotation [pitch, yaw, roll] in degrees (on the first sample and on each one where it changed, so a sample without it still has the last one written), properties.',
         },
         sampleCount: { type: 'number', description: 'How many samples were taken.' },
         gameSeconds: { type: 'number', description: 'Game time covered.' },
@@ -263,9 +263,9 @@ export const TRANSFORM_RECORDS: readonly CapabilityRecordSource[] = [
       costLatency: 'interactive',
       exampleInput: { action: 'sample_motion', actorName: 'PlayerPawn', durationSeconds: 1.5, propertyNames: ['bDead'] },
       exampleOutput: {
-        success: true, message: '31 samples of BP_Mario_C_0 over 1.50 game seconds (duration)',
-        actorName: 'BP_Mario_C_0', sampleCount: 31, gameSeconds: 1.5, realSeconds: 3.2, endedBecause: 'duration',
-        samples: [{ t: 0, location: [8500, 0, 56.1], velocity: [0, 0, 0], properties: { bDead: 'False' } }],
+        success: true, message: '31 samples of BP_Hero_C_0 over 1.50 game seconds (duration)',
+        actorName: 'BP_Hero_C_0', sampleCount: 31, gameSeconds: 1.5, realSeconds: 3.2, endedBecause: 'duration',
+        samples: [{ t: 0, location: [8500, 0, 56.1], velocity: [0, 0, 0], rotation: [0, 90, 0], properties: { bDead: 'False' } }],
         start: [8500, 0, 56.1], end: [9310, 0, 130.2], min: [8500, 0, 56.1], max: [9310, 0, 302.4],
       },
     }),

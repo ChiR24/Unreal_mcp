@@ -1498,3 +1498,12 @@ describe('a spawn batch names the item keys it ignored', () => {
     expect(source).toContain('!Entry->HasField(TEXT("ignoredKeys"));');
   });
 });
+
+// A boat's or a ship's roll over time could not be sampled: motion samples carried location and velocity only.
+describe('motion samples carry rotation when it changes', () => {
+  it('writes rotation on the first sample and on each one where it moved', () => {
+    const source = code('ControlActor', 'McpAutomationBridge_ControlActorMotionSample.cpp');
+    expect(source).toContain('if (!Run.LastRotation.IsSet() || !Rotation.Equals(Run.LastRotation.GetValue(), 0.05)) {');
+    expect(source).toContain('Sample->SetArrayField(TEXT("rotation"), McpMotionVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));');
+  });
+});
