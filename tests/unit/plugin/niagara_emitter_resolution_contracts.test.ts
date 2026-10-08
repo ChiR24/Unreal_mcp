@@ -4,6 +4,8 @@
 // parameter binding sent with an emitterName the system does not have (or "DefaultEmitter") landed in the sole
 // emitter and answered success; set_parameter_value without emitterName wrote the module input in every emitter
 // that has it; systemPath and assetPath naming two systems edited systemPath and answered success.
+// set_parameter_value needs emitterName only when the name matches in more than one place (maintainer review of
+// #658): system-stage inputs and static switches, and a full Constants.<Emitter>.<Module>.<Input>, need none.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -16,6 +18,7 @@ const code = (file: string): string =>
   readFileSync(join(DIR, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
 const context = (): string => code('McpAutomationBridge_NiagaraAuthoringHandlersContext.cpp');
 const values = (): string => code('McpAutomationBridge_NiagaraAuthoringHandlersParameterValues.cpp');
+const owner = (): string => code('McpAutomationBridge_NiagaraAuthoringHandlersInputOwner.cpp');
 const resolver = (): string => sliceBetween(context(), 'FNiagaraEmitterHandle* FindTargetEmitter(', 'FNiagaraEmitterHandle* ResolveEmitterHandle(');
 
 describe('Niagara emitter resolution', () => {
@@ -58,25 +61,62 @@ describe('Niagara emitter resolution', () => {
     expect(sliceBetween(source, 'bool ValidateCommonFields(', 'UNiagaraSystem* LoadSystemOrError(')).toContain('&& ValidateOneSystem(Context);');
   });
 
-  it('set_parameter_value resolves the emitter before a module input, and not for a user parameter', () => {
+  it('set_parameter_value resolves a chosen emitterName, else asks where the name matches, and not for a user parameter', () => {
     const source = values();
     expect(sliceBetween(source, 'static bool NamesModuleInput(', '// One value written')).toContain('!Name.IsEmpty() && !FindUserParameter(System, Name)');
     const single = source.slice(source.indexOf('bool SetParameterValue(FActionContext& Context)'));
-    const gate = 'if (NamesModuleInput(System, {ParamName}) && !ResolveEmitterHandle(Context, System))';
+    const gate = '&& !(Context.EmitterName.IsEmpty() ? ResolveInputEmitter(Context, System, ParamName) : ResolveEmitterHandle(Context, System) != nullptr))';
+    expect(single).toContain('if (NamesModuleInput(System, {ParamName})');
     expect(single.indexOf(gate)).toBeGreaterThan(-1);
-    expect(single.indexOf(gate)).toBeLessThan(single.indexOf('WriteParameter(Context, System, ParamName, Context.Payload)'));
+    expect(single.indexOf(gate)).toBeLessThan(single.indexOf('WriteParameter(System, Context.EmitterName, ParamName, Context.Payload)'));
   });
 
-  // A list fails only the entries that need the emitter: the user parameters in it are still written.
-  it('a parameters list resolves the emitter once and fails only the module-input entries when it cannot', () => {
+  // System-stage inputs, an input of one emitter and a full Constants.<Emitter>.<Module>.<Input> need no emitterName.
+  it('requires emitterName only when the name matches in more than one place', () => {
+    const find = sliceBetween(owner(), 'bool FindInputEmitter(', 'bool ResolveInputEmitter(');
+    expect(find).toContain('TArray<FString> Owners = FindInputOwners(System, ParamName);');
+    expect(find).toMatch(/OutEmitter = Owners\.Num\(\) == 1 \? Owners\[0\] : FString\(\);\s*if \(Owners\.Num\(\) <= 1\)\s*\{\s*return true;\s*\}/u);
+    expect(find).toContain('TEXT("needs emitterName: one of [%s]%s")');
+    const reply = sliceBetween(owner(), 'bool ResolveInputEmitter(', '\n}');
+    expect(reply).toContain('TEXT("EMITTER_NOT_FOUND")');
+    expect(reply).toContain('Nothing was changed.');
+    expect(reply).toContain('Context.Result->SetStringField(TEXT("emitterName"), Context.EmitterName);');
+  });
+
+  it('finds where a name matches as the writers match it: module inputs by full name or suffix, else static switches', () => {
+    const source = owner();
+    const owners = sliceBetween(source, 'static TArray<FString> FindInputOwners(', 'FString ListEmitterNames(');
+    expect(owners).toContain('if (Name == ParamName || Name.EndsWith(TEXT(".") + ParamName))');
+    expect(sliceBetween(values(), 'int32 SetModuleInputValue(', '\n}')).toContain('if (Name != ParamName && !Name.EndsWith(TEXT(".") + ParamName))');
+    expect(owners).toContain('Owners.AddUnique(RapidIterationOwner(System, Name));');
+    // The emitter segment of the rapid-iteration name, or none: the system stage.
+    const ri = sliceBetween(source, 'static FString RapidIterationOwner(', 'static bool GraphHasStaticSwitch(');
+    expect(ri).toContain('Name.StartsWith(TEXT("Constants.") + Handle.GetName().ToString() + TEXT("."))');
+    expect(ri).toMatch(/return FString\(\);\s*\}\s*$/u);
+    // Static switches only when no module input matched, on the system stack graph and every emitter's.
+    expect(owners).toContain('if (Owners.Num() > 0 || !ParamName.Split(TEXT("."), &ModuleName, &SwitchName))');
+    expect(owners).toMatch(/GraphHasStaticSwitch\(SystemSource->NodeGraph, ModuleName, SwitchName\)\)\s*\{\s*Owners\.Add\(FString\(\)\);/u);
+    expect(owners).toContain('GraphHasStaticSwitch(Source->NodeGraph, ModuleName, SwitchName)');
+    expect(sliceBetween(source, 'static bool GraphHasStaticSwitch(', 'static TArray<FString> FindInputOwners(')).toContain('IsStaticSwitchPin(Pin) && Pin->PinName.ToString().Equals(SwitchName, ESearchCase::IgnoreCase)');
+  });
+
+  // A list fails only the entries it cannot place, each with a short reason; its reply never says nothing changed.
+  it('a parameters list resolves each entry on its own and fails only those it cannot place', () => {
     const list = sliceBetween(values(), 'static bool SetParameterValueList(', 'bool SetParameterValue(FActionContext& Context)');
-    expect(list).toMatch(/if \(NamesModuleInput\(System, Names\)\)\s*\{\s*FindTargetEmitter\(Context, System, EmitterError\);\s*\}/u);
-    expect(list).toMatch(/else if \(!EmitterError\.IsEmpty\(\) && !FindUserParameter\(System, Name\)\)\s*\{\s*Write\.Error = EmitterError;\s*\}/u);
-    expect(list.indexOf('FindTargetEmitter(')).toBeLessThan(list.indexOf('Write = WriteParameter(Context, System, Name, Entry);'));
+    expect(list).toMatch(/if \(!Context\.EmitterName\.IsEmpty\(\) && NamesModuleInput\(System, Names\) && !FindTargetEmitter\(Context, System, EmitterError\)\)/u);
+    expect(list).toContain("TEXT(\"no emitter '%s': one of [%s]\")");
+    expect(list).toContain('FindInputEmitter(System, Name, Emitter, ScopeError);');
+    expect(list).toMatch(/else if \(!ScopeError\.IsEmpty\(\)\)\s*\{\s*Write\.Error = ScopeError;\s*\}/u);
+    expect(list.indexOf('FindInputEmitter(')).toBeLessThan(list.indexOf('Write = WriteParameter(System, Emitter, Name, Entry);'));
     expect(list).not.toContain('ResolveEmitterHandle(');
+    expect(list).not.toContain('ResolveInputEmitter(');
+    expect(list).not.toContain('Nothing was changed');
+    expect(sliceBetween(owner(), 'bool FindInputEmitter(', 'bool ResolveInputEmitter(')).not.toContain('Nothing was changed');
   });
 
-  it('a type mismatch on a module input names the emitter', () => {
-    expect(values()).toContain("TEXT(\"Module input '%s' of emitter '%s' is a %s; %s\"), *ParamName, *Context.EmitterName");
+  it('a type mismatch on a module input names the emitter when there is one', () => {
+    const source = values();
+    expect(source).toContain("FString::Printf(TEXT(\" of emitter '%s'\"), *EmitterName);");
+    expect(source).toContain("TEXT(\"Module input '%s'%s is a %s; %s\"), *ParamName, *OfEmitter");
   });
 });

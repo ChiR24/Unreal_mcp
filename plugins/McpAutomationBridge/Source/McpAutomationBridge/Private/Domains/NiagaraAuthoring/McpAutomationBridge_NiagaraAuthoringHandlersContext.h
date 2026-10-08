@@ -265,6 +265,16 @@ bool HandleRendererAction(FActionContext& Context, const FString& SubAction);
 bool HandleParameterAction(FActionContext& Context, const FString& SubAction);
 // set_parameter_value: one parameter, or every entry of a parameters list. In ...HandlersParameterValues.cpp.
 bool SetParameterValue(FActionContext& Context);
+// In ...HandlersInputOwner.cpp. The emitter a module input or static switch ParamName is written in when the caller
+// names none: the one emitter it matches in (a full "Constants.<Emitter>.<Module>.<Input>" names its own), or empty
+// for the system stage or no match at all. Only a name that matches in more than one place needs emitterName: then
+// false, with OutError a short "needs emitterName: one of [...]" (one parameters-list entry's reason).
+bool FindInputEmitter(UNiagaraSystem* System, const FString& ParamName, FString& OutEmitter, FString& OutError);
+// The same for one set_parameter_value call: sets Context.EmitterName and names it in the result, or sends
+// EMITTER_NOT_FOUND ("Nothing was changed.") and returns false.
+bool ResolveInputEmitter(FActionContext& Context, UNiagaraSystem* System, const FString& ParamName);
+// The system's emitter handle names, comma-separated.
+FString ListEmitterNames(UNiagaraSystem* System);
 // Writes Payload's parameterValue to every rapid-iteration copy of the module input ParamName
 // ("SpawnRate.SpawnRate"), in EmitterName's scripts or, empty, every script's; returns the copies written.
 int32 SetModuleInputValue(UNiagaraSystem* System, const FString& EmitterName, const FString& ParamName, const TSharedPtr<FJsonObject>& Payload, TArray<FString>& Candidates, FString& MatchedType);
