@@ -15077,7 +15077,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "parameterType": {
           "type": "string",
-          "description": "Niagara parameter type (Float, Vector, Color, ...)."
+          "description": "Niagara parameter type (Float, Vector, Color or LinearColor, ...)."
         },
         "parameterValue": {
           "description": "Niagara parameter value (any type)."

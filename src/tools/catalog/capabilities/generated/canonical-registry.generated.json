@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "f32936092e053fb1",
+  "catalogRevision": "4a823854b65ed74c",
   "recordCount": 396,
   "records": [
     {
@@ -56798,7 +56798,7 @@
             },
             "parameterType": {
               "type": "string",
-              "description": "Niagara parameter type (Float, Vector, Color, ...)."
+              "description": "Niagara parameter type (Float, Vector, Color or LinearColor, ...)."
             },
             "sourceBinding": {
               "type": "string",
@@ -57127,8 +57127,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "38d155c01cae897662222cce3b17837ed89a797405c187e6be0257568bc01956",
-        "content": "735b0096a80283b62c9c0debf732eec1e044024ab9ba1560026ca8bcc238d8fb"
+        "schema": "f3564c1d36d0aca566e3b8ea4010825b0ebfc23f8cf2fcb6a8590622e2e19af5",
+        "content": "8d0e52e025e228760ea92dddbcd0cfa48512099bd38929a4ff2414ca87b5f231"
       }
     },
     {

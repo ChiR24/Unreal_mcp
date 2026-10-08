@@ -1462,3 +1462,13 @@ describe('a file delete the system accepted counts as done', () => {
     expect(source).toContain('return bDeleted || !FPackageName::DoesPackageExist(PackageName);');
   });
 });
+
+// A Niagara set_parameter that landed answered OUTPUT_SCHEMA_VIOLATION: it sent applied: true while the capability's
+// applied is the count of a parameters batch. It also refused LinearColor, the type add_user_parameter takes.
+describe('a Niagara parameter write answers in the capability shape', () => {
+  it('sends no boolean applied and takes LinearColor as Color', () => {
+    const source = code('Effect', 'McpAutomationBridge_EffectHandlersNiagaraRuntimeParameters.cpp');
+    expect(source).not.toContain('SetBoolField(TEXT("applied")');
+    expect(source).toMatch(/ParameterType\.Equals\(TEXT\("LinearColor"\), ESearchCase::IgnoreCase\)\)\s*\{\s*ParameterType = TEXT\("Color"\);/u);
+  });
+});

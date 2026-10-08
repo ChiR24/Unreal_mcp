@@ -25,6 +25,11 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
     {
         ParameterType = TEXT("Float");
     }
+    // add_user_parameter names the type LinearColor; the component call takes the same value.
+    if (ParameterType.Equals(TEXT("LinearColor"), ESearchCase::IgnoreCase))
+    {
+        ParameterType = TEXT("Color");
+    }
 
     if (!GEditor)
     {
@@ -124,9 +129,8 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
         }
     }
 
+    // No applied flag: success says it, and this capability's applied is the count of a parameters batch.
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetBoolField(TEXT("success"), bApplied);
-    Response->SetBoolField(TEXT("applied"), bApplied);
     Response->SetStringField(TEXT("actorName"), SystemName);
     Response->SetStringField(TEXT("parameterName"), ParameterName);
     Response->SetStringField(TEXT("parameterType"), ParameterType);
@@ -156,7 +160,7 @@ bool HandleSetNiagaraParameter(const FEffectActionContext& Context)
              !ParameterType.Equals(TEXT("Color"), ESearchCase::IgnoreCase) &&
              !ParameterType.Equals(TEXT("Bool"), ESearchCase::IgnoreCase))
     {
-        ErrorMessage = FString::Printf(TEXT("Invalid parameter type: %s"), *ParameterType);
+        ErrorMessage = FString::Printf(TEXT("Invalid parameter type: %s (Float, Vector, Color or LinearColor, Bool)"), *ParameterType);
         ErrorCode = TEXT("INVALID_ARGUMENT");
     }
     Context.Bridge.SendAutomationResponse(

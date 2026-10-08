@@ -39,7 +39,7 @@ export const E: PropertyMap = {
   inputName: str('Module input name receiving the dynamic input.'),
   replaceExisting: bool('Whether an existing dynamic input is replaced.'),
   parameterName: str('Niagara parameter name.'),
-  parameterType: str('Niagara parameter type (Float, Vector, Color, ...).'),
+  parameterType: str('Niagara parameter type (Float, Vector, Color or LinearColor, ...).'),
   parameterValue: { description: 'Niagara parameter value (any type).' },
   sourceBinding: str('Data source the parameter binds to.'),
   forceType: str('Force module type (Gravity, Drag, Wind, Curl, Vortex, PointAttraction).'),
