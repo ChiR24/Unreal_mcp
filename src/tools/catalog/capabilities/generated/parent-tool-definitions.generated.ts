@@ -5526,6 +5526,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             }
           }
         },
+        "gameSeconds": {
+          "type": "number",
+          "description": "Game seconds the steps advanced, when a fixed delta time is set (set_game_speed fixed_delta_time): steps x deltaTime x game speed."
+        },
         "handledByPIE": {
           "type": "boolean",
           "description": "PIE actually consumed the event. False here with routedToPIE true means the key reached the game and nothing bound it: no active input mapping context maps that key (inject the action with inputAction instead)."
@@ -5660,6 +5664,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "throttleOff": {
           "type": "boolean",
           "description": "Whether background CPU throttling is off after the call."
+        },
+        "timeDilation": {
+          "type": "number",
+          "description": "The game speed the steps ran at, present when it is not 1: a step keeps the slow motion that was set, so at speed 0.1 each step advances a tenth of its frame of game time."
         },
         "tool": {
           "type": "object",

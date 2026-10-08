@@ -1,5 +1,7 @@
 #include "Domains/ControlEditor/McpAutomationBridge_ControlEditorSupport.h"
 
+#include "GameFramework/WorldSettings.h"
+
 bool UMcpAutomationBridgeSubsystem::HandleControlEditorPlay(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
@@ -191,9 +193,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorStepFrame(
   auto SendStepped = [](UMcpAutomationBridgeSubsystem *Self,
                         TSharedPtr<FMcpBridgeWebSocket> ReplySocket,
                         const FString &ReplyRequestId, int32 Stepped) {
-    const FString Message =
-        FString::Printf(TEXT("Stepped %d frame(s)"), Stepped);
+    // A step keeps the slow motion that was set, so "Stepped 6 frame(s)" at speed 0.1 advanced
+    // 0.02 s, not the 0.2 s the caller assumed: say the speed, and the game time when steps are fixed.
+    const UWorld *PlayWorld = GEditor ? GEditor->PlayWorld.Get() : nullptr;
+    const AWorldSettings *Settings = PlayWorld ? PlayWorld->GetWorldSettings() : nullptr;
+    const float Dilation = Settings ? Settings->GetEffectiveTimeDilation() : 1.0f;
+    FString Message = FString::Printf(TEXT("Stepped %d frame(s)"), Stepped);
     TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
+    if (!FMath::IsNearlyEqual(Dilation, 1.0f)) {
+      Message += FString::Printf(TEXT(" at game speed %.3g"), Dilation);
+      Resp->SetNumberField(TEXT("timeDilation"), Dilation);
+    }
+    if (FApp::UseFixedTimeStep()) {
+      Resp->SetNumberField(TEXT("gameSeconds"), Stepped * FApp::GetFixedDeltaTime() * Dilation);
+    }
     Resp->SetBoolField(TEXT("success"), true);
     Resp->SetNumberField(TEXT("steps"), Stepped);
     Resp->SetStringField(TEXT("message"), Message);

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ede315a24d1b0c90",
+  "catalogRevision": "ab5a6f8dce965c8c",
   "recordCount": 396,
   "records": [
     {
@@ -38102,6 +38102,14 @@
             "steps": {
               "type": "integer",
               "description": "Number of frames to step."
+            },
+            "gameSeconds": {
+              "type": "number",
+              "description": "Game seconds the steps advanced, when a fixed delta time is set (set_game_speed fixed_delta_time): steps x deltaTime x game speed."
+            },
+            "timeDilation": {
+              "type": "number",
+              "description": "The game speed the steps ran at, present when it is not 1: a step keeps the slow motion that was set, so at speed 0.1 each step advances a tenth of its frame of game time."
             }
           },
           "required": [
@@ -38170,8 +38178,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "57b5a76dcf8cd99d6aa82066850423f0e961fe9a08b51859e6da060b49817e49",
-        "content": "6ea85f1494a1e8fbf904e3acf94c399a0f7513c565c0da0a028904e0615dae3a"
+        "schema": "63aa2d000fe9fa86cd5e7c030a7608f416b73151a27885f11fe8087089b52db4",
+        "content": "a022212a58b2adc018fc5dcbe5833ba0da2abd6c4625cd6e98c50af8948f8877"
       }
     },
     {

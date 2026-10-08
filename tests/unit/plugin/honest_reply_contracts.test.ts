@@ -1337,3 +1337,12 @@ describe('struct reads write every field', () => {
     expect(source).toContain('StructProp->Struct->ExportText(Exported, StructValue, StructValue, nullptr, 0, nullptr, true);');
   });
 });
+
+// Six frame steps at speed 0.1 answered "Stepped 6 frame(s)" for 0.02 s of game time.
+describe('a frame step says the speed it ran at', () => {
+  it('names the game speed and the game time it advanced', () => {
+    const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorPlay.cpp');
+    expect(source).toContain('Resp->SetNumberField(TEXT("timeDilation"), Dilation);');
+    expect(source).toContain('Resp->SetNumberField(TEXT("gameSeconds"), Stepped * FApp::GetFixedDeltaTime() * Dilation);');
+  });
+});

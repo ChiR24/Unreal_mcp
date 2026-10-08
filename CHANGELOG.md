@@ -74,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A class default reaches the actors already placed.** `set_default` changed the Blueprint's class default while every placed actor kept the old value under a success reply; placed actors still holding the old default now take the new one, as the Details panel does (`instancesUpdated`), and an actor that overrides it keeps its own.
 - **A Blueprint given buoyancy floats where it is placed.** An actor placed in the water learns it is in water only from the begin-overlap the water body sends at level load, which it gets only when it asks for it; a `BuoyancyComponent` added to a Blueprint's components never asked, so every placed floater sank. Adding one now sets the request on the class and its placed actors.
 - **A struct read shows its zero fields.** A struct property read left out every field that was zero (`BuoyancyDamp2=0`, whose default is 1, read as never set); every field is now written.
+- **A frame step says the speed it ran at.** `step_frame` keeps the game speed that was set, so six steps at speed 0.1 advanced 0.02 s while the reply said only "Stepped 6 frame(s)"; it now names the speed (`timeDilation`) and, with a fixed delta time, the game seconds advanced (`gameSeconds`).
 
 </details>
 

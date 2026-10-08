@@ -9,6 +9,8 @@ import { P } from './properties.js';
 const F = 'timing';
 const D = 'editor';
 const RUNNING = ['pie', 'simulate'] as const;
+const STEP_GAME_SECONDS = { type: 'number', description: 'Game seconds the steps advanced, when a fixed delta time is set (set_game_speed fixed_delta_time): steps x deltaTime x game speed.' } as const;
+const STEP_DILATION = { type: 'number', description: 'The game speed the steps ran at, present when it is not 1: a step keeps the slow motion that was set, so at speed 0.1 each step advances a tenth of its frame of game time.' } as const;
 
 export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
   buildCoreRecord({
@@ -35,7 +37,7 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildCoreRecord({
     parentTool: 'control_editor', action: 'step_frame', domain: D, family: F,
-    summary: 'Advance the PIE simulation by one or more frames.',
+    summary: 'Advance the PIE simulation by one or more frames, each at the current game speed (slow motion makes each step shorter; timeDilation says so).',
     whenToUse: ['The simulation must advance a fixed number of frames.'],
     whenNotToUse: ['Real-time simulation is preferred.'],
     inputProps: { steps: P.steps },
@@ -44,7 +46,7 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
    
     exampleInput: { action: 'step_frame', steps: 1 },
     exampleOutput: { success: true, message: 'Stepped 1 frame(s)', steps: 1 },
-    outputProps: { steps: P.steps },
+    outputProps: { steps: P.steps, gameSeconds: STEP_GAME_SECONDS, timeDilation: STEP_DILATION },
     outputRequired: ['steps'],
   }),
   buildCoreRecord({
@@ -59,7 +61,7 @@ export const TIMING_RECORDS: readonly CapabilityRecordSource[] = [
    
     exampleInput: { action: 'single_frame_step', steps: 1 },
     exampleOutput: { success: true, message: 'Stepped 1 frame(s)', steps: 1 },
-    outputProps: { steps: P.steps },
+    outputProps: { steps: P.steps, gameSeconds: STEP_GAME_SECONDS, timeDilation: STEP_DILATION },
     outputRequired: ['steps'],
   }),
 ];
