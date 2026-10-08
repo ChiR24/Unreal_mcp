@@ -72,7 +72,8 @@ UEdGraphPin* FActionContext::FindPin(
         CleanPinName = PinName;
     }
 
-    auto MatchPin = [Node](const FString& Candidate) -> UEdGraphPin*
+    auto Squash = [](FString S) { S.ReplaceInline(TEXT(" "), TEXT("")); S.ReplaceInline(TEXT("_"), TEXT("")); return S; };
+    auto MatchPin = [Node, &Squash](const FString& Candidate) -> UEdGraphPin*
     {
         if (UEdGraphPin* Pin = Node->FindPin(*Candidate))
         {
@@ -91,6 +92,11 @@ UEdGraphPin* FActionContext::FindPin(
                 return Pin;
             }
         }
+        // A cast's output is "AsPrimitive Component": a name that drops its spaces or underscores still matches.
+        const FString Squashed = Squash(Candidate);
+        for (UEdGraphPin* Pin : Node->Pins)
+            if (Pin && (Squash(Pin->PinName.ToString()).Equals(Squashed, ESearchCase::IgnoreCase) ||
+                        Squash(Pin->GetDisplayName().ToString()).Equals(Squashed, ESearchCase::IgnoreCase))) return Pin;
         return nullptr;
     };
 

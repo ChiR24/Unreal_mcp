@@ -1507,3 +1507,12 @@ describe('motion samples carry rotation when it changes', () => {
     expect(source).toContain('Sample->SetArrayField(TEXT("rotation"), McpMotionVec(FVector(Rotation.Pitch, Rotation.Yaw, Rotation.Roll)));');
   });
 });
+
+// connect_pins missed a cast's "AsPrimitive Component" when it was written "AsPrimitiveComponent".
+describe('a pin named without its spaces still connects', () => {
+  it('compares pin names with spaces and underscores dropped after the exact tries', () => {
+    const source = code('BlueprintGraph', 'Context', 'McpAutomationBridge_BlueprintGraphHandlersContextEditor.cpp');
+    expect(source).toContain('auto Squash = [](FString S) { S.ReplaceInline(TEXT(" "), TEXT("")); S.ReplaceInline(TEXT("_"), TEXT("")); return S; };');
+    expect(source).toContain('Squash(Pin->PinName.ToString()).Equals(Squashed, ESearchCase::IgnoreCase)');
+  });
+});
