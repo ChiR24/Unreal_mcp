@@ -1308,3 +1308,13 @@ describe('removing a Blueprint\'s root component hands its place to a child', ()
     expect(source).not.toContain('SCS->RemoveNode(');
   });
 });
+
+// set_default changed the class default while every placed actor kept the old value under a success reply.
+describe('a class default reaches the actors already placed', () => {
+  it('set_default carries the new value to placed actors that still held the old default', () => {
+    const source = code('Blueprint', 'Graph', 'McpAutomationBridge_BlueprintHandlersSetDefaultLiteral.cpp');
+    expect(source).toContain('CDO->GetArchetypeInstances(Instances);');
+    expect(source).toContain('Property->Identical(Property->ContainerPtrToValuePtr<void>(InstanceContainer), OldValue)');
+    expect(source).toContain('Result->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);');
+  });
+});

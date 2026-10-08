@@ -51,7 +51,12 @@ const testCases = [
 // === CONFIG: set_default (blueprintPath + propertyName + value/propertyValue) ===
 // bGenerateOverlapEvents is on UPrimitiveComponent; this Actor BP root is SceneComponent.
 // Use a property that exists on AActor CDO directly.
-{ scenario: 'CONFIG: set_default', toolName: 'manage_blueprint', arguments: { action: 'set_default', blueprintPath: BP_PATH, propertyName: 'bReplicates', propertyValue: true }, expected: 'success' },
+// A placed actor still holding the old default takes the new one: set_default used to change only the class
+// default, and every actor already in the level kept the old value under a success reply.
+{ scenario: 'Setup: place an actor of the test Blueprint before its default changes', toolName: 'control_actor', arguments: { action: 'spawn_blueprint', blueprintPath: BP_PATH, actorName: `BPDefaultProbe_${ts}`, location: { x: 0, y: 900, z: 200 } }, expected: 'success|already exists' },
+{ scenario: 'CONFIG: set_default', toolName: 'manage_blueprint', arguments: { action: 'set_default', blueprintPath: BP_PATH, propertyName: 'bReplicates', propertyValue: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.instancesUpdated', equals: 1, label: 'the placed actor took the new default' }] },
+{ scenario: 'VERIFY: the placed actor reads the new default', toolName: 'control_actor', arguments: { action: 'list', filter: `BPDefaultProbe_${ts}`, propertyNames: ['bReplicates'] }, expected: 'success', assertions: [{ path: 'structuredContent.result.actors.0.properties.bReplicates', equals: 'True', label: 'the instance followed the class default' }] },
+{ scenario: 'Cleanup: delete the placed probe actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: `BPDefaultProbe_${ts}` }, expected: 'success|not found' },
 { scenario: 'VERIFY: get_blueprint reads one default without the whole summary', toolName: 'manage_blueprint', arguments: { action: 'get_blueprint', blueprintPath: BP_PATH, propertyName: 'bReplicates' }, expected: 'success', assertions: [{ path: 'structuredContent.result.propertyValue', equals: 'True', label: 'the value set above' }, { path: 'structuredContent.result.variables', equals: undefined, label: 'no summary alongside a single-property read' }] },
 
   // === CONFIG: modify_scs (blueprintPath + operations) ===

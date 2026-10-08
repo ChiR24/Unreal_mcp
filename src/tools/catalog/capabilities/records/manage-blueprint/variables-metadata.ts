@@ -137,7 +137,10 @@ export const VARIABLES_METADATA_RECORDS: readonly CapabilityRecordSource[] = [
     // returns it as `value`, but only when it exports to JSON; the object path
     // returns neither value. `value` is therefore an optional output, and
     // `verifiedValue` (which no set_default path emits) is not declared.
-    outputProps: { value: { description: 'Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON.' } },
+    outputProps: {
+      value: { description: 'Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON.' },
+      instancesUpdated: { type: 'number', description: 'Placed actors (in loaded levels) that still held the old default and took the new value, as the Details panel propagates a class default; an actor that overrides the value keeps it. Save the level to keep them.' },
+    },
     effect: 'write',
     behavior: { idempotency: 'idempotent', safeToRetry: true },
     latency: 'instant',

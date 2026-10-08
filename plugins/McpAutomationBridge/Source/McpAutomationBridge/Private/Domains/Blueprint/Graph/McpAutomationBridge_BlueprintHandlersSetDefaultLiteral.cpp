@@ -112,9 +112,36 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
     Blueprint->Modify();
     CDO->Modify();
 
+    // A placed instance still holding the old default takes the new one, as the Details panel
+    // propagates a class default; a compile that keeps the class layout does not reinstance, so
+    // without this every placed actor kept the old value under a success reply.
+    void *OldValue = FMemory::Malloc(Property->GetSize(), Property->GetMinAlignment());
+    Property->InitializeValue(OldValue);
+    Property->CopyCompleteValue(OldValue, Property->ContainerPtrToValuePtr<void>(TargetContainer));
     FString ConversionError;
-    if (!ApplyJsonValueToProperty(TargetContainer, Property, ValueField,
-                                  ConversionError)) {
+    const bool bApplied = ApplyJsonValueToProperty(TargetContainer, Property, ValueField, ConversionError);
+    int32 InstancesUpdated = 0;
+    TArray<UObject *> Instances;
+    CDO->GetArchetypeInstances(Instances);
+    for (UObject *Instance : bApplied ? Instances : TArray<UObject *>()) {
+      void *InstanceContainer = Instance;
+      FString Unused;
+      if (!IsValid(Instance) || Instance->HasAnyFlags(RF_ClassDefaultObject | RF_ArchetypeObject) ||
+          (PropertyName.Contains(TEXT(".")) &&
+           ResolveNestedPropertyPath(Instance, PropertyName, InstanceContainer, Unused) != Property) ||
+          !InstanceContainer ||
+          !Property->Identical(Property->ContainerPtrToValuePtr<void>(InstanceContainer), OldValue)) {
+        continue;
+      }
+      Instance->Modify();
+      Property->CopyCompleteValue(Property->ContainerPtrToValuePtr<void>(InstanceContainer),
+                                  Property->ContainerPtrToValuePtr<void>(TargetContainer));
+      Instance->PostEditChange();
+      ++InstancesUpdated;
+    }
+    Property->DestroyValue(OldValue);
+    FMemory::Free(OldValue);
+    if (!bApplied) {
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, false,
                              ConversionError, nullptr,
                              TEXT("CONVERSION_FAILED"));
@@ -132,6 +159,7 @@ bool HandleBlueprintSetDefaultLiteral(const FBlueprintActionContext &Context) {
     TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
     Result->SetStringField(TEXT("propertyName"), PropertyName);
     Result->SetStringField(TEXT("blueprintPath"), LocalNormalized);
+    Result->SetNumberField(TEXT("instancesUpdated"), InstancesUpdated);
 
     if (CurrentValue.IsValid()) {
       Result->SetField(TEXT("value"), CurrentValue);

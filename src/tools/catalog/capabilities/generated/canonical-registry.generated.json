@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "b8e49a1a83114893",
+  "catalogRevision": "ede315a24d1b0c90",
   "recordCount": 396,
   "records": [
     {
@@ -16336,6 +16336,10 @@
             },
             "value": {
               "description": "Property value re-read from the Class Default Object after the write. Emitted on the literal path only and omitted when the value cannot be exported to JSON."
+            },
+            "instancesUpdated": {
+              "type": "number",
+              "description": "Placed actors (in loaded levels) that still held the old default and took the new value, as the Details panel propagates a class default; an actor that overrides the value keeps it. Save the level to keep them."
             }
           },
           "required": [
@@ -16447,8 +16451,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "faf8285b71954240cc96c0a2eecf2aed838da12c7f7a2767069630fac5d1fdf2",
-        "content": "eb286ea6bdf786544a3efc647c128f9f9f2fe65a881e7784ab415b3e8e140478"
+        "schema": "c7ce59125b9b319139a7446f649f0aaa88553aacc50cb64ee865c9df67640637",
+        "content": "3d8b95e6195320fb2c02bb85274e0af6d4bc4761829c29fad59851437ac54638"
       }
     },
     {

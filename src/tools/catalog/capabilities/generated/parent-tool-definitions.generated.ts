@@ -13329,6 +13329,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Expression: the input pins the parsed expression made, the names to wire."
         },
+        "instancesUpdated": {
+          "type": "number",
+          "description": "Placed actors (in loaded levels) that still held the old default and took the new value, as the Details panel propagates a class default; an actor that overrides the value keeps it. Save the level to keep them."
+        },
         "isVisible": {
           "type": "boolean",
           "description": "Whether the widget draws, derived from `visibility` (false only for Collapsed and Hidden)."
