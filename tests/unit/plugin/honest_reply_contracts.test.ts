@@ -1402,3 +1402,13 @@ describe('a paused motion run repeats no sample', () => {
     expect(source).toContain('Run.LastSampleGame = GameTime;');
   });
 });
+
+// edit_scs modify added a component with no attachTo under DefaultSceneRoot and said nothing about where it went.
+describe('a batch-added component says where it was attached', () => {
+  it('reports attachedTo when the operation named no parent, on both add paths', () => {
+    const resolve = code('Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersScsParentResolve.h');
+    expect(resolve).toContain('OpSummary->SetStringField(TEXT("attachedTo"), Where);');
+    const ops = code('Blueprint', 'Components', 'McpAutomationBridge_BlueprintHandlersModifyScsComponentOps.cpp');
+    expect(ops.match(/McpScsParent::ReportParent\(/gu)?.length).toBe(2);
+  });
+});

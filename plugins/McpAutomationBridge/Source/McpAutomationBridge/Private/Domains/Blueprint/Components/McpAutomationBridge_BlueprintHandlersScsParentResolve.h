@@ -154,4 +154,25 @@ inline void AttachAndReport(UBlueprint *Blueprint,
                               *ChildName, *ParentName));
 }
 
+// No attachTo: says where the new component ended. Like the editor's Components panel it lands under
+// DefaultSceneRoot, not in its place (add_scs_component's root-level add makes the engine swap the root), and the
+// reply said nothing, so a mesh meant to be the physics root sat under the placeholder unnoticed.
+inline void ReportParent(USimpleConstructionScript *SCS, const FString &ChildName,
+                         const TSharedPtr<FJsonObject> &OpSummary) {
+  USCS_Node *Child = SCS ? FindScsNodeByName(SCS, ChildName) : nullptr;
+  // An actor component (movement, audio logic) has no transform and attaches to nothing.
+  if (!Child || !OpSummary.IsValid() || !Child->ComponentTemplate ||
+      !Child->ComponentTemplate->IsA<USceneComponent>()) {
+    return;
+  }
+  const USCS_Node *Parent = SCS->FindParentNode(Child);
+  FString Where = TEXT("(root)");
+  if (Parent) {
+    Where = Parent->GetVariableName().ToString();
+  } else if (Child->ParentComponentOrVariableName != NAME_None) {
+    Where = Child->ParentComponentOrVariableName.ToString();
+  }
+  OpSummary->SetStringField(TEXT("attachedTo"), Where);
+}
+
 }  // namespace McpScsParent

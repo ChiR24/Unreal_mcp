@@ -247,6 +247,9 @@ if (!ComponentClass) {
       // root. Re-attach by name now that the node exists, and report it.
       McpScsParent::AttachAndReport(LocalBP, LocalBP->SimpleConstructionScript,
                                     ComponentName, AttachToName, OpSummary);
+      if (AttachToName.TrimStartAndEnd().IsEmpty()) {
+        McpScsParent::ReportParent(LocalBP->SimpleConstructionScript, ComponentName, OpSummary);
+      }
       if (!AdditionMethodStr.IsEmpty())
         OpSummary->SetStringField(TEXT("additionMethod"), AdditionMethodStr);
       // The contract says add_component also takes `transform`, a `properties`
@@ -271,6 +274,9 @@ if (!ComponentClass) {
         OpSummary->SetStringField(TEXT("componentName"), ComponentName);
         McpScsParent::AttachAndReport(LocalBP, LocalSCS, ComponentName,
                                       AttachToName, OpSummary);
+        if (AttachToName.TrimStartAndEnd().IsEmpty()) {
+          McpScsParent::ReportParent(LocalSCS, ComponentName, OpSummary);
+        }
         // The subsystem route above places and configures what it added; this one dropped both.
         if (ScsOpHasEdits(Op)) {
           ApplyModifyScsModifyComponent(LocalBP, LocalSCS, Op, OpSummary);
