@@ -29,7 +29,7 @@ const TARGET = { waterBodyName: { ...P.waterBodyName, description: 'Water body t
 export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
   buildRecord({
     id: 'build_environment.create_water_body_ocean', action: 'create_water_body_ocean', family: F,
-    summary: 'Create an ocean water body actor.',
+    summary: 'Create an ocean water body actor with the editor\'s default ocean material and waves.',
     whenToUse: WU, whenNotToUse: ['A lake or river water body is needed.'],
     inputProps: BODY,
     required: [], effect: 'write', latency: 'interactive', resources: 'medium',
@@ -61,10 +61,13 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.configure_water_waves', action: 'configure_water_waves', family: F,
-    summary: 'Configure water wave settings (height, length, amplitude).',
+    summary: 'Give a water body Gerstner waves, the swell its surface and anything floating on it follow: height, wavelength, steepness and wind direction. The call fails when the body does not end up holding the waves.',
     whenToUse: WU, whenNotToUse: ['Default waves are sufficient.'],
-    inputProps: { waveHeight: P.waveHeight, waveLength: P.waveLength,
-      amplitude: P.amplitude, steepness: P.steepness, direction: P.direction, ...TARGET },
+    inputProps: { waveHeight: { ...P.waveHeight, description: 'Height (amplitude) of the largest wave in cm; the body\'s other waves shrink to 15% of it, as a real sea\'s do. A calm harbour is about 5-10, open sea 50 or more.' },
+      waveLength: { ...P.waveLength, description: 'Wavelength of the longest wave in cm, crest to crest; the shortest waves are 13% of it (a harbour is about 1500-2500).' },
+      amplitude: { ...P.amplitude, description: 'Same as waveHeight; waveHeight wins when both are given.' },
+      steepness: { ...P.steepness, description: 'Crest sharpness of the short waves, 0 (smooth swell) to 1 (peaked); the long waves take about half. Keep it under about 0.3: steep crests from many waves fold the surface over itself.' },
+      direction: { ...P.direction, description: 'Wind direction: its yaw sets where the waves travel.' }, ...TARGET },
     required: [], effect: 'write', behavior: { idempotency: 'idempotent' }, latency: 'interactive', resources: 'low',
     exampleInput: { action: 'configure_water_waves', waveHeight: 1.0, waveLength: 10 },
   }),
@@ -86,7 +89,7 @@ export const WATER_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildRecord({
     id: 'build_environment.create_buoyancy_component', action: 'create_buoyancy_component', topics: ['make a boat float'], family: F,
-    summary: 'Create a buoyancy component on an actor for water interaction.',
+    summary: 'Make an actor float: add a buoyancy component (pontoons in settings.BuoyancyData) to an actor whose root is a physics-simulating mesh, and let it take the water body\'s overlap at level load, so one placed already in the water floats instead of sinking. In a Blueprint, add /Script/Water.BuoyancyComponent with edit_scs and set the class default bGenerateOverlapEventsDuringLevelStreaming to true.',
     whenToUse: WU, whenNotToUse: ['Buoyancy is not needed.'],
     inputProps: { actorPath: P.actorPath, actorName: P.actorName, targetActor: P.targetActor, settings: P.settings },
     required: [], effect: 'write', latency: 'interactive', resources: 'low',

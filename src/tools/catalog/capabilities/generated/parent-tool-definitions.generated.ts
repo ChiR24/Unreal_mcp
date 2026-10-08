@@ -1700,7 +1700,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "amplitude": {
           "type": "number",
-          "description": "Wave amplitude."
+          "description": "Same as waveHeight; waveHeight wins when both are given."
         },
         "aperture": {
           "type": "number",
@@ -2043,23 +2043,47 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Foliage density."
         },
         "direction": {
-          "type": "object",
-          "description": "Direction rotation.",
-          "properties": {
-            "pitch": {
-              "type": "number",
-              "description": "Pitch"
+          "oneOf": [
+            {
+              "type": "object",
+              "description": "Direction rotation.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             },
-            "yaw": {
-              "type": "number",
-              "description": "Yaw"
-            },
-            "roll": {
-              "type": "number",
-              "description": "Roll"
+            {
+              "type": "object",
+              "description": "Wind direction: its yaw sets where the waves travel.",
+              "properties": {
+                "pitch": {
+                  "type": "number",
+                  "description": "Pitch"
+                },
+                "yaw": {
+                  "type": "number",
+                  "description": "Yaw"
+                },
+                "roll": {
+                  "type": "number",
+                  "description": "Roll"
+                }
+              },
+              "additionalProperties": false
             }
-          },
-          "additionalProperties": false
+          ],
+          "description": "Direction rotation."
         },
         "directionalLightActorPath": {
           "type": "string",
@@ -3194,7 +3218,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "steepness": {
           "type": "number",
-          "description": "Wave steepness."
+          "description": "Crest sharpness of the short waves, 0 (smooth swell) to 1 (peaked); the long waves take about half. Keep it under about 0.3: steep crests from many waves fold the surface over itself."
         },
         "strength": {
           "type": "number",
@@ -3322,11 +3346,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "waveHeight": {
           "type": "number",
-          "description": "Wave height."
+          "description": "Height (amplitude) of the largest wave in cm; the body's other waves shrink to 15% of it, as a real sea's do. A calm harbour is about 5-10, open sea 50 or more."
         },
         "waveLength": {
           "type": "number",
-          "description": "Wave length."
+          "description": "Wavelength of the longest wave in cm, crest to crest; the shortest waves are 13% of it (a harbour is about 1500-2500)."
         },
         "width": {
           "type": "number",

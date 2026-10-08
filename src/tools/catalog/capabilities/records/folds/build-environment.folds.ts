@@ -166,13 +166,13 @@ export const BUILD_ENVIRONMENT_FOLDS: readonly FoldSpec[] = [
   // water
   {
     primary: 'create_water_body', selector: 'kind',
-    summary: 'Create a water body: ocean, lake, river or custom.',
+    summary: 'Create a water body (ocean, lake, river or custom) with the Water plugin: real water that takes the editor\'s default materials and, for an ocean or lake, its default waves, as placing one in the editor does (listed under defaultsApplied).',
     topics: ['water body', 'ocean', 'lake', 'river', 'add a lake or ocean', 'add a river', 'create a river', 'make a river'],
     members: byTarget('create_water_body_', ['create_water_body_ocean', 'create_water_body_lake', 'create_water_body_river', 'create_water_body_custom']),
   },
   {
     primary: 'configure_water', selector: 'setting',
-    summary: 'Configure water: waves, material, collision.',
+    summary: 'Configure a water body: its Gerstner waves (height, wavelength, steepness, direction), material or collision.',
     topics: ['water waves', 'water material', 'water collision'],
     members: byTarget('configure_water_', ['configure_water_waves', 'configure_water_material', 'configure_water_collision']),
   },

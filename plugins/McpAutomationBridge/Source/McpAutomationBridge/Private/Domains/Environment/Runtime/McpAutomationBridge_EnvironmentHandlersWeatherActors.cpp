@@ -131,6 +131,7 @@ bool McpConfigureWaterBody(const TSharedPtr<FJsonObject> &Payload, const FString
                                                                false, &WaterActor);
     if (bCreatedOrFound && WaterActor)
     {
+        McpApplyWaterBodyDefaults(WaterActor, Resp);
         McpSetMaterialOnActor(WaterActor, Payload, Resp);
         McpSetCollisionOnActor(WaterActor, Payload, Resp);
     }

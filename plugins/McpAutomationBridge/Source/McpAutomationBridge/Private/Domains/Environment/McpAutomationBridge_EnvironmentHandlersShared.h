@@ -185,6 +185,11 @@ bool McpCreateTimeOfDaySystem(const TSharedPtr<FJsonObject> &Payload, TSharedPtr
                                     FString &OutMessage, FString &OutErrorCode);
 bool McpConfigureWaterWavesOnActor(AActor *WaterActor, const TSharedPtr<FJsonObject> &Payload,
                                           TSharedPtr<FJsonObject> Resp, FString &OutMessage, FString &OutErrorCode);
+// Gives the body these waves and reports whether it holds them afterwards.
+bool McpAssignWaterWaves(AActor *WaterActor, UObject *Waves);
+// Fills what a water body lacks from the editor's own placement defaults (materials, and an ocean's or
+// lake's waves), as placing one from the editor does; lists what it filled under defaultsApplied.
+void McpApplyWaterBodyDefaults(AActor *WaterActor, TSharedPtr<FJsonObject> Resp);
 bool McpCreateBuoyancyComponent(const TSharedPtr<FJsonObject> &Payload, TSharedPtr<FJsonObject> Resp,
                                        FString &OutMessage, FString &OutErrorCode);
 bool McpParseEnvironmentSnapshotLighting(

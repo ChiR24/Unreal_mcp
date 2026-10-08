@@ -97,8 +97,7 @@ bool McpConfigureWaterWavesOnActor(AActor *WaterActor, const TSharedPtr<FJsonObj
             return false;
         }
 
-        if (!McpInvokeObjectSetter(WaterActor, FName(TEXT("SetWaterWaves")), WaterWaves) &&
-            !McpSetObjectPropertyValue(WaterActor, TEXT("WaterWaves"), WaterWaves))
+        if (!McpAssignWaterWaves(WaterActor, WaterWaves))
         {
             OutMessage = TEXT("Failed to assign Gerstner water waves to water body");
             OutErrorCode = TEXT("PROPERTY_SET_FAILED");
@@ -120,28 +119,30 @@ bool McpConfigureWaterWavesOnActor(AActor *WaterActor, const TSharedPtr<FJsonObj
     }
 
     TArray<FString> Applied;
-    // One value drives both ends of each generator range: a single wave size.
-    auto ApplyRange = [&](const TCHAR *Key, const TCHAR *MinProperty, const TCHAR *MaxProperty, double Value)
+    // The value given is the largest wave's; the generator's other waves shrink toward a share of it, as a
+    // real sea's do. One size for all 16 lined their crests up and folded the surface into black creases.
+    auto ApplyRange = [&](const TCHAR *Key, const TCHAR *SmallEnd, const TCHAR *LargeEnd, double Value, double SmallShare)
     {
-        McpApplyNumberProperty(Generator, MinProperty, Value, Key, Resp, Applied);
-        McpApplyNumberProperty(Generator, MaxProperty, Value, Key, Resp, Applied);
+        McpApplyNumberProperty(Generator, SmallEnd, Value * SmallShare, Key, Resp, Applied);
+        McpApplyNumberProperty(Generator, LargeEnd, Value, Key, Resp, Applied);
     };
     double NumberValue = 0.0;
     for (const TCHAR *Key : {TEXT("waveHeight"), TEXT("amplitude")})
     {
         if (McpGetFirstNumberField(Payload, {Key}, NumberValue))
         {
-            ApplyRange(Key, TEXT("MinAmplitude"), TEXT("MaxAmplitude"), FMath::Max(NumberValue, 0.0001));
+            ApplyRange(Key, TEXT("MinAmplitude"), TEXT("MaxAmplitude"), FMath::Max(NumberValue, 0.0001), 0.15);
             break;
         }
     }
     if (McpGetFirstNumberField(Payload, {TEXT("waveLength")}, NumberValue))
     {
-        ApplyRange(TEXT("waveLength"), TEXT("MinWavelength"), TEXT("MaxWavelength"), FMath::Max(NumberValue, 0.0001));
+        ApplyRange(TEXT("waveLength"), TEXT("MinWavelength"), TEXT("MaxWavelength"), FMath::Max(NumberValue, 0.0001), 0.13);
     }
+    // The long waves are the gentle ones: steepness is the short waves', the long ones take about half.
     if (McpGetFirstNumberField(Payload, {TEXT("steepness")}, NumberValue))
     {
-        ApplyRange(TEXT("steepness"), TEXT("SmallWaveSteepness"), TEXT("LargeWaveSteepness"), FMath::Clamp(NumberValue, 0.0, 1.0));
+        ApplyRange(TEXT("steepness"), TEXT("LargeWaveSteepness"), TEXT("SmallWaveSteepness"), FMath::Clamp(NumberValue, 0.0, 1.0), 0.55);
     }
 
     const TSharedPtr<FJsonObject> *DirectionObj = nullptr;
@@ -200,6 +201,14 @@ bool McpCreateBuoyancyComponent(const TSharedPtr<FJsonObject> &Payload, TSharedP
     }
 
     McpApplyEnvironmentSettings(Component, Payload, Resp);
+    // An actor that starts the level already in the water never gets the water body's begin-overlap, so its
+    // buoyancy never starts and it sinks; this flag makes level load send that overlap.
+    if (FProperty *LoadOverlaps = McpFindPropertyCaseInsensitive(TargetActor, TEXT("bGenerateOverlapEventsDuringLevelStreaming")))
+    {
+        FString IgnoredError;
+        TargetActor->Modify();
+        McpPropertyReflection::ApplyJsonValueToProperty(TargetActor, LoadOverlaps, MakeShared<FJsonValueBoolean>(true), IgnoredError);
+    }
     Resp->SetStringField(TEXT("actorName"), McpActorRef(TargetActor));
     Resp->SetStringField(TEXT("componentName"), Component->GetName());
     Resp->SetStringField(TEXT("componentPath"), Component->GetPathName());

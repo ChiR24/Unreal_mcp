@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "688215cc0b14c02b",
+  "catalogRevision": "0cfe145f5ec9711b",
   "recordCount": 396,
   "records": [
     {
@@ -23282,7 +23282,7 @@
           "water material",
           "water collision"
         ],
-        "summary": "Configure water: waves, material, collision.",
+        "summary": "Configure a water body: its Gerstner waves (height, wavelength, steepness, direction), material or collision.",
         "whenToUse": [
           "A water body or water simulation must be created or configured."
         ],
@@ -23303,23 +23303,23 @@
             },
             "waveHeight": {
               "type": "number",
-              "description": "Wave height."
+              "description": "Height (amplitude) of the largest wave in cm; the body's other waves shrink to 15% of it, as a real sea's do. A calm harbour is about 5-10, open sea 50 or more."
             },
             "waveLength": {
               "type": "number",
-              "description": "Wave length."
+              "description": "Wavelength of the longest wave in cm, crest to crest; the shortest waves are 13% of it (a harbour is about 1500-2500)."
             },
             "amplitude": {
               "type": "number",
-              "description": "Wave amplitude."
+              "description": "Same as waveHeight; waveHeight wins when both are given."
             },
             "steepness": {
               "type": "number",
-              "description": "Wave steepness."
+              "description": "Crest sharpness of the short waves, 0 (smooth swell) to 1 (peaked); the long waves take about half. Keep it under about 0.3: steep crests from many waves fold the surface over itself."
             },
             "direction": {
               "type": "object",
-              "description": "Direction rotation.",
+              "description": "Wind direction: its yaw sets where the waves travel.",
               "properties": {
                 "pitch": {
                   "type": "number",
@@ -23400,7 +23400,7 @@
       },
       "examples": [
         {
-          "title": "Configure water: waves, material, collision.",
+          "title": "Configure a water body: its Gerstner waves (height, wavelength, steepness, direction), material or collision.",
           "input": {
             "action": "configure_water",
             "waveHeight": 1,
@@ -23477,8 +23477,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "d4b3626e16e3835d56a588c63d8a99229106b7ffdf9f7dde1fbf08164a0b3179",
-        "content": "7f5ce63064a24ab2e781c9f124e5ab680d63c1bae97ed6a60968f2b8058026fb"
+        "schema": "a111b64ba4b2346e6ee1565d6f33ff94b1075682d8589f328d82592e8d7d8304",
+        "content": "f5e583e3a0dfbc234dea355b44a7edc047fd5da3ed4366c901e7e7a59bcd6ca1"
       }
     },
     {
@@ -23976,7 +23976,7 @@
           "create_buoyancy_component",
           "make a boat float"
         ],
-        "summary": "Create a buoyancy component on an actor for water interaction.",
+        "summary": "Make an actor float: add a buoyancy component (pontoons in settings.BuoyancyData) to an actor whose root is a physics-simulating mesh, and let it take the water body's overlap at level load, so one placed already in the water floats instead of sinking. In a Blueprint, add /Script/Water.BuoyancyComponent with edit_scs and set the class default bGenerateOverlapEventsDuringLevelStreaming to true.",
         "whenToUse": [
           "A water body or water simulation must be created or configured."
         ],
@@ -24043,7 +24043,7 @@
       },
       "examples": [
         {
-          "title": "Create a buoyancy component on an actor for water interaction.",
+          "title": "Make an actor float: add a buoyancy component (pontoons in settings.BuoyancyData) to an actor whose root is a physics-simulating mesh, and let it take the water body's overlap at level load, so one placed already in the water floats instead of sinking. In a Blueprint, add /Script/Water.BuoyancyComponent with edit_scs and set the class default bGenerateOverlapEventsDuringLevelStreaming to true.",
           "input": {
             "action": "create_buoyancy_component",
             "actorName": "Boat_1"
@@ -24081,7 +24081,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "9803911dcf49872f1136ef4600e25fe2464a736cdd8ffe4bfaad4c84e6cd0953",
-        "content": "2f77401278b60fdbc4743ba5d6978213c52cf3753a1bffe8b3475050a17bd07b"
+        "content": "dffe03d5c95996071d87a0fc1fd662be342d4062c1d3c6b24db67dd7a659aadb"
       }
     },
     {
@@ -26567,7 +26567,7 @@
           "create a river",
           "make a river"
         ],
-        "summary": "Create a water body: ocean, lake, river or custom.",
+        "summary": "Create a water body (ocean, lake, river or custom) with the Water plugin: real water that takes the editor's default materials and, for an ocean or lake, its default waves, as placing one in the editor does (listed under defaultsApplied).",
         "whenToUse": [
           "A water body or water simulation must be created or configured."
         ],
@@ -26694,7 +26694,7 @@
       },
       "examples": [
         {
-          "title": "Create a water body: ocean, lake, river or custom.",
+          "title": "Create a water body (ocean, lake, river or custom) with the Water plugin: real water that takes the editor's default materials and, for an ocean or lake, its default waves, as placing one in the editor does (listed under defaultsApplied).",
           "input": {
             "action": "create_water_body",
             "name": "Ocean_1",
@@ -26747,7 +26747,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "84457489250fe6ad37b2bba5df12679045531bafc5fb27c343f1f9c9beb7b18a",
-        "content": "7d9d450ba058c3410025e8d2779b1df0d916b4663614d022e9ee853259c5b137"
+        "content": "854490cc61ac8b7d5fbf80c488eeaa4f56b68dbc1ebbc0e45a6e8285685bcff7"
       }
     },
     {
