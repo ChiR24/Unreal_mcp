@@ -1596,3 +1596,12 @@ describe('a component named like the root alias is the parent it names', () => {
     expect(code('SCS', 'McpAutomationBridge_SCSHandlersReparent.cpp')).toContain('IsSCSRootAlias(SCS, NewParentName)');
   });
 });
+
+// A Blueprint component's properties bag refused SimulatePhysics: the field is BodyInstance.bSimulatePhysics.
+describe('a bool named without its b prefix resolves', () => {
+  it('tries the b-prefixed bool for a last segment and for a bare nested name', () => {
+    const resolver = code('..', 'Foundation', 'BridgeHelpers', 'Properties', 'McpAutomationBridgeHelpersNestedPropertyPath.h');
+    expect(resolver).toContain('CastField<FBoolProperty>(FindFProperty<FProperty>(CurrentTypeScope, FName(*(TEXT("b") + Segment))));');
+    expect(resolver).toContain('McpCollectNestedMemberPaths(RootObject->GetClass(), FName(*(TEXT("b") + PropertyPath)), FString(), Candidates);');
+  });
+});

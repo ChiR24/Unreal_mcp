@@ -90,6 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A spawn batch names the keys it ignored.** An item's `label`, meant as `actorName`, was dropped without a word and the actor kept its class label; each item now lists keys no spawn reads under `ignoredKeys`.
 - **A delete the system accepted counts as done.** `delete` listed an asset under `failedToDeletePaths` ("its file is still on disk because the package is still loaded") after it had unloaded the package and deleted the file: a file something still holds open shows until that handle closes, and it was gone at the next editor start. A file delete the system accepted now counts the asset as deleted.
 - **A component named `Root` is the parent `attachTo` names.** `add_scs_component`, `reparent` and the parent check took `Root`, `RootComponent` and `DefaultSceneRoot` as the Blueprint's root even when a component had that name (the interaction tools name their scene root `Root`), so a part attached to it landed on the DefaultSceneRoot above it; a component of that exact name now wins.
+- **A bool property answers to its name without the `b`.** A Blueprint component's `properties` bag, `edit_scs` `set_property` and `get_property`/`set_property` refused `SimulatePhysics`, the Details panel's name for `BodyInstance.bSimulatePhysics`; a name that matches nothing now tries the `b`-prefixed bool, at the end of a path and among struct members.
 
 </details>
 

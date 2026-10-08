@@ -85,6 +85,10 @@ static inline FProperty *ResolveNestedPropertyPath(UObject *RootObject,
 
     CurrentProperty =
         FindFProperty<FProperty>(CurrentTypeScope, FName(*Segment));
+    // The details panel shows a bool without its b prefix (Simulate Physics is bSimulatePhysics).
+    if (!CurrentProperty && bIsLastSegment) {
+      CurrentProperty = CastField<FBoolProperty>(FindFProperty<FProperty>(CurrentTypeScope, FName(*(TEXT("b") + Segment))));
+    }
     // An actor's instance components (placed in the level, or added by AddInstanceComponent) have no property
     // behind them, so a middle segment may name one exactly: the component name a create call reported.
     AActor *Actor = !CurrentProperty && !bIsLastSegment ? Cast<AActor>(CurrentObject) : nullptr;
@@ -181,6 +185,9 @@ static inline FProperty *McpResolvePropertyPath(UObject *RootObject, const FStri
   }
   TArray<FString> Candidates;
   McpCollectNestedMemberPaths(RootObject->GetClass(), FName(*PropertyPath), FString(), Candidates);
+  if (Candidates.IsEmpty()) {
+    McpCollectNestedMemberPaths(RootObject->GetClass(), FName(*(TEXT("b") + PropertyPath)), FString(), Candidates);
+  }
   if (Candidates.Num() == 1) {
     OutResolvedPath = Candidates[0];
     return ResolveNestedPropertyPath(RootObject, Candidates[0], OutContainerPtr, OutError);
