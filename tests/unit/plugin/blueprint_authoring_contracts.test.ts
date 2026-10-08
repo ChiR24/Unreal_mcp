@@ -609,6 +609,8 @@ describe('graph edits that used to answer success while doing nothing useful', (
     expect(mutations).toContain('TEXT("K2Node_MathExpression")');
     expect(mutations).toMatch(/McpTrySetNodeAssetPropertyForMcp\(TargetNode, PropertyName, OldExpression\);/u);
     expect(mutations).toContain('TEXT("EXPRESSION_INVALID")');
+    // "x && !y" failed as a bare "does not parse": the refusal names unary ! and && on a number input.
+    expect(mutations).toContain('DescribeOperatorMisuse(Context.Blueprint, Value)');
   });
 
   // create_framework_class documents short class names, but "GameModeBase" answered NOT_FOUND.

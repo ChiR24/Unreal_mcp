@@ -213,17 +213,14 @@ static bool SetNodeProperty(FActionContext& Context)
             }
         }
         Context.TargetGraph->NotifyGraphChanged();
-        FString Unknown = McpBlueprintMathExpression::DescribeUnknownFunctions(Value);
-        if (!Unknown.IsEmpty())
-        {
-            Unknown += TEXT(" ");
-        }
+        FString Unknown = McpBlueprintMathExpression::DescribeUnknownFunctions(Value) + TEXT(" ") +
+            McpBlueprintMathExpression::DescribeOperatorMisuse(Context.Blueprint, Value);
+        Unknown.TrimStartAndEndInline();
         Context.SendError(
             FString::Printf(TEXT("The expression '%s' does not parse, so the node would have no output; it keeps the "
-                                 "old one. %sCall a function by its compact title (max, clamp, abs, sin), else its name "
-                                 "(Fraction, SelectFloat); write a negative number as 0 - x; FInterpTo is a CallFunction "
-                                 "node, not an expression."),
-                *Value, *Unknown),
+                                 "old one. %s%sCall a function by its compact title (max, clamp, abs, sin), else its "
+                                 "name (Fraction, SelectFloat); FInterpTo is a CallFunction node, not an expression."),
+                *Value, *Unknown, Unknown.IsEmpty() ? TEXT("") : TEXT(" ")),
             TEXT("EXPRESSION_INVALID"));
         return true;
     }

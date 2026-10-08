@@ -16,6 +16,10 @@ namespace McpBlueprintMathExpression
 // ("No math function is called FMax (try Max), frac (try Fraction)."); empty when every call is known.
 FString DescribeUnknownFunctions(const FString& Expression);
 
+// The operators Expression uses in a way no Math Expression node takes: a unary ! or minus, and && or || on a name
+// that is not a bool variable (every unknown name becomes a number input). Empty when none.
+FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression);
+
 // After a parse: inputPins, the pins the node made, and boundToMembers, the names it reads from the Blueprint's
 // own variables instead (no pin to wire).
 void DescribeInputs(const UBlueprint* Blueprint, const UEdGraphNode& Node, const FString& Expression,

@@ -69,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Console commands reach the running game.** During Play In Editor `console_command` ran every command against the editor world, so a game command (`slomo`, a cheat, a pawn's or HUD's exec) came back not executed; it now goes through the game's local player first, as the in-game console sends it.
 - **`spawn_batch` variables are in place before BeginPlay.** In a running game the actor's BeginPlay ran inside the spawn, before the batch set its `variables`, so it saw the class defaults (a projectile spawned with its launch velocity never moved); the spawn now waits for them.
 - **`set_property` `watch` samples the written property by default.** `watch.propertyName` was required even to watch the property the call writes; omitted, it is now that property.
-- **A math expression names what went wrong and what it made.** `EXPRESSION_INVALID` names each call the node cannot reach with the spelling it takes (`FMax` is `Max`, `frac` is `Fraction`), and a parsed expression answers `inputPins` and `boundToMembers`, the names that read the Blueprint's own variables instead of becoming pins (also in `build_graph` step results).
+- **A math expression names what went wrong and what it made.** `EXPRESSION_INVALID` names each call the node cannot reach with the spelling it takes (`FMax` is `Max`, `frac` is `Fraction`), a unary `!` or minus (`x == false`, `0 - x`), and `&&` or `||` on a name that would become a number input; a parsed expression answers `inputPins` and `boundToMembers`, the names that read the Blueprint's own variables instead of becoming pins (also in `build_graph` step results).
 
 </details>
 

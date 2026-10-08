@@ -111,6 +111,76 @@ void SplitNames(const FString& Expression, TArray<FString>& OutCalls, TArray<FSt
     (bCall ? OutCalls : OutNames).AddUnique(Expression.Mid(Start, Index - Start));
   }
 }
+
+// Expression as tokens: names, numbers, two-character operators (&& || == != <= >=) and single characters.
+TArray<FString> Tokens(const FString& Expression)
+{
+  TArray<FString> Out;
+  int32 Index = 0;
+  while (Index < Expression.Len())
+  {
+    const TCHAR Char = Expression[Index];
+    int32 End = Index + 1;
+    if (FChar::IsAlnum(Char) || Char == TEXT('_') || Char == TEXT('.'))
+    {
+      while (End < Expression.Len() && (FChar::IsAlnum(Expression[End]) || Expression[End] == TEXT('_') ||
+                                        Expression[End] == TEXT('.')))
+      {
+        ++End;
+      }
+    }
+    else if (TArray<FString>({TEXT("&&"), TEXT("||"), TEXT("=="), TEXT("!="), TEXT("<="), TEXT(">=")})
+                 .Contains(Expression.Mid(Index, 2)))
+    {
+      ++End;
+    }
+    if (!FChar::IsWhitespace(Char))
+    {
+      Out.Add(Expression.Mid(Index, End - Index));
+    }
+    Index = End;
+  }
+  return Out;
+}
+}
+
+FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression)
+{
+  const TArray<FString> Parts = Tokens(Expression);
+  const UClass* Members = Blueprint ? Blueprint->SkeletonGeneratedClass.Get() : nullptr;
+  const TArray<FString> Comparisons = {TEXT("=="), TEXT("!="), TEXT("<"), TEXT(">"), TEXT("<="), TEXT(">=")};
+  TArray<FString> Notes;
+  for (int32 Index = 0; Index < Parts.Num(); ++Index)
+  {
+    const FString Prev = Index > 0 ? Parts[Index - 1] : FString();
+    const FString Next = Index + 1 < Parts.Num() ? Parts[Index + 1] : FString();
+    const bool bAfterOperand = FChar::IsAlnum(Prev.Len() ? Prev[0] : TEXT(' ')) || Prev == TEXT(")") ||
+                               Prev == TEXT("_") || Prev.StartsWith(TEXT("."));
+    if (Parts[Index] == TEXT("!"))
+    {
+      Notes.AddUnique(TEXT("There is no unary !: write (x == false)."));
+    }
+    else if (Parts[Index] == TEXT("-") && !bAfterOperand)
+    {
+      Notes.AddUnique(TEXT("There is no unary minus: write 0 - x."));
+    }
+    const TCHAR First = Parts[Index][0];
+    const bool bName = (FChar::IsAlpha(First) || First == TEXT('_')) && Next != TEXT("(");
+    const bool bLogical = Prev == TEXT("&&") || Prev == TEXT("||") || Next == TEXT("&&") || Next == TEXT("||");
+    if (!bName || !bLogical || Comparisons.Contains(Prev) || Comparisons.Contains(Next))
+    {
+      continue;
+    }
+    const FProperty* Member = Members ? Members->FindPropertyByName(FName(*Parts[Index])) : nullptr;
+    if (!CastField<FBoolProperty>(Member))
+    {
+      Notes.AddUnique(FString::Printf(TEXT("'%s' is a number here (a name that is not a bool variable becomes a "
+                                           "number input), but && and || take true/false: compare it (%s > 0), "
+                                           "name a bool variable, or wire a BooleanAND node."),
+                                      *Parts[Index], *Parts[Index]));
+    }
+  }
+  return FString::Join(Notes, TEXT(" "));
 }
 
 FString DescribeUnknownFunctions(const FString& Expression)
