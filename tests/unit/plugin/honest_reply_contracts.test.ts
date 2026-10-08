@@ -1480,3 +1480,12 @@ describe('a property batch says whether it saved', () => {
     expect(source).toMatch(/TEXT\("materialRebuilt"\), TEXT\("saved"\), TEXT\("saveSkippedReason"\)\}\)/u);
   });
 });
+
+// add_scs_component of a buoyancy component said parent "(root)" while its verification said it attaches to nothing.
+describe('an actor component added to a Blueprint is not reported under the root', () => {
+  it('names no parent for a component that is not a scene component', () => {
+    const source = code('SCS', 'McpAutomationBridge_SCSHandlersAddComponent.cpp');
+    expect(source).toContain('const bool bSceneComponent = CompClass->IsChildOf(USceneComponent::StaticClass());');
+    expect(source).toContain('!bSceneComponent ? TEXT("(none - not a scene component)")');
+  });
+});

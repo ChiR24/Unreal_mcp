@@ -260,7 +260,10 @@ TSharedPtr<FJsonObject> FSCSHandlers::AddSCSComponent(
   if (USCS_Node *ActualParentNode = SCS->FindParentNode(VerifiedNode)) {
     ActualParent = ActualParentNode->GetVariableName().ToString();
   }
-  Result->SetStringField(TEXT("parent"), ActualParent.IsEmpty() ? TEXT("(root)") : ActualParent);
+  // An actor component (buoyancy, movement) attaches to nothing; scsVerification already says so.
+  const bool bSceneComponent = CompClass->IsChildOf(USceneComponent::StaticClass());
+  Result->SetStringField(TEXT("parent"), !bSceneComponent ? TEXT("(none - not a scene component)")
+                                         : ActualParent.IsEmpty() ? TEXT("(root)") : ActualParent);
   // componentName is the SCS name the caller asked for and can address again; the internal
   // variable/template name (Name_GEN_VARIABLE) rides separately (dogfood #23).
   Result->SetStringField(TEXT("componentName"), ComponentName);
