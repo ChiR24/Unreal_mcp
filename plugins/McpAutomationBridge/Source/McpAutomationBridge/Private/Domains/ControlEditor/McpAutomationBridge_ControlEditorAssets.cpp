@@ -170,6 +170,8 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
     }
   }
   int32 LeftDirty = 0;
+  // Named, so a caller can tell its own unsaved work from someone else's without saving everything to find out.
+  TArray<FString> LeftDirtyPackages;
 
   auto ShouldSkipPackage = [](UPackage* Package) -> bool {
     if (!Package || Package->HasAnyFlags(RF_Transient)) {
@@ -188,6 +190,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
     ProcessedPackages.Add(Package);
     if (OnlyPackages.Num() > 0 && !OnlyPackages.Contains(Package->GetName())) {
       LeftDirty++;
+      LeftDirtyPackages.Add(Package->GetName());
       return;
     }
     TotalDirty++;
@@ -259,6 +262,7 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
   Resp->SetNumberField(TEXT("leftDirtyCount"), LeftDirty);
   Resp->SetArrayField(TEXT("skippedPackages"), MakeStringArray(SkippedPackages));
   Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));
+  if (LeftDirtyPackages.Num() > 0) Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));
 
   if (FailedPackages.Num() > 0) {
     Receipt.AddCompensatingCapability(TEXT("control_editor.save_all"));

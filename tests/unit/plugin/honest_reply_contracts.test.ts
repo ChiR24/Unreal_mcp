@@ -1526,6 +1526,15 @@ describe('a property write with markDirty false leaves the package clean', () =>
   });
 });
 
+// save_all with assetPaths said "left 1 other dirty package(s) unsaved" without saying which.
+describe('save_all names the packages it left unsaved', () => {
+  it('lists them under leftDirtyPackages', () => {
+    const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorAssets.cpp');
+    expect(source).toMatch(/LeftDirty\+\+;\s*LeftDirtyPackages\.Add\(Package->GetName\(\)\);/u);
+    expect(source).toContain('Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));');
+  });
+});
+
 // add_scs_component of a buoyancy component said parent "(root)" while its verification said it attaches to nothing.
 describe('an actor component added to a Blueprint is not reported under the root', () => {
   it('names no parent for a component that is not a scene component', () => {

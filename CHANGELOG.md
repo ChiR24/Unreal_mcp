@@ -110,6 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A MetaSound batch saves the asset once.** `build_metasound` ran every step with the batch's own `save`, so a 63-step voice wrote its package 65 times, about six seconds of saving; it now saves once after the steps (a batch that stops at a failing step still saves the ones before it) and answers `saved`.
 - **`set_property` `markDirty` `false` leaves the package clean.** The write marked its package unsaved all the same, so a level edited with `markDirty` `false` still asked to be saved.
 - **A text search finds a call by the title the graph shows.** `query_asset` `text` matched a function call only by its function name (`PlaySoundAtLocation`); "Play Sound at Location", as the graph shows it, found nothing.
+- **`save_all` names what it left unsaved.** With `assetPaths` it said "left 1 other dirty package(s) unsaved" without saying which; `leftDirtyPackages` lists them.
 
 </details>
 

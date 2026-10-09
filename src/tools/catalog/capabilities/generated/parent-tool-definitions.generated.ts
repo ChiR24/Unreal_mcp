@@ -5558,6 +5558,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "True when only the CDO existed, which usually means the owning window has never been opened."
         },
+        "leftDirtyPackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "With assetPaths: the other packages that still hold unsaved changes, left as they were."
+        },
         "locationApplied": {
           "type": "boolean",
           "description": "Whether the viewport took the requested location; false (with CAMERA_NOT_APPLIED) when it is locked to an actor, piloting or orthographic."

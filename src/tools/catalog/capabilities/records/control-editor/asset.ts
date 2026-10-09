@@ -126,7 +126,10 @@ export const ASSET_RECORDS: readonly CapabilityRecordSource[] = [
       assetPaths: { type: 'array', items: { type: 'string' }, description: 'Save only these assets or levels, e.g. ["/Game/UI/WBP_Menu"], and leave every other dirty package as it is; omit to save everything dirty.' },
     },
     required: [],
-    outputProps: { compensation: COMPENSATION },
+    outputProps: {
+      compensation: COMPENSATION,
+      leftDirtyPackages: { type: 'array', items: { type: 'string' }, description: 'With assetPaths: the other packages that still hold unsaved changes, left as they were.' },
+    },
     effect: 'write',
     costLatency: 'interactive', costResources: 'medium',
     exampleInput: { action: 'save_all' },

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "ae9fd934b8089940",
+  "catalogRevision": "d2b06cd8647c8ad4",
   "recordCount": 397,
   "records": [
     {
@@ -37335,6 +37335,13 @@
                 "state"
               ],
               "additionalProperties": false
+            },
+            "leftDirtyPackages": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "With assetPaths: the other packages that still hold unsaved changes, left as they were."
             }
           },
           "required": [
@@ -37399,8 +37406,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "7e527c04ff595caef95ff4a03e502a9100a2a6d75260bd8ab4b9472948d617a0",
-        "content": "a467c56a6d8d614e30dbf3a7223e11a779387f2be5bf468c67e4058d1f615f85"
+        "schema": "c254a97607a428289d1d730d0979401da1e2ec13839a89c594b264371eaacedb",
+        "content": "21e211a5e1b99f4cf2d421434477809f73b35d2ba5eb07e8917b00886db3f26f"
       }
     },
     {
