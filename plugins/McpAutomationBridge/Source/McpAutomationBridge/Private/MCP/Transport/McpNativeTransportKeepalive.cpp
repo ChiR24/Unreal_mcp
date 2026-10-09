@@ -132,14 +132,16 @@ void FMcpNativeTransport::AnswerStillRunning(const FString& RequestId)
 		Percent = Conn->LastProgressPercent;
 	}
 
+	// Kept before the answer goes out, so a get_task_result sent the moment it arrives finds the task.
+	TaskResults.NoteRunning(RequestId, GetSessionPrincipal(Conn->SessionId).Identity);
 	const double Elapsed = FPlatformTime::Seconds() - Conn->StartTime;
 	const bool bWaiting = Subsystem && Subsystem->IsAutomationRequestWaiting(RequestId);
 	const FString Work = McpAutomationBridge::DescribeEditorWork(RequestId);
 	const FString Message = bWaiting
-		? FString::Printf(TEXT("Queued for %.0f s and not started: Unreal is %s. It runs by itself once the editor is free; do not send it again."),
-			Elapsed, Work.IsEmpty() ? TEXT("busy") : *Work)
-		: FString::Printf(TEXT("Still running after %.0f s: %s. Unreal keeps going; this answer does not stop it. Until it is done every call answers with its progress; then read the result back instead of sending this call again."),
-			Elapsed, Work.IsEmpty() ? TEXT("Unreal is still working on it") : *Work);
+		? FString::Printf(TEXT("Queued for %.0f s and not started: Unreal is %s. It runs by itself once the editor is free; do not send it again. Read its result with manage_tools get_task_result taskId %s."),
+			Elapsed, Work.IsEmpty() ? TEXT("busy") : *Work, *RequestId)
+		: FString::Printf(TEXT("Still running after %.0f s: %s. Unreal keeps going; this answer does not stop it. Read its result with manage_tools get_task_result taskId %s instead of sending this call again."),
+			Elapsed, Work.IsEmpty() ? TEXT("Unreal is still working on it") : *Work, *RequestId);
 
 	// A success receipt whose task is still running (the receipt algebra's own long-call shape); the idempotency
 	// slot stays claimed until the work completes and CompletePendingRequest settles it.

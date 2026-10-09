@@ -227,6 +227,38 @@ const SPECS: readonly Omit<CoreRecordSpec, 'parentTool' | 'domain'>[] = [
       categories: [{ name: 'core', enabled: true, toolCount: 8, enabledCount: 8 }],
     },
   },
+  // A call still open at 27 s answers "still running" with task.taskId; its result went only to the editor log, so a
+  // client that gave up at its own timeout, or sent no idempotencyKey, could not read it.
+  {
+    action: 'get_task_result',
+    family: 'tool-status',
+    topics: ['task result', 'still running result', 'long call result', 'read finished call', 'task state'],
+    summary: 'Read a call that answered "still running": whether it is queued, running or done, and once done the reply it would have given.',
+    whenToUse: ['A call answered task.state running or queued, and its result is wanted without sending the call again.'],
+    whenNotToUse: ['The call answered with its result.'],
+    inputProps: {
+      taskId: { type: 'string', description: 'The task.taskId the still-running answer gave. Only the last 32 such calls of this server or editor session are kept.' },
+    },
+    required: ['taskId'],
+    outputProps: {
+      taskId: { type: 'string', description: 'The task read.' },
+      state: { type: 'string', enum: ['queued', 'running', 'done'], description: 'queued (waiting for the editor), running, or done.' },
+      progress: { type: 'number', description: 'While running, the share done (0-1) when the call reports progress.' },
+      outcome: { type: 'object', additionalProperties: true, 'x-unreal-reflection-boundary': true, description: 'Once done: the call\'s own reply as it would have answered (success, message, errorCode, data, and its receipt with what changed).' },
+    },
+    outputRequired: ['taskId', 'state'],
+    effect: 'read',
+    // It reads the server's own store, so it answers whatever the editor is doing.
+    editorStates: ['edit', 'pie', 'simulate'],
+    exampleInput: { action: 'get_task_result', taskId: 'num:12' },
+    exampleOutput: {
+      success: true,
+      message: 'Task num:12 is done.',
+      taskId: 'num:12',
+      state: 'done',
+      outcome: { success: true, message: 'Render finished' },
+    },
+  },
   {
     action: 'reset',
     family: 'tool-visibility',

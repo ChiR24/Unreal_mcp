@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "70d9dceb2b156f0f",
-  "recordCount": 397,
+  "catalogRevision": "cadc4115a7a175b8",
+  "recordCount": 398,
   "records": [
     {
       "id": "animation_physics.bind_cloth_to_skeletal_mesh",
@@ -77698,6 +77698,155 @@
         "algorithm": "sha256",
         "schema": "3e5744163fa0b65f990f3efce228e2e1e42356a11ee991afff519c7be5e29bcd",
         "content": "a34737f098f19697f97f6728bf315e6a25c18c84d4265fc8c17147d4fe0e3d4a"
+      }
+    },
+    {
+      "id": "manage_tools.get_task_result",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "manage_tools",
+          "action": "get_task_result"
+        }
+      ],
+      "discovery": {
+        "domain": "tools",
+        "family": "tool-status",
+        "topics": [
+          "get_task_result",
+          "task result",
+          "still running result",
+          "long call result",
+          "read finished call",
+          "task state"
+        ],
+        "summary": "Read a call that answered \"still running\": whether it is queued, running or done, and once done the reply it would have given.",
+        "whenToUse": [
+          "A call answered task.state running or queued, and its result is wanted without sending the call again."
+        ],
+        "whenNotToUse": [
+          "The call answered with its result."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "taskId": {
+              "type": "string",
+              "description": "The task.taskId the still-running answer gave. Only the last 32 such calls of this server or editor session are kept."
+            }
+          },
+          "required": [
+            "action",
+            "taskId"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "taskId": {
+              "type": "string",
+              "description": "The task read."
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "queued",
+                "running",
+                "done"
+              ],
+              "description": "queued (waiting for the editor), running, or done."
+            },
+            "progress": {
+              "type": "number",
+              "description": "While running, the share done (0-1) when the call reports progress."
+            },
+            "outcome": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Once done: the call's own reply as it would have answered (success, message, errorCode, data, and its receipt with what changed)."
+            }
+          },
+          "required": [
+            "success",
+            "taskId",
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Read a call that answered \"still running\": whether it is queued, running or done, and once done the reply it would have given.",
+          "input": {
+            "action": "get_task_result",
+            "taskId": "num:12"
+          },
+          "output": {
+            "success": true,
+            "message": "Task num:12 is done.",
+            "taskId": "num:12",
+            "state": "done",
+            "outcome": {
+              "success": true,
+              "message": "Render finished"
+            }
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit",
+          "pie",
+          "simulate"
+        ]
+      },
+      "behavior": {
+        "effect": "read",
+        "idempotency": "idempotent",
+        "longRunning": false,
+        "safeToRetry": true
+      },
+      "policy": {
+        "requiredScope": "read",
+        "consent": "none",
+        "dataAccess": "project-read"
+      },
+      "cost": {
+        "latency": "instant",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "manage_tools",
+        "dispatchAction": "get_task_result"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "3c791137edeccb3bb91bc0a6ab5223d46be32fbbd677b771085563b9a1c722c4",
+        "content": "a5f2656acffc1f4d0c96405544699aca05fc690b23acd0befc19df8a805971fa"
       }
     },
     {

@@ -21824,6 +21824,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           ],
           "description": "Category name to enable/disable."
         },
+        "taskId": {
+          "type": "string",
+          "description": "The task.taskId the still-running answer gave. Only the last 32 such calls of this server or editor session are kept."
+        },
         "tools": {
           "type": "array",
           "items": {
@@ -21841,6 +21845,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "enable_category",
             "disable_category",
             "get_status",
+            "get_task_result",
             "reset"
           ],
           "description": "Action to invoke on manage_tools."
@@ -21924,15 +21929,38 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           }
         },
+        "outcome": {
+          "type": "object",
+          "additionalProperties": true,
+          "x-unreal-reflection-boundary": true,
+          "description": "Once done: the call's own reply as it would have answered (success, message, errorCode, data, and its receipt with what changed)."
+        },
+        "progress": {
+          "type": "number",
+          "description": "While running, the share done (0-1) when the call reports progress."
+        },
         "protected": {
           "type": "array",
           "items": {
             "type": "string"
           }
         },
+        "state": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "done"
+          ],
+          "description": "queued (waiting for the editor), running, or done."
+        },
         "success": {
           "type": "boolean",
           "description": "Whether the action succeeded."
+        },
+        "taskId": {
+          "type": "string",
+          "description": "The task read."
         },
         "tools": {
           "type": "array",

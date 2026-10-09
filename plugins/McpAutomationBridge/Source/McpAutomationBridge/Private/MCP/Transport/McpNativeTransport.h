@@ -4,6 +4,7 @@
 #include "HAL/Runnable.h"
 #include "Dom/JsonValue.h"
 #include "MCP/DynamicTools/McpDynamicToolManager.h"
+#include "MCP/DynamicTools/McpTaskResults.h"
 #include "Async/Future.h"
 #include <atomic>
 #include "MCP/Transport/McpNativeTransportConnectionTypes.h"
@@ -146,6 +147,8 @@ private:
 		const FString& ToolName, const TSharedPtr<FJsonObject>& Arguments,
 		const TSharedPtr<FJsonValue>& Id, FSocket* ClientSocket,
 		const FString& SessionId, const FString& CorsOrigin);
+	// manage_tools get_task_result: a call that answered "still running", read back by the principal that sent it.
+	TSharedPtr<FJsonObject> DescribeTask(const FString& TaskId, const FString& SessionId);
 
 	// Route a tools/call whose name is the 'unreal' gateway tool.
 	void HandleGatewayCall(
@@ -253,6 +256,7 @@ private:
 
 	UMcpAutomationBridgeSubsystem* Subsystem;
 	FMcpDynamicToolManager ToolManager;
+	FMcpTaskResults TaskResults;
 	int32 ListenPort = 0;
 
 	// Server identity & instructions (loaded from server-info.json + settings)

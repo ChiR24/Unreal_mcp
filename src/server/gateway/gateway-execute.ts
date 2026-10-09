@@ -27,6 +27,7 @@ import { dispatchAndValidate, type GatewayContext } from './gateway-execute-disp
 import { checkConsentAuthorization, checkExpectedCatalogRevision, checkScopeAuthorization, matchedFoldedGrant } from './gateway-execute-policy.js';
 import { ConsentGrantSchema, type ConsentGrant } from '../../tools/catalog/capabilities/semantic/authorization.js';
 import { buildReceiptContext, type GatewayReceiptContext } from './gateway-receipt-context.js';
+import { noteTaskDone, noteTaskRunning } from './gateway-task-results.js';
 import type { CapabilityRecord } from '../../tools/catalog/capabilities/model.js';
 import {
   conflictMessage,
@@ -173,9 +174,9 @@ export async function executeGatewayCall(
       }, receiptContext),
       (recorded: Record<string, unknown>) => markReplayed(recorded, receiptContext.correlationId)
     );
-  // Only a keyed call can fetch its real result later, and an explicit timeoutMs is
-  // the caller saying how long it will wait; every other call waits for its result.
-  if (receiptContext.idempotencyId === undefined || checked.timeoutMs !== undefined) return await settled;
+  // An explicit timeoutMs is the caller saying how long it will wait; any other call answers "still running"
+  // past STILL_RUNNING_AFTER_MS, and its result is read back with manage_tools get_task_result.
+  if (checked.timeoutMs !== undefined) return await settled;
   return await answerWhileRunning(settled, target.record, receiptContext, context);
 }
 
@@ -183,10 +184,11 @@ export async function executeGatewayCall(
 export const STILL_RUNNING_AFTER_MS = 27_000;
 
 // A client gives up on a call at its own timeout (often 30 s) while Unreal keeps
-// working, and the result was lost. Past 27 s a keyed call answers with a success
-// receipt whose task is still running: the work goes on, its idempotency slot
-// stays claimed until it settles, and the same call with the same
-// idempotencyKey then replays the real result.
+// working, and the result was lost. Past 27 s a call answers with a success
+// receipt whose task is still running: the work goes on, manage_tools
+// get_task_result reads its result once it settles, and a keyed call's
+// idempotency slot stays claimed until then, so the same call with the same
+// idempotencyKey replays the real result.
 async function answerWhileRunning(
   settled: Promise<Record<string, unknown>>,
   record: CapabilityRecord,
@@ -199,15 +201,27 @@ async function answerWhileRunning(
   });
   const first = await Promise.race([settled, running]).finally(() => clearTimeout(timer));
   if (first !== undefined) return first;
+  const taskId = receiptContext.correlationId;
+  noteTaskRunning(taskId);
   settled.then(
-    (receipt) => context.logger.info(`${record.id} finished after its still-running answer (success=${String(receipt.success)}).`),
-    (error: unknown) => context.logger.warn(`${record.id} failed after its still-running answer: ${error instanceof Error ? error.message : String(error)}`)
+    (receipt) => {
+      noteTaskDone(taskId, receipt);
+      context.logger.info(`${record.id} finished after its still-running answer (success=${String(receipt.success)}).`);
+    },
+    (error: unknown) => {
+      const text = error instanceof Error ? error.message : String(error);
+      noteTaskDone(taskId, { success: false, errorCode: 'EXECUTION_ERROR', message: text });
+      context.logger.warn(`${record.id} failed after its still-running answer: ${text}`);
+    }
   );
+  const again = receiptContext.idempotencyId === undefined
+    ? 'do not send this call again: it would run twice.'
+    : 'the same call with the same idempotencyKey also answers with it instead of running again.';
   const message = `Still running after ${STILL_RUNNING_AFTER_MS / 1000} s. Unreal keeps going; this answer does not stop it. `
-    + 'Send this call again with the same idempotencyKey once it is done: it answers with the result instead of running again.';
+    + `Read its result with manage_tools get_task_result taskId ${taskId} once it is done; ${again}`;
   return executeSuccessEnvelope({
     record,
-    result: { success: true, message, task: { taskId: receiptContext.correlationId, state: 'running' } },
+    result: { success: true, message, task: { taskId, state: 'running' } },
     canonicalOutput: { message },
     warnings: []
   }, receiptContext);

@@ -20,6 +20,7 @@ const testCases = [
   { scenario: 'TOGGLE: disable_category', toolName: 'manage_tools', arguments: { action: 'disable_category', category: 'gameplay' }, expected: 'success', assertions: [{ path: 'structuredContent.category', equals: 'gameplay', label: 'disable_category echoes category' }] },
   // === INFO ===
   { scenario: 'INFO: get_status', toolName: 'manage_tools', arguments: { action: 'get_status' }, expected: 'success', assertions: [{ path: 'structuredContent.categories', includesObject: { name: 'gameplay', enabled: false }, label: 'get_status reflects disabled gameplay category' }] },
+  { scenario: 'INFO: get_task_result names a task no call answered as still running', toolName: 'manage_tools', arguments: { action: 'get_task_result', taskId: 'no-such-task' }, expected: 'error|TASK_NOT_FOUND' },
   // === ACTION ===
   { scenario: 'ACTION: reset', toolName: 'manage_tools', arguments: { action: 'reset' }, expected: 'success' },
 

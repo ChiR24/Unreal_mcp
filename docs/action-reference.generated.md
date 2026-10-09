@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `70d9dceb2b156f0f`
+Catalog revision: `cadc4115a7a175b8`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -13,7 +13,7 @@ by `tools/list` and a direct `tools/call` on one returns a
 `DIRECT_TOOL_CALL_REMOVED` receipt rather than executing
 (`src/server/gateway/direct-call-migration.ts`).
 
-The catalog declares 397 capabilities across
+The catalog declares 398 capabilities across
 23 internal parent tools.
 Every row is derived from the capability record that the gateway actually
 validates against, so `execute` cannot accept an action this table omits.
@@ -57,12 +57,12 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_networking` | 21 | 5 | 13 | 3 | networking |
 | `manage_pcg` | 3 | 0 | 3 | 0 | world |
 | `manage_sequence` | 19 | 2 | 16 | 1 | cinematics, media, movie_render, replay, sequence, take_recorder |
-| `manage_tools` | 8 | 3 | 5 | 0 | tools |
+| `manage_tools` | 9 | 4 | 5 | 0 | tools |
 | `system_control` | 27 | 9 | 16 | 2 | audio, build, console, insights, logs, performance, project, python, render, viewport, widget |
 
 ## Capabilities requiring consent
 
-64 of 397 capabilities require consent.
+64 of 398 capabilities require consent.
 
 | Capability | Tool | Action | Effect | Consent |
 | --- | --- | --- | --- | --- |
@@ -462,6 +462,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `manage_tools.enable_category` | `manage_tools` | `enable_category` | write | write | none | `manage_tools.enable_category` |
 | `manage_tools.enable_tools` | `manage_tools` | `enable_tools` | write | write | none | `manage_tools.enable_tools` |
 | `manage_tools.get_status` | `manage_tools` | `get_status` | read | read | none | `manage_tools.get_status` |
+| `manage_tools.get_task_result` | `manage_tools` | `get_task_result` | read | read | none | `manage_tools.get_task_result` |
 | `manage_tools.list_categories` | `manage_tools` | `list_categories` | read | read | none | `manage_tools.list_categories` |
 | `manage_tools.list_tools` | `manage_tools` | `list_tools` | read | read | none | `manage_tools.list_tools` |
 | `manage_tools.reset` | `manage_tools` | `reset` | write | write | none | `manage_tools.reset` |

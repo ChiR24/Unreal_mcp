@@ -16871,10 +16871,12 @@
         "enable_category",
         "disable_category",
         "get_status",
+        "get_task_result",
         "reset"
       ],
       "parameterNames": [
         "category",
+        "taskId",
         "tools"
       ],
       "inputSchema": {
@@ -16890,6 +16892,10 @@
               "all"
             ],
             "description": "Category name to enable/disable."
+          },
+          "taskId": {
+            "type": "string",
+            "description": "The task.taskId the still-running answer gave. Only the last 32 such calls of this server or editor session are kept."
           },
           "tools": {
             "type": "array",
@@ -16908,6 +16914,7 @@
               "enable_category",
               "disable_category",
               "get_status",
+              "get_task_result",
               "reset"
             ],
             "description": "Action to invoke on manage_tools."

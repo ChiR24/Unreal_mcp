@@ -195,8 +195,35 @@ describe('a call still running when the client would give up answers for itself'
     expect((replay.receipt as { task?: unknown }).task).toBeUndefined();
   });
 
+  // A call without a key, or a client that lost it, had no way to the result but the log.
+  it('a call without an idempotencyKey answers too, and get_task_result reads it running, then done', async () => {
+    vi.useFakeTimers();
+    let finish: (value: unknown) => void = () => undefined;
+    const slow = new Promise((resolve) => { finish = resolve; });
+    const context = gatewayContext(
+      { isConnected: () => true, sendAutomationRequest: () => slow, getAuthority: () => ({ scopes: ['admin'] }) },
+      'unkeyed-running'
+    );
+    const pending = handleUnrealGatewayCall(spawn, context);
+    await vi.advanceTimersByTimeAsync(STILL_RUNNING_AFTER_MS);
+    const early = await pending;
+    const taskId = String((early.receipt as { task?: { taskId?: string } }).task?.taskId);
+    expect(String((early.data as { message?: string }).message)).toContain('do not send this call again');
+    const read = (): Promise<Record<string, unknown>> => handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_task_result', params: { taskId } }, context);
+    expect(((await read()).data as { state?: string }).state).toBe('running');
+
+    finish({ success: true, actorName: 'StaticMeshActor_0' });
+    await vi.runAllTimersAsync();
+    const done = (await read()).data as { state?: string; outcome?: { success?: boolean } };
+    expect(done.state).toBe('done');
+    expect(done.outcome?.success).toBe(true);
+    const unknown = await handleUnrealGatewayCall(
+      { operation: 'execute', tool: 'manage_tools', action: 'get_task_result', params: { taskId: 'no-such-task' } }, context);
+    expect(unknown.errorCode).toBe('TASK_NOT_FOUND');
+  });
+
   it.each([
-    ['without an idempotencyKey', {}],
     ['with an explicit timeoutMs', { options: { idempotencyKey: 'slow-spawn-2', timeoutMs: 120000 } }]
   ])(`a call %s waits past ${STILL_RUNNING_AFTER_MS} ms for its real result`, async (_label, extra) => {
     vi.useFakeTimers();

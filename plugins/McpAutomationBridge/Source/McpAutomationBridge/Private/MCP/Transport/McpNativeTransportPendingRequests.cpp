@@ -1,6 +1,7 @@
 #include "MCP/Transport/McpNativeTransportPrivate.h"
 #include "MCP/Execute/McpNativeGatewayReceipt.h"
 #include "MCP/Gateway/McpNativeGatewayExecuteReceiptBuild.h"
+#include "MCP/Protocol/McpJsonRpcReplyCompaction.h"
 
 namespace
 {
@@ -26,6 +27,30 @@ void AddActorNotFoundGuidance(const TSharedPtr<FJsonObject>& Receipt, const TSha
 	Receipt->SetArrayField(TEXT("suggestions"), {MakeShared<FJsonValueString>(FString::Printf(
 		TEXT("No actor in the world is labeled or named '%s'; control_actor find by name lists near labels under similar."), *Name))});
 	Receipt->SetObjectField(TEXT("nextCall"), Next);
+}
+
+// What manage_tools get_task_result answers as the outcome of a call that answered "still running": the call's own
+// reply as it would have answered, compacted like every reply (data without the repeats). Mirrors describeTask in
+// src/server/gateway/gateway-task-results.ts.
+TSharedPtr<FJsonObject> McpTaskOutcome(
+	bool bSuccess, const FString& Message, const FString& ErrorCode, const TSharedPtr<FJsonObject>& Reply)
+{
+	TSharedPtr<FJsonObject> Outcome = MakeShared<FJsonObject>();
+	if (const TSharedPtr<FJsonObject> Shown = Reply.IsValid() ? McpJsonRpcReply::MakeCompactReply(Reply) : nullptr)
+	{
+		Outcome->Values = Shown->Values;
+	}
+	Outcome->RemoveField(TEXT("operation"));
+	Outcome->SetBoolField(TEXT("success"), bSuccess);
+	if (!Message.IsEmpty())
+	{
+		Outcome->SetStringField(TEXT("message"), Message);
+	}
+	if (!ErrorCode.IsEmpty())
+	{
+		Outcome->SetStringField(TEXT("errorCode"), ErrorCode);
+	}
+	return Outcome;
 }
 
 // A handler that refuses a call because another call settles it can name that call in its own reply:
@@ -156,7 +181,9 @@ bool FMcpNativeTransport::CompletePendingRequest(
 	Conn->IdempotencySlot.Reset();
 	if (Conn->bAnsweredRunning.load())
 	{
-		// The client was already told it was still running (AnswerStillRunning); the outcome goes to the log.
+		// The client was already told it was still running (AnswerStillRunning): the outcome is kept for
+		// manage_tools get_task_result, and logged.
+		TaskResults.NoteDone(RequestId, McpTaskOutcome(bReportedSuccess, ReportedMessage, ReportedErrorCode, ReportedResult));
 		UE_LOG(LogMcpNativeTransport, Log, TEXT("tools/call %s finished after its still-running answer (tool=%s, success=%s): %s"),
 			*RequestId, *Conn->ToolName, bReportedSuccess ? TEXT("true") : TEXT("false"), *ReportedMessage.Left(400));
 	}
@@ -213,17 +240,21 @@ void FMcpNativeTransport::SendSSEProgressUpdate(
 	{
 		FScopeLock Lock(&SSEConnectionsMutex);
 		TSharedPtr<FSSEConnection>* Found = SSEConnections.Find(RequestId);
-		if (!Found || !Found->IsValid() || !(*Found)->Socket
-			|| (*Found)->bMarkedForRemoval.load() || (*Found)->bAnsweredRunning.load())
+		if (!Found || !Found->IsValid() || (*Found)->bMarkedForRemoval.load())
 		{
 			return;
 		}
 		Conn = *Found;
-		CapturedSessionId = Conn->SessionId;
 		// Progress never goes backwards: the cleanup heartbeat reports 0, and a
 		// client that saw 60% earlier must not be told the call regressed.
 		Percent = FMath::Max(Percent, Conn->LastProgressPercent);
 		Conn->LastProgressPercent = Percent;
+		// A call answered "still running" has no stream left: manage_tools get_task_result reads the progress kept above.
+		if (!Conn->Socket || Conn->bAnsweredRunning.load())
+		{
+			return;
+		}
+		CapturedSessionId = Conn->SessionId;
 		bool bExpected = false;
 		if (!Conn->bProgressWritePending.compare_exchange_strong(
 				bExpected, true))
