@@ -99,7 +99,7 @@ export const GEOMETRY_PRIMITIVES_RECORDS: readonly CapabilityRecordSource[] = [
   }),
   buildWorldRecord({
     parentTool: 'manage_geometry', action: 'create_plane', plugins: PLUGIN,
-    family: F, summary: 'Create a plane dynamic mesh actor.', whenToUse: ['A flat plane primitive must be created.'], whenNotToUse: ['A box is needed; use create_box.'],
+    family: F, summary: 'Create a plane dynamic mesh actor: flat in XY, centred on its origin, facing +Z.', whenToUse: ['A flat plane primitive must be created.', 'A sign, banner or flag needs a subdivided sheet: stand the plane up with a 90 degree roll on the component that draws it.'], whenNotToUse: ['A box is needed; use create_box.'],
     inputProps: { ...IDENT, ...XFORM, width: P.width, depth: P.depth, widthSegments: P.widthSegments, heightSegments: P.heightSegments }, required: [], effect: 'write', costLatency: 'interactive', costResources: 'low',
     exampleInput: { action: 'create_plane', width: 500, depth: 500 },
   }),

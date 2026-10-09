@@ -15907,7 +15907,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "depth": {
           "type": "number",
-          "description": "Primitive depth along Z."
+          "description": "Primitive depth: a box's size along Z; a plane's size along Y (a plane lies flat in XY, centred, facing +Z)."
         },
         "depthSegments": {
           "type": "integer",
@@ -16029,7 +16029,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "heightSegments": {
           "type": "integer",
-          "description": "Tessellation segments along height."
+          "description": "Tessellation segments along height (on a plane, along its depth, Y)."
         },
         "hullCount": {
           "type": "integer",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "cafbcd18de334d53",
+  "catalogRevision": "3403a6c7fdc8d4e7",
   "recordCount": 396,
   "records": [
     {
@@ -60607,6 +60607,7 @@
           "primitive=cone: A cone primitive must be created.",
           "primitive=capsule: A capsule primitive must be created.",
           "primitive=plane: A flat plane primitive must be created.",
+          "primitive=plane: A sign, banner or flag needs a subdivided sheet: stand the plane up with a 90 degree roll on the component that draws it.",
           "primitive=disc: A circular disc primitive must be created.",
           "primitive=ring: A ring/annulus primitive must be created.",
           "primitive=torus: A torus primitive must be created.",
@@ -60722,7 +60723,7 @@
             },
             "depth": {
               "type": "number",
-              "description": "Primitive depth along Z."
+              "description": "Primitive depth: a box's size along Z; a plane's size along Y (a plane lies flat in XY, centred, facing +Z)."
             },
             "widthSegments": {
               "type": "integer",
@@ -60730,7 +60731,7 @@
             },
             "heightSegments": {
               "type": "integer",
-              "description": "Tessellation segments along height."
+              "description": "Tessellation segments along height (on a plane, along its depth, Y)."
             },
             "depthSegments": {
               "type": "integer",
@@ -61327,8 +61328,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "e218a4a2ce1d33df54e8bddf0a4b5aafa30ef6f5920aa2d0c410fde559c55207",
-        "content": "20836aa9cc5bf5c1ac2b6251f5d42615794a41379e324211a454eca975f39a05"
+        "schema": "fb457e4a0410128fc75363f6dc0548531c89bfc988581cdf6fffea30824d9de1",
+        "content": "14a8fb3a9a57ba2072e78307abb71f01fa9148f0fc3795a583c4d4598bae7781"
       }
     },
     {
