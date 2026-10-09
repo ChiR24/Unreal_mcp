@@ -30,7 +30,7 @@ export const BOOLEAN_FIELDS = new Set([
   // TryGetBoolField (McpAutomationBridge_InputHandlersLegacyMappings.cpp), so
   // publishing them as strings made a schema-valid boolean unrepresentable.
   'shift', 'ctrl', 'alt', 'cmd',
-  'smoothing', 'all',
+  'smoothing', 'all', 'oneShot',
 ]);
 
 /** Field names whose JSON-Schema type is `number` on the wire. */
@@ -108,6 +108,7 @@ export const FIELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
   inputType: 'Graph input data type (Float, Int32, Bool, String, Trigger, Audio).',
   location: 'World location as [x, y, z] (an {x, y, z} object is accepted).',
   looping: 'Whether playback loops.',
+  oneShot: 'Whether the MetaSound is a one-shot source that ends when On Finished fires; false is a continuous source the engine virtualizes like a loop.',
   lowPassFilterFrequency: 'Low-pass filter cutoff frequency in Hz.',
   maxSeconds: 'Longest the measurement runs, in seconds (default 5, 0.2 to 20). A sound that ends sooner ends it then; looping sounds, music and MetaSounds that never trigger On Finished play until this.',
   mixName: 'Sound Mix name.',

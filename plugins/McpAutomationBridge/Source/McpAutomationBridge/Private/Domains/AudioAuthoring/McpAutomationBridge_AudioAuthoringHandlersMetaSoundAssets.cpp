@@ -1,5 +1,8 @@
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
+#if MCP_HAS_METASOUND_FRONTEND
+#include "Interfaces/MetasoundFrontendSourceInterface.h"
+#endif
 
 namespace McpAudioAuthoring
 {
@@ -50,12 +53,19 @@ TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, co
 		return McpHandlerUtils::BuildErrorResponse(TEXT("CREATE_FAILED"), TEXT("Failed to create MetaSound asset"));
 	}
 
+	bool bOneShot = true;
 #if MCP_HAS_METASOUND_FRONTEND
 	TScriptInterface<IMetaSoundDocumentInterface> DocInterface(MetaSound);
 	if (DocInterface)
 	{
 		FMetaSoundFrontendDocumentBuilder Builder(DocInterface);
 		Builder.InitDocument();
+		// The engine never virtualizes a one-shot: a hum looping on an AudioComponent that started out of earshot was
+		// dropped for good. Without the interface the source counts as looping and resumes when the listener nears.
+		if (!GetJsonBoolField(Params, TEXT("oneShot"), true))
+		{
+			bOneShot = !Builder.RemoveInterface(Metasound::Frontend::SourceOneShotInterface::GetVersion().Name);
+		}
 	}
 #endif
 
@@ -69,6 +79,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundAssetActions(const FString& SubAction, co
 
 	FString FullPath = MetaSound->GetPathName();
 	Response->SetStringField(TEXT("assetPath"), FullPath);
+	Response->SetBoolField(TEXT("oneShot"), bOneShot);
 	Response->SetBoolField(TEXT("success"), true);
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("MetaSound '%s' created"), *Name));
 	McpHandlerUtils::AddVerification(Response, MetaSound);

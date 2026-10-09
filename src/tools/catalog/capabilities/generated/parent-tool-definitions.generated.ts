@@ -11253,6 +11253,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Volume scale applied while occluded (0-1)."
         },
+        "oneShot": {
+          "type": "boolean",
+          "description": "false makes a continuous source with no On Finished output: the engine treats it as looping, so a hum or ambience whose AudioComponent starts out of earshot resumes when the listener comes near. Default true (it plays until On Finished fires)."
+        },
         "operations": {
           "type": "array",
           "items": {
@@ -11622,6 +11626,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "numChannels": {
           "type": "number",
           "description": "Number of audio channels in the inspected Sound Wave."
+        },
+        "oneShot": {
+          "type": "boolean",
+          "description": "Whether the new MetaSound is a one-shot source; false when it was made continuous (no On Finished output)."
         },
         "parentClass": {
           "type": "string",

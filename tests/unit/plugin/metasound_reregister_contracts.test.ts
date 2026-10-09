@@ -50,6 +50,20 @@ describe('build_metasound checks the pins it names on its own nodes before runni
   });
 });
 
+// The engine never virtualizes a one-shot MetaSound: a hum on an AudioComponent that started out of earshot stayed
+// silent for good, IsPlaying false even after Play.
+describe('create_metasound can make a continuous source', () => {
+  it('removes the One-Shot interface when oneShot is false, inside the builder gate, and says which it made', () => {
+    const create = readFileSync(join(AUDIO, 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundAssets.cpp'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//gu, ' ').replace(/\/\/[^\n]*/gu, ' ');
+    const gated = create.slice(create.indexOf('TScriptInterface<IMetaSoundDocumentInterface> DocInterface(MetaSound);'), create.indexOf('MetaSound->MarkPackageDirty();'));
+    expect(create.lastIndexOf('#if MCP_HAS_METASOUND_FRONTEND', create.indexOf('TScriptInterface<IMetaSoundDocumentInterface>'))).toBeGreaterThan(-1);
+    expect(gated).toContain('if (!GetJsonBoolField(Params, TEXT("oneShot"), true))');
+    expect(gated).toContain('bOneShot = !Builder.RemoveInterface(Metasound::Frontend::SourceOneShotInterface::GetVersion().Name);');
+    expect(create).toContain('Response->SetBoolField(TEXT("oneShot"), bOneShot);');
+  });
+});
+
 describe('a MetaSound graph edit reaches playback without an editor restart', () => {
   it('re-registers through the MetaSound editor, only where the builder and the editor subsystem exist', () => {
     const code = source();

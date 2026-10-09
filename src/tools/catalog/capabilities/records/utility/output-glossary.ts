@@ -106,6 +106,7 @@ export const UTILITY_OUTPUT_FIELDS: Readonly<Record<string, JsonObject>> = Objec
   rootNodeClass: str('Class of the node now at the root of the Sound Cue.'),
   drivesNode: str('Name of the node the inserted node now plays.'),
   saved: bool('Whether the asset was saved to disk.'),
+  oneShot: bool('Whether the new MetaSound is a one-shot source; false when it was made continuous (no On Finished output).'),
   nodes: { type: 'array', items: { type: 'object', additionalProperties: true, [REFLECTION_BOUNDARY]: true }, description: 'Every node: nodeId, name, className, kind (Node, GraphInput, GraphOutput, Literal, Variable...), inputs [{name, type, literal}] and outputs [{name, type}].' },
   nodeIds: reflected('Batch step id -> node id for every node the batch created.'),
   numChannels: num('Number of audio channels in the inspected Sound Wave.'),

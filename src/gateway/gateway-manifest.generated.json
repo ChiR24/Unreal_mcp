@@ -8102,6 +8102,7 @@
         "occlusionFilterScale",
         "occlusionInterpolationTime",
         "occlusionVolumeScale",
+        "oneShot",
         "operations",
         "outputName",
         "outputType",
@@ -8491,6 +8492,10 @@
           "occlusionVolumeScale": {
             "type": "number",
             "description": "Volume scale applied while occluded (0-1)."
+          },
+          "oneShot": {
+            "type": "boolean",
+            "description": "false makes a continuous source with no On Finished output: the engine treats it as looping, so a hum or ambience whose AudioComponent starts out of earshot resumes when the listener comes near. Default true (it plays until On Finished fires)."
           },
           "operations": {
             "type": "array",
