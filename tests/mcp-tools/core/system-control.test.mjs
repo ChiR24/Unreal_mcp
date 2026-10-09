@@ -169,6 +169,9 @@ const testCases = [
   { scenario: 'ACTION: validate_assets', toolName: 'system_control', arguments: { action: 'validate_assets', paths: [VALIDATION_MATERIAL] }, expected: 'success' },
   { scenario: 'ACTION: validate_assets assetPath', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALIDATION_MATERIAL }, expected: 'success' },
   { scenario: 'ACTION: validate_assets path recursive', toolName: 'system_control', arguments: { action: 'validate_assets', path: TEST_FOLDER, recursive: false }, expected: 'success' },
+  // Data Validation runs the project's and the engine's validators, which loading alone never did.
+  { scenario: 'ACTION: validate_assets dataValidation', toolName: 'system_control', arguments: { action: 'validate_assets', assetPath: VALIDATION_MATERIAL, dataValidation: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results', includesObject: { kind: 'asset', isValid: true }, label: 'the material loads and passes its validators' }] },
+  { scenario: 'ACTION: validate_assets dataValidation folder', toolName: 'system_control', arguments: { action: 'validate_assets', path: TEST_FOLDER, recursive: false, dataValidation: true }, expected: 'success', assertions: [{ path: 'structuredContent.result.results', includesObject: { kind: 'directory' }, label: 'the folder row carries the verdict counts' }] },
   // === CONFIG ===
   { scenario: 'CONFIG: set_project_setting', toolName: 'system_control', arguments: { action: 'set_project_setting', section: PROJECT_SETTING_SECTION, key: PROJECT_SETTING_KEY, value: '1' }, expected: 'success' },
   { scenario: 'ACTION: execute_python', toolName: 'system_control', arguments: { action: 'execute_python', code: 'print("system-control-ok")' }, expected: 'success' },

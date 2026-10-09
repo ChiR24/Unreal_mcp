@@ -7,8 +7,38 @@
 #include "McpAutomationBridgeSubsystem.h"
 
 #include "EditorAssetLibrary.h"
+#include "EditorValidatorSubsystem.h"
 
 namespace McpSystemControlHandlers {
+namespace {
+TArray<TSharedPtr<FJsonValue>> McpTextValues(const TArray<FText>& Texts) {
+  TArray<TSharedPtr<FJsonValue>> Out;
+  for (const FText& Text : Texts) {
+    Out.Add(MakeShared<FJsonValueString>(Text.ToString()));
+  }
+  return Out;
+}
+
+// Runs the project's and the engine's Data Validation on one loaded asset (what the editor's Validate Assets
+// menu runs): its verdict, and its errors and warnings when it has any. Loading alone passed an asset whose
+// validators reject it.
+EDataValidationResult McpRunDataValidation(UEditorValidatorSubsystem* Validator, UObject* Asset,
+                                           const TSharedPtr<FJsonObject>& Row) {
+  TArray<FText> Errors, Warnings;
+  const EDataValidationResult Verdict =
+      Validator->IsAssetValid(FAssetData(Asset), Errors, Warnings, EDataValidationUsecase::Script);
+  Row->SetStringField(TEXT("dataValidation"), Verdict == EDataValidationResult::Valid ? TEXT("valid")
+                                              : Verdict == EDataValidationResult::Invalid ? TEXT("invalid")
+                                                                                          : TEXT("notValidated"));
+  if (Errors.Num() > 0) {
+    Row->SetArrayField(TEXT("errors"), McpTextValues(Errors));
+  }
+  if (Warnings.Num() > 0) {
+    Row->SetArrayField(TEXT("warnings"), McpTextValues(Warnings));
+  }
+  return Verdict;
+}
+} // namespace
 
 bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
                           const FString& RequestId,
@@ -50,6 +80,9 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
   const bool bRecursive = Payload->HasField(TEXT("recursive"))
       ? GetJsonBoolField(Payload, TEXT("recursive"))
       : true;
+  UEditorValidatorSubsystem* Validator = GetJsonBoolField(Payload, TEXT("dataValidation")) && GEditor
+      ? GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>()
+      : nullptr;
   TArray<TSharedPtr<FJsonValue>> Results;
   int32 InvalidCount = 0;
 
@@ -66,6 +99,14 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
     }
     Results.Add(MakeShared<FJsonValueObject>(Item));
     InvalidCount += bSuccess ? 0 : 1;
+    return Item;
+  };
+  // A row whose asset loaded but its validators reject turns invalid.
+  auto FailRow = [&](const TSharedPtr<FJsonObject>& Item) {
+    if (Item->GetBoolField(TEXT("isValid"))) {
+      Item->SetBoolField(TEXT("isValid"), false);
+      InvalidCount += 1;
+    }
   };
 
   for (const FString& RawPath : PathsToValidate) {
@@ -81,10 +122,13 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
 
     if (McpAssetExists(SafePath)) {
       UObject* Asset = McpLoadAsset(SafePath);
-      AddValidationResult(
+      const TSharedPtr<FJsonObject> Row = AddValidationResult(
           SafePath, Asset != nullptr, TEXT("asset"),
           Asset ? TEXT("Asset loaded successfully")
                 : TEXT("Asset exists but failed to load"));
+      if (Asset && Validator && McpRunDataValidation(Validator, Asset, Row) == EDataValidationResult::Invalid) {
+        FailRow(Row);
+      }
       continue;
     }
 
@@ -94,18 +138,44 @@ bool HandleValidateAssets(UMcpAutomationBridgeSubsystem* Self,
       TArray<FString> Assets =
           UEditorAssetLibrary::ListAssets(SafePath, bRecursive, false);
       TArray<FString> Failed;
+      TArray<TSharedPtr<FJsonValue>> Issues; // the assets the validators said something about, at most 20
+      int32 Counts[3] = {0, 0, 0};          // invalid, valid, notValidated (EDataValidationResult order)
       for (const FString& AssetPath : Assets) {
-        if (!McpLoadAsset(AssetPath)) {
+        UObject* Asset = McpLoadAsset(AssetPath);
+        if (!Asset) {
           Failed.Add(AssetPath);
+        } else if (Validator) {
+          TSharedPtr<FJsonObject> Issue = MakeShared<FJsonObject>();
+          Issue->SetStringField(TEXT("asset"), AssetPath);
+          const EDataValidationResult Verdict = McpRunDataValidation(Validator, Asset, Issue);
+          Counts[FMath::Clamp(static_cast<int32>(Verdict), 0, 2)] += 1;
+          if (Issues.Num() < 20 && (Issue->HasField(TEXT("errors")) || Issue->HasField(TEXT("warnings")) ||
+                                    Verdict == EDataValidationResult::Invalid)) {
+            Issues.Add(MakeShared<FJsonValueObject>(Issue));
+          }
         }
       }
       TArray<FString> Shown(Failed.GetData(), FMath::Min(Failed.Num(), 20));
-      AddValidationResult(SafePath, Failed.Num() == 0, TEXT("directory"),
-                          Failed.Num() == 0
-                              ? FString::Printf(TEXT("All %d asset(s) loaded successfully"), Assets.Num())
-                              : FString::Printf(TEXT("%d of %d asset(s) failed to load: %s"), Failed.Num(),
-                                                Assets.Num(), *FString::Join(Shown, TEXT(", "))),
-                          Assets.Num());
+      const TSharedPtr<FJsonObject> Row =
+          AddValidationResult(SafePath, Failed.Num() == 0, TEXT("directory"),
+                              Failed.Num() == 0
+                                  ? FString::Printf(TEXT("All %d asset(s) loaded successfully"), Assets.Num())
+                                  : FString::Printf(TEXT("%d of %d asset(s) failed to load: %s"), Failed.Num(),
+                                                    Assets.Num(), *FString::Join(Shown, TEXT(", "))),
+                              Assets.Num());
+      if (Validator) {
+        TSharedPtr<FJsonObject> Verdicts = MakeShared<FJsonObject>();
+        Verdicts->SetNumberField(TEXT("valid"), Counts[1]);
+        Verdicts->SetNumberField(TEXT("invalid"), Counts[0]);
+        Verdicts->SetNumberField(TEXT("notValidated"), Counts[2]);
+        Row->SetObjectField(TEXT("dataValidation"), Verdicts);
+        if (Issues.Num() > 0) {
+          Row->SetArrayField(TEXT("issues"), Issues);
+        }
+        if (Counts[0] > 0) {
+          FailRow(Row);
+        }
+      }
       continue;
     }
 

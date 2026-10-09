@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "03fb6071aba7faa4",
+  "catalogRevision": "ebf75a3b2095dc4f",
   "recordCount": 398,
   "records": [
     {
@@ -93443,11 +93443,14 @@
           "fail to load",
           "content folder",
           "find broken assets",
-          "verify assets"
+          "verify assets",
+          "data validation",
+          "run validators"
         ],
-        "summary": "Check that assets load without error: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results (asset, directory or missing, with a message) and the checked and invalid counts.",
+        "summary": "Check that assets load without error, and with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets): each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
         "whenToUse": [
-          "Asset references must be validated before use."
+          "Asset references must be validated before use.",
+          "Assets must pass Data Validation (the editor's Validate Assets) before they are relied on or shipped."
         ],
         "whenNotToUse": [
           "A single asset must be imported or created (use manage_asset)."
@@ -93480,6 +93483,10 @@
             "recursive": {
               "type": "boolean",
               "description": "For a folder path, include its subfolders (default true)."
+            },
+            "dataValidation": {
+              "type": "boolean",
+              "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
             }
           },
           "required": [
@@ -93503,25 +93510,62 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Additional handler result fields not named by the contract."
+            },
+            "isValid": {
+              "type": "boolean",
+              "description": "True when every path loaded (and, with dataValidation, none was invalid)."
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, and with dataValidation its verdict, errors, warnings or issues."
+            },
+            "checkedCount": {
+              "type": "number",
+              "description": "Paths checked."
+            },
+            "invalidCount": {
+              "type": "number",
+              "description": "Paths that failed."
             }
           },
           "required": [
-            "success"
+            "success",
+            "isValid",
+            "results"
           ],
           "additionalProperties": false
         }
       },
       "examples": [
         {
-          "title": "Check that assets load without error: each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results (asset, directory or missing, with a message) and the checked and invalid counts.",
+          "title": "Check that assets load without error, and with dataValidation that they pass the project's and the engine's Data Validation (the editor's Validate Assets): each asset path, or every asset under a folder (recursive by default); returns isValid, per-path results and the checked and invalid counts.",
           "input": {
             "action": "validate_assets",
             "paths": [
               "/Game/Materials/M_Base"
-            ]
+            ],
+            "dataValidation": true
           },
           "output": {
-            "success": true
+            "success": true,
+            "message": "Asset validation completed; all assets valid",
+            "isValid": true,
+            "results": [
+              {
+                "path": "/Game/Materials/M_Base",
+                "isValid": true,
+                "kind": "asset",
+                "message": "Asset loaded successfully",
+                "dataValidation": "valid"
+              }
+            ],
+            "checkedCount": 1,
+            "invalidCount": 0
           }
         }
       ],
@@ -93552,8 +93596,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "4eff181b46982e5ab1e50ca1616f8a9b99cd6314549b8ab32de422209407008f",
-        "content": "d4efc608cce794b2c9fc5bda2b6efbe0f5139672a4ce047efbcfc6ba1c56801e"
+        "schema": "dfcdc2f72c76f5841edf930dd3792f229eea510cb71efcbd2e95f1f0731473ab",
+        "content": "2f0066ffe7e1e53018c5cf6e8c1a2b42dee144ecda7bf273f7881acbd9bcf45a"
       }
     },
     {

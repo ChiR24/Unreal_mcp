@@ -1824,3 +1824,14 @@ describe('split_mesh makes one static mesh per part', () => {
     expect(handlers).toContain('if (SubAction == TEXT("split_mesh")) return HandleSplitMesh(this, RequestId, Payload, RequestingSocket);');
   });
 });
+
+// validate_assets only loaded each asset: one its project or engine validators reject passed as valid.
+describe('validate_assets runs Data Validation on request', () => {
+  it('asks the editor validator subsystem for each loaded asset and turns a rejected one invalid', () => {
+    const check = code('SystemControl', 'McpAutomationBridge_SystemControlHandlersAssetValidation.cpp');
+    expect(check).toContain('GetJsonBoolField(Payload, TEXT("dataValidation")) && GEditor');
+    expect(check).toContain('Validator->IsAssetValid(FAssetData(Asset), Errors, Warnings, EDataValidationUsecase::Script);');
+    expect(check).toContain('if (Asset && Validator && McpRunDataValidation(Validator, Asset, Row) == EDataValidationResult::Invalid) {');
+    expect(check).toContain('if (Counts[0] > 0) {');
+  });
+});

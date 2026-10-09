@@ -16997,6 +16997,7 @@
         "connectionType",
         "control",
         "cvar",
+        "dataValidation",
         "deleteSlot",
         "detailed",
         "duration",
@@ -17176,6 +17177,10 @@
           "cvar": {
             "type": "string",
             "description": "Alternate CVar name field."
+          },
+          "dataValidation": {
+            "type": "boolean",
+            "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
           },
           "deleteSlot": {
             "type": "boolean",

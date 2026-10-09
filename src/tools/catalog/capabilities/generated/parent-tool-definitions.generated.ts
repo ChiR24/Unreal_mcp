@@ -22111,6 +22111,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Alternate CVar name field."
         },
+        "dataValidation": {
+          "type": "boolean",
+          "description": "Also run Data Validation on every asset that loads (default false): an asset row gains dataValidation (valid, invalid or notValidated, the last when no validator checks that kind of asset) with its errors and warnings, a folder row the count of each verdict and issues (up to 20 assets with errors or warnings). An invalid asset makes its row invalid."
+        },
         "deleteSlot": {
           "type": "boolean",
           "description": "true deletes the slot instead; properties are then ignored."
@@ -22601,6 +22605,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "False when the plugin was already in the requested state and nothing was written."
         },
+        "checkedCount": {
+          "type": "number",
+          "description": "Paths checked."
+        },
         "codeSha256": {
           "type": "string",
           "description": "SHA-256 of the executed code, as logged."
@@ -22714,6 +22722,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "hint": {
           "type": "string",
           "description": "How to get a full section dump."
+        },
+        "invalidCount": {
+          "type": "number",
+          "description": "Paths that failed."
+        },
+        "isValid": {
+          "type": "boolean",
+          "description": "True when every path loaded (and, with dataValidation, none was invalid)."
         },
         "jobId": {
           "type": "string",
@@ -22882,13 +22898,27 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "True whenever the project file changed; modules and content mount only at startup."
         },
         "results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "x-unreal-reflection-boundary": true
-          },
-          "description": "With paths: one entry per path (path, deleted, and errorCode plus error when it was not deleted). The call fails with PARTIAL_DELETE when any path was not deleted."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, and with dataValidation its verdict, errors, warnings or issues."
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "With paths: one entry per path (path, deleted, and errorCode plus error when it was not deleted). The call fails with PARTIAL_DELETE when any path was not deleted."
+            }
+          ],
+          "description": "One row per path: path, isValid, kind (asset, directory, missing or invalid), message, assetCount for a folder, and with dataValidation its verdict, errors, warnings or issues."
         },
         "returned": {
           "type": "number",

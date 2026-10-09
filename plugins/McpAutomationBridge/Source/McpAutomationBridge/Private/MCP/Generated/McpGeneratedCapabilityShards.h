@@ -79,7 +79,7 @@ inline const FMcpCapabilityShard& At(int32 Index)
 		{ TEXT("manage_pcg"), Detail::MCP_CAP_SHARD_MANAGE_PCG_CHUNKS, 5, 3 },
 		{ TEXT("manage_sequence"), Detail::MCP_CAP_SHARD_MANAGE_SEQUENCE_CHUNKS, 30, 19 },
 		{ TEXT("manage_tools"), Detail::MCP_CAP_SHARD_MANAGE_TOOLS_CHUNKS, 6, 9 },
-		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 25, 27 },
+		{ TEXT("system_control"), Detail::MCP_CAP_SHARD_SYSTEM_CONTROL_CHUNKS, 26, 27 },
 	};
 	check(Index >= 0 && Index < Num());
 	return Table[Index];
@@ -87,5 +87,5 @@ inline const FMcpCapabilityShard& At(int32 Index)
 
 inline int32 TotalRecordCount() { return 398; }
 
-inline const TCHAR* CatalogRevision() { return TEXT("03fb6071aba7faa4"); }
+inline const TCHAR* CatalogRevision() { return TEXT("ebf75a3b2095dc4f"); }
 }
