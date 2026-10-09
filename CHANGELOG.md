@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 🏷️ [Unreleased]
 
+_Nothing yet._
+
+---
+
+## 🏷️ [0.6.0-beta-e] - 2026-10-09
+
+> [!NOTE]
+> **Beta.** Published as a semver prerelease (`0.6.0-beta-e`) under the npm `beta` dist-tag, so `npm install` keeps serving the newest stable release, **`0.5.30`**. This section is everything on `dev` since the `v0.6.0-beta-d` tag, written from the code diff.
+
 <details>
 <summary><b>✨ Added</b></summary>
 
@@ -22,6 +31,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The proxy's tool-list cache moved out of the shared temp dir** to the user's cache folder (`%LOCALAPPDATA%`, `$XDG_CACHE_HOME` or `~/.cache`, under `unreal-mcp`), written owner-only, so another account cannot plant the tool list and instructions it serves.
 - **`package-plugin.mjs` refuses an argument holding `"`, `%`, `!` or a line break** before it reaches `cmd.exe`, and runs it with delayed expansion off.
 - **source-map-js 1.2.2** (development only) clears GHSA-68fv-2mgg-jv7q.
+
+</details>
+
+<details>
+<summary><b>📊 Change Statistics</b></summary>
+
+| Metric | Count |
+|--------|-------|
+| Diff range | `v0.6.0-beta-d..v0.6.0-beta-e` |
+| Commits | 4, the version bump and this release entry included |
+| Files changed | 36 (27 hand-written, not counting generated files or line-ending-only changes) |
+| Insertions / deletions | 1,868 / 95 (hand-written: 800 / 33) |
+| Capability records | 405 |
+| Callable `{tool, action}` pairs | 1,518 |
+| C++ domain directories | 55 |
 
 </details>
 

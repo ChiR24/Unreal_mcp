@@ -6,6 +6,12 @@ All notable changes to the MCP Automation Bridge plugin will be documented in th
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.6.0-beta-e] - 2026-10-09
+
+Plugin-side changes since the `v0.6.0-beta-d` tag, from the code diff. The server-side view is in the root `CHANGELOG.md`.
+
 ### Added
 - **Control Rig graphs**: `edit_control_rig`, `get_control_rig` and `list_rig_units` edit and read a rig's RigVM graph and hierarchy through the controllers the Control Rig editor uses, so each edit undoes and compiles like a hand-made one.
 
