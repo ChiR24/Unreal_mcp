@@ -226,6 +226,11 @@ inline void SetAttenuationInnerRadius(FBaseAttenuationSettings& Settings, double
 	else if (Settings.AttenuationShape == EAttenuationShape::Capsule) { Extents.Y = Radius; Extents.X = FMath::Max(Extents.X, Radius); }
 	else { Extents.X = Radius; }
 }
+/** The innerRadius SetAttenuationInnerRadius wrote, read from the axis the shape keeps it on. */
+inline double GetAttenuationInnerRadius(const FBaseAttenuationSettings& Settings)
+{
+	return Settings.AttenuationShape == EAttenuationShape::Capsule ? Settings.AttenuationShapeExtents.Y : Settings.AttenuationShapeExtents.X;
+}
 TSharedPtr<FJsonObject> HandleDialogueActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleEffectActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);
 TSharedPtr<FJsonObject> HandleAudioInfoActions(const FString& SubAction, const TSharedPtr<FJsonObject>& Params, TSharedPtr<FJsonObject> Response);

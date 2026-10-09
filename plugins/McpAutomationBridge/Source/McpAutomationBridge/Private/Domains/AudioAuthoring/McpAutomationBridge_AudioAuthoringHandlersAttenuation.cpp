@@ -79,6 +79,13 @@ TSharedPtr<FJsonObject> HandleAttenuationActions(const FString& SubAction, const
 		if (bLowPassSent || Params->HasField(TEXT("attenuateWithLPF"))) { Atten->Attenuation.bAttenuateWithLPF = GetJsonBoolField(Params, TEXT("attenuateWithLPF"), true); }
 
 		SaveAudioAsset(Atten, bSave);
+		// Read back like its siblings: this one answered only "Operation complete", so a value it set went unseen.
+		Response->SetStringField(TEXT("distanceAlgorithm"), StaticEnum<EAttenuationDistanceModel>()->GetNameStringByValue(static_cast<int64>(Atten->Attenuation.DistanceAlgorithm)));
+		Response->SetNumberField(TEXT("innerRadius"), GetAttenuationInnerRadius(Atten->Attenuation));
+		Response->SetNumberField(TEXT("falloffDistance"), Atten->Attenuation.FalloffDistance);
+		Response->SetBoolField(TEXT("attenuateWithLPF"), Atten->Attenuation.bAttenuateWithLPF);
+		for (const TPair<const TCHAR*, float*>& Field : LowPass) { Response->SetNumberField(Field.Key, *Field.Value); }
+		Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Distance attenuation of '%s' set"), *Atten->GetName()));
 		McpHandlerUtils::AddVerification(Response, Atten);
 		Response->SetBoolField(TEXT("success"), true);
 		return Response;

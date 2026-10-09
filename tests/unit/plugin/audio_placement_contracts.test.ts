@@ -57,4 +57,15 @@ describe('distance attenuation sets air absorption', () => {
     }
     expect(authoring).toContain('if (bLowPassSent || Params->HasField(TEXT("attenuateWithLPF"))) { Atten->Attenuation.bAttenuateWithLPF = GetJsonBoolField(Params, TEXT("attenuateWithLPF"), true); }');
   });
+
+  // It answered only "Operation complete", while occlusion, reverb send and spatialization echo what they set.
+  it('reads back what it set, the inner radius from the axis the shape keeps it on', () => {
+    const authoring = read('AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersAttenuation.cpp');
+    const distance = authoring.slice(authoring.indexOf('"configure_distance_attenuation"'), authoring.indexOf('"configure_spatialization"'));
+    expect(distance).toContain('Response->SetNumberField(TEXT("innerRadius"), GetAttenuationInnerRadius(Atten->Attenuation));');
+    expect(distance).toContain('Response->SetNumberField(TEXT("falloffDistance"), Atten->Attenuation.FalloffDistance);');
+    expect(distance).toContain('for (const TPair<const TCHAR*, float*>& Field : LowPass) { Response->SetNumberField(Field.Key, *Field.Value); }');
+    expect(read('AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h'))
+      .toContain('return Settings.AttenuationShape == EAttenuationShape::Capsule ? Settings.AttenuationShapeExtents.Y : Settings.AttenuationShapeExtents.X;');
+  });
 });
