@@ -79,7 +79,7 @@ const OPERATIONS = {
 const BATCH_OUT = schema({
   success: bool('True when every step ran.'),
   assetPath: str('The material the batch edited, compiled and saved.'),
-  results: arrObj('Per-step outcome: index, edit, id, success, nodeId, placementWarning, error.'),
+  results: arrObj('Per-step outcome: index, edit, id, success, nodeId, placementWarning, error. A step that ran and has nothing more to say (a plain connect_nodes) is counted in succeeded, not listed; a failed batch lists every step.'),
   nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node id for every node the batch created.' },
   succeeded: num('Steps that completed.'),
   failedIndex: num('Index of the step that stopped the batch (failures only).'),

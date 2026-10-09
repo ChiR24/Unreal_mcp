@@ -10635,7 +10635,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "object",
             "x-unreal-reflection-boundary": true
           },
-          "description": "Per-step outcome: index, edit, id, success, nodeId, placementWarning, error."
+          "description": "Per-step outcome: index, edit, id, success, nodeId, placementWarning, error. A step that ran and has nothing more to say (a plain connect_nodes) is counted in succeeded, not listed; a failed batch lists every step."
         },
         "rootDirectories": {
           "type": "object",
@@ -13655,7 +13655,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "x-unreal-reflection-boundary": true
           },
           "x-unreal-reflection-boundary": true,
-          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression's Expression step: the pins it made, and the names that read member variables instead)."
+          "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression's Expression step: the pins it made, and the names that read member variables instead). A step that ran and has nothing more to say (a plain connect_pins, an add_variable) is counted in succeeded, not listed; a failed batch lists every step."
         },
         "right": {
           "type": "number",

@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "3decad1d52a31eba",
+  "catalogRevision": "cafbcd18de334d53",
   "recordCount": 396,
   "records": [
     {
@@ -15495,7 +15495,7 @@
                 "x-unreal-reflection-boundary": true
               },
               "x-unreal-reflection-boundary": true,
-              "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression's Expression step: the pins it made, and the names that read member variables instead)."
+              "description": "Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression's Expression step: the pins it made, and the names that read member variables instead). A step that ran and has nothing more to say (a plain connect_pins, an add_variable) is counted in succeeded, not listed; a failed batch lists every step."
             },
             "nodeIds": {
               "type": "object",
@@ -15707,8 +15707,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "1d9c44e339daaf0b67289ae79c348499918dd91af50d28fec094779908aabed3",
-        "content": "058f61ee7aa9bd10b5d6e73bfb1cf9990d426b91a7472b2dd75e882604935617"
+        "schema": "ea616b221ae3acb22373645e6f6756f608ba8777c6a61c8c968d0ca291202650",
+        "content": "44b12ff930bb74a8329c1b6c7c1a3e892aa40c6397780e9d02328817d9b47384"
       }
     },
     {
@@ -78495,7 +78495,7 @@
                 "type": "object",
                 "x-unreal-reflection-boundary": true
               },
-              "description": "Per-step outcome: index, edit, id, success, nodeId, placementWarning, error."
+              "description": "Per-step outcome: index, edit, id, success, nodeId, placementWarning, error. A step that ran and has nothing more to say (a plain connect_nodes) is counted in succeeded, not listed; a failed batch lists every step."
             },
             "nodeIds": {
               "type": "object",
@@ -78797,8 +78797,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "cb6c51a14bc759407fbbee21a40e7a38eb28967b2ff6201e99bebb067b5be7c2",
-        "content": "470825726c4f84c43eacf761fced1085e7bb626ecc27af04ba4aa9dc368c673c"
+        "schema": "c11405408e24b2f0b3fc5e2c3d1b75c3e92675ef080e829a1ba8e60e57d5bf9c",
+        "content": "337838d88721de2ceeefc0858a7aabbe7d97650596e83366b8307a930b31bfe4"
       }
     },
     {

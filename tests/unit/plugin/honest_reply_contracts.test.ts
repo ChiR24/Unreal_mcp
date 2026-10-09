@@ -1626,3 +1626,20 @@ describe('a written struct echoes its editable fields', () => {
     expect(code('Property', 'McpAutomationBridge_PropertyHandlersObjectGet.cpp')).not.toContain('ExportWrittenValueToJson');
   });
 });
+
+// A 108-step graph build answered some 70 rows of {"index":N,"edit":"connect_pins","connected":true,"success":true}.
+describe('a batch lists the steps that have something to say', () => {
+  it('counts plain successful steps in succeeded and lists the rest, in the graph, material and MetaSound batches', () => {
+    const fields = code('..', 'Foundation', 'BridgeHelpers', 'Responses', 'McpAutomationBridgeHelpersJsonFields.h');
+    expect(fields).toContain('static inline TArray<TSharedPtr<FJsonValue>> McpListTellingSteps(const TArray<TSharedPtr<FJsonValue>>& Results)');
+    expect(fields).toContain('Step->Values.Num() == Plain');
+    expect(code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp')).toContain('Result->SetArrayField(TEXT("results"), McpListTellingSteps(Results));');
+    expect(code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringGraphBatch.cpp')).toContain('Result->SetArrayField(TEXT("results"), McpListTellingSteps(Results));');
+    expect(code('AudioAuthoring', 'MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundBatch.cpp')).toContain('Response->SetArrayField(TEXT("results"), McpListTellingSteps(Results));');
+  });
+
+  it('keeps every step on a failed batch, where the failing step is the last result', () => {
+    const batch = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
+    expect(batch).toContain('Details->SetArrayField(TEXT("results"), Results);');
+  });
+});

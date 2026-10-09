@@ -212,3 +212,31 @@ static inline int32 GetJsonIntField(const TSharedPtr<FJsonObject>& Obj, const FS
     }
     return static_cast<int32>(Value);
 }
+
+// A batch reply listed every step, so a 108-step graph build answered some 70 rows of
+// {"index":N,"edit":"connect_pins","connected":true,"success":true}. A step that ran and says nothing beyond
+// those fields is left to the batch's succeeded count; created nodes, pin reports, replaced links, warnings and
+// failures stay listed.
+static inline TArray<TSharedPtr<FJsonValue>> McpListTellingSteps(const TArray<TSharedPtr<FJsonValue>>& Results)
+{
+    TArray<TSharedPtr<FJsonValue>> Telling;
+    for (const TSharedPtr<FJsonValue>& Value : Results)
+    {
+        const TSharedPtr<FJsonObject> Step = Value.IsValid() ? Value->AsObject() : nullptr;
+        int32 Plain = 0;
+        for (const TCHAR* Field : {TEXT("index"), TEXT("edit"), TEXT("success"), TEXT("connected"), TEXT("id")})
+        {
+            Plain += Step.IsValid() && Step->HasField(Field) ? 1 : 0;
+        }
+        bool bRan = false;
+        bool bConnected = true;
+        const bool bQuiet = Step.IsValid() && Step->TryGetBoolField(TEXT("success"), bRan) && bRan &&
+                            (!Step->TryGetBoolField(TEXT("connected"), bConnected) || bConnected) &&
+                            Step->Values.Num() == Plain;
+        if (!bQuiet)
+        {
+            Telling.Add(Value);
+        }
+    }
+    return Telling;
+}

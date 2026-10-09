@@ -95,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A write echoes what can be written.** `set_property` read a written struct, or an array of them, back with every field, runtime state included: four buoyancy pontoons answered 4 KB of `LocalForce`, `WaterHeight` and the like. The echo now holds the editable fields; reads still show every field.
 - **A component list lists components.** `get_components` rows on a placed actor carried the first ten property names each component's class declares, with no values: a 36-component pawn answered 30 KB. A row now holds the name, class, parent, visibility, transform, mesh and materials; `get_component_property` reads a property.
 - **A function call answers what it did.** Every `call_actor_function` reply carried ten function and target diagnostics (flags, thunk, parameter size, validity); it now holds the object the call reached, the outputs and the return value.
+- **A batch lists the steps that have something to say.** `build_graph`, the material graph batch and `build_metasound` listed every step, so a 108-step graph build answered some 70 identical `connected` rows. A step that ran with nothing more to report is counted in `succeeded`; created nodes, pin reports, replaced links, warnings and failures stay listed.
 
 </details>
 

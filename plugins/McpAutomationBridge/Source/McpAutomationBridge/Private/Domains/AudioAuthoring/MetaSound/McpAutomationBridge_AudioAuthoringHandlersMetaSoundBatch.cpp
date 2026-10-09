@@ -6,6 +6,7 @@
 // sourceNodeId / targetNodeId, or "$id.Pin" in from/to).
 #include "Core/Compatibility/McpVersionCompatibility.h"
 #include "Domains/AudioAuthoring/McpAutomationBridge_AudioAuthoringHandlersPrivate.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 
 namespace McpAudioAuthoring
 {
@@ -215,7 +216,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 	// Names the edited MetaSound, so the receipt carries its handle and changes[] (both were empty).
 	Response->SetStringField(TEXT("assetPath"), NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT(""))));
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Ran %d MetaSound operations"), Steps->Num()));
-	Response->SetArrayField(TEXT("results"), Results);
+	Response->SetArrayField(TEXT("results"), McpListTellingSteps(Results));
 	Response->SetObjectField(TEXT("nodeIds"), NodeIds);
 	Response->SetNumberField(TEXT("succeeded"), Steps->Num());
 	return Response;

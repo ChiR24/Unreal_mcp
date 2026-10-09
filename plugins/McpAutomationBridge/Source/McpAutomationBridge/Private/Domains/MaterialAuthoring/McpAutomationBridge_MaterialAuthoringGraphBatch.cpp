@@ -1,6 +1,7 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 
 #include "Core/Requests/McpResponseCaptureRegistry.h"
+#include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringBatchSteps.h"
 #include "Misc/PackageName.h"
 
@@ -274,7 +275,7 @@ bool HandleBuildMaterialGraph(UMcpAutomationBridgeSubsystem* Bridge, const FStri
   TSharedPtr<FJsonObject> Result = McpHandlerUtils::CreateResultObject();
   // Named so the receipt carries the material as its handle and change; it listed neither.
   Result->SetStringField(TEXT("assetPath"), AssetPath);
-  Result->SetArrayField(TEXT("results"), Results);
+  Result->SetArrayField(TEXT("results"), McpListTellingSteps(Results));
   Result->SetObjectField(TEXT("nodeIds"), NodeIds);
   Result->SetNumberField(TEXT("succeeded"), Results.Num());
   Result->SetBoolField(TEXT("compiled"), bCompiles);

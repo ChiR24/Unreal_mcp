@@ -56,7 +56,7 @@ export const GRAPH_BATCH_RECORDS: readonly CapabilityRecordSource[] = [
     },
     required: ['blueprintPath', 'operations'],
     outputProps: {
-      results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression\'s Expression step: the pins it made, and the names that read member variables instead).' },
+      results: { type: 'array', items: ITEM, 'x-unreal-reflection-boundary': true, description: 'Per-step outcome: index, edit, id, success, error, nodeGuid, resultNodeGuid (add_function), pins (for created nodes), connected, appliedValue, placementWarning (a create step that was moved off an overlapping position, or placed where it still overlaps), inputPins and boundToMembers (a Math Expression\'s Expression step: the pins it made, and the names that read member variables instead). A step that ran and has nothing more to say (a plain connect_pins, an add_variable) is counted in succeeded, not listed; a failed batch lists every step.' },
       nodeIds: { type: 'object', additionalProperties: { type: 'string' }, description: 'Step id -> node guid for every node the batch created or reused; an add_function step with an id also adds "<id>_return" for its return node.' },
       succeeded: { type: 'number', description: 'Steps that completed.' },
       failedIndex: { type: 'number', description: 'Index of the step that stopped the batch (failures only).' },

@@ -301,14 +301,15 @@ const testCases = [
   ] }, expected: 'success', assertions: [
     { path: 'structuredContent.result.succeeded', equals: 3, label: 'all three steps ran' },
     { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with the batch-built function' },
-    { path: 'structuredContent.result.results.2.pins', notIncludes: 'execute', label: 'a pure function is called without exec pins' },
+    { path: 'structuredContent.result.results', length: 2, label: 'the plain connect is counted in succeeded, not listed' },
+    { path: 'structuredContent.result.results.1.pins', notIncludes: 'execute', label: 'a pure function is called without exec pins' },
   ] },
   { scenario: 'BATCH: build_graph declares an event dispatcher and calls it', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
     { edit: 'add_event_dispatcher', dispatcherName: 'OnBatchPing', parameters: [{ name: 'Count', type: 'Int' }] },
     { edit: 'create_node', id: 'ping', nodeType: 'CallDelegate', memberName: 'OnBatchPing' },
   ] }, expected: 'success', assertions: [
     { path: 'structuredContent.result.compiled', equals: true, label: 'the Blueprint compiles with the new dispatcher' },
-    { path: 'structuredContent.result.results.1.pins', includes: 'Count', label: 'the call carries the dispatcher parameter' },
+    { path: 'structuredContent.result.results.0.pins', includes: 'Count', label: 'the call carries the dispatcher parameter (the dispatcher step itself is only counted)' },
   ] },
   // A second return node mirrors the first one's outputs, and its pins take defaults.
   { scenario: 'BATCH: build_graph gives a function a second return node', toolName: 'manage_blueprint', arguments: { action: 'build_graph', blueprintPath: BP_PATH, graphName: 'EventGraph', operations: [
