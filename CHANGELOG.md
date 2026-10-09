@@ -104,6 +104,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A MetaSound batch checks its pin names before it adds nodes.** `build_metasound` stopped at a `connect` whose output name was wrong ("Band Pass Filter" for "Band Pass") after its nodes were added; a pin a `connect` or `set_default` names on a node the batch adds is now checked against that node class first, refused with `PIN_NOT_FOUND` and the class's pins, and nothing is applied.
 - **A reply prints its message once.** A capability whose contract declares only `success` and `details` repeated the reply's message under `details.message`; the receipt carries it at its top, on both transports.
 - **A math expression that uses a true/false value as a number is refused.** `(Speed > 0) * Gain` parses, and only the Blueprint compile refused it, after a whole `build_graph` batch had run; the batch pre-check and `set_node_property` now refuse it with `EXPRESSION_INVALID` and suggest `SelectFloat(1, 0, Speed > 0)`.
+- **A MetaSound batch saves the asset once.** `build_metasound` ran every step with the batch's own `save`, so a 63-step voice wrote its package 65 times, about six seconds of saving; it now saves once after the steps (a batch that stops at a failing step still saves the ones before it) and answers `saved`.
 
 </details>
 

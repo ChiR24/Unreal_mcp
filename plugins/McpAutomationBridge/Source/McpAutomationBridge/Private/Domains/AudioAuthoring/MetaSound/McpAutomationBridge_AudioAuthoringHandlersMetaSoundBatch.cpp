@@ -22,11 +22,7 @@ FString MetaSoundStepSubAction(const FString& Edit)
 		{TEXT("add_output"), TEXT("add_metasound_output")}, {TEXT("remove_node"), TEXT("remove_metasound_node")},
 		{TEXT("disconnect"), TEXT("disconnect_metasound_nodes")}};
 	if (const FString* Mapped = Short.Find(Edit)) { return *Mapped; }
-	for (const TPair<FString, FString>& Pair : Short)
-	{
-		if (Pair.Value == Edit) { return Edit; }
-	}
-	return FString();
+	return Short.FindKey(Edit) ? Edit : FString();
 }
 
 // "$osc.Audio" is node "$osc" + pin "Audio". Only alias endpoints split: a real
@@ -125,10 +121,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 	{
 		const TSharedPtr<FJsonObject>* StepObj = nullptr;
 		FString Edit;
-		if (!(*Steps)[Index].IsValid() || !(*Steps)[Index]->TryGetObject(StepObj) || !(*StepObj)->TryGetStringField(TEXT("edit"), Edit))
-		{
-			continue;
-		}
+		if (!(*Steps)[Index].IsValid() || !(*Steps)[Index]->TryGetObject(StepObj) || !(*StepObj)->TryGetStringField(TEXT("edit"), Edit)) { continue; }
 		// So are the pins a connect or set_default names on a node the batch adds: a wrong output name ("Band Pass
 		// Filter" for "Band Pass") stopped a batch after its nodes were added.
 		const FString StepSubAction = MetaSoundStepSubAction(Edit);
@@ -161,10 +154,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 			}
 			continue;
 		}
-		if (StepSubAction != TEXT("add_metasound_node"))
-		{
-			continue;
-		}
+		if (StepSubAction != TEXT("add_metasound_node")) { continue; }
 		const FMcpMetaSoundNodeClassRequest Request = ResolveMetaSoundAddNodeClass(*StepObj);
 		FString AddedId;
 		if ((*StepObj)->TryGetStringField(TEXT("id"), AddedId)) { Added.Add(AddedId, Request); }
@@ -186,6 +176,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 	TMap<FString, FString> Aliases;
 	TArray<TSharedPtr<FJsonValue>> Results;
 	TSharedPtr<FJsonObject> NodeIds = MakeShared<FJsonObject>();
+	// One save for the whole batch: every step saved the package, so a 63-step voice was written 65 times.
+	const auto SaveOnce = [&Params]() { UObject* MetaSound = FindObject<UObject>(nullptr, *NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT(""))));
+		return GetJsonBoolField(Params, TEXT("save"), true) && MetaSound && SaveAudioAsset(MetaSound, true); };
 	for (int32 Index = 0; Index < Steps->Num(); ++Index)
 	{
 		const TSharedPtr<FJsonObject>* StepObj = nullptr;
@@ -215,6 +208,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 			{
 				if (Pair.Key != TEXT("assetPath")) { Step->SetField(Pair.Key, Pair.Value); }
 			}
+			Step->SetBoolField(TEXT("save"), false);
 			const FString StepSubAction = MetaSoundStepSubAction(Edit);
 			Step->SetStringField(TEXT("subAction"), StepSubAction);
 			Step->TryGetStringField(TEXT("id"), StepId);
@@ -239,8 +233,9 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 		if (!StepId.IsEmpty()) { Entry->SetStringField(TEXT("id"), StepId); }
 		if (!Reason.IsEmpty())
 		{
-			// Stop at the first failure; earlier steps are already saved.
+			// Stop at the first failure; the steps before it stay applied and are saved.
 			TSharedPtr<FJsonObject> Details = McpHandlerUtils::CreateResultObject();
+			Details->SetBoolField(TEXT("saved"), Index > 0 && SaveOnce());
 			for (const TCHAR* Key : {TEXT("availableNodes"), TEXT("availableInputs"), TEXT("candidateNodeClasses"), TEXT("sourceOutputs"), TEXT("targetInputs")})
 			{
 				if (Reply.IsValid() && Reply->HasField(Key)) { Details->SetField(Key, Reply->TryGetField(Key)); }
@@ -270,6 +265,7 @@ TSharedPtr<FJsonObject> HandleMetaSoundBatchAction(const FString& SubAction, con
 	}
 
 	Response->SetBoolField(TEXT("success"), true);
+	Response->SetBoolField(TEXT("saved"), SaveOnce());
 	// Names the edited MetaSound, so the receipt carries its handle and changes[] (both were empty).
 	Response->SetStringField(TEXT("assetPath"), NormalizeAudioPath(GetJsonStringField(Params, TEXT("assetPath"), TEXT(""))));
 	Response->SetStringField(TEXT("message"), FString::Printf(TEXT("Ran %d MetaSound operations"), Steps->Num()));

@@ -59,7 +59,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
     ['assetPath', 'soundClassPath', 'volumeAdjuster', 'pitchAdjuster', 'applyToChildren', 'fadeInTime', 'fadeOutTime', 'save'], ['assetPath', 'soundClassPath']),
   a('add_source_effect', 'Add an effect to a Source Effect Chain: a new preset of effectType, or an existing preset asset by effectPresetPath.',
     ['assetPath', 'effectType', 'effectPresetPath', 'bypass', 'save'], ['assetPath'], [], [], [], ['effectType', 'effectPresetPath']),
-  { ...(withInputProps(a('build_metasound', 'Run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps.', ['assetPath'], ['assetPath', 'operations'], ['nodeIds', 'results'], [], META), {
+  { ...(withInputProps(a('build_metasound', 'Run many MetaSound graph edits in one call: add nodes, inputs and outputs, connect pins and set literals, with $id references between steps.', ['assetPath'], ['assetPath', 'operations'], ['nodeIds', 'results', 'saved'], [], META), {
     operations: {
       type: 'array', items: OBJ_ITEM, 'x-unreal-reflection-boundary': true,
       description: 'Steps run in order, 1-200, stopping at the first failure; every add_node class is looked up first, so a node '
@@ -70,7 +70,7 @@ export const AUDIO_AUTHORING_RECORDS: readonly CapabilityRecordSource[] = [
         + 'it creates; later steps use "$id" in nodeId/nodeIds/sourceNodeId/targetNodeId), from/to ("$id.PinName" shorthand for '
         + 'connect; interface nodes such as the On Play input are named with the explicit fields).',
     },
-    save: { type: 'boolean', description: 'Save the MetaSound after each step (default true); false leaves every edit in memory only.' },
+    save: { type: 'boolean', description: 'Save the MetaSound once, after the steps (default true); a batch that stops at a failing step saves the steps before it. false leaves every edit in memory only.' },
   })), examples: [{ title: 'Build a one-oscillator MetaSound', ...BUILD_METASOUND_EXAMPLE }] },
   withInputProps(a('configure_distance_attenuation', 'Configure distance attenuation: inner radius, falloff distance and curve, and air absorption (a low-pass that muffles the sound with distance).',
     ['assetPath', 'innerRadius', 'falloffDistance', 'distanceAlgorithm', 'save'], ['assetPath']), {

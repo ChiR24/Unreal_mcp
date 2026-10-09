@@ -37,6 +37,17 @@ describe('build_metasound checks the pins it names on its own nodes before runni
     expect(precheck).toContain('if ((*StepObj)->TryGetStringField(TEXT("id"), AddedId)) { Added.Add(AddedId, Request); }');
     expect(batch).toContain('Known.StartsWith(Pin + TEXT(" ("), ESearchCase::IgnoreCase)');
   });
+
+  // Every step ran the single-edit handler with the batch's save, so a 63-step voice wrote its package 65 times.
+  it('saves the MetaSound once, after the steps, not after each one', () => {
+    const batch = strip(join('MetaSound', 'McpAutomationBridge_AudioAuthoringHandlersMetaSoundBatch.cpp'));
+    const steps = batch.indexOf('Step->SetBoolField(TEXT("save"), false);');
+    expect(steps).toBeGreaterThan(-1);
+    expect(steps).toBeLessThan(batch.indexOf('HandleMetaSoundNodeActions(StepSubAction'));
+    expect(batch).toContain('Details->SetBoolField(TEXT("saved"), Index > 0 && SaveOnce());');
+    expect(batch).toContain('Response->SetBoolField(TEXT("saved"), SaveOnce());');
+    expect(batch).not.toContain('McpSafeAssetSave');
+  });
 });
 
 describe('a MetaSound graph edit reaches playback without an editor restart', () => {
