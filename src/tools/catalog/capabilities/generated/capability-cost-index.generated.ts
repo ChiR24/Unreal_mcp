@@ -1489,6 +1489,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::configure_nanite": "interactive|medium",
   "system_control::configure_occlusion_culling": "interactive|medium",
   "system_control::configure_performance": "interactive|medium",
+  "system_control::configure_rendering": "interactive|low",
   "system_control::configure_texture_streaming": "interactive|medium",
   "system_control::configure_world_partition": "interactive|medium",
   "system_control::console_command": "instant|low",
@@ -1557,4 +1558,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1544;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1545;

@@ -17205,6 +17205,7 @@
         "execute_python",
         "set_project_setting",
         "get_project_settings",
+        "configure_rendering",
         "validate_assets",
         "lumen_update_scene",
         "list_plugins",
@@ -17217,9 +17218,12 @@
       ],
       "parameterNames": [
         "actors",
+        "antiAliasing",
         "archiveDirectory",
         "arguments",
         "assetPath",
+        "autoExposure",
+        "bloom",
         "boostPlayerLocation",
         "build",
         "category",
@@ -17247,6 +17251,8 @@
         "filter",
         "forceLOD",
         "forceRecompile",
+        "globalIllumination",
+        "hardwareRayTracing",
         "height",
         "host",
         "includeMetadata",
@@ -17263,11 +17269,14 @@
         "maps",
         "maxFPS",
         "maxTests",
+        "megaLights",
+        "meshDistanceFields",
         "message",
         "metadata",
         "minScreenRadius",
         "minVerbosity",
         "mode",
+        "motionBlur",
         "name",
         "offset",
         "outputPath",
@@ -17287,6 +17296,7 @@
         "profileType",
         "properties",
         "recursive",
+        "reflections",
         "replaceSourceActors",
         "resolution",
         "returnBase64",
@@ -17298,6 +17308,7 @@
         "seconds",
         "section",
         "setting",
+        "shadows",
         "slop",
         "slotName",
         "snapshotPath",
@@ -17331,6 +17342,17 @@
             },
             "description": "Actor names to merge (>=2 required)."
           },
+          "antiAliasing": {
+            "type": "string",
+            "enum": [
+              "tsr",
+              "taa",
+              "fxaa",
+              "msaa",
+              "none"
+            ],
+            "description": "Default anti-aliasing method."
+          },
           "archiveDirectory": {
             "type": "string",
             "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
@@ -17342,6 +17364,14 @@
           "assetPath": {
             "type": "string",
             "description": "Single asset path to validate."
+          },
+          "autoExposure": {
+            "type": "boolean",
+            "description": "Auto exposure on by default."
+          },
+          "bloom": {
+            "type": "boolean",
+            "description": "Bloom on by default."
           },
           "boostPlayerLocation": {
             "type": "boolean",
@@ -17473,6 +17503,19 @@
             "type": "boolean",
             "description": "Force a shader recompile."
           },
+          "globalIllumination": {
+            "type": "string",
+            "enum": [
+              "lumen",
+              "screen_space",
+              "none"
+            ],
+            "description": "Dynamic global illumination method."
+          },
+          "hardwareRayTracing": {
+            "type": "boolean",
+            "description": "Support hardware ray tracing (applies after an editor restart)."
+          },
           "height": {
             "type": "number",
             "description": "Height in pixels."
@@ -17552,6 +17595,14 @@
             "type": "number",
             "description": "Run at most this many of the matching tests, in the order the editor lists them (default 50, at most 200); matched says how many there were."
           },
+          "megaLights": {
+            "type": "boolean",
+            "description": "Use MegaLights by default (UE 5.5 and later; listed under unavailable on older engines)."
+          },
+          "meshDistanceFields": {
+            "type": "boolean",
+            "description": "Generate mesh distance fields, which software Lumen traces (applies after an editor restart)."
+          },
           "message": {
             "type": "string",
             "description": "Notification message text."
@@ -17580,6 +17631,10 @@
           "mode": {
             "type": "string",
             "description": "Optimization mode."
+          },
+          "motionBlur": {
+            "type": "boolean",
+            "description": "Motion blur on by default."
           },
           "name": {
             "type": "string",
@@ -17689,6 +17744,15 @@
             "type": "boolean",
             "description": "For a folder path, include its subfolders (default true)."
           },
+          "reflections": {
+            "type": "string",
+            "enum": [
+              "lumen",
+              "screen_space",
+              "none"
+            ],
+            "description": "Reflection method."
+          },
           "replaceSourceActors": {
             "type": "boolean",
             "description": "Replace source actors in the level."
@@ -17759,6 +17823,14 @@
               "baseline"
             ],
             "description": "Which configure display variant to run."
+          },
+          "shadows": {
+            "type": "string",
+            "enum": [
+              "virtual",
+              "maps"
+            ],
+            "description": "Shadow map method: virtual shadow maps or classic shadow maps."
           },
           "slop": {
             "type": "number",
@@ -17885,6 +17957,7 @@
               "execute_python",
               "set_project_setting",
               "get_project_settings",
+              "configure_rendering",
               "validate_assets",
               "lumen_update_scene",
               "list_plugins",

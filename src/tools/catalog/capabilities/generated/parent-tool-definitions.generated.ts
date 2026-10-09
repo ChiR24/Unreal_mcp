@@ -22655,6 +22655,17 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           },
           "description": "Actor names to merge (>=2 required)."
         },
+        "antiAliasing": {
+          "type": "string",
+          "enum": [
+            "tsr",
+            "taa",
+            "fxaa",
+            "msaa",
+            "none"
+          ],
+          "description": "Default anti-aliasing method."
+        },
         "archiveDirectory": {
           "type": "string",
           "description": "Archive directory package_project wrote (default <Project>/Packaged). Must be inside the project."
@@ -22666,6 +22677,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "assetPath": {
           "type": "string",
           "description": "Single asset path to validate."
+        },
+        "autoExposure": {
+          "type": "boolean",
+          "description": "Auto exposure on by default."
+        },
+        "bloom": {
+          "type": "boolean",
+          "description": "Bloom on by default."
         },
         "boostPlayerLocation": {
           "type": "boolean",
@@ -22797,6 +22816,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "Force a shader recompile."
         },
+        "globalIllumination": {
+          "type": "string",
+          "enum": [
+            "lumen",
+            "screen_space",
+            "none"
+          ],
+          "description": "Dynamic global illumination method."
+        },
+        "hardwareRayTracing": {
+          "type": "boolean",
+          "description": "Support hardware ray tracing (applies after an editor restart)."
+        },
         "height": {
           "type": "number",
           "description": "Height in pixels."
@@ -22876,6 +22908,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Run at most this many of the matching tests, in the order the editor lists them (default 50, at most 200); matched says how many there were."
         },
+        "megaLights": {
+          "type": "boolean",
+          "description": "Use MegaLights by default (UE 5.5 and later; listed under unavailable on older engines)."
+        },
+        "meshDistanceFields": {
+          "type": "boolean",
+          "description": "Generate mesh distance fields, which software Lumen traces (applies after an editor restart)."
+        },
         "message": {
           "type": "string",
           "description": "Notification message text."
@@ -22904,6 +22944,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "mode": {
           "type": "string",
           "description": "Optimization mode."
+        },
+        "motionBlur": {
+          "type": "boolean",
+          "description": "Motion blur on by default."
         },
         "name": {
           "type": "string",
@@ -23013,6 +23057,15 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "boolean",
           "description": "For a folder path, include its subfolders (default true)."
         },
+        "reflections": {
+          "type": "string",
+          "enum": [
+            "lumen",
+            "screen_space",
+            "none"
+          ],
+          "description": "Reflection method."
+        },
         "replaceSourceActors": {
           "type": "boolean",
           "description": "Replace source actors in the level."
@@ -23083,6 +23136,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "baseline"
           ],
           "description": "Which configure display variant to run."
+        },
+        "shadows": {
+          "type": "string",
+          "enum": [
+            "virtual",
+            "maps"
+          ],
+          "description": "Shadow map method: virtual shadow maps or classic shadow maps."
         },
         "slop": {
           "type": "number",
@@ -23209,6 +23270,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "execute_python",
             "set_project_setting",
             "get_project_settings",
+            "configure_rendering",
             "validate_assets",
             "lumen_update_scene",
             "list_plugins",
@@ -23243,7 +23305,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Resolved absolute archive directory."
         },
         "changed": {
-          "type": "boolean",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The settings this call changed."
+            },
+            {
+              "type": "boolean",
+              "description": "False when the plugin was already in the requested state and nothing was written."
+            }
+          ],
           "description": "False when the plugin was already in the requested state and nothing was written."
         },
         "checkedCount": {
@@ -23437,6 +23511,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "Tests the framework did not start (another run or Play In Editor began meanwhile)."
         },
+        "note": {
+          "type": "string",
+          "description": "A setting that cannot work as set, such as Lumen without distance fields or hardware ray tracing."
+        },
         "offset": {
           "type": "number",
           "description": "The offset this page starts at."
@@ -23547,8 +23625,20 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Absolute path to the generated .memreport file."
         },
         "restartRequired": {
-          "type": "boolean",
-          "description": "True whenever the project file changed; modules and content mount only at startup."
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Changed settings that take effect only after the editor restarts (control_editor restart_editor)."
+            },
+            {
+              "type": "boolean",
+              "description": "True whenever the project file changed; modules and content mount only at startup."
+            }
+          ],
+          "description": "Changed settings that take effect only after the editor restarts (control_editor restart_editor)."
         },
         "results": {
           "oneOf": [
@@ -23606,8 +23696,19 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Number of config properties returned."
         },
         "settings": {
-          "type": "object",
-          "x-unreal-reflection-boundary": true,
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Every setting above as it reads after the call, by the same names and values."
+            },
+            {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
+            }
+          ],
           "description": "Config properties of the requested section (every CPF_Config property of the settings class as text; omitted when key names one), or the project snapshot (engineVersion, projectName, projectDir, maps, general) when no section is given."
         },
         "slotName": {
@@ -23659,6 +23760,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         "uatResult": {
           "type": "string",
           "description": "UAT's own result word once the task finished."
+        },
+        "unavailable": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Settings this engine version does not have; nothing was written for them."
         },
         "value": {
           "type": "string",

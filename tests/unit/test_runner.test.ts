@@ -259,6 +259,14 @@ describe('test runner response evaluation', () => {
     expect(missingFallback.reason).toContain('Error pattern not matched');
   });
 
+  it('keeps a captured value\'s type when the placeholder is the whole value', () => {
+    const resolved = resolveCapturedValues(
+      { bloom: '${captured:bloom}', label: 'bloom is ${captured:bloom}', samples: '${captured:samples}', method: '${captured:method}' },
+      { bloom: true, samples: 30, method: 'tsr' }
+    );
+    expect(resolved).toEqual({ bloom: true, label: 'bloom is true', samples: 30, method: 'tsr' });
+  });
+
   it('resolves captured placeholders recursively through nested argument arrays', () => {
     const missingKeys: string[] = [];
     const resolved = resolveCapturedValues(

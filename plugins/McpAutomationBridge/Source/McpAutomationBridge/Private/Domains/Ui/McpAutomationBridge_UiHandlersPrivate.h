@@ -50,6 +50,12 @@ bool HandleProjectSettingsAction(const FString &LowerSub,
                                  const TSharedPtr<FJsonObject> &Resp,
                                  bool &bSuccess, FString &Message,
                                  FString &ErrorCode);
+// configure_rendering (McpAutomationBridge_UiHandlersRenderSettings.cpp).
+bool HandleRenderSettingsAction(const FString &LowerSub,
+                                const TSharedPtr<FJsonObject> &Payload,
+                                const TSharedPtr<FJsonObject> &Resp,
+                                bool &bSuccess, FString &Message,
+                                FString &ErrorCode);
 // lumen_update_scene, play_sound, profile, set_cvar, set_fullscreen,
 // set_resolution, show_widget, spawn_category. Sends its own response and
 // returns true when it handled the action.

@@ -1,6 +1,6 @@
 {
-  "catalogRevision": "5dda79e1ee0491f0",
-  "recordCount": 406,
+  "catalogRevision": "5ed23703dc6e0577",
+  "recordCount": 407,
   "records": [
     {
       "id": "animation_physics.analyze_animation",
@@ -91503,6 +91503,221 @@
         "algorithm": "sha256",
         "schema": "2dcd8535745c0025281e9251cbd80675ac21838c8a2d2373edaecfda4f995425",
         "content": "7a008b08c31c61359eb0bab0472602cfb4ba698ec72a7da21a6a169ff2663cea"
+      }
+    },
+    {
+      "id": "system_control.configure_rendering",
+      "aliases": [],
+      "legacyIds": [
+        {
+          "tool": "system_control",
+          "action": "configure_rendering"
+        }
+      ],
+      "discovery": {
+        "domain": "project",
+        "family": "project",
+        "topics": [
+          "configure_rendering",
+          "render settings",
+          "rendering settings",
+          "lumen",
+          "virtual shadow maps",
+          "anti aliasing",
+          "tsr",
+          "hardware ray tracing",
+          "mesh distance fields",
+          "megalights",
+          "default bloom",
+          "auto exposure",
+          "motion blur"
+        ],
+        "summary": "Set or read the project's rendering methods by plain name: global illumination and reflections (lumen, screen_space, none), shadows (virtual, maps), anti-aliasing (tsr, taa, fxaa, msaa, none), hardware ray tracing, mesh distance fields, MegaLights, and the default bloom, auto exposure and motion blur. Each change is saved to DefaultEngine.ini and applied live where its console variable allows; the reply reads every setting back and lists the ones that wait for an editor restart.",
+        "whenToUse": [
+          "A project must switch to or away from Lumen, virtual shadow maps or TSR, or turn hardware ray tracing or distance fields on.",
+          "A stylized game must drop the default auto exposure, bloom or motion blur.",
+          "The current rendering methods must be read (send no setting)."
+        ],
+        "whenNotToUse": [
+          "One post-process volume or camera must look different (use build_environment configure_post_process).",
+          "Any other project setting (use set_project_setting)."
+        ]
+      },
+      "schemas": {
+        "input": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "action": {
+              "type": "string",
+              "description": "The action to execute on the parent tool."
+            },
+            "globalIllumination": {
+              "type": "string",
+              "enum": [
+                "lumen",
+                "screen_space",
+                "none"
+              ],
+              "description": "Dynamic global illumination method."
+            },
+            "reflections": {
+              "type": "string",
+              "enum": [
+                "lumen",
+                "screen_space",
+                "none"
+              ],
+              "description": "Reflection method."
+            },
+            "shadows": {
+              "type": "string",
+              "enum": [
+                "virtual",
+                "maps"
+              ],
+              "description": "Shadow map method: virtual shadow maps or classic shadow maps."
+            },
+            "antiAliasing": {
+              "type": "string",
+              "enum": [
+                "tsr",
+                "taa",
+                "fxaa",
+                "msaa",
+                "none"
+              ],
+              "description": "Default anti-aliasing method."
+            },
+            "hardwareRayTracing": {
+              "type": "boolean",
+              "description": "Support hardware ray tracing (applies after an editor restart)."
+            },
+            "meshDistanceFields": {
+              "type": "boolean",
+              "description": "Generate mesh distance fields, which software Lumen traces (applies after an editor restart)."
+            },
+            "megaLights": {
+              "type": "boolean",
+              "description": "Use MegaLights by default (UE 5.5 and later; listed under unavailable on older engines)."
+            },
+            "bloom": {
+              "type": "boolean",
+              "description": "Bloom on by default."
+            },
+            "autoExposure": {
+              "type": "boolean",
+              "description": "Auto exposure on by default."
+            },
+            "motionBlur": {
+              "type": "boolean",
+              "description": "Motion blur on by default."
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "additionalProperties": false
+        },
+        "output": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Whether the action succeeded."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable result message."
+            },
+            "details": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true,
+              "description": "Additional handler result fields not named by the contract."
+            },
+            "settings": {
+              "type": "object",
+              "additionalProperties": true,
+              "x-unreal-reflection-boundary": true,
+              "description": "Every setting above as it reads after the call, by the same names and values."
+            },
+            "changed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The settings this call changed."
+            },
+            "restartRequired": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Changed settings that take effect only after the editor restarts (control_editor restart_editor)."
+            },
+            "unavailable": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Settings this engine version does not have; nothing was written for them."
+            },
+            "note": {
+              "type": "string",
+              "description": "A setting that cannot work as set, such as Lumen without distance fields or hardware ray tracing."
+            }
+          },
+          "required": [
+            "success"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "examples": [
+        {
+          "title": "Set or read the project's rendering methods by plain name: global illumination and reflections (lumen, screen_space, none), shadows (virtual, maps), anti-aliasing (tsr, taa, fxaa, msaa, none), hardware ray tracing, mesh distance fields, MegaLights, and the default bloom, auto exposure and motion blur. Each change is saved to DefaultEngine.ini and applied live where its console variable allows; the reply reads every setting back and lists the ones that wait for an editor restart.",
+          "input": {
+            "action": "configure_rendering",
+            "globalIllumination": "lumen",
+            "shadows": "virtual",
+            "antiAliasing": "tsr",
+            "meshDistanceFields": true
+          },
+          "output": {
+            "success": true
+          }
+        }
+      ],
+      "availability": {
+        "requiredPlugins": [],
+        "editorStates": [
+          "edit"
+        ]
+      },
+      "behavior": {
+        "effect": "write",
+        "idempotency": "non-idempotent",
+        "longRunning": false,
+        "safeToRetry": false
+      },
+      "policy": {
+        "requiredScope": "write",
+        "consent": "none",
+        "dataAccess": "project-write"
+      },
+      "cost": {
+        "latency": "interactive",
+        "resources": "low"
+      },
+      "routing": {
+        "parentTool": "system_control",
+        "dispatchAction": "system_control"
+      },
+      "hashes": {
+        "algorithm": "sha256",
+        "schema": "0fd0371885f10bb4faa6305fd00396fafaa7d6d5d1be26224ff63c5088bda164",
+        "content": "9bd97682ef45ac4968df5c7075cab057c3d48823473add583126e67563052938"
       }
     },
     {

@@ -1149,6 +1149,19 @@ describe('Make and Break nodes of structs with native functions', () => {
   });
 });
 
+describe('configure_rendering', () => {
+  // set_project_setting took raw property names and enum spellings and never said a change waited for a restart.
+  it('checks every value before writing any, applies the console variable live and names restart-only changes', () => {
+    const render = code('Ui', 'McpAutomationBridge_UiHandlersRenderSettings.cpp');
+    expect(render.indexOf('Writes.Add(Write);')).toBeLessThan(render.indexOf('McpWriteSetting(Write.Property, Settings, Write.Value);'));
+    expect(render).toContain('Variable->Set(*LexToString(Write.Value), ECVF_SetByProjectSetting);');
+    expect(render).toContain('Write.Property->HasMetaData(TEXT("ConfigRestartRequired"))');
+    expect(render).toContain('Settings->TryUpdateDefaultConfigFile(FString(), false)');
+    // The settings object's own change handler can raise dialogs no one is there to answer.
+    expect(render).not.toContain('PostEditChangeProperty');
+  });
+});
+
 describe('skeletal mesh import', () => {
   // A skeleton could only take an animation alone: a character could not be imported onto an existing skeleton,
   // nor its physics asset or morph targets chosen, and the reply named whichever asset the importer listed first.

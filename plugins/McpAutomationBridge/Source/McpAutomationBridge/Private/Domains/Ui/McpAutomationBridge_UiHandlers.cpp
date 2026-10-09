@@ -59,7 +59,9 @@ bool UMcpAutomationBridgeSubsystem::HandleUiAction(
           RequestingSocket, Resp, bSuccess, Message, ErrorCode, bResponseSent,
           ScreenshotFallback) ||
       McpUiHandlers::HandleProjectSettingsAction(LowerSub, Payload, Resp,
-                                                 bSuccess, Message, ErrorCode);
+                                                 bSuccess, Message, ErrorCode) ||
+      McpUiHandlers::HandleRenderSettingsAction(LowerSub, Payload, Resp,
+                                                bSuccess, Message, ErrorCode);
 
   if (bResponseSent) {
     return true;

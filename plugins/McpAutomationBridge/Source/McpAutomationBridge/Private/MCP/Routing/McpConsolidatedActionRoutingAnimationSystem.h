@@ -112,7 +112,7 @@ inline const TArray<FString>& SystemUi()
 {
 	static const TArray<FString> Actions = {
 		TEXT("create_widget"), TEXT("show_widget"), TEXT("add_widget_child"),
-		TEXT("screenshot"), TEXT("get_project_settings"), TEXT("set_project_setting"),
+		TEXT("screenshot"), TEXT("get_project_settings"), TEXT("set_project_setting"), TEXT("configure_rendering"),
 		TEXT("lumen_update_scene"), TEXT("spawn_category"), TEXT("play_sound"),
 		TEXT("set_cvar"), TEXT("set_quality"), TEXT("set_resolution"),
 		TEXT("set_fullscreen"), TEXT("profile")
