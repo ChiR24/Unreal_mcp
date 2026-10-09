@@ -5,7 +5,7 @@ Direct plugin MCP implementation for Streamable HTTP/SSE at `/mcp`. This subtree
 ## STRUCTURE
 | Area | Responsibility |
 |------|----------------|
-| `DynamicTools/` (5) | Enabled state, categories, protected tools |
+| `DynamicTools/` (7) | Enabled state, categories, protected tools; `McpTaskResults` keeps the calls that answered "still running" for `manage_tools get_task_result` |
 | `Execute/` (24) | Native execute pipeline: request parse, folded pins, schema validation, receipts |
 | `Gateway/` (25, at cap) | Native gateway mirror of the TS engine: catalog, capability store, describe, search, guidance, folding (`McpNativeGatewayFolding`: legacy pairs, pins, `dispatchBy`) |
 | `Generated/` (24) | **ALL GENERATED** capability shards (`npm run registry:generate`). Never hand-edit |
@@ -47,7 +47,7 @@ manage_ai, manage_inventory, manage_interaction, manage_networking, manage_level
 - Client notifications receive HTTP 202 after validation. `tools/call` owns its socket until the streamed result completes.
 - Return JSON-RPC errors through `McpJsonRpc` and tool outcomes through MCP `content[]` plus `isError`; never leak raw handler JSON as the top-level response.
 - Do not block socket threads on Unreal work. Shutdown intentionally pumps game-thread tasks while draining active connections and async writes.
-- **Long calls answer before the client gives up** (native only; the TS stdio server has no twin yet). The keepalive thread (`McpNativeTransportKeepalive.cpp`, never the game thread) pings every open `tools/call` after 8 s of silence with `McpAutomationBridge::DescribeEditorWork` (the handler in flight, its running time and last progress, the shader queue) and at 27 s writes a success receipt whose `task.state` is `running` or `queued`; the work goes on, and `bAnsweredRunning` keeps the entry until its completion settles the idempotency slot. Nothing on that thread may take `AutomationRequestExecutionMutex` (a running handler holds it): no `CancelAutomationRequest` there. A handler that reports progress (`SendProgressUpdate`) is what makes these replies say how far it has got.
+- **Long calls answer before the client gives up** (the TS twin is `answerWhileRunning` in `src/server/gateway/gateway-execute.ts`). The keepalive thread (`McpNativeTransportKeepalive.cpp`, never the game thread) pings every open `tools/call` after 8 s of silence with `McpAutomationBridge::DescribeEditorWork` (the handler in flight, its running time and last progress, the shader queue) and at 27 s writes a success receipt whose `task.state` is `running` or `queued`; the work goes on, and `bAnsweredRunning` keeps the entry until its completion settles the idempotency slot. `AnswerStillRunning` notes the task in `TaskResults` (with the sender's principal) BEFORE it writes the answer, `CompletePendingRequest` stores the compacted reply as its outcome, and `TryHandleLocalToolCall` answers `get_task_result` from that store (queued / running with live progress / done), only to the same principal. Nothing on that thread may take `AutomationRequestExecutionMutex` (a running handler holds it): no `CancelAutomationRequest` there. A handler that reports progress (`SendProgressUpdate`) is what makes these replies say how far it has got.
 
 ## SECURITY
 - Empty/`localhost` listen hosts normalize to loopback. A disallowed non-loopback host falls back to `127.0.0.1`.
