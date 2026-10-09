@@ -1535,6 +1535,14 @@ describe('save_all names the packages it left unsaved', () => {
   });
 });
 
+// raycast_world ignoreActors refused PlayerPawn, a name control_actor and set_property take while PIE runs.
+describe('the shared actor lookup takes the running game\'s role names', () => {
+  it('falls back to ResolveRuntimeRole when no actor has the name', () => {
+    const source = code('..', 'Foundation', 'HandlerUtils', 'McpHandlerUtilsActors.cpp');
+    expect(source).toMatch(/if \(AActor\* Actor = FindActorByNameInWorldForMcp\(World, ActorName, true\)\)\s*\{\s*return Actor;\s*\}\s*return Cast<AActor>\(ResolveRuntimeRole\(ActorName\)\);/u);
+  });
+});
+
 // get_splines_info with actorName gave local points while its listing gave world ones; an ocean shoreline read as world
 // was off by the actor's location.
 describe('a spline read names both point spaces', () => {

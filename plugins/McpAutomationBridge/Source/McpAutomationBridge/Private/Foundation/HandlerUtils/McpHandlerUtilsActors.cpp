@@ -33,7 +33,13 @@ UWorld* GetEditorWorld()
 AActor* FindActorByName(const FString& ActorName)
 {
     UWorld* World = GEditor ? (GEditor->PlayWorld ? GEditor->PlayWorld.Get() : GEditor->GetEditorWorldContext().World()) : nullptr;
-    return FindActorByNameInWorldForMcp(World, ActorName, true);
+    if (AActor* Actor = FindActorByNameInWorldForMcp(World, ActorName, true))
+    {
+        return Actor;
+    }
+    // While PIE runs, PlayerPawn, PlayerController, GameMode ... name the running game's actors by role, as control_actor
+    // takes them: raycast_world ignoreActors refused PlayerPawn.
+    return Cast<AActor>(ResolveRuntimeRole(ActorName));
 }
 
 void AddMeshAssetFields(const UActorComponent* Component, const TSharedPtr<FJsonObject>& Entry)
