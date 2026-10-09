@@ -10,9 +10,10 @@
  * {
  *   "success": true,
  *   "data": { ... },
- *   "warnings": [],
- *   "error": null
+ *   "warnings": []
  * }
+ *
+ * No "error" field: a null one only reached every reply as details.error.
  */
 static inline void SendStandardSuccessResponse(
     UMcpAutomationBridgeSubsystem *Subsystem,
@@ -32,8 +33,6 @@ static inline void SendStandardSuccessResponse(
     WarningVals.Add(MakeShared<FJsonValueString>(W));
   }
   Envelope->SetArrayField(TEXT("warnings"), WarningVals);
-
-  Envelope->SetField(TEXT("error"), MakeShared<FJsonValueNull>());
 
   Subsystem->SendAutomationResponse(Socket, RequestId, true, Message, Envelope,
                                     FString());
