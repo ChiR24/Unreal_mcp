@@ -119,21 +119,9 @@ inline bool McpCompileBlueprintWithDiagnostics(
   }
 
   if (Out.IsValid()) {
+    // Why is the comment above: the same 230 characters on nearly every graph edit's reply only repeated it.
     if (bUndoBufferReset) {
       Out->SetBoolField(TEXT("undoBufferReset"), true);
-      Out->SetStringField(
-          TEXT("undoBufferResetReason"),
-          bHadLiveInstances
-              ? TEXT("This blueprint had live instances, so compiling it "
-                     "reinstanced them and left the originals as garbage that "
-                     "the undo buffer can pin along with the world that owns "
-                     "them; editor undo history was cleared to keep the next "
-                     "garbage collection from killing the editor.")
-              : TEXT("The undo buffer referenced this blueprint, so compiling "
-                     "it would have pinned the reinstanced (now garbage) "
-                     "instances and the worlds that own them; editor undo "
-                     "history was cleared to keep the next garbage collection "
-                     "from killing the editor."));
     }
     Out->SetBoolField(TEXT("compiled"), bCompiled);
     Out->SetStringField(TEXT("compilerStatus"),

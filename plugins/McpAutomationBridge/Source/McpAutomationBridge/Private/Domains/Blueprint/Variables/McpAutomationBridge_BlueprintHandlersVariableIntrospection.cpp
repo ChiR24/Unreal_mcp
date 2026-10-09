@@ -95,7 +95,17 @@ FMcpAutomationBridge_BuildVariableJson(const UBlueprint *Blueprint,
   TSharedPtr<FJsonObject> Metadata;
   if (FMcpAutomationBridge_CollectVariableMetadata(Blueprint, VarDesc,
                                                    Metadata)) {
-    Obj->SetObjectField(TEXT("metadata"), Metadata);
+    // The editor keeps DisplayName and Category on every variable, copies of the name and category beside them.
+    FString Value;
+    if (Metadata->TryGetStringField(TEXT("DisplayName"), Value) && Value == VarDesc.VarName.ToString()) {
+      Metadata->RemoveField(TEXT("DisplayName"));
+    }
+    if (Metadata->TryGetStringField(TEXT("Category"), Value) && Value == CategoryStr) {
+      Metadata->RemoveField(TEXT("Category"));
+    }
+    if (Metadata->Values.Num() > 0) {
+      Obj->SetObjectField(TEXT("metadata"), Metadata);
+    }
   }
   return Obj;
 }

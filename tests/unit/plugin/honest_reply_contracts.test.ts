@@ -1728,6 +1728,18 @@ describe('a reply says each thing once', () => {
     expect(source).not.toContain('Result->SetArrayField(TEXT("points")');
   });
 
+  it('reads a new variable back once, without the request echoed beside it or metadata copying its name', () => {
+    const add = code('Blueprint', 'Variables', 'McpAutomationBridge_BlueprintHandlersAddVariable.cpp');
+    expect(add).not.toContain('Response->SetStringField(TEXT("variableType"), VarType);');
+    expect(add).not.toContain('Variable already exists; no changes applied.');
+    const vars = code('Blueprint', 'Variables', 'McpAutomationBridge_BlueprintHandlersVariableIntrospection.cpp');
+    expect(vars).toContain('Metadata->RemoveField(TEXT("DisplayName"));');
+  });
+
+  it('says a compile cleared undo history without the paragraph on why', () => {
+    expect(code('..', 'Foundation', 'BridgeHelpers', 'Blueprints', 'McpAutomationBridgeHelpersBlueprintDiagnostics.h')).not.toContain('undoBufferResetReason');
+  });
+
   it('lets save_all\'s message carry the counts', () => {
     const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorAssets.cpp');
     expect(source).not.toContain('Resp->SetNumberField(TEXT("savedCount")');

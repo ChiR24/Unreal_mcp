@@ -121,7 +121,8 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
     }
 
     TSharedPtr<FJsonObject> Response = McpHandlerUtils::CreateResultObject();
-    Response->SetStringField(TEXT("blueprintPath"), RegistryKey);
+    // The asset is named once, by the verification fields (assetPath); variable{} is the variable as the Blueprint
+    // holds it, so the request is not echoed beside it.
     Response->SetStringField(TEXT("variableName"), VarName);
 
     if (ExistingVar) {
@@ -134,8 +135,6 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
       Response->SetObjectField(
           TEXT("variable"), FMcpAutomationBridge_BuildVariableJson(Blueprint, *ExistingVar));
       Response->SetBoolField(TEXT("success"), true);
-      Response->SetStringField(
-          TEXT("note"), TEXT("Variable already exists; no changes applied."));
       Bridge.SendAutomationResponse(RequestingSocket, RequestId, true,
                              TEXT("Variable already exists"), Response,
                              FString());
@@ -239,15 +238,6 @@ bool HandleBlueprintAddVariable(const FBlueprintActionContext &Context) {
 
     Response->SetBoolField(TEXT("success"), true);
     Response->SetBoolField(TEXT("saved"), bSaved);
-    if (!VarType.IsEmpty()) {
-      Response->SetStringField(TEXT("variableType"), VarType);
-    }
-    if (!Category.IsEmpty()) {
-      Response->SetStringField(TEXT("category"), Category);
-    }
-    Response->SetBoolField(TEXT("replicated"), bReplicated);
-    Response->SetBoolField(TEXT("public"),
-                           (AddedVar->PropertyFlags & CPF_DisableEditOnInstance) == 0);
     Response->SetObjectField(TEXT("variable"),
                              FMcpAutomationBridge_BuildVariableJson(Blueprint, *AddedVar));
     // Add verification data for the blueprint asset
