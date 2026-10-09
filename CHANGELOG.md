@@ -100,6 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A plane's depth runs along Y.** `create_primitive` said `depth` is the size along Z for every primitive, but a plane lies flat in XY, centred and facing +Z: its depth is its Y size.
 - **A restored editor window stays up.** A `configure_editor` restore made in the minutes after a `-McpStartMinimized` launch was put away again within seconds; any restore over the bridge now ends that start-up hold, and a timed run that restored the window for itself leaves it up when a restore was asked for while it ran.
 - **A MetaSound batch checks its pin names before it adds nodes.** `build_metasound` stopped at a `connect` whose output name was wrong ("Band Pass Filter" for "Band Pass") after its nodes were added; a pin a `connect` or `set_default` names on a node the batch adds is now checked against that node class first, refused with `PIN_NOT_FOUND` and the class's pins, and nothing is applied.
+- **A math expression that uses a true/false value as a number is refused.** `(Speed > 0) * Gain` parses, and only the Blueprint compile refused it, after a whole `build_graph` batch had run; the batch pre-check and `set_node_property` now refuse it with `EXPRESSION_INVALID` and suggest `SelectFloat(1, 0, Speed > 0)`.
 
 </details>
 

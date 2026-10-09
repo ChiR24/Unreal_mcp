@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d07a329d40653fde",
+  "catalogRevision": "393bb46b0de7791b",
   "recordCount": 396,
   "records": [
     {
@@ -15231,7 +15231,7 @@
               "description": "Node GUID accepted in place of nodeId."
             },
             "propertyValue": {
-              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes an input pin, except one the Blueprint has a variable of, which reads that variable), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
+              "description": "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes an input pin, except one the Blueprint has a variable of, which reads that variable; a comparison used as a number is refused: write SelectFloat(1, 0, A > B)), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path."
             },
             "pinName": {
               "type": "string",
@@ -15707,8 +15707,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "ea616b221ae3acb22373645e6f6756f608ba8777c6a61c8c968d0ca291202650",
-        "content": "44b12ff930bb74a8329c1b6c7c1a3e892aa40c6397780e9d02328817d9b47384"
+        "schema": "9d942cb3046d02c7443e3279a98c971bacf347a103aeaf232561f5c819e37f1d",
+        "content": "817ec554f27804f4fd9d59db6af11d3296de98b4b9673aae6cfdaf541160ab5a"
       }
     },
     {

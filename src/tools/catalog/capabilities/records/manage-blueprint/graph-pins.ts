@@ -77,7 +77,7 @@ export const GRAPH_PINS_RECORDS: readonly CapabilityRecordSource[] = [
     whenNotToUse: ['A pin default value is the target (use set_pin_default_value).'],
     inputProps: {
       blueprintPath: P.blueprintPath, graphName: P.graphName, nodeId: P.nodeId, propertyName: P.propertyName, nodeGuid: P.nodeGuid,
-      propertyValue: { ...P.propertyValue, description: "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes an input pin, except one the Blueprint has a variable of, which reads that variable), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path." },
+      propertyValue: { ...P.propertyValue, description: "set_node_property: text for NodeComment, a number for NodePosX or NodePosY, true or false for bCommentBubbleVisible or bDisabled, Enabled, Disabled or DevelopmentOnly for EnabledState, the text of a Math Expression node's Expression (each other name becomes an input pin, except one the Blueprint has a variable of, which reads that variable; a comparison used as a number is refused: write SelectFloat(1, 0, A > B)), an asset path for a reflected field. set_pin_default_value: the pin's new default as text: a number, true or false, an enum value name, a vector as X,Y,Z (0,150,110), a rotator as P,Y,R, or an asset path." },
     },
     required: ['blueprintPath', 'propertyName', 'propertyValue'],
     requiredOneOf: ['nodeId', 'nodeGuid'],

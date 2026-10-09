@@ -22,9 +22,17 @@ FString DescribeUnknownFunctions(const FString& Expression);
 FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression,
                                const TSet<FName>& ExtraBools = TSet<FName>());
 
-// Both of the above in one text; empty when Expression shows neither problem.
+// A true/false value used as a number: a bracketed comparison or && / ||, or a bool variable, as an operand of + - * /
+// or %. The node turns no bool into a number, so the parse succeeds and only the Blueprint compile fails. Empty when none.
+FString DescribeBoolArithmetic(const UBlueprint* Blueprint, const FString& Expression,
+                               const TSet<FName>& ExtraBools = TSet<FName>());
+
+// All of the above in one text; empty when Expression shows none of those problems.
 FString DescribeProblems(const UBlueprint* Blueprint, const FString& Expression,
                          const TSet<FName>& ExtraBools = TSet<FName>());
+
+// Expression as tokens: names, numbers, two-character operators (&& || == != <= >=) and single characters.
+TArray<FString> TokenizeExpression(const FString& Expression);
 
 // After a parse: inputPins, the pins the node made, and boundToMembers, the names it reads from the Blueprint's
 // own variables instead (no pin to wire).

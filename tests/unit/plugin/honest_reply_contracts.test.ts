@@ -1395,6 +1395,19 @@ describe('a graph batch checks its expressions before any step runs', () => {
     expect(batch.indexOf('DescribeExpressionStep(Context.Blueprint, **Step, DeclaredBools)')).toBeGreaterThan(-1);
     expect(batch.indexOf('DescribeExpressionStep(')).toBeLessThan(batch.indexOf('RunBatchStep(Context, State'));
   });
+
+  // A true/false value used as a number parses, and only the Blueprint compile refused it, 134 steps later.
+  it('names a comparison or a bool variable used as an operand of + - * / %, in the batch and the single set', () => {
+    const math = code('BlueprintGraph', 'Expression', 'McpAutomationBridge_BlueprintGraphMathExpression.cpp');
+    expect(math).toMatch(/DescribeOperatorMisuse\(Blueprint, Expression, ExtraBools\) \+ TEXT\(" "\) \+\s*DescribeBoolArithmetic\(Blueprint, Expression, ExtraBools\);/u);
+    const types = code('BlueprintGraph', 'Expression', 'McpAutomationBridge_BlueprintGraphMathExpressionTypes.cpp');
+    expect(types).toContain('static const TArray<FString> Arithmetic = {TEXT("+"), TEXT("-"), TEXT("*"), TEXT("/"), TEXT("%")};');
+    expect(types).toContain('if (Depth == 0 && TrueFalse.Contains(Parts[At]))');
+    expect(types, 'a call result is never judged').toContain('LeftFirst = LeftFirst > 0 && IsNameToken(Parts[LeftFirst - 1]) ? INDEX_NONE : LeftFirst;');
+    const mutations = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersNodeMutations.cpp');
+    expect(mutations.indexOf('McpBlueprintMathExpression::DescribeBoolArithmetic(Context.Blueprint, Value)'))
+      .toBeLessThan(mutations.indexOf('bHandled = McpTrySetNodeAssetPropertyForMcp(TargetNode, PropertyName, Value);'));
+  });
 });
 
 // set_default answered instancesUpdated 2 for a class with no placed copies: it counted editor preview actors.

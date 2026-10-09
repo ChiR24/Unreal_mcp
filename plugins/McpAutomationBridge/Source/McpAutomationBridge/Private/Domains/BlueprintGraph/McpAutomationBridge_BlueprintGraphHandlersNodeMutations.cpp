@@ -191,6 +191,14 @@ static bool SetNodeProperty(FActionContext& Context)
         TargetNode->GetClass()->GetName() == TEXT("K2Node_MathExpression");
     const FStrProperty* ExpressionProp = bMathExpression ? FindFProperty<FStrProperty>(TargetNode->GetClass(), TEXT("Expression")) : nullptr;
     const FString OldExpression = ExpressionProp ? ExpressionProp->GetPropertyValue_InContainer(TargetNode) : FString();
+    // A bool used as a number parses, and only the Blueprint compile refuses it: refused here, the node untouched.
+    if (const FString BoolMath = bMathExpression ? McpBlueprintMathExpression::DescribeBoolArithmetic(Context.Blueprint, Value)
+                                                 : FString(); !BoolMath.IsEmpty())
+    {
+        Context.SendError(FString::Printf(TEXT("The expression '%s' would not compile; it keeps the old one. %s"), *Value, *BoolMath),
+            TEXT("EXPRESSION_INVALID"));
+        return true;
+    }
     // The failed parse drops the input links, so the restore below puts them back by pin name.
     TArray<TPair<FName, TArray<UEdGraphPin*>>> SavedLinks;
     for (const UEdGraphPin* Pin : bMathExpression ? TargetNode->Pins : TArray<UEdGraphPin*>())

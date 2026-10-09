@@ -228,6 +228,6 @@ FString DescribeExpressionStep(const UBlueprint* Blueprint, const FJsonObject& S
     }
     const FString Problems = McpBlueprintMathExpression::DescribeProblems(Blueprint, Expression, DeclaredBools);
     return Problems.IsEmpty() ? FString()
-                              : FString::Printf(TEXT("The expression '%s' does not parse: %s"), *Expression, *Problems);
+                              : FString::Printf(TEXT("The expression '%s' would not compile: %s"), *Expression, *Problems);
 }
 }

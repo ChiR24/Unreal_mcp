@@ -111,9 +111,9 @@ void SplitNames(const FString& Expression, TArray<FString>& OutCalls, TArray<FSt
     (bCall ? OutCalls : OutNames).AddUnique(Expression.Mid(Start, Index - Start));
   }
 }
+}
 
-// Expression as tokens: names, numbers, two-character operators (&& || == != <= >=) and single characters.
-TArray<FString> Tokens(const FString& Expression)
+TArray<FString> TokenizeExpression(const FString& Expression)
 {
   TArray<FString> Out;
   int32 Index = 0;
@@ -142,11 +142,10 @@ TArray<FString> Tokens(const FString& Expression)
   }
   return Out;
 }
-}
 
 FString DescribeOperatorMisuse(const UBlueprint* Blueprint, const FString& Expression, const TSet<FName>& ExtraBools)
 {
-  const TArray<FString> Parts = Tokens(Expression);
+  const TArray<FString> Parts = TokenizeExpression(Expression);
   const UClass* Members = Blueprint ? Blueprint->SkeletonGeneratedClass.Get() : nullptr;
   const TArray<FString> Comparisons = {TEXT("=="), TEXT("!="), TEXT("<"), TEXT(">"), TEXT("<="), TEXT(">=")};
   TArray<FString> Notes;
@@ -226,7 +225,8 @@ FString DescribeUnknownFunctions(const FString& Expression)
 FString DescribeProblems(const UBlueprint* Blueprint, const FString& Expression, const TSet<FName>& ExtraBools)
 {
   FString Problems = DescribeUnknownFunctions(Expression) + TEXT(" ") +
-                     DescribeOperatorMisuse(Blueprint, Expression, ExtraBools);
+                     DescribeOperatorMisuse(Blueprint, Expression, ExtraBools) + TEXT(" ") +
+                     DescribeBoolArithmetic(Blueprint, Expression, ExtraBools);
   Problems.TrimStartAndEndInline();
   return Problems;
 }
