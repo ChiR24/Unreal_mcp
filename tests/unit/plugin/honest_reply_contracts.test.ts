@@ -1535,6 +1535,15 @@ describe('save_all names the packages it left unsaved', () => {
   });
 });
 
+// get_splines_info with actorName gave local points while its listing gave world ones; an ocean shoreline read as world
+// was off by the actor's location.
+describe('a spline read names both point spaces', () => {
+  it('adds worldLocation beside the local location', () => {
+    const source = code('Spline', 'McpAutomationBridge_SplineHandlersQueries.cpp');
+    expect(source).toContain('PointObj->SetObjectField(TEXT("worldLocation"), McpHandlerUtils::VectorToJson(SplineComp->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World)));');
+  });
+});
+
 // add_scs_component of a buoyancy component said parent "(root)" while its verification said it attaches to nothing.
 describe('an actor component added to a Blueprint is not reported under the root', () => {
   it('names no parent for a component that is not a scene component', () => {

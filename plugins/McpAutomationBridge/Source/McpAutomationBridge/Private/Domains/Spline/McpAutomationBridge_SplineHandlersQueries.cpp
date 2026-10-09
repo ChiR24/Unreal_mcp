@@ -52,6 +52,8 @@ bool HandleGetSplinesInfo(
             PointObj->SetNumberField(TEXT("index"), i);
 
             PointObj->SetObjectField(TEXT("location"), McpHandlerUtils::VectorToJson(Loc));
+            // location is the space point edits take; the listing gives world points, so this read names both.
+            PointObj->SetObjectField(TEXT("worldLocation"), McpHandlerUtils::VectorToJson(SplineComp->GetLocationAtSplinePoint(i, ESplineCoordinateSpace::World)));
             PointObj->SetStringField(TEXT("type"), SplinePointTypeToString(SplineComp->GetSplinePointType(i)));
 
             PointsArray.Add(MakeShared<FJsonValueObject>(PointObj));

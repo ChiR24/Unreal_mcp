@@ -295,7 +295,7 @@ const testCases = [
     { scenario: 'CREATE: create_cable_spline', toolName: 'build_environment', arguments: { action: 'create_cable_spline', actorName: CABLE_SPLINE, location: { x: 0, y: 1100, z: 0 } }, expected: 'success|already exists' },
     { scenario: 'CREATE: create_pipe_spline', toolName: 'build_environment', arguments: { action: 'create_pipe_spline', actorName: PIPE_SPLINE, location: { x: 0, y: 1250, z: 0 } }, expected: 'success|already exists' },
     // === INFO ===
-    { scenario: 'INFO: get_splines_info', toolName: 'build_environment', arguments: { action: 'get_splines_info', actorName: SPLINE_ACTOR }, expected: 'success' },
+    { scenario: 'INFO: get_splines_info', toolName: 'build_environment', arguments: { action: 'get_splines_info', actorName: SPLINE_ACTOR }, expected: 'success', assertions: [{ path: 'structuredContent.result.splines.0.points.0.worldLocation.x', equals: 0, label: 'a point names where it lies in the level beside its local location' }] },
 
     // === CLEANUP ===
     { scenario: 'Cleanup: delete test actor', toolName: 'control_actor', arguments: { action: 'delete', actorName: `TestActor_${ts}` }, expected: 'success|not found' },

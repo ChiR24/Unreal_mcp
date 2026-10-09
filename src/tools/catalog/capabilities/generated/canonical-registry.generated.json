@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "d2b06cd8647c8ad4",
+  "catalogRevision": "b1983c216b30b0cd",
   "recordCount": 397,
   "records": [
     {
@@ -27718,7 +27718,7 @@
             },
             "position": {
               "type": "object",
-              "description": "Position {x, y, z}.",
+              "description": "Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level).",
               "properties": {
                 "x": {
                   "type": "number",
@@ -27962,8 +27962,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "56a9cf97d438c893dfffaa7281688931346a3d81bd789241cfbfaeee073d4f30",
-        "content": "574fdc463977652a0b255a5224d5cd5f4e6e7a59f8e2117687e9ad021e350fc1"
+        "schema": "e1a7ae8f2d406def165109717aa61715e14c01b41b326084443b6d78c1d1463a",
+        "content": "97ddb6bb9a0f473b7ff4d6d74b26122e5aa59f2d5b3583cb75d95c5be68be9e1"
       }
     },
     {
@@ -28396,7 +28396,7 @@
           "closed loop",
           "world points"
         ],
-        "summary": "List the spline actors in the level with each one's point count, length and world points (first 64); with actorName, one spline's points and types, length and closed-loop flag.",
+        "summary": "List the spline actors in the level with each one's point count, length and world points (first 64); with actorName, one spline's points (location relative to the actor, the space spline edits take, and worldLocation), types, length and closed-loop flag.",
         "whenToUse": [
           "Spline actors must be enumerated."
         ],
@@ -28460,7 +28460,7 @@
       },
       "examples": [
         {
-          "title": "List the spline actors in the level with each one's point count, length and world points (first 64); with actorName, one spline's points and types, length and closed-loop flag.",
+          "title": "List the spline actors in the level with each one's point count, length and world points (first 64); with actorName, one spline's points (location relative to the actor, the space spline edits take, and worldLocation), types, length and closed-loop flag.",
           "input": {
             "action": "get_splines_info"
           },
@@ -28498,7 +28498,7 @@
       "hashes": {
         "algorithm": "sha256",
         "schema": "ca1ce2f032e05fd40185e583784ac1c87115dcd04f1f9fd48532cc92af4c81ad",
-        "content": "71970e876d1826134009a38e4497912913db036ab7ef6ea518792a4a40345012"
+        "content": "a35e7c04a64222d238820e8249cc978a39e966fc75be55b6df835355ae6121ac"
       }
     },
     {

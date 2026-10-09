@@ -2643,23 +2643,47 @@
             "description": "Spline points."
           },
           "position": {
-            "type": "object",
-            "description": "Position {x, y, z}.",
-            "properties": {
-              "x": {
-                "type": "number",
-                "description": "X"
+            "oneOf": [
+              {
+                "type": "object",
+                "description": "Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level).",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               },
-              "y": {
-                "type": "number",
-                "description": "Y"
-              },
-              "z": {
-                "type": "number",
-                "description": "Z"
+              {
+                "type": "object",
+                "description": "Position {x, y, z}.",
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "description": "X"
+                  },
+                  "y": {
+                    "type": "number",
+                    "description": "Y"
+                  },
+                  "z": {
+                    "type": "number",
+                    "description": "Z"
+                  }
+                },
+                "additionalProperties": false
               }
-            },
-            "additionalProperties": false
+            ],
+            "description": "Point position relative to the spline actor {x, y, z}: its local space, the location get_splines_info with actorName reports (worldLocation is where the point lies in the level)."
           },
           "properties": {
             "type": "object",
