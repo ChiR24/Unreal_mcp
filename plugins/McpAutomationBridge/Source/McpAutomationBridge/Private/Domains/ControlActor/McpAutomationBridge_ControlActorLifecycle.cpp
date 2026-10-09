@@ -53,7 +53,11 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorDelete(
   FMcpScopedEditorTransaction Transaction(FText::FromString(TEXT("Delete Actors")),
                                           EMcpMutationDurability::EditorStateOnly, FoundActors);
   for (int32 Index = 0; Index < FoundActors.Num(); ++Index) {
-    if (ActorSS->DestroyActor(CastChecked<AActor>(FoundActors[Index])))
+    AActor *Actor = CastChecked<AActor>(FoundActors[Index]);
+    // A running game's actor is destroyed in its own world: the editor actor subsystem refuses while a game
+    // plays, and nothing there is saved or undone anyway.
+    const bool bGameWorld = Actor->GetWorld() && Actor->GetWorld()->IsGameWorld();
+    if (bGameWorld ? Actor->Destroy() : ActorSS->DestroyActor(Actor))
       Deleted.Add(FoundNames[Index]);
     else
       Missing.Add(FoundNames[Index]);

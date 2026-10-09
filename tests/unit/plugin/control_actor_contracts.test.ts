@@ -670,6 +670,16 @@ describe('control_actor find asks which actors use a static mesh or a material',
 });
 
 // A spawn ran outside any transaction, so after six actors were placed control_editor.undo answered NOTHING_TO_UNDO.
+// spawn works in a running game, but delete went through the editor actor subsystem, which refuses while a game
+// plays: a test actor spawned in PIE could not be removed.
+describe('delete removes an actor from the running game too', () => {
+  it('destroys a game-world actor in its own world and an editor actor through the editor subsystem', () => {
+    const lifecycle = read('McpAutomationBridge_ControlActorLifecycle.cpp');
+    expect(lifecycle).toContain('const bool bGameWorld = Actor->GetWorld() && Actor->GetWorld()->IsGameWorld();');
+    expect(lifecycle).toContain('if (bGameWorld ? Actor->Destroy() : ActorSS->DestroyActor(Actor))');
+  });
+});
+
 describe('every spawn is one undo step, "Spawn Actors", and the reply says so', () => {
   const support = (): string => read('McpAutomationBridge_ControlActorSupport.h');
 
