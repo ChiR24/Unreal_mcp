@@ -209,10 +209,16 @@ function validateObject(
   if (Array.isArray(schema.required)) {
     for (const name of schema.required) {
       if (typeof name === 'string' && !Object.hasOwn(value, name)) {
+        // A key the action does not take, sent beside the missing one, is usually that field misnamed (path for
+        // savePath): the refusal named only the missing field, and the stray key looked accepted.
+        const stray = schema.additionalProperties === false
+          ? Object.keys(value).filter((key) => properties === undefined || !Object.hasOwn(properties, key))
+          : [];
+        const missing = describeMissingParameter(name, properties);
         return {
           reason: 'missing-required',
           pointer: `${pointer}/${name}`,
-          message: describeMissingParameter(name, properties)
+          message: stray.length === 0 ? missing : `${missing}; sent ${stray.join(', ')}, which this action does not take`
         };
       }
     }

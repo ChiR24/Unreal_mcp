@@ -1719,6 +1719,15 @@ describe('a batch lists the steps that have something to say', () => {
   });
 });
 
+// manage_blueprint create sent { path } answered only "Missing required parameter 'savePath'", and path looked accepted.
+describe('a missing required parameter names the keys sent in its place', () => {
+  it('adds the keys the action does not take to the native refusal', () => {
+    const source = code('..', 'MCP', 'Execute', 'McpNativeGatewaySchemaValidation.cpp');
+    expect(source).toContain('if (!(*Properties)->HasField(Entry.Key)) Stray.Add(Entry.Key);');
+    expect(source).toContain('TEXT("%s; sent %s, which this action does not take")');
+  });
+});
+
 // get_stats in Play In Editor read a 21 ms game thread, 8 ms of it the editor's own UI, while the world ticked in 10.5.
 describe('performance stats give the game\'s own share of the frame', () => {
   it('times each world\'s tick from the subsystem\'s start and reports the measured world\'s as worldTickMs', () => {
