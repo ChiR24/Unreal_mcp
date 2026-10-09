@@ -3662,7 +3662,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "componentName": {
           "type": "string",
-          "description": "Component of the parent actor to attach to (default its root): on a character built from several meshes, the mesh that owns the bone."
+          "description": "Call the function on this component of the actor instead of on the actor itself (refused with COMPONENT_NOT_FOUND when the actor has none of that name)."
         },
         "componentNames": {
           "type": "array",

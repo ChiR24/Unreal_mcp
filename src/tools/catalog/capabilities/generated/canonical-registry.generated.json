@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "c3c4d35e41b57c3c",
+  "catalogRevision": "3decad1d52a31eba",
   "recordCount": 396,
   "records": [
     {
@@ -30495,7 +30495,8 @@
         "summary": "Call a named function on an actor, or while Play In Editor runs on the game's GameInstance, GameMode or another framework object, with optional arguments; normalizes to call_function.",
         "whenToUse": [
           "A Blueprint or native function on an actor must be invoked.",
-          "A function of the running game's GameInstance (save, score, reset) must be called during Play In Editor: actorName GameInstance."
+          "A function of the running game's GameInstance (save, score, reset) must be called during Play In Editor: actorName GameInstance.",
+          "A function of one of the actor's components must be called (a body's GetCenterOfMass, a movement component's StopMovementImmediately): componentName."
         ],
         "whenNotToUse": [
           "The function has side effects that cannot be undone."
@@ -30513,6 +30514,10 @@
             "actorName": {
               "type": "string",
               "description": "Target actor name in the current level; while Play In Editor runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game (the GameInstance is no actor)."
+            },
+            "componentName": {
+              "type": "string",
+              "description": "Call the function on this component of the actor instead of on the actor itself (refused with COMPONENT_NOT_FOUND when the actor has none of that name)."
             },
             "functionName": {
               "type": "string",
@@ -30598,8 +30603,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "508e1e3325936497f87ea70d94e89a205a20e2cf4554bfead730bc0bf5d24128",
-        "content": "bee38a91ddd61a82bbf1573944b02f0598881997cd276af5adaa4dda5d01c286"
+        "schema": "56f575ff55cd15837c8cc7d086d7d6b94565dcc3d93f50ae852cf30049fd69fb",
+        "content": "5c7cdd01019f1bfe5d2c7ce9e72df4d1f041fbb3d823f9abc5ee08d42ccba121"
       }
     },
     {

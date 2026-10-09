@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Render jobs can be taken out of the Movie Render Queue.** `create_render_job` `control` `remove` removes one job (`jobId` or `renderJobName`) or every job (`allJobs`); rendered files stay. A finished job stayed queued for good, so a session's jobs piled up until every new one was refused at the queue limit, and that refusal now names the limit and this remedy.
 - **Motion samples carry rotation.** `get_transform` `motion` samples add `rotation` [pitch, yaw, roll] on the first sample and on each one where it changed, so a rocking hull or a turning pawn can be read over time.
 - **`add_variable` takes `exposeOnSpawn`.** The variable becomes an input on SpawnActor and Create Widget nodes for its class (and instance-editable), in a single call or a `build_graph` step, which ignored the flag before.
+- **`call_actor_function` calls a component's function.** `componentName` names one of the actor's components (a body's `GetCenterOfMass`, a movement component's `StopMovementImmediately`); a name the actor lacks is refused with `COMPONENT_NOT_FOUND`.
 
 </details>
 
@@ -93,6 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A bool property answers to its name without the `b`.** A Blueprint component's `properties` bag, `edit_scs` `set_property` and `get_property`/`set_property` refused `SimulatePhysics`, the Details panel's name for `BodyInstance.bSimulatePhysics`; a name that matches nothing now tries the `b`-prefixed bool, at the end of a path and among struct members.
 - **A write echoes what can be written.** `set_property` read a written struct, or an array of them, back with every field, runtime state included: four buoyancy pontoons answered 4 KB of `LocalForce`, `WaterHeight` and the like. The echo now holds the editable fields; reads still show every field.
 - **A component list lists components.** `get_components` rows on a placed actor carried the first ten property names each component's class declares, with no values: a 36-component pawn answered 30 KB. A row now holds the name, class, parent, visibility, transform, mesh and materials; `get_component_property` reads a property.
+- **A function call answers what it did.** Every `call_actor_function` reply carried ten function and target diagnostics (flags, thunk, parameter size, validity); it now holds the object the call reached, the outputs and the return value.
 
 </details>
 

@@ -118,6 +118,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
     whenToUse: [
       'A Blueprint or native function on an actor must be invoked.',
       'A function of the running game\'s GameInstance (save, score, reset) must be called during Play In Editor: actorName GameInstance.',
+      'A function of one of the actor\'s components must be called (a body\'s GetCenterOfMass, a movement component\'s StopMovementImmediately): componentName.',
     ],
     whenNotToUse: ['The function has side effects that cannot be undone.'],
     inputProps: {
@@ -126,6 +127,7 @@ export const ADVANCED_RECORDS: readonly CapabilityRecordSource[] = [
         description:
           'Target actor name in the current level; while Play In Editor runs, GameInstance, GameMode, GameState, PlayerController, PlayerPawn, PlayerState or HUD names that object of the running game (the GameInstance is no actor).',
       },
+      componentName: str('Call the function on this component of the actor instead of on the actor itself (refused with COMPONENT_NOT_FOUND when the actor has none of that name).'),
       functionName: P.functionName,
       arguments: P.arguments,
     },

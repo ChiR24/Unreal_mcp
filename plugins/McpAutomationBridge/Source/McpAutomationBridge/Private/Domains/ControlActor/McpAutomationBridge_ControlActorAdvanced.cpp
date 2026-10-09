@@ -213,9 +213,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorExport(
 bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
     const FString &RequestId, const TSharedPtr<FJsonObject> &Payload,
     TSharedPtr<FMcpBridgeWebSocket> Socket) {
-  FString ActorName, FunctionName;
+  FString ActorName, FunctionName, ComponentName;
   Payload->TryGetStringField(TEXT("actorName"), ActorName);
   Payload->TryGetStringField(TEXT("functionName"), FunctionName);
+  Payload->TryGetStringField(TEXT("componentName"), ComponentName);
 
   if (ActorName.IsEmpty() || FunctionName.IsEmpty()) {
     SendAutomationError(Socket, RequestId, TEXT("actorName and functionName are required"), TEXT("MISSING_PARAM"));
@@ -223,16 +224,27 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
   }
 
   // While PIE runs the game's objects also go by role, as get_property takes them: the GameInstance is no actor.
-  UObject* Actor = FindActorByName(ActorName);
-  Actor = Actor ? Actor : McpHandlerUtils::ResolveRuntimeRole(ActorName);
-  if (!Actor) {
+  UObject* Target = FindActorByName(ActorName);
+  Target = Target ? Target : McpHandlerUtils::ResolveRuntimeRole(ActorName);
+  if (!Target) {
     SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Actor not found: %s"), *ActorName), TEXT("ACTOR_NOT_FOUND"));
     return true;
   }
+  // A component's own functions (a body's GetCenterOfMass, a movement component's StopMovementImmediately) were out
+  // of reach: only the actor's functions resolved.
+  if (!ComponentName.IsEmpty()) {
+    AActor* Owner = Cast<AActor>(Target);
+    UActorComponent* Component = Owner ? FindComponentByName(Owner, ComponentName) : nullptr;
+    if (!Component) {
+      SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Component not found on %s: %s"), *ActorName, *ComponentName), TEXT("COMPONENT_NOT_FOUND"));
+      return true;
+    }
+    Target = Component;
+  }
 
-  UFunction* Function = Actor->FindFunction(*FunctionName);
+  UFunction* Function = Target->FindFunction(*FunctionName);
   if (!Function) {
-    SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Function not found: %s"), *FunctionName), TEXT("FUNCTION_NOT_FOUND"));
+    SendAutomationError(Socket, RequestId, FString::Printf(TEXT("Function not found on %s: %s"), *Target->GetClass()->GetName(), *FunctionName), TEXT("FUNCTION_NOT_FOUND"));
     return true;
   }
 
@@ -260,46 +272,20 @@ bool UMcpAutomationBridgeSubsystem::HandleControlActorCallFunction(
       SendAutomationError(Socket, RequestId, BindError, TEXT("INVALID_ARGUMENT"));
       return true;
     }
-    Actor->ProcessEvent(Function, Params.Data());
+    Target->ProcessEvent(Function, Params.Data());
     Outputs = McpReadParamOutputs(Function, Params.Data());
   } else {
-    Actor->ProcessEvent(Function, nullptr);
+    Target->ProcessEvent(Function, nullptr);
     Outputs = MakeShared<FJsonObject>();
   }
 
   TSharedPtr<FJsonObject> Data = McpHandlerUtils::CreateResultObject();
   Data->SetStringField(TEXT("actorName"), ActorName);
   Data->SetStringField(TEXT("functionName"), FunctionName);
-  // Name resolution alone does not prove the invocation reached the world instance: the sibling
-  // reflected-invoke capability guards against templates because "invoking on a template ... never
-  // reaches the running instance the caller meant". Report what was actually resolved, so a caller can
-  // tell a live actor from a class default object instead of inferring it from an effect that never came.
-  Data->SetStringField(TEXT("resolvedObject"), Actor->GetPathName());
-  Data->SetBoolField(TEXT("resolvedIsTemplate"), Actor->IsTemplate());
-  // Now that the function side is fully accounted for (owner, flags, native bit, non-null thunk,
-  // ParmsSize), the remaining axis is the TARGET: a pointer whose GetPathName() is correct can still be
-  // unfit to receive a reflected call. Report the validity and class-relationship facts directly rather
-  // than inferring them from an effect that never came.
-  Data->SetBoolField(TEXT("actorIsValid"), IsValid(Actor));
-  Data->SetBoolField(TEXT("actorIsUnreachable"), Actor->IsUnreachable());
-  Data->SetStringField(TEXT("actorClass"), Actor->GetClass()->GetName());
-  if (UClass *FunctionOwner = Cast<UClass>(Function->GetOuter())) {
-    Data->SetBoolField(TEXT("actorIsAOfFunctionOwner"), Actor->IsA(FunctionOwner));
-  }
-  // The function is resolved and the object is a live, non-template instance, yet the call has no effect.
-  // Report what was found so the invocation itself can be diagnosed from the receipt instead of guessed at:
-  // a native function with no thunk, or a function owned by an unexpected class, would both explain a
-  // silent no-op.
-  Data->SetStringField(TEXT("resolvedFunction"), Function->GetPathName());
-  Data->SetStringField(TEXT("functionOwnerClass"),
-                       Function->GetOuter() ? Function->GetOuter()->GetName() : FString());
-  Data->SetStringField(TEXT("functionFlags"),
-                       FString::Printf(TEXT("0x%08X"), (uint32)Function->FunctionFlags));
-  Data->SetBoolField(TEXT("functionIsNative"), (Function->FunctionFlags & FUNC_Native) != 0);
-  // A native UFunction with no thunk would make UFunction::Invoke a silent no-op -- the last remaining
-  // explanation that fits "correct function, correct live instance, no effect". Report it directly.
-  Data->SetBoolField(TEXT("functionHasNativeThunk"), Function->GetNativeFunc() != nullptr);
-  Data->SetNumberField(TEXT("functionParmsSize"), Function->ParmsSize);
+  // The object the call reached: the component's path when componentName named one. Ten function and target
+  // diagnostics (flags, thunk, ParmsSize, validity ...) rode on every reply while a silent no-op was chased; the
+  // script guard above was the cause, and they stayed as noise.
+  Data->SetStringField(TEXT("resolvedObject"), Target->GetPathName());
   Data->SetObjectField(TEXT("outputs"), Outputs);
   Data->SetArrayField(TEXT("unsetParameters"), Unset);
 

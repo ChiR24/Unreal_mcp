@@ -776,3 +776,20 @@ describe('get_component_property reads weak and lazy object pointers', () => {
     expect(source).not.toContain('CastField<FObjectProperty>(Property)');
   });
 });
+
+describe('call_actor_function reaches a component and answers lean', () => {
+  it('calls the function on the named component, refusing a name the actor lacks', () => {
+    const source = read('McpAutomationBridge_ControlActorAdvanced.cpp');
+    expect(source).toContain('Payload->TryGetStringField(TEXT("componentName"), ComponentName);');
+    expect(source).toContain('FindComponentByName(Owner, ComponentName)');
+    expect(source).toContain('TEXT("COMPONENT_NOT_FOUND")');
+    expect(source).toContain('Target->ProcessEvent(Function, Params.Data());');
+  });
+
+  it('carries no function or target diagnostics on a success', () => {
+    const source = read('McpAutomationBridge_ControlActorAdvanced.cpp');
+    for (const field of ['functionFlags', 'functionHasNativeThunk', 'functionParmsSize', 'actorIsUnreachable', 'resolvedIsTemplate']) {
+      expect(source).not.toContain(`TEXT("${field}")`);
+    }
+  });
+});
