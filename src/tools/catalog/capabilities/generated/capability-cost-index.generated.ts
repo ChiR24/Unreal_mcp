@@ -575,6 +575,7 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "manage_asset::create_material_instance": "interactive|medium",
   "manage_asset::create_noise_texture": "long-running|high",
   "manage_asset::create_normal_from_height": "long-running|high",
+  "manage_asset::create_parameter_collection": "interactive|medium",
   "manage_asset::create_pattern_texture": "long-running|high",
   "manage_asset::create_post_process_material": "interactive|medium",
   "manage_asset::create_render_target": "interactive|medium",
@@ -1546,4 +1547,4 @@ export const CAPABILITY_COST_INDEX: Readonly<Record<string, string>> = {
   "system_control::write_snapshot": "interactive|medium"
 };
 
-export const CAPABILITY_COST_INDEX_KEY_COUNT = 1533;
+export const CAPABILITY_COST_INDEX_KEY_COUNT = 1534;

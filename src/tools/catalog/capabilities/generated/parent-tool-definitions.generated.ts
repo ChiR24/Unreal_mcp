@@ -8344,6 +8344,10 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "HLSL code."
         },
+        "collectionPath": {
+          "type": "string",
+          "description": "Material Parameter Collection a CollectionParameter node reads (name picks its parameter); a collection that does not load, or lacks the parameter, adds nothing and fails, listing its parameters."
+        },
         "collisionType": {
           "type": "string",
           "enum": [
@@ -8762,6 +8766,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "landscape",
             "post_process",
             "function",
+            "parameter_collection",
             "metadata",
             "tags"
           ],
@@ -8979,7 +8984,7 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
         },
         "name": {
           "type": "string",
-          "description": "DataTable name."
+          "description": "Asset name."
         },
         "neverStream": {
           "type": "boolean",
@@ -9452,6 +9457,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Package path for the instance."
         },
+        "scalars": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Scalar parameters, each {name, default}: a name the collection lacks is added, one it has takes the new default (0 when a new one gives none)."
+        },
         "scale": {
           "type": "number",
           "description": "Noise scale (default 1)."
@@ -9694,6 +9707,14 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "string",
           "description": "Stable member GUID."
         },
+        "vectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "x-unreal-reflection-boundary": true
+          },
+          "description": "Vector parameters, each {name, default}: default as [r, g, b, a] or {r, g, b, a} (alpha 1 when omitted); a name the collection lacks is added, one it has takes the new default."
+        },
         "virtualTextureStreaming": {
           "type": "boolean",
           "description": "Enable VT streaming."
@@ -9793,6 +9814,13 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
             "type": "string"
           },
           "description": "What would surprise the caller about adding this listing: a pack with no build for the running engine, or a mesh file large enough that the add refuses it until combineMeshes is chosen."
+        },
+        "added": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The parameters this call added."
         },
         "alreadyRunning": {
           "type": "boolean",
@@ -9977,8 +10005,11 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "description": "Asset count on this page."
         },
         "created": {
-          "type": "number",
-          "description": "With instances: how many were created."
+          "type": [
+            "boolean",
+            "number"
+          ],
+          "description": "True when the call made the collection, false when it updated one."
         },
         "currency": {
           "type": "string",
@@ -10669,6 +10700,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "number",
           "description": "DefaultValue, for scalar parameter expressions."
         },
+        "scalars": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Every scalar parameter of the collection after the call: {name, default}."
+        },
         "scannedAssets": {
           "type": "number",
           "description": "Blueprints, DataTables and String Tables searched."
@@ -10830,6 +10871,16 @@ export const generatedParentToolDefinitions: readonly ToolDefinition[] = [
           "type": "object",
           "x-unreal-reflection-boundary": true,
           "description": "DefaultValue as rgba, for vector parameter expressions."
+        },
+        "vectors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "x-unreal-reflection-boundary": true
+          },
+          "x-unreal-reflection-boundary": true,
+          "description": "Every vector parameter after the call: {name, default [r, g, b, a]}."
         },
         "versionName": {
           "type": "string",

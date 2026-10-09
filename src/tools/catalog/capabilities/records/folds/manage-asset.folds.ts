@@ -159,9 +159,9 @@ export const MANAGE_ASSET_FOLDS: readonly FoldSpec[] = [
   },
   {
     primary: 'create_material', selector: 'kind',
-    summary: 'Create a material asset: a standard material, a decal, landscape or post-process material, or a material function.',
-    topics: ['create material', 'decal material', 'landscape material', 'post process material', 'material function'],
-    members: { material: 'create_material', decal: 'create_decal_material', landscape: 'create_landscape_material', post_process: 'create_post_process_material', function: 'create_material_function' },
+    summary: 'Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares).',
+    topics: ['create material', 'decal material', 'landscape material', 'post process material', 'material function', 'material parameter collection'],
+    members: { material: 'create_material', decal: 'create_decal_material', landscape: 'create_landscape_material', post_process: 'create_post_process_material', function: 'create_material_function', parameter_collection: 'create_parameter_collection' },
   },
   { primary: 'connect_nodes', topics: ['connect texture to base color', 'connect node to base color'], summary: 'Connect two material graph pins.', members: ['connect_material_pins'] },
   { primary: 'disconnect_nodes', summary: 'Disconnect a material graph pin or node.', members: ['break_material_connections'] },

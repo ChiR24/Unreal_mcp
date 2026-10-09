@@ -34,7 +34,7 @@ inline const TArray<FString>& MaterialAuthoring()
 		TEXT("rebuild_material"), TEXT("set_material_parameter"),
 		TEXT("get_material_node_details"), TEXT("remove_material_node"),
 		TEXT("set_two_sided"), TEXT("set_node_position"),
-		TEXT("build_material_graph")
+		TEXT("build_material_graph"), TEXT("create_parameter_collection")
 	};
 	return Actions;
 }

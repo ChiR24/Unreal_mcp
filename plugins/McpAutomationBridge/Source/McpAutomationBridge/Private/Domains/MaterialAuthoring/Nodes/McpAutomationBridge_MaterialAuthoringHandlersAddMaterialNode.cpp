@@ -1,5 +1,7 @@
 #include "Domains/MaterialAuthoring/McpAutomationBridge_MaterialAuthoringHandlersPrivate.h"
 #include "Foundation/BridgeHelpers/Responses/McpAutomationBridgeHelpersJsonFields.h"
+#include "Materials/MaterialExpressionCollectionParameter.h"
+#include "Materials/MaterialParameterCollection.h"
 
 namespace McpMaterialAuthoringHandlers
 {
@@ -60,6 +62,30 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       }
     }
 
+    // A CollectionParameter node reads one parameter of a Material Parameter Collection, named by `name`. Resolved
+    // before the node exists, so a collection that does not load, or lacks the parameter, adds nothing.
+    UMaterialParameterCollection *NodeCollection = nullptr;
+    FString CollectionPath;
+    if (Payload->TryGetStringField(TEXT("collectionPath"), CollectionPath) && !CollectionPath.IsEmpty()) {
+      NodeCollection = Cast<UMaterialParameterCollection>(McpLoadAsset(SanitizeProjectRelativePath(CollectionPath)));
+      const FName Wanted(*GetJsonStringField(Payload, TEXT("name")));
+      const bool bCollectionNode = ExpressionClass->IsChildOf(UMaterialExpressionCollectionParameter::StaticClass());
+      if (!bCollectionNode || !NodeCollection || !NodeCollection->GetParameterId(Wanted).IsValid()) {
+        TArray<FString> Names;
+        if (NodeCollection) {
+          for (const FCollectionScalarParameter &Param : NodeCollection->ScalarParameters) { Names.Add(Param.ParameterName.ToString()); }
+          for (const FCollectionVectorParameter &Param : NodeCollection->VectorParameters) { Names.Add(Param.ParameterName.ToString()); }
+        }
+        Bridge->SendAutomationError(Socket, RequestId,
+            !bCollectionNode ? FString::Printf(TEXT("collectionPath applies to a CollectionParameter node; %s is not one."), *NodeType)
+            : !NodeCollection ? FString::Printf(TEXT("Material Parameter Collection not found: %s"), *CollectionPath)
+            : FString::Printf(TEXT("The collection has no parameter '%s' (name names it); it has: %s."), *Wanted.ToString(),
+                              Names.Num() > 0 ? *FString::Join(Names, TEXT(", ")) : TEXT("none")),
+            !bCollectionNode ? TEXT("INVALID_ARGUMENT") : !NodeCollection ? TEXT("ASSET_NOT_FOUND") : TEXT("PARAMETER_NOT_FOUND"));
+        return true;
+      }
+    }
+
     UMaterialExpression *NewExpr = NewObject<UMaterialExpression>(
         HostOuter, ExpressionClass, NAME_None, RF_Transactional);
     if (!NewExpr) {
@@ -84,6 +110,11 @@ bool HandleAddMaterialNode(UMcpAutomationBridgeSubsystem* Bridge, const FString&
       UMaterialExpressionTextureBase *TextureNode = CastChecked<UMaterialExpressionTextureBase>(NewExpr);
       TextureNode->Texture = NodeTexture;
       TextureNode->AutoSetSampleType();
+    }
+    if (NodeCollection) {
+      // PostEditChange takes the parameter's id from the collection: the material reads it by id, not by name.
+      CastChecked<UMaterialExpressionCollectionParameter>(NewExpr)->Collection = NodeCollection;
+      NewExpr->PostEditChange();
     }
 
     // Apply the requested default value. Previously only `name` was honoured, so

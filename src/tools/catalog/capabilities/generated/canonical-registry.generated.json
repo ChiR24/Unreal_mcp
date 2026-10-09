@@ -1,5 +1,5 @@
 {
-  "catalogRevision": "393bb46b0de7791b",
+  "catalogRevision": "2beadb1437b61a5a",
   "recordCount": 396,
   "records": [
     {
@@ -78230,6 +78230,7 @@
         "whenToUse": [
           "nodeKind=node: An expression is needed by class name with no dedicated adder, such as Constant, Constant3Vector (with defaultValue), ComponentMask or Saturate.",
           "nodeKind=node: A texture object must feed a Custom node or a material function input (nodeType TextureObjectParameter with name and texturePath).",
+          "nodeKind=node: A material must read a value of a Material Parameter Collection (nodeType CollectionParameter with collectionPath and name).",
           "nodeKind=custom_expression: A calculation the standard nodes cannot express is needed as HLSL, with named inputs and optional extra outputs.",
           "nodeKind=fresnel: A rim light, edge glow or view-angle fade is needed.",
           "nodeKind=if: A value must switch by comparing two numbers: A greater than, equal to or less than B.",
@@ -78301,7 +78302,11 @@
             },
             "name": {
               "type": "string",
-              "description": "Parameter name, when the node type is a parameter of any kind (scalar, vector, static switch, TextureObjectParameter, TextureSampleParameter2D)."
+              "description": "Parameter name, when the node type is a parameter of any kind (scalar, vector, static switch, TextureObjectParameter, TextureSampleParameter2D), or the parameter of collectionPath a CollectionParameter node reads."
+            },
+            "collectionPath": {
+              "type": "string",
+              "description": "Material Parameter Collection a CollectionParameter node reads (name picks its parameter); a collection that does not load, or lacks the parameter, adds nothing and fails, listing its parameters."
             },
             "texturePath": {
               "type": "string",
@@ -78650,6 +78655,9 @@
             "name": [
               "node"
             ],
+            "collectionPath": [
+              "node"
+            ],
             "texturePath": [
               "node",
               "texture_sample"
@@ -78835,8 +78843,8 @@
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "c11405408e24b2f0b3fc5e2c3d1b75c3e92675ef080e829a1ba8e60e57d5bf9c",
-        "content": "337838d88721de2ceeefc0858a7aabbe7d97650596e83366b8307a930b31bfe4"
+        "schema": "70c99b5539c8fe1e6e7b8f174f19b06a85c6c82ef76d51a873445ee4b6f734a0",
+        "content": "13a79ffa5b8cbcad18332ca499a525e0045d3ad5bcbe713977dbfd9eba902f15"
       }
     },
     {
@@ -79286,7 +79294,8 @@
         "material.create_decal_material",
         "material.create_landscape_material",
         "material.create_post_process_material",
-        "material.create_material_function"
+        "material.create_material_function",
+        "material.create_parameter_collection"
       ],
       "legacyIds": [
         {
@@ -79320,6 +79329,13 @@
           "folded": {
             "kind": "function"
           }
+        },
+        {
+          "tool": "manage_asset",
+          "action": "create_parameter_collection",
+          "folded": {
+            "kind": "parameter_collection"
+          }
         }
       ],
       "discovery": {
@@ -79332,19 +79348,26 @@
           "landscape material",
           "post process material",
           "material function",
+          "material parameter collection",
           "new material",
           "make material",
           "material asset",
-          "shader"
+          "shader",
+          "mpc",
+          "global material parameter",
+          "shared material value",
+          "level wide material value"
         ],
-        "summary": "Create a material asset: a standard material, a decal, landscape or post-process material, or a material function.",
+        "summary": "Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares).",
         "whenToUse": [
           "kind=material: A mesh, surface or effect needs a shader of its own and no material asset exists for it yet.",
           "kind=material: A translucent, unlit or two-sided material is wanted from the start (materialDomain, blendMode, shadingModel, twoSided).",
           "kind=decal: A material is needed to project onto surfaces as a deferred decal, such as scorch marks or stains.",
           "kind=landscape: A material is being made for a landscape; it starts empty (Surface domain, Opaque) and its layers are added afterwards.",
           "kind=post_process: A full-screen effect such as a vignette or color grade needs a post-process domain material.",
-          "kind=function: A chunk of graph logic must be reused by several materials as one node, listed in the function library unless exposeToLibrary is false."
+          "kind=function: A chunk of graph logic must be reused by several materials as one node, listed in the function library unless exposeToLibrary is false.",
+          "kind=parameter_collection: One value must drive many materials at once, set once at runtime (a level-wide wetness, wind strength, time of day or flash): a material reads it with a CollectionParameter node (material.add_material_node nodeType CollectionParameter with collectionPath and name), and a Blueprint sets it with SetScalarParameterValue or SetVectorParameterValue of the Kismet Material Library, the collection on its Collection pin.",
+          "kind=parameter_collection: An existing collection needs another parameter or new defaults: send it again; parameters are never removed, since materials read them by id."
         ],
         "whenNotToUse": [
           "kind=material: A variation of an existing material with different parameter values is wanted (use material.create_material_instance).",
@@ -79352,7 +79375,8 @@
           "kind=decal: A decal material already exists and only its blend mode must change (use material.set_material_property).",
           "kind=landscape: The material exists and only needs assigning to a landscape (use build_environment.sculpt with sculptOp=material).",
           "kind=post_process: A built-in post-process setting such as bloom or exposure is enough (use build_environment.configure_post_process).",
-          "kind=function: The logic is used by one material only (build it in that material with material.add_material_node)."
+          "kind=function: The logic is used by one material only (build it in that material with material.add_material_node).",
+          "kind=parameter_collection: The value differs per object (use a material instance and material.set_material_parameter, or a dynamic material instance per actor)."
         ]
       },
       "schemas": {
@@ -79362,7 +79386,7 @@
           "properties": {
             "name": {
               "type": "string",
-              "description": "Material name."
+              "description": "Asset name."
             },
             "path": {
               "type": "string",
@@ -79396,6 +79420,22 @@
               "type": "boolean",
               "description": "Expose in the material function library."
             },
+            "scalars": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Scalar parameters, each {name, default}: a name the collection lacks is added, one it has takes the new default (0 when a new one gives none)."
+            },
+            "vectors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "x-unreal-reflection-boundary": true
+              },
+              "description": "Vector parameters, each {name, default}: default as [r, g, b, a] or {r, g, b, a} (alpha 1 when omitted); a name the collection lacks is added, one it has takes the new default."
+            },
             "kind": {
               "type": "string",
               "enum": [
@@ -79403,7 +79443,8 @@
                 "decal",
                 "landscape",
                 "post_process",
-                "function"
+                "function",
+                "parameter_collection"
               ],
               "description": "Which create material variant to run; omit for 'material'.",
               "default": "material"
@@ -79426,6 +79467,45 @@
               "type": "object",
               "x-unreal-reflection-boundary": true,
               "description": "Operation details."
+            },
+            "assetPath": {
+              "type": "string",
+              "description": "The collection's object path."
+            },
+            "created": {
+              "type": "boolean",
+              "description": "True when the call made the collection, false when it updated one."
+            },
+            "added": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The parameters this call added."
+            },
+            "scalars": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Every scalar parameter of the collection after the call: {name, default}."
+            },
+            "vectors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "x-unreal-reflection-boundary": true
+              },
+              "x-unreal-reflection-boundary": true,
+              "description": "Every vector parameter after the call: {name, default [r, g, b, a]}."
+            },
+            "saved": {
+              "type": "boolean",
+              "description": "Whether the collection reached disk."
             }
           },
           "required": [
@@ -79436,7 +79516,7 @@
       },
       "examples": [
         {
-          "title": "Create a material asset: a standard material, a decal, landscape or post-process material, or a material function.",
+          "title": "Create a material asset: a standard material, a decal, landscape or post-process material, a material function, or a Material Parameter Collection (values every material reading it shares).",
           "input": {
             "name": "M_Base",
             "path": "/Game/Materials",
@@ -79486,7 +79566,8 @@
             "decal": "create_decal_material",
             "landscape": "create_landscape_material",
             "post_process": "create_post_process_material",
-            "function": "create_material_function"
+            "function": "create_material_function",
+            "parameter_collection": "create_parameter_collection"
           },
           "declaredBy": {
             "materialDomain": [
@@ -79518,14 +79599,20 @@
             ],
             "exposeToLibrary": [
               "function"
+            ],
+            "scalars": [
+              "parameter_collection"
+            ],
+            "vectors": [
+              "parameter_collection"
             ]
           }
         }
       },
       "hashes": {
         "algorithm": "sha256",
-        "schema": "01167a33e491172f77f5a079ae79ef8966323df434d0028ec235fde68f83d1cc",
-        "content": "09647174c2f1ef7871d8394fbff361024c5d5cdafba22b3f1d45459a99a5da5b"
+        "schema": "00cefa1a508da24c3f170542ffa12d8f62b53fa2bb868c1e0fb3849db4e519cc",
+        "content": "de12eefd24e5560efd634392a955b2f44da4e4caad349ec2d3a5c18426264c88"
       }
     },
     {

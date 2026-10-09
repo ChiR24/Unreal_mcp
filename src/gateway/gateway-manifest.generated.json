@@ -6168,6 +6168,7 @@
         "classNames",
         "clearExisting",
         "code",
+        "collectionPath",
         "collisionType",
         "color",
         "columnTypes",
@@ -6336,6 +6337,7 @@
         "samples",
         "save",
         "savePath",
+        "scalars",
         "scale",
         "seamless",
         "searchScope",
@@ -6388,6 +6390,7 @@
         "valueName",
         "values",
         "varGuid",
+        "vectors",
         "virtualTextureStreaming",
         "width",
         "x",
@@ -6558,6 +6561,10 @@
           "code": {
             "type": "string",
             "description": "HLSL code."
+          },
+          "collectionPath": {
+            "type": "string",
+            "description": "Material Parameter Collection a CollectionParameter node reads (name picks its parameter); a collection that does not load, or lacks the parameter, adds nothing and fails, listing its parameters."
           },
           "collisionType": {
             "type": "string",
@@ -6977,6 +6984,7 @@
               "landscape",
               "post_process",
               "function",
+              "parameter_collection",
               "metadata",
               "tags"
             ],
@@ -7194,7 +7202,7 @@
           },
           "name": {
             "type": "string",
-            "description": "DataTable name."
+            "description": "Asset name."
           },
           "neverStream": {
             "type": "boolean",
@@ -7667,6 +7675,14 @@
             "type": "string",
             "description": "Package path for the instance."
           },
+          "scalars": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Scalar parameters, each {name, default}: a name the collection lacks is added, one it has takes the new default (0 when a new one gives none)."
+          },
           "scale": {
             "type": "number",
             "description": "Noise scale (default 1)."
@@ -7908,6 +7924,14 @@
           "varGuid": {
             "type": "string",
             "description": "Stable member GUID."
+          },
+          "vectors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "x-unreal-reflection-boundary": true
+            },
+            "description": "Vector parameters, each {name, default}: default as [r, g, b, a] or {r, g, b, a} (alpha 1 when omitted); a name the collection lacks is added, one it has takes the new default."
           },
           "virtualTextureStreaming": {
             "type": "boolean",

@@ -1668,3 +1668,30 @@ describe('a batch lists the steps that have something to say', () => {
     expect(batch).toContain('Details->SetArrayField(TEXT("results"), Results);');
   });
 });
+
+// There was no way to make a Material Parameter Collection or give it parameters, so a level-wide value (wetness, wind
+// strength) could not drive several materials at once.
+describe('a Material Parameter Collection can be made and read', () => {
+  it('creates or updates a collection, works on copies so a refused row changes nothing, and never removes a parameter', () => {
+    const create = code('MaterialAuthoring', 'Creation', 'McpAutomationBridge_MaterialAuthoringHandlersCreateParameterCollection.cpp');
+    expect(create).toContain('TArray<FCollectionScalarParameter> Scalars = Collection ? Collection->ScalarParameters : TArray<FCollectionScalarParameter>();');
+    expect(create).toContain('return FString::Printf(TEXT("\'%s\' is already a parameter of the other kind, and a collection\'s names are shared"), *Name);');
+    expect(create.indexOf('Bridge->SendAutomationError(Socket, RequestId, FString::Printf(TEXT("%s; nothing was changed."), *Error), TEXT("INVALID_ARGUMENT"));'))
+      .toBeLessThan(create.indexOf('NewObject<UMaterialParameterCollection>('));
+    expect(create).toContain('Collection->PostEditChange();');
+    // A new vector started all zero, so an [r, g, b] default came out with alpha 0.
+    expect(create).toContain('bAdded ? 1.f : Param.DefaultValue.A');
+    expect(create).not.toMatch(/ScalarParameters\.Remove|VectorParameters\.Remove|\.Empty\(\)/u);
+    const handlers = code('MaterialAuthoring', 'McpAutomationBridge_MaterialAuthoringHandlers.cpp');
+    expect(handlers).toContain('McpMaterialAuthoringHandlers::HandleCreateParameterCollection(this, RequestId, SubAction, Payload, Socket)');
+    const routing = readFileSync(join('plugins', 'McpAutomationBridge', 'Source', 'McpAutomationBridge', 'Private', 'MCP', 'Routing',
+      'McpConsolidatedActionRoutingAssets.h'), 'utf8');
+    expect(routing).toContain('TEXT("create_parameter_collection")');
+  });
+
+  it('a CollectionParameter node takes its collection, refusing one that lacks the parameter before the node exists', () => {
+    const node = code('MaterialAuthoring', 'Nodes', 'McpAutomationBridge_MaterialAuthoringHandlersAddMaterialNode.cpp');
+    expect(node.indexOf('!NodeCollection->GetParameterId(Wanted).IsValid()')).toBeLessThan(node.indexOf('NewObject<UMaterialExpression>('));
+    expect(node).toMatch(/CastChecked<UMaterialExpressionCollectionParameter>\(NewExpr\)->Collection = NodeCollection;\s*NewExpr->PostEditChange\(\);/u);
+  });
+});

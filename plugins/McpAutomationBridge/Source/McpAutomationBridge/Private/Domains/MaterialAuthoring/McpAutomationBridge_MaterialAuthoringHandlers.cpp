@@ -70,6 +70,7 @@ bool UMcpAutomationBridgeSubsystem::HandleManageMaterialAuthoringAction(
     if (McpMaterialAuthoringHandlers::HandleConnectNodes(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleDisconnectNodes(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleCreateMaterialFunction(this, RequestId, SubAction, Payload, Socket)) { return true; }
+    if (McpMaterialAuthoringHandlers::HandleCreateParameterCollection(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleFunctionInputsOutputs(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleUseMaterialFunction(this, RequestId, SubAction, Payload, Socket)) { return true; }
     if (McpMaterialAuthoringHandlers::HandleCreateMaterialInstance(this, RequestId, SubAction, Payload, Socket)) { return true; }

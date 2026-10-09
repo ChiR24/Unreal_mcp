@@ -4,7 +4,7 @@
 
 # Action reference
 
-Catalog revision: `393bb46b0de7791b`
+Catalog revision: `2beadb1437b61a5a`
 
 Both transports expose exactly ONE public MCP tool, `unreal`, with the four
 operations `search` / `describe` / `execute` / `configure`. The parent tools
@@ -469,7 +469,7 @@ validates against, so `execute` cannot accept an action this table omits.
 | `material.compile_material` | `manage_asset` | `compile_material` | write | write | explicit | `manage_asset.compile_material` `manage_asset.rebuild_material` |
 | `material.configure_layer_blend` | `manage_asset` | `configure_layer_blend` | write | write | explicit | `manage_asset.configure_layer_blend` |
 | `material.connect_nodes` | `manage_asset` | `connect_nodes` | write | write | explicit | `manage_asset.connect_nodes` `manage_asset.connect_material_pins` |
-| `material.create_material` | `manage_asset` | `create_material` | write | write | explicit | `manage_asset.create_material` `manage_asset.create_decal_material` `manage_asset.create_landscape_material` `manage_asset.create_post_process_material` `manage_asset.create_material_function` |
+| `material.create_material` | `manage_asset` | `create_material` | write | write | explicit | `manage_asset.create_material` `manage_asset.create_decal_material` `manage_asset.create_landscape_material` `manage_asset.create_post_process_material` `manage_asset.create_material_function` `manage_asset.create_parameter_collection` |
 | `material.create_material_instance` | `manage_asset` | `create_material_instance` | write | write | explicit | `manage_asset.create_material_instance` |
 | `material.delete_node` | `manage_asset` | `delete_node` | write | write | explicit | `manage_asset.delete_node` `manage_asset.remove_material_node` |
 | `material.disconnect_nodes` | `manage_asset` | `disconnect_nodes` | write | write | explicit | `manage_asset.disconnect_nodes` `manage_asset.break_material_connections` |
