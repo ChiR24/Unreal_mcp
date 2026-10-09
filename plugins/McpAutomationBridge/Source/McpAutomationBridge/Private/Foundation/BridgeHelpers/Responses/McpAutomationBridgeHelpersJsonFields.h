@@ -222,7 +222,14 @@ static inline TArray<TSharedPtr<FJsonValue>> McpListTellingSteps(const TArray<TS
     TArray<TSharedPtr<FJsonValue>> Telling;
     for (const TSharedPtr<FJsonValue>& Value : Results)
     {
-        const TSharedPtr<FJsonObject> Step = Value.IsValid() ? Value->AsObject() : nullptr;
+        TSharedPtr<FJsonObject> Step = Value.IsValid() ? Value->AsObject() : nullptr;
+        // A step with an id is in the batch's nodeIds map, so its row repeated the node's id beside it.
+        if (Step.IsValid() && Step->HasField(TEXT("id")) && (Step->HasField(TEXT("nodeGuid")) || Step->HasField(TEXT("nodeId"))))
+        {
+            Step = MakeShared<FJsonObject>(*Step);
+            Step->RemoveField(TEXT("nodeGuid"));
+            Step->RemoveField(TEXT("nodeId"));
+        }
         int32 Plain = 0;
         for (const TCHAR* Field : {TEXT("index"), TEXT("edit"), TEXT("success"), TEXT("connected"), TEXT("id")})
         {
@@ -233,7 +240,11 @@ static inline TArray<TSharedPtr<FJsonValue>> McpListTellingSteps(const TArray<TS
         const bool bQuiet = Step.IsValid() && Step->TryGetBoolField(TEXT("success"), bRan) && bRan &&
                             (!Step->TryGetBoolField(TEXT("connected"), bConnected) || bConnected) &&
                             Step->Values.Num() == Plain;
-        if (!bQuiet)
+        if (!bQuiet && Step.IsValid())
+        {
+            Telling.Add(MakeShared<FJsonValueObject>(Step));
+        }
+        else if (!bQuiet)
         {
             Telling.Add(Value);
         }

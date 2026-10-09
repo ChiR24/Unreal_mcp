@@ -251,17 +251,10 @@ bool UMcpAutomationBridgeSubsystem::HandleControlEditorSaveAll(
     return Result;
   };
 
+  // The message gives every count; a reply also carried each of them as a field, and two empty lists, on every save.
   TSharedPtr<FJsonObject> Resp = McpHandlerUtils::CreateResultObject();
-  Resp->SetBoolField(TEXT("success"), bSuccess);
-  Resp->SetNumberField(TEXT("savedCount"), SavedWorldCount + SavedContentCount);
-  Resp->SetNumberField(TEXT("savedWorldCount"), SavedWorldCount);
-  Resp->SetNumberField(TEXT("savedContentCount"), SavedContentCount);
-  Resp->SetNumberField(TEXT("skippedCount"), SkippedCount);
-  Resp->SetNumberField(TEXT("failedCount"), FailedPackages.Num());
-  Resp->SetNumberField(TEXT("totalDirty"), TotalDirty);
-  Resp->SetNumberField(TEXT("leftDirtyCount"), LeftDirty);
-  Resp->SetArrayField(TEXT("skippedPackages"), MakeStringArray(SkippedPackages));
-  Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));
+  if (SkippedPackages.Num() > 0) Resp->SetArrayField(TEXT("skippedPackages"), MakeStringArray(SkippedPackages));
+  if (FailedPackages.Num() > 0) Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));
   if (LeftDirtyPackages.Num() > 0) Resp->SetArrayField(TEXT("leftDirtyPackages"), MakeStringArray(LeftDirtyPackages));
 
   if (FailedPackages.Num() > 0) {

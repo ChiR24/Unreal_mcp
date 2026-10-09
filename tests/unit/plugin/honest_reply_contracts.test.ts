@@ -1711,6 +1711,28 @@ describe('a batch lists the steps that have something to say', () => {
     const batch = code('BlueprintGraph', 'McpAutomationBridge_BlueprintGraphHandlersBatch.cpp');
     expect(batch).toContain('Details->SetArrayField(TEXT("results"), Results);');
   });
+
+  // A created node's row repeated its id beside the batch's nodeIds map.
+  it('leaves the node id out of a row whose step has an id', () => {
+    const fields = code('..', 'Foundation', 'BridgeHelpers', 'Responses', 'McpAutomationBridgeHelpersJsonFields.h');
+    expect(fields).toMatch(/if \(Step\.IsValid\(\) && Step->HasField\(TEXT\("id"\)\) && \(Step->HasField\(TEXT\("nodeGuid"\)\) \|\| Step->HasField\(TEXT\("nodeId"\)\)\)\)\s*\{\s*Step = MakeShared<FJsonObject>\(\*Step\);\s*Step->RemoveField\(TEXT\("nodeGuid"\)\);\s*Step->RemoveField\(TEXT\("nodeId"\)\);/u);
+  });
+});
+
+// get_splines_info with actorName answered the spline at the top level and again under splines; save_all carried every
+// count its message gives as a field.
+describe('a reply says each thing once', () => {
+  it('answers one spline only under splines', () => {
+    const source = code('Spline', 'McpAutomationBridge_SplineHandlersQueries.cpp');
+    expect(source).not.toContain('Result->SetNumberField(TEXT("pointCount")');
+    expect(source).not.toContain('Result->SetArrayField(TEXT("points")');
+  });
+
+  it('lets save_all\'s message carry the counts', () => {
+    const source = code('ControlEditor', 'McpAutomationBridge_ControlEditorAssets.cpp');
+    expect(source).not.toContain('Resp->SetNumberField(TEXT("savedCount")');
+    expect(source).toContain('if (FailedPackages.Num() > 0) Resp->SetArrayField(TEXT("failedPackages"), MakeStringArray(FailedPackages));');
+  });
 });
 
 // There was no way to make a Material Parameter Collection or give it parameters, so a level-wide value (wetness, wind

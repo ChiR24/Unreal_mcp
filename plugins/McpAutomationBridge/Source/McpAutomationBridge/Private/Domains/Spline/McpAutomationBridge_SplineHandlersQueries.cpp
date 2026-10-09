@@ -38,10 +38,9 @@ bool HandleGetSplinesInfo(
             return true;
         }
 
+        // The spline itself is answered once, under splines: the same fields at the top level reached the caller a
+        // second time under details. actorName stays for the receipt's actor handle.
         Result->SetStringField(TEXT("actorName"), ActorName);
-        Result->SetNumberField(TEXT("pointCount"), SplineComp->GetNumberOfSplinePoints());
-        Result->SetNumberField(TEXT("splineLength"), SplineComp->GetSplineLength());
-        Result->SetBoolField(TEXT("closedLoop"), SplineComp->IsClosedLoop());
 
         TArray<TSharedPtr<FJsonValue>> PointsArray;
         for (int32 i = 0; i < SplineComp->GetNumberOfSplinePoints(); i++)
@@ -58,7 +57,6 @@ bool HandleGetSplinesInfo(
 
             PointsArray.Add(MakeShared<FJsonValueObject>(PointObj));
         }
-        Result->SetArrayField(TEXT("points"), PointsArray);
         // The contract requires splines[] in every reply (dogfood #211): wrap the single actor.
         TSharedPtr<FJsonObject> SelfObj = McpHandlerUtils::CreateResultObject();
         SelfObj->SetStringField(TEXT("actorName"), ActorName);
